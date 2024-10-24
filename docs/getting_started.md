@@ -19,7 +19,7 @@ PocketPal AI comes pre-configured with some popular SLMs:
 - Gemma 2
 - Qwen
 
-Modells need to be downloaded before use. You can download and use these models directly from the app and load any other GGUF models you like!
+Models need to be downloaded before use. You can download and use these models directly from the app and load any other GGUF models you like!
 
 <div style="display: flex; justify-content: center;">
     <img src="../assets/models_page.webp" alt="Models Page" style="width: 33%;">

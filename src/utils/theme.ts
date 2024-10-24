@@ -9,7 +9,7 @@ import {getThemeColorsAsArray} from '.';
 
 const lightColors: Colors = {
   ...PaperLightTheme.colors,
-  primary: '#6200ee', //PaperLightTheme.colors.primary,
+  primary: '#2881ff', //PaperLightTheme.colors.primary,
   accent: '#03dac4',
   outlineVariant: '#a1a1a1',
   receivedMessageDocumentIcon: PaperLightTheme.colors.primary,
@@ -113,7 +113,7 @@ export const lightTheme: Theme = {
 
 const darkColors: Colors = {
   ...MD3DarkTheme.colors,
-  primary: '#bb86fc',
+  primary: '#64a4ff',
   accent: '#03dac6',
   outlineVariant: '#a1a1a1',
   receivedMessageDocumentIcon: MD3DarkTheme.colors.primary,
