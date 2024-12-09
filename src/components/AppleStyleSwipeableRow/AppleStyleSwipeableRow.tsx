@@ -1,20 +1,36 @@
-import {Animated, Text, View} from 'react-native';
-import React, {Component, PropsWithChildren} from 'react';
+import React, {useRef} from 'react';
+import {Animated, View} from 'react-native';
 
+import {Text} from 'react-native-paper';
 import {RectButton, Swipeable} from 'react-native-gesture-handler';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import {styles} from './styles';
+import {useTheme} from '../../hooks';
+
+import {createStyles, SWIPE_WIDTH} from './styles';
 
 interface AppleStyleSwipeableRowProps {
   onDelete: () => void;
   onSwipeableOpen?: (direction: string) => void;
   onSwipeableClose?: (direction: string) => void;
+  children: React.ReactNode;
 }
 
-export class AppleStyleSwipeableRow extends Component<
-  PropsWithChildren<AppleStyleSwipeableRowProps>
-> {
-  private renderLeftAction = (
+export const AppleStyleSwipeableRow: React.FC<AppleStyleSwipeableRowProps> = ({
+  onDelete,
+  onSwipeableOpen,
+  onSwipeableClose,
+  children,
+}) => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
+  const swipeableRow = useRef<Swipeable>(null);
+
+  const close = () => {
+    swipeableRow.current?.close();
+  };
+
+  const renderLeftAction = (
     text: string,
     color: string,
     x: number,
@@ -22,59 +38,52 @@ export class AppleStyleSwipeableRow extends Component<
   ) => {
     const trans = progress.interpolate({
       inputRange: [0, 1],
-      outputRange: [-x, 0], // Start offscreen and move into view
+      outputRange: [-x, 0],
     });
+
     const pressHandler = () => {
-      this.close();
-      this.props.onDelete();
+      close();
+      onDelete();
     };
 
     return (
       <Animated.View
         style={[
           styles.leftActionContainer,
-          {transform: [{translateX: trans}]},
+          {
+            transform: [{translateX: trans}],
+            backgroundColor: color,
+          },
         ]}>
-        <RectButton
-          style={[styles.leftAction, {backgroundColor: color}]}
-          onPress={pressHandler}>
-          <Text style={styles.actionText}>{text}</Text>
+        <RectButton style={styles.leftAction} onPress={pressHandler}>
+          <Icon name="trash-can-outline" size={22} color="white" />
+          <Text variant="bodySmall" style={styles.actionText}>
+            {text}
+          </Text>
         </RectButton>
       </Animated.View>
     );
   };
 
-  private renderLeftActions = (
+  const renderLeftActions = (
     progress: Animated.AnimatedInterpolation<number>,
     _dragAnimatedValue: Animated.AnimatedInterpolation<number>,
   ) => (
     <View style={styles.leftActionsContainer}>
-      {this.renderLeftAction('Delete', '#dd2c00', 192, progress)}
+      {renderLeftAction('Delete', theme.colors.error, SWIPE_WIDTH, progress)}
     </View>
   );
 
-  private swipeableRow?: Swipeable;
-
-  private updateRef = (ref: Swipeable) => {
-    this.swipeableRow = ref;
-  };
-  private close = () => {
-    this.swipeableRow?.close();
-  };
-
-  render() {
-    const {children} = this.props;
-    return (
-      <Swipeable
-        ref={this.updateRef}
-        friction={2}
-        enableTrackpadTwoFingerGesture
-        leftThreshold={30} // Right swipe threshold
-        renderLeftActions={this.renderLeftActions} // Swipe right to reveal left actions
-        onSwipeableOpen={this.props.onSwipeableOpen}
-        onSwipeableClose={this.props.onSwipeableClose}>
-        {children}
-      </Swipeable>
-    );
-  }
-}
+  return (
+    <Swipeable
+      ref={swipeableRow}
+      friction={2}
+      enableTrackpadTwoFingerGesture
+      leftThreshold={30}
+      renderLeftActions={renderLeftActions}
+      onSwipeableOpen={onSwipeableOpen}
+      onSwipeableClose={onSwipeableClose}>
+      {children}
+    </Swipeable>
+  );
+};

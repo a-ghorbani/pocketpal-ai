@@ -9,7 +9,7 @@ describe('CompletionSettings', () => {
   it('renders all settings correctly', async () => {
     const {getByDisplayValue, getByTestId, getByText} = render(
       <CompletionSettings
-        settings={mockCompletionParams}
+        settings={{...mockCompletionParams, mirostat: 1}}
         onChange={jest.fn()}
       />,
     );
@@ -140,8 +140,8 @@ describe('CompletionSettings', () => {
       />,
     );
 
-    const mirostatChip = getByText('2');
-    fireEvent.press(mirostatChip);
+    const mirostatV2Button = getByText('v2');
+    fireEvent.press(mirostatV2Button);
     expect(mockOnChange).toHaveBeenCalledWith('mirostat', 2);
   });
 

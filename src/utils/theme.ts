@@ -26,8 +26,8 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
       onPrimaryContainer: '#DEE0E6',
       secondary: '#95ABE6',
       onSecondary: '#11214C',
-      secondaryContainer: '#162C66',
-      onSecondaryContainer: '#ADBCE6',
+      secondaryContainer: '#424242',
+      onSecondaryContainer: '#E0E0E0',
       tertiary: '#80E6E4',
       onTertiary: '#014C4C',
       tertiaryContainer: '#016665',
@@ -50,6 +50,8 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
       inverseSurface: '#e5e5e6',
       inverseOnSurface: '#333333',
       inversePrimary: '#5B5E66',
+      inverseSecondary: md3BaseColors.secondary!,
+      shadow: '#ffffff',
       scrim: 'rgba(0, 0, 0, 0.25)',
     };
   }
@@ -62,8 +64,8 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
     onPrimaryContainer: '#2D2F33',
     secondary: md3BaseColors.secondary!,
     onSecondary: '#FFFFFF',
-    secondaryContainer: '#ADBCE6',
-    onSecondaryContainer: '#0B1633',
+    secondaryContainer: '#E0E0E0',
+    onSecondaryContainer: '#424242',
     tertiary: md3BaseColors.tertiary!,
     onTertiary: '#FFFFFF',
     tertiaryContainer: '#9EE6E5',
@@ -72,13 +74,13 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
     onError: '#FFFFFF',
     errorContainer: '#E6ACA9',
     onErrorContainer: '#330B09',
-    background: '#fcfcfc',
+    background: '#F5F5F5',
     onBackground: '#333333',
-    surface: '#fcfcfc',
+    surface: '#ffffff',
     onSurface: '#333333',
     surfaceVariant: '#e4e4e6',
     onSurfaceVariant: '#646466',
-    outline: '#969799',
+    outline: withOpacity(md3BaseColors.primary!, 0.05),
     outlineVariant: '#a1a1a1',
     // Additional required MD3 colors
     surfaceDisabled: withOpacity('#fcfcfc', 0.12),
@@ -86,6 +88,8 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
     inverseSurface: '#333333',
     inverseOnSurface: '#fcfcfc',
     inversePrimary: '#DEE0E6',
+    inverseSecondary: '#95ABE6',
+    shadow: '#000000',
     scrim: 'rgba(0, 0, 0, 0.25)',
   };
 };
@@ -117,6 +121,10 @@ const createSemanticColors = (
     ? withOpacity(baseColors.surface, 0.24)
     : baseColors.surface,
 
+  border: withOpacity(baseColors.onSurface, 0.05),
+  placeholder: withOpacity(baseColors.onSurface, 0.3),
+  textSecondary: withOpacity(baseColors.onSurface, 0.5),
+
   // Interactive states
   stateLayerOpacity: 0.12,
   hoverStateOpacity: stateLayerOpacity.hover,
@@ -138,7 +146,7 @@ const createSemanticColors = (
   // Message specific
   authorBubbleBackground: isDark
     ? 'rgba(255, 255, 255, 0.03)'
-    : 'rgba(0, 0, 0, 0.03)',
+    : 'rgba(0, 0, 0, 0.04)',
   receivedMessageDocumentIcon: baseColors.primary,
   sentMessageDocumentIcon: baseColors.onSurface,
   userAvatarImageBackground: 'transparent',

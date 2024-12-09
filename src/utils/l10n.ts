@@ -13,7 +13,7 @@ export const l10n = {
     networkError: 'Network error. Please try again.',
     goToModels: 'Go to Models',
     readyToChat: 'Ready to chat? Load the last used model.',
-    pleaseLoadModel: 'Please load a model to start chatting.',
+    pleaseLoadModel: 'Load a model to chat.',
     shortMemoryWarning: 'Memory Warning',
     memoryWarning:
       "Warning: Model size is close to or exceeds your device's total memory ({{totalMemory}}). This may cause unexpected behavior such as slow performance or system instability.",
@@ -63,11 +63,52 @@ export const l10n = {
     unknownGroup: 'Unknown',
     menuTitleHf: 'Hugging Face Models',
     menuTitleDownloaded: 'Downloaded Models',
-    menuTitleGrouped: 'Group Models',
+    menuTitleGrouped: 'Group by Model Type',
     menuTitleReset: 'Reset Models List',
     iOSBackgroundDownload: 'Background Download',
     iOSBackgroundDownloadDescription:
       'Allow downloads to continue in the background (it will be slower).',
+    availableToUse: 'Ready to Use',
+    availableToDownload: 'Available to Download',
+    useAddButtonForMore: 'Use + button to find more models',
+    // modelSettings
+    'modelSettings.grammar': 'Set grammar for grammar-based sampling',
+    'modelSettings.stop':
+      'Specify stopping strings that will not be included in the completion',
+    'modelSettings.n_predict':
+      'Maximum number of tokens to predict when generating text',
+    'modelSettings.n_probs':
+      'Number of top token probabilities to return per token',
+    'modelSettings.top_k': 'Limit token selection to K most probable tokens',
+    'modelSettings.top_p':
+      'Limit token selection to tokens with cumulative probability above threshold P',
+    'modelSettings.min_p':
+      'Minimum probability for a token relative to the most likely token',
+    'modelSettings.xtc_probability': 'Chance for token removal via XTC sampler',
+    'modelSettings.xtc_threshold':
+      'Minimum probability threshold for XTC sampler token removal',
+    'modelSettings.typical_p': 'Parameter for locally typical sampling',
+    'modelSettings.temperature': 'Adjust randomness of generated text',
+    'modelSettings.penalty_last_n':
+      'Number of tokens to consider for repetition penalty',
+    'modelSettings.penalty_repeat': 'Control repetition of token sequences',
+    'modelSettings.penalty_freq': 'Repeat alpha frequency penalty',
+    'modelSettings.penalty_present': 'Repeat alpha presence penalty',
+    'modelSettings.penalize_nl': 'Apply repeat penalty to newline tokens',
+    'modelSettings.mirostat': 'Enable Mirostat sampling for perplexity control',
+    'modelSettings.mirostat_tau': 'Mirostat target entropy (tau)',
+    'modelSettings.mirostat_eta': 'Mirostat learning rate (eta)',
+    'modelSettings.dry_multiplier': 'DRY repetition penalty multiplier',
+    'modelSettings.dry_base': 'DRY repetition penalty base value',
+    'modelSettings.dry_allowed_length':
+      'Maximum allowed length before exponential penalty',
+    'modelSettings.dry_penalty_last_n':
+      'Number of tokens to scan for repetitions',
+    'modelSettings.dry_sequence_breakers': 'Sequence breakers for DRY sampling',
+    'modelSettings.ignore_eos':
+      'Ignore end of stream token and continue generating',
+    'modelSettings.logit_bias': 'Modify likelihood of specific tokens',
+    'modelSettings.seed': 'Random number generator seed',
   },
   es: {
     attachmentButtonAccessibilityLabel: 'Enviar multimedia',
@@ -82,7 +123,7 @@ export const l10n = {
     networkError: 'Error de red. Inténtalo de nuevo.',
     goToModels: 'Ir a Modelos',
     readyToChat: '¿Listo para chatear? Cargue el último modelo usado.',
-    pleaseLoadModel: 'Por favor, cargue un modelo para comenzar a chatear.',
+    pleaseLoadModel: 'Cargue un modelo para chatear.',
     shortMemoryWarning: 'Advertencia de memoria',
     memoryWarning:
       'Advertencia: El tamaño del modelo está cerca de o excede la memoria total de su dispositivo ({{totalMemory}}). Esto puede causar comportamientos inesperados como rendimiento lento o inestabilidad del sistema.',
@@ -137,11 +178,59 @@ export const l10n = {
     unknownGroup: 'Desconocido',
     menuTitleHf: 'Modelos de Hugging Face',
     menuTitleDownloaded: 'Modelos Descargados',
-    menuTitleGrouped: 'Modelos Agrupados',
+    menuTitleGrouped: 'Agrupar por Tipo de Modelo',
     menuTitleReset: 'Reiniciar Lista de Modelos',
     iOSBackgroundDownload: 'Descarga en segundo plano',
     iOSBackgroundDownloadDescription:
       'Permitir que las descargas continúen en segundo plano (será más lento).',
+    availableToUse: 'Listo para Usar',
+    availableToDownload: 'Disponible para Descargar',
+    useAddButtonForMore: 'Use el botón + para encontrar más modelos',
+    'modelSettings.grammar':
+      'Establecer gramática para el muestreo basado en gramática',
+    'modelSettings.stop':
+      'Especificar cadenas de parada que no se incluirán en la completación',
+    'modelSettings.n_predict':
+      'Número máximo de tokens a predecir al generar texto',
+    'modelSettings.n_probs':
+      'Número de probabilidades de tokens superiores a devolver por token',
+    'modelSettings.top_k':
+      'Limitar la selección de tokens a los K tokens más probables',
+    'modelSettings.top_p':
+      'Limitar la selección de tokens a aquellos con probabilidad acumulada superior al umbral P',
+    'modelSettings.min_p':
+      'Probabilidad mínima para un token en relación al token más probable',
+    'modelSettings.xtc_probability':
+      'Probabilidad de eliminación de tokens mediante el muestreador XTC',
+    'modelSettings.xtc_threshold':
+      'Umbral mínimo de probabilidad para la eliminación de tokens mediante XTC',
+    'modelSettings.typical_p': 'Parámetro para el muestreo localmente típico',
+    'modelSettings.temperature': 'Ajustar la aleatoriedad del texto generado',
+    'modelSettings.penalty_last_n':
+      'Número de tokens a considerar para la penalización por repetición',
+    'modelSettings.penalty_repeat':
+      'Controlar la repetición de secuencias de tokens',
+    'modelSettings.penalty_freq': 'Penalización de frecuencia alfa repetida',
+    'modelSettings.penalty_present': 'Penalización de presencia alfa repetida',
+    'modelSettings.penalize_nl':
+      'Aplicar penalización por repetición a tokens de nueva línea',
+    'modelSettings.mirostat':
+      'Habilitar muestreo Mirostat para control de perplejidad',
+    'modelSettings.mirostat_tau': 'Entropía objetivo de Mirostat (tau)',
+    'modelSettings.mirostat_eta': 'Tasa de aprendizado de Mirostat (eta)',
+    'modelSettings.dry_multiplier':
+      'Multiplicador de penalización por repetición DRY',
+    'modelSettings.dry_base': 'Valor base de penalización por repetición DRY',
+    'modelSettings.dry_allowed_length':
+      'Longitud máxima permitida antes de penalización exponencial',
+    'modelSettings.dry_penalty_last_n':
+      'Número de tokens a escanear para repeticiones',
+    'modelSettings.dry_sequence_breakers':
+      'Rompedores de secuencia para muestreo DRY',
+    'modelSettings.ignore_eos':
+      'Ignorar token de fin de secuencia y continuar generando',
+    'modelSettings.logit_bias': 'Modificar probabilidad de tokens específicos',
+    'modelSettings.seed': 'Semilla del generador de números aleatorios',
   },
   ko: {
     attachmentButtonAccessibilityLabel: '미디어 보내기',
@@ -156,7 +245,7 @@ export const l10n = {
     networkError: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
     goToModels: '모델로 가기',
     readyToChat: '채팅을 준비하세요. 마지막으로 사용된 모델을 로드하세요.',
-    pleaseLoadModel: '채팅을 시작하려면 모델을 로드하세요.',
+    pleaseLoadModel: '채팅을 위해 모델을 로드하세요.',
     shortMemoryWarning: '메모리 경고',
     memoryWarning:
       '경고: 모델 크기가 또는 장치의 총 메모리를 초과합니다 ({{totalMemory}}). 이는 속도가 느려지거나 시스템 불안정성을 일으킬 수 있는 예기치 않은 동작을 일으켜 초래할 수 있습니다.',
@@ -207,11 +296,43 @@ export const l10n = {
     unknownGroup: '알 수 없음',
     menuTitleHf: 'Hugging Face 모델',
     menuTitleDownloaded: '다운로드된 모델',
-    menuTitleGrouped: '그룹 모델',
+    menuTitleGrouped: '모델 유형별 그룹화',
     menuTitleReset: '모델 목록 재설정',
     iOSBackgroundDownload: '백그라운드 다운로드',
     iOSBackgroundDownloadDescription:
       '백그라운드에서 다운로드가 계속되도록 허용합니다 (속도가 느려질 수 있습니다).',
+    availableToUse: '사용 준비 완료',
+    availableToDownload: '다운로드 가능',
+    useAddButtonForMore: '+ 버튼을 사용하여 더 많은 모델 찾기',
+    'modelSettings.grammar': '문법 기반 샘플링을 위한 문법 설정',
+    'modelSettings.stop': '완성에 포함되지 않을 중지 문자열 지정',
+    'modelSettings.n_predict': '텍스트 생성 시 예측할 최대 토큰 수',
+    'modelSettings.n_probs': '토큰당 반환할 상위 토큰 확률 수',
+    'modelSettings.top_k': '가장 확률이 높은 K개의 토큰으로 토큰 선택 제한',
+    'modelSettings.top_p':
+      '누적 확률이 임계값 P보다 높은 토큰들로 토큰 선택 제한',
+    'modelSettings.min_p': '가장 가능성 높은 토큰 대비 토큰의 최소 확률',
+    'modelSettings.xtc_probability': 'XTC 샘플러를 통한 토큰 제거 확률',
+    'modelSettings.xtc_threshold':
+      'XTC 샘플러 토큰 제거를 위한 최소 확률 임계값',
+    'modelSettings.typical_p': '지역적 전형 샘플링을 위한 매개변수',
+    'modelSettings.temperature': '생성된 텍스트의 무작위성 조정',
+    'modelSettings.penalty_last_n': '반복 페널티를 위해 고려할 토큰 수',
+    'modelSettings.penalty_repeat': '토큰 시퀀스의 반복 제어',
+    'modelSettings.penalty_freq': '반복 알파 빈도 페널티',
+    'modelSettings.penalty_present': '반복 알파 존재 페널티',
+    'modelSettings.penalize_nl': '바꿈 토큰에 반복 페널티 적용',
+    'modelSettings.mirostat': '혼란도 제어를 위한 Mirostat 샘플링 활성화',
+    'modelSettings.mirostat_tau': 'Mirostat 목표 엔트로피 (tau)',
+    'modelSettings.mirostat_eta': 'Mirostat 학습률 (eta)',
+    'modelSettings.dry_multiplier': 'DRY 반복 페널티 승수',
+    'modelSettings.dry_base': 'DRY 반복 페널티 기본값',
+    'modelSettings.dry_allowed_length': '지수 페널티 적용 전 최대 허용 길이',
+    'modelSettings.dry_penalty_last_n': '반복 검사를 위한 토큰 수',
+    'modelSettings.dry_sequence_breakers': 'DRY 샘플링을 위한 시퀀스 중단자',
+    'modelSettings.ignore_eos': '스트림 종료 토큰을 무시하고 생성 계속',
+    'modelSettings.logit_bias': '특정 토큰의 확률 수정',
+    'modelSettings.seed': '난수 생성기 시드',
   },
   pl: {
     attachmentButtonAccessibilityLabel: 'Wyślij multimedia',
@@ -226,7 +347,7 @@ export const l10n = {
     networkError: 'Błąd sieci. Spróbuj ponownie.',
     goToModels: 'Przejdź do modeli',
     readyToChat: 'Czy gotowy do rozmowy? Załaduj ostatnio używany model.',
-    pleaseLoadModel: 'Proszę załadować model, aby rozpocząć rozmowę.',
+    pleaseLoadModel: 'Załaduj model, aby czatować.',
     shortMemoryWarning: 'Ostrzeżenie o pamięci',
     memoryWarning:
       'Ostrzeżenie: Rozmiar modelu jest bliski lub przekracza całkowitą pamięć swojego urządzenia ({{totalMemory}}). To może spowodować nieoczekiwane zachowanie, takie jak wolne wydajność lub niestabilność systemu.',
@@ -277,11 +398,58 @@ export const l10n = {
     unknownGroup: 'Nieznany',
     menuTitleHf: 'Modele Hugging Face',
     menuTitleDownloaded: 'Pobrane Modele',
-    menuTitleGrouped: 'Modele Grupowe',
+    menuTitleGrouped: 'Grupuj według Typu Modelu',
     menuTitleReset: 'Reset Lista Modeli',
     iOSBackgroundDownload: 'Pobieranie w tle',
     iOSBackgroundDownloadDescription:
       'Zezwól na kontynuowanie pobierania w tle (będzie wolniejsze).',
+    availableToUse: 'Gotowy do Użycia',
+    availableToDownload: 'Dostępny do Pobrania',
+    useAddButtonForMore: 'Użyj przycisku +, aby znaleźć więcej modeli',
+    'modelSettings.grammar':
+      'Ustaw gramatykę dla próbkowania opartego na gramatyce',
+    'modelSettings.stop':
+      'Określ ciągi zatrzymujące, które nie zostaną uwzględnione w uzupełnieniu',
+    'modelSettings.n_predict':
+      'Maksymalna liczba tokenów do przewidzenia podczas generowania tekstu',
+    'modelSettings.n_probs':
+      'Liczba najwyższych prawdopodobieństw tokenów do zwrócenia na token',
+    'modelSettings.top_k':
+      'Ogranicz wybór tokenów do K najbardziej prawdopodobnych tokenów',
+    'modelSettings.top_p':
+      'Ogranicz wybór tokenów do tych o skumulowanym prawdopodobieństwie powyżej progu P',
+    'modelSettings.min_p':
+      'Minimalne prawdopodobieństwo dla tokenu względem najbardziej prawdopodobnego tokenu',
+    'modelSettings.xtc_probability':
+      'Szansa na usunięcie tokenu przez próbkowanie XTC',
+    'modelSettings.xtc_threshold':
+      'Mnimalny próg prawdopodobieństwa dla usuwania tokenów przez XTC',
+    'modelSettings.typical_p': 'Parametr dla lokalnie typowego próbkowania',
+    'modelSettings.temperature': 'Ajustar aleatoriedade do tekstu generowanego',
+    'modelSettings.penalty_last_n':
+      'Liczba tokenów do uwzględnienia przy karze za powtórzenia',
+    'modelSettings.penalty_repeat': 'Kontroluj powtarzanie sekwencji tokenów',
+    'modelSettings.penalty_freq': 'Penalidade de frequência alfa repetida',
+    'modelSettings.penalty_present': 'Penalidade de presença alfa repetida',
+    'modelSettings.penalize_nl':
+      'Aplicar penalidade de repetição a tokens de nova linha',
+    'modelSettings.mirostat':
+      'Habilitar amostragem Mirostat para controle de perplexidade',
+    'modelSettings.mirostat_tau': 'Entropia alvo do Mirostat (tau)',
+    'modelSettings.mirostat_eta': 'Taxa de aprendizado do Mirostat (eta)',
+    'modelSettings.dry_multiplier':
+      'Multiplicador de penalidade de repetição DRY',
+    'modelSettings.dry_base': 'Valor base de penalidade de repetição DRY',
+    'modelSettings.dry_allowed_length':
+      'Comprimento máximo permitido antes da penalidade exponencial',
+    'modelSettings.dry_penalty_last_n':
+      'Número de tokens a verificar para repetições',
+    'modelSettings.dry_sequence_breakers':
+      'Quebradores de sequência para amostragem DRY',
+    'modelSettings.ignore_eos':
+      'Ignorar token de fim de fluxo e continuar gerando',
+    'modelSettings.logit_bias': 'Modificar probabilidade de tokens específicos',
+    'modelSettings.seed': 'Semente do gerador de números aleatórios',
   },
   pt: {
     attachmentButtonAccessibilityLabel: 'Envia mídia',
@@ -296,7 +464,7 @@ export const l10n = {
     networkError: 'Erro de rede. Tente novamente.',
     goToModels: 'Ir para Modelos',
     readyToChat: 'Pronto para conversar? Carregue o último modelo usado.',
-    pleaseLoadModel: 'Por favor, carregue um modelo para começar a conversar.',
+    pleaseLoadModel: 'Carregue um modelo para conversar.',
     shortMemoryWarning: 'Advertência de memória',
     memoryWarning:
       'Advertência: O tamanho do modelo está próximo ou excede a memória total do seu dispositivo ({{totalMemory}}). Isso pode causar comportamentos inesperados como desempenho lento ou instabilidade do sistema.',
@@ -346,12 +514,60 @@ export const l10n = {
     tooltipHf: 'Mostrar modelos provenientes de Hugging Face',
     unknownGroup: 'Desconhecido',
     menuTitleHf: 'Modelos Hugging Face',
-    menuTitleDownloaded: 'Pobrane Modele',
-    menuTitleGrouped: 'Modele Grupowe',
+    menuTitleDownloaded: 'Modelos Descarregados',
+    menuTitleGrouped: 'Agrupar por Tipo de Modelo',
     menuTitleReset: 'Reiniciar Lista de Modelos',
     iOSBackgroundDownload: 'Download em segundo plano',
     iOSBackgroundDownloadDescription:
       'Permitir que os downloads continuem em segundo plano (será mais lento).',
+    availableToUse: 'Pronto para Usar',
+    availableToDownload: 'Disponível para Baixar',
+    useAddButtonForMore: 'Use o botão + para encontrar mais modelos',
+    'modelSettings.grammar':
+      'Definir gramática para amostragem baseada em gramática',
+    'modelSettings.stop':
+      'Especificar strings de parada que não serão incluídas na conclusão',
+    'modelSettings.n_predict':
+      'Número máximo de tokens a prever ao gerar texto',
+    'modelSettings.n_probs':
+      'Número de probabilidades de tokens superiores a retornar por token',
+    'modelSettings.top_k':
+      'Limitar a seleção de tokens aos K tokens mais prováveis',
+    'modelSettings.top_p':
+      'Limitar a seleção de tokens àqueles com probabilidade cumulativa acima do limiar P',
+    'modelSettings.min_p':
+      'Probabilidade mínima para um token em relação ao token mais provável',
+    'modelSettings.xtc_probability':
+      'Chance de remoção de token via amostrador XTC',
+    'modelSettings.xtc_threshold':
+      'Limiar mínimo de probabilidade para remoção de tokens via XTC',
+    'modelSettings.typical_p': 'Parâmetro para amostragem localmente típica',
+    'modelSettings.temperature': 'Ajustar aleatoriedade do texto gerado',
+    'modelSettings.penalty_last_n':
+      'Número de tokens a considerar para penalidade de repetição',
+    'modelSettings.penalty_repeat':
+      'Controlar repetição de sequências de tokens',
+    'modelSettings.penalty_freq': 'Penalidade de frequência alfa repetida',
+    'modelSettings.penalty_present': 'Penalidade de presença alfa repetida',
+    'modelSettings.penalize_nl':
+      'Aplicar penalidade de repetição a tokens de nova linha',
+    'modelSettings.mirostat':
+      'Habilitar amostragem Mirostat para controle de perplexidade',
+    'modelSettings.mirostat_tau': 'Entropia alvo do Mirostat (tau)',
+    'modelSettings.mirostat_eta': 'Taxa de aprendizado do Mirostat (eta)',
+    'modelSettings.dry_multiplier':
+      'Multiplicador de penalidade de repetição DRY',
+    'modelSettings.dry_base': 'Valor base de penalidade de repetição DRY',
+    'modelSettings.dry_allowed_length':
+      'Comprimento máximo permitido antes da penalidade exponencial',
+    'modelSettings.dry_penalty_last_n':
+      'Número de tokens a verificar para repetições',
+    'modelSettings.dry_sequence_breakers':
+      'Quebradores de sequência para amostragem DRY',
+    'modelSettings.ignore_eos':
+      'Ignorar token de fim de fluxo e continuar gerando',
+    'modelSettings.logit_bias': 'Modificar probabilidade de tokens específicos',
+    'modelSettings.seed': 'Semente do gerador de números aleatórios',
   },
   ru: {
     attachmentButtonAccessibilityLabel: 'Отправить медиа',
@@ -366,7 +582,7 @@ export const l10n = {
     networkError: 'Ошибка сети. Пожалуйста, попробуйте снова.',
     goToModels: 'Перейти к моделям',
     readyToChat: 'Готовы к общению? Загрузите последний используемый модель.',
-    pleaseLoadModel: 'Пожалуйста, загрузите модель, чтобы начать общение.',
+    pleaseLoadModel: 'Загрузите модель для общения.',
     shortMemoryWarning: 'Предупреждение о памяти',
     memoryWarning:
       'Предупреждение: Размер модели близок или превышает общую память вашего устройства ({{totalMemory}}). Это может привести к непредвиденным поведением, таким как медленная производительность или нестабильность системы.',
@@ -421,11 +637,57 @@ export const l10n = {
     unknownGroup: 'Неизвестно',
     menuTitleHf: 'Модели Hugging Face',
     menuTitleDownloaded: 'Загруженные модели',
-    menuTitleGrouped: 'Групповые модели',
+    menuTitleGrouped: 'Группировать по типу модели',
     menuTitleReset: 'Сбросить список моделей',
     iOSBackgroundDownload: 'Фоновая загрузка',
     iOSBackgroundDownloadDescription:
       'Разрешить загрузки в фоновом режиме (это будет медленнее).',
+    availableToUse: 'Готов к Использованию',
+    availableToDownload: 'Доступен для Скачивания',
+    useAddButtonForMore: 'Используйте кнопку + для поиска моделей',
+    'modelSettings.grammar':
+      'Установить грамматику для выборки на основе грамматики',
+    'modelSettings.stop':
+      'Вказати стоп-рядки, які не будуть включені в завершення',
+    'modelSettings.n_predict':
+      'Максимальна кількість токенів для передбачення при генерації тексту',
+    'modelSettings.n_probs':
+      'Кількість ймовірностей найкращих токенів для повернення на токен',
+    'modelSettings.top_k':
+      'Обмежити вибір токенів K найбільш ймовірними токенами',
+    'modelSettings.top_p':
+      'Обмежити вибір токенів тими, у яких кумулятивна ймовірність вище порогу P',
+    'modelSettings.min_p':
+      'Мінімальна ймовірність для токена відносно найбільш ймовірного токена',
+    'modelSettings.xtc_probability': 'Шанс видалення токена через семплер XTC',
+    'modelSettings.xtc_threshold':
+      'Мінімальний поріг ймовірності для видалення токенів через XTC',
+    'modelSettings.typical_p': 'Параметр для локально типової вибірки',
+    'modelSettings.temperature': 'Налаштувати випадковість генерованого тексту',
+    'modelSettings.penalty_last_n':
+      'Кількість токенів для врахування при штрафі за повторення',
+    'modelSettings.penalty_repeat':
+      'Контролювати повторення послідовностей токенів',
+    'modelSettings.penalty_freq': 'Штраф за частоту повторення альфа',
+    'modelSettings.penalty_present': 'Штраф за присутність повторення альфа',
+    'modelSettings.penalize_nl':
+      'Застосувати штраф за повторення до токенів нового рядка',
+    'modelSettings.mirostat':
+      'Увімкнути вибірку Mirostat для контролю перплексії',
+    'modelSettings.mirostat_tau': 'Цільова ентропія Mirostat (tau)',
+    'modelSettings.mirostat_eta': 'Швидкість навчання Mirostat (eta)',
+    'modelSettings.dry_multiplier': 'Множник штрафу за повторення DRY',
+    'modelSettings.dry_base': 'Базове значення штрафу за повторення DRY',
+    'modelSettings.dry_allowed_length':
+      'Максимальна допустима довжина перед експоненційним штрафом',
+    'modelSettings.dry_penalty_last_n':
+      'Кількість токенів для сканування на повторення',
+    'modelSettings.dry_sequence_breakers':
+      'Переривники послідовності для вибірки DRY',
+    'modelSettings.ignore_eos':
+      'Ігнорувати токен кінця потоку і продовжувати генерацію',
+    'modelSettings.logit_bias': 'Змінити ймовірність певних токенів',
+    'modelSettings.seed': 'Зерно генератора випадкових чисел',
   },
   tr: {
     attachmentButtonAccessibilityLabel: 'Medya gönder',
@@ -440,7 +702,7 @@ export const l10n = {
     networkError: 'Ağ hatası. Lütfen tekrar deneyin.',
     goToModels: 'Modellere git',
     readyToChat: 'Sohbete hazır mısınız? Son kullanılan modeli yükleyin.',
-    pleaseLoadModel: 'Lütfen bir model yükleyin, sohbete başlamak için.',
+    pleaseLoadModel: 'Sohbet için model yükleyin.',
     shortMemoryWarning: 'Hafıza Uyarısı',
     memoryWarning:
       'Uyarı: Model boyutu cihazınızın toplam hafızasına yakın veya onu aşıyor ({{totalMemory}}). Bu, beklenmedik davranışlar, örneğin yavaş performans veya sistem istikrarının oluşmasına neden olabilir.',
@@ -491,11 +753,52 @@ export const l10n = {
     unknownGroup: 'Bilinmeyen',
     menuTitleHf: 'Hugging Face Modelleri',
     menuTitleDownloaded: 'İndirilen Modeller',
-    menuTitleGrouped: 'Gruplandırılmış Modeller',
+    menuTitleGrouped: 'Model Türüne Göre Grupla',
     menuTitleReset: 'Model Listesini Sıfırla',
     iOSBackgroundDownload: 'Arka Plan İndirmesi',
     iOSBackgroundDownloadDescription:
       'İndirmelerin arka planda devam etmesine izin verin (daha yavaş olacaktır).',
+    availableToUse: 'Kullanıma Hazır',
+    availableToDownload: 'İndirilebilir',
+    useAddButtonForMore: 'Daha fazla model bulmak için + düğmesini kullanın',
+    'modelSettings.grammar':
+      'Dilbilgisi tabanlı örnekleme için dilbilgisi ayarla',
+    'modelSettings.stop':
+      'Tamamlamaya dahil edilmeyecek durdurma dizelerini belirt',
+    'modelSettings.n_predict':
+      'Metin oluştururken tahmin edilecek maksimum token sayısı',
+    'modelSettings.n_probs':
+      'Token başına döndürülecek en yüksek token olasılıkları sayısı',
+    'modelSettings.top_k': 'Token seçimini en olası K tokene sınırla',
+    'modelSettings.top_p':
+      'Token seçimini kümülatif olasılığı P eşiğinin üzerinde olan tokenlere sınırla',
+    'modelSettings.min_p':
+      'En olası tokene göre bir token için minimum olasılık',
+    'modelSettings.xtc_probability': 'XTC örnekleyici ile token kaldırma şansı',
+    'modelSettings.xtc_threshold':
+      'XTC token kaldırma için minimum olasılık eşiği',
+    'modelSettings.typical_p': 'Yerel tipik örnekleme için parametre',
+    'modelSettings.temperature': 'Oluşturulan metnin rastgeleliğini ayarla',
+    'modelSettings.penalty_last_n':
+      'Tekrar cezası için dikkate alınacak token sayısı',
+    'modelSettings.penalty_repeat': 'Token dizilerinin tekrarını kontrol et',
+    'modelSettings.penalty_freq': 'Tekrar alfa frekans cezası',
+    'modelSettings.penalty_present': 'Tekrar alfa varlık cezası',
+    'modelSettings.penalize_nl': 'Yeni satır tokenlerine tekrar cezası uygula',
+    'modelSettings.mirostat':
+      'Perpleksite kontrolü için Mirostat örneklemeyi etkinleştir',
+    'modelSettings.mirostat_tau': 'Mirostat hedef entropi (tau)',
+    'modelSettings.mirostat_eta': 'Mirostat öğrenme oranı (eta)',
+    'modelSettings.dry_multiplier': 'DRY tekrar cezası çarpanı',
+    'modelSettings.dry_base': 'DRY tekrar cezası taban değeri',
+    'modelSettings.dry_allowed_length':
+      'Üstel ceza öncesi maksimum izin verilen uzunluk',
+    'modelSettings.dry_penalty_last_n': 'Tekrarlar için taranacak token sayısı',
+    'modelSettings.dry_sequence_breakers': 'DRY örnekleme için dizi kesiciler',
+    'modelSettings.ignore_eos':
+      'Akış sonu tokenini yoksay ve üretmeye devam et',
+    'modelSettings.logit_bias': 'Belirli tokenlerin olasılığını değiştir',
+    'modelSettings.seed': 'Rastgele sayı üreteci tohumu',
   },
   uk: {
     attachmentButtonAccessibilityLabel: 'Надіслати медіа',
@@ -510,7 +813,7 @@ export const l10n = {
     networkError: 'Ошибка сети. Пожалуйста, попробуйте снова.',
     goToModels: 'Перейти к моделям',
     readyToChat: 'Готовы к общению? Загрузите последний используемый модель.',
-    pleaseLoadModel: 'Пожалуйста, загрузите модель, чтобы начать общение.',
+    pleaseLoadModel: 'Завантажте модель для спілкування.',
     shortMemoryWarning: 'Предупреждение о памяти',
     memoryWarning:
       'Предупреждение: Размер модели близок или превышает общую память вашего устройства ({{totalMemory}}). Это может привести к непредвиденным поведением, таким как медленная производительность или нестабильность системы.',
@@ -565,11 +868,57 @@ export const l10n = {
     unknownGroup: 'Невідомо',
     menuTitleHf: 'Моделі Hugging Face',
     menuTitleDownloaded: 'Завантажені моделі',
-    menuTitleGrouped: 'Групові моделі',
+    menuTitleGrouped: 'Групувати за типом моделі',
     menuTitleReset: 'Скинути список моделей',
     iOSBackgroundDownload: 'Фонове завантаження',
     iOSBackgroundDownloadDescription:
       'Дозволити завантаження у фоновому режимі (це буде повільніше).',
+    availableToUse: 'Готовий до Використання',
+    availableToDownload: 'Доступний для Завантаження',
+    useAddButtonForMore: 'Використовуйте кнопку + для пошуку моделей',
+    'modelSettings.grammar':
+      'Встановити граматику для вибірки на основі граматики',
+    'modelSettings.stop':
+      'Вказати стоп-рядки, які не будуть включені в завершення',
+    'modelSettings.n_predict':
+      'Максимальна кількість токенів для передбачення при генерації тексту',
+    'modelSettings.n_probs':
+      'Кількість ймовірностей найкращих токенів для повернення на токен',
+    'modelSettings.top_k':
+      'Обмежити вибір токенів K найбільш ймовірними токенами',
+    'modelSettings.top_p':
+      'Обмежити вибір токенів тими, у яких кумулятивна ймовірність вище порогу P',
+    'modelSettings.min_p':
+      'Мінімальна ймовірність для токена відносно найбільш ймовірного токена',
+    'modelSettings.xtc_probability': 'Шанс видалення токена через семплер XTC',
+    'modelSettings.xtc_threshold':
+      'Мінімальний поріг ймовірності для видалення токенів через XTC',
+    'modelSettings.typical_p': 'Параметр для локально типової вибірки',
+    'modelSettings.temperature': 'Налаштувати випадковість генерованого тексту',
+    'modelSettings.penalty_last_n':
+      'Кількість токенів для врахування при штрафі за повторення',
+    'modelSettings.penalty_repeat':
+      'Контролювати повторення послідовностей токенів',
+    'modelSettings.penalty_freq': 'Штраф за частоту повторення альфа',
+    'modelSettings.penalty_present': 'Штраф за присутність повторення альфа',
+    'modelSettings.penalize_nl':
+      'Застосувати штраф за повторення до токенів нового рядка',
+    'modelSettings.mirostat':
+      'Увімкнути вибірку Mirostat для контролю перплексії',
+    'modelSettings.mirostat_tau': 'Цільова ентропія Mirostat (tau)',
+    'modelSettings.mirostat_eta': 'Швидкість навчання Mirostat (eta)',
+    'modelSettings.dry_multiplier': 'Множник штрафу за повторення DRY',
+    'modelSettings.dry_base': 'Базове значення штрафу за повторення DRY',
+    'modelSettings.dry_allowed_length':
+      'Максимальна допустима довжина перед експоненційним штрафом',
+    'modelSettings.dry_penalty_last_n':
+      'Кількість токенів для сканування на повторення',
+    'modelSettings.dry_sequence_breakers':
+      'Переривники послідовності для вибірки DRY',
+    'modelSettings.ignore_eos':
+      'Ігнорувати токен кінця потоку і продовжувати генерацію',
+    'modelSettings.logit_bias': 'Змінити ймовірність певних токенів',
+    'modelSettings.seed': 'Зерно генератора випадкових чисел',
   },
   ca: {
     attachmentButtonAccessibilityLabel: 'Enviar multimèdia',
@@ -584,7 +933,7 @@ export const l10n = {
     networkError: 'Error de xarxa. Torneu-ho a intentar.',
     goToModels: 'Anar a Models',
     readyToChat: "Preparat per xatejar? Carregueu l'últim model utilitzat.",
-    pleaseLoadModel: 'Si us plau, carregueu un model per començar a xatejar.',
+    pleaseLoadModel: 'Carregueu un model per xatejar.',
     shortMemoryWarning: 'Advertència de memòria',
     memoryWarning:
       'Advertència: La mida del model està prop o supera la memòria total del dispositiu ({{totalMemory}}). Això pot causar comportaments inesperats com baix rendiment o inestabilitat del sistema.',
@@ -638,10 +987,58 @@ export const l10n = {
     unknownGroup: 'Desconegut',
     menuTitleHf: 'Models Hugging Face',
     menuTitleDownloaded: 'Models Descarregats',
-    menuTitleGrouped: 'Models Agrupats',
+    menuTitleGrouped: 'Agrupar per Tipus de Model',
     menuTitleReset: 'Reiniciar Llista de Models',
     iOSBackgroundDownload: 'Descàrrega en segon pla',
     iOSBackgroundDownloadDescription:
       'Permet que les descàrregues continuïn en segon pla (serà més lent).',
+    availableToUse: 'Llest per Usar',
+    availableToDownload: 'Disponible per Descarregar',
+    useAddButtonForMore: 'Utilitzeu el botó + per trobar més models',
+    'modelSettings.grammar':
+      'Establecer gramática para el muestreo basado en gramática',
+    'modelSettings.stop':
+      'Especificar cadenas de parada que no se incluirán en la completación',
+    'modelSettings.n_predict':
+      'Número máximo de tokens a predecir al generar texto',
+    'modelSettings.n_probs':
+      'Número de probabilidades de tokens superiores a devolver por token',
+    'modelSettings.top_k':
+      'Limitar la selección de tokens a los K tokens más probables',
+    'modelSettings.top_p':
+      'Limitar la selección de tokens a aquellos con probabilidad acumulada superior al umbral P',
+    'modelSettings.min_p':
+      'Probabilidad mínima para un token en relación al token más probable',
+    'modelSettings.xtc_probability':
+      'Probabilidad de eliminación de tokens mediante el muestreador XTC',
+    'modelSettings.xtc_threshold':
+      'Umbral mínimo de probabilidad para la eliminación de tokens mediante XTC',
+    'modelSettings.typical_p': 'Parámetro para el muestreo localmente típico',
+    'modelSettings.temperature': 'Ajustar la aleatoriedad del texto generado',
+    'modelSettings.penalty_last_n':
+      'Número de tokens a considerar para la penalización por repetición',
+    'modelSettings.penalty_repeat':
+      'Controlar la repetición de secuencias de tokens',
+    'modelSettings.penalty_freq': 'Penalización de frecuencia alfa repetida',
+    'modelSettings.penalty_present': 'Penalización de presencia alfa repetida',
+    'modelSettings.penalize_nl':
+      'Aplicar penalización por repetición a tokens de nueva línea',
+    'modelSettings.mirostat':
+      'Habilitar muestreo Mirostat para control de perplejidad',
+    'modelSettings.mirostat_tau': 'Entropía objetivo de Mirostat (tau)',
+    'modelSettings.mirostat_eta': 'Tasa de aprendizado de Mirostat (eta)',
+    'modelSettings.dry_multiplier':
+      'Multiplicador de penalización por repetición DRY',
+    'modelSettings.dry_base': 'Valor base de penalización por repetición DRY',
+    'modelSettings.dry_allowed_length':
+      'Longitud máxima permitida antes de penalización exponencial',
+    'modelSettings.dry_penalty_last_n':
+      'Número de tokens a escanear para repeticiones',
+    'modelSettings.dry_sequence_breakers':
+      'Rompedores de secuencia para muestreo DRY',
+    'modelSettings.ignore_eos':
+      'Ignorar token de fin de secuencia y continuar generando',
+    'modelSettings.logit_bias': 'Modificar probabilidad de tokens específicos',
+    'modelSettings.seed': 'Semilla del generador de números aleatorios',
   },
 };

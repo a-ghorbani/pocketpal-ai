@@ -4,6 +4,8 @@ import {Snackbar} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
 import {DrawerNavigationProp} from '@react-navigation/drawer';
 
+import {useTheme} from '../../../hooks';
+
 import {modelStore} from '../../../store';
 
 import {L10nContext} from '../../../utils';
@@ -23,6 +25,8 @@ export const ModelNotLoadedMessage: React.FC = () => {
     const model = modelStore.lastUsedModel;
     setLastUsedModel(model);
   }, []); // Runs on mount to check if the model is available
+
+  const theme = useTheme();
 
   const loadModelDirectly = () => {
     if (lastUsedModel) {
@@ -52,6 +56,7 @@ export const ModelNotLoadedMessage: React.FC = () => {
       action={{
         label: lastUsedModel ? l10n.load : l10n.goToModels,
         onPress: lastUsedModel ? loadModelDirectly : navigateToModelsPage,
+        labelStyle: {color: theme.colors.inverseSecondary},
       }}>
       {lastUsedModel ? l10n.readyToChat : l10n.pleaseLoadModel}
     </Snackbar>

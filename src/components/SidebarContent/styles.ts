@@ -57,7 +57,6 @@ export const createStyles = (theme: MD3Theme) =>
       paddingLeft: 26,
       paddingBottom: 15,
     },
-    drawerItem: {},
     scrollViewContent: {
       flexGrow: 1,
       minHeight: '100%',

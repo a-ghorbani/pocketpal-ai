@@ -42,12 +42,14 @@ export const ChatTemplatePicker: React.FC<TemplatePickerProps> = ({
     () =>
       StyleSheet.create({
         inputIOS: {
+          flex: 1,
           paddingVertical: 10,
           paddingHorizontal: 10,
           paddingRight: 30,
           color: theme.colors.onSurface,
         },
         inputAndroid: {
+          flex: 1,
           height: 40,
           paddingHorizontal: 10,
           paddingVertical: 8,
@@ -58,8 +60,8 @@ export const ChatTemplatePicker: React.FC<TemplatePickerProps> = ({
           color: theme.colors.secondary,
         },
         iconContainer: {
-          top: 6, // Adjusted to align the icon properly
-          right: 10,
+          justifyContent: 'center',
+          alignItems: 'center',
         },
       }),
     [theme.colors.onSurface, theme.colors.secondary],

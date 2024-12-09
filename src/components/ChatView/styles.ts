@@ -1,4 +1,4 @@
-import {Platform, StyleSheet} from 'react-native';
+import {StyleSheet} from 'react-native';
 import {Theme} from '../../utils/types';
 
 export const createStyles = ({theme}: {theme: Theme}) =>
@@ -6,18 +6,6 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     container: {
       backgroundColor: theme.colors.background,
       flex: 1,
-    },
-    emptyComponentContainer: {
-      alignItems: 'center',
-      marginHorizontal: 24,
-      transform:
-        Platform.OS === 'android'
-          ? [{rotate: '180deg'}]
-          : [{rotateX: '180deg'}],
-    },
-    emptyComponentTitle: {
-      ...theme.fonts.emptyChatPlaceholderTextStyle,
-      textAlign: 'center',
     },
     flatList: {
       backgroundColor: theme.colors.background,

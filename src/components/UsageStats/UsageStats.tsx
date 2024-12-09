@@ -127,7 +127,7 @@ export const UsageStats: React.FC<UsageStatsProps> = ({
             <Path
               d={generatePath()}
               fill="none"
-              stroke={theme.colors.primary}
+              stroke={theme.colors.error}
               strokeWidth={1.5}
             />
           </Svg>

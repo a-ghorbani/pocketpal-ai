@@ -1,4 +1,4 @@
-import {uiStore} from '../UIStore';
+import {UIStore, uiStore} from '../UIStore';
 
 jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
   getColorScheme: jest.fn(() => 'light'),
@@ -9,14 +9,16 @@ describe('UIStore', () => {
     uiStore.setColorScheme('light');
     uiStore.setAutoNavigateToChat(true);
     uiStore.setDisplayMemUsage(false);
-    uiStore.setValue('modelsScreen', 'filters', ['grouped']);
+    uiStore.setValue('modelsScreen', 'filters', []);
   });
 
   it('should initialize with default values', () => {
     expect(uiStore.pageStates).toEqual({
       modelsScreen: {
-        filters: ['grouped'],
-        expandedGroups: {},
+        filters: [],
+        expandedGroups: {
+          [UIStore.GROUP_KEYS.READY_TO_USE]: true,
+        },
       },
     });
     expect(uiStore.autoNavigatetoChat).toBe(true);

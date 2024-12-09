@@ -7,14 +7,12 @@ import {
   LayoutAnimation,
   StatusBar,
   StatusBarProps,
-  Text,
   View,
 } from 'react-native';
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import calendar from 'dayjs/plugin/calendar';
-import {oneOf} from '@flyerhq/react-native-link-preview';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
@@ -46,6 +44,7 @@ import {
   ChatInputTopLevelProps,
   Menu,
   LoadingBubble,
+  PocketPalIconAnimation,
 } from '..';
 
 // Untestable
@@ -136,7 +135,6 @@ export const ChatView = observer(
     customDateHeaderText,
     dateFormat,
     disableImageGallery,
-    emptyState,
     enableAnimation,
     flatListProps,
     inputProps,
@@ -519,22 +517,8 @@ export const ChatView = observer(
     );
 
     const renderListEmptyComponent = React.useCallback(
-      () => (
-        <View style={styles.emptyComponentContainer}>
-          {oneOf(
-            emptyState,
-            <Text style={styles.emptyComponentTitle}>
-              {l10nValue.emptyChatPlaceholder}
-            </Text>,
-          )()}
-        </View>
-      ),
-      [
-        styles.emptyComponentContainer,
-        styles.emptyComponentTitle,
-        emptyState,
-        l10nValue,
-      ],
+      () => <PocketPalIconAnimation testID="empty-state-component" />,
+      [],
     );
 
     const renderListFooterComponent = React.useCallback(

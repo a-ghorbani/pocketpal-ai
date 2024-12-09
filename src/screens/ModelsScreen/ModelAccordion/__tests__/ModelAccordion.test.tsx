@@ -103,29 +103,4 @@ describe('ModelAccordion', () => {
       ]),
     );
   });
-
-  it('applies default theme styles when activeModel does not match group type', () => {
-    const group = {type: 'Model Group blah blah'};
-    modelStore.activeModelId = modelStore.models[0].id;
-    const {getByTestId} = render(
-      <ModelAccordion group={group} expanded={false} onPress={jest.fn()}>
-        <List.Item title="Child Item" />
-      </ModelAccordion>,
-    );
-
-    const accordion = getByTestId(
-      'model-accordion-Model Group blah blah',
-    ).parent;
-
-    expect(accordion?.props.style).toEqual(
-      expect.arrayContaining([
-        expect.arrayContaining([
-          expect.objectContaining({
-            backgroundColor: themeFixtures.lightTheme.colors.surface,
-            borderColor: themeFixtures.lightTheme.colors.surfaceVariant,
-          }),
-        ]),
-      ]),
-    );
-  });
 });

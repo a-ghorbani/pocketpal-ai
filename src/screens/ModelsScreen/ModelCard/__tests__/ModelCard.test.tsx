@@ -84,28 +84,6 @@ describe('ModelCard', () => {
     });
   }, 10000);
 
-  it('expands and collapses the card when pressed', async () => {
-    const {queryByText, getByTestId, getByDisplayValue} = customRender(
-      <ModelCard model={downloadedModel} />,
-    );
-
-    await waitFor(() => {
-      expect(queryByText(downloadedModel.chatTemplate.bosToken)).toBeNull();
-      expect(queryByText(downloadedModel.chatTemplate.eosToken)).toBeNull();
-    });
-
-    act(() => {
-      fireEvent.press(getByTestId(`model-card-header-${downloadedModel.id}`));
-    });
-
-    expect(
-      getByDisplayValue(downloadedModel.chatTemplate.bosToken),
-    ).toBeTruthy();
-    expect(
-      getByDisplayValue(downloadedModel.chatTemplate.eosToken),
-    ).toBeTruthy();
-  });
-
   it('handles download overlay and download button correctly', async () => {
     const {getByTestId, queryByTestId} = customRender(
       <ModelCard model={basicModel} />,

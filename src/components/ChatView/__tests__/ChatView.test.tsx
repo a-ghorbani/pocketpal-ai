@@ -165,7 +165,7 @@ describe('chat', () => {
     const messages = [];
     const onSendPress = jest.fn();
     const onMessagePress = jest.fn();
-    const {getByText} = render(
+    const {getByTestId} = render(
       <ChatView
         messages={messages}
         onMessagePress={onMessagePress}
@@ -174,7 +174,7 @@ describe('chat', () => {
       />,
     );
 
-    const placeholder = getByText(l10n.en.emptyChatPlaceholder);
+    const placeholder = getByTestId('empty-state-component');
     expect(placeholder).toBeDefined();
   });
 

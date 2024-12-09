@@ -48,12 +48,12 @@ export const styles = ({
     },
     dateHeader: {
       //textAlign: 'right',
-      color: theme.colors.outline,
+      color: theme.colors.textSecondary,
       fontSize: 10,
     },
     iconContainer: {
       marginRight: 5,
-      color: theme.colors.outline,
+      color: theme.colors.textSecondary,
       fontSize: 16,
     },
   });

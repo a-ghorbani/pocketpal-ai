@@ -1,5 +1,5 @@
-import React, {useCallback, useState} from 'react';
-import {Alert, Linking, View, Image} from 'react-native';
+import React, {useCallback, useState, useEffect} from 'react';
+import {Alert, Linking, View, Image, ScrollView} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useNavigation} from '@react-navigation/native';
@@ -17,16 +17,19 @@ import {
   Snackbar,
 } from 'react-native-paper';
 
+import {Dialog, Divider} from '../../../components';
+
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
-import {styles} from './styles';
+import {createStyles} from './styles';
 import {ModelSettings} from '../ModelSettings';
 
 import {uiStore, modelStore} from '../../../store';
 
 import {chatTemplates} from '../../../utils/chat';
-import {Model, ModelOrigin, RootDrawerParamList} from '../../../utils/types';
 import {getModelDescription, L10nContext} from '../../../utils';
+import {validateCompletionSettings} from '../../../utils/modelSettings';
+import {Model, ModelOrigin, RootDrawerParamList} from '../../../utils/types';
 
 type ChatScreenNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
 
@@ -39,11 +42,13 @@ interface ModelCardProps {
 export const ModelCard: React.FC<ModelCardProps> = observer(
   ({model, activeModelId, onFocus}) => {
     const l10n = React.useContext(L10nContext);
-    const {colors} = useTheme();
+    const theme = useTheme();
+    const styles = createStyles(theme);
+
     const navigation = useNavigation<ChatScreenNavigationProp>();
 
-    const [expanded, setExpanded] = useState(false);
     const [snackbarVisible, setSnackbarVisible] = useState(false); // Snackbar visibility
+    const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
     const {memoryWarning, shortMemoryWarning} = useMemoryCheck(model);
     const {isOk: storageOk, message: storageNOkMessage} =
@@ -54,26 +59,88 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const isDownloading = modelStore.isDownloading(model.id);
     const isHfModel = model.origin === ModelOrigin.HF;
 
-    const handleSettingsUpdate = useCallback(
-      (name: string, value: any) => {
-        const chatTemplateConfig =
-          name === 'name'
-            ? chatTemplates[value]
-            : {...model.chatTemplate, [name]: value};
-        modelStore.updateModelChatTemplate(model.id, chatTemplateConfig);
-      },
-      [model.id, model.chatTemplate],
+    // temporary settings
+    const [tempChatTemplate, setTempChatTemplate] = useState(
+      model.chatTemplate,
     );
+    const [tempCompletionSettings, setTempCompletionSettings] = useState(
+      model.completionSettings,
+    );
+
+    // Reset temp settings when model changes
+    useEffect(() => {
+      setTempChatTemplate(model.chatTemplate);
+      setTempCompletionSettings(model.completionSettings);
+    }, [model]);
+
+    const handleSettingsUpdate = useCallback((name: string, value: any) => {
+      setTempChatTemplate(prev => {
+        const newTemplate =
+          name === 'name' ? chatTemplates[value] : {...prev, [name]: value};
+        return newTemplate;
+      });
+    }, []);
 
     const handleCompletionSettingsUpdate = useCallback(
       (name: string, value: any) => {
-        modelStore.updateCompletionSettings(model.id, {
-          ...model.completionSettings,
+        setTempCompletionSettings(prev => ({
+          ...prev,
           [name]: value,
-        });
+        }));
       },
-      [model.id, model.completionSettings],
+      [],
     );
+
+    const handleOpenSettings = useCallback(() => {
+      setSettingsModalVisible(true);
+    }, []);
+
+    const handleCloseSettings = useCallback(() => {
+      setSettingsModalVisible(false);
+    }, []);
+
+    const handleSaveSettings = useCallback(() => {
+      const {isValid, errors} = validateCompletionSettings(
+        tempCompletionSettings,
+      );
+
+      if (!isValid) {
+        Alert.alert(
+          'Invalid Values',
+          'Please correct the following:\n' +
+            Object.entries(errors)
+              .map(([key, msg]) => `• ${key}: ${msg}`)
+              .join('\n'),
+          [{text: 'OK'}],
+        );
+        return;
+      }
+
+      // All validations passed, save the settings
+      modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
+      modelStore.updateCompletionSettings(model.id, tempCompletionSettings);
+      handleCloseSettings();
+    }, [
+      model.id,
+      tempChatTemplate,
+      tempCompletionSettings,
+      handleCloseSettings,
+    ]);
+
+    const handleCancelSettings = useCallback(() => {
+      // Reset to store values
+      setTempChatTemplate(model.chatTemplate);
+      setTempCompletionSettings(model.completionSettings);
+      handleCloseSettings();
+    }, [model.chatTemplate, model.completionSettings, handleCloseSettings]);
+
+    const handleReset = useCallback(() => {
+      // Reset to model default values
+      modelStore.resetModelChatTemplate(model.id);
+      modelStore.resetCompletionSettings(model.id);
+      setTempChatTemplate(model.chatTemplate);
+      setTempCompletionSettings(model.completionSettings);
+    }, [model.id, model.chatTemplate, model.completionSettings]);
 
     const handleDelete = useCallback(() => {
       if (model.isDownloaded) {
@@ -92,11 +159,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         );
       }
     }, [model]);
-
-    const handleReset = useCallback(() => {
-      modelStore.resetModelChatTemplate(model.id);
-      modelStore.resetCompletionSettings(model.id);
-    }, [model.id]);
 
     const openHuggingFaceUrl = useCallback(() => {
       if (model.hfUrl) {
@@ -122,9 +184,13 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       );
     }, [model]);
 
+    const handleWarningPress = () => {
+      setSnackbarVisible(true);
+    };
+
     const renderDownloadOverlay = () => (
-      <View style={styles.overlayContainer}>
-        <View style={styles.overlay}>
+      <View>
+        {!storageOk && (
           <HelperText
             testID="storage-error-text"
             type="error"
@@ -133,30 +199,31 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             style={styles.storageErrorText}>
             {storageNOkMessage}
           </HelperText>
-          <View style={styles.overlayButtons}>
-            {storageOk && (
-              <Button
-                testID="download-button"
-                icon="download"
-                mode="text"
-                onPress={() => modelStore.checkSpaceAndDownload(model.id)}
-                disabled={!storageOk}
-                style={styles.downloadButton}>
-                Download
-              </Button>
-            )}
-            {isHfModel && (
-              <Button
-                testID="remove-model-button"
-                icon="delete-outline"
-                mode="text"
-                textColor={colors.error}
-                onPress={handleRemove}
-                style={styles.removeButton}>
-                Remove
-              </Button>
-            )}
-          </View>
+        )}
+        <View style={styles.overlayButtons}>
+          {isHfModel && (
+            <Button
+              testID="remove-model-button"
+              icon="delete-outline"
+              mode="text"
+              textColor={theme.colors.error}
+              onPress={handleRemove}
+              style={styles.removeButton}>
+              Remove
+            </Button>
+          )}
+          {storageOk && (
+            <Button
+              testID="download-button"
+              icon="download"
+              mode="text"
+              onPress={() => modelStore.checkSpaceAndDownload(model.id)}
+              disabled={!storageOk}
+              textColor={theme.colors.secondary}
+              style={styles.downloadButton}>
+              Download
+            </Button>
+          )}
         </View>
       </View>
     );
@@ -171,7 +238,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             <ActivityIndicator
               testID="loading-indicator"
               animating={true}
-              color={colors.primary}
+              color={theme.colors.primary}
             />
           </View>
         );
@@ -199,7 +266,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
           icon={isActiveModel ? 'eject' : 'play-circle-outline'}
-          textColor={colors.onSurface}
           mode="text"
           onPress={handlePress}
           style={styles.actionButton}>
@@ -208,18 +274,31 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       );
     };
 
-    const handleWarningPress = () => {
-      setSnackbarVisible(true);
-    };
+    const dialogActions = [
+      {
+        label: 'Reset',
+        onPress: handleReset,
+      },
+      {
+        label: 'Cancel',
+        onPress: handleCancelSettings,
+      },
+      {
+        label: 'Save Changes',
+        onPress: handleSaveSettings,
+        mode: 'contained' as const,
+      },
+    ];
 
     return (
       <>
         <Card
+          elevation={0}
           style={[
             styles.card,
-            {backgroundColor: colors.surface},
-            isActiveModel && {backgroundColor: colors.tertiaryContainer},
-            {borderColor: colors.primary},
+            {backgroundColor: theme.colors.surface},
+            isActiveModel && {backgroundColor: theme.colors.tertiaryContainer},
+            {borderColor: theme.colors.primary},
           ]}>
           {isHfModel && (
             <Image
@@ -228,51 +307,29 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             />
           )}
           <View style={styles.cardInner}>
-            <TouchableRipple
-              testID={`model-card-header-${model.id}`}
-              onPress={() => setExpanded(!expanded)}
-              disabled={!isDownloaded}
-              style={styles.touchableRipple}>
-              <View style={styles.cardContent}>
-                <View style={styles.headerRow}>
-                  <View style={styles.modelInfoContainer}>
-                    <View style={styles.titleRow}>
-                      <Text
-                        style={[
-                          styles.modelName,
-                          !isDownloaded && styles.disabledText,
-                        ]}>
-                        {model.name}
-                      </Text>
+            <View style={styles.cardContent}>
+              <View style={styles.headerRow}>
+                <View style={styles.modelInfoContainer}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.modelName]}>{model.name}</Text>
 
-                      {model.hfUrl && (
-                        <IconButton
-                          testID="open-huggingface-url"
-                          icon="open-in-new"
-                          size={14}
-                          onPress={openHuggingFaceUrl}
-                          style={styles.hfButton}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.modelDescription,
-                        {color: colors.outline},
-                      ]}>
-                      {getModelDescription(model, isActiveModel, modelStore)}
-                    </Text>
+                    {model.hfUrl && (
+                      <IconButton
+                        testID="open-huggingface-url"
+                        icon="open-in-new"
+                        size={14}
+                        iconColor={theme.colors.onSurfaceVariant}
+                        onPress={openHuggingFaceUrl}
+                        style={styles.hfButton}
+                      />
+                    )}
                   </View>
-                  {isDownloaded && (
-                    <IconButton
-                      icon={expanded ? 'chevron-up' : 'chevron-down'}
-                      size={20}
-                      onPress={() => setExpanded(!expanded)}
-                    />
-                  )}
+                  <Text style={styles.modelDescription}>
+                    {getModelDescription(model, isActiveModel, modelStore)}
+                  </Text>
                 </View>
               </View>
-            </TouchableRipple>
+            </View>
 
             {/* Display warning icon if there's a memory warning */}
             {shortMemoryWarning && isDownloaded && (
@@ -283,7 +340,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 <View style={styles.warningContent}>
                   <IconButton
                     icon="alert-circle-outline"
-                    iconColor={colors.error}
+                    iconColor={theme.colors.error}
                     size={20}
                     style={styles.warningIcon}
                   />
@@ -297,7 +354,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 <ProgressBar
                   testID="download-progress-bar"
                   progress={modelStore.getDownloadProgress(model.id)}
-                  color={colors.tertiary}
+                  color={theme.colors.tertiary}
                   style={styles.progressBar}
                 />
                 {model.downloadSpeed && (
@@ -308,53 +365,47 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               </>
             )}
 
-            <View style={styles.settings}>
-              {expanded && isDownloaded && (
-                <ModelSettings
-                  chatTemplate={model.chatTemplate}
-                  completionSettings={model.completionSettings}
-                  isActive={isActiveModel}
-                  onChange={handleSettingsUpdate}
-                  onCompletionSettingsChange={handleCompletionSettingsUpdate}
-                  onFocus={() => {
-                    onFocus && onFocus();
-                  }}
-                />
-              )}
-            </View>
-
+            <Divider style={styles.divider} />
             {isDownloaded ? (
               <Card.Actions style={styles.actions}>
                 <Button
                   testID="delete-button"
                   icon="delete"
                   mode="text"
-                  textColor={colors.error}
+                  compact
+                  textColor={theme.colors.error}
                   onPress={() => handleDelete()}
                   style={styles.actionButton}>
                   {l10n.delete}
                 </Button>
                 <Button
-                  testID="reset-button"
-                  icon="refresh"
+                  testID="settings-button"
+                  icon="tune"
                   mode="text"
-                  textColor={colors.secondary}
-                  onPress={handleReset}
+                  compact
+                  onPress={handleOpenSettings}
                   style={styles.actionButton}>
-                  {l10n.reset}
+                  Settings
+                  <IconButton
+                    icon="chevron-down"
+                    size={14}
+                    style={styles.settingsChevron}
+                  />
                 </Button>
                 {renderModelLoadButton()}
               </Card.Actions>
             ) : isDownloading ? (
               <Card.Actions style={styles.actions}>
-                <Button
-                  testID="cancel-button"
-                  icon="cancel"
-                  mode="outlined"
-                  onPress={() => modelStore.cancelDownload(model.id)}
-                  style={styles.button}>
-                  {l10n.cancel}
-                </Button>
+                <View style={styles.overlayButtons}>
+                  <Button
+                    testID="cancel-button"
+                    icon="close"
+                    mode="text"
+                    textColor={theme.colors.error}
+                    onPress={() => modelStore.cancelDownload(model.id)}>
+                    {l10n.cancel}
+                  </Button>
+                </View>
               </Card.Actions>
             ) : (
               renderDownloadOverlay()
@@ -375,6 +426,24 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           }}>
           {memoryWarning}
         </Snackbar>
+
+        {/* Settings Modal */}
+        <Dialog
+          dismissable={false}
+          visible={settingsModalVisible}
+          onDismiss={handleCancelSettings}
+          title="Model Settings"
+          actions={dialogActions}>
+          <ScrollView style={styles.dialogScrollArea}>
+            <ModelSettings
+              chatTemplate={tempChatTemplate}
+              completionSettings={tempCompletionSettings}
+              onChange={handleSettingsUpdate}
+              onCompletionSettingsChange={handleCompletionSettingsUpdate}
+              onFocus={onFocus}
+            />
+          </ScrollView>
+        </Dialog>
       </>
     );
   },

@@ -173,7 +173,7 @@ describe('ModelSettings', () => {
   it('toggles advanced settings accordion', async () => {
     const {getByText} = render(<ModelSettings {...mockProps} />);
 
-    const accordion = getByText('Advanced Settings');
+    const accordion = getByText('Generation Settings');
     await act(async () => {
       fireEvent.press(accordion);
     });

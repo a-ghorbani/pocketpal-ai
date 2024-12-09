@@ -48,12 +48,16 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-jest.mock('../src/store', () => ({
-  modelStore: mockModelStore,
-  uiStore: mockUiStore,
-  chatSessionStore: mockChatSessionStore,
-  hfStore: mockHFStore,
-}));
+jest.mock('../src/store', () => {
+  const {UIStore} = require('../__mocks__/stores/uiStore');
+  return {
+    modelStore: mockModelStore,
+    UIStore,
+    uiStore: mockUiStore,
+    chatSessionStore: mockChatSessionStore,
+    hfStore: mockHFStore,
+  };
+});
 
 jest.mock('../src/hooks/useTheme', () => {
   const {themeFixtures} = require('./fixtures/theme');

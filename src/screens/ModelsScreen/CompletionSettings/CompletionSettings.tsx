@@ -1,13 +1,21 @@
-import React, {useState} from 'react';
 import {View} from 'react-native';
+import React, {useState, useEffect} from 'react';
 
-import {CompletionParams} from '@pocketpalai/llama.rn';
 import Slider from '@react-native-community/slider';
-import {Card, Text, Switch, TextInput, Divider, Chip} from 'react-native-paper';
+import {CompletionParams} from '@pocketpalai/llama.rn';
+import {Text, Switch, Chip, SegmentedButtons} from 'react-native-paper';
+
+import {TextInput} from '../../../components';
 
 import {useTheme} from '../../../hooks';
 
-import {styles} from './styles';
+import {createStyles} from './styles';
+
+import {L10nContext} from '../../../utils';
+import {
+  COMPLETION_PARAMS_METADATA,
+  validateNumericField,
+} from '../../../utils/modelSettings';
 
 interface Props {
   settings: CompletionParams;
@@ -17,24 +25,31 @@ interface Props {
 export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
   const [localSliderValues, setLocalSliderValues] = useState({});
   const [newStopWord, setNewStopWord] = useState('');
-  const {colors} = useTheme();
+  const theme = useTheme();
+  const styles = createStyles(theme);
+  const l10n = React.useContext(L10nContext);
+
+  // Reset local values when settings change
+  useEffect(() => {
+    setLocalSliderValues({});
+  }, [settings]);
 
   const handleOnChange = (name, value) => {
     onChange(name, value);
   };
 
-  const renderSlider = (
-    name: string,
-    min: number,
-    max: number,
-    step: number = 0.01,
-  ) => (
+  const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
     <View style={styles.settingItem}>
-      <Text style={styles.settingLabel}>{name}</Text>
+      <Text variant="labelSmall" style={styles.settingLabel}>
+        {name.toUpperCase().replace('_', ' ')}
+      </Text>
+      <Text style={styles.description}>
+        {l10n[COMPLETION_PARAMS_METADATA[name]?.descriptionKey]}
+      </Text>
       <Slider
         style={styles.slider}
-        minimumValue={min}
-        maximumValue={max}
+        minimumValue={COMPLETION_PARAMS_METADATA[name]?.validation.min}
+        maximumValue={COMPLETION_PARAMS_METADATA[name]?.validation.max}
         step={step}
         value={localSliderValues[name] ?? settings[name]}
         onValueChange={value => {
@@ -43,8 +58,8 @@ export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
         onSlidingComplete={value => {
           handleOnChange(name, value);
         }}
-        thumbTintColor={colors.primary}
-        minimumTrackTintColor={colors.primary}
+        thumbTintColor={theme.colors.primary}
+        minimumTrackTintColor={theme.colors.primary}
         //onValueChange={value => onChange(name, value)}
         testID={`${name}-slider`}
       />
@@ -56,31 +71,42 @@ export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
     </View>
   );
 
-  const renderIntegerInput = (name: string, min: number, max: number) => (
-    <View style={styles.settingItem}>
-      {/*<Text style={styles.settingLabel}>{name}</Text>*/}
-      <TextInput
-        value={settings[name].toString()}
-        mode="outlined"
-        label={name}
-        onChangeText={value => {
-          const intValue = parseInt(value, 10);
-          if (!isNaN(intValue)) {
-            onChange(name, Math.max(min, Math.min(max, intValue)));
-          }
-        }}
-        keyboardType="numeric"
-        style={styles.textInput}
-        contentStyle={styles.textInputContent}
-        /*left={<TextInput.Affix text={name} textStyle={styles.inputLabel} />}*/
-        testID={`${name}-input`}
-      />
-    </View>
-  );
+  const renderIntegerInput = ({name}: {name: keyof CompletionParams}) => {
+    const metadata = COMPLETION_PARAMS_METADATA[name];
+    if (!metadata) {
+      return null;
+    }
+
+    const value = settings[name]?.toString() ?? '';
+    const validation = validateNumericField(value, metadata.validation);
+
+    return (
+      <View style={styles.settingItem}>
+        <Text variant="labelSmall" style={styles.settingLabel}>
+          {name.toUpperCase().replace('_', ' ')}
+        </Text>
+        <Text style={styles.description}>{l10n[metadata.descriptionKey]}</Text>
+        <TextInput
+          value={value}
+          onChangeText={_value => onChange(name, _value)}
+          keyboardType="numeric"
+          error={!validation.isValid}
+          helperText={validation.errorMessage}
+        />
+      </View>
+    );
+  };
 
   const renderSwitch = (name: string) => (
     <View style={[styles.settingItem, styles.row]}>
-      <Text style={styles.settingLabel}>{name}</Text>
+      <View>
+        <Text variant="labelSmall" style={styles.settingLabel}>
+          {name.toUpperCase().replace('_', ' ')}
+        </Text>
+        <Text style={styles.description}>
+          {l10n[COMPLETION_PARAMS_METADATA[name]?.descriptionKey]}
+        </Text>
+      </View>
       <Switch
         value={settings[name]}
         onValueChange={value => onChange(name, value)}
@@ -92,7 +118,9 @@ export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
   const renderStopWords = () => (
     <View style={styles.settingItem}>
       <View style={styles.stopLabel}>
-        <Text style={styles.settingLabel}>stop</Text>
+        <Text variant="labelSmall" style={styles.settingLabel}>
+          STOP WORDS
+        </Text>
       </View>
 
       {/* Display existing stop words as chips */}
@@ -106,6 +134,8 @@ export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
               );
               onChange('stop', newStops);
             }}
+            compact
+            textStyle={styles.stopChipText}
             style={styles.stopChip}>
             {word}
           </Chip>
@@ -123,49 +153,68 @@ export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
             setNewStopWord('');
           }
         }}
-        style={styles.textInput}
         testID="stop-input"
       />
     </View>
   );
 
+  const renderMirostatSelector = () => {
+    const descriptionKey = COMPLETION_PARAMS_METADATA.mirostat?.descriptionKey;
+    const description = descriptionKey ? l10n[descriptionKey] : '';
+
+    return (
+      <View style={styles.settingItem}>
+        <Text style={styles.settingLabel}>Mirostat</Text>
+        {description && <Text style={styles.description}>{description}</Text>}
+        <SegmentedButtons
+          value={(settings.mirostat ?? 0).toString()}
+          onValueChange={value => onChange('mirostat', parseInt(value, 10))}
+          density="high"
+          buttons={[
+            {
+              value: '0',
+              label: 'Off',
+            },
+            {
+              value: '1',
+              label: 'v1',
+            },
+            {
+              value: '2',
+              label: 'v2',
+            },
+          ]}
+          style={styles.segmentedButtons}
+        />
+      </View>
+    );
+  };
+
   return (
     <View>
-      <Card.Content>
-        {renderIntegerInput('n_predict', 0, 2048)}
-        {renderSlider('temperature', 0, 1)}
-        {renderSlider('top_k', 1, 128, 1)}
-        {renderSlider('top_p', 0, 1)}
-        {renderSlider('min_p', 0, 1)}
-        {renderSlider('xtc_threshold', 0, 1)}
-        {renderSlider('xtc_probability', 0, 1)}
-        {renderSlider('typical_p', 0, 2)}
-        {renderSlider('penalty_last_n', 0, 256, 1)}
-        {renderSlider('penalty_repeat', 0, 2)}
-        {renderSlider('penalty_freq', 0, 2)}
-        {renderSlider('penalty_present', 0, 2)}
-        <Divider style={styles.divider} />
-        <View style={styles.settingItem}>
-          <Text style={styles.settingLabel}>mirostat</Text>
-          <View style={styles.chipContainer}>
-            {[0, 1, 2].map(value => (
-              <Chip
-                key={value}
-                selected={settings.mirostat === value}
-                onPress={() => onChange('mirostat', value)}
-                style={styles.chip}>
-                {value.toString()}
-              </Chip>
-            ))}
-          </View>
-        </View>
-        {renderSlider('mirostat_tau', 0, 10, 1)}
-        {renderSlider('mirostat_eta', 0, 1)}
-        {renderSwitch('penalize_nl')}
-        {renderIntegerInput('seed', 0, Number.MAX_SAFE_INTEGER)}
-        {renderIntegerInput('n_probs', 0, 100)}
-        {renderStopWords()}
-      </Card.Content>
+      {renderIntegerInput({name: 'n_predict'})}
+      {renderSlider({name: 'temperature'})}
+      {renderSlider({name: 'top_k', step: 1})}
+      {renderSlider({name: 'top_p'})}
+      {renderSlider({name: 'min_p'})}
+      {renderSlider({name: 'xtc_threshold'})}
+      {renderSlider({name: 'xtc_probability'})}
+      {renderSlider({name: 'typical_p'})}
+      {renderSlider({name: 'penalty_last_n', step: 1})}
+      {renderSlider({name: 'penalty_repeat'})}
+      {renderSlider({name: 'penalty_freq'})}
+      {renderSlider({name: 'penalty_present'})}
+      {renderMirostatSelector()}
+      {(settings.mirostat ?? 0) > 0 && (
+        <>
+          {renderSlider({name: 'mirostat_tau', step: 1})}
+          {renderSlider({name: 'mirostat_eta'})}
+        </>
+      )}
+      {renderSwitch('penalize_nl')}
+      {renderIntegerInput({name: 'seed'})}
+      {renderIntegerInput({name: 'n_probs'})}
+      {renderStopWords()}
     </View>
   );
 };

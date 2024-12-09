@@ -53,19 +53,16 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
           <DrawerContentScrollView {...props}>
             <Drawer.Section>
               <Drawer.Item
-                style={styles.drawerItem}
                 label={'Chat'}
                 icon={'comment-text'}
                 onPress={() => props.navigation.navigate('Chat')}
               />
               <Drawer.Item
-                style={styles.drawerItem}
                 label={'Models'}
                 icon={'view-grid'}
                 onPress={() => props.navigation.navigate('Models')}
               />
               <Drawer.Item
-                style={styles.drawerItem}
                 label={'Settings'}
                 icon={'cog'}
                 onPress={() => props.navigation.navigate('Settings')}
@@ -75,15 +72,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             {/* Loop over the session groups and render them */}
             {Object.entries(chatSessionStore.groupedSessions).map(
               ([dateLabel, sessions]) => (
-                <Drawer.Section
-                  key={dateLabel}
-                  //title=""
-                  theme={{
-                    colors: {
-                      onSurfaceVariant: 'green',
-                    },
-                  }}
-                  style={styles.drawerSection}>
+                <Drawer.Section key={dateLabel} style={styles.drawerSection}>
                   <Text variant="bodySmall" style={styles.dateLabel}>
                     {dateLabel}
                   </Text>
@@ -97,7 +86,6 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
                           chatSessionStore.deleteSession(session.id)
                         }>
                         <Drawer.Item
-                          style={styles.drawerItem}
                           active={isActive}
                           key={session.id}
                           label={session.title}

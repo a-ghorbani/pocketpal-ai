@@ -4,11 +4,18 @@ import {makePersistable} from 'mobx-persist-store';
 import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-class UIStore {
+export class UIStore {
+  static readonly GROUP_KEYS = {
+    READY_TO_USE: 'ready_to_use',
+    AVAILABLE_TO_DOWNLOAD: 'available_to_download',
+  } as const;
+
   pageStates = {
     modelsScreen: {
-      filters: ['grouped'],
-      expandedGroups: {},
+      filters: [] as string[],
+      expandedGroups: {
+        [UIStore.GROUP_KEYS.READY_TO_USE]: true,
+      },
     },
   };
 

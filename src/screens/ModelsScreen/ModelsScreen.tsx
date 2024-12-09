@@ -9,20 +9,20 @@ import {
 
 import {toJS} from 'mobx';
 import {v4 as uuidv4} from 'uuid';
-import * as RNFS from '@dr.pogodin/react-native-fs';
 import 'react-native-get-random-values';
 import {observer} from 'mobx-react-lite';
+import * as RNFS from '@dr.pogodin/react-native-fs';
 import DocumentPicker from 'react-native-document-picker';
 
 import {useTheme, useMoveScroll} from '../../hooks';
 
-import {styles} from './styles';
 import {FABGroup} from './FABGroup';
 import {ModelCard} from './ModelCard';
+import {createStyles} from './styles';
 import {HFModelSearch} from './HFModelSearch';
 import {ModelAccordion} from './ModelAccordion';
 
-import {uiStore, modelStore} from '../../store';
+import {uiStore, modelStore, UIStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
@@ -32,7 +32,8 @@ export const ModelsScreen: React.FC = observer(() => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [hfSearchVisible, setHFSearchVisible] = useState(false);
   const [_, setTrigger] = useState<boolean>(false);
-  const {colors} = useTheme();
+  const theme = useTheme();
+  const styles = createStyles(theme);
 
   const filters = uiStore.pageStates.modelsScreen.filters;
   const expandedGroups = uiStore.pageStates.modelsScreen.expandedGroups;
@@ -141,9 +142,26 @@ export const ModelsScreen: React.FC = observer(() => {
     return result;
   }, [models, filters]);
 
+  const getGroupDisplayName = (key: string) => {
+    switch (key) {
+      case UIStore.GROUP_KEYS.READY_TO_USE:
+        return l10n.availableToUse;
+      case UIStore.GROUP_KEYS.AVAILABLE_TO_DOWNLOAD:
+        return l10n.availableToDownload;
+      default:
+        return key;
+    }
+  };
+
   const groupedModels = useMemo(() => {
     if (!filters.includes('grouped')) {
-      return {ungrouped: filteredAndSortedModels};
+      return {
+        [UIStore.GROUP_KEYS.READY_TO_USE]: filteredAndSortedModels.filter(
+          model => model.isDownloaded,
+        ),
+        [UIStore.GROUP_KEYS.AVAILABLE_TO_DOWNLOAD]:
+          filteredAndSortedModels.filter(model => !model.isDownloaded),
+      };
     }
 
     return filteredAndSortedModels.reduce((acc, item) => {
@@ -174,10 +192,19 @@ export const ModelsScreen: React.FC = observer(() => {
 
   const renderGroupHeader = ({item: group}) => {
     const isExpanded = expandedGroups[group.type];
+    const displayName = filters.includes('grouped')
+      ? group.type
+      : getGroupDisplayName(group.type);
+    const description =
+      !filters.includes('grouped') &&
+      group.type === UIStore.GROUP_KEYS.AVAILABLE_TO_DOWNLOAD
+        ? l10n.useAddButtonForMore
+        : undefined;
     return (
       <ModelAccordion
-        group={group}
+        group={{...group, type: displayName}}
         expanded={isExpanded}
+        description={description}
         onPress={() => toggleGroup(group.type)}>
         <FlatList
           data={group.items}
@@ -188,7 +215,6 @@ export const ModelsScreen: React.FC = observer(() => {
               activeModelId={activeModelId}
               onFocus={() => {
                 if (Platform.OS === 'ios') {
-                  // Workaround for multiline input text not avoiding the keyboard.
                   moveScrollToDown();
                 }
               }}
@@ -198,19 +224,6 @@ export const ModelsScreen: React.FC = observer(() => {
       </ModelAccordion>
     );
   };
-
-  const renderItem = ({item}) => (
-    <ModelCard
-      model={item}
-      activeModelId={activeModelId}
-      onFocus={() => {
-        if (Platform.OS === 'ios') {
-          // Workaround for multiline input text not avoiding the keyboard.
-          moveScrollToDown();
-        }
-      }}
-    />
-  );
 
   const flatListModels = Object.keys(groupedModels)
     .map(type => ({
@@ -223,28 +236,22 @@ export const ModelsScreen: React.FC = observer(() => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80}
-      style={[styles.container, {backgroundColor: colors.surface}]}>
+      style={styles.container}>
       <FlatList
         ref={scrollRef}
         testID="flat-list"
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContainer}
-        data={
-          filters.includes('grouped') ? flatListModels : filteredAndSortedModels
-        }
-        keyExtractor={item =>
-          filters.includes('grouped') ? item.type : item.id
-        }
+        data={flatListModels}
+        keyExtractor={item => item.type}
         extraData={activeModelId}
-        renderItem={
-          filters.includes('grouped') ? renderGroupHeader : renderItem
-        }
+        renderItem={renderGroupHeader}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[colors.primary]}
+            colors={[theme.colors.primary]}
           />
         }
       />
