@@ -33,7 +33,7 @@ import ImageView from './ImageView';
 import {createStyles} from './styles';
 
 import {chatSessionStore, modelStore} from '../../store';
-
+import {SelectTextView} from '../SelectTextView';
 import {l10n} from '../../utils/l10n';
 import {MessageType, User} from '../../utils/types';
 import {
@@ -264,13 +264,22 @@ export const ChatView = observer(
       chatSessionStore.exitEditMode();
     }, []);
 
-    const {handleCopy, handleEdit, handleTryAgain, handleTryAgainWith} =
-      useMessageActions({
-        user,
-        messages,
-        handleSendPress: wrappedOnSendPress,
-        setInputText,
-      });
+    const {
+      handleSelectView,
+      handleCopy,
+      handleEdit,
+      handleTryAgain,
+      handleTryAgainWith,
+      isSelectionModalVisible,
+      selectedMessageContent,
+      handleTextSelected,
+      setSelectionModalVisible,
+    } = useMessageActions({
+      user,
+      messages,
+      handleSendPress: wrappedOnSendPress,
+      setInputText,
+    });
 
     const l10nValue = React.useMemo(
       () => ({...l10n[locale], ...unwrap(l10nOverride)}),
@@ -429,6 +438,15 @@ export const ChatView = observer(
           icon: 'content-copy',
           disabled: false,
         },
+        {
+          label: 'Select Text',
+          onPress: () => {
+            handleSelectView(selectedMessage);
+            handleMenuDismiss();
+          },
+          icon: 'select-drag',
+          disabled: false,
+        },
       ];
 
       if (!isAuthor) {
@@ -479,6 +497,7 @@ export const ChatView = observer(
       handleEdit,
       handleMenuDismiss,
       size.width,
+      handleSelectView,
     ]);
 
     const renderMenuItem = React.useCallback(
@@ -755,6 +774,12 @@ export const ChatView = observer(
               images={gallery}
               onRequestClose={handleRequestClose}
               visible={isImageViewVisible}
+            />
+            <SelectTextView
+              visible={isSelectionModalVisible}
+              onClose={() => setSelectionModalVisible(false)}
+              content={selectedMessageContent}
+              onTextSelected={handleTextSelected}
             />
             <Menu
               visible={menuVisible}

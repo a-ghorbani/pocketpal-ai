@@ -1,9 +1,7 @@
-import {useCallback} from 'react';
-
+import {useCallback, useState} from 'react';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 import {chatSessionStore, modelStore} from '../store';
-
 import {MessageType, User} from '../utils/types';
 
 interface UseMessageActionsProps {
@@ -19,10 +17,27 @@ export const useMessageActions = ({
   handleSendPress,
   setInputText,
 }: UseMessageActionsProps) => {
+  const [isSelectionModalVisible, setSelectionModalVisible] = useState(false);
+  const [selectedMessageContent, setSelectedMessageContent] = useState('');
+  const [selectedText, setSelectedText] = useState('');
+
   const handleCopy = useCallback((message: MessageType.Text) => {
     if (message.type === 'text') {
       Clipboard.setString(message.text.trim());
     }
+  }, []);
+
+  const handleSelectView = useCallback((message: MessageType.Text) => {
+    if (message.type === 'text') {
+      setSelectedMessageContent(message.text);
+      setSelectionModalVisible(true);
+    }
+  }, []);
+
+  const handleTextSelected = useCallback((text: string) => {
+    setSelectedText(text);
+    Clipboard.setString(text);
+    setSelectionModalVisible(false);
   }, []);
 
   const handleEdit = useCallback(
@@ -46,7 +61,6 @@ export const useMessageActions = ({
 
       // If it's the user's message, resubmit it
       if (message.author.id === user.id) {
-        // Remove all messages from this point (inclusive)
         const messageText = message.text;
         chatSessionStore.removeMessagesFromId(message.id, true);
         await handleSendPress({text: messageText, type: 'text'});
@@ -87,7 +101,13 @@ export const useMessageActions = ({
   return {
     handleCopy,
     handleEdit,
+    handleSelectView,
     handleTryAgain,
     handleTryAgainWith,
+    isSelectionModalVisible,
+    selectedMessageContent,
+    handleTextSelected,
+    setSelectionModalVisible,
+    selectedText,
   };
 };
