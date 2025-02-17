@@ -25,4 +25,5 @@ export const mockUiStore = {
   setColorScheme: jest.fn(),
   setDisplayMemUsage: jest.fn(),
   setBenchmarkShareDialogPreference: jest.fn(),
+  showError: jest.fn(),
 };

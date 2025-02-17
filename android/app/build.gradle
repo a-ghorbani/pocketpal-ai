@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "kotlin-kapt"
 
 // Add the Google Services plugin dependency
 // This is used exclusively for sending benchmarks (with user consent) to Hugging Face Spaces via Firebase.
@@ -137,6 +138,19 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-appcheck-playintegrity'
     implementation 'com.google.firebase:firebase-appcheck-debug'
+
+    // WorkManager
+    implementation "androidx.work:work-runtime-ktx:2.9.0"
+    
+    // Room
+    def room_version = "2.6.1"
+    kapt "androidx.room:room-compiler:$room_version"
+    implementation "androidx.room:room-runtime:$room_version"
+    implementation "androidx.room:room-ktx:$room_version"
+    
+    // OkHttp
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    
 }
 
 // apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

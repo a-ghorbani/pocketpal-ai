@@ -2133,6 +2133,11 @@
   resolved "https://registry.yarnpkg.com/@jsamr/react-native-li/-/react-native-li-2.3.1.tgz#12a5b5f6e3971cec77b96bee58104eed0ae9314a"
   integrity sha512-Qbo4NEj48SQ4k8FZJHFE2fgZDKTWaUGmVxcIQh3msg5JezLdTMMHuRRDYctfdHI6L0FZGObmEv3haWbIvmol8w==
 
+"@kesha-antonov/react-native-background-downloader@^3.2.6":
+  version "3.2.6"
+  resolved "https://registry.yarnpkg.com/@kesha-antonov/react-native-background-downloader/-/react-native-background-downloader-3.2.6.tgz#87656a9c6e31f9b7b915cd64b6a89e18896e79e8"
+  integrity sha512-J87PHzBh4knWTQNkCNM4LTMZ85RpMW/QSV+0LGdTxz4JmfLXoeg8R6ratbFU0DP/l8K1eL7r4S1Rc8bmqNJ3Ug==
+
 "@native-html/css-processor@1.11.0":
   version "1.11.0"
   resolved "https://registry.yarnpkg.com/@native-html/css-processor/-/css-processor-1.11.0.tgz#27d02e5123b0849f4986d44060ba3f235a15f552"

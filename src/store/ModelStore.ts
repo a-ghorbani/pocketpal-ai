@@ -1,25 +1,21 @@
-import {AppState, AppStateStatus, Platform, NativeModules} from 'react-native';
+import {AppState, AppStateStatus, NativeModules} from 'react-native';
 
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
+import {computed, makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {computed, makeAutoObservable, ObservableMap, runInAction} from 'mobx';
 import {CompletionParams, LlamaContext, initLlama} from '@pocketpalai/llama.rn';
 
 import {fetchModelFilesDetails} from '../api/hf';
 
 import {uiStore} from './UIStore';
 import {chatSessionStore} from './ChatSessionStore';
+import {deepMerge, getSHA256Hash, hfAsModel} from '../utils';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
-import {
-  deepMerge,
-  formatBytes,
-  getSHA256Hash,
-  hasEnoughSpace,
-  hfAsModel,
-} from '../utils';
+
+import {downloadManager} from '../services/downloads';
 
 import {
   getHFDefaultSettings,
@@ -70,7 +66,6 @@ class ModelStore {
     | undefined = undefined;
 
   context: LlamaContext | undefined = undefined;
-  downloadJobs = new ObservableMap(); //new Map();
   useMetal = false; //Platform.OS === 'ios';
 
   lastUsedModelId: string | undefined = undefined;
@@ -105,6 +100,37 @@ class ModelStore {
     });
 
     this.setupAppStateListener();
+
+    // Set up download manager callbacks
+    downloadManager.setCallbacks({
+      onProgress: (modelId, progress) => {
+        const model = this.models.find(m => m.id === modelId);
+        if (model) {
+          runInAction(() => {
+            model.progress = progress.progress;
+            model.downloadSpeed = `${progress.speed} ETA: ${progress.eta}`;
+          });
+        }
+      },
+      onComplete: modelId => {
+        const model = this.models.find(m => m.id === modelId);
+        if (model) {
+          runInAction(() => {
+            model.progress = 100;
+            model.isDownloaded = true;
+          });
+        }
+      },
+      onError: modelId => {
+        const model = this.models.find(m => m.id === modelId);
+        if (model) {
+          runInAction(() => {
+            model.progress = 0;
+            model.isDownloaded = false;
+          });
+        }
+      },
+    });
   }
 
   private async initializeThreadCount() {
@@ -416,7 +442,7 @@ class ModelStore {
     const exists = await RNFS.exists(filePath);
 
     // Don't mark as downloaded if currently downloading
-    if (exists && !this.downloadJobs.has(model.id)) {
+    if (exists && !downloadManager.isDownloading(model.id)) {
       if (!model.isDownloaded) {
         console.log(
           'checkFileExists: marking as downloaded - this should not happen:',
@@ -469,146 +495,19 @@ class ModelStore {
       return;
     }
 
-    const isEnoughSpace = await hasEnoughSpace(model);
-
-    if (isEnoughSpace) {
-      this.downloadModel(model);
-    } else {
-      console.error('Not enough storage space to download the model.');
-    }
-  };
-
-  private downloadModel = async (model: Model) => {
-    if (model.isLocal || model.origin === ModelOrigin.LOCAL) {
-      return;
-    } // Skip downloading for local models
-
-    const downloadDest = await this.getModelFullPath(model);
-    console.log('downloading: downloadDest: ', downloadDest);
-
-    // Ensure directory exists
-    const dirPath = downloadDest.substring(0, downloadDest.lastIndexOf('/'));
     try {
-      await RNFS.mkdir(dirPath);
+      const destinationPath = await this.getModelFullPath(model);
+      await downloadManager.startDownload(model, destinationPath);
     } catch (err) {
-      console.error('Failed to create directory:', err);
-      return;
-    }
-
-    let lastBytesWritten = 0;
-    let lastUpdateTime = Date.now();
-
-    const progressHandler = (data: RNFS.DownloadProgressCallbackResultT) => {
-      if (!this.downloadJobs.has(model.id)) {
-        return;
-      }
-
-      const newProgress = (data.bytesWritten / data.contentLength) * 100;
-
-      // Calculate speed and ETA
-      const currentTime = Date.now();
-      const timeDiff = (currentTime - lastUpdateTime) / 1000 || 1; // '|| 1' to avoid division by zero
-      const bytesDiff = data.bytesWritten - lastBytesWritten;
-      const speedBps = bytesDiff / timeDiff;
-      const speedMBps = (speedBps / (1024 * 1024)).toFixed(2);
-
-      const remainingBytes = data.contentLength - data.bytesWritten;
-      const etaSeconds = speedBps > 0 ? remainingBytes / speedBps : 0;
-      const etaMinutes = Math.ceil(etaSeconds / 60);
-      const etaText =
-        etaSeconds >= 60 ? `${etaMinutes} min` : `${Math.ceil(etaSeconds)} sec`;
-
-      runInAction(() => {
-        model.progress = newProgress;
-        model.downloadSpeed = `${formatBytes(
-          data.bytesWritten,
-          0,
-        )}  (${speedMBps} MB/s) ETA: ${etaText}`;
-      });
-
-      lastBytesWritten = data.bytesWritten;
-      lastUpdateTime = currentTime;
-    };
-
-    const options = {
-      fromUrl: model.downloadUrl,
-      toFile: downloadDest,
-      background: uiStore.iOSBackgroundDownloading,
-      discretionary: false,
-      progressInterval: 800, // Update every 800ms
-      begin: () => {
-        runInAction(() => {
-          model.progress = 0;
-        });
-      },
-      progress: progressHandler,
-    };
-
-    try {
-      const ret = RNFS.downloadFile(options);
-      runInAction(() => {
-        model.isDownloaded = false;
-        model.hash = undefined;
-        this.downloadJobs.set(model.id, ret);
-      });
-
-      const result = await ret.promise;
-      if (result.statusCode === 200) {
-        // We removed hash check for now, as it's not reliable and expensive..
-        // It is done only if file size match fails.
-        // // Calculate hash after successful download
-        // const hash = await getSHA256Hash(downloadDest);
-
-        runInAction(() => {
-          model.progress = 100;
-          //model.hash = hash;
-          model.isDownloaded = true; // Only mark as downloaded here
-        });
-
-        if (Platform.OS === 'ios') {
-          // THIS IS REQUIRED. Without this, iOS might keep the background task running
-          // https://github.com/itinance/react-native-fs/tree/master?tab=readme-ov-file#background-downloads-tutorial-ios
-          RNFS.completeHandlerIOS(ret.jobId);
-        }
-      }
-    } catch (err: any) {
-      if (err.message !== 'Download has been aborted') {
-        console.error('Failed to download:', err);
-      } else {
-        console.log('Download aborted');
-      }
-    } finally {
-      runInAction(() => {
-        this.downloadJobs.delete(model.id);
-        this.refreshDownloadStatuses();
-      });
+      console.error('Failed to start download:', err);
+      uiStore.showError('Failed to start download: ' + (err as Error).message);
     }
   };
 
   cancelDownload = async (modelId: string) => {
-    const job = this.downloadJobs.get(modelId);
+    await downloadManager.cancelDownload(modelId);
     const model = this.models.find(m => m.id === modelId);
-    console.log('cancelling job: ', job);
-    if (job) {
-      RNFS.stopDownload(job.jobId);
-      runInAction(() => {
-        this.downloadJobs.delete(modelId);
-      });
-    }
-    console.log('cancelling model: ', model);
     if (model) {
-      const downloadDest = await this.getModelFullPath(model);
-      try {
-        // Ensure the destination file is deleted, this is specifically important for android
-        await RNFS.unlink(downloadDest);
-        console.log('Destination file deleted successfully');
-      } catch (err: any) {
-        if (err.code !== 'ENOENT') {
-          // Ignore error if file does not exist
-          console.error('Failed to delete destination file:', err);
-        }
-      }
-
       runInAction(() => {
         model.isDownloaded = false;
         model.progress = 0;
@@ -618,10 +517,12 @@ class ModelStore {
   };
 
   get isDownloading() {
-    return (modelId: string) => {
-      return this.downloadJobs.has(modelId);
-    };
+    return (modelId: string) => downloadManager.isDownloading(modelId);
   }
+
+  getDownloadProgress = (modelId: string) => {
+    return downloadManager.getDownloadProgress(modelId);
+  };
 
   /**
    * Removes a model from the models list if it is not downloaded.
@@ -692,11 +593,6 @@ class ModelStore {
         console.error('Failed to delete:', err);
       }
     }
-  };
-
-  getDownloadProgress = (modelId: string) => {
-    const model = this.models.find(m => m.id === modelId);
-    return model ? model.progress / 100 : 0; // Normalize progress to 0-1 for display
   };
 
   initContext = async (model: Model) => {
@@ -1079,7 +975,7 @@ class ModelStore {
     const model = this.models.find(m => m.id === modelId);
 
     // We only update hash if the model is downloaded and not currently being downloaded.
-    if (model?.isDownloaded && !this.downloadJobs.has(modelId)) {
+    if (model?.isDownloaded && !downloadManager.isDownloading(modelId)) {
       // If not forced, we only update hash if it's not already set.
       if (model.hash && !force) {
         return;

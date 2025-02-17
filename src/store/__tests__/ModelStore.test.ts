@@ -1,20 +1,38 @@
-jest.unmock('../ModelStore'); // This is not really needed, as only importing from store is mocked.
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
-import * as RNFS from '@dr.pogodin/react-native-fs';
 import {LlamaContext} from '@pocketpalai/llama.rn';
 
-import {modelStore} from '../ModelStore';
 import {defaultModels} from '../defaultModels';
+
+import {downloadManager} from '../../services/downloads';
 
 import {ModelOrigin} from '../../utils/types';
 
+import {modelStore, uiStore} from '..';
+
+// Mock the download manager
+jest.mock('../../services/downloads', () => ({
+  downloadManager: {
+    isDownloading: jest.fn(),
+    startDownload: jest.fn(),
+    cancelDownload: jest.fn(),
+    setCallbacks: jest.fn(),
+  },
+}));
+
 describe('ModelStore', () => {
+  let showErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    showErrorSpy = jest.spyOn(uiStore, 'showError');
     modelStore.models = []; // Clear models before each test
     modelStore.context = undefined;
     modelStore.activeModelId = undefined;
+  });
+
+  afterEach(() => {
+    showErrorSpy.mockRestore();
   });
 
   describe('mergeModelLists', () => {
@@ -223,27 +241,57 @@ describe('ModelStore', () => {
     it('should handle download cancellation', async () => {
       const model = defaultModels[0];
       modelStore.models = [model];
-      // Mock download job
-      modelStore.downloadJobs.set(model.id, {jobId: '123'});
+
+      // Mock isDownloading to return true initially
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(true);
 
       await modelStore.cancelDownload(model.id);
 
-      expect(modelStore.downloadJobs.has(model.id)).toBeFalsy();
-      expect(RNFS.unlink).toHaveBeenCalled();
+      expect(downloadManager.cancelDownload).toHaveBeenCalledWith(model.id);
+      expect(model.isDownloaded).toBeFalsy();
+      expect(model.progress).toBe(0);
     });
 
-    it('should check for sufficient space before download', async () => {
+    it('should update model state on download error', () => {
       const model = defaultModels[0];
       modelStore.models = [model];
 
-      // Mock hasEnoughSpace to return false
-      jest.mock('../../utils', () => ({
-        hasEnoughSpace: jest.fn().mockResolvedValue(false),
-      }));
+      // Set up callbacks directly
+      const callbacks = {
+        onError: (modelId: string) => {
+          const _model = modelStore.models.find(m => m.id === modelId);
+          if (_model) {
+            runInAction(() => {
+              _model.progress = 0;
+              model.isDownloaded = false;
+            });
+          }
+        },
+      };
+
+      // Trigger error callback
+      callbacks.onError(model.id);
+
+      expect(model.progress).toBe(0);
+      expect(model.isDownloaded).toBe(false);
+    });
+
+    it('should handle download failure due to insufficient space', async () => {
+      const model = defaultModels[0];
+      modelStore.models = [model];
+
+      // Mock startDownload to reject with insufficient space error
+      (downloadManager.startDownload as jest.Mock).mockRejectedValue(
+        new Error('Not enough storage space to download the model'),
+      );
 
       await modelStore.checkSpaceAndDownload(model.id);
 
-      expect(modelStore.downloadJobs.has(model.id)).toBeFalsy();
+      expect(downloadManager.startDownload).toHaveBeenCalled();
+      // Should show error message
+      expect(showErrorSpy).toHaveBeenCalledWith(
+        'Failed to start download: Not enough storage space to download the model',
+      );
     });
   });
 

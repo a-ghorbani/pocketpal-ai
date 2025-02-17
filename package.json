@@ -26,6 +26,7 @@
     "@dr.pogodin/react-native-fs": "^2.30.3",
     "@flyerhq/react-native-link-preview": "^1.6.0",
     "@gorhom/bottom-sheet": "^5.0.6",
+    "@kesha-antonov/react-native-background-downloader": "^3.2.6",
     "@pocketpalai/llama.rn": "^0.4.8-2",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "@react-native-clipboard/clipboard": "^1.15.0",

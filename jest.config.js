@@ -46,5 +46,7 @@ module.exports = {
     '@react-native-firebase/app-check':
       '<rootDir>/__mocks__/external/@react-native-firebase/app-check.js',
     '\\.svg': '<rootDir>/__mocks__/external/react-native-svg.js',
+    '@kesha-antonov/react-native-background-downloader':
+      '<rootDir>/__mocks__/external/@kesha-antonov/react-native-background-downloader.js',
   },
 };

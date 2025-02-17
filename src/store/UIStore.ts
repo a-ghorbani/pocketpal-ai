@@ -33,6 +33,11 @@ export class UIStore {
     shouldShow: true,
   };
 
+  showError(message: string) {
+    // TODO: Implement error display logic (e.g., toast, alert, etc.)
+    console.error(message);
+  }
+
   constructor() {
     makeAutoObservable(this);
     makePersistable(this, {
