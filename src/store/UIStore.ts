@@ -3,6 +3,10 @@ import {Appearance} from 'react-native';
 import {makePersistable} from 'mobx-persist-store';
 import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {l10n} from '../utils/l10n';
+
+// Define available languages type
+export type AvailableLanguage = keyof typeof l10n;
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -24,6 +28,12 @@ export class UIStore {
 
   //colorScheme = useColorScheme();
   colorScheme: 'light' | 'dark' = Appearance.getColorScheme() ?? 'light';
+
+  // Current selected language (default to English)
+  language: AvailableLanguage = 'en';
+
+  // List of supported languages
+  supportedLanguages: AvailableLanguage[] = ['en', 'de', 'ja'];
 
   displayMemUsage = false;
 
@@ -47,11 +57,14 @@ export class UIStore {
         'colorScheme',
         'autoNavigatetoChat',
         'displayMemUsage',
-        'iOSBackgroundDownloading',
         'benchmarkShareDialog',
+        'language',
       ],
       storage: AsyncStorage,
     });
+
+    // backwards compatibility. Removed this from the ui settings screen.
+    this.iOSBackgroundDownloading = true;
   }
 
   setValue<T extends keyof typeof this.pageStates>(
@@ -71,6 +84,12 @@ export class UIStore {
   setColorScheme(colorScheme: 'light' | 'dark') {
     runInAction(() => {
       this.colorScheme = colorScheme;
+    });
+  }
+
+  setLanguage(language: AvailableLanguage) {
+    runInAction(() => {
+      this.language = language;
     });
   }
 

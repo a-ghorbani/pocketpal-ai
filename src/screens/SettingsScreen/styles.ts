@@ -33,6 +33,14 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       marginRight: 16,
     },
+    labelWithIconContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    settingIcon: {
+      marginRight: 8,
+    },
     textLabel: {
       color: theme.colors.onSurface,
     },

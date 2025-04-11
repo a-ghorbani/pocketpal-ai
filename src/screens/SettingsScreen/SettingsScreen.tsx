@@ -14,6 +14,7 @@ import Slider from '@react-native-community/slider';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Switch, Text, Card, Button, Icon, List} from 'react-native-paper';
 
+import {GlobeIcon, MoonIcon, CpuChipIcon} from '../../assets/icons';
 import {TextInput, Menu, Divider} from '../../components';
 
 import {useTheme} from '../../hooks';
@@ -21,9 +22,25 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {modelStore, uiStore} from '../../store';
+import {AvailableLanguage} from '../../store/UIStore';
 
 import {L10nContext} from '../../utils';
 import {CacheType} from '../../utils/types';
+
+// Language display names in their native form
+const languageNames: Record<AvailableLanguage, string> = {
+  en: 'English (EN)',
+  es: 'Español (ES)',
+  de: 'Deutsch (DE)',
+  ja: '日本語 (JA)',
+  ko: '한국어 (KO)',
+  pl: 'Polski (PL)',
+  pt: 'Português (PT)',
+  ru: 'Русский (RU)',
+  tr: 'Türkçe (TR)',
+  uk: 'Українська (UK)',
+  ca: 'Català (CA)',
+};
 
 export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
@@ -37,6 +54,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const inputRef = useRef<RNTextInput>(null);
   const [showKeyCacheMenu, setShowKeyCacheMenu] = useState(false);
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
     y: 0,
@@ -45,8 +63,13 @@ export const SettingsScreen: React.FC = observer(() => {
     x: number;
     y: number;
   }>({x: 0, y: 0});
+  const [languageAnchor, setLanguageAnchor] = useState<{x: number; y: number}>({
+    x: 0,
+    y: 0,
+  });
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
+  const languageButtonRef = useRef<View>(null);
 
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
@@ -71,6 +94,7 @@ export const SettingsScreen: React.FC = observer(() => {
     setIsValidInput(true);
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
+    setShowLanguageMenu(false);
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -115,6 +139,13 @@ export const SettingsScreen: React.FC = observer(() => {
         setShowValueCacheMenu(true);
       },
     );
+  };
+
+  const handleLanguagePress = () => {
+    languageButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+      setLanguageAnchor({x: pageX, y: pageY + height});
+      setShowLanguageMenu(true);
+    });
   };
 
   const isIOS18OrHigher =
@@ -496,15 +527,69 @@ export const SettingsScreen: React.FC = observer(() => {
             <Card.Title title="App Settings" />
             <Card.Content>
               <View style={styles.settingItemContainer}>
+                {/* Language Selection */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <GlobeIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        Language
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.menuContainer}>
+                    <Button
+                      ref={languageButtonRef}
+                      mode="outlined"
+                      onPress={handleLanguagePress}
+                      style={styles.menuButton}
+                      contentStyle={styles.buttonContent}
+                      icon={({size, color}) => (
+                        <Icon source="chevron-down" size={size} color={color} />
+                      )}>
+                      {languageNames[uiStore.language]}
+                    </Button>
+                    <Menu
+                      visible={showLanguageMenu}
+                      onDismiss={() => setShowLanguageMenu(false)}
+                      anchor={languageAnchor}
+                      selectable>
+                      {uiStore.supportedLanguages.map(lang => (
+                        <Menu.Item
+                          key={lang}
+                          style={styles.menu}
+                          label={languageNames[lang]}
+                          selected={lang === uiStore.language}
+                          onPress={() => {
+                            uiStore.setLanguage(lang);
+                            setShowLanguageMenu(false);
+                          }}
+                        />
+                      ))}
+                    </Menu>
+                  </View>
+                </View>
+                <Divider />
+
                 {/* Dark Mode */}
                 <View style={styles.switchContainer}>
                   <View style={styles.textContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      Dark Mode
-                    </Text>
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      Toggle dark mode on or off.
-                    </Text>
+                    <View style={styles.labelWithIconContainer}>
+                      <MoonIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        Dark Mode
+                      </Text>
+                    </View>
                   </View>
                   <Switch
                     testID="dark-mode-switch"
@@ -515,41 +600,23 @@ export const SettingsScreen: React.FC = observer(() => {
                   />
                 </View>
 
-                {/* iOS Background Download */}
-                {Platform.OS === 'ios' && (
-                  <>
-                    <Divider />
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.iOSBackgroundDownload}
-                        </Text>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {l10n.iOSBackgroundDownloadDescription}
-                        </Text>
-                      </View>
-                      <Switch
-                        testID="ios-background-download-switch"
-                        value={uiStore.iOSBackgroundDownloading}
-                        onValueChange={value =>
-                          uiStore.setiOSBackgroundDownloading(value)
-                        }
-                      />
-                    </View>
-                  </>
-                )}
-
                 {/* Display Memory Usage (iOS only) */}
                 {Platform.OS === 'ios' && (
                   <>
                     <Divider />
                     <View style={styles.switchContainer}>
                       <View style={styles.textContainer}>
-                        <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.displayMemoryUsage}
-                        </Text>
+                        <View style={styles.labelWithIconContainer}>
+                          <CpuChipIcon
+                            width={20}
+                            height={20}
+                            style={styles.settingIcon}
+                            stroke={theme.colors.onSurface}
+                          />
+                          <Text variant="titleMedium" style={styles.textLabel}>
+                            {l10n.displayMemoryUsage}
+                          </Text>
+                        </View>
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>

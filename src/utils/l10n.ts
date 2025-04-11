@@ -1645,4 +1645,393 @@ export const l10n = {
       },
     },
   },
+  de: {
+    model: 'Modell',
+    modelSettings: 'Modelleinstellungen',
+    chatGenerationSettings: 'Chat-Generierungseinstellungen',
+    generationSettings: 'Generierungseinstellungen',
+    duplicateChatHistory: 'Chat-Verlauf duplizieren',
+    exportChatSession: 'Chat-Sitzung exportieren',
+    rename: 'Umbenennen',
+    makeChatTemporary: 'Chat temporär machen',
+    attachmentButtonAccessibilityLabel: 'Medien senden',
+    emptyChatPlaceholder: 'Noch keine Nachrichten',
+    fileButtonAccessibilityLabel: 'Datei',
+    inputPlaceholder: 'Nachricht',
+    sendButtonAccessibilityLabel: 'Senden',
+    modelNotLoaded:
+      'Modell nicht geladen. Bitte initialisieren Sie das Modell.',
+    loadingModel: 'Modell wird geladen...',
+    typeYourMessage: 'Schreiben Sie Ihre Nachricht hier',
+    conversationReset: 'Konversation zurückgesetzt!',
+    networkError: 'Netzwerkfehler. Bitte versuchen Sie es erneut.',
+    goToModels: 'Zu Modellen',
+    readyToChat: 'Bereit zum Chatten? Laden Sie das zuletzt verwendete Modell.',
+    pleaseLoadModel: 'Laden Sie ein Modell zum Chatten.',
+    shortMemoryWarning: 'Speicherwarnung',
+    memoryWarning:
+      'Warnung: Die Modellgröße kann den verfügbaren Speicher überschreiten. Dies könnte die Leistung und Stabilität Ihres Geräts beeinträchtigen.',
+    load: 'Laden',
+    cancel: 'Abbrechen',
+    download: 'Herunterladen',
+    offload: 'Entladen',
+    reset: 'Zurücksetzen',
+    saveChanges: 'Änderungen speichern',
+    save: 'Speichern',
+    delete: 'Löschen',
+    dismiss: 'Schließen',
+    replace: 'Ersetzen',
+    keepBoth: 'Beide behalten',
+    fileAlreadyExists: 'Datei existiert bereits',
+    deleteChatTitle: 'Chat löschen',
+    deleteChatMessage: 'Sind Sie sicher, dass Sie diesen Chat löschen möchten?',
+    fileAlreadyExistsMessage:
+      'Eine Datei mit diesem Namen existiert bereits. Was möchten Sie tun?',
+    addLocalModel: 'Lokales Modell hinzufügen',
+    localModel: 'Lokal',
+    hfModel: 'HF',
+    hfFABLabel: 'Von Hugging Face hinzufügen',
+    localFABLabel: 'Lokales Modell hinzufügen',
+    resetFABLabel: 'Zurücksetzen',
+    downloaded: 'Heruntergeladen',
+    grouped: 'Gruppiert',
+    proceedWithReset: 'Mit Zurücksetzen fortfahren',
+    confirmReset: 'Zurücksetzen bestätigen',
+    modelSettingsTitle: 'Modelleinstellungen',
+    autoOffloadLoad: 'Auto Entladen/Laden',
+    autoOffloadLoadDescription: 'Modell entladen, wenn App im Hintergrund ist.',
+    metal: 'Metal',
+    metalDescription: 'Apples hardwarebeschleunigte API.',
+    layersOnGPU: 'Schichten auf GPU: {{gpuLayers}}',
+    contextSize: 'Kontextgröße',
+    contextSizePlaceholder: 'Kontextgröße eingeben (min {{minContextSize}})',
+    invalidContextSizeError:
+      'Bitte geben Sie eine gültige Zahl ein (mindestens {{minContextSize}})',
+    modelReloadNotice:
+      'Modell muss neu geladen werden, damit Änderungen wirksam werden.',
+    autoNavigateToChat: 'Auto-Navigation zum Chat',
+    autoNavigateToChatDescription:
+      'Zum Chat navigieren, wenn das Laden beginnt.',
+    uiSettingsTitle: 'UI-Einstellungen',
+    darkMode: 'Dunkler Modus',
+    darkModeDescription: 'Dunklen Modus ein- oder ausschalten.',
+    displayMemoryUsage: 'Speichernutzung anzeigen',
+    displayMemoryUsageDescription:
+      'Speichernutzung in der Chat-Seite anzeigen.',
+    tooltipGroupByType: 'Nach Modelltyp gruppieren',
+    tooltipDownloaded: 'Nur heruntergeladene anzeigen',
+    tooltipHf: 'HuggingFace-Modelle anzeigen',
+    unknownGroup: 'Unbekannt',
+    menuTitleHf: 'Hugging Face Modelle',
+    menuTitleDownloaded: 'Heruntergeladene Modelle',
+    menuTitleGrouped: 'Nach Modelltyp gruppieren',
+    menuTitleReset: 'Modellliste zurücksetzen',
+    iOSBackgroundDownload: 'Hintergrund-Download',
+    iOSBackgroundDownloadDescription:
+      'Downloads im Hintergrund fortsetzen lassen (langsamer).',
+    availableToUse: 'Bereit zur Verwendung',
+    availableToDownload: 'Verfügbar zum Herunterladen',
+    useAddButtonForMore:
+      'Verwenden Sie die +-Schaltfläche, um weitere Modelle zu finden',
+    // modelSettings
+    'modelSettings.grammar':
+      'Spezifische Grammatikregeln erzwingen, um sicherzustellen, dass der generierte Text einer bestimmten Struktur oder einem Format folgt',
+    'modelSettings.stop':
+      'Bestimmte Phrasen definieren, die die Textgenerierung stoppen',
+    'modelSettings.n_predict':
+      'Festlegen, wie lang die generierte Antwort sein soll (in Tokens)',
+    'modelSettings.n_probs':
+      'Wahrscheinlichkeitswerte für alternative Wörter anzeigen.',
+    'modelSettings.top_k':
+      'Kreativität steuern, indem die Wortauswahl auf die K wahrscheinlichsten Optionen beschränkt wird. Niedrigere Werte führen zu fokussierteren Antworten',
+    'modelSettings.top_p':
+      'Balance zwischen Kreativität und Kohärenz. Höhere Werte (nahe 1,0) erlauben kreativere, aber potenziell weniger fokussierte Antworten',
+    'modelSettings.min_p':
+      'Die Mindestwahrscheinlichkeit für ein Token. Unwahrscheinliche Wörter herausfiltern, um unsinnige oder kontextfremde Antworten zu reduzieren',
+    'modelSettings.temperature':
+      'Kreativität vs. Vorhersehbarkeit steuern. Höhere Werte machen Antworten kreativer, aber weniger fokussiert',
+    'modelSettings.penalty_last_n':
+      'Wie weit zurück auf Wiederholung geprüft werden soll. Größere Werte helfen, langfristige Wiederholungen zu verhindern',
+    'modelSettings.penalty_repeat':
+      'Wortwiederholungen vermeiden. Höhere Werte führen zu vielfältigerer Sprache',
+    'modelSettings.penalty_freq':
+      'Überverwendete Wörter bestrafen. Höhere Werte fördern einen breiteren Wortschatz',
+    'modelSettings.penalty_present':
+      'Wiederholung von Themen und Ideen reduzieren. Höhere Werte fördern vielfältigere Inhalte',
+    'modelSettings.mirostat':
+      'Erweiterte Steuerung der Antwortkreativität aktivieren. Setzen Sie den Wert auf 1 oder 2 (gleichmäßiger) für intelligente Echtzeitanpassungen von Zufälligkeit und Kohärenz.',
+    'modelSettings.mirostat_tau':
+      'Legen Sie die Zielkreativität für Mirostat fest. Höhere Werte ermöglichen vielfältigere und fantasievollere Antworten, während niedrigere Werte fokussiertere Ausgaben gewährleisten.',
+    'modelSettings.mirostat_eta':
+      'Wie schnell Mirostat die Kreativität anpasst. Höhere Werte bedeuten schnellere Anpassungen',
+    'modelSettings.dry_multiplier':
+      "Stärke der DRY-Funktion (Don't Repeat Yourself). Höhere Werte verhindern Wiederholungen stark",
+    'modelSettings.dry_base':
+      'Basisstrafe für Wiederholungen im DRY-Modus. Höhere Werte sind aggressiver bei der Verhinderung von Wiederholungen',
+    'modelSettings.dry_allowed_length':
+      'Wie viele Wörter sich wiederholen können, bevor die DRY-Strafe greift',
+    'modelSettings.dry_penalty_last_n':
+      'Wie weit zurück nach Wiederholungen im DRY-Modus gesucht wird',
+    'modelSettings.dry_sequence_breakers':
+      'Symbole, die den Wiederholungsprüfer im DRY-Modus zurücksetzen',
+    'modelSettings.ignore_eos':
+      'Weiter generieren, auch wenn das Modell stoppen möchte. Nützlich, um längere Antworten zu erzwingen',
+    'modelSettings.logit_bias':
+      'Beeinflussen, wie wahrscheinlich bestimmte Wörter in der Antwort erscheinen',
+    'modelSettings.seed':
+      'Seed des Zufallszahlengenerators festlegen. Nützlich für reproduzierbare Ergebnisse',
+    'modelSettings.xtc_probability':
+      'Wahrscheinlichkeit für Token-Entfernung über XTC-Sampler festlegen. 0 ist deaktiviert',
+    'modelSettings.xtc_threshold':
+      'Mindestschwellenwert für die Wahrscheinlichkeit von Tokens, die über den XTC-Sampler entfernt werden sollen. (> 0,5 deaktiviert XTC)',
+    'modelSettings.typical_p':
+      'Lokal typisches Sampling mit Parameter p aktivieren. 1,0 ist deaktiviert',
+    about: {
+      screenTitle: 'App-Info',
+      description:
+        'Eine App, die Sprachmodelle direkt auf Ihr Handy bringt. Basiert auf llama.cpp und llama.rn.',
+      supportProject: 'Projekt unterstützen',
+      supportProjectDescription:
+        'Wenn Ihnen PocketPal AI gefällt, unterstützen Sie das Projekt bitte durch:',
+      githubButton: 'Stern auf GitHub',
+      orText: 'oder',
+      orBy: 'oder durch',
+      sponsorButton: 'Sponsor werden',
+      versionCopiedTitle: 'Version kopiert',
+      versionCopiedDescription:
+        'Versionsinformationen wurden in die Zwischenablage kopiert',
+    },
+    feedback: {
+      title: 'Feedback senden',
+      description:
+        'Ihre Meinung zählt! Teilen Sie uns mit, wie PocketPal AI Ihnen hilft und was wir tun können, um es noch nützlicher zu machen.',
+      shareThoughtsButton: 'Ihre Gedanken teilen',
+      useCase: {
+        label: 'Wofür verwenden Sie PocketPal AI?',
+        placeholder: 'z.B. Zusammenfassungen, Rollenspiele usw.',
+      },
+      featureRequests: {
+        label: 'Welche Funktionen würden Sie gerne in Zukunft sehen?',
+        placeholder: 'Teilen Sie Ihre Ideen und Funktionsvorschläge mit',
+      },
+      generalFeedback: {
+        label: 'Allgemeines Feedback',
+        placeholder: 'Teilen Sie gerne weitere Gedanken mit.',
+      },
+      usageFrequency: {
+        label: 'Wie oft nutzen Sie PocketPal AI? (Optional)',
+        options: {
+          daily: 'Täglich',
+          weekly: 'Wöchentlich',
+          monthly: 'Monatlich',
+          rarely: 'Selten',
+        },
+      },
+      email: {
+        label: 'Kontakt-E-Mail (Optional)',
+        placeholder: 'Ihre E-Mail-Adresse',
+      },
+      submit: 'Feedback senden',
+      validation: {
+        required: 'Bitte geben Sie mindestens ein Feedback ein',
+      },
+      success: 'Vielen Dank für Ihr Feedback!',
+      error: {
+        general:
+          'Fehler beim Senden des Feedbacks. Bitte versuchen Sie es erneut.',
+      },
+    },
+  },
+  ja: {
+    model: 'モデル',
+    modelSettings: 'モデル設定',
+    chatGenerationSettings: 'チャット生成設定',
+    generationSettings: '生成設定',
+    duplicateChatHistory: 'チャット履歴を複製',
+    exportChatSession: 'チャットセッションをエクスポート',
+    rename: '名前変更',
+    makeChatTemporary: 'チャットを一時的にする',
+    attachmentButtonAccessibilityLabel: 'メディア送信',
+    emptyChatPlaceholder: 'まだメッセージはありません',
+    fileButtonAccessibilityLabel: 'ファイル',
+    inputPlaceholder: 'メッセージ',
+    sendButtonAccessibilityLabel: '送信',
+    modelNotLoaded:
+      'モデルが読み込まれていません。モデルを初期化してください。',
+    loadingModel: 'モデルを読み込み中...',
+    typeYourMessage: 'メッセージを入力してください',
+    conversationReset: '会話がリセットされました！',
+    networkError: 'ネットワークエラー。もう一度お試しください。',
+    goToModels: 'モデルへ移動',
+    readyToChat:
+      'チャットの準備はできましたか？最後に使用したモデルを読み込みます。',
+    pleaseLoadModel: 'チャットするにはモデルを読み込んでください。',
+    shortMemoryWarning: 'メモリ警告',
+    memoryWarning:
+      '警告：モデルサイズが利用可能なメモリを超える可能性があります。これによりデバイスのパフォーマンスと安定性に影響する可能性があります。',
+    load: '読み込み',
+    cancel: 'キャンセル',
+    download: 'ダウンロード',
+    offload: 'オフロード',
+    reset: 'リセット',
+    saveChanges: '変更を保存',
+    save: '保存',
+    delete: '削除',
+    dismiss: '閉じる',
+    replace: '置き換え',
+    keepBoth: '両方保持',
+    fileAlreadyExists: 'ファイルは既に存在します',
+    deleteChatTitle: 'チャットを削除',
+    deleteChatMessage: 'このチャットを削除してもよろしいですか？',
+    fileAlreadyExistsMessage:
+      'この名前のファイルは既に存在します。どうしますか？',
+    addLocalModel: 'ローカルモデルを追加',
+    localModel: 'ローカル',
+    hfModel: 'HF',
+    hfFABLabel: 'Hugging Faceから追加',
+    localFABLabel: 'ローカルモデルを追加',
+    resetFABLabel: 'リセット',
+    downloaded: 'ダウンロード済み',
+    grouped: 'グループ化',
+    proceedWithReset: 'リセットを続行',
+    confirmReset: 'リセットを確認',
+    modelSettingsTitle: 'モデル設定',
+    autoOffloadLoad: '自動オフロード/ロード',
+    autoOffloadLoadDescription:
+      'アプリがバックグラウンドにあるときにモデルをオフロードします。',
+    metal: 'Metal',
+    metalDescription: 'Appleのハードウェア加速API。',
+    layersOnGPU: 'GPUレイヤー：{{gpuLayers}}',
+    contextSize: 'コンテキストサイズ',
+    contextSizePlaceholder:
+      'コンテキストサイズを入力（最小{{minContextSize}}）',
+    invalidContextSizeError:
+      '有効な数値を入力してください（最小{{minContextSize}}）',
+    modelReloadNotice: '変更を有効にするにはモデルの再読み込みが必要です。',
+    autoNavigateToChat: 'チャットへ自動ナビゲート',
+    autoNavigateToChatDescription:
+      '読み込みが開始されたらチャットへナビゲートします。',
+    uiSettingsTitle: 'UI設定',
+    darkMode: 'ダークモード',
+    darkModeDescription: 'ダークモードの切り替え。',
+    displayMemoryUsage: 'メモリ使用量表示',
+    displayMemoryUsageDescription: 'チャットページにメモリ使用量を表示します。',
+    tooltipGroupByType: 'モデルタイプでグループ化',
+    tooltipDownloaded: 'ダウンロード済みのみ表示',
+    tooltipHf: 'HuggingFaceソースのモデルを表示',
+    unknownGroup: '不明',
+    menuTitleHf: 'Hugging Faceモデル',
+    menuTitleDownloaded: 'ダウンロード済みモデル',
+    menuTitleGrouped: 'モデルタイプでグループ化',
+    menuTitleReset: 'モデルリストをリセット',
+    iOSBackgroundDownload: 'バックグラウンドダウンロード',
+    iOSBackgroundDownloadDescription:
+      'バックグラウンドでのダウンロードを継続できるようにします（速度は遅くなります）。',
+    availableToUse: '使用可能',
+    availableToDownload: 'ダウンロード可能',
+    useAddButtonForMore: '+ ボタンを使用して他のモデルを探す',
+    // modelSettings
+    'modelSettings.grammar':
+      '生成されたテキストが特定の構造や形式に従うように、特定の文法ルールを適用する',
+    'modelSettings.stop': 'テキスト生成を停止する特定のフレーズを定義する',
+    'modelSettings.n_predict': '生成される応答の長さを設定する（トークン単位）',
+    'modelSettings.n_probs': '代替単語の確率スコアを表示します。',
+    'modelSettings.top_k':
+      '最も可能性の高いK個のオプションに単語の選択を制限することで創造性を制御します。値が低いほど応答がより焦点を絞ったものになります',
+    'modelSettings.top_p':
+      '創造性と一貫性のバランスを取ります。高い値（1.0に近い）では、より創造的だが焦点が少ない可能性のある応答を許可します',
+    'modelSettings.min_p':
+      'トークンが考慮される最小確率。非現実的または文脈外の応答を減らすために可能性の低い単語をフィルタリングします',
+    'modelSettings.temperature':
+      '創造性と予測可能性を制御します。値が高いほど応答がより創造的ですが焦点が少なくなります',
+    'modelSettings.penalty_last_n':
+      '繰り返しをチェックする範囲。大きな値は長期的な繰り返しを防ぐのに役立ちます',
+    'modelSettings.penalty_repeat':
+      '単語の繰り返しを抑制します。値が高いほど応答はより多様な言語を使用します',
+    'modelSettings.penalty_freq':
+      '過剰に使用される単語にペナルティを課します。値が高いほどより広い語彙を奨励します',
+    'modelSettings.penalty_present':
+      'テーマやアイデアの繰り返しを減らします。値が高いほどより多様なコンテンツを奨励します',
+    'modelSettings.mirostat':
+      '応答の創造性に対する高度な制御を有効にします。ランダム性と一貫性のスマートなリアルタイム調整のためには1または2（よりスムーズ）に設定してください。',
+    'modelSettings.mirostat_tau':
+      'Mirostatの創造性レベルを設定します。高い値ではより多様で想像力豊かな応答が可能になり、低い値ではより焦点を絞った出力が確保されます。',
+    'modelSettings.mirostat_eta':
+      'Mirostatが創造性を調整する速さ。高い値は調整がより速いことを意味します',
+    'modelSettings.dry_multiplier':
+      "DRY（Don't Repeat Yourself）機能の強さ。高い値は繰り返しを強く防ぎます",
+    'modelSettings.dry_base':
+      'DRYモードでの繰り返しに対する基本ペナルティ。高い値は繰り返しの防止により積極的です',
+    'modelSettings.dry_allowed_length':
+      'DRYペナルティが適用される前に繰り返し可能な単語数',
+    'modelSettings.dry_penalty_last_n': 'DRYモードで繰り返しを探す範囲',
+    'modelSettings.dry_sequence_breakers':
+      'DRYモードで繰り返しチェッカーをリセットするシンボル',
+    'modelSettings.ignore_eos':
+      'モデルが停止しようとしても生成を続けます。より長い応答を強制するのに役立ちます',
+    'modelSettings.logit_bias': '特定の単語が応答に現れる可能性を調整します',
+    'modelSettings.seed':
+      '乱数生成器のシードを設定します。再現可能な結果に役立ちます',
+    'modelSettings.xtc_probability':
+      'XTCサンプラーによるトークン削除の確率を設定します。0は無効',
+    'modelSettings.xtc_threshold':
+      'XTCサンプラーによって削除されるトークンの最小確率閾値を設定します。（> 0.5はXTCを無効にします）',
+    'modelSettings.typical_p':
+      'パラメータpを使用してローカルに典型的なサンプリングを有効にします。1.0は無効',
+    about: {
+      screenTitle: 'アプリ情報',
+      description:
+        '言語モデルを直接あなたのスマートフォンに提供するアプリです。llama.cppとllama.rnを基盤としています。',
+      supportProject: 'プロジェクトをサポート',
+      supportProjectDescription:
+        'PocketPal AIを楽しんでいただけるなら、次の方法でプロジェクトをサポートすることをご検討ください：',
+      githubButton: 'GitHubでスター',
+      orText: 'または',
+      orBy: 'または',
+      sponsorButton: 'スポンサーになる',
+      versionCopiedTitle: 'バージョンをコピーしました',
+      versionCopiedDescription:
+        'バージョン情報がクリップボードにコピーされました',
+    },
+    feedback: {
+      title: 'フィードバックを送信',
+      description:
+        'あなたの声は重要です！PocketPal AIがどのように役立っているか、さらに便利にするために何ができるかをお聞かせください。',
+      shareThoughtsButton: '意見を共有する',
+      useCase: {
+        label: 'PocketPal AIをどのように使用していますか？',
+        placeholder: '例：要約、ロールプレイなど',
+      },
+      featureRequests: {
+        label: '今後見たい機能は何ですか？',
+        placeholder: 'アイデアや機能の提案を共有してください',
+      },
+      generalFeedback: {
+        label: '一般的なフィードバック',
+        placeholder: 'その他の考えがあればぜひ共有してください。',
+      },
+      usageFrequency: {
+        label: 'PocketPal AIをどのくらいの頻度で使用していますか？（任意）',
+        options: {
+          daily: '毎日',
+          weekly: '毎週',
+          monthly: '毎月',
+          rarely: 'ほとんど使わない',
+        },
+      },
+      email: {
+        label: '連絡先メール（任意）',
+        placeholder: 'あなたのメールアドレス',
+      },
+      submit: 'フィードバックを送信',
+      validation: {
+        required: '少なくともいくつかのフィードバックを提供してください',
+      },
+      success: 'フィードバックありがとうございます！',
+      error: {
+        general:
+          'フィードバック送信中にエラーが発生しました。もう一度お試しください。',
+      },
+    },
+  },
 };
