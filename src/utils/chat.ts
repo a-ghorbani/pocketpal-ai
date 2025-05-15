@@ -175,6 +175,17 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addEosToken: false,
     chatTemplate: '',
   },
+  smolVLM: {
+    name: 'smolVLM',
+    addGenerationPrompt: true,
+    systemPrompt:
+      'You are Lookie, an AI assistant that analyzes images through the camera.',
+    bosToken: '<|im_start|>',
+    eosToken: '<|im_end|>',
+    addBosToken: false,
+    addEosToken: false,
+    chatTemplate: '',
+  },
 };
 
 export function getLocalModelDefaultSettings(): {

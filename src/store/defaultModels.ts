@@ -3,7 +3,7 @@ import {chatTemplates} from '../utils/chat';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {Platform} from 'react-native';
 
-export const MODEL_LIST_VERSION = 11;
+export const MODEL_LIST_VERSION = 12;
 
 const iosOnlyModels: Model[] = [];
 
@@ -361,6 +361,83 @@ const crossPlatformModels: Model[] = [
         size: 1820414944,
         pointerSize: 135,
       },
+      canFitInStorage: true,
+    },
+  },
+  // -------- SmolVLM2 --------
+  {
+    id: 'ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    author: 'ggml-org',
+    name: 'SmolVLM2-500M-Video-Instruct (Q8_0)',
+    type: 'SmolVLM',
+    capabilities: ['vision', 'image-analysis'],
+    size: 437000000,
+    params: 500000000, // 500M parameters
+    isDownloaded: false,
+    downloadUrl:
+      'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    hfUrl: 'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF',
+    progress: 0,
+    filename: 'SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    isLocal: false,
+    origin: ModelOrigin.PRESET,
+    modelType: 'vision', // Specify that this is a vision model
+    defaultChatTemplate: chatTemplates.smolVLM,
+    chatTemplate: chatTemplates.smolVLM,
+    defaultCompletionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.7,
+    },
+    completionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.7,
+    },
+    defaultStopWords: ['<|endoftext|>', '<|im_end|>'],
+    stopWords: ['<|endoftext|>', '<|im_end|>'],
+    hfModelFile: {
+      rfilename: 'SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+      url: 'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+      size: 437000000,
+      canFitInStorage: true,
+    },
+  },
+  {
+    id: 'ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    author: 'ggml-org',
+    name: 'mmproj-SmolVLM2-500M-Video-Instruct (Q8_0)',
+    type: 'SmolVLM',
+    capabilities: ['vision', 'projection'],
+    size: 109000000,
+    params: 500000000,
+    isDownloaded: false,
+    downloadUrl:
+      'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    hfUrl: 'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF',
+    progress: 0,
+    filename: 'mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+    isLocal: false,
+    origin: ModelOrigin.PRESET,
+    modelType: 'projection',
+    defaultChatTemplate: chatTemplates.smolVLM,
+    chatTemplate: chatTemplates.smolVLM,
+    defaultCompletionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.7,
+    },
+    completionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.7,
+    },
+    defaultStopWords: ['<|endoftext|>', '<|im_end|>'],
+    stopWords: ['<|endoftext|>', '<|im_end|>'],
+    hfModelFile: {
+      rfilename: 'mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+      url: 'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf',
+      size: 109000000,
       canFitInStorage: true,
     },
   },

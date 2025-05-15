@@ -36,6 +36,7 @@ import {chatSessionStore, modelStore, palStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {calculateChatMessages, unwrap, UserContext} from '../../utils';
+import {PalType} from '../PalsSheets/types';
 
 import {
   Message,
@@ -91,6 +92,8 @@ export interface ChatProps extends ChatTopLevelProps {
    * for example today, yesterday and before. Or you can just return the same
    * date header for any message. */
   customDateHeaderText?: (dateTime: number) => string;
+  /** Custom content to display between the header and chat list */
+  customContent?: React.ReactNode;
   /** Allows you to customize the date format. IMPORTANT: only for the date,
    * do not return time here. @see {@link ChatProps.timeFormat} to customize the time format.
    * @see {@link ChatProps.customDateHeaderText} for more customization. */
@@ -133,6 +136,7 @@ export interface ChatProps extends ChatTopLevelProps {
 /** Entry component, represents the complete chat */
 export const ChatView = observer(
   ({
+    customContent,
     customDateHeaderText,
     dateFormat,
     disableImageGallery,
@@ -218,8 +222,55 @@ export const ChatView = observer(
           const palDefaultModel = modelStore.availableModels.find(
             m => m.id === activePal.defaultModel?.id,
           );
+
           if (palDefaultModel) {
-            modelStore.initContext(palDefaultModel);
+            // Check if this is a Camera Pal that needs a projection model
+            if (activePal.palType === 'camera') {
+              console.log(
+                'Initializing Camera Pal model with projection model',
+              );
+
+              // Find the projection model if it exists
+              const projectionModel = activePal.projectionModel
+                ? modelStore.availableModels.find(
+                    m => m.id === activePal.projectionModel?.id,
+                  )
+                : null;
+
+              if (projectionModel) {
+                console.log('Found projection model:', projectionModel.name);
+                // Get the projection model path
+                modelStore
+                  .getModelFullPath(projectionModel)
+                  .then(projectionModelPath => {
+                    console.log(
+                      'Initializing with projection model path:',
+                      projectionModelPath,
+                    );
+                    // Initialize with both the main model and projection model
+                    modelStore.initContext(
+                      palDefaultModel,
+                      projectionModelPath,
+                    );
+                  })
+                  .catch(error => {
+                    console.error(
+                      'Failed to get projection model path:',
+                      error,
+                    );
+                    // Fall back to initializing without projection model
+                    modelStore.initContext(palDefaultModel);
+                  });
+              } else {
+                console.warn(
+                  'No projection model found for Camera Pal, initializing without it',
+                );
+                modelStore.initContext(palDefaultModel);
+              }
+            } else {
+              // For non-camera pals, initialize normally
+              modelStore.initContext(palDefaultModel);
+            }
           }
         }
       }
@@ -700,6 +751,7 @@ export const ChatView = observer(
             style={styles.container}>
             <View style={styles.chatContainer}>
               <ChatHeader />
+              {customContent}
               {renderChatList()}
               <Animated.View
                 onLayout={onLayoutChatInput}
@@ -730,8 +782,14 @@ export const ChatView = observer(
                     sendButtonVisibilityMode,
                     textInputProps: {
                       ...textInputProps,
-                      value: inputText,
-                      onChangeText: setInputText,
+                      // Only override value and onChangeText if not using promptText
+                      ...(!(
+                        inputProps?.palType === PalType.CAMERA ||
+                        inputProps?.palType === PalType.VIDEO
+                      ) && {
+                        value: inputText,
+                        onChangeText: setInputText,
+                      }),
                     },
                   }}
                 />

@@ -33,6 +33,10 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string/>
+	<key>NSCameraUsageDescription</key>
+	<string>PocketPal needs camera access to analyze images and video</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PocketPal needs microphone access for video recording</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialIcons.ttf</string>

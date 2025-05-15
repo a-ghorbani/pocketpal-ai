@@ -16,6 +16,7 @@ import {CustomBackdrop} from '../Sheet/CustomBackdrop';
 import {getLocalizedModelCapabilities, L10nContext} from '../../utils';
 //import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {CloseIcon} from '../../assets/icons';
+import {PalType} from '../PalsSheets/types';
 
 type Tab = 'models' | 'pals';
 
@@ -203,6 +204,24 @@ export const ChatPalModelPickerSheet = observer(
       [styles, l10n, handleModelSelect],
     );
 
+    const palTypeText = React.useCallback(
+      (palType: PalType): string => {
+        switch (palType) {
+          case PalType.ASSISTANT:
+            return l10n.components.chatPalModelPickerSheet.assistantType;
+          case PalType.ROLEPLAY:
+            return l10n.components.chatPalModelPickerSheet.roleplayType;
+          case PalType.CAMERA:
+            return l10n.components.chatPalModelPickerSheet.cameraType;
+          case PalType.VIDEO:
+            return l10n.components.chatPalModelPickerSheet.videoType;
+          default:
+            return '';
+        }
+      },
+      [l10n.components.chatPalModelPickerSheet],
+    );
+
     const renderPalItem = React.useCallback(
       (pal: (typeof palStore.pals)[0]) => {
         const isActivePal = pal.id === chatSessionStore.activePalId;
@@ -224,18 +243,21 @@ export const ChatPalModelPickerSheet = observer(
                   styles.itemSubtitle,
                   isActivePal && styles.activeItemSubtitle,
                 ]}>
-                {pal.palType === 'assistant'
-                  ? l10n.components.chatPalModelPickerSheet.assistantType
-                  : l10n.components.chatPalModelPickerSheet.roleplayType}
+                {palTypeText(pal.palType)}
               </Text>
             </View>
           </Pressable>
         );
       },
       [
-        styles,
-        l10n.components.chatPalModelPickerSheet.assistantType,
-        l10n.components.chatPalModelPickerSheet.roleplayType,
+        styles.listItem,
+        styles.activeListItem,
+        styles.itemContent,
+        styles.itemTitle,
+        styles.activeItemTitle,
+        styles.itemSubtitle,
+        styles.activeItemSubtitle,
+        palTypeText,
         handlePalSelect,
       ],
     );

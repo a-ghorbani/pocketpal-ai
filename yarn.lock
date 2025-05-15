@@ -2335,10 +2335,10 @@
     rxjs "^7.8.1"
     sql-escape-string "^1.1.0"
 
-"@pocketpalai/llama.rn@0.5.8-1":
-  version "0.5.8-1"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/llama.rn/-/llama.rn-0.5.8-1.tgz#247bf66e1ad0293663a850a40f25a408916e97e4"
-  integrity sha512-bQWe18RPNjjpjjfTfOUEEAUYu54HfnkShzeAqcMD1Vts6JBLCyfQrGmLY2igacLBjXktt9LAKKoC0y051iUo0A==
+"@pocketpalai/llama.rn@0.5.11-vision-0":
+  version "0.5.11-vision-0"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/llama.rn/-/llama.rn-0.5.11-vision-0.tgz#76634155e15d63f141cc3d1659a817817d5f8f18"
+  integrity sha512-gcNoKtvxIF5rrHsgmcq/MEGMvG0ENQN9OBjTwSF7LYzQbxuGgb+KpYPRvWbFublJaY649glKOlXkduNjCPNZDA==
 
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
@@ -7817,6 +7817,11 @@ react-native-vector-icons@^10.1.0:
   dependencies:
     prop-types "^15.7.2"
     yargs "^16.1.1"
+
+react-native-vision-camera@^4.6.4:
+  version "4.6.4"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-4.6.4.tgz#f1c51dda2c5d558ea0ec235e2401abf5efa46875"
+  integrity sha512-d998uTHsGJ9bTlsClgT37RK1sK7ZQekv5y6ylynds3vmdK6YbFQJUoi2cvMrFN4dp9qvSlCjEfwekjMIz3guQA==
 
 react-native@0.76.3:
   version "0.76.3"
