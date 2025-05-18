@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="file" path="models/"/>
+    <!-- only created in debuggable builds, but can be large and exceed
+     25mb cloud backup limit which makes dev testing difficult -->
+    <exclude domain="file" path="BridgeReactNativeDevBundle.js"/>
+    <exclude domain="root" path="code_cache/"/>
+</full-backup-content>
