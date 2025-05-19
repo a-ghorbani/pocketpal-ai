@@ -7,11 +7,16 @@ import {
   TouchableOpacity,
 } from 'react-native';
 
+import Color from 'tinycolor2';
 import {observer} from 'mobx-react';
 import {IconButton, Text} from 'react-native-paper';
 
+import {PalType} from '../PalsSheets/types';
+
+import {ChevronUpIcon, CameraIcon, VideoRecorderIcon} from '../../assets/icons';
+
 import {useTheme} from '../../hooks';
-import Color from 'tinycolor2';
+
 import {createStyles} from './styles';
 
 import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
@@ -27,7 +32,6 @@ import {
   SendButton,
   StopButton,
 } from '..';
-import {ChevronUpIcon} from '../../assets/icons';
 
 export interface ChatInputTopLevelProps {
   /** Whether attachment is uploading. Will replace attachment button with a
@@ -52,11 +56,27 @@ export interface ChatInputTopLevelProps {
   textInputProps?: TextInputProps;
   isPickerVisible?: boolean;
   inputBackgroundColor?: string;
+  /** Type of Pal being used, affects the input rendering */
+  palType?: PalType;
+  /** Camera-specific props */
+  isCameraActive?: boolean;
+  onStartCamera?: () => void;
+  /** For camera input, allows direct editing of the prompt text */
+  promptText?: string;
+  onPromptTextChange?: (text: string) => void;
 }
 
 export interface ChatInputAdditionalProps {
   attachmentButtonProps?: AttachmentButtonAdditionalProps;
   attachmentCircularActivityIndicatorProps?: CircularActivityIndicatorProps;
+  /** Type of Pal being used, affects the input rendering */
+  palType?: PalType;
+  /** Camera-specific props */
+  isCameraActive?: boolean;
+  onStartCamera?: () => void;
+  /** For camera input, allows direct editing of the prompt text */
+  promptText?: string;
+  onPromptTextChange?: (text: string) => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -79,6 +99,11 @@ export const ChatInput = observer(
     textInputProps,
     isPickerVisible,
     inputBackgroundColor,
+    palType,
+    isCameraActive = false,
+    onStartCamera,
+    promptText,
+    onPromptTextChange,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -89,14 +114,23 @@ export const ChatInput = observer(
     const activePalId = chatSessionStore.activePalId;
     const activePal = palStore.pals.find(pal => pal.id === activePalId);
 
-    const hasActiveModel = !!modelStore.activeModelId;
+    const hasActiveModel =
+      palType === PalType.CAMERA
+        ? !!modelStore.context
+        : !!modelStore.activeModelId;
+
     // Use `defaultValue` if provided
     const [text, setText] = React.useState(textInputProps?.defaultValue ?? '');
     const isEditMode = chatSessionStore.isEditMode;
 
     const styles = createStyles({theme, isEditMode});
 
-    const value = textInputProps?.value ?? text;
+    // For camera input, use promptText if provided
+    const value =
+      (palType === PalType.CAMERA || palType === PalType.VIDEO) &&
+      promptText !== undefined
+        ? promptText
+        : textInputProps?.value ?? text;
 
     React.useEffect(() => {
       if (isEditMode) {
@@ -127,8 +161,15 @@ export const ChatInput = observer(
     }, [isPickerVisible, iconRotation]);
 
     const handleChangeText = (newText: string) => {
-      setText(newText);
-      textInputProps?.onChangeText?.(newText);
+      if (
+        (palType === PalType.CAMERA || palType === PalType.VIDEO) &&
+        onPromptTextChange
+      ) {
+        onPromptTextChange(newText);
+      } else {
+        setText(newText);
+        textInputProps?.onChangeText?.(newText);
+      }
     };
 
     const handleSend = () => {
@@ -246,7 +287,13 @@ export const ChatInput = observer(
                   ref={inputRef}
                   multiline
                   key={inputTextColor}
-                  placeholder={l10n.components.chatInput.inputPlaceholder}
+                  placeholder={
+                    palType === PalType.CAMERA
+                      ? l10n.camera.promptPlaceholder
+                      : palType === PalType.VIDEO
+                      ? l10n.video.promptPlaceholder
+                      : l10n.components.chatInput.inputPlaceholder
+                  }
                   placeholderTextColor={inputTextColor}
                   underlineColorAndroid="transparent"
                   {...textInputProps}
@@ -259,21 +306,65 @@ export const ChatInput = observer(
                   ]}
                   onChangeText={handleChangeText}
                   value={value}
+                  editable={
+                    palType === PalType.CAMERA || palType === PalType.VIDEO
+                      ? !isStreaming && !isCameraActive
+                      : textInputProps?.editable !== false
+                  }
                 />
               </View>
-              {isSendButtonVisible ? (
-                <SendButton
-                  key={inputTextColor}
-                  color={inputTextColor}
-                  onPress={handleSend}
-                />
-              ) : null}
-              {isStopVisible && (
-                <StopButton
-                  key={inputTextColor}
-                  color={inputTextColor}
-                  onPress={onStopPress}
-                />
+
+              {/* Render different buttons based on pal type */}
+              {palType === PalType.CAMERA || palType === PalType.VIDEO ? (
+                // Camera/Video pal - show camera button or stop button
+                !isCameraActive && !isStopVisible ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.cameraButton,
+                      {backgroundColor: activePal?.color?.[0]},
+                    ]}
+                    onPress={onStartCamera}>
+                    {palType === PalType.VIDEO ? (
+                      <VideoRecorderIcon
+                        width={20}
+                        height={20}
+                        stroke="white"
+                        strokeWidth={2}
+                      />
+                    ) : (
+                      <CameraIcon
+                        width={20}
+                        height={20}
+                        stroke="white"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <StopButton
+                    key={inputTextColor}
+                    color={inputTextColor}
+                    onPress={onStopPress}
+                  />
+                )
+              ) : (
+                // Standard chat - show send or stop button
+                <>
+                  {isSendButtonVisible ? (
+                    <SendButton
+                      key={inputTextColor}
+                      color={inputTextColor}
+                      onPress={handleSend}
+                    />
+                  ) : null}
+                  {isStopVisible && (
+                    <StopButton
+                      key={inputTextColor}
+                      color={inputTextColor}
+                      onPress={onStopPress}
+                    />
+                  )}
+                </>
               )}
             </View>
           </View>

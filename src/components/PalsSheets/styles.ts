@@ -3,6 +3,32 @@ import {Theme} from '../../utils/types';
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
+    sliderContainer: {
+      marginBottom: 16,
+      paddingHorizontal: 8,
+    },
+    sliderLabel: {
+      ...theme.fonts.bodyMedium,
+      marginBottom: 8,
+    },
+    slider: {
+      width: '100%',
+      height: 40,
+    },
+    sliderLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+      marginTop: -8,
+    },
+    sliderMinLabel: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+    },
+    sliderMaxLabel: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+    },
     scrollviewContainer: {
       padding: theme.spacing.default,
     },
@@ -76,5 +102,36 @@ export const createStyles = (theme: Theme) =>
     },
     resetButton: {
       marginLeft: 8,
+    },
+    // New styles for LookieSheet
+    modelDownloadSection: {
+      gap: 16,
+      marginTop: 8,
+      marginBottom: 16,
+    },
+    modelSectionTitle: {
+      ...theme.fonts.bodyMedium,
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: 8,
+    },
+    modelItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 12,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: theme.borders.default,
+    },
+    modelInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    modelName: {
+      ...theme.fonts.titleSmall,
+      color: theme.colors.onSurface,
+    },
+    modelDescription: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
     },
   });

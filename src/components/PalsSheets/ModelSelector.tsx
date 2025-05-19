@@ -22,6 +22,7 @@ interface ModelSelectorProps {
   inputRef?: (ref: RNTextInput | null) => void;
   onSubmitEditing?: () => void;
   disabled?: boolean;
+  filter?: (model: Model) => boolean;
 }
 
 export const ModelSelector = observer(
@@ -37,6 +38,7 @@ export const ModelSelector = observer(
     inputRef,
     onSubmitEditing,
     disabled,
+    filter,
   }: ModelSelectorProps) => {
     const [menuVisible, setMenuVisible] = React.useState(false);
     const theme = useTheme();
@@ -75,19 +77,21 @@ export const ModelSelector = observer(
               }
             />
           }>
-          {modelStore.availableModels.map(model => (
-            <Menu.Item
-              key={model.id}
-              label={model.name}
-              onPress={() => {
-                onChange(model);
-                setMenuVisible(false);
-                onSubmitEditing?.();
-              }}
-              selectable
-              selected={model.id === value?.id}
-            />
-          ))}
+          {modelStore.availableModels
+            .filter(model => (filter ? filter(model) : true))
+            .map(model => (
+              <Menu.Item
+                key={model.id}
+                label={model.name}
+                onPress={() => {
+                  onChange(model);
+                  setMenuVisible(false);
+                  onSubmitEditing?.();
+                }}
+                selectable
+                selected={model.id === value?.id}
+              />
+            ))}
         </Menu>
       </View>
     );

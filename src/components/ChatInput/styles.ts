@@ -89,4 +89,30 @@ export const createStyles = ({
       flexShrink: 1,
       flexGrow: 1,
     },
+    // Camera-specific styles
+    cameraButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+
+    stopButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
   });

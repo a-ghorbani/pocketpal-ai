@@ -10,10 +10,13 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {computed, makeAutoObservable, runInAction} from 'mobx';
+import {computed, makeAutoObservable, runInAction, toJS} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {LlamaContext, initLlama} from '@pocketpalai/llama.rn';
-import {CompletionParams} from '../utils/completionTypes';
+import {
+  CompletionParams,
+  toApiCompletionParams,
+} from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
 
@@ -39,6 +42,7 @@ import {
 } from '../utils/types';
 
 import {ErrorState, createErrorState} from '../utils/errors';
+import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 class ModelStore {
   models: Model[] = [];
@@ -621,16 +625,25 @@ class ModelStore {
     }
   };
 
-  initContext = async (model: Model) => {
+  initContext = async (model: Model, mmProjPath?: string) => {
     await this.releaseContext();
     const filePath = await this.getModelFullPath(model);
     if (!filePath) {
       throw new Error('Model path is undefined');
     }
+
+    // Check if this is a vision model based on mmProjPath
+    const isVisionModel = mmProjPath ? true : false;
+
+    console.log('Initializing model:', model.name);
+    console.log('mmProjPath :', mmProjPath);
+    console.log('Is vision model:', isVisionModel ? 'Yes' : 'No');
+
     runInAction(() => {
       this.isContextLoading = true;
       this.loadingModel = model;
     });
+
     try {
       const effectiveValues = this.getEffectiveValues();
       const initSettings = {
@@ -643,13 +656,22 @@ class ModelStore {
         cache_type_v: this.cache_type_v,
         n_gpu_layers: this.useMetal ? this.n_gpu_layers : 0,
         no_gpu_devices: !this.useMetal,
+        mmproj_use_gpu: this.useMetal,
       };
+
+      // If we have a projection model path, log it
+      if (mmProjPath) {
+        console.log('Using projection model path:', mmProjPath);
+      }
+
       const ctx = await initLlama(
         {
           model: filePath,
           use_mlock: true,
           ...initSettings,
           use_progress_callback: true,
+          // Add mmproj path if provided
+          mmproj: mmProjPath,
         },
         (_progress: number) => {
           //console.log('progress: ', _progress);
@@ -657,6 +679,25 @@ class ModelStore {
       );
 
       await this.updateModelStopTokens(ctx, model);
+
+      // Initialize multimodal support if mmproj path was provided
+      if (mmProjPath) {
+        try {
+          console.log('Initializing multimodal support...');
+          // Always explicitly call initMultimodal even if we provided mmproj during initLlama
+          const success = await ctx.initMultimodal(mmProjPath);
+          if (!success) {
+            console.error('Failed to initialize multimodal support');
+          } else {
+            console.log('Multimodal support initialized successfully');
+            // Verify that multimodal is now enabled
+            const isEnabled = await ctx.isMultimodalEnabled();
+            console.log('Multimodal enabled status:', isEnabled);
+          }
+        } catch (error) {
+          console.error('Error initializing multimodal support:', error);
+        }
+      }
 
       runInAction(() => {
         this.context = ctx;
@@ -976,6 +1017,148 @@ class ModelStore {
   setIsStreaming(value: boolean) {
     this.isStreaming = value;
   }
+
+  /**
+   * Checks if the current context supports multimodal input
+   * @returns Promise<boolean> - True if multimodal is enabled, false otherwise
+   */
+  isMultimodalEnabled = async (): Promise<boolean> => {
+    if (!this.context) {
+      console.log('isMultimodalEnabled: No context available');
+      return false;
+    }
+
+    try {
+      const isEnabled = await this.context.isMultimodalEnabled();
+      console.log('isMultimodalEnabled check result:', isEnabled);
+
+      // If not enabled but we have an active model that should support multimodal,
+      // log additional information for debugging
+      if (!isEnabled && this.activeModel) {
+        console.log('Active model:', this.activeModel.name);
+        // Models don't have palType directly, but we can log other relevant info
+        console.log('Model ID:', this.activeModel.id);
+      }
+
+      return isEnabled;
+    } catch (error) {
+      console.error('Error checking multimodal capability:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Starts a completion with an image
+   * @param params - Completion parameters including image_path
+   * @returns Promise<void>
+   */
+  startImageCompletion = async (params: {
+    prompt: string;
+    image_path: string;
+    systemMessage?: string;
+    onToken?: (token: string) => void;
+    onComplete?: (text: string) => void;
+    onError?: (error: Error) => void;
+  }): Promise<void> => {
+    if (!this.context) {
+      throw new Error('No model context available');
+    }
+    console.log('startImageCompletion params: ', params);
+
+    const isMultimodalEnabled = await this.isMultimodalEnabled();
+    if (!isMultimodalEnabled) {
+      throw new Error('Multimodal is not enabled for this model');
+    }
+
+    runInAction(() => {
+      this.inferencing = true;
+      this.isStreaming = false;
+    });
+
+    try {
+      // Prepare the image path - remove file:// prefix if present
+      const imagePath = params.image_path.startsWith('file://')
+        ? Platform.OS === 'ios'
+          ? params.image_path.substring(7) // iOS: remove 'file://'
+          : params.image_path // Android: keep as is
+        : params.image_path;
+
+      // Create a system message
+      const systemMessage = params.systemMessage?.trim()
+        ? {
+            role: 'system',
+            content: params.systemMessage,
+          }
+        : undefined;
+
+      // Create a user message with the image
+      const userMessage = {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: params.prompt,
+          },
+          {
+            type: 'image_url',
+            image_url: {url: imagePath},
+          },
+        ],
+      };
+
+      // Start the completion
+      runInAction(() => {
+        this.isStreaming = true;
+      });
+
+      const completionParams =
+        await chatSessionRepository.getGlobalCompletionSettings();
+      const stopWords = toJS(modelStore.activeModel?.stopWords);
+
+      // Create completion params with app-specific properties
+      const messages = systemMessage
+        ? [systemMessage, userMessage]
+        : [userMessage];
+      const completionParamsWithAppProps = {
+        ...completionParams,
+        messages: messages,
+        stop: stopWords,
+      } as CompletionParams;
+
+      // Strip app-specific properties before passing to llama.rn
+      const cleanCompletionParams = toApiCompletionParams(
+        completionParamsWithAppProps,
+      );
+
+      // Cast to any to allow adding image_path which is supported by the native module
+      // but not included in the TypeScript type definition
+      const completionParamsWithImage = {
+        ...cleanCompletionParams,
+        image_path: imagePath,
+      } as any;
+
+      const result = await this.context.completion(
+        completionParamsWithImage,
+        data => {
+          if (data.token) {
+            params.onToken?.(data.token);
+          }
+        },
+      );
+
+      params.onComplete?.(result.text);
+    } catch (error) {
+      console.error('Error in image completion:', error);
+      params.onError?.(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    } finally {
+      runInAction(() => {
+        this.inferencing = false;
+        this.isStreaming = false;
+      });
+    }
+  };
 
   /**
    * Fetches and updates model file details from HuggingFace.

@@ -319,6 +319,7 @@ export interface Model {
    */
   isLocal: boolean; // this need to be deprecated
   origin: ModelOrigin;
+  modelType?: 'vision' | 'projection'; // Type of model for multimodal support
   defaultChatTemplate: ChatTemplateConfig;
   chatTemplate: ChatTemplateConfig;
   defaultStopWords: CompletionParams['stop'];
