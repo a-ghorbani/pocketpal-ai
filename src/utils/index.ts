@@ -73,6 +73,7 @@ export const initLocale = (locale?: keyof typeof l10n) => {
   const locales: {[key in keyof typeof l10n]: unknown} = {
     en: require('dayjs/locale/en'),
     // es: require('dayjs/locale/es'),
+    ja: require('dayjs/locale/ja'),
     // ko: require('dayjs/locale/ko'),
     // pl: require('dayjs/locale/pl'),
     // pt: require('dayjs/locale/pt'),
@@ -81,8 +82,8 @@ export const initLocale = (locale?: keyof typeof l10n) => {
     // uk: require('dayjs/locale/uk'),
     // ca: require('dayjs/locale/ca'),
     // de: require('dayjs/locale/de'),
-    ja: require('dayjs/locale/ja'),
     zh: require('dayjs/locale/zh'),
+    zh_tw: require('dayjs/locale/zh-tw'),
   };
 
   locale ? locales[locale] : locales.en;
