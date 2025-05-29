@@ -28,12 +28,11 @@ export class UIStore {
 
   //colorScheme = useColorScheme();
   colorScheme: 'light' | 'dark' = Appearance.getColorScheme() ?? 'light';
-
   // Current selected language (default to English)
   _language: AvailableLanguage = 'en';
 
   // List of supported languages
-  supportedLanguages: AvailableLanguage[] = ['en', 'ja', 'zh'];
+  supportedLanguages: AvailableLanguage[] = ['en', 'fr', 'ja', 'zh'];
 
   displayMemUsage = false;
 
