@@ -10,6 +10,7 @@ import RenderHtml, {
 
 import {useTheme} from '../../hooks';
 import {ThinkingBubble} from '../ThinkingBubble';
+import {CodeBlockHeader} from '../CodeBlockHeader';
 
 import {createTagsStyles} from './styles';
 
@@ -46,6 +47,26 @@ const ThinkingRenderer = ({TDefaultRenderer, ...props}: any) => {
   );
 };
 
+const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
+  const isCodeBlock = props?.tnode?.parent?.tagName === 'pre';
+
+  // if not code block, use the default renderer
+  if (!isCodeBlock) {
+    return <TDefaultRenderer {...props} />;
+  }
+
+  const language =
+    props.tnode?.domNode?.attribs?.class?.replace('language-', '') || 'code';
+  const content = props.tnode?.domNode?.children?.[0]?.data || '';
+
+  return (
+    <View>
+      <CodeBlockHeader language={language} content={content} />
+      <TDefaultRenderer {...props} />
+    </View>
+  );
+};
+
 export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
   ({markdownText, maxMessageWidth, selectable = false}) => {
     const _maxWidth = maxMessageWidth;
@@ -76,6 +97,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         think: (props: any) => ThinkingRenderer(props),
         thought: (props: any) => ThinkingRenderer(props),
         thinking: (props: any) => ThinkingRenderer(props),
+        code: (props: any) => CodeRenderer(props),
       }),
       [],
     );
