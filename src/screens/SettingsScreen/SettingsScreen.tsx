@@ -42,7 +42,8 @@ const languageNames: Record<AvailableLanguage, string> = {
   //tr: 'Türkçe (TR)',
   //uk: 'Українська (UK)',
   //ca: 'Català (CA)',
-  zh: '中文 (ZH)',
+  zh: '简体中文 (ZH_CN)',
+  zh_tw: '繁體中文 (ZH_TW)',
 };
 
 export const SettingsScreen: React.FC = observer(() => {
