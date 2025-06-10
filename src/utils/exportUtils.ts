@@ -147,6 +147,163 @@ export const exportLegacyChatSessions = async (): Promise<void> => {
 };
 
 /**
+ * Export a model to a file
+ * @param modelFullPath The fullpath of the model to export
+ * @param modelFileName The filename of the model to export
+ */
+export const exportModel = async (
+  modelFullPath: string,
+  modelFileName: string,
+): Promise<void> => {
+  const currentL10n = uiStore.l10n;
+  try {
+    const tempFilePath = modelFullPath;
+    const filename = modelFileName;
+
+    // Share the file
+    if (Platform.OS === 'ios') {
+      // On iOS, use react-native-share
+      await Share.open({
+        url: `file://${tempFilePath}`,
+        title: `Share ${filename}`,
+        type: 'application/octet-stream',
+        failOnCancel: false,
+      });
+    } else if (Platform.OS === 'android' && Platform.Version === 29) {
+      // Special handling for Android 10 (API 29)
+      // Use direct sharing from temp directory instead of saving to Downloads
+      try {
+        await Share.open({
+          url: `file://${tempFilePath}`,
+          title: `Share ${filename}`,
+          type: 'application/octet-stream',
+          failOnCancel: false,
+        });
+        return; // Exit early after sharing
+      } catch (error) {
+        console.error('Error sharing on Android 10:', error);
+        throw error;
+      }
+    } else {
+      // On Android (not API 29), handle with storage permissions
+      const permissionGranted = await ensureLegacyStoragePermission();
+      if (!permissionGranted) {
+        // If permission denied, fall back to direct sharing
+        console.log('Model FullPath', tempFilePath);
+        console.log('Model Filename', filename);
+        try {
+          await Share.open({
+            url: `file://${tempFilePath}`,
+            title: `Share ${filename}`,
+            type: 'application/octet-stream',
+            failOnCancel: false,
+          });
+          return; // Exit early after sharing
+        } catch (error) {
+          console.error('Error sharing after permission denied:', error);
+          throw error;
+        }
+      }
+      try {
+        // Save to appropriate directory based on platform
+        const savePath = modelFullPath;
+
+        Alert.alert(currentL10n.components.exportUtils.share, filename, [
+          {
+            text: currentL10n.components.exportUtils.share,
+            onPress: async () => {
+              // Use react-native-share for both platforms
+              try {
+                const options = {
+                  title: `Share ${filename}`,
+                  message: 'PocketPal AI Chat Export',
+                  url: `file://${savePath}`,
+                  type: 'application/octet-stream',
+                  failOnCancel: false,
+                };
+
+                await Share.open(options);
+              } catch (error) {
+                const shareError = error as any;
+                console.error('Error sharing file:', shareError);
+
+                // Fallback to sharing content directly if file sharing fails
+                if (shareError.message !== 'User did not share') {
+                  try {
+                    await Share.open({
+                      title: `Share ${filename}`,
+                      message: filename,
+                    });
+                  } catch (err) {
+                    const fallbackError = err as any;
+                    console.error(
+                      'Error with fallback sharing:',
+                      fallbackError,
+                    );
+                    // Ignore cancellation errors
+                    if (fallbackError.message !== 'User did not share') {
+                      Alert.alert(
+                        currentL10n.components.exportUtils.shareError,
+                        currentL10n.components.exportUtils.shareErrorMessage,
+                        [{text: currentL10n.components.exportUtils.ok}],
+                      );
+                    }
+                  }
+                }
+              }
+            },
+          },
+          {text: currentL10n.components.exportUtils.ok},
+        ]);
+      } catch (error) {
+        console.error('Error saving to Downloads:', error);
+
+        // Fallback to just sharing the file content
+        Alert.alert(
+          currentL10n.components.exportUtils.saveOptions,
+          currentL10n.components.exportUtils.saveOptionsMessage,
+          [
+            {
+              text: currentL10n.components.exportUtils.share,
+              onPress: async () => {
+                // For fallback, share the file content directly
+                try {
+                  await Share.open({
+                    title: `Share ${filename}`,
+                    message: filename,
+                  });
+                } catch (err) {
+                  const shareError = err as any;
+                  console.error('Error sharing content:', shareError);
+                  // Ignore cancellation errors
+                  if (shareError.message !== 'User did not share') {
+                    Alert.alert(
+                      currentL10n.components.exportUtils.shareError,
+                      currentL10n.components.exportUtils
+                        .shareContentErrorMessage,
+                      [{text: currentL10n.components.exportUtils.ok}],
+                    );
+                  }
+                }
+              },
+            },
+            {text: currentL10n.components.exportUtils.cancel},
+          ],
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error exporting model:', error);
+    // Show a more user-friendly error message
+    Alert.alert(
+      currentL10n.components.exportUtils.exportError,
+      currentL10n.components.exportUtils.exportErrorMessage,
+      [{text: currentL10n.components.exportUtils.ok}],
+    );
+    throw error;
+  }
+};
+/**
  * Helper function to share JSON data as a file
  */
 const shareJsonData = async (

@@ -31,6 +31,11 @@ jest.mock('react-native/Libraries/Linking/Linking', () => ({
   getInitialURL: jest.fn().mockImplementation(() => Promise.resolve(null)),
 }));
 
+// Mock react-native-share
+jest.mock('react-native-share', () => ({
+  open: jest.fn().mockResolvedValue({success: true}),
+}));
+
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
