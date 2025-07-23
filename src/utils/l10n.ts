@@ -1037,8 +1037,7 @@ export const l10n = {
       reset: 'リセット',
       save: '保存',
       update: '更新',
-      networkError:
-        'ネットワークエラーが発生しました。もう一度お試しください。',
+      networkError: 'ネットワークエラーが発生しました、もう一度お試しください',
       downloadETA: '残り',
       minutes: '分',
       second: '秒',
@@ -1068,7 +1067,7 @@ export const l10n = {
       metal: 'Metal',
       metalDescription: 'Appleのハードウェア加速API',
       metalRequiresNewerIOS:
-        'Metal加速機能にはiOS 18以上が必要です。この機能を利用するにはデバイスを更新してください。',
+        'Metal加速機能にはiOS 18以上が必要です、この機能を利用するにはデバイスを更新してください',
       layersOnGPU: 'GPUレイヤー：{{gpuLayers}}',
       // Context Size
       contextSize: 'コンテキストサイズ',
@@ -1076,7 +1075,7 @@ export const l10n = {
         'コンテキストサイズを入力（最小{{minContextSize}}）',
       invalidContextSizeError:
         '有効な数値を入力してください（最小{{minContextSize}}）',
-      modelReloadNotice: '変更を適用にするにはモデルの再読み込みが必要です。',
+      modelReloadNotice: '変更を適用にするにはモデルの再読み込みが必要です',
       // Advanced Settings
       advancedSettings: '詳細設定',
       // Batch Size
@@ -1109,11 +1108,11 @@ export const l10n = {
       // Auto Offload/Load
       autoOffloadLoad: '自動オフロード/ロード',
       autoOffloadLoadDescription:
-        'アプリがバックグラウンドにあるときにモデルをオフロードします。',
+        'アプリがバックグラウンドにあるときにモデルをオフロードします',
       // Auto Navigate to Chat
       autoNavigateToChat: 'チャットへ自動移動',
       autoNavigateToChatDescription:
-        '読み込みが開始されたらチャット画面へ移動します。',
+        '読み込みが開始されたらチャット画面へ移動します',
       // App Settings
       appSettings: 'アプリ設定',
       // Language
@@ -1122,49 +1121,49 @@ export const l10n = {
       darkMode: 'ダークモード',
       // Display Memory Usage
       displayMemoryUsage: 'メモリ使用量を表示',
-      displayMemoryUsageDescription: 'チャット画面にメモリ使用量を表示します。',
+      displayMemoryUsageDescription: 'チャット画面にメモリ使用量を表示します',
       // Export/Import Options
       exportOptions: 'エクスポートオプション',
       exportLegacyChats: '旧チャットセッションをエクスポート',
       exportLegacyChatsDescription:
-        '移行に失敗した場合や古いチャットセッションを復元する必要がある場合に使用します。',
+        '移行に失敗した場合や古いチャットセッションを復元する必要がある場合に使用します',
       exportButton: 'エクスポート',
       importChats: 'チャットセッションをインポート',
       importChatsDescription:
-        'JSONファイルからチャットセッションをインポートします。',
+        'JSONファイルからチャットセッションをインポートします',
       importButton: 'インポート',
-      importSuccess: '{{count}}個のチャットセッションをインポートしました。',
+      importSuccess: '{{count}}個のチャットセッションをインポートしました',
       importError:
-        'チャットセッションのインポートに失敗しました。ファイル形式を確認してください。',
+        'チャットセッションのインポートに失敗しました、ファイル形式を確認してください',
       // API Settings
       apiSettingsTitle: 'API設定',
       // Hugging Face Token
       huggingFaceTokenLabel: 'Hugging Faceトークン',
       tokenIsSetDescription:
-        'トークンが設定されています。制限付きモデルへのアクセスに必要です。',
+        'トークンが設定されています、制限付きモデルへのアクセスに必要です',
       setTokenDescription:
-        'Hugging Faceから制限付きモデルにアクセスするためのトークンを設定します。',
+        'Hugging Faceから制限付きモデルにアクセスするためのトークンを設定します',
       setTokenButton: 'トークンを設定',
       useHfTokenLabel: 'HFトークンを使用',
       useHfTokenDescription:
-        'HFトークンを使用して制限付きモデルにアクセスします。',
+        'HFトークンを使用して制限付きモデルにアクセスします',
     },
     memory: {
       shortWarning: 'メモリ警告',
       warning:
-        '警告：モデルサイズが利用可能なメモリを超える可能性があります。デバイスのパフォーマンスと安定性に影響する可能性があります。',
+        '警告：モデルサイズが利用可能なメモリを超える可能性があります、デバイスのパフォーマンスと安定性に影響する可能性があります',
       multimodalWarning:
-        'このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります。',
+        'このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります',
       alerts: {
         memoryWarningTitle: 'メモリ警告',
         memoryWarningMessage:
-          'このモデルは利用可能なメモリを超える可能性があり、不安定になる可能性があります。読み込みを続行しますか？',
+          'このモデルは利用可能なメモリを超える可能性があり、不安定になる可能性があります、読み込みを続行しますか？',
         multimodalWarningTitle: 'デバイス性能警告',
         multimodalWarningMessage:
-          'このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります。読み込みにより不安定になる可能性があります。続行しますか？',
+          'このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります、読み込みにより不安定になる可能性があります、続行しますか？',
         combinedWarningTitle: '性能警告',
         combinedWarningMessage:
-          'このモデルは利用可能なメモリを超える可能性があり、このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります。読み込みにより不安定になる可能性があります。続行しますか？',
+          'このモデルは利用可能なメモリを超える可能性があり、このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります、読み込みにより不安定になる可能性があります、続行しますか？',
         cancel: 'キャンセル',
         continue: '続行',
       },
@@ -1182,7 +1181,7 @@ export const l10n = {
       fileManagement: {
         fileAlreadyExists: 'ファイルが既に存在します',
         fileAlreadyExistsMessage:
-          'この名前のファイルは既に存在します。どうしますか？',
+          'この名前のファイルは既に存在します、どうしますか？',
         replace: '置き換え',
         keepBoth: '両方保持する',
       },
@@ -1206,12 +1205,12 @@ export const l10n = {
         download: 'ダウンロード',
         projectionNeededTitle: '投影モデルが必要です',
         projectionNeededMessage:
-          'このモデルはマルチモーダル機能のために投影モデルが必要です。',
+          'このモデルはマルチモーダル機能のために投影モデルが必要です',
         projectionMissingWarning: '投影モデルが不足しています',
         projectionMissingShort: '投影モデル不足',
         reloadModelTitle: 'モデルを再読み込み',
         reloadModelMessage:
-          '新しい投影モデルを適用するにはモデルを再読み込みする必要があります。今すぐ再読み込みしますか？',
+          '新しい投影モデルを適用するにはモデルを再読み込みする必要があります、今すぐ再読み込みしますか？',
         reload: '再読み込み',
         deleteProjectionTitle: '投影モデルを削除',
         deleteProjectionMessage: 'この投影モデルを削除してもよろしいですか？',
@@ -1234,11 +1233,11 @@ export const l10n = {
           requiresProjectionModel:
             '先に互換性のある投影モデルをダウンロードしてください',
         },
-        cannotDeleteActive: 'この投影モデルは現在アクティブです。',
+        cannotDeleteActive: 'この投影モデルは現在アクティブです',
         cannotDeleteInUse:
           'この投影モデルはダウンロード済みのLLMモデルで使用されています：',
         dependentModels: '依存モデル：',
-        visionWillBeDisabled: 'これらのモデルのビジョン機能が無効になります。',
+        visionWillBeDisabled: 'これらのモデルのビジョン機能が無効になります',
       },
       buttons: {
         addFromHuggingFace: 'Hugging Faceから追加',
@@ -1264,15 +1263,14 @@ export const l10n = {
       modelFile: {
         alerts: {
           cannotRemoveTitle: '削除できません',
-          modelPreset: 'このモデルはプリセットです。',
+          modelPreset: 'このモデルはプリセットです',
           downloadedFirst:
-            'モデルがダウンロード済みです。先にファイルを削除してください。',
+            'モデルがダウンロード済みです、先にファイルを削除してください',
           removeTitle: 'モデルを削除',
           removeMessage: 'このモデルをリストから削除してもよろしいですか？',
-          removeError: 'モデルの削除に失敗しました。',
+          removeError: 'モデルの削除に失敗しました',
           alreadyDownloadedTitle: '既にダウンロード済み',
-          alreadyDownloadedMessage:
-            'このモデルは既にダウンロードされています。',
+          alreadyDownloadedMessage: 'このモデルは既にダウンロードされています',
           deleteTitle: 'モデルを削除',
           deleteMessage:
             'このダウンロード済みモデルを削除してもよろしいですか？',
@@ -1282,16 +1280,16 @@ export const l10n = {
         },
         warnings: {
           storage: {
-            message: '十分なストレージ容量がありません。',
+            message: '十分なストレージ容量がありません',
             shortMessage: 'ストレージ容量不足',
           },
           memory: {
             message:
-              'モデルサイズがデバイスの総メモリに近いか超えています。予期しない動作が発生する可能性があります。',
+              'モデルサイズがデバイスの総メモリに近いか超えています、予期しない動作が発生する可能性があります',
           },
           legacy: {
             message:
-              '旧式の量子化形式です - モデルが実行できない可能性があります。',
+              '旧式の量子化形式です - モデルが実行できない可能性があります',
             shortMessage: '旧式の量子化',
           },
           multiple: '{count}件の警告',
@@ -1308,7 +1306,7 @@ export const l10n = {
         modelUpdatedShort: '{{time}}前',
         modelUpdatedJustNowLong: 'たった今更新',
         modelUpdatedJustNowShort: 'たった今',
-        errorOccurred: 'モデルを読み込めませんでした。もう一度お試しください。',
+        errorOccurred: 'モデルを読み込めませんでした、もう一度お試しください',
       },
       modelCard: {
         alerts: {
@@ -1335,9 +1333,9 @@ export const l10n = {
           editButton: '編集',
           dialogTitle: 'チャットテンプレートを編集',
           note1:
-            '注意: テンプレートを変更すると開始トークン、終了トークン、システムプロンプトが変更される可能性があります。',
+            '注意: テンプレートを変更すると開始トークン、終了トークン、システムプロンプトが変更される可能性があります',
           note2:
-            'Nunjucksを使用します。空白の場合はモデルのデフォルトテンプレートを使用します。',
+            'Nunjucksを使用します、空白の場合はモデルのデフォルトテンプレートを使用します',
           placeholder: 'チャットテンプレートをここに入力...',
           closeButton: '閉じる',
         },
@@ -1376,60 +1374,60 @@ export const l10n = {
     },
     completionParams: {
       include_thinking_in_context:
-        'AIの思考/推論部分をモデルに送信するコンテキストに含めます。無効にするとコンテキスト容量を節約できますが、パフォーマンスに影響する可能性があります。',
+        'AIの思考/推論部分をモデルに送信するコンテキストに含めます、無効にするとコンテキスト容量を節約できますが、パフォーマンスに影響する可能性があります',
       jinja:
-        'チャットフォーマットにJinjaテンプレートを使用します。有効にすると、最新のモデルとの互換性を向上させるためにJinjaベースのチャットテンプレート処理を使用します。',
+        'チャットフォーマットにJinjaテンプレートを使用します、有効にすると、最新のモデルとの互換性を向上させるためにJinjaベースのチャットテンプレート処理を使用します',
       grammar:
         '生成テキストが特定の構造や形式に従うよう、文法ルールを適用します',
       stop: 'テキスト生成を停止する特定のフレーズを設定します',
       n_predict: '生成する応答の長さをトークン単位で設定します',
-      n_probs: '代替単語の確率スコアを表示します。',
+      n_probs: '代替単語の確率スコアを表示します',
       top_k:
-        '最も可能性の高いK個の選択肢に単語の選択を限定することで創造性を制御します。値が低いほど応答がより焦点を絞ったものになります',
+        '最も可能性の高いK個の選択肢に単語の選択を限定することで創造性を制御します、値が低いほど応答がより焦点を絞ったものになります',
       top_p:
-        '創造性と一貫性のバランスを調整します。高い値（1.0に近い）ではより創造的ですが、焦点が少ない応答が生成される可能性があります',
+        '創造性と一貫性のバランスを調整します、高い値（1.0に近い）ではより創造的ですが、焦点が少ない応答が生成される可能性があります',
       min_p:
-        'トークンが考慮される最小確率です。確率の低い単語を除外して、不自然または文脈にそぐわない応答を減らします',
+        'トークンが考慮される最小確率です、確率の低い単語を除外して、不自然または文脈にそぐわない応答を減らします',
       temperature:
-        '創造性と予測可能性を制御します。値が高いほど応答がより創造的ですが焦点が少なくなります',
+        '創造性と予測可能性を制御します、値が高いほど応答がより創造的ですが焦点が少なくなります',
       penalty_last_n:
-        '繰り返しをチェックする範囲です。大きな値は長期的な繰り返しを防ぎます',
+        '繰り返しをチェックする範囲です、大きな値は長期的な繰り返しを防ぎます',
       penalty_repeat:
-        '単語の繰り返しを抑制します。値が高いほど応答はより多様な表現を使用します',
+        '単語の繰り返しを抑制します、値が高いほど応答はより多様な表現を使用します',
       penalty_freq:
-        '頻出用語にペナルティを与えます。値が高いほど幅広い語彙の使用を促します',
+        '頻出用語にペナルティを与えます、値が高いほど幅広い語彙の使用を促します',
       penalty_present:
-        'テーマやアイデアの繰り返しを減らします。値が高いほどより多様なコンテンツを生成します',
+        'テーマやアイデアの繰り返しを減らします、値が高いほどより多様なコンテンツを生成します',
       mirostat:
-        '応答の創造性を高度に制御します。1か2（よりスムーズ）に設定して、ランダム性と一貫性をリアルタイムに調整します',
+        '応答の創造性を高度に制御します、1か2（よりスムーズ）に設定して、ランダム性と一貫性をリアルタイムに調整します',
       mirostat_tau:
-        'Mirostatの創造性レベルを設定します。高い値ではより多様で想像力豊かな応答が、低い値ではより焦点を絞った出力が得られます',
+        'Mirostatの創造性レベルを設定します、高い値ではより多様で想像力豊かな応答が、低い値ではより焦点を絞った出力が得られます',
       mirostat_eta:
-        'Mirostatが創造性を調整する速さです。値が高いほど調整が速くなります',
+        'Mirostatが創造性を調整する速さです、値が高いほど調整が速くなります',
       dry_multiplier:
-        "DRY（Don't Repeat Yourself）機能の強さです。値が高いほど繰り返しを強く防ぎます",
+        "DRY（Don't Repeat Yourself）機能の強さです、値が高いほど繰り返しを強く防ぎます",
       dry_base:
-        'DRYモードでの繰り返しに対する基本ペナルティです。高い値は繰り返しをより防ぎます',
+        'DRYモードでの繰り返しに対する基本ペナルティです、高い値は繰り返しをより防ぎます',
       dry_allowed_length:
         'DRYペナルティが適用される前に繰り返し可能な単語数です',
       dry_penalty_last_n: 'DRYモードで繰り返しをチェックする範囲です',
       dry_sequence_breakers:
         'DRYモードで繰り返しチェックをリセットする記号です',
       ignore_eos:
-        'モデルが停止しようとしても生成を続けます。より長い応答を強制するのに役立ちます',
+        'モデルが停止しようとしても生成を続けます、より長い応答を強制するのに役立ちます',
       logit_bias: '特定の単語が応答に現れる確率を調整します',
-      seed: '乱数生成のシードを設定します。再現可能な結果に役立ちます',
+      seed: '乱数生成のシードを設定します、再現可能な結果に役立ちます',
       xtc_probability:
-        'XTCサンプラーによるトークン削除の確率を設定します。0は無効です',
+        'XTCサンプラーによるトークン削除の確率を設定します、0は無効です',
       xtc_threshold:
-        'XTCサンプラーによって削除されるトークンの最小確率閾値を設定します。0.5以上でXTCは無効になります',
+        'XTCサンプラーによって削除されるトークンの最小確率閾値を設定します、0.5以上でXTCは無効になります',
       typical_p:
-        'パラメータpを使用してローカルに典型的なサンプリングを有効にします。1.0は無効です',
+        'パラメータpを使用してローカルに典型的なサンプリングを有効にします、1.0は無効です',
     },
     about: {
       screenTitle: 'アプリ情報',
       description:
-        '言語モデルをスマートフォンで直接利用できるアプリです。llama.cppとllama.rnをベースに開発されています。',
+        '言語モデルをスマートフォンで直接利用できるアプリです、llama.cppとllama.rnをベースに開発されています',
       supportProject: 'プロジェクトを応援する',
       supportProjectDescription:
         'PocketPal AIをご利用いただき楽しんでいただけているなら、以下の方法でプロジェクトを応援いただけると幸いです：',
@@ -1444,7 +1442,7 @@ export const l10n = {
     feedback: {
       title: 'フィードバックを送信',
       description:
-        'ご意見をお聞かせください！PocketPal AIの使い心地やより便利にするためのアイデアをお寄せください。',
+        'ご意見をお聞かせください！PocketPal AIの使い心地やより便利にするためのアイデアをお寄せください',
       shareThoughtsButton: 'ご意見を共有する',
       useCase: {
         label: 'PocketPal AIをどのように使っていますか？',
@@ -1478,7 +1476,7 @@ export const l10n = {
       success: 'フィードバックをありがとうございます！',
       error: {
         general:
-          'フィードバックの送信中にエラーが発生しました。もう一度お試しください。',
+          'フィードバックの送信中にエラーが発生しました、もう一度お試しください',
       },
     },
     components: {
@@ -1497,17 +1495,17 @@ export const l10n = {
         ok: 'OK',
         shareError: '共有エラー',
         shareErrorMessage:
-          'ファイルを共有できませんでした。もう一度お試しください。',
+          'ファイルを共有できませんでした、もう一度お試しください',
         saveError: 'ダウンロードフォルダへの保存エラー',
         saveOptions: '保存オプション',
         saveOptionsMessage:
-          'ダウンロードフォルダに直接保存できません。代わりにファイルを共有しますか？',
+          'ダウンロードフォルダに直接保存できません、代わりにファイルを共有しますか？',
         cancel: 'キャンセル',
         shareContentErrorMessage:
-          'コンテンツを共有できませんでした。もう一度お試しください。',
+          'コンテンツを共有できませんでした、もう一度お試しください',
         exportError: 'エクスポートエラー',
         exportErrorMessage:
-          'ファイルのエクスポート中にエラーが発生しました。もう一度お試しください。',
+          'ファイルのエクスポート中にエラーが発生しました、もう一度お試しください',
         permissionRequired: 'ストレージへのアクセス許可が必要です',
         permissionMessage:
           'ダウンロードフォルダにファイルを保存するには許可が必要です',
@@ -1526,7 +1524,7 @@ export const l10n = {
         noModelsButton: 'モデルをダウンロード',
         activateModelTitle: '開始するにはモデルを有効化してください',
         activateModelDescription:
-          'モデルを選択してダウンロードしてください。ダウンロード後、モデルの横にある読み込みをタップしてチャットを開始します。',
+          'モデルを選択してダウンロードしてください、ダウンロード後、モデルの横にある読み込みをタップしてチャットを開始します',
         activateModelButton: 'モデルを選択',
         loading: '読み込み中...',
       },
@@ -1573,7 +1571,7 @@ export const l10n = {
         videoType: 'ビデオ',
         confirmationTitle: '確認',
         modelSwitchMessage:
-          'このアシスタントには別のデフォルトモデル({{modelName}})があります。アシスタントのデフォルトモデルに切り替えますか？',
+          'このアシスタントには別のデフォルトモデル({{modelName}})があります、アシスタントのデフォルトモデルに切り替えますか？',
         keepButton: '現在のモデルを使用',
         switchButton: '切り替える',
       },
@@ -1582,10 +1580,10 @@ export const l10n = {
         downloadFailedMessage: 'モデルのダウンロードに失敗しました: {message}',
         unauthorizedTitle: '認証失敗',
         unauthorizedMessage:
-          'Hugging Faceトークンが無効または期限切れのようです。設定でトークンを更新してください。',
+          'Hugging Faceトークンが無効または期限切れのようです、設定でトークンを更新してください',
         forbiddenTitle: 'アクセス拒否',
         forbiddenMessage:
-          'このモデルにアクセスする権限がありません。以下を確認してください:',
+          'このモデルにアクセスする権限がありません、以下を確認してください:',
         forbiddenSteps: [
           'トークンに「読み取り」権限があること',
           'このモデルへのアクセスをリクエストし、許可されていること',
@@ -1593,7 +1591,7 @@ export const l10n = {
         ],
         getTokenTitle: 'Hugging Faceトークンを取得',
         getTokenMessage:
-          'このモデルをダウンロードするにはHugging Faceトークンが必要です。',
+          'このモデルをダウンロードするにはHugging Faceトークンが必要です',
         getTokenSteps: [
           'huggingface.coにアクセスしてサインインする',
           '設定 > アクセストークンに移動',
@@ -1602,7 +1600,7 @@ export const l10n = {
         ],
         tokenDisabledTitle: 'トークンが無効',
         tokenDisabledMessage:
-          'Hugging Faceトークンが設定されていますが、現在無効になっています。このモデルをダウンロードするにはトークンが必要です。続行するにはトークンを有効にしてください。',
+          'Hugging Faceトークンが設定されていますが、現在無効になっています、このモデルをダウンロードするにはトークンが必要です、続行するにはトークンを有効にしてください',
         enableAndRetry: 'トークンを有効にして再試行',
         goToSettings: '設定へ移動',
         tryAgain: '再試行',
@@ -1647,7 +1645,7 @@ export const l10n = {
         gatedModelIndicator: 'トークンが必要',
         tokenRequired: 'このモデルはHugging Faceアクセストークンが必要です',
         searchErrorHint:
-          'Hugging Face APIトークンが無効または期限切れです。検索を続けるには、設定でトークンを削除するか、トークン認証を無効にしてください。',
+          'Hugging Face APIトークンが無効または期限切れです、検索を続けるには、設定でトークンを削除するか、トークン認証を無効にしてください',
         disableAndRetry: 'トークンを無効にして再試行',
       },
       modelSettingsSheet: {
@@ -1681,10 +1679,10 @@ export const l10n = {
       },
       modelNotAvailable: {
         noModelsDownloaded:
-          'モデルがダウンロードされていません。先にモデルをダウンロードしてください。',
+          'モデルがダウンロードされていません、先にモデルをダウンロードしてください',
         downloadAModel: 'モデルをダウンロード',
         defaultModelNotDownloaded:
-          'デフォルトモデルがダウンロードされていません。先にダウンロードしてください。',
+          'デフォルトモデルがダウンロードされていません、先にダウンロードしてください',
         cancelDownload: 'キャンセル',
         download: 'ダウンロード',
       },
@@ -1814,7 +1812,7 @@ export const l10n = {
       systemPrompt: 'システムプロンプト',
       videoAnalysis: '動画解析',
       videoAnalysisDescription:
-        'デバイスのカメラからの動画ストリームにリアルタイムでコメントを提供する動画ベースのAIアシスタントです。',
+        'デバイスのカメラからの動画ストリームにリアルタイムでコメントを提供する動画ベースのAIアシスタントです',
       captureInterval: 'キャプチャ間隔',
       captureIntervalUnit: 'ミリ秒',
       world: '世界観',
@@ -1829,7 +1827,7 @@ export const l10n = {
       deletePalMessage: 'このアシスタントを削除してもよろしいですか？',
       missingModel: 'モデルが見つかりません',
       missingModelMessage:
-        'このアシスタントのデフォルトモデル「{{modelName}}」が利用できません。編集シートでダウンロードするか、別のモデルを選択してください。',
+        'このアシスタントのデフォルトモデル「{{modelName}}」が利用できません、編集シートでダウンロードするか、別のモデルを選択してください',
     },
     validation: {
       nameRequired: '名前を入力してください',
@@ -1876,7 +1874,7 @@ export const l10n = {
         title: 'Lookieへようこそ',
         subtitle: 'プライベート・オンデバイス・リアルタイム動画解析',
         experimentalNotice:
-          'これは実験的な機能です。精度は選択したモデルに依存し、速度はデバイスの性能に依存し、一部のモデルは失敗する可能性があります。',
+          'これは実験的な機能です、精度は選択したモデルに依存し、速度はデバイスの性能に依存し、一部のモデルは失敗する可能性があります',
         howToUse: '使い方：',
         step1: '• プロンプトを編集（任意）して解析を誘導',
         step2: '• カメラボタンをタップしてライブ動画解析を開始',
@@ -1896,16 +1894,16 @@ export const l10n = {
     chat: {
       conversationReset: '会話をリセットしました',
       modelNotLoaded:
-        'モデルが読み込まれていません。モデルを初期化してください。',
+        'モデルが読み込まれていません、モデルを初期化してください',
       completionFailed: '生成に失敗しました: ',
       loadingModel: 'モデルを読み込み中...',
       typeYourMessage: 'メッセージを入力',
       load: '読み込む',
       goToModels: 'モデルへ移動',
-      readyToChat: 'チャットを始めましょう。前回使用したモデルを読み込みます。',
-      pleaseLoadModel: 'チャットを開始するにはモデルを読み込んでください。',
+      readyToChat: 'チャットを始めましょう、前回使用したモデルを読み込みます',
+      pleaseLoadModel: 'チャットを開始するにはモデルを読み込んでください',
       multimodalNotEnabled:
-        'このモデルではマルチモーダル機能が有効になっていません。画像は表示されますが、AIによって処理されません。',
+        'このモデルではマルチモーダル機能が有効になっていません、画像は表示されますが、AIによって処理されません',
     },
     benchmark: {
       title: 'ベンチマーク',
@@ -1928,8 +1926,8 @@ export const l10n = {
       messages: {
         pleaseSelectModel: 'モデルを選択して初期化してください',
         testWarning:
-          '注意：大きなモデルでは最大2～5分かかる場合があり、開始後は中断できません。',
-        keepScreenOpen: '画面を開いたままにしておいてください。',
+          '注意：大きなモデルでは最大2～5分かかる場合があり、開始後は中断できません',
+        keepScreenOpen: '画面を開いたままにしておいてください',
         initializingModel: 'モデルを初期化中...',
         modelMaxValue: '(最大: {{maxValue}})',
       },
@@ -1939,7 +1937,7 @@ export const l10n = {
           testProfile: 'テストプロファイル',
           customParameters: 'カスタムパラメーター',
           description:
-            '特定のテストシナリオに合わせてベンチマーク設定を調整できます。',
+            '特定のテストシナリオに合わせてベンチマーク設定を調整できます',
         },
         deleteResult: {
           title: '結果を削除',
@@ -2060,10 +2058,11 @@ export const l10n = {
     },
     simulator: {
       cameraNotAvailable:
-        'シミュレーターではカメラを使用できません。実機をご使用ください。',
+        'シミュレーターではカメラを使用できません、実機をご使用ください',
     },
   },
 
+  // Please do not translate "Pal", keep it as default!!
   zh: {
     common: {
       cancel: '取消',
@@ -2177,17 +2176,17 @@ export const l10n = {
       shortWarning: '内存警告',
       warning:
         '警告：模型大小可能会超过可用内存，这可能会影响设备的性能和稳定性',
-      multimodalWarning: '此设备可能没有足够的资源运行多模态模型。',
+      multimodalWarning: '此设备可能没有足够的资源运行多模态模型',
       alerts: {
         memoryWarningTitle: '内存警告',
         memoryWarningMessage:
-          '此模型可能超过可用内存，这可能导致不稳定。继续加载吗？',
+          '此模型可能超过可用内存，这可能导致不稳定；继续加载吗？',
         multimodalWarningTitle: '设备性能警告',
         multimodalWarningMessage:
-          '此设备可能没有足够的资源运行多模态模型。加载可能导致不稳定。仍要继续吗？',
+          '此设备可能没有足够的资源运行多模态模型，加载可能导致不稳定；仍要继续吗？',
         combinedWarningTitle: '性能警告',
         combinedWarningMessage:
-          '此模型可能超过可用内存，且此设备可能没有足够的资源运行多模态模型。加载可能导致不稳定。仍要继续吗？',
+          '此模型可能超过可用内存，且此设备可能没有足够的资源运行多模态模型，加载可能导致不稳定；仍要继续吗？',
         cancel: '取消',
         continue: '继续',
       },
@@ -2219,47 +2218,47 @@ export const l10n = {
       mmproj: '投影仪',
       multimodal: {
         settings: '多模态设置',
-        projectionModels: '投影模型',
-        noCompatibleModels: '未找到兼容的投影模型',
-        noProjectionModels: '没有可用的投影模型',
+        projectionModels: 'Projection模型',
+        noCompatibleModels: '未找到兼容的Projection模型',
+        noProjectionModels: '没有可用的Projection模型',
         selected: '已选择',
         select: '选择',
         download: '下载',
-        projectionNeededTitle: '需要投影模型',
-        projectionNeededMessage: '此模型需要投影模型才能使用多模态功能。',
-        projectionMissingWarning: '投影模型缺失',
-        projectionMissingShort: '缺少投影模型',
+        projectionNeededTitle: '需要Projection模型',
+        projectionNeededMessage: '此模型需要Projection模型才能使用多模态功能',
+        projectionMissingWarning: 'Projection模型缺失',
+        projectionMissingShort: '缺少Projection模型',
         reloadModelTitle: '重新加载模型',
         reloadModelMessage:
-          '需要重新加载模型以应用新的投影模型。您想现在重新加载吗？',
+          '需要重新加载模型以应用新的Projection模型，你想现在重新加载吗？',
         reload: '重新加载',
-        deleteProjectionTitle: '删除投影模型',
-        deleteProjectionMessage: '您确定要删除此投影模型吗？',
+        deleteProjectionTitle: '删除Projection模型',
+        deleteProjectionMessage: '你确定要删除此Projection模型吗？',
         cannotDeleteTitle: '无法删除',
         // Vision control strings
         visionControls: {
-          enableVision: '启用视觉功能',
-          disableVision: '禁用视觉功能',
+          enableVision: '启用视觉能力',
+          disableVision: '禁用视觉能力',
           visionEnabled: '视觉已启用',
           visionDisabled: '视觉已禁用',
           textOnlyMode: '仅文本',
           visionMode: '视觉已启用',
-          downloadWithVision: '下载包含视觉功能',
-          downloadTextOnly: '仅下载文本',
+          downloadWithVision: '下载包含视觉能力的模型',
+          downloadTextOnly: '仅下载包含文本能力的模型',
           visionToggleDescription: '启用图像处理功能',
-          projectionModelSize: '+{size} 投影模型',
+          projectionModelSize: '+{size} Projection模型',
           visionModeDescription: '处理图像和文本',
           textOnlyModeDescription: '仅处理文本',
-          includesVisionCapability: '包含视觉功能',
-          requiresProjectionModel: '请先下载兼容的投影模型',
+          includesVisionCapability: '包含视觉能力',
+          requiresProjectionModel: '请先下载兼容的Projection模型',
         },
-        cannotDeleteActive: '此投影模型当前处于活动状态。',
-        cannotDeleteInUse: '此投影模型被已下载的LLM模型使用：',
+        cannotDeleteActive: '此Projection模型当前处于活动状态',
+        cannotDeleteInUse: '此Projection模型被已下载的LLM模型使用：',
         dependentModels: '依赖模型：',
-        visionWillBeDisabled: '这些模型的视觉功能将被禁用。',
+        visionWillBeDisabled: '这些模型的视觉能力将被禁用',
       },
       buttons: {
-        addFromHuggingFace: '从Hugging Face添加（镜像站）',
+        addFromHuggingFace: '从Hugging Face添加',
         addLocalModel: '添加本地模型',
         reset: '重置',
       },
@@ -2386,9 +2385,9 @@ export const l10n = {
     },
     completionParams: {
       include_thinking_in_context:
-        '在发送给模型的上下文中包含AI的思考/推理部分，禁用此选项可以节省上下文空间，但可能会影响性能',
+        '在发送给模型的上下文中包含AI的思考/推理部分，禁用此选项可以节省上下文空间；但可能会影响性能',
       jinja:
-        '启用Jinja模板进行聊天格式化。启用时，使用基于Jinja的聊天模板处理以提高与现代模型的兼容性。',
+        '启用Jinja模板进行聊天格式化；启用时，使用基于Jinja的聊天模板处理以提高与现代模型的兼容性',
       grammar: '应用特定的语法规则，以确保生成的文本遵循特定的结构或格式',
       stop: '定义将停止文本生成的特定短语',
       n_predict: '设置生成响应的长度（以token为单位）',
@@ -2511,7 +2510,7 @@ export const l10n = {
         noModelsTitle: '没有可用的模型',
         noModelsDescription: '需要下载一个模型，才能与PocketPal开始聊天',
         noModelsButton: '下载模型',
-        activateModelTitle: '在你和PocketPal聊天前，请先激活模型~',
+        activateModelTitle: '在你和PocketPal开始聊天前，请先激活模型~',
         activateModelDescription: '选择并加载一个模型以开始聊天',
         activateModelButton: '选择模型',
         loading: '加载中...',
@@ -2586,7 +2585,7 @@ export const l10n = {
         ],
         tokenDisabledTitle: '令牌已禁用',
         tokenDisabledMessage:
-          '你有一个Hugging Face令牌设置，但它目前被禁用，此模型需要令牌才能下载；请启用你的令牌以继续',
+          '你有一个Hugging Face令牌设置，但它目前被禁用；此模型需要令牌才能下载；请启用你的令牌以继续',
         enableAndRetry: '启用并重试',
         goToSettings: '前往设置',
         tryAgain: '重试',
@@ -2702,11 +2701,11 @@ export const l10n = {
       },
       lookiePalSheet: {
         title: {
-          create: '创建Lookie帕尔',
-          edit: '编辑Lookie帕尔',
+          create: '创建Lookie Pal',
+          edit: '编辑Lookie Pal',
         },
-        palName: '帕尔名',
-        palNamePlaceholder: '输入您的Lookie帕尔名称',
+        palName: 'Pal名',
+        palNamePlaceholder: '输入你的Lookie Pal名称',
         visionModel: '视觉模型',
         visionModelPlaceholder: '选择视觉模型',
         requiredModelsSection: '必需模型',
@@ -2780,7 +2779,7 @@ export const l10n = {
         menuItems: {
           copy: '复制',
           regenerate: '重新生成',
-          regenerateWith: '重新生成（选择模型）',
+          regenerateWith: '重新生成（重选模型）',
           edit: '编辑',
         },
       },
@@ -2795,7 +2794,7 @@ export const l10n = {
       systemPrompt: '系统提示',
       videoAnalysis: '视频分析',
       videoAnalysisDescription:
-        '这是一个基于视频的AI助手，可以对来自设备摄像头的视频流提供实时评论。',
+        '这是一个基于视频的AI助手，可以对来自设备摄像头的视频流提供实时评论',
       captureInterval: '捕获间隔',
       captureIntervalUnit: '毫秒',
       world: '世界',
@@ -2806,11 +2805,11 @@ export const l10n = {
       assistant: '助手',
       roleplay: '角色扮演',
       video: '视频',
-      deletePal: '删除帕尔',
-      deletePalMessage: '您确定要删除此帕尔吗？',
+      deletePal: '删除Pal',
+      deletePalMessage: '你确定要删除此Pal吗？',
       missingModel: '缺少模型',
       missingModelMessage:
-        '此帕尔的默认模型"{{modelName}}"不可用。请在编辑表中下载它或选择其他模型。',
+        '此Pal的默认模型"{{modelName}}"不可用，请在编辑表中下载它或选择其他模型',
     },
     validation: {
       nameRequired: '需要填写名称',
@@ -2823,31 +2822,31 @@ export const l10n = {
       toneStyleRequired: '需要填写语气/风格',
     },
     camera: {
-      permissionTitle: '需要相机权限',
-      permissionMessage: 'PocketPal需要访问相机来分析图像',
-      requestingPermission: '请求相机权限...',
-      noDevice: '未找到相机设备',
-      errorTitle: '相机错误',
+      permissionTitle: '需要摄像头权限',
+      permissionMessage: 'PocketPal需要访问摄像头来分析图像',
+      requestingPermission: '请求摄像头权限...',
+      noDevice: '未找到摄像头设备',
+      errorTitle: '摄像头错误',
       errorMessage: '拍照时发生错误',
       flip: '翻转',
       analyzing: '分析图像中...',
-      startCamera: '启动相机',
-      stopCamera: '停止相机',
-      promptPlaceholder: '您想了解这张图片的什么信息？',
-      takePhoto: '相机',
+      startCamera: '启动摄像头',
+      stopCamera: '停止摄像头',
+      promptPlaceholder: '你想了解这张图片的什么信息？',
+      takePhoto: '摄像头',
     },
     video: {
-      permissionTitle: '需要相机权限',
-      permissionMessage: 'PocketPal需要访问相机来分析视频',
-      requestingPermission: '请求相机权限...',
-      noDevice: '未找到相机设备',
-      errorTitle: '相机错误',
-      errorMessage: '相机出现错误',
+      permissionTitle: '需要摄像头权限',
+      permissionMessage: 'PocketPal需要访问摄像头来分析视频',
+      requestingPermission: '请求摄像头权限...',
+      noDevice: '未找到摄像头设备',
+      errorTitle: '摄像头错误',
+      errorMessage: '摄像头出现错误',
       flip: '翻转',
       analyzing: '分析视频中...',
-      startCamera: '启动相机',
-      stopCamera: '停止相机',
-      promptPlaceholder: '您想了解这个视频的什么信息？',
+      startCamera: '启动摄像头',
+      stopCamera: '停止摄像头',
+      promptPlaceholder: '你想了解这个视频的什么信息？',
       captureInterval: '捕获间隔',
       captureIntervalUnit: '毫秒',
       liveCommentary: '实时解说',
@@ -2855,11 +2854,11 @@ export const l10n = {
         title: '欢迎使用Lookie',
         subtitle: '私密设备端实时视频分析',
         experimentalNotice:
-          '这是一个实验性功能。准确性取决于所选模型，速度取决于您的设备规格，某些模型可能会失败。',
+          '这是一个实验性功能，准确性取决于所选模型，速度取决于你的设备性能；某些模型可能会失败',
         howToUse: '使用方法：',
         step1: '• 编辑提示词（可选）来指导分析',
-        step2: '• 点击相机按钮开始实时视频分析',
-        step3: '• 在相机激活时调整快照频率',
+        step2: '• 点击摄像头按钮开始实时视频分析',
+        step3: '• 在摄像头激活时调整快照频率',
         step4: '• 切换到其他助手进行正常文本聊天',
       },
     },
@@ -2882,8 +2881,7 @@ export const l10n = {
       goToModels: '转到模型',
       readyToChat: '准备好聊天了吗？加载上次使用的模型',
       pleaseLoadModel: '在你聊天前，请先加载模型',
-      multimodalNotEnabled:
-        '此模型未启用多模态功能。图片将显示但不会被AI处理。',
+      multimodalNotEnabled: '此模型未启用多模态功能，图片将显示但不会被AI处理',
     },
     benchmark: {
       title: '基准测试',
@@ -3022,13 +3020,13 @@ export const l10n = {
       networkError: '网络错误：无法连接到API',
       downloadSetupFailedTitle: '下载设置失败',
       downloadSetupFailedMessage: '无法准备模型下载: {message}',
-      cameraErrorTitle: '相机错误',
+      cameraErrorTitle: '摄像头错误',
       cameraErrorMessage: '拍照失败',
       galleryErrorTitle: '图库错误',
       galleryErrorMessage: '选择图片失败',
     },
     simulator: {
-      cameraNotAvailable: '模拟器中无法使用相机。请使用真实设备。',
+      cameraNotAvailable: '当前虚拟机无法使用摄像头，请使用物理机！！',
     },
   },
 };
