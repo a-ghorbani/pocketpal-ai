@@ -22,7 +22,7 @@ export const mockUiStore = {
     },
   },
   language: 'en',
-  supportedLanguages: ['en', 'ja', 'zh'],
+  supportedLanguages: ['en', 'ja', 'zh', 'fr'],
   l10n: l10n.en,
   setValue: jest.fn(),
   displayMemUsage: false,
