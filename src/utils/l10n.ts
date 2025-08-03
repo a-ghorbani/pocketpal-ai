@@ -771,6 +771,12 @@ export const l10n = {
           edit: 'Edit',
         },
       },
+      palHeaderRight: {
+        exportAllPals: 'Export all pals',
+        importPals: 'Import pals',
+        importSuccess: 'Successfully imported {{count}} pal(s).',
+        importError: 'Failed to import pals. Please check the file format.',
+      },
     },
     palsScreen: {
       systemPrompt: 'System Prompt',
@@ -1794,6 +1800,13 @@ export const l10n = {
           edit: '編集',
         },
       },
+      palHeaderRight: {
+        exportAllPals: 'すべてのアシスタントをエクスポート',
+        importPals: 'アシスタントをインポート',
+        importSuccess: '{{count}}個のアシスタントをインポートしました。',
+        importError:
+          'アシスタントのインポートに失敗しました。ファイル形式を確認してください。',
+      },
     },
     palsScreen: {
       systemPrompt: 'システムプロンプト',
@@ -2769,6 +2782,12 @@ export const l10n = {
           regenerateWith: '重新生成（重选模型）',
           edit: '编辑',
         },
+      },
+      palHeaderRight: {
+        exportAllPals: '导出所有帕尔',
+        importPals: '导入帕尔',
+        importSuccess: '成功导入{{count}}个帕尔',
+        importError: '导入帕尔失败，请检查文件格式',
       },
     },
     palsScreen: {

@@ -6,9 +6,9 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
-import {uiStore} from '../store';
+import {uiStore, palStore} from '../store';
 import {ensureLegacyStoragePermission} from './androidPermission';
-
+import {PalType} from '../components/PalsSheets/types';
 /**
  * Export a single chat session to a JSON file
  * @param sessionId The ID of the session to export
@@ -116,6 +116,86 @@ export const exportAllChatSessions = async (): Promise<void> => {
     console.error('Error exporting all chat sessions:', error);
     throw error;
   }
+};
+
+/**
+ * Export a single pal to a JSON file
+ * @param palId The ID of the pal to export
+ */
+export const exportPal = async (palId: string): Promise<void> => {
+  try {
+    const pal = palStore.getPals().find(p => p.id === palId);
+    if (!pal) {
+      throw new Error('Pal not found');
+    }
+
+    const exportData = transformExportPal(pal);
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+    const sanitizedName = pal.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const filename = `${sanitizedName}_${timestamp}.json`;
+
+    const jsonData = JSON.stringify(exportData, null, 2);
+
+    await shareJsonData(jsonData, filename);
+  } catch (error) {
+    console.error('Error exporting pal:', error);
+    throw error;
+  }
+};
+
+/**
+ * Export all pals to a JSON file
+ */
+export const exportAllPals = async (): Promise<void> => {
+  try {
+    const pals = palStore.getPals();
+    const exportData = pals.map(transformExportPal);
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+    const filename = `all_pals_${timestamp}.json`;
+
+    const jsonData = JSON.stringify(exportData, null, 2);
+
+    await shareJsonData(jsonData, filename);
+  } catch (error) {
+    console.error('Error exporting all pals:', error);
+    throw error;
+  }
+};
+
+const transformExportPal = (pal: any) => {
+  const palData = {
+    id: pal.id,
+    palType: pal.palType,
+    name: pal.name,
+    defaultModel: pal.defaultModel,
+    useAIPrompt: pal.useAIPrompt,
+    systemPrompt: pal.systemPrompt,
+    originalSystemPrompt: pal.originalSystemPrompt,
+    isSystemPromptChanged: pal.isSystemPromptChanged,
+    color: pal.color,
+    promptGenerationModel: pal.promptGenerationModel,
+    generatingPrompt: pal.generatingPrompt,
+    // roleplay fields
+    ...(pal.palType === PalType.ROLEPLAY
+      ? {
+          world: pal.world,
+          location: pal.location,
+          aiRole: pal.aiRole,
+          userRole: pal.userRole,
+          situation: pal.situation,
+          toneStyle: pal.toneStyle,
+        }
+      : {}),
+    // video fields
+    ...(pal.palType === PalType.VIDEO
+      ? {
+          captureInterval: pal.captureInterval,
+        }
+      : {}),
+  };
+  return palData;
 };
 
 /**

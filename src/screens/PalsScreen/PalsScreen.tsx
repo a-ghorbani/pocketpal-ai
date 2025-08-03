@@ -13,6 +13,7 @@ import {
   PencilLineIcon,
   TrashIcon,
   AlertIcon,
+  ShareIcon,
 } from '../../assets/icons';
 import {
   AssistantPalSheet,
@@ -23,6 +24,7 @@ import {
 import {palStore, Pal} from '../../store/PalStore';
 import {modelStore} from '../../store/ModelStore';
 import {L10nContext} from '../../utils';
+import {exportPal} from '../../utils/exportUtils';
 
 const PalDetails = ({pal}: {pal: Pal}) => {
   const theme = useTheme();
@@ -135,6 +137,10 @@ const PalCard = ({pal, onEdit}: {pal: Pal; onEdit: (pal: Pal) => void}) => {
     ]);
   };
 
+  const handleExport = async () => {
+    await exportPal(pal.id);
+  };
+
   const handleWarningPress = () => {
     Alert.alert(
       l10n.palsScreen.missingModel,
@@ -157,6 +163,10 @@ const PalCard = ({pal, onEdit}: {pal: Pal; onEdit: (pal: Pal) => void}) => {
     <PencilLineIcon stroke={theme.colors.onSurface} width={20} height={20} />
   );
 
+  const renderShareIcon = () => (
+    <ShareIcon stroke={theme.colors.onSurface} width={20} height={20} />
+  );
+
   return (
     <View style={styles.palCard}>
       <Pressable
@@ -173,6 +183,11 @@ const PalCard = ({pal, onEdit}: {pal: Pal; onEdit: (pal: Pal) => void}) => {
           <Text style={theme.fonts.titleMediumLight}>{pal.name}</Text>
         </View>
         <View style={styles.itemRight}>
+          <IconButton
+            icon={renderShareIcon}
+            onPress={handleExport}
+            style={styles.iconBtn}
+          />
           <IconButton
             icon={renderTrashIcon}
             onPress={handleDelete}

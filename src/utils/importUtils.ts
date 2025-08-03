@@ -8,6 +8,13 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {MessageType} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
+import {
+  PalType,
+  AssistantFormData,
+  RoleplayFormData,
+  VideoPalFormData,
+} from '../components/PalsSheets/types';
+import {palStore} from '../store';
 
 /**
  * Interface for imported chat session data
@@ -218,6 +225,197 @@ const importSingleSession = async (
     );
   } catch (error) {
     console.error('Error importing single session:', error);
+    throw error;
+  }
+};
+
+/**
+ * Interface for imported pal data
+ */
+export interface ImportedPal {
+  id: string;
+  name: string;
+  palType: PalType;
+  defaultModel?: any;
+  useAIPrompt: boolean;
+  systemPrompt: string;
+  originalSystemPrompt?: string;
+  isSystemPromptChanged: boolean;
+  color?: [string, string];
+  promptGenerationModel?: any;
+  generatingPrompt?: string;
+
+  // Roleplay fields
+  world?: string;
+  location?: string;
+  aiRole?: string;
+  userRole?: string;
+  situation?: string;
+  toneStyle?: string;
+
+  // Video fields
+  captureInterval?: number;
+}
+
+/**
+ * Import pals from a JSON file (single or multiple)
+ */
+export const importPals = async (): Promise<number> => {
+  try {
+    // Pick a JSON file
+    const fileUri = await pickJsonFile();
+    if (!fileUri) {
+      return 0;
+    }
+
+    const data = await readJsonFile(fileUri);
+    const validatedData = validateImportedPalData(data);
+
+    if (Array.isArray(validatedData)) {
+      let importedCount = 0;
+      for (const pal of validatedData) {
+        await importSinglePal(pal);
+        importedCount++;
+      }
+      return importedCount;
+    } else {
+      await importSinglePal(validatedData);
+      return 1;
+    }
+  } catch (error) {
+    console.error('Error importing pals:', error);
+    throw error;
+  }
+};
+
+/**
+ * Validate imported pal data
+ */
+export const validateImportedPalData = (
+  data: any,
+): ImportedPal | ImportedPal[] => {
+  // Check if it's an array or a single object
+  if (Array.isArray(data)) {
+    // Validate each pal in the array
+    return data.map(pal => validateSinglePal(pal));
+  } else {
+    // Validate a single pal
+    return validateSinglePal(data);
+  }
+};
+
+/**
+ * Validate a single pal
+ */
+const validateSinglePal = (pal: any): ImportedPal => {
+  // Check required fields
+  if (!pal.name || typeof pal.name !== 'string') {
+    throw new Error('Invalid pal: missing or invalid name');
+  }
+
+  if (!pal.palType || !Object.values(PalType).includes(pal.palType)) {
+    throw new Error('Invalid pal: missing or invalid palType');
+  }
+
+  if (!pal.systemPrompt || typeof pal.systemPrompt !== 'string') {
+    throw new Error('Invalid pal: missing or invalid systemPrompt');
+  }
+
+  if (typeof pal.useAIPrompt !== 'boolean') {
+    pal.useAIPrompt = false;
+  }
+
+  if (typeof pal.isSystemPromptChanged !== 'boolean') {
+    pal.isSystemPromptChanged = false;
+  }
+
+  // Validate roleplay required fields
+  if (pal.palType === PalType.ROLEPLAY) {
+    const requiredRoleplayFields = [
+      'world',
+      'location',
+      'aiRole',
+      'userRole',
+      'situation',
+      'toneStyle',
+    ];
+
+    for (const field of requiredRoleplayFields) {
+      if (!pal[field] || typeof pal[field] !== 'string') {
+        throw new Error(`Invalid roleplay pal: missing or invalid ${field}`);
+      }
+    }
+  }
+
+  // Validate video required fields
+  if (pal.palType === PalType.VIDEO) {
+    if (
+      pal.captureInterval === undefined ||
+      typeof pal.captureInterval !== 'number'
+    ) {
+      pal.captureInterval = 3000;
+    }
+  }
+
+  if (!pal.id) {
+    pal.id = uuidv4();
+  }
+
+  return pal as ImportedPal;
+};
+
+const transformImportPal = (
+  pal: ImportedPal,
+): AssistantFormData | RoleplayFormData | VideoPalFormData => {
+  const baseData = {
+    name: pal.name,
+    defaultModel: pal.defaultModel,
+    useAIPrompt: pal.useAIPrompt,
+    systemPrompt: pal.systemPrompt,
+    originalSystemPrompt: pal.originalSystemPrompt,
+    isSystemPromptChanged: pal.isSystemPromptChanged,
+    color: pal.color,
+    promptGenerationModel: pal.promptGenerationModel,
+    generatingPrompt: pal.generatingPrompt,
+  };
+  switch (pal.palType) {
+    case PalType.ROLEPLAY:
+      return {
+        ...baseData,
+        palType: PalType.ROLEPLAY,
+        world: pal.world!,
+        location: pal.location!,
+        aiRole: pal.aiRole!,
+        userRole: pal.userRole!,
+        situation: pal.situation!,
+        toneStyle: pal.toneStyle!,
+      } as RoleplayFormData;
+
+    case PalType.VIDEO:
+      return {
+        ...baseData,
+        palType: PalType.VIDEO,
+        captureInterval: pal.captureInterval!,
+      } as VideoPalFormData;
+
+    case PalType.ASSISTANT:
+    default:
+      return {
+        ...baseData,
+        palType: PalType.ASSISTANT,
+      } as AssistantFormData;
+  }
+};
+
+/**
+ * Import a single pal
+ */
+const importSinglePal = async (pal: ImportedPal): Promise<void> => {
+  try {
+    const palData = transformImportPal(pal);
+    await palStore.addPal(palData);
+  } catch (error) {
+    console.error('Error importing single pal:', error);
     throw error;
   }
 };

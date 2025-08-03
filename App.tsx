@@ -26,6 +26,7 @@ import {ROUTES} from './src/utils/navigationConstants';
 import {
   SidebarContent,
   ModelsHeaderRight,
+  PalHeaderRight,
   HeaderLeft,
   AppWithMigration,
 } from './src/components';
@@ -101,6 +102,7 @@ const App = observer(() => {
                       name={ROUTES.PALS}
                       component={gestureHandlerRootHOC(PalsScreen)}
                       options={{
+                        headerRight: () => <PalHeaderRight />,
                         headerStyle: styles.headerWithoutDivider,
                         title: currentL10n.screenTitles.pals,
                       }}

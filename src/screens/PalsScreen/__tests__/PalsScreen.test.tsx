@@ -58,6 +58,9 @@ jest.mock('../../../assets/icons', () => {
     TrashIcon: ({testID = 'trash-icon', ...props}) => (
       <View testID={testID} {...props} />
     ),
+    ShareIcon: ({testID = 'share-icon', ...props}) => (
+      <View testID={testID} {...props} />
+    ),
   };
 });
 
