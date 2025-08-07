@@ -449,6 +449,7 @@ export const l10n = {
         general: 'Error sending feedback. Please try again.',
       },
     },
+
     components: {
       attachmentButton: {
         attachmentButtonAccessibilityLabel: 'Send media',
@@ -505,6 +506,41 @@ export const l10n = {
           thinkingEnabled: 'Thinking mode enabled',
           thinkingDisabled: 'Thinking mode disabled',
           thinkText: 'Think',
+        },
+      },
+      contentReportSheet: {
+        title: 'Report Content',
+        privacyNote:
+          'We do not send any message content or conversation details. Please describe the specific issue you encountered.',
+        categoryLabel: 'Report Category',
+        selectCategory: 'Select a category',
+        categories: {
+          hate: 'Hate Speech',
+          sexual: 'Sexual Content',
+          selfHarm: 'Self-Harm',
+          violence: 'Violence',
+          other: 'Other',
+        },
+        descriptionLabel: 'Description',
+        descriptionPlaceholder:
+          'Please describe the issue with this content...',
+        includeModelInfo: 'Include model information',
+        includeModelInfoDescription:
+          'Include the model name and identifier to help us investigate',
+        noActiveModelNote: 'No model is currently active',
+        submit: 'Submit Report',
+        validation: {
+          title: 'Missing Information',
+          message: 'Please select a category and provide a description.',
+        },
+        success: {
+          title: 'Report Submitted',
+          message:
+            'Thank you for your report. We will review it and take appropriate action.',
+        },
+        error: {
+          title: 'Report Failed',
+          message: 'Failed to submit report. Please try again.',
         },
       },
       chatGenerationSettingsSheet: {
@@ -769,6 +805,7 @@ export const l10n = {
           regenerate: 'Regenerate',
           regenerateWith: 'Regenerate with',
           edit: 'Edit',
+          reportContent: 'Report Content',
         },
       },
       palHeaderRight: {
@@ -1479,6 +1516,7 @@ export const l10n = {
           'フィードバックの送信中にエラーが発生しました、もう一度お試しください',
       },
     },
+
     components: {
       attachmentButton: {
         attachmentButtonAccessibilityLabel: 'メディアを送信',
@@ -1536,6 +1574,41 @@ export const l10n = {
           thinkingEnabled: '思考モードが有効',
           thinkingDisabled: '思考モードが無効',
           thinkText: '思考',
+        },
+      },
+      contentReportSheet: {
+        title: 'コンテンツを報告',
+        privacyNote:
+          'メッセージの内容や会話の詳細は送信されません。遭遇した具体的な問題について説明してください。',
+        categoryLabel: '報告カテゴリ',
+        selectCategory: 'カテゴリを選択',
+        categories: {
+          hate: 'ヘイトスピーチ',
+          sexual: '性的コンテンツ',
+          selfHarm: '自傷行為',
+          violence: '暴力',
+          other: 'その他',
+        },
+        descriptionLabel: '説明',
+        descriptionPlaceholder:
+          'このコンテンツの問題について説明してください...',
+        includeModelInfo: 'モデル情報を含める',
+        includeModelInfoDescription:
+          '調査に役立つようにモデル名と識別子を含める',
+        noActiveModelNote: '現在アクティブなモデルがありません',
+        submit: '報告を送信',
+        validation: {
+          title: '情報が不足しています',
+          message: 'カテゴリを選択し、説明を入力してください。',
+        },
+        success: {
+          title: '報告が送信されました',
+          message:
+            'ご報告ありがとうございます。内容を確認し、適切な対応を取らせていただきます。',
+        },
+        error: {
+          title: '報告に失敗しました',
+          message: '報告の送信に失敗しました。もう一度お試しください。',
         },
       },
       chatGenerationSettingsSheet: {
@@ -1798,6 +1871,7 @@ export const l10n = {
           regenerate: '再生成',
           regenerateWith: '再生成（モデル選択）',
           edit: '編集',
+          reportContent: 'コンテンツを報告',
         },
       },
       palHeaderRight: {
@@ -2475,6 +2549,7 @@ export const l10n = {
         general: '发送反馈时出错，请再试一次',
       },
     },
+
     components: {
       attachmentButton: {
         attachmentButtonAccessibilityLabel: '发送媒体',
@@ -2523,6 +2598,38 @@ export const l10n = {
           thinkingEnabled: '思考模式已启用',
           thinkingDisabled: '思考模式已禁用',
           thinkText: '思考',
+        },
+      },
+      contentReportSheet: {
+        title: '举报内容',
+        privacyNote:
+          '我们不会发送任何消息内容或对话详情。请描述您遇到的具体问题。',
+        categoryLabel: '举报类别',
+        selectCategory: '选择类别',
+        categories: {
+          hate: '仇恨言论',
+          sexual: '性内容',
+          selfHarm: '自残',
+          violence: '暴力',
+          other: '其他',
+        },
+        descriptionLabel: '描述',
+        descriptionPlaceholder: '请描述此内容的问题...',
+        includeModelInfo: '包含模型信息',
+        includeModelInfoDescription: '包含模型名称和标识符以帮助我们调查',
+        noActiveModelNote: '当前没有活动模型',
+        submit: '提交举报',
+        validation: {
+          title: '信息缺失',
+          message: '请选择类别并提供描述。',
+        },
+        success: {
+          title: '举报已提交',
+          message: '感谢您的举报。我们将审查并采取适当行动。',
+        },
+        error: {
+          title: '举报失败',
+          message: '提交举报失败。请重试。',
         },
       },
       chatGenerationSettingsSheet: {
@@ -2781,6 +2888,7 @@ export const l10n = {
           regenerate: '重新生成',
           regenerateWith: '重新生成（重选模型）',
           edit: '编辑',
+          reportContent: '举报内容',
         },
       },
       palHeaderRight: {
