@@ -279,7 +279,7 @@ export function getHFDefaultSettings(hfModel: HuggingFaceModel): {
 
 export const stops = [
   '</s>',
-  '<|end|>',
+  // '<|end|>', conflicts with gpt-oss. Which model uses <|end|>?
   '<|eot_id|>',
   '<|end_of_text|>',
   '<|im_end|>',
@@ -288,6 +288,7 @@ export const stops = [
   '<|end_of_turn|>',
   '<end_of_turn>',
   '<|endoftext|>',
+  '<|return|>', // gpt-oss
 ];
 
 /**

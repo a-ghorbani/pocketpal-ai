@@ -144,7 +144,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
   // Common stop words for all tests
   const stopWords = [
     '</s>',
-    '<|end|>',
+    // '<|end|>',
     '<|eot_id|>',
     '<|end_of_text|>',
     '<|im_end|>',
@@ -152,6 +152,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
     '<|END_OF_TURN_TOKEN|>',
     '<|end_of_turn|>',
     '<|endoftext|>',
+    '<|return|>',
   ];
 
   const handleModelSelect = async (model: Model) => {
