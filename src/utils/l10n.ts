@@ -473,7 +473,7 @@ export const l10n = {
       },
       bubble: {
         timingsString:
-          '{{predictedMs}}ms per token, {{predictedPerSecond}} tokens per second',
+          '{{predictedMs}}ms/token, {{predictedPerSecond}} tokens/sec',
       },
       exportUtils: {
         fileSaved: 'File Saved',

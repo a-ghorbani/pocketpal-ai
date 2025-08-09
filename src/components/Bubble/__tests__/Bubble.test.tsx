@@ -49,7 +49,7 @@ describe('Bubble', () => {
   it('renders correctly with all props', () => {
     const {getByText, getByTestId} = renderBubble(mockMessage);
     expect(getByTestId('child')).toBeTruthy();
-    expect(getByText('10ms per token, 100.00 tokens per second')).toBeTruthy();
+    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
     expect(getByText('content-copy')).toBeTruthy();
   });
 
@@ -74,5 +74,62 @@ describe('Bubble', () => {
     const messageWithoutMetadata = {...mockMessage, metadata: undefined};
     const {getByText} = renderBubble(messageWithoutMetadata);
     expect(getByText('Child content')).toBeTruthy();
+  });
+
+  it('displays time to first token when available', () => {
+    const messageWithTimeToFirstToken = {
+      ...mockMessage,
+      metadata: {
+        copyable: true,
+        timings: {
+          predicted_per_token_ms: 10,
+          predicted_per_second: 100,
+          time_to_first_token_ms: 250,
+        },
+      },
+    };
+
+    const {getByText} = renderBubble(messageWithTimeToFirstToken);
+
+    // Should display the time to first token in addition to the regular timing info
+    expect(getByText(/250ms TTF/)).toBeTruthy();
+  });
+
+  it('does not display time to first token when null', () => {
+    const messageWithNullTimeToFirstToken = {
+      ...mockMessage,
+      metadata: {
+        copyable: true,
+        timings: {
+          predicted_per_token_ms: 10,
+          predicted_per_second: 100,
+          time_to_first_token_ms: null,
+        },
+      },
+    };
+
+    const {queryByText} = renderBubble(messageWithNullTimeToFirstToken);
+
+    // Should not display time to first token when it's null
+    expect(queryByText(/to first token/)).toBeNull();
+  });
+
+  it('does not display time to first token when undefined', () => {
+    const messageWithoutTimeToFirstToken = {
+      ...mockMessage,
+      metadata: {
+        copyable: true,
+        timings: {
+          predicted_per_token_ms: 10,
+          predicted_per_second: 100,
+          // time_to_first_token_ms is undefined
+        },
+      },
+    };
+
+    const {queryByText} = renderBubble(messageWithoutTimeToFirstToken);
+
+    // Should not display time to first token when it's undefined
+    expect(queryByText(/to first token/)).toBeNull();
   });
 });

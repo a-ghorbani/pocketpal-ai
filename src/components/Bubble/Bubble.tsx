@@ -44,6 +44,15 @@ export const Bubble = ({
       timings?.predicted_per_second?.toFixed(2),
     );
 
+  // Add time to first token if available
+  const timeToFirstTokenString =
+    timings?.time_to_first_token_ms !== undefined &&
+    timings?.time_to_first_token_ms !== null
+      ? `, ${timings.time_to_first_token_ms}ms TTFT`
+      : '';
+
+  const fullTimingsString = timingsString + timeToFirstTokenString;
+
   const {contentContainer, dateHeaderContainer, dateHeader, iconContainer} =
     styles({
       currentUserIsAuthor,
@@ -75,7 +84,7 @@ export const Bubble = ({
               <Icon name="content-copy" style={iconContainer} />
             </TouchableOpacity>
           )}
-          {timings && <Text style={dateHeader}>{timingsString}</Text>}
+          {timings && <Text style={dateHeader}>{fullTimingsString}</Text>}
         </View>
       )}
     </Animated.View>
