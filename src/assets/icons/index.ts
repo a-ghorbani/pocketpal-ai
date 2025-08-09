@@ -38,3 +38,4 @@ export {default as ShareIcon} from './share.svg';
 export {default as TrashIcon} from './trash.svg';
 export {default as UploadIcon} from './upload.svg';
 export {default as VideoRecorderIcon} from './video-recorder.svg';
+export {default as AppInfoIcon} from './app-info.svg';
