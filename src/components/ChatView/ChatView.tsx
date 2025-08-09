@@ -439,15 +439,6 @@ export const ChatView = observer(
           icon: () => <CopyIcon stroke={theme.colors.primary} />,
           disabled: false,
         },
-        {
-          label: reportContentLabel,
-          onPress: () => {
-            setIsReportSheetVisible(true);
-            handleMenuDismiss();
-          },
-          icon: () => <AlertIcon stroke={theme.colors.primary} />,
-          disabled: false,
-        },
       ];
 
       if (!isAuthor) {
@@ -487,6 +478,16 @@ export const ChatView = observer(
           disabled: !hasActiveModel,
         });
       }
+
+      baseItems.push({
+        label: reportContentLabel,
+        onPress: () => {
+          setIsReportSheetVisible(true);
+          handleMenuDismiss();
+        },
+        icon: () => <AlertIcon stroke={theme.colors.primary} />,
+        disabled: false,
+      });
 
       return baseItems;
     }, [
