@@ -74,6 +74,23 @@ export const l10n = {
       valueCacheTypeDescription: 'Select the cache type for value computation',
       valueCacheTypeDisabledDescription:
         'Enable Flash Attention to change cache type',
+      // Memory Settings
+      memorySettings: 'Memory Settings',
+      useMlock: 'Use Memory Lock',
+      useMlockDescription:
+        'Force system to keep model in RAM rather than swapping or compressing',
+      useMmap: 'Memory Mapping',
+      useMmapDescription: 'Use memory-mapped files for faster model loading',
+      useMmapTrue: 'Enabled',
+      useMmapFalse: 'Disabled',
+      useMmapSmart: 'Smart',
+      useMmapTrueDescription: 'Always use memory mapping for faster loading',
+      useMmapFalseDescription:
+        'Never use memory mapping (slower loading but may reduce memory usage)',
+      useMmapSmartDescription:
+        'Automatically choose based on model type (Android only)',
+      useMmapRecommended:
+        'Recommended for performance - Memory-mapped with locked pages. Combines fast loading with consistent performance',
       // Model Loading Settings
       modelLoadingSettings: 'Model Loading Settings',
       // Auto Offload/Load
@@ -1140,6 +1157,22 @@ export const l10n = {
       valueCacheTypeDescription: '値計算用のキャッシュタイプを選択',
       valueCacheTypeDisabledDescription:
         'キャッシュタイプを変更するにはFlash Attentionを有効にしてください',
+      // Memory Settings
+      memorySettings: 'メモリ設定',
+      useMlock: 'メモリロックを使用',
+      useMlockDescription: 'モデルをRAMに保持し、スワップや圧縮を防ぎます',
+      useMmap: 'メモリマッピング',
+      useMmapDescription:
+        'メモリマップファイルを使用してモデルの読み込みを高速化',
+      useMmapTrue: '有効',
+      useMmapFalse: '無効',
+      useMmapSmart: 'スマート',
+      useMmapTrueDescription: '常にメモリマッピングを使用して高速読み込み',
+      useMmapFalseDescription:
+        'メモリマッピングを使用しない（読み込みは遅くなりますがメモリ使用量を削減する可能性があります）',
+      useMmapSmartDescription: 'モデルタイプに基づいて自動選択（Androidのみ）',
+      useMmapRecommended:
+        'パフォーマンス推奨 - ロックされたページでメモリマップ。高速読み込みと一貫したパフォーマンスを組み合わせます',
       // Model Loading Settings
       modelLoadingSettings: 'モデル読み込み設定',
       // Auto Offload/Load
@@ -2208,6 +2241,20 @@ export const l10n = {
       valueCacheType: '值缓存类型',
       valueCacheTypeDescription: '选择值计算的缓存类型',
       valueCacheTypeDisabledDescription: '启用Flash Attention以更改缓存类型',
+      // Memory Settings
+      memorySettings: '内存设置',
+      useMlock: '使用内存锁定',
+      useMlockDescription: '强制系统将模型保留在RAM中，而不是交换或压缩',
+      useMmap: '内存映射',
+      useMmapDescription: '使用内存映射文件加快模型加载速度',
+      useMmapTrue: '启用',
+      useMmapFalse: '禁用',
+      useMmapSmart: '智能',
+      useMmapTrueDescription: '始终使用内存映射以实现更快的加载',
+      useMmapFalseDescription: '从不使用内存映射（加载较慢但可能减少内存使用）',
+      useMmapSmartDescription: '根据模型类型自动选择（仅限Android）',
+      useMmapRecommended:
+        '推荐性能设置 - 带锁定页面的内存映射。结合快速加载和一致的性能',
       // Model Loading Settings
       modelLoadingSettings: '模型加载设置',
       // Auto Offload/Load

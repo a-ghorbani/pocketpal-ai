@@ -58,6 +58,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showKeyCacheMenu, setShowKeyCacheMenu] = useState(false);
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
@@ -68,12 +69,17 @@ export const SettingsScreen: React.FC = observer(() => {
     y: number;
   }>({x: 0, y: 0});
   const [languageAnchor, setLanguageAnchor] = useState<{x: number; y: number}>({
-    x: 0,
-    y: 0,
+    x: 0.0,
+    y: 0.0,
+  });
+  const [mmapAnchor, setMmapAnchor] = useState<{x: number; y: number}>({
+    x: 0.0,
+    y: 0.0,
   });
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
+  const mmapButtonRef = useRef<View>(null);
 
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
@@ -99,6 +105,7 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
     setShowLanguageMenu(false);
+    setShowMmapMenu(false);
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -123,10 +130,29 @@ export const SettingsScreen: React.FC = observer(() => {
     {label: 'IQ4_NL', value: CacheType.IQ4_NL},
   ];
 
+  const mmapOptions = [
+    {label: l10n.settings.useMmapTrue, value: 'true' as const},
+    {label: l10n.settings.useMmapFalse, value: 'false' as const},
+    ...(Platform.OS === 'android'
+      ? [{label: l10n.settings.useMmapSmart, value: 'smart' as const}]
+      : []),
+  ];
+
   const getCacheTypeLabel = (value: CacheType) => {
     return (
       cacheTypeOptions.find(option => option.value === value)?.label || value
     );
+  };
+
+  const getMmapLabel = (value: 'true' | 'false' | 'smart') => {
+    return mmapOptions.find(option => option.value === value)?.label || '';
+  };
+
+  const handleMmapPress = () => {
+    mmapButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+      setMmapAnchor({x: pageX, y: pageY + height});
+      setShowMmapMenu(true);
+    });
   };
 
   const handleKeyCachePress = () => {
@@ -490,6 +516,80 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                 </View>
               </List.Accordion>
+            </Card.Content>
+          </Card>
+
+          {/* Memory Settings */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.memorySettings} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                {/* Use Memory Lock */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.useMlock}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.useMlockDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="use-mlock-switch"
+                    value={modelStore.use_mlock}
+                    onValueChange={value => modelStore.setUseMlock(value)}
+                  />
+                </View>
+              </View>
+              <Divider />
+
+              {/* Memory Mapping */}
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.useMmap}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.useMmapDescription}
+                    </Text>
+                  </View>
+                  <View style={styles.menuContainer}>
+                    <Button
+                      ref={mmapButtonRef}
+                      mode="outlined"
+                      onPress={handleMmapPress}
+                      style={styles.menuButton}
+                      contentStyle={styles.buttonContent}
+                      icon={({size, color}) => (
+                        <Icon source="chevron-down" size={size} color={color} />
+                      )}>
+                      {getMmapLabel(modelStore.use_mmap)}
+                    </Button>
+                    <Menu
+                      visible={showMmapMenu}
+                      onDismiss={() => setShowMmapMenu(false)}
+                      anchor={mmapAnchor}
+                      selectable>
+                      {mmapOptions.map(option => (
+                        <Menu.Item
+                          key={option.value}
+                          style={styles.menu}
+                          label={option.label}
+                          selected={option.value === modelStore.use_mmap}
+                          onPress={() => {
+                            modelStore.setUseMmap(option.value);
+                            setShowMmapMenu(false);
+                          }}
+                        />
+                      ))}
+                    </Menu>
+                  </View>
+                </View>
+              </View>
+              <Text variant="labelSmall" style={styles.textDescription}>
+                {l10n.settings.modelReloadNotice}
+              </Text>
             </Card.Content>
           </Card>
 

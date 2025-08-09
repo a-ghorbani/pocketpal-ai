@@ -33,8 +33,11 @@ export const LlamaContext = jest
   .fn()
   .mockImplementation((params: any) => new MockLlamaContext(params));
 
+export const loadLlamaModelInfo = jest.fn();
+
 export default {
   LlamaContext,
   initLlama: jest.fn(),
   CompletionParams: jest.fn(),
+  loadLlamaModelInfo,
 };
