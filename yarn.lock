@@ -2114,10 +2114,10 @@
     rxjs "^7.8.1"
     sql-escape-string "^1.1.0"
 
-"@pocketpalai/llama.rn@^0.6.8-2":
-  version "0.6.8-2"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/llama.rn/-/llama.rn-0.6.8-2.tgz#44f2d28874fbc166b5693fdb98aa280c4f3e68c6"
-  integrity sha512-+PWv2CqPUd9X5SUmb8P0FsQej9sXmhzZ9weZOTa9wswS5nPgNy3K2IoHjS508ml/HzeruUFyJeVwogmvKLKkvA==
+"@pocketpalai/llama.rn@^0.6.9-1":
+  version "0.6.9-1"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/llama.rn/-/llama.rn-0.6.9-1.tgz#c2f405561cb59edc5a21d9ba40211becf8b44c44"
+  integrity sha512-tJvOgmNX4mIOTdChCfaNvd6qmH5/1dNn/2U8oRdNojeui5XUKxjdr4gh3EPSDk3/R68uoFdxWPPtqZteG1otkA==
 
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
