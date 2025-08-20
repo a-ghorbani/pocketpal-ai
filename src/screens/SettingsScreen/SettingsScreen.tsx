@@ -49,9 +49,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const theme = useTheme();
   const styles = createStyles(theme);
-  const [contextSize, setContextSize] = useState(
-    modelStore.n_context.toString(),
-  );
+  const [contextSize, setContextSize] = useState(modelStore.n_ctx.toString());
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const inputRef = useRef<RNTextInput>(null);
@@ -88,7 +86,7 @@ export const SettingsScreen: React.FC = observer(() => {
   ).current;
 
   useEffect(() => {
-    setContextSize(modelStore.n_context.toString());
+    setContextSize(modelStore.n_ctx.toString());
   }, []);
 
   useEffect(() => {
@@ -100,7 +98,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const handleOutsidePress = () => {
     Keyboard.dismiss();
     inputRef.current?.blur();
-    setContextSize(modelStore.n_context.toString());
+    setContextSize(modelStore.n_ctx.toString());
     setIsValidInput(true);
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
@@ -305,8 +303,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         .replace('{{batchSize}}', modelStore.n_batch.toString())
                         .replace(
                           '{{effectiveBatch}}',
-                          modelStore.n_batch > modelStore.n_context
-                            ? ` (${l10n.settings.effectiveLabel}: ${modelStore.n_context})`
+                          modelStore.n_batch > modelStore.n_ctx
+                            ? ` (${l10n.settings.effectiveLabel}: ${modelStore.n_ctx})`
                             : '',
                         )}
                     </Text>
@@ -340,10 +338,10 @@ export const SettingsScreen: React.FC = observer(() => {
                         .replace(
                           '{{effectivePhysicalBatch}}',
                           modelStore.n_ubatch >
-                            Math.min(modelStore.n_batch, modelStore.n_context)
+                            Math.min(modelStore.n_batch, modelStore.n_ctx)
                             ? ` (${l10n.settings.effectiveLabel}: ${Math.min(
                                 modelStore.n_batch,
-                                modelStore.n_context,
+                                modelStore.n_ctx,
                               )})`
                             : '',
                         )}

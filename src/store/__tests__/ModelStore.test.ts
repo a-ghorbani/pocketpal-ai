@@ -1024,9 +1024,9 @@ describe('ModelStore', () => {
       expect(modelStore.n_ubatch).toBe(128);
     });
 
-    it('should set n_context', () => {
+    it('should set n_ctx', () => {
       modelStore.setNContext(2048);
-      expect(modelStore.n_context).toBe(2048);
+      expect(modelStore.n_ctx).toBe(2048);
     });
 
     it('should get effective values respecting constraints', () => {
@@ -1035,7 +1035,7 @@ describe('ModelStore', () => {
       modelStore.setNUBatch(1024); // Larger than effective batch
 
       const effective = modelStore.getEffectiveValues();
-      expect(effective.n_context).toBe(1024);
+      expect(effective.n_ctx).toBe(1024);
       expect(effective.n_batch).toBe(1024); // Clamped to context
       expect(effective.n_ubatch).toBe(1024); // Clamped to effective batch
     });

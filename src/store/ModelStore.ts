@@ -70,7 +70,7 @@ class ModelStore {
   useAutoRelease: boolean = true;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined = undefined;
-  n_context: number = 1024;
+  n_ctx: number = 1024;
   n_gpu_layers: number = 50;
   n_threads: number = 4;
   max_threads: number = 4; // Will be set in constructor
@@ -94,7 +94,7 @@ class ModelStore {
   // Track initialization settings for the active context
   activeContextSettings:
     | {
-        n_context: number;
+        n_ctx: number;
         n_batch: number;
         n_ubatch: number;
         n_threads: number;
@@ -137,7 +137,7 @@ class ModelStore {
         'useAutoRelease',
         'n_gpu_layers',
         'useMetal',
-        'n_context',
+        'n_ctx',
         'n_threads',
         'flash_attn',
         'cache_type_k',
@@ -272,9 +272,9 @@ class ModelStore {
     });
   };
 
-  setNContext = (n_context: number) => {
+  setNContext = (n_ctx: number) => {
     runInAction(() => {
-      this.n_context = n_context;
+      this.n_ctx = n_ctx;
     });
   };
 
@@ -292,12 +292,12 @@ class ModelStore {
 
   // Helper method to get effective values respecting constraints
   getEffectiveValues = () => {
-    const effectiveContext = this.n_context;
+    const effectiveContext = this.n_ctx;
     const effectiveBatch = Math.min(this.n_batch, effectiveContext);
     const effectiveUBatch = Math.min(this.n_ubatch, effectiveBatch);
 
     return {
-      n_context: effectiveContext,
+      n_ctx: effectiveContext,
       n_batch: effectiveBatch,
       n_ubatch: effectiveUBatch,
     };
@@ -1012,7 +1012,7 @@ class ModelStore {
       const effectiveUseMmap = await resolveUseMmap(this.use_mmap, filePath);
 
       const initSettings = {
-        n_context: effectiveValues.n_context,
+        n_ctx: effectiveValues.n_ctx,
         n_batch: effectiveValues.n_batch,
         n_ubatch: effectiveValues.n_ubatch,
         n_threads: this.n_threads,

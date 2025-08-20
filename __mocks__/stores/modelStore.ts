@@ -9,7 +9,7 @@ import {LlamaContext} from '@pocketpalai/llama.rn';
 
 class MockModelStore {
   models = modelsList;
-  n_context = 1024;
+  n_ctx = 1024;
   n_batch = 512;
   n_ubatch = 512;
   n_threads = 4;
