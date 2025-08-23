@@ -58,10 +58,13 @@ export const InputSlider: React.FC<InputSliderProps> = ({
   );
 
   useEffect(() => {
-    if (parseFloat(textValue) !== value) {
-      setTextValue(clamp(value).toString());
-    }
-  }, [textValue, value, clamp]);
+    setTextValue(prev => {
+      if (parseFloat(prev) !== value) {
+        return clamp(value).toString();
+      }
+      return prev;
+    });
+  }, [value, clamp]);
 
   const handleSliderChange = (val: number) => {
     const newValue = clamp(val);
@@ -71,10 +74,6 @@ export const InputSlider: React.FC<InputSliderProps> = ({
 
   const handleTextChange = (text: string) => {
     setTextValue(text);
-    const num = parseFloat(text);
-    if (!isNaN(num)) {
-      onValueChange(clamp(num));
-    }
   };
 
   const handleEndEditing = () => {
