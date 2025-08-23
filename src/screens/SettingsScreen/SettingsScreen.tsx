@@ -11,12 +11,17 @@ import {
 
 import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
-import Slider from '@react-native-community/slider';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Switch, Text, Card, Button, Icon, List} from 'react-native-paper';
 
 import {GlobeIcon, MoonIcon, CpuChipIcon, ShareIcon} from '../../assets/icons';
-import {TextInput, Menu, Divider, HFTokenSheet} from '../../components';
+import {
+  TextInput,
+  Menu,
+  Divider,
+  HFTokenSheet,
+  InputSlider,
+} from '../../components';
 
 import {useTheme} from '../../hooks';
 
@@ -214,19 +219,16 @@ export const SettingsScreen: React.FC = observer(() => {
                         // We don't disable for cases where the users has has set to true in the past.
                       />
                     </View>
-                    <Slider
+                    <InputSlider
                       testID="gpu-layers-slider"
                       disabled={!modelStore.useMetal}
                       value={modelStore.n_gpu_layers}
                       onValueChange={value =>
                         modelStore.setNGPULayers(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={100}
+                      min={1}
+                      max={100}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.layersOnGPU.replace(
@@ -282,21 +284,16 @@ export const SettingsScreen: React.FC = observer(() => {
                 <View style={styles.advancedSettingsContent}>
                   {/* Batch Size Slider */}
                   <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.batchSize}
-                    </Text>
-                    <Slider
+                    <InputSlider
                       testID="batch-size-slider"
+                      label={l10n.settings.batchSize}
                       value={modelStore.n_batch}
                       onValueChange={value =>
                         modelStore.setNBatch(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={4096}
+                      min={1}
+                      max={4096}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.batchSizeDescription
@@ -313,21 +310,16 @@ export const SettingsScreen: React.FC = observer(() => {
 
                   {/* Physical Batch Size Slider */}
                   <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.physicalBatchSize}
-                    </Text>
-                    <Slider
+                    <InputSlider
                       testID="ubatch-size-slider"
+                      label={l10n.settings.physicalBatchSize}
                       value={modelStore.n_ubatch}
                       onValueChange={value =>
                         modelStore.setNUBatch(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={4096}
+                      min={1}
+                      max={4096}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.physicalBatchSizeDescription
@@ -351,21 +343,16 @@ export const SettingsScreen: React.FC = observer(() => {
 
                   {/* Thread Count Slider */}
                   <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.cpuThreads}
-                    </Text>
-                    <Slider
+                    <InputSlider
                       testID="thread-count-slider"
+                      label={l10n.settings.cpuThreads}
                       value={modelStore.n_threads}
                       onValueChange={value =>
                         modelStore.setNThreads(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={modelStore.max_threads}
+                      min={1}
+                      max={modelStore.max_threads}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.cpuThreadsDescription

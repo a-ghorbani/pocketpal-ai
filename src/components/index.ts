@@ -50,3 +50,4 @@ export * from './VideoPalEmptyPlaceholder';
 export * from './VisionDownloadSheet';
 export * from './VisionControlSheet';
 export * from './PalHeaderRight';
+export * from './InputSlider';

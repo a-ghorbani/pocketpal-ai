@@ -10,7 +10,7 @@ import {View, TextInput as RNTextInput} from 'react-native';
 import {observer} from 'mobx-react-lite';
 import {Button, Text} from 'react-native-paper';
 import {zodResolver} from '@hookform/resolvers/zod';
-import Slider from '@react-native-community/slider';
+import {InputSlider} from '../InputSlider';
 import {useForm, FormProvider, Controller, useWatch} from 'react-hook-form';
 
 import {useTheme} from '../../hooks';
@@ -199,21 +199,15 @@ export const VideoPalSheet: React.FC<VideoPalSheetProps> = observer(
                       {l10n.components.lookiePalSheet.captureInterval}: {value}{' '}
                       {l10n.video.captureIntervalUnit}
                     </Text>
-                    <Slider
-                      style={styles.slider}
-                      minimumValue={500}
-                      maximumValue={5000}
-                      step={500}
+                    <InputSlider
                       value={value}
                       onValueChange={onChange}
-                      minimumTrackTintColor={theme.colors.primary}
-                      maximumTrackTintColor={theme.colors.surfaceVariant}
-                      thumbTintColor={theme.colors.primary}
+                      min={500}
+                      max={5000}
+                      step={500}
+                      showRangeLabel={true}
+                      unit="ms"
                     />
-                    <View style={styles.sliderLabels}>
-                      <Text style={styles.sliderMinLabel}>500ms</Text>
-                      <Text style={styles.sliderMaxLabel}>5000ms</Text>
-                    </View>
                   </View>
                 )}
               />
