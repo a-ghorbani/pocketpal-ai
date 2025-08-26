@@ -40,7 +40,7 @@ describe('BenchResultCard', () => {
     uuid: 'test-uuid',
     oid: 'model-oid', // This is needed for sharing
     initSettings: {
-      n_context: 2048,
+      n_ctx: 2048,
       n_batch: 512,
       n_ubatch: 128,
       n_threads: 4,

@@ -378,8 +378,17 @@ export const useChatSession = (
     currentMessageInfo.current = messageInfo;
 
     try {
+      // Track time to first token
+      const completionStartTime = Date.now();
+      let timeToFirstToken: number | null = null;
+
       const result = await context.completion(cleanCompletionParams, data => {
         if (data.token && currentMessageInfo.current) {
+          // Capture time to first token on the first token received
+          if (timeToFirstToken === null) {
+            timeToFirstToken = Date.now() - completionStartTime;
+          }
+
           if (!modelStore.isStreaming) {
             modelStore.setIsStreaming(true);
           }
@@ -394,6 +403,14 @@ export const useChatSession = (
         }
       });
 
+      // Log completion result with time to first token for debugging
+      if (__DEV__) {
+        console.log('Completion result:', {
+          ...result.timings,
+          time_to_first_token_ms: timeToFirstToken,
+        });
+      }
+
       // No need to flush remaining tokens as each token is processed individually
       // Just wait for the queue to finish processing
       while (tokenQueue.current.length > 0 || isProcessingTokens.current) {
@@ -407,7 +424,10 @@ export const useChatSession = (
         currentMessageInfo.current.sessionId,
         {
           metadata: {
-            timings: result.timings,
+            timings: {
+              ...result.timings,
+              time_to_first_token_ms: timeToFirstToken,
+            },
             copyable: true,
             // Add multimodal flag if this was a multimodal completion
             multimodal: hasImages && isMultimodalEnabled,

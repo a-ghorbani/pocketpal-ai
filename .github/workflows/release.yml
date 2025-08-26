@@ -129,10 +129,16 @@ jobs:
     needs: build_android
 
     steps:
-      - name: Checkout code    # Replace the Download code step
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}    # This ensures we get the latest changes including the version bump
+          fetch-depth: 0
+
+      # Step 1: Setup Xcode to use the correct version
+      - name: Setup Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
 
       # Step 2: Set up Node.js
       - name: Set up Node.js
@@ -157,12 +163,12 @@ jobs:
         working-directory: ios
         run: pod install
 
-      # Add this step before the iOS build
+      # Step 6: Create .env file
       - name: Create .env file
         run: |
           echo "FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}" > .env
 
-      # Step 6: Build and upload iOS app to TestFlight
+      # Step 7: Build and upload iOS app to TestFlight
       - name: Build and upload iOS app
         working-directory: ios
         env:

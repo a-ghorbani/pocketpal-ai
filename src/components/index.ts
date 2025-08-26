@@ -8,6 +8,7 @@ export * from './ChatView';
 export * from './ChatHeader';
 export * from './ChatPalModelPickerSheet';
 export * from './ChatEmptyPlaceholder';
+export * from './ContentReportSheet';
 export * from './Checkbox';
 export * from './CircularActivityIndicator';
 export * from './CompletionSettings';

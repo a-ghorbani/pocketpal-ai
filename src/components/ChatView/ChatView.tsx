@@ -53,8 +53,10 @@ import {
   ChatHeader,
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
+  ContentReportSheet,
 } from '..';
 import {
+  AlertIcon,
   CopyIcon,
   GridIcon,
   PencilLineIcon,
@@ -386,6 +388,8 @@ export const ChatView = observer(
     const [menuPosition, setMenuPosition] = React.useState({x: 0, y: 0});
     const [selectedMessage, setSelectedMessage] =
       React.useState<MessageType.Any | null>(null);
+    const [isReportSheetVisible, setIsReportSheetVisible] =
+      React.useState(false);
 
     const handleMessageLongPress = React.useCallback(
       (message: MessageType.Any, event: any) => {
@@ -413,6 +417,7 @@ export const ChatView = observer(
       regenerate: regenerateLabel,
       regenerateWith: regenerateWithLabel,
       edit: editLabel,
+      reportContent: reportContentLabel,
     } = l10n.components.chatView.menuItems;
 
     const menuItems = React.useMemo((): MenuItem[] => {
@@ -474,6 +479,16 @@ export const ChatView = observer(
         });
       }
 
+      baseItems.push({
+        label: reportContentLabel,
+        onPress: () => {
+          setIsReportSheetVisible(true);
+          handleMenuDismiss();
+        },
+        icon: () => <AlertIcon stroke={theme.colors.primary} />,
+        disabled: false,
+      });
+
       return baseItems;
     }, [
       selectedMessage,
@@ -489,6 +504,7 @@ export const ChatView = observer(
       regenerateLabel,
       regenerateWithLabel,
       editLabel,
+      reportContentLabel,
     ]);
 
     const renderMenuItem = React.useCallback(
@@ -805,6 +821,10 @@ export const ChatView = observer(
             anchor={menuPosition}>
             {menuItems.map(renderMenuItem)}
           </Menu>
+          <ContentReportSheet
+            isVisible={isReportSheetVisible}
+            onClose={() => setIsReportSheetVisible(false)}
+          />
         </View>
       </UserContext.Provider>
     );

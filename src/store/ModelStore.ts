@@ -53,6 +53,7 @@ import {ErrorState, createErrorState} from '../utils/errors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {hasEnoughMemory, isHighEndDevice} from '../hooks/useMemoryCheck';
 import {supportsThinking} from '../utils/thinkingCapabilityDetection';
+import {resolveUseMmap} from '../utils/memorySettings';
 
 class ModelStore {
   models: Model[] = [];
@@ -69,7 +70,7 @@ class ModelStore {
   useAutoRelease: boolean = true;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined = undefined;
-  n_context: number = 1024;
+  n_ctx: number = 1024;
   n_gpu_layers: number = 50;
   n_threads: number = 4;
   max_threads: number = 4; // Will be set in constructor
@@ -78,6 +79,11 @@ class ModelStore {
   cache_type_v: CacheType = CacheType.F16;
   n_batch: number = 512;
   n_ubatch: number = 512;
+
+  // Memory settings
+  use_mlock: boolean = false;
+  use_mmap: 'true' | 'false' | 'smart' =
+    Platform.OS === 'android' ? 'smart' : 'true';
 
   activeModelId: string | undefined = undefined;
 
@@ -88,7 +94,7 @@ class ModelStore {
   // Track initialization settings for the active context
   activeContextSettings:
     | {
-        n_context: number;
+        n_ctx: number;
         n_batch: number;
         n_ubatch: number;
         n_threads: number;
@@ -96,6 +102,8 @@ class ModelStore {
         cache_type_k: CacheType;
         cache_type_v: CacheType;
         n_gpu_layers: number;
+        use_mlock: boolean;
+        use_mmap: boolean;
       }
     | undefined = undefined;
 
@@ -129,13 +137,15 @@ class ModelStore {
         'useAutoRelease',
         'n_gpu_layers',
         'useMetal',
-        'n_context',
+        'n_ctx',
         'n_threads',
         'flash_attn',
         'cache_type_k',
         'cache_type_v',
         'n_batch',
         'n_ubatch',
+        'use_mlock',
+        'use_mmap',
         'lastUsedModelId',
         'wasAutoReleased',
         'lastAutoReleasedModelId',
@@ -262,20 +272,32 @@ class ModelStore {
     });
   };
 
-  setNContext = (n_context: number) => {
+  setNContext = (n_ctx: number) => {
     runInAction(() => {
-      this.n_context = n_context;
+      this.n_ctx = n_ctx;
+    });
+  };
+
+  setUseMlock = (use_mlock: boolean) => {
+    runInAction(() => {
+      this.use_mlock = use_mlock;
+    });
+  };
+
+  setUseMmap = (use_mmap: 'true' | 'false' | 'smart') => {
+    runInAction(() => {
+      this.use_mmap = use_mmap;
     });
   };
 
   // Helper method to get effective values respecting constraints
   getEffectiveValues = () => {
-    const effectiveContext = this.n_context;
+    const effectiveContext = this.n_ctx;
     const effectiveBatch = Math.min(this.n_batch, effectiveContext);
     const effectiveUBatch = Math.min(this.n_ubatch, effectiveBatch);
 
     return {
-      n_context: effectiveContext,
+      n_ctx: effectiveContext,
       n_batch: effectiveBatch,
       n_ubatch: effectiveUBatch,
     };
@@ -985,8 +1007,12 @@ class ModelStore {
 
     try {
       const effectiveValues = this.getEffectiveValues();
+
+      // Resolve the effective use_mmap value based on the setting
+      const effectiveUseMmap = await resolveUseMmap(this.use_mmap, filePath);
+
       const initSettings = {
-        n_context: effectiveValues.n_context,
+        n_ctx: effectiveValues.n_ctx,
         n_batch: effectiveValues.n_batch,
         n_ubatch: effectiveValues.n_ubatch,
         n_threads: this.n_threads,
@@ -995,12 +1021,15 @@ class ModelStore {
         cache_type_v: this.cache_type_v,
         n_gpu_layers: this.useMetal ? this.n_gpu_layers : 0,
         no_gpu_devices: !this.useMetal,
+        use_mlock: this.use_mlock,
+        use_mmap: effectiveUseMmap,
       };
+      console.log('initSettings:', initSettings);
 
+      const t0 = Date.now();
       const ctx = await initLlama(
         {
           model: filePath,
-          use_mlock: true,
           ...initSettings,
           use_progress_callback: true,
         },
@@ -1008,6 +1037,8 @@ class ModelStore {
           //console.log('progress: ', _progress);
         },
       );
+      const t1 = Date.now();
+      console.log('init time: ', t1 - t0);
 
       await this.updateModelStopTokens(ctx, model);
 

@@ -18,9 +18,9 @@ import {
   EditIcon,
   ModelIcon,
   PalIcon,
-  PlaceholderIcon,
   SettingsIcon,
   TrashIcon,
+  AppInfoIcon,
 } from '../../assets/icons';
 import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
@@ -126,7 +126,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
               <Drawer.Item
                 label={l10n.components.sidebarContent.menuItems.appInfo}
                 icon={() => (
-                  <PlaceholderIcon
+                  <AppInfoIcon
                     width={24}
                     height={24}
                     stroke={theme.colors.primary}

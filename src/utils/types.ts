@@ -464,7 +464,7 @@ export interface BenchmarkResult {
   uuid: string;
   submitted?: boolean;
   initSettings?: {
-    n_context: number;
+    n_ctx: number;
     n_batch: number;
     n_ubatch: number;
     n_threads: number;

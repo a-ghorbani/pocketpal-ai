@@ -161,7 +161,7 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
                 <Text style={styles.configText}>
                   {l10n.benchmark.benchmarkResultCard.modelSettings.context.replace(
                     '{{context}}',
-                    result.initSettings.n_context.toString(),
+                    result.initSettings.n_ctx.toString(),
                   )}{' '}
                   •{' '}
                   {l10n.benchmark.benchmarkResultCard.modelSettings.batch.replace(

@@ -170,8 +170,6 @@ describe('useChatSession', () => {
 
     expect(chatSessionStore.updateMessage).toHaveBeenCalled();
 
-    const expectedMetadata = {timings: timings, copyable: true};
-
     const matchingCall = (
       chatSessionStore.updateMessage as jest.Mock
     ).mock.calls.find(
@@ -180,7 +178,21 @@ describe('useChatSession', () => {
     );
 
     expect(matchingCall).toBeDefined();
-    expect(matchingCall[2].metadata).toEqual(expectedMetadata);
+
+    // Check that the metadata includes the original timings plus time_to_first_token_ms
+    const actualMetadata = matchingCall[2].metadata;
+    expect(actualMetadata.copyable).toBe(true);
+    expect(actualMetadata.timings).toEqual(
+      expect.objectContaining({
+        ...timings,
+        time_to_first_token_ms: expect.any(Number),
+      }),
+    );
+
+    // Verify time_to_first_token_ms is a reasonable value (should be >= 0)
+    expect(
+      actualMetadata.timings.time_to_first_token_ms,
+    ).toBeGreaterThanOrEqual(0);
   });
 
   it('should reset the conversation', () => {
