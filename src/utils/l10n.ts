@@ -3184,4 +3184,1094 @@ export const l10n = {
       cameraNotAvailable: '当前虚拟机无法使用摄像头，请使用物理机！！',
     },
   },
+
+    ru: {
+    common: {
+      cancel: 'Отмена',
+      delete: 'Удалить',
+      dismiss: 'Отклонить',
+      rename: 'Переименовать',
+      reset: 'Сброс',
+      save: 'Сохранить',
+      update: 'Обновить',
+      networkError: 'Ошибка сети. Попробуйте ещё раз.',
+      downloadETA: 'Осталось',
+      calculating: 'вычисление...',
+      second: 'сек',
+      seconds: 'сек',
+      year: 'год',
+      years: 'года',
+      month: 'месяц',
+      months: 'месяца',
+      week: 'неделя',
+      weeks: 'недели',
+      day: 'день',
+      days: 'дня',
+      hour: 'час',
+      hours: 'часа',
+      minute: 'мин',
+      minutes: 'мин',
+      justNow: 'только что',
+      ok: 'ОК',
+      close: 'Закрыть',
+      clear: 'Очистить всё',
+      gallery: 'Галерея',
+    },
+    settings: {
+      // Model Initialization Settings
+      modelInitializationSettings: 'Настройки инициализации модели',
+      // Metal Settings
+      metal: 'Metal',
+      metalDescription: 'Аппаратно-ускоренный API от Apple.',
+      metalRequiresNewerIOS:
+        'Metal ускорение работает только на iOS 18 и выше. Обновите устройство, чтобы воспользоваться этой возможностью.',
+      layersOnGPU: 'Слои на GPU: {{gpuLayers}}',
+      // Context Size
+      contextSize: 'Размер контекста',
+      contextSizePlaceholder:
+        'Введите размер контекста (мин. {{minContextSize}})',
+      invalidContextSizeError:
+        'Введите допустимое число (минимум {{minContextSize}})',
+      modelReloadNotice: 'Для применения изменений требуется перезагрузка модели.',
+      // Advanced Settings
+      advancedSettings: 'Дополнительные настройки',
+      // Batch Size
+      batchSize: 'Размер пакета',
+      batchSizeDescription: 'Размер пакета: {{batchSize}}{{effectiveBatch}}',
+      effectiveLabel: 'эффективный',
+      // Physical Batch Size
+      physicalBatchSize: 'Физический размер пакета',
+      physicalBatchSizeDescription:
+        'Физический размер пакета: {{physicalBatchSize}}{{effectivePhysicalBatch}}',
+      // Thread Count
+      cpuThreads: 'Потоки CPU',
+      cpuThreadsDescription:
+        'Используется {{threads}} из {{maxThreads}} доступных потоков',
+      // Flash Attention
+      flashAttention: 'Flash Attention',
+      flashAttentionDescription:
+        'Включить Flash Attention для ускорения обработки',
+      // Cache Type K
+      keyCacheType: 'Тип кэша ключа',
+      keyCacheTypeDescription: 'Выберите тип кэша для вычисления ключа',
+      keyCacheTypeDisabledDescription:
+        'Включить Flash Attention для изменения типа кэша',
+      // Cache Type V
+      valueCacheType: 'Тип кэша значений',
+      valueCacheTypeDescription: 'Выберите тип кэша для вычисления значения',
+      valueCacheTypeDisabledDescription:
+        'Включить Flash Attention для изменения типа кэша',
+      // Memory Settings
+      memorySettings: 'Настройки памяти',
+      useMlock: 'Блокировка памяти',
+      useMlockDescription:
+        'Заставлять систему держать модель в ОЗУ, не выгружая и не сжимая',
+      useMmap: 'Отображение в память',
+      useMmapDescription:
+        'Использовать файлы, отображаемые в память, для более быстрой загрузки модели',
+      useMmapTrue: 'Включено',
+      useMmapFalse: 'Отключено',
+      useMmapSmart: 'Авто',
+      useMmapTrueDescription:
+        'Всегда использовать отображение в память для быстрой загрузки',
+      useMmapFalseDescription:
+        'Никогда не использовать отображение в память (загрузка медленнее, но может снизить потребление памяти)',
+      useMmapSmartDescription:
+        'Выбирать автоматически в зависимости от типа модели (только Android)',
+      useMmapRecommended:
+        'Рекомендуется для производительности — отображение в память с блокировкой страниц. Совмещает быструю загрузку со стабильной производительностью',
+      // Model Loading Settings
+      modelLoadingSettings: 'Настройки загрузки модели',
+      // Auto Offload/Load
+      autoOffloadLoad: 'Автоматическая выгрузка/загрузка',
+      autoOffloadLoadDescription:
+        'Выгружать модель при переходе приложения в фоновый режим.',
+      // Auto Navigate to Chat
+      autoNavigateToChat: 'Автоматический переход к чату',
+      autoNavigateToChatDescription: 'Переходить к чату при начале загрузки.',
+      // App Settings
+      appSettings: 'Настройки приложения',
+      // Language
+      language: 'Язык',
+      // Dark Mode
+      darkMode: 'Темный режим',
+      // Display Memory Usage
+      displayMemoryUsage: 'Показывать использование памяти',
+      displayMemoryUsageDescription:
+        'Показывать использование памяти на странице чата.',
+      // Export/Import Options
+      exportOptions: 'Параметры экспорта',
+      exportLegacyChats: 'Экспорт старых чатов',
+      exportLegacyChatsDescription:
+        'Используйте, если миграция не удалась или нужно восстановить старые сессии чата.',
+      exportButton: 'Экспорт',
+      importChats: 'Импорт сессий чата',
+      importChatsDescription:
+        'Импортировать сессии чата из (экспортированного) JSON‑файла.',
+      importButton: 'Импорт',
+      importSuccess: 'Успешно импортировано сессий чата: {{count}}.',
+      importError:
+        'Не удалось импортировать сессии чата. Проверьте формат файла.',
+      // API Settings
+      apiSettingsTitle: 'Настройки API',
+      // Hugging Face Token
+      huggingFaceTokenLabel: 'Токен Hugging Face',
+      tokenIsSetDescription:
+        'Токен установлен. Требуется для доступа к моделям с ограниченным доступом.',
+      setTokenDescription:
+        'Укажите токен для доступа к моделям с ограниченным доступом на Hugging Face.',
+      setTokenButton: 'Установить токен',
+      useHfTokenLabel: 'Использовать токен HF',
+      useHfTokenDescription:
+        'Включите, чтобы использовать токен для API‑запросов. Отключите, если из‑за токена возникают проблемы с авторизацией.',
+    },
+    memory: {
+      shortWarning: 'Предупреждение о памяти',
+      warning:
+        'Предупреждение: Размер модели может превышать доступную память. Это может повлиять на производительность и стабильность вашего устройства.',
+      multimodalWarning:
+        'На этом устройстве может не хватать ресурсов для мультимодальных моделей.',
+      alerts: {
+        memoryWarningTitle: 'Предупреждение о памяти',
+        memoryWarningMessage:
+          'Эта модель может превысить доступную память, что приведёт к нестабильности. Продолжить загрузку?',
+        multimodalWarningTitle: 'Предупреждение о производительности устройства',
+        multimodalWarningMessage:
+          'На этом устройстве может не хватать ресурсов для мультимодальных моделей. Загрузка может вызвать нестабильность. Всё равно продолжить?',
+        combinedWarningTitle: 'Предупреждение о производительности',
+        combinedWarningMessage:
+          'Эта модель может превысить доступную память, и на этом устройстве может не хватать ресурсов для мультимодальных моделей. Загрузка может вызвать нестабильность. Всё равно продолжить?',
+        cancel: 'Отмена',
+        continue: 'Продолжить',
+      },
+    },
+    storage: {
+      checkFailed: 'Не удалось проверить хранилище',
+      lowStorage: 'Недостаточно места! Модель {{modelSize}} > {{freeSpace}} свободно',
+    },
+    generation: {
+      modelNotInitialized: 'Контекст модели не инициализирован',
+      failedToGenerate: 'Не удалось сгенерировать вывод',
+    },
+    models: {
+      fileManagement: {
+        fileAlreadyExists: 'Файл уже существует',
+        fileAlreadyExistsMessage:
+          'Файл с таким именем уже существует. Что вы хотите сделать?',
+        replace: 'Заменить',
+        keepBoth: 'Сохранить оба',
+      },
+      labels: {
+        localModel: 'Локальный',
+        hfModel: 'HF',
+        unknownGroup: 'Неизвестный',
+        availableToUse: 'Готово к использованию',
+        availableToDownload: 'Доступно для загрузки',
+        useAddButtonForMore: 'Используйте +, чтобы найти больше моделей',
+      },
+      vision: 'Зрение',
+      mmproj: 'Проектор',
+      multimodal: {
+        settings: 'Настройки мультимодальности',
+        projectionModels: 'Проекционные модели',
+        noCompatibleModels: 'Совместимые проекционные модели не найдены',
+        noProjectionModels: 'Нет доступных проекционных моделей',
+        selected: 'Выбрано',
+        select: 'Выбрать',
+        download: 'Загрузить',
+        projectionNeededTitle: 'Требуется проекционная модель',
+        projectionNeededMessage:
+          'Для мультимодальности этой модели требуется проекционная модель.',
+        projectionMissingWarning: 'Отсутствует проекционная модель',
+        projectionMissingShort: 'Нет проекции',
+        reloadModelTitle: 'Перезагрузить модель',
+        reloadModelMessage:
+          'Необходимо перезагрузить модель, чтобы применить новую проекционную модель. Перезагрузить сейчас?',
+        reload: 'Перезагрузить',
+        deleteProjectionTitle: 'Удалить проекционную модель',
+        deleteProjectionMessage:
+          'Вы уверены, что хотите удалить эту проекционную модель?',
+        cannotDeleteTitle: 'Невозможно удалить',
+        // Vision control strings
+        visionControls: {
+          enableVision: 'Включить возможности зрения',
+          disableVision: 'Отключить возможности зрения',
+          visionEnabled: 'Зрение включено',
+          visionDisabled: 'Зрение выключено',
+          textOnlyMode: 'Только текст',
+          visionMode: 'Зрение включено',
+          downloadWithVision: 'Загрузить с поддержкой зрения',
+          downloadTextOnly: 'Загрузить только текст',
+          visionToggleDescription: 'Включить обработку изображений',
+          projectionModelSize: '+{size} модель проекции',
+          visionModeDescription: 'Обработка изображений и текста',
+          textOnlyModeDescription: 'Обработка только текста',
+          includesVisionCapability: 'Включает возможности зрения',
+          requiresProjectionModel:
+            'Сначала загрузите совместимую модель проекции',
+        },
+        cannotDeleteActive: 'Эта модель проекции сейчас активна.',
+        cannotDeleteInUse:
+          'Эта модель проекции используется загруженными LLM-моделями:',
+        dependentModels: 'Зависимые модели:',
+        visionWillBeDisabled:
+          'Возможности зрения будут отключены для этих моделей.',
+      },
+      buttons: {
+        addFromHuggingFace: 'Добавить из Hugging Face',
+        addLocalModel: 'Добавить локальную модель',
+        reset: 'Сброс',
+      },
+      modelsHeaderRight: {
+        menuTitleHf: 'Модели от Hugging Face',
+        menuTitleDownloaded: 'Загруженные модели',
+        menuTitleGrouped: 'Группировать по типу модели',
+        menuTitleReset: 'Сбросить список моделей',
+      },
+      modelsResetDialog: {
+        proceedWithReset: 'Продолжить сброс',
+        confirmReset: 'Подтвердить сброс',
+      },
+      chatTemplate: {
+        label: 'Базовый шаблон чата:',
+      },
+      details: {
+        title: 'Доступные файлы GGUF',
+      },
+      modelFile: {
+        alerts: {
+          cannotRemoveTitle: 'Невозможно удалить',
+          modelPreset: 'Модель предустановлена.',
+          downloadedFirst:
+            'Модель загружена. Пожалуйста, сначала удалите файл.',
+          removeTitle: 'Удалить модель',
+          removeMessage:
+            'Вы уверены, что хотите удалить эту модель из списка?',
+          removeError: 'Не удалось удалить модель.',
+          alreadyDownloadedTitle: 'Модель уже загружена',
+          alreadyDownloadedMessage: 'Модель уже загружена.',
+          deleteTitle: 'Удалить модель',
+          deleteMessage:
+            'Вы уверены, что хотите удалить эту загруженную модель?',
+        },
+        buttons: {
+          remove: 'Удалить',
+        },
+        warnings: {
+          storage: {
+            message: 'Недостаточно места для хранения.',
+            shortMessage: 'Низкий объем хранилища',
+          },
+          memory: {
+            message:
+              'Размер модели близок к общему объему памяти вашего устройства или превышает его. Это может вызвать неожиданное поведение.',
+          },
+          legacy: {
+            message: 'Устаревший формат квантования — модель может не работать.',
+            shortMessage: 'Устаревшее квантование',
+          },
+          multiple: '{count} предупреждений',
+        },
+        labels: {
+          downloadSpeed: '{speed}',
+        },
+      },
+      search: {
+        noResults: 'Модели не найдены',
+        loadingMore: 'Загрузка дополнительных данных...',
+        searchPlaceholder: 'Найти модели на Hugging Face',
+        modelUpdatedLong: 'Обновлено {{time}} назад',
+        modelUpdatedShort: '{{time}} назад',
+        modelUpdatedJustNowLong: 'Обновлено только что',
+        modelUpdatedJustNowShort: 'только что',
+        errorOccurred: 'Не удалось загрузить список моделей. Повторите попытку.',
+      },
+      modelCard: {
+        alerts: {
+          deleteTitle: 'Удалить модель',
+          deleteMessage:
+            'Вы уверены, что хотите удалить эту загруженную модель?',
+          removeTitle: 'Удалить модель',
+          removeMessage:
+            'Вы уверены, что хотите удалить эту модель из списка?',
+        },
+        buttons: {
+          settings: 'Настройки',
+          download: 'Загрузить',
+          remove: 'Удалить',
+          load: 'Загрузка',
+          offload: 'Выгрузка',
+        },
+        labels: {
+          skills: 'Навыки: ',
+        },
+      },
+      modelSettings: {
+        template: {
+          label: 'Шаблон:',
+          editButton: 'Редактировать',
+          dialogTitle: 'Редактировать шаблон чата',
+          note1:
+            'Примечание: Изменение шаблона может изменить BOS, EOS и системный промпт.',
+          note2:
+            'Использует Nunjucks. Оставьте пустым, чтобы использовать шаблон модели.',
+          placeholder: 'Введите здесь шаблон чата...',
+          closeButton: 'Закрыть',
+        },
+        stopWords: {
+          label: 'СТОП-СЛОВА',
+          placeholder: 'Добавить новое стоп-слово',
+        },
+        tokenSettings: {
+          bos: 'BOS',
+          eos: 'EOS',
+          addGenerationPrompt: 'Добавить генерирующий промпт',
+          bosTokenPlaceholder: 'Токен BOS',
+          eosTokenPlaceholder: 'Токен EOS',
+          systemPrompt: 'Системный промпт',
+        },
+      },
+      modelDescription: {
+        size: 'Размер: ',
+        parameters: 'Параметры: ',
+        separator: ' | ',
+        notAvailable: 'Н/Д',
+      },
+      modelCapabilities: {
+        questionAnswering: 'Вопрос - Ответ',
+        summarization: 'Суммаризация',
+        reasoning: 'Рассуждение',
+        roleplay: 'Ролевая игра',
+        instructions: 'Следование инструкциям',
+        code: 'Генерация кода',
+        math: 'Решение математических задач',
+        multilingual: 'Многоязычный',
+        rewriting: 'Перефразирование',
+        creativity: 'Творческое письмо',
+        vision: 'Зрение',
+      },
+    },
+    completionParams: {
+      include_thinking_in_context:
+        'Включать части мышления/рассуждений ИИ в контекст, отправляемый модели. Отключение экономит место в контексте и может повлиять на качество.',
+      jinja:
+        'Включить шаблоны Jinja для форматирования чата. При включении используется обработка шаблонов Jinja для лучшей совместимости с современными моделями.',
+      grammar:
+        'Принудительно применять грамматические правила для соответствия генерируемого текста заданной структуре или формату',
+      stop: 'Определить конкретные фразы для остановки генерации текста',
+      n_predict: 'Установить размер генерируемого ответа (в токенах)',
+      n_probs: 'Показать вероятностные оценки для альтернативных слов.',
+      top_k:
+        'Контроль креативности, ограничивая выбор слов K наиболее вероятными вариантами. Низкие значения делают ответы более конкретными',
+      top_p:
+        'Баланс креативности и связности. Более высокие значения (около 1.0) позволяют получать более креативные, но потенциально менее конкретные ответы',
+      min_p:
+        'Минимальный порог вероятности для токена. Исключает маловероятные слова, снижая количество бессмысленных или не соответствующих контексту ответов',
+      temperature:
+        'Контроль креативности против предсказуемости. Высокие значения делают ответы более творческими, но менее конкретными',
+      penalty_last_n:
+        'Дистанция проверки повторений. Большие значения помогают избежать повторений на большом отрезке текста',
+      penalty_repeat:
+        'Подавление повторов слов. Высокие значения делают язык ответов более разнообразным',
+      penalty_freq:
+        'Штраф за чрезмерное употребление слов. Высокие значения способствуют использованию более разнообразного словаря',
+      penalty_present:
+        'Уменьшить повторение тем и идей. Более высокие значения стимулируют разнообразие контента',
+      mirostat:
+        'Включить расширенный контроль над креативностью ответа. Установите 1 или 2 (более плавный) для интеллектуальной регулировки случайности и связности в режиме реального времени.',
+      mirostat_tau:
+        'Установить целевой уровень креативности для Mirostat. Высокие значения дают более разнообразные и творческие ответы, низкие значения дают более конкретные результаты.',
+      mirostat_eta:
+        'Скорость адаптации креативности в Mirostat. Повышенные значения обеспечивают более быстрые корректировки',
+      dry_multiplier:
+        'Интенсивность функции DRY (Не повторяйся). Высокие значения эффективно предотвращают повторения',
+      dry_base:
+        'Базовый штраф за повторение в режиме DRY. Высокие значения более активно препятствуют повторам',
+      dry_allowed_length:
+        'Пороговое количество повторяющихся слов для срабатывания штрафа DRY',
+      dry_penalty_last_n: 'Насколько далеко назад искать повторения в режиме DRY',
+      dry_sequence_breakers:
+        'Символы для сброса проверки повторений в режиме DRY',
+      ignore_eos:
+        'Принудительное продолжение генерации при попытке модели завершить работу. Используется для создания более развернутых ответов',
+      logit_bias:
+        'Регулировать вероятность появления определенных слов в ответе',
+      seed:
+        'Задать начальное значение генератора случайных чисел. Полезно для получения повторяемых результатов',
+      xtc_probability:
+        'Установить вероятность удаления токенов через сэмплер XTC. 0 — отключено',
+      xtc_threshold:
+        'Установить минимальный порог вероятности для удаления токенов через сэмплер XTC. (> 0.5 отключает XTC)',
+      typical_p:
+        'Включить локально типичное сэмплирование с параметром p. 1.0 — отключено',
+    },
+    about: {
+      screenTitle: 'Информация о приложении',
+      description:
+        'Мобильное приложение для работы с языковыми моделями на вашем устройстве. Построено на базе llama.cpp и llama.rn.',
+      supportProject: 'Поддержите проект',
+      supportProjectDescription:
+        'Если вам нравится PocketPal AI, рассмотрите возможность поддержки проекта:',
+      githubButton: 'Поставьте звезду на GitHub',
+      orText: 'или',
+      orBy: 'или',
+      sponsorButton: 'Станьте спонсором',
+      versionCopiedTitle: 'Версия скопирована',
+      versionCopiedDescription:
+        'Информация о версии скопирована в буфер обмена',
+    },
+    feedback: {
+      title: 'Отправить отзыв',
+      description:
+        'Нам важно ваше мнение! Расскажите, как PocketPal AI помогает вам и что мы можем улучшить, чтобы сделать его еще более полезным.',
+      shareThoughtsButton: 'Поделитесь своими мыслями',
+      useCase: {
+        label: 'Для чего вы используете PocketPal AI?',
+        placeholder: 'например, обобщение текстов, ролевые игры и т.д.',
+      },
+      featureRequests: {
+        label: 'Запрос новой функции',
+        placeholder: 'Какие функции вы хотели бы видеть?',
+      },
+      generalFeedback: {
+        label: 'Общий отзыв',
+        placeholder: 'Расскажите о других ваших идеях.',
+      },
+      usageFrequency: {
+        label: 'Как часто вы пользуетесь PocketPal AI? (Необязательно)',
+        options: {
+          daily: 'Ежедневно',
+          weekly: 'Раз в неделю',
+          monthly: 'Раз в месяц',
+          rarely: 'Редко',
+        },
+      },
+      email: {
+        label: 'Контактный Email (Необязательно)',
+        placeholder: 'Ваш email',
+      },
+      submit: 'Отправить отзыв',
+      validation: {
+        required: 'Пожалуйста, напишите что-нибудь в отзыве',
+      },
+      success: 'Спасибо за ваш отзыв!',
+      error: {
+        general: 'Не удалось отправить отзыв. Повторите попытку.',
+      },
+    },
+
+    components: {
+      attachmentButton: {
+        attachmentButtonAccessibilityLabel: 'Отправить медиа',
+      },
+      bubble: {
+        timingsString:
+          '{{predictedMs}}мс на токен, {{predictedPerSecond}} токенов в секунду',
+      },
+      exportUtils: {
+        fileSaved: 'Файл сохранён',
+        fileSavedMessage:
+          'Файл сохранён в папку Загрузки как {{filename}}',
+        share: 'Поделиться',
+        ok: 'ОК',
+        shareError: 'Ошибка при отправке',
+        shareErrorMessage: 'Не удалось поделиться файлом. Повторите попытку.',
+        saveError: 'Ошибка сохранения в Загрузки',
+        saveOptions: 'Параметры сохранения',
+        saveOptionsMessage:
+          'Не удаётся сохранить напрямую в Загрузки. Хотите вместо этого поделиться файлом?',
+        cancel: 'Отмена',
+        shareContentErrorMessage:
+          'Не удалось поделиться контентом. Повторите попытку.',
+        exportError: 'Ошибка экспорта',
+        exportErrorMessage:
+          'Произошла ошибка при экспорте файла. Повторите попытку.',
+        permissionRequired: 'Требуется доступ к хранилищу',
+        permissionMessage:
+          'Нужно разрешение, чтобы сохранить экспорт в папку Загрузки.',
+        permissionDenied: 'Доступ запрещён',
+        permissionDeniedMessage:
+          'Без разрешения на хранилище функция экспорта будет недоступна.',
+        continue: 'Продолжить',
+      },
+      thinkingBubble: {
+        reasoning: 'Рассуждение',
+      },
+      chatEmptyPlaceholder: {
+        noModelsTitle: 'Нет доступных моделей',
+        noModelsDescription:
+          'Загрузите модель и начните общаться в PocketPal',
+        noModelsButton: 'Загрузить модель',
+        activateModelTitle: 'Активируйте модель для начала работы',
+        activateModelDescription:
+          'Выберите модель и загрузите её. После этого, нажмите Загрузить рядом с моделью и начните общение.',
+        activateModelButton: 'Выбор модели',
+        loading: 'Загрузка...',
+      },
+      chatInput: {
+        inputPlaceholder: 'Сообщение',
+        thinkingToggle: {
+          enableThinking: 'Включить режим размышления',
+          disableThinking: 'Отключить режим размышления',
+          thinkingEnabled: 'Режим размышления включён',
+          thinkingDisabled: 'Режим размышления выключен',
+          thinkText: 'Размышлять',
+        },
+      },
+      contentReportSheet: {
+        title: 'Пожаловаться на контент',
+        privacyNote:
+          'Мы не отправляем содержимое сообщений или детали беседы. Пожалуйста, опишите конкретную проблему, с которой вы столкнулись.',
+        categoryLabel: 'Категория жалобы',
+        selectCategory: 'Выберите категорию',
+        categories: {
+          hate: 'Разжигание ненависти',
+          sexual: 'Сексуальный контент',
+          selfHarm: 'Самоповреждение',
+          violence: 'Насилие',
+          other: 'Другое',
+        },
+        descriptionLabel: 'Описание',
+        descriptionPlaceholder:
+          'Пожалуйста, опишите проблему с этим контентом...',
+        includeModelInfo: 'Включить информацию о модели',
+        includeModelInfoDescription:
+          'Добавить название модели и идентификатор, чтобы помочь в расследовании',
+        noActiveModelNote: 'Сейчас нет активной модели',
+        submit: 'Отправить жалобу',
+        validation: {
+          title: 'Не хватает данных',
+          message: 'Выберите категорию и укажите описание.',
+        },
+        success: {
+          title: 'Жалоба отправлена',
+          message:
+            'Спасибо за жалобу. Мы рассмотрим её и примем меры.',
+        },
+        error: {
+          title: 'Не удалось отправить жалобу',
+          message: 'Ошибка при отправке жалобы. Повторите попытку.',
+        },
+      },
+      chatGenerationSettingsSheet: {
+        invalidValues: 'Неверные значения',
+        invalidNumericValuesMessage: 'Должно быть действительным числом',
+        pleaseCorrect: 'Пожалуйста, исправьте следующее:',
+        ok: 'ОК',
+        saveChanges: 'Сохранить изменения',
+        saveAsPreset: 'Сохранить как предустановку',
+        title_session: 'Настройки генерации чата (Сессия)',
+        title_preset: 'Настройки генерации чата (Предустановка)',
+        resetToSystemDefaults: 'Сброс к системным настройкам по умолчанию',
+        resetToPreset: 'Сброс к предустановке',
+        applytoPresetAlert: {
+          title: 'Успешно',
+          message: 'Эти настройки будут применены ко всем будущим сессиям',
+        },
+      },
+      chatHeaderTitle: {
+        defaultTitle: 'Чат',
+      },
+      fileMessage: {
+        fileButtonAccessibilityLabel: 'Файл',
+      },
+      chatPalModelPickerSheet: {
+        modelsTab: 'Модели',
+        palsTab: 'Pals',
+        noPal: 'Без Pal',
+        disablePal: 'Выключить активный Pal',
+        noDescription: 'Нет описания',
+        assistantType: 'Ассистент',
+        roleplayType: 'Ролевая игра',
+        videoType: 'Видео',
+        confirmationTitle: 'Подтверждение',
+        modelSwitchMessage:
+          'У этого Pal по умолчанию установлена другая модель ({{modelName}}). Хотите переключиться на модель по умолчанию?',
+        keepButton: 'Сохранить',
+        switchButton: 'Переключить',
+      },
+      downloadErrorDialog: {
+        downloadFailedTitle: 'Ошибка загрузки',
+        downloadFailedMessage: 'Не удалось загрузить модель: {message}',
+        unauthorizedTitle: 'Ошибка авторизации',
+        unauthorizedMessage:
+          'Ваш токен Hugging Face недействителен или истёк. Пожалуйста, обновите токен в настройках.',
+        forbiddenTitle: 'Доступ запрещён',
+        forbiddenMessage:
+          'У вас нет прав доступа к этой модели. Убедитесь, что:',
+        forbiddenSteps: [
+          'У вашего токена есть право "read"',
+          'Вы запросили и получили доступ к этой модели',
+          'Владелец модели одобрил ваш запрос',
+        ],
+        getTokenTitle: 'Получить токен Hugging Face',
+        getTokenMessage:
+          'Для загрузки этой модели требуется токен Hugging Face.',
+        getTokenSteps: [
+          'Перейдите на huggingface.co и выполните вход',
+          'Откройте Settings > Access Tokens',
+          'Создайте новый токен с правом "read"',
+          'Скопируйте токен и вставьте его в поле',
+        ],
+        tokenDisabledTitle: 'Токен отключён',
+        tokenDisabledMessage:
+          'У вас установлен токен Hugging Face, но он отключён. Для загрузки этой модели требуется токен. Включите токен, чтобы продолжить.',
+        enableAndRetry: 'Включить и повторить',
+        goToSettings: 'Перейти к настройкам',
+        tryAgain: 'Повторить попытку',
+        viewOnHuggingFace: 'Открыть модель на HF ↗',
+      },
+      headerRight: {
+        deleteChatTitle: 'Удалить чат',
+        deleteChatMessage: 'Вы уверены, что хотите удалить этот чат?',
+        generationSettings: 'Настройки генерации',
+        model: 'Модель',
+        duplicateChatHistory: 'Дублировать историю чата',
+        makeChatTemporary: 'Сделать чат временным',
+        export: 'Экспорт/Импорт',
+        exportCurrentSession: 'Экспорт текущей сессии',
+        exportAllSessions: 'Экспорт всех сессий',
+        exportChatSession: 'Экспорт сессии чата',
+        importSessions: 'Импорт сессий',
+      },
+      hfTokenSheet: {
+        title: 'Токен Hugging Face',
+        description: 'Требуется для доступа к моделям с ограничённым доступом',
+        inputLabel: 'Персональный токен доступа',
+        inputPlaceholder: 'Вставьте ваш токен здесь',
+        save: 'Сохранить токен',
+        saved: 'Токен успешно сохранён',
+        reset: 'Сброс токена',
+        resetSuccess: 'Токен успешно удалён',
+        instructions: 'Как получить токен:',
+        instructionsSteps: [
+          'Перейдите на huggingface.co и выполните вход',
+          'Откройте Settings > Access Tokens',
+          'Создайте новый токен с правом "read"',
+          'Скопируйте токен и вставьте его ниже',
+        ],
+        getTokenLink: 'Получить токен на huggingface.co ↗',
+        error: {
+          saving: 'Ошибка сохранения токена',
+          missing: 'Требуется токен Hugging Face',
+          invalid: 'Недействительный или истёкший токен',
+          gatedModelAccess: 'Доступ к этой закрытой модели отклонён',
+        },
+        gatedModelIndicator: 'Требуется токен',
+        tokenRequired: 'Для этой модели требуется токен доступа Hugging Face',
+        searchErrorHint:
+          'Ваш токен API Hugging Face недействителен или истёк. Чтобы продолжить поиск, удалите токен или отключите авторизацию по токену в Настройках.',
+        disableAndRetry: 'Отключить токен и повторить',
+      },
+      modelSettingsSheet: {
+        modelSettings: 'Настройки модели',
+        saveChanges: 'Сохранить изменения',
+      },
+      modelsHeaderRight: {
+        menuTitleHf: 'Модели от Hugging Face',
+        menuTitleDownloaded: 'Загруженные модели',
+        menuTitleGrouped: 'Группировать по типу модели',
+        menuTitleReset: 'Сбросить список моделей',
+      },
+      modelsResetDialog: {
+        proceedWithReset: 'Продолжить сброс',
+        confirmReset: 'Подтвердить сброс',
+      },
+      assistantPalSheet: {
+        title: {
+          create: 'Создать Pal',
+          edit: 'Редактировать Pal',
+        },
+        palName: 'Имя Pal',
+        palNamePlaceholder: 'Имя',
+        defaultModel: 'Модель по умолчанию',
+        defaultModelPlaceholder: 'Выбор модели',
+        validation: {
+          generatingPromptRequired: 'Требуется генерирующий промпт',
+          promptModelRequired: 'Требуется модель для генерации промпта',
+        },
+        create: 'Создать',
+      },
+      modelNotAvailable: {
+        noModelsDownloaded:
+          'У вас еще нет загруженных моделей. Пожалуйста, сначала загрузите модель.',
+        downloadAModel: 'Загрузить модель',
+        defaultModelNotDownloaded:
+          'Модель по умолчанию еще не загружена. Пожалуйста, сначала загрузите модель.',
+        cancelDownload: 'Отменить загрузку',
+        download: 'Загрузить',
+      },
+      roleplayPalSheet: {
+        title: {
+          create: 'Создать Pal ролевых игр',
+          edit: 'Редактировать Pal ролевых игр',
+        },
+        palName: 'Имя Pal',
+        palNamePlaceholder: 'Имя',
+        defaultModel: 'Модель по умолчанию',
+        defaultModelPlaceholder: 'Выбор модели',
+        descriptionSection: 'Описание',
+        world: 'Мир',
+        worldPlaceholder: 'Фантазия',
+        location: 'Место',
+        locationPlaceholder: 'Зачарованный лес',
+        locationSublabel: 'В каком месте происходит действие?',
+        aiRole: 'Роль ИИ',
+        aiRolePlaceholder: 'Эльдара, озорная лесная фея',
+        aiRoleSublabel: 'Установите роль персонажа',
+        userRole: 'Роль пользователя',
+        userRolePlaceholder: 'Сэр Эландор, доблестный рыцарь',
+        userRoleSublabel: 'Кто вы?',
+        situation: 'Ситуация',
+        situationPlaceholder: 'Миссия спасения, разгадывание тайны',
+        toneStyle: 'Тон/Стиль',
+        toneStylePlaceholder: 'Серьезный',
+        validation: {
+          promptModelRequired: 'Требуется модель для генерации промпта',
+        },
+        create: 'Создать',
+      },
+      lookiePalSheet: {
+        title: {
+          create: 'Создать Lookie Pal',
+          edit: 'Редактировать Lookie Pal',
+        },
+        palName: 'Имя Pal',
+        palNamePlaceholder: 'Введите имя для Lookie Pal',
+        visionModel: 'Модель зрения',
+        visionModelPlaceholder: 'Выберите модель зрения',
+        requiredModelsSection: 'Необходимые модели',
+        captureInterval: 'Интервал захвата',
+        captureIntervalHelper:
+          'Интервал между автоматическими захватами в миллисекундах',
+        create: 'Создать',
+      },
+      sendButton: {
+        accessibilityLabel: 'Отправить',
+      },
+      systemPromptSection: {
+        sectionTitle: 'Системный промпт',
+        useAIPrompt: 'Использовать ИИ для генерации системного промпта',
+        modelSelector: {
+          label: 'Выберите модель для генерации*',
+          sublabel: 'Рекомендуется: Llama 3.2 3B или Qwen2.5 3B.',
+          placeholder: 'Выбор модели',
+        },
+        generatingPrompt: {
+          label: 'Генерирующий промпт',
+          placeholder: 'Введите промпт для генерации',
+        },
+        buttons: {
+          loadingModel: 'Загрузка модели...',
+          stopGenerating: 'Остановить генерацию',
+          generatePrompt: 'Генерировать системный промпт',
+        },
+        systemPrompt: {
+          label: 'Системный промпт',
+          sublabel:
+            'Смело редактируйте и экспериментируйте для поиска наилучшего промпта под ваш сценарий',
+          placeholder: 'Вы полезный ассистент',
+        },
+        warnings: {
+          promptChanged: 'Системный промпт был изменен вручную',
+        },
+      },
+      sidebarContent: {
+        menuItems: {
+          chat: 'Чат',
+          models: 'Модели',
+          pals: 'Pals',
+          benchmark: 'Тест производительности',
+          settings: 'Настройки',
+          appInfo: 'Информация о приложении',
+          testCompletion: 'Завершение теста',
+        },
+        deleteChatTitle: 'Удалить чат',
+        deleteChatMessage: 'Вы уверены, что хотите удалить этот чат?',
+        dateGroups: {
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          thisWeek: 'На этой неделе',
+          lastWeek: 'На прошлой неделе',
+          twoWeeksAgo: '2 недели назад',
+          threeWeeksAgo: '3 недели назад',
+          fourWeeksAgo: '4 недели назад',
+          lastMonth: 'В прошлом месяце',
+          older: 'Старше',
+        },
+      },
+      usageStats: {
+        tooltip: {
+          title: 'Использование памяти',
+          used: 'Используется: ',
+          total: 'Всего: ',
+          usage: 'Использование: ',
+        },
+        byteSizes: ['Байт', 'КБ', 'МБ', 'ГБ'],
+      },
+      chatView: {
+        menuItems: {
+          copy: 'Копировать',
+          regenerate: 'Сгенерировать заново',
+          regenerateWith: 'Сгенерировать заново с',
+          edit: 'Редактировать',
+          reportContent: 'Пожаловаться на контент',
+        },
+      },
+      palHeaderRight: {
+        exportAllPals: 'Экспорт всех Pal',
+        importPals: 'Импорт Pal',
+        importSuccess: 'Успешно импортировано Pal: {{count}}.',
+        importError: 'Не удалось импортировать Pal. Проверьте формат файла.',
+      },
+    },
+    palsScreen: {
+      systemPrompt: 'Системный промпт',
+      videoAnalysis: 'Анализ видео',
+      videoAnalysisDescription:
+        'Это видео‑ассистент ИИ, который даёт комментарии в реальном времени к видеопотоку с камеры вашего устройства.',
+      captureInterval: 'Интервал захвата',
+      captureIntervalUnit: 'мс',
+      world: 'Мир',
+      toneStyle: 'Тон/Стиль',
+      aiRole: 'Роль ИИ',
+      userRole: 'Моя роль',
+      prompt: 'Промпт',
+      assistant: 'Ассистент',
+      roleplay: 'Ролевая игра',
+      video: 'Видео',
+      deletePal: 'Удалить Pal',
+      deletePalMessage: 'Вы уверены, что хотите удалить этот Pal?',
+      missingModel: 'Отсутствует модель',
+      missingModelMessage:
+        'Модель по умолчанию "{{modelName}}" для этого Pal недоступна. Загрузите её на экране редактирования или выберите другую модель.',
+    },
+    validation: {
+      nameRequired: 'Требуется имя',
+      systemPromptRequired: 'Требуется системный промпт',
+      worldRequired: 'Требуется мир',
+      locationRequired: 'Требуется местоположение',
+      aiRoleRequired: 'Требуется роль ИИ',
+      userRoleRequired: 'Требуется роль пользователя',
+      situationRequired: 'Требуется ситуация',
+      toneStyleRequired: 'Требуется тон/стиль',
+    },
+    camera: {
+      permissionTitle: 'Требуется доступ к камере',
+      permissionMessage: 'PocketPal нужен доступ к камере для анализа изображений',
+      requestingPermission: 'Запрос разрешения на камеру...',
+      noDevice: 'Камера не найдена',
+      errorTitle: 'Ошибка камеры',
+      errorMessage: 'Произошла ошибка при съёмке',
+      flip: 'Повернуть',
+      analyzing: 'Анализ изображения...',
+      startCamera: 'Включить камеру',
+      stopCamera: 'Выключить камеру',
+      promptPlaceholder: 'Что вы хотите узнать об этом изображении?',
+      takePhoto: 'Камера',
+    },
+    video: {
+      permissionTitle: 'Требуется доступ к камере',
+      permissionMessage: 'PocketPal нужен доступ к камере для анализа видео',
+      requestingPermission: 'Запрос разрешения на камеру...',
+      noDevice: 'Камера не найдена',
+      errorTitle: 'Ошибка камеры',
+      errorMessage: 'Произошла ошибка с камерой',
+      flip: 'Повернуть',
+      analyzing: 'Анализ видео...',
+      startCamera: 'Включить камеру',
+      stopCamera: 'Выключить камеру',
+      promptPlaceholder: 'Что вы хотите узнать об этом видео?',
+      captureInterval: 'Интервал захвата',
+      captureIntervalUnit: 'мс',
+      liveCommentary: 'Комментарий в реальном времени',
+      emptyPlaceholder: {
+        title: 'Добро пожаловать в Lookie',
+        subtitle: 'Конфиденциальный анализ видео в реальном времени на устройстве',
+        experimentalNotice:
+          'Это экспериментальная функция. Точность зависит от выбранной модели, скорость — от мощности вашего устройства; некоторые модели могут не работать.',
+        howToUse: 'Как пользоваться:',
+        step1: '• При необходимости отредактируйте промпт, чтобы направить анализ',
+        step2: '• Нажмите кнопку камеры, чтобы начать анализ видео в реальном времени',
+        step3: '• Регулируйте частоту снимков, пока камера активна',
+        step4: '• Переключитесь на другой Pal для обычного текстового чата',
+      },
+    },
+    screenTitles: {
+      chat: 'Чат',
+      models: 'Модели',
+      pals: 'Pal (экспериментально)',
+      benchmark: 'Тест производительности',
+      settings: 'Настройки',
+      appInfo: 'Информация о приложении',
+      testCompletion: 'Завершение теста',
+    },
+    chat: {
+      conversationReset: 'Диалог сброшен!',
+      modelNotLoaded: 'Модель не загружена. Необходимо инициализировать модель.',
+      completionFailed: 'Завершение не удалось: ',
+      loadingModel: 'Загрузка модели...',
+      typeYourMessage: 'Введите сообщение',
+      load: 'Загрузка',
+      goToModels: 'Перейти к моделям',
+      readyToChat: 'Хотите начать общение? Загрузите последнюю использованную модель.',
+      pleaseLoadModel: 'Загрузите модель, чтобы начать общение.',
+      multimodalNotEnabled:
+        'Мультимодальность для этой модели не включена. Изображения будут отображаться, но не будут обрабатываться ИИ.',
+    },
+    benchmark: {
+      title: 'Тест производительности',
+      modelSelector: {
+        prompt: 'Выбор модели',
+      },
+      buttons: {
+        advancedSettings: 'Дополнительные настройки',
+        startTest: 'Запустить тест',
+        runningTest: 'Запуск теста...',
+        clearAll: 'Очистить все',
+        done: 'Готово',
+        cancel: 'Отмена',
+        delete: 'Удалить',
+        share: 'Поделиться',
+        sharing: 'Поделиться...',
+        viewRawData: 'Показать необработанные данные',
+        hideRawData: 'Скрыть необработанные данные',
+      },
+      messages: {
+        pleaseSelectModel: 'Сначала выберите и инициализируйте модель',
+        testWarning:
+          'Примечание: Тестирование больших моделей может занять от 2 до 5 минут и его нельзя прервать после запуска.',
+        keepScreenOpen: 'Пожалуйста, не закрывайте этот экран.',
+        initializingModel: 'Инициализация модели...',
+        modelMaxValue: '(макс.: {{maxValue}})',
+      },
+      dialogs: {
+        advancedSettings: {
+          title: 'Дополнительные настройки',
+          testProfile: 'Профиль тестирования',
+          customParameters: 'Пользовательские параметры',
+          description:
+            'Точная настройка параметров тестирования под определенные сценарии.',
+        },
+        deleteResult: {
+          title: 'Удалить результат',
+          message: 'Вы действительно хотите удалить этот результат тестирования?',
+        },
+        clearAllResults: {
+          title: 'Очистить все результаты',
+          message: 'Вы действительно хотите удалить все результаты тестирования?',
+        },
+        shareResults: {
+          title: 'Поделиться результатами тестирования',
+          sharedDataTitle: 'Передаваемые данные включают:',
+          deviceAndModelInfo: '• Характеристики устройства и данные модели',
+          performanceMetrics: '• Метрики производительности',
+          dontShowAgain: 'Больше не показывать это сообщение',
+        },
+      },
+      sections: {
+        testResults: 'Результаты тестирования',
+      },
+      benchmarkResultCard: {
+        modelMeta: {
+          params: 'парам.',
+        },
+        config: {
+          title: 'Настройки тестирования',
+          format: 'PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Повт.: {{nr}}',
+        },
+        modelSettings: {
+          title: 'Настройки модели',
+          context: 'Контекст: {{context}}',
+          batch: 'Пакет: {{batch}}',
+          ubatch: 'U-пакет: {{ubatch}}',
+          cpuThreads: 'Потоки CPU: {{threads}}',
+          gpuLayers: 'Слои GPU: {{layers}}',
+          flashAttentionEnabled: 'Flash Attention включен',
+          flashAttentionDisabled: 'Flash Attention отключен',
+          cacheTypes: 'Типы кэша: {{cacheK}}/{{cacheV}}',
+        },
+        results: {
+          promptProcessing: 'Обработка промпта',
+          tokenGeneration: 'Генерация токенов',
+          totalTime: 'Общее время',
+          peakMemory: 'Пиковая память',
+          tokensPerSecond: 'т/сек',
+        },
+        actions: {
+          deleteButton: '',
+          submittedText: '✓ Поделиться в',
+          leaderboardLink: 'Таблица лидеров AI Phone ↗',
+          cannotShare: 'Невозможно поделиться',
+          cannotShareTooltip: 'Невозможно поделиться результатами локальной модели',
+          submitButton: 'Отправить в таблицу лидеров',
+          viewLeaderboard: 'Посмотреть таблицу лидеров ↗',
+        },
+        errors: {
+          networkRetry: 'Проверить соединение и повторить',
+          appCheckRetry: 'Отправить повторно',
+          serverRetry: 'Повторить попытку позже',
+          genericRetry: 'Повторить',
+          failedToSubmit: 'Не удалось отправить результаты тестирования',
+        },
+      },
+      deviceInfoCard: {
+        title: 'Информация об устройстве',
+        deviceSummary: '{{brand}} {{model}} • {{systemName}} {{systemVersion}}',
+        coreSummary: 'Ядер: {{cores}} • {{memory}}',
+        sections: {
+          basicInfo: 'Основная информация',
+          cpuDetails: 'Сведения о CPU',
+          appInfo: 'Информация о приложении',
+        },
+        fields: {
+          architecture: 'Архитектура',
+          totalMemory: 'Всего памяти',
+          deviceId: 'ID устройства',
+          cpuCores: 'Ядер CPU',
+          cpuModel: 'Модель CPU',
+          chipset: 'Чипсет',
+          instructions: 'Инструкции',
+          version: 'Версия',
+        },
+        instructions: {
+          format:
+            'FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}',
+          yes: '✓',
+          no: '✗',
+        },
+        versionFormat: '{{version}} ({{buildNumber}})',
+      },
+    },
+    errors: {
+      unexpectedError: 'Произошла непредвиденная ошибка',
+      hfAuthenticationError:
+        'Ошибка авторизации Hugging Face: токен отсутствует или недействителен',
+      hfAuthenticationErrorSearch:
+        'Ошибка авторизации Hugging Face: недействительный токен',
+      authenticationError: 'Ошибка авторизации: токен отсутствует или недействителен',
+      hfAuthorizationError:
+        'Ошибка авторизации Hugging Face: нет прав доступа к этому ресурсу',
+      authorizationError:
+        'Ошибка авторизации: нет прав доступа к этому ресурсу',
+      hfServerError: 'Ошибка сервера Hugging Face: проблема на стороне API',
+      serverError: 'Ошибка сервера: проблема на стороне API',
+      hfNetworkTimeout:
+        'Тайм‑аут сети: запрос к Hugging Face занял слишком много времени',
+      networkTimeout: 'Тайм‑аут сети: запрос занял слишком много времени',
+      hfNetworkError: 'Сетевая ошибка: не удалось подключиться к API Hugging Face',
+      networkError: 'Сетевая ошибка: не удалось подключиться к API',
+      downloadSetupFailedTitle: 'Сбой подготовки к загрузке',
+      downloadSetupFailedMessage:
+        'Не удалось подготовить модель к загрузке: {message}',
+      cameraErrorTitle: 'Ошибка камеры',
+      cameraErrorMessage: 'Не удалось сделать фото',
+      galleryErrorTitle: 'Ошибка галереи',
+      galleryErrorMessage: 'Не удалось выбрать изображения',
+    },
+    simulator: {
+      cameraNotAvailable:
+        'Камера недоступна в симуляторе. Пожалуйста, используйте физическое устройство.',
+    },
+  },
 };
