@@ -1,5 +1,5 @@
 import {View} from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 
 import {InputSlider} from '../InputSlider';
 import {Text, Switch, SegmentedButtons} from 'react-native-paper';
@@ -23,19 +23,9 @@ interface Props {
 }
 
 export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
-  const [localSliderValues, setLocalSliderValues] = useState({});
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
-
-  // Reset local values when settings change
-  useEffect(() => {
-    setLocalSliderValues({});
-  }, [settings]);
-
-  const handleOnChange = (name: string, value: any) => {
-    onChange(name, value);
-  };
 
   const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
     <View style={styles.settingItem}>
@@ -44,12 +34,13 @@ export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
         label={name.toUpperCase().replace('_', ' ')}
         labelVariant="labelSmall"
         description={l10n.completionParams[name]}
-        value={localSliderValues[name] ?? settings[name]}
-        onValueChange={value => handleOnChange(name, value)}
+        value={settings[name]}
+        onValueChange={value => onChange(name, value)}
         min={COMPLETION_PARAMS_METADATA[name]?.validation.min}
         max={COMPLETION_PARAMS_METADATA[name]?.validation.max}
         step={step}
         precision={Number.isInteger(step) ? 0 : 2}
+        debounceMs={300} // Enable debouncing for sliders
       />
     </View>
   );

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {View} from 'react-native';
 import {Text} from 'react-native-paper';
 import {useTheme} from '../../hooks';
@@ -22,6 +22,10 @@ interface InputSliderProps {
   showRangeLabel?: boolean;
   unit?: string;
   testID?: string;
+  /** Debounce delay in milliseconds for onValueChange. Default: 300ms. Set to 0 to disable debouncing. */
+  debounceMs?: number;
+  /** Optional callback for immediate value changes (not debounced) */
+  onImmediateChange?: (value: number) => void;
 }
 
 export const InputSlider: React.FC<InputSliderProps> = ({
@@ -39,11 +43,14 @@ export const InputSlider: React.FC<InputSliderProps> = ({
   showRangeLabel = false,
   unit = '',
   testID,
+  debounceMs = 300,
+  onImmediateChange,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
 
   const [textValue, setTextValue] = useState(value.toString());
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const clamp = useCallback(
     (val: number | string): number => {
@@ -66,21 +73,63 @@ export const InputSlider: React.FC<InputSliderProps> = ({
     });
   }, [value, clamp]);
 
-  const handleSliderChange = (val: number) => {
-    const newValue = clamp(val);
-    onValueChange(newValue);
-    setTextValue(newValue.toString());
-  };
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
+
+  const handleSliderChange = useCallback(
+    (val: number) => {
+      const newValue = clamp(val);
+      setTextValue(newValue.toString());
+
+      // Call immediate change callback if provided
+      onImmediateChange?.(newValue);
+
+      // Handle debounced onValueChange
+      if (debounceMs > 0) {
+        // Clear existing timeout
+        if (debounceTimeout.current) {
+          clearTimeout(debounceTimeout.current);
+        }
+
+        // Set new timeout for debounced callback
+        debounceTimeout.current = setTimeout(() => {
+          onValueChange(newValue);
+          debounceTimeout.current = null;
+        }, debounceMs);
+      } else {
+        // No debouncing, call immediately
+        onValueChange(newValue);
+      }
+    },
+    [clamp, onValueChange, onImmediateChange, debounceMs],
+  );
 
   const handleTextChange = (text: string) => {
     setTextValue(text);
   };
 
-  const handleEndEditing = () => {
+  const handleEndEditing = useCallback(() => {
     const finalValue = clamp(textValue);
-    onValueChange(finalValue);
     setTextValue(finalValue.toString());
-  };
+
+    // Clear any pending debounced call since we're ending editing
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+      debounceTimeout.current = null;
+    }
+
+    // Call immediate change callback if provided
+    onImmediateChange?.(finalValue);
+
+    // Always call onValueChange immediately when text editing ends
+    onValueChange(finalValue);
+  }, [clamp, textValue, onValueChange, onImmediateChange]);
 
   return (
     <View>
