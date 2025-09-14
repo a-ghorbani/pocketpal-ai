@@ -7,12 +7,18 @@ import {SettingsScreen} from '../SettingsScreen';
 
 import {modelStore, uiStore} from '../../../store';
 
-jest.useFakeTimers();
-
 describe('SettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Keyboard, 'dismiss');
+    // Ensure clean timer state for each test
+    jest.clearAllTimers();
+  });
+
+  afterEach(() => {
+    // Clean up any remaining timers
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   it('renders settings screen correctly', async () => {
@@ -35,19 +41,21 @@ describe('SettingsScreen', () => {
     });
     const contextSizeInput = getByDisplayValue('1024');
 
-    await act(async () => {
+    act(() => {
       fireEvent.changeText(contextSizeInput, '512');
     });
-    await act(async () => {
+    act(() => {
       fireEvent(contextSizeInput, 'blur');
     });
 
-    jest.advanceTimersByTime(501); // Wait for debounce
+    // Advance timers within act to handle React state updates
+    act(() => {
+      jest.advanceTimersByTime(501); // Wait for debounce
+    });
 
     await waitFor(() => {
       expect(modelStore.setNContext).toHaveBeenCalledWith(512);
     });
-    jest.useRealTimers();
   });
 
   it('displays error for invalid context size input', async () => {
@@ -124,6 +132,7 @@ describe('SettingsScreen', () => {
 
   it('toggles Metal switch on iOS and adjusts GPU layers', async () => {
     Platform.OS = 'ios';
+    jest.useFakeTimers();
 
     const {getByTestId} = render(<SettingsScreen />, {
       withSafeArea: true,
@@ -131,7 +140,7 @@ describe('SettingsScreen', () => {
     });
     const metalSwitch = getByTestId('metal-switch');
 
-    await act(async () => {
+    act(() => {
       fireEvent(metalSwitch, 'valueChange', true);
     });
 
@@ -139,8 +148,13 @@ describe('SettingsScreen', () => {
 
     const gpuSlider = getByTestId('gpu-layers-slider');
 
-    await act(async () => {
+    act(() => {
       fireEvent(gpuSlider, 'valueChange', 60);
+    });
+
+    // Fast-forward time by 300ms to trigger debounced callback within act
+    act(() => {
+      jest.advanceTimersByTime(300); // Wait for debounce
     });
 
     expect(modelStore.setNGPULayers).toHaveBeenCalledWith(60);

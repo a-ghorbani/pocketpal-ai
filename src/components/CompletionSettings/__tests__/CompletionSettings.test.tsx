@@ -74,7 +74,7 @@ describe('CompletionSettings', () => {
     expect(seedInput.props.value).toBe('0');
   });
 
-  it('handles slider changes', () => {
+  it('handles slider changes', async () => {
     const mockOnChange = jest.fn();
     const {getByTestId} = render(
       <CompletionSettings
@@ -88,7 +88,10 @@ describe('CompletionSettings', () => {
     fireEvent(temperatureSlider, 'valueChange', 0.8);
     fireEvent(temperatureSlider, 'slidingComplete', 0.8);
 
+    // advance timers for debounce delay
+    jest.advanceTimersByTime(300);
     expect(mockOnChange).toHaveBeenCalledWith('temperature', 0.8);
+    jest.useRealTimers();
   });
 
   it('handles text input changes', () => {

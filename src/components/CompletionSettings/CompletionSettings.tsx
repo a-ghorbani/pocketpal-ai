@@ -1,7 +1,7 @@
 import {View} from 'react-native';
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 
-import Slider from '@react-native-community/slider';
+import {InputSlider} from '../InputSlider';
 import {Text, Switch, SegmentedButtons} from 'react-native-paper';
 
 import {TextInput} from '..';
@@ -23,48 +23,25 @@ interface Props {
 }
 
 export const CompletionSettings: React.FC<Props> = ({settings, onChange}) => {
-  const [localSliderValues, setLocalSliderValues] = useState({});
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
 
-  // Reset local values when settings change
-  useEffect(() => {
-    setLocalSliderValues({});
-  }, [settings]);
-
-  const handleOnChange = (name: string, value: any) => {
-    onChange(name, value);
-  };
-
   const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
     <View style={styles.settingItem}>
-      <Text variant="labelSmall" style={styles.settingLabel}>
-        {name.toUpperCase().replace('_', ' ')}
-      </Text>
-      <Text style={styles.description}>{l10n.completionParams[name]}</Text>
-      <Slider
-        style={styles.slider}
-        minimumValue={COMPLETION_PARAMS_METADATA[name]?.validation.min}
-        maximumValue={COMPLETION_PARAMS_METADATA[name]?.validation.max}
-        step={step}
-        value={localSliderValues[name] ?? settings[name]}
-        onValueChange={value => {
-          setLocalSliderValues(prev => ({...prev, [name]: value}));
-        }}
-        onSlidingComplete={value => {
-          handleOnChange(name, value);
-        }}
-        thumbTintColor={theme.colors.primary}
-        minimumTrackTintColor={theme.colors.primary}
-        //onValueChange={value => onChange(name, value)}
+      <InputSlider
         testID={`${name}-slider`}
+        label={name.toUpperCase().replace('_', ' ')}
+        labelVariant="labelSmall"
+        description={l10n.completionParams[name]}
+        value={settings[name]}
+        onValueChange={value => onChange(name, value)}
+        min={COMPLETION_PARAMS_METADATA[name]?.validation.min}
+        max={COMPLETION_PARAMS_METADATA[name]?.validation.max}
+        step={step}
+        precision={Number.isInteger(step) ? 0 : 2}
+        debounceMs={300} // Enable debouncing for sliders
       />
-      <Text style={styles.settingValue}>
-        {Number.isInteger(step)
-          ? Math.round(localSliderValues[name] ?? settings[name]).toString()
-          : (localSliderValues[name] ?? settings[name]).toFixed(2)}
-      </Text>
     </View>
   );
 
