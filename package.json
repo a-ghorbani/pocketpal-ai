@@ -82,7 +82,7 @@
     "@babel/core": "^7.25.2",
     "@babel/plugin-proposal-decorators": "^7.27.1",
     "@babel/preset-env": "^7.25.3",
-    "@babel/runtime": "^7.28.2",
+    "@babel/runtime": "^7.28.3",
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
     "@react-native-community/cli": "15.0.1",
