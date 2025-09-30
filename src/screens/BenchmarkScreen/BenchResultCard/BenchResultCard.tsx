@@ -219,7 +219,7 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
           <View style={styles.resultRow}>
             <View style={styles.resultItem}>
               <Text style={styles.resultValue}>
-                {result.ppAvg.toFixed(2)}
+                {result.ppAvg?.toFixed(2)}
                 <Text style={styles.resultUnit}>
                   {' '}
                   {l10n.benchmark.benchmarkResultCard.results.tokensPerSecond}
@@ -228,11 +228,10 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
               <Text style={styles.resultLabel}>
                 {l10n.benchmark.benchmarkResultCard.results.promptProcessing}
               </Text>
-              <Text style={styles.resultStd}>±{result.ppStd.toFixed(2)}</Text>
             </View>
             <View style={styles.resultItem}>
               <Text style={styles.resultValue}>
-                {result.tgAvg.toFixed(2)}
+                {result.tgAvg?.toFixed(2)}
                 <Text style={styles.resultUnit}>
                   {' '}
                   {l10n.benchmark.benchmarkResultCard.results.tokensPerSecond}
@@ -241,7 +240,6 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
               <Text style={styles.resultLabel}>
                 {l10n.benchmark.benchmarkResultCard.results.tokenGeneration}
               </Text>
-              <Text style={styles.resultStd}>±{result.tgStd.toFixed(2)}</Text>
             </View>
           </View>
 

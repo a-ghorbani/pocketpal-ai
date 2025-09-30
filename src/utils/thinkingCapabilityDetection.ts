@@ -72,8 +72,7 @@ export async function supportsThinking(
       }
 
       // Check model description for thinking-related terms
-      const modelDetails = await ctx.bench(1, 1, 1, 1);
-      const modelDesc = modelDetails.modelDesc.toLowerCase();
+      const modelDesc = ctx.model.desc.toLowerCase();
       for (const token of THINKING_TOKENS) {
         if (modelDesc.includes(token.toLowerCase())) {
           return true;
