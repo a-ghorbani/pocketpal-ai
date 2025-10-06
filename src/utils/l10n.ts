@@ -40,6 +40,10 @@ export const l10n = {
       metalDescription: "Apple's hardware-accelerated API.",
       metalRequiresNewerIOS:
         'Metal acceleration requires iOS 18 or higher. Please upgrade your device to use this feature.',
+      // OpenCL Settings
+      openCL: 'OpenCL (Experimental)',
+      openCLDescription:
+        'GPU acceleration for Adreno GPUs. Faster prompt processing, but generation may not always be faster.',
       layersOnGPU: 'Layers on GPU: {{gpuLayers}}',
       // Context Size
       contextSize: 'Context Size',
@@ -1188,6 +1192,7 @@ export const l10n = {
         sections: {
           basicInfo: 'Basic Info',
           cpuDetails: 'CPU Details',
+          gpuDetails: 'GPU Details',
           appInfo: 'App Info',
         },
         fields: {
@@ -1199,6 +1204,10 @@ export const l10n = {
           chipset: 'Chipset',
           instructions: 'Instructions',
           version: 'Version',
+          gpuType: 'GPU Type',
+          gpuRenderer: 'Renderer',
+          gpuVendor: 'Vendor',
+          openclSupport: 'OpenCL Support',
         },
         instructions: {
           format:
@@ -1281,6 +1290,10 @@ export const l10n = {
       metalDescription: 'Appleのハードウェア加速API',
       metalRequiresNewerIOS:
         'Metal加速機能にはiOS 18以上が必要です、この機能を利用するにはデバイスを更新してください',
+      // OpenCL Settings
+      openCL: 'OpenCL（実験的）',
+      openCLDescription:
+        'Adreno GPU向けのGPU加速。プロンプト処理は高速化されますが、生成速度は必ずしも速くなりません。',
       layersOnGPU: 'GPUレイヤー：{{gpuLayers}}',
       // Context Size
       contextSize: 'コンテキストサイズ',
@@ -2432,6 +2445,7 @@ export const l10n = {
         sections: {
           basicInfo: '基本情報',
           cpuDetails: 'CPU詳細',
+          gpuDetails: 'GPU詳細',
           appInfo: 'アプリ情報',
         },
         fields: {
@@ -2443,6 +2457,10 @@ export const l10n = {
           chipset: 'チップセット',
           instructions: '命令セット',
           version: 'バージョン',
+          gpuType: 'GPUタイプ',
+          gpuRenderer: 'レンダラー',
+          gpuVendor: 'ベンダー',
+          openclSupport: 'OpenCLサポート',
         },
         instructions: {
           format:
@@ -2527,6 +2545,10 @@ export const l10n = {
       metalDescription: 'Apple的硬件加速API',
       metalRequiresNewerIOS:
         'Metal加速需要iOS 18或更高版本，请升级设备以使用此功能',
+      // OpenCL Settings
+      openCL: 'OpenCL（实验性）',
+      openCLDescription:
+        'Adreno GPU的GPU加速。提示处理更快，但生成速度不一定更快。',
       layersOnGPU: 'GPU层数：{{gpuLayers}}',
       // Context Size
       contextSize: '上下文长度',
@@ -3610,6 +3632,7 @@ export const l10n = {
         sections: {
           basicInfo: '基本信息',
           cpuDetails: 'CPU详细信息',
+          gpuDetails: 'GPU详细信息',
           appInfo: 'APP信息',
         },
         fields: {
@@ -3621,6 +3644,10 @@ export const l10n = {
           chipset: '芯片组',
           instructions: '指令集',
           version: '版本',
+          gpuType: 'GPU类型',
+          gpuRenderer: '渲染器',
+          gpuVendor: '供应商',
+          openclSupport: 'OpenCL支持',
         },
         instructions: {
           format:

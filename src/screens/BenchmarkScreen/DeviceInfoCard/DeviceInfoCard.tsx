@@ -66,6 +66,18 @@ const getCPUInfo = async () => {
   }
 };
 
+const getGPUInfo = async () => {
+  if (Platform.OS !== 'android' || !DeviceInfoModule?.getGPUInfo) {
+    return undefined;
+  }
+  try {
+    return await DeviceInfoModule.getGPUInfo();
+  } catch (e) {
+    console.warn('Failed to get GPU info:', e);
+    return undefined;
+  }
+};
+
 type Props = {
   onDeviceInfo?: (info: DeviceInfo) => void;
   testId?: string;
@@ -105,6 +117,18 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
       hasSve: false,
       hasI8mm: false,
     },
+    gpuDetails: undefined as
+      | {
+          renderer: string;
+          vendor: string;
+          version: string;
+          hasAdreno: boolean;
+          hasMali: boolean;
+          hasPowerVR: boolean;
+          supportsOpenCL: boolean;
+          gpuType: string;
+        }
+      | undefined,
   });
   const [expanded, setExpanded] = useState(false);
 
@@ -117,8 +141,18 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
       RNDeviceInfo.getTotalMemory(),
       getChipsetInfo(),
       getCPUInfo(),
+      getGPUInfo(),
     ]).then(
-      ([abis, emulator, device, deviceId, totalMem, chipset, cpuInfo]) => {
+      ([
+        abis,
+        emulator,
+        device,
+        deviceId,
+        totalMem,
+        chipset,
+        cpuInfo,
+        gpuInfo,
+      ]) => {
         const newDeviceInfo = {
           model: RNDeviceInfo.getModel(),
           systemName: Platform.OS === 'ios' ? 'iOS' : 'Android',
@@ -146,6 +180,7 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
                   hasSve: false,
                   hasI8mm: false,
                 },
+          gpuDetails: gpuInfo,
         };
 
         setDeviceInfo(newDeviceInfo);
@@ -296,6 +331,53 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
                 </View>
               )}
             </View>
+
+            {/* GPU Details Section */}
+            {deviceInfo.gpuDetails && (
+              <View style={styles.section}>
+                <Text variant="labelSmall" style={styles.sectionTitle}>
+                  {l10n.benchmark.deviceInfoCard.sections.gpuDetails}
+                </Text>
+                <View style={styles.deviceInfoRow}>
+                  <Text variant="labelSmall" style={styles.deviceInfoLabel}>
+                    {l10n.benchmark.deviceInfoCard.fields.gpuType}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.deviceInfoValue}>
+                    {deviceInfo.gpuDetails.gpuType}
+                  </Text>
+                </View>
+                {deviceInfo.gpuDetails.renderer && (
+                  <View style={styles.deviceInfoRow}>
+                    <Text variant="labelSmall" style={styles.deviceInfoLabel}>
+                      {l10n.benchmark.deviceInfoCard.fields.gpuRenderer}
+                    </Text>
+                    <Text variant="bodySmall" style={styles.deviceInfoValue}>
+                      {deviceInfo.gpuDetails.renderer}
+                    </Text>
+                  </View>
+                )}
+                {deviceInfo.gpuDetails.vendor && (
+                  <View style={styles.deviceInfoRow}>
+                    <Text variant="labelSmall" style={styles.deviceInfoLabel}>
+                      {l10n.benchmark.deviceInfoCard.fields.gpuVendor}
+                    </Text>
+                    <Text variant="bodySmall" style={styles.deviceInfoValue}>
+                      {deviceInfo.gpuDetails.vendor}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.deviceInfoRow}>
+                  <Text variant="labelSmall" style={styles.deviceInfoLabel}>
+                    {l10n.benchmark.deviceInfoCard.fields.openclSupport}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.deviceInfoValue}>
+                    {deviceInfo.gpuDetails.supportsOpenCL
+                      ? l10n.benchmark.deviceInfoCard.instructions.yes
+                      : l10n.benchmark.deviceInfoCard.instructions.no}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             <View style={styles.section}>
               <Text variant="labelSmall" style={styles.sectionTitle}>

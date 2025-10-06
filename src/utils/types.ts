@@ -579,6 +579,16 @@ export type DeviceInfo = {
     hasSve: boolean;
     hasI8mm: boolean;
   };
+  gpuDetails?: {
+    renderer: string;
+    vendor: string;
+    version: string;
+    hasAdreno: boolean;
+    hasMali: boolean;
+    hasPowerVR: boolean;
+    supportsOpenCL: boolean;
+    gpuType: string;
+  };
 };
 
 export enum CacheType {

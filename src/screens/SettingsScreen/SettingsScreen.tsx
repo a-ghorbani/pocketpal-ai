@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput as RNTextInput,
   Alert,
+  NativeModules,
 } from 'react-native';
 
 import {debounce} from 'lodash';
@@ -33,6 +34,8 @@ import {AvailableLanguage} from '../../store/UIStore';
 import {L10nContext} from '../../utils';
 import {CacheType} from '../../utils/types';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
+
+const {DeviceInfoModule} = NativeModules;
 
 // Language display names in their native form
 const languageNames: Record<AvailableLanguage, string> = {
@@ -65,6 +68,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
+  const [supportsOpenCL, setSupportsOpenCL] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
     y: 0,
@@ -94,6 +98,17 @@ export const SettingsScreen: React.FC = observer(() => {
 
   useEffect(() => {
     setContextSize(modelStore.contextInitParams.n_ctx.toString());
+
+    // Check for OpenCL support on Android
+    if (Platform.OS === 'android' && DeviceInfoModule?.getGPUInfo) {
+      DeviceInfoModule.getGPUInfo()
+        .then((gpuInfo: {supportsOpenCL: boolean}) => {
+          setSupportsOpenCL(gpuInfo.supportsOpenCL);
+        })
+        .catch(() => {
+          setSupportsOpenCL(false);
+        });
+    }
   }, []);
 
   useEffect(() => {
@@ -186,6 +201,22 @@ export const SettingsScreen: React.FC = observer(() => {
   const isIOS18OrHigher =
     Platform.OS === 'ios' && parseInt(Platform.Version as string, 10) >= 18;
 
+  // Show GPU settings for iOS or Android with OpenCL support
+  const showGPUSettings =
+    Platform.OS === 'ios' || (Platform.OS === 'android' && supportsOpenCL);
+
+  // Determine GPU label and description based on platform
+  const gpuLabel =
+    Platform.OS === 'ios'
+      ? l10n.settings.metal
+      : l10n.settings.openCL || 'OpenCL';
+  const gpuDescription =
+    Platform.OS === 'ios'
+      ? isIOS18OrHigher
+        ? l10n.settings.metalDescription
+        : l10n.settings.metalRequiresNewerIOS
+      : l10n.settings.openCLDescription;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -194,21 +225,19 @@ export const SettingsScreen: React.FC = observer(() => {
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.modelInitializationSettings} />
             <Card.Content>
-              {/* Metal Settings (iOS only) */}
-              {Platform.OS === 'ios' && (
+              {/* GPU Settings (iOS Metal or Android OpenCL) */}
+              {showGPUSettings && (
                 <>
                   <View style={styles.settingItemContainer}>
                     <View style={styles.switchContainer}>
                       <View style={styles.textContainer}>
                         <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.settings.metal}
+                          {gpuLabel}
                         </Text>
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {isIOS18OrHigher
-                            ? l10n.settings.metalDescription
-                            : l10n.settings.metalRequiresNewerIOS}
+                          {gpuDescription}
                         </Text>
                       </View>
                       <Switch
