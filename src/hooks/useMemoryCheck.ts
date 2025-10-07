@@ -1,9 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
-import {NativeModules} from 'react-native';
 import {L10nContext} from '../utils';
-
-const {DeviceInfoModule} = NativeModules;
+import {isHighEndDevice} from '../utils/deviceCapabilities';
 
 function memoryRequirementEstimate(modelSize: number, isMultimodal = false) {
   // Model parameters derived by fitting a linear regression to benchmark data
@@ -18,31 +16,6 @@ function memoryRequirementEstimate(modelSize: number, isMultimodal = false) {
 
   return baseRequirement;
 }
-
-/**
- * Check if device is capable of running multimodal models
- */
-export const isHighEndDevice = async (): Promise<boolean> => {
-  try {
-    const ram = await DeviceInfo.getTotalMemory();
-    const ramGB = ram / 1000 / 1000 / 1000;
-
-    // Get CPU info for more detailed checks
-    const cpuInfo = DeviceInfoModule
-      ? await DeviceInfoModule.getCPUInfo()
-      : {cores: 4};
-    const cpuCount = cpuInfo.cores || 4; // fallback to 4
-
-    // Multimodal requirements (more stringent than regular models)
-    const ramOK = ramGB >= 5.5; // 6GB minimum for multimodal
-    const cpuOK = cpuCount >= 6; // 6+ cores for decent performance
-
-    return ramOK && cpuOK;
-  } catch (error) {
-    console.error('High-end device check failed:', error);
-    return false; // Conservative fallback
-  }
-};
 
 export const hasEnoughMemory = async (
   modelSize: number,

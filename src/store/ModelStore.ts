@@ -1,10 +1,4 @@
-import {
-  AppState,
-  AppStateStatus,
-  Platform,
-  NativeModules,
-  Alert,
-} from 'react-native';
+import {AppState, AppStateStatus, Platform, Alert} from 'react-native';
 
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
@@ -22,6 +16,7 @@ import {fetchModelFilesDetails} from '../api/hf';
 
 import {uiStore, hfStore} from '.';
 import {chatSessionStore} from './ChatSessionStore';
+import {checkGpuSupport} from '../utils/deviceCapabilities';
 import {
   deepMerge,
   getSHA256Hash,
@@ -52,7 +47,12 @@ import {
 
 import {ErrorState, createErrorState} from '../utils/errors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
-import {hasEnoughMemory, isHighEndDevice} from '../hooks/useMemoryCheck';
+import {hasEnoughMemory} from '../hooks/useMemoryCheck';
+import {
+  isHighEndDevice,
+  getRecommendedThreadCount,
+  getCpuCoreCount,
+} from '../utils/deviceCapabilities';
 import {supportsThinking} from '../utils/thinkingCapabilityDetection';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -172,13 +172,10 @@ class ModelStore {
 
   private async initializeThreadCount() {
     try {
-      const {DeviceInfoModule} = NativeModules;
-      const info = await DeviceInfoModule.getCPUInfo();
-      const cores = info.cores;
+      const cores = await getCpuCoreCount();
       this.max_threads = cores;
 
-      // Set n_threads to 80% of cores or number of cores if 4 or less
-      const threads = cores <= 4 ? cores : Math.floor(cores * 0.8);
+      const threads = await getRecommendedThreadCount();
       runInAction(() => {
         this.contextInitParams = {
           ...this.contextInitParams,
@@ -186,7 +183,7 @@ class ModelStore {
         };
       });
     } catch (error) {
-      console.error('Failed to get CPU info:', error);
+      console.error('Failed to initialize thread count:', error);
       // Fallback to 4 threads if we can't get the CPU info
       runInAction(() => {
         this.max_threads = 4;
@@ -1529,19 +1526,23 @@ class ModelStore {
     }
   };
 
-  private initializeGpuSettings() {
-    const isIOS18OrHigher =
-      Platform.OS === 'ios' && parseInt(Platform.Version as string, 10) >= 18;
-    // If we're not on iOS 18+ or not on iOS at all, force GPU acceleration off
-    if (!isIOS18OrHigher) {
+  private async initializeGpuSettings() {
+    const gpuCapabilities = await checkGpuSupport();
+
+    // If GPU is not supported but currently enabled, disable it
+    if (
+      !gpuCapabilities.isSupported &&
+      this.contextInitParams.no_gpu_devices === false
+    ) {
       runInAction(() => {
         this.contextInitParams = {
           ...this.contextInitParams,
           no_gpu_devices: true,
+          n_gpu_layers: 0,
         };
       });
     }
-    // If we are on iOS 18+, the persisted value will be used
+    // If GPU is supported, the persisted value will be used
   }
 
   setNoGpuDevices = (no_gpu_devices: boolean) => {

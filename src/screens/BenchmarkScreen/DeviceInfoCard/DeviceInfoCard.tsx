@@ -67,7 +67,7 @@ const getCPUInfo = async () => {
 };
 
 const getGPUInfo = async () => {
-  if (Platform.OS !== 'android' || !DeviceInfoModule?.getGPUInfo) {
+  if (!DeviceInfoModule?.getGPUInfo) {
     return undefined;
   }
   try {
@@ -368,10 +368,14 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
                 )}
                 <View style={styles.deviceInfoRow}>
                   <Text variant="labelSmall" style={styles.deviceInfoLabel}>
-                    {l10n.benchmark.deviceInfoCard.fields.openclSupport}
+                    {Platform.OS === 'ios'
+                      ? l10n.benchmark.deviceInfoCard.fields.metalSupport
+                      : l10n.benchmark.deviceInfoCard.fields.openclSupport}
                   </Text>
                   <Text variant="bodySmall" style={styles.deviceInfoValue}>
-                    {deviceInfo.gpuDetails.supportsOpenCL
+                    {Platform.OS === 'ios'
+                      ? l10n.benchmark.deviceInfoCard.instructions.yes
+                      : deviceInfo.gpuDetails.supportsOpenCL
                       ? l10n.benchmark.deviceInfoCard.instructions.yes
                       : l10n.benchmark.deviceInfoCard.instructions.no}
                   </Text>

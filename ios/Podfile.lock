@@ -155,7 +155,7 @@ PODS:
   - hermes-engine (0.76.3):
     - hermes-engine/Pre-built (= 0.76.3)
   - hermes-engine/Pre-built (0.76.3)
-  - llama-rn (0.7.0-rc.2-1):
+  - llama-rn (0.7.0-rc.2-2):
     - React-Core
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
@@ -2416,7 +2416,7 @@ SPEC CHECKSUMS:
   GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 0555a84ea495e8e3b4bde71b597cd87fbb382888
-  llama-rn: 5bf5b64f20ade3146d154656dbe13fee1d601592
+  llama-rn: c1eb37a37fae218f7cd9a436b9dae4a94efe6595
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 84578c8756030547307e4572ab1947de1685c599
