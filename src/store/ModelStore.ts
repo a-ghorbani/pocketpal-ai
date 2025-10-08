@@ -400,7 +400,7 @@ class ModelStore {
       this.removeInvalidLocalModels();
     }
 
-    this.initializeGpuSettings();
+    await this.initializeGpuSettings(); // Should be awaited to ensure GPU settings are applied before initializing context
 
     // Check if we need to reload an auto-released model (for app restarts)
     this.checkAndReloadAutoReleasedModel();

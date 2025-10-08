@@ -7,6 +7,8 @@ import {
   ScrollView,
   TextInput as RNTextInput,
   Alert,
+  Linking,
+  TouchableOpacity,
 } from 'react-native';
 
 import {debounce} from 'lodash';
@@ -14,7 +16,13 @@ import {observer} from 'mobx-react-lite';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Switch, Text, Card, Button, Icon, List} from 'react-native-paper';
 
-import {GlobeIcon, MoonIcon, CpuChipIcon, ShareIcon} from '../../assets/icons';
+import {
+  GlobeIcon,
+  MoonIcon,
+  CpuChipIcon,
+  ShareIcon,
+  LinkExternalIcon,
+} from '../../assets/icons';
 import {
   TextInput,
   Menu,
@@ -50,6 +58,10 @@ const languageNames: Record<AvailableLanguage, string> = {
   //ca: 'Català (CA)',
   zh: '中文 (ZH)',
 };
+
+// OpenCL documentation URL (not localized)
+const OPENCL_DOCS_URL =
+  'https://github.com/ggml-org/llama.cpp/blob/master/docs/backend/OPENCL.md#model-preparation';
 
 export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
@@ -313,6 +325,33 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.contextInitParams.n_gpu_layers.toString(),
                       )}
                     </Text>
+                    {Platform.OS === 'android' && gpuSupported && (
+                      <View>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {l10n.settings.openCLQuantizationNote}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
+                          style={styles.linkContainer}>
+                          <Text
+                            variant="labelSmall"
+                            style={[
+                              styles.textDescription,
+                              {color: theme.colors.primary},
+                            ]}>
+                            {l10n.settings.openCLDocsLink}
+                          </Text>
+                          <LinkExternalIcon
+                            width={12}
+                            height={12}
+                            stroke={theme.colors.primary}
+                            style={styles.linkIcon}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                   <Divider />
                 </>

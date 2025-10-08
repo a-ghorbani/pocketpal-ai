@@ -191,12 +191,6 @@ export async function isHighEndDevice(): Promise<boolean> {
     const ramOK = ramGB >= 5.5; // 6GB minimum for multimodal
     const cpuOK = cpuCount >= 6; // 6+ cores for decent performance
 
-    console.log('High-end device check:', {
-      ramGB,
-      cpuCount,
-      ramOK,
-      cpuOK,
-    });
     return ramOK && cpuOK;
   } catch (error) {
     console.error('High-end device check failed:', error);

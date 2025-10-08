@@ -48,6 +48,9 @@ export const l10n = {
         'OpenCL is not available on this device. Requires Adreno GPU with i8mm and dotprod CPU features.',
       openCLMissingCPUFeatures:
         'OpenCL requires i8mm and dotprod CPU features, which are not available on this device.',
+      openCLQuantizationNote:
+        'Note: Pure Q4_0 quantized models perform best with OpenCL.',
+      openCLDocsLink: 'See llama.cpp OpenCL docs for details.',
       layersOnGPU: 'Layers on GPU: {{gpuLayers}}',
       // Context Size
       contextSize: 'Context Size',
@@ -1304,6 +1307,9 @@ export const l10n = {
         'このデバイスではOpenCLを利用できません。i8mmとdotprodのCPU機能を備えたAdreno GPUが必要です。',
       openCLMissingCPUFeatures:
         'OpenCLにはi8mmとdotprodのCPU機能が必要ですが、このデバイスでは利用できません。',
+      openCLQuantizationNote:
+        '注：純粋なQ4_0量子化モデルがOpenCLで最高のパフォーマンスを発揮します。',
+      openCLDocsLink: '詳細はllama.cpp OpenCLドキュメントをご覧ください。',
       layersOnGPU: 'GPUレイヤー：{{gpuLayers}}',
       // Context Size
       contextSize: 'コンテキストサイズ',
@@ -2565,6 +2571,8 @@ export const l10n = {
         '此设备不支持OpenCL。需要具有i8mm和dotprod CPU功能的Adreno GPU。',
       openCLMissingCPUFeatures:
         'OpenCL需要i8mm和dotprod CPU功能，但此设备不支持。',
+      openCLQuantizationNote: '注意：纯Q4_0量化模型在OpenCL上性能最佳。',
+      openCLDocsLink: '详情请参阅llama.cpp OpenCL文档。',
       layersOnGPU: 'GPU层数：{{gpuLayers}}',
       // Context Size
       contextSize: '上下文长度',
