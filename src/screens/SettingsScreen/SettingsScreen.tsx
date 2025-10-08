@@ -66,7 +66,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
-  const [supportsOpenCL, setSupportsOpenCL] = useState(false);
+  const [gpuSupported, setGpuSupported] = useState(false);
   const [deviceCapabilities, setDeviceCapabilities] = useState<{
     hasAdreno: boolean;
     hasI8mm: boolean;
@@ -106,7 +106,7 @@ export const SettingsScreen: React.FC = observer(() => {
     const checkGpuCapabilities = async () => {
       const gpuCapabilities = await checkGpuSupport();
 
-      setSupportsOpenCL(gpuCapabilities.isSupported);
+      setGpuSupported(gpuCapabilities.isSupported);
 
       // Store device capabilities for displaying appropriate error messages
       if (gpuCapabilities.details) {
@@ -130,7 +130,7 @@ export const SettingsScreen: React.FC = observer(() => {
 
     checkGpuCapabilities().catch(error => {
       console.warn('Failed to check GPU capabilities:', error);
-      setSupportsOpenCL(false);
+      setGpuSupported(false);
       setDeviceCapabilities(null);
     });
   }, []);
@@ -241,7 +241,7 @@ export const SettingsScreen: React.FC = observer(() => {
       ? l10n.settings.metalDescription
       : l10n.settings.metalRequiresNewerIOS;
   } else if (Platform.OS === 'android') {
-    if (supportsOpenCL) {
+    if (gpuSupported) {
       gpuDescription = l10n.settings.openCLDescription;
     } else if (deviceCapabilities) {
       // Explain why OpenCL is not available
@@ -291,7 +291,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         onValueChange={value =>
                           modelStore.setNoGpuDevices(!value)
                         }
-                        disabled={Platform.OS === 'android' && !supportsOpenCL}
+                        disabled={!gpuSupported}
                       />
                     </View>
                     <InputSlider
