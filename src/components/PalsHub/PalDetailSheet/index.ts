@@ -1,0 +1,1 @@
+export {PalDetailSheet} from './PalDetailSheet';

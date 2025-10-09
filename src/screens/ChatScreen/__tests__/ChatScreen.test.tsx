@@ -1,13 +1,21 @@
 import React from 'react';
 
 import {LlamaContext} from '@pocketpalai/llama.rn';
-import {render, fireEvent, act, waitFor} from '../../../../jest/test-utils';
+import {
+  render as baseRender,
+  fireEvent,
+  act,
+  waitFor,
+} from '../../../../jest/test-utils';
 import {ChatScreen} from '../ChatScreen';
 
 import {chatSessionStore, modelStore} from '../../../store';
 
 import {l10n} from '../../../utils/l10n';
 import {mockContextModel} from '../../../../jest/fixtures/models';
+
+const render = (ui: React.ReactElement, options: any = {}) =>
+  baseRender(ui, {withBottomSheetProvider: true, ...options});
 
 describe('ChatScreen', () => {
   let llamaRN;

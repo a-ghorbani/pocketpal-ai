@@ -930,12 +930,26 @@ describe('ModelStore', () => {
 
   // Add tests for use metal and auto release settings
   describe('settings', () => {
-    it('should update useMetal setting', () => {
-      modelStore.useMetal = false;
+    it('should update GPU acceleration setting', () => {
+      modelStore.contextInitParams = {
+        ...modelStore.contextInitParams,
+        no_gpu_devices: true,
+      };
 
-      modelStore.updateUseMetal(true);
+      modelStore.setNoGpuDevices(false);
 
-      expect(modelStore.useMetal).toBe(true);
+      expect(modelStore.contextInitParams.no_gpu_devices).toBe(false);
+    });
+
+    it('should update GPU acceleration setting via setNoGpuDevices', () => {
+      modelStore.contextInitParams = {
+        ...modelStore.contextInitParams,
+        no_gpu_devices: false,
+      };
+
+      modelStore.setNoGpuDevices(true);
+
+      expect(modelStore.contextInitParams.no_gpu_devices).toBe(true);
     });
 
     it('should update useAutoRelease setting', () => {
@@ -975,74 +989,123 @@ describe('ModelStore', () => {
   describe('configuration setters', () => {
     it('should set n_threads', () => {
       modelStore.setNThreads(8);
-      expect(modelStore.n_threads).toBe(8);
+      expect(modelStore.contextInitParams.n_threads).toBe(8);
     });
 
     it('should set flash attention and reset cache types when disabled', () => {
       // Enable flash attention first
       modelStore.setFlashAttn(true);
-      expect(modelStore.flash_attn).toBe(true);
+      expect(modelStore.contextInitParams.flash_attn).toBe(true);
 
       // Disable flash attention - should reset cache types
       modelStore.setFlashAttn(false);
-      expect(modelStore.flash_attn).toBe(false);
-      expect(modelStore.cache_type_k).toBe('f16');
-      expect(modelStore.cache_type_v).toBe('f16');
+      expect(modelStore.contextInitParams.flash_attn).toBe(false);
+      expect(modelStore.contextInitParams.cache_type_k).toBe('f16');
+      expect(modelStore.contextInitParams.cache_type_v).toBe('f16');
     });
 
     it('should set cache type K only when flash attention is enabled', () => {
       // Disable flash attention
       modelStore.setFlashAttn(false);
       modelStore.setCacheTypeK('q8_0' as any);
-      expect(modelStore.cache_type_k).toBe('f16'); // Should not change
+      expect(modelStore.contextInitParams.cache_type_k).toBe('f16'); // Should not change
 
       // Enable flash attention
       modelStore.setFlashAttn(true);
       modelStore.setCacheTypeK('q8_0' as any);
-      expect(modelStore.cache_type_k).toBe('q8_0'); // Should change
+      expect(modelStore.contextInitParams.cache_type_k).toBe('q8_0'); // Should change
     });
 
     it('should set cache type V only when flash attention is enabled', () => {
       // Disable flash attention
       modelStore.setFlashAttn(false);
       modelStore.setCacheTypeV('q8_0' as any);
-      expect(modelStore.cache_type_v).toBe('f16'); // Should not change
+      expect(modelStore.contextInitParams.cache_type_v).toBe('f16'); // Should not change
 
       // Enable flash attention
       modelStore.setFlashAttn(true);
       modelStore.setCacheTypeV('q8_0' as any);
-      expect(modelStore.cache_type_v).toBe('q8_0'); // Should change
+      expect(modelStore.contextInitParams.cache_type_v).toBe('q8_0'); // Should change
     });
 
     it('should set n_batch', () => {
       modelStore.setNBatch(256);
-      expect(modelStore.n_batch).toBe(256);
+      expect(modelStore.contextInitParams.n_batch).toBe(256);
     });
 
     it('should set n_ubatch', () => {
       modelStore.setNUBatch(128);
-      expect(modelStore.n_ubatch).toBe(128);
+      expect(modelStore.contextInitParams.n_ubatch).toBe(128);
     });
 
     it('should set n_ctx', () => {
       modelStore.setNContext(2048);
-      expect(modelStore.n_ctx).toBe(2048);
+      expect(modelStore.contextInitParams.n_ctx).toBe(2048);
     });
 
-    it('should get effective values respecting constraints', () => {
+    it('should get effective batch values respecting constraints', () => {
       modelStore.setNContext(1024);
       modelStore.setNBatch(2048); // Larger than context
       modelStore.setNUBatch(1024); // Larger than effective batch
 
-      const effective = modelStore.getEffectiveValues();
+      const effective = modelStore.getEffectiveBatchValues();
       expect(effective.n_ctx).toBe(1024);
       expect(effective.n_batch).toBe(1024); // Clamped to context
       expect(effective.n_ubatch).toBe(1024); // Clamped to effective batch
     });
 
+    it('should maintain backward compatibility with getEffectiveValues', () => {
+      modelStore.setNContext(1024);
+      modelStore.setNBatch(2048);
+      modelStore.setNUBatch(1024);
+
+      // Legacy method should still work
+      const effective = modelStore.getEffectiveValues();
+      expect(effective.n_ctx).toBe(1024);
+      expect(effective.n_batch).toBe(1024);
+      expect(effective.n_ubatch).toBe(1024);
+    });
+
+    it('should get comprehensive effective context init params', async () => {
+      modelStore.setNContext(2048);
+      modelStore.setNBatch(1024);
+      modelStore.setNUBatch(512);
+      modelStore.setNThreads(8);
+      modelStore.setFlashAttn(true);
+      modelStore.contextInitParams = {
+        ...modelStore.contextInitParams,
+        no_gpu_devices: false,
+      };
+      modelStore.setNGPULayers(32);
+
+      const effective = await modelStore.getEffectiveContextInitParams();
+
+      expect(effective.n_ctx).toBe(2048);
+      expect(effective.n_batch).toBe(1024);
+      expect(effective.n_ubatch).toBe(512);
+      expect(effective.n_threads).toBe(8);
+      expect(effective.flash_attn).toBe(true);
+      expect(effective.n_gpu_layers).toBe(32);
+      expect(effective.no_gpu_devices).toBe(false);
+      expect(effective.use_mlock).toBe(false);
+      expect(effective.use_mmap).toBe(true); // Should be boolean for llama.rn compatibility
+    });
+
+    it('should maintain backward compatibility with getEffectiveInitSettings', async () => {
+      modelStore.setNContext(2048);
+      modelStore.setNBatch(1024);
+      modelStore.setNUBatch(512);
+
+      const effective = await modelStore.getEffectiveInitSettings();
+
+      expect(effective.n_ctx).toBe(2048);
+      expect(effective.n_batch).toBe(1024);
+      expect(effective.n_ubatch).toBe(512);
+    });
+
     it('should set n_gpu_layers', () => {
       modelStore.setNGPULayers(25);
-      expect(modelStore.n_gpu_layers).toBe(25);
+      expect(modelStore.contextInitParams.n_gpu_layers).toBe(25);
     });
   });
 

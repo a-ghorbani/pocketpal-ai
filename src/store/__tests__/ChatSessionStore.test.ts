@@ -108,6 +108,7 @@ describe('chatSessionStore', () => {
           date: new Date().toISOString(),
           messages: [],
           completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
         },
       ];
       (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValue(
@@ -131,6 +132,7 @@ describe('chatSessionStore', () => {
           date: new Date().toISOString(),
           messages: [],
           completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
         },
       ];
       (chatSessionRepository.deleteSession as jest.Mock).mockRejectedValue(
@@ -190,6 +192,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [mockSession];
       chatSessionStore.activeSessionId = mockSession.id;
@@ -213,6 +216,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [mockMessage],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [mockSession];
       chatSessionStore.activeSessionId = mockSession.id;
@@ -246,6 +250,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [mockMessage],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
 
       (chatSessionRepository.updateSessionTitle as jest.Mock).mockResolvedValue(
@@ -269,6 +274,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [{...mockMessage, text: longMessage}],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
 
       (chatSessionRepository.updateSessionTitle as jest.Mock).mockResolvedValue(
@@ -339,6 +345,7 @@ describe('chatSessionStore', () => {
           ...defaultCompletionSettings,
           temperature: 0.9,
         },
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [originalSession];
       chatSessionStore.activeSessionId = originalSession.id;
@@ -417,6 +424,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [mockMessage],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
@@ -437,6 +445,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [mockMessage],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
@@ -473,6 +482,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
@@ -522,6 +532,7 @@ describe('chatSessionStore', () => {
           date: today.toISOString(),
           messages: [],
           completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
         },
         {
           id: '2',
@@ -529,6 +540,7 @@ describe('chatSessionStore', () => {
           date: yesterday.toISOString(),
           messages: [],
           completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
         },
         {
           id: '3',
@@ -536,6 +548,7 @@ describe('chatSessionStore', () => {
           date: lastWeek.toISOString(),
           messages: [],
           completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
         },
       ];
 
@@ -557,6 +570,7 @@ describe('chatSessionStore', () => {
           ...defaultCompletionSettings,
           temperature: 0.7,
         },
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
 
       chatSessionStore.sessions = [originalSession];
@@ -626,6 +640,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [] as MessageType.Any[],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
@@ -654,6 +669,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
 
@@ -680,6 +696,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
 
@@ -708,6 +725,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
@@ -847,6 +865,7 @@ describe('chatSessionStore', () => {
           mockMessage, // oldest - user (message1)
         ],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = 'session1';
@@ -920,6 +939,7 @@ describe('chatSessionStore', () => {
           mockMessage, // oldest - user (message1)
         ],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = 'session1';
@@ -999,6 +1019,7 @@ describe('chatSessionStore', () => {
         messages: [],
         completionSettings: defaultCompletionSettings,
         activePalId: 'pal1',
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = 'session1';
@@ -1019,6 +1040,7 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
         messages: [],
         completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = 'session1';
@@ -1042,6 +1064,7 @@ describe('chatSessionStore', () => {
         messages: [],
         completionSettings: defaultCompletionSettings,
         activePalId: 'pal1',
+        settingsSource: 'pal' as 'pal' | 'custom',
       };
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = 'session1';

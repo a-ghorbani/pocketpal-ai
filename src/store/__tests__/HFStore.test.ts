@@ -28,6 +28,10 @@ describe('HFStore', () => {
     // Clear the token to ensure tests start with no authentication
     hfStore.hfToken = null;
     hfStore.useHfToken = true;
+    // Reset pagination protection state
+    (hfStore as any).lastFetchMoreAttempt = 0;
+    (hfStore as any).consecutiveSmallResults = 0;
+    (hfStore as any).lastFetchedNextLink = null;
   });
 
   describe('fetchModels', () => {
@@ -94,6 +98,52 @@ describe('HFStore', () => {
       expect(hfStore.models[1].id).toBe(mockHFModel2.id);
       expect(hfStore.nextPageLink).toBeNull();
     });
+
+    it('should prevent rapid successive calls with debouncing', async () => {
+      // Set initial state with few models to trigger protection
+      hfStore.models = [mockHFModel1];
+      hfStore.nextPageLink = 'next-page-url';
+
+      // First call should go through
+      const mockResponse = {
+        models: [mockHFModel2],
+        nextLink: 'next-page-url-2',
+      };
+      (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+
+      await hfStore.fetchMoreModels();
+      expect(fetchModels).toHaveBeenCalledTimes(1);
+
+      // Immediate second call should be prevented due to debouncing
+      await hfStore.fetchMoreModels();
+      expect(fetchModels).toHaveBeenCalledTimes(1); // Still only 1 call
+    });
+
+    it('should track consecutive small results', async () => {
+      hfStore.models = [];
+      hfStore.nextPageLink = 'next-page-url';
+
+      // Mock multiple responses with small result sets
+      const smallResponse = {
+        models: [mockHFModel1], // Only 1 model (< 3)
+        nextLink: 'next-page-url-2',
+      };
+
+      (fetchModels as jest.Mock)
+        .mockResolvedValueOnce(smallResponse)
+        .mockResolvedValueOnce(smallResponse)
+        .mockResolvedValueOnce(smallResponse);
+
+      // Make multiple calls to trigger consecutive small results tracking
+      await hfStore.fetchMoreModels();
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+      await hfStore.fetchMoreModels();
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+      await hfStore.fetchMoreModels();
+
+      // Should have tracked consecutive small results
+      expect((hfStore as any).consecutiveSmallResults).toBeGreaterThan(0);
+    });
   });
 
   describe('fetchModelData', () => {
@@ -138,6 +188,48 @@ describe('HFStore', () => {
       hfStore.setSearchQuery(query);
 
       expect(hfStore.searchQuery).toBe(query);
+    });
+  });
+
+  describe('pagination protection', () => {
+    it('should reset pagination guards on fresh search', async () => {
+      // Set some state that should be reset
+      (hfStore as any).consecutiveSmallResults = 5;
+      (hfStore as any).lastFetchMoreAttempt = Date.now();
+
+      const mockResponse = {
+        models: [mockHFModel1],
+        nextLink: null,
+      };
+      (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+
+      await hfStore.fetchModels();
+
+      expect((hfStore as any).consecutiveSmallResults).toBe(0);
+      expect((hfStore as any).lastFetchMoreAttempt).toBe(0);
+    });
+
+    it('should use correct sort parameters', () => {
+      hfStore.setSortBy('lastModified');
+      const sortParams = (hfStore as any).getSortParams();
+
+      expect(sortParams?.sort).toBe('lastModified');
+      expect(sortParams?.direction).toBe('-1');
+    });
+
+    it('should use relevance as default sort (no sorting)', () => {
+      hfStore.setSortBy('relevance');
+      const sortParams = (hfStore as any).getSortParams();
+
+      expect(sortParams).toBeNull();
+    });
+
+    it('should use downloads sort when specified', () => {
+      hfStore.setSortBy('downloads');
+      const sortParams = (hfStore as any).getSortParams();
+
+      expect(sortParams?.sort).toBe('downloads');
+      expect(sortParams?.direction).toBe('-1');
     });
   });
 

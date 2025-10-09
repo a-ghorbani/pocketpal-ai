@@ -8,7 +8,8 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {uiStore, palStore} from '../store';
 import {ensureLegacyStoragePermission} from './androidPermission';
-import {PalType} from '../components/PalsSheets/types';
+import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
+import type {Pal} from '../types/pal';
 /**
  * Export a single chat session to a JSON file
  * @param sessionId The ID of the session to export
@@ -47,7 +48,7 @@ export const exportChatSession = async (sessionId: string): Promise<void> => {
     const sanitizedTitle = session.title
       .replace(/[^a-z0-9]/gi, '_')
       .toLowerCase();
-    const filename = `${sanitizedTitle}_${timestamp}.json`;
+    const filename = `chat_${sanitizedTitle}_${timestamp}.json`;
 
     // Convert to JSON
     const jsonData = JSON.stringify(exportData, null, 2);
@@ -129,11 +130,11 @@ export const exportPal = async (palId: string): Promise<void> => {
       throw new Error('Pal not found');
     }
 
-    const exportData = transformExportPal(pal);
+    const exportData = await transformExportPal(pal);
 
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
     const sanitizedName = pal.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    const filename = `${sanitizedName}_${timestamp}.json`;
+    const filename = `pal_${sanitizedName}_v${exportData.version}_${timestamp}.json`;
 
     const jsonData = JSON.stringify(exportData, null, 2);
 
@@ -164,38 +165,69 @@ export const exportAllPals = async (): Promise<void> => {
   }
 };
 
-const transformExportPal = (pal: any) => {
-  const palData = {
+const transformExportPal = async (pal: Pal) => {
+  // Create export data with version information
+  // Data Transfer Object (DTO) for exported pal data (format v2.0)
+
+  // Handle thumbnail image - convert local images to base64 for portability
+  let thumbnailData: string | undefined;
+  let thumbnailUrl: string | undefined = pal.thumbnail_url;
+
+  if (pal.thumbnail_url && isLocalThumbnailPath(pal.thumbnail_url)) {
+    try {
+      // Convert local image to base64 for export
+      const absolutePath = getAbsoluteThumbnailPath(pal.thumbnail_url);
+      const base64Content = await RNFS.readFile(absolutePath, 'base64');
+
+      // Get file extension from original file (fallback to jpg)
+      const fileExtension =
+        absolutePath.toLowerCase().split('.').pop() || 'jpg';
+
+      thumbnailData = `data:image/${fileExtension};base64,${base64Content}`;
+      thumbnailUrl = undefined; // Don't export local file paths
+    } catch (error) {
+      console.warn('Failed to read thumbnail for export:', error);
+      thumbnailUrl = undefined; // Remove invalid local path
+    }
+  }
+
+  const exportData = {
+    // Export format version for future compatibility
+    version: '2.0',
+
+    // Core pal data (modern format)
     id: pal.id,
-    palType: pal.palType,
     name: pal.name,
-    defaultModel: pal.defaultModel,
-    useAIPrompt: pal.useAIPrompt,
+    description: pal.description,
+    thumbnail_url: thumbnailUrl, // Remote URLs only
+    thumbnail_data: thumbnailData, // Base64 embedded images
     systemPrompt: pal.systemPrompt,
     originalSystemPrompt: pal.originalSystemPrompt,
     isSystemPromptChanged: pal.isSystemPromptChanged,
-    color: pal.color,
+    useAIPrompt: pal.useAIPrompt,
+    defaultModel: pal.defaultModel,
     promptGenerationModel: pal.promptGenerationModel,
     generatingPrompt: pal.generatingPrompt,
-    // roleplay fields
-    ...(pal.palType === PalType.ROLEPLAY
-      ? {
-          world: pal.world,
-          location: pal.location,
-          aiRole: pal.aiRole,
-          userRole: pal.userRole,
-          situation: pal.situation,
-          toneStyle: pal.toneStyle,
-        }
-      : {}),
-    // video fields
-    ...(pal.palType === PalType.VIDEO
-      ? {
-          captureInterval: pal.captureInterval,
-        }
-      : {}),
+    color: pal.color,
+    capabilities: pal.capabilities,
+    parameters: pal.parameters,
+    parameterSchema: pal.parameterSchema,
+    source: pal.source,
+    palshub_id: pal.palshub_id,
+    creator_info: pal.creator_info,
+    categories: pal.categories,
+    tags: pal.tags,
+    rating: pal.rating,
+    review_count: pal.review_count,
+    protection_level: pal.protection_level,
+    price_cents: pal.price_cents,
+    is_owned: pal.is_owned,
+    generation_settings: pal.completionSettings,
+    created_at: pal.created_at,
+    updated_at: pal.updated_at,
   };
-  return palData;
+
+  return exportData;
 };
 
 /**

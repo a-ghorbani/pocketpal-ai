@@ -33,12 +33,13 @@ import {usePrevious, useTheme, useMessageActions} from '../../hooks';
 import ImageView from './ImageView';
 import {createStyles} from './styles';
 
-import {chatSessionStore, modelStore, palStore} from '../../store';
+import {chatSessionStore, modelStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
+import {Pal} from '../../types/pal';
 import {calculateChatMessages, unwrap, UserContext} from '../../utils';
 import {L10nContext} from '../../utils';
-import {PalType} from '../PalsSheets/types';
+import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {
   Message,
@@ -126,6 +127,10 @@ export interface ChatProps extends ChatTopLevelProps {
    * to the very end of the list (minus `onEndReachedThreshold`).
    * See {@link ChatProps.flatListProps} to set it up. */
   onEndReached?: () => Promise<void>;
+  /** The currently active pal */
+  activePal?: Pal;
+  /** Called when pal sheet should be opened */
+  onPalSettingsSelect?: (pal: Pal) => void;
   /** Show user names for received messages. Useful for a group chat. Will be
    * shown only on text messages. */
   showUserNames?: boolean;
@@ -160,6 +165,8 @@ export const ChatView = observer(
     onEndReached,
     onMessageLongPress: externalOnMessageLongPress,
     onMessagePress,
+    activePal,
+    onPalSettingsSelect,
     onPreviewDataFetched,
     onSendPress,
     onStopPress,
@@ -191,8 +198,6 @@ export const ChatView = observer(
     const insets = useSafeAreaInsets();
     const {progress} = useKeyboardAnimation();
     const headerHeight = useHeaderHeight();
-    const activePalId = chatSessionStore.activePalId;
-    const activePal = palStore.pals.find(pal => pal.id === activePalId);
 
     const {onLayout, size} = useComponentSize();
     const {onLayout: onLayoutChatInput, size: chatInputHeight} =
@@ -608,7 +613,7 @@ export const ChatView = observer(
 
     const renderListEmptyComponent = React.useCallback(() => {
       // Show VideoPalEmptyPlaceholder for video pal, otherwise show regular ChatEmptyPlaceholder
-      if (inputProps?.palType === PalType.VIDEO) {
+      if (activePal && hasVideoCapability(activePal)) {
         return (
           <VideoPalEmptyPlaceholder
             bottomComponentHeight={bottomComponentHeight}
@@ -622,7 +627,7 @@ export const ChatView = observer(
           onSelectModel={() => setIsPickerVisible(true)}
         />
       );
-    }, [bottomComponentHeight, setIsPickerVisible, inputProps?.palType]);
+    }, [bottomComponentHeight, setIsPickerVisible, activePal]);
 
     const renderListFooterComponent = React.useCallback(
       () =>
@@ -790,7 +795,7 @@ export const ChatView = observer(
                     textInputProps: {
                       ...textInputProps,
                       // Only override value and onChangeText if not using promptText
-                      ...(!(inputProps?.palType === PalType.VIDEO) && {
+                      ...(!(activePal && hasVideoCapability(activePal)) && {
                         value: inputText,
                         onChangeText: setInputText,
                       }),
@@ -803,6 +808,7 @@ export const ChatView = observer(
                 onClose={() => setIsPickerVisible(false)}
                 onModelSelect={handleModelSelect}
                 onPalSelect={handlePalSelect}
+                onPalSettingsSelect={onPalSettingsSelect}
                 chatInputHeight={chatInputHeight.height}
                 keyboardHeight={keyboardHeight}
               />

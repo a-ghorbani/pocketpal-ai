@@ -6,7 +6,7 @@ import {observer} from 'mobx-react-lite';
 
 import {useTheme} from '../../../hooks';
 
-import {styles} from './styles';
+import {createStyles} from './styles';
 
 import {modelStore} from '../../../store';
 
@@ -20,9 +20,11 @@ interface ModelAccordionProps {
 
 export const ModelAccordion: React.FC<ModelAccordionProps> = observer(
   ({group, expanded, onPress, children, description}) => {
-    const {colors} = useTheme();
+    const theme = useTheme();
+    const {colors} = theme;
     const activeModel = modelStore.activeModel;
     const activeGroup = activeModel && activeModel.type === group.type;
+    const styles = createStyles(theme);
 
     const accordionStyles = StyleSheet.flatten([
       styles.accordion,

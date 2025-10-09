@@ -151,3 +151,72 @@ export const fetchGGUFSpecs = async (
     throw error;
   }
 };
+
+/**
+ * Fetches complete model information from HuggingFace API
+ * @param repoId - The repository ID (e.g., "microsoft/DialoGPT-medium")
+ * @param revision - Optional revision/branch (defaults to main)
+ * @param full - Whether to fetch full model data
+ * @param authToken - Optional authentication token for accessing private models
+ * @param stripFields - Optional array of fields to remove from the result
+ * @returns Partial HuggingFaceModel with GGUF specs converted to compatible format
+ */
+export async function fetchModelInfo({
+  repoId,
+  revision,
+  full,
+  authToken,
+  stripFields = ['spaces', 'cardData', 'config'], // Default fields to strip
+}: {
+  repoId: string;
+  revision?: string;
+  full?: boolean;
+  authToken?: string | null;
+  stripFields?: string[];
+}): Promise<Partial<HuggingFaceModel>> {
+  const headers: Record<string, string> = {};
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  const base = revision
+    ? `${urls.modelSpecs(repoId)}/revision/${revision}`
+    : urls.modelSpecs(repoId);
+
+  try {
+    const response = await axios.get<any>(base, {
+      params: {
+        full,
+      },
+      headers,
+    });
+
+    const modelData: Partial<HuggingFaceModel> = {...response.data};
+
+    // Remove unwanted fields
+    for (const field of stripFields) {
+      delete (modelData as any)[field];
+    }
+
+    // Convert GGUF field to specs format for compatibility with existing code
+    // The API returns: { "gguf": { "total": 123, "architecture": "llama", ... } }
+    // But our code expects: { "specs": { "gguf": { "total": 123, ... } } }
+    // TODO: at some point this needs to be migrated to be compatible with HF datastructure.
+    if (response.data.gguf) {
+      modelData.specs = {
+        _id: response.data._id || '',
+        id: response.data.id || repoId,
+        gguf: response.data.gguf,
+        // Include other fields that might be in the original specs format
+        ...modelData.specs,
+      };
+      // Remove the original gguf field since we've moved it to specs.gguf
+      delete (modelData as any).gguf;
+    }
+
+    return modelData;
+  } catch (error) {
+    console.error('Failed to fetch model info:', error);
+    throw error;
+  }
+}

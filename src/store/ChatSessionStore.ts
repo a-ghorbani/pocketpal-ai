@@ -8,6 +8,7 @@ import {MessageType} from '../utils/types';
 import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
+import {palStore} from './PalStore';
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
@@ -19,6 +20,7 @@ export interface SessionMetaData {
   messages: MessageType.Any[];
   completionSettings: CompletionParams;
   activePalId?: string;
+  settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
 }
 
 interface SessionGroup {
@@ -50,6 +52,7 @@ class ChatSessionStore {
   isGenerating: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
+  newChatSettingsSource: 'pal' | 'custom' = 'pal';
   // Store localized date group names
   dateGroupNames: typeof DEFAULT_GROUP_NAMES = DEFAULT_GROUP_NAMES;
   // Migration status
@@ -165,6 +168,7 @@ class ChatSessionStore {
           messages,
           completionSettings,
           activePalId: session.activePalId,
+          settingsSource: 'pal', // Default to pal settings for existing sessions
         });
       }
 
@@ -219,6 +223,7 @@ class ChatSessionStore {
   resetActiveSession() {
     runInAction(() => {
       this.newChatPalId = this.activePalId;
+      this.newChatSettingsSource = 'pal'; // Reset to default for new chat
       // Do not copy completion settings from session to global settings
       // Instead, preserve global settings as they are
       this.exitEditMode();
@@ -232,6 +237,7 @@ class ChatSessionStore {
       this.activeSessionId = sessionId;
       // Don't modify global settings when changing sessions
       this.newChatPalId = undefined;
+      this.newChatSettingsSource = 'pal'; // Reset for consistency
     });
   }
 
@@ -369,6 +375,7 @@ class ChatSessionStore {
         date: newSession.date,
         messages,
         completionSettings: settings,
+        settingsSource: this.newChatSettingsSource, // Use the stored settings source choice
       };
 
       if (this.newChatPalId) {
@@ -432,10 +439,41 @@ class ChatSessionStore {
           // Update local state directly - no need to reload from database
           runInAction(() => {
             session.completionSettings = settings;
+            session.settingsSource = 'custom'; // Mark as using custom settings
           });
         } catch (error) {
           console.error('Failed to update session completion settings:', error);
         }
+      }
+    }
+  }
+
+  async updateSessionSettingsSource(source: 'pal' | 'custom') {
+    if (this.activeSessionId) {
+      const session = this.sessions.find(s => s.id === this.activeSessionId);
+      if (session) {
+        runInAction(() => {
+          session.settingsSource = source;
+        });
+      }
+    }
+  }
+
+  setNewChatSettingsSource(source: 'pal' | 'custom') {
+    runInAction(() => {
+      this.newChatSettingsSource = source;
+    });
+  }
+
+  // Called when the active pal changes in a session
+  async updateSessionActivePal(palId: string) {
+    if (this.activeSessionId) {
+      const session = this.sessions.find(s => s.id === this.activeSessionId);
+      if (session) {
+        runInAction(() => {
+          session.activePalId = palId;
+          session.settingsSource = 'pal'; // Switch to pal settings when changing pal
+        });
       }
     }
   }
@@ -722,6 +760,64 @@ class ChatSessionStore {
     } else {
       this.newChatPalId = palId;
     }
+  }
+
+  /**
+   * Resolves completion settings according to the precedence hierarchy:
+   * System Defaults → Global User Settings → Pal-Specific Settings → Session-Specific Settings (only if explicitly modified)
+   */
+  async resolveCompletionSettings(
+    sessionId?: string,
+    palId?: string,
+  ): Promise<CompletionParams> {
+    // Start with system defaults
+    let resolvedSettings: CompletionParams = {...defaultCompletionSettings};
+
+    // Apply global user settings
+    resolvedSettings = {
+      ...resolvedSettings,
+      ...this.newChatCompletionSettings,
+    };
+
+    // Apply pal-specific settings if available
+    if (palId) {
+      // Use in-memory pal store as the source of truth (avoids cache invalidation issues)
+      const pal = palStore.pals.find(p => p.id === palId);
+      const palSettings = pal?.completionSettings;
+
+      if (palSettings) {
+        resolvedSettings = {
+          ...resolvedSettings,
+          ...palSettings,
+        };
+      }
+    }
+
+    // Apply session-specific settings based on explicit user choice
+    if (sessionId) {
+      const session = this.sessions.find(s => s.id === sessionId);
+
+      if (session?.settingsSource === 'custom') {
+        // User explicitly chose custom settings - use session settings
+        resolvedSettings = session.completionSettings;
+      }
+    }
+
+    return resolvedSettings;
+  }
+
+  /**
+   * Gets the effective completion settings for the current context
+   */
+  async getCurrentCompletionSettings(): Promise<CompletionParams> {
+    const activePalId = this.activeSessionId
+      ? this.sessions.find(s => s.id === this.activeSessionId)?.activePalId
+      : this.newChatPalId;
+
+    return this.resolveCompletionSettings(
+      this.activeSessionId || undefined,
+      activePalId,
+    );
   }
 }
 

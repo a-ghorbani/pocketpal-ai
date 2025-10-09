@@ -31,8 +31,28 @@ describe('MarkdownView Component', () => {
       <MarkdownView markdownText={markdownText} maxMessageWidth={200} />,
     );
 
-    expect(getByTestId('chatMarkdownScrollView').props.style.maxWidth).toBe(
-      200,
-    );
+    const element = getByTestId('chatMarkdownScrollView');
+
+    // Check if style is an array and extract maxWidth from the correct location
+    const style = element.props.style;
+    let maxWidth: number | undefined;
+
+    if (Array.isArray(style)) {
+      // Find maxWidth in the style array
+      for (const styleItem of style) {
+        if (
+          styleItem &&
+          typeof styleItem === 'object' &&
+          'maxWidth' in styleItem
+        ) {
+          maxWidth = styleItem.maxWidth;
+          break;
+        }
+      }
+    } else if (style && typeof style === 'object' && 'maxWidth' in style) {
+      maxWidth = style.maxWidth;
+    }
+
+    expect(maxWidth).toBe(200);
   });
 });

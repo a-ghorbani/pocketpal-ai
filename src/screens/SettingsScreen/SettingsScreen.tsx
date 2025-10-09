@@ -7,16 +7,29 @@ import {
   ScrollView,
   TextInput as RNTextInput,
   Alert,
+  Linking,
+  TouchableOpacity,
 } from 'react-native';
 
 import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
-import Slider from '@react-native-community/slider';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Switch, Text, Card, Button, Icon, List} from 'react-native-paper';
 
-import {GlobeIcon, MoonIcon, CpuChipIcon, ShareIcon} from '../../assets/icons';
-import {TextInput, Menu, Divider, HFTokenSheet} from '../../components';
+import {
+  GlobeIcon,
+  MoonIcon,
+  CpuChipIcon,
+  ShareIcon,
+  LinkExternalIcon,
+} from '../../assets/icons';
+import {
+  TextInput,
+  Menu,
+  Divider,
+  HFTokenSheet,
+  InputSlider,
+} from '../../components';
 
 import {useTheme} from '../../hooks';
 
@@ -28,6 +41,7 @@ import {AvailableLanguage} from '../../store/UIStore';
 import {L10nContext} from '../../utils';
 import {CacheType} from '../../utils/types';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
+import {checkGpuSupport} from '../../utils/deviceCapabilities';
 
 // Language display names in their native form
 const languageNames: Record<AvailableLanguage, string> = {
@@ -45,11 +59,17 @@ const languageNames: Record<AvailableLanguage, string> = {
   zh: '中文 (ZH)',
 };
 
+// OpenCL documentation URL (not localized)
+const OPENCL_DOCS_URL =
+  'https://github.com/ggml-org/llama.cpp/blob/master/docs/backend/OPENCL.md#model-preparation';
+
 export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const theme = useTheme();
   const styles = createStyles(theme);
-  const [contextSize, setContextSize] = useState(modelStore.n_ctx.toString());
+  const [contextSize, setContextSize] = useState(
+    modelStore.contextInitParams.n_ctx.toString(),
+  );
   const [isValidInput, setIsValidInput] = useState(true);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const inputRef = useRef<RNTextInput>(null);
@@ -58,6 +78,12 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
+  const [gpuSupported, setGpuSupported] = useState(false);
+  const [deviceCapabilities, setDeviceCapabilities] = useState<{
+    hasAdreno: boolean;
+    hasI8mm: boolean;
+    hasDotProd: boolean;
+  } | null>(null);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
     y: 0,
@@ -86,7 +112,39 @@ export const SettingsScreen: React.FC = observer(() => {
   ).current;
 
   useEffect(() => {
-    setContextSize(modelStore.n_ctx.toString());
+    setContextSize(modelStore.contextInitParams.n_ctx.toString());
+
+    // Check for GPU support (Metal on iOS 18+, OpenCL on Android with Adreno + CPU features)
+    const checkGpuCapabilities = async () => {
+      const gpuCapabilities = await checkGpuSupport();
+
+      setGpuSupported(gpuCapabilities.isSupported);
+
+      // Store device capabilities for displaying appropriate error messages
+      if (gpuCapabilities.details) {
+        setDeviceCapabilities({
+          hasAdreno: gpuCapabilities.details.hasAdreno ?? false,
+          hasI8mm: gpuCapabilities.details.hasI8mm ?? false,
+          hasDotProd: gpuCapabilities.details.hasDotProd ?? false,
+        });
+      }
+
+      // If GPU is not supported but currently enabled,
+      // automatically disable it to prevent using non-functional GPU acceleration
+      if (
+        !gpuCapabilities.isSupported &&
+        modelStore.contextInitParams.no_gpu_devices === false
+      ) {
+        modelStore.setNoGpuDevices(true);
+        modelStore.setNGPULayers(0);
+      }
+    };
+
+    checkGpuCapabilities().catch(error => {
+      console.warn('Failed to check GPU capabilities:', error);
+      setGpuSupported(false);
+      setDeviceCapabilities(null);
+    });
   }, []);
 
   useEffect(() => {
@@ -98,7 +156,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const handleOutsidePress = () => {
     Keyboard.dismiss();
     inputRef.current?.blur();
-    setContextSize(modelStore.n_ctx.toString());
+    setContextSize(modelStore.contextInitParams.n_ctx.toString());
     setIsValidInput(true);
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
@@ -136,7 +194,7 @@ export const SettingsScreen: React.FC = observer(() => {
       : []),
   ];
 
-  const getCacheTypeLabel = (value: CacheType) => {
+  const getCacheTypeLabel = (value: CacheType | string) => {
     return (
       cacheTypeOptions.find(option => option.value === value)?.label || value
     );
@@ -179,6 +237,41 @@ export const SettingsScreen: React.FC = observer(() => {
   const isIOS18OrHigher =
     Platform.OS === 'ios' && parseInt(Platform.Version as string, 10) >= 18;
 
+  // Show GPU settings for iOS or Android (always show on Android to explain why it's not available)
+  const showGPUSettings = Platform.OS === 'ios' || Platform.OS === 'android';
+
+  // Determine GPU label and description based on platform and availability
+  const gpuLabel =
+    Platform.OS === 'ios'
+      ? l10n.settings.metal
+      : l10n.settings.openCL || 'OpenCL';
+
+  // Determine the appropriate description based on platform and GPU support
+  let gpuDescription = '';
+  if (Platform.OS === 'ios') {
+    gpuDescription = isIOS18OrHigher
+      ? l10n.settings.metalDescription
+      : l10n.settings.metalRequiresNewerIOS;
+  } else if (Platform.OS === 'android') {
+    if (gpuSupported) {
+      gpuDescription = l10n.settings.openCLDescription;
+    } else if (deviceCapabilities) {
+      // Explain why OpenCL is not available
+      if (!deviceCapabilities.hasAdreno) {
+        gpuDescription = l10n.settings.openCLNotAvailable;
+      } else if (
+        !deviceCapabilities.hasI8mm ||
+        !deviceCapabilities.hasDotProd
+      ) {
+        gpuDescription = l10n.settings.openCLMissingCPUFeatures;
+      } else {
+        gpuDescription = l10n.settings.openCLNotAvailable;
+      }
+    } else {
+      gpuDescription = l10n.settings.openCLNotAvailable;
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -187,53 +280,78 @@ export const SettingsScreen: React.FC = observer(() => {
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.modelInitializationSettings} />
             <Card.Content>
-              {/* Metal Settings (iOS only) */}
-              {Platform.OS === 'ios' && (
+              {/* GPU Settings (iOS Metal or Android OpenCL) */}
+              {showGPUSettings && (
                 <>
                   <View style={styles.settingItemContainer}>
                     <View style={styles.switchContainer}>
                       <View style={styles.textContainer}>
                         <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.settings.metal}
+                          {gpuLabel}
                         </Text>
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {isIOS18OrHigher
-                            ? l10n.settings.metalDescription
-                            : l10n.settings.metalRequiresNewerIOS}
+                          {gpuDescription}
                         </Text>
                       </View>
                       <Switch
-                        testID="metal-switch"
-                        value={modelStore.useMetal}
-                        onValueChange={value =>
-                          modelStore.updateUseMetal(value)
+                        testID="gpu-acceleration-switch"
+                        value={
+                          modelStore.contextInitParams.no_gpu_devices === false
                         }
-                        // disabled={!isIOS18OrHigher}
-                        // We don't disable for cases where the users has has set to true in the past.
+                        onValueChange={value =>
+                          modelStore.setNoGpuDevices(!value)
+                        }
+                        disabled={!gpuSupported}
                       />
                     </View>
-                    <Slider
+                    <InputSlider
                       testID="gpu-layers-slider"
-                      disabled={!modelStore.useMetal}
-                      value={modelStore.n_gpu_layers}
+                      disabled={
+                        modelStore.contextInitParams.no_gpu_devices !== false
+                      }
+                      value={modelStore.contextInitParams.n_gpu_layers}
                       onValueChange={value =>
                         modelStore.setNGPULayers(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={100}
+                      min={1}
+                      max={100}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.layersOnGPU.replace(
                         '{{gpuLayers}}',
-                        modelStore.n_gpu_layers.toString(),
+                        modelStore.contextInitParams.n_gpu_layers.toString(),
                       )}
                     </Text>
+                    {Platform.OS === 'android' && gpuSupported && (
+                      <View>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {l10n.settings.openCLQuantizationNote}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
+                          style={styles.linkContainer}>
+                          <Text
+                            variant="labelSmall"
+                            style={[
+                              styles.textDescription,
+                              {color: theme.colors.primary},
+                            ]}>
+                            {l10n.settings.openCLDocsLink}
+                          </Text>
+                          <LinkExternalIcon
+                            width={12}
+                            height={12}
+                            stroke={theme.colors.primary}
+                            style={styles.linkIcon}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                   <Divider />
                 </>
@@ -282,29 +400,28 @@ export const SettingsScreen: React.FC = observer(() => {
                 <View style={styles.advancedSettingsContent}>
                   {/* Batch Size Slider */}
                   <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.batchSize}
-                    </Text>
-                    <Slider
+                    <InputSlider
                       testID="batch-size-slider"
-                      value={modelStore.n_batch}
+                      label={l10n.settings.batchSize}
+                      value={modelStore.contextInitParams.n_batch}
                       onValueChange={value =>
                         modelStore.setNBatch(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={4096}
+                      min={1}
+                      max={4096}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.batchSizeDescription
-                        .replace('{{batchSize}}', modelStore.n_batch.toString())
+                        .replace(
+                          '{{batchSize}}',
+                          modelStore.contextInitParams.n_batch.toString(),
+                        )
                         .replace(
                           '{{effectiveBatch}}',
-                          modelStore.n_batch > modelStore.n_ctx
-                            ? ` (${l10n.settings.effectiveLabel}: ${modelStore.n_ctx})`
+                          modelStore.contextInitParams.n_batch >
+                            modelStore.contextInitParams.n_ctx
+                            ? ` (${l10n.settings.effectiveLabel}: ${modelStore.contextInitParams.n_ctx})`
                             : '',
                         )}
                     </Text>
@@ -313,35 +430,33 @@ export const SettingsScreen: React.FC = observer(() => {
 
                   {/* Physical Batch Size Slider */}
                   <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.physicalBatchSize}
-                    </Text>
-                    <Slider
+                    <InputSlider
                       testID="ubatch-size-slider"
-                      value={modelStore.n_ubatch}
+                      label={l10n.settings.physicalBatchSize}
+                      value={modelStore.contextInitParams.n_ubatch}
                       onValueChange={value =>
                         modelStore.setNUBatch(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={4096}
+                      min={1}
+                      max={4096}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.physicalBatchSizeDescription
                         .replace(
                           '{{physicalBatchSize}}',
-                          modelStore.n_ubatch.toString(),
+                          modelStore.contextInitParams.n_ubatch.toString(),
                         )
                         .replace(
                           '{{effectivePhysicalBatch}}',
-                          modelStore.n_ubatch >
-                            Math.min(modelStore.n_batch, modelStore.n_ctx)
+                          modelStore.contextInitParams.n_ubatch >
+                            Math.min(
+                              modelStore.contextInitParams.n_batch,
+                              modelStore.contextInitParams.n_ctx,
+                            )
                             ? ` (${l10n.settings.effectiveLabel}: ${Math.min(
-                                modelStore.n_batch,
-                                modelStore.n_ctx,
+                                modelStore.contextInitParams.n_batch,
+                                modelStore.contextInitParams.n_ctx,
                               )})`
                             : '',
                         )}
@@ -351,25 +466,23 @@ export const SettingsScreen: React.FC = observer(() => {
 
                   {/* Thread Count Slider */}
                   <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.cpuThreads}
-                    </Text>
-                    <Slider
+                    <InputSlider
                       testID="thread-count-slider"
-                      value={modelStore.n_threads}
+                      label={l10n.settings.cpuThreads}
+                      value={modelStore.contextInitParams.n_threads}
                       onValueChange={value =>
                         modelStore.setNThreads(Math.round(value))
                       }
-                      minimumValue={1}
-                      maximumValue={modelStore.max_threads}
+                      min={1}
+                      max={modelStore.max_threads}
                       step={1}
-                      style={styles.slider}
-                      thumbTintColor={theme.colors.primary}
-                      minimumTrackTintColor={theme.colors.primary}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {l10n.settings.cpuThreadsDescription
-                        .replace('{{threads}}', modelStore.n_threads.toString())
+                        .replace(
+                          '{{threads}}',
+                          modelStore.contextInitParams.n_threads.toString(),
+                        )
                         .replace(
                           '{{maxThreads}}',
                           modelStore.max_threads.toString(),
@@ -393,7 +506,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       </View>
                       <Switch
                         testID="flash-attention-switch"
-                        value={modelStore.flash_attn}
+                        value={modelStore.contextInitParams.flash_attn}
                         onValueChange={value => modelStore.setFlashAttn(value)}
                       />
                     </View>
@@ -410,7 +523,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {modelStore.flash_attn
+                          {modelStore.contextInitParams.flash_attn
                             ? l10n.settings.keyCacheTypeDescription
                             : l10n.settings.keyCacheTypeDisabledDescription}
                         </Text>
@@ -422,7 +535,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           onPress={handleKeyCachePress}
                           style={styles.menuButton}
                           contentStyle={styles.buttonContent}
-                          disabled={!modelStore.flash_attn}
+                          disabled={!modelStore.contextInitParams.flash_attn}
                           icon={({size, color}) => (
                             <Icon
                               source="chevron-down"
@@ -430,7 +543,9 @@ export const SettingsScreen: React.FC = observer(() => {
                               color={color}
                             />
                           )}>
-                          {getCacheTypeLabel(modelStore.cache_type_k)}
+                          {getCacheTypeLabel(
+                            modelStore.contextInitParams.cache_type_k,
+                          )}
                         </Button>
                         <Menu
                           visible={showKeyCacheMenu}
@@ -443,7 +558,8 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.menu}
                               label={option.label}
                               selected={
-                                option.value === modelStore.cache_type_k
+                                option.value ===
+                                modelStore.contextInitParams.cache_type_k
                               }
                               onPress={() => {
                                 modelStore.setCacheTypeK(option.value);
@@ -467,7 +583,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {modelStore.flash_attn
+                          {modelStore.contextInitParams.flash_attn
                             ? l10n.settings.valueCacheTypeDescription
                             : l10n.settings.valueCacheTypeDisabledDescription}
                         </Text>
@@ -479,7 +595,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           onPress={handleValueCachePress}
                           style={styles.menuButton}
                           contentStyle={styles.buttonContent}
-                          disabled={!modelStore.flash_attn}
+                          disabled={!modelStore.contextInitParams.flash_attn}
                           icon={({size, color}) => (
                             <Icon
                               source="chevron-down"
@@ -487,7 +603,9 @@ export const SettingsScreen: React.FC = observer(() => {
                               color={color}
                             />
                           )}>
-                          {getCacheTypeLabel(modelStore.cache_type_v)}
+                          {getCacheTypeLabel(
+                            modelStore.contextInitParams.cache_type_v,
+                          )}
                         </Button>
                         <Menu
                           visible={showValueCacheMenu}
@@ -500,7 +618,8 @@ export const SettingsScreen: React.FC = observer(() => {
                               label={option.label}
                               style={styles.menu}
                               selected={
-                                option.value === modelStore.cache_type_v
+                                option.value ===
+                                modelStore.contextInitParams.cache_type_v
                               }
                               onPress={() => {
                                 modelStore.setCacheTypeV(option.value);
@@ -534,7 +653,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Switch
                     testID="use-mlock-switch"
-                    value={modelStore.use_mlock}
+                    value={modelStore.contextInitParams.use_mlock}
                     onValueChange={value => modelStore.setUseMlock(value)}
                   />
                 </View>
@@ -562,7 +681,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       icon={({size, color}) => (
                         <Icon source="chevron-down" size={size} color={color} />
                       )}>
-                      {getMmapLabel(modelStore.use_mmap)}
+                      {getMmapLabel(modelStore.contextInitParams.use_mmap)}
                     </Button>
                     <Menu
                       visible={showMmapMenu}
@@ -574,7 +693,10 @@ export const SettingsScreen: React.FC = observer(() => {
                           key={option.value}
                           style={styles.menu}
                           label={option.label}
-                          selected={option.value === modelStore.use_mmap}
+                          selected={
+                            option.value ===
+                            modelStore.contextInitParams.use_mmap
+                          }
                           onPress={() => {
                             modelStore.setUseMmap(option.value);
                             setShowMmapMenu(false);

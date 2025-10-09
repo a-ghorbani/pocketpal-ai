@@ -3,7 +3,7 @@ import {ImageURISource, TextStyle} from 'react-native';
 
 import {MD3Theme} from 'react-native-paper';
 import {TemplateConfig} from 'chat-formatter';
-import {TokenData} from '@pocketpalai/llama.rn';
+import {ContextParams, TokenData} from '@pocketpalai/llama.rn';
 import {CompletionParams} from './completionTypes';
 import {PreviewData} from '@flyerhq/react-native-link-preview';
 import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
@@ -230,6 +230,28 @@ export interface SemanticColors {
   thinkingBubbleShadow: string;
   thinkingBubbleChevronBackground: string;
   thinkingBubbleChevronBorder: string;
+
+  // Status bar specific
+  bgStatusActive: string;
+  bgStatusIdle: string;
+
+  // Button specific
+  btnPrimaryBg: string;
+  btnPrimaryBorder: string;
+  btnPrimaryText: string;
+
+  btnReadyBg: string;
+  btnReadyBorder: string;
+  btnReadyText: string;
+
+  btnDownloadBg: string;
+  btnDownloadBorder: string;
+  btnDownloadText: string;
+
+  // Icon specific
+  iconModelTypeText: string;
+  iconModelTypeVision: string;
+  iconModelTypeAudio: string;
 }
 
 export interface ThemeBorders {
@@ -440,6 +462,68 @@ export type BenchmarkConfig = {
   label: string;
 };
 
+// Define which fields we always want to be required in ContextInitParams
+type RequiredContextFields =
+  | 'n_ctx'
+  | 'n_batch'
+  | 'n_ubatch'
+  | 'n_threads'
+  | 'flash_attn'
+  | 'cache_type_k'
+  | 'cache_type_v'
+  | 'n_gpu_layers'
+  | 'no_gpu_devices'
+  | 'use_mlock';
+
+/**
+ * Context initialization parameters for PocketPal AI
+ * Extends llama.rn's ContextParams but excludes 'model' and makes core fields required
+ * This ensures type safety and eliminates the need for fallback values in UI components
+ */
+export interface ContextInitParams
+  extends Omit<ContextParams, 'model' | 'use_mmap' | RequiredContextFields>,
+    Required<Pick<ContextParams, RequiredContextFields>> {
+  version: string; // Version of the context init params schema
+  use_mmap: 'true' | 'false' | 'smart'; // Extended to support 'smart' option (required for android, where we wanted conditional mmap based on quantization type, eg q4_0 )
+}
+
+/**
+ * Legacy context initialization parameters for migration purposes
+ * Used to handle old data formats that may be missing fields or use old property names
+ */
+export interface LegacyContextInitParams {
+  version?: string;
+  n_ctx?: number;
+  n_batch: number;
+  n_ubatch: number;
+  n_threads: number;
+  flash_attn: boolean;
+  cache_type_k:
+    | 'f16'
+    | 'f32'
+    | 'q8_0'
+    | 'q4_0'
+    | 'q4_1'
+    | 'iq4_nl'
+    | 'q5_0'
+    | 'q5_1';
+  cache_type_v:
+    | 'f16'
+    | 'f32'
+    | 'q8_0'
+    | 'q4_0'
+    | 'q4_1'
+    | 'iq4_nl'
+    | 'q5_0'
+    | 'q5_1';
+  n_gpu_layers: number;
+  use_mlock?: boolean;
+  use_mmap?: boolean;
+  // Legacy property for migration (renamed to n_ctx)
+  n_context?: number;
+  no_gpu_devices?: boolean;
+}
+
 export interface BenchmarkResult {
   config: BenchmarkConfig;
   modelDesc: string;
@@ -463,16 +547,7 @@ export interface BenchmarkResult {
   wallTimeMs?: number;
   uuid: string;
   submitted?: boolean;
-  initSettings?: {
-    n_ctx: number;
-    n_batch: number;
-    n_ubatch: number;
-    n_threads: number;
-    flash_attn: boolean;
-    cache_type_k: CacheType;
-    cache_type_v: CacheType;
-    n_gpu_layers: number;
-  };
+  initSettings?: ContextInitParams | LegacyContextInitParams;
 }
 
 export type DeviceInfo = {
@@ -503,6 +578,16 @@ export type DeviceInfo = {
     hasDotProd: boolean;
     hasSve: boolean;
     hasI8mm: boolean;
+  };
+  gpuDetails?: {
+    renderer: string;
+    vendor: string;
+    version: string;
+    hasAdreno: boolean;
+    hasMali: boolean;
+    hasPowerVR: boolean;
+    supportsOpenCL: boolean; // Note: On Android, this only checks for Adreno GPU. Full OpenCL support also requires i8mm and dotprod CPU features.
+    gpuType: string;
   };
 };
 

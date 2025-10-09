@@ -93,4 +93,12 @@ export const createStyles = (theme: Theme) =>
     menu: {
       width: 170,
     },
+    linkContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    linkIcon: {
+      marginLeft: 4,
+    },
   });

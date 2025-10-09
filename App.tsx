@@ -16,7 +16,6 @@ import {
 import {uiStore} from './src/store';
 import {useTheme} from './src/hooks';
 import {Theme} from './src/utils/types';
-import {initializeLookiePal} from './src/store/PalStore';
 
 import {l10n} from './src/utils/l10n';
 import {initLocale} from './src/utils';
@@ -36,11 +35,11 @@ import {
   SettingsScreen,
   BenchmarkScreen,
   AboutScreen,
-  PalsScreen,
 
   // Dev tools screen. Only available in debug mode.
   DevToolsScreen,
 } from './src/screens';
+import PalsScreen from './src/screens/PalsScreen';
 
 // Check if app is in debug mode
 const isDebugMode = __DEV__;
@@ -54,10 +53,9 @@ const App = observer(() => {
   const styles = createStyles(theme);
   const currentL10n = l10n[uiStore.language];
 
-  // Initialize locale with the current language and create default pals
+  // Initialize locale with the current language
   React.useEffect(() => {
     initLocale(uiStore.language);
-    initializeLookiePal();
   }, []);
 
   return (
@@ -69,7 +67,6 @@ const App = observer(() => {
               <NavigationContainer>
                 <BottomSheetModalProvider>
                   <Drawer.Navigator
-                    useLegacyImplementation={false}
                     screenOptions={{
                       headerLeft: () => <HeaderLeft />,
                       drawerStyle: {
@@ -90,21 +87,21 @@ const App = observer(() => {
                       }}
                     />
                     <Drawer.Screen
-                      name={ROUTES.MODELS}
-                      component={gestureHandlerRootHOC(ModelsScreen)}
-                      options={{
-                        headerRight: () => <ModelsHeaderRight />,
-                        headerStyle: styles.headerWithoutDivider,
-                        title: currentL10n.screenTitles.models,
-                      }}
-                    />
-                    <Drawer.Screen
                       name={ROUTES.PALS}
                       component={gestureHandlerRootHOC(PalsScreen)}
                       options={{
                         headerRight: () => <PalHeaderRight />,
                         headerStyle: styles.headerWithoutDivider,
                         title: currentL10n.screenTitles.pals,
+                      }}
+                    />
+                    <Drawer.Screen
+                      name={ROUTES.MODELS}
+                      component={gestureHandlerRootHOC(ModelsScreen)}
+                      options={{
+                        headerRight: () => <ModelsHeaderRight />,
+                        headerStyle: styles.headerWithoutDivider,
+                        title: currentL10n.screenTitles.models,
                       }}
                     />
                     <Drawer.Screen

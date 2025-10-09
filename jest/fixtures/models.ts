@@ -44,6 +44,11 @@ export const mockContextModel: NativeLlamaContext['model'] = {
 };
 
 export const mockDefaultCompletionParams: CompletionParams = {
+  // App-specific properties
+  version: 3,
+  include_thinking_in_context: true,
+
+  // llama.rn API properties
   prompt: '',
   n_predict: 400,
   temperature: 0.7,

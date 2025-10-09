@@ -8,8 +8,8 @@ export const createStyles = (theme: Theme) =>
     },
     container: {
       flex: 1,
-      padding: 10,
-      backgroundColor: theme.colors.background,
+      padding: 2,
+      backgroundColor: theme.colors.surface,
     },
     listContainer: {
       paddingBottom: 150,

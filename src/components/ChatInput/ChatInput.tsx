@@ -15,7 +15,7 @@ import {useCameraPermission} from 'react-native-vision-camera';
 import {observer} from 'mobx-react';
 import {IconButton, Text} from 'react-native-paper';
 
-import {PalType} from '../PalsSheets/types';
+import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {
   ChevronUpIcon,
@@ -54,8 +54,7 @@ export interface ChatInputTopLevelProps {
   /** External control for selected images (for edit mode) */
   defaultImages?: string[];
   onDefaultImagesChange?: (images: string[]) => void;
-  /** Type of Pal being used, affects the input rendering */
-  palType?: PalType;
+
   /** Camera-specific props */
   isCameraActive?: boolean;
   onStartCamera?: () => void;
@@ -74,8 +73,6 @@ export interface ChatInputTopLevelProps {
 }
 
 export interface ChatInputAdditionalProps {
-  /** Type of Pal being used, affects the input rendering */
-  palType?: PalType;
   /** Camera-specific props */
   isCameraActive?: boolean;
   onStartCamera?: () => void;
@@ -108,7 +105,6 @@ export const ChatInput = observer(
     textInputProps,
     isPickerVisible,
     inputBackgroundColor,
-    palType,
     isCameraActive = false,
     onStartCamera,
     promptText,
@@ -128,7 +124,7 @@ export const ChatInput = observer(
     const editBarHeight = React.useRef(new Animated.Value(0)).current;
     const iconRotation = React.useRef(new Animated.Value(0)).current;
     const activePalId = chatSessionStore.activePalId;
-    const activePal = palStore.pals.find(pal => pal.id === activePalId);
+    const currentActivePal = palStore.pals.find(pal => pal.id === activePalId);
 
     // Camera permission hook from react-native-vision-camera
     const {hasPermission, requestPermission} = useCameraPermission();
@@ -151,8 +147,10 @@ export const ChatInput = observer(
     const styles = createStyles({theme, isEditMode});
 
     // For camera input, use promptText if provided
+    const isVideoCapable =
+      currentActivePal && hasVideoCapability(currentActivePal);
     const value =
-      palType === PalType.VIDEO && promptText !== undefined
+      isVideoCapable && promptText !== undefined
         ? promptText
         : textInputProps?.value ?? text;
 
@@ -185,7 +183,7 @@ export const ChatInput = observer(
     }, [isPickerVisible, iconRotation]);
 
     const handleChangeText = (newText: string) => {
-      if (palType === PalType.VIDEO && onPromptTextChange) {
+      if (isVideoCapable && onPromptTextChange) {
         onPromptTextChange(newText);
       } else {
         setText(newText);
@@ -308,7 +306,7 @@ export const ChatInput = observer(
       !isStreaming &&
       !isStopVisible &&
       user &&
-      palType !== PalType.VIDEO && // Hide send button for video pals
+      !isVideoCapable && // Hide send button for video-capable pals
       (sendButtonVisibilityMode === 'always' || value.trim());
     const isSendButtonEnabled = value.trim().length > 0;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
@@ -318,7 +316,7 @@ export const ChatInput = observer(
       outputRange: ['0deg', '180deg'],
     });
 
-    const onSurfaceColor = activePal?.color?.[0] || theme.colors.text;
+    const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
     const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
     // // Plus button state
     const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
@@ -400,7 +398,7 @@ export const ChatInput = observer(
               },
             ]}>
             {/* Subtle Prompt Label for Video Pals */}
-            {palType === PalType.VIDEO && (
+            {isVideoCapable && (
               <Text
                 variant="labelSmall"
                 style={[styles.promptLabel, {color: onSurfaceColorVariant}]}>
@@ -411,7 +409,7 @@ export const ChatInput = observer(
               ref={inputRef}
               multiline
               placeholder={
-                palType === PalType.VIDEO
+                isVideoCapable
                   ? l10n.video.promptPlaceholder
                   : l10n.components.chatInput.inputPlaceholder
               }
@@ -424,12 +422,12 @@ export const ChatInput = observer(
                 {
                   color: onSurfaceColor,
                 },
-                palType === PalType.VIDEO && styles.inputWithLabel,
+                isVideoCapable && styles.inputWithLabel,
               ]}
               onChangeText={handleChangeText}
               value={value}
               editable={
-                palType === PalType.VIDEO
+                isVideoCapable
                   ? !isStreaming && !isCameraActive
                   : textInputProps?.editable !== false
               }
@@ -441,7 +439,7 @@ export const ChatInput = observer(
             {/* Left Controls */}
             <View style={styles.leftControls}>
               {/* Plus Button for Image Upload (only for regular chat) */}
-              {showImageUpload && palType !== PalType.VIDEO && (
+              {showImageUpload && !isVideoCapable && (
                 <Menu
                   visible={showImageUploadMenu}
                   onDismiss={() => setShowImageUploadMenu(false)}
@@ -482,8 +480,8 @@ export const ChatInput = observer(
                           ? theme.colors.inverseOnSurface
                           : theme.colors.inverseSurface,
                     },
-                    activePal?.color && {
-                      backgroundColor: activePal?.color?.[0],
+                    currentActivePal?.color && {
+                      backgroundColor: currentActivePal?.color?.[0],
                     },
                   ]}
                   onPress={onPalBtnPress}
@@ -498,7 +496,7 @@ export const ChatInput = observer(
                 </TouchableOpacity>
 
                 {/* Pal Name Display */}
-                {activePal?.name && hasActiveModel && (
+                {currentActivePal?.name && hasActiveModel && (
                   <Text
                     style={[
                       styles.palNameCompact,
@@ -514,7 +512,7 @@ export const ChatInput = observer(
                           color: onSurfaceColor,
                         },
                       ]}>
-                      {activePal?.name}
+                      {currentActivePal?.name}
                     </Text>
                   </Text>
                 )}
@@ -563,7 +561,7 @@ export const ChatInput = observer(
               {/* Send/Stop Button */}
               {isStopVisible ? (
                 <StopButton color={onSurfaceColor} onPress={onStopPress} />
-              ) : palType === PalType.VIDEO && !isCameraActive ? (
+              ) : isVideoCapable && !isCameraActive ? (
                 /* Compact Start Video Button for Video Pals */
                 <TouchableOpacity
                   style={[

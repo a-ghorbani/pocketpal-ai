@@ -1,5 +1,13 @@
 import React, {useCallback, useState, useEffect} from 'react';
-import {Alert, Linking, View} from 'react-native';
+import {
+  Alert,
+  Linking,
+  View,
+  TouchableOpacity,
+  LayoutAnimation,
+  UIManager,
+  Platform,
+} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {useNavigation} from '@react-navigation/native';
@@ -11,12 +19,13 @@ import {
   IconButton,
   Text,
   TouchableRipple,
-  HelperText,
   ActivityIndicator,
   Snackbar,
+  Switch,
+  HelperText,
 } from 'react-native-paper';
 
-import {Divider, VisionControlSheet} from '../../../components';
+import {ProjectionModelSelector} from '../../../components';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
@@ -31,11 +40,24 @@ import {
   RootDrawerParamList,
 } from '../../../utils/types';
 import {
-  getModelDescription,
+  getModelSizeString,
   L10nContext,
   checkModelFileIntegrity,
+  getModelSkills,
+  formatNumber,
 } from '../../../utils';
-import {SkillsDisplay} from '../../../components';
+
+import {
+  LinkExternalIcon,
+  TrashIcon,
+  SettingsIcon,
+  CpuChipIcon,
+  EyeIcon,
+  ChatIcon,
+  XIcon,
+  ChevronSelectorVerticalIcon,
+  ChevronSelectorExpandedVerticalIcon,
+} from '../../../assets/icons';
 
 type ChatScreenNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
 
@@ -44,6 +66,14 @@ interface ModelCardProps {
   activeModelId?: string;
   onFocus?: () => void;
   onOpenSettings?: () => void;
+}
+
+// Enable LayoutAnimation on Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export const ModelCard: React.FC<ModelCardProps> = observer(
@@ -56,14 +86,16 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     const [snackbarVisible, setSnackbarVisible] = useState(false); // Snackbar visibility
     const [integrityError, setIntegrityError] = useState<string | null>(null);
-
-    const [showVisionControlSheet, setShowVisionControlSheet] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const {memoryWarning, shortMemoryWarning, multimodalWarning} =
       useMemoryCheck(model.size, model.supportsMultimodal);
     const {isOk: storageOk, message: storageNOkMessage} = useStorageCheck(
       model,
-      {enablePeriodicCheck: true, checkInterval: 10000},
+      {
+        enablePeriodicCheck: true,
+        checkInterval: 10000,
+      },
     );
 
     const isActiveModel = activeModelId === model.id;
@@ -199,51 +231,241 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       if (model.defaultProjectionModel) {
         // Try to download the missing projection model
         modelStore.checkSpaceAndDownload(model.defaultProjectionModel);
-      } else {
-        // Show vision control sheet to select projection model
-        setShowVisionControlSheet(true);
       }
+      // Note: If no default projection model, user can manually select one in the vision controls
     }, [model.defaultProjectionModel]);
 
-    const renderDownloadOverlay = () => (
-      <View>
-        {!storageOk && (
-          <HelperText
-            testID="storage-error-text"
-            type="error"
-            visible={!storageOk}
-            padding="none"
-            style={styles.storageErrorText}>
-            {storageNOkMessage}
-          </HelperText>
-        )}
-        <View style={styles.overlayButtons}>
-          {isHfModel && (
+    const handleVisionToggle = useCallback(
+      async (enabled: boolean) => {
+        try {
+          await modelStore.setModelVisionEnabled(model.id, enabled);
+        } catch (error) {
+          console.error('Failed to toggle vision setting:', error);
+          // The error is already handled in setModelVisionEnabled (vision state is reverted)
+        }
+      },
+      [model.id],
+    );
+
+    const handleProjectionModelSelect = useCallback(
+      (projectionModelId: string) => {
+        modelStore.setDefaultProjectionModel(model.id, projectionModelId);
+      },
+      [model.id],
+    );
+
+    // Helper function to get model type icon - updated sizes
+    const getModelTypeIcon = () => {
+      if (model.supportsMultimodal) {
+        return (
+          <EyeIcon
+            width={16}
+            height={16}
+            stroke={theme.colors.iconModelTypeVision}
+          />
+        );
+      }
+      // Default to chat icon for text models
+      return (
+        <ChatIcon
+          width={16}
+          height={16}
+          stroke={theme.colors.iconModelTypeText}
+        />
+      );
+    };
+
+    // Helper function to get status dot
+    const getStatusDot = () => {
+      if (!isDownloaded) {
+        return null;
+      }
+      return (
+        <View
+          style={[
+            styles.statusDot,
+            {
+              backgroundColor: isActiveModel
+                ? theme.colors.bgStatusActive
+                : theme.colors.bgStatusIdle,
+            },
+          ]}
+        />
+      );
+    };
+
+    // Helper function to toggle expanded state with smooth LayoutAnimation
+    const toggleExpanded = useCallback(() => {
+      LayoutAnimation.configureNext({
+        duration: 300,
+        create: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.scaleXY,
+        },
+      });
+      setIsExpanded(!isExpanded);
+    }, [isExpanded]);
+
+    const renderActionButtons = () => {
+      if (isDownloading) {
+        // Downloading state - show cancel button
+        return (
+          <View style={styles.actionButtonsRow}>
             <Button
-              testID="remove-model-button"
-              icon="delete-outline"
-              mode="text"
-              textColor={theme.colors.error}
-              onPress={handleRemove}
-              style={styles.removeButton}>
-              {l10n.models.modelCard.buttons.remove}
+              testID="cancel-button"
+              icon="close"
+              mode="outlined"
+              onPress={() => modelStore.cancelDownload(model.id)}
+              style={[
+                styles.primaryActionButton,
+                {
+                  backgroundColor: theme.colors.errorContainer,
+                  borderColor: theme.colors.error,
+                },
+              ]}
+              textColor={theme.colors.error}>
+              {l10n.common.cancel}
             </Button>
-          )}
-          {storageOk && (
+          </View>
+        );
+      }
+
+      if (!isDownloaded) {
+        // Not downloaded state
+        return (
+          <View style={styles.actionButtonsRow}>
             <Button
               testID="download-button"
               icon="download"
-              mode="text"
+              mode="outlined"
               onPress={() => modelStore.checkSpaceAndDownload(model.id)}
               disabled={!storageOk}
-              textColor={theme.colors.secondary}
-              style={styles.downloadButton}>
+              style={[
+                styles.primaryActionButton,
+                storageOk
+                  ? {
+                      backgroundColor: theme.colors.btnDownloadBg,
+                      borderColor: theme.colors.btnDownloadBorder,
+                    }
+                  : {
+                      backgroundColor: theme.colors.surfaceDim,
+                      borderColor: theme.colors.outline,
+                    },
+              ]}
+              textColor={theme.colors.btnDownloadText}>
               {l10n.models.modelCard.buttons.download}
             </Button>
-          )}
+
+            <TouchableOpacity
+              testID="settings-button"
+              onPress={onOpenSettings}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.models.modelCard.buttons.settings}>
+              <SettingsIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+
+            {isHfModel && (
+              <TouchableOpacity
+                testID="remove-model-button"
+                onPress={handleRemove}
+                style={styles.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel={l10n.models.modelCard.buttons.remove}>
+                <XIcon width={20} height={20} stroke={theme.colors.error} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              testID="expand-details-button"
+              onPress={toggleExpanded}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isExpanded
+                  ? l10n.models.modelCard.accessibility.collapseDetails
+                  : l10n.models.modelCard.accessibility.expandDetails
+              }>
+              {isExpanded ? (
+                <ChevronSelectorExpandedVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              ) : (
+                <ChevronSelectorVerticalIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      // Downloaded state - soft blue styling
+      return (
+        <View style={styles.actionButtonsRow}>
+          {renderModelLoadButton()}
+
+          <TouchableOpacity
+            testID="settings-button"
+            onPress={onOpenSettings}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel={l10n.models.modelCard.buttons.settings}>
+            <SettingsIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            testID="delete-button"
+            onPress={() => handleDelete()}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel={l10n.common.delete}>
+            <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            testID="expand-details-button"
+            onPress={toggleExpanded}
+            style={styles.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isExpanded
+                ? l10n.models.modelCard.accessibility.collapseDetails
+                : l10n.models.modelCard.accessibility.expandDetails
+            }>
+            {isExpanded ? (
+              <ChevronSelectorExpandedVerticalIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+            ) : (
+              <ChevronSelectorVerticalIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+            )}
+          </TouchableOpacity>
         </View>
-      </View>
-    );
+      );
+    };
 
     const renderModelLoadButton = () => {
       if (
@@ -251,13 +473,23 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         modelStore.loadingModel?.id === model.id
       ) {
         return (
-          <View style={styles.loadingContainer}>
+          <Button
+            disabled={true}
+            style={[
+              styles.primaryActionButton,
+              {
+                backgroundColor: theme.colors.btnPrimaryBg,
+                borderColor: theme.colors.btnPrimaryBorder,
+              },
+            ]}
+            textColor={theme.colors.btnPrimaryText}>
             <ActivityIndicator
               testID="loading-indicator"
               animating={true}
-              color={theme.colors.primary}
+              color={theme.colors.btnPrimaryText}
+              size="small"
             />
-          </View>
+          </Button>
         );
       }
 
@@ -276,168 +508,319 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         }
       };
 
+      const getButtonText = () => {
+        if (isActiveModel) {
+          return l10n.models.modelCard.buttons.offload;
+        }
+        return l10n.models.modelCard.buttons.load;
+      };
+
+      const getButtonStyle = () => {
+        if (isActiveModel) {
+          return {
+            backgroundColor: theme.colors.btnReadyBg,
+            borderColor: theme.colors.btnReadyBorder,
+          };
+        }
+        return {
+          backgroundColor: theme.colors.btnPrimaryBg,
+          borderColor: theme.colors.btnPrimaryBorder,
+        };
+      };
+
+      const getTextColor = () => {
+        if (isActiveModel) {
+          return theme.colors.btnReadyText;
+        }
+        return theme.colors.btnPrimaryText;
+      };
+
       return (
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
           icon={isActiveModel ? 'eject' : 'play-circle-outline'}
-          mode="text"
+          //mode="contained-tonal"
           onPress={handlePress}
-          // disabled={!!integrityError} // for now integrity check is experimental. So won't disable the button
-          style={styles.actionButton}>
-          {isActiveModel
-            ? l10n.models.modelCard.buttons.offload
-            : l10n.models.modelCard.buttons.load}
+          style={[styles.primaryActionButton, getButtonStyle()]}
+          textColor={getTextColor()}>
+          {getButtonText()}
         </Button>
       );
     };
 
     return (
       <>
-        <Card
-          elevation={0}
-          style={[
-            styles.card,
-            {backgroundColor: theme.colors.surface},
-            isActiveModel && {backgroundColor: theme.colors.tertiaryContainer},
-            {borderColor: theme.colors.primary},
-          ]}>
-          <View style={styles.cardInner}>
-            <View style={styles.cardContent}>
-              <View style={styles.headerRow}>
-                <View style={styles.modelInfoContainer}>
-                  <View style={styles.titleRow}>
-                    <Text style={[styles.modelName]}>{model.name}</Text>
-
-                    {model.hfUrl && (
-                      <IconButton
-                        testID="open-huggingface-url"
-                        icon="open-in-new"
-                        size={14}
-                        iconColor={theme.colors.onSurfaceVariant}
-                        onPress={openHuggingFaceUrl}
-                        style={styles.hfButton}
-                      />
-                    )}
-                  </View>
-                  <Text style={styles.modelDescription}>
-                    {getModelDescription(model, isActiveModel, l10n)}
-                  </Text>
-                  <SkillsDisplay
-                    model={model}
-                    onVisionPress={
-                      model.supportsMultimodal
-                        ? () => setShowVisionControlSheet(true)
-                        : undefined
-                    }
-                    visionEnabled={modelStore.getModelVisionPreference(model)}
-                    visionAvailable={projectionModelStatus.isAvailable}
-                    hasProjectionModelWarning={hasProjectionModelWarning}
-                    onProjectionWarningPress={handleProjectionWarningPress}
-                  />
-                </View>
+        <Card elevation={0} style={styles.card}>
+          {/* Compact Header */}
+          <View style={styles.compactHeader}>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <View style={styles.modelTypeIcon}>{getModelTypeIcon()}</View>
+                <Text
+                  variant="titleSmall"
+                  style={styles.compactModelName}
+                  numberOfLines={1}
+                  ellipsizeMode="middle">
+                  {model.name}
+                </Text>
               </View>
-
-              {/* Display warning icon if there's a memory or multimodal warning */}
-              {(shortMemoryWarning || multimodalWarning) && isDownloaded && (
-                <TouchableRipple
-                  testID="memory-warning-button"
-                  onPress={handleWarningPress}
-                  style={styles.warningContainer}>
-                  <View style={styles.warningContent}>
-                    <IconButton
-                      icon="alert-circle-outline"
-                      iconColor={theme.colors.error}
-                      size={20}
-                      style={styles.warningIcon}
-                    />
-                    <Text style={styles.warningText}>
-                      {shortMemoryWarning || multimodalWarning}
-                    </Text>
-                  </View>
-                </TouchableRipple>
-              )}
-
-              {/* Display integrity warning if check fails */}
-              {integrityError && (
-                <TouchableRipple
-                  testID="integrity-warning-button"
-                  //onPress={handleWarningPress}
-                  style={styles.warningContainer}>
-                  <View style={styles.warningContent}>
-                    <IconButton
-                      icon="alert-circle-outline"
-                      iconColor={theme.colors.error}
-                      size={20}
-                      style={styles.warningIcon}
-                    />
-                    <Text style={styles.warningText}>{integrityError}</Text>
-                  </View>
-                </TouchableRipple>
-              )}
-
-              {isDownloading && (
-                <>
-                  <ProgressBar
-                    testID="download-progress-bar"
-                    progress={model.progress / 100}
-                    color={theme.colors.tertiary}
-                    style={styles.progressBar}
+              <View style={styles.headerRight}>
+                <View style={styles.sizeInfo}>
+                  <CpuChipIcon
+                    width={10}
+                    height={10}
+                    stroke={theme.colors.onSurfaceVariant}
                   />
-                  {model.downloadSpeed && (
-                    <Text style={styles.downloadSpeed}>
-                      {model.downloadSpeed}
-                    </Text>
-                  )}
-                </>
-              )}
+                  <Text style={styles.sizeInfoText}>
+                    {getModelSizeString(model, isActiveModel, l10n)}
+                  </Text>
+                </View>
+                {getStatusDot()}
+              </View>
+            </View>
+          </View>
+
+          {/* Content */}
+          <View style={styles.cardContent}>
+            {/* Storage Error Display */}
+            {!storageOk && !isDownloaded && (
+              <HelperText
+                testID="storage-error-text"
+                type="error"
+                visible={!storageOk}
+                padding="none"
+                style={styles.storageErrorText}>
+                {storageNOkMessage}
+              </HelperText>
+            )}
+
+            {/* Display warnings */}
+            {(shortMemoryWarning || multimodalWarning) && isDownloaded && (
+              <TouchableRipple
+                testID="memory-warning-button"
+                onPress={handleWarningPress}
+                style={styles.warningContainer}>
+                <View style={styles.warningContent}>
+                  <IconButton
+                    icon="alert-circle-outline"
+                    iconColor={theme.colors.error}
+                    size={20}
+                    style={styles.warningIcon}
+                  />
+                  <Text style={styles.warningText}>
+                    {shortMemoryWarning || multimodalWarning}
+                  </Text>
+                </View>
+              </TouchableRipple>
+            )}
+
+            {integrityError && (
+              <TouchableRipple
+                testID="integrity-warning-button"
+                style={styles.warningContainer}>
+                <View style={styles.warningContent}>
+                  <IconButton
+                    icon="alert-circle-outline"
+                    iconColor={theme.colors.error}
+                    size={20}
+                    style={styles.warningIcon}
+                  />
+                  <Text style={styles.warningText}>{integrityError}</Text>
+                </View>
+              </TouchableRipple>
+            )}
+
+            {/* Download Progress */}
+            {isDownloading && (
+              <View style={styles.downloadProgressContainer}>
+                <ProgressBar
+                  testID="download-progress-bar"
+                  progress={model.progress / 100}
+                  color={theme.colors.tertiary}
+                  style={styles.progressBar}
+                />
+                {model.downloadSpeed && (
+                  <Text style={styles.downloadSpeed}>
+                    {model.downloadSpeed}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Action Buttons Section */}
+            <View style={styles.actionButtonsContainer}>
+              {renderActionButtons()}
             </View>
 
-            <Divider style={styles.divider} />
+            {isExpanded && (
+              <View style={styles.detailsContent}>
+                {/* Full Model Name */}
+                <View style={styles.fullModelNameContainer}>
+                  <Text style={styles.fullModelNameLabel}>
+                    {l10n.models.modelCard.labels.modelName}
+                  </Text>
+                  <Text style={styles.fullModelNameText} selectable={true}>
+                    {model.name}
+                  </Text>
+                </View>
 
-            {isDownloaded ? (
-              <Card.Actions style={styles.actions}>
-                <Button
-                  testID="delete-button"
-                  icon="delete"
-                  mode="text"
-                  compact
-                  textColor={theme.colors.error}
-                  onPress={() => handleDelete()}
-                  style={styles.actionButton}>
-                  {l10n.common.delete}
-                </Button>
-                <View style={styles.settingsContainer}>
-                  <Button
-                    testID="settings-button"
-                    icon="tune"
-                    mode="text"
-                    compact
-                    onPress={onOpenSettings}>
-                    {l10n.models.modelCard.buttons.settings}
-                  </Button>
-                  <IconButton
-                    icon="chevron-down"
-                    size={14}
-                    style={styles.settingsChevron}
-                  />
+                {/* Description - matching updated React example */}
+                {model.capabilities && model.capabilities.length > 0 && (
+                  <View style={styles.descriptionContainer}>
+                    <Text style={styles.descriptionText}>
+                      {getModelSkills(model)
+                        .map(
+                          skill =>
+                            l10n.models.modelCapabilities[
+                              skill.labelKey as keyof typeof l10n.models.modelCapabilities
+                            ] || skill.labelKey,
+                        )
+                        .join(', ')}{' '}
+                      {l10n.models.modelCard.labels.capabilities}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Vision Toggle for multimodal models */}
+                {model.supportsMultimodal && (
+                  <View style={styles.visionToggleContainer}>
+                    <View
+                      testID="vision-skill-touchable"
+                      style={styles.visionToggleHeader}>
+                      <View style={styles.visionToggleLeft}>
+                        <EyeIcon
+                          width={16}
+                          height={16}
+                          stroke={
+                            modelStore.getModelVisionPreference(model)
+                              ? theme.colors.tertiary
+                              : theme.colors.onSurfaceVariant
+                          }
+                        />
+                        <Text style={styles.visionToggleLabel}>
+                          {l10n.models.modelCard.labels.vision}
+                        </Text>
+                      </View>
+                      <Switch
+                        value={modelStore.getModelVisionPreference(model)}
+                        onValueChange={handleVisionToggle}
+                        disabled={
+                          !projectionModelStatus.isAvailable &&
+                          !modelStore.getModelVisionPreference(model) &&
+                          model.isDownloaded
+                        }
+                      />
+                    </View>
+                    {!projectionModelStatus.isAvailable &&
+                      !modelStore.getModelVisionPreference(model) &&
+                      model.isDownloaded && (
+                        <Text style={styles.visionHelpText}>
+                          {l10n.models.modelCard.labels.requiresProjectionModel}
+                        </Text>
+                      )}
+                  </View>
+                )}
+
+                {/* Projection Models Management for multimodal models */}
+                {model.supportsMultimodal &&
+                  modelStore.getModelVisionPreference(model) && (
+                    <View style={styles.projectionModelsContainer}>
+                      <ProjectionModelSelector
+                        model={model}
+                        onProjectionModelSelect={handleProjectionModelSelect}
+                        showDownloadActions={model.isDownloaded}
+                        initialExpanded={true}
+                      />
+                    </View>
+                  )}
+
+                {/* Technical Details Grid - 2x2 layout */}
+                <View style={styles.technicalDetailsGrid}>
+                  {/* Parameters */}
+                  {model.params > 0 && (
+                    <View style={styles.technicalDetailCard}>
+                      <Text style={styles.technicalDetailLabel}>
+                        {l10n.models.modelDescription.parameters}
+                      </Text>
+                      <Text style={styles.technicalDetailValue}>
+                        {formatNumber(model.params, 2, true, false)}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Context Length */}
+                  {model.hfModel?.specs?.gguf?.context_length && (
+                    <View style={styles.technicalDetailCard}>
+                      <Text style={styles.technicalDetailLabel}>
+                        {l10n.models.modelCard.labels.contextLength}
+                      </Text>
+                      <Text style={styles.technicalDetailValue}>
+                        {model.hfModel.specs.gguf.context_length.toLocaleString()}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Architecture */}
+                  {model.hfModel?.specs?.gguf?.architecture && (
+                    <View style={styles.technicalDetailCard}>
+                      <Text style={styles.technicalDetailLabel}>
+                        {l10n.models.modelCard.labels.architecture}
+                      </Text>
+                      <Text style={styles.technicalDetailValue}>
+                        {model.hfModel.specs.gguf.architecture}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Author */}
+                  {model.author && (
+                    <View style={styles.technicalDetailCard}>
+                      <Text style={styles.technicalDetailLabel}>
+                        {l10n.models.modelCard.labels.author}
+                      </Text>
+                      <Text style={styles.technicalDetailValue}>
+                        {model.author}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                {renderModelLoadButton()}
-              </Card.Actions>
-            ) : isDownloading ? (
-              <Card.Actions style={styles.actions}>
-                <View style={styles.overlayButtons}>
-                  <Button
-                    testID="cancel-button"
-                    icon="close"
-                    mode="text"
-                    textColor={theme.colors.error}
-                    onPress={() => modelStore.cancelDownload(model.id)}>
-                    {l10n.common.cancel}
-                  </Button>
-                </View>
-              </Card.Actions>
-            ) : (
-              renderDownloadOverlay()
+
+                {/* Projection model warning */}
+                {hasProjectionModelWarning && (
+                  <TouchableOpacity
+                    testID="projection-warning-badge"
+                    onPress={handleProjectionWarningPress}
+                    style={styles.warningButton}
+                    activeOpacity={0.7}>
+                    <Text style={styles.warningButtonText}>
+                      {l10n.models.modelCard.labels.downloadProjectionModel}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* HuggingFace Link */}
+                {model.hfUrl && (
+                  <TouchableOpacity
+                    testID="open-huggingface-url"
+                    onPress={openHuggingFaceUrl}
+                    style={styles.hfLinkButton}
+                    activeOpacity={0.7}>
+                    <View style={styles.hfLinkContent}>
+                      <LinkExternalIcon
+                        width={16}
+                        height={16}
+                        stroke={theme.colors.primary}
+                      />
+                      <Text style={styles.hfLinkText}>
+                        {
+                          l10n.models.modelCard.labels
+                            .viewModelCardOnHuggingFace
+                        }
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
         </Card>
@@ -458,13 +841,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             (hasProjectionModelWarning &&
               l10n.models.multimodal.projectionMissingWarning)}
         </Snackbar>
-
-        {/* Vision Control Sheet */}
-        <VisionControlSheet
-          isVisible={showVisionControlSheet}
-          onClose={() => setShowVisionControlSheet(false)}
-          model={model}
-        />
       </>
     );
   },

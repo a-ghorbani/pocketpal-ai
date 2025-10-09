@@ -15,10 +15,16 @@ const md3BaseColors: Partial<MD3BaseColors> = {
   error: '#FF653F',
 };
 
-const createBaseColors = (isDark: boolean): MD3BaseColors => {
-  const baseTheme = isDark ? MD3DarkTheme : PaperLightTheme;
+enum AppTheme {
+  Light = 'light',
+  Dark = 'dark',
+  X1 = 'x1',
+}
 
-  if (isDark) {
+const createBaseColors = (appTheme: AppTheme): MD3BaseColors => {
+  const baseTheme = appTheme === AppTheme.Dark ? MD3DarkTheme : PaperLightTheme;
+
+  if (appTheme === AppTheme.Dark) {
     return {
       ...baseTheme.colors,
       primary: '#DADDE6',
@@ -39,7 +45,7 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
       onErrorContainer: '#E6ACA9',
       background: '#000000',
       onBackground: '#ffffff',
-      surface: '#1E1E1E',
+      surface: '#0E0E0E',
       onSurface: '#E2E2E2',
       surfaceVariant: '#646466',
       onSurfaceVariant: '#e3e4e6',
@@ -55,6 +61,50 @@ const createBaseColors = (isDark: boolean): MD3BaseColors => {
       shadow: '#ffffff',
       scrim: 'rgba(0, 0, 0, 0.25)',
       backdrop: 'rgba(38, 37, 37, 0.8)',
+    };
+  } else if (appTheme === AppTheme.X1) {
+    return {
+      primary: 'rgb(37,99,235)',
+      onPrimary: 'rgb(255, 255, 255)',
+      primaryContainer: 'rgb(219, 225, 255)',
+      onPrimaryContainer: 'rgb(0, 23, 75)',
+      secondary: 'rgb(109, 59, 215)',
+      onSecondary: 'rgb(255, 255, 255)',
+      secondaryContainer: 'rgb(233, 221, 255)',
+      onSecondaryContainer: 'rgb(35, 0, 92)',
+      tertiary: 'rgb(249,115,22)',
+      onTertiary: 'rgb(255, 255, 255)',
+      tertiaryContainer: 'rgb(255, 219, 202)',
+      onTertiaryContainer: 'rgb(52, 17, 0)',
+      error: 'rgb(186, 26, 26)',
+      onError: 'rgb(255, 255, 255)',
+      errorContainer: 'rgb(255, 218, 214)',
+      onErrorContainer: 'rgb(65, 0, 2)',
+      background: 'rgb(254, 251, 255)',
+      onBackground: 'rgb(27, 27, 31)',
+      surface: 'rgb(254, 251, 255)',
+      onSurface: 'rgb(27, 27, 31)',
+      surfaceVariant: 'rgb(226, 226, 236)',
+      onSurfaceVariant: 'rgb(69, 70, 79)',
+      outline: 'rgb(117, 118, 128)',
+      outlineVariant: 'rgb(197, 198, 208)',
+      shadow: 'rgb(0, 0, 0)',
+      scrim: 'rgb(0, 0, 0)',
+      inverseSurface: 'rgb(48, 48, 52)',
+      inverseOnSurface: 'rgb(242, 240, 244)',
+      inversePrimary: 'rgb(180, 197, 255)',
+      inverseSecondary: 'rgb(208, 188, 255)',
+      elevation: {
+        level0: 'transparent',
+        level1: 'rgb(241, 243, 253)',
+        level2: 'rgb(234, 238, 252)',
+        level3: 'rgb(226, 233, 251)',
+        level4: 'rgb(224, 231, 251)',
+        level5: 'rgb(218, 228, 250)',
+      },
+      surfaceDisabled: 'rgba(27, 27, 31, 0.12)',
+      onSurfaceDisabled: 'rgba(27, 27, 31, 0.38)',
+      backdrop: 'rgba(46, 48, 56, 0.4)',
     };
   }
 
@@ -177,6 +227,25 @@ const createSemanticColors = (
   thinkingBubbleChevronBorder: isDark
     ? 'rgba(74, 140, 199, 0.3)'
     : 'rgba(10, 89, 153, 0.2)',
+
+  bgStatusActive: isDark ? '#22c55e' : '#22c55e',
+  bgStatusIdle: isDark ? '#4b5563' : '#d1d5db',
+
+  btnPrimaryBg: isDark ? '#0f1629' : '#eff6ff',
+  btnPrimaryBorder: isDark ? '#192645' : '#bfdbff',
+  btnPrimaryText: isDark ? '#93c5fd' : '#1447e6',
+
+  btnReadyBg: isDark ? '#052e16' : '#ecfdf5',
+  btnReadyBorder: isDark ? '#166534' : '#bbf7d0',
+  btnReadyText: isDark ? '#6ee7b7' : '#047857',
+
+  btnDownloadBg: isDark ? '#0a1f17' : '#ecfdf5',
+  btnDownloadBorder: isDark ? '#143d2d' : '#bbf7d0',
+  btnDownloadText: isDark ? '#34d399' : '#047857',
+
+  iconModelTypeText: isDark ? '#93c5fd' : '#3b82f6',
+  iconModelTypeVision: isDark ? '#c4b5fd' : '#9810fa',
+  iconModelTypeAudio: isDark ? '#fdba74' : '#f97316',
 });
 
 export const fontStyles = {
@@ -232,10 +301,13 @@ const configuredFonts = configureFonts({
   },
 });
 
-const createTheme = (isDark: boolean): Theme => {
-  const baseTheme = isDark ? MD3DarkTheme : PaperLightTheme;
-  const baseColors = createBaseColors(isDark);
-  const semanticColors = createSemanticColors(baseColors, isDark);
+const createTheme = (appTheme: AppTheme): Theme => {
+  const baseTheme = appTheme === AppTheme.Dark ? MD3DarkTheme : PaperLightTheme;
+  const baseColors = createBaseColors(appTheme);
+  const semanticColors = createSemanticColors(
+    baseColors,
+    appTheme === AppTheme.Dark,
+  );
 
   return {
     ...baseTheme,
@@ -345,5 +417,6 @@ const createTheme = (isDark: boolean): Theme => {
   };
 };
 
-export const lightTheme = createTheme(false);
-export const darkTheme = createTheme(true);
+export const lightTheme = createTheme(AppTheme.Light);
+export const darkTheme = createTheme(AppTheme.Dark);
+export const x1Theme = createTheme(AppTheme.X1);

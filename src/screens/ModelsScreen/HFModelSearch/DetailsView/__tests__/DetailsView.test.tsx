@@ -1,5 +1,5 @@
 import React from 'react';
-import {render} from '../../../../../../jest/test-utils';
+import {render as baseRender} from '../../../../../../jest/test-utils';
 import {DetailsView} from '../DetailsView';
 import {
   mockHFModel1,
@@ -7,6 +7,9 @@ import {
 } from '../../../../../../jest/fixtures/models';
 import {formatNumber, timeAgo} from '../../../../../utils';
 import {l10n} from '../../../../../utils/l10n';
+
+const render = (ui: React.ReactElement, options: any = {}) =>
+  baseRender(ui, {withBottomSheetProvider: true, ...options});
 
 describe('DetailsView', () => {
   it('renders basic model information', () => {

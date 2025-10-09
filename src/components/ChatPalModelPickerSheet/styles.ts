@@ -57,6 +57,16 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     itemContent: {
       flex: 1,
       marginLeft: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    itemTextContent: {
+      flex: 1,
+    },
+    settingsButton: {
+      padding: 8,
+      marginLeft: 8,
     },
     itemTitle: {
       fontSize: 16,

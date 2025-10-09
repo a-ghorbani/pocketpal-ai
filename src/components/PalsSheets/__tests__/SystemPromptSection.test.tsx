@@ -4,8 +4,8 @@ import {FormProvider, useForm} from 'react-hook-form';
 import {SystemPromptSection} from '../SystemPromptSection';
 import {modelStore} from '../../../store';
 import {useStructuredOutput} from '../../../hooks/useStructuredOutput';
-import {PalType} from '../types';
 import {modelsList} from '../../../../jest/fixtures/models';
+import type {ParameterDefinition} from '../../../types/pal';
 
 // Mock the modelStore
 jest.mock('../../../store', () => {
@@ -37,20 +37,40 @@ jest.mock('../../../hooks/useStructuredOutput', () => ({
   useStructuredOutput: jest.fn(),
 }));
 
+// Test form data interface
+interface TestFormData {
+  name: string;
+  systemPrompt: string;
+  originalSystemPrompt?: string;
+  useAIPrompt: boolean;
+  isSystemPromptChanged: boolean;
+  promptGenerationModel?: any;
+  generatingPrompt?: string;
+  // Parameter fields for testing different pal types
+  world?: string;
+  location?: string;
+  aiRole?: string;
+  userRole?: string;
+  situation?: string;
+  toneStyle?: string;
+  captureInterval?: string;
+  role?: string;
+  setting?: string;
+}
+
 const TestWrapper = ({
   children,
   defaultValues = {},
 }: {
   children: React.ReactNode;
-  defaultValues?: any;
+  defaultValues?: Partial<TestFormData>;
 }) => {
-  const methods = useForm({
+  const methods = useForm<TestFormData>({
     defaultValues: {
       name: '',
       systemPrompt: '',
       useAIPrompt: false,
       isSystemPromptChanged: false,
-      palType: PalType.ASSISTANT,
       ...defaultValues,
     },
   });
@@ -68,10 +88,10 @@ describe('SystemPromptSection', () => {
     });
   });
 
-  it('renders basic fields correctly', () => {
+  it('renders basic fields correctly for non-templated pal', () => {
     const {getByText, getByPlaceholderText} = render(
       <TestWrapper>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -86,7 +106,7 @@ describe('SystemPromptSection', () => {
   it('toggles AI prompt generation fields visibility', () => {
     const {getByText, queryByText} = render(
       <TestWrapper defaultValues={{useAIPrompt: false}}>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -106,15 +126,15 @@ describe('SystemPromptSection', () => {
   it('handles system prompt generation for assistant type', async () => {
     mockGenerate.mockResolvedValueOnce({prompt: 'Generated assistant prompt'});
 
+    // Assistant pal - no parameter schema (simple pal)
     const {getByText, getByPlaceholderText} = render(
       <TestWrapper
         defaultValues={{
           useAIPrompt: true,
           promptGenerationModel: modelsList[0],
-          palType: PalType.ASSISTANT,
           generatingPrompt: 'Test generating prompt',
         }}>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -135,12 +155,21 @@ describe('SystemPromptSection', () => {
   it('handles system prompt generation for roleplay type', async () => {
     mockGenerate.mockResolvedValueOnce({prompt: 'Generated roleplay prompt'});
 
+    // Roleplay pal - has parameter schema with roleplay fields
+    const roleplaySchema: ParameterDefinition[] = [
+      {key: 'world', type: 'text', label: 'World', required: true},
+      {key: 'location', type: 'text', label: 'Location', required: true},
+      {key: 'aiRole', type: 'text', label: 'AI Role', required: true},
+      {key: 'userRole', type: 'text', label: 'User Role', required: true},
+      {key: 'situation', type: 'text', label: 'Situation', required: true},
+      {key: 'toneStyle', type: 'text', label: 'Tone & Style', required: true},
+    ];
+
     const {getByText, getByPlaceholderText} = render(
       <TestWrapper
         defaultValues={{
           useAIPrompt: true,
           promptGenerationModel: modelsList[0],
-          palType: PalType.ROLEPLAY,
           world: 'Fantasy',
           location: 'Castle',
           aiRole: 'Wizard',
@@ -148,7 +177,10 @@ describe('SystemPromptSection', () => {
           situation: 'Quest',
           toneStyle: 'Medieval',
         }}>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection
+          closeSheet={() => {}}
+          parameterSchema={roleplaySchema}
+        />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -202,10 +234,9 @@ describe('SystemPromptSection', () => {
         defaultValues={{
           useAIPrompt: true,
           promptGenerationModel: modelsList[1], // Different from activeModelId
-          palType: PalType.ASSISTANT,
           generatingPrompt: 'Test prompt',
         }}>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -217,6 +248,149 @@ describe('SystemPromptSection', () => {
 
     await waitFor(() => {
       expect(modelStore.initContext).toHaveBeenCalledWith(modelsList[1]);
+    });
+  });
+
+  it('generates different prompts for roleplay vs assistant pals', async () => {
+    mockGenerate.mockResolvedValueOnce({prompt: 'Generated roleplay prompt'});
+
+    const roleplaySchema = [
+      {key: 'world', type: 'text' as const, label: 'World', required: true},
+      {key: 'aiRole', type: 'text' as const, label: 'AI Role', required: true},
+    ];
+
+    const {getByText} = render(
+      <TestWrapper
+        defaultValues={{
+          useAIPrompt: true,
+          promptGenerationModel: modelsList[0],
+          generatingPrompt: 'Fantasy adventure',
+          world: 'Medieval fantasy kingdom',
+          aiRole: 'Wise wizard advisor',
+        }}>
+        <SystemPromptSection
+          closeSheet={() => {}}
+          parameterSchema={roleplaySchema}
+        />
+      </TestWrapper>,
+      {
+        withNavigation: true,
+      },
+    );
+
+    // Click generate button
+    fireEvent.press(getByText('Generate System Prompt'));
+
+    await waitFor(() => {
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Generate a system prompt for a roleplay AI assistant',
+        ),
+        expect.any(Object),
+      );
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining('World: Medieval fantasy kingdom'),
+        expect.any(Object),
+      );
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining('AI Role: Wise wizard advisor'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  it('includes parameter values in generation prompt', async () => {
+    mockGenerate.mockResolvedValueOnce({prompt: 'Generated assistant prompt'});
+
+    const assistantSchema = [];
+
+    const {getByText} = render(
+      <TestWrapper
+        defaultValues={{
+          useAIPrompt: true,
+          promptGenerationModel: modelsList[0],
+          generatingPrompt: 'Helpful coding assistant',
+        }}>
+        <SystemPromptSection
+          closeSheet={() => {}}
+          parameterSchema={assistantSchema}
+        />
+      </TestWrapper>,
+      {
+        withNavigation: true,
+      },
+    );
+
+    // Click generate button
+    fireEvent.press(getByText('Generate System Prompt'));
+
+    await waitFor(() => {
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Generate a concise and professional system prompt for an AI assistant',
+        ),
+        expect.any(Object),
+      );
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Assistant Purpose: "Helpful coding assistant"',
+        ),
+        expect.any(Object),
+      );
+    });
+  });
+
+  it('generates video pal specific prompts and excludes technical parameters', async () => {
+    mockGenerate.mockResolvedValueOnce({prompt: 'Generated video prompt'});
+
+    const videoSchema = [
+      {
+        key: 'captureInterval',
+        type: 'text' as const,
+        label: 'Capture Interval (ms)',
+        required: true,
+      },
+    ];
+
+    const {getByText} = render(
+      <TestWrapper
+        defaultValues={{
+          useAIPrompt: true,
+          promptGenerationModel: modelsList[0],
+          generatingPrompt: 'Real-time security monitoring',
+          captureInterval: '2000',
+        }}>
+        <SystemPromptSection
+          closeSheet={() => {}}
+          parameterSchema={videoSchema}
+        />
+      </TestWrapper>,
+      {
+        withNavigation: true,
+      },
+    );
+
+    // Click generate button
+    fireEvent.press(getByText('Generate System Prompt'));
+
+    await waitFor(() => {
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Generate a system prompt for a video analysis AI assistant',
+        ),
+        expect.any(Object),
+      );
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Video Analysis Purpose: "Real-time security monitoring"',
+        ),
+        expect.any(Object),
+      );
+      // Should NOT include captureInterval in the prompt since it's technical
+      expect(mockGenerate).not.toHaveBeenCalledWith(
+        expect.stringContaining('Capture Interval'),
+        expect.any(Object),
+      );
     });
   });
 
@@ -255,7 +429,7 @@ describe('SystemPromptSection', () => {
           isSystemPromptChanged: true,
           promptGenerationModel: modelsList[0],
         }}>
-        <SystemPromptSection closeSheet={() => {}} />
+        <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
       </TestWrapper>,
       {
         withNavigation: true,
@@ -264,5 +438,99 @@ describe('SystemPromptSection', () => {
 
     const generateButton = getByTestId('generate-button');
     expect(generateButton.props.accessibilityState.disabled).toBe(true);
+  });
+
+  // New template functionality tests
+  describe('Template functionality', () => {
+    const templateSchema: ParameterDefinition[] = [
+      {key: 'role', type: 'text', label: 'Role', required: true},
+      {key: 'setting', type: 'text', label: 'Setting', required: true},
+    ];
+
+    it('detects templated pals and shows template mode toggle', () => {
+      const {getByTestId} = render(
+        <TestWrapper
+          defaultValues={{
+            systemPrompt: 'You are {{role}} in {{setting}}',
+            role: 'wizard',
+            setting: 'fantasy world',
+          }}>
+          <SystemPromptSection
+            closeSheet={() => {}}
+            parameterSchema={templateSchema}
+          />
+        </TestWrapper>,
+        {withNavigation: true},
+      );
+
+      // Should show toggle button for template mode (icon button)
+      expect(getByTestId('icon-button')).toBeTruthy();
+    });
+
+    it('renders final prompt in default mode for templated pals', () => {
+      const {getByText} = render(
+        <TestWrapper
+          defaultValues={{
+            systemPrompt: 'You are {{role}} in {{setting}}',
+            role: 'wizard',
+            setting: 'fantasy world',
+          }}>
+          <SystemPromptSection
+            closeSheet={() => {}}
+            parameterSchema={templateSchema}
+          />
+        </TestWrapper>,
+        {withNavigation: true},
+      );
+
+      // Should show rendered prompt
+      expect(getByText('You are wizard in fantasy world')).toBeTruthy();
+    });
+
+    it('shows reset parameters and reset template buttons for templated pals', () => {
+      const {getByText} = render(
+        <TestWrapper
+          defaultValues={{
+            systemPrompt: 'You are {{role}} in {{setting}}',
+            role: 'wizard',
+            setting: 'fantasy world',
+          }}>
+          <SystemPromptSection
+            closeSheet={() => {}}
+            parameterSchema={templateSchema}
+          />
+        </TestWrapper>,
+        {withNavigation: true},
+      );
+
+      expect(getByText('Reset Parameters')).toBeTruthy();
+      expect(getByText('Reset Template')).toBeTruthy();
+    });
+
+    it('preserves originalSystemPrompt when generating AI prompts', async () => {
+      mockGenerate.mockResolvedValueOnce({prompt: 'Generated new prompt'});
+
+      const {getByText} = render(
+        <TestWrapper
+          defaultValues={{
+            useAIPrompt: true,
+            promptGenerationModel: modelsList[0],
+            systemPrompt: 'Current prompt',
+            originalSystemPrompt: 'Original template {{role}}',
+            generatingPrompt: 'Test prompt',
+          }}>
+          <SystemPromptSection closeSheet={() => {}} parameterSchema={[]} />
+        </TestWrapper>,
+        {withNavigation: true},
+      );
+
+      // Click generate button
+      fireEvent.press(getByText('Generate System Prompt'));
+
+      await waitFor(() => {
+        expect(mockGenerate).toHaveBeenCalled();
+        // originalSystemPrompt should be preserved (not overwritten)
+      });
+    });
   });
 });

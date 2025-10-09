@@ -36,7 +36,7 @@ describe('chat', () => {
     const onSendPress = jest.fn();
     const {getByTestId, getByText} = render(
       <ChatView messages={messages} onSendPress={onSendPress} user={user} />,
-      {withSafeArea: true, withNavigation: true},
+      {withSafeArea: true, withNavigation: true, withBottomSheetProvider: true},
     );
 
     const button = getByTestId('message-image').parent;
@@ -72,7 +72,7 @@ describe('chat', () => {
         textInputProps={{defaultValue: 'text'}}
         user={user}
       />,
-      {withNavigation: true},
+      {withNavigation: true, withBottomSheetProvider: true},
     );
     const textInput = getByPlaceholderText(
       l10n.en.components.chatInput.inputPlaceholder,
@@ -104,7 +104,7 @@ describe('chat', () => {
         showUserAvatars
         user={user}
       />,
-      {withNavigation: true},
+      {withNavigation: true, withBottomSheetProvider: true},
     );
 
     const button = getByLabelText(
@@ -136,7 +136,7 @@ describe('chat', () => {
         showUserAvatars
         user={user}
       />,
-      {withNavigation: true},
+      {withNavigation: true, withBottomSheetProvider: true},
     );
 
     const button = getByTestId('ContentContainer');
@@ -166,7 +166,7 @@ describe('chat', () => {
         showUserAvatars
         user={user}
       />,
-      {withNavigation: true},
+      {withNavigation: true, withBottomSheetProvider: true},
     );
 
     const button = getByTestId('ContentContainer');
@@ -186,7 +186,7 @@ describe('chat', () => {
         onSendPress={onSendPress}
         user={user}
       />,
-      {withNavigation: true},
+      {withNavigation: true, withBottomSheetProvider: true},
     );
 
     expect(ChatEmptyPlaceholder).toHaveBeenCalled();

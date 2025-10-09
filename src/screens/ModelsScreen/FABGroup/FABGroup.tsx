@@ -3,18 +3,21 @@ import React, {useContext, useMemo, useState} from 'react';
 
 import {FAB} from 'react-native-paper';
 
+import {useTheme} from '../../../hooks';
 import {L10nContext} from '../../../utils';
-import {styles} from './styles';
+import {createStyles} from './styles';
 
 interface FABGroupProps {
   onAddHFModel: () => void;
   onAddLocalModel: () => void;
 }
 
+const iconStyle = {width: 24, height: 24};
+
 const HFIcon: React.FC<any> = props => (
   <Image
     source={require('../../../assets/icon-hf.png')}
-    style={styles.icon}
+    style={iconStyle}
     {...props}
   />
 );
@@ -25,6 +28,8 @@ export const FABGroup: React.FC<FABGroupProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const l10n = useContext(L10nContext);
+  const theme = useTheme();
+  const styles = createStyles(theme);
 
   const onStateChange = ({open: isOpen}) => setOpen(isOpen);
 
@@ -34,6 +39,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
         testID: 'hf-fab',
         icon: HFIcon,
         label: l10n.models.buttons.addFromHuggingFace,
+        style: styles.actionButton,
         onPress: () => {
           onAddHFModel();
         },
@@ -42,12 +48,13 @@ export const FABGroup: React.FC<FABGroupProps> = ({
         testID: 'local-fab',
         icon: 'folder-plus',
         label: l10n.models.buttons.addLocalModel,
+        style: styles.actionButton,
         onPress: () => {
           onAddLocalModel();
         },
       },
     ],
-    [l10n, onAddHFModel, onAddLocalModel],
+    [l10n, onAddHFModel, onAddLocalModel, styles.actionButton],
   );
 
   return (
@@ -66,6 +73,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
         }
       }}
       fabStyle={styles.fab}
+      backdropColor={theme.colors.surface}
       accessibilityLabel={open ? 'Close menu' : 'Open menu'}
     />
   );

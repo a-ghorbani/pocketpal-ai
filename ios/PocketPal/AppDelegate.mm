@@ -1,9 +1,11 @@
 #import "AppDelegate.h"
 
 // App Check
-#import "RNFBAppCheckModule.h" 
+#import "RNFBAppCheckModule.h"
 #import <Firebase.h>
 
+// Google Sign-In
+#import <GoogleSignIn/GoogleSignIn.h>
 
 #import <React/RCTBundleURLProvider.h>
 #import <RNFSBackgroundDownloads.h>
@@ -43,6 +45,10 @@
 - (void)application:(UIApplication *)application handleEventsForBackgroundURLSession:(NSString *)identifier completionHandler:(void (^)())completionHandler
 {
   [RNFSBackgroundDownloads setCompletionHandlerForIdentifier:identifier completionHandler:completionHandler];
+}
+
+- (BOOL)application:(UIApplication *)application openURL:(nonnull NSURL *)url options:(nonnull NSDictionary<NSString *,id> *)options {
+  return [GIDSignIn.sharedInstance handleURL:url];
 }
 
 @end

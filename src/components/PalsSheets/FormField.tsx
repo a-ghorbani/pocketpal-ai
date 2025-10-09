@@ -6,24 +6,9 @@ import {Controller, useFormContext} from 'react-hook-form';
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {TextInput} from '../TextInput';
-import type {AssistantFormData, RoleplayFormData} from './types';
-
-type FormData = AssistantFormData | RoleplayFormData;
-
-// Extract only string fields
-type StringFields =
-  | 'name'
-  | 'systemPrompt'
-  | 'generatingPrompt'
-  | 'world'
-  | 'location'
-  | 'aiRole'
-  | 'userRole'
-  | 'situation'
-  | 'toneStyle';
-
+// Generic form field that works with any form data
 interface FormFieldProps {
-  name: StringFields;
+  name: string;
   label: string;
   placeholder?: string;
   multiline?: boolean;
@@ -52,7 +37,7 @@ const FormField = forwardRef<RNTextInput, FormFieldProps>(
     const {
       control,
       formState: {errors},
-    } = useFormContext<FormData>();
+    } = useFormContext();
 
     return (
       <View style={styles.field}>
@@ -68,7 +53,7 @@ const FormField = forwardRef<RNTextInput, FormFieldProps>(
             <TextInput
               testID={`form-field-${name}`}
               ref={ref}
-              value={value || ''}
+              value={typeof value === 'string' ? value : ''}
               onChangeText={onChange}
               error={!!errors[name]}
               placeholder={placeholder}

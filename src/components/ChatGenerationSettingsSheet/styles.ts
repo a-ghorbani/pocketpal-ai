@@ -33,4 +33,13 @@ export const styles = StyleSheet.create({
   button: {
     flex: 1,
   },
+  settingsSourceContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  settingsSourceTitle: {
+    marginBottom: 8,
+    fontWeight: '500',
+  },
 });

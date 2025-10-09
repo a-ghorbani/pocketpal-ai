@@ -76,3 +76,6 @@ ios/GoogleService-Info.plist
 .env
 .env.*
 !.env.example
+
+# Auto-generated environment config
+ios/Config/Env.xcconfig

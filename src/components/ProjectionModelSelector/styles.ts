@@ -60,21 +60,13 @@ export const createStyles = (theme: Theme) =>
     },
     modelInfo: {
       flex: 1,
-      marginRight: 12,
-    },
-    modelHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 4,
-    },
-    modelIcon: {
-      marginRight: 8,
+      marginRight: 8, // Reduced from 12 to 8
     },
     modelName: {
       fontSize: 14,
       fontWeight: '500',
       color: theme.colors.onSurface,
-      flex: 1,
+      marginBottom: 2, // Small gap between name and size
     },
     selectedModelName: {
       fontWeight: '600',
@@ -83,25 +75,24 @@ export const createStyles = (theme: Theme) =>
     modelSize: {
       fontSize: 11,
       color: theme.colors.onSurfaceVariant,
-      marginLeft: 20, // Align with model name
     },
     modelActions: {
-      minWidth: 80,
-      alignItems: 'flex-end',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4, // Tighter spacing between action buttons
     },
     downloadedActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 4, // Reduced from 8 to 4
     },
     selectArea: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 8,
+      padding: 6, // More compact padding
       borderRadius: 6,
-      minWidth: 70,
+      alignItems: 'center',
       justifyContent: 'center',
+      minWidth: 32, // Reduced from 70 to 32 for icon-only
+      minHeight: 32,
     },
     selectedArea: {
       backgroundColor: theme.colors.tertiaryContainer + '30',
@@ -118,14 +109,17 @@ export const createStyles = (theme: Theme) =>
       backgroundColor: theme.colors.errorContainer + '20',
       alignItems: 'center',
       justifyContent: 'center',
+      minWidth: 32,
+      minHeight: 32,
     },
     downloadArea: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 8,
+      padding: 6, // More compact, icon-only
       borderRadius: 6,
       backgroundColor: theme.colors.primaryContainer + '20',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 32,
+      minHeight: 32,
     },
     downloadText: {
       fontSize: 12,

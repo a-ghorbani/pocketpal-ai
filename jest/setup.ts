@@ -41,7 +41,10 @@ jest.mock('@react-navigation/elements', () => ({
 import {mockUiStore} from '../__mocks__/stores/uiStore';
 import {mockHFStore} from '../__mocks__/stores/hfStore';
 import {mockModelStore} from '../__mocks__/stores/modelStore';
-import {mockChatSessionStore} from '../__mocks__/stores/chatSessionStore';
+import {
+  mockChatSessionStore,
+  mockDefaultCompletionSettings,
+} from '../__mocks__/stores/chatSessionStore';
 import {benchmarkStore as mockBenchmarkStore} from '../__mocks__/stores/benchmarkStore';
 import {mockPalStore} from '../__mocks__/stores/palStore';
 
@@ -76,6 +79,7 @@ jest.mock('../src/store', () => {
     hfStore: mockHFStore,
     benchmarkStore: mockBenchmarkStore,
     palStore: mockPalStore,
+    defaultCompletionSettings: mockDefaultCompletionSettings,
   };
 });
 
@@ -121,3 +125,13 @@ jest.mock('react-native-share', () => ({
 
 jest.mock('react-native-image-picker');
 jest.mock('react-native-vision-camera');
+
+jest.mock('../src/database', () => {
+  return {
+    database: require('../__mocks__/database').mockDatabase,
+  };
+});
+
+jest.mock('../src/services', () => {
+  return require('../__mocks__/services');
+});

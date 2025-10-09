@@ -3,7 +3,12 @@ import {Alert} from 'react-native';
 
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import DocumentPicker from 'react-native-document-picker';
-import {fireEvent, render, waitFor, act} from '../../../../jest/test-utils';
+import {
+  fireEvent,
+  render as baseRender,
+  waitFor,
+  act,
+} from '../../../../jest/test-utils';
 
 import {ModelsScreen} from '../ModelsScreen';
 
@@ -15,6 +20,13 @@ import {
   hfModel2,
 } from '../../../../jest/fixtures/models';
 
+const render = (ui: React.ReactElement, options: any = {}) =>
+  baseRender(ui, {
+    withBottomSheetProvider: true,
+    withNavigation: true,
+    ...options,
+  });
+
 jest.useFakeTimers();
 
 describe('ModelsScreen', () => {
@@ -24,17 +36,13 @@ describe('ModelsScreen', () => {
   });
 
   it('renders correctly', async () => {
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
     expect(getByTestId('flat-list')).toBeTruthy();
     expect(getByTestId('fab-group')).toBeTruthy();
   });
 
   it('refreshes models on pull-to-refresh', async () => {
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
 
     const flatList = getByTestId('flat-list');
     const refreshControl = flatList.props.refreshControl;
@@ -46,9 +54,7 @@ describe('ModelsScreen', () => {
   });
 
   it('opens HF model search when the HF FAB is pressed', async () => {
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
 
     // Open the FAB group
     const fabGroup = getByTestId('fab-group');
@@ -88,9 +94,7 @@ describe('ModelsScreen', () => {
       return true; // Other paths exist by default
     });
 
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
 
     // Open the FAB group
     const fabGroup = getByTestId('fab-group');
@@ -136,9 +140,7 @@ describe('ModelsScreen', () => {
       buttons![0].onPress!();
     });
 
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
 
     // Open the FAB group
     const fabGroup = getByTestId('fab-group');
@@ -181,9 +183,7 @@ describe('ModelsScreen', () => {
       buttons![2].onPress!();
     });
 
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
     // Open the FAB group
     const fabGroup = getByTestId('fab-group');
     fireEvent.press(fabGroup);
@@ -231,9 +231,7 @@ describe('ModelsScreen', () => {
       return true; // Original file exists
     });
 
-    const {getByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
+    const {getByTestId} = render(<ModelsScreen />);
 
     // Open the FAB group
     const fabGroup = getByTestId('fab-group');
@@ -265,50 +263,6 @@ describe('ModelsScreen', () => {
     });
   });
 
-  // TODO: fix this test
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('hides reset dialog on cancel', async () => {
-    const {getByTestId, queryByTestId} = render(<ModelsScreen />, {
-      withNavigation: true,
-    });
-
-    // Open the FAB group
-    const fabGroup = getByTestId('fab-group');
-    fireEvent.press(fabGroup);
-
-    // Wait for the FAB group to open and its children to be accessible
-    await waitFor(() => {
-      const resetFab = getByTestId('reset-fab', {includeHiddenElements: true});
-      expect(resetFab).toBeTruthy();
-    });
-    const resetFab = getByTestId('reset-fab', {includeHiddenElements: true});
-
-    await act(async () => {
-      fireEvent.press(resetFab);
-    });
-
-    // Wait for dialog to be visible
-    await waitFor(() => {
-      expect(getByTestId('reset-dialog')).toBeTruthy();
-    });
-
-    // Press cancel button
-    const cancelButton = getByTestId('cancel-reset-button');
-    await act(async () => {
-      fireEvent.press(cancelButton);
-    });
-
-    // Wait for dialog to be hidden
-    await waitFor(
-      () => {
-        expect(queryByTestId('reset-dialog')).toBeNull();
-      },
-      {
-        timeout: 10000,
-      },
-    );
-  }, 15000);
-
   // Add tests for model filtering and grouping
   describe('Model filtering and grouping', () => {
     beforeEach(() => {
@@ -320,9 +274,7 @@ describe('ModelsScreen', () => {
     it('should filter downloaded models when downloaded filter is active', async () => {
       uiStore.pageStates.modelsScreen.filters = ['downloaded'];
 
-      const {getByText, queryByText} = render(<ModelsScreen />, {
-        withNavigation: true,
-      });
+      const {getByText, queryByText} = render(<ModelsScreen />);
 
       await waitFor(() => {
         expect(getByText('downloaded model')).toBeTruthy();
@@ -333,9 +285,7 @@ describe('ModelsScreen', () => {
     it('should filter HF models when HF filter is active', async () => {
       uiStore.pageStates.modelsScreen.filters = ['hf'];
 
-      const {getByText, queryByText} = render(<ModelsScreen />, {
-        withNavigation: true,
-      });
+      const {getByText, queryByText} = render(<ModelsScreen />);
 
       // Open the Available to Download group, since hf mocked models are not downloaded.
       const button = getByText('Available to Download');
@@ -350,9 +300,7 @@ describe('ModelsScreen', () => {
     it('should group models by type when grouped filter is active', async () => {
       uiStore.pageStates.modelsScreen.filters = ['grouped'];
 
-      const {getByText} = render(<ModelsScreen />, {
-        withNavigation: true,
-      });
+      const {getByText} = render(<ModelsScreen />);
 
       await waitFor(() => {
         expect(getByText('Test Model Type')).toBeTruthy();
@@ -362,9 +310,7 @@ describe('ModelsScreen', () => {
     it('should group models into ready-to-use and available-to-download when not grouped', async () => {
       uiStore.pageStates.modelsScreen.filters = [];
 
-      const {getByText} = render(<ModelsScreen />, {
-        withNavigation: true,
-      });
+      const {getByText} = render(<ModelsScreen />);
 
       await waitFor(() => {
         expect(getByText('Ready to Use')).toBeTruthy();
@@ -375,9 +321,7 @@ describe('ModelsScreen', () => {
     it('should handle group expansion and collapse', async () => {
       uiStore.pageStates.modelsScreen.filters = [];
 
-      const {getByText, queryByText} = render(<ModelsScreen />, {
-        withNavigation: true,
-      });
+      const {getByText, queryByText} = render(<ModelsScreen />);
 
       // Not downloaded model should not be visible
       await waitFor(() => {

@@ -11,6 +11,10 @@ export const mockHFStore = {
   queryConfig: true,
   hfToken: '',
   useHfToken: true,
+  searchFilters: {
+    author: '',
+    sortBy: 'relevance' as const,
+  },
 
   get isTokenPresent(): boolean {
     return !!this.hfToken && this.hfToken.trim().length > 0;
@@ -25,6 +29,7 @@ export const mockHFStore = {
 
   // Methods
   setSearchQuery: jest.fn(),
+  setSearchFilters: jest.fn(),
   fetchAndSetGGUFSpecs: jest.fn().mockResolvedValue(undefined),
   fetchModelFileDetails: jest.fn().mockResolvedValue(undefined),
   getModelById: jest.fn(id =>

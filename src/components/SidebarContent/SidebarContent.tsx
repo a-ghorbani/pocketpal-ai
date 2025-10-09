@@ -93,15 +93,15 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
                 style={styles.menuDrawerItem}
               />
               <Drawer.Item
-                label={l10n.components.sidebarContent.menuItems.models}
-                icon={() => <ModelIcon stroke={theme.colors.primary} />}
-                onPress={() => props.navigation.navigate(ROUTES.MODELS)}
-                style={styles.menuDrawerItem}
-              />
-              <Drawer.Item
                 label={l10n.components.sidebarContent.menuItems.pals}
                 icon={() => <PalIcon stroke={theme.colors.primary} />}
                 onPress={() => props.navigation.navigate(ROUTES.PALS)}
+                style={styles.menuDrawerItem}
+              />
+              <Drawer.Item
+                label={l10n.components.sidebarContent.menuItems.models}
+                icon={() => <ModelIcon stroke={theme.colors.primary} />}
+                onPress={() => props.navigation.navigate(ROUTES.MODELS)}
                 style={styles.menuDrawerItem}
               />
               <Drawer.Item

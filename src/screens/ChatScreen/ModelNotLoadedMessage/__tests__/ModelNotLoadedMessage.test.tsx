@@ -1,6 +1,5 @@
 import React from 'react';
 
-import {createDrawerNavigator} from '@react-navigation/drawer';
 import {render, fireEvent, act} from '../../../../../jest/test-utils';
 
 import {ModelNotLoadedMessage} from '../ModelNotLoadedMessage';
@@ -10,29 +9,30 @@ import {modelStore} from '../../../../store';
 import {l10n} from '../../../../utils/l10n';
 import {basicModel, modelsList} from '../../../../../jest/fixtures/models';
 
-const Drawer = createDrawerNavigator();
 const mockNavigate = jest.fn();
-
-//jest.useFakeTimers();
 
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
   return {
     ...actualNav,
     useNavigation: () => ({
+      addListener: jest.fn((_evt: string, _cb: any) => ({remove: jest.fn()})),
       navigate: mockNavigate,
+      goBack: jest.fn(),
+      setOptions: jest.fn(),
+      dispatch: jest.fn(),
     }),
+    useRoute: () => ({key: 'test', name: 'Test'}),
   };
 });
 
-const customRender = (ui, {...renderOptions} = {}) => {
-  return render(
-    <Drawer.Navigator useLegacyImplementation={false}>
-      <Drawer.Screen name="Test" component={() => ui} />
-    </Drawer.Navigator>,
-    {...renderOptions, withNavigation: true},
-  );
-};
+const customRender = (ui: React.ReactElement, options: any = {}) =>
+  render(ui, {
+    withBottomSheetProvider: true,
+    withNavigation: true,
+    withSafeArea: true,
+    ...options,
+  });
 
 describe('ModelNotLoadedMessage', () => {
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe('ModelNotLoadedMessage', () => {
 
     const {getByText} = customRender(<ModelNotLoadedMessage />);
 
-    await act(async () => {
+    act(() => {
       fireEvent.press(getByText(l10n.en.chat.load));
     });
 
@@ -87,9 +87,12 @@ describe('ModelNotLoadedMessage', () => {
 
     const {getByText} = customRender(<ModelNotLoadedMessage />);
 
-    await act(async () => {
+    act(() => {
       fireEvent.press(getByText(l10n.en.chat.load));
     });
+
+    // Wait for the promise to resolve/reject
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(modelStore.initContext).toHaveBeenCalledWith(basicModel);
     expect(consoleSpy).toHaveBeenCalledWith(`Error: ${mockError}`);
@@ -102,9 +105,8 @@ describe('ModelNotLoadedMessage', () => {
 
     const {getByText} = customRender(<ModelNotLoadedMessage />);
 
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    // Wait for the useEffect to run
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(getByText(l10n.en.chat.readyToChat)).toBeTruthy();
   });

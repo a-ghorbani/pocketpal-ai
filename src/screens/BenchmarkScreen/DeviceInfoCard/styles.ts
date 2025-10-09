@@ -14,14 +14,19 @@ export const createStyles = (theme: Theme) =>
     deviceInfoRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       marginBottom: 4,
     },
     deviceInfoLabel: {
       color: theme.colors.onSurfaceVariant,
+      flexShrink: 0,
+      marginRight: 8,
     },
     deviceInfoValue: {
       color: theme.colors.onSurface,
+      flex: 1,
+      textAlign: 'right',
+      flexWrap: 'wrap',
     },
     headerRow: {
       flexDirection: 'row',

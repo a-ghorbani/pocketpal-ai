@@ -60,6 +60,18 @@ export const createStyles = (theme: Theme) =>
     container: {
       flex: 1,
     },
+    markdownContainer: {
+      // Dynamic maxWidth will be applied via style prop
+    },
+    codeHighlighterText: {
+      fontFamily: 'Courier',
+    },
+    codeHighlighterScrollContent: {
+      backgroundColor: theme.colors.surface,
+      padding: 8,
+      borderRadius: 6,
+      marginTop: 4,
+    },
     thinkContainer: {
       backgroundColor: theme.colors.surfaceContainerHigh,
       borderRadius: 8,

@@ -20,7 +20,11 @@ describe('ModelNotAvailable', () => {
   it('should show message when no models are downloaded', () => {
     modelStore.models = [];
     const {getByText} = render(
-      <ModelNotAvailable model={undefined} closeSheet={mockCloseSheet} />,
+      <ModelNotAvailable
+        model={undefined}
+        currentlySelectedModel={undefined}
+        closeSheet={mockCloseSheet}
+      />,
       {withNavigation: true},
     );
 
@@ -34,13 +38,17 @@ describe('ModelNotAvailable', () => {
 
   it('should show download button when specific model is not downloaded', () => {
     const {getByText} = render(
-      <ModelNotAvailable model={basicModel} closeSheet={mockCloseSheet} />,
+      <ModelNotAvailable
+        model={basicModel}
+        currentlySelectedModel={undefined}
+        closeSheet={mockCloseSheet}
+      />,
       {withNavigation: true},
     );
 
     expect(
       getByText(
-        'Default model is not downloaded yet. Please download it first.',
+        'This pal recommends a specific model that needs to be downloaded, or you can select a different model.',
       ),
     ).toBeTruthy();
     expect(getByText('Download')).toBeTruthy();
@@ -50,6 +58,7 @@ describe('ModelNotAvailable', () => {
     const {getByTestId, getByText} = render(
       <ModelNotAvailable
         model={downloadingModel}
+        currentlySelectedModel={undefined}
         closeSheet={mockCloseSheet}
       />,
       {withNavigation: true},
@@ -63,6 +72,7 @@ describe('ModelNotAvailable', () => {
     const {getByText} = render(
       <ModelNotAvailable
         model={downloadingModel}
+        currentlySelectedModel={undefined}
         closeSheet={mockCloseSheet}
       />,
       {withNavigation: true},
@@ -74,7 +84,11 @@ describe('ModelNotAvailable', () => {
 
   it('should call checkSpaceAndDownload when download button is pressed', () => {
     const {getByText} = render(
-      <ModelNotAvailable model={basicModel} closeSheet={mockCloseSheet} />,
+      <ModelNotAvailable
+        model={basicModel}
+        currentlySelectedModel={undefined}
+        closeSheet={mockCloseSheet}
+      />,
       {withNavigation: true},
     );
 
@@ -86,7 +100,11 @@ describe('ModelNotAvailable', () => {
 
   it('should handle HF model download when model has hfModel property', () => {
     const {getByText} = render(
-      <ModelNotAvailable model={hfModel1} closeSheet={mockCloseSheet} />,
+      <ModelNotAvailable
+        model={hfModel1}
+        currentlySelectedModel={undefined}
+        closeSheet={mockCloseSheet}
+      />,
       {withNavigation: true},
     );
 
@@ -96,5 +114,35 @@ describe('ModelNotAvailable', () => {
       hfModel1.hfModelFile,
       {enableVision: true},
     );
+  });
+
+  it('should hide warning when a downloaded model is currently selected', () => {
+    // Mock that the currently selected model is downloaded
+    const downloadedModel = {...basicModel, isDownloaded: true};
+    modelStore.isModelAvailable = jest.fn().mockImplementation(id => {
+      if (id === downloadedModel.id) {
+        return true;
+      }
+      if (id === basicModel.id) {
+        return false;
+      } // Default model is not downloaded
+      return false;
+    });
+
+    const {queryByText} = render(
+      <ModelNotAvailable
+        model={basicModel} // Default model is not downloaded
+        currentlySelectedModel={downloadedModel} // But currently selected model is downloaded
+        closeSheet={mockCloseSheet}
+      />,
+      {withNavigation: true},
+    );
+
+    // Should not show the warning since a downloaded model is selected
+    expect(
+      queryByText(
+        'Default model "basic model" is not downloaded yet. Please download it first.',
+      ),
+    ).toBeNull();
   });
 });

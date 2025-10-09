@@ -1,10 +1,4 @@
-import {
-  AppState,
-  AppStateStatus,
-  Platform,
-  NativeModules,
-  Alert,
-} from 'react-native';
+import {AppState, AppStateStatus, Platform, Alert} from 'react-native';
 
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
@@ -12,7 +6,7 @@ import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {computed, makeAutoObservable, runInAction, toJS} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {LlamaContext, initLlama} from '@pocketpalai/llama.rn';
+import {ContextParams, LlamaContext, initLlama} from '@pocketpalai/llama.rn';
 import {
   CompletionParams,
   toApiCompletionParams,
@@ -22,6 +16,7 @@ import {fetchModelFilesDetails} from '../api/hf';
 
 import {uiStore, hfStore} from '.';
 import {chatSessionStore} from './ChatSessionStore';
+import {checkGpuSupport} from '../utils/deviceCapabilities';
 import {
   deepMerge,
   getSHA256Hash,
@@ -42,6 +37,7 @@ import {
 import {
   CacheType,
   ChatTemplateConfig,
+  ContextInitParams,
   HuggingFaceModel,
   Model,
   ModelFile,
@@ -51,9 +47,18 @@ import {
 
 import {ErrorState, createErrorState} from '../utils/errors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
-import {hasEnoughMemory, isHighEndDevice} from '../hooks/useMemoryCheck';
+import {hasEnoughMemory} from '../hooks/useMemoryCheck';
+import {
+  isHighEndDevice,
+  getRecommendedThreadCount,
+  getCpuCoreCount,
+} from '../utils/deviceCapabilities';
 import {supportsThinking} from '../utils/thinkingCapabilityDetection';
 import {resolveUseMmap} from '../utils/memorySettings';
+import {
+  createContextInitParams,
+  createDefaultContextInitParams,
+} from '../utils/contextInitParamsVersions';
 
 class ModelStore {
   models: Model[] = [];
@@ -70,20 +75,11 @@ class ModelStore {
   useAutoRelease: boolean = true;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined = undefined;
-  n_ctx: number = 1024;
-  n_gpu_layers: number = 50;
-  n_threads: number = 4;
-  max_threads: number = 4; // Will be set in constructor
-  flash_attn: boolean = false;
-  cache_type_k: CacheType = CacheType.F16;
-  cache_type_v: CacheType = CacheType.F16;
-  n_batch: number = 512;
-  n_ubatch: number = 512;
 
-  // Memory settings
-  use_mlock: boolean = false;
-  use_mmap: 'true' | 'false' | 'smart' =
-    Platform.OS === 'android' ? 'smart' : 'true';
+  // Unified context initialization parameters
+  contextInitParams: ContextInitParams = createDefaultContextInitParams();
+
+  max_threads: number = 4; // Will be set in constructor
 
   activeModelId: string | undefined = undefined;
 
@@ -92,23 +88,9 @@ class ModelStore {
   activeProjectionModelId: string | undefined = undefined;
 
   // Track initialization settings for the active context
-  activeContextSettings:
-    | {
-        n_ctx: number;
-        n_batch: number;
-        n_ubatch: number;
-        n_threads: number;
-        flash_attn: boolean;
-        cache_type_k: CacheType;
-        cache_type_v: CacheType;
-        n_gpu_layers: number;
-        use_mlock: boolean;
-        use_mmap: boolean;
-      }
-    | undefined = undefined;
+  activeContextSettings: ContextInitParams | undefined = undefined;
 
   context: LlamaContext | undefined = undefined;
-  useMetal = false; //Platform.OS === 'ios';
 
   lastUsedModelId: string | undefined = undefined;
 
@@ -135,23 +117,13 @@ class ModelStore {
         'models',
         'version',
         'useAutoRelease',
-        'n_gpu_layers',
-        'useMetal',
-        'n_ctx',
-        'n_threads',
-        'flash_attn',
-        'cache_type_k',
-        'cache_type_v',
-        'n_batch',
-        'n_ubatch',
-        'use_mlock',
-        'use_mmap',
+        'contextInitParams',
         'lastUsedModelId',
         'wasAutoReleased',
         'lastAutoReleasedModelId',
       ],
       storage: AsyncStorage,
-    }).then(() => {
+    }).then(async () => {
       this.initializeStore();
     });
 
@@ -200,53 +172,62 @@ class ModelStore {
 
   private async initializeThreadCount() {
     try {
-      const {DeviceInfoModule} = NativeModules;
-      const info = await DeviceInfoModule.getCPUInfo();
-      const cores = info.cores;
+      const cores = await getCpuCoreCount();
       this.max_threads = cores;
 
-      // Set n_threads to 80% of cores or number of cores if 4 or less
-      if (cores <= 4) {
-        runInAction(() => {
-          this.n_threads = cores;
-        });
-      } else {
-        runInAction(() => {
-          this.n_threads = Math.floor(cores * 0.8);
-        });
-      }
+      const threads = await getRecommendedThreadCount();
+      runInAction(() => {
+        this.contextInitParams = {
+          ...this.contextInitParams,
+          n_threads: threads,
+        };
+      });
     } catch (error) {
-      console.error('Failed to get CPU info:', error);
+      console.error('Failed to initialize thread count:', error);
       // Fallback to 4 threads if we can't get the CPU info
       runInAction(() => {
         this.max_threads = 4;
-        this.n_threads = 4;
+        this.contextInitParams = {
+          ...this.contextInitParams,
+          n_threads: 4,
+        };
       });
     }
   }
 
   setNThreads = (n_threads: number) => {
     runInAction(() => {
-      this.n_threads = n_threads;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        n_threads,
+      };
     });
   };
 
   setFlashAttn = (flash_attn: boolean) => {
     runInAction(() => {
-      this.flash_attn = flash_attn;
-      // Reset cache types to F16 if flash attention is disabled
-      if (!flash_attn) {
-        this.cache_type_k = CacheType.F16;
-        this.cache_type_v = CacheType.F16;
-      }
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        flash_attn,
+        // Reset cache types to F16 if flash attention is disabled
+        ...(flash_attn
+          ? {}
+          : {
+              cache_type_k: CacheType.F16,
+              cache_type_v: CacheType.F16,
+            }),
+      };
     });
   };
 
   setCacheTypeK = (cache_type: CacheType) => {
     runInAction(() => {
       // Only allow changing cache type if flash attention is enabled
-      if (this.flash_attn) {
-        this.cache_type_k = cache_type;
+      if (this.contextInitParams.flash_attn) {
+        this.contextInitParams = {
+          ...this.contextInitParams,
+          cache_type_k: cache_type,
+        };
       }
     });
   };
@@ -254,53 +235,153 @@ class ModelStore {
   setCacheTypeV = (cache_type: CacheType) => {
     runInAction(() => {
       // Only allow changing cache type if flash attention is enabled
-      if (this.flash_attn) {
-        this.cache_type_v = cache_type;
+      if (this.contextInitParams.flash_attn) {
+        this.contextInitParams = {
+          ...this.contextInitParams,
+          cache_type_v: cache_type,
+        };
       }
     });
   };
 
   setNBatch = (n_batch: number) => {
     runInAction(() => {
-      this.n_batch = n_batch;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        n_batch,
+      };
     });
   };
 
   setNUBatch = (n_ubatch: number) => {
     runInAction(() => {
-      this.n_ubatch = n_ubatch;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        n_ubatch,
+      };
     });
   };
 
   setNContext = (n_ctx: number) => {
     runInAction(() => {
-      this.n_ctx = n_ctx;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        n_ctx,
+      };
+    });
+  };
+
+  setNGPULayers = (n_gpu_layers: number) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        n_gpu_layers,
+      };
     });
   };
 
   setUseMlock = (use_mlock: boolean) => {
     runInAction(() => {
-      this.use_mlock = use_mlock;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        use_mlock,
+      };
     });
   };
 
   setUseMmap = (use_mmap: 'true' | 'false' | 'smart') => {
     runInAction(() => {
-      this.use_mmap = use_mmap;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        use_mmap,
+      };
     });
   };
 
-  // Helper method to get effective values respecting constraints
-  getEffectiveValues = () => {
-    const effectiveContext = this.n_ctx;
-    const effectiveBatch = Math.min(this.n_batch, effectiveContext);
-    const effectiveUBatch = Math.min(this.n_ubatch, effectiveBatch);
+  /**
+   * Get effective context initialization parameters with constraints applied
+   * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
+   */
+  getEffectiveContextInitParams = async (
+    filePath?: string,
+  ): Promise<Omit<ContextParams, 'model'>> => {
+    // Apply batch constraints
+    const effectiveContext = this.contextInitParams.n_ctx;
+    const effectiveBatch = Math.min(
+      this.contextInitParams.n_batch,
+      effectiveContext,
+    );
+    const effectiveUBatch = Math.min(
+      this.contextInitParams.n_ubatch,
+      effectiveBatch,
+    );
+
+    // Resolve the effective use_mmap value based on the setting
+    const currentUseMmap = this.contextInitParams.use_mmap;
+    let effectiveUseMmap: boolean;
+
+    if (currentUseMmap === 'smart') {
+      // Handle 'smart' option
+      effectiveUseMmap = filePath
+        ? await resolveUseMmap('smart', filePath)
+        : true;
+    } else if (currentUseMmap === 'true') {
+      effectiveUseMmap = true;
+    } else if (currentUseMmap === 'false') {
+      effectiveUseMmap = false;
+    } else {
+      // Default fallback
+      effectiveUseMmap = true;
+    }
+
+    return {
+      n_ctx: effectiveContext,
+      n_batch: effectiveBatch,
+      n_ubatch: effectiveUBatch,
+      n_threads: this.contextInitParams.n_threads,
+      flash_attn: this.contextInitParams.flash_attn,
+      cache_type_k: this.contextInitParams.cache_type_k,
+      cache_type_v: this.contextInitParams.cache_type_v,
+      n_gpu_layers: !this.contextInitParams.no_gpu_devices
+        ? this.contextInitParams.n_gpu_layers
+        : 0,
+      no_gpu_devices: this.contextInitParams.no_gpu_devices,
+      use_mlock: this.contextInitParams.use_mlock,
+      use_mmap: effectiveUseMmap,
+    };
+  };
+
+  // Legacy methods for backward compatibility
+
+  /** @deprecated Use getEffectiveContextInitParams instead */
+  getEffectiveBatchValues = () => {
+    const effectiveContext = this.contextInitParams.n_ctx;
+    const effectiveBatch = Math.min(
+      this.contextInitParams.n_batch,
+      effectiveContext,
+    );
+    const effectiveUBatch = Math.min(
+      this.contextInitParams.n_ubatch,
+      effectiveBatch,
+    );
 
     return {
       n_ctx: effectiveContext,
       n_batch: effectiveBatch,
       n_ubatch: effectiveUBatch,
     };
+  };
+
+  /** @deprecated Use getEffectiveContextInitParams instead */
+  getEffectiveInitSettings = async (
+    filePath?: string,
+  ): Promise<Omit<ContextParams, 'model'>> => {
+    return this.getEffectiveContextInitParams(filePath);
+  };
+
+  /** @deprecated Use getEffectiveBatchValues instead */
+  getEffectiveValues = () => {
+    return this.getEffectiveBatchValues();
   };
 
   initializeStore = async () => {
@@ -319,7 +400,7 @@ class ModelStore {
       this.removeInvalidLocalModels();
     }
 
-    this.initializeUseMetal();
+    await this.initializeGpuSettings(); // Should be awaited to ensure GPU settings are applied before initializing context
 
     // Check if we need to reload an auto-released model (for app restarts)
     this.checkAndReloadAutoReleasedModel();
@@ -515,12 +596,6 @@ class ModelStore {
         await this.initContext(model);
       }
     }
-  };
-
-  setNGPULayers = (n_gpu_layers: number) => {
-    runInAction(() => {
-      this.n_gpu_layers = n_gpu_layers;
-    });
   };
 
   /**
@@ -1006,31 +1081,19 @@ class ModelStore {
     });
 
     try {
-      const effectiveValues = this.getEffectiveValues();
+      // Get all effective initialization settings using unified method
+      const effectiveSettings = await this.getEffectiveContextInitParams(
+        filePath,
+      );
 
-      // Resolve the effective use_mmap value based on the setting
-      const effectiveUseMmap = await resolveUseMmap(this.use_mmap, filePath);
-
-      const initSettings = {
-        n_ctx: effectiveValues.n_ctx,
-        n_batch: effectiveValues.n_batch,
-        n_ubatch: effectiveValues.n_ubatch,
-        n_threads: this.n_threads,
-        flash_attn: this.flash_attn,
-        cache_type_k: this.cache_type_k,
-        cache_type_v: this.cache_type_v,
-        n_gpu_layers: this.useMetal ? this.n_gpu_layers : 0,
-        no_gpu_devices: !this.useMetal,
-        use_mlock: this.use_mlock,
-        use_mmap: effectiveUseMmap,
-      };
-      console.log('initSettings:', initSettings);
+      // Create properly versioned ContextInitParams
+      const contextInitParams = createContextInitParams(effectiveSettings);
 
       const t0 = Date.now();
       const ctx = await initLlama(
         {
           model: filePath,
-          ...initSettings,
+          ...effectiveSettings, // Use effectiveSettings without version for llama.rn
           use_progress_callback: true,
         },
         (_progress: number) => {
@@ -1053,7 +1116,7 @@ class ModelStore {
           // Initialize multimodal with the new API format
           const success = await ctx.initMultimodal({
             path: mmProjPath,
-            use_gpu: this.useMetal,
+            use_gpu: !this.contextInitParams.no_gpu_devices,
           });
 
           if (!success) {
@@ -1080,7 +1143,7 @@ class ModelStore {
 
       runInAction(() => {
         this.context = ctx;
-        this.activeContextSettings = initSettings;
+        this.activeContextSettings = contextInitParams; // Already properly versioned
         this.setActiveModel(model.id);
       });
       return ctx;
@@ -1463,21 +1526,31 @@ class ModelStore {
     }
   };
 
-  private initializeUseMetal() {
-    const isIOS18OrHigher =
-      Platform.OS === 'ios' && parseInt(Platform.Version as string, 10) >= 18;
-    // If we're not on iOS 18+ or not on iOS at all, force useMetal to false
-    if (!isIOS18OrHigher) {
+  private async initializeGpuSettings() {
+    const gpuCapabilities = await checkGpuSupport();
+
+    // If GPU is not supported but currently enabled, disable it
+    if (
+      !gpuCapabilities.isSupported &&
+      this.contextInitParams.no_gpu_devices === false
+    ) {
       runInAction(() => {
-        this.useMetal = false;
+        this.contextInitParams = {
+          ...this.contextInitParams,
+          no_gpu_devices: true,
+          n_gpu_layers: 0,
+        };
       });
     }
-    // If we are on iOS 18+, the persisted value will be used
+    // If GPU is supported, the persisted value will be used
   }
 
-  updateUseMetal = (useMetal: boolean) => {
+  setNoGpuDevices = (no_gpu_devices: boolean) => {
     runInAction(() => {
-      this.useMetal = useMetal;
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        no_gpu_devices,
+      };
     });
   };
 

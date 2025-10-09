@@ -7,18 +7,16 @@ import RenderHtml, {
   HTMLContentModel,
   HTMLElementModel,
 } from 'react-native-render-html';
+import CodeHighlighter from 'react-native-code-highlighter';
+import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import {useTheme} from '../../hooks';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {CodeBlockHeader} from '../CodeBlockHeader';
 
-import {createTagsStyles} from './styles';
+import {createTagsStyles, createStyles} from './styles';
 
-marked.use({
-  langPrefix: 'language-',
-  mangle: false,
-  headerIds: false,
-});
+marked.use({});
 
 interface MarkdownViewProps {
   markdownText: string;
@@ -48,6 +46,8 @@ const ThinkingRenderer = ({TDefaultRenderer, ...props}: any) => {
 };
 
 const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const isCodeBlock = props?.tnode?.parent?.tagName === 'pre';
 
   // if not code block, use the default renderer
@@ -56,13 +56,21 @@ const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
   }
 
   const language =
-    props.tnode?.domNode?.attribs?.class?.replace('language-', '') || 'code';
+    props.tnode?.domNode?.attribs?.class?.replace('language-', '') || 'text';
   const content = props.tnode?.domNode?.children?.[0]?.data || '';
 
   return (
     <View>
       <CodeBlockHeader language={language} content={content} />
-      <TDefaultRenderer {...props} />
+      <CodeHighlighter
+        hljsStyle={atomOneDark}
+        language={language}
+        textStyle={styles.codeHighlighterText}
+        scrollViewProps={{
+          contentContainerStyle: styles.codeHighlighterScrollContent,
+        }}>
+        {content}
+      </CodeHighlighter>
     </View>
   );
 };
@@ -72,6 +80,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     const _maxWidth = maxMessageWidth;
 
     const theme = useTheme();
+    const styles = createStyles(theme);
     const tagsStyles = useMemo(() => createTagsStyles(theme), [theme]);
 
     const customHTMLElementModels = useMemo(
@@ -113,11 +122,16 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
 
     const contentWidth = useMemo(() => _maxWidth, [_maxWidth]);
 
-    const htmlContent = useMemo(() => marked(markdownText), [markdownText]);
+    const htmlContent = useMemo(
+      () => marked(markdownText) as string,
+      [markdownText],
+    );
     const source = useMemo(() => ({html: htmlContent}), [htmlContent]);
 
     return (
-      <View testID="chatMarkdownScrollView" style={{maxWidth: _maxWidth}}>
+      <View
+        testID="chatMarkdownScrollView"
+        style={[styles.markdownContainer, {maxWidth: _maxWidth}]}>
         <RenderHtml
           contentWidth={contentWidth}
           source={source}

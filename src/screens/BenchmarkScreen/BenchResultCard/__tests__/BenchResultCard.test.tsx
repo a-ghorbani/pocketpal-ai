@@ -92,8 +92,6 @@ describe('BenchResultCard', () => {
     // Benchmark results
     expect(getByText('20.50 t/s')).toBeTruthy();
     expect(getByText('30.50 t/s')).toBeTruthy();
-    expect(getByText('±1.20')).toBeTruthy();
-    expect(getByText('±2.10')).toBeTruthy();
 
     // Configuration
     expect(getByText(/PP: 1 • TG: 1 • PL: 512 • Rep: 3/)).toBeTruthy();

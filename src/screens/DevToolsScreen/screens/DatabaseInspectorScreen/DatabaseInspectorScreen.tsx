@@ -11,6 +11,7 @@ import {
 import {Card, Button} from 'react-native-paper';
 import {database} from '../../../../database';
 import {chatSessionRepository} from '../../../../repositories/ChatSessionRepository';
+import {palRepository} from '../../../../repositories/PalRepository';
 import {useNavigation} from '@react-navigation/native';
 
 // Define the collections we want to inspect
@@ -19,6 +20,10 @@ const COLLECTIONS = [
   'messages',
   'completion_settings',
   'global_settings',
+  'local_pals',
+  'cached_pals',
+  'user_library',
+  'sync_status',
 ];
 
 const DatabaseInspectorScreen = () => {
@@ -58,14 +63,27 @@ const DatabaseInspectorScreen = () => {
     loadAllCollections();
   }, []);
 
-  const resetMigration = async () => {
+  const resetChatMigration = async () => {
     try {
       await chatSessionRepository.resetMigration();
-      Alert.alert('Migration reset successful', 'Please restart the app.');
+      Alert.alert('Chat migration reset successful', 'Please restart the app.');
     } catch (error) {
-      console.error('Failed to reset migration:', error);
+      console.error('Failed to reset chat migration:', error);
       Alert.alert(
-        'Failed to reset migration',
+        'Failed to reset chat migration',
+        error instanceof Error ? error.message : 'Unknown error occurred',
+      );
+    }
+  };
+
+  const resetPalMigration = async () => {
+    try {
+      await palRepository.resetMigration();
+      Alert.alert('Pal migration reset successful', 'Please restart the app.');
+    } catch (error) {
+      console.error('Failed to reset pal migration:', error);
+      Alert.alert(
+        'Failed to reset pal migration',
         error instanceof Error ? error.message : 'Unknown error occurred',
       );
     }
@@ -88,9 +106,26 @@ const DatabaseInspectorScreen = () => {
             </TouchableOpacity>
           ))}
         </Card.Content>
-        <Card.Actions>
-          <Button onPress={loadAllCollections}>Refresh</Button>
-          <Button onPress={resetMigration}>Reset Migration</Button>
+        <Card.Actions style={styles.cardActionsColumn}>
+          <View style={styles.buttonRow}>
+            <Button onPress={loadAllCollections} mode="contained">
+              Refresh
+            </Button>
+          </View>
+          <View style={styles.buttonRow}>
+            <Button
+              onPress={resetChatMigration}
+              mode="outlined"
+              style={styles.resetButton}>
+              Reset Chat Migration
+            </Button>
+            <Button
+              onPress={resetPalMigration}
+              mode="outlined"
+              style={styles.resetButton}>
+              Reset Pal Migration
+            </Button>
+          </View>
         </Card.Actions>
       </Card>
     );
@@ -123,9 +158,22 @@ const DatabaseInspectorScreen = () => {
                   {record.title && (
                     <Text style={styles.recordTitle}>{record.title}</Text>
                   )}
+                  {record.name && (
+                    <Text style={styles.recordTitle}>{record.name}</Text>
+                  )}
                   {record.session_id && (
                     <Text style={styles.recordSessionId}>
                       Session: {record.session_id}
+                    </Text>
+                  )}
+                  {record.palshub_id && (
+                    <Text style={styles.recordSessionId}>
+                      PalsHub ID: {record.palshub_id}
+                    </Text>
+                  )}
+                  {record.source && (
+                    <Text style={styles.recordSessionId}>
+                      Source: {record.source}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -182,6 +230,28 @@ const DatabaseInspectorScreen = () => {
 
       if (session) {
         relatedRecords.chat_sessions = [session];
+      }
+    }
+
+    // If this is a cached_pal, find related user_library entries
+    if (collection === 'cached_pals' && record.palshub_id) {
+      const userLibraryEntries = (collectionData.user_library || []).filter(
+        entry => entry.palshub_id === record.palshub_id,
+      );
+
+      if (userLibraryEntries.length > 0) {
+        relatedRecords.user_library = userLibraryEntries;
+      }
+    }
+
+    // If this is a user_library entry, find related cached_pal
+    if (collection === 'user_library' && record.palshub_id) {
+      const cachedPal = (collectionData.cached_pals || []).find(
+        pal => pal.palshub_id === record.palshub_id,
+      );
+
+      if (cachedPal) {
+        relatedRecords.cached_pals = [cachedPal];
       }
     }
 
@@ -447,6 +517,19 @@ const styles = StyleSheet.create({
   },
   next: {
     flexDirection: 'row-reverse',
+  },
+  cardActionsColumn: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  resetButton: {
+    flex: 1,
   },
 });
 

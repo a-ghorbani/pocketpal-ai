@@ -5,21 +5,25 @@ import {FormProvider, useForm} from 'react-hook-form';
 
 import {render} from '../../../../jest/test-utils';
 import {FormField} from '../FormField';
-import type {AssistantFormData} from '../types';
+
+// Simple test form data type for testing the generic FormField component
+interface TestFormData {
+  name: string;
+  systemPrompt: string;
+  description?: string;
+}
 
 const TestWrapper = ({
   children,
   defaultValues = {},
 }: {
   children: React.ReactNode;
-  defaultValues?: Partial<AssistantFormData>;
+  defaultValues?: Partial<TestFormData>;
 }) => {
-  const methods = useForm<AssistantFormData>({
+  const methods = useForm<TestFormData>({
     defaultValues: {
       name: '',
       systemPrompt: '',
-      useAIPrompt: false,
-      isSystemPromptChanged: false,
       ...defaultValues,
     },
   });
@@ -77,12 +81,10 @@ describe('FormField', () => {
 
   it('shows error message when form has errors', () => {
     const TestComponent = () => {
-      const methods = useForm<AssistantFormData>({
+      const methods = useForm<TestFormData>({
         defaultValues: {
           name: '',
           systemPrompt: '',
-          useAIPrompt: false,
-          isSystemPromptChanged: false,
         },
       });
 

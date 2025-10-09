@@ -66,14 +66,15 @@ jobs:
       # Step 7: Commit and push version changes
       - name: Commit and push version changes
         run: |
-          echo "VERSION=$(cat .version)" >> $GITHUB_ENV
+          VERSION=$(cat .version)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add .version package.json android/app/build.gradle ios/PocketPal.xcodeproj/project.pbxproj
-          git commit -m "chore(release): bump version to ${{ env.VERSION }}"
+          git commit -m "chore(release): bump version to $VERSION"
           git push
-          git tag "v${{ env.VERSION }}"
-          git push origin "v${{ env.VERSION }}"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
 
       # Step 8: Set up Android Keystore
       - name: Set up Android Keystore
@@ -93,7 +94,26 @@ jobs:
       # Add this step before the Android build
       - name: Create .env file
         run: |
-          echo "FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}" > .env
+          cat > .env << 'EOL'
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
+
+          # PalsHub/Supabase Configuration
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+
+          # App Configuration
+          APP_URL=pocketpal://app
+
+          # Feature Flags (true/false)
+          ENABLE_PALSHUB_INTEGRATION=true
+          ENABLE_AUTHENTICATION=true
+          ENABLE_OFFLINE_MODE=true
+
+          # Google Sign-In Configuration
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          EOL
 
       # Step 10: Build and upload Android app to Alpha track (includes building APK and Bundle)
       - name: Build and upload Android app
@@ -163,12 +183,42 @@ jobs:
         working-directory: ios
         run: pod install
 
-      # Step 6: Create .env file
+      # Step 6: Create Env.xcconfig
+      - name: Create Env.xcconfig
+        run: |
+          cat > ios/Config/Env.xcconfig << 'EOL'
+          // This file contains environment-specific build settings.
+
+          GOOGLE_WEB_CLIENT_ID = ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          REVERSED_GOOGLE_IOS_CLIENT_ID = ${{ vars.REVERSED_GOOGLE_IOS_CLIENT_ID }}
+
+          EOL
+
+      # Step 7: Create .env file
       - name: Create .env file
         run: |
-          echo "FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}" > .env
+          cat > .env << 'EOL'
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
 
-      # Step 7: Build and upload iOS app to TestFlight
+          # PalsHub/Supabase Configuration
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+
+          # App Configuration
+          APP_URL=pocketpal://app
+
+          # Feature Flags (true/false)
+          ENABLE_PALSHUB_INTEGRATION=true
+          ENABLE_AUTHENTICATION=true
+          ENABLE_OFFLINE_MODE=true
+
+          # Google Sign-In Configuration
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          EOL
+
+      # Step 8: Build and upload iOS app to TestFlight
       - name: Build and upload iOS app
         working-directory: ios
         env:

@@ -20,6 +20,7 @@ interface ProjectionModelSelectorProps {
   showDownloadActions?: boolean; // Controls whether to show download/delete buttons
   context?: 'search' | 'modelsList'; // Context for data source selection
   availableProjectionModels?: Model[]; // For search context - models from HF repository
+  initialExpanded?: boolean; // Controls initial expanded state
 }
 
 /**
@@ -32,12 +33,13 @@ export const ProjectionModelSelector = observer(
     showDownloadActions = true,
     context = 'modelsList',
     availableProjectionModels,
+    initialExpanded = false,
   }: ProjectionModelSelectorProps) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const styles = createStyles(theme);
 
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(initialExpanded);
     const [compatibleModels, setCompatibleModels] = useState<Model[]>([]);
     const [selectedModelId, setSelectedModelId] = useState<string | undefined>(
       model.defaultProjectionModel,
@@ -171,6 +173,7 @@ export const ProjectionModelSelector = observer(
         {/* Optional Header - only show if there are multiple models or user needs to collapse */}
         {compatibleModels.length > 1 && (
           <TouchableOpacity
+            testID="projection-model-selector-header"
             style={styles.header}
             onPress={toggleExpanded}
             activeOpacity={0.7}>
@@ -221,26 +224,15 @@ export const ProjectionModelSelector = observer(
                         isSelected && styles.selectedModelItem,
                       ]}>
                       <View style={styles.modelInfo}>
-                        <View style={styles.modelHeader}>
-                          <Icon
-                            name="cube-outline"
-                            size={12}
-                            color={
-                              isSelected
-                                ? theme.colors.tertiary
-                                : theme.colors.onSurfaceVariant
-                            }
-                            style={styles.modelIcon}
-                          />
-                          <Text
-                            style={[
-                              styles.modelName,
-                              isSelected && styles.selectedModelName,
-                            ]}
-                            numberOfLines={1}>
-                            {projModel.name}
-                          </Text>
-                        </View>
+                        <Text
+                          style={[
+                            styles.modelName,
+                            isSelected && styles.selectedModelName,
+                          ]}
+                          numberOfLines={2}
+                          ellipsizeMode="tail">
+                          {projModel.name}
+                        </Text>
                         <Text style={styles.modelSize}>
                           {formatBytes(projModel.size)}
                         </Text>
@@ -307,9 +299,6 @@ export const ProjectionModelSelector = observer(
                                   size={16}
                                   color={theme.colors.primary}
                                 />
-                                <Text style={styles.downloadText}>
-                                  {l10n.models.multimodal.download}
-                                </Text>
                               </TouchableOpacity>
                             )}
                           </>

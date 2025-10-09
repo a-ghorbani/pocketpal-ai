@@ -161,28 +161,28 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
                 <Text style={styles.configText}>
                   {l10n.benchmark.benchmarkResultCard.modelSettings.context.replace(
                     '{{context}}',
-                    result.initSettings.n_ctx.toString(),
+                    (result.initSettings.n_ctx || 0).toString(),
                   )}{' '}
                   •{' '}
                   {l10n.benchmark.benchmarkResultCard.modelSettings.batch.replace(
                     '{{batch}}',
-                    result.initSettings.n_batch.toString(),
+                    (result.initSettings.n_batch || 0).toString(),
                   )}{' '}
                   •{' '}
                   {l10n.benchmark.benchmarkResultCard.modelSettings.ubatch.replace(
                     '{{ubatch}}',
-                    result.initSettings.n_ubatch.toString(),
+                    (result.initSettings.n_ubatch || 0).toString(),
                   )}
                 </Text>
                 <Text style={styles.configText}>
                   {l10n.benchmark.benchmarkResultCard.modelSettings.cpuThreads.replace(
                     '{{threads}}',
-                    result.initSettings.n_threads.toString(),
+                    (result.initSettings.n_threads || 0).toString(),
                   )}{' '}
                   •{' '}
                   {l10n.benchmark.benchmarkResultCard.modelSettings.gpuLayers.replace(
                     '{{layers}}',
-                    result.initSettings.n_gpu_layers.toString(),
+                    (result.initSettings.n_gpu_layers || 0).toString(),
                   )}
                 </Text>
                 {result.initSettings.flash_attn ? (
@@ -195,11 +195,15 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
                     {l10n.benchmark.benchmarkResultCard.modelSettings.cacheTypes
                       .replace(
                         '{{cacheK}}',
-                        result.initSettings.cache_type_k.toString(),
+                        (
+                          result.initSettings.cache_type_k || 'unknown'
+                        ).toString(),
                       )
                       .replace(
                         '{{cacheV}}',
-                        result.initSettings.cache_type_v.toString(),
+                        (
+                          result.initSettings.cache_type_v || 'unknown'
+                        ).toString(),
                       )}
                   </Text>
                 ) : (
@@ -219,7 +223,7 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
           <View style={styles.resultRow}>
             <View style={styles.resultItem}>
               <Text style={styles.resultValue}>
-                {result.ppAvg.toFixed(2)}
+                {result.ppAvg?.toFixed(2)}
                 <Text style={styles.resultUnit}>
                   {' '}
                   {l10n.benchmark.benchmarkResultCard.results.tokensPerSecond}
@@ -228,11 +232,10 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
               <Text style={styles.resultLabel}>
                 {l10n.benchmark.benchmarkResultCard.results.promptProcessing}
               </Text>
-              <Text style={styles.resultStd}>±{result.ppStd.toFixed(2)}</Text>
             </View>
             <View style={styles.resultItem}>
               <Text style={styles.resultValue}>
-                {result.tgAvg.toFixed(2)}
+                {result.tgAvg?.toFixed(2)}
                 <Text style={styles.resultUnit}>
                   {' '}
                   {l10n.benchmark.benchmarkResultCard.results.tokensPerSecond}
@@ -241,7 +244,6 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
               <Text style={styles.resultLabel}>
                 {l10n.benchmark.benchmarkResultCard.results.tokenGeneration}
               </Text>
-              <Text style={styles.resultStd}>±{result.tgStd.toFixed(2)}</Text>
             </View>
           </View>
 

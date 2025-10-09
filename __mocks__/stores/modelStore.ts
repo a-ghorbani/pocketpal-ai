@@ -4,20 +4,16 @@ import {modelsList} from '../../jest/fixtures/models';
 
 import {downloadManager} from '../services/downloads';
 
-import {Model} from '../../src/utils/types';
+import {Model, ContextInitParams} from '../../src/utils/types';
 import {LlamaContext} from '@pocketpalai/llama.rn';
+import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
 
 class MockModelStore {
   models = modelsList;
-  n_ctx = 1024;
-  n_batch = 512;
-  n_ubatch = 512;
-  n_threads = 4;
+  contextInitParams: ContextInitParams = createDefaultContextInitParams();
   max_threads = 4;
   MIN_CONTEXT_SIZE = 200;
   useAutoRelease = true;
-  useMetal = false;
-  n_gpu_layers = 50;
   activeModelId: string | undefined;
   inferencing = false;
   isStreaming = false;
@@ -27,7 +23,7 @@ class MockModelStore {
   addLocalModel: jest.Mock;
   setNContext: jest.Mock;
   updateUseAutoRelease: jest.Mock;
-  updateUseMetal: jest.Mock;
+  setNoGpuDevices: jest.Mock;
   setNGPULayers: jest.Mock;
   resetModels: jest.Mock;
   initContext: jest.Mock;
@@ -53,7 +49,7 @@ class MockModelStore {
       addLocalModel: false,
       setNContext: false,
       updateUseAutoRelease: false,
-      updateUseMetal: false,
+
       setNGPULayers: false,
       resetModels: false,
       initContext: false,
@@ -79,7 +75,7 @@ class MockModelStore {
     this.addLocalModel = jest.fn();
     this.setNContext = jest.fn();
     this.updateUseAutoRelease = jest.fn();
-    this.updateUseMetal = jest.fn();
+    this.setNoGpuDevices = jest.fn();
     this.setNGPULayers = jest.fn();
     this.resetModels = jest.fn();
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());

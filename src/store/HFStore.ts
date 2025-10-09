@@ -5,30 +5,43 @@ import * as Keychain from 'react-native-keychain';
 
 import {fetchGGUFSpecs, fetchModelFilesDetails, fetchModels} from '../api/hf';
 
-import {urls} from '../config';
-
 import {hasEnoughSpace, hfAsModel} from '../utils';
+import {processHFSearchResults} from '../utils/hf';
 import {ErrorState, createErrorState} from '../utils/errors';
 
 import {HuggingFaceModel} from '../utils/types';
 
-const RE_GGUF_SHARD_FILE =
-  /^(?<prefix>.*?)-(?<shard>\d{5})-of-(?<total>\d{5})\.gguf$/;
-
 // Service name for keychain storage
 const HF_TOKEN_SERVICE = 'hf_token_service';
+
+// Filter types for enhanced search
+export type SortOption = 'relevance' | 'downloads' | 'lastModified' | 'likes';
+
+export interface SearchFilters {
+  author: string;
+  sortBy: SortOption;
+}
 
 class HFStore {
   models: HuggingFaceModel[] = [];
   isLoading = false;
   error: ErrorState | null = null;
   nextPageLink: string | null = null;
+  private lastFetchedNextLink: string | null = null;
+  private lastFetchMoreAttempt: number = 0;
+  private consecutiveSmallResults: number = 0;
   searchQuery = '';
   queryFilter = 'gguf,conversational';
   queryFull = true;
   queryConfig = true;
   hfToken: string | null = null;
   useHfToken: boolean = true; // Only applies when token is set
+
+  // search filters
+  searchFilters: SearchFilters = {
+    author: '',
+    sortBy: 'relevance',
+  };
 
   constructor() {
     makeAutoObservable(this);
@@ -110,6 +123,36 @@ class HFStore {
 
   setSearchQuery(query: string) {
     this.searchQuery = query;
+  }
+
+  setSearchFilters(filters: Partial<SearchFilters>) {
+    if (
+      filters.author !== undefined &&
+      this.searchFilters.author !== filters.author
+    ) {
+      this.searchFilters.author = filters.author;
+    }
+    if (
+      filters.sortBy !== undefined &&
+      this.searchFilters.sortBy !== filters.sortBy
+    ) {
+      this.searchFilters.sortBy = filters.sortBy;
+    }
+  }
+
+  setAuthorFilter(author: string) {
+    this.searchFilters.author = author;
+  }
+
+  setSortBy(sortBy: SortOption) {
+    this.searchFilters.sortBy = sortBy;
+  }
+
+  clearFilters() {
+    this.searchFilters = {
+      author: '',
+      sortBy: 'relevance',
+    };
   }
 
   clearError() {
@@ -208,43 +251,50 @@ class HFStore {
     }
   }
 
-  /** Filters out non-GGUF and sharded GGUF files from model siblings */
-  private filterGGUFFiles(siblings: any[]) {
-    return (
-      siblings?.filter(sibling => {
-        const filename = sibling.rfilename.toLowerCase();
-        return filename.endsWith('.gguf') && !RE_GGUF_SHARD_FILE.test(filename);
-      }) || []
-    );
-  }
-
-  /** Adds download URLs to model files based on modelId */
-  private addDownloadUrls(modelId: string, siblings: any[]) {
-    return siblings.map(sibling => ({
-      ...sibling,
-      url: urls.modelDownloadFile(modelId, sibling.rfilename),
-    }));
-  }
-
-  // Process the hf search results to:
-  // - add the URL
-  // - filter out non-gguf files from the siblings
-  // - filter out sharded gguf files from the siblings
-  private processSearchResults(models: HuggingFaceModel[]) {
-    return models.map(model => {
-      const filteredSiblings = this.filterGGUFFiles(model.siblings);
-      const siblingsWithUrl = this.addDownloadUrls(model.id, filteredSiblings);
-
-      return {
-        ...model,
-        url: urls.modelWebPage(model.id),
-        siblings: siblingsWithUrl,
-      };
-    });
-  }
-
   get hasMoreResults() {
     return this.nextPageLink !== null;
+  }
+
+  // Check if we should prevent fetching more due to small result sets
+  private shouldPreventFetchMore(): boolean {
+    const now = Date.now();
+    const timeSinceLastAttempt = now - this.lastFetchMoreAttempt;
+
+    // If we have very few models and recent attempts, apply debouncing
+    if (this.models.length < 5 && timeSinceLastAttempt < 2000) {
+      console.log('🔵 Preventing fetchMore: too few models and recent attempt');
+      return true;
+    }
+
+    // If we've had multiple consecutive small results, be more cautious
+    if (this.consecutiveSmallResults >= 3 && timeSinceLastAttempt < 5000) {
+      console.log(
+        '🔵 Preventing fetchMore: multiple small results, applying longer debounce',
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  // Helper method to build filter string based on current filters
+  private buildFilterString(): string {
+    return this.queryFilter; // Just use the base filter
+  }
+
+  // Helper method to get sort parameters
+  private getSortParams(): {sort: string; direction: string} | null {
+    switch (this.searchFilters.sortBy) {
+      case 'lastModified':
+        return {sort: 'lastModified', direction: '-1'};
+      case 'likes':
+        return {sort: 'likes', direction: '-1'};
+      case 'downloads':
+        return {sort: 'downloads', direction: '-1'};
+      case 'relevance':
+      default:
+        return null; // No sorting - use HF's default relevance ranking
+    }
   }
 
   // Fetch the models from the Hugging Face API
@@ -252,23 +302,31 @@ class HFStore {
     this.isLoading = true;
     this.error = null;
 
+    // Fresh search → reset pagination guards
+    this.lastFetchedNextLink = null;
+    this.consecutiveSmallResults = 0;
+    this.lastFetchMoreAttempt = 0;
+
     try {
       const authToken = this.shouldUseToken ? this.hfToken : null;
+      const sortParams = this.getSortParams();
+
       const {models, nextLink} = await fetchModels({
         search: this.searchQuery,
+        author: this.searchFilters.author || undefined,
         limit: 10,
-        sort: 'downloads',
-        direction: '-1',
-        filter: this.queryFilter,
+        sort: sortParams?.sort,
+        direction: sortParams?.direction,
+        filter: this.buildFilterString(),
         full: this.queryFull,
         config: this.queryConfig,
         authToken: authToken,
       });
 
-      const modelsWithUrl = this.processSearchResults(models);
+      let processedModels = processHFSearchResults(models);
 
       runInAction(() => {
-        this.models = modelsWithUrl;
+        this.models = processedModels;
         this.nextPageLink = nextLink;
       });
     } catch (error) {
@@ -290,9 +348,26 @@ class HFStore {
 
   // Fetch the next page of models
   async fetchMoreModels() {
+    console.log('fetchMoreModels called');
     if (!this.nextPageLink || this.isLoading) {
       return;
     }
+
+    // Check if we should prevent fetching more due to small result sets
+    if (this.shouldPreventFetchMore()) {
+      return;
+    }
+
+    // ⛔️ Don't refetch the same page over and over
+    if (this.lastFetchedNextLink === this.nextPageLink) {
+      console.log(
+        '🔵 Skipping duplicate fetch for same nextPageLink:',
+        this.nextPageLink,
+      );
+      return;
+    }
+    this.lastFetchedNextLink = this.nextPageLink;
+    this.lastFetchMoreAttempt = Date.now();
 
     this.isLoading = true;
     this.error = null;
@@ -304,10 +379,19 @@ class HFStore {
         authToken: authToken,
       });
 
-      const modelsWithUrl = this.processSearchResults(models);
+      let processedModels = processHFSearchResults(models);
 
       runInAction(() => {
-        modelsWithUrl.forEach(model => this.models.push(model));
+        // Track consecutive small results for pagination protection
+        if (processedModels.length < 3) {
+          this.consecutiveSmallResults++;
+        } else {
+          this.consecutiveSmallResults = 0;
+        }
+
+        processedModels.forEach((model: HuggingFaceModel) =>
+          this.models.push(model),
+        );
         this.nextPageLink = nextLink;
       });
     } catch (error) {

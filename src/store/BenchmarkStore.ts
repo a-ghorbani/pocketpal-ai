@@ -2,6 +2,10 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {BenchmarkResult} from '../utils/types';
+import {
+  migrateBenchmarkResults,
+  migrateBenchmarkResult,
+} from '../utils/benchmarkMigration';
 
 export class BenchmarkStore {
   results: BenchmarkResult[] = [];
@@ -12,12 +16,19 @@ export class BenchmarkStore {
       name: 'BenchmarkStore',
       properties: ['results'],
       storage: AsyncStorage,
+    }).then(() => {
+      // Migrate benchmark results after loading from storage
+      runInAction(() => {
+        this.results = migrateBenchmarkResults(this.results);
+      });
     });
   }
 
   addResult(result: BenchmarkResult) {
     runInAction(() => {
-      this.results.unshift(result); // Add new result at the beginning
+      // Migrate the result in case it still has legacy format
+      const migratedResult = migrateBenchmarkResult(result);
+      this.results.unshift(migratedResult); // Add new result at the beginning
     });
   }
 

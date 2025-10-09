@@ -14,9 +14,9 @@ import {createStyles} from './styles';
 import {modelStore, palStore, chatSessionStore} from '../../store';
 import {CustomBackdrop} from '../Sheet/CustomBackdrop';
 import {getModelSkills, L10nContext, Model} from '../../utils';
+import type {Pal} from '../../types/pal';
 //import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {CloseIcon} from '../../assets/icons';
-import {PalType} from '../PalsSheets/types';
+import {CloseIcon, SettingsIcon} from '../../assets/icons';
 import {SkillsDisplay} from '../SkillsDisplay';
 
 type Tab = 'models' | 'pals';
@@ -27,6 +27,7 @@ interface ChatPalModelPickerSheetProps {
   onClose: () => void;
   onModelSelect?: (modelId: string) => void;
   onPalSelect?: (palId: string | undefined) => void;
+  onPalSettingsSelect?: (pal: Pal) => void;
   keyboardHeight: number;
 }
 
@@ -73,6 +74,7 @@ export const ChatPalModelPickerSheet = observer(
     onClose,
     onModelSelect,
     onPalSelect,
+    onPalSettingsSelect,
     chatInputHeight,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     keyboardHeight,
@@ -88,17 +90,17 @@ export const ChatPalModelPickerSheet = observer(
     const TABS = React.useMemo(
       () => [
         {
-          id: 'models' as Tab,
-          label: l10n.components.chatPalModelPickerSheet.modelsTab,
-        },
-        {
           id: 'pals' as Tab,
           label: l10n.components.chatPalModelPickerSheet.palsTab,
         },
+        {
+          id: 'models' as Tab,
+          label: l10n.components.chatPalModelPickerSheet.modelsTab,
+        },
       ],
       [
-        l10n.components.chatPalModelPickerSheet.modelsTab,
         l10n.components.chatPalModelPickerSheet.palsTab,
+        l10n.components.chatPalModelPickerSheet.modelsTab,
       ],
     );
 
@@ -238,18 +240,15 @@ export const ChatPalModelPickerSheet = observer(
       [styles, handleModelSelect],
     );
 
-    const palTypeText = React.useCallback(
-      (palType: PalType): string => {
-        switch (palType) {
-          case PalType.ASSISTANT:
-            return l10n.components.chatPalModelPickerSheet.assistantType;
-          case PalType.ROLEPLAY:
-            return l10n.components.chatPalModelPickerSheet.roleplayType;
-          case PalType.VIDEO:
-            return l10n.components.chatPalModelPickerSheet.videoType;
-          default:
-            return '';
+    const getCapabilityText = React.useCallback(
+      (pal: Pal): string => {
+        if (pal.capabilities?.video) {
+          return l10n.components.chatPalModelPickerSheet.videoType;
         }
+
+        // TODO: Add support for other capabilities
+        // Use assistant for now.
+        return l10n.components.chatPalModelPickerSheet.assistantType;
       },
       [l10n.components.chatPalModelPickerSheet],
     );
@@ -263,20 +262,40 @@ export const ChatPalModelPickerSheet = observer(
             style={[styles.listItem, isActivePal && styles.activeListItem]}
             onPress={() => handlePalSelect(pal)}>
             <View style={styles.itemContent}>
-              <Text
-                style={[
-                  styles.itemTitle,
-                  isActivePal && styles.activeItemTitle,
-                ]}>
-                {pal.name}
-              </Text>
-              <Text
-                style={[
-                  styles.itemSubtitle,
-                  isActivePal && styles.activeItemSubtitle,
-                ]}>
-                {palTypeText(pal.palType)}
-              </Text>
+              <View style={styles.itemTextContent}>
+                <Text
+                  style={[
+                    styles.itemTitle,
+                    isActivePal && styles.activeItemTitle,
+                  ]}>
+                  {pal.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.itemSubtitle,
+                    isActivePal && styles.activeItemSubtitle,
+                  ]}>
+                  {getCapabilityText(pal)}
+                </Text>
+              </View>
+              {isActivePal && pal.type === 'local' && onPalSettingsSelect && (
+                <Pressable
+                  style={styles.settingsButton}
+                  onPress={e => {
+                    e.stopPropagation();
+                    onPalSettingsSelect(pal);
+                  }}>
+                  <SettingsIcon
+                    width={16}
+                    height={16}
+                    stroke={
+                      isActivePal
+                        ? styles.activeItemTitle.color
+                        : styles.itemSubtitle.color
+                    }
+                  />
+                </Pressable>
+              )}
             </View>
           </Pressable>
         );
@@ -285,12 +304,15 @@ export const ChatPalModelPickerSheet = observer(
         styles.listItem,
         styles.activeListItem,
         styles.itemContent,
+        styles.itemTextContent,
+        styles.settingsButton,
         styles.itemTitle,
         styles.activeItemTitle,
         styles.itemSubtitle,
         styles.activeItemSubtitle,
-        palTypeText,
+        getCapabilityText,
         handlePalSelect,
+        onPalSettingsSelect,
       ],
     );
 
@@ -333,7 +355,7 @@ export const ChatPalModelPickerSheet = observer(
         enablePanDownToClose
         snapPoints={snapPoints} // Dynamic sizing is not working properly in all situations, like keyboard open/close android/ios ...
         enableDynamicSizing={false}
-        backdropComponent={isVisible ? CustomBackdrop : null} // on android we need this check to ensure it doenst' block interaction
+        backdropComponent={isVisible ? CustomBackdrop : undefined} // on android we need this check to ensure it doenst' block interaction
         backgroundStyle={{
           backgroundColor: theme.colors.background,
         }}

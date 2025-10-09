@@ -8,13 +8,8 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {MessageType} from './types';
 import {CompletionParams} from './completionTypes';
 import {migrateCompletionSettings} from './completionSettingsVersions';
-import {
-  PalType,
-  AssistantFormData,
-  RoleplayFormData,
-  VideoPalFormData,
-} from '../components/PalsSheets/types';
 import {palStore} from '../store';
+import type {Pal, ParameterDefinition} from '../types/pal';
 
 /**
  * Interface for imported chat session data
@@ -230,31 +225,39 @@ const importSingleSession = async (
 };
 
 /**
- * Interface for imported pal data
+ * Interface (Data Transfer Object (DTO)) for imported pal data (format v2.0)
  */
 export interface ImportedPal {
+  version: string;
   id: string;
   name: string;
-  palType: PalType;
-  defaultModel?: any;
-  useAIPrompt: boolean;
+  description?: string;
+  thumbnail_url?: string;
+  thumbnail_data?: string; // Base64 embedded image data
   systemPrompt: string;
   originalSystemPrompt?: string;
   isSystemPromptChanged: boolean;
-  color?: [string, string];
+  useAIPrompt: boolean;
+  defaultModel?: any;
   promptGenerationModel?: any;
   generatingPrompt?: string;
-
-  // Roleplay fields
-  world?: string;
-  location?: string;
-  aiRole?: string;
-  userRole?: string;
-  situation?: string;
-  toneStyle?: string;
-
-  // Video fields
-  captureInterval?: number;
+  color?: [string, string];
+  capabilities?: any;
+  parameters: Record<string, any>;
+  parameterSchema: ParameterDefinition[];
+  source: 'local' | 'palshub';
+  palshub_id?: string;
+  creator_info?: any;
+  categories?: string[];
+  tags?: string[];
+  rating?: number;
+  review_count?: number;
+  protection_level?: string;
+  price_cents?: number;
+  is_owned?: boolean;
+  generation_settings?: any;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -289,7 +292,7 @@ export const importPals = async (): Promise<number> => {
 };
 
 /**
- * Validate imported pal data
+ * Validate imported pal data (handles both legacy and modern formats)
  */
 export const validateImportedPalData = (
   data: any,
@@ -305,20 +308,20 @@ export const validateImportedPalData = (
 };
 
 /**
- * Validate a single pal
+ * Validate a single pal (modern format v2.0+ only)
  */
 const validateSinglePal = (pal: any): ImportedPal => {
   // Check required fields
   if (!pal.name || typeof pal.name !== 'string') {
-    throw new Error('Invalid pal: missing or invalid name');
-  }
-
-  if (!pal.palType || !Object.values(PalType).includes(pal.palType)) {
-    throw new Error('Invalid pal: missing or invalid palType');
+    throw new Error('Import failed: Invalid pal data');
   }
 
   if (!pal.systemPrompt || typeof pal.systemPrompt !== 'string') {
-    throw new Error('Invalid pal: missing or invalid systemPrompt');
+    throw new Error('Import failed: Invalid pal data');
+  }
+
+  if (!pal.version || !pal.version.startsWith('2.')) {
+    throw new Error('Import failed: Unsupported format');
   }
 
   if (typeof pal.useAIPrompt !== 'boolean') {
@@ -329,32 +332,16 @@ const validateSinglePal = (pal: any): ImportedPal => {
     pal.isSystemPromptChanged = false;
   }
 
-  // Validate roleplay required fields
-  if (pal.palType === PalType.ROLEPLAY) {
-    const requiredRoleplayFields = [
-      'world',
-      'location',
-      'aiRole',
-      'userRole',
-      'situation',
-      'toneStyle',
-    ];
-
-    for (const field of requiredRoleplayFields) {
-      if (!pal[field] || typeof pal[field] !== 'string') {
-        throw new Error(`Invalid roleplay pal: missing or invalid ${field}`);
-      }
-    }
+  if (!pal.parameters || typeof pal.parameters !== 'object') {
+    pal.parameters = {};
   }
 
-  // Validate video required fields
-  if (pal.palType === PalType.VIDEO) {
-    if (
-      pal.captureInterval === undefined ||
-      typeof pal.captureInterval !== 'number'
-    ) {
-      pal.captureInterval = 3000;
-    }
+  if (!pal.parameterSchema || !Array.isArray(pal.parameterSchema)) {
+    pal.parameterSchema = [];
+  }
+
+  if (!pal.source) {
+    pal.source = 'local';
   }
 
   if (!pal.id) {
@@ -364,47 +351,88 @@ const validateSinglePal = (pal: any): ImportedPal => {
   return pal as ImportedPal;
 };
 
-const transformImportPal = (
+/**
+ * Save base64 image data as a local file
+ */
+const saveBase64Image = async (
+  base64Data: string,
+  palId: string,
+): Promise<string> => {
+  // Extract extension and base64 content from data URL
+  const extensionMatch = base64Data.match(/^data:image\/([a-z]+);base64,/);
+  const fileExtension = extensionMatch ? extensionMatch[1] : 'jpg'; // Fallback to jpg
+  const base64Content = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
+
+  // Use same directory and naming convention as imageUtils.ts
+  const PAL_IMAGES_DIR = `${RNFS.DocumentDirectoryPath}/pal-images`;
+  const fileName = `${palId}_thumbnail.${fileExtension}`;
+  const filePath = `${PAL_IMAGES_DIR}/${fileName}`;
+
+  // Ensure directory exists (same as imageUtils.ts)
+  const exists = await RNFS.exists(PAL_IMAGES_DIR);
+  if (!exists) {
+    await RNFS.mkdir(PAL_IMAGES_DIR);
+  }
+
+  // Write base64 data to file
+  await RNFS.writeFile(filePath, base64Content, 'base64');
+
+  // Return filename for storage
+  return fileName;
+};
+
+/**
+ * Transform imported pal to the format expected by palStore.createPal
+ */
+const transformImportPal = async (
   pal: ImportedPal,
-): AssistantFormData | RoleplayFormData | VideoPalFormData => {
-  const baseData = {
+): Promise<Omit<Pal, 'id' | 'created_at' | 'updated_at'>> => {
+  // Handle thumbnail image - save base64 data as local file if present
+  let thumbnailUrl = pal.thumbnail_url;
+
+  if (pal.thumbnail_data) {
+    try {
+      // Generate new ID for this imported pal to avoid conflicts
+      const newPalId = uuidv4();
+      thumbnailUrl = await saveBase64Image(pal.thumbnail_data, newPalId);
+    } catch (error) {
+      console.warn('Failed to save imported thumbnail:', error);
+      thumbnailUrl = undefined; // Fall back to no thumbnail
+    }
+  }
+
+  return {
+    type: 'local',
     name: pal.name,
-    defaultModel: pal.defaultModel,
-    useAIPrompt: pal.useAIPrompt,
+    description: pal.description,
+    thumbnail_url: thumbnailUrl,
     systemPrompt: pal.systemPrompt,
     originalSystemPrompt: pal.originalSystemPrompt,
     isSystemPromptChanged: pal.isSystemPromptChanged,
-    color: pal.color,
+    useAIPrompt: pal.useAIPrompt,
+    defaultModel: pal.defaultModel,
     promptGenerationModel: pal.promptGenerationModel,
     generatingPrompt: pal.generatingPrompt,
+    color: pal.color,
+    capabilities: pal.capabilities || {},
+    parameters: pal.parameters,
+    parameterSchema: pal.parameterSchema,
+    source: pal.source,
+    palshub_id: pal.palshub_id,
+    creator_info: pal.creator_info,
+    categories: pal.categories,
+    tags: pal.tags,
+    rating: pal.rating,
+    review_count: pal.review_count,
+    protection_level: pal.protection_level as
+      | 'public'
+      | 'reveal_on_purchase'
+      | 'private'
+      | undefined,
+    price_cents: pal.price_cents,
+    is_owned: pal.is_owned,
+    completionSettings: pal.generation_settings,
   };
-  switch (pal.palType) {
-    case PalType.ROLEPLAY:
-      return {
-        ...baseData,
-        palType: PalType.ROLEPLAY,
-        world: pal.world!,
-        location: pal.location!,
-        aiRole: pal.aiRole!,
-        userRole: pal.userRole!,
-        situation: pal.situation!,
-        toneStyle: pal.toneStyle!,
-      } as RoleplayFormData;
-
-    case PalType.VIDEO:
-      return {
-        ...baseData,
-        palType: PalType.VIDEO,
-        captureInterval: pal.captureInterval!,
-      } as VideoPalFormData;
-
-    case PalType.ASSISTANT:
-    default:
-      return {
-        ...baseData,
-        palType: PalType.ASSISTANT,
-      } as AssistantFormData;
-  }
 };
 
 /**
@@ -412,8 +440,9 @@ const transformImportPal = (
  */
 const importSinglePal = async (pal: ImportedPal): Promise<void> => {
   try {
-    const palData = transformImportPal(pal);
-    await palStore.addPal(palData);
+    const palData = await transformImportPal(pal);
+
+    await palStore.createPal(palData);
   } catch (error) {
     console.error('Error importing single pal:', error);
     throw error;

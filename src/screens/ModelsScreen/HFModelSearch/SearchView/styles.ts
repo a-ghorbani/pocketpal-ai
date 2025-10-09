@@ -1,15 +1,14 @@
 import {StyleSheet} from 'react-native';
 import {Theme} from '../../../../utils/types';
 
-export const createStyles = (theme: Theme, bottomInset: number) =>
+export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     contentContainer: {
       flex: 1,
-      justifyContent: 'space-between',
     },
     list: {
       padding: 16,
-      paddingBottom: 100,
+      paddingBottom: 0,
     },
     divider: {
       marginVertical: 12,
@@ -49,12 +48,6 @@ export const createStyles = (theme: Theme, bottomInset: number) =>
       marginTop: 20,
       fontSize: 16,
       color: theme.colors.onSurfaceVariant,
-    },
-    searchbarContainer: {
-      position: 'absolute',
-      bottom: bottomInset,
-      left: 0,
-      right: 0,
     },
     loadingMoreText: {
       textAlign: 'center',

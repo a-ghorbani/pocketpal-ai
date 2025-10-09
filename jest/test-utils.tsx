@@ -15,7 +15,7 @@ import {user as userFixture} from './fixtures';
 import {UserContext} from '../src/utils';
 import type {Theme} from '../src/utils/types';
 
-type CustomRenderOptions = {
+export type CustomRenderOptions = {
   theme?: Theme;
   user?: any;
   withNavigation?: boolean;
@@ -49,21 +49,27 @@ const customRender = (
       withBottomSheetProviderWrapper
     );
 
+    const withPaperProvider = (
+      <PaperProvider theme={theme}>{withNavigationWrapper}</PaperProvider>
+    );
+
     const withSafeAreaWrapper = withSafeArea ? (
-      <SafeAreaProvider>{withNavigationWrapper}</SafeAreaProvider>
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: {x: 0, y: 0, width: 0, height: 0},
+          insets: {top: 0, right: 0, bottom: 0, left: 0},
+        }}>
+        {withPaperProvider}
+      </SafeAreaProvider>
     ) : (
-      withNavigationWrapper
+      withPaperProvider
     );
 
     return (
       <GestureHandlerRootView style={styles.root}>
-        <BottomSheetModalProvider>
-          <PaperProvider theme={theme}>
-            <UserContext.Provider value={user}>
-              {withSafeAreaWrapper}
-            </UserContext.Provider>
-          </PaperProvider>
-        </BottomSheetModalProvider>
+        <UserContext.Provider value={user}>
+          {withSafeAreaWrapper}
+        </UserContext.Provider>
       </GestureHandlerRootView>
     );
   };

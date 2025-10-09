@@ -5,7 +5,11 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+# Log the minimum iOS version
+ios_version = min_ios_version_supported
+Pod::UI.puts "📱 Minimum iOS version supported: #{ios_version}".green
+
+platform :ios, ios_version
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']

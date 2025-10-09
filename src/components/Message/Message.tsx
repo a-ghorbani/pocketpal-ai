@@ -115,7 +115,7 @@ export const Message = React.memo(
 
     const handlePressIn = () => {
       Animated.spring(scaleAnim, {
-        toValue: 1.03,
+        toValue: 1.01,
         friction: 8,
         tension: 100,
         useNativeDriver: true,

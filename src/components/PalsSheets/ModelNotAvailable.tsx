@@ -7,10 +7,18 @@ import {View} from 'react-native';
 import {createStyles} from './styles';
 import {useNavigation} from '@react-navigation/native';
 import {observer} from 'mobx-react';
-import {L10nContext} from '../../utils';
+import {formatBytes, L10nContext} from '../../utils';
 
 export const ModelNotAvailable = observer(
-  ({model, closeSheet}: {model?: Model; closeSheet: () => void}) => {
+  ({
+    model,
+    currentlySelectedModel,
+    closeSheet,
+  }: {
+    model?: Model;
+    currentlySelectedModel?: Model;
+    closeSheet: () => void;
+  }) => {
     const theme = useTheme();
     const navigation = useNavigation<any>();
     const styles = createStyles(theme);
@@ -18,6 +26,11 @@ export const ModelNotAvailable = observer(
 
     const isPalModelDownloaded = modelStore.isModelAvailable(model?.id);
     const defaultModel = modelStore.models.find(m => m.id === model?.id);
+
+    // Check if currently selected model is downloaded (if any)
+    const isCurrentlySelectedModelDownloaded = currentlySelectedModel
+      ? modelStore.isModelAvailable(currentlySelectedModel.id)
+      : false;
 
     const isDownloading = defaultModel
       ? modelStore.isDownloading(defaultModel.id)
@@ -48,7 +61,7 @@ export const ModelNotAvailable = observer(
     if (!hasAnyDownloadedModel && !model) {
       return (
         <View style={styles.modelNotDownloaded}>
-          <Text style={{color: theme.colors.error}}>
+          <Text style={[theme.fonts.bodyMedium, styles.errorMessage]}>
             {l10n.components.modelNotAvailable.noModelsDownloaded}
           </Text>
           <Button onPress={handleNavigateToModels} mode="contained-tonal">
@@ -57,7 +70,15 @@ export const ModelNotAvailable = observer(
         </View>
       );
     }
-    if (model && !isPalModelDownloaded) {
+    // Show warning if:
+    // 1. There's a default model that's not downloaded, AND
+    // 2. Either no model is currently selected OR the currently selected model is not downloaded
+    const shouldShowWarning =
+      model &&
+      !isPalModelDownloaded &&
+      (!currentlySelectedModel || !isCurrentlySelectedModelDownloaded);
+
+    if (shouldShowWarning) {
       return (
         <View style={styles.modelNotDownloaded}>
           {isDownloading ? (
@@ -71,9 +92,25 @@ export const ModelNotAvailable = observer(
               {downloadSpeed && <Paragraph>{downloadSpeed}</Paragraph>}
             </>
           ) : (
-            <Text style={{color: theme.colors.error}}>
-              {l10n.components.modelNotAvailable.defaultModelNotDownloaded}
-            </Text>
+            <View style={styles.errorContainer}>
+              <Text style={[theme.fonts.bodyMedium, styles.errorMessage]}>
+                {l10n.components.modelNotAvailable.defaultModelNotDownloaded}
+              </Text>
+              <View style={styles.recommendedModelContainer}>
+                <Text style={[theme.fonts.labelSmall, styles.recommendedLabel]}>
+                  {l10n.components.modelNotAvailable.recommendedModel}:
+                </Text>
+                <View style={styles.modelDetailsContainer}>
+                  <Text style={[theme.fonts.bodySmall, styles.modelDetails]}>
+                    {model.author && `${model.author}/`}
+                    {model.filename}
+                  </Text>
+                  <Text style={[theme.fonts.bodySmall, styles.modelSize]}>
+                    {formatBytes(model.size)}
+                  </Text>
+                </View>
+              </View>
+            </View>
           )}
 
           <Button

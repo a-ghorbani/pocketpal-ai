@@ -88,6 +88,7 @@ describe('HeaderRight', () => {
             date: new Date().toISOString(),
             messages: [],
             completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal',
           },
         ];
         chatSessionStore.activeSessionId = 'test-session';

@@ -1,7 +1,7 @@
 import React from 'react';
 import {Keyboard} from 'react-native';
 
-import {render, fireEvent, act, waitFor} from '../../../../../jest/test-utils';
+import {render, fireEvent, act} from '../../../../../jest/test-utils';
 
 import {ModelSettings} from '../ModelSettings';
 
@@ -111,31 +111,6 @@ describe('ModelSettings', () => {
     });
 
     expect(mockProps.onChange).toHaveBeenCalledWith('addBosToken', false);
-  });
-
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('opens and closes the template dialog', async () => {
-    const {getByText, queryByText} = render(<ModelSettings {...mockProps} />);
-
-    // Open dialog
-    await act(() => {
-      fireEvent.press(getByText('Edit'));
-    });
-
-    // Wait for dialog to be visible
-    await waitFor(() => {
-      expect(getByText('Close')).toBeTruthy();
-    });
-
-    // Press Close button
-    await act(() => {
-      fireEvent.press(getByText('Close'));
-    });
-
-    // Wait for dialog to be hidden
-    await waitFor(() => {
-      expect(queryByText('Close')).toBeNull();
-    });
   });
 
   it('saves template changes', async () => {

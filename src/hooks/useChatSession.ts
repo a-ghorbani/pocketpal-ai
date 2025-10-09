@@ -7,11 +7,12 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
 import {chatSessionStore, modelStore, palStore, uiStore} from '../store';
-import {createMultimodalWarning} from '../utils/errors';
 
 import {MessageType, User} from '../utils/types';
-import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
+import {createMultimodalWarning} from '../utils/errors';
+import {resolveSystemMessages} from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
+import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
   toApiCompletionParams,
   CompletionParams,
@@ -21,8 +22,7 @@ import {
 const prepareCompletion = async ({
   imageUris,
   message,
-  getSystemMessage,
-  activeSession,
+  systemMessages,
   context,
   assistant,
   conversationIdRef,
@@ -32,8 +32,7 @@ const prepareCompletion = async ({
 }: {
   imageUris: string[];
   message: MessageType.PartialText;
-  getSystemMessage: () => any[];
-  activeSession: any;
+  systemMessages: Array<{role: 'system'; content: string}>;
   context: any;
   assistant: User;
   conversationIdRef: string;
@@ -41,7 +40,8 @@ const prepareCompletion = async ({
   l10n: any;
   currentMessages: MessageType.Any[];
 }) => {
-  const sessionCompletionSettings = toJS(activeSession?.completionSettings);
+  const sessionCompletionSettings =
+    await chatSessionStore.getCurrentCompletionSettings();
   const stopWords = toJS(modelStore.activeModel?.stopWords);
 
   // Create user message content - always start with text
@@ -71,8 +71,7 @@ const prepareCompletion = async ({
     );
   }
 
-  // Get system messages and convert chat session messages to llama.rn format
-  const systemMessages = getSystemMessage();
+  // Convert chat session messages to llama.rn format
   let chatMessages = convertToChatMessages(
     currentMessages.filter(msg => msg.type !== 'image'),
     isMultimodalEnabled,
@@ -279,14 +278,14 @@ export const useChatSession = (
   };
 
   const handleSendPress = async (message: MessageType.PartialText) => {
-    // Extract imageUris from the message object
-    const imageUris = message.imageUris;
     const context = modelStore.context;
     if (!context) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
       return;
     }
 
+    // Extract imageUris from the message object
+    const imageUris = message.imageUris;
     // Check if we have images in the current message
     const hasImages = imageUris && imageUris.length > 0;
 
@@ -327,46 +326,22 @@ export const useChatSession = (
     const activeSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
-    let systemPrompt = '';
-    if (activeSession?.activePalId) {
-      const pal = palStore.pals.find(p => p.id === activeSession.activePalId);
-      if (pal?.systemPrompt) {
-        systemPrompt = pal.systemPrompt;
-      }
-    }
 
-    const getSystemMessage = () => {
-      // If no system prompt is available at all, return empty array
-      if (
-        !systemPrompt &&
-        !modelStore.activeModel?.chatTemplate?.systemPrompt?.trim()
-      ) {
-        return [];
-      }
+    // Resolve system messages using utility function
+    const pal = activeSession?.activePalId
+      ? palStore.pals.find(p => p.id === activeSession.activePalId)
+      : null;
 
-      // Prefer custom system prompt, fall back to template's system prompt
-      const finalSystemPrompt =
-        systemPrompt ||
-        modelStore.activeModel?.chatTemplate?.systemPrompt ||
-        '';
-
-      if (finalSystemPrompt?.trim() === '') {
-        return [];
-      }
-      return [
-        {
-          role: 'system' as 'system',
-          content: finalSystemPrompt,
-        },
-      ];
-    };
+    const systemMessages = resolveSystemMessages({
+      pal,
+      model: modelStore.activeModel,
+    });
 
     // Prepare completion parameters and create message record
     const {cleanCompletionParams, messageInfo} = await prepareCompletion({
       imageUris: imageUris || [],
       message,
-      getSystemMessage,
-      activeSession,
+      systemMessages,
       context,
       assistant,
       conversationIdRef: conversationIdRef.current,

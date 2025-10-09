@@ -1,9 +1,16 @@
 import React from 'react';
 import {Alert, Linking, Platform} from 'react-native';
-import {render, fireEvent, act} from '../../../../jest/test-utils';
+import {
+  render as baseRender,
+  fireEvent,
+  act,
+} from '../../../../jest/test-utils';
 import {AboutScreen} from '../AboutScreen';
 import {submitFeedback} from '../../../api/feedback';
 import {l10n} from '../../../utils/l10n';
+
+const render = (ui: React.ReactElement, options: any = {}) =>
+  baseRender(ui, {withBottomSheetProvider: true, ...options});
 
 // Mock DeviceInfo
 jest.mock('react-native-device-info', () => ({

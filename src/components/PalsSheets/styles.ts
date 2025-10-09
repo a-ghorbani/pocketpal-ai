@@ -42,11 +42,40 @@ export const createStyles = (theme: Theme) =>
       gap: theme.spacing.default,
     },
     modelNotDownloaded: {
-      gap: 10,
+      gap: 12,
     },
     progressBar: {
       height: 8,
       borderRadius: 5,
+    },
+    errorContainer: {
+      gap: 12,
+    },
+    errorMessage: {
+      color: theme.colors.error,
+      lineHeight: 20,
+    },
+    recommendedModelContainer: {
+      gap: 6,
+      paddingLeft: 4,
+    },
+    recommendedLabel: {
+      color: theme.colors.onSurfaceVariant,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    modelDetailsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    modelDetails: {
+      color: theme.colors.onSurface,
+      flex: 1,
+    },
+    modelSize: {
+      color: theme.colors.onSurfaceVariant,
+      fontWeight: '500',
     },
     field: {
       gap: 4,
@@ -133,5 +162,40 @@ export const createStyles = (theme: Theme) =>
     modelDescription: {
       ...theme.fonts.bodySmall,
       color: theme.colors.onSurfaceVariant,
+    },
+    renderedPromptContainer: {
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: theme.borders.default,
+      padding: theme.spacing.default,
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.outline,
+    },
+    renderedPromptText: {
+      ...theme.fonts.bodyMedium,
+      color: theme.colors.onSurfaceVariant,
+      lineHeight: 20,
+    },
+    templateModeHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    toggleButton: {
+      margin: 0,
+    },
+    resetOptionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      gap: 8,
+      marginTop: 8,
+    },
+    generationSettingsSection: {
+      paddingHorizontal: theme.spacing.default,
+      marginBottom: theme.spacing.default,
+    },
+    generationSettingsButton: {
+      marginTop: 8,
     },
   });

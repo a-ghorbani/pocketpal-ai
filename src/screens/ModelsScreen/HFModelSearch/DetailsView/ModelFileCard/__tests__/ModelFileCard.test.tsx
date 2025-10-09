@@ -1,7 +1,11 @@
 import React from 'react';
 import {Alert} from 'react-native';
 
-import {render, fireEvent, act} from '../../../../../../../jest/test-utils';
+import {
+  render as baseRender,
+  fireEvent,
+  act,
+} from '../../../../../../../jest/test-utils';
 import {
   hfModel1,
   createModel,
@@ -14,6 +18,9 @@ import {ModelFileCard} from '../ModelFileCard';
 import {downloadManager} from '../../../../../../services/downloads';
 
 import {modelStore} from '../../../../../../store';
+
+const render = (ui: React.ReactElement, options: any = {}) =>
+  baseRender(ui, {withBottomSheetProvider: true, ...options});
 
 describe('ModelFileCard', () => {
   const mockModelFile = {

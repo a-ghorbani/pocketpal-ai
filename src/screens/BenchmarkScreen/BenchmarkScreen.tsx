@@ -162,13 +162,15 @@ export const BenchmarkScreen: React.FC = observer(() => {
         }
       }, 1000);
 
-      const {modelDesc, modelSize, modelNParams, ppAvg, ppStd, tgAvg, tgStd} =
-        await modelStore.context.bench(
-          selectedConfig.pp,
-          selectedConfig.tg,
-          selectedConfig.pl,
-          selectedConfig.nr,
-        );
+      const {speedPp: ppAvg, speedTg: tgAvg} = await modelStore.context.bench(
+        selectedConfig.pp,
+        selectedConfig.tg,
+        selectedConfig.pl,
+        selectedConfig.nr,
+      );
+      const modelDesc = modelStore.context.model.desc;
+      const modelSize = modelStore.context.model.size;
+      const modelNParams = modelStore.context.model.nParams;
 
       const wallTimeMs = Date.now() - startTime;
 
@@ -178,9 +180,9 @@ export const BenchmarkScreen: React.FC = observer(() => {
         modelSize,
         modelNParams,
         ppAvg,
-        ppStd,
+        ppStd: 0,
         tgAvg,
-        tgStd,
+        tgStd: 0,
         timestamp: new Date().toISOString(),
         modelId: modelStore.activeModel.id,
         modelName: modelStore.activeModel.name,

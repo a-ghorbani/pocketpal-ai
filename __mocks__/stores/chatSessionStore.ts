@@ -1,11 +1,36 @@
 import {sessionFixtures} from '../../jest/fixtures/chatSessions';
-import {defaultCompletionSettings} from '../../src/store/ChatSessionStore';
+
+// Mock defaultCompletionSettings to avoid circular imports
+// This should match the actual defaultCompletionSettings from ChatSessionStore
+export const mockDefaultCompletionSettings = {
+  version: 3,
+  include_thinking_in_context: true,
+  n_predict: 1024,
+  temperature: 0.7,
+  top_k: 40,
+  top_p: 0.95,
+  min_p: 0.05,
+  xtc_threshold: 0.1,
+  xtc_probability: 0.0,
+  typical_p: 1.0,
+  penalty_last_n: 64,
+  penalty_repeat: 1.0,
+  penalty_freq: 0.0,
+  penalty_present: 0.0,
+  mirostat: 0,
+  mirostat_tau: 5,
+  mirostat_eta: 0.1,
+  seed: -1,
+  n_probs: 0,
+  jinja: true,
+  enable_thinking: true,
+};
 
 export const mockChatSessionStore = {
   sessions: sessionFixtures,
   //currentSessionMessages: [],
   activeSessionId: 'session-1',
-  newChatCompletionSettings: defaultCompletionSettings,
+  newChatCompletionSettings: mockDefaultCompletionSettings,
   isMigrating: false,
   migrationComplete: true,
   loadSessionList: jest.fn().mockResolvedValue(undefined),
@@ -34,6 +59,12 @@ export const mockChatSessionStore = {
   setNewChatCompletionSettings: jest.fn().mockResolvedValue(undefined),
   resetNewChatCompletionSettings: jest.fn().mockResolvedValue(undefined),
   setActivePal: jest.fn().mockResolvedValue(undefined),
+  resolveCompletionSettings: jest
+    .fn()
+    .mockResolvedValue(mockDefaultCompletionSettings),
+  getCurrentCompletionSettings: jest
+    .fn()
+    .mockResolvedValue(mockDefaultCompletionSettings),
   dateGroupNames: {
     today: 'Today',
     yesterday: 'Yesterday',

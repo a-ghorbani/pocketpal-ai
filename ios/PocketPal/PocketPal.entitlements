@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		Keychain Access Groups: Required for Supabase authentication session persistence
+
+		This entitlement allows the app to store and retrieve authentication tokens
+		securely in the iOS Keychain. Without this, Supabase sessions won't persist
+		across app restarts, requiring users to sign in every time they open the app.
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)ai.pocketpal</string>
+	</array>
+</dict>
+</plist>

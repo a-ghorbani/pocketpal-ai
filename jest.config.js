@@ -23,7 +23,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   setupFiles: ['./jest/setup.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller)/)',
+    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines)/)',
   ],
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',
@@ -65,11 +65,15 @@ module.exports = {
       '<rootDir>/__mocks__/external/@nozbe/watermelondb/Model.js',
     '@nozbe/simdjson': '<rootDir>/__mocks__/external/@nozbe/simdjson.js',
     '@nozbe/sqlite': '<rootDir>/__mocks__/external/@nozbe/sqlite.js',
-    '../database': '<rootDir>/__mocks__/database.js',
     'mobx-persist-store': '<rootDir>/__mocks__/external/mobx-persist-store.js',
     'react-native-image-picker':
       '<rootDir>/__mocks__/external/react-native-image-picker.js',
     'react-native-vision-camera':
       '<rootDir>/__mocks__/external/react-native-vision-camera.ts',
+    '@react-native-google-signin/google-signin':
+      '<rootDir>/__mocks__/external/@react-native-google-signin/google-signin.ts',
+    'react-native-code-highlighter':
+      '<rootDir>/__mocks__/external/react-native-code-highlighter.js',
+    '@env': '<rootDir>/__mocks__/external/@env.js',
   },
 };

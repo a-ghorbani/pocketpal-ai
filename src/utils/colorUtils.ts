@@ -2,6 +2,11 @@
  * Converts a hex color to RGBA
  */
 export const hexToRGBA = (hex: string, alpha: number = 1): string => {
+  // Safety check for undefined hex
+  if (!hex || typeof hex !== 'string') {
+    return `rgba(0, 0, 0, ${alpha})`; // Default to black
+  }
+
   // Remove the hash if it exists
   hex = hex.replace('#', '');
 
@@ -18,6 +23,11 @@ export const hexToRGBA = (hex: string, alpha: number = 1): string => {
  * Applies opacity to a color (works with both hex and rgba)
  */
 export const withOpacity = (color: string, opacity: number): string => {
+  // Safety check for undefined color
+  if (!color || typeof color !== 'string') {
+    return `rgba(0, 0, 0, ${opacity})`; // Default to black with opacity
+  }
+
   if (color.startsWith('rgba')) {
     // If it's already rgba, just modify the opacity
     return color.replace(/[\d.]+\)$/g, `${opacity})`);
@@ -29,6 +39,11 @@ export const withOpacity = (color: string, opacity: number): string => {
  * Determines if a color is light or dark
  */
 export const isLightColor = (color: string): boolean => {
+  // Safety check for undefined color
+  if (!color || typeof color !== 'string') {
+    return true; // Default to light for undefined colors
+  }
+
   let r: number, g: number, b: number;
 
   if (color.startsWith('#')) {
@@ -55,6 +70,10 @@ export const isLightColor = (color: string): boolean => {
  * Gets a contrasting color (black or white) based on background
  */
 export const getContrastColor = (backgroundColor: string): string => {
+  // Safety check for undefined backgroundColor
+  if (!backgroundColor || typeof backgroundColor !== 'string') {
+    return '#FFFFFF'; // Default to white for undefined backgrounds
+  }
   return isLightColor(backgroundColor) ? '#000000' : '#FFFFFF';
 };
 

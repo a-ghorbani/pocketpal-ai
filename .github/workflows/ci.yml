@@ -31,7 +31,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install Yarn
         run: npm install -g yarn
@@ -133,6 +133,16 @@ jobs:
       - name: Install dependencies
         run: yarn install
       
+      - name: Create Env.xcconfig
+        run: |
+          cat > ios/Config/Env.xcconfig << 'EOL'
+          // This file contains environment-specific build settings.
+
+          GOOGLE_WEB_CLIENT_ID = "" 
+          REVERSED_GOOGLE_IOS_CLIENT_ID = "" 
+
+          EOL
+
       - name: Install CocoaPods dependencies
         run: |
           cd ios

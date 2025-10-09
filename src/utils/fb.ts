@@ -11,6 +11,17 @@ export const initializeAppCheck = () => {
   }
 
   try {
+    // Skip App Check initialization if debug tokens are not configured in dev mode
+    if (
+      __DEV__ &&
+      (!APPCHECK_DEBUG_TOKEN_ANDROID || !APPCHECK_DEBUG_TOKEN_IOS)
+    ) {
+      console.warn(
+        'Firebase App Check debug tokens not configured - skipping initialization in dev mode',
+      );
+      return;
+    }
+
     const rnfbProvider = firebase
       .appCheck()
       .newReactNativeFirebaseAppCheckProvider();

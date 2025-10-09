@@ -40,6 +40,17 @@ export const l10n = {
       metalDescription: "Apple's hardware-accelerated API.",
       metalRequiresNewerIOS:
         'Metal acceleration requires iOS 18 or higher. Please upgrade your device to use this feature.',
+      // OpenCL Settings
+      openCL: 'OpenCL (Experimental)',
+      openCLDescription:
+        'GPU acceleration for Adreno GPUs. Faster prompt processing, but generation may not always be faster.',
+      openCLNotAvailable:
+        'OpenCL is not available on this device. Requires Adreno GPU with i8mm and dotprod CPU features.',
+      openCLMissingCPUFeatures:
+        'OpenCL requires i8mm and dotprod CPU features, which are not available on this device.',
+      openCLQuantizationNote:
+        'Note: Pure Q4_0 quantized models perform best with OpenCL.',
+      openCLDocsLink: 'See llama.cpp OpenCL docs for details.',
       layersOnGPU: 'Layers on GPU: {{gpuLayers}}',
       // Context Size
       contextSize: 'Context Size',
@@ -294,6 +305,22 @@ export const l10n = {
         modelUpdatedJustNowLong: 'Updated just now',
         modelUpdatedJustNowShort: 'just now',
         errorOccurred: 'Unable to load models. Please try again.',
+        // Enhanced search filters
+        filters: {
+          author: 'Author',
+          authorPlaceholder: 'Filter by author...',
+
+          sortBy: 'Sort by',
+          clearFilters: 'Clear Filters',
+          showFilters: 'Show Filters',
+          hideFilters: 'Hide Filters',
+
+          // Sort options
+          sortRelevance: 'Relevance',
+          sortDownloads: 'Downloads',
+          sortRecent: 'Recently Updated',
+          sortLikes: 'Most Liked',
+        },
       },
       modelCard: {
         alerts: {
@@ -313,6 +340,33 @@ export const l10n = {
         },
         labels: {
           skills: 'Skills: ',
+          vision: 'Vision',
+          capabilities: 'capabilities.',
+          modelName: 'Model Name',
+          contextLength: 'Context Length',
+          architecture: 'Architecture',
+          author: 'Author',
+          requiresProjectionModel: 'Requires projection model',
+          downloadProjectionModel: 'Download projection model',
+          viewModelCardOnHuggingFace: 'View Model Card on Hugging Face',
+        },
+        accessibility: {
+          expandDetails: 'Expand details',
+          collapseDetails: 'Collapse details',
+          memoryWarning: 'Memory warning',
+          integrityWarning: 'Integrity warning',
+          downloadProgress: 'Download progress',
+          loadingIndicator: 'Loading',
+          loadButton: 'Load model',
+          offloadButton: 'Offload model',
+          downloadButton: 'Download model',
+          settingsButton: 'Model settings',
+          deleteButton: 'Delete model',
+          removeButton: 'Remove model',
+          expandDetailsButton: 'Expand model details',
+          memoryWarningButton: 'Show memory warning details',
+          integrityWarningButton: 'Show integrity warning details',
+          memoryWarningSnackbar: 'Memory warning notification',
         },
       },
       modelSettings: {
@@ -575,6 +629,24 @@ export const l10n = {
           title: 'Success',
           message: 'These settings will be applied to all future sessions',
         },
+        palSettings: 'Pal Settings',
+        settingsSource: 'Settings Source',
+      },
+      palGenerationSettingsSheet: {
+        title: (palName: string) => `Generation Settings - ${palName}`,
+        invalidValues: 'Invalid Values',
+        invalidNumericValuesMessage: 'Must be a valid number',
+        pleaseCorrect: 'Please correct the following:',
+        ok: 'OK',
+        error: 'Error',
+        failedToSave: 'Failed to save pal settings',
+        resetToGlobal: 'Reset to Global Defaults',
+        resetToSystem: 'Reset to System Defaults',
+        clearPalSettings: 'Clear Pal Settings',
+        customSettingsFor: (palName: string) =>
+          `Custom settings for ${palName}`,
+        inheritedSettingsFor: (palName: string) =>
+          `Inherited settings for ${palName}`,
       },
       chatHeaderTitle: {
         defaultTitle: 'Chat',
@@ -684,6 +756,25 @@ export const l10n = {
         proceedWithReset: 'Proceed with Reset',
         confirmReset: 'Confirm Reset',
       },
+      palSheet: {
+        title: {
+          edit: 'Edit Pal',
+          newPal: 'New Pal',
+          newVideoPal: 'New Video Pal',
+        },
+        description: 'Description',
+        descriptionPlaceholder: 'Enter a brief description of your pal',
+        parameters: 'Parameters',
+        generationSettings: 'Generation Settings',
+        configureGenerationSettings: 'Configure Generation Settings',
+        validation: {
+          nameRequired: 'Name is required',
+          generatingPromptRequired:
+            'Generating prompt is required when using AI prompt',
+          promptModelRequired:
+            'Prompt generation model is required when using AI prompt',
+        },
+      },
       assistantPalSheet: {
         title: {
           create: 'Create Assistant Pal',
@@ -704,7 +795,9 @@ export const l10n = {
           'You do not have any models downloaded yet. Please download a model first.',
         downloadAModel: 'Download a model',
         defaultModelNotDownloaded:
-          'Default model is not downloaded yet. Please download it first.',
+          'This pal recommends a specific model that needs to be downloaded, or you can select a different model.',
+        modelNotDownloadedShort: 'Model not downloaded',
+        recommendedModel: 'Recommended Model',
         cancelDownload: 'Cancel download',
         download: 'Download',
       },
@@ -761,17 +854,20 @@ export const l10n = {
         useAIPrompt: 'Use AI to generate system prompt',
         modelSelector: {
           label: 'Select Model for Generation*',
-          sublabel: 'Recommended: Llama 3.2 3B or Qwen2.5 3B.',
+          sublabel: 'Recommended: Llama 3.2 3B or Qwen3 4B Instruct 2507.',
           placeholder: 'Select model',
         },
         generatingPrompt: {
-          label: 'Generating Prompt',
-          placeholder: 'Enter prompt for generation',
+          label: 'Purpose & Context',
+          placeholder:
+            'Describe the role, purpose, or scenario for this pal...',
         },
         buttons: {
           loadingModel: 'Loading model...',
           stopGenerating: 'Stop Generating',
           generatePrompt: 'Generate System Prompt',
+          resetParameters: 'Reset Parameters',
+          resetTemplate: 'Reset Template',
         },
         systemPrompt: {
           label: 'System Prompt',
@@ -833,6 +929,12 @@ export const l10n = {
       },
     },
     palsScreen: {
+      // Section Titles
+      sectionTitles: {
+        myPalsLocal: 'My Pals (local)',
+        myLibrary: 'My Library (palshub.ai)',
+        discoverPals: 'Discover Pals (palshub.ai)',
+      },
       systemPrompt: 'System Prompt',
       videoAnalysis: 'Video Analysis',
       videoAnalysisDescription:
@@ -852,6 +954,74 @@ export const l10n = {
       missingModel: 'Missing Model',
       missingModelMessage:
         'The default model "{{modelName}}" for this pal is not available. Please download it in the edit sheet or select a different model.',
+      // Bottom Action Bar
+      search: 'Search',
+      profile: 'Profile',
+      signIn: 'Sign In',
+      addPal: 'Add Pal',
+      // Compact Auth Bar
+      signInToAccessLibrary: 'Sign in to access your library from palshub.ai',
+      // Profile Sheet
+      signOut: 'Sign Out',
+      signOutConfirmation: 'Are you sure you want to sign out?',
+      signOutError: 'Failed to sign out. Please try again.',
+      account: 'Account',
+      signInToPalsHub: 'Sign In to PalsHub',
+      signInDescription:
+        'Access your library, create private Pals, and sync across devices',
+      // Search
+      searchAllPals: 'Search all Pals...',
+      // Pal Card Actions
+      deletePalConfirmation: 'Are you sure you want to delete "{{palName}}"?',
+      // Filter Labels
+      filters: {
+        all: 'All',
+        myPals: 'My Pals',
+        local: 'Local',
+        video: 'Video',
+        free: 'Free',
+        premium: 'Premium',
+      },
+      // Display Labels
+      labels: {
+        free: 'Free',
+        premium: 'Premium',
+        private: 'Private',
+        download: 'Download',
+        getFree: 'Get Free',
+      },
+      // Descriptions
+      premiumPalDescription: 'Premium pal from the palshub.ai community',
+      premiumInfoText: 'Visit palshub.ai to explore more pals',
+      // Sort Options
+      sortOptions: {
+        newest: 'Newest',
+        oldest: 'Oldest',
+        rating: 'Highest Rated',
+        popular: 'Most Popular',
+      },
+      // Pal Detail Sheet
+      palDetailSheet: {
+        by: 'by',
+        unknown: 'Unknown',
+        rating: 'Rating',
+        reviews: 'Reviews',
+        created: 'Created',
+        description: 'Description',
+        noDescriptionAvailable: 'No description available.',
+        categories: 'Categories',
+        tags: 'Tags',
+        systemPrompt: 'System Prompt',
+        downloaded: 'Downloaded',
+        success: 'Success',
+        palAddedToCollection: 'Pal has been added to your collection!',
+        error: 'Error',
+        failedToLoadDetails: 'Failed to load pal details',
+        failedToDownload: 'Failed to download pal',
+        premiumPalMessage:
+          "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
+        notAvailable: 'N/A',
+      },
     },
     validation: {
       nameRequired: 'Name is required',
@@ -1029,6 +1199,7 @@ export const l10n = {
         sections: {
           basicInfo: 'Basic Info',
           cpuDetails: 'CPU Details',
+          gpuDetails: 'GPU Details',
           appInfo: 'App Info',
         },
         fields: {
@@ -1040,6 +1211,12 @@ export const l10n = {
           chipset: 'Chipset',
           instructions: 'Instructions',
           version: 'Version',
+          gpuType: 'GPU Type',
+          gpuRenderer: 'Renderer',
+          gpuVendor: 'Vendor',
+          metalSupport: 'Metal Support',
+          openclSupport: 'OpenCL Support',
+          openclRequirement: 'Requires i8mm & dotprod',
         },
         instructions: {
           format:
@@ -1122,6 +1299,17 @@ export const l10n = {
       metalDescription: 'Appleのハードウェア加速API',
       metalRequiresNewerIOS:
         'Metal加速機能にはiOS 18以上が必要です、この機能を利用するにはデバイスを更新してください',
+      // OpenCL Settings
+      openCL: 'OpenCL（実験的）',
+      openCLDescription:
+        'Adreno GPU向けのGPU加速。プロンプト処理は高速化されますが、生成速度は必ずしも速くなりません。',
+      openCLNotAvailable:
+        'このデバイスではOpenCLを利用できません。i8mmとdotprodのCPU機能を備えたAdreno GPUが必要です。',
+      openCLMissingCPUFeatures:
+        'OpenCLにはi8mmとdotprodのCPU機能が必要ですが、このデバイスでは利用できません。',
+      openCLQuantizationNote:
+        '注：純粋なQ4_0量子化モデルがOpenCLで最高のパフォーマンスを発揮します。',
+      openCLDocsLink: '詳細はllama.cpp OpenCLドキュメントをご覧ください。',
       layersOnGPU: 'GPUレイヤー：{{gpuLayers}}',
       // Context Size
       contextSize: 'コンテキストサイズ',
@@ -1377,6 +1565,22 @@ export const l10n = {
         modelUpdatedJustNowLong: 'たった今更新',
         modelUpdatedJustNowShort: 'たった今',
         errorOccurred: 'モデルを読み込めませんでした、もう一度お試しください',
+        // Enhanced search filters
+        filters: {
+          author: '作者',
+          authorPlaceholder: '作者でフィルタ...',
+
+          sortBy: '並び順',
+          clearFilters: 'フィルタをクリア',
+          showFilters: 'フィルタを表示',
+          hideFilters: 'フィルタを非表示',
+
+          // Sort options
+          sortRelevance: '関連度',
+          sortDownloads: 'ダウンロード数',
+          sortRecent: '最近更新',
+          sortLikes: 'いいね数',
+        },
       },
       modelCard: {
         alerts: {
@@ -1395,6 +1599,33 @@ export const l10n = {
         },
         labels: {
           skills: 'スキル: ',
+          vision: 'ビジョン',
+          capabilities: '機能。',
+          modelName: 'モデル名',
+          contextLength: 'コンテキスト長',
+          architecture: 'アーキテクチャ',
+          author: '作者',
+          requiresProjectionModel: '投影モデルが必要',
+          downloadProjectionModel: '投影モデルをダウンロード',
+          viewModelCardOnHuggingFace: 'Hugging Faceでモデルカードを表示',
+        },
+        accessibility: {
+          expandDetails: '詳細を展開',
+          collapseDetails: '詳細を折りたたむ',
+          memoryWarning: 'メモリ警告',
+          integrityWarning: '整合性警告',
+          downloadProgress: 'ダウンロード進行状況',
+          loadingIndicator: '読み込み中',
+          loadButton: 'モデルを読み込む',
+          offloadButton: 'モデルをアンロード',
+          downloadButton: 'モデルをダウンロード',
+          settingsButton: 'モデル設定',
+          deleteButton: 'モデルを削除',
+          removeButton: 'モデルを削除',
+          expandDetailsButton: 'モデル詳細を展開',
+          memoryWarningButton: 'メモリ警告詳細を表示',
+          integrityWarningButton: '整合性警告詳細を表示',
+          memoryWarningSnackbar: 'メモリ警告通知',
         },
       },
       modelSettings: {
@@ -1659,6 +1890,22 @@ export const l10n = {
           title: '保存完了',
           message: 'これらの設定は今後すべてのセッションに適用されます',
         },
+        palSettings: 'Pal設定',
+        settingsSource: '設定ソース',
+      },
+      palGenerationSettingsSheet: {
+        title: (palName: string) => `生成設定 - ${palName}`,
+        invalidValues: '無効な値',
+        invalidNumericValuesMessage: '有効な数値を入力してください',
+        pleaseCorrect: '以下を修正してください：',
+        ok: 'OK',
+        error: 'エラー',
+        failedToSave: 'Pal設定の保存に失敗しました',
+        resetToGlobal: 'グローバル設定に戻す',
+        resetToSystem: 'システム設定に戻す',
+        clearPalSettings: 'Pal設定をクリア',
+        customSettingsFor: (palName: string) => `${palName}のカスタム設定`,
+        inheritedSettingsFor: (palName: string) => `${palName}の継承設定`,
       },
       chatHeaderTitle: {
         defaultTitle: 'チャット',
@@ -1768,6 +2015,25 @@ export const l10n = {
         proceedWithReset: 'リセットする',
         confirmReset: 'リセットの確認',
       },
+      palSheet: {
+        title: {
+          edit: 'アシスタントを編集',
+          newPal: '新しいアシスタント',
+          newVideoPal: '新しいビデオアシスタント',
+        },
+        description: '説明',
+        descriptionPlaceholder: 'アシスタントの簡単な説明を入力',
+        parameters: 'パラメータ',
+        generationSettings: '生成設定',
+        configureGenerationSettings: '生成設定を構成',
+        validation: {
+          nameRequired: '名前は必須です',
+          generatingPromptRequired:
+            'AIプロンプトを使用する場合、生成プロンプトが必要です',
+          promptModelRequired:
+            'AIプロンプトを使用する場合、プロンプト生成モデルが必要です',
+        },
+      },
       assistantPalSheet: {
         title: {
           create: 'アシスタントを作成',
@@ -1788,7 +2054,9 @@ export const l10n = {
           'モデルがダウンロードされていません、先にモデルをダウンロードしてください',
         downloadAModel: 'モデルをダウンロード',
         defaultModelNotDownloaded:
-          'デフォルトモデルがダウンロードされていません、先にダウンロードしてください',
+          'このパルは特定のモデルを推奨していますが、ダウンロードが必要です。または別のモデルを選択できます',
+        modelNotDownloadedShort: 'モデル未ダウンロード',
+        recommendedModel: '推奨モデル',
         cancelDownload: 'キャンセル',
         download: 'ダウンロード',
       },
@@ -1844,17 +2112,19 @@ export const l10n = {
         useAIPrompt: 'AIを使用してシステムプロンプトを生成する',
         modelSelector: {
           label: '生成用モデルを選択*',
-          sublabel: '推奨: Llama 3.2 3B または Qwen2.5 3B.',
+          sublabel: '推奨: Llama 3.2 3B または Qwen3 4B Instruct 2507.',
           placeholder: 'モデルを選択',
         },
         generatingPrompt: {
-          label: '生成プロンプト',
-          placeholder: '生成用のプロンプトを入力',
+          label: '目的とコンテキスト',
+          placeholder: 'このPalの役割、目的、シナリオを説明してください...',
         },
         buttons: {
           loadingModel: 'モデルを読み込み中...',
           stopGenerating: '生成を停止',
           generatePrompt: 'システムプロンプトを生成',
+          resetParameters: 'パラメータをリセット',
+          resetTemplate: 'テンプレートをリセット',
         },
         systemPrompt: {
           label: 'システムプロンプト',
@@ -1916,6 +2186,12 @@ export const l10n = {
       },
     },
     palsScreen: {
+      // Section Titles
+      sectionTitles: {
+        myPalsLocal: 'マイアシスタント (ローカル)',
+        myLibrary: 'マイライブラリ (palshub.ai)',
+        discoverPals: 'アシスタントを探す (palshub.ai)',
+      },
       systemPrompt: 'システムプロンプト',
       videoAnalysis: '動画解析',
       videoAnalysisDescription:
@@ -1930,11 +2206,81 @@ export const l10n = {
       assistant: 'アシスタント',
       roleplay: 'ロールプレイ',
       video: '動画',
-      deletePal: 'アシスタントを削除',
-      deletePalMessage: 'このアシスタントを削除してもよろしいですか？',
+      deletePal: 'Palを削除',
+      deletePalMessage: 'このPalを削除してもよろしいですか？',
       missingModel: 'モデルが見つかりません',
       missingModelMessage:
-        'このアシスタントのデフォルトモデル「{{modelName}}」が利用できません、編集シートでダウンロードするか、別のモデルを選択してください',
+        'このPalのデフォルトモデル「{{modelName}}」が利用できません、編集シートでダウンロードするか、別のモデルを選択してください',
+      // Bottom Action Bar
+      search: '検索',
+      profile: 'プロフィール',
+      signIn: 'サインイン',
+      addPal: 'Palを追加',
+      // Compact Auth Bar
+      signInToAccessLibrary:
+        'palshub.aiのライブラリにアクセスするにはサインインしてください',
+      // Profile Sheet
+      signOut: 'サインアウト',
+      signOutConfirmation: 'サインアウトしてもよろしいですか？',
+      signOutError: 'サインアウトに失敗しました。もう一度お試しください。',
+      account: 'アカウント',
+      signInToPalsHub: 'PalsHubにサインイン',
+      signInDescription:
+        'ライブラリにアクセスし、プライベートPalを作成し、デバイス間で同期',
+      // Search
+      searchAllPals: 'すべてのPalを検索...',
+      // Pal Card Actions
+      deletePalConfirmation: '「{{palName}}」を削除してもよろしいですか？',
+      // Filter Labels
+      filters: {
+        all: 'すべて',
+        myPals: 'マイPal',
+        local: 'ローカル',
+        video: '動画',
+        free: '無料',
+        premium: 'プレミアム',
+      },
+      // Display Labels
+      labels: {
+        free: '無料',
+        premium: 'プレミアム',
+        private: 'プライベート',
+        download: 'ダウンロード',
+        getFree: '無料で入手',
+      },
+      // Descriptions
+      premiumPalDescription: 'palshub.aiコミュニティのプレミアムPal',
+      premiumInfoText:
+        'アプリ外でpalshub.aiにアクセスして、より多くのPalを探索',
+      // Sort Options
+      sortOptions: {
+        newest: '新着順',
+        oldest: '古い順',
+        rating: '評価順',
+        popular: '人気順',
+      },
+      // Pal Detail Sheet
+      palDetailSheet: {
+        by: 'by',
+        unknown: '不明',
+        rating: '評価',
+        reviews: 'レビュー',
+        created: '作成日',
+        description: '説明',
+        noDescriptionAvailable: '説明がありません。',
+        categories: 'カテゴリ',
+        tags: 'タグ',
+        systemPrompt: 'システムプロンプト',
+        downloaded: 'ダウンロード済み',
+        success: '成功',
+        palAddedToCollection: 'Palがコレクションに追加されました！',
+        error: 'エラー',
+        failedToLoadDetails: 'Palの詳細の読み込みに失敗しました',
+        failedToDownload: 'Palのダウンロードに失敗しました',
+        premiumPalMessage:
+          'これはプレミアムPalです。\n• Palshubアカウントで既にアンロックしている場合は、サインインして詳細にアクセスしてください。\n• まだアンロックしていない場合は、palshub.aiアプリにアクセスして詳細をご確認ください。',
+        notAvailable: 'N/A',
+      },
     },
     validation: {
       nameRequired: '名前を入力してください',
@@ -2115,6 +2461,7 @@ export const l10n = {
         sections: {
           basicInfo: '基本情報',
           cpuDetails: 'CPU詳細',
+          gpuDetails: 'GPU詳細',
           appInfo: 'アプリ情報',
         },
         fields: {
@@ -2126,6 +2473,12 @@ export const l10n = {
           chipset: 'チップセット',
           instructions: '命令セット',
           version: 'バージョン',
+          gpuType: 'GPUタイプ',
+          gpuRenderer: 'レンダラー',
+          gpuVendor: 'ベンダー',
+          metalSupport: 'Metalサポート',
+          openclSupport: 'OpenCLサポート',
+          openclRequirement: 'i8mmとdotprodが必要',
         },
         instructions: {
           format:
@@ -2210,6 +2563,16 @@ export const l10n = {
       metalDescription: 'Apple的硬件加速API',
       metalRequiresNewerIOS:
         'Metal加速需要iOS 18或更高版本，请升级设备以使用此功能',
+      // OpenCL Settings
+      openCL: 'OpenCL（实验性）',
+      openCLDescription:
+        'Adreno GPU的GPU加速。提示处理更快，但生成速度不一定更快。',
+      openCLNotAvailable:
+        '此设备不支持OpenCL。需要具有i8mm和dotprod CPU功能的Adreno GPU。',
+      openCLMissingCPUFeatures:
+        'OpenCL需要i8mm和dotprod CPU功能，但此设备不支持。',
+      openCLQuantizationNote: '注意：纯Q4_0量化模型在OpenCL上性能最佳。',
+      openCLDocsLink: '详情请参阅llama.cpp OpenCL文档。',
       layersOnGPU: 'GPU层数：{{gpuLayers}}',
       // Context Size
       contextSize: '上下文长度',
@@ -2442,6 +2805,22 @@ export const l10n = {
         modelUpdatedJustNowLong: '刚刚更新',
         modelUpdatedJustNowShort: '刚刚',
         errorOccurred: '无法加载模型，请重试',
+        // Enhanced search filters
+        filters: {
+          author: '作者',
+          authorPlaceholder: '按作者筛选...',
+
+          sortBy: '排序',
+          clearFilters: '清除筛选',
+          showFilters: '显示筛选',
+          hideFilters: '隐藏筛选',
+
+          // Sort options
+          sortRelevance: '相关性',
+          sortDownloads: '下载量',
+          sortRecent: '最近更新',
+          sortLikes: '点赞数',
+        },
       },
       modelCard: {
         alerts: {
@@ -2459,6 +2838,33 @@ export const l10n = {
         },
         labels: {
           skills: '技能: ',
+          vision: '视觉',
+          capabilities: '功能。',
+          modelName: '模型名称',
+          contextLength: '上下文长度',
+          architecture: '架构',
+          author: '作者',
+          requiresProjectionModel: '需要投影模型',
+          downloadProjectionModel: '下载投影模型',
+          viewModelCardOnHuggingFace: '在Hugging Face上查看模型卡片',
+        },
+        accessibility: {
+          expandDetails: '展开详情',
+          collapseDetails: '收起详情',
+          memoryWarning: '内存警告',
+          integrityWarning: '完整性警告',
+          downloadProgress: '下载进度',
+          loadingIndicator: '加载中',
+          loadButton: '加载模型',
+          offloadButton: '卸载模型',
+          downloadButton: '下载模型',
+          settingsButton: '模型设置',
+          deleteButton: '删除模型',
+          removeButton: '删除模型',
+          expandDetailsButton: '展开模型详情',
+          memoryWarningButton: '显示内存警告详情',
+          integrityWarningButton: '显示完整性警告详情',
+          memoryWarningSnackbar: '内存警告通知',
         },
       },
       modelSettings: {
@@ -2694,6 +3100,22 @@ export const l10n = {
           title: '成功',
           message: '这些设置将应用于所有未来的会话',
         },
+        palSettings: 'Pal设置',
+        settingsSource: '设置来源',
+      },
+      palGenerationSettingsSheet: {
+        title: (palName: string) => `生成设置 - ${palName}`,
+        invalidValues: '无效值',
+        invalidNumericValuesMessage: '必须是有效数字',
+        pleaseCorrect: '请纠正以下内容：',
+        ok: '确定',
+        error: '错误',
+        failedToSave: '保存Pal设置失败',
+        resetToGlobal: '重置为全局默认值',
+        resetToSystem: '重置为系统默认值',
+        clearPalSettings: '清除Pal设置',
+        customSettingsFor: (palName: string) => `${palName}的自定义设置`,
+        inheritedSettingsFor: (palName: string) => `${palName}的继承设置`,
       },
       chatHeaderTitle: {
         defaultTitle: '聊天',
@@ -2801,6 +3223,23 @@ export const l10n = {
         proceedWithReset: '继续重置',
         confirmReset: '确认重置',
       },
+      palSheet: {
+        title: {
+          edit: '编辑Pal',
+          newPal: '新建Pal',
+          newVideoPal: '新建视频Pal',
+        },
+        description: '描述',
+        descriptionPlaceholder: '输入Pal的简要描述',
+        parameters: '参数',
+        generationSettings: '生成设置',
+        configureGenerationSettings: '配置生成设置',
+        validation: {
+          nameRequired: '名称为必填项',
+          generatingPromptRequired: '使用AI Prompt时需要生成Prompt',
+          promptModelRequired: '使用AI Prompt时需要Prompt生成模型',
+        },
+      },
       assistantPalSheet: {
         title: {
           create: '创建助手Pal',
@@ -2819,7 +3258,10 @@ export const l10n = {
       modelNotAvailable: {
         noModelsDownloaded: '你还没有下载任何模型，请先下载模型',
         downloadAModel: '下载模型',
-        defaultModelNotDownloaded: '默认模型还没有下载，请先下载它',
+        defaultModelNotDownloaded:
+          '此Pal推荐特定模型但需要下载，或者您可以选择其他模型',
+        modelNotDownloadedShort: '模型未下载',
+        recommendedModel: '推荐模型',
         cancelDownload: '取消下载',
         download: '下载',
       },
@@ -2875,17 +3317,19 @@ export const l10n = {
         useAIPrompt: '使用AI生成系统提示',
         modelSelector: {
           label: '选择生成用模型*',
-          sublabel: '推荐: Llama 3.2 3B 或 Qwen3 4B.',
+          sublabel: '推荐: Llama 3.2 3B 或 Qwen3 4B Instruct 2507',
           placeholder: '选择模型',
         },
         generatingPrompt: {
-          label: '生成Prompt',
-          placeholder: '输入生成Prompt',
+          label: '目的与背景',
+          placeholder: '描述此Pal的角色、目的或场景...',
         },
         buttons: {
           loadingModel: '加载模型中...',
           stopGenerating: '停止生成',
           generatePrompt: '生成系统提示',
+          resetParameters: '重置参数',
+          resetTemplate: '重置模板',
         },
         systemPrompt: {
           label: '系统提示',
@@ -2946,6 +3390,12 @@ export const l10n = {
       },
     },
     palsScreen: {
+      // Section Titles
+      sectionTitles: {
+        myPalsLocal: '我的Pal (本地)',
+        myLibrary: '我的库 (palshub.ai)',
+        discoverPals: '发现Pal (palshub.ai)',
+      },
       systemPrompt: '系统提示',
       videoAnalysis: '视频分析',
       videoAnalysisDescription:
@@ -2965,6 +3415,73 @@ export const l10n = {
       missingModel: '缺少模型',
       missingModelMessage:
         '此Pal的默认模型"{{modelName}}"不可用，请在编辑表中下载它或选择其他模型',
+      // Bottom Action Bar
+      search: '搜索',
+      profile: '个人资料',
+      signIn: '登录',
+      addPal: '添加Pal',
+      // Compact Auth Bar
+      signInToAccessLibrary: '登录以访问您在palshub.ai的资料库',
+      // Profile Sheet
+      signOut: '退出登录',
+      signOutConfirmation: '您确定要退出登录吗？',
+      signOutError: '退出登录失败，请重试。',
+      account: '账户',
+      signInToPalsHub: '登录PalsHub',
+      signInDescription: '访问您的资料库，创建私人Pal，并在设备间同步',
+      // Search
+      searchAllPals: '搜索所有Pal...',
+      // Pal Card Actions
+      deletePalConfirmation: '您确定要删除"{{palName}}"吗？',
+      // Filter Labels
+      filters: {
+        all: '全部',
+        myPals: '我的Pal',
+        local: '本地',
+        video: '视频',
+        free: '免费',
+        premium: '高级',
+      },
+      // Display Labels
+      labels: {
+        free: '免费',
+        premium: '高级',
+        private: '私人',
+        download: '下载',
+        getFree: '免费获取',
+      },
+      // Descriptions
+      premiumPalDescription: '来自palshub.ai社区的高级Pal',
+      premiumInfoText: '在应用外访问palshub.ai探索更多Pal',
+      // Sort Options
+      sortOptions: {
+        newest: '最新',
+        oldest: '最旧',
+        rating: '评分最高',
+        popular: '最受欢迎',
+      },
+      // Pal Detail Sheet
+      palDetailSheet: {
+        by: 'by',
+        unknown: '未知',
+        rating: '评分',
+        reviews: '评论',
+        created: '创建时间',
+        description: '描述',
+        noDescriptionAvailable: '暂无描述。',
+        categories: '分类',
+        tags: '标签',
+        systemPrompt: '系统提示',
+        downloaded: '已下载',
+        success: '成功',
+        palAddedToCollection: 'Pal已添加到您的收藏！',
+        error: '错误',
+        failedToLoadDetails: '加载Pal详情失败',
+        failedToDownload: '下载Pal失败',
+        premiumPalMessage:
+          '这是一个高级Pal。\n• 如果您已经通过Palshub账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问palshub.ai应用了解更多。',
+        notAvailable: 'N/A',
+      },
     },
     validation: {
       nameRequired: '需要填写名称',
@@ -3139,6 +3656,7 @@ export const l10n = {
         sections: {
           basicInfo: '基本信息',
           cpuDetails: 'CPU详细信息',
+          gpuDetails: 'GPU详细信息',
           appInfo: 'APP信息',
         },
         fields: {
@@ -3150,6 +3668,12 @@ export const l10n = {
           chipset: '芯片组',
           instructions: '指令集',
           version: '版本',
+          gpuType: 'GPU类型',
+          gpuRenderer: '渲染器',
+          gpuVendor: '供应商',
+          metalSupport: 'Metal支持',
+          openclSupport: 'OpenCL支持',
+          openclRequirement: '需要i8mm和dotprod',
         },
         instructions: {
           format:

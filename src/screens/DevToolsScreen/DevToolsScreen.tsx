@@ -176,25 +176,31 @@ export const DevToolsScreen: React.FC = () => {
   const theme = useTheme();
   const drawerNavigation = useNavigation<DevToolsScreenNavigationProp>();
 
+  // Create header left component function
+  const createHeaderLeft = (props: any) => (
+    <BackButton
+      navigation={drawerNavigation}
+      canGoBack={props.canGoBack}
+      onPress={props.onPress}
+    />
+  );
+
   // Create header options
   const screenOptions = {
     headerStyle: {
       backgroundColor: theme.colors.background,
     },
     headerTintColor: theme.colors.onBackground,
-    headerLeft: (props: any) => (
-      <BackButton
-        navigation={drawerNavigation}
-        canGoBack={props.canGoBack}
-        onPress={props.onPress}
-      />
-    ),
+    headerLeft: createHeaderLeft,
   };
+
+  // Create header menu component function
+  const createHeaderMenu = () => <MenuButton navigation={drawerNavigation} />;
 
   // Create home screen options
   const homeScreenOptions = {
     title: 'Dev Tools',
-    headerLeft: () => <MenuButton navigation={drawerNavigation} />,
+    headerLeft: createHeaderMenu,
   };
 
   return (

@@ -1,19 +1,21 @@
-import React, {useRef, ReactNode} from 'react';
+import React, {useRef, ReactNode, useState} from 'react';
 
 import {observer} from 'mobx-react';
 
 import {Bubble, ChatView, ErrorSnackbar} from '../../components';
+import {PalSheet} from '../../components/PalsSheets';
 
 import {useChatSession} from '../../hooks';
+import {Pal} from '../../types/pal';
 
 import {modelStore, chatSessionStore, palStore, uiStore} from '../../store';
+import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
 import {MessageType} from '../../utils/types';
 import {user, assistant} from '../../utils/chat';
 
 import {VideoPalScreen} from './VideoPalScreen';
-import {PalType} from '../../components/PalsSheets/types';
 
 const renderBubble = ({
   child,
@@ -42,8 +44,26 @@ export const ChatScreen: React.FC = observer(() => {
   } | null>(null);
   const l10n = React.useContext(L10nContext);
 
+  const activePalId = chatSessionStore.activePalId;
+  const activePal = activePalId
+    ? palStore.pals.find(p => p.id === activePalId)
+    : undefined;
+  const isVideoPal = activePal && hasVideoCapability(activePal);
+
+  // State for pal sheet
+  const [isPalSheetVisible, setIsPalSheetVisible] = useState(false);
+
   const {handleSendPress, handleStopPress, isMultimodalEnabled} =
     useChatSession(currentMessageInfo, user, assistant);
+
+  // Callback handler for opening pal sheet
+  const handleOpenPalSheet = React.useCallback((_pal: Pal) => {
+    setIsPalSheetVisible(true);
+  }, []);
+
+  const handleClosePalSheet = React.useCallback(() => {
+    setIsPalSheetVisible(false);
+  }, []);
 
   // Check if multimodal is enabled
   const [multimodalEnabled, setMultimodalEnabled] = React.useState(false);
@@ -94,15 +114,9 @@ export const ChatScreen: React.FC = observer(() => {
     }
   };
 
-  const activePalId = chatSessionStore.activePalId;
-  const activePal = activePalId
-    ? palStore.pals.find(p => p.id === activePalId)
-    : undefined;
-  const isVideoPal = activePal?.palType === PalType.VIDEO;
-
   // If the active pal is a video pal, show the video pal screen
   if (isVideoPal) {
-    return <VideoPalScreen />;
+    return <VideoPalScreen activePal={activePal} />;
   }
 
   // Otherwise, show the regular chat view
@@ -111,8 +125,10 @@ export const ChatScreen: React.FC = observer(() => {
       <ChatView
         renderBubble={renderBubble}
         messages={chatSessionStore.currentSessionMessages}
+        activePal={activePal}
         onSendPress={handleSendPress}
         onStopPress={handleStopPress}
+        onPalSettingsSelect={handleOpenPalSheet}
         user={user}
         isStopVisible={modelStore.inferencing}
         isThinking={isThinking}
@@ -138,6 +154,13 @@ export const ChatScreen: React.FC = observer(() => {
         <ErrorSnackbar
           error={uiStore.chatWarning}
           onDismiss={() => uiStore.clearChatWarning()}
+        />
+      )}
+      {activePal && (
+        <PalSheet
+          isVisible={isPalSheetVisible}
+          onClose={handleClosePalSheet}
+          pal={activePal}
         />
       )}
     </>

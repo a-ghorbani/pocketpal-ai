@@ -39,9 +39,8 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-const customRender = (ui, {...renderOptions} = {}) => {
-  return render(ui, {...renderOptions, withNavigation: true});
-};
+const customRender = (ui: React.ReactElement, options: any = {}) =>
+  render(ui, {withBottomSheetProvider: true, withNavigation: true, ...options});
 
 describe('ModelCard', () => {
   beforeEach(() => {
@@ -120,7 +119,7 @@ describe('ModelCard', () => {
       },
     );
 
-    const {getByTestId, queryByTestId, rerender} = render(
+    const {getByTestId, queryByTestId, rerender} = customRender(
       <ModelCard model={basicModel} />,
     );
 
@@ -136,11 +135,17 @@ describe('ModelCard', () => {
     });
   });
 
-  it('opens the HuggingFace URL when the icon button is pressed', () => {
+  it('opens the HuggingFace URL when the icon button is pressed', async () => {
     const {getByTestId} = customRender(<ModelCard model={basicModel} />);
 
-    const openButton = getByTestId('open-huggingface-url');
-    fireEvent.press(openButton);
+    // First expand the details to see the HuggingFace link
+    const expandButton = getByTestId('expand-details-button');
+    fireEvent.press(expandButton);
+
+    await waitFor(() => {
+      const openButton = getByTestId('open-huggingface-url');
+      fireEvent.press(openButton);
+    });
 
     expect(Linking.openURL).toHaveBeenCalledWith(basicModel.hfUrl);
   });
@@ -281,6 +286,13 @@ describe('ModelCard', () => {
 
     beforeEach(() => {
       jest.clearAllMocks();
+
+      // Reset downloadManager mock to ensure models are not downloading
+      (downloadManager.isDownloading as jest.Mock).mockImplementation(
+        modelId => {
+          return modelId === downloadingModel.id;
+        },
+      );
     });
 
     it('calls onOpenSettings when settings button is pressed', async () => {
@@ -307,6 +319,13 @@ describe('ModelCard', () => {
       modelStore.isContextLoading = false;
       modelStore.loadingModel = undefined;
       modelStore.initContext = jest.fn(); // optional: re-mock if necessary
+
+      // Reset downloadManager mock to ensure models are not downloading
+      (downloadManager.isDownloading as jest.Mock).mockImplementation(
+        modelId => {
+          return modelId === downloadingModel.id;
+        },
+      );
     });
 
     it('shows loading indicator when model is being loaded', async () => {
@@ -357,33 +376,51 @@ describe('ModelCard', () => {
 
     beforeEach(() => {
       jest.clearAllMocks();
+
+      // Reset downloadManager mock to ensure models are not downloading
+      (downloadManager.isDownloading as jest.Mock).mockImplementation(
+        modelId => {
+          return modelId === downloadingModel.id;
+        },
+      );
+
+      // Mock projection model status
+      modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+        isAvailable: true,
+        state: 'available',
+      });
+
+      // Mock vision preference
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
     });
 
-    it('shows vision control sheet for vision models', async () => {
+    it('shows vision controls for vision models', async () => {
       const {getByTestId, getByText} = customRender(
         <ModelCard model={visionModel} />,
       );
 
+      // First expand the details to see the vision toggle
+      const expandButton = getByTestId('expand-details-button');
+      fireEvent.press(expandButton);
+
       await waitFor(() => {
         expect(getByText('Vision')).toBeTruthy();
       });
-      const visionTag = getByTestId('vision-skill-touchable');
-      fireEvent.press(visionTag);
 
-      // Should open vision control sheet with projection selector inside
-      await waitFor(() => {
-        expect(getByTestId('projection-model-selector')).toBeTruthy();
-      });
+      // Vision controls should be visible in the expanded details
+      const visionToggle = getByTestId('vision-skill-touchable');
+      expect(visionToggle).toBeTruthy();
     });
 
-    it('handles projection model selection', async () => {
+    it('shows projection model selector for vision models', async () => {
       const {getByTestId} = customRender(<ModelCard model={visionModel} />);
       (modelStore.getCompatibleProjectionModels as jest.Mock) = jest
         .fn()
         .mockReturnValue([projectionModel]);
 
-      const visionTag = getByTestId('vision-skill-touchable');
-      fireEvent.press(visionTag);
+      // First expand the details to see the projection model selector
+      const expandButton = getByTestId('expand-details-button');
+      fireEvent.press(expandButton);
 
       await waitFor(() => {
         expect(getByTestId('projection-model-selector')).toBeTruthy();
@@ -407,14 +444,22 @@ describe('ModelCard', () => {
         defaultProjectionModel: 'missing/projection-model',
       };
 
-      // Mock getProjectionModelStatus to return false
-      (modelStore.getProjectionModelStatus as jest.Mock) = jest
-        .fn()
-        .mockReturnValue({isAvailable: false, state: 'missing'});
+      // Mock getProjectionModelStatus to return missing state
+      modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+        isAvailable: false,
+        state: 'missing',
+      });
+
+      // Mock vision preference to be enabled (required for warning to show)
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
 
       const {getByTestId} = customRender(
         <ModelCard model={visionModelWithMissingProjection} />,
       );
+
+      // First expand the details to see the projection warning
+      const expandButton = getByTestId('expand-details-button');
+      fireEvent.press(expandButton);
 
       await waitFor(() => {
         expect(getByTestId('projection-warning-badge')).toBeTruthy();
@@ -428,17 +473,27 @@ describe('ModelCard', () => {
         defaultProjectionModel: 'missing/projection-model',
       };
 
-      // Mock getProjectionModelStatus to return false
-      (modelStore.getProjectionModelStatus as jest.Mock) = jest
-        .fn()
-        .mockReturnValue({isAvailable: false, state: 'missing'});
+      // Mock getProjectionModelStatus to return missing state
+      modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+        isAvailable: false,
+        state: 'missing',
+      });
+
+      // Mock vision preference to be enabled (required for warning to show)
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
 
       const {getByTestId} = customRender(
         <ModelCard model={visionModelWithMissingProjection} />,
       );
 
-      const warningBadge = getByTestId('projection-warning-badge');
-      fireEvent.press(warningBadge);
+      // First expand the details to see the projection warning
+      const expandButton = getByTestId('expand-details-button');
+      fireEvent.press(expandButton);
+
+      await waitFor(() => {
+        const warningBadge = getByTestId('projection-warning-badge');
+        fireEvent.press(warningBadge);
+      });
 
       expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
         'missing/projection-model',

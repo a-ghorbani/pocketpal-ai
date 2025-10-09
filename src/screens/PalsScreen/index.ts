@@ -1,1 +1,1 @@
-export * from './PalsScreen';
+export {PalsScreen, default} from './PalsScreen';

@@ -40,7 +40,20 @@ export const writeFile = jest.fn(() => {
   return Promise.resolve();
 });
 export const downloadFile = jest.fn();
-export const DocumentDirectoryPath = '/path/to/documents';
+// Make DocumentDirectoryPath configurable for tests
+let documentDirectoryPath = '/path/to/documents';
+export const DocumentDirectoryPath = documentDirectoryPath;
+
+// Allow tests to override the path
+export const __setDocumentDirectoryPath = path => {
+  documentDirectoryPath = path;
+  // Update the exported constant
+  Object.defineProperty(exports, 'DocumentDirectoryPath', {
+    value: path,
+    writable: true,
+    configurable: true,
+  });
+};
 export const copyFile = jest.fn().mockResolvedValue(true);
 
 // Expose method to reset state for tests
@@ -61,6 +74,7 @@ const RNFS = {
   DocumentDirectoryPath,
   copyFile,
   __resetMockState,
+  __setDocumentDirectoryPath,
 };
 
 export {RNFS};

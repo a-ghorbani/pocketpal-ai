@@ -251,6 +251,36 @@ export function bytesToGB(bytes: number): string {
   return gib.toFixed(2);
 }
 
+export const getModelSizeString = (
+  model: Model,
+  isActiveModel: boolean,
+  l10nData = l10n.en,
+): string => {
+  // Get size from context if the model is active.
+  // This is relevant only for local models (when we don't know size upfront),
+  // otherwise the values should be the same.
+  const size =
+    isActiveModel && modelStore.context?.model
+      ? modelStore.context.model.size
+      : model.size;
+
+  const notAvailable = l10nData.models.modelDescription.notAvailable;
+  let sizeString = size > 0 ? formatBytes(size) : notAvailable;
+
+  // For vision models, show combined size if projection model is available
+  if (model.supportsMultimodal && model.hfModelFile && model.hfModel) {
+    const sizeBreakdown = getVisionModelSizeBreakdown(
+      model.hfModelFile,
+      model.hfModel,
+    );
+    if (sizeBreakdown.hasProjection) {
+      sizeString = `${formatBytes(sizeBreakdown.totalSize)}`;
+    }
+  }
+
+  return sizeString;
+};
+
 export const getModelDescription = (
   model: Model,
   isActiveModel: boolean,
@@ -760,3 +790,4 @@ export * from './formatters';
 export * from './multimodalHelpers';
 export * from './network';
 export * from './types';
+export * from './hf';
