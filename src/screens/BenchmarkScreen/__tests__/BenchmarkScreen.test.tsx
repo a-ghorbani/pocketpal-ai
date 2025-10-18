@@ -70,9 +70,12 @@ describe('BenchmarkScreen', () => {
       });
 
       // Verify loading indicator is removed
-      await waitFor(() => {
-        expect(queryByTestId('loading-indicator-model-init')).toBeNull();
-      }, {timeout: 5000});
+      await waitFor(
+        () => {
+          expect(queryByTestId('loading-indicator-model-init')).toBeNull();
+        },
+        {timeout: 5000},
+      );
     });
 
     it('should show model selector with available models', () => {
@@ -161,8 +164,7 @@ describe('BenchmarkScreen', () => {
   });
 
   describe('Memory Usage Tracking', () => {
-    beforeAll(() => {
-    });
+    beforeAll(() => {});
 
     it('should display memory usage in results', async () => {
       const result = {
@@ -291,9 +293,12 @@ describe('BenchmarkScreen', () => {
       });
 
       // wait for the dialog to be closed
-      await waitFor(() => {
-        expect(queryByTestId('share-benchmark-dialog')).toBeNull();
-      }, {timeout: 2000});
+      await waitFor(
+        () => {
+          expect(queryByTestId('share-benchmark-dialog')).toBeNull();
+        },
+        {timeout: 2000},
+      );
 
       // Verify preference was saved
       expect(uiStore.setBenchmarkShareDialogPreference).toHaveBeenCalledWith(

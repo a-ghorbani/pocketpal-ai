@@ -62,7 +62,7 @@ export const KeyboardAccessoryView = React.memo(
       keyboardHeight +
       (keyboardHeight > 0
         ? (contentOffsetKeyboardOpened ?? 0) - bottom
-        : contentOffsetKeyboardClosed ?? 0);
+        : (contentOffsetKeyboardClosed ?? 0));
 
     return (
       <>

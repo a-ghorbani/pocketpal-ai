@@ -280,9 +280,8 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                   text: 'Download',
                   onPress: async () => {
                     try {
-                      const downloadedPal = await palStore.downloadPalsHubPal(
-                        pal,
-                      );
+                      const downloadedPal =
+                        await palStore.downloadPalsHubPal(pal);
                       await activatePalAndNavigate(downloadedPal);
                     } catch (error) {
                       console.error('Error downloading pal:', error);

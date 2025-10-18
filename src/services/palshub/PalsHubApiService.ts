@@ -13,7 +13,10 @@ import type {
 } from '../../types/palshub';
 
 export class PalsHubError extends Error {
-  constructor(message: string, public details?: unknown) {
+  constructor(
+    message: string,
+    public details?: unknown,
+  ) {
     super(message);
     this.name = 'PalsHubError';
   }

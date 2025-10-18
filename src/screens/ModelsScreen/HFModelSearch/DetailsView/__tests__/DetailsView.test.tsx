@@ -41,7 +41,9 @@ describe('DetailsView', () => {
   });
 
   it('renders model files section', () => {
-    const {getByText, getByTestId} = render(<DetailsView hfModel={mockHFModel1} />);
+    const {getByText, getByTestId} = render(
+      <DetailsView hfModel={mockHFModel1} />,
+    );
 
     expect(getByText('Available GGUF Files')).toBeDefined();
     // Check if file names are displayed using testIDs

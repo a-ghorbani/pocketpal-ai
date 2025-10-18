@@ -269,9 +269,8 @@ describe('PalSheet', () => {
     });
 
     it('closes generation settings sheet when close button is pressed', () => {
-      const {getByText, getByTestId, queryByTestId} = renderPalSheet(
-        createExistingPal(),
-      );
+      const {getByText, getByTestId, queryByTestId} =
+        renderPalSheet(createExistingPal());
 
       // Open the settings sheet
       fireEvent.press(getByText('Configure Generation Settings'));
@@ -296,9 +295,8 @@ describe('PalSheet', () => {
     });
 
     it('does not show validation error when name is provided', async () => {
-      const {getByText, getByTestId, queryByText} = renderPalSheet(
-        createBasicPal(),
-      );
+      const {getByText, getByTestId, queryByText} =
+        renderPalSheet(createBasicPal());
 
       const nameInput = getByTestId('form-field-name');
       fireEvent.changeText(nameInput, 'My New Pal');

@@ -1,5 +1,10 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {isErrorWithCode, pick, types, errorCodes} from '@react-native-documents/picker';
+import {
+  isErrorWithCode,
+  pick,
+  types,
+  errorCodes,
+} from '@react-native-documents/picker';
 import {Platform} from 'react-native';
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
@@ -41,8 +46,7 @@ export interface ImportedMessage {
 export const pickJsonFile = async (): Promise<string | null> => {
   try {
     const res = await pick({
-      type:
-        Platform.OS === 'ios' ? 'public.json' : [types.allFiles],
+      type: Platform.OS === 'ios' ? 'public.json' : [types.allFiles],
     });
 
     if (res && res.length > 0) {
@@ -62,18 +66,20 @@ export const pickJsonFile = async (): Promise<string | null> => {
   } catch (err: any) {
     if (isErrorWithCode(err)) {
       switch (err.code) {
-       case errorCodes.IN_PROGRESS:
-        console.warn('user attempted to present a picker, but a previous one was already presented');
-        break;
-      case errorCodes.UNABLE_TO_OPEN_FILE_TYPE:
-        throw new Error('unable to open file type');
-      case errorCodes.OPERATION_CANCELED:
-        // ignore
-        return null;
-      default:
-        console.error(err);
-        throw new Error('unknown error');
-    }
+        case errorCodes.IN_PROGRESS:
+          console.warn(
+            'user attempted to present a picker, but a previous one was already presented',
+          );
+          break;
+        case errorCodes.UNABLE_TO_OPEN_FILE_TYPE:
+          throw new Error('unable to open file type');
+        case errorCodes.OPERATION_CANCELED:
+          // ignore
+          return null;
+        default:
+          console.error(err);
+          throw new Error('unknown error');
+      }
     }
     throw err;
   }
@@ -219,7 +225,7 @@ const importSingleSession = async (
           type: msg.type as any,
           metadata: msg.metadata || {},
           createdAt: msg.createdAt || Date.now(),
-        } as MessageType.Any),
+        }) as MessageType.Any,
     );
 
     // Create a new session in the database

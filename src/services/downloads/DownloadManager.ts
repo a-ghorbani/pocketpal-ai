@@ -416,10 +416,8 @@ export class DownloadManager {
         progressInterval: 1000,
         ...(authToken ? {authToken} : {}),
       };
-      const response: DownloadResponse = await NativeDownloadModule.startDownload(
-        model.downloadUrl!,
-        config,
-      );
+      const response: DownloadResponse =
+        await NativeDownloadModule.startDownload(model.downloadUrl!, config);
 
       // Store the download ID
       downloadJob.downloadId = response.downloadId;
@@ -461,7 +459,11 @@ export class DownloadManager {
           if (job.jobId) {
             RNFS.stopDownload(job.jobId); // job.jobId is now correctly typed as number
           }
-        } else if (Platform.OS === 'android' && NativeDownloadModule && job.downloadId) {
+        } else if (
+          Platform.OS === 'android' &&
+          NativeDownloadModule &&
+          job.downloadId
+        ) {
           console.log(`${TAG}: Cancelling Android download:`, modelId);
           await NativeDownloadModule.cancelDownload(job.downloadId);
         }

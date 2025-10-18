@@ -57,16 +57,18 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
   __esModule: true,
   default: {
     getCPUInfo: jest.fn(() => Promise.resolve({cores: 4})),
-    getGPUInfo: jest.fn(() => Promise.resolve({
-      renderer: 'Mock GPU',
-      vendor: 'Mock Vendor',
-      version: 'Mock Version',
-      hasAdreno: false,
-      hasMali: false,
-      hasPowerVR: false,
-      supportsOpenCL: false,
-      gpuType: 'Mock GPU',
-    })),
+    getGPUInfo: jest.fn(() =>
+      Promise.resolve({
+        renderer: 'Mock GPU',
+        vendor: 'Mock Vendor',
+        version: 'Mock Version',
+        hasAdreno: false,
+        hasMali: false,
+        hasPowerVR: false,
+        supportsOpenCL: false,
+        gpuType: 'Mock GPU',
+      }),
+    ),
     getChipset: jest.fn(() => Promise.resolve('Mock Chipset')),
   },
 }));

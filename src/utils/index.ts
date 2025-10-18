@@ -472,8 +472,8 @@ export function hfAsModel(
     modelType: isProjModel
       ? ModelType.PROJECTION
       : isVisionLLM
-      ? ModelType.VISION
-      : undefined,
+        ? ModelType.VISION
+        : undefined,
     compatibleProjectionModels: isVisionLLM
       ? compatibleProjectionModels
       : undefined,

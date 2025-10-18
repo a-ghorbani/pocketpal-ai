@@ -152,7 +152,7 @@ export const ChatInput = observer(
     const value =
       isVideoCapable && promptText !== undefined
         ? promptText
-        : textInputProps?.value ?? text;
+        : (textInputProps?.value ?? text);
 
     React.useEffect(() => {
       if (isEditMode) {
@@ -393,8 +393,8 @@ export const ChatInput = observer(
                     ? 8 // Reduced padding when images present in edit mode
                     : 48 // Edit bar height (28px) + normal padding (20px)
                   : selectedImages.length > 0
-                  ? 0
-                  : 20,
+                    ? 0
+                    : 20,
               },
             ]}>
             {/* Subtle Prompt Label for Video Pals */}

@@ -27,4 +27,3 @@ export const safeAlert = (
     Alert.alert(title, message, buttons, options);
   }
 };
-

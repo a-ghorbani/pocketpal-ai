@@ -137,7 +137,9 @@ describe('VideoPalScreen', () => {
     // Check the call arguments
     const callArgs = alertSpy.mock.calls[0];
     expect(callArgs[0]).toBe('Multimodal Not Enabled');
-    expect(callArgs[1]).toBe('This model does not support image analysis. Please load a multimodal model.');
+    expect(callArgs[1]).toBe(
+      'This model does not support image analysis. Please load a multimodal model.',
+    );
     expect(callArgs[2]).toEqual(expect.any(Array));
   });
 

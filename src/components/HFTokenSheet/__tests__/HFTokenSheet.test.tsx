@@ -105,7 +105,9 @@ describe('HFTokenSheet', () => {
     fireEvent.press(getTokenLink);
 
     // Verify the Linking API was called with the correct URL
-    expect(mockOpenURL).toHaveBeenCalledWith('https://huggingface.co/settings/tokens');
+    expect(mockOpenURL).toHaveBeenCalledWith(
+      'https://huggingface.co/settings/tokens',
+    );
   });
 
   it('toggles password visibility when eye icon is pressed', () => {

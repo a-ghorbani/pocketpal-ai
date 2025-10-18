@@ -355,8 +355,8 @@ export const SystemPromptSection = observer(
               {isLoadingModel
                 ? l10n.components.systemPromptSection.buttons.loadingModel
                 : isGenerating
-                ? l10n.components.systemPromptSection.buttons.stopGenerating
-                : l10n.components.systemPromptSection.buttons.generatePrompt}
+                  ? l10n.components.systemPromptSection.buttons.stopGenerating
+                  : l10n.components.systemPromptSection.buttons.generatePrompt}
             </Button>
           </>
         )}

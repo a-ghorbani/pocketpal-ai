@@ -45,4 +45,3 @@ export interface Spec extends TurboModule {
 export default Platform.OS === 'android'
   ? TurboModuleRegistry.getEnforcing<Spec>('DownloadModule')
   : (null as any as Spec);
-

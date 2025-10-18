@@ -28,8 +28,8 @@ export const createContextInitParams = (
     params.use_mmap === true
       ? 'true'
       : params.use_mmap === false
-      ? 'false'
-      : params.use_mmap ?? (Platform.OS === 'android' ? 'smart' : 'true');
+        ? 'false'
+        : (params.use_mmap ?? (Platform.OS === 'android' ? 'smart' : 'true'));
 
   return {
     ...params,

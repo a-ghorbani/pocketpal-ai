@@ -375,8 +375,8 @@ const DatabaseInspectorScreen = () => {
         {selectedRecord
           ? renderRecordDetails()
           : selectedCollection
-          ? renderRecordList()
-          : renderCollectionList()}
+            ? renderRecordList()
+            : renderCollectionList()}
       </ScrollView>
     </SafeAreaView>
   );

@@ -13,7 +13,11 @@ import {L10nContext} from '../../../utils';
 import {createStyles} from './styles';
 
 import {DeviceInfo} from '../../../utils/types';
-import {getCpuInfo, getGpuInfo, getChipsetInfo} from '../../../utils/deviceCapabilities';
+import {
+  getCpuInfo,
+  getGpuInfo,
+  getChipsetInfo,
+} from '../../../utils/deviceCapabilities';
 
 type Props = {
   onDeviceInfo?: (info: DeviceInfo) => void;
@@ -326,8 +330,8 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
                     {Platform.OS === 'ios'
                       ? l10n.benchmark.deviceInfoCard.instructions.yes
                       : deviceInfo.gpuDetails.supportsOpenCL
-                      ? l10n.benchmark.deviceInfoCard.instructions.yes
-                      : l10n.benchmark.deviceInfoCard.instructions.no}
+                        ? l10n.benchmark.deviceInfoCard.instructions.yes
+                        : l10n.benchmark.deviceInfoCard.instructions.no}
                   </Text>
                 </View>
               </View>

@@ -748,8 +748,8 @@ export const ChatView = observer(
     const inputBackgroundColor = activePal?.color?.[1]
       ? activePal.color?.[1]
       : Platform.OS === 'ios'
-      ? theme.colors.surface
-      : theme.colors.secondaryContainer; // Since on Android, we don't have shadow enabled, use secondaryContainer for better contrast
+        ? theme.colors.surface
+        : theme.colors.secondaryContainer; // Since on Android, we don't have shadow enabled, use secondaryContainer for better contrast
     // Use surface for Android when new architecture is enabled
 
     return (

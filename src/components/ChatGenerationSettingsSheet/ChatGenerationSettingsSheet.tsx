@@ -117,8 +117,8 @@ export const ChatGenerationSettingsSheet = ({
   // For new chat sessions with pal: use stored newChatSettingsSource
   const effectiveSettingsSource = activePal
     ? session
-      ? localSettingsSource ?? session?.settingsSource ?? 'pal'
-      : localSettingsSource ?? chatSessionStore.newChatSettingsSource // New chat session uses stored choice
+      ? (localSettingsSource ?? session?.settingsSource ?? 'pal')
+      : (localSettingsSource ?? chatSessionStore.newChatSettingsSource) // New chat session uses stored choice
     : null;
 
   const isUsingPalSettings = effectiveSettingsSource === 'pal';

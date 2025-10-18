@@ -126,8 +126,7 @@ export const ModelsScreen: React.FC = observer(() => {
 
   const handleAddLocalModel = async () => {
     pick({
-      type:
-        Platform.OS === 'ios' ? 'public.data' : types.allFiles,
+      type: Platform.OS === 'ios' ? 'public.data' : types.allFiles,
     })
       .then(async res => {
         let [file] = res;
@@ -246,18 +245,21 @@ export const ModelsScreen: React.FC = observer(() => {
       };
     }
 
-    return filteredAndSortedModels.reduce((acc, item) => {
-      const groupKey =
-        item.origin === ModelOrigin.LOCAL || item.isLocal
-          ? l10n.models.labels.localModel
-          : item.type || l10n.models.labels.unknownGroup;
+    return filteredAndSortedModels.reduce(
+      (acc, item) => {
+        const groupKey =
+          item.origin === ModelOrigin.LOCAL || item.isLocal
+            ? l10n.models.labels.localModel
+            : item.type || l10n.models.labels.unknownGroup;
 
-      if (!acc[groupKey]) {
-        acc[groupKey] = [];
-      }
-      acc[groupKey].push(item);
-      return acc;
-    }, {} as Record<string, Model[]>);
+        if (!acc[groupKey]) {
+          acc[groupKey] = [];
+        }
+        acc[groupKey].push(item);
+        return acc;
+      },
+      {} as Record<string, Model[]>,
+    );
   }).get();
 
   const toggleGroup = (type: string) => {
@@ -353,8 +355,8 @@ export const ModelsScreen: React.FC = observer(() => {
           model={
             modelStore.downloadError?.metadata?.modelId
               ? modelStore.models.find(
-                  m => m.id === modelStore.downloadError?.metadata?.modelId,
-                )
+                m => m.id === modelStore.downloadError?.metadata?.modelId,
+              )
               : undefined
           }
           onTryAgain={modelStore.retryDownload}

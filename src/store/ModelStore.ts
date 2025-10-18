@@ -1081,9 +1081,8 @@ class ModelStore {
 
     try {
       // Get all effective initialization settings using unified method
-      const effectiveSettings = await this.getEffectiveContextInitParams(
-        filePath,
-      );
+      const effectiveSettings =
+        await this.getEffectiveContextInitParams(filePath);
 
       // Create properly versioned ContextInitParams
       const contextInitParams = createContextInitParams(effectiveSettings);

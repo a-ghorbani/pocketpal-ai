@@ -66,8 +66,8 @@ export const ImageMessage = ({message, messageWidth}: ImageMessageProps) => {
           isMinimized
             ? minimizedImage
             : aspectRatio < 1
-            ? verticalImage
-            : horizontalImage
+              ? verticalImage
+              : horizontalImage
         }
       />
     );

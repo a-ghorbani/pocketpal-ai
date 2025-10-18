@@ -90,9 +90,8 @@ export const ProjectionModelSelector = observer(
                 text: l10n.models.multimodal.reload,
                 onPress: async () => {
                   // Get the projection model path
-                  const projModelPath = await modelStore.getModelFullPath(
-                    projectionModel,
-                  );
+                  const projModelPath =
+                    await modelStore.getModelFullPath(projectionModel);
                   if (projModelPath) {
                     // Reload the model with the new projection model
                     modelStore.initContext(model, projModelPath);

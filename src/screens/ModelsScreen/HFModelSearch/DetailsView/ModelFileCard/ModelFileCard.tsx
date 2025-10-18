@@ -219,8 +219,8 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
     const downloadIcon = isDownloaded
       ? 'delete'
       : modelFile.canFitInStorage
-      ? 'download-outline'
-      : 'download-off-outline';
+        ? 'download-outline'
+        : 'download-off-outline';
 
     const handleWarningPress = () => {
       setShowWarning(true);
@@ -295,9 +295,9 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
                       <Text style={styles.warningText}>
                         {warnings.length > 1
                           ? l10n.models.modelFile.warnings.multiple.replace(
-                              '{count}',
-                              warnings.length.toString(),
-                            )
+                            '{count}',
+                            warnings.length.toString(),
+                          )
                           : warnings[0].shortMessage}
                       </Text>
                     </View>
@@ -331,7 +331,7 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
                     {isDownloaded
                       ? l10n.models.multimodal.visionControls.visionEnabled
                       : l10n.models.multimodal.visionControls
-                          .includesVisionCapability}
+                        .includesVisionCapability}
                   </Chip>
                   <ChevronRightIcon
                     width={16}
@@ -383,8 +383,8 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
                         isDownloaded
                           ? handleDelete
                           : isDownloading
-                          ? handleCancel
-                          : handleDownload
+                            ? handleCancel
+                            : handleDownload
                       }
                       size={20}
                       animated
