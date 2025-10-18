@@ -11,6 +11,8 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
+import com.pocketpal.KeepAwakePackage
+import com.pocketpal.HardwareInfoPackage
 import com.pocketpal.download.DownloadPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -21,8 +23,8 @@ class MainApplication : Application(), ReactApplication {
             PackageList(this).packages.apply {
               // Packages that cannot be autolinked yet can be added manually here, for example:
               // add(MyReactNativePackage())
-              add(DeviceInfoPackage())
               add(KeepAwakePackage())
+              add(HardwareInfoPackage())
               add(DownloadPackage())
             }
 

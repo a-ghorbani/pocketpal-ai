@@ -52,11 +52,24 @@ jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter');
 
-// Mock NativeModules.DeviceInfoModule specifically
-const {NativeModules} = require('react-native');
-NativeModules.DeviceInfoModule = {
-  getCPUInfo: jest.fn(() => Promise.resolve({cores: 4})),
-};
+// Mock NativeHardwareInfo TurboModule
+jest.mock('../src/specs/NativeHardwareInfo', () => ({
+  __esModule: true,
+  default: {
+    getCPUInfo: jest.fn(() => Promise.resolve({cores: 4})),
+    getGPUInfo: jest.fn(() => Promise.resolve({
+      renderer: 'Mock GPU',
+      vendor: 'Mock Vendor',
+      version: 'Mock Version',
+      hasAdreno: false,
+      hasMali: false,
+      hasPowerVR: false,
+      supportsOpenCL: false,
+      gpuType: 'Mock GPU',
+    })),
+    getChipset: jest.fn(() => Promise.resolve('Mock Chipset')),
+  },
+}));
 
 jest.mock('react-native-safe-area-context', () => {
   const inset = {top: 0, right: 0, bottom: 0, left: 0};

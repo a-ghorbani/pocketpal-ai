@@ -20,7 +20,7 @@ DerivedData
 *.hmap
 *.ipa
 *.xcuserstate
-ios/.xcode.env.local
+**/.xcode.env.local
 
 # Android/IntelliJ
 #
@@ -33,6 +33,7 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+.kotlin/
 
 # node.js
 #
@@ -58,7 +59,7 @@ package-lock.json
 *.jsbundle
 
 # Ruby / CocoaPods
-/ios/Pods/
+**/Pods/
 /vendor/bundle/
 
 # Temporary files created by Metro to check the health of the file watcher
@@ -77,5 +78,5 @@ ios/GoogleService-Info.plist
 .env.*
 !.env.example
 
-# Auto-generated environment config
+# environment config
 ios/Config/Env.xcconfig

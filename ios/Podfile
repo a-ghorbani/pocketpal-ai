@@ -21,7 +21,7 @@ end
 # Enable Firebase as a static framework
 $RNFirebaseAsStaticFramework = true
 
-ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+ENV['RCT_NEW_ARCH_ENABLED'] = '1'
 
 target 'PocketPal' do
   config = use_native_modules!

@@ -20,8 +20,6 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>GIDClientID</key>
-	<string>$(GOOGLE_WEB_CLIENT_ID)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -37,6 +35,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
 	<false/>
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_WEB_CLIENT_ID)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>

@@ -1,6 +1,6 @@
 import React, {useEffect, useState, useContext} from 'react';
 import {View, TouchableOpacity} from 'react-native';
-import {Platform, NativeModules} from 'react-native';
+import {Platform} from 'react-native';
 
 import {Card, Text, Icon} from 'react-native-paper';
 import RNDeviceInfo from 'react-native-device-info';
@@ -13,70 +13,7 @@ import {L10nContext} from '../../../utils';
 import {createStyles} from './styles';
 
 import {DeviceInfo} from '../../../utils/types';
-
-const {DeviceInfoModule} = NativeModules;
-
-const getChipsetInfo = async () => {
-  if (Platform.OS !== 'android' || !DeviceInfoModule) {
-    return '';
-  }
-  try {
-    return await DeviceInfoModule.getChipset();
-  } catch (e) {
-    console.warn('Failed to get chipset info:', e);
-    return '';
-  }
-};
-
-const getCPUInfo = async () => {
-  if (!DeviceInfoModule) {
-    console.warn('DeviceInfoModule not available');
-    return {
-      cores: 0,
-      processors: [],
-      features: [],
-      socModel: '',
-      hasFp16: false,
-      hasDotProd: false,
-      hasSve: false,
-      hasI8mm: false,
-    };
-  }
-  try {
-    const info = await DeviceInfoModule.getCPUInfo();
-    if (!info) {
-      return null;
-    }
-
-    return Platform.OS === 'ios'
-      ? {
-          cores: info.cores || 0,
-          processors: [],
-          features: [],
-          socModel: '',
-          hasFp16: false,
-          hasDotProd: false,
-          hasSve: false,
-          hasI8mm: false,
-        }
-      : info;
-  } catch (e) {
-    console.warn('Failed to get CPU info:', e);
-    return null;
-  }
-};
-
-const getGPUInfo = async () => {
-  if (!DeviceInfoModule?.getGPUInfo) {
-    return undefined;
-  }
-  try {
-    return await DeviceInfoModule.getGPUInfo();
-  } catch (e) {
-    console.warn('Failed to get GPU info:', e);
-    return undefined;
-  }
-};
+import {getCpuInfo, getGpuInfo, getChipsetInfo} from '../../../utils/deviceCapabilities';
 
 type Props = {
   onDeviceInfo?: (info: DeviceInfo) => void;
@@ -140,8 +77,8 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
       RNDeviceInfo.getDeviceId(),
       RNDeviceInfo.getTotalMemory(),
       getChipsetInfo(),
-      getCPUInfo(),
-      getGPUInfo(),
+      getCpuInfo(),
+      getGpuInfo(),
     ]).then(
       ([
         abis,
@@ -165,22 +102,35 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
           device,
           deviceId,
           totalMemory: totalMem,
-          chipset,
+          chipset: chipset || '',
           cpu: '',
-          cpuDetails:
-            typeof cpuInfo === 'object'
-              ? cpuInfo
-              : {
-                  cores: 0,
-                  processors: [],
-                  socModel: '',
-                  features: [],
-                  hasFp16: false,
-                  hasDotProd: false,
-                  hasSve: false,
-                  hasI8mm: false,
-                },
-          gpuDetails: gpuInfo,
+          cpuDetails: cpuInfo
+            ? {
+                cores: cpuInfo.cores || 0,
+                processors: (cpuInfo.processors || []).map(p => ({
+                  processor: p.processor || '',
+                  'model name': p['model name'] || '',
+                  'cpu MHz': p['cpu MHz'] || '',
+                  vendor_id: p.vendor_id || '',
+                })),
+                socModel: cpuInfo.socModel || '',
+                features: cpuInfo.features || [],
+                hasFp16: cpuInfo.hasFp16 || false,
+                hasDotProd: cpuInfo.hasDotProd || false,
+                hasSve: cpuInfo.hasSve || false,
+                hasI8mm: cpuInfo.hasI8mm || false,
+              }
+            : {
+                cores: 0,
+                processors: [],
+                socModel: '',
+                features: [],
+                hasFp16: false,
+                hasDotProd: false,
+                hasSve: false,
+                hasI8mm: false,
+              },
+          gpuDetails: gpuInfo || undefined,
         };
 
         setDeviceInfo(newDeviceInfo);

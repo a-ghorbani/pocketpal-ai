@@ -4,6 +4,7 @@
     "noImplicitAny": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "useDefineForClassFields": true
+    "useDefineForClassFields": true,
+    "skipLibCheck": true
   }
 }

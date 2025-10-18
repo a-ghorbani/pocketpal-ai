@@ -2,6 +2,13 @@ const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 
 //const localPackagePaths = ['localpath/code/llama.rn'];
 
+/**
+ * Metro configuration
+ * https://reactnative.dev/docs/metro
+ *
+ * @type {import('@react-native/metro-config').MetroConfig}
+ */
+
 const defaultConfig = getDefaultConfig(__dirname);
 const {assetExts, sourceExts} = defaultConfig.resolver;
 

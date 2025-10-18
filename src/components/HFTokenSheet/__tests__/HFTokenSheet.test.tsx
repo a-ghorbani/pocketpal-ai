@@ -1,11 +1,12 @@
 import React from 'react';
+import {Linking} from 'react-native';
 import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 import {HFTokenSheet} from '../HFTokenSheet';
 import {hfStore} from '../../../store';
 
-jest.mock('react-native/Libraries/Linking/Linking', () => ({
-  openURL: jest.fn(() => Promise.resolve()),
-}));
+// Mock Linking - need to spy on the actual Linking object
+const mockOpenURL = jest.fn().mockImplementation(() => Promise.resolve());
+jest.spyOn(Linking, 'openURL').mockImplementation(mockOpenURL);
 
 jest.mock('../../Sheet', () => {
   const {View, Button} = require('react-native');
@@ -104,9 +105,7 @@ describe('HFTokenSheet', () => {
     fireEvent.press(getTokenLink);
 
     // Verify the Linking API was called with the correct URL
-    expect(
-      require('react-native/Libraries/Linking/Linking').openURL,
-    ).toHaveBeenCalledWith('https://huggingface.co/settings/tokens');
+    expect(mockOpenURL).toHaveBeenCalledWith('https://huggingface.co/settings/tokens');
   });
 
   it('toggles password visibility when eye icon is pressed', () => {

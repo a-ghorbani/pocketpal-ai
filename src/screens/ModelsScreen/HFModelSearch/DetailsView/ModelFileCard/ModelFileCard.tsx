@@ -252,7 +252,9 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
     };
 
     return (
-      <View style={styles.fileCardContainer}>
+      <View
+        style={styles.fileCardContainer}
+        testID={`model-file-card-${modelFile.rfilename}`}>
         <LinearGradient
           colors={[theme.dark ? HF_YELLOW + '90' : HF_YELLOW, 'transparent']}
           locations={[1, 1]}
@@ -271,7 +273,8 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
                 variant="titleSmall"
                 numberOfLines={1}
                 ellipsizeMode="middle"
-                style={styles.fileName}>
+                style={styles.fileName}
+                testID={`model-file-name-${modelFile.rfilename}`}>
                 {modelFile.rfilename}
               </Text>
               <View style={styles.metadataRow}>

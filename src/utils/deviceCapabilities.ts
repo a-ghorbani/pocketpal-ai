@@ -1,7 +1,7 @@
-import {Platform, NativeModules} from 'react-native';
+import {Platform} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-
-const {DeviceInfoModule} = NativeModules;
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
+import type {CPUInfo, GPUInfo} from '../specs/NativeHardwareInfo';
 
 /**
  * Device GPU capabilities result
@@ -63,17 +63,10 @@ export async function checkGpuSupport(): Promise<GpuCapabilities> {
     };
   } else if (Platform.OS === 'android') {
     // Android requires Adreno GPU + i8mm + dotprod CPU features for OpenCL
-    if (!DeviceInfoModule?.getGPUInfo || !DeviceInfoModule?.getCPUInfo) {
-      return {
-        isSupported: false,
-        reason: 'unknown',
-      };
-    }
-
     try {
       const [gpuInfo, cpuInfo] = await Promise.all([
-        DeviceInfoModule.getGPUInfo(),
-        DeviceInfoModule.getCPUInfo(),
+        NativeHardwareInfo.getGPUInfo(),
+        NativeHardwareInfo.getCPUInfo(),
       ]);
 
       const hasAdreno = gpuInfo.hasAdreno ?? false;
@@ -124,13 +117,8 @@ export async function checkGpuSupport(): Promise<GpuCapabilities> {
  * @returns Promise<CpuInfo | null> CPU information or null if unavailable
  */
 export async function getCpuInfo(): Promise<CpuInfo | null> {
-  if (!DeviceInfoModule?.getCPUInfo) {
-    console.warn('DeviceInfoModule.getCPUInfo not available');
-    return null;
-  }
-
   try {
-    const info = await DeviceInfoModule.getCPUInfo();
+    const info: CPUInfo = await NativeHardwareInfo.getCPUInfo();
     if (!info) {
       return null;
     }
@@ -148,7 +136,22 @@ export async function getCpuInfo(): Promise<CpuInfo | null> {
       };
     }
 
-    return info;
+    // Map CPUInfo to CpuInfo, ensuring all fields are properly typed
+    return {
+      cores: info.cores,
+      processors: (info.processors || []).map(p => ({
+        processor: p.processor || '',
+        'model name': p['model name'] || '',
+        'cpu MHz': p['cpu MHz'] || '',
+        vendor_id: p.vendor_id || '',
+      })),
+      socModel: info.socModel,
+      features: info.features,
+      hasFp16: info.hasFp16,
+      hasDotProd: info.hasDotProd,
+      hasSve: info.hasSve,
+      hasI8mm: info.hasI8mm,
+    };
   } catch (error) {
     console.warn('Failed to get CPU info:', error);
     return null;
@@ -195,5 +198,37 @@ export async function isHighEndDevice(): Promise<boolean> {
   } catch (error) {
     console.error('High-end device check failed:', error);
     return false; // Conservative fallback
+  }
+}
+
+/**
+ * Get GPU information from the device
+ * @returns Promise<GPUInfo | null> GPU information or null if unavailable
+ */
+export async function getGpuInfo(): Promise<GPUInfo | null> {
+  try {
+    const info = await NativeHardwareInfo.getGPUInfo();
+    return info || null;
+  } catch (error) {
+    console.warn('Failed to get GPU info:', error);
+    return null;
+  }
+}
+
+/**
+ * Get chipset information (Android only)
+ * @returns Promise<string | null> Chipset name or null if unavailable/iOS
+ */
+export async function getChipsetInfo(): Promise<string | null> {
+  if (Platform.OS !== 'android') {
+    return null;
+  }
+
+  try {
+    const chipset = await NativeHardwareInfo.getChipset?.();
+    return chipset || null;
+  } catch (error) {
+    console.warn('Failed to get chipset info:', error);
+    return null;
   }
 }

@@ -1,9 +1,9 @@
 import React, {useState, useCallback, useContext, useEffect} from 'react';
-import {View, StyleSheet, Alert} from 'react-native';
+import {View, StyleSheet} from 'react-native';
 import {observer} from 'mobx-react';
 import {ChatView, EmbeddedVideoView} from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
-import {L10nContext, UserContext} from '../../utils';
+import {L10nContext, UserContext, safeAlert} from '../../utils';
 import {modelStore, palStore} from '../../store';
 import {Pal} from '../../types/pal';
 import 'react-native-get-random-values';
@@ -109,7 +109,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
   // Handle starting the camera
   const handleStartCamera = useCallback(async () => {
     if (!modelStore.context) {
-      Alert.alert(l10n.chat.modelNotLoaded, l10n.chat.pleaseLoadModel, [
+      safeAlert(l10n.chat.modelNotLoaded, l10n.chat.pleaseLoadModel, [
         {
           text: l10n.common.ok,
         },
@@ -121,7 +121,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
     try {
       const isEnabled = await modelStore.isMultimodalEnabled();
       if (!isEnabled) {
-        Alert.alert(
+        safeAlert(
           'Multimodal Not Enabled',
           'This model does not support image analysis. Please load a multimodal model.',
           [
@@ -136,7 +136,7 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
       setIsCameraActive(true);
     } catch (error) {
       console.error('Error checking multimodal capability:', error);
-      Alert.alert('Error', 'Failed to check if model supports images.', [
+      safeAlert('Error', 'Failed to check if model supports images.', [
         {
           text: l10n.common.ok,
         },

@@ -91,7 +91,7 @@ describe('EnhancedSearchBar', () => {
 
   it('opens filter sheet when filter buttons are pressed', () => {
     const onFiltersChange = jest.fn();
-    const {getByText} = render(
+    const {getByTestId} = render(
       <EnhancedSearchBar {...defaultProps} onFiltersChange={onFiltersChange} />,
       {
         withBottomSheetProvider: true,
@@ -99,12 +99,12 @@ describe('EnhancedSearchBar', () => {
     );
 
     // Test that Author filter button exists and can be pressed
-    const authorButton = getByText(l10n.en.models.search.filters.author);
+    const authorButton = getByTestId('filter-button-author');
     expect(authorButton).toBeTruthy();
     fireEvent.press(authorButton);
 
     // Test that Sort filter button exists and can be pressed
-    const sortButton = getByText(l10n.en.models.search.filters.sortRelevance);
+    const sortButton = getByTestId('filter-button-sort');
     expect(sortButton).toBeTruthy();
     fireEvent.press(sortButton);
   });

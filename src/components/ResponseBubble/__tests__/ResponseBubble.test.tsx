@@ -1,20 +1,11 @@
 import React from 'react';
-import {Text} from 'react-native';
+import {Text, LayoutAnimation} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 import {render} from '../../../../jest/test-utils';
 import {ResponseBubble} from '../ResponseBubble';
 
-// Mock LayoutAnimation
-jest.mock('react-native/Libraries/LayoutAnimation/LayoutAnimation', () => ({
-  configureNext: jest.fn(),
-  Types: {
-    easeInEaseOut: 'easeInEaseOut',
-    spring: 'spring',
-  },
-  Properties: {
-    opacity: 'opacity',
-  },
-}));
+// Mock LayoutAnimation - need to spy on the actual LayoutAnimation object
+jest.spyOn(LayoutAnimation, 'configureNext').mockImplementation(jest.fn());
 
 describe('ResponseBubble', () => {
   beforeEach(() => {

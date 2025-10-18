@@ -44,12 +44,14 @@ describe('ModelFileCard', () => {
   });
 
   it('renders correctly with initial props', () => {
-    const {getByText} = render(
+    const {getByTestId, getByText} = render(
       <ModelFileCard modelFile={mockModelFile} hfModel={mockHFModel1} />,
     );
 
-    expect(getByText('test-model.gguf')).toBeTruthy();
-    expect(getByText('500 MB')).toBeTruthy();
+    // Check that the card and file name are rendered using testIDs
+    expect(getByTestId('model-file-card-test-model.gguf')).toBeDefined();
+    expect(getByTestId('model-file-name-test-model.gguf')).toBeDefined();
+    expect(getByText('500 MB')).toBeDefined();
   });
 
   it('handles bookmark toggle when not bookmarked', async () => {

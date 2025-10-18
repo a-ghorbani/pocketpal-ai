@@ -23,10 +23,9 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
 }));
 
-// Mock Linking
-jest.mock('react-native/Libraries/Linking/Linking', () => ({
-  openURL: jest.fn().mockImplementation(() => Promise.resolve()),
-}));
+// Mock Linking - need to spy on the actual Linking object
+const mockOpenURL = jest.fn().mockImplementation(() => Promise.resolve());
+jest.spyOn(Linking, 'openURL').mockImplementation(mockOpenURL);
 
 // Mock feedback API
 jest.mock('../../../api/feedback', () => ({

@@ -12,7 +12,7 @@ import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {observer} from 'mobx-react-lite';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import DocumentPicker from 'react-native-document-picker';
+import {pick, types} from '@react-native-documents/picker';
 import {Portal} from 'react-native-paper';
 
 import {useTheme} from '../../hooks';
@@ -125,9 +125,9 @@ export const ModelsScreen: React.FC = observer(() => {
   };
 
   const handleAddLocalModel = async () => {
-    DocumentPicker.pick({
+    pick({
       type:
-        Platform.OS === 'ios' ? 'public.data' : DocumentPicker.types.allFiles,
+        Platform.OS === 'ios' ? 'public.data' : types.allFiles,
     })
       .then(async res => {
         let [file] = res;

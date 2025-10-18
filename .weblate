@@ -1,0 +1,38 @@
+# Weblate configuration for PocketPal AI
+
+[weblate]
+url = https://hosted.weblate.org/
+
+[keys]
+# API key will be set via environment variable WEBLATE_TOKEN
+
+[pocketpal-ai/translations]
+url = https://hosted.weblate.org/projects/pocketpal-ai/translations/
+
+# File format configuration
+file_format = json
+new_lang = add
+source_language = en
+
+# File paths
+filemask = src/locales/*.json
+template = src/locales/en.json
+
+# Translation settings
+allow_translation_propagation = true
+enable_suggestions = true
+suggestion_voting = true
+check_flags = placeholder-format
+
+# Workflow
+commit_message = i18n: update translations from Weblate
+
+# Quality checks
+enforced_checks = 
+    placeholder-format,
+    json-format,
+    duplicate
+
+# Auto-translation
+auto_translate_mode = suggest
+auto_translate_threshold = 80

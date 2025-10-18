@@ -274,13 +274,12 @@ describe('PalDetailSheet', () => {
         mockPremiumPalsHubPal,
       );
 
-      const {getAllByText} = render(
+      const {getByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
       );
 
       await waitFor(() => {
-        const premiumLabels = getAllByText(/Premium/i);
-        expect(premiumLabels.length).toBeGreaterThan(0);
+        expect(getByTestId('pal-label-premium')).toBeTruthy();
       });
     });
 

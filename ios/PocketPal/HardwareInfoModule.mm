@@ -1,17 +1,24 @@
-#import "DeviceInfoModule.h"
-#import <React/RCTLog.h>
+#import <React/RCTBridgeModule.h>
+#import <UIKit/UIKit.h>
 #import <Metal/Metal.h>
 
-@implementation DeviceInfoModule
+@interface HardwareInfoModule : NSObject <RCTBridgeModule>
+@end
 
-RCT_EXPORT_MODULE(DeviceInfoModule);
+@implementation HardwareInfoModule
+
+RCT_EXPORT_MODULE(HardwareInfo)
 
 RCT_EXPORT_METHOD(getCPUInfo:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
   @try {
     NSUInteger numberOfCPUCores = [[NSProcessInfo processInfo] activeProcessorCount];
-    NSDictionary *result = @{@"cores": @(numberOfCPUCores)};
+
+    NSDictionary *result = @{
+      @"cores": @(numberOfCPUCores)
+    };
+
     resolve(result);
   } @catch (NSException *exception) {
     reject(@"error_getting_cpu_info", @"Could not retrieve CPU info", nil);
@@ -45,4 +52,11 @@ RCT_EXPORT_METHOD(getGPUInfo:(RCTPromiseResolveBlock)resolve
   }
 }
 
+// Don't synthesize default module since we want to use the custom name
++ (BOOL)requiresMainQueueSetup
+{
+  return NO;
+}
+
 @end
+

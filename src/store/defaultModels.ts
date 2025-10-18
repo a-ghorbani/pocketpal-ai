@@ -374,6 +374,7 @@ const crossPlatformModels: Model[] = [
     name: 'SmolVLM2-500M-Instruct (Q8_0)',
     type: 'SmolVLM',
     capabilities: ['vision'],
+    visionEnabled: true,
     size: 436806912,
     params: 409252800, // 500M parameters
     isDownloaded: false,

@@ -1,5 +1,5 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import DocumentPicker from 'react-native-document-picker';
+import {pick} from '@react-native-documents/picker';
 import {
   readJsonFile,
   validateImportedData,
@@ -100,7 +100,7 @@ describe('importUtils', () => {
       (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
 
       // Mock document picker to return a file
-      (DocumentPicker.pick as jest.Mock).mockResolvedValue([
+      (pick as jest.Mock).mockResolvedValue([
         {
           uri: 'file://path/to/pals.json',
           name: 'pals.json',
@@ -111,7 +111,7 @@ describe('importUtils', () => {
 
     describe('importPals', () => {
       it('should return 0 when user cancels file picker', async () => {
-        (DocumentPicker.pick as jest.Mock).mockResolvedValue(null);
+        (pick as jest.Mock).mockResolvedValue(null);
 
         const result = await importPals();
 

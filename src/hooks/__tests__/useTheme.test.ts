@@ -1,5 +1,4 @@
-import {renderHook} from '@testing-library/react-native';
-import {act} from 'react-test-renderer';
+import {renderHook, waitFor} from '@testing-library/react-native';
 
 jest.unmock('../useTheme');
 jest.unmock('../../store');
@@ -29,15 +28,13 @@ describe('useTheme', () => {
 
     const {result} = renderHook(() => useTheme());
 
-    // Wait for the next update to ensure the theme change is applied
-    await act(async () => {
-      await Promise.resolve();
+    // Wait for the theme change to be applied
+    await waitFor(() => {
+      expect(result.current).toEqual(
+        expect.objectContaining({
+          ...darkTheme,
+        }),
+      );
     });
-
-    expect(result.current).toEqual(
-      expect.objectContaining({
-        ...darkTheme,
-      }),
-    );
   });
 });

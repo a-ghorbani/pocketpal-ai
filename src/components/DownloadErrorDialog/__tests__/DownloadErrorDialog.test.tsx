@@ -8,10 +8,9 @@ import {createModel} from '../../../../jest/fixtures/models';
 import {l10n} from '../../../utils/l10n';
 import {createErrorState, ErrorState} from '../../../utils/errors';
 
-// Mock Linking for testing URL navigation
-jest.mock('react-native/Libraries/Linking/Linking', () => ({
-  openURL: jest.fn(() => Promise.resolve()),
-}));
+// Mock Linking - need to spy on the actual Linking object
+const mockOpenURL = jest.fn().mockImplementation(() => Promise.resolve());
+jest.spyOn(Linking, 'openURL').mockImplementation(mockOpenURL);
 
 // Mock the CheckCircleIcon component
 jest.mock('../../../assets/icons', () => ({
@@ -197,7 +196,7 @@ describe('DownloadErrorDialog', () => {
       },
     );
 
-    const {getByText, getAllByText} = render(
+    const {getByText, getByTestId} = render(
       <DownloadErrorDialog
         visible={true}
         onDismiss={mockDismiss}
@@ -212,7 +211,10 @@ describe('DownloadErrorDialog', () => {
       getByText(l10n.en.components.downloadErrorDialog.downloadFailedTitle),
     ).toBeTruthy();
 
-    // Check that the error message is displayed
-    expect(getAllByText('Something unexpected happened')[0]).toBeTruthy();
+    // Check that the error message is displayed using testID
+    expect(getByTestId('error-message-text')).toBeTruthy();
+    expect(getByTestId('error-message-text').props.children).toBe(
+      'Something unexpected happened',
+    );
   });
 });

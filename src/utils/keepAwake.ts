@@ -1,15 +1,4 @@
-import {NativeModules} from 'react-native';
-
-const {KeepAwakeModule} = NativeModules;
-
-if (!KeepAwakeModule) {
-  console.warn(
-    'KeepAwakeModule is not available. Make sure:\n' +
-      '- You rebuilt the app after adding the native modules\n' +
-      '- The native module is properly linked\n' +
-      '- You are not using Expo managed workflow',
-  );
-}
+import NativeKeepAwake from '../specs/NativeKeepAwake';
 
 /**
  * Activates keep awake functionality to prevent the screen from going to sleep
@@ -17,7 +6,7 @@ if (!KeepAwakeModule) {
  */
 export const activateKeepAwake = (): void => {
   try {
-    KeepAwakeModule.activate();
+    NativeKeepAwake.activate();
   } catch (error) {
     console.error('Failed to activate keep awake:', error);
     throw error;
@@ -30,7 +19,7 @@ export const activateKeepAwake = (): void => {
  */
 export const deactivateKeepAwake = (): void => {
   try {
-    KeepAwakeModule.deactivate();
+    NativeKeepAwake.deactivate();
   } catch (error) {
     console.error('Failed to deactivate keep awake:', error);
     throw error;

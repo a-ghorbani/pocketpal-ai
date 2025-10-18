@@ -41,12 +41,13 @@ describe('DetailsView', () => {
   });
 
   it('renders model files section', () => {
-    const {getByText} = render(<DetailsView hfModel={mockHFModel1} />);
+    const {getByText, getByTestId} = render(<DetailsView hfModel={mockHFModel1} />);
 
     expect(getByText('Available GGUF Files')).toBeDefined();
-    // Check if file names are displayed
+    // Check if file names are displayed using testIDs
     mockHFModel1.siblings.forEach(file => {
-      expect(getByText(file.rfilename)).toBeDefined();
+      expect(getByTestId(`model-file-card-${file.rfilename}`)).toBeDefined();
+      expect(getByTestId(`model-file-name-${file.rfilename}`)).toBeDefined();
     });
   });
 });

@@ -11,12 +11,16 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('react-native', () => ({
   Dimensions: {
-    addEventListener: jest.fn(),
+    addEventListener: jest.fn(() => ({
+      remove: jest.fn(),
+    })),
     removeEventListener: jest.fn(),
     get: jest.fn().mockReturnValue({height: 800}),
   },
   Keyboard: {
-    addListener: jest.fn(),
+    addListener: jest.fn(() => ({
+      remove: jest.fn(),
+    })),
     removeListener: jest.fn(),
   },
   LayoutAnimation: {
@@ -34,6 +38,14 @@ describe('useKeyboardDimensions', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     (useSafeAreaFrame as jest.Mock).mockReturnValue({height: 800, y: 0});
+
+    // Re-setup the mocks after resetAllMocks
+    (Dimensions.addEventListener as jest.Mock).mockReturnValue({
+      remove: jest.fn(),
+    });
+    (Keyboard.addListener as jest.Mock).mockReturnValue({
+      remove: jest.fn(),
+    });
   });
 
   it('should initialize with the screen height and no keyboard', () => {

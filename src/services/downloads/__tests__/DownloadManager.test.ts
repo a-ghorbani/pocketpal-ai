@@ -6,23 +6,42 @@ import {basicModel} from '../../../../jest/fixtures/models';
 
 import {DownloadManager} from '../DownloadManager';
 
-jest.mock('react-native', () => ({
-  NativeModules: {
-    DownloadModule: {
-      startDownload: jest.fn(),
-      cancelDownload: jest.fn(),
-      getActiveDownloads: jest.fn(),
-      reattachDownloadObserver: jest.fn(),
+jest.mock('react-native', () => {
+  // Create a shared mock for DownloadModule inside the factory
+  const mockDownloadModule = {
+    startDownload: jest.fn(),
+    cancelDownload: jest.fn(),
+    getActiveDownloads: jest.fn(),
+    reattachDownloadObserver: jest.fn(),
+    addListener: jest.fn(),
+    removeListeners: jest.fn(),
+    pauseDownload: jest.fn(),
+    resumeDownload: jest.fn(),
+    retryDownload: jest.fn(),
+    logDownloadDatabase: jest.fn(),
+  };
+
+  return {
+    NativeModules: {
+      DownloadModule: mockDownloadModule,
     },
-  },
-  NativeEventEmitter: jest.fn(),
-  Platform: {
-    OS: 'android',
-  },
-  Appearance: {
-    getColorScheme: jest.fn(() => 'light'),
-  },
-}));
+    NativeEventEmitter: jest.fn(),
+    Platform: {
+      OS: 'android',
+    },
+    Appearance: {
+      getColorScheme: jest.fn(() => 'light'),
+    },
+    TurboModuleRegistry: {
+      getEnforcing: jest.fn((name: string) => {
+        if (name === 'DownloadModule') {
+          return mockDownloadModule;
+        }
+        return null;
+      }),
+    },
+  };
+});
 
 describe('DownloadManager', () => {
   let downloadManager: DownloadManager;

@@ -1,7 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "org.jetbrains.kotlin.kapt"
 apply plugin: "com.facebook.react"
-apply plugin: "kotlin-kapt"
 
 // Add the Google Services plugin dependency
 // This is used exclusively for sending benchmarks (with user consent) to Hugging Face Spaces via Firebase.
@@ -16,13 +16,13 @@ apply from: "../../node_modules/react-native-config/android/dotenv.gradle"
  */
 react {
     /* Folders */
-    //   The root of your project, i.e. where "package.json" lives. Default is '..'
+    //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
-    //   The folder where the react-native NPM package is. Default is ../node_modules/react-native
+    //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
     // reactNativeDir = file("../../node_modules/react-native")
-    //   The folder where the react-native Codegen package is. Default is ../node_modules/@react-native/codegen
+    //   The folder where the react-native Codegen package is. Default is ../../node_modules/@react-native/codegen
     // codegenDir = file("../../node_modules/@react-native/codegen")
-    //   The cli.js file which is the React Native CLI entrypoint. Default is ../node_modules/react-native/cli.js
+    //   The cli.js file which is the React Native CLI entrypoint. Default is ../../node_modules/react-native/cli.js
     // cliFile = file("../../node_modules/react-native/cli.js")
 
     /* Variants */
@@ -71,14 +71,14 @@ def enableProguardInReleaseBuilds = false
  * The preferred build flavor of JavaScriptCore (JSC)
  *
  * For example, to use the international variant, you can use:
- * `def jscFlavor = 'org.webkit:android-jsc-intl:+'`
+ * `def jscFlavor = io.github.react-native-community:jsc-android-intl:2026004.+`
  *
  * The international variant includes ICU i18n library and necessary data
  * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
  * give correct results when using with locales other than en-US. Note that
  * this variant is about 6MiB larger per architecture than default.
  */
-def jscFlavor = 'org.webkit:android-jsc:+'
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -127,7 +127,6 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    //implementation("com.facebook.react:flipper-integration")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
@@ -135,29 +134,35 @@ dependencies {
         implementation jscFlavor
     }
 
-    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    // The Firebase Android BoM (Bill of Materials) lets you manage all your Firebase library versions 
+    // by specifying only one version — the BoM's version.
+    implementation platform('com.google.firebase:firebase-bom:34.4.0')
     implementation 'com.google.firebase:firebase-appcheck-playintegrity'
     implementation 'com.google.firebase:firebase-appcheck-debug'
 
-    // for edge-to-edge display
-    implementation "androidx.activity:activity-ktx:1.9.3" 
-    
-    // for download manager
-    implementation "androidx.work:work-runtime-ktx:2.9.0"
-    def room_version = "2.6.1"
-    kapt "androidx.room:room-compiler:$room_version"
-    implementation "androidx.room:room-runtime:$room_version"
-    implementation "androidx.room:room-ktx:$room_version"
-    implementation "com.squareup.okhttp3:okhttp:4.12.0"
-    
-}
+    // Room dependencies for DownloadModule
+    def room_version = "2.8.2"
+    implementation("androidx.room:room-runtime:$room_version")
+    // Kotlin Extensions and Coroutines support for Room
+    implementation("androidx.room:room-ktx:$room_version")
+    kapt("androidx.room:room-compiler:$room_version")
+    // WorkManager for DownloadModule
+    implementation "androidx.work:work-runtime-ktx:2.10.5"
+    // Lifecycle for DownloadModule
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.9.4"
+    // Coroutines for DownloadModule (wait)
+    implementation "androidx.concurrent:concurrent-futures-ktx:1.3.0" 
 
-// apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+    // Core library for AndroidX Jetpack - Needed for WindowCompat (we use for edge-to-edge)
+    implementation "androidx.core:core-ktx:1.17.0"
+
+    // OkHttp for DownloadModule (network requests)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+}
 
 project.ext.vectoricons = [
     iconFontNames: [ 'MaterialIcons.ttf', 'MaterialCommunityIcons.ttf'  ] // Specify font files
 ]
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
-
 

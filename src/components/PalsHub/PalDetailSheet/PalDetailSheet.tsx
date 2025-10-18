@@ -148,6 +148,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
             <View style={styles.labelRow}>
               {palLabel.showLabel && (
                 <Text
+                  testID={`pal-label-${palLabel.type}`}
                   style={[
                     styles.priceLabel,
                     palLabel.type === 'free' && styles.freeLabel,

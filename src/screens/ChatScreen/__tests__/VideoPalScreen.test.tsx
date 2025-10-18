@@ -131,12 +131,14 @@ describe('VideoPalScreen', () => {
     fireEvent.press(getByLabelText('Start video analysis'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Multimodal Not Enabled',
-        expect.stringContaining('does not support image analysis'),
-        expect.any(Array),
-      );
+      expect(alertSpy).toHaveBeenCalled();
     });
+
+    // Check the call arguments
+    const callArgs = alertSpy.mock.calls[0];
+    expect(callArgs[0]).toBe('Multimodal Not Enabled');
+    expect(callArgs[1]).toBe('This model does not support image analysis. Please load a multimodal model.');
+    expect(callArgs[2]).toEqual(expect.any(Array));
   });
 
   it('starts camera when multimodal is enabled, allows interval change, and closes back to chat', async () => {

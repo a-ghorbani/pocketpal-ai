@@ -23,7 +23,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   setupFiles: ['./jest/setup.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines)/)',
+    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines|react-native-worklets)/)',
   ],
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',
@@ -36,8 +36,8 @@ module.exports = {
     'react-dom': '<rootDir>/__mocks__/external/react-dom.js',
     'react-native-device-info':
       '<rootDir>/__mocks__/external/react-native-device-info.js',
-    'react-native-document-picker':
-      '<rootDir>/__mocks__/external/react-native-document-picker.js',
+    '@react-native-documents/picker':
+      '<rootDir>/__mocks__/external/@react-native-documents/picker.js',
     '@dr.pogodin/react-native-fs':
       '<rootDir>/__mocks__/external/@dr.pogodin/react-native-fs.js',
     'react-native-haptic-feedback':
@@ -75,5 +75,6 @@ module.exports = {
     'react-native-code-highlighter':
       '<rootDir>/__mocks__/external/react-native-code-highlighter.js',
     '@env': '<rootDir>/__mocks__/external/@env.js',
+    '@gorhom/bottom-sheet': '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
   },
 };

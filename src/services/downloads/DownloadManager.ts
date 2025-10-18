@@ -1,6 +1,6 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {makeAutoObservable, observable} from 'mobx';
-import {NativeEventEmitter, NativeModules, Platform} from 'react-native';
+import {NativeEventEmitter, Platform} from 'react-native';
 
 import {
   DownloadEventCallbacks,
@@ -12,8 +12,12 @@ import {
 import {Model} from '../../utils/types';
 import {formatBytes, hasEnoughSpace} from '../../utils';
 import {uiStore} from '../../store';
+import NativeDownloadModule from '../../specs/NativeDownloadModule';
+import type {
+  DownloadConfig,
+  DownloadResponse,
+} from '../../specs/NativeDownloadModule';
 
-const {DownloadModule} = NativeModules;
 const TAG = 'DownloadManager';
 
 export class DownloadManager {
@@ -32,9 +36,9 @@ export class DownloadManager {
   }
 
   private setupAndroidEventListener() {
-    if (DownloadModule) {
+    if (NativeDownloadModule) {
       console.log(`${TAG}: Setting up Android event listeners`);
-      this.eventEmitter = new NativeEventEmitter(DownloadModule);
+      this.eventEmitter = new NativeEventEmitter(NativeDownloadModule as any);
 
       this.eventEmitter.addListener('onDownloadProgress', event => {
         // console.log(
@@ -405,13 +409,17 @@ export class DownloadManager {
       };
 
       // Start the download first to get the download ID
-      const response = await DownloadModule.startDownload(model.downloadUrl!, {
+      const config: DownloadConfig = {
         destination: destinationPath,
         networkType: 'ANY',
         priority: 1,
         progressInterval: 1000,
         ...(authToken ? {authToken} : {}),
-      });
+      };
+      const response: DownloadResponse = await NativeDownloadModule.startDownload(
+        model.downloadUrl!,
+        config,
+      );
 
       // Store the download ID
       downloadJob.downloadId = response.downloadId;
@@ -453,9 +461,9 @@ export class DownloadManager {
           if (job.jobId) {
             RNFS.stopDownload(job.jobId); // job.jobId is now correctly typed as number
           }
-        } else if (Platform.OS === 'android' && DownloadModule) {
+        } else if (Platform.OS === 'android' && NativeDownloadModule && job.downloadId) {
           console.log(`${TAG}: Cancelling Android download:`, modelId);
-          await DownloadModule.cancelDownload(job.downloadId);
+          await NativeDownloadModule.cancelDownload(job.downloadId);
         }
 
         // Clean up the partial download file
@@ -519,7 +527,7 @@ export class DownloadManager {
    * This should be called after the model store is initialized.
    */
   syncWithActiveDownloads = async (models: Model[]): Promise<void> => {
-    if (Platform.OS !== 'android' || !DownloadModule) {
+    if (Platform.OS !== 'android' || !NativeDownloadModule) {
       return;
     }
 
@@ -527,7 +535,7 @@ export class DownloadManager {
       console.log(`${TAG}: Syncing download jobs with native layer`);
 
       // Get active downloads from native module
-      const activeDownloads = await DownloadModule.getActiveDownloads();
+      const activeDownloads = await NativeDownloadModule.getActiveDownloads();
       console.log(
         `${TAG}: Found ${activeDownloads.length} active downloads in native layer`,
       );
@@ -549,21 +557,15 @@ export class DownloadManager {
           continue;
         }
 
-        // Parse numeric values safely
-        const bytesWritten =
-          typeof download.bytesWritten === 'string'
-            ? parseInt(download.bytesWritten, 10)
-            : download.bytesWritten || 0;
-
-        const totalBytes =
-          typeof download.totalBytes === 'string'
-            ? parseInt(download.totalBytes, 10)
-            : download.totalBytes || 0;
-
+        // Parse progress value safely
         const progress =
           typeof download.progress === 'string'
             ? parseFloat(download.progress)
             : download.progress || 0;
+
+        // Calculate bytes from model size and progress
+        const totalBytes = model.size || 0;
+        const bytesWritten = Math.floor((totalBytes * progress) / 100);
 
         // Create a download job for this model
         const downloadJob: DownloadJob = {
@@ -599,14 +601,14 @@ export class DownloadManager {
         // Re-register for progress updates by calling the native module
         try {
           // We need to tell the native module to re-register the observer for this download
-          if (DownloadModule.reattachDownloadObserver) {
-            await DownloadModule.reattachDownloadObserver(download.id);
+          if (NativeDownloadModule.reattachDownloadObserver) {
+            await NativeDownloadModule.reattachDownloadObserver(download.id);
             console.log(
               `${TAG}: Re-attached observer for download ID: ${download.id}`,
             );
           } else {
             console.warn(
-              `${TAG}: reattachDownloadObserver method not available in DownloadModule`,
+              `${TAG}: reattachDownloadObserver method not available in NativeDownloadModule`,
             );
           }
         } catch (error) {

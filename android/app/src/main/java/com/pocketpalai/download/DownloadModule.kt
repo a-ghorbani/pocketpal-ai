@@ -4,14 +4,17 @@ import android.util.Log
 import androidx.lifecycle.Observer
 import androidx.work.*
 import com.facebook.react.bridge.*
+import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.pocketpal.specs.NativeDownloadModuleSpec
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.util.*
-import androidx.work.await
+import androidx.concurrent.futures.await
 
-class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+@ReactModule(name = NativeDownloadModuleSpec.NAME)
+class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModuleSpec(reactContext) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val downloadDao = DownloadDatabase.getInstance(reactContext).downloadDao()
     private val workManager = WorkManager.getInstance(reactContext)
@@ -20,23 +23,19 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
 
     init {
         Log.d(TAG, "Initializing DownloadModule")
-        
+
         scope.launch {
             Log.d(TAG, "Logging initial download database state")
             logEntireDownloadDatabase()
         }
     }
 
-    override fun getName() = "DownloadModule"
-
-    @ReactMethod
-    fun addListener(eventName: String) {
+    override fun addListener(eventName: String) {
         Log.d(TAG, "Adding listener for event: $eventName")
     }
 
-    @ReactMethod
-    fun removeListeners(count: Int) {
-        Log.d(TAG, "Removing $count listeners")
+    override fun removeListeners(count: Double) {
+        Log.d(TAG, "Removing ${count.toInt()} listeners")
     }
 
     private fun sendEvent(eventName: String, params: WritableMap) {
@@ -55,8 +54,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun startDownload(url: String, config: ReadableMap, promise: Promise) {
+    override fun startDownload(url: String, config: ReadableMap, promise: Promise) {
         Log.d(TAG, "Starting download with config: $config")
         scope.launch {
             try {
@@ -79,9 +77,16 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
                 }
                 Log.d(TAG, "Network type: $networkType")
 
-                val progressInterval = config.getDouble("progressInterval")?.toLong() 
+                val progressInterval = config.getDouble("progressInterval")?.toLong()
                     ?: DownloadWorker.DEFAULT_PROGRESS_INTERVAL
                 Log.d(TAG, "Progress interval: $progressInterval ms")
+
+                val priority = if (config.hasKey("priority")) {
+                    config.getInt("priority")
+                } else {
+                    0
+                }
+                Log.d(TAG, "Priority: $priority")
 
                 val download = DownloadEntity(
                     id = downloadId,
@@ -90,7 +95,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
                     totalBytes = 0,
                     downloadedBytes = 0,
                     status = DownloadStatus.QUEUED,
-                    priority = config.getInt("priority") ?: 0,
+                    priority = priority,
                     networkType = networkType,
                     createdAt = System.currentTimeMillis(),
                     authToken = authToken
@@ -125,8 +130,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun reattachDownloadObserver(downloadId: String, promise: Promise) {
+    override fun reattachDownloadObserver(downloadId: String, promise: Promise) {
         Log.d(TAG, "Re-attaching observer for download: $downloadId")
         scope.launch {
             try {
@@ -151,8 +155,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun getActiveDownloads(promise: Promise) {
+    override fun getActiveDownloads(promise: Promise) {
         Log.d(TAG, "Getting active downloads")
         scope.launch {
             try {
@@ -191,8 +194,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun logDownloadDatabase(promise: Promise) {
+    override fun logDownloadDatabase(promise: Promise) {
         Log.d(TAG, "Logging download database state (requested from JS)")
         scope.launch {
             try {
@@ -205,8 +207,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun pauseDownload(downloadId: String, promise: Promise) {
+    override fun pauseDownload(downloadId: String, promise: Promise) {
         Log.d(TAG, "Pausing download: $downloadId")
         scope.launch {
             try {
@@ -222,8 +223,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun resumeDownload(downloadId: String, promise: Promise) {
+    override fun resumeDownload(downloadId: String, promise: Promise) {
         Log.d(TAG, "Resuming download: $downloadId")
         scope.launch {
             try {
@@ -259,8 +259,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun retryDownload(downloadId: String, promise: Promise) {
+    override fun retryDownload(downloadId: String, promise: Promise) {
         Log.d(TAG, "Retrying download: $downloadId")
         scope.launch {
             try {
@@ -284,8 +283,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    @ReactMethod
-    fun cancelDownload(downloadId: String, promise: Promise) {
+    override fun cancelDownload(downloadId: String, promise: Promise) {
         Log.d(TAG, "Cancelling download: $downloadId")
         scope.launch {
             try {

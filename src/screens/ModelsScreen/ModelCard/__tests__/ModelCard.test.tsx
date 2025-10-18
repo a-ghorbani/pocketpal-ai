@@ -23,13 +23,9 @@ import {l10n} from '../../../../utils/l10n';
 
 jest.useFakeTimers(); // Mock all timers
 
-jest.mock('react-native/Libraries/Linking/Linking', () => ({
-  openURL: jest.fn().mockImplementation(() => Promise.resolve()),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  canOpenURL: jest.fn().mockImplementation(() => Promise.resolve(true)),
-  getInitialURL: jest.fn().mockImplementation(() => Promise.resolve(null)),
-}));
+// Mock Linking - need to spy on the actual Linking object
+const mockOpenURL = jest.fn().mockImplementation(() => Promise.resolve());
+jest.spyOn(Linking, 'openURL').mockImplementation(mockOpenURL);
 
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({

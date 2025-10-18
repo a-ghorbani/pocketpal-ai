@@ -9,10 +9,9 @@ import {
   ServerError,
 } from '../../../../utils/errors';
 
-// Mock Linking
-jest.mock('react-native/Libraries/Linking/Linking', () => ({
-  openURL: jest.fn().mockImplementation(() => Promise.resolve()),
-}));
+// Mock Linking - need to spy on the actual Linking object
+const mockOpenURL = jest.fn().mockImplementation(() => Promise.resolve());
+jest.spyOn(Linking, 'openURL').mockImplementation(mockOpenURL);
 
 // Mock Alert
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());

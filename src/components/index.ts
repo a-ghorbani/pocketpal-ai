@@ -1,6 +1,5 @@
 export * from './AttachmentButton';
 export * from './Avatar';
-export * from './BottomSheetSearchbar';
 export * from './Bubble';
 export * from './ChatGenerationSettingsSheet';
 export * from './ChatInput';
@@ -38,7 +37,6 @@ export * from './ModelTypeTag';
 export * from './ProjectionModelSelector';
 export * from './RenameModal';
 export * from './ResponseBubble';
-export * from './Searchbar';
 export * from './Selector';
 export * from './SendButton';
 export * from './SidebarContent';

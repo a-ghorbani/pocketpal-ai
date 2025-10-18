@@ -1,7 +1,8 @@
 import {LlamaContext} from '@pocketpalai/llama.rn';
-import {renderHook, act} from '@testing-library/react-native';
+import {renderHook, act, waitFor} from '@testing-library/react-native';
 
 import {textMessage} from '../../../jest/fixtures';
+import {sessionFixtures} from '../../../jest/fixtures/chatSessions';
 import {
   mockBasicModel,
   mockContextModel,
@@ -21,7 +22,19 @@ const mockAssistant = {
 };
 
 beforeEach(() => {
+  // Reset jest mocks' call counts without removing spies
   jest.clearAllMocks();
+
+  // Reset mock stores to a known baseline between tests
+  palStore.pals = [] as any;
+  chatSessionStore.sessions = sessionFixtures as any;
+  chatSessionStore.activeSessionId = 'session-1';
+
+  // Reset model state
+  modelStore.models = modelsList as any;
+  modelStore.activeModelId = undefined;
+
+  // Fresh mocked context each test
   modelStore.context = new LlamaContext({
     contextId: 1,
     gpu: false,
@@ -29,7 +42,6 @@ beforeEach(() => {
     model: mockContextModel,
   });
 });
-modelStore.models = modelsList;
 
 // Mock the applyChatTemplate function from utils/chat
 const applyChatTemplateSpy = jest
@@ -237,17 +249,16 @@ describe('useChatSession', () => {
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
 
-    const sendPromise = act(async () => {
-      await result.current.handleSendPress(textMessage);
+    const sendPromise = result.current.handleSendPress(textMessage);
+
+    // Wait until inferencing flips to true (handleSendPress sets it after adding message)
+    await waitFor(() => {
+      expect(modelStore.inferencing).toBe(true);
     });
 
+    // Complete the mocked completion and wait for the handler to finish
+    resolveCompletion!({timings: {total: 100}, usage: {}});
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-    expect(modelStore.inferencing).toBe(true);
-
-    await act(async () => {
-      resolveCompletion!({timings: {total: 100}, usage: {}});
       await sendPromise;
     });
     expect(modelStore.inferencing).toBe(false);

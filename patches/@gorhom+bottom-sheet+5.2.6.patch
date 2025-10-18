@@ -1,0 +1,19 @@
+diff --git a/node_modules/@gorhom/bottom-sheet/src/constants.ts b/node_modules/@gorhom/bottom-sheet/src/constants.ts
+index 4159132..0bdfc0a 100644
+--- a/node_modules/@gorhom/bottom-sheet/src/constants.ts
++++ b/node_modules/@gorhom/bottom-sheet/src/constants.ts
+@@ -1,5 +1,4 @@
+ import { Dimensions, Platform } from 'react-native';
+-import type Animated from 'react-native-reanimated';
+ import { Easing } from 'react-native-reanimated';
+ import type { SpringConfig, TimingConfig } from './types';
+ 
+@@ -69,7 +68,7 @@ enum SNAP_POINT_TYPE {
+   DYNAMIC = 1,
+ }
+ 
+-const ANIMATION_EASING: Animated.EasingFunction = Easing.out(Easing.exp);
++const ANIMATION_EASING = Easing.out(Easing.exp);
+ const ANIMATION_DURATION = 250;
+ 
+ const ANIMATION_CONFIGS = Platform.select<TimingConfig | SpringConfig>({

@@ -1,28 +1,26 @@
 package com.pocketpal
 
-import android.app.Activity
 import android.view.WindowManager
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.module.annotations.ReactModule
+import com.pocketpal.specs.NativeKeepAwakeSpec
 
-class KeepAwakeModule(private val reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+@ReactModule(name = NativeKeepAwakeSpec.NAME)
+class KeepAwakeModule(reactContext: ReactApplicationContext) :
+    NativeKeepAwakeSpec(reactContext) {
 
-    override fun getName(): String = "KeepAwakeModule"
-
-    @ReactMethod
-    fun activate() {
-        val activity = reactContext.currentActivity
-        activity?.runOnUiThread {
-            activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+  override fun activate() {
+    val activity = currentActivity ?: return
+    activity.runOnUiThread {
+      activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
+  }
 
-    @ReactMethod
-    fun deactivate() {
-        val activity = reactContext.currentActivity
-        activity?.runOnUiThread {
-            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+  override fun deactivate() {
+    val activity = currentActivity ?: return
+    activity.runOnUiThread {
+      activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
-} 
+  }
+}
+

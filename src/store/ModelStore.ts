@@ -712,13 +712,12 @@ class ModelStore {
     if (
       !model.supportsMultimodal ||
       !model.defaultProjectionModel ||
-      model.modelType === ModelType.PROJECTION ||
-      !model.visionEnabled
+      model.modelType === ModelType.PROJECTION
     ) {
       return;
     }
 
-    // Check if vision is enabled for this model
+    // Check if vision is enabled for this model (uses getModelVisionPreference for proper default handling)
     if (!this.getModelVisionPreference(model)) {
       console.log(
         'Vision disabled for model, skipping projection model download:',

@@ -99,7 +99,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         color: z.tuple([z.string(), z.string()]).optional(),
         promptGenerationModel: z.any().optional(),
         generatingPrompt: z.string().nullable().optional(),
-        completionSettings: z.record(z.any()).optional(),
+        completionSettings: z.record(z.string(), z.any()).optional(),
       });
 
       // Add dynamic parameter validation
@@ -123,7 +123,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
 
     // Manages values, errors, touches & makes Zod the source of truth for validation.
     const methods = useForm<PalFormData>({
-      resolver: zodResolver(validationSchema),
+      resolver: zodResolver(validationSchema) as any,
       defaultValues: INITIAL_STATE,
     });
 
@@ -304,7 +304,9 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
               contentContainerStyle={styles.scrollviewContainer}>
               <View style={styles.form}>
                 <FormField
-                  ref={ref => (inputRefs.current.name = ref)}
+                  ref={ref => {
+                    inputRefs.current.name = ref;
+                  }}
                   name="name"
                   label={
                     l10n.components.assistantPalSheet?.palName || 'Pal Name'
@@ -318,7 +320,9 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                 />
 
                 <FormField
-                  ref={ref => (inputRefs.current.description = ref)}
+                  ref={ref => {
+                    inputRefs.current.description = ref;
+                  }}
                   name="description"
                   label={l10n.components.palSheet.description}
                   placeholder={l10n.components.palSheet.descriptionPlaceholder}

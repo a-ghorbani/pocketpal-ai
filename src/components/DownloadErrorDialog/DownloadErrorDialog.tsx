@@ -231,7 +231,9 @@ export const DownloadErrorDialog: React.FC<DownloadErrorDialogProps> = ({
 
           {errorType === 'other' && error?.message && (
             <View style={styles.errorDetails}>
-              <Text style={styles.errorText}>{error.message}</Text>
+              <Text style={styles.errorText} testID="error-message-text">
+                {error.message}
+              </Text>
             </View>
           )}
         </View>

@@ -192,6 +192,7 @@ export const EnhancedSearchBar = ({
         contentContainerStyle={styles.filterDropdownContent}>
         {/* Author Filter Button */}
         <TouchableOpacity
+          testID="filter-button-author"
           onPress={() => openFilterSheet('author')}
           style={[
             styles.filterDropdownButton,
@@ -218,6 +219,7 @@ export const EnhancedSearchBar = ({
 
         {/* Sort Filter Button */}
         <TouchableOpacity
+          testID="filter-button-sort"
           onPress={() => openFilterSheet('sort')}
           style={[
             styles.filterDropdownButton,
