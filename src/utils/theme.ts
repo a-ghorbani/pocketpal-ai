@@ -60,7 +60,7 @@ const createBaseColors = (appTheme: AppTheme): MD3BaseColors => {
       inverseSecondary: md3BaseColors.secondary!,
       shadow: '#ffffff',
       scrim: 'rgba(0, 0, 0, 0.25)',
-      backdrop: 'rgba(38, 37, 37, 0.8)',
+      backdrop: 'rgba(66, 66, 66, 0.8)',
     };
   } else if (appTheme === AppTheme.X1) {
     return {

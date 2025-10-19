@@ -4,8 +4,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import React, {useMemo} from 'react';
 import {useTheme} from 'react-native-paper';
-import {Extrapolation, interpolate} from 'react-native-reanimated';
-import {useAnimatedStyle} from 'react-native-reanimated';
+// import {Extrapolation, interpolate} from 'react-native-reanimated';
+// import {useAnimatedStyle} from 'react-native-reanimated';
 
 export const CustomBackdrop = ({
   animatedIndex,
@@ -14,14 +14,14 @@ export const CustomBackdrop = ({
 }: BottomSheetBackdropProps) => {
   const theme = useTheme();
 
-  const containerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      animatedIndex.value,
-      [-1, 0],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
+  // const containerAnimatedStyle = useAnimatedStyle(() => ({
+  //   opacity: interpolate(
+  //     animatedIndex.value,
+  //     [-1, 0],
+  //     [0, 1],
+  //     Extrapolation.CLAMP,
+  //   ),
+  // }));
 
   const containerStyle = useMemo(
     () => [
@@ -29,9 +29,9 @@ export const CustomBackdrop = ({
       {
         backgroundColor: theme.colors.backdrop,
       },
-      containerAnimatedStyle,
+      // containerAnimatedStyle,
     ],
-    [style, containerAnimatedStyle, theme.colors.backdrop],
+    [style, theme.colors.backdrop],
   );
 
   return (

@@ -109,9 +109,10 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
           appearsOnIndex={0}
           opacity={0.5}
           pressBehavior="close"
+          style={{backgroundColor: theme.colors.backdrop}}
         />
       ),
-      [],
+      [theme.colors.backdrop],
     );
 
     const handleSheetDismiss = () => {

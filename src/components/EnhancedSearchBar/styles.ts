@@ -143,7 +143,10 @@ export const createStyles = (theme: Theme) =>
     },
 
     filterSheetContent: {
+      paddingTop: 44,
       paddingBottom: 100,
+      paddingHorizontal: 16,
+      gap: 1,
     },
     filterOption: {
       flexDirection: 'row',
@@ -151,11 +154,23 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'space-between',
       paddingVertical: 16,
       paddingHorizontal: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.colors.outline,
+      borderRadius: 12,
+      backgroundColor: 'transparent',
+      minHeight: 56,
+    },
+    filterOptionSelected: {
+      backgroundColor: theme.colors.primaryContainer,
+    },
+    filterOptionLast: {
+      borderBottomWidth: 0,
     },
     filterOptionText: {
       fontSize: 16,
       color: theme.colors.onSurface,
+      fontWeight: '400',
+    },
+    filterOptionTextSelected: {
+      color: theme.colors.primary,
+      fontWeight: '600',
     },
   });

@@ -253,17 +253,34 @@ export const EnhancedSearchBar = ({
         onClose={closeFilterSheet}
         title={l10n.models.search.filters.sortBy}>
         <Sheet.View style={styles.filterSheetContent}>
-          {sortOptions.map(option => (
-            <TouchableOpacity
-              key={option.value}
-              onPress={() => handleSortFilterSelect(option.value)}
-              style={styles.filterOption}>
-              <Text style={styles.filterOptionText}>{option.label}</Text>
-              {filters.sortBy === option.value && (
-                <Icon name="check" size={20} color={theme.colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
+          {sortOptions.map(option => {
+            const isSelected = filters.sortBy === option.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => handleSortFilterSelect(option.value)}
+                style={[
+                  styles.filterOption,
+                  isSelected && styles.filterOptionSelected,
+                ]}
+                activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    isSelected && styles.filterOptionTextSelected,
+                  ]}>
+                  {option.label}
+                </Text>
+                {isSelected && (
+                  <Icon
+                    name="check-circle"
+                    size={24}
+                    color={theme.colors.primary}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </Sheet.View>
       </Sheet>
     </View>

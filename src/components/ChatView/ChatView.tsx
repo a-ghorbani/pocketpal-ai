@@ -803,15 +803,19 @@ export const ChatView = observer(
                   }}
                 />
               </Animated.View>
-              <ChatPalModelPickerSheet
-                isVisible={isPickerVisible}
-                onClose={() => setIsPickerVisible(false)}
-                onModelSelect={handleModelSelect}
-                onPalSelect={handlePalSelect}
-                onPalSettingsSelect={onPalSettingsSelect}
-                chatInputHeight={chatInputHeight.height}
-                keyboardHeight={keyboardHeight}
-              />
+              {/* Conditionally render the sheet to avoid keyboard issues. 
+              It makes the disappearing sudden, but it's better than the keyboard issue.*/}
+              {isPickerVisible && (
+                <ChatPalModelPickerSheet
+                  isVisible={isPickerVisible}
+                  onClose={() => setIsPickerVisible(false)}
+                  onModelSelect={handleModelSelect}
+                  onPalSelect={handlePalSelect}
+                  onPalSettingsSelect={onPalSettingsSelect}
+                  chatInputHeight={chatInputHeight.height}
+                  keyboardHeight={keyboardHeight}
+                />
+              )}
             </View>
           </KeyboardAvoidingView>
           <ImageView

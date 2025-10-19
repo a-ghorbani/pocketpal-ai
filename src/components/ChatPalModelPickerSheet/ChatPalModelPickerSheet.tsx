@@ -1,4 +1,4 @@
-import React, {useRef, useEffect, useContext} from 'react';
+import React, {useRef, useContext} from 'react';
 import {Alert, Dimensions, View, Pressable} from 'react-native';
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
@@ -15,7 +15,6 @@ import {modelStore, palStore, chatSessionStore} from '../../store';
 import {CustomBackdrop} from '../Sheet/CustomBackdrop';
 import {getModelSkills, L10nContext, Model} from '../../utils';
 import type {Pal} from '../../types/pal';
-//import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {CloseIcon, SettingsIcon} from '../../assets/icons';
 import {SkillsDisplay} from '../SkillsDisplay';
 
@@ -82,7 +81,6 @@ export const ChatPalModelPickerSheet = observer(
     const [activeTab, setActiveTab] = React.useState<Tab>('models');
     const theme = useTheme();
     const l10n = useContext(L10nContext);
-    // const insets = useSafeAreaInsets();
     const styles = createStyles({theme});
     const bottomSheetRef = useRef<BottomSheet>(null);
     const flatListRef = useRef<BottomSheetFlatListMethods>(null);
@@ -104,13 +102,14 @@ export const ChatPalModelPickerSheet = observer(
       ],
     );
 
-    useEffect(() => {
-      if (isVisible) {
-        bottomSheetRef.current?.expand();
-      } else {
-        bottomSheetRef.current?.close();
-      }
-    }, [isVisible]);
+    // Render the sheet only when it's visible
+    // useEffect(() => {
+    //   if (isVisible) {
+    //     bottomSheetRef.current?.expand();
+    //   } else {
+    //     bottomSheetRef.current?.close();
+    //   }
+    // }, [isVisible]);
 
     const handleTabPress = (tab: Tab, index: number) => {
       setActiveTab(tab);
@@ -350,7 +349,7 @@ export const ChatPalModelPickerSheet = observer(
     return (
       <BottomSheet
         ref={bottomSheetRef}
-        index={-1}
+        // index={-1} // remove this line to make it visible by default
         onClose={onClose}
         enablePanDownToClose
         snapPoints={snapPoints} // Dynamic sizing is not working properly in all situations, like keyboard open/close android/ios ...
