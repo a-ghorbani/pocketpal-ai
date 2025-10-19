@@ -355,8 +355,8 @@ export const ModelsScreen: React.FC = observer(() => {
           model={
             modelStore.downloadError?.metadata?.modelId
               ? modelStore.models.find(
-                m => m.id === modelStore.downloadError?.metadata?.modelId,
-              )
+                  m => m.id === modelStore.downloadError?.metadata?.modelId,
+                )
               : undefined
           }
           onTryAgain={modelStore.retryDownload}
