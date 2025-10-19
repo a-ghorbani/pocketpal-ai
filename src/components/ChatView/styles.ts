@@ -1,4 +1,4 @@
-import {Platform, StyleSheet} from 'react-native';
+import {StyleSheet} from 'react-native';
 import {Theme} from '../../utils/types';
 
 export const createStyles = ({theme}: {theme: Theme}) =>
@@ -56,17 +56,9 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       right: 0,
       bottom: 0,
       ...(!theme.dark
-        ? Platform.select({
-            ios: {
-              shadowColor: theme.colors.shadow,
-              shadowOffset: {width: 0, height: -2},
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-            },
-            android: {
-              // Add boxShadow/dropShadow if new architecture is enabled
-            },
-          })
+        ? {
+            boxShadow: `0px -2px 8px ${theme.colors.shadow}1A`,
+          }
         : {}),
     },
     chatContainer: {
