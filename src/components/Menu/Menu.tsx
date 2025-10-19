@@ -63,15 +63,22 @@ export const Menu: React.FC<MenuProps> & {
         styles.content,
         hasActiveSubmenu && styles.contentWithSubmenu,
       ]}>
-      {React.Children.map(children, child =>
-        React.isValidElement<MenuItemProps>(child)
-          ? React.cloneElement(child, {
-              onSubmenuOpen: handleSubmenuOpen,
-              onSubmenuClose: handleSubmenuClose,
-              selectable,
-            })
-          : child,
-      )}
+      {React.Children.map(children, child => {
+        if (!React.isValidElement<MenuItemProps>(child)) {
+          return child;
+        }
+
+        // Only pass submenu props to MenuItem components, not to Separator or GroupSeparator
+        if (child.type === MenuItem) {
+          return React.cloneElement(child, {
+            onSubmenuOpen: handleSubmenuOpen,
+            onSubmenuClose: handleSubmenuClose,
+            selectable,
+          });
+        }
+
+        return child;
+      })}
     </PaperMenu>
   );
 };

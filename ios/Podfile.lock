@@ -2425,7 +2425,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNSVG (15.13.0):
+  - RNSVG (15.14.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2448,9 +2448,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNSVG/common (= 15.13.0)
+    - RNSVG/common (= 15.14.0)
     - Yoga
-  - RNSVG/common (15.13.0):
+  - RNSVG/common (15.14.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2498,7 +2498,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNWorklets (0.6.0):
+  - RNWorklets (0.6.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2521,9 +2521,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNWorklets/worklets (= 0.6.0)
+    - RNWorklets/worklets (= 0.6.1)
     - Yoga
-  - RNWorklets/worklets (0.6.0):
+  - RNWorklets/worklets (0.6.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2546,9 +2546,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNWorklets/worklets/apple (= 0.6.0)
+    - RNWorklets/worklets/apple (= 0.6.1)
     - Yoga
-  - RNWorklets/worklets/apple (0.6.0):
+  - RNWorklets/worklets/apple (0.6.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -3032,9 +3032,9 @@ SPEC CHECKSUMS:
   RNReanimated: 6c440e04cb566a4bb214c5c968607e5aac3bd1f6
   RNScreens: 3f6e41f9f89cb888a6b4b27566bdfdf7a3bf51ad
   RNShare: a60af5971cb114a8d31df642b108e3fe00e5b987
-  RNSVG: ba22deba00b123dd9bca2e5540b6fbc0d3f858cb
+  RNSVG: 681f8ef5ca50e13cb3c6c88a907ea89b68fee74f
   RNVectorIcons: 1fe59cfa2d3ac94ceb9d373a59c54609471b8d56
-  RNWorklets: 7eaf77e405fff64f84d5b6c2c598184de33e2c5e
+  RNWorklets: b1faafefb82d9f29c4018404a0fb33974b494a7b
   simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: 30b358b807324c692064f78385e9a732ce1bebfe
