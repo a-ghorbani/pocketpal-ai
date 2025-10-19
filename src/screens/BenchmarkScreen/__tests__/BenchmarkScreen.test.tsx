@@ -359,14 +359,14 @@ describe('BenchmarkScreen', () => {
         expect(submitBenchmark).toHaveBeenCalled();
       });
 
-      benchmarkStore.results = [mockResult, mockSubmittedResult];
+      await act(async () => {
+        benchmarkStore.results = [mockResult, mockSubmittedResult];
+      });
 
       // wait for the dialog to be closed
-      await waitFor(
-        () => {
-          expect(queryByTestId('share-benchmark-dialog')).toBeNull();
-        },
-        {timeout: 5000},
+      await waitForElementToBeRemoved(
+        () => queryByTestId('share-benchmark-dialog'),
+        {timeout: 4000},
       );
 
       // Since the store is mock we need to manually set the state
