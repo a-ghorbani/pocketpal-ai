@@ -1,0 +1,52 @@
+diff --git a/node_modules/react-native-paper/src/components/Menu/Menu.tsx b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
+index 55922c1..6fff18f 100644
+--- a/node_modules/react-native-paper/src/components/Menu/Menu.tsx
++++ b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
+@@ -346,6 +346,7 @@ const Menu = ({
+ 
+     attachListeners();
+     const { animation } = theme;
++    await new Promise(resolve => setTimeout(resolve, 1));
+     Animated.parallel([
+       Animated.timing(scaleAnimationRef.current, {
+         toValue: { x: menuLayoutResult.width, y: menuLayoutResult.height },
+@@ -367,11 +368,10 @@ const Menu = ({
+     });
+   }, [anchor, attachListeners, measureAnchorLayout, theme]);
+ 
+-  const hide = React.useCallback(() => {
++  const hide = React.useCallback((callback?: () => unknown) => {
+     removeListeners();
+ 
+     const { animation } = theme;
+-
+     Animated.timing(opacityAnimationRef.current, {
+       toValue: 0,
+       duration: ANIMATION_DURATION * animation.scale,
+@@ -383,6 +383,8 @@ const Menu = ({
+         setRendered(false);
+         prevRendered.current = false;
+         focusFirstDOMNode(anchorRef.current);
++        scaleAnimationRef.current.setValue({x: 0, y: 0});
++        callback?.();
+       }
+     });
+   }, [removeListeners, theme]);
+@@ -640,7 +642,7 @@ const Menu = ({
+           <Pressable
+             accessibilityLabel={overlayAccessibilityLabel}
+             accessibilityRole="button"
+-            onPress={onDismiss}
++            onPress={() => hide(onDismiss)}
+             style={styles.pressableOverlay}
+           />
+           <View
+@@ -651,7 +653,7 @@ const Menu = ({
+             accessibilityViewIsModal={visible}
+             style={[styles.wrapper, positionStyle, style]}
+             pointerEvents={pointerEvents}
+-            onAccessibilityEscape={onDismiss}
++            onAccessibilityEscape={() => hide(onDismiss)}
+             testID={`${testID}-view`}
+           >
+             <Animated.View
