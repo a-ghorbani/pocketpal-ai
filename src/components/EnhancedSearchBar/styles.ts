@@ -48,7 +48,7 @@ export const createStyles = (theme: Theme) =>
       top: '50%',
       transform: [{translateY: -12}],
       padding: 4,
-      zIndex: 1,
+      zIndex: 100,
     },
     filterToggleButton: {
       width: 40,
@@ -113,10 +113,10 @@ export const createStyles = (theme: Theme) =>
       borderColor: theme.colors.outline,
     },
     authorInputContainer: {
-      position: 'relative',
-      marginTop: 16,
-      marginBottom: 40,
-      marginHorizontal: 16,
+      //position: 'relative',
+      // marginTop: 16,
+      // marginBottom: 40,
+      // marginHorizontal: 16,
     },
     authorInput: {
       backgroundColor: theme.colors.surface,
@@ -128,6 +128,10 @@ export const createStyles = (theme: Theme) =>
       paddingRight: 44, // Make room for clear button
       minHeight: 40,
       color: theme.colors.onSurface,
+    },
+    sheetScrollContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 66,
     },
     selectorContainer: {
       flex: 1,
