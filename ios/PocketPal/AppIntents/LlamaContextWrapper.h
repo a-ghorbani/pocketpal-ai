@@ -41,6 +41,17 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)getFormattedChat:(NSString *)messages
               withChatTemplate:(nullable NSString *)chatTemplate;
 
+/// Save KV cache session to file
+/// @param path File path to save session
+/// @param size Number of tokens to save (pass -1 to save all)
+/// @return Number of tokens saved
+- (int)saveSession:(NSString *)path size:(int)size;
+
+/// Load KV cache session from file
+/// @param path File path to load session from
+/// @return Dictionary with 'tokens_loaded' (number) and 'prompt' (string)
+- (NSDictionary *)loadSession:(NSString *)path;
+
 /// Release the context
 - (void)invalidate;
 

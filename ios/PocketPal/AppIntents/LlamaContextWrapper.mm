@@ -91,6 +91,16 @@
     return [_context getFormattedChat:messages withChatTemplate:chatTemplate];
 }
 
+- (int)saveSession:(NSString *)path size:(int)size {
+    // Simply pass through to RNLlamaContext
+    return [_context saveSession:path size:size];
+}
+
+- (NSDictionary *)loadSession:(NSString *)path {
+    // Simply pass through to RNLlamaContext
+    return [_context loadSession:path];
+}
+
 - (void)invalidate {
     if (_context) {
         [_context invalidate];

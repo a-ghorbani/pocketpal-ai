@@ -53,11 +53,29 @@ struct AskPalIntent: AppIntent {
             // Load model if not already loaded
             try await inferenceEngine.loadModel(at: palModelPath)
 
+            // Try to load cached session (handles cleanup and validation internally)
+            // llama.cpp will compare cached tokens with current prompt and reuse what matches
+            _ = await inferenceEngine.loadSessionCache(
+                palId: pal.id,
+                modelPath: palModelPath,
+                systemPrompt: pal.systemPrompt
+            )
+
+            // Run inference
             let response = try await inferenceEngine.runInference(
                 systemPrompt: pal.systemPrompt,
                 userMessage: message,
                 completionSettings: pal.completionSettings
             )
+
+            // Save session cache ONLY if system prompt changed or no cache existed
+            if !pal.systemPrompt.isEmpty {
+                _ = await inferenceEngine.saveSessionCacheIfNeeded(
+                    palId: pal.id,
+                    modelPath: palModelPath,
+                    systemPrompt: pal.systemPrompt
+                )
+            }
             print("[AskPalIntent] Inference completed. Response length: \(response.count) chars")
             print("[AskPalIntent] Response: \(response)")
 
