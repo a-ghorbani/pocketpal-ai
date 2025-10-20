@@ -57,43 +57,81 @@ actor LlamaInferenceEngine {
         }
     }
     
-    /// Run inference with the loaded model
-    func runInference(prompt: String, settings: [String: Any]?) async throws -> String {
+    /// Run inference with messages array
+    func runInference(
+        systemPrompt: String,
+        userMessage: String,
+        completionSettings: [String: Any]?
+    ) async throws -> String {
         guard let context = currentContext else {
             throw InferenceError.noModelLoaded
         }
 
-        // Prepare completion parameters
-        var completionParams: [String: Any] = [
-            "prompt": prompt,
-            "n_predict": 512,
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "top_k": 40,
-            "repeat_penalty": 1.1,
-        ]
+        // Build messages array
+        var messages: [[String: Any]] = []
 
-        // Override with pal-specific settings if provided
-        if let settings = settings {
-            completionParams.merge(settings) { (_, new) in new }
+        // Add system prompt if provided
+        if !systemPrompt.isEmpty {
+            messages.append([
+                "role": "system",
+                "content": systemPrompt
+            ])
         }
 
-        // Run completion using our wrapper
-        // This is a blocking call that returns when complete
-        var fullText = ""
+        // Add user message
+        messages.append([
+            "role": "user",
+            "content": userMessage
+        ])
+
+        // Convert messages to JSON string
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: messages, options: []),
+              let messagesJson = String(data: jsonData, encoding: .utf8) else {
+            throw InferenceError.inferenceFailed("Failed to serialize messages")
+        }
+
+        // Format messages using getFormattedChat (matching LlamaManager.mm)
+        let formattedPrompt = context.getFormattedChat(messagesJson, withChatTemplate: nil)
+
+        if formattedPrompt.isEmpty {
+            throw InferenceError.inferenceFailed("Failed to format chat messages")
+        }
+
+        // Prepare completion parameters
+        // Start with minimal params - llama.rn will use its defaults
+        var completionParams: [String: Any] = [
+            "prompt": formattedPrompt
+        ]
+
+        // If pal has completion settings, use them
+        if let settings = completionSettings {
+            // Merge pal settings, excluding app-specific fields
+            let excludedKeys = ["version", "include_thinking_in_context", "enable_thinking", "jinja"]
+            for (key, value) in settings {
+                if !excludedKeys.contains(key) {
+                    completionParams[key] = value
+                }
+            }
+        } else {
+            // No pal settings - let llama.rn use defaults
+            // Only set essential params
+            completionParams["n_predict"] = 512
+        }
+
+        // Run completion
         do {
             let result = try context.completion(
                 withParams: completionParams,
                 onToken: { token in
-                    fullText += token
+                    // Token callback - we could use this for streaming in the future
                 }
             )
 
-            // Return the full text
-            if let text = result["text"] as? String {
-                return text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            } else if !fullText.isEmpty {
-                return fullText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            // Extract response (matching LlamaManager.mm pattern)
+            if let content = result["content"] as? String {
+                return content.trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if let text = result["text"] as? String {
+                return text.trimmingCharacters(in: .whitespacesAndNewlines)
             } else {
                 throw InferenceError.invalidResponse
             }

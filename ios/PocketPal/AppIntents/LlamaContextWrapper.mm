@@ -85,6 +85,12 @@
     return result;
 }
 
+- (NSString *)getFormattedChat:(NSString *)messages
+              withChatTemplate:(nullable NSString *)chatTemplate {
+    // Simply pass through to RNLlamaContext
+    return [_context getFormattedChat:messages withChatTemplate:chatTemplate];
+}
+
 - (void)invalidate {
     if (_context) {
         [_context invalidate];

@@ -34,6 +34,13 @@ NS_ASSUME_NONNULL_BEGIN
                                         onToken:(nullable void (^)(NSString *token))tokenCallback
                                           error:(NSError **)error;
 
+/// Format chat messages using model's chat template
+/// @param messages JSON string of messages array
+/// @param chatTemplate Optional custom chat template (pass nil or empty string to use model's default)
+/// @return Formatted prompt string
+- (NSString *)getFormattedChat:(NSString *)messages
+              withChatTemplate:(nullable NSString *)chatTemplate;
+
 /// Release the context
 - (void)invalidate;
 

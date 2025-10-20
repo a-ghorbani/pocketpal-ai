@@ -20,6 +20,7 @@
 		9AE3DCE490A24E01AA31653A /* Inter-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */; };
 		A81001102E92E09600935976 /* KeepAwakeModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A810010E2E92E09600935976 /* KeepAwakeModule.mm */; };
 		A81001162E92FFC900935976 /* HardwareInfoModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = A81001152E92FFC900935976 /* HardwareInfoModule.mm */; };
+		A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */; };
 		A8B4FFD32EA5731700CD3B4C /* LlamaInferenceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */; };
 		A8B4FFD42EA5731700CD3B4C /* AskPalIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */; };
 		A8B4FFD52EA5731700CD3B4C /* PalDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFD02EA5731700CD3B4C /* PalDataProvider.swift */; };
@@ -66,6 +67,8 @@
 		A81001152E92FFC900935976 /* HardwareInfoModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = HardwareInfoModule.mm; path = PocketPal/HardwareInfoModule.mm; sourceTree = "<group>"; };
 		A826FC242E9ECA10003F1572 /* Env.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Env.xcconfig; path = Config/Env.xcconfig; sourceTree = "<group>"; };
 		A826FC2A2E9ECA9B003F1572 /* PocketPalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketPalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A86CF0D22EA57BE100BFFCEE /* LlamaContextWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LlamaContextWrapper.h; path = PocketPal/AppIntents/LlamaContextWrapper.h; sourceTree = "<group>"; };
+		A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = LlamaContextWrapper.mm; path = PocketPal/AppIntents/LlamaContextWrapper.mm; sourceTree = "<group>"; };
 		A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AskPalIntent.swift; path = PocketPal/AppIntents/AskPalIntent.swift; sourceTree = "<group>"; };
 		A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LlamaInferenceEngine.swift; path = PocketPal/AppIntents/LlamaInferenceEngine.swift; sourceTree = "<group>"; };
 		A8B4FFCE2EA5731700CD3B4C /* ModelDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ModelDataProvider.swift; path = PocketPal/AppIntents/ModelDataProvider.swift; sourceTree = "<group>"; };
@@ -119,6 +122,8 @@
 		13B07FAE1A68108700A75B9A /* PocketPal */ = {
 			isa = PBXGroup;
 			children = (
+				A86CF0D22EA57BE100BFFCEE /* LlamaContextWrapper.h */,
+				A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */,
 				A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */,
 				A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */,
 				A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */,
@@ -460,6 +465,7 @@
 				A8B4FFD42EA5731700CD3B4C /* AskPalIntent.swift in Sources */,
 				A8B4FFDC2EA5736100CD3B4C /* DeepLinkModule.swift in Sources */,
 				A8B4FFDD2EA5736100CD3B4C /* DeepLinkModule.m in Sources */,
+				A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */,
 				A8B4FFD52EA5731700CD3B4C /* PalDataProvider.swift in Sources */,
 				A8B4FFD62EA5731700CD3B4C /* PocketPalShortcuts.swift in Sources */,
 				A8B4FFD72EA5731700CD3B4C /* ModelDataProvider.swift in Sources */,

@@ -23,14 +23,14 @@ struct PalEntity: AppEntity {
     // Pal properties
     var name: String
     var systemPrompt: String
-    var defaultModelId: String?
+    var defaultModelPath: String? // Full path to the downloaded model file
     var completionSettings: [String: Any]?
-    
-    init(id: String, name: String, systemPrompt: String, defaultModelId: String? = nil, completionSettings: [String: Any]? = nil) {
+
+    init(id: String, name: String, systemPrompt: String, defaultModelPath: String? = nil, completionSettings: [String: Any]? = nil) {
         self.id = id
         self.name = name
         self.systemPrompt = systemPrompt
-        self.defaultModelId = defaultModelId
+        self.defaultModelPath = defaultModelPath
         self.completionSettings = completionSettings
     }
 }

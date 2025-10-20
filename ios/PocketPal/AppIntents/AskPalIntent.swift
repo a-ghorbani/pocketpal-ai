@@ -26,64 +26,58 @@ struct AskPalIntent: AppIntent {
     }
     
     @MainActor
-    func perform() async throws -> some IntentResult & ReturnsValue<String> {
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
         // Validate inputs
         guard !message.isEmpty else {
+            print("[AskPalIntent] Error: Empty message")
             throw AskPalError.emptyMessage
         }
-        
-        // Check if model is available
-        let modelPath: String
-        if let palModelId = pal.defaultModelId,
-           let path = ModelDataProvider.shared.getModelPath(modelId: palModelId) {
-            modelPath = path
-        } else if let defaultPath = ModelDataProvider.shared.getDefaultModelPath() {
-            modelPath = defaultPath
-        } else {
+
+        // We MUST have a model path from the pal
+        guard let palModelPath = pal.defaultModelPath else {
+            print("[AskPalIntent] Error: Pal has no default model")
             throw AskPalError.noModelAvailable
         }
-        
+
+        // Verify the file exists
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: palModelPath) else {
+            print("[AskPalIntent] Error: Model file not found at path")
+            throw AskPalError.noModelAvailable
+        }
+
         // Initialize inference engine
         let inferenceEngine = LlamaInferenceEngine.shared
-        
+
         do {
             // Load model if not already loaded
-            try await inferenceEngine.loadModel(at: modelPath)
-            
-            // Prepare the prompt with system prompt
-            let fullPrompt = preparePrompt(systemPrompt: pal.systemPrompt, userMessage: message)
-            
-            // Run inference
+            try await inferenceEngine.loadModel(at: palModelPath)
+
             let response = try await inferenceEngine.runInference(
-                prompt: fullPrompt,
-                settings: pal.completionSettings
+                systemPrompt: pal.systemPrompt,
+                userMessage: message,
+                completionSettings: pal.completionSettings
             )
-            
+            print("[AskPalIntent] Inference completed. Response length: \(response.count) chars")
+            print("[AskPalIntent] Response: \(response)")
+
             // Schedule model release after a short delay to save memory
             Task {
                 try? await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds
+                print("[AskPalIntent] Releasing model after delay")
                 await inferenceEngine.releaseModel()
             }
-            
-            return .result(value: response)
-            
+
+            // Return with dialog so Siri can speak it
+            return .result(
+                value: response,
+                dialog: IntentDialog(stringLiteral: response)
+            )
+
         } catch {
+            print("[AskPalIntent] Error during inference: \(error.localizedDescription)")
             throw AskPalError.inferenceFailed(error.localizedDescription)
         }
-    }
-    
-    // MARK: - Helper Methods
-    
-    private func preparePrompt(systemPrompt: String, userMessage: String) -> String {
-        // Simple chat template - this should ideally use the model's chat template
-        // For now, using a basic format that works with most models
-        return """
-        <|system|>
-        \(systemPrompt)
-        <|user|>
-        \(userMessage)
-        <|assistant|>
-        """
     }
 }
 

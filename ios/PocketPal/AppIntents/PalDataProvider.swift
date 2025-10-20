@@ -45,83 +45,156 @@ class PalDataProvider {
     
     private func fetchPalsFromDatabase() throws -> [PalEntity] {
         guard let dbPath = getDatabasePath() else {
+            print("[PalDataProvider] Database not found")
             throw PalDataError.databaseNotFound
         }
-        
+
         var db: OpaquePointer?
-        guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+        let openResult = sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil)
+        guard openResult == SQLITE_OK else {
+            let errorMessage = String(cString: sqlite3_errmsg(db))
+            print("[PalDataProvider] Failed to open database: \(errorMessage) (code: \(openResult))")
             throw PalDataError.databaseOpenFailed
         }
         defer { sqlite3_close(db) }
-        
+
         let query = """
         SELECT id, name, system_prompt, default_model, generation_settings
         FROM local_pals
         ORDER BY name ASC
         """
-        
+
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK else {
+        let prepareResult = sqlite3_prepare_v2(db, query, -1, &statement, nil)
+        guard prepareResult == SQLITE_OK else {
+            let errorMessage = String(cString: sqlite3_errmsg(db))
+            print("[PalDataProvider] Failed to prepare query: \(errorMessage) (code: \(prepareResult))")
             throw PalDataError.queryFailed
         }
         defer { sqlite3_finalize(statement) }
-        
+
         var pals: [PalEntity] = []
-        
+        var rowCount = 0
+
         while sqlite3_step(statement) == SQLITE_ROW {
+            rowCount += 1
             let id = String(cString: sqlite3_column_text(statement, 0))
             let name = String(cString: sqlite3_column_text(statement, 1))
             let systemPrompt = String(cString: sqlite3_column_text(statement, 2))
-            
+
             // Optional fields
-            var defaultModelId: String?
+            var defaultModelPath: String?
             if let modelText = sqlite3_column_text(statement, 3) {
                 let modelJson = String(cString: modelText)
-                defaultModelId = parseModelId(from: modelJson)
+                defaultModelPath = parseModelPath(from: modelJson)
             }
-            
+
             var completionSettings: [String: Any]?
             if let settingsText = sqlite3_column_text(statement, 4) {
                 let settingsJson = String(cString: settingsText)
                 completionSettings = parseSettings(from: settingsJson)
             }
-            
+
             let pal = PalEntity(
                 id: id,
                 name: name,
                 systemPrompt: systemPrompt,
-                defaultModelId: defaultModelId,
+                defaultModelPath: defaultModelPath,
                 completionSettings: completionSettings
             )
             pals.append(pal)
         }
-        
+
         return pals
     }
     
     private func getDatabasePath() -> String? {
         let fileManager = FileManager.default
         guard let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("[PalDataProvider] Could not get documents directory")
             return nil
         }
-        
-        // WatermelonDB default database name
-        let dbPath = documentsPath.appendingPathComponent("watermelon.db").path
-        
+
+        // WatermelonDB database name (configured in src/database/index.ts)
+        let dbPath = documentsPath.appendingPathComponent("pocketpalai.db").path
+
         if fileManager.fileExists(atPath: dbPath) {
+            print("[PalDataProvider] Database found!")
             return dbPath
         }
-        
+
+        print("[PalDataProvider] Database not found at expected path")
+
+        // List all files in documents directory for debugging
+        if let files = try? fileManager.contentsOfDirectory(atPath: documentsPath.path) {
+            print("[PalDataProvider] Files in documents directory: \(files)")
+        }
+
         return nil
     }
     
-    private func parseModelId(from json: String) -> String? {
+    /// Computes the full path for a model file, matching ModelStore.getModelFullPath() logic exactly
+    private func parseModelPath(from json: String) -> String? {
         guard let data = json.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let id = dict["id"] as? String else {
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("[PalDataProvider] Failed to parse model JSON")
             return nil
         }
-        return id
+
+        let fileManager = FileManager.default
+        guard let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("[PalDataProvider] Could not get documents directory")
+            return nil
+        }
+
+        // Check isLocal first (for backward compatibility)
+        let isLocal = dict["isLocal"] as? Bool ?? false
+        let origin = dict["origin"] as? String ?? ""
+
+        // For local models, use the fullPath
+        if isLocal || origin == "local" {
+            guard let fullPath = dict["fullPath"] as? String else {
+                print("[PalDataProvider] Error: Full path is undefined for local model")
+                return nil
+            }
+            return fullPath
+        }
+
+        // For non-local models, we need filename
+        guard let filename = dict["filename"] as? String else {
+            print("[PalDataProvider] Error: Model filename is undefined")
+            return nil
+        }
+
+        // For preset models, check both old and new paths
+        if origin == "preset" {
+            let author = dict["author"] as? String ?? "unknown"
+            let oldPath = documentsPath.appendingPathComponent(filename).path
+            let newPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(filename)").path
+
+            // If the file exists in old path, use that (for backwards compatibility)
+            if fileManager.fileExists(atPath: oldPath) {
+                print("[PalDataProvider] Found model at old path")
+                return oldPath
+            }
+
+            // Otherwise use new path
+            return newPath
+        }
+
+        // For HF models, use author/model structure
+        if origin == "hf" {
+            let author = dict["author"] as? String ?? "unknown"
+            let path = documentsPath.appendingPathComponent("models/hf/\(author)/\(filename)").path
+            print("[PalDataProvider] Constructed HF model path: \(path)")
+            return path
+        }
+
+        // Fallback (shouldn't reach here)
+        print("[PalDataProvider] Warning: Unexpected model origin, using fallback path")
+        let fallbackPath = documentsPath.appendingPathComponent(filename).path
+        print("[PalDataProvider] Fallback path: \(fallbackPath)")
+        return fallbackPath
     }
     
     private func parseSettings(from json: String) -> [String: Any]? {
