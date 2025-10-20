@@ -31,6 +31,36 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     return true
   }
+
+  // MARK: - Deep Linking Support
+
+  func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey : Any] = [:]
+  ) -> Bool {
+    // Handle deep links from Shortcuts
+    if url.scheme == "pocketpal" {
+      NotificationCenter.default.post(
+        name: NSNotification.Name("RCTOpenURLNotification"),
+        object: nil,
+        userInfo: ["url": url]
+      )
+      return true
+    }
+
+    // Handle other URL schemes (e.g., Google Sign-In)
+    return false
+  }
+
+  func application(
+    _ application: UIApplication,
+    continue userActivity: NSUserActivity,
+    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+  ) -> Bool {
+    // Handle universal links if needed in the future
+    return false
+  }
 }
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {

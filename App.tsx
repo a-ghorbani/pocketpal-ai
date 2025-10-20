@@ -15,6 +15,7 @@ import {
 
 import {uiStore} from './src/store';
 import {useTheme} from './src/hooks';
+import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
 
 import {l10n} from './src/utils/l10n';
@@ -48,6 +49,12 @@ const Drawer = createDrawerNavigator();
 
 const screenWidth = Dimensions.get('window').width;
 
+// Component that handles deep linking - must be inside NavigationContainer
+const DeepLinkHandler = () => {
+  useDeepLinking();
+  return null;
+};
+
 const App = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -65,6 +72,7 @@ const App = observer(() => {
           <PaperProvider theme={theme}>
             <L10nContext.Provider value={currentL10n}>
               <NavigationContainer>
+                <DeepLinkHandler />
                 <BottomSheetModalProvider>
                   <Drawer.Navigator
                     screenOptions={{

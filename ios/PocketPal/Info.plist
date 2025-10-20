@@ -30,6 +30,16 @@
 				<string>$(REVERSED_GOOGLE_IOS_CLIENT_ID)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.pocketpalai.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pocketpal</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
@@ -50,6 +60,8 @@
 	<string>PocketPal uses your camera to capture images and video for local AI analysis only. All processing happens on your device and no images are transmitted to external servers.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PocketPal accesses your photo library to select images for local AI analysis only. Selected images are processed entirely on your device and are never transmitted to external servers.</string>
+	<key>NSSiriUsageDescription</key>
+	<string>PocketPal uses Siri to let you ask questions to your AI Pals using voice commands.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialIcons.ttf</string>

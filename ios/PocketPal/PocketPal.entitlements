@@ -13,5 +13,14 @@
 	<array>
 		<string>$(AppIdentifierPrefix)ai.pocketpal</string>
 	</array>
+
+	<!--
+		Siri: Required for App Intents and Shortcuts integration
+
+		This entitlement allows the app to provide App Intents that can be invoked
+		through Siri voice commands and the Shortcuts app.
+	-->
+	<key>com.apple.developer.siri</key>
+	<true/>
 </dict>
 </plist>

@@ -137,6 +137,10 @@ export interface ChatProps extends ChatTopLevelProps {
   showImageUpload?: boolean;
   /** Whether to enable vision mode for the chat input */
   isVisionEnabled?: boolean;
+  /** Initial text to prefill the input (e.g., from deep linking) */
+  initialInputText?: string;
+  /** Callback when initial text is consumed */
+  onInitialTextConsumed?: () => void;
   /**
    * Allows you to customize the time format. IMPORTANT: only for the time,
    * do not return date here. @see {@link ChatProps.dateFormat} to customize the date format.
@@ -179,6 +183,8 @@ export const ChatView = observer(
     showUserNames = false,
     showImageUpload = false,
     isVisionEnabled = false,
+    initialInputText,
+    onInitialTextConsumed,
     textInputProps,
     timeFormat,
     usePreviewData = true,
@@ -197,6 +203,14 @@ export const ChatView = observer(
     const insets = useSafeAreaInsets();
     const {progress} = useKeyboardAnimation();
     const headerHeight = useHeaderHeight();
+
+    // Handle initial input text from deep linking
+    React.useEffect(() => {
+      if (initialInputText && initialInputText.trim()) {
+        setInputText(initialInputText);
+        onInitialTextConsumed?.();
+      }
+    }, [initialInputText, onInitialTextConsumed]);
 
     const {onLayout, size} = useComponentSize();
     const {onLayout: onLayoutChatInput, size: chatInputHeight} =
