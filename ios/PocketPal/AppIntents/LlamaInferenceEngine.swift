@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CommonCrypto
 
 /// Manages llama.cpp inference for App Intents
 @available(iOS 16.0, *)
@@ -17,6 +18,45 @@ actor LlamaInferenceEngine {
     private var cachedSystemPrompts: [String: String] = [:] // palId -> systemPrompt hash
 
     private init() {}
+
+    /// Read a value from AsyncStorage (React Native's persistent storage)
+    /// AsyncStorage stores data in Application Support/[bundleID]/RCTAsyncLocalStorage_V1/
+    /// Each key is stored as a file with MD5 hash of the key as filename
+    private static func readFromAsyncStorage(key: String) -> String? {
+        // Get the AsyncStorage directory path
+        guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
+              let bundleID = Bundle.main.bundleIdentifier else {
+            return nil
+        }
+
+        let storageDir = appSupportDir
+            .appendingPathComponent(bundleID)
+            .appendingPathComponent("RCTAsyncLocalStorage_V1")
+
+        // Calculate MD5 hash of the key (same as AsyncStorage does)
+        let keyHash = md5Hash(key)
+        let filePath = storageDir.appendingPathComponent(keyHash)
+
+        // Read the file
+        guard let data = try? Data(contentsOf: filePath),
+              let content = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return content
+    }
+
+    /// Calculate MD5 hash of a string (same algorithm as AsyncStorage)
+    private static func md5Hash(_ string: String) -> String {
+        let data = Data(string.utf8)
+        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+
+        data.withUnsafeBytes { buffer in
+            _ = CC_MD5(buffer.baseAddress, CC_LONG(data.count), &digest)
+        }
+
+        return digest.map { String(format: "%02hhx", $0) }.joined()
+    }
     
     /// Load a model for inference
     func loadModel(at path: String) async throws {
@@ -28,14 +68,38 @@ actor LlamaInferenceEngine {
         // Release any existing model
         await releaseModel()
 
+        // Get system processor count and calculate recommended thread count
+        let processorCount = ProcessInfo.processInfo.activeProcessorCount
+        // Use 80% of cores (same logic as React Native side of thing)
+        let recommendedThreads = processorCount <= 4 ? processorCount : Int(Double(processorCount) * 0.8)
+
+        // Try to read context size from ModelStore (persisted by MobX via AsyncStorage)
+        // AsyncStorage stores data in Application Support/[bundleID]/RCTAsyncLocalStorage_V1/
+        // Each key is stored as a file with MD5 hash of the key as filename
+        var contextSize = 2048 // Default
+
+        if let modelStoreData = Self.readFromAsyncStorage(key: "ModelStore"),
+           let data = modelStoreData.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let contextInitParams = json["contextInitParams"] as? [String: Any],
+           let nCtx = contextInitParams["n_ctx"] as? Int {
+            contextSize = nCtx
+            print("[LlamaInferenceEngine] Using n_ctx from app settings: \(contextSize)")
+        } else {
+            print("[LlamaInferenceEngine] Could not read n_ctx from app settings, using default: \(contextSize)")
+        }
+
         // Initialize with model
         let params: [String: Any] = [
-            "n_ctx": 2048,
-            "n_threads": 4,
+            "n_ctx": contextSize,
+            "n_threads": recommendedThreads,
             "use_mlock": false,
             "use_mmap": true,
             "n_gpu_layers": 0, // CPU only for background tasks to save battery
         ]
+
+        print("[LlamaInferenceEngine] Using \(recommendedThreads) threads (out of \(processorCount) cores) and context size \(contextSize)")
+        print("[LlamaInferenceEngine] Initializing model with params: \(params)")
 
         // Initialize context using our wrapper
         do {
