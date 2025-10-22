@@ -5,20 +5,12 @@
  * Must be called from a component inside NavigationContainer
  */
 
-import {useEffect, useState, useCallback} from 'react';
+import {useEffect, useCallback} from 'react';
+import {Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
-import {chatSessionStore, palStore} from '../store';
+import {chatSessionStore, palStore, deepLinkStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
-
-// Shared state for pending message (accessible from any component)
-let pendingMessage: string | null = null;
-const messageListeners: Array<(message: string | null) => void> = [];
-
-const setPendingMessage = (message: string | null) => {
-  pendingMessage = message;
-  messageListeners.forEach(listener => listener(message));
-};
 
 /**
  * Hook for handling deep link navigation
@@ -35,23 +27,35 @@ export const useDeepLinking = () => {
 
         if (!pal) {
           console.error(`Pal not found: ${palId} (${palName})`);
-          // TODO: Show error to user
+
+          // Show user-friendly error message
+          Alert.alert(
+            'Pal Not Found',
+            `The pal "${palName || palId}" could not be found. It may have been deleted or is not available on this device.`,
+            [{text: 'OK'}],
+          );
           return;
         }
 
         // Store message to prefill if provided
         if (message) {
-          setPendingMessage(message);
+          deepLinkStore.setPendingMessage(message);
         }
 
         // Set the pal as active
         await chatSessionStore.setActivePal(pal.id);
 
-        // Navigate to chat screen
+        // Navigate to chat screen with proper typing
         (navigation as any).navigate(ROUTES.CHAT);
       } catch (error) {
         console.error('Error handling chat deep link:', error);
-        // TODO: Show error to user
+
+        // Show user-friendly error message
+        Alert.alert(
+          'Error Opening Chat',
+          'An error occurred while trying to open the chat. Please try again.',
+          [{text: 'OK'}],
+        );
       }
     },
     [navigation],
@@ -93,28 +97,10 @@ export const useDeepLinking = () => {
  * Can be called from any component (doesn't require navigation)
  */
 export const usePendingMessage = () => {
-  const [message, setMessage] = useState<string | null>(pendingMessage);
-
-  useEffect(() => {
-    // Subscribe to message changes
-    const listener = (newMessage: string | null) => {
-      setMessage(newMessage);
-    };
-    messageListeners.push(listener);
-
-    // Cleanup
-    return () => {
-      const index = messageListeners.indexOf(listener);
-      if (index > -1) {
-        messageListeners.splice(index, 1);
-      }
-    };
-  }, []);
-
   return {
-    pendingMessage: message,
+    pendingMessage: deepLinkStore.pendingMessage,
     clearPendingMessage: () => {
-      setPendingMessage(null);
+      deepLinkStore.clearPendingMessage();
     },
   };
 };

@@ -134,6 +134,9 @@ class PalDataProvider {
     }
     
     /// Computes the full path for a model file, matching ModelStore.getModelFullPath() logic exactly
+    ///
+    /// IMPORTANT: This logic MUST stay in sync with TypeScript implementation
+    /// See: src/store/ModelStore.ts - getModelFullPath() method (lines 618-659)
     private func parseModelPath(from json: String) -> String? {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {

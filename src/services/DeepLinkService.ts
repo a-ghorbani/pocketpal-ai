@@ -41,6 +41,16 @@ class DeepLinkService {
       return;
     }
 
+    // Cleanup existing subscription first to prevent duplicates
+    // This can happen during hot reload or if initialize() is called multiple times
+    if (this.subscription) {
+      console.log(
+        'DeepLinkService: Cleaning up existing subscription before re-initializing',
+      );
+      this.subscription.remove();
+      this.subscription = null;
+    }
+
     // Listen for deep link events
     this.subscription = this.eventEmitter.addListener(
       'onDeepLink',

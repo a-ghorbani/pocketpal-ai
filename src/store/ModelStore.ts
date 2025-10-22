@@ -611,6 +611,10 @@ class ModelStore {
    *          new path (DocumentDirectoryPath/models/preset/author/filename)
    * - HF: Uses DocumentDirectoryPath/models/hf/author/filename
    *
+   * IMPORTANT: This logic is duplicated in native Swift code for iOS Shortcuts
+   * See: ios/PocketPal/AppIntents/PalDataProvider.swift - parseModelPath() method
+   * If we modify this function, we need to update the Swift version as well.
+   *
    * @param model - The model object containing necessary metadata (origin, filename, author, etc.)
    * @returns Promise<string> - The full path where the model file is or should be stored
    * @throws Error if filename is undefined or if fullPath is undefined for local models

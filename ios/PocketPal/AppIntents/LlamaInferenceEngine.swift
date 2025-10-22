@@ -4,9 +4,16 @@
 //
 //  Wrapper for llama.rn inference for use in App Intents
 //
+//  FUTURE ENHANCEMENTS:
+//  - Streaming Support: Add streaming with early termination for better UX
+//    Currently uses blocking inference which waits for full completion
+//  - Progress Indication: Add progress callbacks so users know inference is working
+//  - Cancellation Support: Allow users to cancel long-running inference
+//  - Memory Pressure Checks: Check available memory before loading models
+//
 
 import Foundation
-import CommonCrypto
+import CryptoKit
 
 /// Manages llama.cpp inference for App Intents
 @available(iOS 16.0, *)
@@ -47,14 +54,10 @@ actor LlamaInferenceEngine {
     }
 
     /// Calculate MD5 hash of a string (same algorithm as AsyncStorage)
+    /// Uses CryptoKit (iOS 13+) instead of deprecated CommonCrypto
     private static func md5Hash(_ string: String) -> String {
         let data = Data(string.utf8)
-        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
-
-        data.withUnsafeBytes { buffer in
-            _ = CC_MD5(buffer.baseAddress, CC_LONG(data.count), &digest)
-        }
-
+        let digest = Insecure.MD5.hash(data: data)
         return digest.map { String(format: "%02hhx", $0) }.joined()
     }
     
@@ -83,8 +86,18 @@ actor LlamaInferenceEngine {
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let contextInitParams = json["contextInitParams"] as? [String: Any],
            let nCtx = contextInitParams["n_ctx"] as? Int {
-            contextSize = nCtx
-            print("[LlamaInferenceEngine] Using n_ctx from app settings: \(contextSize)")
+            // Validate context size to prevent corrupted or invalid values
+            // llama.cpp minimum is typically 200, maximum is model-dependent but 32768 is a safe upper bound
+            if nCtx < 200 {
+                contextSize = 200
+                print("[LlamaInferenceEngine] n_ctx from app settings (\(nCtx)) is too small, using minimum: \(contextSize)")
+            } else if nCtx > 32768 {
+                contextSize = 32768
+                print("[LlamaInferenceEngine] n_ctx from app settings (\(nCtx)) is too large, using maximum: \(contextSize)")
+            } else {
+                contextSize = nCtx
+                print("[LlamaInferenceEngine] Using n_ctx from app settings: \(contextSize)")
+            }
         } else {
             print("[LlamaInferenceEngine] Could not read n_ctx from app settings, using default: \(contextSize)")
         }
@@ -163,24 +176,62 @@ actor LlamaInferenceEngine {
         }
 
         // Prepare completion parameters
-        // Start with minimal params - llama.rn will use its defaults
+        // Match the app's pattern: defaultCompletionParams → pal settings → strip app-only keys
+        // See: src/utils/completionSettingsVersions.ts and src/utils/completionTypes.ts
+
+        // Start with default completion params (matching defaultCompletionParams from TypeScript)
         var completionParams: [String: Any] = [
-            "prompt": formattedPrompt
+            "prompt": formattedPrompt,
+            // Default llama.rn API parameters (matching src/utils/completionSettingsVersions.ts)
+            "n_predict": 1024,
+            "temperature": 0.7,
+            "top_k": 40,
+            "top_p": 0.95,
+            "min_p": 0.05,
+            "xtc_threshold": 0.1,
+            "xtc_probability": 0.0,
+            "typical_p": 1.0,
+            "penalty_last_n": 64,
+            "penalty_repeat": 1.0,
+            "penalty_freq": 0.0,
+            "penalty_present": 0.0,
+            "mirostat": 0,
+            "mirostat_tau": 5,
+            "mirostat_eta": 0.1,
+            "seed": -1,
+            "n_probs": 0,
+            // Include all known stop words from src/utils/chat.ts
+            // In the main app, these are dynamically filtered based on the model's chat template,
+            // but for Shortcuts we include all of them for simplicity
+            "stop": [
+                "</s>",
+                "<|eot_id|>",
+                "<|end_of_text|>",
+                "<|im_end|>",
+                "<|EOT|>",
+                "<|END_OF_TURN_TOKEN|>",
+                "<|end_of_turn|>",
+                "<end_of_turn>",
+                "<|endoftext|>",
+                "<|return|>",  // gpt-oss
+            ],
+            "jinja": true,
+            "enable_thinking": true
         ]
 
-        // If pal has completion settings, use them
+        // Merge pal-specific settings if available (pal settings override defaults)
         if let settings = completionSettings {
-            // Merge pal settings, excluding app-specific fields
-            let excludedKeys = ["version", "include_thinking_in_context", "enable_thinking", "jinja"]
             for (key, value) in settings {
-                if !excludedKeys.contains(key) {
-                    completionParams[key] = value
-                }
+                completionParams[key] = value
             }
-        } else {
-            // No pal settings - let llama.rn use defaults
-            // Only set essential params
-            completionParams["n_predict"] = 512
+        }
+
+        // Strip app-specific fields before passing to llama.rn
+        // These are PocketPal-only fields that llama.rn doesn't understand
+        // See: src/utils/completionTypes.ts - APP_ONLY_KEYS
+        let appOnlyKeys = ["version", "include_thinking_in_context"]
+        for key in appOnlyKeys {
+            completionParams.removeValue(forKey: key)
         }
 
         // Run completion
@@ -275,11 +326,14 @@ actor LlamaInferenceEngine {
             return false
         }
 
-        // Clean up old session caches for this pal (from previous models)
-        Self.cleanupOldSessionCaches(
-            for: palId,
-            keepingModelPath: modelPath
-        )
+        // Clean up old session caches in background to avoid blocking the critical path
+        // This is a fire-and-forget operation - we don't wait for it to complete
+        Task.detached(priority: .background) {
+            Self.cleanupOldSessionCaches(
+                for: palId,
+                keepingModelPath: modelPath
+            )
+        }
 
         // Get the cache path for current model
         let sessionCachePath = Self.getSessionCachePath(
