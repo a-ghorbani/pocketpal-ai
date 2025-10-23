@@ -1075,7 +1075,6 @@ class ModelStore {
     if (!filePath) {
       throw new Error('Model path is undefined');
     }
-    console.log('proceedWithInitialization: ', filePath);
 
     runInAction(() => {
       this.isContextLoading = true;

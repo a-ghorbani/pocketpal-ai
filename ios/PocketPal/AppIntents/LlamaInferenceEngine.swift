@@ -249,6 +249,11 @@ actor LlamaInferenceEngine {
                     continue
                 }
 
+                // Skip 'enable_thinking' - it is always false for shortcuts
+                if key == "enable_thinking" {
+                    continue 
+                }
+
                 // Special handling for 'stop' - merge arrays instead of replacing
                 if key == "stop", let palStops = value as? [String] {
                     // Merge pal stops with default stops, removing duplicates
