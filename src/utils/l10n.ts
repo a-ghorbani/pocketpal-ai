@@ -144,6 +144,18 @@ export const l10n = {
       useHfTokenLabel: 'Use HF Token',
       useHfTokenDescription:
         'Enable to use token for API requests. Disable if token is causing authentication issues.',
+      // Cache & Storage Settings
+      cacheStorageTitle: 'Cache & Storage',
+      clearPalCaches: 'Clear Shortcuts Caches',
+      clearPalCachesDescription:
+        "Clears cached data used to speed up Shortcuts. This won't affect your Pals or chat history.",
+      clearCachesButton: 'Clear Caches',
+      clearCachesConfirmTitle: 'Clear Shortcuts Caches?',
+      clearCachesConfirmMessage:
+        "This will clear all cached session data ({{fileCount}} files, {{size}}). Shortcuts may be slower on first use after clearing. This won't affect your Pals or chat history.",
+      clearCachesSuccess: 'Successfully cleared {{count}} cache file(s).',
+      clearCachesError: 'Failed to clear caches. Please try again.',
+      noCachesToClear: 'No caches to clear.',
     },
     memory: {
       shortWarning: 'Memory Warning',
@@ -1405,6 +1417,19 @@ export const l10n = {
       useHfTokenLabel: 'HFトークンを使用',
       useHfTokenDescription:
         'HFトークンを使用して制限付きモデルにアクセスします',
+      // Cache & Storage Settings
+      cacheStorageTitle: 'キャッシュとストレージ',
+      clearPalCaches: 'ショートカットキャッシュをクリア',
+      clearPalCachesDescription:
+        'ショートカットを高速化するために使用されるキャッシュデータをクリアします。Palやチャット履歴には影響しません。',
+      clearCachesButton: 'キャッシュをクリア',
+      clearCachesConfirmTitle: 'ショートカットキャッシュをクリアしますか？',
+      clearCachesConfirmMessage:
+        'すべてのキャッシュされたセッションデータ（{{fileCount}}ファイル、{{size}}）をクリアします。クリア後、ショートカットの初回使用時は遅くなる可能性があります。Palやチャット履歴には影響しません。',
+      clearCachesSuccess: '{{count}}個のキャッシュファイルをクリアしました。',
+      clearCachesError:
+        'キャッシュのクリアに失敗しました。もう一度お試しください。',
+      noCachesToClear: 'クリアするキャッシュがありません。',
     },
     memory: {
       shortWarning: 'メモリ警告',
@@ -2655,6 +2680,18 @@ export const l10n = {
       setTokenButton: '设置令牌',
       useHfTokenLabel: '使用HF令牌',
       useHfTokenDescription: '使用HF令牌访问受限模型',
+      // Cache & Storage Settings
+      cacheStorageTitle: '缓存与存储',
+      clearPalCaches: '清除快捷指令缓存',
+      clearPalCachesDescription:
+        '清除用于加速快捷指令的缓存数据。这不会影响你的Pal或聊天历史记录。',
+      clearCachesButton: '清除缓存',
+      clearCachesConfirmTitle: '清除快捷指令缓存？',
+      clearCachesConfirmMessage:
+        '这将清除所有缓存的会话数据（{{fileCount}}个文件，{{size}}）。清除后，快捷指令首次使用时可能会变慢。这不会影响你的Pal或聊天历史记录。',
+      clearCachesSuccess: '成功清除{{count}}个缓存文件。',
+      clearCachesError: '清除缓存失败，请重试。',
+      noCachesToClear: '没有可清除的缓存。',
     },
     memory: {
       shortWarning: '内存警告',

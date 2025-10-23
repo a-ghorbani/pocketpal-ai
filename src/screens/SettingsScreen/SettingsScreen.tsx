@@ -23,6 +23,7 @@ import {
   ShareIcon,
   LinkExternalIcon,
 } from '../../assets/icons';
+
 import {
   TextInput,
   Menu,
@@ -35,13 +36,18 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore} from '../../store';
 import {AvailableLanguage} from '../../store/UIStore';
+import {modelStore, uiStore, hfStore} from '../../store';
 
-import {L10nContext} from '../../utils';
 import {CacheType} from '../../utils/types';
-import {exportLegacyChatSessions} from '../../utils/exportUtils';
+import {
+  L10nContext,
+  formatBytes,
+  clearAllSessionCaches,
+  getSessionCacheInfo,
+} from '../../utils';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
+import {exportLegacyChatSessions} from '../../utils/exportUtils';
 
 // Language display names in their native form
 const languageNames: Record<AvailableLanguage, string> = {
@@ -919,6 +925,102 @@ export const SettingsScreen: React.FC = observer(() => {
                     disabled={!hfStore.isTokenPresent}
                     onValueChange={value => hfStore.setUseHfToken(value)}
                   />
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Cache & Storage Settings */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.cacheStorageTitle} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                {/* Clear Pal Caches */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.clearPalCaches}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.clearPalCachesDescription}
+                    </Text>
+                  </View>
+                  <Button
+                    mode="outlined"
+                    onPress={async () => {
+                      try {
+                        // Get cache info first
+                        const cacheInfo = await getSessionCacheInfo();
+
+                        if (cacheInfo.fileCount === 0) {
+                          Alert.alert(
+                            l10n.settings.clearPalCaches,
+                            l10n.settings.noCachesToClear,
+                          );
+                          return;
+                        }
+
+                        // Show confirmation dialog with cache info
+                        const formattedSize = formatBytes(
+                          cacheInfo.totalSizeBytes,
+                        );
+                        const confirmMessage =
+                          l10n.settings.clearCachesConfirmMessage
+                            .replace(
+                              '{{fileCount}}',
+                              cacheInfo.fileCount.toString(),
+                            )
+                            .replace('{{size}}', formattedSize);
+
+                        Alert.alert(
+                          l10n.settings.clearCachesConfirmTitle,
+                          confirmMessage,
+                          [
+                            {
+                              text: l10n.common.cancel,
+                              style: 'cancel',
+                            },
+                            {
+                              text: l10n.settings.clearCachesButton,
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  const deletedCount =
+                                    await clearAllSessionCaches();
+                                  const successMessage =
+                                    l10n.settings.clearCachesSuccess.replace(
+                                      '{{count}}',
+                                      deletedCount.toString(),
+                                    );
+                                  Alert.alert(
+                                    l10n.settings.clearPalCaches,
+                                    successMessage,
+                                  );
+                                } catch (error) {
+                                  console.error(
+                                    'Failed to clear caches:',
+                                    error,
+                                  );
+                                  Alert.alert(
+                                    l10n.settings.clearPalCaches,
+                                    l10n.settings.clearCachesError,
+                                  );
+                                }
+                              },
+                            },
+                          ],
+                        );
+                      } catch (error) {
+                        console.error('Failed to get cache info:', error);
+                        Alert.alert(
+                          l10n.settings.clearPalCaches,
+                          l10n.settings.clearCachesError,
+                        );
+                      }
+                    }}
+                    style={styles.menuButton}>
+                    {l10n.settings.clearCachesButton}
+                  </Button>
                 </View>
               </View>
             </Card.Content>
