@@ -41,6 +41,15 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)getFormattedChat:(NSString *)messages
               withChatTemplate:(nullable NSString *)chatTemplate;
 
+/// Format chat messages using Jinja templating with full result
+/// @param messages JSON string of messages array
+/// @param chatTemplate Optional custom chat template (pass nil or empty string to use model's default)
+/// @param enableThinking Whether to enable thinking mode
+/// @return Dictionary with prompt, additional_stops, chat_format, grammar, etc.
+- (NSDictionary *)getFormattedChatWithJinja:(NSString *)messages
+                           withChatTemplate:(nullable NSString *)chatTemplate
+                          withEnableThinking:(BOOL)enableThinking;
+
 /// Save KV cache session to file
 /// @param path File path to save session
 /// @param size Number of tokens to save (pass -1 to save all)

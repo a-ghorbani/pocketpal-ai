@@ -91,6 +91,23 @@
     return [_context getFormattedChat:messages withChatTemplate:chatTemplate];
 }
 
+- (NSDictionary *)getFormattedChatWithJinja:(NSString *)messages
+                           withChatTemplate:(nullable NSString *)chatTemplate
+                          withEnableThinking:(BOOL)enableThinking {
+    // Call RNLlamaContext's getFormattedChatWithJinja with full parameters
+    // Note: In Swift, this method is auto-renamed to getFormattedChat(withJinja:...)
+    return [_context getFormattedChatWithJinja:messages
+                              withChatTemplate:chatTemplate
+                                withJsonSchema:nil
+                                     withTools:nil
+                         withParallelToolCalls:NO
+                                withToolChoice:nil
+                            withEnableThinking:enableThinking
+                       withAddGenerationPrompt:YES
+                                       withNow:nil
+                        withChatTemplateKwargs:nil];
+}
+
 - (int)saveSession:(NSString *)path size:(int)size {
     // Simply pass through to RNLlamaContext
     return [_context saveSession:path size:size];

@@ -59,7 +59,7 @@ class PalDataProvider {
         defer { sqlite3_close(db) }
 
         let query = """
-        SELECT id, name, system_prompt, default_model, generation_settings
+        SELECT id, name, system_prompt, default_model, generation_settings, parameters, parameter_schema
         FROM local_pals
         ORDER BY name ASC
         """
@@ -84,9 +84,11 @@ class PalDataProvider {
 
             // Optional fields
             var defaultModelPath: String?
+            var defaultModelId: String?
             if let modelText = sqlite3_column_text(statement, 3) {
                 let modelJson = String(cString: modelText)
                 defaultModelPath = parseModelPath(from: modelJson)
+                defaultModelId = parseModelId(from: modelJson)
             }
 
             var completionSettings: [String: Any]?
@@ -95,12 +97,30 @@ class PalDataProvider {
                 completionSettings = parseSettings(from: settingsJson)
             }
 
+            var parameters: [String: Any]?
+            if let parametersText = sqlite3_column_text(statement, 5) {
+                let parametersJson = String(cString: parametersText)
+                parameters = parseSettings(from: parametersJson)
+            }
+
+            var parameterSchema: [[String: Any]]?
+            if let schemaText = sqlite3_column_text(statement, 6) {
+                let schemaJson = String(cString: schemaText)
+                if let data = schemaJson.data(using: .utf8),
+                   let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                    parameterSchema = array
+                }
+            }
+
             let pal = PalEntity(
                 id: id,
                 name: name,
                 systemPrompt: systemPrompt,
                 defaultModelPath: defaultModelPath,
-                completionSettings: completionSettings
+                defaultModelId: defaultModelId,
+                completionSettings: completionSettings,
+                parameters: parameters,
+                parameterSchema: parameterSchema
             )
             pals.append(pal)
         }
@@ -133,10 +153,20 @@ class PalDataProvider {
         return nil
     }
     
+    /// Extract model ID from model JSON
+    private func parseModelId(from json: String) -> String? {
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+
+        return dict["id"] as? String
+    }
+
     /// Computes the full path for a model file, matching ModelStore.getModelFullPath() logic exactly
     ///
     /// IMPORTANT: This logic MUST stay in sync with TypeScript implementation
-    /// See: src/store/ModelStore.ts - getModelFullPath() method (lines 618-659)
+    /// See: src/store/ModelStore.ts - getModelFullPath() method (lines ~618-659)
     private func parseModelPath(from json: String) -> String? {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {

@@ -53,31 +53,31 @@ struct AskPalIntent: AppIntent {
             // Load model if not already loaded
             try await inferenceEngine.loadModel(at: palModelPath)
 
-            // Try to load cached session (handles cleanup and validation internally)
-            // llama.cpp will compare cached tokens with current prompt and reuse what matches
+            // Try to load cached session
+            var finalSystemPrompt = pal.systemPrompt
+            if let params = pal.parameters, !params.isEmpty {
+                finalSystemPrompt = MustacheRenderer.render(template: pal.systemPrompt, parameters: params)
+                print("[LlamaInferenceEngine] Rendered system prompt: \(finalSystemPrompt)")
+            }
+
+            // Use model ID for cache validation
+            // Fallback to model path if ID is not available (shouldn't happen though )
+            let modelId = pal.defaultModelId ?? palModelPath
+
             _ = await inferenceEngine.loadSessionCache(
                 palId: pal.id,
-                modelPath: palModelPath,
-                systemPrompt: pal.systemPrompt
+                modelId: modelId,
+                systemPrompt: finalSystemPrompt
             )
 
-            // Run inference
             let response = try await inferenceEngine.runInference(
-                systemPrompt: pal.systemPrompt,
+                systemPrompt: finalSystemPrompt,
                 userMessage: message,
-                completionSettings: pal.completionSettings
+                completionSettings: pal.completionSettings,
+                parameters: pal.parameters
             )
 
-            // Save session cache ONLY if system prompt changed or no cache existed
-            if !pal.systemPrompt.isEmpty {
-                _ = await inferenceEngine.saveSessionCacheIfNeeded(
-                    palId: pal.id,
-                    modelPath: palModelPath,
-                    systemPrompt: pal.systemPrompt
-                )
-            }
             print("[AskPalIntent] Inference completed. Response length: \(response.count) chars")
-            print("[AskPalIntent] Response: \(response)")
 
             // Schedule model release after a short delay to save memory
             Task {

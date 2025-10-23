@@ -23,15 +23,21 @@ struct PalEntity: AppEntity {
     // Pal properties
     var name: String
     var systemPrompt: String
-    var defaultModelPath: String? // Full path to the downloaded model file
+    var defaultModelPath: String? // Path to the downloaded model file
+    var defaultModelId: String? // Model ID for cache validation
     var completionSettings: [String: Any]?
+    var parameters: [String: Any]? // Template parameter values
+    var parameterSchema: [[String: Any]]? // Template parameter schema
 
-    init(id: String, name: String, systemPrompt: String, defaultModelPath: String? = nil, completionSettings: [String: Any]? = nil) {
+    init(id: String, name: String, systemPrompt: String, defaultModelPath: String? = nil, defaultModelId: String? = nil, completionSettings: [String: Any]? = nil, parameters: [String: Any]? = nil, parameterSchema: [[String: Any]]? = nil) {
         self.id = id
         self.name = name
         self.systemPrompt = systemPrompt
         self.defaultModelPath = defaultModelPath
+        self.defaultModelId = defaultModelId
         self.completionSettings = completionSettings
+        self.parameters = parameters
+        self.parameterSchema = parameterSchema
     }
 }
 

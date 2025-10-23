@@ -4,10 +4,7 @@
 //
 //  Wrapper for llama.rn inference for use in App Intents
 //
-//  FUTURE ENHANCEMENTS:
-//  - Streaming Support: Add streaming with early termination for better UX
-//    Currently uses blocking inference which waits for full completion
-//  - Progress Indication: Add progress callbacks so users know inference is working
+//  TODO:
 //  - Cancellation Support: Allow users to cancel long-running inference
 //  - Memory Pressure Checks: Check available memory before loading models
 //
@@ -22,7 +19,6 @@ actor LlamaInferenceEngine {
 
     private var currentContext: LlamaContextWrapper?
     private var currentModelPath: String?
-    private var cachedSystemPrompts: [String: String] = [:] // palId -> systemPrompt hash
 
     private init() {}
 
@@ -77,8 +73,6 @@ actor LlamaInferenceEngine {
         let recommendedThreads = processorCount <= 4 ? processorCount : Int(Double(processorCount) * 0.8)
 
         // Try to read context size from ModelStore (persisted by MobX via AsyncStorage)
-        // AsyncStorage stores data in Application Support/[bundleID]/RCTAsyncLocalStorage_V1/
-        // Each key is stored as a file with MD5 hash of the key as filename
         var contextSize = 2048 // Default
 
         if let modelStoreData = Self.readFromAsyncStorage(key: "ModelStore"),
@@ -86,13 +80,12 @@ actor LlamaInferenceEngine {
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let contextInitParams = json["contextInitParams"] as? [String: Any],
            let nCtx = contextInitParams["n_ctx"] as? Int {
-            // Validate context size to prevent corrupted or invalid values
-            // llama.cpp minimum is typically 200, maximum is model-dependent but 32768 is a safe upper bound
+            // llama.cpp minimum is typically 200, maximum is model-dependent but 4096 is a safe upper bound for background tasks
             if nCtx < 200 {
                 contextSize = 200
                 print("[LlamaInferenceEngine] n_ctx from app settings (\(nCtx)) is too small, using minimum: \(contextSize)")
-            } else if nCtx > 32768 {
-                contextSize = 32768
+            } else if nCtx > 4096 {
+                contextSize = 4096
                 print("[LlamaInferenceEngine] n_ctx from app settings (\(nCtx)) is too large, using maximum: \(contextSize)")
             } else {
                 contextSize = nCtx
@@ -108,11 +101,14 @@ actor LlamaInferenceEngine {
             "n_threads": recommendedThreads,
             "use_mlock": false,
             "use_mmap": true,
-            "n_gpu_layers": 0, // CPU only for background tasks to save battery
+            // CPU only for background tasks. 
+            // We use caching, so except the first run, we should not notice much of a performance difference
+            "n_gpu_layers": 0, 
         ]
 
         print("[LlamaInferenceEngine] Using \(recommendedThreads) threads (out of \(processorCount) cores) and context size \(contextSize)")
         print("[LlamaInferenceEngine] Initializing model with params: \(params)")
+        print("[LlamaInferenceEngine] Model path: \(path)")
 
         // Initialize context using our wrapper
         do {
@@ -135,15 +131,20 @@ actor LlamaInferenceEngine {
         }
     }
     
-    /// Run inference with messages array
+    /// Run inference
     func runInference(
         systemPrompt: String,
         userMessage: String,
-        completionSettings: [String: Any]?
+        completionSettings: [String: Any]?,
+        parameters: [String: Any]? = nil
     ) async throws -> String {
         guard let context = currentContext else {
             throw InferenceError.noModelLoaded
         }
+        print("[LlamaInferenceEngine] Running inference with system prompt: \(systemPrompt)")
+        print("[LlamaInferenceEngine] Running inference with user message: \(userMessage)")
+        print("[LlamaInferenceEngine] Running inference with completion settings: \(String(describing: completionSettings))")
+        print("[LlamaInferenceEngine] Running inference with parameters: \(String(describing: parameters))")
 
         // Build messages array
         var messages: [[String: Any]] = []
@@ -168,18 +169,47 @@ actor LlamaInferenceEngine {
             throw InferenceError.inferenceFailed("Failed to serialize messages")
         }
 
-        // Format messages using getFormattedChat (matching LlamaManager.mm)
-        let formattedPrompt = context.getFormattedChat(messagesJson, withChatTemplate: nil)
+        print("[LlamaInferenceEngine] Serialized messages: \(messagesJson)")
 
-        if formattedPrompt.isEmpty {
+        // Format messages using getFormattedChatWithJinja to get full result including additional_stops
+        // This matches the TypeScript completion method in llama.rn/src/index.ts
+        // Set enable_thinking to false for shortcuts
+        // Note: Swift auto-renames the Obj-C method from getFormattedChatWithJinja: to getFormattedChat(withJinja:...)
+        let enableThinking = false // (completionSettings?["enable_thinking"] as? Bool) ?? false
+        let formattedResult = context.getFormattedChat(
+            withJinja: messagesJson,
+            withChatTemplate: nil,
+            withEnableThinking: enableThinking
+        )
+
+        guard let formattedPrompt = formattedResult["prompt"] as? String, !formattedPrompt.isEmpty else {
             throw InferenceError.inferenceFailed("Failed to format chat messages")
         }
+
+        // Extract additional_stops from jinja result (if any)
+        let additionalStops = formattedResult["additional_stops"] as? [String] ?? []
 
         // Prepare completion parameters
         // Match the app's pattern: defaultCompletionParams → pal settings → strip app-only keys
         // See: src/utils/completionSettingsVersions.ts and src/utils/completionTypes.ts
 
+        print("[LlamaInferenceEngine] Formatted prompt: \(formattedPrompt)")
+        print("[LlamaInferenceEngine] Additional stops from template: \(additionalStops)")
         // Start with default completion params (matching defaultCompletionParams from TypeScript)
+        // Store default stop words to merge with pal settings and template stops later
+        let defaultStopWords: [String] = [
+            "</s>",
+            "<|eot_id|>",
+            "<|end_of_text|>",
+            "<|im_end|>",
+            "<|EOT|>",
+            "<|END_OF_TURN_TOKEN|>",
+            "<|end_of_turn|>",
+            "<end_of_turn>",
+            "<|endoftext|>",
+            "<|return|>",  // gpt-oss
+        ]
+
         var completionParams: [String: Any] = [
             "prompt": formattedPrompt,
             // Default llama.rn API parameters (matching src/utils/completionSettingsVersions.ts)
@@ -203,26 +233,44 @@ actor LlamaInferenceEngine {
             // Include all known stop words from src/utils/chat.ts
             // In the main app, these are dynamically filtered based on the model's chat template,
             // but for Shortcuts we include all of them for simplicity
-            "stop": [
-                "</s>",
-                "<|eot_id|>",
-                "<|end_of_text|>",
-                "<|im_end|>",
-                "<|EOT|>",
-                "<|END_OF_TURN_TOKEN|>",
-                "<|end_of_turn|>",
-                "<end_of_turn>",
-                "<|endoftext|>",
-                "<|return|>",  // gpt-oss
-            ],
+            "stop": defaultStopWords,
             "jinja": true,
-            "enable_thinking": true
+            "enable_thinking": enableThinking,
         ]
 
         // Merge pal-specific settings if available (pal settings override defaults)
+        // IMPORTANT: We need to handle 'prompt' and 'stop' specially:
+        // - 'prompt' should NOT be overridden (it's always empty in completionSettings)
+        // - 'stop' should be MERGED (not replaced) to include all possible stop tokens
         if let settings = completionSettings {
             for (key, value) in settings {
-                completionParams[key] = value
+                // Skip 'prompt' - it's always empty in completionSettings and would override our formatted prompt
+                if key == "prompt" {
+                    continue
+                }
+
+                // Special handling for 'stop' - merge arrays instead of replacing
+                if key == "stop", let palStops = value as? [String] {
+                    // Merge pal stops with default stops, removing duplicates
+                    var mergedStops = Set(defaultStopWords)
+                    mergedStops.formUnion(palStops)
+                    completionParams[key] = Array(mergedStops)
+                } else {
+                    // For all other keys, override with pal settings
+                    completionParams[key] = value
+                }
+            }
+        }
+
+        // Add additional_stops from jinja template result (matching TypeScript completion method)
+        // These are template-specific stop tokens that should be included
+        if !additionalStops.isEmpty {
+            if var currentStops = completionParams["stop"] as? [String] {
+                var mergedStops = Set(currentStops)
+                mergedStops.formUnion(additionalStops)
+                completionParams["stop"] = Array(mergedStops)
+            } else {
+                completionParams["stop"] = additionalStops
             }
         }
 
@@ -234,6 +282,8 @@ actor LlamaInferenceEngine {
             completionParams.removeValue(forKey: key)
         }
 
+        print("[LlamaInferenceEngine] Running inference with params: \(completionParams)")
+
         // Run completion
         do {
             let result = try context.completion(
@@ -243,7 +293,7 @@ actor LlamaInferenceEngine {
                 }
             )
 
-            // Extract response (matching LlamaManager.mm pattern)
+            // Extract response
             if let content = result["content"] as? String {
                 return content.trimmingCharacters(in: .whitespacesAndNewlines)
             } else if let text = result["text"] as? String {
@@ -258,6 +308,7 @@ actor LlamaInferenceEngine {
     
     /// Release the current model to free memory
     func releaseModel() async {
+        print("[LlamaInferenceEngine] Releasing model")
         if let context = currentContext {
             context.invalidate()
         }
@@ -265,109 +316,130 @@ actor LlamaInferenceEngine {
         currentModelPath = nil
     }
 
-    /// Save session cache for a pal if system prompt changed or cache doesn't exist
+    /// Save session cache for a pal
     /// @param palId The pal's ID
-    /// @param modelPath The model file path
+    /// @param modelId The model ID
     /// @param systemPrompt The current system prompt
     /// @param tokenSize Number of tokens to save (pass -1 to save all)
-    /// @return Number of tokens saved, or 0 if not saved
-    func saveSessionCacheIfNeeded(palId: String, modelPath: String, systemPrompt: String, tokenSize: Int = -1) async -> Int {
+    /// @return Number of tokens saved
+    func saveSessionCache(palId: String, modelId: String, systemPrompt: String, tokenSize: Int = -1) async -> Int {
         guard let context = currentContext else {
             print("[LlamaInferenceEngine] Cannot save session - no model loaded")
             return 0
         }
 
-        // Get the cache path for current model
-        let sessionCachePath = Self.getSessionCachePath(
-            for: palId,
-            modelPath: modelPath
-        )
+        let sessionCachePath = Self.getSessionCachePath(for: palId)
 
-        // Check if cache file exists
-        let fileManager = FileManager.default
-        let cacheExists = fileManager.fileExists(atPath: sessionCachePath)
+        do {
+            let tokensSaved = Int(context.saveSession(sessionCachePath, size: Int32(tokenSize)))
+            print("[LlamaInferenceEngine] Saved session cache with \(tokensSaved) tokens")
 
-        // Check if system prompt changed
-        let promptChanged = cachedSystemPrompts[palId] != systemPrompt
+            // Save metadata for validation
+            Self.saveSessionMetadata(for: palId, modelId: modelId, systemPrompt: systemPrompt)
 
-        // Save if cache doesn't exist OR system prompt changed
-        if !cacheExists || promptChanged {
-            do {
-                let tokensSaved = Int(context.saveSession(sessionCachePath, size: Int32(tokenSize)))
-                let reason = !cacheExists ? "cache missing" : "system prompt changed"
-                print("[LlamaInferenceEngine] Saved session cache with \(tokensSaved) tokens (\(reason))")
-                // Update cached system prompt
-                cachedSystemPrompts[palId] = systemPrompt
-                return tokensSaved
-            } catch {
-                print("[LlamaInferenceEngine] Failed to save session: \(error.localizedDescription)")
-                return 0
-            }
-        } else {
-            print("[LlamaInferenceEngine] System prompt unchanged and cache exists, skipping save")
+            return tokensSaved
+        } catch {
+            print("[LlamaInferenceEngine] Failed to save session: \(error.localizedDescription)")
             return 0
         }
     }
 
-    /// Load session cache for a pal
-    /// Manages all caching logic internally:
-    /// - Checks if cache exists
-    /// - Cleans up old caches (from different models)
-    /// - Loads existing cache if valid (llama.cpp handles prompt comparison internally)
-    /// - Tracks the cached system prompt
-    /// - Cleans up corrupted cache files
+    /// Load or regenerate session cache for a pal
+    /// Strategy:
+    /// 1. Check if cache exists and metadata is valid (model ID + system prompt match)
+    /// 2. If valid, load the session
+    /// 3. If invalid, run minimal inference (1 char, 1 token) to load system prompt into memory, then save
     /// @param palId The pal's ID
-    /// @param modelPath The model file path
+    /// @param modelId The model ID (portable across app updates)
     /// @param systemPrompt The current system prompt
-    /// @return True if cache was loaded, false if no cache exists or load failed
-    func loadSessionCache(palId: String, modelPath: String, systemPrompt: String) async -> Bool {
+    /// @return True if cache was loaded or regenerated successfully
+    func loadSessionCache(palId: String, modelId: String, systemPrompt: String) async -> Bool {
         guard let context = currentContext else {
             print("[LlamaInferenceEngine] Cannot load session - no model loaded")
             return false
         }
 
-        // Clean up old session caches in background to avoid blocking the critical path
-        // This is a fire-and-forget operation - we don't wait for it to complete
-        Task.detached(priority: .background) {
-            Self.cleanupOldSessionCaches(
-                for: palId,
-                keepingModelPath: modelPath
-            )
-        }
-
-        // Get the cache path for current model
-        let sessionCachePath = Self.getSessionCachePath(
-            for: palId,
-            modelPath: modelPath
-        )
-
-        // Check if session file exists
+        let sessionCachePath = Self.getSessionCachePath(for: palId)
         let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: sessionCachePath) else {
-            print("[LlamaInferenceEngine] No cached session found for pal \(palId)")
-            return false
+
+        // Check if cache exists and metadata is valid
+        let cacheExists = fileManager.fileExists(atPath: sessionCachePath)
+        let metadataValid = Self.validateSessionMetadata(for: palId, modelId: modelId, systemPrompt: systemPrompt)
+
+        if cacheExists && metadataValid {
+            // Cache is valid, load it
+            do {
+                let session = try context.loadSession(sessionCachePath)
+
+                if let sessionDict = session as? [String: Any],
+                   let tokensLoaded = sessionDict["tokens_loaded"] as? Int {
+                    print("[LlamaInferenceEngine] Loaded valid cached session with \(tokensLoaded) tokens")
+
+                    // // Log embd detokenized text for debugging
+                    // if let prompt = sessionDict["prompt"] as? String {
+                    //     print("[LlamaInferenceEngine] embd detokenized: '\(prompt)'")
+                    // }
+
+                    return true
+                } else {
+                    print("[LlamaInferenceEngine] Invalid session format, will regenerate")
+                }
+            } catch {
+                print("[LlamaInferenceEngine] Failed to load session: \(error.localizedDescription), will regenerate")
+            }
+        } else {
+            let reason = !cacheExists ? "cache missing" : "metadata invalid (model or system prompt changed)"
+            print("[LlamaInferenceEngine] Cache invalid: \(reason), regenerating...")
         }
 
-        // Try to load the session
-        do {
-            let session = try context.loadSession(sessionCachePath)
+        // Cache is invalid or failed to load - regenerate it
+        // Run minimal inference to load system prompt into memory
+        print("[LlamaInferenceEngine] Running minimal inference to load system prompt into memory...")
 
-            if let sessionDict = session as? [String: Any],
-               let tokensLoaded = sessionDict["tokens_loaded"] as? Int {
-                print("[LlamaInferenceEngine] Loaded cached session with \(tokensLoaded) tokens")
-                // Track the system prompt that was cached
-                cachedSystemPrompts[palId] = systemPrompt
-                return true
-            } else {
-                print("[LlamaInferenceEngine] Invalid session format, cleaning up")
-                try? fileManager.removeItem(atPath: sessionCachePath)
+        do {
+            // Build messages array with system prompt and minimal user message
+            let messages: [[String: String]] = [
+                ["role": "system", "content": systemPrompt],
+                ["role": "user", "content": "Hi"]
+            ]
+
+            // Convert to JSON string
+            guard let messagesJson = try? JSONSerialization.data(withJSONObject: messages),
+                  let messagesStr = String(data: messagesJson, encoding: .utf8) else {
+                print("[LlamaInferenceEngine] Failed to serialize messages")
                 return false
             }
+
+            // Format messages using chat template to get a proper prompt
+            let formattedResult = context.getFormattedChat(
+                withJinja: messagesStr,
+                withChatTemplate: nil,
+                withEnableThinking: false
+            )
+
+            guard let formattedPrompt = formattedResult["prompt"] as? String, !formattedPrompt.isEmpty else {
+                print("[LlamaInferenceEngine] Failed to format chat messages")
+                return false
+            }
+
+            // Run minimal inference with formatted prompt
+            var tokenCount = 0
+            _ = try context.completion(withParams: [
+                "prompt": formattedPrompt,
+                "n_predict": 1  // Generate only 1 token
+            ]) { tokenResult in
+                tokenCount += 1
+            }
+
+            print("[LlamaInferenceEngine] Minimal inference complete, generated \(tokenCount) token(s)")
+
+            // Now save the session with the system prompt loaded
+            let tokensSaved = await saveSessionCache(palId: palId, modelId: modelId, systemPrompt: systemPrompt)
+            print("[LlamaInferenceEngine] Regenerated session cache with \(tokensSaved) tokens")
+
+            return tokensSaved > 0
         } catch {
-            print("[LlamaInferenceEngine] Failed to load session: \(error.localizedDescription)")
-            print("[LlamaInferenceEngine] Cleaning up corrupted cache file")
-            // Delete corrupted cache file so it gets recreated
-            try? fileManager.removeItem(atPath: sessionCachePath)
+            print("[LlamaInferenceEngine] Failed to regenerate session cache: \(error.localizedDescription)")
             return false
         }
     }
@@ -376,65 +448,66 @@ actor LlamaInferenceEngine {
     /// @param palId The pal's ID
     /// @param modelPath The model file path (used to invalidate cache when model changes)
     /// @return File path for the session cache
-    static func getSessionCachePath(for palId: String, modelPath: String) -> String {
+    static func getSessionCachePath(for palId: String) -> String {
         let fileManager = FileManager.default
-        guard let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+        guard let cachesPath = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
             return ""
         }
 
-        // Store session caches in Documents/session-cache/
-        let cacheDir = documentsPath.appendingPathComponent("session-cache")
+        // Store session caches in Caches/session-cache/
+        let cacheDir = cachesPath.appendingPathComponent("session-cache")
 
         // Create directory if it doesn't exist
         if !fileManager.fileExists(atPath: cacheDir.path) {
             try? fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         }
 
-        // Create hash of model path to include in the cache filename
-        // This ensures cache invalidation when model changes
-        // Note: We don't hash system prompt - llama.cpp handles prompt comparison internally
-        let modelHash = modelPath.hash
-
-        return cacheDir.appendingPathComponent("\(palId)_\(modelHash).session").path
+        return cacheDir.appendingPathComponent("\(palId).session").path
     }
 
-    /// Clean up old session cache files for a pal (when model changes)
-    /// @param palId The pal's ID
-    /// @param currentModelPath The current model path
-    static func cleanupOldSessionCaches(for palId: String, keepingModelPath currentModelPath: String) {
-        let fileManager = FileManager.default
-        guard let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return
-        }
+    static func getSessionMetadataPath(for palId: String) -> String {
+        let sessionPath = getSessionCachePath(for: palId)
+        return sessionPath.replacingOccurrences(of: ".session", with: "_metadata.json")
+    }
 
-        let cacheDir = documentsPath.appendingPathComponent("session-cache")
-        guard fileManager.fileExists(atPath: cacheDir.path) else {
-            return
-        }
+    /// Save session metadata (model ID and system prompt) to validate cache
+    static func saveSessionMetadata(for palId: String, modelId: String, systemPrompt: String) {
+        let metadataPath = getSessionMetadataPath(for: palId)
 
-        // Get all cache files for this pal
+        let metadata: [String: String] = [
+            "modelId": modelId,
+            "systemPrompt": systemPrompt
+        ]
+
         do {
-            let files = try fileManager.contentsOfDirectory(atPath: cacheDir.path)
-            let currentModelHash = currentModelPath.hash
-
-            for file in files {
-                // Check if this is a cache file for this pal
-                if file.hasPrefix("\(palId)_") && file.hasSuffix(".session") {
-                    // Extract the model hash from the filename: {palId}_{modelHash}.session
-                    let components = file.dropLast(8).split(separator: "_") // Remove ".session"
-                    if components.count >= 2,
-                       let fileModelHash = Int(components[1]) {
-                        // Delete if model hash doesn't match
-                        if fileModelHash != currentModelHash {
-                            let filePath = cacheDir.appendingPathComponent(file).path
-                            try? fileManager.removeItem(atPath: filePath)
-                            print("[LlamaInferenceEngine] Cleaned up old session cache: \(file)")
-                        }
-                    }
-                }
-            }
+            let jsonData = try JSONSerialization.data(withJSONObject: metadata, options: .prettyPrinted)
+            try jsonData.write(to: URL(fileURLWithPath: metadataPath))
         } catch {
-            print("[LlamaInferenceEngine] Error cleaning up session caches: \(error.localizedDescription)")
+            print("[LlamaInferenceEngine] Failed to save session metadata: \(error.localizedDescription)")
+        }
+    }
+
+    /// Load and validate session metadata
+    /// @return true if metadata exists and matches current model ID and system prompt
+    static func validateSessionMetadata(for palId: String, modelId: String, systemPrompt: String) -> Bool {
+        let metadataPath = getSessionMetadataPath(for: palId)
+
+        guard FileManager.default.fileExists(atPath: metadataPath) else {
+            return false
+        }
+
+        do {
+            let jsonData = try Data(contentsOf: URL(fileURLWithPath: metadataPath))
+            guard let metadata = try JSONSerialization.jsonObject(with: jsonData) as? [String: String],
+                  let cachedModelId = metadata["modelId"],
+                  let cachedSystemPrompt = metadata["systemPrompt"] else {
+                return false
+            }
+
+            return cachedModelId == modelId && cachedSystemPrompt == systemPrompt
+        } catch {
+            print("[LlamaInferenceEngine] Failed to load session metadata: \(error.localizedDescription)")
+            return false
         }
     }
 }
