@@ -53,6 +53,8 @@ target 'PocketPal' do
   # WatermelonDB dependency
   pod 'simdjson', path: '../node_modules/@nozbe/simdjson', modular_headers: true
 
+  # Mustache template rendering for iOS Shortcuts
+  pod 'GRMustache.swift'
 
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
