@@ -1,6 +1,6 @@
 import React, {useRef, useCallback} from 'react';
 
-import {toJS} from 'mobx';
+import {toJS, runInAction} from 'mobx';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
@@ -416,6 +416,32 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+
+      // Clean up the empty assistant message that was created before the error
+      if (currentMessageInfo.current) {
+        try {
+          await chatSessionRepository.deleteMessage(
+            currentMessageInfo.current.id,
+          );
+          // Also remove from local state
+          const session = chatSessionStore.sessions.find(
+            s => s.id === currentMessageInfo.current!.sessionId,
+          );
+          if (session) {
+            runInAction(() => {
+              session.messages = session.messages.filter(
+                msg => msg.id !== currentMessageInfo.current!.id,
+              );
+            });
+          }
+        } catch (cleanupError) {
+          console.error(
+            'Failed to clean up empty message after error:',
+            cleanupError,
+          );
+        }
+      }
+
       const errorMessage = (error as Error).message;
       if (errorMessage.includes('network')) {
         // TODO: This can be removed. We don't use network for chat.
