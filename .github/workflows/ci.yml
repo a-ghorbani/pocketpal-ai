@@ -268,18 +268,20 @@ jobs:
           pod install
           cd ..
 
+      - name: Install xcpretty
+        run: gem install xcpretty
+
       - name: Build iOS Release
         run: |
           cd ios
-          xcodebuild \
+          set -o pipefail && xcodebuild \
             -workspace PocketPal.xcworkspace \
             -scheme PocketPal \
             -configuration Release \
             -sdk iphonesimulator \
-            -arch x86_64 \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            | xcpretty || true
+            | xcpretty
