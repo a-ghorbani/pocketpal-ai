@@ -19,7 +19,23 @@ buildscript {
         // Add the Google Services plugin dependency
         // This is used exclusively for sending benchmarks (with user consent) to Hugging Face Spaces via Firebase.
         // Firebase is used for App Check functionality, allowing unauthenticated users to submit their benchmark data securely.
-        classpath 'com.google.gms:google-services:4.4.4' 
+        classpath 'com.google.gms:google-services:4.4.4'
+    }
+}
+
+// Fix for React Native New Architecture codegen issue
+// https://github.com/facebook/react-native/issues/38237
+// Ensures codegen artifacts are generated before CMake configuration
+project(':app') {
+    afterEvaluate {
+        if (tasks.findByName("preBuild")) {
+            tasks.preBuild.doFirst {
+                exec {
+                    workingDir rootDir
+                    commandLine './gradlew', 'generateCodegenArtifactsFromSchema'
+                }
+            }
+        }
     }
 }
 
