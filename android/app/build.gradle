@@ -104,10 +104,16 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file("pocketpal-release-key.keystore")
-            storePassword project.env.get("APP_RELEASE_STORE_PASSWORD")
-            keyAlias "pocketpal_key_alias"
-            keyPassword project.env.get("APP_RELEASE_KEY_PASSWORD")
+            // Read signing credentials from .env file or environment variables
+            def releaseStorePassword = project.env.get("APP_RELEASE_STORE_PASSWORD") ?: System.getenv("APP_RELEASE_STORE_PASSWORD")
+            def releaseKeyPassword = project.env.get("APP_RELEASE_KEY_PASSWORD") ?: System.getenv("APP_RELEASE_KEY_PASSWORD")
+
+            if (releaseStorePassword && releaseKeyPassword) {
+                storeFile file("pocketpal-release-key.keystore")
+                storePassword releaseStorePassword
+                keyAlias "pocketpal_key_alias"
+                keyPassword releaseKeyPassword
+            }
         }
     }
     buildTypes {
@@ -117,7 +123,14 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            // Only use release signing config if credentials are available, otherwise use debug
+            if (signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            } else {
+                // Fall back to debug signing for CI builds without credentials
+                signingConfig signingConfigs.debug
+                println "Warning: Release signing credentials not found, using debug keystore"
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
