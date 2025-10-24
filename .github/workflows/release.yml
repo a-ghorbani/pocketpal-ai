@@ -44,7 +44,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.18.0' # Use the specified Node.js version
+          node-version: '22.21.0' # Use the specified Node.js version
           cache: 'yarn'
 
       # Step 4: Install dependencies using Yarn
@@ -164,7 +164,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.18.0'
+          node-version: '22.21.0'
           cache: 'yarn'
 
       # Step 3: Install dependencies using Yarn

@@ -120,7 +120,7 @@
     "typescript": "5.0.4"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.21.0"
   },
   "packageManager": "yarn@1.22.22",
   "codegenConfig": {
