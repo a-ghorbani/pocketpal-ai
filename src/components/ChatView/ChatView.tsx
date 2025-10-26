@@ -28,7 +28,7 @@ import {
   useKeyboardDimensions,
 } from '../KeyboardAccessoryView/hooks';
 
-import {usePrevious, useTheme, useMessageActions} from '../../hooks';
+import {useTheme, useMessageActions} from '../../hooks';
 
 import ImageView from './ImageView';
 import {createStyles} from './styles';
@@ -334,22 +334,6 @@ export const ChatView = observer(
       showUserNames,
       timeFormat,
     });
-
-    const previousChatMessages = usePrevious(chatMessages);
-
-    React.useEffect(() => {
-      if (
-        chatMessages[0]?.type !== 'dateHeader' &&
-        chatMessages[0]?.id !== previousChatMessages?.[0]?.id &&
-        chatMessages[0]?.author?.id === user.id
-      ) {
-        list.current?.scrollToOffset({
-          animated: true,
-          offset: 0,
-        });
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chatMessages]);
 
     // Untestable
     /* istanbul ignore next */
@@ -705,7 +689,7 @@ export const ChatView = observer(
               // eslint-disable-next-line react-native/no-inline-styles
               {
                 justifyContent:
-                  chatMessages.length !== 0 ? undefined : 'center',
+                  chatMessages.length !== 0 ? 'flex-end' : 'center',
                 paddingTop: chatInputHeight.height,
               },
             ]}
@@ -727,8 +711,8 @@ export const ChatView = observer(
             ref={list}
             renderItem={renderMessage}
             maintainVisibleContentPosition={{
-              autoscrollToTopThreshold: 20,
-              minIndexForVisible: isStreaming ? 1 : 0,
+              autoscrollToTopThreshold: 0,
+              minIndexForVisible: 1, // isStreaming ? 1 : 0,
             }}
           />
           {showScrollButton && (
@@ -771,7 +755,6 @@ export const ChatView = observer(
         keyExtractor,
         handleEndReached,
         renderMessage,
-        isStreaming,
         showScrollButton,
         bottomComponentHeight,
         scrollToBottom,
