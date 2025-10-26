@@ -65,6 +65,10 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       flex: 1,
       position: 'relative',
       backgroundColor: theme.colors.background,
+      zIndex: 0,
+    },
+    headerWrapper: {
+      zIndex: 100,
     },
     customBottomComponent: {
       position: 'absolute',

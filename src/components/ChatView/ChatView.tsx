@@ -8,19 +8,20 @@ import {
   StatusBarProps,
   View,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import calendar from 'dayjs/plugin/calendar';
-import {useHeaderHeight} from '@react-navigation/elements';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {
-  KeyboardAvoidingView,
-  useKeyboardAnimation,
-} from 'react-native-keyboard-controller';
+import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  useAnimatedReaction,
+} from 'react-native-reanimated';
 
 import {
   useComponentSize,
@@ -201,8 +202,6 @@ export const ChatView = observer(
     const animationRef = React.useRef(false);
     const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
     const insets = useSafeAreaInsets();
-    const {progress} = useKeyboardAnimation();
-    const headerHeight = useHeaderHeight();
 
     // Handle initial input text from deep linking
     React.useEffect(() => {
@@ -221,22 +220,52 @@ export const ChatView = observer(
       return height;
     }, [chatInputHeight.height]);
 
-    const listPaddingBottom = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [
-        bottomComponentHeight,
-        bottomComponentHeight - insets.bottom,
-      ],
-    });
-
     const {keyboardHeight: keyboardHeight} = useKeyboardDimensions(true);
-    const translateY = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [
-        0,
-        Math.max(0, Math.min(insets.bottom, keyboardHeight - insets.bottom)),
+
+    // ============ KEYBOARD ANIMATION SETUP ============
+    // Get real-time keyboard height from the keyboard controller
+    const keyboard = useReanimatedKeyboardAnimation();
+    const trackingKeyboardMovement = useSharedValue(false);
+    const bottomOffset = -insets.bottom;
+
+    // Shared value that tracks the offset to apply when keyboard is moving up
+    const keyboardOffsetBottom = useSharedValue(0);
+
+    // Shared value to track if keyboard is visible (height > 0)
+    const isKeyboardVisible = useSharedValue(false);
+
+    // Animated style that translates the entire chat container vertically
+    const contentAnimatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
       ],
-    });
+    }));
+
+    // Animated style for input container padding
+    // Apply bottom padding (safe area inset) only when keyboard is NOT visible
+    const inputContainerAnimatedStyle = useAnimatedStyle(() => ({
+      paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
+    }));
+
+    // Monitor keyboard height changes and animate the offset value
+    useAnimatedReaction(
+      () => -keyboard.height.value,
+      (value, prevValue) => {
+        if (prevValue !== null && value !== prevValue) {
+          const isKeyboardMovingUp = value > prevValue;
+          if (isKeyboardMovingUp !== trackingKeyboardMovement.value) {
+            trackingKeyboardMovement.value = isKeyboardMovingUp;
+            keyboardOffsetBottom.value = withTiming(
+              isKeyboardMovingUp ? bottomOffset : 0,
+              {
+                duration: bottomOffset ? 150 : 400,
+              },
+            );
+          }
+        }
+      },
+      [keyboard, trackingKeyboardMovement, bottomOffset],
+    );
 
     const [isImageViewVisible, setIsImageViewVisible] = React.useState(false);
     const [isNextPageLoading, setNextPageLoading] = React.useState(false);
@@ -260,7 +289,7 @@ export const ChatView = observer(
       }
     }, [activePal]);
 
-    const handleScroll = React.useCallback(event => {
+    const handleScroll = React.useCallback((event: any) => {
       const {contentOffset} = event.nativeEvent;
       const isAtTop = contentOffset.y <= 80;
       setShowScrollButton(!isAtTop);
@@ -669,7 +698,7 @@ export const ChatView = observer(
     const renderChatList = React.useCallback(
       () => (
         <>
-          <Animated.FlatList
+          <Reanimated.FlatList
             automaticallyAdjustContentInsets={false}
             contentContainerStyle={[
               styles.flatListContentContainer,
@@ -677,7 +706,7 @@ export const ChatView = observer(
               {
                 justifyContent:
                   chatMessages.length !== 0 ? undefined : 'center',
-                paddingTop: listPaddingBottom, // Use animated padding
+                paddingTop: chatInputHeight.height,
               },
             ]}
             initialNumToRender={10}
@@ -703,12 +732,20 @@ export const ChatView = observer(
             }}
           />
           {showScrollButton && (
-            <Animated.View style={{transform: [{translateY}]}}>
+            <View
+              style={[
+                // eslint-disable-next-line react-native/no-inline-styles
+                {
+                  position: 'absolute',
+                  right: 8,
+                  bottom:
+                    bottomComponentHeight +
+                    40 /* button height */ +
+                    20 /* padding */,
+                },
+              ]}>
               <TouchableOpacity
-                style={[
-                  styles.scrollToBottomButton,
-                  {bottom: bottomComponentHeight + 20},
-                ]}
+                style={styles.scrollToBottomButton}
                 onPress={scrollToBottom}>
                 <Icon
                   name="chevron-down"
@@ -716,7 +753,7 @@ export const ChatView = observer(
                   color={theme.colors.onPrimary}
                 />
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           )}
         </>
       ),
@@ -725,7 +762,7 @@ export const ChatView = observer(
         styles.flatList,
         styles.scrollToBottomButton,
         chatMessages,
-        listPaddingBottom,
+        chatInputHeight.height,
         renderListEmptyComponent,
         renderListFooterComponent,
         renderListHeaderComponent,
@@ -736,7 +773,6 @@ export const ChatView = observer(
         renderMessage,
         isStreaming,
         showScrollButton,
-        translateY,
         bottomComponentHeight,
         scrollToBottom,
         theme.colors.onPrimary,
@@ -761,72 +797,69 @@ export const ChatView = observer(
     const inputBackgroundColor = activePal?.color?.[1]
       ? activePal.color?.[1]
       : theme.colors.surface;
+
     return (
       <UserContext.Provider value={user}>
         <View style={styles.container} onLayout={onLayout}>
-          <KeyboardAvoidingView
-            behavior="padding"
-            keyboardVerticalOffset={headerHeight}
-            style={styles.container}>
-            <View style={styles.chatContainer}>
-              <ChatHeader />
-              {customContent}
-              {renderChatList()}
-              <Animated.View
-                onLayout={onLayoutChatInput}
-                style={[
-                  styles.inputContainer,
-                  // eslint-disable-next-line react-native/no-inline-styles
-                  {
-                    paddingBottom: insets.bottom,
-                    transform: [{translateY}],
-                    zIndex: 10,
+          <View style={styles.headerWrapper}>
+            <ChatHeader />
+          </View>
+          <Reanimated.View style={[styles.chatContainer, contentAnimatedStyle]}>
+            {customContent}
+            {renderChatList()}
+            <Reanimated.View
+              onLayout={onLayoutChatInput}
+              style={[
+                styles.inputContainer,
+                inputContainerAnimatedStyle,
+                // eslint-disable-next-line react-native/no-inline-styles
+                {
+                  zIndex: 10,
+                },
+                {backgroundColor: inputBackgroundColor},
+              ]}>
+              <ChatInput
+                {...{
+                  ...unwrap(inputProps),
+                  isStreaming,
+                  onSendPress: wrappedOnSendPress,
+                  onStopPress,
+                  chatInputHeight,
+                  inputBackgroundColor,
+                  onCancelEdit: handleCancelEdit,
+                  onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
+                  isStopVisible,
+                  isPickerVisible,
+                  sendButtonVisibilityMode,
+                  showImageUpload,
+                  isVisionEnabled,
+                  defaultImages: inputImages,
+                  onDefaultImagesChange: setInputImages,
+                  textInputProps: {
+                    ...textInputProps,
+                    // Only override value and onChangeText if not using promptText
+                    ...(!(activePal && hasVideoCapability(activePal)) && {
+                      value: inputText,
+                      onChangeText: setInputText,
+                    }),
                   },
-                  {backgroundColor: inputBackgroundColor},
-                ]}>
-                <ChatInput
-                  {...{
-                    ...unwrap(inputProps),
-                    isStreaming,
-                    onSendPress: wrappedOnSendPress,
-                    onStopPress,
-                    chatInputHeight,
-                    inputBackgroundColor,
-                    onCancelEdit: handleCancelEdit,
-                    onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
-                    isStopVisible,
-                    isPickerVisible,
-                    sendButtonVisibilityMode,
-                    showImageUpload,
-                    isVisionEnabled,
-                    defaultImages: inputImages,
-                    onDefaultImagesChange: setInputImages,
-                    textInputProps: {
-                      ...textInputProps,
-                      // Only override value and onChangeText if not using promptText
-                      ...(!(activePal && hasVideoCapability(activePal)) && {
-                        value: inputText,
-                        onChangeText: setInputText,
-                      }),
-                    },
-                  }}
-                />
-              </Animated.View>
-              {/* Conditionally render the sheet to avoid keyboard issues. 
-              It makes the disappearing sudden, but it's better than the keyboard issue.*/}
-              {isPickerVisible && (
-                <ChatPalModelPickerSheet
-                  isVisible={isPickerVisible}
-                  onClose={() => setIsPickerVisible(false)}
-                  onModelSelect={handleModelSelect}
-                  onPalSelect={handlePalSelect}
-                  onPalSettingsSelect={onPalSettingsSelect}
-                  chatInputHeight={chatInputHeight.height}
-                  keyboardHeight={keyboardHeight}
-                />
-              )}
-            </View>
-          </KeyboardAvoidingView>
+                }}
+              />
+            </Reanimated.View>
+            {/* Conditionally render the sheet to avoid keyboard issues.
+            It makes the disappearing sudden, but it's better than the keyboard issue.*/}
+            {isPickerVisible && (
+              <ChatPalModelPickerSheet
+                isVisible={isPickerVisible}
+                onClose={() => setIsPickerVisible(false)}
+                onModelSelect={handleModelSelect}
+                onPalSelect={handlePalSelect}
+                onPalSettingsSelect={onPalSettingsSelect}
+                chatInputHeight={chatInputHeight.height}
+                keyboardHeight={keyboardHeight}
+              />
+            )}
+          </Reanimated.View>
           <ImageView
             imageIndex={imageViewIndex}
             images={gallery}
