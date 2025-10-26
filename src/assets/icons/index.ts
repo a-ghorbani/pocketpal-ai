@@ -44,6 +44,7 @@ export {default as SearchIcon} from './search.svg';
 export {default as SendIcon} from './send.svg';
 export {default as SettingsIcon} from './settings.svg';
 export {default as ShoppingCartIcon} from './shopping-cart.svg';
+export {default as SpeakerIcon} from './speaker.svg';
 export {default as StarIcon} from './star.svg';
 export {default as StopIcon} from './stop.svg';
 export {default as ShareIcon} from './share.svg';

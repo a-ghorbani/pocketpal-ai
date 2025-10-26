@@ -17,6 +17,7 @@ import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {useTTS} from './useTTS';
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -156,6 +157,9 @@ export const useChatSession = (
 ) => {
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
+
+  // Initialize TTS hook
+  const tts = useTTS({enabled: uiStore.ttsEnabled});
 
   // Time-based batch processing
   // Token queue for accumulating tokens
@@ -375,6 +379,11 @@ export const useChatSession = (
             currentMessageInfo.current.id,
             currentMessageInfo.current.sessionId,
           );
+
+          // Add token to TTS if enabled
+          if (uiStore.ttsEnabled) {
+            tts.addText(data.token);
+          }
         }
       });
 
@@ -390,6 +399,11 @@ export const useChatSession = (
       // Just wait for the queue to finish processing
       while (tokenQueue.current.length > 0 || isProcessingTokens.current) {
         await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      // Flush any remaining TTS text
+      if (uiStore.ttsEnabled) {
+        tts.flush();
       }
 
       // Update only the metadata in the database
@@ -469,6 +483,12 @@ export const useChatSession = (
     if (modelStore.inferencing && context) {
       context.stopCompletion();
     }
+
+    // Stop TTS immediately when user stops generation
+    if (uiStore.ttsEnabled) {
+      tts.stop();
+    }
+
     // Wait for any queued tokens to finish processing
     if (tokenQueue.current.length > 0 || isProcessingTokens.current) {
       try {

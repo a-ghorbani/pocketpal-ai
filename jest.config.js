@@ -23,7 +23,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   setupFiles: ['./jest/setup.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines|react-native-worklets)/)',
+    'node_modules/(?!(@supabase|isows|@react-native-google-signin|@flyerhq|@react-native|react-native|uuid|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|react-native-image-viewing|react-native-parsed-text|@react-navigation/.*|@react-native-masked-view/masked-view|react-native-linear-gradient|react-native-picker-select|react-native-paper|react-native-keyboard-controller|react-native-drawer-layout|marked|react-native-code-highlighter|react-syntax-highlighter|trim-newlines|react-native-worklets|@mhpdev)/)',
   ],
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',
@@ -77,5 +77,7 @@ module.exports = {
     '@env': '<rootDir>/__mocks__/external/@env.js',
     '@gorhom/bottom-sheet':
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
+    '@mhpdev/react-native-speech':
+      '<rootDir>/__mocks__/external/@mhpdev-react-native-speech.ts',
   },
 };

@@ -146,6 +146,9 @@ export const ChatScreen: React.FC = observer(() => {
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
+          showTTSToggle: true,
+          isTTSEnabled: uiStore.ttsEnabled,
+          onTTSToggle: (enabled: boolean) => uiStore.setTTSEnabled(enabled),
         }}
         textInputProps={{
           editable: !!modelStore.context,

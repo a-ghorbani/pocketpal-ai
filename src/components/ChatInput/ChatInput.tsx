@@ -22,6 +22,7 @@ import {
   VideoRecorderIcon,
   PlusIcon,
   AtomIcon,
+  SpeakerIcon,
 } from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
@@ -70,6 +71,12 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether to show the TTS toggle button */
+  showTTSToggle?: boolean;
+  /** Whether TTS is currently enabled */
+  isTTSEnabled?: boolean;
+  /** Callback when TTS toggle is pressed */
+  onTTSToggle?: (enabled: boolean) => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -87,6 +94,12 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether to show the TTS toggle button */
+  showTTSToggle?: boolean;
+  /** Whether TTS is currently enabled */
+  isTTSEnabled?: boolean;
+  /** Callback when TTS toggle is pressed */
+  onTTSToggle?: (enabled: boolean) => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -116,6 +129,9 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    showTTSToggle = false,
+    isTTSEnabled = false,
+    onTTSToggle,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -551,6 +567,43 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                     ]}>
                     {l10n.components.chatInput.thinkingToggle.thinkText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* TTS Toggle Button */}
+              {showTTSToggle && !isCameraActive && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    isTTSEnabled && {backgroundColor: onSurfaceColor},
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={() => onTTSToggle?.(!isTTSEnabled)}
+                  accessibilityLabel={
+                    isTTSEnabled
+                      ? 'Disable Text-to-Speech'
+                      : 'Enable Text-to-Speech'
+                  }
+                  accessibilityRole="button">
+                  <SpeakerIcon
+                    width={14}
+                    height={14}
+                    stroke={
+                      isTTSEnabled
+                        ? inputBackgroundColor
+                        : onSurfaceColorVariant
+                    }
+                    strokeWidth={2}
+                  />
+                  <Text
+                    style={[
+                      styles.thinkingToggleText,
+                      isTTSEnabled
+                        ? {color: inputBackgroundColor}
+                        : {color: onSurfaceColorVariant},
+                    ]}>
+                    TTS
                   </Text>
                 </TouchableOpacity>
               )}

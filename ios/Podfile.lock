@@ -2426,6 +2426,30 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNSpeech (1.3.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNSVG (15.14.0):
     - DoubleConversion
     - glog
@@ -2688,6 +2712,7 @@ DEPENDENCIES:
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNShare (from `../node_modules/react-native-share`)
+  - "RNSpeech (from `../node_modules/@mhpdev/react-native-speech`)"
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
@@ -2908,6 +2933,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-screens"
   RNShare:
     :path: "../node_modules/react-native-share"
+  RNSpeech:
+    :path: "../node_modules/@mhpdev/react-native-speech"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
@@ -3036,6 +3063,7 @@ SPEC CHECKSUMS:
   RNReanimated: 6c440e04cb566a4bb214c5c968607e5aac3bd1f6
   RNScreens: 3f6e41f9f89cb888a6b4b27566bdfdf7a3bf51ad
   RNShare: a60af5971cb114a8d31df642b108e3fe00e5b987
+  RNSpeech: b0b11c7c50495d29f5161fa2a2f2281761d307fe
   RNSVG: 681f8ef5ca50e13cb3c6c88a907ea89b68fee74f
   RNVectorIcons: 1fe59cfa2d3ac94ceb9d373a59c54609471b8d56
   RNWorklets: b1faafefb82d9f29c4018404a0fb33974b494a7b

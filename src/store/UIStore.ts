@@ -47,6 +47,9 @@ export class UIStore {
   // Warning state for chat-related warnings (like multimodal warnings)
   chatWarning: ErrorState | null = null;
 
+  // TTS (Text-to-Speech) settings
+  ttsEnabled = false;
+
   showError(message: string) {
     // TODO: Implement error display logic (e.g., toast, alert, etc.)
     console.error(message);
@@ -75,6 +78,7 @@ export class UIStore {
         'displayMemUsage',
         'benchmarkShareDialog',
         '_language',
+        'ttsEnabled',
       ],
       storage: AsyncStorage,
     });
@@ -139,6 +143,12 @@ export class UIStore {
   setBenchmarkShareDialogPreference(shouldShow: boolean) {
     runInAction(() => {
       this.benchmarkShareDialog.shouldShow = shouldShow;
+    });
+  }
+
+  setTTSEnabled(enabled: boolean) {
+    runInAction(() => {
+      this.ttsEnabled = enabled;
     });
   }
 }
