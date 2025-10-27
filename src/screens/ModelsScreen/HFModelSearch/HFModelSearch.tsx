@@ -1,32 +1,14 @@
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-  useEffect,
-  useContext,
-} from 'react';
+import React, {useState, useCallback, useMemo, useEffect} from 'react';
 
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
-import {Portal, PaperProvider} from 'react-native-paper';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetScrollView,
-  BottomSheetModalProvider,
-} from '@gorhom/bottom-sheet';
 
-import {useTheme} from '../../../hooks';
-
-import {createStyles} from './styles';
 import {SearchView} from './SearchView';
 import {DetailsView} from './DetailsView';
 
 import {hfStore} from '../../../store';
 
 import {HuggingFaceModel} from '../../../utils/types';
-import {L10nContext} from '../../../utils';
 import {Sheet} from '../../../components';
 
 interface HFModelSearchProps {
@@ -38,17 +20,10 @@ const DEBOUNCE_DELAY = 500;
 
 export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
   ({visible, onDismiss}) => {
-    const l10n = useContext(L10nContext);
-    const theme = useTheme();
-    const styles = createStyles(theme);
-
     const [detailsVisible, setDetailsVisible] = useState(false);
     const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(
       null,
     );
-
-    const searchSheetRef = useRef<BottomSheetModal>(null);
-    const detailsSheetRef = useRef<BottomSheetModal>(null);
 
     // Clear state when closed
     useEffect(() => {
@@ -80,18 +55,6 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     }, [handleSearchChange, visible]);
 
-    useEffect(() => {
-      if (visible) {
-        searchSheetRef.current?.present();
-      }
-    }, [visible]);
-
-    useEffect(() => {
-      if (detailsVisible) {
-        detailsSheetRef.current?.present();
-      }
-    }, [detailsVisible]);
-
     const handleModelSelect = async (model: HuggingFaceModel) => {
       setSelectedModel(model);
       setDetailsVisible(true);
@@ -101,20 +64,6 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
         setSelectedModel({...updatedModel});
       }
     };
-
-    const renderBackdrop = useCallback(
-      props => (
-        <BottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          opacity={0.5}
-          pressBehavior="close"
-          style={{backgroundColor: theme.colors.backdrop}}
-        />
-      ),
-      [theme.colors.backdrop],
-    );
 
     const handleSheetDismiss = () => {
       console.log('Search sheet dismissed, clearing error state');
@@ -139,30 +88,16 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
             onChangeSearchQuery={handleSearchChange}
           />
         </Sheet>
-        <Portal>
-          <BottomSheetModalProvider>
-            <BottomSheetModal
-              ref={detailsSheetRef}
-              index={0}
-              snapPoints={['90%']}
-              enableDynamicSizing={false}
-              onDismiss={() => setDetailsVisible(false)}
-              enablePanDownToClose
-              stackBehavior="push"
-              handleIndicatorStyle={styles.bottomSheetHandle}
-              backgroundStyle={styles.bottomSheetBackground}
-              backdropComponent={renderBackdrop}>
-              {/* PaperProvider is needed here to restore theme context. see the comment above. */}
-              <PaperProvider theme={theme}>
-                <L10nContext.Provider value={l10n}>
-                  <BottomSheetScrollView>
-                    {selectedModel && <DetailsView hfModel={selectedModel} />}
-                  </BottomSheetScrollView>
-                </L10nContext.Provider>
-              </PaperProvider>
-            </BottomSheetModal>
-          </BottomSheetModalProvider>
-        </Portal>
+        <Sheet
+          isVisible={detailsVisible}
+          snapPoints={['90%']}
+          enableDynamicSizing={false}
+          enablePanDownToClose
+          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          onClose={() => setDetailsVisible(false)}
+          showCloseButton={false}>
+          {selectedModel && <DetailsView hfModel={selectedModel} />}
+        </Sheet>
       </>
     );
   },
