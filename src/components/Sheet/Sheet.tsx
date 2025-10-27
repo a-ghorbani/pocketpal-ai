@@ -22,6 +22,7 @@ export interface SheetProps extends Partial<BottomSheetModalProps> {
   isVisible?: boolean;
   onClose?: () => void;
   displayFullHeight?: boolean;
+  showCloseButton?: boolean;
 }
 
 interface SheetComponent
@@ -42,6 +43,7 @@ export const Sheet = forwardRef(
       isVisible,
       displayFullHeight,
       onClose,
+      showCloseButton = true,
       ...props
     }: SheetProps,
     ref: React.Ref<BottomSheetModalMethods>,
@@ -101,12 +103,14 @@ export const Sheet = forwardRef(
         {...props}>
         <View style={styles.header}>
           {title && <Text variant="titleMedium">{title}</Text>}
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={onDismiss}
-            hitSlop={10}>
-            <CloseIcon stroke={theme.colors.primary} />
-          </TouchableOpacity>
+          {showCloseButton && (
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={onDismiss}
+              hitSlop={10}>
+              <CloseIcon stroke={theme.colors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
         {children}
       </BottomSheetModal>

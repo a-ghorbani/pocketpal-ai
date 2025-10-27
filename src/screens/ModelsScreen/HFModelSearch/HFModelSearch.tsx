@@ -27,6 +27,7 @@ import {hfStore} from '../../../store';
 
 import {HuggingFaceModel} from '../../../utils/types';
 import {L10nContext} from '../../../utils';
+import {Sheet} from '../../../components';
 
 interface HFModelSearchProps {
   visible: boolean;
@@ -123,64 +124,46 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     };
 
     return (
-      <Portal>
-        <BottomSheetModalProvider>
-          <BottomSheetModal
-            ref={searchSheetRef}
-            index={0}
-            snapPoints={['92%']}
-            enableDynamicSizing={false}
-            onDismiss={handleSheetDismiss}
-            enablePanDownToClose
-            enableContentPanningGesture={false}
-            handleIndicatorStyle={styles.bottomSheetHandle}
-            backgroundStyle={styles.bottomSheetBackground}
-            keyboardBehavior="extend"
-            keyboardBlurBehavior="restore"
-            android_keyboardInputMode="adjustResize"
-            backdropComponent={renderBackdrop}>
-            {/*
-            We need PaperProvider here because:
-            1. BottomSheetModal creates a new React portal/root that's outside
-               the main component tree
-            2. When content is portaled, it loses access to the context (including theme)
-               from the original component tree
-            3. By wrapping the bottom sheet content with PaperProvider, we restore
-               the theme context for all Paper components inside
-          */}
-            <PaperProvider theme={theme}>
-              <L10nContext.Provider value={l10n}>
-                <SearchView
-                  testID="hf-model-search-view"
-                  onModelSelect={handleModelSelect}
-                  onChangeSearchQuery={handleSearchChange}
-                />
-              </L10nContext.Provider>
-            </PaperProvider>
-          </BottomSheetModal>
-
-          <BottomSheetModal
-            ref={detailsSheetRef}
-            index={0}
-            snapPoints={['90%']}
-            enableDynamicSizing={false}
-            onDismiss={() => setDetailsVisible(false)}
-            enablePanDownToClose
-            stackBehavior="push"
-            handleIndicatorStyle={styles.bottomSheetHandle}
-            backgroundStyle={styles.bottomSheetBackground}
-            backdropComponent={renderBackdrop}>
-            {/* PaperProvider is needed here to restore theme context. see the comment above. */}
-            <PaperProvider theme={theme}>
-              <L10nContext.Provider value={l10n}>
-                <BottomSheetScrollView>
-                  {selectedModel && <DetailsView hfModel={selectedModel} />}
-                </BottomSheetScrollView>
-              </L10nContext.Provider>
-            </PaperProvider>
-          </BottomSheetModal>
-        </BottomSheetModalProvider>
-      </Portal>
+      <>
+        <Sheet
+          isVisible={visible}
+          snapPoints={['92%']}
+          enableDynamicSizing={false}
+          enablePanDownToClose
+          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          onClose={handleSheetDismiss}
+          showCloseButton={false}>
+          <SearchView
+            testID="hf-model-search-view"
+            onModelSelect={handleModelSelect}
+            onChangeSearchQuery={handleSearchChange}
+          />
+        </Sheet>
+        <Portal>
+          <BottomSheetModalProvider>
+            <BottomSheetModal
+              ref={detailsSheetRef}
+              index={0}
+              snapPoints={['90%']}
+              enableDynamicSizing={false}
+              onDismiss={() => setDetailsVisible(false)}
+              enablePanDownToClose
+              stackBehavior="push"
+              handleIndicatorStyle={styles.bottomSheetHandle}
+              backgroundStyle={styles.bottomSheetBackground}
+              backdropComponent={renderBackdrop}>
+              {/* PaperProvider is needed here to restore theme context. see the comment above. */}
+              <PaperProvider theme={theme}>
+                <L10nContext.Provider value={l10n}>
+                  <BottomSheetScrollView>
+                    {selectedModel && <DetailsView hfModel={selectedModel} />}
+                  </BottomSheetScrollView>
+                </L10nContext.Provider>
+              </PaperProvider>
+            </BottomSheetModal>
+          </BottomSheetModalProvider>
+        </Portal>
+      </>
     );
   },
 );
