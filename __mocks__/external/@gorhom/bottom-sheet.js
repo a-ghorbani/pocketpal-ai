@@ -20,6 +20,24 @@ const BottomSheetBase = React.forwardRef((props, ref) => {
   return React.createElement(View, {...props}, props.children);
 });
 
+// Mock FlatList that actually renders items
+const BottomSheetFlatList = React.forwardRef((props, ref) => {
+  React.useImperativeHandle(ref, createMockRef, []);
+  const {data, renderItem, keyExtractor, ...restProps} = props;
+
+  return React.createElement(
+    View,
+    {...restProps},
+    data?.map((item, index) =>
+      React.createElement(
+        View,
+        {key: keyExtractor ? keyExtractor(item) : index},
+        renderItem ? renderItem({item, index}) : null,
+      ),
+    ),
+  );
+});
+
 // Provide aliases for all components that may be imported
 const BottomSheet = BottomSheetBase;
 const BottomSheetModal = BottomSheetBase;
@@ -27,7 +45,6 @@ const BottomSheetModalProvider = ({children}) =>
   React.createElement(View, null, children);
 const BottomSheetBackdrop = BottomSheetBase;
 const BottomSheetScrollView = BottomSheetBase;
-const BottomSheetFlatList = BottomSheetBase;
 const BottomSheetSectionList = BottomSheetBase;
 const BottomSheetView = BottomSheetBase;
 
