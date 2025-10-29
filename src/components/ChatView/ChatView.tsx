@@ -134,6 +134,8 @@ export interface ChatProps extends ChatTopLevelProps {
   /** Show user names for received messages. Useful for a group chat. Will be
    * shown only on text messages. */
   showUserNames?: boolean;
+  /** Whether to show date headers between messages. Defaults to true. */
+  showDateHeaders?: boolean;
   /** Whether to show the image upload button in the chat input */
   showImageUpload?: boolean;
   /** Whether to enable vision mode for the chat input */
@@ -182,6 +184,7 @@ export const ChatView = observer(
     sendButtonVisibilityMode = 'editing',
     showUserAvatars = false,
     showUserNames = false,
+    showDateHeaders = false,
     showImageUpload = false,
     isVisionEnabled = false,
     initialInputText,
@@ -340,6 +343,7 @@ export const ChatView = observer(
       dateFormat,
       showUserNames,
       timeFormat,
+      showDateHeaders,
     });
 
     // Untestable
