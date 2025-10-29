@@ -203,6 +203,9 @@ export const ChatView = observer(
     const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
     const insets = useSafeAreaInsets();
 
+    // Track if user is at bottom (inverted list: small y means bottom)
+    const atBottomRef = React.useRef(true);
+
     // Handle initial input text from deep linking
     React.useEffect(() => {
       if (initialInputText && initialInputText.trim()) {
@@ -273,6 +276,7 @@ export const ChatView = observer(
     const [stackEntry, setStackEntry] = React.useState<StatusBarProps>({});
 
     const [showScrollButton, setShowScrollButton] = React.useState(false);
+    const [isAtBottom, setIsAtBottom] = React.useState(true);
 
     React.useEffect(() => {
       if (activePal) {
@@ -291,7 +295,10 @@ export const ChatView = observer(
 
     const handleScroll = React.useCallback((event: any) => {
       const {contentOffset} = event.nativeEvent;
-      const isAtTop = contentOffset.y <= 80;
+      const isAtTop = contentOffset.y <= 50;
+      // In inverted list: small y means we're at the bottom (latest message visible)
+      atBottomRef.current = isAtTop;
+      setIsAtBottom(isAtTop);
       setShowScrollButton(!isAtTop);
     }, []);
 
@@ -689,7 +696,7 @@ export const ChatView = observer(
               // eslint-disable-next-line react-native/no-inline-styles
               {
                 justifyContent:
-                  chatMessages.length !== 0 ? 'flex-end' : 'center',
+                  chatMessages.length !== 0 ? undefined : 'center',
                 paddingTop: chatInputHeight.height,
               },
             ]}
@@ -720,7 +727,7 @@ export const ChatView = observer(
               style={[
                 // eslint-disable-next-line react-native/no-inline-styles
                 {
-                  position: 'absolute',
+                  // position: 'absolute',
                   right: 8,
                   bottom:
                     bottomComponentHeight +
@@ -783,7 +790,9 @@ export const ChatView = observer(
 
     return (
       <UserContext.Provider value={user}>
-        <View style={styles.container} onLayout={onLayout}>
+        <View
+          style={[styles.container, {backgroundColor: inputBackgroundColor}]}
+          onLayout={onLayout}>
           <View style={styles.headerWrapper}>
             <ChatHeader />
           </View>
@@ -795,10 +804,6 @@ export const ChatView = observer(
               style={[
                 styles.inputContainer,
                 inputContainerAnimatedStyle,
-                // eslint-disable-next-line react-native/no-inline-styles
-                {
-                  zIndex: 10,
-                },
                 {backgroundColor: inputBackgroundColor},
               ]}>
               <ChatInput

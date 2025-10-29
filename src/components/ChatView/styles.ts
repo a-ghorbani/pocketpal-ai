@@ -4,11 +4,9 @@ import {Theme} from '../../utils/types';
 export const createStyles = ({theme}: {theme: Theme}) =>
   StyleSheet.create({
     container: {
-      //backgroundColor: theme.colors.primary,
       flex: 1,
     },
     flatList: {
-      backgroundColor: theme.colors.background,
       height: '100%',
     },
     flatListContentContainer: {
@@ -48,10 +46,10 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       elevation: 5,
     },
     inputContainer: {
-      backgroundColor: theme.colors.primary,
       borderTopLeftRadius: theme.borders.inputBorderRadius,
       borderTopRightRadius: theme.borders.inputBorderRadius,
       position: 'absolute',
+      zIndex: 10,
       left: 0,
       right: 0,
       bottom: 0,
