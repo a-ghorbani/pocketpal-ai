@@ -78,7 +78,7 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-vision-camera": "^4.7.2",
     "react-native-worklets": "^0.6.0",
-    "react-syntax-highlighter": "^15.6.6",
+    "react-syntax-highlighter": "^16.1.0",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   },
