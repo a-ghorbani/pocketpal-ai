@@ -696,7 +696,7 @@ export const ChatView = observer(
               // eslint-disable-next-line react-native/no-inline-styles
               {
                 justifyContent:
-                  chatMessages.length !== 0 ? undefined : 'center',
+                  chatMessages.length !== 0 ? 'flex-end' : 'center',
                 paddingTop: chatInputHeight.height,
               },
             ]}
