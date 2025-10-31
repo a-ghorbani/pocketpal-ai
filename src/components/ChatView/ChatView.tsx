@@ -15,12 +15,17 @@ import {observer} from 'mobx-react';
 import calendar from 'dayjs/plugin/calendar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
+import {
+  KeyboardStickyView,
+  useReanimatedKeyboardAnimation,
+} from 'react-native-keyboard-controller';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   useAnimatedReaction,
+  useAnimatedScrollHandler,
+  useDerivedValue,
 } from 'react-native-reanimated';
 
 import {
@@ -206,9 +211,6 @@ export const ChatView = observer(
     const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
     const insets = useSafeAreaInsets();
 
-    // Track if user is at bottom (inverted list: small y means bottom)
-    const atBottomRef = React.useRef(true);
-
     // Handle initial input text from deep linking
     React.useEffect(() => {
       if (initialInputText && initialInputText.trim()) {
@@ -240,16 +242,12 @@ export const ChatView = observer(
     // Shared value to track if keyboard is visible (height > 0)
     const isKeyboardVisible = useSharedValue(false);
 
-    // Animated style that translates the entire chat container vertically
-    const contentAnimatedStyle = useAnimatedStyle(() => ({
-      transform: [
-        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
-      ],
-    }));
-
     // Animated style for input container padding
     // Apply bottom padding (safe area inset) only when keyboard is NOT visible
     const inputContainerAnimatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
+      ],
       paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
     }));
 
@@ -264,7 +262,7 @@ export const ChatView = observer(
             keyboardOffsetBottom.value = withTiming(
               isKeyboardMovingUp ? bottomOffset : 0,
               {
-                duration: bottomOffset ? 150 : 400,
+                duration: 200, // bottomOffset ? 150 : 400,
               },
             );
           }
@@ -277,9 +275,6 @@ export const ChatView = observer(
     const [isNextPageLoading, setNextPageLoading] = React.useState(false);
     const [imageViewIndex, setImageViewIndex] = React.useState(0);
     const [stackEntry, setStackEntry] = React.useState<StatusBarProps>({});
-
-    const [showScrollButton, setShowScrollButton] = React.useState(false);
-    const [isAtBottom, setIsAtBottom] = React.useState(true);
 
     React.useEffect(() => {
       if (activePal) {
@@ -296,14 +291,47 @@ export const ChatView = observer(
       }
     }, [activePal]);
 
-    const handleScroll = React.useCallback((event: any) => {
-      const {contentOffset} = event.nativeEvent;
-      const isAtTop = contentOffset.y <= 50;
-      // In inverted list: small y means we're at the bottom (latest message visible)
-      atBottomRef.current = isAtTop;
-      setIsAtBottom(isAtTop);
-      setShowScrollButton(!isAtTop);
-    }, []);
+    const underflow = useSharedValue(true);
+    const atLatest = useSharedValue(true);
+
+    const STICK = 24;
+    const LEAVE = 40;
+    const EPS = 1;
+
+    // --- Scroll tracking with Reanimated ---
+    const handleScroll = useAnimatedScrollHandler({
+      onScroll: e => {
+        const y = e.contentOffset.y;
+        const Hc = e.contentSize?.height ?? 0; // content height
+        const Hv = e.layoutMeasurement?.height ?? 0; // viewport height
+        const maxY = Math.max(0, Hc - Hv);
+
+        // underflow: content can't actually scroll (flexGrow:1 makes Hc≈Hv)
+        underflow.value = Hc <= Hv + EPS;
+
+        // clamp to kill rubber-band noise
+        const clampedY = Math.min(Math.max(y, 0), maxY);
+
+        if (underflow.value) {
+          atLatest.value = true;
+          return;
+        }
+        if (atLatest.value) {
+          if (clampedY > LEAVE) atLatest.value = false;
+        } else {
+          if (clampedY < STICK) atLatest.value = true;
+        }
+      },
+    });
+
+    const hasHiddenContent = useDerivedValue(() => {
+      return !underflow.value && !atLatest.value ? 1 : 0;
+    });
+
+    const scrollToBottomAnimatedStyle = useAnimatedStyle(() => ({
+      opacity: withTiming(hasHiddenContent.value, {duration: 160}),
+      transform: [{translateY: withTiming(hasHiddenContent.value ? 0 : 8)}],
+    }));
 
     const scrollToBottom = React.useCallback(() => {
       list.current?.scrollToOffset({
@@ -685,60 +713,94 @@ export const ChatView = observer(
       ],
     );
 
+    // --- ListHeaderComponent as animated spacer (inverted list: header is at bottom) ---
+    // We use this to create a spacer at the bottom of the list to account for the keyboard height.
+    // So we can move up/down when the keyboard is shown/hidden.
+    const headerStyle = useAnimatedStyle(() => {
+      // only animate when not streaming
+      // if (isStreaming) return {height: 0};
+
+      // Only lift when keyboard is actively moving
+      const shouldLift = trackingKeyboardMovement.value;
+      return {
+        height: withTiming(
+          shouldLift ? Math.abs(keyboard.height.value) - insets.bottom : 0,
+          {
+            duration: !hasHiddenContent.value
+              ? 0 // if we don't have hidden content, we can animate immediately, so it feels more natural
+              : 1000, // if we have hidden content, we need to animate slower to give time to maintainVisibleContentPosition, so it doesn't feel janky
+          },
+        ),
+      };
+    });
+
     const renderListHeaderComponent = React.useCallback(
-      () => (isThinking ? <LoadingBubble /> : null),
-      [isThinking],
+      () => (
+        <>
+          {isThinking && <LoadingBubble />}
+          <Reanimated.View style={headerStyle} />
+        </>
+      ),
+      [isThinking, headerStyle],
     );
 
     const renderChatList = React.useCallback(
       () => (
         <>
-          <Reanimated.FlatList
-            automaticallyAdjustContentInsets={false}
-            contentContainerStyle={[
-              styles.flatListContentContainer,
-              // eslint-disable-next-line react-native/no-inline-styles
-              {
-                justifyContent:
-                  chatMessages.length !== 0 ? 'flex-end' : 'center',
-                paddingTop: chatInputHeight.height,
-              },
-            ]}
-            initialNumToRender={10}
-            ListEmptyComponent={renderListEmptyComponent}
-            ListFooterComponent={renderListFooterComponent}
-            ListHeaderComponent={renderListHeaderComponent}
-            maxToRenderPerBatch={6}
-            onEndReachedThreshold={0.75}
-            style={styles.flatList}
-            showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            {...unwrap(flatListProps)}
-            data={chatMessages}
-            inverted={chatMessages.length > 0}
-            keyboardDismissMode="interactive"
-            keyExtractor={keyExtractor}
-            onEndReached={handleEndReached}
-            ref={list}
-            renderItem={renderMessage}
-            maintainVisibleContentPosition={{
-              autoscrollToTopThreshold: 0,
-              minIndexForVisible: 1, // isStreaming ? 1 : 0,
-            }}
-          />
-          {showScrollButton && (
-            <View
-              style={[
+          <Reanimated.View
+            // eslint-disable-next-line react-native/no-inline-styles
+            style={{flex: 1}}>
+            <Reanimated.FlatList
+              automaticallyAdjustContentInsets={false}
+              contentContainerStyle={[
+                styles.flatListContentContainer,
                 // eslint-disable-next-line react-native/no-inline-styles
                 {
-                  // position: 'absolute',
-                  right: 8,
-                  bottom:
-                    bottomComponentHeight +
-                    40 /* button height */ +
-                    20 /* padding */,
+                  justifyContent:
+                    chatMessages.length !== 0 ? 'flex-end' : 'center',
                 },
-              ]}>
+              ]}
+              initialNumToRender={10}
+              ListEmptyComponent={renderListEmptyComponent}
+              ListFooterComponent={renderListFooterComponent}
+              ListHeaderComponent={renderListHeaderComponent}
+              maxToRenderPerBatch={6}
+              onEndReachedThreshold={0.75}
+              style={[styles.flatList, {marginBottom: bottomComponentHeight}]}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              {...unwrap(flatListProps)}
+              data={chatMessages}
+              inverted={chatMessages.length > 0}
+              keyboardDismissMode="interactive"
+              keyExtractor={keyExtractor}
+              onEndReached={handleEndReached}
+              ref={list}
+              renderItem={renderMessage}
+              maintainVisibleContentPosition={
+                isStreaming || hasHiddenContent.value
+                  ? {
+                      autoscrollToTopThreshold: 1,
+                      minIndexForVisible: 1, //isStreaming ? 1 : 0,
+                    }
+                  : undefined
+              }
+            />
+          </Reanimated.View>
+          <Reanimated.View
+            style={[
+              scrollToBottomAnimatedStyle,
+              // eslint-disable-next-line react-native/no-inline-styles
+              {
+                // position: 'absolute',
+                right: 8,
+                bottom:
+                  bottomComponentHeight +
+                  40 /* button height */ +
+                  20 /* padding */,
+              },
+            ]}>
+            <KeyboardStickyView offset={{closed: 0, opened: insets.bottom}}>
               <TouchableOpacity
                 style={styles.scrollToBottomButton}
                 onPress={scrollToBottom}>
@@ -748,8 +810,8 @@ export const ChatView = observer(
                   color={theme.colors.onPrimary}
                 />
               </TouchableOpacity>
-            </View>
-          )}
+            </KeyboardStickyView>
+          </Reanimated.View>
         </>
       ),
       [
@@ -757,17 +819,19 @@ export const ChatView = observer(
         styles.flatList,
         styles.scrollToBottomButton,
         chatMessages,
-        chatInputHeight.height,
         renderListEmptyComponent,
         renderListFooterComponent,
         renderListHeaderComponent,
+        bottomComponentHeight,
         handleScroll,
         flatListProps,
         keyExtractor,
         handleEndReached,
         renderMessage,
-        showScrollButton,
-        bottomComponentHeight,
+        isStreaming,
+        hasHiddenContent.value,
+        scrollToBottomAnimatedStyle,
+        insets.bottom,
         scrollToBottom,
         theme.colors.onPrimary,
       ],
@@ -800,7 +864,7 @@ export const ChatView = observer(
           <View style={styles.headerWrapper}>
             <ChatHeader />
           </View>
-          <Reanimated.View style={[styles.chatContainer, contentAnimatedStyle]}>
+          <Reanimated.View style={styles.chatContainer}>
             {customContent}
             {renderChatList()}
             <Reanimated.View

@@ -8,6 +8,7 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     },
     flatList: {
       height: '100%',
+      // flex: 1,
     },
     flatListContentContainer: {
       flexGrow: 1,
