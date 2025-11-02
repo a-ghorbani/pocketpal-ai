@@ -762,10 +762,7 @@ describe('input', () => {
   describe('Model Not Loaded Feedback', () => {
     it('shows warning and haptic feedback when trying to send without model', async () => {
       // Mock haptic feedback
-      const hapticTriggerSpy = jest.spyOn(
-        ReactNativeHapticFeedback,
-        'trigger',
-      );
+      const hapticTriggerSpy = jest.spyOn(ReactNativeHapticFeedback, 'trigger');
 
       // Ensure no model is loaded
       runInAction(() => {

@@ -583,7 +583,7 @@ export const ChatInput = observer(
               {/* Helper text for model not loaded */}
               {showModelWarning && !hasActiveModel && (
                 <View style={styles.helperTextContainer}>
-                  <Text style={styles.helperText}>
+                  <Text variant="bodySmall" style={styles.helperText}>
                     {l10n.chat.cannotSendWithoutModel}
                   </Text>
                 </View>

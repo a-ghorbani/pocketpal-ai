@@ -269,7 +269,6 @@ export const createStyles = ({
       elevation: 3,
     },
     helperText: {
-      ...fontStyles.bodySmall,
       color: theme.colors.onErrorContainer,
       fontSize: 11,
       lineHeight: 14,
