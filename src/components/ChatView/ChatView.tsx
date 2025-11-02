@@ -43,8 +43,12 @@ import {chatSessionStore, modelStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
-import {calculateChatMessages, unwrap, UserContext} from '../../utils';
-import {L10nContext} from '../../utils';
+import {
+  calculateChatMessages,
+  unwrap,
+  UserContext,
+  L10nContext,
+} from '../../utils';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {
@@ -777,14 +781,9 @@ export const ChatView = observer(
       // Only lift when keyboard is actively moving
       const shouldLift = trackingKeyboardMovement.value;
       return {
-        height: withTiming(
-          shouldLift ? Math.abs(keyboard.height.value) - insets.bottom : 0,
-          {
-            duration: !hasHiddenContent.value
-              ? 0 // if we don't have hidden content, we can animate immediately, so it feels more natural
-              : 1000, // if we have hidden content, we need to animate slower to give time to maintainVisibleContentPosition, so it doesn't feel janky
-          },
-        ),
+        height: shouldLift
+          ? Math.abs(keyboard.height.value) - insets.bottom
+          : 0,
       };
     });
 
@@ -834,7 +833,7 @@ export const ChatView = observer(
               ref={list}
               renderItem={renderMessage}
               maintainVisibleContentPosition={
-                isStreaming || hasHiddenContent.value
+                isStreaming // || hasHiddenContentState
                   ? {
                       autoscrollToTopThreshold: 20,
                       minIndexForVisible: 1, //isStreaming ? 1 : 0,
@@ -885,7 +884,6 @@ export const ChatView = observer(
         handleEndReached,
         renderMessage,
         isStreaming,
-        hasHiddenContent.value,
         scrollToBottomAnimatedStyle,
         insets.bottom,
         scrollToBottom,

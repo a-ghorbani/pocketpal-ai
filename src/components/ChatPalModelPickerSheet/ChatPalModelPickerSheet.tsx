@@ -1,5 +1,5 @@
-import React, {useRef, useContext} from 'react';
-import {Alert, Dimensions, View, Pressable} from 'react-native';
+import React, {useRef, useContext, useEffect} from 'react';
+import {Alert, Dimensions, View, Pressable, Keyboard} from 'react-native';
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
 import BottomSheet, {
@@ -102,14 +102,28 @@ export const ChatPalModelPickerSheet = observer(
       ],
     );
 
-    // Render the sheet only when it's visible
-    // useEffect(() => {
-    //   if (isVisible) {
-    //     bottomSheetRef.current?.expand();
-    //   } else {
-    //     bottomSheetRef.current?.close();
-    //   }
-    // }, [isVisible]);
+    // Dismiss keyboard when sheet becomes visible
+    useEffect(() => {
+      if (isVisible) {
+        Keyboard.dismiss();
+      }
+    }, [isVisible]);
+
+    // Close sheet when keyboard opens
+    useEffect(() => {
+      const keyboardDidShowListener = Keyboard.addListener(
+        'keyboardDidShow',
+        () => {
+          if (isVisible) {
+            onClose();
+          }
+        },
+      );
+
+      return () => {
+        keyboardDidShowListener.remove();
+      };
+    }, [isVisible, onClose]);
 
     const handleTabPress = (tab: Tab, index: number) => {
       setActiveTab(tab);
