@@ -8,6 +8,7 @@ import {
   StatusBarProps,
   View,
   TouchableOpacity,
+  Keyboard,
 } from 'react-native';
 
 import dayjs from 'dayjs';
@@ -33,7 +34,7 @@ import {
   useKeyboardDimensions,
 } from '../KeyboardAccessoryView/hooks';
 
-import {useTheme, useMessageActions} from '../../hooks';
+import {useTheme, useMessageActions, usePrevious} from '../../hooks';
 
 import ImageView from './ImageView';
 import {createStyles} from './styles';
@@ -347,6 +348,7 @@ export const ChatView = observer(
         }
         onSendPress(message);
         setInputText('');
+        Keyboard.dismiss();
       },
       [onSendPress],
     );
@@ -373,6 +375,22 @@ export const ChatView = observer(
       timeFormat,
       showDateHeaders,
     });
+
+    const previousChatMessages = usePrevious(chatMessages);
+
+    React.useEffect(() => {
+      if (
+        chatMessages[0]?.type !== 'dateHeader' &&
+        chatMessages[0]?.id !== previousChatMessages?.[0]?.id &&
+        chatMessages[0]?.author?.id === user.id
+      ) {
+        list.current?.scrollToOffset({
+          animated: true,
+          offset: 0,
+        });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatMessages]);
 
     // Untestable
     /* istanbul ignore next */
@@ -757,7 +775,7 @@ export const ChatView = observer(
                 // eslint-disable-next-line react-native/no-inline-styles
                 {
                   justifyContent:
-                    chatMessages.length !== 0 ? 'flex-end' : 'center',
+                    chatMessages.length !== 0 ? undefined : 'center',
                 },
               ]}
               initialNumToRender={10}
@@ -780,7 +798,7 @@ export const ChatView = observer(
               maintainVisibleContentPosition={
                 isStreaming || hasHiddenContent.value
                   ? {
-                      autoscrollToTopThreshold: 1,
+                      autoscrollToTopThreshold: 20,
                       minIndexForVisible: 1, //isStreaming ? 1 : 0,
                     }
                   : undefined
