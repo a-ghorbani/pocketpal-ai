@@ -787,10 +787,10 @@ export const ChatView = observer(
       () => (
         <>
           {isThinking && <LoadingBubble />}
-          <Reanimated.View style={headerStyle} />
+          {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),
-      [isThinking, headerStyle],
+      [isThinking, chatMessages.length, headerStyle],
     );
 
     // Render complete chat list with scroll-to-bottom button
