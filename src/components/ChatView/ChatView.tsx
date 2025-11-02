@@ -861,7 +861,7 @@ export const ChatView = observer(
                 onPress={scrollToBottom}>
                 <Icon
                   name="chevron-down"
-                  size={24}
+                  size={20}
                   color={theme.colors.onPrimary}
                 />
               </TouchableOpacity>
