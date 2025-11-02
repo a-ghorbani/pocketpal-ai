@@ -29,10 +29,7 @@ import Reanimated, {
   useDerivedValue,
 } from 'react-native-reanimated';
 
-import {
-  useComponentSize,
-  useKeyboardDimensions,
-} from '../KeyboardAccessoryView/hooks';
+import {useComponentSize} from '../KeyboardAccessoryView/hooks';
 
 import {useTheme, useMessageActions, usePrevious} from '../../hooks';
 
@@ -249,8 +246,6 @@ export const ChatView = observer(
       const height = chatInputHeight.height;
       return height;
     }, [chatInputHeight.height]);
-
-    const {keyboardHeight: keyboardHeight} = useKeyboardDimensions(true);
 
     // ============ INITIAL INPUT TEXT HANDLING ============
     // Handle initial input text from deep linking
@@ -971,7 +966,6 @@ export const ChatView = observer(
                 onPalSelect={handlePalSelect}
                 onPalSettingsSelect={onPalSettingsSelect}
                 chatInputHeight={chatInputHeight.height}
-                keyboardHeight={keyboardHeight}
               />
             )}
           </Reanimated.View>

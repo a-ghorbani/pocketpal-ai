@@ -27,7 +27,6 @@ interface ChatPalModelPickerSheetProps {
   onModelSelect?: (modelId: string) => void;
   onPalSelect?: (palId: string | undefined) => void;
   onPalSettingsSelect?: (pal: Pal) => void;
-  keyboardHeight: number;
 }
 
 const ObservedSkillsDisplay = observer(({model}) => {
@@ -75,8 +74,6 @@ export const ChatPalModelPickerSheet = observer(
     onPalSelect,
     onPalSettingsSelect,
     chatInputHeight,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    keyboardHeight,
   }: ChatPalModelPickerSheetProps) => {
     const [activeTab, setActiveTab] = React.useState<Tab>('models');
     const theme = useTheme();
@@ -372,10 +369,6 @@ export const ChatPalModelPickerSheet = observer(
         backgroundStyle={{
           backgroundColor: theme.colors.background,
         }}
-        // Dynamic sizing is not working properly in all situations, like keyboard open/close android/ios ...
-        //maxDynamicContentSize={
-        //  Dimensions.get('screen').height - insets.top - 16 - keyboardHeight
-        //}
         handleIndicatorStyle={{
           backgroundColor: theme.colors.primary,
         }}
