@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useCameraPermission} from 'react-native-vision-camera';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {observer} from 'mobx-react';
 import {IconButton, Text} from 'react-native-paper';
@@ -91,6 +92,11 @@ export interface ChatInputAdditionalProps {
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
 
+const hapticOptions = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
+
 /** Bottom bar input component with a text input, attachment and
  * send buttons inside. By default hides send button when text input is empty. */
 export const ChatInput = observer(
@@ -142,6 +148,8 @@ export const ChatInput = observer(
       onDefaultImagesChange ?? setInternalSelectedImages;
     // State for image upload menu
     const [showImageUploadMenu, setShowImageUploadMenu] = React.useState(false);
+    // State for showing "model not loaded" helper text
+    const [showModelWarning, setShowModelWarning] = React.useState(false);
     const isEditMode = chatSessionStore.isEditMode;
 
     const styles = createStyles({theme, isEditMode});
@@ -194,6 +202,20 @@ export const ChatInput = observer(
     const handleSend = () => {
       const trimmedValue = value.trim();
       if (trimmedValue) {
+        // Check if model is loaded before sending
+        if (!hasActiveModel) {
+          // Trigger haptic feedback to indicate the action is blocked
+          ReactNativeHapticFeedback.trigger(
+            'notificationWarning',
+            hapticOptions,
+          );
+          // Show warning helper text
+          setShowModelWarning(true);
+          // Auto-hide after 3 seconds
+          setTimeout(() => setShowModelWarning(false), 3000);
+          return;
+        }
+
         // Include imageUris in the message object
         onSendPress({
           text: trimmedValue,
@@ -308,7 +330,7 @@ export const ChatInput = observer(
       user &&
       !isVideoCapable && // Hide send button for video-capable pals
       (sendButtonVisibilityMode === 'always' || value.trim());
-    const isSendButtonEnabled = value.trim().length > 0;
+    const isSendButtonEnabled = value.trim().length > 0 && hasActiveModel;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
     const rotateInterpolate = iconRotation.interpolate({
@@ -558,6 +580,15 @@ export const ChatInput = observer(
 
             {/* Right Controls */}
             <View style={styles.rightControls}>
+              {/* Helper text for model not loaded */}
+              {showModelWarning && !hasActiveModel && (
+                <View style={styles.helperTextContainer}>
+                  <Text variant="bodySmall" style={styles.helperText}>
+                    {l10n.chat.cannotSendWithoutModel}
+                  </Text>
+                </View>
+              )}
+
               {/* Send/Stop Button */}
               {isStopVisible ? (
                 <StopButton color={onSurfaceColor} onPress={onStopPress} />
@@ -586,13 +617,7 @@ export const ChatInput = observer(
               ) : (
                 isSendButtonVisible && (
                   <View style={{opacity: sendButtonOpacity}}>
-                    <SendButton
-                      color={onSurfaceColor}
-                      onPress={isSendButtonEnabled ? handleSend : () => {}}
-                      touchableOpacityProps={{
-                        disabled: !isSendButtonEnabled,
-                      }}
-                    />
+                    <SendButton color={onSurfaceColor} onPress={handleSend} />
                   </View>
                 )
               )}

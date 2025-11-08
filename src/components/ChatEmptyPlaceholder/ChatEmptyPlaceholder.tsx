@@ -49,7 +49,7 @@ export const ChatEmptyPlaceholder = observer(
     const {title, description, buttonText, onPress} = getContent();
 
     if (hasActiveModel) {
-      return null;
+      return <View />;
     }
     return (
       <View

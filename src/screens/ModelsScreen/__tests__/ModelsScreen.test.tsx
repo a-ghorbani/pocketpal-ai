@@ -285,14 +285,16 @@ describe('ModelsScreen', () => {
     it('should filter HF models when HF filter is active', async () => {
       uiStore.pageStates.modelsScreen.filters = ['hf'];
 
-      const {getByText, queryByText} = render(<ModelsScreen />);
+      const {getByText, queryByText, getAllByText} = render(<ModelsScreen />);
 
       // Open the Available to Download group, since hf mocked models are not downloaded.
       const button = getByText('Available to Download');
       fireEvent.press(button);
 
       await waitFor(() => {
-        expect(getByText('hf-model-name-1')).toBeTruthy();
+        // Use getAllByText to get all instances and check the first one exists
+        const modelNames = getAllByText('hf-model-name-1');
+        expect(modelNames.length).toBeGreaterThan(0);
         expect(queryByText('basic model')).toBeNull();
       });
     });

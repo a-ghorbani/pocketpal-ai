@@ -148,7 +148,6 @@ export const ChatScreen: React.FC = observer(() => {
           onThinkingToggle: handleThinkingToggle,
         }}
         textInputProps={{
-          editable: !!modelStore.context,
           placeholder: !modelStore.context
             ? modelStore.isContextLoading
               ? l10n.chat.loadingModel

@@ -1,11 +1,5 @@
 import React, {useState, useContext, useEffect} from 'react';
-import {
-  FlatList,
-  RefreshControl,
-  Platform,
-  Alert,
-  KeyboardAvoidingView,
-} from 'react-native';
+import {FlatList, RefreshControl, Platform, Alert, View} from 'react-native';
 
 import {reaction, computed} from 'mobx';
 import {v4 as uuidv4} from 'uuid';
@@ -313,10 +307,7 @@ export const ModelsScreen: React.FC = observer(() => {
     .filter(group => group.items.length > 0);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80}
-      style={styles.container}>
+    <View style={styles.container}>
       {/* Show Error Snackbar only if no dialog is visible */}
       {!isShowingErrorDialog && activeError && (
         <ErrorSnackbar
@@ -376,6 +367,6 @@ export const ModelsScreen: React.FC = observer(() => {
         onClose={handleCloseSettings}
         model={selectedModel}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 });
