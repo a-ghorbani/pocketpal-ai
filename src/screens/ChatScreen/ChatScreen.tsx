@@ -151,7 +151,6 @@ export const ChatScreen: React.FC = observer(() => {
           onTTSToggle: (enabled: boolean) => uiStore.setTTSEnabled(enabled),
         }}
         textInputProps={{
-          editable: !!modelStore.context,
           placeholder: !modelStore.context
             ? modelStore.isContextLoading
               ? l10n.chat.loadingModel

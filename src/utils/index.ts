@@ -110,11 +110,13 @@ export const calculateChatMessages = (
     dateFormat,
     showUserNames,
     timeFormat,
+    showDateHeaders = true,
   }: {
     customDateHeaderText?: (dateTime: number) => string;
     dateFormat?: string;
     showUserNames: boolean;
     timeFormat?: string;
+    showDateHeaders?: boolean;
   },
 ) => {
   let chatMessages: MessageType.DerivedAny[] = [];
@@ -176,7 +178,7 @@ export const calculateChatMessages = (
         nextMessage!.createdAt! - message.createdAt! <= 60000;
     }
 
-    if (isFirst && messageHasCreatedAt) {
+    if (isFirst && messageHasCreatedAt && showDateHeaders) {
       const text =
         customDateHeaderText?.(message.createdAt!) ??
         getVerboseDateTimeRepresentation(message.createdAt!, {
@@ -202,7 +204,10 @@ export const calculateChatMessages = (
       ...chatMessages,
     ];
 
-    if (nextMessageDifferentDay || nextMessageDateThreshold) {
+    if (
+      (nextMessageDifferentDay || nextMessageDateThreshold) &&
+      showDateHeaders
+    ) {
       const text =
         customDateHeaderText?.(nextMessage!.createdAt!) ??
         getVerboseDateTimeRepresentation(nextMessage!.createdAt!, {

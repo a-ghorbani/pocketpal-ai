@@ -1,6 +1,6 @@
 import React from 'react';
 import {render, fireEvent, waitFor} from '@testing-library/react-native';
-import {Alert} from 'react-native';
+import {Alert, Keyboard} from 'react-native';
 
 import {ChatPalModelPickerSheet} from '../ChatPalModelPickerSheet';
 import {modelStore, chatSessionStore} from '../../../store';
@@ -92,6 +92,17 @@ jest.mock('@gorhom/bottom-sheet', () => {
 // Mock Alert
 jest.spyOn(Alert, 'alert');
 
+// Mock Keyboard
+const mockKeyboardDismiss = jest.fn();
+const mockKeyboardRemove = jest.fn();
+jest.spyOn(Keyboard, 'dismiss').mockImplementation(mockKeyboardDismiss);
+jest.spyOn(Keyboard, 'addListener').mockImplementation(
+  (_eventName, _callback) =>
+    ({
+      remove: mockKeyboardRemove,
+    }) as any,
+);
+
 const defaultProps = {
   isVisible: true,
   chatInputHeight: 60,
@@ -129,6 +140,54 @@ describe('ChatPalModelPickerSheet', () => {
     );
 
     expect(queryByTestId('bottom-sheet')).toBeTruthy(); // Component still renders but sheet is closed
+  });
+
+  it('dismisses keyboard when sheet becomes visible', () => {
+    const {rerender} = render(
+      <UserContext.Provider value={user}>
+        <L10nContext.Provider value={l10n.en}>
+          <ChatPalModelPickerSheet {...defaultProps} isVisible={false} />
+        </L10nContext.Provider>
+      </UserContext.Provider>,
+    );
+
+    // Keyboard should not be dismissed when initially not visible
+    expect(mockKeyboardDismiss).not.toHaveBeenCalled();
+
+    // Make the sheet visible
+    rerender(
+      <UserContext.Provider value={user}>
+        <L10nContext.Provider value={l10n.en}>
+          <ChatPalModelPickerSheet {...defaultProps} isVisible={true} />
+        </L10nContext.Provider>
+      </UserContext.Provider>,
+    );
+
+    // Keyboard should be dismissed when sheet becomes visible
+    expect(mockKeyboardDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes sheet when keyboard opens', () => {
+    const mockOnClose = jest.fn();
+    render(
+      <UserContext.Provider value={user}>
+        <L10nContext.Provider value={l10n.en}>
+          <ChatPalModelPickerSheet
+            {...defaultProps}
+            isVisible={true}
+            onClose={mockOnClose}
+          />
+        </L10nContext.Provider>
+      </UserContext.Provider>,
+    );
+
+    // Simulate keyboard opening
+    const keyboardDidShowListener = (Keyboard.addListener as jest.Mock).mock
+      .calls[0][1];
+    keyboardDidShowListener();
+
+    // Sheet should be closed
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
   it('displays models and pals tabs', () => {

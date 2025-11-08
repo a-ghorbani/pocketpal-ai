@@ -1,4 +1,5 @@
 import React from 'react';
+import {runInAction} from 'mobx';
 
 import {LlamaContext} from '@pocketpalai/llama.rn';
 import {
@@ -54,13 +55,17 @@ describe('ChatScreen', () => {
   });
 
   it('handles sending a message', async () => {
-    modelStore.context = new LlamaContext({
-      contextId: 1,
-      gpu: false,
-      reasonNoGPU: '',
-      model: mockContextModel,
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+      modelStore.context = new LlamaContext({
+        contextId: 1,
+        gpu: false,
+        reasonNoGPU: '',
+        model: mockContextModel,
+      });
     });
-    modelStore.context.completion = jest.fn().mockResolvedValue({
+    modelStore.context!.completion = jest.fn().mockResolvedValue({
       timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
     });
 
@@ -94,13 +99,17 @@ describe('ChatScreen', () => {
   });
 
   it('handles sending a message failure', async () => {
-    modelStore.context = new LlamaContext({
-      contextId: 1,
-      gpu: false,
-      reasonNoGPU: '',
-      model: mockContextModel,
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+      modelStore.context = new LlamaContext({
+        contextId: 1,
+        gpu: false,
+        reasonNoGPU: '',
+        model: mockContextModel,
+      });
     });
-    modelStore.context.completion = jest
+    modelStore.context!.completion = jest
       .fn()
       .mockRejectedValue(new Error('Completion failed'));
 

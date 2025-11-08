@@ -17,19 +17,29 @@ export const createStyles = (theme: Theme) =>
       flexGrow: 1,
     },
     content: {
+      flex: 1,
+    },
+    header: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    list: {
       padding: 16,
+      paddingTop: 0,
+      paddingBottom: 100,
     },
     authorRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: 6,
       gap: 8,
     },
     modelAuthor: {
       marginBottom: 0,
     },
     titleContainer: {
-      marginBottom: 16,
+      marginBottom: 10,
     },
     modelTitleRow: {
       flexDirection: 'row',
@@ -43,15 +53,20 @@ export const createStyles = (theme: Theme) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 4,
-      marginBottom: 24,
+      marginBottom: 12,
     },
     stat: {
-      backgroundColor: theme.colors.surfaceVariant,
+      backgroundColor: 'transparent',
+      // backgroundColor: theme.colors.surfaceVariant,
+    },
+    statText: {
+      fontSize: 10,
+      // color: theme.colors.onSurfaceVariant,
     },
     sectionTitle: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: 'bold',
-      marginTop: 16,
+      marginTop: 4,
       marginBottom: 8,
       color: theme.colors.onSurface,
     },

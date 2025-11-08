@@ -1,32 +1,15 @@
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-  useEffect,
-  useContext,
-} from 'react';
+import React, {useState, useCallback, useMemo, useEffect} from 'react';
 
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
-import {Portal, PaperProvider} from 'react-native-paper';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetScrollView,
-  BottomSheetModalProvider,
-} from '@gorhom/bottom-sheet';
 
-import {useTheme} from '../../../hooks';
-
-import {createStyles} from './styles';
 import {SearchView} from './SearchView';
 import {DetailsView} from './DetailsView';
 
 import {hfStore} from '../../../store';
 
 import {HuggingFaceModel} from '../../../utils/types';
-import {L10nContext} from '../../../utils';
+import {Sheet} from '../../../components';
 
 interface HFModelSearchProps {
   visible: boolean;
@@ -37,17 +20,10 @@ const DEBOUNCE_DELAY = 500;
 
 export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
   ({visible, onDismiss}) => {
-    const l10n = useContext(L10nContext);
-    const theme = useTheme();
-    const styles = createStyles(theme);
-
     const [detailsVisible, setDetailsVisible] = useState(false);
     const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(
       null,
     );
-
-    const searchSheetRef = useRef<BottomSheetModal>(null);
-    const detailsSheetRef = useRef<BottomSheetModal>(null);
 
     // Clear state when closed
     useEffect(() => {
@@ -79,18 +55,6 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     }, [handleSearchChange, visible]);
 
-    useEffect(() => {
-      if (visible) {
-        searchSheetRef.current?.present();
-      }
-    }, [visible]);
-
-    useEffect(() => {
-      if (detailsVisible) {
-        detailsSheetRef.current?.present();
-      }
-    }, [detailsVisible]);
-
     const handleModelSelect = async (model: HuggingFaceModel) => {
       setSelectedModel(model);
       setDetailsVisible(true);
@@ -101,20 +65,6 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     };
 
-    const renderBackdrop = useCallback(
-      props => (
-        <BottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          opacity={0.5}
-          pressBehavior="close"
-          style={{backgroundColor: theme.colors.backdrop}}
-        />
-      ),
-      [theme.colors.backdrop],
-    );
-
     const handleSheetDismiss = () => {
       console.log('Search sheet dismissed, clearing error state');
       // Clear error state when the sheet is closed
@@ -123,64 +73,32 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     };
 
     return (
-      <Portal>
-        <BottomSheetModalProvider>
-          <BottomSheetModal
-            ref={searchSheetRef}
-            index={0}
-            snapPoints={['92%']}
-            enableDynamicSizing={false}
-            onDismiss={handleSheetDismiss}
-            enablePanDownToClose
-            enableContentPanningGesture={false}
-            handleIndicatorStyle={styles.bottomSheetHandle}
-            backgroundStyle={styles.bottomSheetBackground}
-            keyboardBehavior="extend"
-            keyboardBlurBehavior="restore"
-            android_keyboardInputMode="adjustResize"
-            backdropComponent={renderBackdrop}>
-            {/*
-            We need PaperProvider here because:
-            1. BottomSheetModal creates a new React portal/root that's outside
-               the main component tree
-            2. When content is portaled, it loses access to the context (including theme)
-               from the original component tree
-            3. By wrapping the bottom sheet content with PaperProvider, we restore
-               the theme context for all Paper components inside
-          */}
-            <PaperProvider theme={theme}>
-              <L10nContext.Provider value={l10n}>
-                <SearchView
-                  testID="hf-model-search-view"
-                  onModelSelect={handleModelSelect}
-                  onChangeSearchQuery={handleSearchChange}
-                />
-              </L10nContext.Provider>
-            </PaperProvider>
-          </BottomSheetModal>
-
-          <BottomSheetModal
-            ref={detailsSheetRef}
-            index={0}
-            snapPoints={['90%']}
-            enableDynamicSizing={false}
-            onDismiss={() => setDetailsVisible(false)}
-            enablePanDownToClose
-            stackBehavior="push"
-            handleIndicatorStyle={styles.bottomSheetHandle}
-            backgroundStyle={styles.bottomSheetBackground}
-            backdropComponent={renderBackdrop}>
-            {/* PaperProvider is needed here to restore theme context. see the comment above. */}
-            <PaperProvider theme={theme}>
-              <L10nContext.Provider value={l10n}>
-                <BottomSheetScrollView>
-                  {selectedModel && <DetailsView hfModel={selectedModel} />}
-                </BottomSheetScrollView>
-              </L10nContext.Provider>
-            </PaperProvider>
-          </BottomSheetModal>
-        </BottomSheetModalProvider>
-      </Portal>
+      <>
+        <Sheet
+          isVisible={visible}
+          snapPoints={['92%']}
+          enableDynamicSizing={false}
+          enablePanDownToClose
+          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          onClose={handleSheetDismiss}
+          showCloseButton={false}>
+          <SearchView
+            testID="hf-model-search-view"
+            onModelSelect={handleModelSelect}
+            onChangeSearchQuery={handleSearchChange}
+          />
+        </Sheet>
+        <Sheet
+          isVisible={detailsVisible}
+          snapPoints={['90%']}
+          enableDynamicSizing={false}
+          enablePanDownToClose
+          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          onClose={() => setDetailsVisible(false)}
+          showCloseButton={false}>
+          {selectedModel && <DetailsView hfModel={selectedModel} />}
+        </Sheet>
+      </>
     );
   },
 );

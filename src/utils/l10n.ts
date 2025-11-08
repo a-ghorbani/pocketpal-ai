@@ -1107,6 +1107,7 @@ export const l10n = {
       pleaseLoadModel: 'Load a model to chat.',
       multimodalNotEnabled:
         'Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.',
+      cannotSendWithoutModel: 'Load a model first',
     },
     benchmark: {
       title: 'Benchmark',
@@ -2382,6 +2383,7 @@ export const l10n = {
       pleaseLoadModel: 'チャットを開始するにはモデルを読み込んでください',
       multimodalNotEnabled:
         'このモデルではマルチモーダル機能が有効になっていません、画像は表示されますが、AIによって処理されません',
+      cannotSendWithoutModel: 'モデルを読み込んでください',
     },
     benchmark: {
       title: 'ベンチマーク',
@@ -3591,6 +3593,7 @@ export const l10n = {
       readyToChat: '准备好聊天了吗？加载上次使用的模型',
       pleaseLoadModel: '在你聊天前，请先加载模型',
       multimodalNotEnabled: '此模型未启用多模态功能，图片将显示但不会被AI处理',
+      cannotSendWithoutModel: '请先加载模型',
     },
     benchmark: {
       title: '基准测试',

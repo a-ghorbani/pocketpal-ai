@@ -9,7 +9,8 @@ import {l10n} from '../../../utils/l10n';
 import {UserContext} from '../../../utils';
 import {ChatInput} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';
-import {palStore, chatSessionStore} from '../../../store';
+import {palStore, chatSessionStore, modelStore} from '../../../store';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 // Mock react-native-image-picker
 jest.mock('react-native-image-picker', () => ({
@@ -24,6 +25,10 @@ const renderScrollable = () => <ScrollView />;
 describe('input', () => {
   it('send button', () => {
     expect.assertions(2);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const {getByPlaceholderText, getByLabelText} = render(
       <UserContext.Provider value={user}>
@@ -50,6 +55,10 @@ describe('input', () => {
 
   it('sends a text message', () => {
     expect.assertions(2);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const {getByPlaceholderText, getByLabelText} = render(
       <UserContext.Provider value={user}>
@@ -76,6 +85,10 @@ describe('input', () => {
 
   it('sends a text message if onChangeText and value are provided', () => {
     expect.assertions(2);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const value = 'value';
     const onChangeText = jest.fn(newValue => {
@@ -118,6 +131,10 @@ describe('input', () => {
 
   it('sends a text message if onChangeText is provided', () => {
     expect.assertions(2);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const onChangeText = jest.fn();
     const {getByPlaceholderText, getByLabelText} = render(
@@ -146,6 +163,10 @@ describe('input', () => {
 
   it('sends a text message if value is provided', async () => {
     expect.assertions(2);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const value = 'value';
     const {getByPlaceholderText, getByLabelText} = render(
@@ -176,6 +197,10 @@ describe('input', () => {
 
   it('sends a text message if defaultValue is provided', () => {
     expect.assertions(2);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const defaultValue = 'defaultValue';
     const {getByPlaceholderText, getByLabelText} = render(
@@ -494,6 +519,10 @@ describe('input', () => {
 
   it('sends message with images when images are selected', () => {
     expect.assertions(1);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
     const onSendPress = jest.fn();
     const {getByPlaceholderText, getByLabelText} = render(
       <UserContext.Provider value={user}>
@@ -636,6 +665,10 @@ describe('input', () => {
     });
 
     it('sends message with selected images', () => {
+      // Set up an active model for the test
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model-id';
+      });
       const onSendPress = jest.fn();
       const defaultImages = ['file://image1.jpg', 'file://image2.jpg'];
       const {getByPlaceholderText, getByLabelText} = render(
@@ -723,6 +756,96 @@ describe('input', () => {
       fireEvent.press(cancelButton);
 
       expect(onCancelEdit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Model Not Loaded Feedback', () => {
+    it('shows warning and haptic feedback when trying to send without model', async () => {
+      // Mock haptic feedback
+      const hapticTriggerSpy = jest.spyOn(ReactNativeHapticFeedback, 'trigger');
+
+      // Ensure no model is loaded
+      runInAction(() => {
+        modelStore.activeModelId = undefined;
+        modelStore.context = undefined;
+      });
+
+      const onSendPress = jest.fn();
+
+      const {getByPlaceholderText, getByLabelText, getByText} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress,
+              renderScrollable,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>,
+      );
+
+      const input = getByPlaceholderText(
+        l10n.en.components.chatInput.inputPlaceholder,
+      );
+      fireEvent.changeText(input, 'Test message');
+
+      const sendButton = getByLabelText(
+        l10n.en.components.sendButton.accessibilityLabel,
+      );
+      fireEvent.press(sendButton);
+
+      // Verify haptic feedback was triggered
+      expect(hapticTriggerSpy).toHaveBeenCalledWith('notificationWarning', {
+        enableVibrateFallback: true,
+        ignoreAndroidSystemSettings: false,
+      });
+
+      // Verify helper text is displayed
+      expect(getByText(l10n.en.chat.cannotSendWithoutModel)).toBeTruthy();
+
+      // Verify onSendPress was NOT called
+      expect(onSendPress).not.toHaveBeenCalled();
+
+      hapticTriggerSpy.mockRestore();
+    });
+
+    it('allows sending when model is loaded', async () => {
+      const onSendPress = jest.fn();
+
+      // Ensure model is loaded
+      runInAction(() => {
+        modelStore.activeModelId = 'test-model';
+        modelStore.context = {id: 'test-context'} as any;
+      });
+
+      const {getByPlaceholderText, getByLabelText} = render(
+        <UserContext.Provider value={user}>
+          <ChatInput
+            {...{
+              onSendPress,
+              renderScrollable,
+              sendButtonVisibilityMode: 'editing',
+            }}
+          />
+        </UserContext.Provider>,
+      );
+
+      const input = getByPlaceholderText(
+        l10n.en.components.chatInput.inputPlaceholder,
+      );
+      fireEvent.changeText(input, 'Test message');
+
+      const sendButton = getByLabelText(
+        l10n.en.components.sendButton.accessibilityLabel,
+      );
+      fireEvent.press(sendButton);
+
+      // Verify onSendPress WAS called
+      expect(onSendPress).toHaveBeenCalledWith({
+        text: 'Test message',
+        type: 'text',
+        imageUris: undefined,
+      });
     });
   });
 });

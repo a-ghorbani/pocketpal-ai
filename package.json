@@ -1,6 +1,6 @@
 {
   "name": "PocketPal",
-  "version": "1.11.6",
+  "version": "1.11.7",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -29,7 +29,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@mhpdev/react-native-speech": "^1.3.0",
     "@nozbe/watermelondb": "^0.28.0",
-    "@pocketpalai/llama.rn": "0.8.0-rc.4-0",
+    "@pocketpalai/llama.rn": "^0.8.0-0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/slider": "^5.0.1",

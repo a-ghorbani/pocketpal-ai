@@ -1,5 +1,6 @@
 //import {fireEvent, render} from '@testing-library/react-native';
 import * as React from 'react';
+import {runInAction} from 'mobx';
 
 import {
   fileMessage,
@@ -12,6 +13,7 @@ import {MessageType} from '../../../utils/types';
 import {ChatView} from '../ChatView';
 import {fireEvent, render} from '../../../../jest/test-utils';
 import {ChatEmptyPlaceholder} from '../../ChatEmptyPlaceholder';
+import {modelStore} from '../../../store';
 
 jest.useFakeTimers();
 
@@ -50,6 +52,11 @@ describe('chat', () => {
 
   it('sends a text message', () => {
     expect.assertions(1);
+    // Set up an active model for the test
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
+
     const messages = [
       textMessage,
       fileMessage,

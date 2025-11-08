@@ -107,6 +107,7 @@ export const createStyles = ({
       flex: 1,
     },
     rightControls: {
+      position: 'relative',
       flexDirection: 'row',
       alignItems: 'center',
     },
@@ -246,5 +247,30 @@ export const createStyles = ({
     },
     inputWithLabel: {
       marginTop: 0,
+    },
+    // Helper text for model not loaded warning
+    helperTextContainer: {
+      position: 'absolute',
+      bottom: '100%',
+      right: 0,
+      marginBottom: 4,
+      backgroundColor: theme.colors.errorContainer,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      maxWidth: 250,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 3,
+      elevation: 3,
+    },
+    helperText: {
+      color: theme.colors.onErrorContainer,
+      fontSize: 11,
+      lineHeight: 14,
     },
   });

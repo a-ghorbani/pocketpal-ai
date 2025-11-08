@@ -4,10 +4,14 @@ import {TouchableOpacity, View} from 'react-native';
 import {observer} from 'mobx-react';
 import {Text, Chip, Button} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
-import {BottomSheetFlatList, BottomSheetView} from '@gorhom/bottom-sheet';
+import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
 
-import {Divider, EnhancedSearchBar, ModelTypeTag} from '../../../../components';
+import {
+  Divider,
+  EnhancedSearchBar,
+  ModelTypeTag,
+  Sheet,
+} from '../../../../components';
 
 import {useTheme} from '../../../../hooks';
 
@@ -177,7 +181,7 @@ export const SearchView = observer(
     });
 
     return (
-      <BottomSheetView style={styles.contentContainer} testID={testID}>
+      <View style={styles.contentContainer} testID={testID}>
         <EnhancedSearchBar
           value={searchQuery}
           onChangeText={handleSearchChange}
@@ -194,17 +198,10 @@ export const SearchView = observer(
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           renderScrollComponent={props => (
-            <KeyboardAwareScrollView bottomOffset={100} {...props} />
+            <Sheet.ScrollView bottomOffset={100} {...props} />
           )}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
-          maintainVisibleContentPosition={
-            hfStore.models.length > 0
-              ? {
-                  minIndexForVisible: 0,
-                }
-              : null
-          }
           ListEmptyComponent={renderEmptyState}
           ListFooterComponent={observer(() =>
             hfStore.isLoading ? (
@@ -214,7 +211,7 @@ export const SearchView = observer(
             ) : null,
           )}
         />
-      </BottomSheetView>
+      </View>
     );
   },
 );

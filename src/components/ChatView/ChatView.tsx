@@ -8,26 +8,30 @@ import {
   StatusBarProps,
   View,
   TouchableOpacity,
-  Animated,
+  Keyboard,
 } from 'react-native';
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import calendar from 'dayjs/plugin/calendar';
-import {useHeaderHeight} from '@react-navigation/elements';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
-  KeyboardAvoidingView,
-  useKeyboardAnimation,
+  KeyboardStickyView,
+  useReanimatedKeyboardAnimation,
 } from 'react-native-keyboard-controller';
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  useAnimatedReaction,
+  useAnimatedScrollHandler,
+  useDerivedValue,
+} from 'react-native-reanimated';
 
-import {
-  useComponentSize,
-  useKeyboardDimensions,
-} from '../KeyboardAccessoryView/hooks';
+import {useComponentSize} from '../KeyboardAccessoryView/hooks';
 
-import {usePrevious, useTheme, useMessageActions} from '../../hooks';
+import {useTheme, useMessageActions, usePrevious} from '../../hooks';
 
 import ImageView from './ImageView';
 import {createStyles} from './styles';
@@ -36,8 +40,12 @@ import {chatSessionStore, modelStore} from '../../store';
 
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
-import {calculateChatMessages, unwrap, UserContext} from '../../utils';
-import {L10nContext} from '../../utils';
+import {
+  calculateChatMessages,
+  unwrap,
+  UserContext,
+  L10nContext,
+} from '../../utils';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {
@@ -133,6 +141,8 @@ export interface ChatProps extends ChatTopLevelProps {
   /** Show user names for received messages. Useful for a group chat. Will be
    * shown only on text messages. */
   showUserNames?: boolean;
+  /** Whether to show date headers between messages. Defaults to true. */
+  showDateHeaders?: boolean;
   /** Whether to show the image upload button in the chat input */
   showImageUpload?: boolean;
   /** Whether to enable vision mode for the chat input */
@@ -181,6 +191,7 @@ export const ChatView = observer(
     sendButtonVisibilityMode = 'editing',
     showUserAvatars = false,
     showUserNames = false,
+    showDateHeaders = false,
     showImageUpload = false,
     isVisionEnabled = false,
     initialInputText,
@@ -190,28 +201,43 @@ export const ChatView = observer(
     usePreviewData = true,
     user,
   }: ChatProps) => {
+    // ============ THEME & LOCALIZATION ============
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const styles = createStyles({theme});
+    const insets = useSafeAreaInsets();
 
+    // ============ REFS ============
+    const animationRef = React.useRef(false);
+    const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
+
+    // ============ COMPONENT STATE ============
+    // Input state
     const [inputText, setInputText] = React.useState('');
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
+    const [_selectedModel, setSelectedModel] = React.useState<string | null>(
+      null,
+    );
+    const [_selectedPal, setSelectedPal] = React.useState<string | undefined>();
 
-    const animationRef = React.useRef(false);
-    const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
-    const insets = useSafeAreaInsets();
-    const {progress} = useKeyboardAnimation();
-    const headerHeight = useHeaderHeight();
+    // Image viewer state
+    const [isImageViewVisible, setIsImageViewVisible] = React.useState(false);
+    const [imageViewIndex, setImageViewIndex] = React.useState(0);
+    const [stackEntry, setStackEntry] = React.useState<StatusBarProps>({});
 
-    // Handle initial input text from deep linking
-    React.useEffect(() => {
-      if (initialInputText && initialInputText.trim()) {
-        setInputText(initialInputText);
-        onInitialTextConsumed?.();
-      }
-    }, [initialInputText, onInitialTextConsumed]);
+    // Context menu state
+    const [menuVisible, setMenuVisible] = React.useState(false);
+    const [menuPosition, setMenuPosition] = React.useState({x: 0, y: 0});
+    const [selectedMessage, setSelectedMessage] =
+      React.useState<MessageType.Any | null>(null);
+    const [isReportSheetVisible, setIsReportSheetVisible] =
+      React.useState(false);
 
+    // Pagination state
+    const [isNextPageLoading, setNextPageLoading] = React.useState(false);
+
+    // ============ COMPONENT SIZE TRACKING ============
     const {onLayout, size} = useComponentSize();
     const {onLayout: onLayoutChatInput, size: chatInputHeight} =
       useComponentSize();
@@ -221,30 +247,17 @@ export const ChatView = observer(
       return height;
     }, [chatInputHeight.height]);
 
-    const listPaddingBottom = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [
-        bottomComponentHeight,
-        bottomComponentHeight - insets.bottom,
-      ],
-    });
+    // ============ INITIAL INPUT TEXT HANDLING ============
+    // Handle initial input text from deep linking
+    React.useEffect(() => {
+      if (initialInputText && initialInputText.trim()) {
+        setInputText(initialInputText);
+        onInitialTextConsumed?.();
+      }
+    }, [initialInputText, onInitialTextConsumed]);
 
-    const {keyboardHeight: keyboardHeight} = useKeyboardDimensions(true);
-    const translateY = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [
-        0,
-        Math.max(0, Math.min(insets.bottom, keyboardHeight - insets.bottom)),
-      ],
-    });
-
-    const [isImageViewVisible, setIsImageViewVisible] = React.useState(false);
-    const [isNextPageLoading, setNextPageLoading] = React.useState(false);
-    const [imageViewIndex, setImageViewIndex] = React.useState(0);
-    const [stackEntry, setStackEntry] = React.useState<StatusBarProps>({});
-
-    const [showScrollButton, setShowScrollButton] = React.useState(false);
-
+    // ============ ACTIVE PAL MODEL INITIALIZATION ============
+    // Initialize model context when active pal changes
     React.useEffect(() => {
       if (activePal) {
         if (!modelStore.activeModel && activePal.defaultModel) {
@@ -260,12 +273,94 @@ export const ChatView = observer(
       }
     }, [activePal]);
 
-    const handleScroll = React.useCallback(event => {
-      const {contentOffset} = event.nativeEvent;
-      const isAtTop = contentOffset.y <= 80;
-      setShowScrollButton(!isAtTop);
-    }, []);
+    // ============ KEYBOARD ANIMATION SETUP ============
+    // Get real-time keyboard height from the keyboard controller
+    const keyboard = useReanimatedKeyboardAnimation();
+    const trackingKeyboardMovement = useSharedValue(false);
+    const bottomOffset = -insets.bottom;
 
+    // Shared value that tracks the offset to apply when keyboard is moving up
+    const keyboardOffsetBottom = useSharedValue(0);
+
+    // Shared value to track if keyboard is visible (height > 0)
+    const isKeyboardVisible = useSharedValue(false);
+
+    // Animated style for input container padding
+    // Apply bottom padding (safe area inset) only when keyboard is NOT visible
+    const inputContainerAnimatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
+      ],
+      paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
+    }));
+
+    // Monitor keyboard height changes and animate the offset value
+    useAnimatedReaction(
+      () => -keyboard.height.value,
+      (value, prevValue) => {
+        if (prevValue !== null && value !== prevValue) {
+          const isKeyboardMovingUp = value > prevValue;
+          if (isKeyboardMovingUp !== trackingKeyboardMovement.value) {
+            trackingKeyboardMovement.value = isKeyboardMovingUp;
+            keyboardOffsetBottom.value = withTiming(
+              isKeyboardMovingUp ? bottomOffset : 0,
+              {
+                duration: 200, // bottomOffset ? 150 : 400,
+              },
+            );
+          }
+        }
+      },
+      [keyboard, trackingKeyboardMovement, bottomOffset],
+    );
+
+    // ============ SCROLL TRACKING & SCROLL-TO-BOTTOM ============
+    // Shared values for tracking scroll position and content overflow
+    const underflow = useSharedValue(true);
+    const atLatest = useSharedValue(true);
+
+    const STICK = 24;
+    const LEAVE = 40;
+    const EPS = 1;
+
+    // Scroll tracking with Reanimated to determine if user is at bottom
+    const handleScroll = useAnimatedScrollHandler({
+      onScroll: e => {
+        const y = e.contentOffset.y;
+        const Hc = e.contentSize?.height ?? 0; // content height
+        const Hv = e.layoutMeasurement?.height ?? 0; // viewport height
+        const maxY = Math.max(0, Hc - Hv);
+
+        // underflow: content can't actually scroll (flexGrow:1 makes Hc≈Hv)
+        underflow.value = Hc <= Hv + EPS;
+
+        // clamp to kill rubber-band noise
+        const clampedY = Math.min(Math.max(y, 0), maxY);
+
+        if (underflow.value) {
+          atLatest.value = true;
+          return;
+        }
+        if (atLatest.value) {
+          if (clampedY > LEAVE) atLatest.value = false;
+        } else {
+          if (clampedY < STICK) atLatest.value = true;
+        }
+      },
+    });
+
+    // Derived value to determine if there's hidden content (user scrolled away from bottom)
+    const hasHiddenContent = useDerivedValue(() => {
+      return !underflow.value && !atLatest.value ? 1 : 0;
+    });
+
+    // Animated style for scroll-to-bottom button visibility
+    const scrollToBottomAnimatedStyle = useAnimatedStyle(() => ({
+      opacity: withTiming(hasHiddenContent.value, {duration: 160}),
+      transform: [{translateY: withTiming(hasHiddenContent.value ? 0 : 8)}],
+    }));
+
+    // Scroll to bottom handler
     const scrollToBottom = React.useCallback(() => {
       list.current?.scrollToOffset({
         animated: true,
@@ -273,6 +368,19 @@ export const ChatView = observer(
       });
     }, []);
 
+    // ============ MESSAGE PROCESSING & CALCULATIONS ============
+    // Calculate chat messages with date headers and user names
+    const {chatMessages, gallery} = calculateChatMessages(messages, user, {
+      customDateHeaderText,
+      dateFormat,
+      showUserNames,
+      timeFormat,
+      showDateHeaders,
+    });
+
+    const previousChatMessages = usePrevious(chatMessages);
+
+    // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
         if (chatSessionStore.isEditMode) {
@@ -280,6 +388,7 @@ export const ChatView = observer(
         }
         onSendPress(message);
         setInputText('');
+        Keyboard.dismiss();
       },
       [onSendPress],
     );
@@ -299,15 +408,8 @@ export const ChatView = observer(
         setInputImages,
       });
 
-    const {chatMessages, gallery} = calculateChatMessages(messages, user, {
-      customDateHeaderText,
-      dateFormat,
-      showUserNames,
-      timeFormat,
-    });
-
-    const previousChatMessages = usePrevious(chatMessages);
-
+    // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
+    // Scroll to bottom when user sends a new message
     React.useEffect(() => {
       if (
         chatMessages[0]?.type !== 'dateHeader' &&
@@ -322,6 +424,7 @@ export const ChatView = observer(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chatMessages]);
 
+    // ============ LAYOUT ANIMATION SETUP ============
     // Untestable
     /* istanbul ignore next */
     if (animationRef.current && enableAnimation) {
@@ -338,6 +441,7 @@ export const ChatView = observer(
       }
     }, [enableAnimation, messages]);
 
+    // ============ PAGINATION HANDLER ============
     const handleEndReached = React.useCallback(
       // Ignoring because `scroll` event for some reason doesn't trigger even basic
       // `onEndReached`, impossible to test.
@@ -361,6 +465,7 @@ export const ChatView = observer(
       [isLastPage, isNextPageLoading, messages.length, onEndReached],
     );
 
+    // ============ IMAGE VIEWER HANDLERS ============
     const handleImagePress = React.useCallback(
       (message: MessageType.Image) => {
         setImageViewIndex(
@@ -379,6 +484,15 @@ export const ChatView = observer(
       [gallery],
     );
 
+    // TODO: Tapping on a close button results in the next warning:
+    // `An update to ImageViewing inside a test was not wrapped in act(...).`
+    /* istanbul ignore next */
+    const handleRequestClose = () => {
+      setIsImageViewVisible(false);
+      StatusBar.popStackEntry(stackEntry);
+    };
+
+    // ============ MESSAGE INTERACTION HANDLERS ============
     const handleMessagePress = React.useCallback(
       (message: MessageType.Any) => {
         if (message.type === 'image' && !disableImageGallery) {
@@ -388,26 +502,6 @@ export const ChatView = observer(
       },
       [disableImageGallery, handleImagePress, onMessagePress],
     );
-
-    // TODO: Tapping on a close button results in the next warning:
-    // `An update to ImageViewing inside a test was not wrapped in act(...).`
-    /* istanbul ignore next */
-    const handleRequestClose = () => {
-      setIsImageViewVisible(false);
-      StatusBar.popStackEntry(stackEntry);
-    };
-
-    const keyExtractor = React.useCallback(
-      ({id}: MessageType.DerivedAny) => id,
-      [],
-    );
-
-    const [menuVisible, setMenuVisible] = React.useState(false);
-    const [menuPosition, setMenuPosition] = React.useState({x: 0, y: 0});
-    const [selectedMessage, setSelectedMessage] =
-      React.useState<MessageType.Any | null>(null);
-    const [isReportSheetVisible, setIsReportSheetVisible] =
-      React.useState(false);
 
     const handleMessageLongPress = React.useCallback(
       (message: MessageType.Any, event: any) => {
@@ -430,6 +524,12 @@ export const ChatView = observer(
       setSelectedMessage(null);
     }, []);
 
+    const keyExtractor = React.useCallback(
+      ({id}: MessageType.DerivedAny) => id,
+      [],
+    );
+
+    // ============ CONTEXT MENU CONFIGURATION ============
     const {
       copy: copyLabel,
       regenerate: regenerateLabel,
@@ -525,6 +625,8 @@ export const ChatView = observer(
       reportContentLabel,
     ]);
 
+    // ============ RENDER FUNCTIONS ============
+    // Render menu item (with submenu support)
     const renderMenuItem = React.useCallback(
       (item: MenuItem, index: number) => {
         if (item.submenu) {
@@ -565,6 +667,7 @@ export const ChatView = observer(
       [],
     );
 
+    // Render individual message
     const renderMessage = React.useCallback(
       ({item: message}: {item: MessageType.DerivedAny; index: number}) => {
         const messageWidth =
@@ -624,6 +727,7 @@ export const ChatView = observer(
       ],
     );
 
+    // Render empty state (video pal or regular chat placeholder)
     const renderListEmptyComponent = React.useCallback(() => {
       // Show VideoPalEmptyPlaceholder for video pal, otherwise show regular ChatEmptyPlaceholder
       if (activePal && hasVideoCapability(activePal)) {
@@ -642,6 +746,7 @@ export const ChatView = observer(
       );
     }, [bottomComponentHeight, setIsPickerVisible, activePal]);
 
+    // Render footer (loading indicator or spacer)
     const renderListFooterComponent = React.useCallback(
       () =>
         // Impossible to test, see `handleEndReached` function
@@ -661,63 +766,102 @@ export const ChatView = observer(
       ],
     );
 
+    // ListHeaderComponent as animated spacer (inverted list: header is at bottom)
+    // We use this to create a spacer at the bottom of the list to account for the keyboard height.
+    // So we can move up/down when the keyboard is shown/hidden.
+    const headerStyle = useAnimatedStyle(() => {
+      // only animate when not streaming
+      // if (isStreaming) return {height: 0};
+
+      // Only lift when keyboard is actively moving
+      const shouldLift = trackingKeyboardMovement.value;
+      return {
+        height: shouldLift
+          ? Math.abs(keyboard.height.value) - insets.bottom
+          : 0,
+      };
+    });
+
+    // Render header (loading bubble and keyboard spacer)
     const renderListHeaderComponent = React.useCallback(
-      () => (isThinking ? <LoadingBubble /> : null),
-      [isThinking],
+      () => (
+        <>
+          {isThinking && <LoadingBubble />}
+          {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
+        </>
+      ),
+      [isThinking, chatMessages.length, headerStyle],
     );
 
+    // Render complete chat list with scroll-to-bottom button
     const renderChatList = React.useCallback(
       () => (
         <>
-          <Animated.FlatList
-            automaticallyAdjustContentInsets={false}
-            contentContainerStyle={[
-              styles.flatListContentContainer,
+          <Reanimated.View
+            // eslint-disable-next-line react-native/no-inline-styles
+            style={{flex: 1}}>
+            <Reanimated.FlatList
+              automaticallyAdjustContentInsets={false}
+              contentContainerStyle={[
+                styles.flatListContentContainer,
+                // eslint-disable-next-line react-native/no-inline-styles
+                {
+                  justifyContent:
+                    chatMessages.length !== 0 ? undefined : 'center',
+                },
+              ]}
+              initialNumToRender={10}
+              ListEmptyComponent={renderListEmptyComponent}
+              ListFooterComponent={renderListFooterComponent}
+              ListHeaderComponent={renderListHeaderComponent}
+              maxToRenderPerBatch={6}
+              onEndReachedThreshold={0.75}
+              style={[styles.flatList, {marginBottom: bottomComponentHeight}]}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              {...unwrap(flatListProps)}
+              data={chatMessages}
+              inverted={chatMessages.length > 0}
+              keyboardDismissMode="interactive"
+              keyExtractor={keyExtractor}
+              onEndReached={handleEndReached}
+              ref={list}
+              renderItem={renderMessage}
+              maintainVisibleContentPosition={
+                isStreaming // || hasHiddenContentState
+                  ? {
+                      autoscrollToTopThreshold: 20,
+                      minIndexForVisible: 1, //isStreaming ? 1 : 0,
+                    }
+                  : undefined
+              }
+            />
+          </Reanimated.View>
+          <Reanimated.View
+            style={[
+              scrollToBottomAnimatedStyle,
               // eslint-disable-next-line react-native/no-inline-styles
               {
-                justifyContent:
-                  chatMessages.length !== 0 ? undefined : 'center',
-                paddingTop: listPaddingBottom, // Use animated padding
+                // position: 'absolute',
+                right: 8,
+                bottom:
+                  bottomComponentHeight +
+                  40 /* button height */ +
+                  20 /* padding */,
               },
-            ]}
-            initialNumToRender={10}
-            ListEmptyComponent={renderListEmptyComponent}
-            ListFooterComponent={renderListFooterComponent}
-            ListHeaderComponent={renderListHeaderComponent}
-            maxToRenderPerBatch={6}
-            onEndReachedThreshold={0.75}
-            style={styles.flatList}
-            showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            {...unwrap(flatListProps)}
-            data={chatMessages}
-            inverted={chatMessages.length > 0}
-            keyboardDismissMode="interactive"
-            keyExtractor={keyExtractor}
-            onEndReached={handleEndReached}
-            ref={list}
-            renderItem={renderMessage}
-            maintainVisibleContentPosition={{
-              autoscrollToTopThreshold: 20,
-              minIndexForVisible: isStreaming ? 1 : 0,
-            }}
-          />
-          {showScrollButton && (
-            <Animated.View style={{transform: [{translateY}]}}>
+            ]}>
+            <KeyboardStickyView offset={{closed: 0, opened: insets.bottom}}>
               <TouchableOpacity
-                style={[
-                  styles.scrollToBottomButton,
-                  {bottom: bottomComponentHeight + 20},
-                ]}
+                style={styles.scrollToBottomButton}
                 onPress={scrollToBottom}>
                 <Icon
                   name="chevron-down"
-                  size={24}
+                  size={20}
                   color={theme.colors.onPrimary}
                 />
               </TouchableOpacity>
-            </Animated.View>
-          )}
+            </KeyboardStickyView>
+          </Reanimated.View>
         </>
       ),
       [
@@ -725,29 +869,24 @@ export const ChatView = observer(
         styles.flatList,
         styles.scrollToBottomButton,
         chatMessages,
-        listPaddingBottom,
         renderListEmptyComponent,
         renderListFooterComponent,
         renderListHeaderComponent,
+        bottomComponentHeight,
         handleScroll,
         flatListProps,
         keyExtractor,
         handleEndReached,
         renderMessage,
         isStreaming,
-        showScrollButton,
-        translateY,
-        bottomComponentHeight,
+        scrollToBottomAnimatedStyle,
+        insets.bottom,
         scrollToBottom,
         theme.colors.onPrimary,
       ],
     );
 
-    const [_selectedModel, setSelectedModel] = React.useState<string | null>(
-      null,
-    );
-    const [_selectedPal, setSelectedPal] = React.useState<string | undefined>();
-
+    // ============ PAL/MODEL PICKER HANDLERS ============
     const handleModelSelect = React.useCallback((model: string) => {
       setSelectedModel(model);
       setIsPickerVisible(false);
@@ -758,81 +897,88 @@ export const ChatView = observer(
       setIsPickerVisible(false);
     }, []);
 
+    // ============ COMPUTED VALUES ============
     const inputBackgroundColor = activePal?.color?.[1]
       ? activePal.color?.[1]
       : theme.colors.surface;
+
+    // ============ COMPONENT RENDER ============
     return (
       <UserContext.Provider value={user}>
-        <View style={styles.container} onLayout={onLayout}>
-          <KeyboardAvoidingView
-            behavior="padding"
-            keyboardVerticalOffset={headerHeight}
-            style={styles.container}>
-            <View style={styles.chatContainer}>
-              <ChatHeader />
-              {customContent}
-              {renderChatList()}
-              <Animated.View
-                onLayout={onLayoutChatInput}
-                style={[
-                  styles.inputContainer,
-                  // eslint-disable-next-line react-native/no-inline-styles
-                  {
-                    paddingBottom: insets.bottom,
-                    transform: [{translateY}],
-                    zIndex: 10,
+        <View
+          style={[styles.container, {backgroundColor: inputBackgroundColor}]}
+          onLayout={onLayout}>
+          {/* Header */}
+          <View style={styles.headerWrapper}>
+            <ChatHeader />
+          </View>
+
+          {/* Main chat container */}
+          <Reanimated.View style={styles.chatContainer}>
+            {customContent}
+            {renderChatList()}
+
+            {/* Chat input */}
+            <Reanimated.View
+              onLayout={onLayoutChatInput}
+              style={[
+                styles.inputContainer,
+                inputContainerAnimatedStyle,
+                {backgroundColor: inputBackgroundColor},
+              ]}>
+              <ChatInput
+                {...{
+                  ...unwrap(inputProps),
+                  isStreaming,
+                  onSendPress: wrappedOnSendPress,
+                  onStopPress,
+                  chatInputHeight,
+                  inputBackgroundColor,
+                  onCancelEdit: handleCancelEdit,
+                  onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
+                  isStopVisible,
+                  isPickerVisible,
+                  sendButtonVisibilityMode,
+                  showImageUpload,
+                  isVisionEnabled,
+                  defaultImages: inputImages,
+                  onDefaultImagesChange: setInputImages,
+                  textInputProps: {
+                    ...textInputProps,
+                    // Only override value and onChangeText if not using promptText
+                    ...(!(activePal && hasVideoCapability(activePal)) && {
+                      value: inputText,
+                      onChangeText: setInputText,
+                    }),
                   },
-                  {backgroundColor: inputBackgroundColor},
-                ]}>
-                <ChatInput
-                  {...{
-                    ...unwrap(inputProps),
-                    isStreaming,
-                    onSendPress: wrappedOnSendPress,
-                    onStopPress,
-                    chatInputHeight,
-                    inputBackgroundColor,
-                    onCancelEdit: handleCancelEdit,
-                    onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
-                    isStopVisible,
-                    isPickerVisible,
-                    sendButtonVisibilityMode,
-                    showImageUpload,
-                    isVisionEnabled,
-                    defaultImages: inputImages,
-                    onDefaultImagesChange: setInputImages,
-                    textInputProps: {
-                      ...textInputProps,
-                      // Only override value and onChangeText if not using promptText
-                      ...(!(activePal && hasVideoCapability(activePal)) && {
-                        value: inputText,
-                        onChangeText: setInputText,
-                      }),
-                    },
-                  }}
-                />
-              </Animated.View>
-              {/* Conditionally render the sheet to avoid keyboard issues. 
-              It makes the disappearing sudden, but it's better than the keyboard issue.*/}
-              {isPickerVisible && (
-                <ChatPalModelPickerSheet
-                  isVisible={isPickerVisible}
-                  onClose={() => setIsPickerVisible(false)}
-                  onModelSelect={handleModelSelect}
-                  onPalSelect={handlePalSelect}
-                  onPalSettingsSelect={onPalSettingsSelect}
-                  chatInputHeight={chatInputHeight.height}
-                  keyboardHeight={keyboardHeight}
-                />
-              )}
-            </View>
-          </KeyboardAvoidingView>
+                }}
+              />
+            </Reanimated.View>
+
+            {/* Pal/Model picker sheet */}
+            {/* Conditionally render the sheet to avoid keyboard issues.
+            It makes the disappearing sudden, but it's better than the keyboard issue.*/}
+            {isPickerVisible && (
+              <ChatPalModelPickerSheet
+                isVisible={isPickerVisible}
+                onClose={() => setIsPickerVisible(false)}
+                onModelSelect={handleModelSelect}
+                onPalSelect={handlePalSelect}
+                onPalSettingsSelect={onPalSettingsSelect}
+                chatInputHeight={chatInputHeight.height}
+              />
+            )}
+          </Reanimated.View>
+
+          {/* Image viewer */}
           <ImageView
             imageIndex={imageViewIndex}
             images={gallery}
             onRequestClose={handleRequestClose}
             visible={isImageViewVisible}
           />
+
+          {/* Context menu */}
           <Menu
             visible={menuVisible}
             onDismiss={handleMenuDismiss}
@@ -840,6 +986,8 @@ export const ChatView = observer(
             anchor={menuPosition}>
             {menuItems.map(renderMenuItem)}
           </Menu>
+
+          {/* Content report sheet */}
           <ContentReportSheet
             isVisible={isReportSheetVisible}
             onClose={() => setIsReportSheetVisible(false)}

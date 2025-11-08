@@ -5,10 +5,11 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     contentContainer: {
       flex: 1,
+      justifyContent: 'space-between',
     },
     list: {
       padding: 16,
-      paddingBottom: 0,
+      paddingBottom: 100,
     },
     divider: {
       marginVertical: 12,

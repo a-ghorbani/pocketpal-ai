@@ -4,12 +4,11 @@ import {Theme} from '../../utils/types';
 export const createStyles = ({theme}: {theme: Theme}) =>
   StyleSheet.create({
     container: {
-      //backgroundColor: theme.colors.primary,
       flex: 1,
     },
     flatList: {
-      backgroundColor: theme.colors.background,
       height: '100%',
+      // flex: 1,
     },
     flatListContentContainer: {
       flexGrow: 1,
@@ -33,8 +32,8 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       position: 'absolute',
       right: 16,
       backgroundColor: theme.colors.primary,
-      width: 40,
-      height: 40,
+      width: 35,
+      height: 35,
       borderRadius: 20,
       justifyContent: 'center',
       alignItems: 'center',
@@ -48,10 +47,10 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       elevation: 5,
     },
     inputContainer: {
-      backgroundColor: theme.colors.primary,
       borderTopLeftRadius: theme.borders.inputBorderRadius,
       borderTopRightRadius: theme.borders.inputBorderRadius,
       position: 'absolute',
+      zIndex: 10,
       left: 0,
       right: 0,
       bottom: 0,
@@ -65,6 +64,10 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       flex: 1,
       position: 'relative',
       backgroundColor: theme.colors.background,
+      zIndex: 0,
+    },
+    headerWrapper: {
+      zIndex: 100,
     },
     customBottomComponent: {
       position: 'absolute',
