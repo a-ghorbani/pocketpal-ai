@@ -2152,10 +2152,10 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
-"@pocketpalai/llama.rn@^0.8.0-0":
-  version "0.8.0-0"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/llama.rn/-/llama.rn-0.8.0-0.tgz#4395f177a380f64616aca355dd370d247ea47216"
-  integrity sha512-kSqvr9INvRA5EcVeIp7V9ky+pMwD2tTZent1t52Zn90AC1eHf2hWPMsW5L0hIbLhw9Ip0R3EiRKVBF8ZDCJ0dQ==
+"@pocketpalai/llama.rn@^0.8.1-0":
+  version "0.8.1-0"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/llama.rn/-/llama.rn-0.8.1-0.tgz#be977ac5ce453254b1dc57617f444688a9657c74"
+  integrity sha512-aABSu/gVvrkwKln66kcCW6Q9EcgTsImYBrkfu5ZhasTAiyPhFfHPjotpxTA2ZzTLH5qmnyT3fDZqW2dtmNk80w==
 
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
