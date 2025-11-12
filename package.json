@@ -27,7 +27,7 @@
     "@flyerhq/react-native-link-preview": "^1.6.0",
     "@gorhom/bottom-sheet": "^5.2.6",
     "@hookform/resolvers": "^5.2.2",
-    "@mhpdev/react-native-speech": "^1.3.0",
+    "@mhpdev/react-native-speech": "../react-native-speech",
     "@nozbe/watermelondb": "^0.28.0",
     "@pocketpalai/llama.rn": "^0.8.0-0",
     "@react-native-async-storage/async-storage": "^2.2.0",

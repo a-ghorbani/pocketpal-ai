@@ -158,8 +158,11 @@ export const useChatSession = (
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
 
-  // Initialize TTS hook
-  const tts = useTTS({enabled: uiStore.ttsEnabled});
+  // Initialize TTS hook with settings from ttsStore
+  const tts = useTTS({
+    enabled: uiStore.ttsEnabled,
+    // Settings will be pulled from ttsStore.activeVoiceConfig inside useTTS
+  });
 
   // Time-based batch processing
   // Token queue for accumulating tokens

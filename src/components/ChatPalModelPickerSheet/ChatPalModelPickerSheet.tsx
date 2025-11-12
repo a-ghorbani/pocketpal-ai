@@ -328,9 +328,17 @@ export const ChatPalModelPickerSheet = observer(
 
     const renderContent = React.useCallback(
       ({item}: {item: (typeof TABS)[0]}) => (
-        <View style={{width: Dimensions.get('window').width}}>
+        <View
+          style={{
+            width: Dimensions.get('window').width,
+            backgroundColor: 'blue',
+          }}>
           <BottomSheetScrollView
-            contentContainerStyle={{paddingBottom: chatInputHeight + 66}}>
+            style={{backgroundColor: 'green'}}
+            contentContainerStyle={{
+              paddingBottom: chatInputHeight + 500,
+              backgroundColor: 'red',
+            }}>
             {item.id === 'models'
               ? modelStore.availableModels.map(renderModelItem)
               : [renderDisablePalItem(), ...palStore.pals.map(renderPalItem)]}

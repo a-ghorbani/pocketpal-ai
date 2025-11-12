@@ -22,6 +22,7 @@ import {l10n} from './src/utils/l10n';
 import {initLocale} from './src/utils';
 import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
+import {initializeVoiceModels} from './src/services/tts/VoiceModelDownloader';
 
 import {
   SidebarContent,
@@ -60,9 +61,14 @@ const App = observer(() => {
   const styles = createStyles(theme);
   const currentL10n = l10n[uiStore.language];
 
-  // Initialize locale with the current language
+  // Initialize locale and TTS voice models
   React.useEffect(() => {
     initLocale(uiStore.language);
+
+    // Initialize TTS voice models in the background
+    initializeVoiceModels().catch(error => {
+      console.error('Failed to initialize TTS voice models:', error);
+    });
   }, []);
 
   return (

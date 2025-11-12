@@ -22,6 +22,7 @@ import {
   CpuChipIcon,
   ShareIcon,
   LinkExternalIcon,
+  SpeakerIcon,
 } from '../../assets/icons';
 
 import {
@@ -37,7 +38,7 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {AvailableLanguage} from '../../store/UIStore';
-import {modelStore, uiStore, hfStore} from '../../store';
+import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
 
 import {CacheType} from '../../utils/types';
 import {
@@ -875,6 +876,165 @@ export const SettingsScreen: React.FC = observer(() => {
                         }
                       />
                     </View>
+                  </>
+                )}
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* TTS Settings */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title="Text-to-Speech" />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                {/* TTS Enable/Disable */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <SpeakerIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        Enable TTS
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      Read AI responses aloud as they are generated
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="tts-enabled-switch"
+                    value={ttsStore.settings.enabled}
+                    onValueChange={value => ttsStore.setEnabled(value)}
+                  />
+                </View>
+
+                {/* Engine Type Selection */}
+                {ttsStore.settings.enabled && (
+                  <>
+                    <Divider style={styles.divider} />
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          TTS Engine
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {ttsStore.settings.engineType === 'platform'
+                            ? 'Using system TTS engine'
+                            : ttsStore.isNeuralEngineAvailable
+                              ? 'Using neural TTS (Piper)'
+                              : 'Neural TTS not available'}
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="tts-engine-switch"
+                        value={ttsStore.settings.engineType === 'neural'}
+                        disabled={!ttsStore.isNeuralEngineAvailable}
+                        onValueChange={value =>
+                          ttsStore.setEngineType(value ? 'neural' : 'platform')
+                        }
+                      />
+                    </View>
+
+                    {/* Rate Slider */}
+                    <Divider style={styles.divider} />
+                    <View style={styles.settingItemContainer}>
+                      <InputSlider
+                        testID="tts-rate-slider"
+                        label={`Speech Rate: ${
+                          ttsStore.settings.engineType === 'platform'
+                            ? (ttsStore.settings.platformRate ?? 1.0).toFixed(2)
+                            : (ttsStore.settings.neuralRate ?? 1.0).toFixed(2)
+                        }`}
+                        value={
+                          ttsStore.settings.engineType === 'platform'
+                            ? (ttsStore.settings.platformRate ?? 1.0)
+                            : (ttsStore.settings.neuralRate ?? 1.0)
+                        }
+                        onValueChange={value => {
+                          if (ttsStore.settings.engineType === 'platform') {
+                            ttsStore.setPlatformRate(value);
+                          } else {
+                            ttsStore.setNeuralRate(value);
+                          }
+                        }}
+                        min={0.5}
+                        max={2.0}
+                        step={0.1}
+                      />
+                    </View>
+
+                    {/* Pitch Slider (Platform only) */}
+                    {ttsStore.settings.engineType === 'platform' && (
+                      <>
+                        <Divider style={styles.divider} />
+                        <View style={styles.settingItemContainer}>
+                          <InputSlider
+                            testID="tts-pitch-slider"
+                            label={`Pitch: ${(ttsStore.settings.platformPitch ?? 1.0).toFixed(2)}`}
+                            value={ttsStore.settings.platformPitch ?? 1.0}
+                            onValueChange={value =>
+                              ttsStore.setPlatformPitch(value)
+                            }
+                            min={0.5}
+                            max={2.0}
+                            step={0.1}
+                          />
+                        </View>
+                      </>
+                    )}
+
+                    {/* Volume Slider */}
+                    <Divider style={styles.divider} />
+                    <View style={styles.settingItemContainer}>
+                      <InputSlider
+                        testID="tts-volume-slider"
+                        label={`Volume: ${(ttsStore.settings.volume ?? 1.0).toFixed(2)}`}
+                        value={ttsStore.settings.volume ?? 1.0}
+                        onValueChange={value => ttsStore.setVolume(value)}
+                        min={0.0}
+                        max={1.0}
+                        step={0.1}
+                      />
+                    </View>
+
+                    {/* Voice Model Browser Link */}
+                    {ttsStore.settings.engineType === 'neural' && (
+                      <>
+                        <Divider style={styles.divider} />
+                        <View style={styles.switchContainer}>
+                          <View style={styles.textContainer}>
+                            <Text
+                              variant="titleMedium"
+                              style={styles.textLabel}>
+                              Voice Models
+                            </Text>
+                            <Text
+                              variant="labelSmall"
+                              style={styles.textDescription}>
+                              {ttsStore.getDownloadedNeuralVoices().length}{' '}
+                              downloaded voices
+                            </Text>
+                          </View>
+                          <Button
+                            mode="outlined"
+                            onPress={() => {
+                              Alert.alert(
+                                'Voice Models',
+                                'Voice model browser coming soon!',
+                              );
+                            }}
+                            style={styles.menuButton}>
+                            Manage
+                          </Button>
+                        </View>
+                      </>
+                    )}
                   </>
                 )}
               </View>

@@ -1,11 +1,16 @@
 import {useEffect, useRef, useCallback} from 'react';
 import Speech from '@mhpdev/react-native-speech';
+import {ttsStore} from '../store/TTSStore';
 
 export interface TTSOptions {
   enabled: boolean;
   rate?: number;
   pitch?: number;
   language?: string;
+  voice?: string;
+  engineType?: 'platform' | 'neural';
+  speakerId?: number;
+  volume?: number;
 }
 
 interface TTSState {
@@ -21,10 +26,27 @@ interface TTSState {
  * - Initialization and cleanup of TTS engine
  * - Speaking text in chunks as they arrive from the LLM
  * - Pause/resume/stop controls
+ * - Support for both platform and neural TTS engines
  * - Automatic cleanup on unmount
  */
 export const useTTS = (options: TTSOptions) => {
-  const {enabled, rate = 0.5, pitch = 1.0, language} = options;
+  // Get settings from store or use provided options
+  const activeConfig = ttsStore.activeVoiceConfig;
+
+  const {
+    enabled,
+    rate = activeConfig.rate,
+    pitch = activeConfig.engineType === 'platform' ? activeConfig.pitch : 1.0,
+    language = activeConfig.engineType === 'platform'
+      ? activeConfig.language
+      : undefined,
+    voice = activeConfig.voice,
+    engineType = activeConfig.engineType,
+    speakerId = activeConfig.engineType === 'neural'
+      ? activeConfig.speakerId
+      : undefined,
+    volume = activeConfig.volume,
+  } = options;
 
   const stateRef = useRef<TTSState>({
     isSpeaking: false,
@@ -41,19 +63,37 @@ export const useTTS = (options: TTSOptions) => {
   useEffect(() => {
     isMountedRef.current = true;
 
-    const initializeTTS = () => {
+    const initializeTTS = async () => {
       try {
-        // Initialize Speech with default settings
-        const speechOptions: any = {};
+        // Build speech options based on engine type and settings
+        const speechOptions: any = {
+          volume: volume ?? 1.0,
+        };
 
-        if (rate !== undefined) {
-          speechOptions.rate = rate;
+        // Add voice identifier if specified
+        if (voice) {
+          speechOptions.voice = voice;
         }
-        if (pitch !== undefined) {
-          speechOptions.pitch = pitch;
-        }
-        if (language) {
-          speechOptions.language = language;
+
+        // Platform-specific options
+        if (engineType === 'platform') {
+          if (rate !== undefined) {
+            speechOptions.rate = rate;
+          }
+          if (pitch !== undefined) {
+            speechOptions.pitch = pitch;
+          }
+          if (language) {
+            speechOptions.language = language;
+          }
+        } else if (engineType === 'neural') {
+          // Neural-specific options
+          if (rate !== undefined) {
+            speechOptions.rate = rate; // Length scale for neural
+          }
+          if (speakerId !== undefined) {
+            speechOptions.speakerId = speakerId;
+          }
         }
 
         Speech.initialize(speechOptions);
@@ -61,7 +101,13 @@ export const useTTS = (options: TTSOptions) => {
         stateRef.current.isInitialized = true;
 
         if (__DEV__) {
-          console.log('[TTS] Initialized successfully');
+          console.log('[TTS] Initialized successfully', {
+            engineType,
+            voice,
+            rate,
+            pitch,
+            speakerId,
+          });
         }
       } catch (error) {
         console.error('[TTS] Initialization failed:', error);
@@ -137,7 +183,7 @@ export const useTTS = (options: TTSOptions) => {
       // Clear buffer
       textBufferRef.current = '';
     };
-  }, [rate, pitch, language]);
+  }, [rate, pitch, language, voice, engineType, speakerId, volume]);
 
   /**
    * Speak accumulated text from buffer
