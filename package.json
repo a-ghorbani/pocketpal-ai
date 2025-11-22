@@ -52,6 +52,7 @@
     "mobx-persist-store": "^1.1.8",
     "mobx-react": "^9.2.1",
     "mustache": "^4.2.0",
+    "onnxruntime-react-native": "^1.23.2",
     "react": "19.0.0",
     "react-hook-form": "^7.65.0",
     "react-native": "0.79.6",

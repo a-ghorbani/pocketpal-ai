@@ -1,45 +1,78 @@
 /**
- * TTS (Text-to-Speech) type definitions
+ * TTS (Text-to-Speech) Type Definitions
+ * Uses unified Speech API from @mhpdev/react-native-speech v2.0+
+ *
+ * The library now provides a unified API where engine selection is done via
+ * Speech.initialize({ engine: TTSEngine.KOKORO, ... }) instead of separate
+ * engine-specific APIs like Speech.kokoro.speak().
  */
 
-export type TTSEngineType = 'platform' | 'neural';
-export type VoiceQuality = 'low' | 'medium' | 'high';
+// Re-export types from react-native-speech library
+export {TTSEngine} from '@mhpdev/react-native-speech';
+export type {
+  KokoroVoice,
+  KokoroConfig,
+  SupertonicVoice,
+  SupertonicConfig,
+  SynthesisOptions,
+  EngineStatus,
+} from '@mhpdev/react-native-speech';
+
+// ============ App-Level Types ============
 
 /**
- * Neural voice model information
+ * App-level engine type (simplified for UI)
+ * - 'platform': Use OS native TTS (TTSEngine.OS_NATIVE)
+ * - 'neural': Use neural TTS (TTSEngine.KOKORO or TTSEngine.SUPERTONIC)
  */
-export interface NeuralVoiceModel {
-  /** Unique identifier for the voice */
-  identifier: string;
-  /** Display name */
-  name: string;
-  /** Language code (e.g., 'en-US', 'fr-FR') */
-  language: string;
-  /** Voice quality level */
-  quality: VoiceQuality;
-  /** Number of speakers in the model (1 for single-speaker) */
-  numSpeakers: number;
-  /** Sample rate in Hz */
-  sampleRate: number;
-  /** Model size in bytes */
-  size: number;
-  /** Whether the model is downloaded */
+export type AppTTSEngineType = 'platform' | 'neural';
+
+/**
+ * Neural engine selection (when AppTTSEngineType is 'neural')
+ */
+export type NeuralEngineType = 'kokoro' | 'supertonic';
+
+/**
+ * Voice Gender (for UI display)
+ */
+export type VoiceGender = 'male' | 'female' | 'neutral';
+
+/**
+ * Supported Languages
+ */
+export type SupportedLanguage = 'en' | 'zh' | 'ko' | 'ja';
+
+// ============ Model Configuration ============
+
+/**
+ * Kokoro model configuration (extends library's KokoroConfig with app metadata)
+ */
+export interface KokoroModelInfo {
+  variant: 'full' | 'fp16' | 'q8' | 'quantized';
+  version: string;
+  size: number; // Size in bytes
   isDownloaded: boolean;
-  /** Download progress (0-100) */
-  downloadProgress?: number;
-  /** Local path to model.onnx file */
-  modelPath?: string;
-  /** Local path to tokens.txt file */
-  tokensPath?: string;
-  /** Local path to espeak-ng-data directory */
-  dataPath?: string;
-  /** Download URL for the model package */
-  downloadUrl?: string;
-  /** Gender of the voice (if applicable) */
-  gender?: 'male' | 'female' | 'neutral';
-  /** Description of the voice */
-  description?: string;
+  // Paths (required for Speech.initialize())
+  modelPath?: string; // Path to kokoro-*.onnx
+  vocabPath?: string; // Path to vocab.json
+  mergesPath?: string; // Path to merges.txt
+  voicesPath?: string; // Path to voices.bin
 }
+
+/**
+ * Supertonic model configuration (for future support)
+ */
+export interface SupertonicModelInfo {
+  variant: string;
+  version: string;
+  size: number;
+  isDownloaded: boolean;
+  // Paths (required for Speech.initialize())
+  modelPath?: string; // Path to model.onnx
+  voicesPath?: string; // Path to voices.bin
+}
+
+// ============ TTS Settings ============
 
 /**
  * TTS settings stored in TTSStore
@@ -48,8 +81,11 @@ export interface TTSSettings {
   /** Whether TTS is enabled globally */
   enabled: boolean;
 
-  /** Selected engine type */
-  engineType: TTSEngineType;
+  /** Selected engine type (app-level) */
+  engineType: AppTTSEngineType;
+
+  /** Selected neural engine (when engineType is 'neural') */
+  neuralEngine?: NeuralEngineType;
 
   // Platform TTS settings
   /** Selected platform voice identifier */
@@ -61,46 +97,26 @@ export interface TTSSettings {
   /** Platform TTS language */
   platformLanguage?: string;
 
-  // Neural TTS settings
-  /** Selected neural voice identifier */
-  neuralVoice?: string;
-  /** Neural TTS rate/length scale (0.5-2.0) */
-  neuralRate: number;
-  /** Speaker ID for multi-speaker models */
-  neuralSpeakerId?: number;
+  // Neural TTS settings (engine-agnostic)
+  /** Selected neural voice ID */
+  neuralVoiceId?: string;
+  /** Neural TTS speed (0.5-2.0) */
+  neuralSpeed: number;
 
   // Common settings
   /** Volume level (0.0-1.0) */
   volume: number;
 }
 
-/**
- * Voice model download state
- */
-export interface VoiceDownloadState {
-  isDownloading: boolean;
-  progress: number;
-  error?: Error;
-}
+// ============ Download State ============
 
 /**
- * Voice model catalog entry (before download)
+ * Model download state
  */
-export interface VoiceModelCatalogEntry {
-  identifier: string;
-  name: string;
-  language: string;
-  quality: VoiceQuality;
-  numSpeakers: number;
-  sampleRate: number;
-  size: number;
-  downloadUrl: string;
-  gender?: 'male' | 'female' | 'neutral';
-  description?: string;
-  /** Files included in the package */
-  files: {
-    model: string; // e.g., "model.onnx"
-    tokens: string; // e.g., "tokens.txt"
-    data: string; // e.g., "espeak-ng-data"
-  };
+export interface ModelDownloadState {
+  isDownloading: boolean;
+  progress: number; // 0-100
+  error?: string;
+  bytesDownloaded?: number;
+  totalBytes?: number;
 }

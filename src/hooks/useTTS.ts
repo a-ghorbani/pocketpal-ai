@@ -9,7 +9,7 @@ export interface TTSOptions {
   language?: string;
   voice?: string;
   engineType?: 'platform' | 'neural';
-  speakerId?: number;
+  speed?: number;
   volume?: number;
 }
 
@@ -26,7 +26,7 @@ interface TTSState {
  * - Initialization and cleanup of TTS engine
  * - Speaking text in chunks as they arrive from the LLM
  * - Pause/resume/stop controls
- * - Support for both platform and neural TTS engines
+ * - Support for both platform and neural TTS engines (Kokoro, Piper, etc.)
  * - Automatic cleanup on unmount
  */
 export const useTTS = (options: TTSOptions) => {
@@ -35,18 +35,24 @@ export const useTTS = (options: TTSOptions) => {
 
   const {
     enabled,
-    rate = activeConfig.rate,
+    rate = activeConfig.engineType === 'platform' ? activeConfig.rate : 1.0,
     pitch = activeConfig.engineType === 'platform' ? activeConfig.pitch : 1.0,
     language = activeConfig.engineType === 'platform'
       ? activeConfig.language
       : undefined,
-    voice = activeConfig.voice,
-    engineType = activeConfig.engineType,
-    speakerId = activeConfig.engineType === 'neural'
-      ? activeConfig.speakerId
+    voice = activeConfig.engineType === 'platform'
+      ? activeConfig.voice
       : undefined,
+    engineType = activeConfig.engineType,
+    speed = activeConfig.engineType === 'neural' ? activeConfig.speed : 1.0,
     volume = activeConfig.volume,
   } = options;
+
+  // Get neural voice ID if using neural engine
+  const neuralVoiceId =
+    engineType === 'neural' && activeConfig.engineType === 'neural'
+      ? activeConfig.voiceId
+      : undefined;
 
   const stateRef = useRef<TTSState>({
     isSpeaking: false,
@@ -65,48 +71,24 @@ export const useTTS = (options: TTSOptions) => {
 
     const initializeTTS = async () => {
       try {
-        // Build speech options based on engine type and settings
-        const speechOptions: any = {
-          volume: volume ?? 1.0,
-        };
-
-        // Add voice identifier if specified
-        if (voice) {
-          speechOptions.voice = voice;
+        // Engine should already be initialized via TTSStore
+        // Just verify it's ready
+        const isReady = await Speech.isReady();
+        if (!isReady) {
+          console.warn('[TTS] Speech engine not ready');
+          stateRef.current.isInitialized = false;
+          return;
         }
-
-        // Platform-specific options
-        if (engineType === 'platform') {
-          if (rate !== undefined) {
-            speechOptions.rate = rate;
-          }
-          if (pitch !== undefined) {
-            speechOptions.pitch = pitch;
-          }
-          if (language) {
-            speechOptions.language = language;
-          }
-        } else if (engineType === 'neural') {
-          // Neural-specific options
-          if (rate !== undefined) {
-            speechOptions.rate = rate; // Length scale for neural
-          }
-          if (speakerId !== undefined) {
-            speechOptions.speakerId = speakerId;
-          }
-        }
-
-        Speech.initialize(speechOptions);
 
         stateRef.current.isInitialized = true;
 
         if (__DEV__) {
           console.log('[TTS] Initialized successfully', {
             engineType,
-            voice,
+            voice: engineType === 'platform' ? voice : neuralVoiceId,
             rate,
             pitch,
-            speakerId,
+            speed,
           });
         }
       } catch (error) {
@@ -183,7 +165,7 @@ export const useTTS = (options: TTSOptions) => {
       // Clear buffer
       textBufferRef.current = '';
     };
-  }, [rate, pitch, language, voice, engineType, speakerId, volume]);
+  }, [rate, pitch, language, voice, engineType, speed, volume, neuralVoiceId]);
 
   /**
    * Speak accumulated text from buffer
@@ -201,13 +183,27 @@ export const useTTS = (options: TTSOptions) => {
     // Clear the buffer
     textBufferRef.current = '';
 
-    // Speak the text
+    // Speak the text using unified Speech API
     try {
-      await Speech.speak(textToSpeak);
+      if (engineType === 'platform') {
+        // Use platform TTS (Speech is already initialized with OS_NATIVE)
+        await Speech.speak(textToSpeak);
+      } else if (engineType === 'neural') {
+        // Use neural TTS (Speech is already initialized with KOKORO/SUPERTONIC)
+        if (!neuralVoiceId) {
+          console.error('[TTS] Neural voice not configured');
+          return;
+        }
+
+        await Speech.speak(textToSpeak, neuralVoiceId, {
+          speed,
+          volume,
+        });
+      }
     } catch (error) {
       console.error('[TTS] Failed to speak:', error);
     }
-  }, [enabled]);
+  }, [enabled, engineType, neuralVoiceId, speed, volume]);
 
   /**
    * Add text to the buffer and schedule speaking
@@ -261,7 +257,7 @@ export const useTTS = (options: TTSOptions) => {
       speakTimerRef.current = null;
     }
 
-    // Stop TTS
+    // Stop TTS using unified Speech API
     try {
       await Speech.stop();
       stateRef.current.isSpeaking = false;

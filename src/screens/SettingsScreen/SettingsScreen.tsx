@@ -926,41 +926,45 @@ export const SettingsScreen: React.FC = observer(() => {
                           style={styles.textDescription}>
                           {ttsStore.settings.engineType === 'platform'
                             ? 'Using system TTS engine'
-                            : ttsStore.isNeuralEngineAvailable
-                              ? 'Using neural TTS (Piper)'
-                              : 'Neural TTS not available'}
+                            : ttsStore.isKokoroModelDownloaded()
+                              ? 'Using neural TTS (Kokoro)'
+                              : 'Neural TTS - model not downloaded'}
                         </Text>
                       </View>
                       <Switch
                         testID="tts-engine-switch"
                         value={ttsStore.settings.engineType === 'neural'}
-                        disabled={!ttsStore.isNeuralEngineAvailable}
+                        disabled={!ttsStore.isKokoroModelDownloaded()}
                         onValueChange={value =>
                           ttsStore.setEngineType(value ? 'neural' : 'platform')
                         }
                       />
                     </View>
 
-                    {/* Rate Slider */}
+                    {/* Rate/Speed Slider */}
                     <Divider style={styles.divider} />
                     <View style={styles.settingItemContainer}>
                       <InputSlider
                         testID="tts-rate-slider"
-                        label={`Speech Rate: ${
+                        label={`${
+                          ttsStore.settings.engineType === 'platform'
+                            ? 'Speech Rate'
+                            : 'Speech Speed'
+                        }: ${
                           ttsStore.settings.engineType === 'platform'
                             ? (ttsStore.settings.platformRate ?? 1.0).toFixed(2)
-                            : (ttsStore.settings.neuralRate ?? 1.0).toFixed(2)
+                            : (ttsStore.settings.neuralSpeed ?? 1.0).toFixed(2)
                         }`}
                         value={
                           ttsStore.settings.engineType === 'platform'
                             ? (ttsStore.settings.platformRate ?? 1.0)
-                            : (ttsStore.settings.neuralRate ?? 1.0)
+                            : (ttsStore.settings.neuralSpeed ?? 1.0)
                         }
                         onValueChange={value => {
                           if (ttsStore.settings.engineType === 'platform') {
                             ttsStore.setPlatformRate(value);
                           } else {
-                            ttsStore.setNeuralRate(value);
+                            ttsStore.setNeuralSpeed(value);
                           }
                         }}
                         min={0.5}
@@ -1003,7 +1007,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       />
                     </View>
 
-                    {/* Voice Model Browser Link */}
+                    {/* Neural Voice Selection */}
                     {ttsStore.settings.engineType === 'neural' && (
                       <>
                         <Divider style={styles.divider} />
@@ -1012,21 +1016,52 @@ export const SettingsScreen: React.FC = observer(() => {
                             <Text
                               variant="titleMedium"
                               style={styles.textLabel}>
-                              Voice Models
+                              Neural Voice
                             </Text>
                             <Text
                               variant="labelSmall"
                               style={styles.textDescription}>
-                              {ttsStore.getDownloadedNeuralVoices().length}{' '}
-                              downloaded voices
+                              {ttsStore.settings.neuralVoiceId
+                                ? `Selected: ${ttsStore.settings.neuralVoiceId}`
+                                : 'No voice selected'}
                             </Text>
                           </View>
                           <Button
                             mode="outlined"
                             onPress={() => {
                               Alert.alert(
-                                'Voice Models',
-                                'Voice model browser coming soon!',
+                                'Voice Selection',
+                                'Voice selection UI coming soon!',
+                              );
+                            }}
+                            style={styles.menuButton}>
+                            Select
+                          </Button>
+                        </View>
+
+                        {/* Model Management */}
+                        <Divider style={styles.divider} />
+                        <View style={styles.switchContainer}>
+                          <View style={styles.textContainer}>
+                            <Text
+                              variant="titleMedium"
+                              style={styles.textLabel}>
+                              Kokoro Model
+                            </Text>
+                            <Text
+                              variant="labelSmall"
+                              style={styles.textDescription}>
+                              {ttsStore.isKokoroModelDownloaded()
+                                ? `Downloaded: ${ttsStore.kokoroModel?.variant || 'unknown'}`
+                                : 'Not downloaded'}
+                            </Text>
+                          </View>
+                          <Button
+                            mode="outlined"
+                            onPress={() => {
+                              Alert.alert(
+                                'Model Management',
+                                'Model download UI coming soon!',
                               );
                             }}
                             style={styles.menuButton}>

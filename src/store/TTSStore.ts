@@ -1,88 +1,147 @@
 import {makeAutoObservable, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Speech from '@mhpdev/react-native-speech';
+import Speech, {TTSEngine} from '@mhpdev/react-native-speech';
+import type {KokoroVoice} from '@mhpdev/react-native-speech';
 import type {
   TTSSettings,
-  TTSEngineType,
-  NeuralVoiceModel,
-  VoiceDownloadState,
+  AppTTSEngineType,
+  NeuralEngineType,
+  KokoroModelInfo,
+  ModelDownloadState,
 } from '../types/tts';
-import {VOICE_MODEL_CATALOG} from '../services/tts/voiceModelCatalog';
+import {
+  getRecommendedModel,
+  getAllModels,
+  type KokoroModelCatalogEntry,
+} from '../services/tts/models';
 
 /**
- * Store for managing TTS (Text-to-Speech) settings and neural voice models
+ * Store for managing TTS (Text-to-Speech) settings
+ * Uses unified Speech API from @mhpdev/react-native-speech v2.0+
  */
 export class TTSStore {
   // TTS Settings
   settings: TTSSettings = {
     enabled: false,
     engineType: 'platform',
+    neuralEngine: 'kokoro',
     platformVoice: undefined,
     platformRate: 1.0,
     platformPitch: 1.0,
     platformLanguage: undefined,
-    neuralVoice: undefined,
-    neuralRate: 1.0,
-    neuralSpeakerId: undefined,
+    neuralVoiceId: undefined,
+    neuralSpeed: 1.0,
     volume: 1.0,
   };
 
-  // Neural voice models catalog
-  neuralVoices: Map<string, NeuralVoiceModel> = new Map();
+  // Kokoro model configuration
+  kokoroModel: KokoroModelInfo | null = null;
 
-  // Download states for voice models
-  downloadStates: Map<string, VoiceDownloadState> = new Map();
+  // Model download state
+  modelDownloadState: ModelDownloadState = {
+    isDownloading: false,
+    progress: 0,
+  };
 
-  // Neural engine availability
-  isNeuralEngineAvailable = false;
+  // Available voices (cached from Speech.getVoicesWithMetadata())
+  availableVoices: KokoroVoice[] = [];
+
+  // Track if neural engine is initialized
+  isNeuralEngineInitialized = false;
 
   constructor() {
     makeAutoObservable(this);
     makePersistable(this, {
       name: 'TTSStore',
-      properties: ['settings', 'neuralVoices'],
+      properties: ['settings', 'kokoroModel'],
       storage: AsyncStorage,
     }).then(() => {
-      // Populate voice catalog after persistence is loaded
-      this.populateVoiceCatalog();
-    });
-
-    // Check neural engine availability on initialization
-    this.checkNeuralEngineAvailability();
-  }
-
-  /**
-   * Populate the voice catalog with available voices
-   */
-  private populateVoiceCatalog() {
-    runInAction(() => {
-      // Add catalog voices that aren't already in the store
-      VOICE_MODEL_CATALOG.forEach(catalogEntry => {
-        if (!this.neuralVoices.has(catalogEntry.identifier)) {
-          const voice: NeuralVoiceModel = {
-            ...catalogEntry,
-            isDownloaded: false,
-          };
-          this.neuralVoices.set(catalogEntry.identifier, voice);
-        }
-      });
+      // Initialize after persistence is loaded
+      this.initializeEngines();
     });
   }
 
   /**
-   * Check if neural TTS engine is available
+   * Initialize TTS engines
    */
-  async checkNeuralEngineAvailability() {
+  async initializeEngines() {
+    // Initialize OS native engine (default)
     try {
-      const available = await Speech.isNeuralEngineAvailable();
+      await Speech.initialize({engine: TTSEngine.OS_NATIVE});
+      console.log('[TTSStore] OS native TTS initialized');
+    } catch (error) {
+      console.error('[TTSStore] Failed to initialize OS TTS:', error);
+    }
+
+    // Initialize Kokoro if model is downloaded
+    if (this.kokoroModel?.isDownloaded) {
+      await this.initializeKokoroEngine();
+    }
+  }
+
+  /**
+   * Initialize Kokoro neural engine using Speech.initialize()
+   */
+  async initializeKokoroEngine() {
+    if (!this.kokoroModel || !this.kokoroModel.isDownloaded) {
+      console.log(
+        '[TTSStore] Kokoro model not downloaded, skipping initialization',
+      );
+      return;
+    }
+
+    const {modelPath, vocabPath, mergesPath, voicesPath} = this.kokoroModel;
+    if (!modelPath || !vocabPath || !mergesPath || !voicesPath) {
+      console.error('[TTSStore] Kokoro model paths incomplete');
+      return;
+    }
+
+    try {
+      await Speech.initialize({
+        engine: TTSEngine.KOKORO,
+        modelPath,
+        vocabPath,
+        mergesPath,
+        voicesPath,
+      });
+
       runInAction(() => {
-        this.isNeuralEngineAvailable = available;
+        this.isNeuralEngineInitialized = true;
+      });
+
+      // Load available voices
+      await this.loadAvailableVoices();
+
+      console.log('[TTSStore] Kokoro engine initialized successfully');
+    } catch (error) {
+      console.error('[TTSStore] Failed to initialize Kokoro engine:', error);
+      runInAction(() => {
+        this.isNeuralEngineInitialized = false;
+      });
+    }
+  }
+
+  /**
+   * Load available voices from Speech.getVoicesWithMetadata()
+   */
+  async loadAvailableVoices() {
+    if (!this.isNeuralEngineInitialized) {
+      runInAction(() => {
+        this.availableVoices = [];
+      });
+      return;
+    }
+
+    try {
+      const voices = await Speech.getVoicesWithMetadata();
+      runInAction(() => {
+        this.availableVoices = voices as KokoroVoice[];
       });
     } catch (error) {
-      console.error('[TTSStore] Failed to check neural engine availability:', error);
+      console.error('[TTSStore] Failed to load voices:', error);
       runInAction(() => {
-        this.isNeuralEngineAvailable = false;
+        this.availableVoices = [];
       });
     }
   }
@@ -101,10 +160,26 @@ export class TTSStore {
   /**
    * Set the TTS engine type
    */
-  setEngineType(engineType: TTSEngineType) {
+  setEngineType(engineType: AppTTSEngineType) {
     runInAction(() => {
       this.settings.engineType = engineType;
     });
+
+    // Re-initialize Speech with the appropriate engine
+    if (engineType === 'platform') {
+      Speech.initialize({engine: TTSEngine.OS_NATIVE}).catch(err =>
+        console.error('[TTSStore] Failed to switch to OS native:', err),
+      );
+    } else if (engineType === 'neural' && this.isNeuralEngineInitialized) {
+      // Already initialized, just switch back
+      const neuralEngine =
+        this.settings.neuralEngine === 'kokoro'
+          ? TTSEngine.KOKORO
+          : TTSEngine.SUPERTONIC;
+      Speech.initialize({engine: neuralEngine}).catch(err =>
+        console.error('[TTSStore] Failed to switch to neural:', err),
+      );
+    }
   }
 
   /**
@@ -144,29 +219,35 @@ export class TTSStore {
   }
 
   /**
+   * Set neural engine type (kokoro or supertonic)
+   */
+  setNeuralEngine(engineType: NeuralEngineType) {
+    runInAction(() => {
+      this.settings.neuralEngine = engineType;
+    });
+
+    // Re-initialize with the selected neural engine
+    if (engineType === 'kokoro' && this.kokoroModel?.isDownloaded) {
+      this.initializeKokoroEngine();
+    }
+    // TODO: Add supertonic initialization when supported
+  }
+
+  /**
    * Set neural voice
    */
   setNeuralVoice(voiceId: string | undefined) {
     runInAction(() => {
-      this.settings.neuralVoice = voiceId;
+      this.settings.neuralVoiceId = voiceId;
     });
   }
 
   /**
-   * Set neural rate (length scale)
+   * Set neural speed
    */
-  setNeuralRate(rate: number) {
+  setNeuralSpeed(speed: number) {
     runInAction(() => {
-      this.settings.neuralRate = Math.max(0.5, Math.min(2.0, rate));
-    });
-  }
-
-  /**
-   * Set neural speaker ID
-   */
-  setNeuralSpeakerId(speakerId: number | undefined) {
-    runInAction(() => {
-      this.settings.neuralSpeakerId = speakerId;
+      this.settings.neuralSpeed = Math.max(0.5, Math.min(2.0, speed));
     });
   }
 
@@ -179,104 +260,84 @@ export class TTSStore {
     });
   }
 
-  // ============ Voice Model Management ============
+  // ============ Model Management ============
 
   /**
-   * Add a neural voice model to the catalog
+   * Set Kokoro model configuration
    */
-  addNeuralVoiceModel(voice: NeuralVoiceModel) {
+  setKokoroModel(model: KokoroModelInfo) {
     runInAction(() => {
-      this.neuralVoices.set(voice.identifier, voice);
+      this.kokoroModel = model;
     });
   }
 
   /**
-   * Update neural voice model
+   * Mark Kokoro model as downloaded
    */
-  updateNeuralVoiceModel(identifier: string, updates: Partial<NeuralVoiceModel>) {
-    const voice = this.neuralVoices.get(identifier);
-    if (voice) {
+  markKokoroModelDownloaded(paths: {
+    modelPath: string;
+    vocabPath: string;
+    mergesPath: string;
+    voicesPath: string;
+  }) {
+    if (this.kokoroModel) {
       runInAction(() => {
-        this.neuralVoices.set(identifier, {...voice, ...updates});
+        this.kokoroModel = {
+          ...this.kokoroModel!,
+          isDownloaded: true,
+          ...paths,
+        };
       });
+
+      // Initialize the engine now that model is downloaded
+      this.initializeKokoroEngine();
     }
   }
 
   /**
-   * Remove a neural voice model from the catalog
+   * Get available Kokoro model variants
    */
-  removeNeuralVoiceModel(identifier: string) {
-    runInAction(() => {
-      this.neuralVoices.delete(identifier);
-      // If this was the selected voice, clear the selection
-      if (this.settings.neuralVoice === identifier) {
-        this.settings.neuralVoice = undefined;
-      }
-    });
+  getAvailableKokoroModels(): KokoroModelCatalogEntry[] {
+    return getAllModels();
   }
 
   /**
-   * Get a neural voice model by identifier
+   * Get recommended Kokoro model
    */
-  getNeuralVoiceModel(identifier: string): NeuralVoiceModel | undefined {
-    return this.neuralVoices.get(identifier);
+  getRecommendedKokoroModel(): KokoroModelCatalogEntry {
+    return getRecommendedModel();
   }
 
   /**
-   * Get all neural voice models
+   * Check if Kokoro model is downloaded
    */
-  getAllNeuralVoices(): NeuralVoiceModel[] {
-    return Array.from(this.neuralVoices.values());
-  }
-
-  /**
-   * Get downloaded neural voices
-   */
-  getDownloadedNeuralVoices(): NeuralVoiceModel[] {
-    return this.getAllNeuralVoices().filter(v => v.isDownloaded);
-  }
-
-  /**
-   * Get available (not downloaded) neural voices
-   */
-  getAvailableNeuralVoices(): NeuralVoiceModel[] {
-    return this.getAllNeuralVoices().filter(v => !v.isDownloaded);
+  isKokoroModelDownloaded(): boolean {
+    return this.kokoroModel?.isDownloaded ?? false;
   }
 
   // ============ Download State Management ============
 
   /**
-   * Set download state for a voice model
+   * Set model download state
    */
-  setDownloadState(identifier: string, state: VoiceDownloadState) {
+  setModelDownloadState(state: ModelDownloadState) {
     runInAction(() => {
-      this.downloadStates.set(identifier, state);
-
-      // Update the voice model's download progress
-      const voice = this.neuralVoices.get(identifier);
-      if (voice) {
-        this.neuralVoices.set(identifier, {
-          ...voice,
-          downloadProgress: state.progress,
-        });
-      }
+      this.modelDownloadState = state;
     });
   }
 
   /**
-   * Get download state for a voice model
+   * Get model download state
    */
-  getDownloadState(identifier: string): VoiceDownloadState | undefined {
-    return this.downloadStates.get(identifier);
+  getModelDownloadState(): ModelDownloadState {
+    return this.modelDownloadState;
   }
 
   /**
-   * Clear download state for a voice model
+   * Check if model is currently downloading
    */
-  clearDownloadState(identifier: string) {
-    runInAction(() => {
-      this.downloadStates.delete(identifier);
-    });
+  isModelDownloading(): boolean {
+    return this.modelDownloadState.isDownloading;
   }
 
   // ============ Computed Properties ============
@@ -286,16 +347,14 @@ export class TTSStore {
    */
   get activeVoiceConfig() {
     if (this.settings.engineType === 'neural') {
-      const voiceId = this.settings.neuralVoice;
+      const voiceId = this.settings.neuralVoiceId;
       if (voiceId) {
-        const voice = this.neuralVoices.get(voiceId);
         return {
           engineType: 'neural' as const,
-          voice: voiceId,
-          rate: this.settings.neuralRate,
-          speakerId: this.settings.neuralSpeakerId,
+          neuralEngine: this.settings.neuralEngine,
+          voiceId,
+          speed: this.settings.neuralSpeed,
           volume: this.settings.volume,
-          voiceModel: voice,
         };
       }
     }
@@ -311,13 +370,21 @@ export class TTSStore {
   }
 
   /**
-   * Check if a voice is currently downloading
+   * Get available voices for current engine
    */
-  isVoiceDownloading(identifier: string): boolean {
-    const state = this.downloadStates.get(identifier);
-    return state?.isDownloading ?? false;
+  getAvailableVoices(language?: string): KokoroVoice[] {
+    if (language) {
+      return this.availableVoices.filter(v => v.language === language);
+    }
+    return this.availableVoices;
+  }
+
+  /**
+   * Get voice by ID
+   */
+  getVoiceById(voiceId: string): KokoroVoice | undefined {
+    return this.availableVoices.find(v => v.id === voiceId);
   }
 }
 
 export const ttsStore = new TTSStore();
-

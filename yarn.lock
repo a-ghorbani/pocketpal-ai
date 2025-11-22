@@ -7307,6 +7307,19 @@ onetime@^5.1.0, onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
+onnxruntime-common@1.23.2:
+  version "1.23.2"
+  resolved "https://registry.yarnpkg.com/onnxruntime-common/-/onnxruntime-common-1.23.2.tgz#669892f8d2b7de273ac60a76151781a97d01ab49"
+  integrity sha512-5LFsC9Dukzp2WV6kNHYLNzp8sT6V02IubLCbzw2Xd6X5GOlr65gAX6xiJwyi2URJol/s71gaQLC5F2C25AAR2w==
+
+onnxruntime-react-native@^1.23.2:
+  version "1.23.2"
+  resolved "https://registry.yarnpkg.com/onnxruntime-react-native/-/onnxruntime-react-native-1.23.2.tgz#034c3cb942ea18d2eb668e1dd6c5ab770c9b6cc7"
+  integrity sha512-PVSjR9QRQTzT/rpU5BMKi23PoEBhJ6G/THkA3u4XgzQ+mgYcLkmwlhhvgAzBM4F1mgaAThhMMiXEyd4tI8LLDw==
+  dependencies:
+    buffer "^6.0.3"
+    onnxruntime-common "1.23.2"
+
 open@^6.2.0:
   version "6.4.0"
   resolved "https://registry.npmjs.org/open/-/open-6.4.0.tgz"

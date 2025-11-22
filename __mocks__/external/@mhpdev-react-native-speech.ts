@@ -23,4 +23,3 @@ const mockSpeech = {
 };
 
 export default mockSpeech;
-
