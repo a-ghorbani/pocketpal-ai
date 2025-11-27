@@ -9,7 +9,7 @@ import {defaultCompletionParams} from '../../../utils/completionSettingsVersions
 jest.mock('../../../screens/ModelsScreen/ModelSettings', () => {
   const {View} = require('react-native');
   return {
-    ModelSettings: ({onChange, onStopWordsChange}) => (
+    ModelSettings: ({onChange, onStopWordsChange, onModelNameChange}) => (
       <View testID="model-settings">
         <View
           testID="mock-settings-update"
@@ -18,6 +18,10 @@ jest.mock('../../../screens/ModelsScreen/ModelSettings', () => {
         <View
           testID="mock-stop-words-update"
           onPress={() => onStopWordsChange(['stop1', 'stop2'])}
+        />
+        <View
+          testID="mock-model-name-update"
+          onPress={() => onModelNameChange('new model name')}
         />
       </View>
     ),
@@ -55,6 +59,8 @@ jest.mock('../../../store', () => ({
     updateModelStopWords: jest.fn(),
     resetModelChatTemplate: jest.fn(),
     resetModelStopWords: jest.fn(),
+    updateModelName: jest.fn(),
+    resetModelName: jest.fn(),
   },
 }));
 
