@@ -5,7 +5,7 @@ import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 import {MessageType} from '../../utils/types';
-import {mockContextModel} from '../../../jest/fixtures/models';
+import {mockLlamaContextParams} from '../../../jest/fixtures/models';
 import {waitFor} from '@testing-library/react-native';
 
 // Use the mock from __mocks__/repositories/ChatSessionRepository.js
@@ -450,12 +450,7 @@ describe('chatSessionStore', () => {
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
 
-      const mockContext = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: 'Test environment',
-        model: mockContextModel,
-      });
+      const mockContext = new LlamaContext(mockLlamaContextParams);
 
       (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
         true,
@@ -487,12 +482,7 @@ describe('chatSessionStore', () => {
       chatSessionStore.sessions = [session];
       chatSessionStore.activeSessionId = session.id;
 
-      const mockContext = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: 'Test environment',
-        model: mockContextModel,
-      });
+      const mockContext = new LlamaContext(mockLlamaContextParams);
       const newMessageId = 'new-message';
       const createdAt = Date.now();
 

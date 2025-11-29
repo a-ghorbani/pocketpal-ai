@@ -5,8 +5,8 @@ import {textMessage} from '../../../jest/fixtures';
 import {sessionFixtures} from '../../../jest/fixtures/chatSessions';
 import {
   mockBasicModel,
-  mockContextModel,
   mockDefaultCompletionParams,
+  mockLlamaContextParams,
   modelsList,
 } from '../../../jest/fixtures/models';
 
@@ -35,12 +35,7 @@ beforeEach(() => {
   modelStore.activeModelId = undefined;
 
   // Fresh mocked context each test
-  modelStore.context = new LlamaContext({
-    contextId: 1,
-    gpu: false,
-    reasonNoGPU: '',
-    model: mockContextModel,
-  });
+  modelStore.context = new LlamaContext(mockLlamaContextParams);
 });
 
 // Mock the applyChatTemplate function from utils/chat

@@ -13,7 +13,7 @@ import {ChatScreen} from '../ChatScreen';
 import {chatSessionStore, modelStore} from '../../../store';
 
 import {l10n} from '../../../utils/l10n';
-import {mockContextModel} from '../../../../jest/fixtures/models';
+import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});
@@ -42,12 +42,7 @@ describe('ChatScreen', () => {
   });
 
   it('renders correctly when model is loaded', () => {
-    modelStore.context = new LlamaContext({
-      contextId: 1,
-      gpu: false,
-      reasonNoGPU: '',
-      model: mockContextModel,
-    });
+    modelStore.context = new LlamaContext(mockLlamaContextParams);
     const {getByPlaceholderText} = render(<ChatScreen />, {
       withNavigation: true,
     });
@@ -58,12 +53,7 @@ describe('ChatScreen', () => {
     // Set up an active model for the test
     runInAction(() => {
       modelStore.activeModelId = 'test-model-id';
-      modelStore.context = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: '',
-        model: mockContextModel,
-      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
     });
     modelStore.context!.completion = jest.fn().mockResolvedValue({
       timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
@@ -102,12 +92,7 @@ describe('ChatScreen', () => {
     // Set up an active model for the test
     runInAction(() => {
       modelStore.activeModelId = 'test-model-id';
-      modelStore.context = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: '',
-        model: mockContextModel,
-      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
     });
     modelStore.context!.completion = jest
       .fn()
@@ -137,12 +122,7 @@ describe('ChatScreen', () => {
   });
 
   it('renders different message types correctly', async () => {
-    modelStore.context = new LlamaContext({
-      contextId: 1,
-      gpu: false,
-      reasonNoGPU: '',
-      model: mockContextModel,
-    });
+    modelStore.context = new LlamaContext(mockLlamaContextParams);
     jest
       .spyOn(chatSessionStore, 'currentSessionMessages', 'get')
       .mockReturnValue([

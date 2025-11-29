@@ -39,9 +39,17 @@ export const mockContextModel: NativeLlamaContext['model'] = {
       },
     },
   },
-  isChatTemplateSupported: false,
   metadata: {},
+  isChatTemplateSupported: false,
 };
+
+export const mockLlamaContextParams = {
+  contextId: 1,
+  gpu: false,
+  reasonNoGPU: '',
+  systemInfo: '',
+  model: mockContextModel,
+} as const;
 
 export const mockDefaultCompletionParams: CompletionParams = {
   // App-specific properties

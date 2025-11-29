@@ -20,7 +20,7 @@ import {
 import {BenchmarkScreen} from '../BenchmarkScreen';
 
 import {benchmarkStore, modelStore, uiStore} from '../../../store';
-import {mockContextModel} from '../../../../jest/fixtures/models';
+import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
 
 jest.mock('../../../api/benchmark', () => ({
   submitBenchmark: jest.fn().mockResolvedValue(undefined),
@@ -132,12 +132,7 @@ describe('BenchmarkScreen', () => {
 
     it('should show benchmark loading indicator during execution', async () => {
       modelStore.activeModelId = modelStore.models[0].id;
-      modelStore.context = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: '',
-        model: mockContextModel,
-      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
 
       const {getByText, getByTestId} = render(<BenchmarkScreen />);
 
@@ -150,12 +145,7 @@ describe('BenchmarkScreen', () => {
 
     it('should disable start button during benchmark execution', async () => {
       modelStore.activeModelId = modelStore.models[0].id;
-      modelStore.context = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: '',
-        model: mockContextModel,
-      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
       const {getByTestId} = render(<BenchmarkScreen />);
       const startButton = getByTestId('start-test-button');
 
@@ -195,12 +185,7 @@ describe('BenchmarkScreen', () => {
   describe('Advanced Settings', () => {
     it('should apply preset configurations correctly', async () => {
       modelStore.activeModelId = modelStore.models[0].id;
-      modelStore.context = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: '',
-        model: mockContextModel,
-      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
 
       const {getByText, getByTestId} = render(<BenchmarkScreen />);
 

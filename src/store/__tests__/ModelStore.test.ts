@@ -10,7 +10,7 @@ import {downloadManager} from '../../services/downloads';
 import {ModelOrigin, ModelType} from '../../utils/types';
 import {
   basicModel,
-  mockContextModel,
+  mockLlamaContextParams,
   mockHFModel1,
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
@@ -219,12 +219,7 @@ describe('ModelStore', () => {
         isDownloaded: true,
       };
 
-      modelStore.context = new LlamaContext({
-        contextId: 1,
-        gpu: false,
-        reasonNoGPU: '',
-        model: mockContextModel,
-      });
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
       modelStore.models = [projModel];
       modelStore.activeProjectionModelId = projModel.id;
 
@@ -607,14 +602,9 @@ describe('ModelStore', () => {
       modelStore.wasAutoReleased = true;
       modelStore.lastAutoReleasedModelId = model.id;
 
-      const mockInitContext = jest.fn().mockResolvedValue(
-        new LlamaContext({
-          contextId: 1,
-          gpu: false,
-          reasonNoGPU: '',
-          model: mockContextModel,
-        }),
-      );
+      const mockInitContext = jest
+        .fn()
+        .mockResolvedValue(new LlamaContext(mockLlamaContextParams));
       modelStore.initContext = mockInitContext;
 
       // Simulate coming to foreground

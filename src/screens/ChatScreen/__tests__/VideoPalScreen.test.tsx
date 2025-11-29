@@ -11,7 +11,7 @@ import {VideoPalScreen} from '../VideoPalScreen';
 import {palStore, chatSessionStore, modelStore} from '../../../store';
 import type {Pal} from '../../../types/pal';
 import {LlamaContext} from 'llama.rn';
-import {mockContextModel} from '../../../../jest/fixtures/models';
+import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {
@@ -114,12 +114,7 @@ describe('VideoPalScreen', () => {
     });
 
     // Provide a context so we pass the first guard
-    modelStore.context = new LlamaContext({
-      contextId: 1,
-      gpu: false,
-      reasonNoGPU: '',
-      model: mockContextModel,
-    });
+    modelStore.context = new LlamaContext(mockLlamaContextParams);
 
     // Ensure multimodal check resolves to false
     jest.spyOn(modelStore, 'isMultimodalEnabled').mockResolvedValue(false);
@@ -152,12 +147,7 @@ describe('VideoPalScreen', () => {
     });
 
     // Provide a loaded context
-    modelStore.context = new LlamaContext({
-      contextId: 1,
-      gpu: false,
-      reasonNoGPU: '',
-      model: mockContextModel,
-    });
+    modelStore.context = new LlamaContext(mockLlamaContextParams);
 
     // Allow multimodal
     jest.spyOn(modelStore, 'isMultimodalEnabled').mockResolvedValue(true);
