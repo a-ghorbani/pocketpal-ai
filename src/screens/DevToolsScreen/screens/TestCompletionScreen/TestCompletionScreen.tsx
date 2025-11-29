@@ -3,7 +3,7 @@ import React, {useState} from 'react';
 import {View, ScrollView} from 'react-native';
 
 import {observer} from 'mobx-react';
-import {JinjaFormattedChatResult} from '@pocketpalai/llama.rn';
+import {JinjaFormattedChatResult} from 'llama.rn';
 import {CompletionParams} from '../../../../utils/completionTypes';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {SafeAreaView} from 'react-native-safe-area-context';

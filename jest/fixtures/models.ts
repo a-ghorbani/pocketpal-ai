@@ -1,4 +1,4 @@
-import {NativeLlamaContext} from '@pocketpalai/llama.rn';
+import {NativeLlamaContext} from 'llama.rn';
 
 import {deviceInfo} from './device-info';
 

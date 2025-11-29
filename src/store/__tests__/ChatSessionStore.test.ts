@@ -1,5 +1,5 @@
 jest.unmock('../ChatSessionStore'); // this is not really needed, as only importing from store is mocked.
-import {LlamaContext} from '@pocketpalai/llama.rn';
+import {LlamaContext} from 'llama.rn';
 
 import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';

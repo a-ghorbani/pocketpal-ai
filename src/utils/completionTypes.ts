@@ -1,4 +1,4 @@
-import {CompletionParams as LlamaRNCompletionParams} from '@pocketpalai/llama.rn';
+import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 
 // Alias allows flexibility to switch API providers later
 // We should move towards OpenAI Compatible API Params

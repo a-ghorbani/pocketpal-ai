@@ -1,6 +1,6 @@
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
-import {LlamaContext} from '@pocketpalai/llama.rn';
+import {LlamaContext} from 'llama.rn';
 import {Alert} from 'react-native';
 
 import {defaultModels} from '../defaultModels';

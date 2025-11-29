@@ -32,7 +32,7 @@ module.exports = {
   moduleNameMapper: {
     '@react-native-async-storage/async-storage':
       '<rootDir>/__mocks__/external/@react-native-async-storage/async-storage.js',
-    '@pocketpalai/llama.rn': '<rootDir>/__mocks__/external/llama.rn.ts',
+    'llama.rn': '<rootDir>/__mocks__/external/llama.rn.ts',
     'react-dom': '<rootDir>/__mocks__/external/react-dom.js',
     'react-native-device-info':
       '<rootDir>/__mocks__/external/react-native-device-info.js',

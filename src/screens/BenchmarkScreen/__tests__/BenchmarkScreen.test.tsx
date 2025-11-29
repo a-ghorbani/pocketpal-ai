@@ -1,7 +1,7 @@
 import React from 'react';
 
 import {cloneDeep} from 'lodash';
-import {LlamaContext} from '@pocketpalai/llama.rn';
+import {LlamaContext} from 'llama.rn';
 
 import {submitBenchmark} from '../../../api/benchmark';
 

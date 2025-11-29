@@ -7,7 +7,7 @@
  * 3. Add a migration step in migrateContextInitParams to handle the new parameter
  */
 
-import {ContextParams} from '@pocketpalai/llama.rn';
+import {ContextParams} from 'llama.rn';
 import {ContextInitParams, LegacyContextInitParams} from './types';
 import {Platform} from 'react-native';
 

@@ -6,7 +6,7 @@ import {makePersistable} from 'mobx-persist-store';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {computed, makeAutoObservable, runInAction, toJS} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {ContextParams, LlamaContext, initLlama} from '@pocketpalai/llama.rn';
+import {ContextParams, LlamaContext, initLlama} from 'llama.rn';
 import {
   CompletionParams,
   toApiCompletionParams,
