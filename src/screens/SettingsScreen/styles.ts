@@ -101,4 +101,7 @@ export const createStyles = (theme: Theme) =>
     linkIcon: {
       marginLeft: 4,
     },
+    segmentedButtons: {
+      marginTop: 8,
+    },
   });

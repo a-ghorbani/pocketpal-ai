@@ -14,7 +14,15 @@ import {
 import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {Switch, Text, Card, Button, Icon, List} from 'react-native-paper';
+import {
+  Switch,
+  Text,
+  Card,
+  Button,
+  Icon,
+  List,
+  SegmentedButtons,
+} from 'react-native-paper';
 
 import {
   GlobeIcon,
@@ -49,6 +57,11 @@ import {
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
 import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
+import {
+  inferBackendType,
+  getAllowedCacheTypeKOptions,
+  getAllowedCacheTypeVOptions,
+} from '../../utils/flashAttnCompatibility';
 
 // Language display names in their native form
 const languageNames: Record<AvailableLanguage, string> = {
@@ -84,7 +97,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
-  const [showFlashAttnMenu, setShowFlashAttnMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
@@ -103,13 +115,6 @@ export const SettingsScreen: React.FC = observer(() => {
     x: 0.0,
     y: 0.0,
   });
-  const [flashAttnAnchor, setFlashAttnAnchor] = useState<{
-    x: number;
-    y: number;
-  }>({
-    x: 0.0,
-    y: 0.0,
-  });
   const [showDeviceMenu, setShowDeviceMenu] = useState(false);
   const [deviceAnchor, setDeviceAnchor] = useState<{x: number; y: number}>({
     x: 0.0,
@@ -120,7 +125,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
   const mmapButtonRef = useRef<View>(null);
-  const flashAttnButtonRef = useRef<View>(null);
   const deviceButtonRef = useRef<View>(null);
 
   const debouncedUpdateStore = useRef(
@@ -172,7 +176,6 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowLanguageMenu(false);
     setShowDeviceMenu(false);
     setShowMmapMenu(false);
-    setShowFlashAttnMenu(false);
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -186,16 +189,27 @@ export const SettingsScreen: React.FC = observer(() => {
     }
   };
 
-  const cacheTypeOptions = [
-    {label: 'F32', value: CacheType.F32},
-    {label: 'F16', value: CacheType.F16},
-    {label: 'Q8_0', value: CacheType.Q8_0},
-    {label: 'Q5_1', value: CacheType.Q5_1},
-    {label: 'Q5_0', value: CacheType.Q5_0},
-    {label: 'Q4_1', value: CacheType.Q4_1},
-    {label: 'Q4_0', value: CacheType.Q4_0},
-    {label: 'IQ4_NL', value: CacheType.IQ4_NL},
-  ];
+  // Compute current backend type based on device selection
+  const currentBackend = inferBackendType(
+    modelStore.contextInitParams.n_gpu_layers ?? 0,
+    modelStore.contextInitParams.devices,
+  );
+  console.log('Current infered backend:', currentBackend);
+
+  const currentFlashAttnType =
+    modelStore.contextInitParams.flash_attn_type ??
+    (Platform.OS === 'ios' ? 'auto' : 'off');
+
+  // Get dynamic cache type options based on flash attention compatibility
+  const cacheTypeKOptions = getAllowedCacheTypeKOptions(
+    currentFlashAttnType as 'auto' | 'on' | 'off',
+    currentBackend,
+  );
+
+  const cacheTypeVOptions = getAllowedCacheTypeVOptions(
+    currentFlashAttnType as 'auto' | 'on' | 'off',
+    currentBackend,
+  );
 
   const mmapOptions = [
     {label: l10n.settings.useMmapTrue, value: 'true' as const},
@@ -205,37 +219,22 @@ export const SettingsScreen: React.FC = observer(() => {
       : []),
   ];
 
-  const flashAttnOptions = [
-    {label: 'Auto (Recommended)', value: 'auto' as const},
-    {label: 'Enabled', value: 'on' as const},
-    {label: 'Disabled', value: 'off' as const},
-  ];
-
-  const getCacheTypeLabel = (value: CacheType | string) => {
-    return (
-      cacheTypeOptions.find(option => option.value === value)?.label || value
-    );
+  const getCacheTypeLabel = (
+    value: CacheType | string,
+    isValueCache = false,
+  ) => {
+    const options = isValueCache ? cacheTypeVOptions : cacheTypeKOptions;
+    return options.find(option => option.value === value)?.label || value;
   };
 
   const getMmapLabel = (value: 'true' | 'false' | 'smart') => {
     return mmapOptions.find(option => option.value === value)?.label || '';
   };
 
-  const getFlashAttnLabel = (value: 'auto' | 'on' | 'off') => {
-    return flashAttnOptions.find(option => option.value === value)?.label || '';
-  };
-
   const handleMmapPress = () => {
     mmapButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
       setMmapAnchor({x: pageX, y: pageY + height});
       setShowMmapMenu(true);
-    });
-  };
-
-  const handleFlashAttnPress = () => {
-    flashAttnButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setFlashAttnAnchor({x: pageX, y: pageY + height});
-      setShowFlashAttnMenu(true);
     });
   };
 
@@ -579,63 +578,43 @@ export const SettingsScreen: React.FC = observer(() => {
 
                   {/* Flash Attention Type */}
                   <View style={styles.settingItemContainer}>
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <Text variant="titleMedium" style={styles.textLabel}>
-                          Flash Attention
-                        </Text>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {Platform.OS === 'ios'
-                            ? 'Memory-efficient attention (auto-enabled on Metal)'
-                            : 'Must be disabled for OpenCL state save/load'}
-                        </Text>
-                      </View>
-                      <View style={styles.menuContainer}>
-                        <Button
-                          ref={flashAttnButtonRef}
-                          mode="outlined"
-                          onPress={handleFlashAttnPress}
-                          style={styles.menuButton}
-                          contentStyle={styles.buttonContent}
-                          disabled={Platform.OS === 'android'}
-                          icon={({size, color}) => (
-                            <Icon
-                              source="chevron-down"
-                              size={size}
-                              color={color}
-                            />
-                          )}>
-                          {getFlashAttnLabel(
-                            modelStore.contextInitParams.flash_attn_type ??
-                              (Platform.OS === 'ios' ? 'auto' : 'off'),
-                          )}
-                        </Button>
-                        <Menu
-                          visible={showFlashAttnMenu}
-                          onDismiss={() => setShowFlashAttnMenu(false)}
-                          anchor={flashAttnAnchor}
-                          selectable>
-                          {flashAttnOptions.map(option => (
-                            <Menu.Item
-                              key={option.value}
-                              style={styles.menu}
-                              label={option.label}
-                              selected={
-                                option.value ===
-                                (modelStore.contextInitParams.flash_attn_type ??
-                                  (Platform.OS === 'ios' ? 'auto' : 'off'))
-                              }
-                              onPress={() => {
-                                modelStore.setFlashAttnType(option.value);
-                                setShowFlashAttnMenu(false);
-                              }}
-                            />
-                          ))}
-                        </Menu>
-                      </View>
-                    </View>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      Flash Attention
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {Platform.OS === 'ios'
+                        ? 'Memory-efficient attention (auto-enabled on Metal)'
+                        : 'Must be disabled for OpenCL state save/load'}
+                    </Text>
+                    <SegmentedButtons
+                      value={
+                        modelStore.contextInitParams.flash_attn_type ??
+                        (Platform.OS === 'ios' ? 'auto' : 'off')
+                      }
+                      onValueChange={value =>
+                        modelStore.setFlashAttnType(
+                          value as 'auto' | 'on' | 'off',
+                        )
+                      }
+                      density="high"
+                      buttons={[
+                        {
+                          value: 'auto',
+                          label: 'Auto',
+                          disabled: Platform.OS === 'android',
+                        },
+                        {
+                          value: 'on',
+                          label: 'On',
+                          disabled: Platform.OS === 'android',
+                        },
+                        {
+                          value: 'off',
+                          label: 'Off',
+                        },
+                      ]}
+                      style={styles.segmentedButtons}
+                    />
                   </View>
                   <Divider />
 
@@ -676,6 +655,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           )}>
                           {getCacheTypeLabel(
                             modelStore.contextInitParams.cache_type_k,
+                            false,
                           )}
                         </Button>
                         <Menu
@@ -683,7 +663,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           onDismiss={() => setShowKeyCacheMenu(false)}
                           anchor={keyCacheAnchor}
                           selectable>
-                          {cacheTypeOptions.map(option => (
+                          {cacheTypeKOptions.map(option => (
                             <Menu.Item
                               key={option.value}
                               style={styles.menu}
@@ -692,9 +672,12 @@ export const SettingsScreen: React.FC = observer(() => {
                                 option.value ===
                                 modelStore.contextInitParams.cache_type_k
                               }
+                              disabled={option.disabled}
                               onPress={() => {
-                                modelStore.setCacheTypeK(option.value);
-                                setShowKeyCacheMenu(false);
+                                if (!option.disabled) {
+                                  modelStore.setCacheTypeK(option.value);
+                                  setShowKeyCacheMenu(false);
+                                }
                               }}
                             />
                           ))}
@@ -741,6 +724,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           )}>
                           {getCacheTypeLabel(
                             modelStore.contextInitParams.cache_type_v,
+                            true,
                           )}
                         </Button>
                         <Menu
@@ -748,7 +732,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           onDismiss={() => setShowValueCacheMenu(false)}
                           anchor={valueCacheAnchor}
                           selectable>
-                          {cacheTypeOptions.map(option => (
+                          {cacheTypeVOptions.map(option => (
                             <Menu.Item
                               key={option.value}
                               label={option.label}
@@ -757,9 +741,12 @@ export const SettingsScreen: React.FC = observer(() => {
                                 option.value ===
                                 modelStore.contextInitParams.cache_type_v
                               }
+                              disabled={option.disabled}
                               onPress={() => {
-                                modelStore.setCacheTypeV(option.value);
-                                setShowValueCacheMenu(false);
+                                if (!option.disabled) {
+                                  modelStore.setCacheTypeV(option.value);
+                                  setShowValueCacheMenu(false);
+                                }
                               }}
                             />
                           ))}
