@@ -115,17 +115,11 @@ export const SettingsScreen: React.FC = observer(() => {
     x: 0.0,
     y: 0.0,
   });
-  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
-  const [deviceAnchor, setDeviceAnchor] = useState<{x: number; y: number}>({
-    x: 0.0,
-    y: 0.0,
-  });
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
   const mmapButtonRef = useRef<View>(null);
-  const deviceButtonRef = useRef<View>(null);
 
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
@@ -174,7 +168,6 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
     setShowLanguageMenu(false);
-    setShowDeviceMenu(false);
     setShowMmapMenu(false);
   };
 
@@ -238,43 +231,45 @@ export const SettingsScreen: React.FC = observer(() => {
     });
   };
 
-  const handleDevicePress = () => {
-    deviceButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setDeviceAnchor({x: pageX, y: pageY + height});
-      setShowDeviceMenu(true);
-    });
-  };
-
-  const getCurrentDeviceLabel = (): string => {
+  const getCurrentDeviceId = (): string => {
     const devices = modelStore.contextInitParams.devices;
     const nGpuLayers = modelStore.contextInitParams.n_gpu_layers ?? 0;
 
-    if (!devices || devices.length === 0) {
-      // Auto mode
-      if (nGpuLayers === 0) {
-        return l10n.settings.deviceCPUOnly;
+    // iOS
+    if (Platform.OS === 'ios') {
+      if (!devices || devices.length === 0) {
+        return nGpuLayers === 0 ? 'cpu' : 'auto';
       }
-      return Platform.OS === 'ios'
-        ? l10n.settings.deviceAutoMetalGPU
-        : l10n.settings.deviceAuto;
+      if (devices[0] === 'Metal') {
+        return 'gpu';
+      }
+      if (devices[0] === 'CPU') {
+        return 'cpu';
+      }
+      return 'auto';
     }
 
-    // Find matching device option
-    const matchingOption = deviceOptions.find(opt => {
-      if (!opt.devices || opt.devices.length === 0) {
-        return false;
-      }
-      return opt.devices[0] === devices[0];
-    });
+    // Android
+    if (nGpuLayers === 0) {
+      return 'cpu';
+    }
 
-    return matchingOption?.label ?? devices[0] ?? l10n.settings.deviceAuto;
+    if (!devices || devices.length === 0) {
+      return 'auto';
+    }
+
+    if (devices[0].startsWith('HTP')) {
+      return 'hexagon';
+    }
+
+    // GPU device
+    return 'gpu';
   };
 
   const handleDeviceSelect = (option: DeviceOption) => {
     modelStore.setDevices(option.devices);
     modelStore.setNGPULayers(option.n_gpu_layers);
     modelStore.setFlashAttnType(option.flash_attn_type);
-    setShowDeviceMenu(false);
   };
 
   const handleKeyCachePress = () => {
@@ -315,75 +310,41 @@ export const SettingsScreen: React.FC = observer(() => {
               {showGPUSettings && (
                 <>
                   <View style={styles.settingItemContainer}>
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <Text variant="titleMedium" style={styles.textLabel}>
-                          {Platform.OS === 'ios'
-                            ? l10n.settings.deviceSelectionIOS
-                            : l10n.settings.deviceSelection}
-                        </Text>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {Platform.OS === 'ios'
-                            ? l10n.settings.deviceSelectionIOSDescription
-                            : l10n.settings.deviceSelectionAndroidDescription}
-                        </Text>
-                      </View>
-                      <View style={styles.menuContainer}>
-                        <Button
-                          ref={deviceButtonRef}
-                          mode="outlined"
-                          onPress={handleDevicePress}
-                          icon={({size, color}) => (
-                            <Icon
-                              source="chevron-down"
-                              size={size}
-                              color={color}
-                            />
-                          )}>
-                          {getCurrentDeviceLabel()}
-                        </Button>
-                        <Menu
-                          visible={showDeviceMenu}
-                          onDismiss={() => setShowDeviceMenu(false)}
-                          anchor={deviceAnchor}
-                          selectable>
-                          {deviceOptions.map(option => {
-                            const devices =
-                              modelStore.contextInitParams.devices;
-                            const nGpuLayers =
-                              modelStore.contextInitParams.n_gpu_layers ?? 0;
-                            // For iOS: selected based on n_gpu_layers (auto=99, cpu=0)
-                            // For Android: selected based on devices array
-                            const isSelected =
-                              Platform.OS === 'ios'
-                                ? (option.id === 'auto' && nGpuLayers > 0) ||
-                                  (option.id === 'cpu' && nGpuLayers === 0)
-                                : option.id === 'auto' &&
-                                  (!devices || devices.length === 0);
-                            return (
-                              <Menu.Item
-                                key={option.id}
-                                style={styles.menu}
-                                label={option.label}
-                                selected={isSelected}
-                                leadingIcon={
-                                  option.tag === 'Recommended'
-                                    ? 'star'
-                                    : option.tag === 'Fastest'
-                                      ? 'flash'
-                                      : option.tag === 'Experimental'
-                                        ? 'flask'
-                                        : undefined
-                                }
-                                onPress={() => handleDeviceSelect(option)}
-                              />
-                            );
-                          })}
-                        </Menu>
-                      </View>
-                    </View>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.deviceSelectionIOS
+                        : l10n.settings.deviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.deviceSelectionIOSDescription
+                        : l10n.settings.deviceSelectionAndroidDescription}
+                    </Text>
+                    <SegmentedButtons
+                      value={getCurrentDeviceId()}
+                      onValueChange={deviceId => {
+                        const option = deviceOptions.find(
+                          opt => opt.id === deviceId,
+                        );
+                        if (option) {
+                          handleDeviceSelect(option);
+                        }
+                      }}
+                      density="high"
+                      buttons={deviceOptions.map(option => ({
+                        value: option.id,
+                        label: option.label,
+                        // icon:
+                        //   option.tag === 'Recommended'
+                        //     ? 'star'
+                        //     : option.tag === 'Experimental'
+                        //       ? 'flask'
+                        //       : option.tag === 'Stable'
+                        //         ? 'shield-check'
+                        //         : undefined,
+                      }))}
+                      style={styles.segmentedButtons}
+                    />
 
                     {/* GPU Layers Slider - only show if GPU is being used */}
                     {(modelStore.contextInitParams.n_gpu_layers ?? 0) > 0 && (

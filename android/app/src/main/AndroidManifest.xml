@@ -44,9 +44,14 @@
         </intent-filter>
       </activity>
 
-        <!-- Optional native library (not required for most devices) -->
+        <!-- Optional native library for OpenCL (GPU acceleration) -->
         <uses-native-library
             android:name="libOpenCL.so"
+            android:required="false" />
+
+        <!-- Optional native library for Hexagon DSP (NPU acceleration) -->
+        <uses-native-library
+            android:name="libcdsprpc.so"
             android:required="false" />
     </application>
 

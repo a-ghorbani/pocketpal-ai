@@ -45,11 +45,13 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
   const options: DeviceOption[] = [];
 
   if (Platform.OS === 'ios') {
-    // iOS: Simple auto-select only (Metal always available on iOS 18+)
+    // iOS: Three clear options
+
+    // Option 1: Auto (devices: undefined, lets llama.cpp choose)
     options.push({
       id: 'auto',
-      label: 'Auto (Metal GPU)',
-      description: 'Automatically uses Metal GPU acceleration',
+      label: 'Auto',
+      description: 'Automatically selects Metal GPU (Recommended)',
       devices: undefined,
       n_gpu_layers: 99,
       flash_attn_type: 'auto',
@@ -57,77 +59,88 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       platform: 'ios',
     });
 
-    // Optional: CPU-only for testing
+    // Option 2: Metal GPU (explicit devices: ['Metal'])
+    options.push({
+      id: 'gpu',
+      label: 'Metal',
+      description: 'Explicitly use Metal GPU acceleration',
+      devices: ['Metal'],
+      n_gpu_layers: 99,
+      flash_attn_type: 'auto',
+      platform: 'ios',
+    });
+
+    // Option 3: CPU only (n_gpu_layers: 0)
     options.push({
       id: 'cpu',
-      label: 'CPU Only',
-      description: 'Use CPU only (slower, for testing)',
-      devices: undefined,
+      label: 'CPU',
+      description: 'CPU only (slower, for testing or compatibility)',
+      devices: ['CPU'],
       n_gpu_layers: 0,
       flash_attn_type: 'auto',
-      tag: 'Compatible',
       platform: 'ios',
     });
 
     return options;
   }
 
-  // Android: More complex options based on available devices
+  // Android: Build options based on available devices
   const devices = await getAvailableDevices();
-
-  // Option 1: Auto (always available, recommended)
   const hasGpu = devices.some(d => d.type === 'gpu');
+  const hexagonDevs = devices.filter(d => d.deviceName?.startsWith('HTP'));
+  const hasHexagon = hexagonDevs.length > 0;
+  const gpuDev = devices.find(d => d.type === 'gpu');
+
+  // Option 1: Auto (Recommended - uses GPU if available)
   options.push({
     id: 'auto',
-    label: 'Auto (Recommended)',
+    label: 'Auto',
     description: hasGpu
-      ? 'Automatically uses GPU if available'
-      : 'Automatically selects best device',
+      ? 'Automatically uses OpenCL GPU (Best for Q4_0/Q6_K)'
+      : 'Automatically selects best available device',
     devices: undefined,
     n_gpu_layers: hasGpu ? 99 : 0,
-    flash_attn_type: 'off',
+    flash_attn_type: 'off', // Required for OpenCL
     tag: 'Recommended',
     platform: 'android',
   });
 
-  // Option 2: Hexagon NPU (if available)
-  const hexagonDevs = devices.filter(d => d.deviceName?.startsWith('HTP'));
-  if (hexagonDevs.length > 0) {
-    options.push({
-      id: 'hexagon',
-      label: 'Hexagon NPU',
-      description: 'Fastest, but experimental and may be unstable',
-      devices: ['HTP*'], // Wildcard for all HTP devices
-      n_gpu_layers: 99,
-      flash_attn_type: 'off',
-      tag: 'Fastest',
-      experimental: true,
-      platform: 'android',
-      deviceInfo: hexagonDevs[0],
-    });
-  }
-
-  // Option 3: GPU (if available)
-  const gpuDev = devices.find(d => d.type === 'gpu');
+  // Option 2: GPU/OpenCL (if available)
   if (gpuDev) {
     options.push({
       id: 'gpu',
-      label: `${gpuDev.deviceName || 'GPU'}`,
-      description: 'Stable GPU acceleration (OpenCL)',
+      label: `GPU (${gpuDev.deviceName || 'OpenCL'})`,
+      description: 'OpenCL GPU acceleration (Only for Q4_0/Q6_K models)',
       devices: [gpuDev.deviceName!],
       n_gpu_layers: 99,
-      flash_attn_type: 'off',
+      flash_attn_type: 'off', // Required for OpenCL
       tag: 'Stable',
       platform: 'android',
       deviceInfo: gpuDev,
     });
   }
 
-  // Option 4: CPU (always available)
+  // Option 3: Hexagon NPU (if available)
+  if (hasHexagon) {
+    options.push({
+      id: 'hexagon',
+      label: 'Hexagon NPU',
+      description: 'Qualcomm NPU (Experimental, fastest but may be unstable)',
+      devices: ['HTP*'], // Wildcard for all HTP devices
+      n_gpu_layers: 99,
+      flash_attn_type: 'off',
+      tag: 'Experimental',
+      experimental: true,
+      platform: 'android',
+      deviceInfo: hexagonDevs[0],
+    });
+  }
+
+  // Option 4: CPU Only (always available)
   options.push({
     id: 'cpu',
     label: 'CPU Only',
-    description: 'Slower, but works on all devices',
+    description: 'CPU only (Slowest, but works with all models)',
     devices: undefined,
     n_gpu_layers: 0,
     flash_attn_type: 'off',
