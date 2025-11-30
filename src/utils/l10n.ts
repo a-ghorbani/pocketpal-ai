@@ -52,6 +52,15 @@ export const l10n = {
         'Note: Pure Q4_0 quantized models perform best with OpenCL.',
       openCLDocsLink: 'See llama.cpp OpenCL docs for details.',
       layersOnGPU: 'Layers on GPU: {{gpuLayers}}',
+      // Device Selection
+      deviceSelection: 'Device Selection',
+      deviceSelectionIOS: 'Device (Metal)',
+      deviceSelectionIOSDescription: 'Choose Metal GPU or CPU-only mode',
+      deviceSelectionAndroidDescription:
+        'Select compute device (Auto, GPU, Hexagon NPU, or CPU)',
+      deviceAuto: 'Auto',
+      deviceAutoMetalGPU: 'Auto (Metal GPU)',
+      deviceCPUOnly: 'CPU Only',
       // Context Size
       contextSize: 'Context Size',
       contextSizePlaceholder: 'Enter context size (min {{minContextSize}})',
@@ -75,6 +84,13 @@ export const l10n = {
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: 'Enable Flash Attention for faster processing',
+      flashAttentionIOSDescription:
+        'Memory-efficient attention (auto-enabled on Metal)',
+      flashAttentionAndroidDescription:
+        'Must be disabled for OpenCL state save/load',
+      flashAttentionAuto: 'Auto',
+      flashAttentionOn: 'On',
+      flashAttentionOff: 'Off',
       // Cache Type K
       keyCacheType: 'Key Cache Type',
       keyCacheTypeDescription: 'Select the cache type for key computation',
@@ -102,6 +118,14 @@ export const l10n = {
         'Automatically choose based on model type (Android only)',
       useMmapRecommended:
         'Recommended for performance - Memory-mapped with locked pages. Combines fast loading with consistent performance',
+      // Unified KV Cache
+      unifiedKVCache: 'Unified KV Cache',
+      unifiedKVCacheDescription:
+        'Saves ~7GB memory by using a single KV cache stream. Highly recommended for mobile devices.',
+      unifiedKVCacheWarningTitle: 'High Memory Usage Warning',
+      unifiedKVCacheWarningMessage:
+        'Disabling unified KV cache will use ~8x more memory (~7GB additional). This may cause out-of-memory errors.\n\nOnly disable if you need 8+ parallel conversations simultaneously.\n\nContinue?',
+      unifiedKVCacheDisable: 'Disable',
       // Model Loading Settings
       modelLoadingSettings: 'Model Loading Settings',
       // Auto Offload/Load
@@ -1324,6 +1348,15 @@ export const l10n = {
         '注：純粋なQ4_0量子化モデルがOpenCLで最高のパフォーマンスを発揮します。',
       openCLDocsLink: '詳細はllama.cpp OpenCLドキュメントをご覧ください。',
       layersOnGPU: 'GPUレイヤー：{{gpuLayers}}',
+      // Device Selection
+      deviceSelection: 'デバイス選択',
+      deviceSelectionIOS: 'デバイス（Metal）',
+      deviceSelectionIOSDescription: 'Metal GPUまたはCPUのみモードを選択',
+      deviceSelectionAndroidDescription:
+        '計算デバイスを選択（自動、GPU、Hexagon NPU、またはCPU）',
+      deviceAuto: '自動',
+      deviceAutoMetalGPU: '自動（Metal GPU）',
+      deviceCPUOnly: 'CPUのみ',
       // Context Size
       contextSize: 'コンテキストサイズ',
       contextSizePlaceholder:
@@ -1348,6 +1381,13 @@ export const l10n = {
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: '高速処理のためのFlash Attentionを有効化',
+      flashAttentionIOSDescription:
+        'メモリ効率的なアテンション（Metalで自動有効化）',
+      flashAttentionAndroidDescription:
+        'OpenCL状態の保存/読み込みには無効化が必要',
+      flashAttentionAuto: '自動',
+      flashAttentionOn: 'オン',
+      flashAttentionOff: 'オフ',
       // Cache Type K
       keyCacheType: 'キーキャッシュタイプ',
       keyCacheTypeDescription: 'キー計算用のキャッシュタイプを選択',
@@ -1374,6 +1414,14 @@ export const l10n = {
       useMmapSmartDescription: 'モデルタイプに基づいて自動選択（Androidのみ）',
       useMmapRecommended:
         'パフォーマンス推奨 - ロックされたページでメモリマップ。高速読み込みと一貫したパフォーマンスを組み合わせます',
+      // Unified KV Cache
+      unifiedKVCache: '統合KVキャッシュ',
+      unifiedKVCacheDescription:
+        '単一のKVキャッシュストリームを使用して約7GBのメモリを節約します。モバイルデバイスに強く推奨されます。',
+      unifiedKVCacheWarningTitle: '高メモリ使用量警告',
+      unifiedKVCacheWarningMessage:
+        '統合KVキャッシュを無効にすると、約8倍のメモリ（約7GB追加）を使用します。メモリ不足エラーが発生する可能性があります。\n\n8つ以上の並列会話が同時に必要な場合にのみ無効にしてください。\n\n続行しますか？',
+      unifiedKVCacheDisable: '無効化',
       // Model Loading Settings
       modelLoadingSettings: 'モデル読み込み設定',
       // Auto Offload/Load
@@ -2601,6 +2649,15 @@ export const l10n = {
       openCLQuantizationNote: '注意：纯Q4_0量化模型在OpenCL上性能最佳。',
       openCLDocsLink: '详情请参阅llama.cpp OpenCL文档。',
       layersOnGPU: 'GPU层数：{{gpuLayers}}',
+      // Device Selection
+      deviceSelection: '设备选择',
+      deviceSelectionIOS: '设备（Metal）',
+      deviceSelectionIOSDescription: '选择Metal GPU或仅CPU模式',
+      deviceSelectionAndroidDescription:
+        '选择计算设备（自动、GPU、Hexagon NPU或CPU）',
+      deviceAuto: '自动',
+      deviceAutoMetalGPU: '自动（Metal GPU）',
+      deviceCPUOnly: '仅CPU',
       // Context Size
       contextSize: '上下文长度',
       contextSizePlaceholder: '输入上下文长度（最小{{minContextSize}}）',
@@ -2623,6 +2680,11 @@ export const l10n = {
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: '启用Flash Attention以加快处理速度',
+      flashAttentionIOSDescription: '内存高效注意力（Metal上自动启用）',
+      flashAttentionAndroidDescription: 'OpenCL状态保存/加载必须禁用',
+      flashAttentionAuto: '自动',
+      flashAttentionOn: '开启',
+      flashAttentionOff: '关闭',
       // Cache Type K
       keyCacheType: '键缓存类型',
       keyCacheTypeDescription: '选择键计算的缓存类型',
@@ -2645,6 +2707,14 @@ export const l10n = {
       useMmapSmartDescription: '根据模型类型自动选择（仅限Android）',
       useMmapRecommended:
         '推荐性能设置 - 带锁定页面的内存映射。结合快速加载和一致的性能',
+      // Unified KV Cache
+      unifiedKVCache: '统一KV缓存',
+      unifiedKVCacheDescription:
+        '通过使用单个KV缓存流节省约7GB内存。强烈推荐移动设备使用。',
+      unifiedKVCacheWarningTitle: '高内存使用警告',
+      unifiedKVCacheWarningMessage:
+        '禁用统一KV缓存将使用约8倍内存（额外约7GB）。这可能导致内存不足错误。\n\n仅在需要同时进行8个以上并行对话时禁用。\n\n继续吗？',
+      unifiedKVCacheDisable: '禁用',
       // Model Loading Settings
       modelLoadingSettings: '模型加载设置',
       // Auto Offload/Load

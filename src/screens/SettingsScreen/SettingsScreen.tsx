@@ -252,9 +252,11 @@ export const SettingsScreen: React.FC = observer(() => {
     if (!devices || devices.length === 0) {
       // Auto mode
       if (nGpuLayers === 0) {
-        return 'CPU Only';
+        return l10n.settings.deviceCPUOnly;
       }
-      return Platform.OS === 'ios' ? 'Auto (Metal GPU)' : 'Auto';
+      return Platform.OS === 'ios'
+        ? l10n.settings.deviceAutoMetalGPU
+        : l10n.settings.deviceAuto;
     }
 
     // Find matching device option
@@ -265,7 +267,7 @@ export const SettingsScreen: React.FC = observer(() => {
       return opt.devices[0] === devices[0];
     });
 
-    return matchingOption?.label ?? devices[0] ?? 'Auto';
+    return matchingOption?.label ?? devices[0] ?? l10n.settings.deviceAuto;
   };
 
   const handleDeviceSelect = (option: DeviceOption) => {
@@ -317,15 +319,15 @@ export const SettingsScreen: React.FC = observer(() => {
                       <View style={styles.textContainer}>
                         <Text variant="titleMedium" style={styles.textLabel}>
                           {Platform.OS === 'ios'
-                            ? 'Device (Metal)'
-                            : 'Device Selection'}
+                            ? l10n.settings.deviceSelectionIOS
+                            : l10n.settings.deviceSelection}
                         </Text>
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
                           {Platform.OS === 'ios'
-                            ? 'Choose Metal GPU or CPU-only mode'
-                            : 'Select compute device (Auto, GPU, Hexagon NPU, or CPU)'}
+                            ? l10n.settings.deviceSelectionIOSDescription
+                            : l10n.settings.deviceSelectionAndroidDescription}
                         </Text>
                       </View>
                       <View style={styles.menuContainer}>
@@ -579,12 +581,12 @@ export const SettingsScreen: React.FC = observer(() => {
                   {/* Flash Attention Type */}
                   <View style={styles.settingItemContainer}>
                     <Text variant="titleMedium" style={styles.textLabel}>
-                      Flash Attention
+                      {l10n.settings.flashAttention}
                     </Text>
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {Platform.OS === 'ios'
-                        ? 'Memory-efficient attention (auto-enabled on Metal)'
-                        : 'Must be disabled for OpenCL state save/load'}
+                        ? l10n.settings.flashAttentionIOSDescription
+                        : l10n.settings.flashAttentionAndroidDescription}
                     </Text>
                     <SegmentedButtons
                       value={
@@ -600,17 +602,17 @@ export const SettingsScreen: React.FC = observer(() => {
                       buttons={[
                         {
                           value: 'auto',
-                          label: 'Auto',
+                          label: l10n.settings.flashAttentionAuto,
                           disabled: Platform.OS === 'android',
                         },
                         {
                           value: 'on',
-                          label: 'On',
+                          label: l10n.settings.flashAttentionOn,
                           disabled: Platform.OS === 'android',
                         },
                         {
                           value: 'off',
-                          label: 'Off',
+                          label: l10n.settings.flashAttentionOff,
                         },
                       ]}
                       style={styles.segmentedButtons}
@@ -837,11 +839,10 @@ export const SettingsScreen: React.FC = observer(() => {
                 <View style={styles.switchContainer}>
                   <View style={styles.textContainer}>
                     <Text variant="titleMedium" style={styles.textLabel}>
-                      Unified KV Cache
+                      {l10n.settings.unifiedKVCache}
                     </Text>
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      Saves ~7GB memory by using a single KV cache stream.
-                      Highly recommended for mobile devices.
+                      {l10n.settings.unifiedKVCacheDescription}
                     </Text>
                   </View>
                   <Switch
@@ -851,12 +852,12 @@ export const SettingsScreen: React.FC = observer(() => {
                       if (!value) {
                         // Warn user about memory impact
                         Alert.alert(
-                          'High Memory Usage Warning',
-                          'Disabling unified KV cache will use ~8x more memory (~7GB additional). This may cause out-of-memory errors.\n\nOnly disable if you need 8+ parallel conversations simultaneously.\n\nContinue?',
+                          l10n.settings.unifiedKVCacheWarningTitle,
+                          l10n.settings.unifiedKVCacheWarningMessage,
                           [
-                            {text: 'Cancel', style: 'cancel'},
+                            {text: l10n.common.cancel, style: 'cancel'},
                             {
-                              text: 'Disable',
+                              text: l10n.settings.unifiedKVCacheDisable,
                               style: 'destructive',
                               onPress: () => modelStore.setKvUnified(false),
                             },
