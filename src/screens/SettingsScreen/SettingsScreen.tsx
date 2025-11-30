@@ -834,42 +834,6 @@ export const SettingsScreen: React.FC = observer(() => {
               </View>
               <Divider />
 
-              {/* Unified KV Cache */}
-              <View style={styles.settingItemContainer}>
-                <View style={styles.switchContainer}>
-                  <View style={styles.textContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.unifiedKVCache}
-                    </Text>
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.unifiedKVCacheDescription}
-                    </Text>
-                  </View>
-                  <Switch
-                    testID="kv-unified-switch"
-                    value={modelStore.contextInitParams.kv_unified ?? true}
-                    onValueChange={value => {
-                      if (!value) {
-                        // Warn user about memory impact
-                        Alert.alert(
-                          l10n.settings.unifiedKVCacheWarningTitle,
-                          l10n.settings.unifiedKVCacheWarningMessage,
-                          [
-                            {text: l10n.common.cancel, style: 'cancel'},
-                            {
-                              text: l10n.settings.unifiedKVCacheDisable,
-                              style: 'destructive',
-                              onPress: () => modelStore.setKvUnified(false),
-                            },
-                          ],
-                        );
-                      } else {
-                        modelStore.setKvUnified(true);
-                      }
-                    }}
-                  />
-                </View>
-              </View>
               <Text variant="labelSmall" style={styles.textDescription}>
                 {l10n.settings.modelReloadNotice}
               </Text>

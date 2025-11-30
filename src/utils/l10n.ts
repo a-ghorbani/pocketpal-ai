@@ -118,14 +118,6 @@ export const l10n = {
         'Automatically choose based on model type (Android only)',
       useMmapRecommended:
         'Recommended for performance - Memory-mapped with locked pages. Combines fast loading with consistent performance',
-      // Unified KV Cache
-      unifiedKVCache: 'Unified KV Cache',
-      unifiedKVCacheDescription:
-        'Saves ~7GB memory by using a single KV cache stream. Highly recommended for mobile devices.',
-      unifiedKVCacheWarningTitle: 'High Memory Usage Warning',
-      unifiedKVCacheWarningMessage:
-        'Disabling unified KV cache will use ~8x more memory (~7GB additional). This may cause out-of-memory errors.\n\nOnly disable if you need 8+ parallel conversations simultaneously.\n\nContinue?',
-      unifiedKVCacheDisable: 'Disable',
       // Model Loading Settings
       modelLoadingSettings: 'Model Loading Settings',
       // Auto Offload/Load
@@ -1414,14 +1406,6 @@ export const l10n = {
       useMmapSmartDescription: 'モデルタイプに基づいて自動選択（Androidのみ）',
       useMmapRecommended:
         'パフォーマンス推奨 - ロックされたページでメモリマップ。高速読み込みと一貫したパフォーマンスを組み合わせます',
-      // Unified KV Cache
-      unifiedKVCache: '統合KVキャッシュ',
-      unifiedKVCacheDescription:
-        '単一のKVキャッシュストリームを使用して約7GBのメモリを節約します。モバイルデバイスに強く推奨されます。',
-      unifiedKVCacheWarningTitle: '高メモリ使用量警告',
-      unifiedKVCacheWarningMessage:
-        '統合KVキャッシュを無効にすると、約8倍のメモリ（約7GB追加）を使用します。メモリ不足エラーが発生する可能性があります。\n\n8つ以上の並列会話が同時に必要な場合にのみ無効にしてください。\n\n続行しますか？',
-      unifiedKVCacheDisable: '無効化',
       // Model Loading Settings
       modelLoadingSettings: 'モデル読み込み設定',
       // Auto Offload/Load
@@ -2707,14 +2691,6 @@ export const l10n = {
       useMmapSmartDescription: '根据模型类型自动选择（仅限Android）',
       useMmapRecommended:
         '推荐性能设置 - 带锁定页面的内存映射。结合快速加载和一致的性能',
-      // Unified KV Cache
-      unifiedKVCache: '统一KV缓存',
-      unifiedKVCacheDescription:
-        '通过使用单个KV缓存流节省约7GB内存。强烈推荐移动设备使用。',
-      unifiedKVCacheWarningTitle: '高内存使用警告',
-      unifiedKVCacheWarningMessage:
-        '禁用统一KV缓存将使用约8倍内存（额外约7GB）。这可能导致内存不足错误。\n\n仅在需要同时进行8个以上并行对话时禁用。\n\n继续吗？',
-      unifiedKVCacheDisable: '禁用',
       // Model Loading Settings
       modelLoadingSettings: '模型加载设置',
       // Auto Offload/Load
