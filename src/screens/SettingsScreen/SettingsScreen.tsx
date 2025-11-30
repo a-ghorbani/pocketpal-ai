@@ -48,6 +48,7 @@ import {
 } from '../../utils';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
+import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
 
 // Language display names in their native form
 const languageNames: Record<AvailableLanguage, string> = {
@@ -83,13 +84,9 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
+  const [showFlashAttnMenu, setShowFlashAttnMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
-  const [deviceCapabilities, setDeviceCapabilities] = useState<{
-    hasAdreno: boolean;
-    hasI8mm: boolean;
-    hasDotProd: boolean;
-  } | null>(null);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
     y: 0,
@@ -106,10 +103,25 @@ export const SettingsScreen: React.FC = observer(() => {
     x: 0.0,
     y: 0.0,
   });
+  const [flashAttnAnchor, setFlashAttnAnchor] = useState<{
+    x: number;
+    y: number;
+  }>({
+    x: 0.0,
+    y: 0.0,
+  });
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+  const [deviceAnchor, setDeviceAnchor] = useState<{x: number; y: number}>({
+    x: 0.0,
+    y: 0.0,
+  });
+  const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
   const mmapButtonRef = useRef<View>(null);
+  const flashAttnButtonRef = useRef<View>(null);
+  const deviceButtonRef = useRef<View>(null);
 
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
@@ -123,34 +135,25 @@ export const SettingsScreen: React.FC = observer(() => {
     // Check for GPU support (Metal on iOS 18+, OpenCL on Android with Adreno + CPU features)
     const checkGpuCapabilities = async () => {
       const gpuCapabilities = await checkGpuSupport();
-
       setGpuSupported(gpuCapabilities.isSupported);
-
-      // Store device capabilities for displaying appropriate error messages
-      if (gpuCapabilities.details) {
-        setDeviceCapabilities({
-          hasAdreno: gpuCapabilities.details.hasAdreno ?? false,
-          hasI8mm: gpuCapabilities.details.hasI8mm ?? false,
-          hasDotProd: gpuCapabilities.details.hasDotProd ?? false,
-        });
-      }
-
-      // If GPU is not supported but currently enabled,
-      // automatically disable it to prevent using non-functional GPU acceleration
-      if (
-        !gpuCapabilities.isSupported &&
-        modelStore.contextInitParams.no_gpu_devices === false
-      ) {
-        modelStore.setNoGpuDevices(true);
-        modelStore.setNGPULayers(0);
-      }
     };
 
     checkGpuCapabilities().catch(error => {
       console.warn('Failed to check GPU capabilities:', error);
       setGpuSupported(false);
-      setDeviceCapabilities(null);
     });
+
+    // Load available device options
+    const loadDeviceOptions = async () => {
+      try {
+        const options = await getDeviceOptions();
+        setDeviceOptions(options);
+      } catch (error) {
+        console.warn('Failed to load device options:', error);
+      }
+    };
+
+    loadDeviceOptions();
   }, []);
 
   useEffect(() => {
@@ -167,7 +170,9 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
     setShowLanguageMenu(false);
+    setShowDeviceMenu(false);
     setShowMmapMenu(false);
+    setShowFlashAttnMenu(false);
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -200,6 +205,12 @@ export const SettingsScreen: React.FC = observer(() => {
       : []),
   ];
 
+  const flashAttnOptions = [
+    {label: 'Auto (Recommended)', value: 'auto' as const},
+    {label: 'Enabled', value: 'on' as const},
+    {label: 'Disabled', value: 'off' as const},
+  ];
+
   const getCacheTypeLabel = (value: CacheType | string) => {
     return (
       cacheTypeOptions.find(option => option.value === value)?.label || value
@@ -210,11 +221,59 @@ export const SettingsScreen: React.FC = observer(() => {
     return mmapOptions.find(option => option.value === value)?.label || '';
   };
 
+  const getFlashAttnLabel = (value: 'auto' | 'on' | 'off') => {
+    return flashAttnOptions.find(option => option.value === value)?.label || '';
+  };
+
   const handleMmapPress = () => {
     mmapButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
       setMmapAnchor({x: pageX, y: pageY + height});
       setShowMmapMenu(true);
     });
+  };
+
+  const handleFlashAttnPress = () => {
+    flashAttnButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+      setFlashAttnAnchor({x: pageX, y: pageY + height});
+      setShowFlashAttnMenu(true);
+    });
+  };
+
+  const handleDevicePress = () => {
+    deviceButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
+      setDeviceAnchor({x: pageX, y: pageY + height});
+      setShowDeviceMenu(true);
+    });
+  };
+
+  const getCurrentDeviceLabel = (): string => {
+    const devices = modelStore.contextInitParams.devices;
+    const nGpuLayers = modelStore.contextInitParams.n_gpu_layers ?? 0;
+
+    if (!devices || devices.length === 0) {
+      // Auto mode
+      if (nGpuLayers === 0) {
+        return 'CPU Only';
+      }
+      return Platform.OS === 'ios' ? 'Auto (Metal GPU)' : 'Auto';
+    }
+
+    // Find matching device option
+    const matchingOption = deviceOptions.find(opt => {
+      if (!opt.devices || opt.devices.length === 0) {
+        return false;
+      }
+      return opt.devices[0] === devices[0];
+    });
+
+    return matchingOption?.label ?? devices[0] ?? 'Auto';
+  };
+
+  const handleDeviceSelect = (option: DeviceOption) => {
+    modelStore.setDevices(option.devices);
+    modelStore.setNGPULayers(option.n_gpu_layers);
+    modelStore.setFlashAttnType(option.flash_attn_type);
+    setShowDeviceMenu(false);
   };
 
   const handleKeyCachePress = () => {
@@ -240,43 +299,8 @@ export const SettingsScreen: React.FC = observer(() => {
     });
   };
 
-  const isIOS18OrHigher =
-    Platform.OS === 'ios' && parseInt(Platform.Version as string, 10) >= 18;
-
   // Show GPU settings for iOS or Android (always show on Android to explain why it's not available)
   const showGPUSettings = Platform.OS === 'ios' || Platform.OS === 'android';
-
-  // Determine GPU label and description based on platform and availability
-  const gpuLabel =
-    Platform.OS === 'ios'
-      ? l10n.settings.metal
-      : l10n.settings.openCL || 'OpenCL';
-
-  // Determine the appropriate description based on platform and GPU support
-  let gpuDescription = '';
-  if (Platform.OS === 'ios') {
-    gpuDescription = isIOS18OrHigher
-      ? l10n.settings.metalDescription
-      : l10n.settings.metalRequiresNewerIOS;
-  } else if (Platform.OS === 'android') {
-    if (gpuSupported) {
-      gpuDescription = l10n.settings.openCLDescription;
-    } else if (deviceCapabilities) {
-      // Explain why OpenCL is not available
-      if (!deviceCapabilities.hasAdreno) {
-        gpuDescription = l10n.settings.openCLNotAvailable;
-      } else if (
-        !deviceCapabilities.hasI8mm ||
-        !deviceCapabilities.hasDotProd
-      ) {
-        gpuDescription = l10n.settings.openCLMissingCPUFeatures;
-      } else {
-        gpuDescription = l10n.settings.openCLNotAvailable;
-      }
-    } else {
-      gpuDescription = l10n.settings.openCLNotAvailable;
-    }
-  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -286,78 +310,134 @@ export const SettingsScreen: React.FC = observer(() => {
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.modelInitializationSettings} />
             <Card.Content>
-              {/* GPU Settings (iOS Metal or Android OpenCL) */}
+              {/* Device Selection */}
               {showGPUSettings && (
                 <>
                   <View style={styles.settingItemContainer}>
                     <View style={styles.switchContainer}>
                       <View style={styles.textContainer}>
                         <Text variant="titleMedium" style={styles.textLabel}>
-                          {gpuLabel}
+                          {Platform.OS === 'ios'
+                            ? 'Device (Metal)'
+                            : 'Device Selection'}
                         </Text>
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {gpuDescription}
+                          {Platform.OS === 'ios'
+                            ? 'Choose Metal GPU or CPU-only mode'
+                            : 'Select compute device (Auto, GPU, Hexagon NPU, or CPU)'}
                         </Text>
                       </View>
-                      <Switch
-                        testID="gpu-acceleration-switch"
-                        value={
-                          modelStore.contextInitParams.no_gpu_devices === false
-                        }
-                        onValueChange={value =>
-                          modelStore.setNoGpuDevices(!value)
-                        }
-                        disabled={!gpuSupported}
-                      />
+                      <View style={styles.menuContainer}>
+                        <Button
+                          ref={deviceButtonRef}
+                          mode="outlined"
+                          onPress={handleDevicePress}
+                          icon={({size, color}) => (
+                            <Icon
+                              source="chevron-down"
+                              size={size}
+                              color={color}
+                            />
+                          )}>
+                          {getCurrentDeviceLabel()}
+                        </Button>
+                        <Menu
+                          visible={showDeviceMenu}
+                          onDismiss={() => setShowDeviceMenu(false)}
+                          anchor={deviceAnchor}
+                          selectable>
+                          {deviceOptions.map(option => {
+                            const devices =
+                              modelStore.contextInitParams.devices;
+                            const nGpuLayers =
+                              modelStore.contextInitParams.n_gpu_layers ?? 0;
+                            // For iOS: selected based on n_gpu_layers (auto=99, cpu=0)
+                            // For Android: selected based on devices array
+                            const isSelected =
+                              Platform.OS === 'ios'
+                                ? (option.id === 'auto' && nGpuLayers > 0) ||
+                                  (option.id === 'cpu' && nGpuLayers === 0)
+                                : option.id === 'auto' &&
+                                  (!devices || devices.length === 0);
+                            return (
+                              <Menu.Item
+                                key={option.id}
+                                style={styles.menu}
+                                label={option.label}
+                                selected={isSelected}
+                                leadingIcon={
+                                  option.tag === 'Recommended'
+                                    ? 'star'
+                                    : option.tag === 'Fastest'
+                                      ? 'flash'
+                                      : option.tag === 'Experimental'
+                                        ? 'flask'
+                                        : undefined
+                                }
+                                onPress={() => handleDeviceSelect(option)}
+                              />
+                            );
+                          })}
+                        </Menu>
+                      </View>
                     </View>
-                    <InputSlider
-                      testID="gpu-layers-slider"
-                      disabled={
-                        modelStore.contextInitParams.no_gpu_devices !== false
-                      }
-                      value={modelStore.contextInitParams.n_gpu_layers}
-                      onValueChange={value =>
-                        modelStore.setNGPULayers(Math.round(value))
-                      }
-                      min={1}
-                      max={100}
-                      step={1}
-                    />
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.layersOnGPU.replace(
-                        '{{gpuLayers}}',
-                        modelStore.contextInitParams.n_gpu_layers.toString(),
-                      )}
-                    </Text>
-                    {Platform.OS === 'android' && gpuSupported && (
-                      <View>
+
+                    {/* GPU Layers Slider - only show if GPU is being used */}
+                    {(modelStore.contextInitParams.n_gpu_layers ?? 0) > 0 && (
+                      <>
+                        <InputSlider
+                          testID="gpu-layers-slider"
+                          value={modelStore.contextInitParams.n_gpu_layers}
+                          onValueChange={value =>
+                            modelStore.setNGPULayers(Math.round(value))
+                          }
+                          min={1}
+                          max={100}
+                          step={1}
+                        />
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {l10n.settings.openCLQuantizationNote}
+                          {l10n.settings.layersOnGPU.replace(
+                            '{{gpuLayers}}',
+                            modelStore.contextInitParams.n_gpu_layers.toString(),
+                          )}
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
-                          style={styles.linkContainer}>
+                      </>
+                    )}
+
+                    {/* OpenCL quantization note for Android */}
+                    {Platform.OS === 'android' &&
+                      gpuSupported &&
+                      (modelStore.contextInitParams.n_gpu_layers ?? 0) > 0 && (
+                        <View>
                           <Text
                             variant="labelSmall"
-                            style={[
-                              styles.textDescription,
-                              {color: theme.colors.primary},
-                            ]}>
-                            {l10n.settings.openCLDocsLink}
+                            style={styles.textDescription}>
+                            {l10n.settings.openCLQuantizationNote}
                           </Text>
-                          <LinkExternalIcon
-                            width={12}
-                            height={12}
-                            stroke={theme.colors.primary}
-                            style={styles.linkIcon}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
+                            style={styles.linkContainer}>
+                            <Text
+                              variant="labelSmall"
+                              style={[
+                                styles.textDescription,
+                                {color: theme.colors.primary},
+                              ]}>
+                              {l10n.settings.openCLDocsLink}
+                            </Text>
+                            <LinkExternalIcon
+                              width={12}
+                              height={12}
+                              stroke={theme.colors.primary}
+                              style={styles.linkIcon}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                   </View>
                   <Divider />
                 </>
@@ -497,24 +577,64 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Divider />
 
-                  {/* Flash Attention and Cache Types */}
+                  {/* Flash Attention Type */}
                   <View style={styles.settingItemContainer}>
                     <View style={styles.switchContainer}>
                       <View style={styles.textContainer}>
                         <Text variant="titleMedium" style={styles.textLabel}>
-                          {l10n.settings.flashAttention}
+                          Flash Attention
                         </Text>
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {l10n.settings.flashAttentionDescription}
+                          {Platform.OS === 'ios'
+                            ? 'Memory-efficient attention (auto-enabled on Metal)'
+                            : 'Must be disabled for OpenCL state save/load'}
                         </Text>
                       </View>
-                      <Switch
-                        testID="flash-attention-switch"
-                        value={modelStore.contextInitParams.flash_attn}
-                        onValueChange={value => modelStore.setFlashAttn(value)}
-                      />
+                      <View style={styles.menuContainer}>
+                        <Button
+                          ref={flashAttnButtonRef}
+                          mode="outlined"
+                          onPress={handleFlashAttnPress}
+                          style={styles.menuButton}
+                          contentStyle={styles.buttonContent}
+                          disabled={Platform.OS === 'android'}
+                          icon={({size, color}) => (
+                            <Icon
+                              source="chevron-down"
+                              size={size}
+                              color={color}
+                            />
+                          )}>
+                          {getFlashAttnLabel(
+                            modelStore.contextInitParams.flash_attn_type ??
+                              (Platform.OS === 'ios' ? 'auto' : 'off'),
+                          )}
+                        </Button>
+                        <Menu
+                          visible={showFlashAttnMenu}
+                          onDismiss={() => setShowFlashAttnMenu(false)}
+                          anchor={flashAttnAnchor}
+                          selectable>
+                          {flashAttnOptions.map(option => (
+                            <Menu.Item
+                              key={option.value}
+                              style={styles.menu}
+                              label={option.label}
+                              selected={
+                                option.value ===
+                                (modelStore.contextInitParams.flash_attn_type ??
+                                  (Platform.OS === 'ios' ? 'auto' : 'off'))
+                              }
+                              onPress={() => {
+                                modelStore.setFlashAttnType(option.value);
+                                setShowFlashAttnMenu(false);
+                              }}
+                            />
+                          ))}
+                        </Menu>
+                      </View>
                     </View>
                   </View>
                   <Divider />
@@ -529,7 +649,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {modelStore.contextInitParams.flash_attn
+                          {modelStore.contextInitParams.flash_attn_type &&
+                          modelStore.contextInitParams.flash_attn_type !== 'off'
                             ? l10n.settings.keyCacheTypeDescription
                             : l10n.settings.keyCacheTypeDisabledDescription}
                         </Text>
@@ -541,7 +662,11 @@ export const SettingsScreen: React.FC = observer(() => {
                           onPress={handleKeyCachePress}
                           style={styles.menuButton}
                           contentStyle={styles.buttonContent}
-                          disabled={!modelStore.contextInitParams.flash_attn}
+                          disabled={
+                            !modelStore.contextInitParams.flash_attn_type ||
+                            modelStore.contextInitParams.flash_attn_type ===
+                              'off'
+                          }
                           icon={({size, color}) => (
                             <Icon
                               source="chevron-down"
@@ -589,7 +714,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         <Text
                           variant="labelSmall"
                           style={styles.textDescription}>
-                          {modelStore.contextInitParams.flash_attn
+                          {modelStore.contextInitParams.flash_attn_type &&
+                          modelStore.contextInitParams.flash_attn_type !== 'off'
                             ? l10n.settings.valueCacheTypeDescription
                             : l10n.settings.valueCacheTypeDisabledDescription}
                         </Text>
@@ -601,7 +727,11 @@ export const SettingsScreen: React.FC = observer(() => {
                           onPress={handleValueCachePress}
                           style={styles.menuButton}
                           contentStyle={styles.buttonContent}
-                          disabled={!modelStore.contextInitParams.flash_attn}
+                          disabled={
+                            !modelStore.contextInitParams.flash_attn_type ||
+                            modelStore.contextInitParams.flash_attn_type ===
+                              'off'
+                          }
                           icon={({size, color}) => (
                             <Icon
                               source="chevron-down"
@@ -711,6 +841,45 @@ export const SettingsScreen: React.FC = observer(() => {
                       ))}
                     </Menu>
                   </View>
+                </View>
+              </View>
+              <Divider />
+
+              {/* Unified KV Cache */}
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      Unified KV Cache
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      Saves ~7GB memory by using a single KV cache stream.
+                      Highly recommended for mobile devices.
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="kv-unified-switch"
+                    value={modelStore.contextInitParams.kv_unified ?? true}
+                    onValueChange={value => {
+                      if (!value) {
+                        // Warn user about memory impact
+                        Alert.alert(
+                          'High Memory Usage Warning',
+                          'Disabling unified KV cache will use ~8x more memory (~7GB additional). This may cause out-of-memory errors.\n\nOnly disable if you need 8+ parallel conversations simultaneously.\n\nContinue?',
+                          [
+                            {text: 'Cancel', style: 'cancel'},
+                            {
+                              text: 'Disable',
+                              style: 'destructive',
+                              onPress: () => modelStore.setKvUnified(false),
+                            },
+                          ],
+                        );
+                      } else {
+                        modelStore.setKvUnified(true);
+                      }
+                    }}
+                  />
                 </View>
               </View>
               <Text variant="labelSmall" style={styles.textDescription}>

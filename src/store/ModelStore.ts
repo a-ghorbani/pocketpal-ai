@@ -223,7 +223,13 @@ class ModelStore {
   setCacheTypeK = (cache_type: CacheType) => {
     runInAction(() => {
       // Only allow changing cache type if flash attention is enabled
-      if (this.contextInitParams.flash_attn) {
+      // Support both old flash_attn and new flash_attn_type
+      const flashAttnEnabled =
+        this.contextInitParams.flash_attn ||
+        (this.contextInitParams.flash_attn_type &&
+          this.contextInitParams.flash_attn_type !== 'off');
+
+      if (flashAttnEnabled) {
         this.contextInitParams = {
           ...this.contextInitParams,
           cache_type_k: cache_type,
@@ -235,7 +241,13 @@ class ModelStore {
   setCacheTypeV = (cache_type: CacheType) => {
     runInAction(() => {
       // Only allow changing cache type if flash attention is enabled
-      if (this.contextInitParams.flash_attn) {
+      // Support both old flash_attn and new flash_attn_type
+      const flashAttnEnabled =
+        this.contextInitParams.flash_attn ||
+        (this.contextInitParams.flash_attn_type &&
+          this.contextInitParams.flash_attn_type !== 'off');
+
+      if (flashAttnEnabled) {
         this.contextInitParams = {
           ...this.contextInitParams,
           cache_type_v: cache_type,
@@ -334,18 +346,23 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
+    // Handle flash_attn_type (v2.0) - platform-specific default
+    const flash_attn_type =
+      this.contextInitParams.flash_attn_type ??
+      (Platform.OS === 'ios' ? 'auto' : 'off');
+
     return {
       n_ctx: effectiveContext,
       n_batch: effectiveBatch,
       n_ubatch: effectiveUBatch,
       n_threads: this.contextInitParams.n_threads,
-      flash_attn: this.contextInitParams.flash_attn,
+      flash_attn_type, // NEW: replaces flash_attn boolean
       cache_type_k: this.contextInitParams.cache_type_k,
       cache_type_v: this.contextInitParams.cache_type_v,
-      n_gpu_layers: !this.contextInitParams.no_gpu_devices
-        ? this.contextInitParams.n_gpu_layers
-        : 0,
-      no_gpu_devices: this.contextInitParams.no_gpu_devices,
+      n_gpu_layers: this.contextInitParams.n_gpu_layers ?? 99,
+      devices: this.contextInitParams.devices, // NEW
+      kv_unified: this.contextInitParams.kv_unified ?? true, // NEW (default true!)
+      n_parallel: this.contextInitParams.n_parallel ?? 1, // NEW (1 for blocking mode only)
       use_mlock: this.contextInitParams.use_mlock,
       use_mmap: effectiveUseMmap,
     };
@@ -1552,6 +1569,50 @@ class ModelStore {
       this.contextInitParams = {
         ...this.contextInitParams,
         no_gpu_devices,
+      };
+    });
+  };
+
+  // New v2.0 setters
+  setDevices = (devices: string[] | undefined) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        devices,
+      };
+    });
+  };
+
+  setFlashAttnType = (flash_attn_type: 'auto' | 'on' | 'off') => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        flash_attn_type,
+        // Reset cache types to F16 if flash attention is disabled
+        ...(flash_attn_type !== 'off'
+          ? {}
+          : {
+              cache_type_k: CacheType.F16,
+              cache_type_v: CacheType.F16,
+            }),
+      };
+    });
+  };
+
+  setKvUnified = (kv_unified: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        kv_unified,
+      };
+    });
+  };
+
+  setNParallel = (n_parallel: number) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        n_parallel,
       };
     });
   };

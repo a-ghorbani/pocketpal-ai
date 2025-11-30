@@ -468,11 +468,9 @@ type RequiredContextFields =
   | 'n_batch'
   | 'n_ubatch'
   | 'n_threads'
-  | 'flash_attn'
   | 'cache_type_k'
   | 'cache_type_v'
   | 'n_gpu_layers'
-  | 'no_gpu_devices'
   | 'use_mlock';
 
 /**
@@ -481,10 +479,25 @@ type RequiredContextFields =
  * This ensures type safety and eliminates the need for fallback values in UI components
  */
 export interface ContextInitParams
-  extends Omit<ContextParams, 'model' | 'use_mmap' | RequiredContextFields>,
+  extends Omit<
+      ContextParams,
+      'model' | 'use_mmap' | 'flash_attn' | RequiredContextFields
+    >,
     Required<Pick<ContextParams, RequiredContextFields>> {
   version: string; // Version of the context init params schema
   use_mmap: 'true' | 'false' | 'smart'; // Extended to support 'smart' option (required for android, where we wanted conditional mmap based on quantization type, eg q4_0 )
+
+  // New parameters (v2.0+)
+  devices?: string[]; // Device selection (undefined = auto-select)
+  flash_attn_type?: 'auto' | 'on' | 'off'; // Replaces flash_attn boolean
+  kv_unified?: boolean; // Unified KV cache (CRITICAL: saves ~7GB memory)
+  n_parallel?: number; // Max parallel sequences (default: 1 for blocking completion)
+
+  // Deprecated (kept for migration)
+  /** @deprecated Use devices instead */
+  no_gpu_devices?: boolean;
+  /** @deprecated Use flash_attn_type instead */
+  flash_attn?: boolean;
 }
 
 /**

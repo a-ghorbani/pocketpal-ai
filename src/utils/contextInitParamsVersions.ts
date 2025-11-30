@@ -13,7 +13,7 @@ import {Platform} from 'react-native';
 
 // Current version of the context init params schema
 // Increment this when adding new parameters or changing existing ones
-export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '1.0';
+export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.0';
 
 /**
  * Creates properly versioned ContextInitParams from ContextParams (excluding model)
@@ -31,21 +31,29 @@ export const createContextInitParams = (
         ? 'false'
         : (params.use_mmap ?? (Platform.OS === 'android' ? 'smart' : 'true'));
 
+  // Handle flash_attn_type (new) vs flash_attn (old)
+  const flash_attn_type =
+    (params as any).flash_attn_type ?? (Platform.OS === 'ios' ? 'auto' : 'off');
+
   return {
     ...params,
     use_mmap,
     version: CURRENT_CONTEXT_INIT_PARAMS_VERSION,
     // Ensure all required fields have values (with fallbacks for safety)
-    n_ctx: params.n_ctx ?? 1024,
+    n_ctx: params.n_ctx ?? 2048, // Increased default from 1024
     n_batch: params.n_batch ?? 512,
     n_ubatch: params.n_ubatch ?? 512,
     n_threads: params.n_threads ?? 4,
-    flash_attn: params.flash_attn ?? false,
     cache_type_k: params.cache_type_k ?? 'f16',
     cache_type_v: params.cache_type_v ?? 'f16',
-    n_gpu_layers: params.n_gpu_layers ?? 0,
-    no_gpu_devices: params.no_gpu_devices ?? true,
+    n_gpu_layers: params.n_gpu_layers ?? 99, // Changed default from 0 to 99
     use_mlock: params.use_mlock ?? false,
+
+    // New parameters (v2.0+)
+    flash_attn_type,
+    devices: (params as any).devices,
+    kv_unified: (params as any).kv_unified ?? true, // CRITICAL default
+    n_parallel: (params as any).n_parallel ?? 1, // Blocking completion only
   };
 };
 
@@ -94,12 +102,66 @@ export function migrateContextInitParams(
     migratedParams.version = '1.0';
   }
 
-  // Add future migrations here as needed
-  // if (migratedParams.version < '2.0') {
-  //   // Migration to version 2.0
-  //   migratedParams.new_field = defaultValue;
-  //   migratedParams.version = '2.0';
-  // }
+  // Migration from 1.0 to 2.0: no_gpu_devices → devices, flash_attn → flash_attn_type
+  if (migratedParams.version === '1.0') {
+    // Migrate no_gpu_devices to devices
+    if ('no_gpu_devices' in migratedParams) {
+      if (migratedParams.no_gpu_devices === true) {
+        // GPU was disabled → set n_gpu_layers to 0, devices undefined (will use CPU)
+        migratedParams.n_gpu_layers = 0;
+        migratedParams.devices = undefined;
+      } else {
+        // GPU was enabled → use auto-select
+        migratedParams.devices = undefined;
+        // Keep existing n_gpu_layers value (or default to 99 if not set)
+        if (
+          migratedParams.n_gpu_layers === undefined ||
+          migratedParams.n_gpu_layers === 0
+        ) {
+          migratedParams.n_gpu_layers = 99;
+        }
+      }
+
+      // Keep no_gpu_devices for now (marked deprecated, will be removed in future version)
+      // delete migratedParams.no_gpu_devices;
+    }
+
+    // Migrate flash_attn boolean to flash_attn_type string
+    if (
+      'flash_attn' in migratedParams &&
+      typeof migratedParams.flash_attn === 'boolean'
+    ) {
+      if (migratedParams.flash_attn) {
+        // Flash attention was enabled
+        migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
+      } else {
+        // Flash attention was disabled
+        migratedParams.flash_attn_type = 'off';
+      }
+
+      // Keep flash_attn for now (marked deprecated, will be removed in future version)
+      // delete migratedParams.flash_attn;
+    } else if (!migratedParams.flash_attn_type) {
+      // No flash_attn or flash_attn_type, set platform-specific default
+      migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
+    }
+
+    // Add new required parameters with defaults
+    if (migratedParams.kv_unified === undefined) {
+      migratedParams.kv_unified = true;
+    }
+
+    if (migratedParams.n_parallel === undefined) {
+      migratedParams.n_parallel = 1; // App only uses blocking completion()
+    }
+
+    // Increase default context size if it was the old default
+    if (migratedParams.n_ctx === 1024) {
+      migratedParams.n_ctx = 2048; // Increase to new recommended default
+    }
+
+    migratedParams.version = '2.0';
+  }
 
   // Ensure the final version is set correctly
   migratedParams.version = CURRENT_CONTEXT_INIT_PARAMS_VERSION;
@@ -121,16 +183,20 @@ export function validateContextInitParams(
     'n_batch',
     'n_ubatch',
     'n_threads',
-    'flash_attn',
     'cache_type_k',
     'cache_type_v',
     'n_gpu_layers',
-    'no_gpu_devices',
     'use_mlock',
     'use_mmap',
   ];
 
-  return requiredFields.every(field => field in params);
+  // Check required fields
+  const hasRequiredFields = requiredFields.every(field => field in params);
+
+  // For v2.0+, also check for new optional fields (but don't require them)
+  // kv_unified, n_parallel, devices, flash_attn_type
+
+  return hasRequiredFields;
 }
 
 /**
@@ -138,23 +204,22 @@ export function validateContextInitParams(
  * Used as fallback when parameters are corrupted or missing
  */
 export function createDefaultContextInitParams(): ContextInitParams {
-  const defaultParams = createContextInitParams({
-    n_ctx: 1024,
+  return {
+    version: CURRENT_CONTEXT_INIT_PARAMS_VERSION,
+    n_ctx: 2048,
     n_batch: 512,
     n_ubatch: 512,
     n_threads: 4,
-    flash_attn: false,
     cache_type_k: 'f16',
     cache_type_v: 'f16',
-    n_gpu_layers: 0,
-    no_gpu_devices: true,
+    n_gpu_layers: 99, // All layers
     use_mlock: false,
-    // use_mmap will be set below
-  });
-
-  // Set the platform-specific default for use_mmap
-  return {
-    ...defaultParams,
     use_mmap: Platform.OS === 'android' ? 'smart' : 'true',
+
+    // New v2.0 parameters
+    devices: undefined, // Auto-select
+    flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
+    kv_unified: true, // CRITICAL: saves ~7GB memory
+    n_parallel: 1, // App only uses blocking completion()
   };
 }
