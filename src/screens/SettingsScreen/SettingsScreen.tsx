@@ -267,7 +267,17 @@ export const SettingsScreen: React.FC = observer(() => {
 
   const handleDeviceSelect = (option: DeviceOption) => {
     modelStore.setDevices(option.devices);
-    modelStore.setFlashAttnType(option.flash_attn_type);
+
+    // Only update flash attention if current value is not valid for the selected device
+    const currentFlashAttn =
+      modelStore.contextInitParams.flash_attn_type ??
+      (Platform.OS === 'ios' ? 'auto' : 'off');
+
+    if (!option.valid_flash_attn_types.includes(currentFlashAttn)) {
+      // Current setting is invalid for this device, use the default
+      modelStore.setFlashAttnType(option.default_flash_attn_type);
+    }
+    // Otherwise, keep the user's current flash attention preference
   };
 
   const handleKeyCachePress = () => {
