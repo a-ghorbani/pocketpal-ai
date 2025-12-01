@@ -268,7 +268,6 @@ export const SettingsScreen: React.FC = observer(() => {
 
   const handleDeviceSelect = (option: DeviceOption) => {
     modelStore.setDevices(option.devices);
-    modelStore.setNGPULayers(option.n_gpu_layers);
     modelStore.setFlashAttnType(option.flash_attn_type);
   };
 
@@ -347,28 +346,22 @@ export const SettingsScreen: React.FC = observer(() => {
                     />
 
                     {/* GPU Layers Slider - only show if GPU is being used */}
-                    {(modelStore.contextInitParams.n_gpu_layers ?? 0) > 0 && (
-                      <>
-                        <InputSlider
-                          testID="gpu-layers-slider"
-                          value={modelStore.contextInitParams.n_gpu_layers}
-                          onValueChange={value =>
-                            modelStore.setNGPULayers(Math.round(value))
-                          }
-                          min={1}
-                          max={100}
-                          step={1}
-                        />
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {l10n.settings.layersOnGPU.replace(
-                            '{{gpuLayers}}',
-                            modelStore.contextInitParams.n_gpu_layers.toString(),
-                          )}
-                        </Text>
-                      </>
-                    )}
+                    <InputSlider
+                      testID="gpu-layers-slider"
+                      value={modelStore.contextInitParams.n_gpu_layers}
+                      onValueChange={value =>
+                        modelStore.setNGPULayers(Math.round(value))
+                      }
+                      min={1}
+                      max={100}
+                      step={1}
+                    />
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.layersOnGPU.replace(
+                        '{{gpuLayers}}',
+                        modelStore.contextInitParams.n_gpu_layers.toString(),
+                      )}
+                    </Text>
 
                     {/* OpenCL quantization note for Android */}
                     {Platform.OS === 'android' &&
