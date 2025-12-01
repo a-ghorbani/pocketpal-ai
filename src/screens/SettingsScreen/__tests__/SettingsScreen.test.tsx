@@ -40,7 +40,7 @@ describe('SettingsScreen', () => {
     expect(getByText('Model Initialization Settings')).toBeTruthy();
     expect(getByText('Model Loading Settings')).toBeTruthy();
     expect(getByText('App Settings')).toBeTruthy();
-    expect(getByDisplayValue('1024')).toBeTruthy(); // Context size
+    expect(getByDisplayValue('2048')).toBeTruthy(); // Context size
   });
 
   it('updates context size correctly', async () => {
@@ -49,7 +49,7 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const contextSizeInput = getByDisplayValue('1024');
+    const contextSizeInput = getByDisplayValue('2048');
 
     act(() => {
       fireEvent.changeText(contextSizeInput, '512');
@@ -73,7 +73,7 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const contextSizeInput = getByDisplayValue('1024');
+    const contextSizeInput = getByDisplayValue('2048');
 
     await act(async () => {
       fireEvent.changeText(contextSizeInput, '100'); // Below minimum size
@@ -87,14 +87,14 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const contextSizeInput = getByDisplayValue('1024');
+    const contextSizeInput = getByDisplayValue('2048');
 
     fireEvent.changeText(contextSizeInput, '512');
     fireEvent.press(getByText('Model Initialization Settings'));
 
     await waitFor(() => {
       expect(Keyboard.dismiss).toHaveBeenCalled();
-      expect(getByDisplayValue('1024')).toBeTruthy(); // Reset back to original size
+      expect(getByDisplayValue('2048')).toBeTruthy(); // Reset back to original size
     });
   });
 
@@ -148,13 +148,16 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const gpuSwitch = getByTestId('gpu-acceleration-switch');
+    await waitFor(() => {
+      expect(getByTestId('device-option-gpu')).toBeTruthy();
+    });
+    const gpuBtn = getByTestId('device-option-gpu');
 
     act(() => {
-      fireEvent(gpuSwitch, 'valueChange', true);
+      fireEvent(gpuBtn, 'press');
     });
 
-    expect(modelStore.setNoGpuDevices).toHaveBeenCalledWith(false);
+    expect(modelStore.setDevices).toHaveBeenCalledWith(['Metal']);
 
     const gpuSlider = getByTestId('gpu-layers-slider');
 

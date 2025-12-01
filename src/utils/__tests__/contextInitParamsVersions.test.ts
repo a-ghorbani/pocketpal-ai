@@ -51,7 +51,7 @@ describe('contextInitParamsVersions', () => {
       const migrated = migrateContextInitParams(settings);
 
       expect(migrated.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
-      expect(migrated.n_ctx).toBe(1024);
+      expect(migrated.n_ctx).toBe(2048);
     });
 
     it('should migrate n_context to n_ctx', () => {
@@ -178,15 +178,14 @@ describe('contextInitParamsVersions', () => {
 
       expect(validateContextInitParams(defaultSettings)).toBe(true);
       expect(defaultSettings.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
-      expect(defaultSettings.n_ctx).toBe(1024);
+      expect(defaultSettings.n_ctx).toBe(2048);
       expect(defaultSettings.n_batch).toBe(512);
       expect(defaultSettings.n_ubatch).toBe(512);
       expect(defaultSettings.n_threads).toBe(4);
-      expect(defaultSettings.flash_attn).toBe(false);
+      expect(defaultSettings.flash_attn_type).toBe('auto');
       expect(defaultSettings.cache_type_k).toBe('f16');
       expect(defaultSettings.cache_type_v).toBe('f16');
-      expect(defaultSettings.n_gpu_layers).toBe(0);
-      expect(defaultSettings.no_gpu_devices).toBe(true);
+      expect(defaultSettings.n_gpu_layers).toBe(99);
       expect(defaultSettings.use_mlock).toBe(false);
       expect(defaultSettings.use_mmap).toBe('true'); // Default for non-Android platforms
     });

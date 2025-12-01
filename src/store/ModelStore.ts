@@ -204,22 +204,6 @@ class ModelStore {
     });
   };
 
-  setFlashAttn = (flash_attn: boolean) => {
-    runInAction(() => {
-      this.contextInitParams = {
-        ...this.contextInitParams,
-        flash_attn,
-        // Reset cache types to F16 if flash attention is disabled
-        ...(flash_attn
-          ? {}
-          : {
-              cache_type_k: CacheType.F16,
-              cache_type_v: CacheType.F16,
-            }),
-      };
-    });
-  };
-
   setCacheTypeK = (cache_type: CacheType) => {
     runInAction(() => {
       // Only allow changing cache type if flash attention is enabled

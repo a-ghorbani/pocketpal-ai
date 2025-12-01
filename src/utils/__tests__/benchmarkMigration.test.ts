@@ -4,6 +4,8 @@ import {
 } from '../benchmarkMigration';
 import {BenchmarkResult, CacheType} from '../types';
 
+const N_CONTEXT = 2048;
+
 describe('benchmarkMigration', () => {
   describe('migrateBenchmarkResult', () => {
     it('should migrate n_context to n_ctx', () => {
@@ -34,7 +36,7 @@ describe('benchmarkMigration', () => {
 
       const migratedResult = migrateBenchmarkResult(legacyResult);
 
-      expect(migratedResult.initSettings).toHaveProperty('n_ctx', 1024);
+      expect(migratedResult.initSettings).toHaveProperty('n_ctx', N_CONTEXT);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
       expect(migratedResult.initSettings?.n_batch).toBe(512);
       expect(migratedResult.initSettings?.n_ubatch).toBe(256);
@@ -123,7 +125,7 @@ describe('benchmarkMigration', () => {
       const migratedResult = migrateBenchmarkResult(originalResult);
 
       expect(originalResult).toEqual(originalCopy);
-      expect(migratedResult.initSettings?.version).toBe('1.0');
+      expect(migratedResult.initSettings?.version).toBe('2.0');
     });
 
     it('should not migrate if already at current version', () => {
@@ -141,12 +143,13 @@ describe('benchmarkMigration', () => {
         modelName: 'Test Model',
         uuid: 'test-uuid',
         initSettings: {
-          version: '1.0',
-          n_ctx: 1024,
+          version: '2.0',
+          n_ctx: N_CONTEXT,
           n_batch: 512,
           n_ubatch: 256,
           n_threads: 8,
           flash_attn: false,
+          flash_attn_type: 'auto',
           cache_type_k: CacheType.F16,
           cache_type_v: CacheType.F16,
           n_gpu_layers: 0,
@@ -190,9 +193,9 @@ describe('benchmarkMigration', () => {
 
       const migratedResult = migrateBenchmarkResult(legacyVersionResult);
 
-      expect(migratedResult.initSettings?.n_ctx).toBe(1024);
+      expect(migratedResult.initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
-      expect(migratedResult.initSettings?.version).toBe('1.0');
+      expect(migratedResult.initSettings?.version).toBe('2.0');
     });
   });
 
@@ -252,7 +255,7 @@ describe('benchmarkMigration', () => {
       const migratedResults = migrateBenchmarkResults(results);
 
       expect(migratedResults).toHaveLength(2);
-      expect(migratedResults[0].initSettings?.n_ctx).toBe(1024);
+      expect(migratedResults[0].initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResults[0].initSettings).not.toHaveProperty('n_context');
       expect(migratedResults[1].initSettings?.n_ctx).toBe(2048);
     });
@@ -288,9 +291,9 @@ describe('benchmarkMigration', () => {
       // Test that addResult migrates the data
       const migratedResult = migrateBenchmarkResult(legacyResult);
 
-      expect(migratedResult.initSettings?.n_ctx).toBe(1024);
+      expect(migratedResult.initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
-      expect(migratedResult.initSettings?.version).toBe('1.0');
+      expect(migratedResult.initSettings?.version).toBe('2.0');
     });
   });
 });

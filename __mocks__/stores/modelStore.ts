@@ -24,6 +24,8 @@ class MockModelStore {
   setNContext: jest.Mock;
   updateUseAutoRelease: jest.Mock;
   setNoGpuDevices: jest.Mock;
+  setDevices: jest.Mock;
+  setFlashAttnType: jest.Mock;
   setNGPULayers: jest.Mock;
   resetModels: jest.Mock;
   initContext: jest.Mock;
@@ -76,6 +78,8 @@ class MockModelStore {
     this.setNContext = jest.fn();
     this.updateUseAutoRelease = jest.fn();
     this.setNoGpuDevices = jest.fn();
+    this.setDevices = jest.fn();
+    this.setFlashAttnType = jest.fn();
     this.setNGPULayers = jest.fn();
     this.resetModels = jest.fn();
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());

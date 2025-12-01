@@ -187,7 +187,6 @@ export const SettingsScreen: React.FC = observer(() => {
     modelStore.contextInitParams.n_gpu_layers ?? 0,
     modelStore.contextInitParams.devices,
   );
-  console.log('Current infered backend:', currentBackend);
 
   const currentFlashAttnType =
     modelStore.contextInitParams.flash_attn_type ??
@@ -294,9 +293,6 @@ export const SettingsScreen: React.FC = observer(() => {
     });
   };
 
-  // Show GPU settings for iOS or Android (always show on Android to explain why it's not available)
-  const showGPUSettings = Platform.OS === 'ios' || Platform.OS === 'android';
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -306,97 +302,93 @@ export const SettingsScreen: React.FC = observer(() => {
             <Card.Title title={l10n.settings.modelInitializationSettings} />
             <Card.Content>
               {/* Device Selection */}
-              {showGPUSettings && (
-                <>
-                  <View style={styles.settingItemContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {Platform.OS === 'ios'
-                        ? l10n.settings.deviceSelectionIOS
-                        : l10n.settings.deviceSelection}
-                    </Text>
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      {Platform.OS === 'ios'
-                        ? l10n.settings.deviceSelectionIOSDescription
-                        : l10n.settings.deviceSelectionAndroidDescription}
-                    </Text>
-                    <SegmentedButtons
-                      value={getCurrentDeviceId()}
-                      onValueChange={deviceId => {
-                        const option = deviceOptions.find(
-                          opt => opt.id === deviceId,
-                        );
-                        if (option) {
-                          handleDeviceSelect(option);
-                        }
-                      }}
-                      density="high"
-                      buttons={deviceOptions.map(option => ({
-                        value: option.id,
-                        label: option.label,
-                        // icon:
-                        //   option.tag === 'Recommended'
-                        //     ? 'star'
-                        //     : option.tag === 'Experimental'
-                        //       ? 'flask'
-                        //       : option.tag === 'Stable'
-                        //         ? 'shield-check'
-                        //         : undefined,
-                      }))}
-                      style={styles.segmentedButtons}
-                    />
 
-                    {/* GPU Layers Slider - only show if GPU is being used */}
-                    <InputSlider
-                      testID="gpu-layers-slider"
-                      value={modelStore.contextInitParams.n_gpu_layers}
-                      onValueChange={value =>
-                        modelStore.setNGPULayers(Math.round(value))
-                      }
-                      min={1}
-                      max={100}
-                      step={1}
-                    />
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.layersOnGPU.replace(
-                        '{{gpuLayers}}',
-                        modelStore.contextInitParams.n_gpu_layers.toString(),
-                      )}
-                    </Text>
+              <View style={styles.settingItemContainer}>
+                <Text variant="titleMedium" style={styles.textLabel}>
+                  {Platform.OS === 'ios'
+                    ? l10n.settings.deviceSelectionIOS
+                    : l10n.settings.deviceSelection}
+                </Text>
+                <Text variant="labelSmall" style={styles.textDescription}>
+                  {Platform.OS === 'ios'
+                    ? l10n.settings.deviceSelectionIOSDescription
+                    : l10n.settings.deviceSelectionAndroidDescription}
+                </Text>
+                <SegmentedButtons
+                  value={getCurrentDeviceId()}
+                  onValueChange={deviceId => {
+                    const option = deviceOptions.find(
+                      opt => opt.id === deviceId,
+                    );
+                    if (option) {
+                      handleDeviceSelect(option);
+                    }
+                  }}
+                  density="high"
+                  buttons={deviceOptions.map(option => ({
+                    value: option.id,
+                    label: option.label,
+                    testID: `device-option-${option.id}`,
+                    // icon:
+                    //   option.tag === 'Recommended'
+                    //     ? 'star'
+                    //     : option.tag === 'Experimental'
+                    //       ? 'flask'
+                    //       : option.tag === 'Stable'
+                    //         ? 'shield-check'
+                    //         : undefined,
+                  }))}
+                  style={styles.segmentedButtons}
+                />
 
-                    {/* OpenCL quantization note for Android */}
-                    {Platform.OS === 'android' &&
-                      gpuSupported &&
-                      (modelStore.contextInitParams.n_gpu_layers ?? 0) > 0 && (
-                        <View>
-                          <Text
-                            variant="labelSmall"
-                            style={styles.textDescription}>
-                            {l10n.settings.openCLQuantizationNote}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
-                            style={styles.linkContainer}>
-                            <Text
-                              variant="labelSmall"
-                              style={[
-                                styles.textDescription,
-                                {color: theme.colors.primary},
-                              ]}>
-                              {l10n.settings.openCLDocsLink}
-                            </Text>
-                            <LinkExternalIcon
-                              width={12}
-                              height={12}
-                              stroke={theme.colors.primary}
-                              style={styles.linkIcon}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                  </View>
-                  <Divider />
-                </>
-              )}
+                {/* GPU Layers Slider - only show if GPU is being used */}
+                <InputSlider
+                  testID="gpu-layers-slider"
+                  value={modelStore.contextInitParams.n_gpu_layers}
+                  onValueChange={value =>
+                    modelStore.setNGPULayers(Math.round(value))
+                  }
+                  min={0}
+                  max={99}
+                  step={1}
+                />
+                <Text variant="labelSmall" style={styles.textDescription}>
+                  {l10n.settings.layersOnGPU.replace(
+                    '{{gpuLayers}}',
+                    modelStore.contextInitParams.n_gpu_layers.toString(),
+                  )}
+                </Text>
+
+                {/* OpenCL quantization note for Android */}
+                {Platform.OS === 'android' &&
+                  gpuSupported &&
+                  (modelStore.contextInitParams.n_gpu_layers ?? 0) > 0 && (
+                    <View>
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.openCLQuantizationNote}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
+                        style={styles.linkContainer}>
+                        <Text
+                          variant="labelSmall"
+                          style={[
+                            styles.textDescription,
+                            {color: theme.colors.primary},
+                          ]}>
+                          {l10n.settings.openCLDocsLink}
+                        </Text>
+                        <LinkExternalIcon
+                          width={12}
+                          height={12}
+                          stroke={theme.colors.primary}
+                          style={styles.linkIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+              </View>
+              <Divider />
 
               {/* Context Size */}
               <View style={styles.settingItemContainer}>

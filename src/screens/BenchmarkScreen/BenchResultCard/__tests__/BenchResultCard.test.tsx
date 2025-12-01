@@ -39,14 +39,17 @@ describe('BenchResultCard', () => {
     uuid: 'test-uuid',
     oid: 'model-oid', // This is needed for sharing
     initSettings: {
+      version: '2.0',
       n_ctx: 2048,
       n_batch: 512,
       n_ubatch: 128,
       n_threads: 4,
       n_gpu_layers: 20,
-      flash_attn: true,
+      flash_attn_type: 'auto',
       cache_type_k: CacheType.F16,
       cache_type_v: CacheType.F16,
+      use_mmap: 'true' as const,
+      use_mlock: false,
     },
     wallTimeMs: 5000, // 5 seconds
     peakMemoryUsage: {
@@ -371,5 +374,190 @@ describe('BenchResultCard', () => {
     expect(queryByText('Model Settings')).toBeNull();
     expect(queryByText('Peak Memory')).toBeNull();
     expect(queryByText('Total Time')).toBeNull();
+  });
+
+  describe('flash attention display', () => {
+    it('displays flash attention enabled for flash_attn_type="auto"', () => {
+      const resultWithAuto: BenchmarkResult = {
+        ...mockResult,
+        initSettings: {
+          version: '2.0',
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 128,
+          n_threads: 4,
+          n_gpu_layers: 20,
+          flash_attn_type: 'auto',
+          cache_type_k: CacheType.F16,
+          cache_type_v: CacheType.F16,
+          use_mmap: 'true',
+          use_mlock: false,
+        },
+      };
+
+      const {getByText} = render(
+        <BenchResultCard
+          result={resultWithAuto}
+          onDelete={mockOnDelete}
+          onShare={mockOnShare}
+        />,
+      );
+
+      expect(getByText(/Flash Attention Enabled/)).toBeTruthy();
+      expect(getByText(/Cache Types: f16\/f16/)).toBeTruthy();
+    });
+
+    it('displays flash attention enabled for flash_attn_type="on"', () => {
+      const resultWithOn: BenchmarkResult = {
+        ...mockResult,
+        initSettings: {
+          version: '2.0',
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 128,
+          n_threads: 4,
+          n_gpu_layers: 20,
+          flash_attn_type: 'on',
+          cache_type_k: CacheType.F16,
+          cache_type_v: CacheType.F16,
+          use_mmap: 'true',
+          use_mlock: false,
+        },
+      };
+
+      const {getByText} = render(
+        <BenchResultCard
+          result={resultWithOn}
+          onDelete={mockOnDelete}
+          onShare={mockOnShare}
+        />,
+      );
+
+      expect(getByText(/Flash Attention Enabled/)).toBeTruthy();
+      expect(getByText(/Cache Types: f16\/f16/)).toBeTruthy();
+    });
+
+    it('displays flash attention disabled for flash_attn_type="off"', () => {
+      const resultWithOff: BenchmarkResult = {
+        ...mockResult,
+        initSettings: {
+          version: '2.0',
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 128,
+          n_threads: 4,
+          n_gpu_layers: 20,
+          flash_attn_type: 'off',
+          cache_type_k: CacheType.F16,
+          cache_type_v: CacheType.F16,
+          use_mmap: 'true',
+          use_mlock: false,
+        },
+      };
+
+      const {getByText} = render(
+        <BenchResultCard
+          result={resultWithOff}
+          onDelete={mockOnDelete}
+          onShare={mockOnShare}
+        />,
+      );
+
+      expect(getByText(/Flash Attention Disabled/)).toBeTruthy();
+      expect(getByText(/Cache Types: f16\/f16/)).toBeTruthy();
+    });
+
+    it('handles legacy flash_attn boolean (true)', () => {
+      const legacyResult = {
+        ...mockResult,
+        initSettings: {
+          version: '1.0',
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 128,
+          n_threads: 4,
+          n_gpu_layers: 20,
+          flash_attn: true, // Legacy boolean
+          cache_type_k: CacheType.F16,
+          cache_type_v: CacheType.F16,
+          use_mmap: 'true' as const,
+          use_mlock: false,
+        },
+      };
+
+      const {getByText} = render(
+        <BenchResultCard
+          result={legacyResult}
+          onDelete={mockOnDelete}
+          onShare={mockOnShare}
+        />,
+      );
+
+      // Should display as enabled (legacy true -> auto)
+      expect(getByText(/Flash Attention Enabled/)).toBeTruthy();
+      expect(getByText(/Cache Types: f16\/f16/)).toBeTruthy();
+    });
+
+    it('handles legacy flash_attn boolean (false)', () => {
+      const legacyResult = {
+        ...mockResult,
+        initSettings: {
+          version: '1.0',
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 128,
+          n_threads: 4,
+          n_gpu_layers: 20,
+          flash_attn: false, // Legacy boolean
+          cache_type_k: CacheType.F16,
+          cache_type_v: CacheType.F16,
+          use_mmap: 'true' as const,
+          use_mlock: false,
+        },
+      };
+
+      const {getByText} = render(
+        <BenchResultCard
+          result={legacyResult}
+          onDelete={mockOnDelete}
+          onShare={mockOnShare}
+        />,
+      );
+
+      // Should display as disabled (legacy false -> off)
+      expect(getByText(/Flash Attention Disabled/)).toBeTruthy();
+      expect(getByText(/Cache Types: f16\/f16/)).toBeTruthy();
+    });
+
+    it('displays cache types for all flash attention states', () => {
+      // Cache types should be displayed regardless of flash attention state
+      const resultWithOff: BenchmarkResult = {
+        ...mockResult,
+        initSettings: {
+          version: '2.0',
+          n_ctx: 2048,
+          n_batch: 512,
+          n_ubatch: 128,
+          n_threads: 4,
+          n_gpu_layers: 20,
+          flash_attn_type: 'off',
+          cache_type_k: CacheType.Q8_0,
+          cache_type_v: CacheType.Q4_0,
+          use_mmap: 'true',
+          use_mlock: false,
+        },
+      };
+
+      const {getByText} = render(
+        <BenchResultCard
+          result={resultWithOff}
+          onDelete={mockOnDelete}
+          onShare={mockOnShare}
+        />,
+      );
+
+      expect(getByText(/Flash Attention Disabled/)).toBeTruthy();
+      expect(getByText(/Cache Types: q8_0\/q4_0/)).toBeTruthy();
+    });
   });
 });
