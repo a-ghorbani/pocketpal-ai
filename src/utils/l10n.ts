@@ -58,9 +58,7 @@ export const l10n = {
       deviceSelectionIOSDescription: 'Choose Metal GPU or CPU-only mode',
       deviceSelectionAndroidDescription:
         'Select compute device (Auto, GPU, Hexagon NPU, or CPU)',
-      deviceAuto: 'Auto',
-      deviceAutoMetalGPU: 'Auto (Metal GPU)',
-      deviceCPUOnly: 'CPU Only',
+      cpuOnlyNoAccelerators: 'CPU only - No hardware accelerators detected',
       // Context Size
       contextSize: 'Context Size',
       contextSizePlaceholder: 'Enter context size (min {{minContextSize}})',
@@ -1193,6 +1191,7 @@ export const l10n = {
           ubatch: 'UBatch: {{ubatch}}',
           cpuThreads: 'CPU Threads: {{threads}}',
           gpuLayers: 'GPU Layers: {{layers}}',
+          device: 'Device: {{device}}',
           flashAttentionEnabled: 'Flash Attention Enabled',
           flashAttentionDisabled: 'Flash Attention Disabled',
           cacheTypes: 'Cache Types: {{cacheK}}/{{cacheV}}',
@@ -1346,9 +1345,8 @@ export const l10n = {
       deviceSelectionIOSDescription: 'Metal GPUまたはCPUのみモードを選択',
       deviceSelectionAndroidDescription:
         '計算デバイスを選択（自動、GPU、Hexagon NPU、またはCPU）',
-      deviceAuto: '自動',
-      deviceAutoMetalGPU: '自動（Metal GPU）',
-      deviceCPUOnly: 'CPUのみ',
+      cpuOnlyNoAccelerators:
+        'CPUのみ - ハードウェアアクセラレータが検出されませんでした',
       // Context Size
       contextSize: 'コンテキストサイズ',
       contextSizePlaceholder:
@@ -2485,6 +2483,7 @@ export const l10n = {
           ubatch: 'Uバッチ: {{ubatch}}',
           cpuThreads: 'CPUスレッド: {{threads}}',
           gpuLayers: 'GPUレイヤー: {{layers}}',
+          device: 'デバイス: {{device}}',
           flashAttentionEnabled: 'Flash Attention 有効',
           flashAttentionDisabled: 'Flash Attention 無効',
           cacheTypes: 'キャッシュタイプ: {{cacheK}}/{{cacheV}}',
@@ -2639,9 +2638,7 @@ export const l10n = {
       deviceSelectionIOSDescription: '选择Metal GPU或仅CPU模式',
       deviceSelectionAndroidDescription:
         '选择计算设备（自动、GPU、Hexagon NPU或CPU）',
-      deviceAuto: '自动',
-      deviceAutoMetalGPU: '自动（Metal GPU）',
-      deviceCPUOnly: '仅CPU',
+      cpuOnlyNoAccelerators: '仅CPU - 未检测到硬件加速器',
       // Context Size
       contextSize: '上下文长度',
       contextSizePlaceholder: '输入上下文长度（最小{{minContextSize}}）',
@@ -3707,6 +3704,7 @@ export const l10n = {
           ubatch: 'U批处理: {{ubatch}}',
           cpuThreads: 'CPU线程: {{threads}}',
           gpuLayers: 'GPU层数: {{layers}}',
+          device: '设备: {{device}}',
           flashAttentionEnabled: '启用Flash Attention',
           flashAttentionDisabled: '禁用Flash Attention',
           cacheTypes: '缓存类型: {{cacheK}}/{{cacheV}}',

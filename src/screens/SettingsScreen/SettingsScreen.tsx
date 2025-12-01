@@ -249,19 +249,19 @@ export const SettingsScreen: React.FC = observer(() => {
     }
 
     // Android
-    if (nGpuLayers === 0) {
-      return 'cpu';
-    }
-
     if (!devices || devices.length === 0) {
       return 'auto';
+    }
+
+    if (devices[0] === 'CPU') {
+      return 'cpu';
     }
 
     if (devices[0].startsWith('HTP')) {
       return 'hexagon';
     }
 
-    // GPU device
+    // GPU device (Adreno, etc.)
     return 'gpu';
   };
 
@@ -314,60 +314,67 @@ export const SettingsScreen: React.FC = observer(() => {
               {/* Device Selection */}
 
               <View style={styles.settingItemContainer}>
-                <Text variant="titleMedium" style={styles.textLabel}>
-                  {Platform.OS === 'ios'
-                    ? l10n.settings.deviceSelectionIOS
-                    : l10n.settings.deviceSelection}
-                </Text>
-                <Text variant="labelSmall" style={styles.textDescription}>
-                  {Platform.OS === 'ios'
-                    ? l10n.settings.deviceSelectionIOSDescription
-                    : l10n.settings.deviceSelectionAndroidDescription}
-                </Text>
-                <SegmentedButtons
-                  value={getCurrentDeviceId()}
-                  onValueChange={deviceId => {
-                    const option = deviceOptions.find(
-                      opt => opt.id === deviceId,
-                    );
-                    if (option) {
-                      handleDeviceSelect(option);
-                    }
-                  }}
-                  density="high"
-                  buttons={deviceOptions.map(option => ({
-                    value: option.id,
-                    label: option.label,
-                    testID: `device-option-${option.id}`,
-                    // icon:
-                    //   option.tag === 'Recommended'
-                    //     ? 'star'
-                    //     : option.tag === 'Experimental'
-                    //       ? 'flask'
-                    //       : option.tag === 'Stable'
-                    //         ? 'shield-check'
-                    //         : undefined,
-                  }))}
-                  style={styles.segmentedButtons}
-                />
+                {/* Show full UI when multiple device options available */}
+                {deviceOptions.length > 1 ? (
+                  <>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.deviceSelectionIOS
+                        : l10n.settings.deviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.deviceSelectionIOSDescription
+                        : l10n.settings.deviceSelectionAndroidDescription}
+                    </Text>
+                    <SegmentedButtons
+                      value={getCurrentDeviceId()}
+                      onValueChange={deviceId => {
+                        const option = deviceOptions.find(
+                          opt => opt.id === deviceId,
+                        );
+                        if (option) {
+                          handleDeviceSelect(option);
+                        }
+                      }}
+                      density="high"
+                      buttons={deviceOptions.map(option => ({
+                        value: option.id,
+                        label: option.label,
+                        testID: `device-option-${option.id}`,
+                      }))}
+                      style={styles.segmentedButtons}
+                    />
 
-                {/* GPU Layers Slider - only show if GPU is being used */}
-                <InputSlider
-                  testID="gpu-layers-slider"
-                  value={modelStore.contextInitParams.n_gpu_layers}
-                  onValueChange={value =>
-                    modelStore.setNGPULayers(Math.round(value))
-                  }
-                  min={0}
-                  max={99}
-                  step={1}
-                />
-                <Text variant="labelSmall" style={styles.textDescription}>
-                  {l10n.settings.layersOnGPU.replace(
-                    '{{gpuLayers}}',
-                    modelStore.contextInitParams.n_gpu_layers.toString(),
-                  )}
-                </Text>
+                    {/* GPU Layers Slider */}
+                    <InputSlider
+                      testID="gpu-layers-slider"
+                      value={modelStore.contextInitParams.n_gpu_layers}
+                      onValueChange={value =>
+                        modelStore.setNGPULayers(Math.round(value))
+                      }
+                      min={0}
+                      max={99}
+                      step={1}
+                    />
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.layersOnGPU.replace(
+                        '{{gpuLayers}}',
+                        modelStore.contextInitParams.n_gpu_layers.toString(),
+                      )}
+                    </Text>
+                  </>
+                ) : (
+                  /* Simplified UI when only CPU available */
+                  <>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.deviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.cpuOnlyNoAccelerators}
+                    </Text>
+                  </>
+                )}
 
                 {/* OpenCL quantization note for Android */}
                 {Platform.OS === 'android' &&

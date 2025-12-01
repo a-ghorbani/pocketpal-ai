@@ -98,21 +98,27 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
   const hasHexagon = hexagonDevs.length > 0;
   const gpuDev = devices.find(d => d.type === 'gpu');
 
-  // Option 1: Auto (Recommended - uses GPU if available)
-  // OpenCL only supports 'off', CPU/BLAS supports all
-  options.push({
-    id: 'auto',
-    label: 'Auto',
-    description: hasGpu
-      ? 'Automatically uses OpenCL GPU (Best for Q4_0/Q6_K)'
-      : 'Automatically selects best available device',
-    devices: undefined,
-    n_gpu_layers: hasGpu ? 99 : 0,
-    default_flash_attn_type: 'off', // OpenCL requires 'off'
-    valid_flash_attn_types: hasGpu ? ['off'] : ['auto', 'on', 'off'], // OpenCL only supports 'off'
-    tag: 'Recommended',
-    platform: 'android',
-  });
+  // Only show "Auto" if there are actual hardware accelerators available
+  // Otherwise "Auto" is redundant with "CPU"
+  const hasAccelerators = hasGpu || hasHexagon;
+
+  if (hasAccelerators) {
+    // Option 1: Auto (Recommended - uses GPU/Hexagon if available)
+    // OpenCL only supports 'off', CPU/BLAS supports all
+    options.push({
+      id: 'auto',
+      label: 'Auto',
+      description: hasGpu
+        ? 'Automatically uses OpenCL GPU (Best for Q4_0/Q6_K)'
+        : 'Automatically selects best available device',
+      devices: undefined,
+      n_gpu_layers: hasGpu ? 99 : 0,
+      default_flash_attn_type: 'off', // OpenCL requires 'off'
+      valid_flash_attn_types: hasGpu ? ['off'] : ['auto', 'on', 'off'], // OpenCL only supports 'off'
+      tag: 'Recommended',
+      platform: 'android',
+    });
+  }
 
   // Option 2: GPU/OpenCL (if available)
   if (gpuDev) {
@@ -139,7 +145,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       id: 'hexagon',
       label: 'Hexagon NPU',
       description: 'Qualcomm NPU (Experimental, fastest but may be unstable)',
-      devices: ['HTP*'], // Wildcard for all HTP devices
+      devices: ['HTP0'], // Wildcard for all HTP devices
       n_gpu_layers: 99,
       default_flash_attn_type: 'off',
       valid_flash_attn_types: ['off'], // Conservative: only 'off' is guaranteed safe
@@ -150,17 +156,17 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
     });
   }
 
-  // Option 4: CPU Only (always available)
+  // Option: CPU Only (always available)
   // CPU supports all flash attention types
   options.push({
     id: 'cpu',
-    label: 'CPU Only',
+    label: 'CPU',
     description: 'CPU only (Slowest, but works with all models)',
-    devices: undefined,
+    devices: ['CPU'], // Explicitly mark as CPU to differentiate from auto
     n_gpu_layers: 0,
     default_flash_attn_type: 'off',
     valid_flash_attn_types: ['auto', 'on', 'off'], // CPU supports all
-    tag: 'Compatible',
+    tag: hasAccelerators ? 'Compatible' : 'Recommended', // If no accelerators, CPU is the only (and recommended) option
     platform: 'android',
   });
 

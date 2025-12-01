@@ -184,6 +184,17 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
                     '{{layers}}',
                     (result.initSettings.n_gpu_layers || 0).toString(),
                   )}
+                  {(result.initSettings as any).devices &&
+                    (result.initSettings as any).devices.length > 0 && (
+                      <>
+                        {' '}
+                        •{' '}
+                        {l10n.benchmark.benchmarkResultCard.modelSettings.device.replace(
+                          '{{device}}',
+                          (result.initSettings as any).devices.join(', '),
+                        )}
+                      </>
+                    )}
                 </Text>
                 <Text style={styles.configText}>
                   {/* Flash Attention Type */}
