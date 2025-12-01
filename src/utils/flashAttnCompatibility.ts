@@ -5,39 +5,64 @@
 
 import {Platform} from 'react-native';
 import {CacheType} from './types';
+import {getAvailableDevices} from './deviceSelection';
 
 export type FlashAttnType = 'auto' | 'on' | 'off';
 export type BackendType = 'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas';
 
 /**
- * Determines the likely backend type based on platform and device selection
+ * Determines the backend type based ONLY on the devices array
+ * When devices is undefined (auto mode), checks available hardware on Android
  */
-export function inferBackendType(
-  nGpuLayers: number,
+export async function inferBackendType(
   devices?: string[],
-): BackendType {
-  if (Platform.OS === 'ios') {
-    // iOS uses Metal if GPU is enabled
-    return nGpuLayers > 0 ? 'metal' : 'cpu';
-  }
-
-  // Android backend inference
-  if (nGpuLayers === 0) {
-    return 'cpu';
-  }
-
-  // Check for Hexagon NPU
-  if (devices && devices.length > 0 && devices[0].startsWith('HTP')) {
-    return 'hexagon';
-  }
-
-  // Check for GPU (OpenCL on Android)
+): Promise<BackendType> {
+  // Explicit device specified
   if (devices && devices.length > 0) {
-    return 'opencl';
+    const primaryDevice = devices[0];
+    const deviceLower = primaryDevice.toLowerCase();
+
+    // Metal backend (iOS)
+    if (deviceLower === 'metal') {
+      return 'metal';
+    }
+
+    // CPU backend (explicit CPU selection)
+    if (deviceLower === 'cpu') {
+      return 'cpu';
+    }
+
+    // Hexagon NPU (Android Qualcomm)
+    if (primaryDevice.startsWith('HTP')) {
+      return 'hexagon';
+    }
+
+    // Any other device on Android is assumed to be GPU (OpenCL/Vulkan)
+    // (e.g., "Adreno 730", "Mali-G78", etc.)
+    if (Platform.OS === 'android') {
+      return 'opencl';
+    }
+
+    // Fallback to BLAS for unknown devices
+    return 'blas';
   }
 
-  // Auto-select: likely OpenCL if GPU layers > 0
-  return nGpuLayers > 0 ? 'opencl' : 'cpu';
+  // No devices specified = auto-select
+  // iOS: Always uses Metal
+  if (Platform.OS === 'ios') {
+    return 'metal';
+  }
+
+  // Android: Check what's actually available
+  // Auto mode will use GPU if available, otherwise CPU
+  const availableDevices = await getAvailableDevices();
+  const hasGpu = availableDevices.some(d => d.type === 'gpu');
+
+  if (hasGpu) {
+    return 'opencl'; // Auto mode uses OpenCL when GPU is available
+  }
+
+  return 'blas'; // Fallback to BLAS/CPU when no GPU
 }
 
 /**

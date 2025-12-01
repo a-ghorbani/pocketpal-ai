@@ -13,6 +13,7 @@ import {
 
 import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
+import {toJS} from 'mobx';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   Switch,
@@ -116,6 +117,9 @@ export const SettingsScreen: React.FC = observer(() => {
     y: 0.0,
   });
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
+  const [currentBackend, setCurrentBackend] = useState<
+    'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
+  >(Platform.OS === 'ios' ? 'metal' : 'blas');
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
@@ -154,6 +158,23 @@ export const SettingsScreen: React.FC = observer(() => {
     loadDeviceOptions();
   }, []);
 
+  // Compute current backend type based on device selection
+  // Convert MobX observable to plain JS for dependency tracking
+  const devicesKey = JSON.stringify(toJS(modelStore.contextInitParams.devices));
+
+  useEffect(() => {
+    const updateBackend = async () => {
+      const backend = await inferBackendType(
+        modelStore.contextInitParams.devices,
+      );
+      setCurrentBackend(backend);
+      console.log('Current backend:', backend);
+      console.log('devices:', modelStore.contextInitParams.devices);
+    };
+
+    updateBackend();
+  }, [devicesKey]);
+
   useEffect(() => {
     return () => {
       debouncedUpdateStore.cancel();
@@ -181,12 +202,6 @@ export const SettingsScreen: React.FC = observer(() => {
       setIsValidInput(false);
     }
   };
-
-  // Compute current backend type based on device selection
-  const currentBackend = inferBackendType(
-    modelStore.contextInitParams.n_gpu_layers ?? 0,
-    modelStore.contextInitParams.devices,
-  );
 
   const currentFlashAttnType =
     modelStore.contextInitParams.flash_attn_type ??
@@ -562,22 +577,36 @@ export const SettingsScreen: React.FC = observer(() => {
                         )
                       }
                       density="high"
-                      buttons={[
-                        {
-                          value: 'auto',
-                          label: l10n.settings.flashAttentionAuto,
-                          disabled: Platform.OS === 'android',
-                        },
-                        {
-                          value: 'on',
-                          label: l10n.settings.flashAttentionOn,
-                          disabled: Platform.OS === 'android',
-                        },
-                        {
-                          value: 'off',
-                          label: l10n.settings.flashAttentionOff,
-                        },
-                      ]}
+                      buttons={(() => {
+                        const currentDeviceId = getCurrentDeviceId();
+                        const currentDevice = deviceOptions.find(
+                          opt => opt.id === currentDeviceId,
+                        );
+                        const validTypes =
+                          currentDevice?.valid_flash_attn_types || [
+                            'auto',
+                            'on',
+                            'off',
+                          ];
+
+                        return [
+                          {
+                            value: 'auto',
+                            label: l10n.settings.flashAttentionAuto,
+                            disabled: !validTypes.includes('auto'),
+                          },
+                          {
+                            value: 'on',
+                            label: l10n.settings.flashAttentionOn,
+                            disabled: !validTypes.includes('on'),
+                          },
+                          {
+                            value: 'off',
+                            label: l10n.settings.flashAttentionOff,
+                            disabled: !validTypes.includes('off'),
+                          },
+                        ];
+                      })()}
                       style={styles.segmentedButtons}
                     />
                   </View>
