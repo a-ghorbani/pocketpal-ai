@@ -264,11 +264,8 @@ export const SettingsScreen: React.FC = observer(() => {
     }
 
     // Android
-    if (!devices || devices.length === 0) {
-      return 'auto';
-    }
-
-    if (devices[0] === 'CPU') {
+    // No auto mode on Android - always explicit device selection
+    if (!devices || devices.length === 0 || devices[0] === 'CPU') {
       return 'cpu';
     }
 
