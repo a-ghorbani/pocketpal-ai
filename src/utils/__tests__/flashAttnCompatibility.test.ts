@@ -35,17 +35,12 @@ describe('flashAttnCompatibility', () => {
         });
       });
 
-      it('should return cpu when nGpuLayers is 0', () => {
-        expect(inferBackendType(0)).toBe('cpu');
-        expect(inferBackendType(0, [])).toBe('cpu');
-        expect(inferBackendType(0, undefined)).toBe('cpu');
-      });
-
-      it('should return metal when nGpuLayers > 0', () => {
-        expect(inferBackendType(99)).toBe('metal');
-        expect(inferBackendType(99, [])).toBe('metal');
-        expect(inferBackendType(1)).toBe('metal');
-        expect(inferBackendType(50, undefined)).toBe('metal');
+      it('should return correct backend type on iOS', async () => {
+        expect(await inferBackendType()).toBe('metal');
+        expect(await inferBackendType([])).toBe('metal');
+        expect(await inferBackendType(['CPU'])).toBe('cpu');
+        expect(await inferBackendType(undefined)).toBe('metal');
+        expect(await inferBackendType(['blah-blah'])).toBe('cpu');
       });
     });
 
@@ -67,26 +62,23 @@ describe('flashAttnCompatibility', () => {
         });
       });
 
-      it('should return cpu when nGpuLayers is 0', () => {
-        expect(inferBackendType(0)).toBe('cpu');
-        expect(inferBackendType(0, [])).toBe('cpu');
-        expect(inferBackendType(0, undefined)).toBe('cpu');
+      it('should return cpu', async () => {
+        expect(await inferBackendType(['CPU'])).toBe('cpu');
+        expect(await inferBackendType([])).toBe('cpu');
+        expect(await inferBackendType(undefined)).toBe('cpu');
+        expect(await inferBackendType()).toBe('cpu');
       });
 
-      it('should return opencl when nGpuLayers > 0 without devices', () => {
-        expect(inferBackendType(50)).toBe('opencl');
-        expect(inferBackendType(50, [])).toBe('opencl');
+      it('should return opencl when devices array contains GPU', async () => {
+        expect(await inferBackendType(['GPU'])).toBe('opencl');
+        expect(await inferBackendType(['GPU:0'])).toBe('opencl');
+        expect(await inferBackendType(['blahblah'])).toBe('opencl');
       });
 
-      it('should return opencl when devices array contains GPU', () => {
-        expect(inferBackendType(50, ['GPU'])).toBe('opencl');
-        expect(inferBackendType(50, ['GPU:0'])).toBe('opencl');
-      });
-
-      it('should return hexagon when devices array starts with HTP', () => {
-        expect(inferBackendType(50, ['HTP'])).toBe('hexagon');
-        expect(inferBackendType(50, ['HTP:0'])).toBe('hexagon');
-        expect(inferBackendType(50, ['HTP:1'])).toBe('hexagon');
+      it('should return hexagon when devices array starts with HTP', async () => {
+        expect(await inferBackendType(['HTP'])).toBe('hexagon');
+        expect(await inferBackendType(['HTP:0'])).toBe('hexagon');
+        expect(await inferBackendType(['HTP:1'])).toBe('hexagon');
       });
     });
   });

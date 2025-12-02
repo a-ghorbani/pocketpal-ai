@@ -43,8 +43,8 @@ export async function inferBackendType(
       return 'opencl';
     }
 
-    // Fallback to BLAS for unknown devices
-    return 'blas';
+    // Fallback to cpu for unknown devices (on iOS)
+    return 'cpu';
   }
 
   // No devices specified = auto-select
@@ -62,7 +62,7 @@ export async function inferBackendType(
     return 'opencl'; // Auto mode uses OpenCL when GPU is available
   }
 
-  return 'blas'; // Fallback to BLAS/CPU when no GPU
+  return 'cpu'; // Fallback to CPU when no GPU
 }
 
 /**

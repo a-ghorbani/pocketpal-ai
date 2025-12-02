@@ -119,7 +119,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
-  >(Platform.OS === 'ios' ? 'metal' : 'blas');
+  >(Platform.OS === 'ios' ? 'metal' : 'cpu');
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
