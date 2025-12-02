@@ -20,7 +20,14 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
 
   override fun getChipset(promise: Promise) {
     try {
-      val chipset = Build.HARDWARE.takeUnless { it.isNullOrEmpty() } ?: Build.BOARD
+      // Prefer SOC_MODEL (Android S+) for more specific chipset info
+      val chipset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Build.SOC_MODEL.takeUnless { it.isNullOrEmpty() }
+          ?: Build.HARDWARE.takeUnless { it.isNullOrEmpty() }
+          ?: Build.BOARD
+      } else {
+        Build.HARDWARE.takeUnless { it.isNullOrEmpty() } ?: Build.BOARD
+      }
       promise.resolve(chipset)
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)

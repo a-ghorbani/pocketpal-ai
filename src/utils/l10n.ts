@@ -1228,6 +1228,7 @@ export const l10n = {
           basicInfo: 'Basic Info',
           cpuDetails: 'CPU Details',
           gpuDetails: 'GPU Details',
+          hexagonDetails: 'Hexagon DSP',
           appInfo: 'App Info',
         },
         fields: {
@@ -2520,6 +2521,7 @@ export const l10n = {
           basicInfo: '基本情報',
           cpuDetails: 'CPU詳細',
           gpuDetails: 'GPU詳細',
+          hexagonDetails: 'Hexagon DSP',
           appInfo: 'アプリ情報',
         },
         fields: {
@@ -3741,6 +3743,7 @@ export const l10n = {
           basicInfo: '基本信息',
           cpuDetails: 'CPU详细信息',
           gpuDetails: 'GPU详细信息',
+          hexagonDetails: 'Hexagon DSP',
           appInfo: 'APP信息',
         },
         fields: {
