@@ -357,8 +357,8 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
                 <Text variant="labelSmall" style={styles.sectionTitle}>
                   {l10n.benchmark.deviceInfoCard.sections.hexagonDetails}
                 </Text>
-                {hexagonInfo.map((info, index) => (
-                  <View key={index} style={styles.deviceInfoRow}>
+                {hexagonInfo.map(info => (
+                  <View key={info.version} style={styles.deviceInfoRow}>
                     <Text variant="bodySmall" style={styles.deviceInfoValue}>
                       Hexagon {info.version} | {info.soc}{' '}
                       {info.supported
