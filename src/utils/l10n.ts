@@ -57,7 +57,7 @@ export const l10n = {
       deviceSelectionIOS: 'Device (Metal)',
       deviceSelectionIOSDescription: 'Choose Metal GPU or CPU-only mode',
       deviceSelectionAndroidDescription:
-        'Select compute device (Auto, GPU, Hexagon NPU, or CPU)',
+        'Select compute device (CPU, GPU, or Hexagon NPU)',
       cpuOnlyNoAccelerators: 'CPU only - No hardware accelerators detected',
       // Context Size
       contextSize: 'Context Size',
@@ -1345,7 +1345,7 @@ export const l10n = {
       deviceSelectionIOS: 'デバイス（Metal）',
       deviceSelectionIOSDescription: 'Metal GPUまたはCPUのみモードを選択',
       deviceSelectionAndroidDescription:
-        '計算デバイスを選択（自動、GPU、Hexagon NPU、またはCPU）',
+        '計算デバイスを選択（CPU、GPU、またはHexagon NPU）',
       cpuOnlyNoAccelerators:
         'CPUのみ - ハードウェアアクセラレータが検出されませんでした',
       // Context Size
@@ -2639,7 +2639,7 @@ export const l10n = {
       deviceSelectionIOS: '设备（Metal）',
       deviceSelectionIOSDescription: '选择Metal GPU或仅CPU模式',
       deviceSelectionAndroidDescription:
-        '选择计算设备（自动、GPU、Hexagon NPU或CPU）',
+        '选择计算设备（CPU、GPU或Hexagon NPU）',
       cpuOnlyNoAccelerators: '仅CPU - 未检测到硬件加速器',
       // Context Size
       contextSize: '上下文长度',

@@ -77,7 +77,6 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
   });
   const [hexagonInfo, setHexagonInfo] = useState<HexagonInfo[]>([]);
   const [expanded, setExpanded] = useState(false);
-  console.log('Hexagon Info:', hexagonInfo);
 
   useEffect(() => {
     Promise.all([
@@ -148,10 +147,7 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
 
         // Fetch Hexagon info (only on Android)
         // Prefer socModel (Android S+) over generic chipset string
-        console.log('-CPU Info:', cpuInfo);
-        console.log('-Chipset:', chipset);
         const socIdentifier = cpuInfo?.socModel || chipset;
-        console.log('SoC Identifier:', socIdentifier);
         if (Platform.OS === 'android') {
           getHexagonInfo(socIdentifier || undefined).then(hexInfo => {
             setHexagonInfo(hexInfo);

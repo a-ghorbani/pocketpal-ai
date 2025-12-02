@@ -94,7 +94,6 @@ export async function getHexagonInfo(chipset?: string): Promise<HexagonInfo[]> {
     const hexagonDevices = devices.filter(d => d.deviceName?.startsWith('HTP'));
 
     const hexagonInfo: HexagonInfo[] = [];
-    console.log('Hexagon Devices:', hexagonDevices);
 
     // Detect version from chipset (all HTP devices share same version on a device)
     const version = detectHexagonVersion(chipset);

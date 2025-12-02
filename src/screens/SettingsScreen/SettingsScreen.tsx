@@ -168,8 +168,6 @@ export const SettingsScreen: React.FC = observer(() => {
         modelStore.contextInitParams.devices,
       );
       setCurrentBackend(backend);
-      console.log('Current backend:', backend);
-      console.log('devices:', modelStore.contextInitParams.devices);
     };
 
     updateBackend();
@@ -349,10 +347,13 @@ export const SettingsScreen: React.FC = observer(() => {
                           handleDeviceSelect(option);
                         }
                       }}
-                      density="high"
+                      density="medium"
                       buttons={deviceOptions.map(option => ({
                         value: option.id,
                         label: option.label,
+                        labelStyle: {
+                          fontSize: 10,
+                        },
                         testID: `device-option-${option.id}`,
                       }))}
                       style={styles.segmentedButtons}

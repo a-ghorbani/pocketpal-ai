@@ -116,7 +116,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
     // According to FLASH_ATTN.md Matrix 1: OpenCL only supports 'off' flash attention
     options.push({
       id: 'gpu',
-      label: `GPU (${gpuDev.deviceName || 'OpenCL'})`,
+      label: `GPU (OpenCL)`,
       description: 'OpenCL GPU acceleration (Only for Q4_0/Q6_K models)',
       devices: [gpuDev.deviceName!],
       n_gpu_layers: 99,
@@ -134,7 +134,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
     // Conservative: only allow 'off' to avoid runtime errors
     options.push({
       id: 'hexagon',
-      label: 'Hexagon NPU',
+      label: 'Hexagon',
       description: 'Qualcomm NPU (Experimental, fastest but may be unstable)',
       devices: ['HTP*'], // Wildcard for all HTP devices
       n_gpu_layers: 99,
