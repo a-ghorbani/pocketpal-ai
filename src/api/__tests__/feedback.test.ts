@@ -255,7 +255,7 @@ describe('submitContentReport', () => {
     // Default mocks for success case
     Platform.OS = 'ios';
     mockedUtils.checkConnectivity.mockResolvedValue(true);
-    mockedUtils.initializeAppCheck.mockReturnValue(undefined);
+    mockedUtils.initializeAppCheck.mockResolvedValue();
     mockedUtils.getAppCheckToken.mockResolvedValue(mockAppCheckToken);
     mockedDeviceInfo.getVersion.mockReturnValue('1.0.0');
     mockedDeviceInfo.getBuildNumber.mockReturnValue('100');
