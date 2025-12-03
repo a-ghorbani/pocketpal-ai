@@ -56,7 +56,7 @@ export async function submitContentReport(
     // Get App Check token
     let appCheckToken: string | null = null;
     try {
-      initializeAppCheck();
+      await initializeAppCheck();
       appCheckToken = await getAppCheckToken();
     } catch (error) {
       console.error('App Check error:', error);
@@ -138,7 +138,7 @@ export async function submitFeedback(
     // Get App Check token
     let appCheckToken: string | null = null;
     try {
-      initializeAppCheck();
+      await initializeAppCheck();
       appCheckToken = await getAppCheckToken();
     } catch (error) {
       console.error('App Check error:', error);

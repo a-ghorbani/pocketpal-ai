@@ -1,16 +1,27 @@
-import '@react-native-firebase/app-check';
-import firebase from '@react-native-firebase/app';
+import {getApp} from '@react-native-firebase/app';
+import {
+  ReactNativeFirebaseAppCheckProvider,
+  initializeAppCheck as fbInitializeAppCheck,
+} from '@react-native-firebase/app-check';
+
 import {APPCHECK_DEBUG_TOKEN_ANDROID, APPCHECK_DEBUG_TOKEN_IOS} from '@env';
 
 // Track initialization status
 let isAppCheckInitialized = false;
+let appCheckInstance: any;
 
-export const initializeAppCheck = () => {
+export const initializeAppCheck = async () => {
   if (isAppCheckInitialized) {
     return;
   }
 
   try {
+    // Ensure Firebase app is initialized first
+    const app = getApp();
+    if (!app) {
+      throw new Error('Firebase app is not initialized');
+    }
+
     // Skip App Check initialization if debug tokens are not configured in dev mode
     if (
       __DEV__ &&
@@ -22,9 +33,8 @@ export const initializeAppCheck = () => {
       return;
     }
 
-    const rnfbProvider = firebase
-      .appCheck()
-      .newReactNativeFirebaseAppCheckProvider();
+    // const rnfbProvider = appCheck().newReactNativeFirebaseAppCheckProvider();
+    const rnfbProvider = new ReactNativeFirebaseAppCheckProvider();
 
     rnfbProvider.configure({
       android: {
@@ -36,7 +46,7 @@ export const initializeAppCheck = () => {
         debugToken: APPCHECK_DEBUG_TOKEN_IOS,
       },
     });
-    firebase.appCheck().initializeAppCheck({
+    appCheckInstance = await fbInitializeAppCheck(getApp(), {
       provider: rnfbProvider,
       isTokenAutoRefreshEnabled: true,
     });
@@ -44,16 +54,14 @@ export const initializeAppCheck = () => {
     isAppCheckInitialized = true;
   } catch (error) {
     console.error('Failed to initialize Firebase App Check:', error);
+    throw error;
   }
 };
 
 // Get a fresh App Check token
 export const getAppCheckToken = async () => {
   try {
-    if (!firebase.appCheck) {
-      throw new Error('Firebase App Check module is not available');
-    }
-    const {token} = await firebase.appCheck().getToken(true);
+    const {token} = await appCheckInstance.getToken();
     return token;
   } catch (error) {
     console.error('Failed to get App Check token:', error);

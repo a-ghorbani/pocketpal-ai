@@ -12,13 +12,12 @@ Pod::UI.puts "📱 Minimum iOS version supported: #{ios_version}".green
 platform :ios, ios_version
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
-
-# Enable Firebase as a static framework
+# linkage = ENV['USE_FRAMEWORKS']
+# if linkage != nil
+#   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+#   use_frameworks! :linkage => linkage.to_sym
+# end
+use_frameworks! :linkage => :static
 $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
@@ -32,16 +31,19 @@ target 'PocketPal' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # # Required for Firebase with New Architecture
+  # pod 'Firebase',         :modular_headers => true
+  # pod 'FirebaseCore',     :modular_headers => true
+  # pod 'FirebaseAppCheck', :modular_headers => true
+  # pod 'GoogleUtilities',  :modular_headers => true
+
+  # # Native module for @react-native-firebase/app-check
+  # pod 'RNFBAppCheck', :path => '../node_modules/@react-native-firebase/app-check'
+
   target 'PocketPalTests' do
     inherit! :complete
     # Pods for testing
   end
-
-  # Firebase (App Check)
-  pod 'Firebase', :modular_headers => true
-  pod 'FirebaseCore', :modular_headers => true
-  pod 'FirebaseAppCheck', :modular_headers => true
-  pod 'GoogleUtilities', :modular_headers => true
 
   # Uncomment this line if you're not using auto-linking or if auto-linking causes trouble
   # pod 'WatermelonDB', path: '../node_modules/@nozbe/watermelondb'
@@ -55,6 +57,19 @@ target 'PocketPal' do
 
   # Mustache template rendering for iOS Shortcuts
   pod 'GRMustache.swift'
+
+  # Force llama-rn to build as static library to avoid duplicate headers
+  pre_install do |installer|
+    installer.pod_targets.each do |pod|
+      # Fix "Multiple commands produce" for llama-rn
+      if pod.name == 'llama-rn' || pod.name.start_with?('llama')
+        puts "Forcing #{pod.name} to static_library build type"
+        def pod.build_type
+          Pod::BuildType.static_library
+        end
+      end
+    end
+  end
 
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202

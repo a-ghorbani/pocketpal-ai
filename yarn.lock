@@ -2379,15 +2379,15 @@
   resolved "https://registry.yarnpkg.com/@react-native-documents/picker/-/picker-10.1.7.tgz#3c2890d89d5c76f375cb94149e90d07128324012"
   integrity sha512-Tb8SPU+pHxrSJmDHBozSUStIPeyFHTHLrU3MW0N3sUAioLd5z+nmUdypfg5fs+Yzp7KTxVW06APe2HLB1ysLww==
 
-"@react-native-firebase/app-check@^23.4.1":
-  version "23.4.1"
-  resolved "https://registry.yarnpkg.com/@react-native-firebase/app-check/-/app-check-23.4.1.tgz#5ac834fb6a3ae89f7a29c4b7bcb7331e2ad18559"
-  integrity sha512-Q25SUb66G/Ff3UBCTA7ClrmFpo/lEBkwZ/zQykbfFsi8UHzCmEVOD+dWgt6mu/UXHYMieswkO2tJS9PkESR40g==
+"@react-native-firebase/app-check@^23.5.0":
+  version "23.5.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/app-check/-/app-check-23.5.0.tgz#3f9598a2c1e6597d8f262e89d5424c2101369f84"
+  integrity sha512-jUEHrQ4wio++T2oGvEcr/fMtBpKJvmC8jsxVg1FRMIxgGlZ8UYrMSghu8QGZO6KEVim6QWFEnOSKAvVJmL3HXw==
 
-"@react-native-firebase/app@^23.4.1":
-  version "23.4.1"
-  resolved "https://registry.yarnpkg.com/@react-native-firebase/app/-/app-23.4.1.tgz#00c836c6fc3f921de0fbe235362627ce73df8de6"
-  integrity sha512-AVxk9dS3plHjIUDWUlKSEAbKrEtGweLZXEMZpJokvLyNbeL1i4dDAUkDriPzjIEgtxaFX3rUxFuBRQvLHlsmAA==
+"@react-native-firebase/app@^23.5.0":
+  version "23.5.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/app/-/app-23.5.0.tgz#b84540b1822e510dfd3c3890e8ca10b2655759fe"
+  integrity sha512-TOlm6V6fbILwgFP37QZM9Y0nfAW6zqNGVIWlMlepQB6b/BzzFMrCl1FiyknqD5l7i1jgdFQrqX1WH6ZO4ePa/g==
   dependencies:
     firebase "12.4.0"
 

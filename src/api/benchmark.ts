@@ -39,7 +39,7 @@ export async function submitBenchmark(
     // Get App Check token
     let appCheckToken: string | null = null;
     try {
-      initializeAppCheck();
+      await initializeAppCheck();
       appCheckToken = await getAppCheckToken();
     } catch (error) {
       console.error('App Check error:', error);
