@@ -28,6 +28,36 @@ const isEmptyContent = (content: string): boolean => {
   return !content || content.trim() === '';
 };
 
+// Helper to decode HTML entities
+const decodeHTMLEntities = (text: string): string => {
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x27;': "'",
+    '&nbsp;': ' ',
+    '&apos;': "'",
+  };
+
+  // Replace named entities
+  let decoded = text.replace(
+    /&[a-z]+;/gi,
+    entity => entities[entity] || entity,
+  );
+
+  // Replace numeric entities (&#123; and &#xAB;)
+  decoded = decoded.replace(/&#(\d+);/g, (_match, dec) =>
+    String.fromCharCode(parseInt(dec, 10)),
+  );
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_match, hex) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+
+  return decoded;
+};
+
 const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -40,7 +70,18 @@ const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
 
   const language =
     props.tnode?.domNode?.attribs?.class?.replace('language-', '') || 'text';
-  const content = props.tnode?.domNode?.children?.[0]?.data || '';
+
+  // Extract content from the original HTML to preserve newlines
+  // The react-native-render-html parser collapses whitespace in the DOM,
+  // so we need to get the content from tnode.init which preserves the original text
+  const rawHtml =
+    props.tnode?.init?.domNode?.rawHTML ||
+    props.tnode?.domNode?.rawHTML ||
+    props.tnode?.domNode?.children?.[0]?.data ||
+    '';
+
+  // Decode HTML entities (&lt; -> <, &gt; -> >, etc.)
+  const content = decodeHTMLEntities(rawHtml);
 
   return (
     <View>

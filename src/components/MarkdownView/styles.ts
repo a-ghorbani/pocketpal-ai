@@ -21,6 +21,7 @@ export const createTagsStyles = (theme: Theme) => ({
     borderRadius: 4,
     color: theme.colors.onSurface, // Color for code text
     fontSize: 12,
+    whiteSpace: 'pre' as const,
   },
   pre: {
     backgroundColor: theme.colors.surface, // Background for pre blocks
@@ -29,6 +30,7 @@ export const createTagsStyles = (theme: Theme) => ({
     color: theme.colors.onPrimaryContainer,
     fontFamily: 'Courier',
     fontSize: 14,
+    whiteSpace: 'pre' as const,
     // overflow: 'scroll', // Ensure scrolling for long code blocks
   },
   // Styles for thinking tags
