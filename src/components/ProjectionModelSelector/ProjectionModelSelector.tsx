@@ -268,6 +268,7 @@ export const ProjectionModelSelector = observer(
                                   />
                                 </TouchableOpacity>
                                 <TouchableOpacity
+                                  testID="delete-projection-model-button"
                                   onPress={() => handleDeleteModel(projModel)}
                                   style={styles.deleteArea}
                                   activeOpacity={0.7}>
@@ -290,6 +291,7 @@ export const ProjectionModelSelector = observer(
                               </View>
                             ) : (
                               <TouchableOpacity
+                                testID="download-projection-model-button"
                                 onPress={() => handleDownloadModel(projModel)}
                                 style={styles.downloadArea}
                                 activeOpacity={0.7}>
