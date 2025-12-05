@@ -21,11 +21,29 @@ export function convertToChatMessages(
   isMultimodalEnabled: boolean = true,
 ): ChatMessage[] {
   return messages
-    .filter(message => message.type === 'text' && message.text !== undefined)
+    .filter(message => {
+      // Filter out non-text messages
+      if (message.type !== 'text') return false;
+
+      // Filter out messages with null, undefined, or empty text
+      const text = (message as MessageType.Text).text;
+      return text !== undefined && text !== null && text.trim() !== '';
+    })
     .map(message => {
       const textMessage = message as MessageType.Text;
       const role: 'assistant' | 'user' =
         message.author.id === assistant.id ? 'assistant' : 'user';
+
+      // Ensure text is a non-null string
+      const messageText = textMessage.text || '';
+
+      // For assistant messages, get reasoning_content from metadata if available
+      // llama.rn already extracts this for us during completion
+      const reasoningContent =
+        role === 'assistant'
+          ? textMessage.metadata?.completionResult?.reasoning_content ||
+            textMessage.metadata?.partialCompletionResult?.reasoning_content
+          : undefined;
 
       // Check if this message has images (multimodal) and if multimodal is enabled
       if (
@@ -34,35 +52,49 @@ export function convertToChatMessages(
         isMultimodalEnabled
       ) {
         // Create multimodal content with text and images
-        const content: Array<{
+        const contentArray: Array<{
           type: 'text' | 'image_url';
           text?: string;
           image_url?: {url: string};
         }> = [
           {
             type: 'text',
-            text: textMessage.text!,
+            text: messageText,
           },
         ];
 
         // Add images to content
-        content.push(
+        contentArray.push(
           ...textMessage.imageUris.map(path => ({
             type: 'image_url' as const,
             image_url: {url: path},
           })),
         );
 
-        return {
+        const chatMessage: any = {
           role,
-          content,
-        } as ChatMessage;
+          content: contentArray,
+        };
+
+        // Add reasoning_content if present (for chat context)
+        if (reasoningContent) {
+          chatMessage.reasoning_content = reasoningContent;
+        }
+
+        return chatMessage as ChatMessage;
       } else {
         // Text-only message (backward compatibility)
-        return {
+        const chatMessage: any = {
           role,
-          content: textMessage.text!,
-        } as ChatMessage;
+          content: messageText,
+        };
+
+        // Add reasoning_content if present (for chat context)
+        if (reasoningContent) {
+          chatMessage.reasoning_content = reasoningContent;
+        }
+
+        return chatMessage as ChatMessage;
       }
     })
     .reverse();

@@ -1,11 +1,9 @@
 jest.unmock('../ChatSessionStore'); // this is not really needed, as only importing from store is mocked.
-import {LlamaContext} from 'llama.rn';
 
 import {chatSessionStore, defaultCompletionSettings} from '../ChatSessionStore';
 import {chatSessionRepository} from '../../repositories/ChatSessionRepository';
 
 import {MessageType} from '../../utils/types';
-import {mockLlamaContextParams} from '../../../jest/fixtures/models';
 import {waitFor} from '@testing-library/react-native';
 
 // Use the mock from __mocks__/repositories/ChatSessionRepository.js
@@ -434,76 +432,6 @@ describe('chatSessionStore', () => {
 
     it('returns empty array when no active session', () => {
       expect(chatSessionStore.currentSessionMessages).toEqual([]);
-    });
-  });
-
-  describe('updateMessageToken', () => {
-    it('updates existing message with new token', async () => {
-      const session = {
-        id: 'session1',
-        title: 'Session 1',
-        date: new Date().toISOString(),
-        messages: [mockMessage],
-        completionSettings: defaultCompletionSettings,
-        settingsSource: 'pal' as 'pal' | 'custom',
-      };
-      chatSessionStore.sessions = [session];
-      chatSessionStore.activeSessionId = session.id;
-
-      const mockContext = new LlamaContext(mockLlamaContextParams);
-
-      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
-        true,
-      );
-
-      await chatSessionStore.updateMessageToken(
-        {token: ' world'},
-        Date.now(),
-        mockMessage.id,
-        session.id,
-        mockContext,
-      );
-
-      expect(chatSessionRepository.updateMessage).toHaveBeenCalled();
-      expect(
-        (chatSessionStore.currentSessionMessages[0] as MessageType.Text).text,
-      ).toBe('Hello, world! world');
-    });
-
-    it('creates new message if id not found', async () => {
-      const session = {
-        id: 'session1',
-        title: 'Session 1',
-        date: new Date().toISOString(),
-        messages: [],
-        completionSettings: defaultCompletionSettings,
-        settingsSource: 'pal' as 'pal' | 'custom',
-      };
-      chatSessionStore.sessions = [session];
-      chatSessionStore.activeSessionId = session.id;
-
-      const mockContext = new LlamaContext(mockLlamaContextParams);
-      const newMessageId = 'new-message';
-      const createdAt = Date.now();
-
-      // Mock the updateMessage method to return false (message not found)
-      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
-        false,
-      );
-
-      await chatSessionStore.updateMessageToken(
-        {token: 'New message'},
-        createdAt,
-        newMessageId,
-        session.id,
-        mockContext,
-      );
-
-      expect(chatSessionRepository.updateMessage).toHaveBeenCalled();
-      const newMessage = chatSessionStore.currentSessionMessages[0];
-      expect(newMessage.id).toBe(newMessageId);
-      expect((newMessage as MessageType.Text).text).toBe('New message');
-      expect(newMessage.metadata).toEqual({contextId: 1, copyable: true});
     });
   });
 

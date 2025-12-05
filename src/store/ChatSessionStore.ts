@@ -1,9 +1,7 @@
-import {LlamaContext} from 'llama.rn';
 import {makeAutoObservable, runInAction} from 'mobx';
 import {format, isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {assistant} from '../utils/chat';
 import {MessageType} from '../utils/types';
 import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
@@ -12,6 +10,10 @@ import {palStore} from './PalStore';
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
+
+// Minimum time between streaming UI updates to prevent excessive re-renders
+// Set to 150ms to stay well above the 50ms threshold that triggers React warnings
+const STREAMING_THROTTLE_MS = 150;
 
 export interface SessionMetaData {
   id: string;
@@ -394,6 +396,107 @@ class ChatSessionStore {
     }
   }
 
+  private streamingThrottleTimer: NodeJS.Timeout | null = null;
+  private pendingStreamingUpdate: {
+    id: string;
+    sessionId: string;
+    update: Partial<MessageType.Text>;
+  } | null = null;
+  private lastStreamingUpdateTime: number = 0;
+
+  // Update message during streaming - no database write, triggers reactivity
+  // Throttled to avoid excessive re-renders
+  updateMessageStreaming(
+    id: string,
+    sessionId: string,
+    update: Partial<MessageType.Text>,
+  ): void {
+    // Store the latest update
+    this.pendingStreamingUpdate = {id, sessionId, update};
+
+    // If timer is already running, the update will be applied when it fires
+    if (this.streamingThrottleTimer) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastUpdate = now - this.lastStreamingUpdateTime;
+
+    // If enough time has passed, apply immediately
+    if (timeSinceLastUpdate >= STREAMING_THROTTLE_MS) {
+      this.applyStreamingUpdate();
+      this.lastStreamingUpdateTime = Date.now();
+      return;
+    }
+
+    // Otherwise, schedule for later (wait for the remaining time)
+    const remainingTime = STREAMING_THROTTLE_MS - timeSinceLastUpdate;
+    this.streamingThrottleTimer = setTimeout(() => {
+      this.streamingThrottleTimer = null;
+      if (this.pendingStreamingUpdate) {
+        this.applyStreamingUpdate();
+        this.lastStreamingUpdateTime = Date.now();
+      }
+    }, remainingTime);
+  }
+
+  // Flush any pending streaming update immediately
+  flushPendingStreamingUpdate(): void {
+    if (this.streamingThrottleTimer) {
+      clearTimeout(this.streamingThrottleTimer);
+      this.streamingThrottleTimer = null;
+    }
+    if (this.pendingStreamingUpdate) {
+      this.applyStreamingUpdate();
+      this.lastStreamingUpdateTime = Date.now();
+    }
+  }
+
+  private applyStreamingUpdate(): void {
+    if (!this.pendingStreamingUpdate) {
+      return;
+    }
+
+    const {id, sessionId, update} = this.pendingStreamingUpdate;
+    this.pendingStreamingUpdate = null;
+
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+
+    const message = session.messages.find(msg => msg.id === id);
+    if (!message || message.type !== 'text') {
+      return;
+    }
+
+    // Update the message properties directly - MobX will track changes
+    runInAction(() => {
+      if (update.text !== undefined) {
+        (message as MessageType.Text).text = update.text;
+      }
+      if (update.metadata !== undefined) {
+        (message as MessageType.Text).metadata = {
+          ...(message as MessageType.Text).metadata,
+          ...update.metadata,
+        };
+      }
+    });
+
+    // Also persist to database for crash resilience
+    // This is async but we don't await to keep streaming fast
+    chatSessionRepository
+      .updateMessage(id, update)
+      .catch(error =>
+        console.error('Failed to persist streaming update to DB:', error),
+      );
+  }
+
   async updateMessage(
     id: string,
     sessionId: string,
@@ -498,78 +601,6 @@ class ChatSessionStore {
         await this.updateSessionCompletionSettings({
           ...this.newChatCompletionSettings,
         });
-      }
-    }
-  }
-
-  async updateMessageToken(
-    data: any,
-    createdAt: number,
-    id: string,
-    sessionId: string | undefined,
-    context: LlamaContext,
-  ): Promise<void> {
-    const {token} = data;
-
-    if (this.activeSessionId) {
-      const session = sessionId
-        ? this.sessions.find(s => s.id === sessionId)
-        : this.sessions.find(s => s.id === this.activeSessionId);
-      if (session) {
-        const index = session.messages.findIndex(msg => msg.id === id);
-        if (index >= 0) {
-          // Update existing message
-          runInAction(() => {
-            session.messages = session.messages.map((msg, i) => {
-              if (msg.type === 'text' && i === index) {
-                return {
-                  ...msg,
-                  text: (msg.text + token).replace(/^\s+/, ''),
-                };
-              }
-              return msg;
-            });
-          });
-
-          // Update the database with each token to ensure it's saved
-          // Since we throttle the calls, this shouldn't be too much of a performance hit
-          try {
-            const updatedMessage = session.messages[index];
-            if (updatedMessage.type === 'text') {
-              // Use the repository to update the message
-              await chatSessionRepository.updateMessage(id, {
-                text: updatedMessage.text,
-              });
-            }
-          } catch (error) {
-            console.error('Failed to update message in database:', error);
-          }
-        } else {
-          // Create new message
-          const newMessage = {
-            author: assistant,
-            createdAt,
-            id,
-            text: token,
-            type: 'text',
-            metadata: {contextId: context?.id, copyable: true},
-          } as MessageType.Text;
-
-          // we can simply update the message in the database,
-          // since we create an empty message before calling update
-          try {
-            await chatSessionRepository.updateMessage(id, {
-              text: newMessage.text,
-            });
-
-            // Then update UI
-            runInAction(() => {
-              session.messages.unshift(newMessage);
-            });
-          } catch (error) {
-            console.error('Failed to add message to session:', error);
-          }
-        }
       }
     }
   }

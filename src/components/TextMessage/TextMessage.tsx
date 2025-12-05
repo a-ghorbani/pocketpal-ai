@@ -244,6 +244,10 @@ export const TextMessage = ({
             markdownText={message.text.trim()}
             maxMessageWidth={messageWidth}
             selectable={false}
+            reasoningContent={
+              message.metadata?.completionResult?.reasoning_content ||
+              message.metadata?.partialCompletionResult?.reasoning_content
+            }
           />
 
           {/*Platform.OS === 'ios' ? (

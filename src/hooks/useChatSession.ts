@@ -1,4 +1,4 @@
-import React, {useRef, useCallback} from 'react';
+import React, {useRef} from 'react';
 
 import {toJS, runInAction} from 'mobx';
 
@@ -44,31 +44,34 @@ const prepareCompletion = async ({
     await chatSessionStore.getCurrentCompletionSettings();
   const stopWords = toJS(modelStore.activeModel?.stopWords);
 
-  // Create user message content - always start with text
-  const userMessageContent: any[] = [
-    {
-      type: 'text',
-      text: message.text,
-    },
-  ];
-
   // Check if we have images and if multimodal is enabled
   const hasImages = imageUris && imageUris.length > 0;
 
-  // Add images only if multimodal is enabled
-  // If images exist but multimodal is not enabled, show warning but don't send images to API
+  // Create user message content - use array format only for multimodal, string for text-only
+  let userMessageContent: any;
+
   if (hasImages && isMultimodalEnabled) {
-    userMessageContent.push(
+    // Multimodal: use array format with text and images
+    userMessageContent = [
+      {
+        type: 'text',
+        text: message.text,
+      },
       ...imageUris.map(path => ({
         type: 'image_url',
         image_url: {url: path}, // llama.rn handles file:// prefix removal
       })),
-    );
-  } else if (hasImages && !isMultimodalEnabled) {
-    // Show warning for multimodal not enabled
-    uiStore.setChatWarning(
-      createMultimodalWarning(l10n.chat.multimodalNotEnabled),
-    );
+    ];
+  } else {
+    // Text-only: use simple string format
+    userMessageContent = message.text;
+
+    // Show warning if user tried to send images but multimodal is not enabled
+    if (hasImages && !isMultimodalEnabled) {
+      uiStore.setChatWarning(
+        createMultimodalWarning(l10n.chat.multimodalNotEnabled),
+      );
+    }
   }
 
   // Convert chat session messages to llama.rn format
@@ -117,28 +120,34 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
-  // Create message record in database
+  // If enable_thinking is true, set reasoning_format to 'auto'
+  // This returns the reasoning content in a separate field (reasoning_content)
+  if (cleanCompletionParams.enable_thinking) {
+    cleanCompletionParams.reasoning_format = 'auto';
+  }
+
+  // Create empty assistant message in both database and store
   const createdAt = Date.now();
-  const newMessage = await chatSessionRepository.addMessageToSession(
-    chatSessionStore.activeSessionId!,
-    {
-      author: assistant,
-      createdAt: createdAt,
-      id: '',
-      text: '',
-      type: 'text',
-      metadata: {
-        contextId: context.id,
-        conversationId: conversationIdRef,
-        copyable: true,
-        multimodal: hasImages, // Simple check based on presence of images
-      },
+  const emptyMessage: MessageType.Text = {
+    author: assistant,
+    createdAt: createdAt,
+    id: '', // Will be set by addMessageToCurrentSession
+    text: '',
+    type: 'text',
+    metadata: {
+      contextId: context.id,
+      conversationId: conversationIdRef,
+      copyable: true,
+      multimodal: hasImages, // Simple check based on presence of images
     },
-  );
+  };
+
+  // Use store method to ensure message is added to both database AND MobX observable store
+  await chatSessionStore.addMessageToCurrentSession(emptyMessage);
 
   const messageInfo = {
     createdAt,
-    id: newMessage.id,
+    id: emptyMessage.id, // This is now set by addMessageToCurrentSession
     sessionId: chatSessionStore.activeSessionId!,
   };
 
@@ -156,110 +165,6 @@ export const useChatSession = (
 ) => {
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
-
-  // Time-based batch processing
-  // Token queue for accumulating tokens
-  const tokenQueue = useRef<
-    Array<{token: string; createdAt: number; id: string; sessionId: string}>
-  >([]);
-  const isProcessingTokens = useRef(false);
-  const isMounted = useRef(true); // we use Drawer.Navigator, so the screen won't unmount. Not sure how useful this is.
-  const batchTimer = useRef<NodeJS.Timeout | null>(null);
-  const batchTimeout = 100; // Process batch every 100ms
-
-  // Process all accumulated tokens in a batch
-  const processTokenBatch = useCallback(async () => {
-    if (isProcessingTokens.current || tokenQueue.current.length === 0) {
-      return;
-    }
-
-    isProcessingTokens.current = true;
-    batchTimer.current = null;
-
-    try {
-      // Take all accumulated tokens
-      const tokensToProcess = [...tokenQueue.current];
-      tokenQueue.current = [];
-      const context = modelStore.context;
-
-      if (context && tokensToProcess.length > 0) {
-        // Group tokens by message ID
-        const messageUpdates: Record<string, string> = {};
-
-        tokensToProcess.forEach(({token, id}) => {
-          messageUpdates[id] = (messageUpdates[id] || '') + token;
-        });
-
-        // Update each message in a single operation
-        for (const [id, combinedToken] of Object.entries(messageUpdates)) {
-          try {
-            await chatSessionStore.updateMessageToken(
-              {token: combinedToken},
-              tokensToProcess[0].createdAt, // Use first token's timestamp
-              id,
-              tokensToProcess[0].sessionId, // Use first token's session
-              context,
-            );
-          } catch (error) {
-            console.error('Error updating message token batch:', error);
-          }
-        }
-      }
-    } finally {
-      isProcessingTokens.current = false;
-
-      // Schedule next batch if there are new tokens
-      if (tokenQueue.current.length > 0) {
-        if (isMounted.current) {
-          // Normal case - component is mounted, schedule next batch
-          if (!batchTimer.current) {
-            batchTimer.current = setTimeout(processTokenBatch, batchTimeout);
-          }
-        } else {
-          // Component is unmounted but we still have tokens - process immediately
-          // This ensures all tokens are saved even after navigation
-          processTokenBatch();
-        }
-      }
-    }
-  }, [batchTimeout]);
-
-  // Add token to queue and schedule processing
-  const queueToken = useCallback(
-    (token: string, createdAt: number, id: string, sessionId: string) => {
-      // Add token to queue
-      tokenQueue.current.push({token, createdAt, id, sessionId});
-
-      // Schedule processing if not already scheduled
-      if (!batchTimer.current && isMounted.current) {
-        batchTimer.current = setTimeout(processTokenBatch, batchTimeout);
-      }
-    },
-    [processTokenBatch, batchTimeout],
-  );
-
-  // Cleanup on unmount
-  // In Drawer.Navigator, the screen won't unmount. Not sure how useful this is.
-  React.useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      // Process any remaining tokens immediately instead of waiting for the timer
-      if (tokenQueue.current.length > 0 && !isProcessingTokens.current) {
-        // Force process the remaining tokens
-        processTokenBatch();
-      }
-
-      // After a short delay to allow processing to complete, clean up
-      setTimeout(() => {
-        isMounted.current = false;
-        // Clear any pending timer
-        if (batchTimer.current) {
-          clearTimeout(batchTimer.current);
-          batchTimer.current = null;
-        }
-      }, 500); // Give 500ms for processing to complete
-    };
-  }, [processTokenBatch]);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -358,9 +263,9 @@ export const useChatSession = (
       let timeToFirstToken: number | null = null;
 
       const result = await context.completion(cleanCompletionParams, data => {
-        if (data.token && currentMessageInfo.current) {
+        if (currentMessageInfo.current) {
           // Capture time to first token on the first token received
-          if (timeToFirstToken === null) {
+          if (timeToFirstToken === null && (data.token || data.content)) {
             timeToFirstToken = Date.now() - completionStartTime;
           }
 
@@ -368,13 +273,34 @@ export const useChatSession = (
             modelStore.setIsStreaming(true);
           }
 
-          // Queue each token individually for processing
-          queueToken(
-            data.token,
-            currentMessageInfo.current.createdAt,
-            currentMessageInfo.current.id,
-            currentMessageInfo.current.sessionId,
-          );
+          // Use content and reasoning_content from the streaming data
+          // llama.rn already separates these for us when enable_thinking is true
+          const {content = '', reasoning_content: reasoningContent} = data;
+
+          // Update message with the separated content
+          if (content || reasoningContent) {
+            // Build the update object
+            const update: any = {
+              metadata: {
+                partialCompletionResult: {
+                  reasoning_content: reasoningContent,
+                  content: content.replace(/^\s+/, ''),
+                },
+              },
+            };
+
+            // Only update text if we have actual content
+            if (content) {
+              update.text = content.replace(/^\s+/, '');
+            }
+
+            // Use the store's streaming update method which properly triggers reactivity
+            chatSessionStore.updateMessageStreaming(
+              currentMessageInfo.current.id,
+              currentMessageInfo.current.sessionId,
+              update,
+            );
+          }
         }
       });
 
@@ -383,17 +309,14 @@ export const useChatSession = (
         console.log('Completion result:', {
           ...result.timings,
           time_to_first_token_ms: timeToFirstToken,
+          reasoning_content: result.reasoning_content,
+          content: result.content,
+          text: result.text,
         });
+        console.log('result', result);
       }
 
-      // No need to flush remaining tokens as each token is processed individually
-      // Just wait for the queue to finish processing
-      while (tokenQueue.current.length > 0 || isProcessingTokens.current) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-
-      // Update only the metadata in the database
-      // The text is already being updated with each token
+      // Update final completion metadata
       await chatSessionStore.updateMessage(
         currentMessageInfo.current.id,
         currentMessageInfo.current.sessionId,
@@ -413,6 +336,7 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
     } catch (error) {
+      console.error('Completion error:', error);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
@@ -469,19 +393,10 @@ export const useChatSession = (
     if (modelStore.inferencing && context) {
       context.stopCompletion();
     }
-    // Wait for any queued tokens to finish processing
-    if (tokenQueue.current.length > 0 || isProcessingTokens.current) {
-      try {
-        // Wait for the queue to finish processing
-        while (tokenQueue.current.length > 0 || isProcessingTokens.current) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
-      } catch (error) {
-        console.error('Error when stopping completion:', error);
-      }
-    }
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
+    chatSessionStore.setIsGenerating(false);
+
     // Deactivate keep awake when stopping completion
     try {
       deactivateKeepAwake();
