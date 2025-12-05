@@ -928,6 +928,211 @@ describe('chatSessionStore', () => {
     });
   });
 
+  describe('updateMessageStreaming', () => {
+    let testMessage: MessageType.Text;
+    let mockTime: number;
+    let dateNowSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      // Mock Date.now() to work with fake timers
+      mockTime = 1000000;
+      dateNowSpy = jest.spyOn(Date, 'now').mockImplementation(() => mockTime);
+      jest.useFakeTimers();
+
+      // Reset store's internal streaming state
+      (chatSessionStore as any).lastStreamingUpdateTime = 0;
+      (chatSessionStore as any).pendingStreamingUpdate = null;
+      if ((chatSessionStore as any).streamingThrottleTimer) {
+        clearTimeout((chatSessionStore as any).streamingThrottleTimer);
+        (chatSessionStore as any).streamingThrottleTimer = null;
+      }
+
+      // Create a fresh copy of the message for each test
+      testMessage = {
+        id: 'message1',
+        text: 'Hello, world!',
+        type: 'text',
+        author: {id: 'user1', name: 'User'},
+        createdAt: mockTime,
+      } as MessageType.Text;
+
+      const session = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [testMessage],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [session];
+      chatSessionStore.activeSessionId = 'session1';
+      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.clearAllMocks();
+      dateNowSpy.mockRestore();
+    });
+
+    it('should apply update immediately when no throttle is active', () => {
+      const update = {text: 'Streaming text...'};
+
+      chatSessionStore.updateMessageStreaming(
+        testMessage.id,
+        'session1',
+        update,
+      );
+
+      // Should apply immediately
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('Streaming text...');
+    });
+
+    it('should update message metadata', () => {
+      const update = {
+        metadata: {
+          thinking: 'Internal reasoning...',
+        },
+      };
+
+      chatSessionStore.updateMessageStreaming(
+        testMessage.id,
+        'session1',
+        update,
+      );
+
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).metadata
+          ?.thinking,
+      ).toBe('Internal reasoning...');
+    });
+
+    it('should merge metadata with existing metadata', () => {
+      // Set initial metadata
+      (chatSessionStore.sessions[0].messages[0] as MessageType.Text).metadata =
+        {
+          existingKey: 'existing value',
+        };
+
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        metadata: {
+          newKey: 'new value',
+        },
+      });
+
+      const metadata = (
+        chatSessionStore.sessions[0].messages[0] as MessageType.Text
+      ).metadata;
+      expect(metadata?.existingKey).toBe('existing value');
+      expect(metadata?.newKey).toBe('new value');
+    });
+
+    it('should persist updates to database asynchronously', () => {
+      const update = {text: 'Persisted text'};
+
+      chatSessionStore.updateMessageStreaming(
+        testMessage.id,
+        'session1',
+        update,
+      );
+
+      expect(chatSessionRepository.updateMessage).toHaveBeenCalledWith(
+        testMessage.id,
+        update,
+      );
+    });
+
+    it('should handle session not found gracefully', () => {
+      chatSessionStore.updateMessageStreaming(
+        testMessage.id,
+        'non-existent-session',
+        {text: 'test'},
+      );
+
+      // Should not throw, just silently fail
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('Hello, world!');
+    });
+
+    it('should handle message not found gracefully', () => {
+      chatSessionStore.updateMessageStreaming(
+        'non-existent-message',
+        'session1',
+        {
+          text: 'test',
+        },
+      );
+
+      // Should not throw, original message unchanged
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('Hello, world!');
+    });
+
+    it('should handle non-text message types gracefully', () => {
+      const imageMessage = {
+        id: 'image-msg',
+        type: 'image',
+        uri: 'file://image.jpg',
+        author: {id: 'user1'},
+        createdAt: Date.now(),
+      } as MessageType.Image;
+
+      chatSessionStore.sessions[0].messages = [imageMessage];
+
+      // Should not throw when trying to update non-text message
+      chatSessionStore.updateMessageStreaming('image-msg', 'session1', {
+        text: 'test',
+      });
+
+      expect(chatSessionStore.sessions[0].messages[0].type).toBe('image');
+    });
+
+    it('should use activeSessionId when sessionId parameter is empty', () => {
+      const update = {text: 'Active session update'};
+
+      chatSessionStore.updateMessageStreaming(testMessage.id, '', update);
+
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('Active session update');
+    });
+
+    it('should handle database persistence errors gracefully', async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      (chatSessionRepository.updateMessage as jest.Mock).mockRejectedValueOnce(
+        new Error('DB write failed'),
+      );
+
+      chatSessionStore.updateMessageStreaming(testMessage.id, 'session1', {
+        text: 'Test update',
+      });
+
+      // Message should still be updated in memory
+      expect(
+        (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
+      ).toBe('Test update');
+
+      // Wait for async DB operation to complete
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Failed to persist streaming update to DB:',
+          expect.any(Error),
+        );
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
   describe('pal management', () => {
     it('gets active pal ID from active session', () => {
       const session = {

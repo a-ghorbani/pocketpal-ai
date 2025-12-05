@@ -440,18 +440,6 @@ class ChatSessionStore {
     }, remainingTime);
   }
 
-  // Flush any pending streaming update immediately
-  flushPendingStreamingUpdate(): void {
-    if (this.streamingThrottleTimer) {
-      clearTimeout(this.streamingThrottleTimer);
-      this.streamingThrottleTimer = null;
-    }
-    if (this.pendingStreamingUpdate) {
-      this.applyStreamingUpdate();
-      this.lastStreamingUpdateTime = Date.now();
-    }
-  }
-
   private applyStreamingUpdate(): void {
     if (!this.pendingStreamingUpdate) {
       return;
