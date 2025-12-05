@@ -266,8 +266,6 @@ export const ModelsScreen: React.FC = observer(() => {
     uiStore.setValue('modelsScreen', 'expandedGroups', updatedExpandedGroups);
   };
 
-  //const {scrollRef, moveScrollToDown} = useMoveScroll();
-
   const renderGroupHeader = ({item: group}) => {
     const isExpanded = expandedGroups[group.type];
     const displayName = filters.includes('grouped')
