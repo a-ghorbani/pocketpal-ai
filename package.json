@@ -45,7 +45,7 @@
     "chat-formatter": "^0.3.4",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
-    "llama.rn": "0.9.1",
+    "llama.rn": "0.9.2",
     "marked": "^16.4.0",
     "mobx": "^6.15.0",
     "mobx-persist-store": "^1.1.8",
