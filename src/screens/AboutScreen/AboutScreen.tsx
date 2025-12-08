@@ -12,6 +12,7 @@ import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {Text, Button, SegmentedButtons} from 'react-native-paper';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {BuildInfo} from 'llama.rn';
 
 import {submitFeedback} from '../../api/feedback';
 
@@ -127,6 +128,10 @@ export const AboutScreen: React.FC = () => {
                   />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.llamaBuildText}>
+                llama.cpp {BuildInfo.number} ({BuildInfo.commit.substring(0, 7)}
+                )
+              </Text>
             </View>
           </View>
 

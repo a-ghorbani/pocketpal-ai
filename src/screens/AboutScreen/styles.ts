@@ -66,6 +66,12 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       ...theme.fonts.bodyMedium,
       color: theme.colors.onSurface,
     },
+    llamaBuildText: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+      marginTop: theme.spacing.default / 2,
+      opacity: 0.7,
+    },
     section: {
       padding: theme.spacing.default * 2,
       borderBottomWidth: 1,
