@@ -50,6 +50,10 @@ export const createStyles = (theme: Theme) =>
     settingsSection: {
       paddingVertical: 8,
     },
+    modelNameLabel: {
+      ...theme.fonts.titleMediumLight,
+      paddingVertical: 8,
+    },
     divider: {
       marginVertical: 4,
     },
