@@ -538,6 +538,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       return (
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
+          accessibilityLabel={isActiveModel ? 'Offload model' : 'Load model'}
           icon={isActiveModel ? 'eject' : 'play-circle-outline'}
           //mode="contained-tonal"
           onPress={handlePress}

@@ -76,7 +76,11 @@ export const SearchView = observer(
       const isVision = isVisionRepo(item.siblings || []);
 
       return (
-        <TouchableOpacity key={item.id} onPress={() => onModelSelect(item)}>
+        <TouchableOpacity
+          key={item.id}
+          onPress={() => onModelSelect(item)}
+          accessibilityLabel={`${item.author} ${extractHFModelTitle(item.id)}`}
+          testID={`hf-model-item-${item.id}`}>
           <Text variant="labelMedium" style={styles.modelAuthor}>
             {item.author}
           </Text>

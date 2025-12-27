@@ -137,6 +137,8 @@ export const EnhancedSearchBar = ({
             placeholder={placeholder || l10n.models.search.searchPlaceholder}
             placeholderTextColor={theme.colors.onSurfaceVariant}
             style={styles.searchInput}
+            testID="search-input"
+            accessibilityLabel="Search models"
           />
           {value.length > 0 && (
             <TouchableOpacity
@@ -231,6 +233,8 @@ export const EnhancedSearchBar = ({
               placeholderTextColor={theme.colors.onSurfaceVariant}
               style={styles.authorInput}
               autoFocus
+              testID="author-filter-input"
+              accessibilityLabel="Filter by author"
             />
             {filters.author.length > 0 && (
               <TouchableOpacity
