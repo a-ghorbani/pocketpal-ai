@@ -49,7 +49,7 @@ export interface ErrorState {
     | 'server'
     | 'multimodal'
     | 'unknown';
-  service?: 'huggingface' | 'firebase' | 'localapi';
+  service?: 'huggingface' | 'firebase' | 'localapi' | 'oci';
   message: string;
   context: 'search' | 'download' | 'modelDetails' | 'chat';
   recoverable: boolean;
