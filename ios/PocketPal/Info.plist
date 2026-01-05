@@ -62,6 +62,8 @@
 	<string>PocketPal accesses your photo library to select images for local AI analysis only. Selected images are processed entirely on your device and are never transmitted to external servers.</string>
 	<key>NSSiriUsageDescription</key>
 	<string>PocketPal uses Siri to let you ask questions to your AI Pals using voice commands.</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialIcons.ttf</string>
