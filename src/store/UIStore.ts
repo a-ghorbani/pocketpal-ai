@@ -28,7 +28,8 @@ export class UIStore {
   autoNavigatetoChat = true;
 
   //colorScheme = useColorScheme();
-  colorScheme: 'light' | 'dark' = Appearance.getColorScheme() ?? 'light';
+  colorScheme: 'light' | 'dark' =
+    Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
 
   // Current selected language (default to English)
   _language: AvailableLanguage = 'en';
