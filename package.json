@@ -65,7 +65,7 @@
     "react-native-keyboard-controller": "^1.19.1",
     "react-native-keychain": "^10.0.0",
     "react-native-linear-gradient": "^2.8.3",
-    "react-native-paper": "^5.14.5",
+    "react-native-paper": "5.14.5",
     "react-native-parsed-text": "^0.0.22",
     "react-native-picker-select": "^9.3.1",
     "react-native-reanimated": "^4.1.3",
