@@ -107,6 +107,7 @@ class ModelStore {
   isStreaming: boolean = false;
 
   downloadError: ErrorState | null = null;
+  modelLoadError: ErrorState | null = null;
 
   constructor() {
     makeAutoObservable(this, {activeModel: computed});
@@ -335,7 +336,8 @@ class ModelStore {
       this.contextInitParams.flash_attn_type ??
       (Platform.OS === 'ios' ? 'auto' : 'off');
 
-    return {
+    // Build the params object, filtering out undefined values
+    const params: Partial<Omit<ContextParams, 'model'>> = {
       n_ctx: effectiveContext,
       n_batch: effectiveBatch,
       n_ubatch: effectiveUBatch,
@@ -350,6 +352,11 @@ class ModelStore {
       use_mlock: this.contextInitParams.use_mlock,
       use_mmap: effectiveUseMmap,
     };
+
+    // Remove undefined values from the params object
+    return Object.fromEntries(
+      Object.entries(params).filter(([_, value]) => value !== undefined),
+    ) as Omit<ContextParams, 'model'>;
   };
 
   // Legacy methods for backward compatibility
@@ -1150,6 +1157,21 @@ class ModelStore {
         this.setActiveModel(model.id);
       });
       return ctx;
+    } catch (error) {
+      console.error(
+        `Failed to initialize model context for "${model.name}" (${model.id}):`,
+        error,
+      );
+
+      // Set error state for UI feedback
+      const errorState = createErrorState(error, 'modelInit', undefined, {
+        modelId: model.id,
+      });
+      runInAction(() => {
+        this.modelLoadError = errorState;
+      });
+
+      throw error;
     } finally {
       runInAction(() => {
         this.isContextLoading = false;
@@ -2297,6 +2319,10 @@ class ModelStore {
 
   clearDownloadError = () => {
     this.downloadError = null;
+  };
+
+  clearModelLoadError = () => {
+    this.modelLoadError = null;
   };
 
   retryDownload = () => {

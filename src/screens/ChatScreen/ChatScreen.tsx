@@ -161,6 +161,12 @@ export const ChatScreen: React.FC = observer(() => {
           onDismiss={() => uiStore.clearChatWarning()}
         />
       )}
+      {modelStore.modelLoadError && (
+        <ErrorSnackbar
+          error={modelStore.modelLoadError}
+          onDismiss={() => modelStore.clearModelLoadError()}
+        />
+      )}
       {activePal && (
         <PalSheet
           isVisible={isPalSheetVisible}

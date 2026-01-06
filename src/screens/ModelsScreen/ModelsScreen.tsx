@@ -54,6 +54,7 @@ export const ModelsScreen: React.FC = observer(() => {
       () => ({
         hfError: hfStore.error,
         downloadError: modelStore.downloadError,
+        modelLoadError: modelStore.modelLoadError,
       }),
       // React to changes
       data => {
@@ -67,6 +68,9 @@ export const ModelsScreen: React.FC = observer(() => {
         if (hasDialogError) {
           // If showing a dialog, don't show snackbar
           setActiveError(null);
+        } else if (data.modelLoadError) {
+          // Model load errors should show in snackbar
+          setActiveError(data.modelLoadError);
         } else if (data.hfError) {
           // If we have an HF error, show it
           setActiveError(data.hfError);
@@ -104,9 +108,10 @@ export const ModelsScreen: React.FC = observer(() => {
   };
 
   const handleDismissError = () => {
-    // Clear errors from both stores
+    // Clear errors from all stores
     hfStore.clearError();
     modelStore.clearDownloadError();
+    modelStore.clearModelLoadError();
   };
 
   const handleRetryAction = () => {
@@ -114,6 +119,15 @@ export const ModelsScreen: React.FC = observer(() => {
       hfStore.fetchModels();
     } else if (activeError?.context === 'download') {
       modelStore.retryDownload();
+    } else if (activeError?.context === 'modelInit') {
+      // Retry model initialization
+      const modelId = activeError.metadata?.modelId;
+      if (modelId) {
+        const model = modelStore.models.find(m => m.id === modelId);
+        if (model) {
+          modelStore.initContext(model);
+        }
+      }
     }
     handleDismissError();
   };

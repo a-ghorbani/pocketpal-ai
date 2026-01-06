@@ -51,7 +51,7 @@ export interface ErrorState {
     | 'unknown';
   service?: 'huggingface' | 'firebase' | 'localapi';
   message: string;
-  context: 'search' | 'download' | 'modelDetails' | 'chat';
+  context: 'search' | 'download' | 'modelDetails' | 'chat' | 'modelInit';
   recoverable: boolean;
   severity?: 'error' | 'warning';
   metadata?: {
