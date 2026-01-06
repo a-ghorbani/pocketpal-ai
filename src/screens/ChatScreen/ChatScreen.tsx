@@ -2,7 +2,12 @@ import React, {useRef, ReactNode, useState} from 'react';
 
 import {observer} from 'mobx-react';
 
-import {Bubble, ChatView, ErrorSnackbar} from '../../components';
+import {
+  Bubble,
+  ChatView,
+  ErrorSnackbar,
+  ModelErrorReportSheet,
+} from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
 
 import {useChatSession} from '../../hooks';
@@ -14,6 +19,7 @@ import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
 import {MessageType} from '../../utils/types';
+import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
 
 import {VideoPalScreen} from './VideoPalScreen';
@@ -54,6 +60,10 @@ export const ChatScreen: React.FC = observer(() => {
   // State for pal sheet
   const [isPalSheetVisible, setIsPalSheetVisible] = useState(false);
 
+  // State for model error report sheet
+  const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
+  const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
+
   const {handleSendPress, handleStopPress, isMultimodalEnabled} =
     useChatSession(currentMessageInfo, user, assistant);
 
@@ -67,6 +77,20 @@ export const ChatScreen: React.FC = observer(() => {
 
   const handleClosePalSheet = React.useCallback(() => {
     setIsPalSheetVisible(false);
+  }, []);
+
+  // Handlers for model error report
+  const handleReportModelError = React.useCallback(() => {
+    if (modelStore.modelLoadError) {
+      setErrorToReport(modelStore.modelLoadError);
+      setIsErrorReportVisible(true);
+      modelStore.clearModelLoadError();
+    }
+  }, []);
+
+  const handleCloseErrorReport = React.useCallback(() => {
+    setIsErrorReportVisible(false);
+    setErrorToReport(null);
   }, []);
 
   // Check if multimodal is enabled
@@ -165,8 +189,14 @@ export const ChatScreen: React.FC = observer(() => {
         <ErrorSnackbar
           error={modelStore.modelLoadError}
           onDismiss={() => modelStore.clearModelLoadError()}
+          onReport={handleReportModelError}
         />
       )}
+      <ModelErrorReportSheet
+        isVisible={isErrorReportVisible}
+        onClose={handleCloseErrorReport}
+        error={errorToReport}
+      />
       {activePal && (
         <PalSheet
           isVisible={isPalSheetVisible}

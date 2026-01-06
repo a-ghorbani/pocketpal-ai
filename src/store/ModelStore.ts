@@ -1091,11 +1091,12 @@ class ModelStore {
       this.activeProjectionModelId = projectionModel?.id;
     });
 
-    try {
-      // Get all effective initialization settings using unified method
-      const effectiveSettings =
-        await this.getEffectiveContextInitParams(filePath);
+    // Get all effective initialization settings BEFORE try block
+    // so they're available for error reporting if initialization fails
+    const effectiveSettings =
+      await this.getEffectiveContextInitParams(filePath);
 
+    try {
       // Create properly versioned ContextInitParams
       const contextInitParams = createContextInitParams(effectiveSettings);
 
@@ -1163,9 +1164,13 @@ class ModelStore {
         error,
       );
 
-      // Set error state for UI feedback
+      // Set error state for UI feedback - include model info and context params for error reporting
       const errorState = createErrorState(error, 'modelInit', undefined, {
         modelId: model.id,
+        modelName: model.name,
+        modelUrl: model.hfUrl,
+        modelSize: model.size,
+        contextParams: effectiveSettings,
       });
       runInAction(() => {
         this.modelLoadError = errorState;
