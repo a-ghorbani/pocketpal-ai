@@ -232,7 +232,7 @@ class AuthService {
           await GoogleSignin.signOut();
         }
       } catch (error) {
-        console.log('No current user signed in');
+        console.log('No current user signed in: ', error);
       }
 
       // Sign in with Google
