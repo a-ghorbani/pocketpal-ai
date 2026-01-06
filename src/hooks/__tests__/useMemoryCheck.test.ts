@@ -26,7 +26,7 @@ describe('useMemoryCheck', () => {
 
     try {
       await waitForNextUpdate();
-    } catch (error) {
+    } catch {
       // Ignoring timeout
     }
 
