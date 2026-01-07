@@ -19,17 +19,23 @@ import {L10nContext} from '../../../utils';
 import {CompletionParams} from '../../../utils/completionTypes';
 
 interface ModelSettingsProps {
+  modelName: string;
   chatTemplate: ChatTemplateConfig;
   stopWords: CompletionParams['stop'];
+  isPresetModel: boolean;
   onChange: (name: string, value: any) => void;
   onStopWordsChange: (stopWords: CompletionParams['stop']) => void;
+  onModelNameChange: (name: string) => void;
 }
 
 export const ModelSettings: React.FC<ModelSettingsProps> = ({
+  modelName,
   chatTemplate,
   stopWords,
+  isPresetModel,
   onChange,
   onStopWordsChange,
+  onModelNameChange,
 }) => {
   const l10n = useContext(L10nContext);
   const [isDialogVisible, setDialogVisible] = useState<boolean>(false);
@@ -192,6 +198,20 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
 
   return (
     <View style={styles.container} testID="settings-container">
+      {/* Model Name Section */}
+      <View style={styles.settingsSection}>
+        <Text style={styles.modelNameLabel}>
+          {l10n.models.modelCard.labels.modelName}
+        </Text>
+        <TextInput
+          value={modelName}
+          onChangeText={text => onModelNameChange(text)}
+          disabled={isPresetModel}
+        />
+      </View>
+
+      <Divider style={styles.divider} />
+
       {/* Token Settings Section */}
       <View style={styles.settingsSection}>
         {renderTokenSetting(
