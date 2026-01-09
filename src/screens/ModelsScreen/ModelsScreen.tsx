@@ -337,7 +337,7 @@ export const ModelsScreen: React.FC = observer(() => {
     .filter(group => group.items.length > 0);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="models-screen">
       {/* Show Error Snackbar only if no dialog is visible */}
       {!isShowingErrorDialog && activeError && (
         <ErrorSnackbar

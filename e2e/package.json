@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "E2E tests for PocketPal using Appium + WebDriverIO",
   "scripts": {
-    "test:android": "wdio run wdio.android.conf.js",
-    "test:ios": "wdio run wdio.ios.conf.js",
-    "test:android:local": "wdio run wdio.android.local.conf.js",
-    "test:ios:local": "wdio run wdio.ios.local.conf.js",
-    "test:aws": "node scripts/run-aws-device-farm.js"
+    "test:android": "wdio run wdio.android.conf.ts",
+    "test:ios": "wdio run wdio.ios.conf.ts",
+    "test:android:local": "wdio run wdio.android.local.conf.ts",
+    "test:ios:local": "wdio run wdio.ios.local.conf.ts",
+    "test:aws": "node scripts/run-aws-device-farm.js",
+    "typecheck": "tsc --noEmit"
   },
   "packageManager": "yarn@1.22.22",
   "dependencies": {
@@ -22,6 +23,10 @@
     "@aws-sdk/client-device-farm": "^3.693.0"
   },
   "devDependencies": {
-    "dotenv": "^16.4.7"
+    "@types/node": "^22.10.5",
+    "@wdio/globals": "^9.4.5",
+    "dotenv": "^16.4.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }

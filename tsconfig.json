@@ -6,5 +6,6 @@
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": ["node_modules", "e2e"]
 }

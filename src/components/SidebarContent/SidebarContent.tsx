@@ -91,24 +91,28 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
                 icon={() => <ChatIcon stroke={theme.colors.primary} />}
                 onPress={() => props.navigation.navigate(ROUTES.CHAT)}
                 style={styles.menuDrawerItem}
+                testID="drawer-item-chat"
               />
               <Drawer.Item
                 label={l10n.components.sidebarContent.menuItems.pals}
                 icon={() => <PalIcon stroke={theme.colors.primary} />}
                 onPress={() => props.navigation.navigate(ROUTES.PALS)}
                 style={styles.menuDrawerItem}
+                testID="drawer-item-pals"
               />
               <Drawer.Item
                 label={l10n.components.sidebarContent.menuItems.models}
                 icon={() => <ModelIcon stroke={theme.colors.primary} />}
                 onPress={() => props.navigation.navigate(ROUTES.MODELS)}
                 style={styles.menuDrawerItem}
+                testID="drawer-item-models"
               />
               <Drawer.Item
                 label={l10n.components.sidebarContent.menuItems.benchmark}
                 icon={() => <BenchmarkIcon stroke={theme.colors.primary} />}
                 onPress={() => props.navigation.navigate(ROUTES.BENCHMARK)}
                 style={styles.menuDrawerItem}
+                testID="drawer-item-benchmark"
               />
               <Drawer.Item
                 label={l10n.components.sidebarContent.menuItems.settings}
@@ -121,6 +125,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
                 )}
                 onPress={() => props.navigation.navigate(ROUTES.SETTINGS)}
                 style={styles.menuDrawerItem}
+                testID="drawer-item-settings"
               />
 
               <Drawer.Item

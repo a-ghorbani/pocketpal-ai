@@ -1,10 +1,19 @@
 /**
  * WebDriverIO configuration for local iOS testing
+ * TypeScript version
+ *
+ * Build the release app before running tests:
+ *   yarn ios:build:e2e
  */
-const { config } = require('./wdio.shared.conf');
 
-exports.config = {
-  ...config,
+import {config as sharedConfig} from './wdio.shared.conf';
+import type {Options} from '@wdio/types';
+
+// Use release build with known path (no Metro bundler required)
+const APP_PATH = '../ios/build/Build/Products/Release-iphonesimulator/PocketPal.app';
+
+export const config: Options.Testrunner = {
+  ...sharedConfig,
 
   capabilities: [
     {
@@ -13,8 +22,8 @@ exports.config = {
       'appium:platformVersion': '26.0',
       'appium:udid': 'FC7F851B-B6C0-4E1D-B99B-335889FCC177',
       'appium:automationName': 'XCUITest',
-      'appium:app': '../ios/build/Build/Products/Debug-iphonesimulator/PocketPal.app',
-      'appium:bundleId': 'com.pocketpal',
+      'appium:app': APP_PATH,
+      'appium:bundleId': 'ai.pocketpal',
       'appium:noReset': false,
       'appium:fullReset': false,
       'appium:newCommandTimeout': 300,
@@ -32,4 +41,4 @@ exports.config = {
       },
     ],
   ],
-};
+} as Options.Testrunner;

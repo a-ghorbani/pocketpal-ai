@@ -12,6 +12,7 @@ module.exports = {
     'ios/',
     'build/',
     'dist/',
+    'e2e/',
   ],
   rules: {
     'prettier/prettier': 'error',
