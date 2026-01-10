@@ -140,6 +140,16 @@ export const Selectors = {
     get messageTiming(): string {
       return byTestId('message-timing');
     },
+    // The timing text is a sibling element after message-timing, not a child
+    get messageTimingText(): string {
+      if (isAndroid()) {
+        // Android: Find TextView sibling that follows message-timing ViewGroup
+        return `//*[@resource-id="message-timing"]/following-sibling::android.widget.TextView[1]`;
+      }
+      // iOS: Match StaticText containing timing pattern (tokens/sec)
+      // Class chain doesn't support following-sibling, so we match by content
+      return `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "tokens/sec"`;
+    },
     get userMessage(): string {
       return byTestId('user-message');
     },
@@ -218,8 +228,21 @@ export const Selectors = {
       }
       return `-ios predicate string:name CONTAINS "model-file-card"`;
     },
+    // Dynamic: file name text element by filename
+    fileName: (filename: string): string => {
+      return byTestId(`model-file-name-${filename}`);
+    },
     get downloadButton(): string {
       return byTestId('download-button');
+    },
+    // Selector for download button within a specific file card
+    // Returns the button element selector to find within a file card context
+    get downloadButtonElement(): string {
+      if (isAndroid()) {
+        return `.//android.widget.Button[contains(@resource-id, "download-button")]`;
+      }
+      // iOS: Use class chain with proper prefix for child element search
+      return `-ios class chain:**/XCUIElementTypeButton[\`name == "download-button"\`]`;
     },
     get cancelButton(): string {
       return byTestId('cancel-button');

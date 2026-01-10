@@ -1,16 +1,19 @@
 /**
  * E2E Test: Model Download and Chat Flow
  *
- * Verifies the complete flow:
+ * Data-driven test that verifies the complete flow for multiple models:
  * 1. Navigate to Models screen
  * 2. Open HuggingFace search
  * 3. Search for a model
  * 4. Select model from results
- * 5. Download the model
+ * 5. Download a specific model file
  * 6. Wait for download to complete
  * 7. Close sheets and load the model
  * 8. Navigate to Chat
- * 9. Send a message and verify response
+ * 9. Send prompts and verify responses
+ *
+ * Models to test are defined in fixtures/models.ts
+ * Filter with: TEST_MODELS=model-id yarn test:ios:local
  */
 
 import * as fs from 'fs';
@@ -22,6 +25,12 @@ import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
 import {Selectors, nativeTextElement} from '../helpers/selectors';
+import {
+  getModelsToTest,
+  TIMEOUTS,
+  ModelTestConfig,
+  PromptTestCase,
+} from '../fixtures/models';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -35,16 +44,14 @@ interface InferenceReport {
 }
 
 describe('PocketPal - Model Download and Chat', () => {
-  const MODEL_SEARCH_QUERY = 'bartowski smollm2 135m';
-  const MODEL_NAME = 'SmolLM2-135M-Instruct';
-  const DOWNLOAD_TIMEOUT = 300000; // 5 minutes
-  const INFERENCE_TIMEOUT = 120000; // 2 minutes
-
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
   let modelsPage: ModelsPage;
   let hfSearchSheet: HFSearchSheet;
   let modelDetailsSheet: ModelDetailsSheet;
+
+  // Get models to test (can be filtered via TEST_MODELS env var)
+  const modelsToTest = getModelsToTest();
 
   beforeEach(async () => {
     chatPage = new ChatPage();
@@ -53,7 +60,7 @@ describe('PocketPal - Model Download and Chat', () => {
     hfSearchSheet = new HFSearchSheet();
     modelDetailsSheet = new ModelDetailsSheet();
 
-    await chatPage.waitForReady(60000);
+    await chatPage.waitForReady(TIMEOUTS.appReady);
   });
 
   afterEach(async function (this: Mocha.Context) {
@@ -70,7 +77,28 @@ describe('PocketPal - Model Download and Chat', () => {
     }
   });
 
-  it('should download a model from HuggingFace and chat with it', async () => {
+  // Run tests for each configured model
+  for (const model of modelsToTest) {
+    describe(`Model: ${model.id}`, () => {
+      it(`should download ${model.downloadFile} and load model`, async () => {
+        await downloadAndLoadModel(model);
+      });
+
+      // Run each prompt as a separate test case
+      for (const prompt of model.prompts) {
+        it(`should respond to: "${prompt.description || prompt.input}"`, async () => {
+          await testPrompt(model, prompt);
+        });
+      }
+    });
+  }
+
+  /**
+   * Download and load a model from HuggingFace
+   */
+  async function downloadAndLoadModel(model: ModelTestConfig): Promise<void> {
+    const downloadTimeout = model.downloadTimeout ?? TIMEOUTS.download;
+
     // Step 1: Navigate to Models screen
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
@@ -82,14 +110,15 @@ describe('PocketPal - Model Download and Chat', () => {
     await hfSearchSheet.waitForReady();
 
     // Step 3: Search for model
-    await hfSearchSheet.search(MODEL_SEARCH_QUERY);
+    await hfSearchSheet.search(model.searchQuery);
 
     // Step 4: Select model from search results
-    await hfSearchSheet.selectModel(MODEL_NAME);
+    await hfSearchSheet.selectModel(model.selectorText);
     await modelDetailsSheet.waitForReady();
 
-    // Step 5: Start download
-    await modelDetailsSheet.tapDownload();
+    // Step 5: Scroll to the specific file if needed and start download
+    await modelDetailsSheet.scrollToFile(model.downloadFile);
+    await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
 
     // Step 6: Close sheets and return to Models screen
     await modelDetailsSheet.close();
@@ -97,29 +126,36 @@ describe('PocketPal - Model Download and Chat', () => {
     await modelsPage.waitForReady();
 
     // Step 7: Wait for download to complete and load the model
-    await waitForDownloadAndLoad(DOWNLOAD_TIMEOUT);
+    await waitForDownloadAndLoad(downloadTimeout);
 
-    // Step 9: Navigate to Chat screen
-    // load auto-navigates to chat
-    // await modelsPage.openDrawer();
-    // await drawerPage.waitForOpen();
-    // await drawerPage.navigateToChat();
+    // Step 8: Verify we're back on chat screen (auto-navigates after load)
     await chatPage.waitForReady();
 
-    // Step 10: Send a message
-    const prompt = 'Hi';
-    await chatPage.sendMessage(prompt);
+    console.log(`\nModel loaded successfully: ${model.id}`);
+  }
 
-    // Step 11: Wait for AI response
-    await waitForResponse(INFERENCE_TIMEOUT);
+  /**
+   * Test a prompt with the currently loaded model
+   */
+  async function testPrompt(
+    model: ModelTestConfig,
+    prompt: PromptTestCase,
+  ): Promise<void> {
+    const inferenceTimeout = model.inferenceTimeout ?? TIMEOUTS.inference;
 
-    // Step 12: Save inference report
-    await saveInferenceReport(prompt, MODEL_NAME);
+    // Send the message
+    await chatPage.sendMessage(prompt.input);
+
+    // Wait for AI response
+    await waitForResponse(inferenceTimeout);
+
+    // Save inference report
+    await saveInferenceReport(prompt.input, model.id);
 
     // Verify no error occurred
     const errorVisible = await isErrorDisplayed();
     expect(errorVisible).toBe(false);
-  });
+  }
 
   /**
    * Wait for download to complete and load the model
@@ -163,17 +199,18 @@ describe('PocketPal - Model Download and Chat', () => {
    */
   async function saveInferenceReport(
     prompt: string,
-    model: string,
+    modelId: string,
   ): Promise<InferenceReport> {
-    // Dump page source for debugging layout structure
+    // Ensure output directory exists
     const outputDir = path.join(__dirname, '../debug-output');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, {recursive: true});
     }
 
     // Get timing info - this confirms response was generated
-    const timing = browser.$(Selectors.chat.messageTiming);
-    const timingText = await timing.getText();
+    // Timing text is a sibling element after message-timing, not a child
+    const timingTextElement = browser.$(Selectors.chat.messageTimingText);
+    const timingText = await timingTextElement.getText();
 
     // Extract AI response text from the native TextView/StaticText inside ai-message
     const aiMessage = browser.$(Selectors.chat.aiMessage);
@@ -181,14 +218,14 @@ describe('PocketPal - Model Download and Chat', () => {
     const responseText = await textView.getText();
 
     const report: InferenceReport = {
-      model,
+      model: modelId,
       prompt,
       response: responseText,
       timing: timingText,
       timestamp: new Date().toISOString(),
     };
 
-    // Save report to file (outputDir already created above for layout dump)
+    // Save report to file
     const reportPath = path.join(outputDir, 'inference-report.json');
 
     // Append to existing reports or create new array
@@ -201,7 +238,7 @@ describe('PocketPal - Model Download and Chat', () => {
 
     fs.writeFileSync(reportPath, JSON.stringify(reports, null, 2));
     console.log(`\nInference Report saved to: ${reportPath}`);
-    console.log(`  Model: ${model}`);
+    console.log(`  Model: ${modelId}`);
     console.log(`  Prompt: ${prompt}`);
     console.log(`  Response: ${responseText}`);
     console.log(`  Timing: ${timingText}`);
