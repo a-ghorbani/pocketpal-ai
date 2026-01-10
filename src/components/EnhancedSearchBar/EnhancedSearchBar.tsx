@@ -138,7 +138,6 @@ export const EnhancedSearchBar = ({
             placeholderTextColor={theme.colors.onSurfaceVariant}
             style={styles.searchInput}
             testID="search-input"
-            accessibilityLabel="Search models"
           />
           {value.length > 0 && (
             <TouchableOpacity

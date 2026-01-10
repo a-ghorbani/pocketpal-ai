@@ -79,6 +79,7 @@ export const SearchView = observer(
         <TouchableOpacity
           key={item.id}
           onPress={() => onModelSelect(item)}
+          accessible={true}
           accessibilityLabel={`${item.author} ${extractHFModelTitle(item.id)}`}
           testID={`hf-model-item-${item.id}`}>
           <Text variant="labelMedium" style={styles.modelAuthor}>

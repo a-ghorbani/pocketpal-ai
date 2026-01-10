@@ -57,9 +57,12 @@ export class ModelDetailsSheet extends BasePage {
 
   /**
    * Close the sheet by swiping down on the handle
+   * Uses getLastDisplayedElement to handle stacked sheets (finds topmost visible handle)
    */
   async close(): Promise<void> {
-    const handle = await this.waitForElement(Selectors.common.sheetHandle);
+    const handle = await this.getLastDisplayedElement(
+      Selectors.common.sheetHandle,
+    );
     await Gestures.swipeDownOnElement(handle);
     await this.waitForClose();
   }

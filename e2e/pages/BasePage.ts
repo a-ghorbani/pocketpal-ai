@@ -100,14 +100,32 @@ export abstract class BasePage {
 
   /**
    * Dismiss keyboard if visible
+   *
+   * Note: On iOS, hideKeyboard() is unreliable due to XCTest limitations.
+   * We tap the Return/Done key on the keyboard instead.
+   * See: https://github.com/appium/appium/issues/17550
    */
   protected async dismissKeyboard(): Promise<void> {
-    try {
-      await (
-        browser as unknown as {hideKeyboard: () => Promise<void>}
-      ).hideKeyboard();
-    } catch {
-      // Keyboard might not be visible
+    const isIOS = (browser as unknown as {isIOS?: boolean}).isIOS;
+
+    if (isIOS) {
+      // iOS: Tap Return/Done/Search key on keyboard
+      const keyboardKey = browser.$(
+        '-ios predicate string:name == "Return" OR name == "Done" OR name == "Search"',
+      );
+      if (await keyboardKey.isExisting()) {
+        await keyboardKey.click();
+        await browser.pause(200);
+      }
+    } else {
+      // Android: hideKeyboard() works reliably
+      try {
+        await (
+          browser as unknown as {hideKeyboard: () => Promise<void>}
+        ).hideKeyboard();
+      } catch {
+        // Keyboard might not be visible
+      }
     }
   }
 
@@ -116,5 +134,31 @@ export abstract class BasePage {
    */
   protected getElement(selector: string): ChainableElement {
     return browser.$(selector);
+  }
+
+  /**
+   * Find the last displayed element matching the selector
+   * Useful when multiple elements match (e.g., stacked sheets) and you want the topmost/visible one
+   */
+  protected async getLastDisplayedElement(
+    selector: string,
+    timeout = BasePage.DEFAULT_TIMEOUT,
+  ): Promise<ChainableElement> {
+    // Wait for at least one element to exist
+    await browser.$(selector).waitForExist({timeout});
+
+    const elements = browser.$$(selector);
+    const count = await elements.length;
+
+    // Find the last displayed element (typically the topmost in stacked UI)
+    for (let i = count - 1; i >= 0; i--) {
+      const element = elements[i];
+      if (await element.isDisplayed()) {
+        return element;
+      }
+    }
+
+    // Fallback to last element if none are displayed (shouldn't happen)
+    return elements[count - 1];
   }
 }

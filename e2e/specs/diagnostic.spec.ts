@@ -12,6 +12,7 @@ import {DrawerPage} from '../pages/DrawerPage';
 import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {Selectors} from '../helpers/selectors';
+import { ModelDetailsSheet } from '../pages';
 
 declare const driver: WebdriverIO.Browser;
 
@@ -27,7 +28,8 @@ async function savePageSource(filename: string): Promise<string> {
     fs.mkdirSync(OUTPUT_DIR, {recursive: true});
   }
 
-  const filePath = path.join(OUTPUT_DIR, `${filename}.xml`);
+  const platform = driver.isAndroid ? "Android" : driver.isIOS ? "iOS" : "unknown"; 
+  const filePath = path.join(OUTPUT_DIR, `${filename}-${platform}.xml`);
   fs.writeFileSync(filePath, pageSource);
   console.log(`Saved: ${filePath}`);
 
@@ -46,12 +48,14 @@ describe('Diagnostic - Element Selector Analysis', () => {
   let drawerPage: DrawerPage;
   let modelsPage: ModelsPage;
   let hfSearchSheet: HFSearchSheet;
+  let modelDetailsSheet: ModelDetailsSheet;
 
   beforeEach(async () => {
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
     modelsPage = new ModelsPage();
     hfSearchSheet = new HFSearchSheet();
+    modelDetailsSheet = new ModelDetailsSheet();
 
     await chatPage.waitForReady(30000);
   });
@@ -76,25 +80,26 @@ describe('Diagnostic - Element Selector Analysis', () => {
     logSelector('models.menuButton', Selectors.models.menuButton);
     await savePageSource('03-models-screen');
 
-    console.log('\n=== STEP 4: FAB Expanded ===');
-    await modelsPage.expandFabMenu();
-    logSelector('models.hfFab', Selectors.models.hfFab);
-    logSelector('models.localFab', Selectors.models.localFab);
-    await savePageSource('04-fab-expanded');
-
-    console.log('\n=== STEP 5: HF Search Sheet ===');
+    console.log('\n=== STEP 4: HF Search Sheet ===');
+    // openHuggingFaceSearch() internally expands the FAB menu first
     await modelsPage.openHuggingFaceSearch();
     await hfSearchSheet.waitForReady();
+    await driver.pause(1500);
     logSelector('hfSearch.view', Selectors.hfSearch.view);
     logSelector('hfSearch.searchBar', Selectors.hfSearch.searchBar);
     logSelector('hfSearch.searchInput', Selectors.hfSearch.searchInput);
-    logSelector('common.sheetCloseButton', Selectors.common.sheetCloseButton);
-    await savePageSource('05-hf-search-sheet');
+    logSelector('common.sheetHandle', Selectors.common.sheetHandle);
+    await hfSearchSheet.search('bartowski smollm2 135m');
+    await savePageSource('04-hf-search-sheet');
 
-    console.log('\n=== STEP 6: Close Sheet ===');
+    console.log('\n=== STEP 5: Select Model ===');
+    await hfSearchSheet.selectModel('SmolLM2-135M-Instruct');
+    await driver.pause(100);
+    await savePageSource('05-model-details');
+
+    await modelDetailsSheet.close();
     await hfSearchSheet.close();
     await modelsPage.waitForReady();
-    await savePageSource('06-back-to-models');
 
     console.log('\n=== DIAGNOSTIC COMPLETE ===');
     console.log(`Output saved to: ${OUTPUT_DIR}`);

@@ -49,11 +49,23 @@ export const byPartialText = (text: string): string => {
 };
 
 /**
- * Create selector by accessibilityLabel (use sparingly - testID is preferred)
+ * Create selector by exact accessibilityLabel match
+ * Use this for buttons with known labels like "Close menu", "Add from Hugging Face"
  */
 export const byAccessibilityLabel = (label: string): string => {
   if (isAndroid()) {
     return `~${label}`;
+  }
+  return `~${label}`;
+};
+
+/**
+ * Create selector by partial accessibilityLabel match
+ * Use this when searching for elements where the label may contain additional text
+ */
+export const byAccessibilityLabelContains = (label: string): string => {
+  if (isAndroid()) {
+    return `//*[contains(@content-desc, "${label}")]`;
   }
   return `-ios predicate string:label CONTAINS "${label}"`;
 };
@@ -67,6 +79,17 @@ export const nativeTextElement = (): string => {
     return 'android.widget.TextView';
   }
   return '-ios class chain:**/XCUIElementTypeStaticText';
+};
+
+/**
+ * Create selector for native text input elements (EditText on Android, TextField on iOS)
+ * Useful for finding TextInput elements that may not expose testID properly
+ */
+export const nativeTextInput = (): string => {
+  if (isAndroid()) {
+    return 'android.widget.EditText';
+  }
+  return '-ios class chain:**/XCUIElementTypeTextField';
 };
 
 /**
@@ -164,13 +187,8 @@ export const Selectors = {
       return byTestId('hf-model-search-view');
     },
     get searchInput(): string {
-      // TextInput inside @gorhom/bottom-sheet may not expose testID properly
-      // Use accessibilityLabel which is set to "Search models"
-      if (isAndroid()) {
-        return byTestId('search-input');
-      }
-      // iOS: Use accessibility label
-      return byAccessibilityLabel('Search models');
+      // With accessible={false} on the Sheet container, child testIDs are now exposed
+      return byTestId('search-input');
     },
     get searchBar(): string {
       return byTestId('enhanced-search-bar');
@@ -183,8 +201,8 @@ export const Selectors = {
     },
     // Dynamic: model item by ID
     modelItem: (id: string): string => byTestId(`hf-model-item-${id}`),
-    // Partial match for finding models by text content
-    modelItemByText: (text: string): string => byPartialText(text),
+    // Find model item by partial accessibilityLabel match (targets the TouchableOpacity)
+    modelItemByText: (text: string): string => byAccessibilityLabelContains(text),
   },
 
   // Model details/file cards

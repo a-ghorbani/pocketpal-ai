@@ -99,6 +99,9 @@ export const Sheet = forwardRef(
         }}
         snapPoints={snapPoints}
         onDismiss={onDismiss}
+        // Disable accessible to allow Appium/e2e tests to access child elements on iOS
+        // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
+        accessible={false}
         {...props}>
         <View style={styles.header}>
           {title && <Text variant="titleMedium">{title}</Text>}

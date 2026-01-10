@@ -8,7 +8,6 @@
  */
 
 // WebdriverIO globals - available during test execution
-declare const browser: WebdriverIO.Browser;
 declare const driver: WebdriverIO.Browser;
 
 import {BasePage, ChainableElement} from './BasePage';
@@ -45,9 +44,11 @@ export class HFSearchSheet extends BasePage {
 
   /**
    * Wait for sheet to be ready
+   * Waits for the search bar to be displayed since that's the primary interactive element
    */
   async waitForReady(timeout = 10000): Promise<void> {
-    await this.waitForElement(Selectors.hfSearch.view, timeout);
+    // Wait for the search bar which is the main interactive element
+    await this.waitForElement(Selectors.hfSearch.searchBar, timeout);
   }
 
   /**
