@@ -177,26 +177,39 @@ describe('Quick Smoke Test', () => {
     console.log(`  Response: ${responseText}`);
     console.log(`  Timing: ${timingText}`);
 
-    // Save quick report
+    // Save reports
     const outputDir = path.join(__dirname, '../debug-output');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, {recursive: true});
     }
-    const reportPath = path.join(outputDir, 'quick-smoke-report.json');
-    fs.writeFileSync(
-      reportPath,
-      JSON.stringify(
-        {
-          model: model.id,
-          prompt,
-          response: responseText,
-          timing: timingText,
-          timestamp: new Date().toISOString(),
-        },
-        null,
-        2,
-      ),
-    );
+
+    const testResult = {
+      model: model.id,
+      prompt,
+      response: responseText,
+      timing: timingText,
+      timestamp: new Date().toISOString(),
+      success: true,
+    };
+
+    // Save individual model report (for easy access to specific model results)
+    const modelReportPath = path.join(outputDir, `report-${model.id}.json`);
+    fs.writeFileSync(modelReportPath, JSON.stringify(testResult, null, 2));
+
+    // Append to cumulative report (preserves all model results across runs)
+    const cumulativeReportPath = path.join(outputDir, 'all-models-report.json');
+    let allResults: typeof testResult[] = [];
+    if (fs.existsSync(cumulativeReportPath)) {
+      try {
+        allResults = JSON.parse(fs.readFileSync(cumulativeReportPath, 'utf8'));
+        // Remove any previous result for this model (in case of re-runs)
+        allResults = allResults.filter(r => r.model !== model.id);
+      } catch {
+        allResults = [];
+      }
+    }
+    allResults.push(testResult);
+    fs.writeFileSync(cumulativeReportPath, JSON.stringify(allResults, null, 2));
 
     // Verify no error occurred
     try {

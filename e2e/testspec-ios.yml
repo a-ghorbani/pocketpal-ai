@@ -49,24 +49,25 @@ phases:
     commands:
       - cd $DEVICEFARM_TEST_PACKAGE_PATH
 
-      # Run WebDriverIO tests with the Device Farm Appium server
+      # Run model tests with Device Farm Appium server
+      # The --device-farm flag tells the runner to use Device Farm configs
       - >-
         APPIUM_HOST=127.0.0.1
         APPIUM_PORT=4723
         DEVICE_UDID=$DEVICEFARM_DEVICE_UDID
         APP_PATH=$DEVICEFARM_APP_PATH
-        npx wdio run wdio.ios.conf.ts --spec specs/quick-smoke.spec.ts
+        npx ts-node scripts/run-model-tests.ts --platform ios --device-farm
 
   post_test:
     commands:
       - cd $DEVICEFARM_TEST_PACKAGE_PATH
 
       # Copy test artifacts to Device Farm output directory
-      - mkdir -p $DEVICEFARM_LOG_DIR/screenshots
-      - cp -r debug-output/* $DEVICEFARM_LOG_DIR/screenshots/ 2>/dev/null || true
+      - mkdir -p $DEVICEFARM_LOG_DIR/reports
+      - cp -r debug-output/* $DEVICEFARM_LOG_DIR/reports/ 2>/dev/null || true
 
-      # Copy any generated reports
-      - cp -r reports/* $DEVICEFARM_LOG_DIR/ 2>/dev/null || true
+      # Print cumulative report for visibility in logs
+      - echo "=== MODEL TEST RESULTS ===" && cat debug-output/all-models-report.json 2>/dev/null || echo "No cumulative report found"
 
 artifacts:
   # Specify which files to collect as test artifacts

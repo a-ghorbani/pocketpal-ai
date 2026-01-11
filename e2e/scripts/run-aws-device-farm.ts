@@ -211,10 +211,12 @@ function createTestPackage(): string {
     fs.unlinkSync(zipPath);
   }
 
-  // Include source files and configs, 
+  // Include source files and configs, but NOT node_modules (too large - 4GB+)
   // Dependencies will be installed on Device Farm during the install phase
+  // This keeps the package small (~1MB vs 500MB+)
+  // Note: scripts/ is included for run-model-tests.ts
   execSync(
-    `cd "${packageDir}" && zip -r test-package.zip specs pages helpers fixtures wdio.*.conf.ts tsconfig.json package.json yarn.lock`,
+    `cd "${packageDir}" && zip -r test-package.zip specs pages helpers fixtures scripts wdio.*.conf.ts tsconfig.json package.json yarn.lock`,
     {stdio: 'inherit'},
   );
 
