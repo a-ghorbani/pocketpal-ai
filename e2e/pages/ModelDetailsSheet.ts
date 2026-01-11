@@ -35,9 +35,15 @@ export class ModelDetailsSheet extends BasePage {
 
   /**
    * Wait for sheet to be ready
+   * Simply waits for the sheet animation to complete.
+   * Note: On iOS, isDisplayed() is unreliable for elements in bottom sheets
+   * so we don't try to verify file cards are visible. Instead, we rely on
+   * scrollToFile and tapDownloadForFile to find specific elements.
    */
-  async waitForReady(timeout = 10000): Promise<void> {
-    await this.waitForElement(Selectors.modelDetails.fileCard(), timeout);
+  async waitForReady(_timeout = 10000): Promise<void> {
+    // Wait for sheet opening animation to complete
+    // The actual content verification happens in scrollToFile/tapDownloadForFile
+    await browser.pause(1000);
   }
 
   /**
@@ -69,32 +75,43 @@ export class ModelDetailsSheet extends BasePage {
     filename: string,
     timeout = 10000,
   ): Promise<void> {
-    // First, wait for the specific file card to be visible
+    // Wait for the specific file card to exist in DOM
+    // We use waitForExist because isDisplayed is unreliable for sheet content on iOS
     const fileCardSelector = Selectors.modelDetails.fileCard(filename);
-    const fileCard = await this.waitForElement(fileCardSelector, timeout);
+    const fileCard = await this.waitForExist(fileCardSelector, timeout);
 
     // Find the download button within this file card
     const downloadButton = fileCard.$(Selectors.modelDetails.downloadButtonElement);
-    await downloadButton.waitForDisplayed({timeout});
+    // Wait for button to exist, then click
+    // Note: We use waitForExist, not waitForDisplayed, due to iOS sheet visibility bug
+    await downloadButton.waitForExist({timeout});
     await downloadButton.click();
   }
 
   /**
    * Scroll to a specific model file card if not visible
+   * Uses safe scroll coordinates that won't trigger Android home gesture
    *
    * @param filename - The exact filename to scroll to
    */
   async scrollToFile(filename: string): Promise<void> {
     const fileCardSelector = Selectors.modelDetails.fileCard(filename);
-    const fileCard = browser.$(fileCardSelector);
 
-    // Check if already visible
-    if (await fileCard.isDisplayed()) {
-      return;
+    // Try to scroll until element exists in DOM
+    // We use isExisting instead of isDisplayed due to iOS sheet visibility bug
+    const found = await Gestures.scrollInSheetToElementExists(
+      fileCardSelector,
+      5,
+    );
+    if (!found) {
+      // Fallback: element might already be in DOM but needs scroll into view
+      const fileCard = browser.$(fileCardSelector);
+      try {
+        await fileCard.scrollIntoView();
+      } catch {
+        // Element may not be in the DOM yet - will be caught by tapDownloadForFile
+      }
     }
-
-    // Scroll until visible
-    await fileCard.scrollIntoView();
   }
 
   /**

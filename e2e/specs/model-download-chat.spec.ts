@@ -60,6 +60,34 @@ describe('PocketPal - Model Download and Chat', () => {
     hfSearchSheet = new HFSearchSheet();
     modelDetailsSheet = new ModelDetailsSheet();
 
+    // Ensure we're on the chat screen before each test
+    // The app might be on a different screen from a previous test
+    const onChatScreen = await chatPage.isDisplayed();
+    if (!onChatScreen) {
+      // Try to navigate to chat via drawer
+      // First check if drawer is already open
+      const drawerOpen = await drawerPage.isOpen();
+      if (!drawerOpen) {
+        // We might be on models screen or elsewhere - find and tap menu button
+        const menuButton = browser.$(Selectors.chat.menuButton);
+        const menuVisible = await menuButton.isDisplayed().catch(() => false);
+        if (menuVisible) {
+          await menuButton.click();
+        } else {
+          // Try models screen menu button
+          const modelsMenuButton = browser.$(Selectors.models.menuButton);
+          const modelsMenuVisible = await modelsMenuButton
+            .isDisplayed()
+            .catch(() => false);
+          if (modelsMenuVisible) {
+            await modelsMenuButton.click();
+          }
+        }
+      }
+      // Navigate to chat
+      await drawerPage.navigateToChat();
+    }
+
     await chatPage.waitForReady(TIMEOUTS.appReady);
   });
 
@@ -105,6 +133,9 @@ describe('PocketPal - Model Download and Chat', () => {
     await drawerPage.navigateToModels();
     await modelsPage.waitForReady();
 
+    // Step 1.5: Offload any currently loaded model before loading a new one
+    await offloadCurrentModelIfLoaded();
+
     // Step 2: Open HuggingFace search
     await modelsPage.openHuggingFaceSearch();
     await hfSearchSheet.waitForReady();
@@ -126,10 +157,13 @@ describe('PocketPal - Model Download and Chat', () => {
     await modelsPage.waitForReady();
 
     // Step 7: Wait for download to complete and load the model
-    await waitForDownloadAndLoad(downloadTimeout);
+    await waitForDownloadAndLoad(model.downloadFile, downloadTimeout);
 
     // Step 8: Verify we're back on chat screen (auto-navigates after load)
     await chatPage.waitForReady();
+
+    // Step 9: Reset chat to start fresh (clears any previous conversation)
+    await chatPage.resetChat();
 
     console.log(`\nModel loaded successfully: ${model.id}`);
   }
@@ -158,16 +192,22 @@ describe('PocketPal - Model Download and Chat', () => {
   }
 
   /**
-   * Wait for download to complete and load the model
-   * Download is complete when load-button appears on the Models screen
+   * Wait for download to complete and load a specific model
+   * Finds the model card container by filename and clicks its load button
    */
-  async function waitForDownloadAndLoad(timeout: number): Promise<void> {
-    const loadBtn = browser.$(Selectors.modelCard.loadButton);
+  async function waitForDownloadAndLoad(
+    filename: string,
+    timeout: number,
+  ): Promise<void> {
+    // Wait for the specific model card container to appear (download complete)
+    // Note: The model card element itself has no children - buttons are siblings in the container
+    const containerSelector = Selectors.modelCard.cardContainer(filename);
+    const modelCardContainer = browser.$(containerSelector);
+    await modelCardContainer.waitForDisplayed({timeout});
 
-    // Wait for load button to appear (download complete)
-    await loadBtn.waitForDisplayed({timeout});
-
-    // Load the model
+    // Find and click the load button within the container
+    const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
+    await loadBtn.waitForDisplayed({timeout: 10000});
     await loadBtn.click();
   }
 
@@ -189,6 +229,27 @@ describe('PocketPal - Model Download and Chat', () => {
       return await error.isDisplayed();
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Offload any currently loaded model by clicking its offload button
+   * This ensures a clean state before loading a new model
+   */
+  async function offloadCurrentModelIfLoaded(): Promise<void> {
+    try {
+      // Check if any offload button is visible (indicates a model is loaded)
+      const offloadButton = browser.$(Selectors.modelCard.offloadButton);
+      const isVisible = await offloadButton.isDisplayed().catch(() => false);
+
+      if (isVisible) {
+        console.log('Offloading currently loaded model...');
+        await offloadButton.click();
+        // Wait a moment for the offload to complete
+        await browser.pause(1000);
+      }
+    } catch {
+      // No model loaded or offload button not found - that's fine
     }
   }
 

@@ -119,10 +119,12 @@ async function swipeDownToClose(startYPercent = 0.1): Promise<void> {
 
 /**
  * Swipe up (for scrolling down content)
+ * Uses safe Y coordinates to avoid triggering Android gesture navigation
  */
 async function swipeUp(): Promise<void> {
   await swipe({
-    startYPercent: 0.7,
+    // Start higher up to avoid Android gesture bar area
+    startYPercent: 0.6,
     endYPercent: 0.3,
     duration: 300,
   });
@@ -176,6 +178,69 @@ async function scrollToElement(
   return false;
 }
 
+/**
+ * Swipe up within a bottom sheet (uses safer coordinates)
+ * Avoids the bottom navigation gesture area on Android
+ */
+async function swipeUpInSheet(): Promise<void> {
+  await swipe({
+    // Use middle section of screen to avoid Android gesture bar
+    startYPercent: 0.55,
+    endYPercent: 0.25,
+    duration: 300,
+  });
+}
+
+/**
+ * Scroll within a sheet to find an element
+ * Uses safe coordinates that won't trigger Android home gesture
+ * @param selector - Element selector to scroll to
+ * @param maxScrolls - Maximum number of scroll attempts
+ */
+async function scrollInSheetToElement(
+  selector: string,
+  maxScrolls = 5,
+): Promise<boolean> {
+  for (let i = 0; i < maxScrolls; i++) {
+    try {
+      const element = await browser.$(selector);
+      if (await element.isDisplayed()) {
+        return true;
+      }
+    } catch {
+      // Element not found yet
+    }
+    await swipeUpInSheet();
+    await driver.pause(300);
+  }
+  return false;
+}
+
+/**
+ * Scroll within a sheet to find an element using isExisting instead of isDisplayed
+ * This is more reliable on iOS where elements in sheets report isDisplayed=false
+ * @param selector - Element selector to scroll to
+ * @param maxScrolls - Maximum number of scroll attempts
+ */
+async function scrollInSheetToElementExists(
+  selector: string,
+  maxScrolls = 5,
+): Promise<boolean> {
+  for (let i = 0; i < maxScrolls; i++) {
+    try {
+      const element = await browser.$(selector);
+      if (await element.isExisting()) {
+        return true;
+      }
+    } catch {
+      // Element not found yet
+    }
+    await swipeUpInSheet();
+    await driver.pause(300);
+  }
+  return false;
+}
+
 export const Gestures = {
   getScreenSize,
   swipe,
@@ -185,4 +250,7 @@ export const Gestures = {
   swipeDown,
   swipeToOpenDrawer,
   scrollToElement,
+  swipeUpInSheet,
+  scrollInSheetToElement,
+  scrollInSheetToElementExists,
 };

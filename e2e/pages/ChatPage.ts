@@ -58,4 +58,11 @@ export class ChatPage extends BasePage {
     await this.typeText(Selectors.chat.input, message);
     await this.tap(Selectors.chat.sendButton);
   }
+
+  /**
+   * Reset/clear the current chat to start a new session
+   */
+  async resetChat(): Promise<void> {
+    await this.tap(Selectors.chat.resetButton);
+  }
 }

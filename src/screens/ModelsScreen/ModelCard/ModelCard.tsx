@@ -551,7 +551,10 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     return (
       <>
-        <Card elevation={0} style={styles.card}>
+        <Card
+          elevation={0}
+          style={styles.card}
+          testID={`model-card-${model.filename}`}>
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>

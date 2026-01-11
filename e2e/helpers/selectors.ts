@@ -241,8 +241,8 @@ export const Selectors = {
       if (isAndroid()) {
         return `.//android.widget.Button[contains(@resource-id, "download-button")]`;
       }
-      // iOS: Use class chain with proper prefix for child element search
-      return `-ios class chain:**/XCUIElementTypeButton[\`name == "download-button"\`]`;
+      // iOS: Use predicate string for nested element search
+      return `-ios predicate string:name == "download-button"`;
     },
     get cancelButton(): string {
       return byTestId('cancel-button');
@@ -254,6 +254,12 @@ export const Selectors = {
 
   // Model card actions
   modelCard: {
+    // Dynamic: model card by filename (e.g., 'SmolLM2-135M-Instruct-Q2_K.gguf')
+    // Note: The actual model-card element has no children - use container for finding siblings
+    card: (filename: string): string => byTestId(`model-card-${filename}`),
+    // Model card container - contains the model card and its action buttons as siblings
+    cardContainer: (filename: string): string =>
+      byTestId(`model-card-${filename}-container`),
     get downloadButton(): string {
       return byTestId('download-button');
     },
@@ -268,6 +274,14 @@ export const Selectors = {
     },
     get loadButton(): string {
       return byTestId('load-button');
+    },
+    // Load button element selector for use within a model card context
+    get loadButtonElement(): string {
+      if (isAndroid()) {
+        return `.//android.widget.Button[contains(@resource-id, "load-button")]`;
+      }
+      // iOS: Use predicate string for nested element search
+      return `-ios predicate string:name == "load-button"`;
     },
     get offloadButton(): string {
       return byTestId('offload-button');
@@ -312,6 +326,57 @@ export const Selectors = {
     },
     get errorSnackbar(): string {
       return byTestId('error-snackbar');
+    },
+  },
+
+  // Native alert dialogs (React Native Alert.alert)
+  // These are OS-level dialogs with platform-specific selectors
+  alert: {
+    // Alert container
+    get container(): string {
+      if (isAndroid()) {
+        // Android AlertDialog
+        return '//android.widget.FrameLayout[@resource-id="android:id/content"]//android.widget.ScrollView';
+      }
+      // iOS Alert
+      return '-ios class chain:**/XCUIElementTypeAlert';
+    },
+    // Alert title
+    get title(): string {
+      if (isAndroid()) {
+        return '//android.widget.TextView[@resource-id="android:id/alertTitle"]';
+      }
+      return '-ios class chain:**/XCUIElementTypeAlert/**/XCUIElementTypeStaticText[1]';
+    },
+    // Alert message
+    get message(): string {
+      if (isAndroid()) {
+        return '//android.widget.TextView[@resource-id="android:id/message"]';
+      }
+      return '-ios class chain:**/XCUIElementTypeAlert/**/XCUIElementTypeStaticText[2]';
+    },
+    // Dynamic: alert button by text label
+    button: (label: string): string => {
+      if (isAndroid()) {
+        // Android uses Button with text attribute
+        return `//android.widget.Button[@text="${label}"]`;
+      }
+      // iOS uses XCUIElementTypeButton with label
+      return `-ios predicate string:type == "XCUIElementTypeButton" AND label == "${label}"`;
+    },
+    // Common button shortcuts
+    // Note: Android AlertDialog buttons are displayed in UPPERCASE
+    get cancelButton(): string {
+      if (isAndroid()) {
+        return '//android.widget.Button[@text="CANCEL"]';
+      }
+      return `-ios predicate string:type == "XCUIElementTypeButton" AND label == "Cancel"`;
+    },
+    get continueButton(): string {
+      if (isAndroid()) {
+        return '//android.widget.Button[@text="CONTINUE"]';
+      }
+      return `-ios predicate string:type == "XCUIElementTypeButton" AND label == "Continue"`;
     },
   },
 

@@ -18,13 +18,60 @@ import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
 import {Selectors, nativeTextElement} from '../helpers/selectors';
-import {QUICK_TEST_MODEL, TIMEOUTS} from '../fixtures/models';
+import {
+  QUICK_TEST_MODEL,
+  TIMEOUTS,
+  getModelsToTest,
+  ModelTestConfig,
+} from '../fixtures/models';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
+/**
+ * Dismiss memory/performance warning alert if it appears.
+ * The app shows this alert when loading models that may exceed device memory
+ * or for multimodal models on low-end devices.
+ * Taps "Continue" to proceed with loading anyway.
+ */
+async function dismissPerformanceWarningIfPresent(): Promise<void> {
+  try {
+    // Wait briefly for the alert to potentially appear
+    await browser.pause(1500);
+
+    const continueButton = browser.$(Selectors.alert.continueButton);
+    const exists = await continueButton.isExisting();
+
+    if (exists) {
+      const isDisplayed = await continueButton.isDisplayed();
+      if (isDisplayed) {
+        console.log('Performance warning alert detected, tapping Continue...');
+        await continueButton.click();
+        // Wait for alert to dismiss
+        await browser.pause(500);
+      }
+    }
+  } catch {
+    // No alert appeared or error - just continue
+  }
+}
+
+/**
+ * Get the model to test.
+ * If TEST_MODELS env var is set, use the first model from the filtered list.
+ * Otherwise, use the default QUICK_TEST_MODEL.
+ */
+function getModelForTest(): ModelTestConfig {
+  const envFilter = process.env.TEST_MODELS;
+  if (envFilter) {
+    const models = getModelsToTest();
+    return models[0]; // Use first matched model
+  }
+  return QUICK_TEST_MODEL;
+}
+
 describe('Quick Smoke Test', () => {
-  const model = QUICK_TEST_MODEL;
+  const model = getModelForTest();
 
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
@@ -84,12 +131,27 @@ describe('Quick Smoke Test', () => {
     await modelsPage.waitForReady();
 
     // Wait for download to complete and load the model
-    const loadBtn = browser.$(Selectors.modelCard.loadButton);
-    await loadBtn.waitForDisplayed({timeout: TIMEOUTS.download});
+    // Note: The model card element itself has no children - buttons are siblings in the container
+    const containerSelector = Selectors.modelCard.cardContainer(model.downloadFile);
+    const modelCardContainer = browser.$(containerSelector);
+    await modelCardContainer.waitForDisplayed({timeout: TIMEOUTS.download});
+
+    // Find and click the load button within the container
+    const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
+    await loadBtn.waitForDisplayed({timeout: 10000});
     await loadBtn.click();
+
+    // Handle potential memory/performance warning alert
+    // The app may show a warning dialog for models that exceed device memory
+    // or for multimodal models on low-end devices. Tap "Continue" to proceed.
+    await dismissPerformanceWarningIfPresent();
 
     // Verify we're back on chat screen (auto-navigates after load)
     await chatPage.waitForReady();
+
+    // Reset chat to start fresh
+    await chatPage.resetChat();
+
     console.log(`\nModel loaded successfully: ${model.id}`);
 
     // Send a message
@@ -99,12 +161,6 @@ describe('Quick Smoke Test', () => {
     // Wait for AI response
     const timing = browser.$(Selectors.chat.messageTiming);
     await timing.waitForDisplayed({timeout: TIMEOUTS.inference});
-
-    // Save page source for debugging element structure
-    const outputDir = path.join(__dirname, '../debug-output');
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, {recursive: true});
-    }
 
     // Get timing and response
     // Timing text is a sibling element after message-timing, not a child
@@ -121,7 +177,11 @@ describe('Quick Smoke Test', () => {
     console.log(`  Response: ${responseText}`);
     console.log(`  Timing: ${timingText}`);
 
-    // Save quick report (outputDir already created above for page source)
+    // Save quick report
+    const outputDir = path.join(__dirname, '../debug-output');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, {recursive: true});
+    }
     const reportPath = path.join(outputDir, 'quick-smoke-report.json');
     fs.writeFileSync(
       reportPath,
