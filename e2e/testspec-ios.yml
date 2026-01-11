@@ -1,0 +1,73 @@
+version: 0.1
+
+# AWS Device Farm Test Spec for PocketPal E2E Tests (iOS)
+# This file defines the test environment and execution steps for Appium Node.js tests
+
+phases:
+  install:
+    commands:
+      # Install Node.js 18 (required for our tests)
+      - export NVM_DIR=$HOME/.nvm
+      - . $NVM_DIR/nvm.sh
+      - nvm install 18
+      - nvm use 18
+      - node --version
+      - npm --version
+
+      # Navigate to test package directory
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+      - echo "Test package contents:" && ls -la
+
+      # Install dependencies from package.json (node_modules not included in package)
+      - echo "Installing dependencies..."
+      - npm install --legacy-peer-deps
+      - echo "Dependencies installed successfully"
+
+      # List installed packages for debugging
+      - npm list --depth=0 || true
+
+  pre_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Start Appium server with XCUITest driver
+      - echo "Starting Appium server..."
+      - >-
+        npx appium --base-path /wd/hub --port 4723 &
+
+      # Wait for Appium to start
+      - sleep 15
+
+      # Verify Appium is running
+      - curl -s http://127.0.0.1:4723/wd/hub/status || echo "Appium status check failed"
+
+      # Print environment info for debugging
+      - echo "Device Farm App Path:" && echo $DEVICEFARM_APP_PATH
+      - echo "Device UDID:" && echo $DEVICEFARM_DEVICE_UDID
+
+  test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Run WebDriverIO tests with the Device Farm Appium server
+      - >-
+        APPIUM_HOST=127.0.0.1
+        APPIUM_PORT=4723
+        DEVICE_UDID=$DEVICEFARM_DEVICE_UDID
+        APP_PATH=$DEVICEFARM_APP_PATH
+        npx wdio run wdio.ios.conf.ts --spec specs/quick-smoke.spec.ts
+
+  post_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Copy test artifacts to Device Farm output directory
+      - mkdir -p $DEVICEFARM_LOG_DIR/screenshots
+      - cp -r debug-output/* $DEVICEFARM_LOG_DIR/screenshots/ 2>/dev/null || true
+
+      # Copy any generated reports
+      - cp -r reports/* $DEVICEFARM_LOG_DIR/ 2>/dev/null || true
+
+artifacts:
+  # Specify which files to collect as test artifacts
+  - $DEVICEFARM_LOG_DIR

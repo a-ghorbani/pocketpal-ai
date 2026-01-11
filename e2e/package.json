@@ -7,7 +7,7 @@
     "test:ios": "wdio run wdio.ios.conf.ts",
     "test:android:local": "wdio run wdio.android.local.conf.ts",
     "test:ios:local": "wdio run wdio.ios.local.conf.ts",
-    "test:aws": "node scripts/run-aws-device-farm.js",
+    "test:aws": "npx ts-node scripts/run-aws-device-farm.ts",
     "test:models:ios": "npx ts-node scripts/run-model-tests.ts --platform ios",
     "test:models:android": "npx ts-node scripts/run-model-tests.ts --platform android",
     "typecheck": "tsc --noEmit"
