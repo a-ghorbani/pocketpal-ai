@@ -16,6 +16,8 @@ const DEVICE_UDID = process.env.DEVICEFARM_DEVICE_UDID || process.env.DEVICE_UDI
 const APP_PATH = process.env.DEVICEFARM_APP_PATH || process.env.APP_PATH;
 const APPIUM_HOST = process.env.APPIUM_HOST || '127.0.0.1';
 const APPIUM_PORT = parseInt(process.env.APPIUM_PORT || '4723', 10);
+// Pre-built WebDriverAgent path for Device Farm (required for iOS 26+, works with iOS 18.5)
+const WDA_DERIVED_DATA_PATH = process.env.DEVICEFARM_APPIUM_WDA_DERIVED_DATA_PATH_V9;
 
 export const config: Options.Testrunner = {
   ...sharedConfig,
@@ -37,6 +39,9 @@ export const config: Options.Testrunner = {
       'appium:fullReset': false,
       'appium:newCommandTimeout': 300,
       'appium:autoAcceptAlerts': true,
+      // Use pre-built WDA already installed on Device Farm devices
+      'appium:usePrebuiltWDA': true,
+      ...(WDA_DERIVED_DATA_PATH && {'appium:derivedDataPath': WDA_DERIVED_DATA_PATH}),
     },
   ],
 
