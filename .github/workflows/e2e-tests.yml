@@ -131,11 +131,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Run E2E tests on AWS Device Farm
         env:
-          AWS_DEVICE_FARM_PROJECT_ARN: ${{ secrets.AWS_DEVICE_FARM_PROJECT_ARN }}
+          AWS_DEVICE_FARM_PROJECT_ARN: ${{ vars.AWS_DEVICE_FARM_PROJECT_ARN }}
+          AWS_DEVICE_POOL_ARN_ANDROID: ${{ vars.AWS_DEVICE_POOL_ARN_ANDROID }}
         run: |
           cd e2e
           yarn test:aws --platform android --app ../app/app-release.apk
@@ -169,11 +170,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Run E2E tests on AWS Device Farm
         env:
-          AWS_DEVICE_FARM_PROJECT_ARN: ${{ secrets.AWS_DEVICE_FARM_PROJECT_ARN }}
+          AWS_DEVICE_FARM_PROJECT_ARN: ${{ vars.AWS_DEVICE_FARM_PROJECT_ARN }}
+          AWS_DEVICE_POOL_ARN_IOS: ${{ vars.AWS_DEVICE_POOL_ARN_IOS }}
         run: |
           cd e2e
           yarn test:aws --platform ios --app ../app/PocketPal.ipa
