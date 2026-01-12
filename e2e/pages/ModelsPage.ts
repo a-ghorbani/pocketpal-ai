@@ -1,0 +1,97 @@
+/**
+ * Models Page Object
+ * Handles interactions with the Models screen
+ *
+ * Uses shared Selectors utility for consistent cross-platform selectors
+ */
+
+import {BasePage, ChainableElement} from './BasePage';
+import {Selectors} from '../helpers/selectors';
+
+declare const browser: WebdriverIO.Browser;
+
+export class ModelsPage extends BasePage {
+  /**
+   * Get FAB group element
+   */
+  get fabButton(): ChainableElement {
+    return this.getElement(Selectors.models.fabGroup);
+  }
+
+  /**
+   * Get HuggingFace FAB button
+   */
+  get hfFabButton(): ChainableElement {
+    return this.getElement(Selectors.models.hfFab);
+  }
+
+  /**
+   * Check if models screen is displayed
+   */
+  async isDisplayed(): Promise<boolean> {
+    return this.isElementDisplayed(Selectors.models.screen, 5000);
+  }
+
+  /**
+   * Wait for models screen to be ready
+   */
+  async waitForReady(timeout = 10000): Promise<void> {
+    await this.waitForElement(Selectors.models.screen, timeout);
+  }
+
+  /**
+   * Open navigation drawer
+   */
+  async openDrawer(): Promise<void> {
+    await this.tap(Selectors.models.menuButton);
+  }
+
+  /**
+   * Check if FAB menu is expanded (HF fab button is visible)
+   */
+  async isFabMenuExpanded(): Promise<boolean> {
+    return this.isElementDisplayed(Selectors.models.hfFab, 2000);
+  }
+
+  /**
+   * Expand FAB menu by tapping the FAB group
+   */
+  async expandFabMenu(): Promise<void> {
+    await this.tap(Selectors.models.fabGroup);
+    await this.waitForElement(Selectors.models.hfFab, 5000);
+  }
+
+  /**
+   * Close FAB menu if it's expanded
+   */
+  async closeFabMenuIfExpanded(): Promise<void> {
+    const isExpanded = await this.isFabMenuExpanded();
+    if (isExpanded) {
+      // Tap the close button or the FAB group again to collapse
+      const closeButton = browser.$(Selectors.models.fabGroupClose);
+      const closeVisible = await closeButton.isDisplayed().catch(() => false);
+      if (closeVisible) {
+        await closeButton.click();
+      } else {
+        // Fallback: tap FAB group to toggle
+        await this.tap(Selectors.models.fabGroup);
+      }
+      await browser.pause(500);
+    }
+  }
+
+  /**
+   * Open HuggingFace search sheet
+   */
+  async openHuggingFaceSearch(): Promise<void> {
+    // First ensure FAB menu is in a known state (collapsed)
+    await this.closeFabMenuIfExpanded();
+
+    // Now expand the FAB menu
+    await this.expandFabMenu();
+
+    // Tap the HuggingFace FAB button
+    await this.tap(Selectors.models.hfFab);
+    await browser.pause(1000); // This is needed to ensure the animation is complete.
+  }
+}

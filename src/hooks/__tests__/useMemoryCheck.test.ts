@@ -26,7 +26,7 @@ describe('useMemoryCheck', () => {
 
     try {
       await waitForNextUpdate();
-    } catch (error) {
+    } catch {
       // Ignoring timeout
     }
 
@@ -44,7 +44,7 @@ describe('useMemoryCheck', () => {
 
     try {
       await waitForNextUpdate();
-    } catch (error) {
+    } catch {
       // Ignoring timeout
     }
 
@@ -71,7 +71,7 @@ describe('useMemoryCheck', () => {
 
     try {
       await waitForNextUpdate();
-    } catch (error) {
+    } catch {
       // Ignoring timeout
     }
 

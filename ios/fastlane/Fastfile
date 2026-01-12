@@ -62,4 +62,83 @@ platform :ios do
       wait_processing_timeout_duration: 1800 # 30 minutes timeout
     )
   end
+
+  desc "Build IPA for AWS Device Farm testing"
+  lane :build_for_device_farm do |options|
+    setup_ci(force: true) if ENV['CI']
+
+    # Support both env vars and file-based API key
+    # For local dev: pass key_path parameter or set APP_STORE_CONNECT_API_KEY_PATH
+    # For CI: use APP_STORE_CONNECT_API_KEY_CONTENT env var
+
+    key_path = options[:key_path] || ENV['APP_STORE_CONNECT_API_KEY_PATH']
+
+    if key_path && File.exist?(key_path)
+      # Use file-based API key (local development)
+      UI.message("Using API key from file: #{key_path}")
+
+      # Extract key_id from filename (AuthKey_XXXXXX.p8)
+      key_id = ENV['APP_STORE_CONNECT_API_KEY_ID'] || File.basename(key_path, '.p8').sub('AuthKey_', '')
+
+      api_key = app_store_connect_api_key(
+        key_id: key_id,
+        issuer_id: ENV['APP_STORE_CONNECT_API_ISSUER_ID'],
+        key_filepath: key_path,
+        in_house: false
+      )
+    elsif ENV['APP_STORE_CONNECT_API_KEY_CONTENT']
+      # Use env var (CI)
+      api_key = app_store_connect_api_key(
+        key_id: ENV['APP_STORE_CONNECT_API_KEY_ID'],
+        issuer_id: ENV['APP_STORE_CONNECT_API_ISSUER_ID'],
+        key_content: ENV['APP_STORE_CONNECT_API_KEY_CONTENT'].gsub('\\n', "\n"),
+        in_house: false
+      )
+    else
+      UI.user_error!(
+        "Missing App Store Connect API key.\n\n" \
+        "Option 1 (Local): Set APP_STORE_CONNECT_API_KEY_PATH to your .p8 file path\n" \
+        "  export APP_STORE_CONNECT_API_KEY_PATH=~/path/to/AuthKey_XXXXX.p8\n" \
+        "  export APP_STORE_CONNECT_API_ISSUER_ID=your-issuer-id\n\n" \
+        "Option 2 (CI): Set APP_STORE_CONNECT_API_KEY_CONTENT with the key contents"
+      )
+    end
+
+    # Validate other required vars
+    if ENV['MATCH_GITHUB_TOKEN'].nil? || ENV['MATCH_GITHUB_TOKEN'].empty?
+      UI.user_error!("Missing MATCH_GITHUB_TOKEN environment variable")
+    end
+
+    # Helper method to encode GitHub token
+    def encoded_github_token
+      require 'base64'
+      Base64.strict_encode64("x-access-token:#{ENV['MATCH_GITHUB_TOKEN']}")
+    end
+
+    # Use development profile for Device Farm testing
+    match(
+      type: "development",
+      readonly: true,
+      api_key: api_key,
+      git_branch: "master",
+      git_basic_authorization: encoded_github_token
+    )
+
+    build_ios_app(
+      scheme: "PocketPal",
+      export_method: "development",
+      output_directory: "./build",
+      output_name: "PocketPal.ipa",
+      clean: true,
+      export_options: {
+        provisioningProfiles: {
+          "ai.pocketpal" => "match Development ai.pocketpal"
+        },
+        signingStyle: "manual"
+      }
+    )
+
+    # Print output path for reference
+    puts "IPA built at: #{lane_context[SharedValues::IPA_OUTPUT_PATH]}"
+  end
 end

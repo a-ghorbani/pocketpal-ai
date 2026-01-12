@@ -21,7 +21,7 @@ describe('MarkdownView Component', () => {
     );
 
     // Simulate a layout change
-    fireEvent(getByTestId('chatMarkdownScrollView'), 'layout', {
+    fireEvent(getByTestId('markdown-content'), 'layout', {
       nativeEvent: {
         layout: {width: 200, height: 100},
       },
@@ -31,7 +31,7 @@ describe('MarkdownView Component', () => {
       <MarkdownView markdownText={markdownText} maxMessageWidth={200} />,
     );
 
-    const element = getByTestId('chatMarkdownScrollView');
+    const element = getByTestId('markdown-content');
 
     // Check if style is an array and extract maxWidth from the correct location
     const style = element.props.style;

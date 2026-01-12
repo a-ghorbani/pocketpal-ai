@@ -81,7 +81,7 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
           enablePanDownToClose
           enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
           onClose={handleSheetDismiss}
-          showCloseButton={false}>
+          showCloseButton={true}>
           <SearchView
             testID="hf-model-search-view"
             onModelSelect={handleModelSelect}

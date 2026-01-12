@@ -14,12 +14,15 @@ interface FABGroupProps {
 
 const iconStyle = {width: 24, height: 24};
 
-const HFIcon: React.FC<any> = props => (
-  <Image
-    source={require('../../../assets/icon-hf.png')}
-    style={iconStyle}
-    {...props}
-  />
+// Icon component type for react-native-paper FAB actions
+type IconComponentProps = {
+  size: number;
+  allowFontScaling?: boolean;
+  color: string;
+};
+
+const HFIcon = (_props: IconComponentProps): React.ReactNode => (
+  <Image source={require('../../../assets/icon-hf.png')} style={iconStyle} />
 );
 
 export const FABGroup: React.FC<FABGroupProps> = ({
@@ -39,6 +42,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
         testID: 'hf-fab',
         icon: HFIcon,
         label: l10n.models.buttons.addFromHuggingFace,
+        accessibilityLabel: l10n.models.buttons.addFromHuggingFace,
         style: styles.actionButton,
         onPress: () => {
           onAddHFModel();
@@ -48,6 +52,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
         testID: 'local-fab',
         icon: 'folder-plus',
         label: l10n.models.buttons.addLocalModel,
+        accessibilityLabel: l10n.models.buttons.addLocalModel,
         style: styles.actionButton,
         onPress: () => {
           onAddLocalModel();

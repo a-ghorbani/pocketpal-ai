@@ -15,6 +15,7 @@ import BottomSheetKeyboardAwareScrollView from './BottomSheetAwareScrollview';
 import {Dimensions, TouchableOpacity, View} from 'react-native';
 import {CustomBackdrop} from './CustomBackdrop';
 import {Actions} from './Actions';
+import {SheetHandle} from './SheetHandle';
 
 export interface SheetProps extends Partial<BottomSheetModalProps> {
   children?: React.ReactNode;
@@ -89,17 +90,18 @@ export const Sheet = forwardRef(
         enableDynamicSizing={!snapPoints}
         stackBehavior="push"
         backdropComponent={CustomBackdrop}
+        handleComponent={SheetHandle}
         keyboardBlurBehavior="restore"
         activeOffsetY={[-1, 1]}
         failOffsetX={[-5, 5]}
         backgroundStyle={{
           backgroundColor: theme.colors.background,
         }}
-        handleIndicatorStyle={{
-          backgroundColor: theme.colors.primary,
-        }}
         snapPoints={snapPoints}
         onDismiss={onDismiss}
+        // Disable accessible to allow Appium/e2e tests to access child elements on iOS
+        // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
+        accessible={false}
         {...props}>
         <View style={styles.header}>
           {title && <Text variant="titleMedium">{title}</Text>}
@@ -107,7 +109,10 @@ export const Sheet = forwardRef(
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={onDismiss}
-              hitSlop={10}>
+              hitSlop={10}
+              testID="sheet-close-button"
+              accessibilityLabel="Close"
+              accessibilityRole="button">
               <CloseIcon stroke={theme.colors.primary} />
             </TouchableOpacity>
           )}

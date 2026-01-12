@@ -640,6 +640,36 @@ export const l10n = {
           message: 'Failed to submit report. Please try again.',
         },
       },
+      modelErrorReportSheet: {
+        title: 'Report Model Loading Issue',
+        privacyNote:
+          'Help us improve PocketPal by sharing details about this error. Review below what will be shared - you can deselect any items you prefer not to include.',
+        errorMessage: 'Error message',
+        modelInfo: 'Model Information',
+        modelName: 'Name',
+        modelSource: 'Source',
+        modelSize: 'Size',
+        contextParams: 'Context Parameters',
+        deviceInfo: 'Device Information',
+        deviceModel: 'Device',
+        osVersion: 'OS',
+        memoryInfo: 'Memory',
+        cpuArchitecture: 'CPU',
+        isEmulator: 'Emulator',
+        additionalInfoLabel: 'Additional context (optional)',
+        additionalInfoPlaceholder:
+          'Any additional details that might help us understand the issue...',
+        submit: 'Submit Report',
+        success: {
+          title: 'Report Submitted',
+          message:
+            'Thank you for helping us improve PocketPal. Your report will help us fix this issue.',
+        },
+        error: {
+          title: 'Report Failed',
+          message: 'Failed to submit report. Please try again later.',
+        },
+      },
       chatGenerationSettingsSheet: {
         invalidValues: 'Invalid Values',
         invalidNumericValuesMessage: 'Must be a valid number',
@@ -1932,6 +1962,36 @@ export const l10n = {
           message: '報告の送信に失敗しました。もう一度お試しください。',
         },
       },
+      modelErrorReportSheet: {
+        title: 'モデル読み込みエラーを報告',
+        privacyNote:
+          'このエラーの詳細を共有してPocketPalの改善にご協力ください。以下の共有内容を確認し、含めたくない項目は選択解除できます。',
+        errorMessage: 'エラーメッセージ',
+        modelInfo: 'モデル情報',
+        modelName: '名前',
+        modelSource: 'ソース',
+        modelSize: 'サイズ',
+        contextParams: 'コンテキストパラメータ',
+        deviceInfo: 'デバイス情報',
+        deviceModel: 'デバイス',
+        osVersion: 'OS',
+        memoryInfo: 'メモリ',
+        cpuArchitecture: 'CPU',
+        isEmulator: 'エミュレータ',
+        additionalInfoLabel: '追加情報（任意）',
+        additionalInfoPlaceholder:
+          '問題の理解に役立つ追加情報があればお書きください...',
+        submit: '報告を送信',
+        success: {
+          title: '報告が送信されました',
+          message:
+            'PocketPalの改善にご協力いただきありがとうございます。この問題の修正に役立てます。',
+        },
+        error: {
+          title: '報告に失敗しました',
+          message: '報告の送信に失敗しました。後でもう一度お試しください。',
+        },
+      },
       chatGenerationSettingsSheet: {
         invalidValues: '無効な値',
         invalidNumericValuesMessage: '有効な数値を入力してください',
@@ -3167,6 +3227,35 @@ export const l10n = {
         error: {
           title: '举报失败',
           message: '提交举报失败。请重试。',
+        },
+      },
+      modelErrorReportSheet: {
+        title: '报告模型加载问题',
+        privacyNote:
+          '通过分享此错误的详细信息帮助我们改进PocketPal。请查看下方将要分享的内容 - 您可以取消选择不想包含的项目。',
+        errorMessage: '错误消息',
+        modelInfo: '模型信息',
+        modelName: '名称',
+        modelSource: '来源',
+        modelSize: '大小',
+        contextParams: '上下文参数',
+        deviceInfo: '设备信息',
+        deviceModel: '设备',
+        osVersion: '操作系统',
+        memoryInfo: '内存',
+        cpuArchitecture: 'CPU',
+        isEmulator: '模拟器',
+        additionalInfoLabel: '额外说明（可选）',
+        additionalInfoPlaceholder: '任何可能帮助我们理解问题的额外信息...',
+        submit: '提交报告',
+        success: {
+          title: '报告已提交',
+          message:
+            '感谢您帮助我们改进PocketPal。您的报告将帮助我们修复此问题。',
+        },
+        error: {
+          title: '报告失败',
+          message: '提交报告失败。请稍后重试。',
         },
       },
       chatGenerationSettingsSheet: {

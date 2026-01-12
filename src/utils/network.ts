@@ -11,6 +11,7 @@ export const checkConnectivity = async (timeoutMs = 5000): Promise<boolean> => {
     await axios.head('https://www.google.com', {timeout: timeoutMs});
     return true;
   } catch (error) {
+    console.error('Connectibity Error: ', error);
     return false;
   }
 };

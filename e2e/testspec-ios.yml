@@ -1,0 +1,86 @@
+version: 0.1
+
+# AWS Device Farm Test Spec for PocketPal E2E Tests (iOS)
+# This file defines the test environment and execution steps for Appium Node.js tests
+
+# Use the new macOS Sequoia test host (required for iOS 18+)
+ios_test_host: macos_sequoia
+
+phases:
+  install:
+    commands:
+      # Use devicefarm-cli for software selection (new host approach)
+      - devicefarm-cli use node 18
+      - devicefarm-cli use appium 2
+      - node --version
+      - npm --version
+
+      # Check Device Farm's Appium version and install xcuitest driver
+      - echo "Device Farm Appium version:"
+      - /private/var/devicefarm/runtime/appium_2_x/node_modules/.bin/appium --version
+      - echo "Installing xcuitest driver (version compatible with Appium 2.x)..."
+      - /private/var/devicefarm/runtime/appium_2_x/node_modules/.bin/appium driver install xcuitest@7.27.0
+      - echo "Installed drivers:"
+      - /private/var/devicefarm/runtime/appium_2_x/node_modules/.bin/appium driver list --installed
+
+      # Navigate to test package directory
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+      - echo "Test package contents:" && ls -la
+
+      # Install dependencies from package.json (node_modules not included in package)
+      - echo "Installing dependencies..."
+      - npm install --legacy-peer-deps
+      - echo "Dependencies installed successfully"
+
+  pre_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Start Device Farm's pre-installed Appium (has XCUITest driver)
+      # Using pre-built WDA from Device Farm (required for iOS 26+, also works for iOS 18.5)
+      - echo "Starting Device Farm Appium server..."
+      - >-
+        /private/var/devicefarm/runtime/appium_2_x/node_modules/.bin/appium
+        --base-path /wd/hub
+        --port 4723
+        --use-drivers xcuitest
+        --default-capabilities "{\"appium:derivedDataPath\": \"$DEVICEFARM_APPIUM_WDA_DERIVED_DATA_PATH_V9\"}" &
+
+      # Wait for Appium to start
+      - sleep 15
+
+      # Verify Appium is running
+      - curl -s http://127.0.0.1:4723/wd/hub/status || echo "Appium status check failed"
+
+      # Print environment info for debugging
+      - echo "Device Farm App Path:" && echo $DEVICEFARM_APP_PATH
+      - echo "Device UDID:" && echo $DEVICEFARM_DEVICE_UDID
+      - echo "WDA Derived Data Path:" && echo $DEVICEFARM_APPIUM_WDA_DERIVED_DATA_PATH_V9
+
+  test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Run model tests with Device Farm Appium server
+      # The --device-farm flag tells the runner to use Device Farm configs
+      - >-
+        APPIUM_HOST=127.0.0.1
+        APPIUM_PORT=4723
+        DEVICE_UDID=$DEVICEFARM_DEVICE_UDID
+        APP_PATH=$DEVICEFARM_APP_PATH
+        npx ts-node scripts/run-model-tests.ts --platform ios --device-farm
+
+  post_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Copy test artifacts to Device Farm output directory
+      - mkdir -p $DEVICEFARM_LOG_DIR/reports
+      - cp -r debug-output/* $DEVICEFARM_LOG_DIR/reports/ 2>/dev/null || true
+
+      # Print cumulative report for visibility in logs
+      - echo "=== MODEL TEST RESULTS ===" && cat debug-output/all-models-report.json 2>/dev/null || echo "No cumulative report found"
+
+artifacts:
+  # Specify which files to collect as test artifacts
+  - $DEVICEFARM_LOG_DIR

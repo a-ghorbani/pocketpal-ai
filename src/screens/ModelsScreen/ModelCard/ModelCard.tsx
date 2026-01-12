@@ -538,6 +538,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       return (
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
+          accessibilityLabel={isActiveModel ? 'Offload model' : 'Load model'}
           icon={isActiveModel ? 'eject' : 'play-circle-outline'}
           //mode="contained-tonal"
           onPress={handlePress}
@@ -550,7 +551,10 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
     return (
       <>
-        <Card elevation={0} style={styles.card}>
+        <Card
+          elevation={0}
+          style={styles.card}
+          testID={`model-card-${model.filename}`}>
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>

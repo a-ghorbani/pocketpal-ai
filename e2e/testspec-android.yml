@@ -1,0 +1,74 @@
+version: 0.1
+
+# AWS Device Farm Test Spec for PocketPal E2E Tests (Android)
+# This file defines the test environment and execution steps for Appium Node.js tests
+
+phases:
+  install:
+    commands:
+      # Install Node.js 18 (required for our tests)
+      - export NVM_DIR=$HOME/.nvm
+      - . $NVM_DIR/nvm.sh
+      - nvm install 18
+      - nvm use 18
+      - node --version
+      - npm --version
+
+      # Navigate to test package directory
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+      - echo "Test package contents:" && ls -la
+
+      # Install dependencies from package.json (node_modules not included in package)
+      - echo "Installing dependencies..."
+      - npm install --legacy-peer-deps
+      - echo "Dependencies installed successfully"
+
+      # List installed packages for debugging
+      - npm list --depth=0 || true
+
+  pre_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Start Appium server
+      - echo "Starting Appium server..."
+      - >-
+        npx appium --base-path /wd/hub --port 4723 --allow-insecure chromedriver_autodownload &
+
+      # Wait for Appium to start
+      - sleep 15
+
+      # Verify Appium is running
+      - curl -s http://127.0.0.1:4723/wd/hub/status || echo "Appium status check failed"
+
+      # Print environment info for debugging
+      - echo "Device Farm App Path:" && echo $DEVICEFARM_APP_PATH
+      - echo "Device UDID:" && echo $DEVICEFARM_DEVICE_UDID
+
+  test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Run model tests with Device Farm Appium server
+      # The --device-farm flag tells the runner to use Device Farm configs
+      - >-
+        APPIUM_HOST=127.0.0.1
+        APPIUM_PORT=4723
+        DEVICE_UDID=$DEVICEFARM_DEVICE_UDID
+        APP_PATH=$DEVICEFARM_APP_PATH
+        npx ts-node scripts/run-model-tests.ts --platform android --device-farm
+
+  post_test:
+    commands:
+      - cd $DEVICEFARM_TEST_PACKAGE_PATH
+
+      # Copy test artifacts to Device Farm output directory
+      - mkdir -p $DEVICEFARM_LOG_DIR/reports
+      - cp -r debug-output/* $DEVICEFARM_LOG_DIR/reports/ 2>/dev/null || true
+
+      # Print cumulative report for visibility in logs
+      - echo "=== MODEL TEST RESULTS ===" && cat debug-output/all-models-report.json 2>/dev/null || echo "No cumulative report found"
+
+artifacts:
+  # Specify which files to collect as test artifacts
+  - $DEVICEFARM_LOG_DIR

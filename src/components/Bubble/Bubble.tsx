@@ -70,6 +70,7 @@ export const Bubble = ({
 
   return (
     <Animated.View
+      testID={currentUserIsAuthor ? 'user-message' : 'ai-message'}
       style={[
         contentContainer,
         {
@@ -78,7 +79,7 @@ export const Bubble = ({
       ]}>
       {child}
       {timings && (
-        <View style={dateHeaderContainer}>
+        <View style={dateHeaderContainer} testID="message-timing">
           {copyable && (
             <TouchableOpacity onPress={copyToClipboard}>
               <Icon name="content-copy" style={iconContainer} />

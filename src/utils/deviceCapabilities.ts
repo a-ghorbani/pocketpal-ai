@@ -10,13 +10,19 @@ export interface GpuCapabilities {
   /** Whether GPU acceleration is supported on this device */
   isSupported: boolean;
   /** Reason why GPU is not supported (if applicable) */
-  reason?: 'ios_version' | 'no_adreno' | 'missing_cpu_features' | 'unknown';
+  reason?:
+    | 'ios_version'
+    | 'no_adreno'
+    | 'missing_cpu_features'
+    | 'simulator'
+    | 'unknown';
   /** Detailed information about missing requirements */
   details?: {
     hasAdreno?: boolean;
     hasI8mm?: boolean;
     hasDotProd?: boolean;
     iosVersion?: number;
+    isSimulator?: boolean;
   };
 }
 
@@ -49,6 +55,18 @@ export interface CpuInfo {
  * @returns Promise<GpuCapabilities> GPU support status and details
  */
 export async function checkGpuSupport(): Promise<GpuCapabilities> {
+  // Check for simulator/emulator first - Metal residency sets not supported on simulators
+  const isSimulator = await DeviceInfo.isEmulator();
+  if (isSimulator) {
+    return {
+      isSupported: false,
+      reason: 'simulator',
+      details: {
+        isSimulator: true,
+      },
+    };
+  }
+
   if (Platform.OS === 'ios') {
     // iOS requires version 18 or higher for Metal acceleration
     const iosVersion = parseInt(Platform.Version as string, 10);

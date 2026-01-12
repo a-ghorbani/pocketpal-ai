@@ -20,6 +20,7 @@ import {
   DownloadErrorDialog,
   ErrorSnackbar,
   ModelSettingsSheet,
+  ModelErrorReportSheet,
 } from '../../components';
 
 import {uiStore, modelStore, hfStore, UIStore} from '../../store';
@@ -40,6 +41,10 @@ export const ModelsScreen: React.FC = observer(() => {
   const [activeError, setActiveError] = useState<ErrorState | null>(null);
   const [isShowingErrorDialog, setIsShowingErrorDialog] = useState(false);
 
+  // Model error report sheet state
+  const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
+  const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
+
   const theme = useTheme();
   const styles = createStyles(theme);
 
@@ -54,6 +59,7 @@ export const ModelsScreen: React.FC = observer(() => {
       () => ({
         hfError: hfStore.error,
         downloadError: modelStore.downloadError,
+        modelLoadError: modelStore.modelLoadError,
       }),
       // React to changes
       data => {
@@ -67,6 +73,9 @@ export const ModelsScreen: React.FC = observer(() => {
         if (hasDialogError) {
           // If showing a dialog, don't show snackbar
           setActiveError(null);
+        } else if (data.modelLoadError) {
+          // Model load errors should show in snackbar
+          setActiveError(data.modelLoadError);
         } else if (data.hfError) {
           // If we have an HF error, show it
           setActiveError(data.hfError);
@@ -104,9 +113,10 @@ export const ModelsScreen: React.FC = observer(() => {
   };
 
   const handleDismissError = () => {
-    // Clear errors from both stores
+    // Clear errors from all stores
     hfStore.clearError();
     modelStore.clearDownloadError();
+    modelStore.clearModelLoadError();
   };
 
   const handleRetryAction = () => {
@@ -114,8 +124,30 @@ export const ModelsScreen: React.FC = observer(() => {
       hfStore.fetchModels();
     } else if (activeError?.context === 'download') {
       modelStore.retryDownload();
+    } else if (activeError?.context === 'modelInit') {
+      // Retry model initialization
+      const modelId = activeError.metadata?.modelId;
+      if (modelId) {
+        const model = modelStore.models.find(m => m.id === modelId);
+        if (model) {
+          modelStore.initContext(model);
+        }
+      }
     }
     handleDismissError();
+  };
+
+  const handleReportModelError = () => {
+    if (activeError?.context === 'modelInit') {
+      setErrorToReport(activeError);
+      setIsErrorReportVisible(true);
+      handleDismissError();
+    }
+  };
+
+  const handleCloseErrorReport = () => {
+    setIsErrorReportVisible(false);
+    setErrorToReport(null);
   };
 
   const handleAddLocalModel = async () => {
@@ -305,13 +337,14 @@ export const ModelsScreen: React.FC = observer(() => {
     .filter(group => group.items.length > 0);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="models-screen">
       {/* Show Error Snackbar only if no dialog is visible */}
       {!isShowingErrorDialog && activeError && (
         <ErrorSnackbar
           error={activeError}
           onDismiss={handleDismissError}
           onRetry={handleRetryAction}
+          onReport={handleReportModelError}
         />
       )}
 
@@ -364,6 +397,11 @@ export const ModelsScreen: React.FC = observer(() => {
         isVisible={settingsVisible}
         onClose={handleCloseSettings}
         model={selectedModel}
+      />
+      <ModelErrorReportSheet
+        isVisible={isErrorReportVisible}
+        onClose={handleCloseErrorReport}
+        error={errorToReport}
       />
     </View>
   );

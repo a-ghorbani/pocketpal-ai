@@ -453,6 +453,8 @@ export const ChatInput = observer(
                   ? !isStreaming && !isCameraActive
                   : textInputProps?.editable !== false
               }
+              testID="chat-input"
+              accessibilityLabel="Message input"
             />
           </View>
 

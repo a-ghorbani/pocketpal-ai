@@ -1167,7 +1167,7 @@ export const SettingsScreen: React.FC = observer(() => {
                     onPress={async () => {
                       try {
                         await exportLegacyChatSessions();
-                      } catch (error) {
+                      } catch {
                         Alert.alert(
                           'Export Error',
                           'Failed to export legacy chat sessions. The file may not exist.',

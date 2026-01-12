@@ -245,6 +245,7 @@
         false,  // parallel_tool_calls
         "",     // tool_choice
         enableThinking,
+        enableThinking ? "auto" : "none",  // reasoning_format
         true,   // add_generation_prompt
         "",     // now_str
         {}      // chat_template_kwargs

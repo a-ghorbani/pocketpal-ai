@@ -157,7 +157,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
 
     return (
       <View
-        testID="chatMarkdownScrollView"
+        testID="markdown-content"
         style={[styles.markdownContainer, {maxWidth: _maxWidth}]}>
         {/* Render reasoning/thinking content first if present */}
         {reasoningSource && !isEmptyContent(reasoningContent || '') && (
