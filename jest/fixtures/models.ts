@@ -41,6 +41,8 @@ export const mockContextModel: NativeLlamaContext['model'] = {
   },
   metadata: {},
   isChatTemplateSupported: false,
+  is_recurrent: false,
+  is_hybrid: false,
 };
 
 export const mockLlamaContextParams = {
