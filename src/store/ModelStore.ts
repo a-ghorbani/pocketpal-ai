@@ -106,6 +106,10 @@ class ModelStore {
   inferencing: boolean = false;
   isStreaming: boolean = false;
 
+  // Track active completion promise for safe context release
+  // This prevents race condition where context is freed while completion is still running
+  private activeCompletionPromise: Promise<any> | null = null;
+
   downloadError: ErrorState | null = null;
   modelLoadError: ErrorState | null = null;
 
@@ -1202,7 +1206,45 @@ class ModelStore {
     }
 
     try {
-      // First check if multimodal is enabled and release it if needed
+      // IMPORTANT: Stop-Await-Release Pattern
+      // This prevents race condition where completion callback fires after context is freed
+      // which causes SIGSEGV in isMultimodalEnabled/createCompletionResult
+      if (
+        this.inferencing ||
+        this.isStreaming ||
+        this.activeCompletionPromise
+      ) {
+        console.log('Stopping active completion before context release');
+
+        // Step 1: Signal the completion to stop
+        try {
+          await this.context.stopCompletion();
+        } catch (stopError) {
+          console.warn('Error stopping completion:', stopError);
+          // Continue with release even if stop fails
+        }
+
+        // Step 2: Wait for the completion promise to actually finish
+        // This is critical - stopCompletion() only signals, it doesn't wait
+        if (this.activeCompletionPromise) {
+          console.log('Waiting for completion promise to finish...');
+          try {
+            // Wait for promise to settle (ignore errors, just wait for it to complete)
+            await this.activeCompletionPromise.catch(() => {});
+          } catch {
+            // Ignore any errors, we just need to wait
+          }
+          this.activeCompletionPromise = null;
+        }
+
+        // Clear inference flags
+        runInAction(() => {
+          this.inferencing = false;
+          this.isStreaming = false;
+        });
+      }
+
+      // Step 3: Now safe to release - First check if multimodal is enabled and release it if needed
       const isMultimodalEnabled = await this.isMultimodalEnabled();
       if (isMultimodalEnabled) {
         console.log('Releasing multimodal context first');
@@ -1754,6 +1796,23 @@ class ModelStore {
   }
 
   /**
+   * Register an active completion promise for safe context release.
+   * This should be called when starting a completion operation.
+   * @param promise The completion promise to track
+   */
+  registerCompletionPromise(promise: Promise<any>) {
+    this.activeCompletionPromise = promise;
+  }
+
+  /**
+   * Clear the active completion promise.
+   * This should be called when the completion finishes (success or error).
+   */
+  clearCompletionPromise() {
+    this.activeCompletionPromise = null;
+  }
+
+  /**
    * Checks if the current context supports multimodal input
    * @returns Promise<boolean> - True if multimodal is enabled, false otherwise
    */
@@ -2233,7 +2292,8 @@ class ModelStore {
         completionParamsWithAppProps,
       );
 
-      const result = await this.context.completion(
+      // Create the completion promise and register it for safe context release
+      const completionPromise = this.context.completion(
         cleanCompletionParams,
         data => {
           if (data.token) {
@@ -2242,8 +2302,18 @@ class ModelStore {
         },
       );
 
+      // Register the promise so releaseContext can wait for it
+      this.registerCompletionPromise(completionPromise);
+
+      const result = await completionPromise;
+
+      // Clear the promise after completion finishes
+      this.clearCompletionPromise();
+
       params.onComplete?.(result.text);
     } catch (error) {
+      // Clear the promise on error too
+      this.clearCompletionPromise();
       console.error('Error in multi-image completion:', error);
       params.onError?.(
         error instanceof Error ? error : new Error(String(error)),
