@@ -184,10 +184,30 @@ describe('errors.ts', () => {
       expect(errorState.message).toBe('Insufficient storage space available');
     });
 
-    it('should handle unknown errors with default values', () => {
-      const unknownError = 'Some string error';
+    it('should preserve string error messages', () => {
+      const stringError = 'Some string error';
 
-      const errorState = createErrorState(unknownError, 'chat');
+      const errorState = createErrorState(stringError, 'chat');
+
+      expect(errorState.code).toBe('unknown');
+      expect(errorState.message).toBe('Some string error');
+      expect(errorState.context).toBe('chat');
+      expect(errorState.recoverable).toBe(true);
+    });
+
+    it('should handle object errors with message property (JSI bridge errors)', () => {
+      // Errors from native JSI calls may not be proper Error instances
+      const jsiError = {message: 'Native error: out of memory'};
+
+      const errorState = createErrorState(jsiError, 'modelInit');
+
+      expect(errorState.code).toBe('unknown');
+      expect(errorState.message).toBe('Native error: out of memory');
+      expect(errorState.context).toBe('modelInit');
+    });
+
+    it('should use default message for null/undefined errors', () => {
+      const errorState = createErrorState(null, 'chat');
 
       expect(errorState.code).toBe('unknown');
       expect(errorState.message).toBe('An unexpected error occurred');
