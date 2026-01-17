@@ -274,12 +274,14 @@ jobs:
       - name: Build iOS Release
         run: |
           cd ios
+          # List available simulators for debugging
+          xcrun simctl list devices available
           set -o pipefail && xcodebuild \
             -workspace PocketPal.xcworkspace \
             -scheme PocketPal \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -destination 'generic/platform=iOS Simulator' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \

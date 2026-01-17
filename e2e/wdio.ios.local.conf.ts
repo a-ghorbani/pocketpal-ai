@@ -20,7 +20,6 @@ export const config: Options.Testrunner = {
       platformName: 'iOS',
       'appium:deviceName': 'iPhone 17 Pro',
       'appium:platformVersion': '26.0',
-      'appium:udid': 'FC7F851B-B6C0-4E1D-B99B-335889FCC177',
       'appium:automationName': 'XCUITest',
       'appium:app': APP_PATH,
       'appium:bundleId': 'ai.pocketpal',

@@ -153,6 +153,9 @@ export function createErrorState(
             errorService === 'huggingface'
               ? l10nObject.errors.hfServerError
               : l10nObject.errors.serverError;
+        } else {
+          // Other status codes (400, 404, etc.) - preserve the original message
+          message = error.message;
         }
       } else if (
         error.message.includes('storage') ||
@@ -165,6 +168,22 @@ export function createErrorState(
       }
     } else {
       message = error.message;
+    }
+  } else {
+    // Fallback for non-Error objects (e.g., from native JSI calls)
+    // This handles cases where errors cross the JS-native boundary
+    // and may not be proper Error instances
+    if (error && typeof error === 'object' && 'message' in error) {
+      message = String((error as {message: unknown}).message);
+    } else if (typeof error === 'string') {
+      message = error;
+    } else if (error !== null && error !== undefined) {
+      // Last resort: stringify the error
+      try {
+        message = JSON.stringify(error);
+      } catch {
+        message = String(error);
+      }
     }
   }
 

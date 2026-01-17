@@ -113,6 +113,10 @@ class MockModelStore {
     this.isStreaming = value;
   };
 
+  // Safe context release methods
+  registerCompletionPromise = jest.fn();
+  clearCompletionPromise = jest.fn();
+
   get lastUsedModel(): Model | undefined {
     return this.lastUsedModelId
       ? this.models.find(m => m.id === this.lastUsedModelId)

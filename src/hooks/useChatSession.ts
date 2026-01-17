@@ -262,47 +262,61 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
-      const result = await context.completion(cleanCompletionParams, data => {
-        if (currentMessageInfo.current) {
-          // Capture time to first token on the first token received
-          if (timeToFirstToken === null && (data.token || data.content)) {
-            timeToFirstToken = Date.now() - completionStartTime;
-          }
-
-          if (!modelStore.isStreaming) {
-            modelStore.setIsStreaming(true);
-          }
-
-          // Use content and reasoning_content from the streaming data
-          // llama.rn already separates these for us when enable_thinking is true
-          const {content = '', reasoning_content: reasoningContent} = data;
-
-          // Update message with the separated content
-          if (content || reasoningContent) {
-            // Build the update object
-            const update: any = {
-              metadata: {
-                partialCompletionResult: {
-                  reasoning_content: reasoningContent,
-                  content: content.replace(/^\s+/, ''),
-                },
-              },
-            };
-
-            // Only update text if we have actual content
-            if (content) {
-              update.text = content.replace(/^\s+/, '');
+      // Create the completion promise and register it with modelStore
+      // This enables safe context release by waiting for the promise to finish
+      const completionPromise = context.completion(
+        cleanCompletionParams,
+        data => {
+          if (currentMessageInfo.current) {
+            // Capture time to first token on the first token received
+            if (timeToFirstToken === null && (data.token || data.content)) {
+              timeToFirstToken = Date.now() - completionStartTime;
             }
 
-            // Use the store's streaming update method which properly triggers reactivity
-            chatSessionStore.updateMessageStreaming(
-              currentMessageInfo.current.id,
-              currentMessageInfo.current.sessionId,
-              update,
-            );
+            if (!modelStore.isStreaming) {
+              modelStore.setIsStreaming(true);
+            }
+
+            // Use content and reasoning_content from the streaming data
+            // llama.rn already separates these for us when enable_thinking is true
+            const {content = '', reasoning_content: reasoningContent} = data;
+
+            // Update message with the separated content
+            if (content || reasoningContent) {
+              // Build the update object
+              const update: any = {
+                metadata: {
+                  partialCompletionResult: {
+                    reasoning_content: reasoningContent,
+                    content: content.replace(/^\s+/, ''),
+                  },
+                },
+              };
+
+              // Only update text if we have actual content
+              if (content) {
+                update.text = content.replace(/^\s+/, '');
+              }
+
+              // Use the store's streaming update method which properly triggers reactivity
+              chatSessionStore.updateMessageStreaming(
+                currentMessageInfo.current.id,
+                currentMessageInfo.current.sessionId,
+                update,
+              );
+            }
           }
-        }
-      });
+        },
+      );
+
+      // Register the promise so releaseContext can wait for it
+      modelStore.registerCompletionPromise(completionPromise);
+
+      // Await the completion
+      const result = await completionPromise;
+
+      // Clear the promise after completion finishes
+      modelStore.clearCompletionPromise();
 
       // Log completion result with time to first token for debugging
       if (__DEV__) {
@@ -336,6 +350,8 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
     } catch (error) {
+      // Clear the promise on error too
+      modelStore.clearCompletionPromise();
       console.error('Completion error:', error);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
