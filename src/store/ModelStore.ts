@@ -1540,6 +1540,15 @@ class ModelStore {
     }
   };
 
+  updateModelName = (modelId: string, newName: string) => {
+    const model = this.models.find(m => m.id === modelId);
+    if (model && model.origin !== ModelOrigin.PRESET) {
+      runInAction(() => {
+        model.name = newName;
+      });
+    }
+  };
+
   resetModels = () => {
     const localModels = this.models.filter(
       model => model.isLocal || model.origin === ModelOrigin.LOCAL,
@@ -1594,6 +1603,15 @@ class ModelStore {
     if (model) {
       runInAction(() => {
         model.stopWords = [...(model.defaultStopWords || [])];
+      });
+    }
+  };
+
+  resetModelName = (modelId: string) => {
+    const model = this.models.find(m => m.id === modelId);
+    if (model) {
+      runInAction(() => {
+        model.name = model.filename || '';
       });
     }
   };
