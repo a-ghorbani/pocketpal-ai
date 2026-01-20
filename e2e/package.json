@@ -10,6 +10,8 @@
     "test:aws": "npx ts-node scripts/run-aws-device-farm.ts",
     "test:models:ios": "npx ts-node scripts/run-model-tests.ts --platform ios",
     "test:models:android": "npx ts-node scripts/run-model-tests.ts --platform android",
+    "crash-repro": "npx ts-node scripts/run-crash-repro.ts",
+    "crash-repro:local": "npx ts-node scripts/run-crash-repro.ts --local",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "yarn@1.22.22",

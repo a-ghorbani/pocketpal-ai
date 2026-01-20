@@ -158,18 +158,68 @@ describe('Quick Smoke Test', () => {
     const prompt = model.prompts[0].input;
     await chatPage.sendMessage(prompt);
 
-    // Wait for AI response
-    const timing = browser.$(Selectors.chat.messageTiming);
-    await timing.waitForDisplayed({timeout: TIMEOUTS.inference});
+    // Wait for AI message to appear first (indicates response started)
+    console.log('[Timing] Waiting for AI message to appear...');
+    const aiMessageEl = browser.$(Selectors.chat.aiMessage);
+    await aiMessageEl.waitForExist({timeout: TIMEOUTS.inference});
+    console.log('[Timing] AI message exists');
 
-    // Get timing and response
-    // Timing text is a sibling element after message-timing, not a child
-    const timingTextElement = browser.$(Selectors.chat.messageTimingText);
-    const timingText = await timingTextElement.getText();
+    // Poll for completion by checking for timing pattern in content-desc
+    // The timing info appears in the content-desc of the message bubble wrapper
+    // We use XPath to find any element with content-desc containing "tokens/sec"
+    const maxWaitTime = 60000; // 1 minute max for inference
+    const pollInterval = 2000; // Check every 2 seconds
+    const startTime = Date.now();
+    let inferenceComplete = false;
+    let timingText = '';
 
+    // XPath to find element with timing info in content-desc
+    const timingXpath = `//*[contains(@content-desc, "tokens/sec")]`;
+
+    while (Date.now() - startTime < maxWaitTime) {
+      // Check if timing element exists using XPath
+      const timingElement = browser.$(timingXpath);
+      const exists = await timingElement.isExisting().catch(() => false);
+
+      if (exists) {
+        console.log('[Timing] Inference complete - timing found in content-desc');
+        // Extract timing from content-desc
+        const contentDesc = await timingElement.getAttribute('content-desc').catch(() => '');
+        const timingMatch = contentDesc.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
+        timingText = timingMatch ? timingMatch[1] : contentDesc.slice(-100);
+        inferenceComplete = true;
+        break;
+      }
+
+      // Swipe up to scroll down while waiting (in case content is long)
+      try {
+        const {width, height} = await driver.getWindowSize();
+        await driver.action('pointer', {
+          parameters: {pointerType: 'touch'},
+        })
+          .move({x: Math.floor(width / 2), y: Math.floor(height * 0.7)})
+          .down()
+          .move({x: Math.floor(width / 2), y: Math.floor(height * 0.3), duration: 300})
+          .up()
+          .perform();
+        console.log('[Timing] Swiped up to scroll');
+      } catch {
+        // Swipe failed, continue waiting
+      }
+
+      await browser.pause(pollInterval);
+    }
+
+    if (!inferenceComplete) {
+      throw new Error('Inference timed out - timing info not found in content-desc');
+    }
+
+    console.log('[Timing] Inference successful');
+
+    // Get response text from AI message
     const aiMessage = browser.$(Selectors.chat.aiMessage);
     const textView = aiMessage.$(nativeTextElement());
-    const responseText = await textView.getText();
+    const responseText = await textView.getText().catch(() => 'Unable to extract response text');
 
     console.log(`\nSmoke Test Results:`);
     console.log(`  Model: ${model.id}`);
