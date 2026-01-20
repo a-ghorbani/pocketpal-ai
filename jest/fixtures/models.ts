@@ -18,24 +18,20 @@ export const mockContextModel: NativeLlamaContext['model'] = {
   nParams: 0,
   chatTemplates: {
     llamaChat: false,
-    minja: {
+    jinja: {
       default: false,
       defaultCaps: {
         tools: false,
         toolCalls: false,
-        toolResponses: false,
         systemRole: false,
         parallelToolCalls: false,
-        toolCallId: false,
       },
       toolUse: false,
       toolUseCaps: {
         tools: false,
         toolCalls: false,
-        toolResponses: false,
         systemRole: false,
         parallelToolCalls: false,
-        toolCallId: false,
       },
     },
   },

@@ -81,3 +81,9 @@ ios/GoogleService-Info.plist
 
 # environment config
 ios/Config/Env.xcconfig
+
+# Android native libraries (should not be committed)
+**/libggml-htp*.so
+
+# E2E debug output
+e2e/debug-output/
