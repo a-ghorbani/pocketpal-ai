@@ -159,6 +159,14 @@ export const Selectors = {
     get markdownContent(): string {
       return byTestId('markdown-content');
     },
+    /**
+     * Selector for detecting inference completion.
+     * Matches any element with "tokens/sec" in its accessibility label/content-desc.
+     * The timing info appears in the message bubble's accessibility label when inference completes.
+     */
+    get inferenceComplete(): string {
+      return byAccessibilityLabelContains('tokens/sec');
+    },
   },
 
   // Models screen

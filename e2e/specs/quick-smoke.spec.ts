@@ -158,18 +158,65 @@ describe('Quick Smoke Test', () => {
     const prompt = model.prompts[0].input;
     await chatPage.sendMessage(prompt);
 
-    // Wait for AI response
-    const timing = browser.$(Selectors.chat.messageTiming);
-    await timing.waitForDisplayed({timeout: TIMEOUTS.inference});
+    // Wait for AI message to appear first (indicates response started)
+    console.log('[Timing] Waiting for AI message to appear...');
+    const aiMessageEl = browser.$(Selectors.chat.aiMessage);
+    await aiMessageEl.waitForExist({timeout: TIMEOUTS.inference});
+    console.log('[Timing] AI message exists');
 
-    // Get timing and response
-    // Timing text is a sibling element after message-timing, not a child
-    const timingTextElement = browser.$(Selectors.chat.messageTimingText);
-    const timingText = await timingTextElement.getText();
+    // Poll for completion by checking for timing pattern in accessibility label
+    // The timing info appears in the message bubble's accessibility label when inference completes
+    const maxWaitTime = 60000; // 1 minute max for inference
+    const pollInterval = 2000; // Check every 2 seconds
+    const startTime = Date.now();
+    let inferenceComplete = false;
+    let timingText = '';
 
+    while (Date.now() - startTime < maxWaitTime) {
+      // Check if timing element exists (cross-platform selector)
+      const timingElement = browser.$(Selectors.chat.inferenceComplete);
+      const exists = await timingElement.isExisting().catch(() => false);
+
+      if (exists) {
+        console.log('[Timing] Inference complete - timing found');
+        // Extract timing from accessibility label (content-desc on Android, label on iOS)
+        const attrName = driver.isAndroid ? 'content-desc' : 'label';
+        const labelText = await timingElement.getAttribute(attrName).catch(() => '');
+        const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
+        timingText = timingMatch ? timingMatch[1] : labelText.slice(-100);
+        inferenceComplete = true;
+        break;
+      }
+
+      // Swipe up to scroll down while waiting (in case content is long)
+      try {
+        const {width, height} = await driver.getWindowSize();
+        await driver.action('pointer', {
+          parameters: {pointerType: 'touch'},
+        })
+          .move({x: Math.floor(width / 2), y: Math.floor(height * 0.7)})
+          .down()
+          .move({x: Math.floor(width / 2), y: Math.floor(height * 0.3), duration: 300})
+          .up()
+          .perform();
+        console.log('[Timing] Swiped up to scroll');
+      } catch {
+        // Swipe failed, continue waiting
+      }
+
+      await browser.pause(pollInterval);
+    }
+
+    if (!inferenceComplete) {
+      throw new Error('Inference timed out - timing info not found');
+    }
+
+    console.log('[Timing] Inference successful');
+
+    // Get response text from AI message
     const aiMessage = browser.$(Selectors.chat.aiMessage);
     const textView = aiMessage.$(nativeTextElement());
-    const responseText = await textView.getText();
+    const responseText = await textView.getText().catch(() => 'Unable to extract response text');
 
     console.log(`\nSmoke Test Results:`);
     console.log(`  Model: ${model.id}`);
