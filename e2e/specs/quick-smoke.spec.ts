@@ -164,29 +164,26 @@ describe('Quick Smoke Test', () => {
     await aiMessageEl.waitForExist({timeout: TIMEOUTS.inference});
     console.log('[Timing] AI message exists');
 
-    // Poll for completion by checking for timing pattern in content-desc
-    // The timing info appears in the content-desc of the message bubble wrapper
-    // We use XPath to find any element with content-desc containing "tokens/sec"
+    // Poll for completion by checking for timing pattern in accessibility label
+    // The timing info appears in the message bubble's accessibility label when inference completes
     const maxWaitTime = 60000; // 1 minute max for inference
     const pollInterval = 2000; // Check every 2 seconds
     const startTime = Date.now();
     let inferenceComplete = false;
     let timingText = '';
 
-    // XPath to find element with timing info in content-desc
-    const timingXpath = `//*[contains(@content-desc, "tokens/sec")]`;
-
     while (Date.now() - startTime < maxWaitTime) {
-      // Check if timing element exists using XPath
-      const timingElement = browser.$(timingXpath);
+      // Check if timing element exists (cross-platform selector)
+      const timingElement = browser.$(Selectors.chat.inferenceComplete);
       const exists = await timingElement.isExisting().catch(() => false);
 
       if (exists) {
-        console.log('[Timing] Inference complete - timing found in content-desc');
-        // Extract timing from content-desc
-        const contentDesc = await timingElement.getAttribute('content-desc').catch(() => '');
-        const timingMatch = contentDesc.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
-        timingText = timingMatch ? timingMatch[1] : contentDesc.slice(-100);
+        console.log('[Timing] Inference complete - timing found');
+        // Extract timing from accessibility label (content-desc on Android, label on iOS)
+        const attrName = driver.isAndroid ? 'content-desc' : 'label';
+        const labelText = await timingElement.getAttribute(attrName).catch(() => '');
+        const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
+        timingText = timingMatch ? timingMatch[1] : labelText.slice(-100);
         inferenceComplete = true;
         break;
       }
@@ -211,7 +208,7 @@ describe('Quick Smoke Test', () => {
     }
 
     if (!inferenceComplete) {
-      throw new Error('Inference timed out - timing info not found in content-desc');
+      throw new Error('Inference timed out - timing info not found');
     }
 
     console.log('[Timing] Inference successful');
