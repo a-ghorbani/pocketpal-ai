@@ -177,6 +177,92 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('model name management', () => {
+    it('should update model name for local model', () => {
+      const localModel = {
+        ...basicModel,
+        id: 'local-test-id',
+        name: 'Original Name',
+        origin: ModelOrigin.LOCAL,
+      };
+      runInAction(() => {
+        modelStore.models = [localModel];
+      });
+
+      modelStore.updateModelName('local-test-id', 'New Name');
+
+      expect(modelStore.models[0].name).toBe('New Name');
+    });
+
+    it('should not update model name for preset model', () => {
+      const presetModel = {
+        ...basicModel,
+        id: 'preset-test-id',
+        name: 'Gemma-2-2b-it (Q6_K)',
+        origin: ModelOrigin.PRESET,
+      };
+      runInAction(() => {
+        modelStore.models = [presetModel];
+      });
+
+      modelStore.updateModelName('preset-test-id', 'New Name');
+
+      // Name should remain unchanged
+      expect(modelStore.models[0].name).toBe('Gemma-2-2b-it (Q6_K)');
+    });
+
+    it('should reset local model name by stripping .gguf extension', () => {
+      const localModel = {
+        ...basicModel,
+        id: 'local-test-id',
+        name: 'Modified Name',
+        filename: 'my-model-file.gguf',
+        origin: ModelOrigin.LOCAL,
+      };
+      runInAction(() => {
+        modelStore.models = [localModel];
+      });
+
+      modelStore.resetModelName('local-test-id');
+
+      expect(modelStore.models[0].name).toBe('my-model-file');
+    });
+
+    it('should reset preset model name to original display name', () => {
+      // Use a real preset model from defaultModels
+      const presetModel = {
+        ...defaultModels[0],
+        name: 'User Modified Name', // User changed it
+      };
+      runInAction(() => {
+        modelStore.models = [presetModel];
+      });
+
+      modelStore.resetModelName(presetModel.id);
+
+      // Should restore to original name from defaultModels
+      expect(modelStore.models[0].name).toBe(defaultModels[0].name);
+    });
+
+    it('should handle reset when preset model not found in defaultModels', () => {
+      const orphanPresetModel = {
+        ...basicModel,
+        id: 'orphan-preset-id',
+        name: 'Modified Name',
+        filename: 'orphan-model.gguf',
+        origin: ModelOrigin.PRESET,
+      };
+      runInAction(() => {
+        modelStore.models = [orphanPresetModel];
+      });
+
+      modelStore.resetModelName('orphan-preset-id');
+
+      // Should fall back to stripping .gguf from filename
+      expect(modelStore.models[0].name).toBe('orphan-model');
+    });
+  });
+
   describe('projection model deletion', () => {
     beforeEach(() => {
       jest.clearAllMocks();
