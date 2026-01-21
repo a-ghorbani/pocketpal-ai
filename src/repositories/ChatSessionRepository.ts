@@ -434,7 +434,12 @@ class ChatSessionRepository {
             record.text = update.text;
           }
           if (update.metadata !== undefined) {
-            record.metadata = JSON.stringify(update.metadata);
+            // MERGE metadata instead of replacing to preserve existing fields (e.g., timings)
+            const existingMetadata = JSON.parse(record.metadata || '{}');
+            record.metadata = JSON.stringify({
+              ...existingMetadata,
+              ...update.metadata,
+            });
           }
         });
       });
