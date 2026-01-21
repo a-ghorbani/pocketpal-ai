@@ -407,9 +407,9 @@ describe('chatSessionStore', () => {
   // saveSessionsMetadata tests removed as this method is no longer needed with database storage
 
   describe('setActiveSession', () => {
-    it('sets the active session id', () => {
+    it('sets the active session id', async () => {
       const sessionId = 'session1';
-      chatSessionStore.setActiveSession(sessionId);
+      await chatSessionStore.setActiveSession(sessionId);
       expect(chatSessionStore.activeSessionId).toBe(sessionId);
     });
   });
