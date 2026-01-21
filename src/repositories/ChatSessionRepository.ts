@@ -213,6 +213,35 @@ class ChatSessionRepository {
     };
   }
 
+  // Get session metadata with settings but without messages (for lazy loading)
+  async getSessionMetadataWithSettings(id: string): Promise<{
+    session: ChatSession;
+    completionSettings: CompletionSetting;
+  } | null> {
+    const session = await database.collections
+      .get('chat_sessions')
+      .find(id)
+      .catch(() => null);
+
+    if (!session) {
+      return null;
+    }
+
+    // Get completion settings but NOT messages
+    const completionSettingsArray = await database.collections
+      .get('completion_settings')
+      .query(Q.where('session_id', id))
+      .fetch();
+
+    const completionSettings =
+      completionSettingsArray.length > 0 ? completionSettingsArray[0] : null;
+
+    return {
+      session: session as unknown as ChatSession,
+      completionSettings: completionSettings as unknown as CompletionSetting,
+    };
+  }
+
   // Create a new session
   async createSession(
     title: string,
@@ -405,7 +434,12 @@ class ChatSessionRepository {
             record.text = update.text;
           }
           if (update.metadata !== undefined) {
-            record.metadata = JSON.stringify(update.metadata);
+            // MERGE metadata instead of replacing to preserve existing fields (e.g., timings)
+            const existingMetadata = JSON.parse(record.metadata || '{}');
+            record.metadata = JSON.stringify({
+              ...existingMetadata,
+              ...update.metadata,
+            });
           }
         });
       });

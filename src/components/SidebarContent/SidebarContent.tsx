@@ -171,8 +171,8 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
                     return (
                       <View key={session.id} style={styles.sessionItem}>
                         <TouchableOpacity
-                          onPress={() => {
-                            chatSessionStore.setActiveSession(session.id);
+                          onPress={async () => {
+                            await chatSessionStore.setActiveSession(session.id);
                             props.navigation.navigate(ROUTES.CHAT);
                           }}
                           onLongPress={event => openMenu(session.id, event)}
