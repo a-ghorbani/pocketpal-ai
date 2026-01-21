@@ -46,18 +46,6 @@ describe('chatSessionStore', () => {
         date: new Date().toISOString(),
       };
 
-      const mockMessages = [
-        {
-          toMessageObject: () => ({
-            id: 'msg1',
-            text: 'Hello',
-            type: 'text',
-            author: {id: 'user1'},
-            createdAt: Date.now(),
-          }),
-        },
-      ];
-
       const mockCompletionSettings = {
         getSettings: () => ({
           ...defaultCompletionSettings,
@@ -1210,6 +1198,358 @@ describe('chatSessionStore', () => {
 
       expect(chatSessionStore.sessions[0].activePalId).toBe('pal1');
       expect(chatSessionStore.newChatPalId).toBeUndefined();
+    });
+  });
+
+  describe('lazy loading', () => {
+    it('setActiveSession loads messages on first access', async () => {
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: false,
+      };
+
+      chatSessionStore.sessions = [mockSession];
+
+      const mockMessages = [
+        {
+          toMessageObject: () => ({
+            id: 'msg1',
+            text: 'Hello',
+            type: 'text',
+            author: {id: 'user1'},
+            createdAt: Date.now(),
+          }),
+        },
+        {
+          toMessageObject: () => ({
+            id: 'msg2',
+            text: 'World',
+            type: 'text',
+            author: {id: 'user1'},
+            createdAt: Date.now(),
+          }),
+        },
+      ];
+
+      const mockSessionData = {
+        session: mockSession,
+        messages: mockMessages,
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      };
+
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue(
+        mockSessionData,
+      );
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith(
+        'session1',
+      );
+      expect(chatSessionStore.sessions[0].messages.length).toBe(2);
+      expect(chatSessionStore.sessions[0].messages[0].id).toBe('msg1');
+      expect(chatSessionStore.sessions[0].messages[1].id).toBe('msg2');
+      expect(chatSessionStore.sessions[0].messagesLoaded).toBe(true);
+      expect(chatSessionStore.activeSessionId).toBe('session1');
+    });
+
+    it('setActiveSession does not reload messages if already loaded', async () => {
+      const cachedMessage = {
+        id: 'msg1',
+        text: 'Hello',
+        type: 'text',
+        author: {id: 'user1'},
+        createdAt: Date.now(),
+      } as MessageType.Text;
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [cachedMessage],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: true,
+      };
+
+      chatSessionStore.sessions = [mockSession];
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionRepository.getSessionById).not.toHaveBeenCalled();
+      expect(chatSessionStore.activeSessionId).toBe('session1');
+      expect(chatSessionStore.sessions[0].messages.length).toBe(1);
+      expect(chatSessionStore.sessions[0].messages[0].id).toBe('msg1');
+    });
+
+    it('currentSessionMessages returns correct messages after lazy load', async () => {
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: false,
+      };
+
+      chatSessionStore.sessions = [mockSession];
+
+      const mockMessages = [
+        {
+          toMessageObject: () => ({
+            id: 'msg1',
+            text: 'Hello',
+            type: 'text',
+            author: {id: 'user1'},
+            createdAt: Date.now(),
+          }),
+        },
+      ];
+
+      const mockSessionData = {
+        session: mockSession,
+        messages: mockMessages,
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      };
+
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue(
+        mockSessionData,
+      );
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionStore.currentSessionMessages.length).toBe(1);
+      expect(chatSessionStore.currentSessionMessages[0].id).toBe('msg1');
+      expect(
+        (chatSessionStore.currentSessionMessages[0] as MessageType.Text).text,
+      ).toBe('Hello');
+    });
+
+    it('createNewSession marks messages as loaded', async () => {
+      const mockNewSession = {
+        id: 'new-session',
+        title: 'My New Session',
+        date: new Date().toISOString(),
+      };
+
+      const newSessionMessage = {
+        toMessageObject: () => ({
+          id: 'msg1',
+          text: 'Hello',
+          type: 'text',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        }),
+      };
+
+      const mockSessionData = {
+        messages: [newSessionMessage],
+        completionSettings: {
+          getSettings: () => defaultCompletionSettings,
+        },
+      };
+
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
+        mockNewSession,
+      );
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue(
+        mockSessionData,
+      );
+
+      await chatSessionStore.createNewSession('My New Session', [
+        newSessionMessage.toMessageObject() as MessageType.Any,
+      ]);
+
+      expect(chatSessionStore.sessions.length).toBe(1);
+      expect(chatSessionStore.sessions[0].messagesLoaded).toBe(true);
+      expect(chatSessionStore.sessions[0].messages.length).toBe(1);
+      expect(chatSessionStore.sessions[0].messages[0].id).toBe('msg1');
+    });
+
+    it('addMessageToCurrentSession works correctly with lazy loaded session', async () => {
+      const mockMessage1 = {
+        id: 'msg1',
+        text: 'Hello',
+        type: 'text',
+        author: {id: 'user1'},
+        createdAt: Date.now(),
+      } as MessageType.Text;
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [mockMessage1],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: true,
+      };
+
+      chatSessionStore.sessions = [mockSession];
+      chatSessionStore.activeSessionId = 'session1';
+
+      const newMessage = {
+        id: 'msg2',
+        text: 'World',
+        type: 'text',
+        author: {id: 'user1'},
+        createdAt: Date.now(),
+      } as MessageType.Text;
+
+      (
+        chatSessionRepository.addMessageToSession as jest.Mock
+      ).mockResolvedValue({
+        id: 'msg2',
+      });
+
+      await chatSessionStore.addMessageToCurrentSession(newMessage);
+
+      expect(chatSessionRepository.addMessageToSession).toHaveBeenCalledWith(
+        'session1',
+        newMessage,
+      );
+      expect(chatSessionStore.sessions[0].messages.length).toBe(2);
+      expect(chatSessionStore.sessions[0].messages[0].id).toBe('msg2');
+      expect(chatSessionStore.sessions[0].messages[1].id).toBe('msg1');
+    });
+
+    it('handles missing session gracefully during lazy load', async () => {
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: false,
+      };
+
+      chatSessionStore.sessions = [mockSession];
+
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith(
+        'session1',
+      );
+      expect(chatSessionStore.sessions[0].messages.length).toBe(0);
+      expect(chatSessionStore.sessions[0].messagesLoaded).toBe(false);
+      expect(chatSessionStore.activeSessionId).toBe('session1');
+    });
+
+    it('handles errors during lazy load gracefully', async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: false,
+      };
+
+      chatSessionStore.sessions = [mockSession];
+
+      (chatSessionRepository.getSessionById as jest.Mock).mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith(
+        'session1',
+      );
+      expect(chatSessionStore.sessions[0].messages.length).toBe(0);
+      expect(chatSessionStore.sessions[0].messagesLoaded).toBe(false);
+      expect(chatSessionStore.activeSessionId).toBe('session1');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to load messages for session session1:',
+        expect.any(Error),
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('loads messages for multiple sessions independently', async () => {
+      const mockSession1 = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: false,
+      };
+
+      const mockSession2 = {
+        id: 'session2',
+        title: 'Session 2',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: false,
+      };
+
+      chatSessionStore.sessions = [mockSession1, mockSession2];
+
+      const mockMessages1 = [
+        {
+          toMessageObject: () => ({
+            id: 'msg1',
+            text: 'Hello from session 1',
+            type: 'text',
+            author: {id: 'user1'},
+            createdAt: Date.now(),
+          }),
+        },
+      ];
+
+      const mockMessages2 = [
+        {
+          toMessageObject: () => ({
+            id: 'msg2',
+            text: 'Hello from session 2',
+            type: 'text',
+            author: {id: 'user1'},
+            createdAt: Date.now(),
+          }),
+        },
+      ];
+
+      (chatSessionRepository.getSessionById as jest.Mock)
+        .mockResolvedValueOnce({
+          session: mockSession1,
+          messages: mockMessages1,
+          completionSettings: {getSettings: () => defaultCompletionSettings},
+        })
+        .mockResolvedValueOnce({
+          session: mockSession2,
+          messages: mockMessages2,
+          completionSettings: {getSettings: () => defaultCompletionSettings},
+        });
+
+      await chatSessionStore.setActiveSession('session1');
+      expect(chatSessionStore.sessions[0].messages[0].id).toBe('msg1');
+      expect(chatSessionStore.sessions[0].messagesLoaded).toBe(true);
+      expect(chatSessionStore.sessions[1].messagesLoaded).toBe(false);
+
+      await chatSessionStore.setActiveSession('session2');
+      expect(chatSessionStore.sessions[1].messages[0].id).toBe('msg2');
+      expect(chatSessionStore.sessions[1].messagesLoaded).toBe(true);
     });
   });
 });
