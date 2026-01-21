@@ -260,6 +260,23 @@ jobs:
           cd e2e
           yarn test:aws --platform android --app ../app/app-release.apk
 
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-artifacts
+          path: e2e/device-farm-artifacts/
+          retention-days: 30
+
+      - name: Publish Test Results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Android E2E Test Results
+          path: e2e/device-farm-artifacts/**/junit*.xml
+          reporter: java-junit
+          fail-on-error: false
+
   test-ios:
     needs: build-ios
     if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both' }}
@@ -298,3 +315,20 @@ jobs:
         run: |
           cd e2e
           yarn test:aws --platform ios --app ../app/PocketPal.ipa
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-artifacts
+          path: e2e/device-farm-artifacts/
+          retention-days: 30
+
+      - name: Publish Test Results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: iOS E2E Test Results
+          path: e2e/device-farm-artifacts/**/junit*.xml
+          reporter: java-junit
+          fail-on-error: false

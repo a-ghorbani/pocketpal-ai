@@ -23,6 +23,7 @@ import {
   getModelsToTest,
   ModelTestConfig,
 } from '../fixtures/models';
+import {SCREENSHOT_DIR, OUTPUT_DIR} from '../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -128,14 +129,14 @@ async function captureScreenshot(
   testName: string,
   suffix: string,
 ): Promise<string | undefined> {
-  const outputDir = path.join(__dirname, '../debug-output');
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, {recursive: true});
+  // Use SCREENSHOT_DIR for Device Farm compatibility
+  if (!fs.existsSync(SCREENSHOT_DIR)) {
+    fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `${testName}-${suffix}-${timestamp}.png`;
-  const filepath = path.join(outputDir, filename);
+  const filepath = path.join(SCREENSHOT_DIR, filename);
 
   try {
     await driver.saveScreenshot(filepath);
@@ -189,16 +190,15 @@ describe('Load Stress Test', () => {
   });
 
   afterEach(async function (this: Mocha.Context) {
-    // Save report regardless of test outcome
-    const outputDir = path.join(__dirname, '../debug-output');
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, {recursive: true});
+    // Save report regardless of test outcome - use OUTPUT_DIR for Device Farm compatibility
+    if (!fs.existsSync(OUTPUT_DIR)) {
+      fs.mkdirSync(OUTPUT_DIR, {recursive: true});
     }
 
     report.overallSuccess =
       report.successfulCycles === report.totalCycles && report.failedCycles === 0;
 
-    const reportPath = path.join(outputDir, `load-stress-report-${model.id}.json`);
+    const reportPath = path.join(OUTPUT_DIR, `load-stress-report-${model.id}.json`);
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
     console.log(`\nReport saved to: ${reportPath}`);
 
@@ -363,9 +363,8 @@ describe('Load Stress Test', () => {
           // Dump page source for debugging (with timestamp matching screenshot)
           try {
             const pageSource = await driver.getPageSource();
-            const outputDir = path.join(__dirname, '../debug-output');
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const sourceFile = path.join(outputDir, `page-source-${model.id}-cycle${cycle}-${timestamp}.xml`);
+            const sourceFile = path.join(OUTPUT_DIR, `page-source-${model.id}-cycle${cycle}-${timestamp}.xml`);
             fs.writeFileSync(sourceFile, pageSource);
             console.log(`Page source saved to: ${sourceFile}`);
           } catch (sourceError) {

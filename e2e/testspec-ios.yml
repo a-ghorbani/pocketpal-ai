@@ -63,6 +63,7 @@ phases:
 
       # Run model tests with Device Farm Appium server
       # The --device-farm flag tells the runner to use Device Farm configs
+      # Note: --all-models flag is added dynamically by run-aws-device-farm.ts when needed
       - >-
         APPIUM_HOST=127.0.0.1
         APPIUM_PORT=4723
@@ -74,13 +75,20 @@ phases:
     commands:
       - cd $DEVICEFARM_TEST_PACKAGE_PATH
 
-      # Copy test artifacts to Device Farm output directory
+      # Copy any remaining local artifacts to Device Farm output directory
+      # (Tests write directly to DEVICEFARM_LOG_DIR/DEVICEFARM_SCREENSHOT_PATH when available)
       - mkdir -p $DEVICEFARM_LOG_DIR/reports
       - cp -r debug-output/* $DEVICEFARM_LOG_DIR/reports/ 2>/dev/null || true
 
-      # Print cumulative report for visibility in logs
-      - echo "=== MODEL TEST RESULTS ===" && cat debug-output/all-models-report.json 2>/dev/null || echo "No cumulative report found"
+      # Print test summary for visibility in logs
+      - echo "=== MODEL TEST RESULTS ==="
+      - cat $DEVICEFARM_LOG_DIR/all-models-report.json 2>/dev/null || cat debug-output/all-models-report.json 2>/dev/null || echo "No cumulative report found"
+
+      # Print JUnit results summary
+      - echo "=== JUNIT RESULTS ==="
+      - cat $DEVICEFARM_LOG_DIR/junit-results.xml 2>/dev/null || echo "No JUnit results found"
 
 artifacts:
-  # Specify which files to collect as test artifacts
+  # Collect test artifacts - JUnit XML, screenshots, and custom reports
   - $DEVICEFARM_LOG_DIR
+  - $DEVICEFARM_SCREENSHOT_PATH

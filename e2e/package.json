@@ -21,6 +21,7 @@
     "@wdio/local-runner": "^9.4.5",
     "@wdio/mocha-framework": "^9.4.4",
     "@wdio/spec-reporter": "^9.4.4",
+    "@wdio/junit-reporter": "^9.4.4",
     "appium": "^2.15.1",
     "appium-uiautomator2-driver": "^3.8.1",
     "appium-xcuitest-driver": "^7.32.5",
