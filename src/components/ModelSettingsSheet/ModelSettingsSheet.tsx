@@ -4,7 +4,7 @@ import {Button, Text, Divider} from 'react-native-paper';
 import {ModelSettings} from '../../screens/ModelsScreen/ModelSettings';
 import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
-import {Model, ModelOrigin} from '../../utils/types';
+import {Model} from '../../utils/types';
 import {modelStore} from '../../store';
 import {chatTemplates} from '../../utils/chat';
 
@@ -52,10 +52,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
 
     const handleSaveSettings = () => {
       if (model) {
-        // Only update model name if it's not a preset model
-        if (model.origin !== ModelOrigin.PRESET) {
-          modelStore.updateModelName(model.id, tempModelName);
-        }
+        modelStore.updateModelName(model.id, tempModelName);
         modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
         modelStore.updateModelStopWords(model.id, tempStopWords);
         onClose();
