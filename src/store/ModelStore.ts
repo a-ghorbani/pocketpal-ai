@@ -1473,7 +1473,7 @@ class ModelStore {
 
   updateModelName = (modelId: string, newName: string) => {
     const model = this.models.find(m => m.id === modelId);
-    if (model && model.origin !== ModelOrigin.PRESET) {
+    if (model) {
       runInAction(() => {
         model.name = newName;
       });
