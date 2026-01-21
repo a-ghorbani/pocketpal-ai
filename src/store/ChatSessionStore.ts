@@ -23,6 +23,7 @@ export interface SessionMetaData {
   completionSettings: CompletionParams;
   activePalId?: string;
   settingsSource: 'pal' | 'custom'; // Explicit choice: use pal settings or custom settings
+  messagesLoaded?: boolean; // Track if messages are loaded for lazy loading
 }
 
 interface SessionGroup {
@@ -144,14 +145,17 @@ class ChatSessionStore {
       const sessionMetadata: SessionMetaData[] = [];
 
       for (const session of sessions) {
-        const sessionData = await chatSessionRepository.getSessionById(
-          session.id,
-        );
+        // Use metadata-only method instead of full getSessionById
+        const sessionData =
+          await chatSessionRepository.getSessionMetadataWithSettings(
+            session.id,
+          );
         if (!sessionData) {
           continue;
         }
 
-        const messages = sessionData.messages.map(msg => msg.toMessageObject());
+        // DON'T load messages - leave array empty
+        const messages: MessageType.Any[] = [];
 
         // Handle case where completionSettings might be null
         let completionSettings = defaultCompletionSettings;
@@ -171,6 +175,7 @@ class ChatSessionStore {
           completionSettings,
           activePalId: session.activePalId,
           settingsSource: 'pal', // Default to pal settings for existing sessions
+          messagesLoaded: false, // Mark as not loaded for lazy loading
         });
       }
 
