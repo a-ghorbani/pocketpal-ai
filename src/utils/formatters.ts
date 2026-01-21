@@ -1,5 +1,7 @@
 import dayjs from 'dayjs';
 import {l10n} from './l10n';
+import {defaultModels} from '../store/defaultModels';
+import {ModelOrigin} from './types';
 
 /**
  * Formats a byte value into a human-readable string with appropriate units
@@ -186,12 +188,6 @@ export const getOriginalModelName = (model: {
   filename: string;
   origin: string;
 }): string => {
-  // Import dynamically to avoid circular dependency
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const {defaultModels} = require('../store/defaultModels');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const {ModelOrigin} = require('./types');
-
   // For preset models, look up the original name from defaultModels
   if (model.origin === ModelOrigin.PRESET) {
     const defaultModel = defaultModels.find(

@@ -25,6 +25,7 @@ import {
   filterProjectionModels,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {getOriginalModelName} from '../utils/formatters';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
 import {downloadManager} from '../services/downloads';
@@ -1541,7 +1542,7 @@ class ModelStore {
     const model = this.models.find(m => m.id === modelId);
     if (model) {
       runInAction(() => {
-        model.name = model.filename || '';
+        model.name = getOriginalModelName(model);
       });
     }
   };
