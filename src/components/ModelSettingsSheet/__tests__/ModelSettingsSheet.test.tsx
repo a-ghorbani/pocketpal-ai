@@ -9,7 +9,7 @@ import {defaultCompletionParams} from '../../../utils/completionSettingsVersions
 jest.mock('../../../screens/ModelsScreen/ModelSettings', () => {
   const {View} = require('react-native');
   return {
-    ModelSettings: ({onChange, onStopWordsChange}) => (
+    ModelSettings: ({onChange, onStopWordsChange, onModelNameChange}) => (
       <View testID="model-settings">
         <View
           testID="mock-settings-update"
@@ -18,6 +18,10 @@ jest.mock('../../../screens/ModelsScreen/ModelSettings', () => {
         <View
           testID="mock-stop-words-update"
           onPress={() => onStopWordsChange(['stop1', 'stop2'])}
+        />
+        <View
+          testID="mock-model-name-update"
+          onPress={() => onModelNameChange('new model name')}
         />
       </View>
     ),
@@ -47,16 +51,6 @@ jest.mock('../../../components/Sheet', () => {
   );
   return {Sheet: MockSheet};
 });
-
-// Mock the stores
-jest.mock('../../../store', () => ({
-  modelStore: {
-    updateModelChatTemplate: jest.fn(),
-    updateModelStopWords: jest.fn(),
-    resetModelChatTemplate: jest.fn(),
-    resetModelStopWords: jest.fn(),
-  },
-}));
 
 describe('ModelSettingsSheet', () => {
   const defaultTemplate = {
@@ -164,6 +158,44 @@ describe('ModelSettingsSheet', () => {
       mockModel.id,
     );
     expect(modelStore.resetModelStopWords).toHaveBeenCalledWith(mockModel.id);
+  });
+
+  it('handles reset model name correctly', async () => {
+    const {getByText} = render(<ModelSettingsSheet {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.press(getByText('Reset'));
+    });
+
+    expect(modelStore.resetModelName).toHaveBeenCalledWith(mockModel.id);
+  });
+
+  it('handles model name change correctly for local models', async () => {
+    // Use a local model (not preset) to allow name changes
+    const localModel: Model = {
+      ...mockModel,
+      id: 'local-model',
+      origin: ModelOrigin.LOCAL,
+    };
+
+    const {getByTestId, getByText} = render(
+      <ModelSettingsSheet {...defaultProps} model={localModel} />,
+    );
+
+    // Trigger the mock model name update
+    await act(async () => {
+      fireEvent.press(getByTestId('mock-model-name-update'));
+    });
+
+    // Then save
+    await act(async () => {
+      fireEvent.press(getByText('Save Changes'));
+    });
+
+    expect(modelStore.updateModelName).toHaveBeenCalledWith(
+      localModel.id,
+      'new model name',
+    );
   });
 
   it('updates settings when model changes', () => {

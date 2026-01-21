@@ -42,6 +42,12 @@ class MockModelStore {
   removeModelFromList: jest.Mock;
   canDeleteProjectionModel: jest.Mock;
   setDefaultProjectionModel: jest.Mock;
+  updateModelChatTemplate: jest.Mock;
+  resetModelChatTemplate: jest.Mock;
+  updateModelStopWords: jest.Mock;
+  resetModelStopWords: jest.Mock;
+  updateModelName: jest.Mock;
+  resetModelName: jest.Mock;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
 
@@ -67,6 +73,12 @@ class MockModelStore {
       removeModelFromList: false,
       canDeleteProjectionModel: false,
       setDefaultProjectionModel: false,
+      updateModelChatTemplate: false,
+      resetModelChatTemplate: false,
+      updateModelStopWords: false,
+      resetModelStopWords: false,
+      updateModelName: false,
+      resetModelName: false,
       lastUsedModel: computed,
       activeModel: computed,
       displayModels: computed,
@@ -99,6 +111,12 @@ class MockModelStore {
       dependentModels: [],
     });
     this.setDefaultProjectionModel = jest.fn();
+    this.updateModelChatTemplate = jest.fn();
+    this.resetModelChatTemplate = jest.fn();
+    this.updateModelStopWords = jest.fn();
+    this.resetModelStopWords = jest.fn();
+    this.updateModelName = jest.fn();
+    this.resetModelName = jest.fn();
   }
 
   setActiveModel = (modelId: string) => {

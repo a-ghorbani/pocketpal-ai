@@ -20,6 +20,7 @@ interface ModelSettingsSheetProps {
 
 export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
   ({isVisible, onClose, model}) => {
+    const [tempModelName, setTempModelName] = useState(model?.name || '');
     const [tempChatTemplate, setTempChatTemplate] = useState(
       model?.chatTemplate || chatTemplates.default,
     );
@@ -31,6 +32,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     // Reset temp settings when model changes
     useEffect(() => {
       if (model) {
+        setTempModelName(model.name);
         setTempChatTemplate(model.chatTemplate);
         setTempStopWords(model.stopWords || []);
       }
@@ -44,8 +46,13 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
       });
     };
 
+    const handleModelNameChange = (name: string) => {
+      setTempModelName(name);
+    };
+
     const handleSaveSettings = () => {
       if (model) {
+        modelStore.updateModelName(model.id, tempModelName);
         modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
         modelStore.updateModelStopWords(model.id, tempStopWords);
         onClose();
@@ -55,6 +62,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const handleCancelSettings = () => {
       if (model) {
         // Reset to store values
+        setTempModelName(model.name);
         setTempChatTemplate(model.chatTemplate);
         setTempStopWords(model.stopWords || []);
       }
@@ -64,8 +72,10 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const handleReset = () => {
       if (model) {
         // Reset to model default values
+        modelStore.resetModelName(model.id);
         modelStore.resetModelChatTemplate(model.id);
         modelStore.resetModelStopWords(model.id);
+        setTempModelName(model.name);
         setTempChatTemplate(model.chatTemplate);
         setTempStopWords(model.stopWords || []);
       }
@@ -85,10 +95,12 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
           bottomOffset={16}
           contentContainerStyle={styles.sheetScrollViewContainer}>
           <ModelSettings
+            modelName={tempModelName}
             chatTemplate={tempChatTemplate}
             stopWords={tempStopWords}
             onChange={handleSettingsUpdate}
             onStopWordsChange={value => setTempStopWords(value || [])}
+            onModelNameChange={handleModelNameChange}
           />
 
           {/* Multimodal Settings Section */}
