@@ -160,6 +160,44 @@ describe('ModelSettingsSheet', () => {
     expect(modelStore.resetModelStopWords).toHaveBeenCalledWith(mockModel.id);
   });
 
+  it('handles reset model name correctly', async () => {
+    const {getByText} = render(<ModelSettingsSheet {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.press(getByText('Reset'));
+    });
+
+    expect(modelStore.resetModelName).toHaveBeenCalledWith(mockModel.id);
+  });
+
+  it('handles model name change correctly for local models', async () => {
+    // Use a local model (not preset) to allow name changes
+    const localModel: Model = {
+      ...mockModel,
+      id: 'local-model',
+      origin: ModelOrigin.LOCAL,
+    };
+
+    const {getByTestId, getByText} = render(
+      <ModelSettingsSheet {...defaultProps} model={localModel} />,
+    );
+
+    // Trigger the mock model name update
+    await act(async () => {
+      fireEvent.press(getByTestId('mock-model-name-update'));
+    });
+
+    // Then save
+    await act(async () => {
+      fireEvent.press(getByText('Save Changes'));
+    });
+
+    expect(modelStore.updateModelName).toHaveBeenCalledWith(
+      localModel.id,
+      'new model name',
+    );
+  });
+
   it('updates settings when model changes', () => {
     const {rerender} = render(<ModelSettingsSheet {...defaultProps} />);
 
