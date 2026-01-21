@@ -4,6 +4,7 @@ import {observer} from 'mobx-react';
 import {Divider, Drawer, Text} from 'react-native-paper';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {DrawerContentComponentProps} from '@react-navigation/drawer';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
@@ -108,6 +109,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
+    const insets = useSafeAreaInsets();
 
     // Convert groupedSessions to SectionList format
     // observer() HOC handles MobX reactivity, transformation is cheap
@@ -331,7 +333,10 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             renderSectionHeader={renderSectionHeader}
             ListHeaderComponent={ListHeaderComponent}
             stickySectionHeadersEnabled={false}
-            contentContainerStyle={styles.scrollViewContent}
+            contentContainerStyle={[
+              styles.scrollViewContent,
+              {paddingTop: insets.top},
+            ]}
           />
         </View>
         <RenameModal
