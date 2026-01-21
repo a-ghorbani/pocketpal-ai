@@ -164,3 +164,44 @@ export function timeAgo(
     );
   }
 }
+
+/**
+ * Strips the .gguf extension from a model filename for display purposes.
+ * @param filename - The model filename (e.g., "llama-3.1-8b-q4_0.gguf")
+ * @returns Clean display name without .gguf extension (e.g., "llama-3.1-8b-q4_0")
+ */
+export const getDisplayNameFromFilename = (filename: string): string => {
+  return (filename || '').replace(/\.gguf$/i, '');
+};
+
+/**
+ * Returns the original/default display name for a model.
+ * - For preset models: Returns the curated display name from defaultModels
+ * - For local/HF models: Returns the filename without .gguf extension
+ * @param model - The model object
+ * @returns The original display name
+ */
+export const getOriginalModelName = (model: {
+  id: string;
+  filename: string;
+  origin: string;
+}): string => {
+  // Import dynamically to avoid circular dependency
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {defaultModels} = require('../store/defaultModels');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {ModelOrigin} = require('./types');
+
+  // For preset models, look up the original name from defaultModels
+  if (model.origin === ModelOrigin.PRESET) {
+    const defaultModel = defaultModels.find(
+      (dm: {id: string}) => dm.id === model.id,
+    );
+    if (defaultModel) {
+      return defaultModel.name;
+    }
+  }
+
+  // For local/HF models (or preset not found), strip .gguf from filename
+  return getDisplayNameFromFilename(model.filename);
+};
