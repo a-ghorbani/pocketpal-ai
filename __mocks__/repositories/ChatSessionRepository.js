@@ -34,6 +34,23 @@ class ChatSessionRepository {
     };
   }
 
+  // Get session metadata with settings but without messages (for lazy loading)
+  async getSessionMetadataWithSettings(id) {
+    return {
+      session: {
+        id,
+        title: 'Mock Session',
+        date: new Date().toISOString(),
+      },
+      completionSettings: {
+        id: 'mock-settings-id',
+        sessionId: id,
+        settings: JSON.stringify(defaultCompletionSettings),
+        getSettings: () => defaultCompletionSettings,
+      },
+    };
+  }
+
   // Create a new session
   async createSession(
     title,

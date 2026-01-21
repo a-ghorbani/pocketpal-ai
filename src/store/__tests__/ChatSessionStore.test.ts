@@ -12,6 +12,7 @@ import {waitFor} from '@testing-library/react-native';
 // Make the repository methods mockable
 jest.spyOn(chatSessionRepository, 'getAllSessions');
 jest.spyOn(chatSessionRepository, 'getSessionById');
+jest.spyOn(chatSessionRepository, 'getSessionMetadataWithSettings');
 jest.spyOn(chatSessionRepository, 'createSession');
 jest.spyOn(chatSessionRepository, 'deleteSession');
 jest.spyOn(chatSessionRepository, 'addMessageToSession');
@@ -65,23 +66,27 @@ describe('chatSessionStore', () => {
       };
 
       const mockSessionData = {
-        messages: mockMessages,
+        session: mockSession,
         completionSettings: mockCompletionSettings,
       };
 
       (chatSessionRepository.getAllSessions as jest.Mock).mockResolvedValue([
         mockSession,
       ]);
-      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue(
-        mockSessionData,
-      );
+      (
+        chatSessionRepository.getSessionMetadataWithSettings as jest.Mock
+      ).mockResolvedValue(mockSessionData);
 
       await chatSessionStore.loadSessionList();
 
       expect(chatSessionStore.sessions.length).toBe(1);
       expect(chatSessionStore.sessions[0].title).toBe('Session 1');
+      expect(chatSessionStore.sessions[0].messages).toEqual([]);
+      expect(chatSessionStore.sessions[0].messagesLoaded).toBe(false);
       expect(chatSessionRepository.getAllSessions).toHaveBeenCalled();
-      expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith('1');
+      expect(
+        chatSessionRepository.getSessionMetadataWithSettings,
+      ).toHaveBeenCalledWith('1');
     });
 
     it('handles database error gracefully', async () => {
