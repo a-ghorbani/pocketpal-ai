@@ -41,11 +41,13 @@ describe('ModelSettings', () => {
   };
 
   const mockProps = {
+    modelName: 'test-model',
     chatTemplate: defaultTemplate,
     stopWords: [] as string[],
     onChange: jest.fn(),
     onStopWordsChange: jest.fn(),
     onCompletionSettingsChange: jest.fn(),
+    onModelNameChange: jest.fn(),
     isActive: false,
     onFocus: jest.fn(),
   };
@@ -74,6 +76,24 @@ describe('ModelSettings', () => {
     expect(getByText('Add Generation Prompt')).toBeTruthy();
     expect(getByPlaceholderText('BOS Token')).toBeTruthy();
     expect(getByPlaceholderText('EOS Token')).toBeTruthy();
+  });
+
+  it('allows editing model name input', async () => {
+    const {getByDisplayValue} = render(<ModelSettings {...mockProps} />);
+
+    // Find the model name input by its current value
+    const modelNameInput = getByDisplayValue('test-model');
+
+    // Verify input is NOT disabled (can be edited)
+    expect(modelNameInput.props.editable).not.toBe(false);
+
+    // Simulate user typing
+    await act(async () => {
+      fireEvent.changeText(modelNameInput, 'My Custom Name');
+    });
+
+    // Verify the change handler was called
+    expect(mockProps.onModelNameChange).toHaveBeenCalledWith('My Custom Name');
   });
 
   it('handles BOS token changes', async () => {

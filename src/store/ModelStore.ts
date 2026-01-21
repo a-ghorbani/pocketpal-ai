@@ -25,6 +25,7 @@ import {
   filterProjectionModels,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {getOriginalModelName} from '../utils/formatters';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
 import {downloadManager} from '../services/downloads';
@@ -1540,6 +1541,15 @@ class ModelStore {
     }
   };
 
+  updateModelName = (modelId: string, newName: string) => {
+    const model = this.models.find(m => m.id === modelId);
+    if (model) {
+      runInAction(() => {
+        model.name = newName;
+      });
+    }
+  };
+
   resetModels = () => {
     const localModels = this.models.filter(
       model => model.isLocal || model.origin === ModelOrigin.LOCAL,
@@ -1594,6 +1604,15 @@ class ModelStore {
     if (model) {
       runInAction(() => {
         model.stopWords = [...(model.defaultStopWords || [])];
+      });
+    }
+  };
+
+  resetModelName = (modelId: string) => {
+    const model = this.models.find(m => m.id === modelId);
+    if (model) {
+      runInAction(() => {
+        model.name = getOriginalModelName(model);
       });
     }
   };

@@ -29,6 +29,7 @@ import {hfAsModel} from '../utils';
 import {palsHubService} from '../services';
 import {defaultModels} from './defaultModels';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
+import {getDisplayNameFromFilename} from '../utils/formatters';
 
 import type {Pal, ParameterDefinition} from '../types/pal';
 import type {
@@ -380,7 +381,7 @@ class PalStore {
     const defaultModel = defaultModels[0];
 
     // Extract model name from filename (remove .gguf extension)
-    const modelName = modelRef.filename.replace(/\.gguf$/i, '');
+    const modelName = getDisplayNameFromFilename(modelRef.filename);
 
     return {
       id: `${modelRef.repo_id}/${modelRef.filename}`,
