@@ -6,7 +6,7 @@ import {
   createDrawerNavigator,
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
-import {render, fireEvent} from '@testing-library/react-native';
+import {render, fireEvent, waitFor} from '@testing-library/react-native';
 
 import {SidebarContent} from '../SidebarContent';
 
@@ -50,7 +50,7 @@ describe('SidebarContent Component', () => {
     expect(getByText('Session 2')).toBeTruthy();
   });
 
-  it('navigates to Chat screen when a session is pressed', () => {
+  it('navigates to Chat screen when a session is pressed', async () => {
     const {getByText, queryByText} = render(<TestNavigator />);
 
     // Navigate to a differnet page (as the default is chat screen)
@@ -60,7 +60,9 @@ describe('SidebarContent Component', () => {
 
     // Pressing a session should navigate to the Chat screen
     fireEvent.press(getByText('Session 1'));
-    expect(getByText('Chat Screen')).toBeTruthy();
+    await waitFor(() => {
+      expect(getByText('Chat Screen')).toBeTruthy();
+    });
   });
 
   it('navigates to correct screen from drawer items', () => {
