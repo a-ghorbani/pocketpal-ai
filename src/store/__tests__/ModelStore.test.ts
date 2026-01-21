@@ -194,7 +194,7 @@ describe('ModelStore', () => {
       expect(modelStore.models[0].name).toBe('New Name');
     });
 
-    it('should not update model name for preset model', () => {
+    it('should update model name for preset model', () => {
       const presetModel = {
         ...basicModel,
         id: 'preset-test-id',
@@ -207,8 +207,8 @@ describe('ModelStore', () => {
 
       modelStore.updateModelName('preset-test-id', 'New Name');
 
-      // Name should remain unchanged
-      expect(modelStore.models[0].name).toBe('Gemma-2-2b-it (Q6_K)');
+      // Name should be updated
+      expect(modelStore.models[0].name).toBe('New Name');
     });
 
     it('should reset local model name by stripping .gguf extension', () => {
