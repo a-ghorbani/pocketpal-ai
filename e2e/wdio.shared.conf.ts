@@ -38,7 +38,11 @@ export const config: Options.Testrunner = {
       'junit',
       {
         outputDir: OUTPUT_DIR,
-        outputFileFormat: () => 'junit-results.xml',
+        outputFileFormat: () => {
+          // Use model ID from TEST_MODELS env var for unique filenames
+          const modelId = process.env.TEST_MODELS?.replace(/[^a-zA-Z0-9.-]/g, '-') || 'unknown';
+          return `junit-${modelId}.xml`;
+        },
       },
     ],
   ],

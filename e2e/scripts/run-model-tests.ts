@@ -219,6 +219,61 @@ function printModelReports(): void {
   }
 }
 
+/**
+ * Merge individual JUnit XML files into a single combined report.
+ * This is needed because each model test runs in a separate WDIO process
+ * and generates its own JUnit file.
+ */
+function mergeJUnitReports(): void {
+  const junitFiles = fs.readdirSync(DEBUG_OUTPUT_DIR).filter(f => f.startsWith('junit-') && f.endsWith('.xml'));
+
+  if (junitFiles.length === 0) {
+    console.log('No JUnit files found to merge');
+    return;
+  }
+
+  let totalTests = 0;
+  let totalFailures = 0;
+  let totalErrors = 0;
+  let totalSkipped = 0;
+  const testSuites: string[] = [];
+
+  for (const file of junitFiles) {
+    const filePath = path.join(DEBUG_OUTPUT_DIR, file);
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Extract testsuite elements (everything between <testsuite and </testsuite>)
+    const suiteMatch = content.match(/<testsuite[\s\S]*?<\/testsuite>/g);
+    if (suiteMatch) {
+      for (const suite of suiteMatch) {
+        testSuites.push(suite);
+
+        // Parse counts from testsuite attributes
+        const testsMatch = suite.match(/tests="(\d+)"/);
+        const failuresMatch = suite.match(/failures="(\d+)"/);
+        const errorsMatch = suite.match(/errors="(\d+)"/);
+        const skippedMatch = suite.match(/skipped="(\d+)"/);
+
+        if (testsMatch) totalTests += parseInt(testsMatch[1], 10);
+        if (failuresMatch) totalFailures += parseInt(failuresMatch[1], 10);
+        if (errorsMatch) totalErrors += parseInt(errorsMatch[1], 10);
+        if (skippedMatch) totalSkipped += parseInt(skippedMatch[1], 10);
+      }
+    }
+  }
+
+  // Create merged JUnit XML
+  const mergedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="${totalTests}" failures="${totalFailures}" errors="${totalErrors}" skipped="${totalSkipped}">
+${testSuites.join('\n')}
+</testsuites>`;
+
+  const mergedPath = path.join(DEBUG_OUTPUT_DIR, 'junit-results.xml');
+  fs.writeFileSync(mergedPath, mergedXml);
+  console.log(`\nMerged ${junitFiles.length} JUnit reports into: ${mergedPath}`);
+  console.log(`  Total: ${totalTests} tests, ${totalFailures} failures, ${totalErrors} errors, ${totalSkipped} skipped`);
+}
+
 async function main(): Promise<void> {
   const {platform, models: modelFilter, deviceFarm, allModels} = parseArgs();
   const modelsToTest = getModelsToTest(modelFilter, allModels);
@@ -241,6 +296,9 @@ async function main(): Promise<void> {
 
   // Print detailed model inference results from the cumulative report
   printModelReports();
+
+  // Merge individual JUnit XML files into one combined report
+  mergeJUnitReports();
 
   // Exit with error code if any tests failed
   const hasFailures = results.some(r => !r.success);

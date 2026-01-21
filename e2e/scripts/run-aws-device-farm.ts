@@ -373,8 +373,16 @@ async function downloadArtifacts(runArn: string, outputDir: string): Promise<voi
   for (const job of jobs) {
     if (!job.arn) continue;
 
-    const jobName = job.device?.name || 'unknown-device';
-    console.log(`  Processing job: ${jobName}`);
+    // Create a safe device name for the directory
+    const deviceName = job.device?.name || 'unknown-device';
+    const safeDeviceName = deviceName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    console.log(`  Processing job: ${deviceName}`);
+
+    // Create device-specific directory
+    const deviceDir = path.join(outputDir, safeDeviceName);
+    if (!fs.existsSync(deviceDir)) {
+      fs.mkdirSync(deviceDir, {recursive: true});
+    }
 
     // Artifact categories we want to download
     const artifactCategories: ArtifactCategory[] = ['FILE', 'LOG', 'SCREENSHOT'];
@@ -393,8 +401,8 @@ async function downloadArtifacts(runArn: string, outputDir: string): Promise<voi
         for (const artifact of artifacts) {
           if (!artifact.url || !artifact.name) continue;
 
-          // Create subdirectory for artifact category
-          const typeDir = path.join(outputDir, artifactCategory.toLowerCase());
+          // Create subdirectory for artifact category within device directory
+          const typeDir = path.join(deviceDir, artifactCategory.toLowerCase());
           if (!fs.existsSync(typeDir)) {
             fs.mkdirSync(typeDir, {recursive: true});
           }
@@ -418,19 +426,61 @@ async function downloadArtifacts(runArn: string, outputDir: string): Promise<voi
     }
   }
 
-  // Look for JUnit XML in the downloaded files and copy to root of output dir
-  const fileDir = path.join(outputDir, 'file');
-  if (fs.existsSync(fileDir)) {
-    const files = fs.readdirSync(fileDir);
-    for (const file of files) {
-      if (file.includes('junit') && file.endsWith('.xml')) {
-        const srcPath = path.join(fileDir, file);
-        const destPath = path.join(outputDir, 'junit-results.xml');
-        fs.copyFileSync(srcPath, destPath);
-        console.log(`  Copied JUnit results to: ${destPath}`);
-        break;
+  // Look for JUnit XML files in device subdirectories and merge them
+  // Structure: outputDir/<device-name>/file/junit*.xml
+  const deviceDirs = fs.readdirSync(outputDir).filter(d => {
+    const fullPath = path.join(outputDir, d);
+    return fs.statSync(fullPath).isDirectory();
+  });
+
+  const junitFiles: string[] = [];
+  for (const deviceDir of deviceDirs) {
+    const fileDir = path.join(outputDir, deviceDir, 'file');
+    if (fs.existsSync(fileDir)) {
+      const files = fs.readdirSync(fileDir);
+      for (const file of files) {
+        if (file.includes('junit') && file.endsWith('.xml')) {
+          junitFiles.push(path.join(fileDir, file));
+        }
       }
     }
+  }
+
+  if (junitFiles.length > 0) {
+    // Merge all JUnit files into one
+    let totalTests = 0;
+    let totalFailures = 0;
+    let totalErrors = 0;
+    let totalSkipped = 0;
+    const testSuites: string[] = [];
+
+    for (const junitFile of junitFiles) {
+      const content = fs.readFileSync(junitFile, 'utf8');
+      const suiteMatch = content.match(/<testsuite[\s\S]*?<\/testsuite>/g);
+      if (suiteMatch) {
+        for (const suite of suiteMatch) {
+          testSuites.push(suite);
+          const testsMatch = suite.match(/tests="(\d+)"/);
+          const failuresMatch = suite.match(/failures="(\d+)"/);
+          const errorsMatch = suite.match(/errors="(\d+)"/);
+          const skippedMatch = suite.match(/skipped="(\d+)"/);
+          if (testsMatch) totalTests += parseInt(testsMatch[1], 10);
+          if (failuresMatch) totalFailures += parseInt(failuresMatch[1], 10);
+          if (errorsMatch) totalErrors += parseInt(errorsMatch[1], 10);
+          if (skippedMatch) totalSkipped += parseInt(skippedMatch[1], 10);
+        }
+      }
+    }
+
+    const mergedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="${totalTests}" failures="${totalFailures}" errors="${totalErrors}" skipped="${totalSkipped}">
+${testSuites.join('\n')}
+</testsuites>`;
+
+    const mergedPath = path.join(outputDir, 'junit-results.xml');
+    fs.writeFileSync(mergedPath, mergedXml);
+    console.log(`  Merged ${junitFiles.length} JUnit file(s) into: ${mergedPath}`);
+    console.log(`    Total: ${totalTests} tests, ${totalFailures} failures, ${totalErrors} errors`);
   }
 
   console.log(`Artifacts saved to: ${outputDir}`);
