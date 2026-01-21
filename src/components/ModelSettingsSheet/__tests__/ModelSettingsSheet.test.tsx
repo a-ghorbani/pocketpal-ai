@@ -52,18 +52,6 @@ jest.mock('../../../components/Sheet', () => {
   return {Sheet: MockSheet};
 });
 
-// Mock the stores
-jest.mock('../../../store', () => ({
-  modelStore: {
-    updateModelChatTemplate: jest.fn(),
-    updateModelStopWords: jest.fn(),
-    resetModelChatTemplate: jest.fn(),
-    resetModelStopWords: jest.fn(),
-    updateModelName: jest.fn(),
-    resetModelName: jest.fn(),
-  },
-}));
-
 describe('ModelSettingsSheet', () => {
   const defaultTemplate = {
     name: 'custom',
