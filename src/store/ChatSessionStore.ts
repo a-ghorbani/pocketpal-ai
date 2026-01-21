@@ -415,6 +415,7 @@ class ChatSessionStore {
         messages,
         completionSettings: settings,
         settingsSource: this.newChatSettingsSource, // Use the stored settings source choice
+        messagesLoaded: true, // Mark as loaded since we have the messages
       };
 
       if (this.newChatPalId) {
