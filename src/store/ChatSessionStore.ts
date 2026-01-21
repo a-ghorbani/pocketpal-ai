@@ -238,7 +238,39 @@ class ChatSessionStore {
     });
   }
 
-  setActiveSession(sessionId: string) {
+  // Helper method to load messages for a session
+  private async loadSessionMessages(sessionId: string): Promise<void> {
+    try {
+      const sessionData = await chatSessionRepository.getSessionById(sessionId);
+      if (!sessionData) {
+        console.warn(`Session ${sessionId} not found when loading messages`);
+        return;
+      }
+
+      const session = this.sessions.find(s => s.id === sessionId);
+      if (!session) {
+        return;
+      }
+
+      const messages = sessionData.messages.map(msg => msg.toMessageObject());
+
+      runInAction(() => {
+        session.messages = messages;
+        session.messagesLoaded = true;
+      });
+    } catch (error) {
+      console.error(`Failed to load messages for session ${sessionId}:`, error);
+    }
+  }
+
+  async setActiveSession(sessionId: string): Promise<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+
+    // Lazy-load messages if not already loaded
+    if (session && !session.messagesLoaded) {
+      await this.loadSessionMessages(sessionId);
+    }
+
     runInAction(() => {
       this.exitEditMode();
       this.activeSessionId = sessionId;
