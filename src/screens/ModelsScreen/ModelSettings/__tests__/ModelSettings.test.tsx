@@ -42,7 +42,6 @@ describe('ModelSettings', () => {
 
   const mockProps = {
     modelName: 'test-model',
-    isPresetModel: false,
     chatTemplate: defaultTemplate,
     stopWords: [] as string[],
     onChange: jest.fn(),

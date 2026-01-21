@@ -101,7 +101,6 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
             modelName={tempModelName}
             chatTemplate={tempChatTemplate}
             stopWords={tempStopWords}
-            isPresetModel={model.origin === ModelOrigin.PRESET}
             onChange={handleSettingsUpdate}
             onStopWordsChange={value => setTempStopWords(value || [])}
             onModelNameChange={handleModelNameChange}

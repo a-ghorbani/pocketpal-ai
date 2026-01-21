@@ -22,7 +22,6 @@ interface ModelSettingsProps {
   modelName: string;
   chatTemplate: ChatTemplateConfig;
   stopWords: CompletionParams['stop'];
-  isPresetModel: boolean;
   onChange: (name: string, value: any) => void;
   onStopWordsChange: (stopWords: CompletionParams['stop']) => void;
   onModelNameChange: (name: string) => void;
@@ -32,7 +31,6 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   modelName,
   chatTemplate,
   stopWords,
-  isPresetModel,
   onChange,
   onStopWordsChange,
   onModelNameChange,
@@ -206,11 +204,8 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
         <TextInput
           value={modelName}
           onChangeText={text => onModelNameChange(text)}
-          disabled={isPresetModel}
         />
       </View>
-
-      <Divider style={styles.divider} />
 
       {/* Token Settings Section */}
       <View style={styles.settingsSection}>
