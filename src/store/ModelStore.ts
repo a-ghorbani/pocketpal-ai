@@ -106,6 +106,7 @@ class ModelStore {
 
   inferencing: boolean = false;
   isStreaming: boolean = false;
+  isInitializing: boolean = false;  // Prevent concurrent model initialization
 
   // Track active completion promise for safe context release
   // This prevents race condition where context is freed while completion is still running
