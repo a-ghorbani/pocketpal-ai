@@ -19,7 +19,7 @@
 import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import {TEST_MODELS, ModelTestConfig} from '../fixtures/models';
+import {TEST_MODELS, ALL_MODELS, ModelTestConfig} from '../fixtures/models';
 
 const DEBUG_OUTPUT_DIR = path.join(__dirname, '../debug-output');
 const CUMULATIVE_REPORT_PATH = path.join(DEBUG_OUTPUT_DIR, 'all-models-report.json');
@@ -35,11 +35,13 @@ function parseArgs(): {
   platform: 'ios' | 'android';
   models?: string[];
   deviceFarm: boolean;
+  allModels: boolean;
 } {
   const args = process.argv.slice(2);
   let platform: 'ios' | 'android' = 'ios';
   let models: string[] | undefined;
   let deviceFarm = false;
+  let allModels = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--platform' && args[i + 1]) {
@@ -50,26 +52,30 @@ function parseArgs(): {
       i++;
     } else if (args[i] === '--device-farm') {
       deviceFarm = true;
+    } else if (args[i] === '--all-models') {
+      allModels = true;
     }
   }
 
-  return {platform, models, deviceFarm};
+  return {platform, models, deviceFarm, allModels};
 }
 
-function getModelsToTest(filterIds?: string[]): ModelTestConfig[] {
+function getModelsToTest(filterIds?: string[], useAllModels = false): ModelTestConfig[] {
+  const modelPool = useAllModels ? ALL_MODELS : TEST_MODELS;
+
   if (!filterIds) {
-    return TEST_MODELS;
+    return modelPool;
   }
 
-  const filtered = TEST_MODELS.filter(m =>
+  const filtered = modelPool.filter(m =>
     filterIds.some(id => m.id.toLowerCase() === id.toLowerCase()),
   );
 
   if (filtered.length === 0) {
     console.warn(
-      `Warning: No models matched filter. Available: ${TEST_MODELS.map(m => m.id).join(', ')}`,
+      `Warning: No models matched filter. Available: ${modelPool.map(m => m.id).join(', ')}`,
     );
-    return TEST_MODELS;
+    return modelPool;
   }
 
   return filtered;
@@ -213,9 +219,64 @@ function printModelReports(): void {
   }
 }
 
+/**
+ * Merge individual JUnit XML files into a single combined report.
+ * This is needed because each model test runs in a separate WDIO process
+ * and generates its own JUnit file.
+ */
+function mergeJUnitReports(): void {
+  const junitFiles = fs.readdirSync(DEBUG_OUTPUT_DIR).filter(f => f.startsWith('junit-') && f.endsWith('.xml'));
+
+  if (junitFiles.length === 0) {
+    console.log('No JUnit files found to merge');
+    return;
+  }
+
+  let totalTests = 0;
+  let totalFailures = 0;
+  let totalErrors = 0;
+  let totalSkipped = 0;
+  const testSuites: string[] = [];
+
+  for (const file of junitFiles) {
+    const filePath = path.join(DEBUG_OUTPUT_DIR, file);
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Extract testsuite elements (everything between <testsuite and </testsuite>)
+    const suiteMatch = content.match(/<testsuite[\s\S]*?<\/testsuite>/g);
+    if (suiteMatch) {
+      for (const suite of suiteMatch) {
+        testSuites.push(suite);
+
+        // Parse counts from testsuite attributes
+        const testsMatch = suite.match(/tests="(\d+)"/);
+        const failuresMatch = suite.match(/failures="(\d+)"/);
+        const errorsMatch = suite.match(/errors="(\d+)"/);
+        const skippedMatch = suite.match(/skipped="(\d+)"/);
+
+        if (testsMatch) totalTests += parseInt(testsMatch[1], 10);
+        if (failuresMatch) totalFailures += parseInt(failuresMatch[1], 10);
+        if (errorsMatch) totalErrors += parseInt(errorsMatch[1], 10);
+        if (skippedMatch) totalSkipped += parseInt(skippedMatch[1], 10);
+      }
+    }
+  }
+
+  // Create merged JUnit XML
+  const mergedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="${totalTests}" failures="${totalFailures}" errors="${totalErrors}" skipped="${totalSkipped}">
+${testSuites.join('\n')}
+</testsuites>`;
+
+  const mergedPath = path.join(DEBUG_OUTPUT_DIR, 'junit-results.xml');
+  fs.writeFileSync(mergedPath, mergedXml);
+  console.log(`\nMerged ${junitFiles.length} JUnit reports into: ${mergedPath}`);
+  console.log(`  Total: ${totalTests} tests, ${totalFailures} failures, ${totalErrors} errors, ${totalSkipped} skipped`);
+}
+
 async function main(): Promise<void> {
-  const {platform, models: modelFilter, deviceFarm} = parseArgs();
-  const modelsToTest = getModelsToTest(modelFilter);
+  const {platform, models: modelFilter, deviceFarm, allModels} = parseArgs();
+  const modelsToTest = getModelsToTest(modelFilter, allModels);
 
   console.log(`\nRunning E2E tests for ${modelsToTest.length} model(s) on ${platform}`);
   console.log(`Mode: ${deviceFarm ? 'AWS Device Farm' : 'Local'}`);
@@ -235,6 +296,9 @@ async function main(): Promise<void> {
 
   // Print detailed model inference results from the cumulative report
   printModelReports();
+
+  // Merge individual JUnit XML files into one combined report
+  mergeJUnitReports();
 
   // Exit with error code if any tests failed
   const hasFailures = results.some(r => !r.success);

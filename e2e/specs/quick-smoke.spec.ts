@@ -24,6 +24,7 @@ import {
   getModelsToTest,
   ModelTestConfig,
 } from '../fixtures/models';
+import {SCREENSHOT_DIR, OUTPUT_DIR} from '../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -64,7 +65,8 @@ async function dismissPerformanceWarningIfPresent(): Promise<void> {
 function getModelForTest(): ModelTestConfig {
   const envFilter = process.env.TEST_MODELS;
   if (envFilter) {
-    const models = getModelsToTest();
+    // Use includeAllModels=true to also search CRASH_REPRO_MODELS
+    const models = getModelsToTest(true);
     return models[0]; // Use first matched model
   }
   return QUICK_TEST_MODEL;
@@ -94,8 +96,12 @@ describe('Quick Smoke Test', () => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const testName = this.currentTest.title.replace(/\s+/g, '-');
       try {
+        // Ensure screenshot directory exists
+        if (!fs.existsSync(SCREENSHOT_DIR)) {
+          fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
+        }
         await driver.saveScreenshot(
-          `./debug-output/failure-${testName}-${timestamp}.png`,
+          path.join(SCREENSHOT_DIR, `failure-${testName}-${timestamp}.png`),
         );
       } catch (e) {
         console.error('Failed to capture screenshot:', (e as Error).message);
@@ -224,10 +230,9 @@ describe('Quick Smoke Test', () => {
     console.log(`  Response: ${responseText}`);
     console.log(`  Timing: ${timingText}`);
 
-    // Save reports
-    const outputDir = path.join(__dirname, '../debug-output');
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, {recursive: true});
+    // Save reports - use OUTPUT_DIR for Device Farm compatibility
+    if (!fs.existsSync(OUTPUT_DIR)) {
+      fs.mkdirSync(OUTPUT_DIR, {recursive: true});
     }
 
     const testResult = {
@@ -240,11 +245,11 @@ describe('Quick Smoke Test', () => {
     };
 
     // Save individual model report (for easy access to specific model results)
-    const modelReportPath = path.join(outputDir, `report-${model.id}.json`);
+    const modelReportPath = path.join(OUTPUT_DIR, `report-${model.id}.json`);
     fs.writeFileSync(modelReportPath, JSON.stringify(testResult, null, 2));
 
     // Append to cumulative report (preserves all model results across runs)
-    const cumulativeReportPath = path.join(outputDir, 'all-models-report.json');
+    const cumulativeReportPath = path.join(OUTPUT_DIR, 'all-models-report.json');
     let allResults: typeof testResult[] = [];
     if (fs.existsSync(cumulativeReportPath)) {
       try {

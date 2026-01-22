@@ -71,7 +71,7 @@ export const TEST_MODELS: ModelTestConfig[] = [
     selectorText: 'LFM2.5-VL-1.6B',
     downloadFile: 'LFM2.5-VL-1.6B-Q4_0.gguf',
     prompts: [{input: 'Hi', description: 'Basic greeting'}],
-    isVision: true,
+    downloadTimeout: 600000, // 10 min - larger model
   },
   {
     id: 'qwen3-0.6b',
@@ -86,6 +86,7 @@ export const TEST_MODELS: ModelTestConfig[] = [
     selectorText: 'google_gemma-3n-E2B-it',
     downloadFile: 'google_gemma-3n-E2B-it-Q2_K.gguf',
     prompts: [{input: 'Hi', description: 'Basic greeting'}],
+    downloadTimeout: 600000,
   },
   {
     id: 'smolvlm-256m',
@@ -108,7 +109,7 @@ export const CRASH_REPRO_MODELS: ModelTestConfig[] = [
     selectorText: 'gemma-2-2b-it',
     downloadFile: 'gemma-2-2b-it-Q6_K.gguf',
     prompts: [{input: 'Hi', description: 'Basic greeting'}],
-    downloadTimeout: 600000, // 10 min - larger model
+    downloadTimeout: 600000,
   },
   {
     id: 'llama-3.2-3b',
@@ -132,6 +133,7 @@ export const CRASH_REPRO_MODELS: ModelTestConfig[] = [
     selectorText: 'Qwen2.5-1.5B-Instruct',
     downloadFile: 'Qwen2.5-1.5B-Instruct-Q8_0.gguf',
     prompts: [{input: 'Hi', description: 'Basic greeting'}],
+    downloadTimeout: 600000,
   },
 ];
 

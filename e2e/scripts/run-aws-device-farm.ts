@@ -28,9 +28,12 @@ import {
   ScheduleRunCommand,
   GetRunCommand,
   ListDevicePoolsCommand,
+  ListJobsCommand,
+  ListArtifactsCommand,
   Upload,
   Run,
   UploadType,
+  ArtifactCategory,
 } from '@aws-sdk/client-device-farm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -53,10 +56,11 @@ const DEFAULT_ANDROID_APP = '../android/app/build/outputs/apk/release/app-releas
 const DEFAULT_IOS_APP = '../ios/build/PocketPal.ipa';
 
 // Parse command line arguments
-function parseArgs(): {platform: 'ios' | 'android'; appPath: string} {
+function parseArgs(): {platform: 'ios' | 'android'; appPath: string; allModels: boolean} {
   const args = process.argv.slice(2);
   const platformIndex = args.indexOf('--platform');
   const appIndex = args.indexOf('--app');
+  const allModels = args.includes('--all-models');
 
   const platform = (platformIndex !== -1 ? args[platformIndex + 1] : 'android') as 'ios' | 'android';
 
@@ -73,7 +77,7 @@ function parseArgs(): {platform: 'ios' | 'android'; appPath: string} {
     appPath = path.resolve(__dirname, '..', appPath);
   }
 
-  return {platform, appPath};
+  return {platform, appPath, allModels};
 }
 
 // Validate required environment variables
@@ -99,7 +103,7 @@ function validateEnvironment(): void {
   }
 }
 
-const {platform, appPath} = parseArgs();
+const {platform, appPath, allModels} = parseArgs();
 
 // Validate environment before proceeding
 validateEnvironment();
@@ -224,6 +228,35 @@ function createTestPackage(): string {
 }
 
 /**
+ * Create a modified testspec with --all-models flag if needed.
+ * Returns path to the testspec file to upload.
+ */
+function prepareTestSpec(targetPlatform: 'ios' | 'android', useAllModels: boolean): string {
+  const packageDir = path.join(__dirname, '..');
+  const originalPath = path.join(packageDir, `testspec-${targetPlatform}.yml`);
+
+  if (!useAllModels) {
+    return originalPath;
+  }
+
+  // Read original testspec and add --all-models flag
+  let content = fs.readFileSync(originalPath, 'utf8');
+
+  // Replace the run-model-tests.ts command to include --all-models
+  content = content.replace(
+    /npx ts-node scripts\/run-model-tests\.ts --platform (ios|android) --device-farm/g,
+    'npx ts-node scripts/run-model-tests.ts --platform $1 --device-farm --all-models',
+  );
+
+  // Write to temporary file
+  const tempPath = path.join(packageDir, `testspec-${targetPlatform}-allmodels.yml`);
+  fs.writeFileSync(tempPath, content);
+  console.log(`Created modified testspec with --all-models: ${tempPath}`);
+
+  return tempPath;
+}
+
+/**
  * Get device pool ARN based on platform.
  * Priority:
  * 1. Environment variable (AWS_DEVICE_POOL_ARN_ANDROID or AWS_DEVICE_POOL_ARN_IOS)
@@ -284,6 +317,175 @@ async function getDevicePoolArn(targetPlatform: 'ios' | 'android'): Promise<stri
   throw new Error('No device pools available. Please create a device pool in AWS Device Farm console.');
 }
 
+/**
+ * Download a file from a URL to a local path
+ */
+async function downloadFile(url: string, destPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    https.get(url, response => {
+      // Handle redirects
+      if (response.statusCode === 301 || response.statusCode === 302) {
+        const redirectUrl = response.headers.location;
+        if (redirectUrl) {
+          https.get(redirectUrl, redirectResponse => {
+            redirectResponse.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              resolve();
+            });
+          }).on('error', err => {
+            fs.unlink(destPath, () => {});
+            reject(err);
+          });
+          return;
+        }
+      }
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close();
+        resolve();
+      });
+    }).on('error', err => {
+      fs.unlink(destPath, () => {});
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Download test artifacts (JUnit XML, screenshots, logs) from Device Farm
+ */
+async function downloadArtifacts(runArn: string, outputDir: string): Promise<void> {
+  console.log('\nDownloading test artifacts...');
+
+  // Ensure output directory exists
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, {recursive: true});
+  }
+
+  // Get all jobs for this run
+  const jobsResponse = await client.send(new ListJobsCommand({arn: runArn}));
+  const jobs = jobsResponse.jobs || [];
+
+  console.log(`Found ${jobs.length} job(s) in the test run`);
+
+  for (const job of jobs) {
+    if (!job.arn) continue;
+
+    // Create a safe device name for the directory
+    const deviceName = job.device?.name || 'unknown-device';
+    const safeDeviceName = deviceName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    console.log(`  Processing job: ${deviceName}`);
+
+    // Create device-specific directory
+    const deviceDir = path.join(outputDir, safeDeviceName);
+    if (!fs.existsSync(deviceDir)) {
+      fs.mkdirSync(deviceDir, {recursive: true});
+    }
+
+    // Artifact categories we want to download
+    const artifactCategories: ArtifactCategory[] = ['FILE', 'LOG', 'SCREENSHOT'];
+
+    for (const artifactCategory of artifactCategories) {
+      try {
+        const artifactsResponse = await client.send(
+          new ListArtifactsCommand({
+            arn: job.arn,
+            type: artifactCategory,
+          }),
+        );
+
+        const artifacts = artifactsResponse.artifacts || [];
+
+        for (const artifact of artifacts) {
+          if (!artifact.url || !artifact.name) continue;
+
+          // Create subdirectory for artifact category within device directory
+          const typeDir = path.join(deviceDir, artifactCategory.toLowerCase());
+          if (!fs.existsSync(typeDir)) {
+            fs.mkdirSync(typeDir, {recursive: true});
+          }
+
+          // Determine file extension from artifact name or type
+          const artifactName = artifact.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const extension = artifact.extension || '';
+          const filename = extension ? `${artifactName}.${extension}` : artifactName;
+          const destPath = path.join(typeDir, filename);
+
+          try {
+            await downloadFile(artifact.url, destPath);
+            console.log(`    Downloaded: ${filename}`);
+          } catch (downloadErr) {
+            console.log(`    Failed to download ${filename}: ${(downloadErr as Error).message}`);
+          }
+        }
+      } catch (listErr) {
+        console.log(`    Error listing ${artifactCategory} artifacts: ${(listErr as Error).message}`);
+      }
+    }
+  }
+
+  // Look for JUnit XML files in device subdirectories and merge them
+  // Structure: outputDir/<device-name>/file/junit*.xml
+  const deviceDirs = fs.readdirSync(outputDir).filter(d => {
+    const fullPath = path.join(outputDir, d);
+    return fs.statSync(fullPath).isDirectory();
+  });
+
+  const junitFiles: string[] = [];
+  for (const deviceDir of deviceDirs) {
+    const fileDir = path.join(outputDir, deviceDir, 'file');
+    if (fs.existsSync(fileDir)) {
+      const files = fs.readdirSync(fileDir);
+      for (const file of files) {
+        if (file.includes('junit') && file.endsWith('.xml')) {
+          junitFiles.push(path.join(fileDir, file));
+        }
+      }
+    }
+  }
+
+  if (junitFiles.length > 0) {
+    // Merge all JUnit files into one
+    let totalTests = 0;
+    let totalFailures = 0;
+    let totalErrors = 0;
+    let totalSkipped = 0;
+    const testSuites: string[] = [];
+
+    for (const junitFile of junitFiles) {
+      const content = fs.readFileSync(junitFile, 'utf8');
+      const suiteMatch = content.match(/<testsuite[\s\S]*?<\/testsuite>/g);
+      if (suiteMatch) {
+        for (const suite of suiteMatch) {
+          testSuites.push(suite);
+          const testsMatch = suite.match(/tests="(\d+)"/);
+          const failuresMatch = suite.match(/failures="(\d+)"/);
+          const errorsMatch = suite.match(/errors="(\d+)"/);
+          const skippedMatch = suite.match(/skipped="(\d+)"/);
+          if (testsMatch) totalTests += parseInt(testsMatch[1], 10);
+          if (failuresMatch) totalFailures += parseInt(failuresMatch[1], 10);
+          if (errorsMatch) totalErrors += parseInt(errorsMatch[1], 10);
+          if (skippedMatch) totalSkipped += parseInt(skippedMatch[1], 10);
+        }
+      }
+    }
+
+    const mergedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="${totalTests}" failures="${totalFailures}" errors="${totalErrors}" skipped="${totalSkipped}">
+${testSuites.join('\n')}
+</testsuites>`;
+
+    const mergedPath = path.join(outputDir, 'junit-results.xml');
+    fs.writeFileSync(mergedPath, mergedXml);
+    console.log(`  Merged ${junitFiles.length} JUnit file(s) into: ${mergedPath}`);
+    console.log(`    Total: ${totalTests} tests, ${totalFailures} failures, ${totalErrors} errors`);
+  }
+
+  console.log(`Artifacts saved to: ${outputDir}`);
+}
+
 async function waitForRunComplete(runArn: string): Promise<Run> {
   console.log('Waiting for test run to complete...');
   console.log('(This may take several minutes. You can also monitor progress in the AWS Console.)\n');
@@ -320,6 +522,7 @@ async function main(): Promise<void> {
     console.log('='.repeat(50));
     console.log(`Platform: ${platform}`);
     console.log(`App: ${appPath}`);
+    console.log(`All models: ${allModels}`);
     console.log(`Region: ${REGION}`);
     console.log(`Project: ${PROJECT_ARN}`);
     console.log('='.repeat(50) + '\n');
@@ -344,7 +547,8 @@ async function main(): Promise<void> {
     );
 
     // Upload test spec (required for custom environment mode)
-    const testSpecPath = path.join(__dirname, '..', `testspec-${platform}.yml`);
+    // If --all-models is set, create a modified testspec with the flag baked in
+    const testSpecPath = prepareTestSpec(platform, allModels);
     if (!fs.existsSync(testSpecPath)) {
       throw new Error(`Test spec file not found: ${testSpecPath}`);
     }
@@ -364,14 +568,14 @@ async function main(): Promise<void> {
         projectArn: PROJECT_ARN,
         appArn,
         devicePoolArn,
-        name: `PocketPal E2E - ${platform} - ${new Date().toISOString()}`,
+        name: `PocketPal E2E - ${platform}${allModels ? ' (all models)' : ''} - ${new Date().toISOString()}`,
         test: {
           type: 'APPIUM_NODE',
           testPackageArn,
           testSpecArn, // Required for custom environment mode
         },
         executionConfiguration: {
-          jobTimeoutMinutes: 60,
+          jobTimeoutMinutes: allModels ? 120 : 60, // More time for all models
         },
       }),
     );
@@ -383,6 +587,10 @@ async function main(): Promise<void> {
 
     // Wait for completion
     const finalRun = await waitForRunComplete(runArn);
+
+    // Download artifacts (JUnit XML, screenshots, logs)
+    const artifactsDir = path.join(__dirname, '..', 'device-farm-artifacts');
+    await downloadArtifacts(runArn, artifactsDir);
 
     // Print results
     console.log(`\n${'='.repeat(50)}`);
