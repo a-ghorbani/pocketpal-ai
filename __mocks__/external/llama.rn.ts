@@ -41,6 +41,8 @@ export const LlamaContext = jest
 
 export const loadLlamaModelInfo = jest.fn();
 
+export const initLlama = jest.fn();
+
 export const BuildInfo = {
   number: '1.0.0',
   commit: 'a123456',
@@ -48,7 +50,7 @@ export const BuildInfo = {
 
 export default {
   LlamaContext,
-  initLlama: jest.fn(),
+  initLlama,
   CompletionParams: jest.fn(),
   loadLlamaModelInfo,
 };
