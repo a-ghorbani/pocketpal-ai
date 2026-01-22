@@ -50,6 +50,7 @@ class MockModelStore {
   resetModelName: jest.Mock;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
+  isInitializing: boolean = false;
 
   constructor() {
     makeAutoObservable(this, {

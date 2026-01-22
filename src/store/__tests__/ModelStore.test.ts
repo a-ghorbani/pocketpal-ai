@@ -1950,6 +1950,127 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('initContext race condition prevention', () => {
+    let initLlamaMock: jest.Mock;
+    // Store original initContext to restore after tests that replace it with mocks
+    const originalInitContext = modelStore.initContext;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+
+      // Restore the original initContext method (may have been replaced by earlier tests)
+      modelStore.initContext = originalInitContext;
+
+      // Reset store state using runInAction for MobX observables
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.context = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.isInitializing = false;
+      });
+
+      // Get the mock function - use named export
+      const {initLlama} = require('llama.rn');
+      initLlamaMock = initLlama;
+    });
+
+    afterEach(() => {
+      // Ensure flag is always cleared after each test
+      runInAction(() => {
+        modelStore.isInitializing = false;
+      });
+    });
+
+    it('should prevent concurrent initContext calls', async () => {
+      const model = basicModel;
+
+      // Mock initLlama with a long delay to ensure overlap
+      const mockContext = {release: jest.fn()} as unknown as LlamaContext;
+      initLlamaMock.mockReset(); // Ensure clean slate
+      initLlamaMock.mockImplementation(
+        () =>
+          new Promise(resolve => setTimeout(() => resolve(mockContext), 200)),
+      );
+
+      // Start first init (don't await)
+      const firstCall = modelStore.initContext(model);
+
+      // Start second init immediately (should be guarded)
+      const secondCall = modelStore.initContext(model);
+
+      // The second call should resolve to null quickly (guarded)
+      const secondResult = await secondCall;
+      expect(secondResult).toBeNull();
+
+      // Wait for first to complete
+      const firstResult = await firstCall;
+      expect(firstResult).toBeTruthy(); // First call should succeed
+
+      // initLlama should only be called once (first call only)
+      expect(initLlamaMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clear isInitializing after successful init', async () => {
+      const model = basicModel;
+      const mockContext = {release: jest.fn()} as unknown as LlamaContext;
+      initLlamaMock.mockReset();
+      initLlamaMock.mockResolvedValue(mockContext);
+
+      await modelStore.initContext(model);
+
+      expect(modelStore.isInitializing).toBe(false);
+    });
+
+    it('should clear isInitializing even when init fails', async () => {
+      const model = basicModel;
+      initLlamaMock.mockReset();
+      initLlamaMock.mockRejectedValue(new Error('Init failed'));
+
+      try {
+        await modelStore.initContext(model);
+      } catch {
+        // Expected to throw
+      }
+
+      // Flag should still be cleared
+      expect(modelStore.isInitializing).toBe(false);
+    });
+
+    it('should return null when concurrent call is prevented', async () => {
+      const model = basicModel;
+
+      // Manually set flag to simulate in-progress init
+      runInAction(() => {
+        modelStore.isInitializing = true;
+      });
+
+      const result = await modelStore.initContext(model);
+
+      expect(result).toBeNull();
+
+      // No need to clean up - afterEach will handle it
+    });
+
+    it('should log warning when concurrent init is prevented', async () => {
+      const model = basicModel;
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Manually set flag
+      runInAction(() => {
+        modelStore.isInitializing = true;
+      });
+
+      await modelStore.initContext(model);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('already in progress'),
+      );
+
+      consoleWarnSpy.mockRestore();
+      // No need to clean up flag - afterEach will handle it
+    });
+  });
+
   describe('checkSpaceAndDownload vision model auto-download', () => {
     beforeEach(() => {
       jest.clearAllMocks();
