@@ -1987,8 +1987,9 @@ describe('ModelStore', () => {
       // Mock initLlama with a long delay to ensure overlap
       const mockContext = {release: jest.fn()} as unknown as LlamaContext;
       initLlamaMock.mockReset(); // Ensure clean slate
-      initLlamaMock.mockImplementation(() =>
-        new Promise(resolve => setTimeout(() => resolve(mockContext), 200))
+      initLlamaMock.mockImplementation(
+        () =>
+          new Promise(resolve => setTimeout(() => resolve(mockContext), 200)),
       );
 
       // Start first init (don't await)
@@ -2027,7 +2028,7 @@ describe('ModelStore', () => {
 
       try {
         await modelStore.initContext(model);
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 
@@ -2062,7 +2063,7 @@ describe('ModelStore', () => {
       await modelStore.initContext(model);
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('already in progress')
+        expect.stringContaining('already in progress'),
       );
 
       consoleWarnSpy.mockRestore();
