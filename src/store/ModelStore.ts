@@ -106,7 +106,7 @@ class ModelStore {
 
   inferencing: boolean = false;
   isStreaming: boolean = false;
-  isInitializing: boolean = false;  // Prevent concurrent model initialization
+  isInitializing: boolean = false; // Prevent concurrent model initialization
 
   // Track active completion promise for safe context release
   // This prevents race condition where context is freed while completion is still running
@@ -968,112 +968,132 @@ class ModelStore {
    * @returns The initialized LlamaContext
    */
   initContext = async (model: Model, mmProjPath?: string) => {
-    await this.releaseContext();
-    const filePath = await this.getModelFullPath(model);
-    if (!filePath) {
-      throw new Error('Model path is undefined');
-    }
-
-    // Determine if this is a multimodal initialization
-    let isMultimodalInit = false;
-    let projectionModel: Model | undefined;
-
-    // Check if vision is enabled for this model
-    const visionEnabled = this.getModelVisionPreference(model);
-
-    // If mmProjPath is provided directly, use it (but only if vision is enabled)
-    if (mmProjPath && visionEnabled) {
-      isMultimodalInit = true;
-    }
-    // Otherwise, check if the model has a default projection model and vision is enabled
-    else if (
-      model.supportsMultimodal &&
-      model.defaultProjectionModel &&
-      visionEnabled
-    ) {
-      projectionModel = this.models.find(
-        m => m.id === model.defaultProjectionModel,
+    // Guard: Prevent concurrent initialization
+    if (this.isInitializing) {
+      console.warn(
+        '[ModelStore] Model initialization already in progress, ignoring concurrent call',
       );
-      if (projectionModel?.isDownloaded) {
-        mmProjPath = await this.getModelFullPath(projectionModel);
-        isMultimodalInit = true;
-      }
-    }
-
-    // Check both memory and device capability for models
-    let hasMemory = true;
-    try {
-      hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
-    } catch (error) {
-      console.error('Memory check failed:', error);
       return null;
     }
-    const isCapable = isMultimodalInit ? await isHighEndDevice() : true;
 
-    // Determine what warnings to show
-    const hasMemoryIssue = !hasMemory;
-    const hasCapabilityIssue = isMultimodalInit && !isCapable;
+    // Set flag before any async work
+    runInAction(() => {
+      this.isInitializing = true;
+    });
 
-    if (hasMemoryIssue || hasCapabilityIssue) {
-      console.warn(
-        `Device performance warning for model: ${model.name} - Memory: ${hasMemoryIssue}, Capability: ${hasCapabilityIssue}`,
-      );
-
-      // Determine appropriate alert message
-      let title: string;
-      let message: string;
-
-      if (hasMemoryIssue && hasCapabilityIssue) {
-        // Both memory and multimodal capability issues
-        title = uiStore.l10n.memory.alerts.combinedWarningTitle;
-        message = uiStore.l10n.memory.alerts.combinedWarningMessage;
-      } else if (hasMemoryIssue) {
-        // Only memory issue
-        title = uiStore.l10n.memory.alerts.memoryWarningTitle;
-        message = uiStore.l10n.memory.alerts.memoryWarningMessage;
-      } else {
-        // Only multimodal capability issue
-        title = uiStore.l10n.memory.alerts.multimodalWarningTitle;
-        message = uiStore.l10n.memory.alerts.multimodalWarningMessage;
+    try {
+      await this.releaseContext();
+      const filePath = await this.getModelFullPath(model);
+      if (!filePath) {
+        throw new Error('Model path is undefined');
       }
 
-      // Show alert and let user decide
-      return new Promise((resolve, reject) => {
-        Alert.alert(title, message, [
-          {
-            text: uiStore.l10n.memory.alerts.cancel,
-            style: 'cancel',
-            onPress: () => {
-              reject(new Error('Model loading cancelled by user'));
+      // Determine if this is a multimodal initialization
+      let isMultimodalInit = false;
+      let projectionModel: Model | undefined;
+
+      // Check if vision is enabled for this model
+      const visionEnabled = this.getModelVisionPreference(model);
+
+      // If mmProjPath is provided directly, use it (but only if vision is enabled)
+      if (mmProjPath && visionEnabled) {
+        isMultimodalInit = true;
+      }
+      // Otherwise, check if the model has a default projection model and vision is enabled
+      else if (
+        model.supportsMultimodal &&
+        model.defaultProjectionModel &&
+        visionEnabled
+      ) {
+        projectionModel = this.models.find(
+          m => m.id === model.defaultProjectionModel,
+        );
+        if (projectionModel?.isDownloaded) {
+          mmProjPath = await this.getModelFullPath(projectionModel);
+          isMultimodalInit = true;
+        }
+      }
+
+      // Check both memory and device capability for models
+      let hasMemory = true;
+      try {
+        hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
+      } catch (error) {
+        console.error('Memory check failed:', error);
+        return null;
+      }
+      const isCapable = isMultimodalInit ? await isHighEndDevice() : true;
+
+      // Determine what warnings to show
+      const hasMemoryIssue = !hasMemory;
+      const hasCapabilityIssue = isMultimodalInit && !isCapable;
+
+      if (hasMemoryIssue || hasCapabilityIssue) {
+        console.warn(
+          `Device performance warning for model: ${model.name} - Memory: ${hasMemoryIssue}, Capability: ${hasCapabilityIssue}`,
+        );
+
+        // Determine appropriate alert message
+        let title: string;
+        let message: string;
+
+        if (hasMemoryIssue && hasCapabilityIssue) {
+          // Both memory and multimodal capability issues
+          title = uiStore.l10n.memory.alerts.combinedWarningTitle;
+          message = uiStore.l10n.memory.alerts.combinedWarningMessage;
+        } else if (hasMemoryIssue) {
+          // Only memory issue
+          title = uiStore.l10n.memory.alerts.memoryWarningTitle;
+          message = uiStore.l10n.memory.alerts.memoryWarningMessage;
+        } else {
+          // Only multimodal capability issue
+          title = uiStore.l10n.memory.alerts.multimodalWarningTitle;
+          message = uiStore.l10n.memory.alerts.multimodalWarningMessage;
+        }
+
+        // Show alert and let user decide
+        return new Promise((resolve, reject) => {
+          Alert.alert(title, message, [
+            {
+              text: uiStore.l10n.memory.alerts.cancel,
+              style: 'cancel',
+              onPress: () => {
+                reject(new Error('Model loading cancelled by user'));
+              },
             },
-          },
-          {
-            text: uiStore.l10n.memory.alerts.continue,
-            onPress: async () => {
-              try {
-                const ctx = await this.proceedWithInitialization(
-                  model,
-                  mmProjPath,
-                  isMultimodalInit,
-                  projectionModel,
-                );
-                resolve(ctx);
-              } catch (error) {
-                reject(error);
-              }
+            {
+              text: uiStore.l10n.memory.alerts.continue,
+              onPress: async () => {
+                try {
+                  const ctx = await this.proceedWithInitialization(
+                    model,
+                    mmProjPath,
+                    isMultimodalInit,
+                    projectionModel,
+                  );
+                  resolve(ctx);
+                } catch (error) {
+                  reject(error);
+                }
+              },
             },
-          },
-        ]);
+          ]);
+        });
+      }
+
+      // If device is capable or not multimodal, proceed with normal initialization
+      return this.proceedWithInitialization(
+        model,
+        mmProjPath,
+        isMultimodalInit,
+        projectionModel,
+      );
+    } finally {
+      // Always clear flag, even on error
+      runInAction(() => {
+        this.isInitializing = false;
       });
     }
-
-    // If device is capable or not multimodal, proceed with normal initialization
-    return this.proceedWithInitialization(
-      model,
-      mmProjPath,
-      isMultimodalInit,
-      projectionModel,
-    );
   };
 
   /**
