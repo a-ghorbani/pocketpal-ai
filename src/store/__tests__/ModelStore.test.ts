@@ -2087,9 +2087,9 @@ describe('ModelStore', () => {
       expect(resultA).toBeNull();
       expect(resultB).toBeTruthy();
 
-      // Should log that A was skipped
+      // Should log that A was skipped (either during confirmation or in mutex)
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping outdated load'),
+        expect.stringContaining('Skipping'),
       );
 
       consoleLogSpy.mockRestore();

@@ -968,22 +968,173 @@ class ModelStore {
   };
 
   /**
-   * Initialize a model context, optionally with multimodal support
+   * Determines whether multimodal (vision) should be enabled for a model load.
+   *
+   * Resolves multimodal config: enables vision if model supports it and a projection
+   * model is available (explicit path or downloaded default).
+   *
+   * @returns
+   * - isMultimodalInit: true if we should initialize with vision support
+   * - resolvedMmProjPath: file path to the projection model (only if isMultimodalInit=true)
+   * - projectionModel: the Model object for the projection (only when auto-resolved from defaults)
+   *
+   * Note: This is a read-only operation safe to call outside the mutex.
+   */
+  private resolveMultimodalConfig = async (
+    model: Model,
+    mmProjPath?: string,
+  ): Promise<{
+    isMultimodalInit: boolean;
+    resolvedMmProjPath?: string;
+    projectionModel?: Model;
+  }> => {
+    const visionEnabled = this.getModelVisionPreference(model);
+
+    // Priority 1: Explicit path provided by caller
+    if (mmProjPath && visionEnabled) {
+      return {isMultimodalInit: true, resolvedMmProjPath: mmProjPath};
+    }
+
+    // Priority 2: Auto-resolve from model's default projection model
+    if (
+      model.supportsMultimodal &&
+      model.defaultProjectionModel &&
+      visionEnabled
+    ) {
+      const projectionModel = this.models.find(
+        m => m.id === model.defaultProjectionModel,
+      );
+      if (projectionModel?.isDownloaded) {
+        const resolvedPath = await this.getModelFullPath(projectionModel);
+        return {
+          isMultimodalInit: true,
+          resolvedMmProjPath: resolvedPath,
+          projectionModel,
+        };
+      }
+    }
+
+    // Default: No multimodal support
+    return {isMultimodalInit: false};
+  };
+
+  /**
+   * Check memory/capability requirements and show warning alert if needed.
+   * Returns true if user confirms or no warning needed, false if cancelled.
+   */
+  private checkMemoryAndConfirm = async (
+    model: Model,
+    isMultimodalInit: boolean,
+  ): Promise<boolean> => {
+    let hasMemory = true;
+    try {
+      hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
+    } catch (error) {
+      console.error('Memory check failed:', error);
+      return false;
+    }
+
+    const isCapable = isMultimodalInit ? await isHighEndDevice() : true;
+    const hasMemoryIssue = !hasMemory;
+    const hasCapabilityIssue = isMultimodalInit && !isCapable;
+
+    if (!hasMemoryIssue && !hasCapabilityIssue) {
+      return true; // No warning needed
+    }
+
+    console.warn(
+      `Device performance warning for model: ${model.name} - Memory: ${hasMemoryIssue}, Capability: ${hasCapabilityIssue}`,
+    );
+
+    let title: string;
+    let message: string;
+
+    if (hasMemoryIssue && hasCapabilityIssue) {
+      title = uiStore.l10n.memory.alerts.combinedWarningTitle;
+      message = uiStore.l10n.memory.alerts.combinedWarningMessage;
+    } else if (hasMemoryIssue) {
+      title = uiStore.l10n.memory.alerts.memoryWarningTitle;
+      message = uiStore.l10n.memory.alerts.memoryWarningMessage;
+    } else {
+      title = uiStore.l10n.memory.alerts.multimodalWarningTitle;
+      message = uiStore.l10n.memory.alerts.multimodalWarningMessage;
+    }
+
+    // Show alert and wait for user decision - this happens OUTSIDE the mutex
+    return new Promise<boolean>(resolve => {
+      Alert.alert(title, message, [
+        {
+          text: uiStore.l10n.memory.alerts.cancel,
+          style: 'cancel',
+          onPress: () => resolve(false),
+        },
+        {
+          text: uiStore.l10n.memory.alerts.continue,
+          onPress: () => resolve(true),
+        },
+      ]);
+    });
+  };
+
+  /**
+   * Initialize a model context, optionally with multimodal support.
+   *
+   * Architecture:
+   * - Phase 1 (outside mutex): Resolve config, check memory, show alert if needed
+   * - Phase 2 (inside mutex): Release old context, load new context
+   *
+   * The "last-one-wins" pattern uses pendingModelId set at the START, then checked
+   * both after the Alert (to skip if superseded) and inside the mutex (final check).
+   * Note: "last-one-wins" not always loading the last tapped model, but it's ok, as
+   * long as it is not leading the deadlock or mem leak.
+   *
    * @param model The main LLM model to initialize
    * @param mmProjPath Optional path to a projection model for multimodal support
-   * @returns The initialized LlamaContext
+   * @returns The initialized LlamaContext, or null if cancelled/skipped
    */
   initContext = async (model: Model, mmProjPath?: string) => {
+    // === Phase 1: Pre-flight checks OUTSIDE mutex ===
+
+    // Mark intent immediately - this is the "last-one-wins" tracking
+    // If another model is requested while we're showing an Alert, their
+    // pendingModelId will overwrite ours and we'll detect it later
     this.pendingModelId = model.id;
 
+    // Set loading state immediately for UI feedback
     runInAction(() => {
       this.isContextLoading = true;
       this.loadingModel = model;
     });
 
-    // Entire operation must be inside mutex, not just release
-    const operationPromise = this.contextOperationMutex.then(async () => {
-      try {
+    try {
+      // Resolve multimodal configuration
+      const {isMultimodalInit, resolvedMmProjPath, projectionModel} =
+        await this.resolveMultimodalConfig(model, mmProjPath);
+
+      // Check memory and get user confirmation if needed (no mutex - UI interaction)
+      const shouldProceed = await this.checkMemoryAndConfirm(
+        model,
+        isMultimodalInit,
+      );
+
+      if (!shouldProceed) {
+        throw new Error('Model loading cancelled by user');
+      }
+
+      // After Alert (if shown), check if we're still the intended model
+      // Another model request might have come in while user was deciding
+      if (this.pendingModelId !== model.id) {
+        console.log(
+          `[ModelStore] Skipping "${model.name}" - user switched to "${this.pendingModelId}" during confirmation`,
+        );
+        return null;
+      }
+
+      // === Phase 2: Execute context operations WITH mutex ===
+
+      const operationPromise = this.contextOperationMutex.then(async () => {
+        // Final check if this request is still current (last-one-wins)
+        // This catches race conditions where another request queued while we waited
         if (this.pendingModelId !== model.id) {
           console.log(
             `[ModelStore] Skipping outdated load for "${model.name}" - user now wants model "${this.pendingModelId}"`,
@@ -991,126 +1142,41 @@ class ModelStore {
           return null;
         }
 
+        // Skip if already loaded
         if (this.activeModelId === model.id && this.context) {
           console.log(
             `[ModelStore] Model "${model.name}" is already loaded, skipping`,
           );
           return this.context;
         }
+
+        // Release existing context
         await this._releaseContextInternal();
 
         // Small delay for native cleanup before loading next model
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        const filePath = await this.getModelFullPath(model);
-        if (!filePath) {
-          throw new Error('Model path is undefined');
-        }
-
-        let isMultimodalInit = false;
-        let projectionModel: Model | undefined;
-        const visionEnabled = this.getModelVisionPreference(model);
-
-        if (mmProjPath && visionEnabled) {
-          isMultimodalInit = true;
-        } else if (
-          model.supportsMultimodal &&
-          model.defaultProjectionModel &&
-          visionEnabled
-        ) {
-          projectionModel = this.models.find(
-            m => m.id === model.defaultProjectionModel,
-          );
-          if (projectionModel?.isDownloaded) {
-            mmProjPath = await this.getModelFullPath(projectionModel);
-            isMultimodalInit = true;
-          }
-        }
-
-        let hasMemory = true;
-        try {
-          hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
-        } catch (error) {
-          console.error('Memory check failed:', error);
-          return null;
-        }
-        const isCapable = isMultimodalInit ? await isHighEndDevice() : true;
-        const hasMemoryIssue = !hasMemory;
-        const hasCapabilityIssue = isMultimodalInit && !isCapable;
-
-        if (hasMemoryIssue || hasCapabilityIssue) {
-          console.warn(
-            `Device performance warning for model: ${model.name} - Memory: ${hasMemoryIssue}, Capability: ${hasCapabilityIssue}`,
-          );
-
-          let title: string;
-          let message: string;
-
-          if (hasMemoryIssue && hasCapabilityIssue) {
-            title = uiStore.l10n.memory.alerts.combinedWarningTitle;
-            message = uiStore.l10n.memory.alerts.combinedWarningMessage;
-          } else if (hasMemoryIssue) {
-            title = uiStore.l10n.memory.alerts.memoryWarningTitle;
-            message = uiStore.l10n.memory.alerts.memoryWarningMessage;
-          } else {
-            title = uiStore.l10n.memory.alerts.multimodalWarningTitle;
-            message = uiStore.l10n.memory.alerts.multimodalWarningMessage;
-          }
-
-          // Blocks mutex while waiting for user decision
-          const alertResult = await new Promise<LlamaContext | null>(
-            (resolve, reject) => {
-              Alert.alert(title, message, [
-                {
-                  text: uiStore.l10n.memory.alerts.cancel,
-                  style: 'cancel',
-                  onPress: () => {
-                    reject(new Error('Model loading cancelled by user'));
-                  },
-                },
-                {
-                  text: uiStore.l10n.memory.alerts.continue,
-                  onPress: async () => {
-                    try {
-                      const ctx = await this.proceedWithInitialization(
-                        model,
-                        mmProjPath,
-                        isMultimodalInit,
-                        projectionModel,
-                      );
-                      resolve(ctx);
-                    } catch (error) {
-                      reject(error);
-                    }
-                  },
-                },
-              ]);
-            },
-          );
-          return alertResult;
-        }
-
-        const result = await this.proceedWithInitialization(
+        // Proceed with actual initialization
+        return this.proceedWithInitialization(
           model,
-          mmProjPath,
+          resolvedMmProjPath,
           isMultimodalInit,
           projectionModel,
         );
-        return result;
-      } finally {
-        runInAction(() => {
-          this.isContextLoading = false;
-          this.loadingModel = undefined;
-        });
-      }
-    });
+      });
 
-    // Swallow errors to keep mutex chain intact; callers get errors via operationPromise
-    this.contextOperationMutex = operationPromise
-      .then(() => {})
-      .catch(() => {});
+      // Keep mutex chain intact by swallowing errors
+      this.contextOperationMutex = operationPromise
+        .then(() => {})
+        .catch(() => {});
 
-    return operationPromise;
+      return await operationPromise;
+    } finally {
+      runInAction(() => {
+        this.isContextLoading = false;
+        this.loadingModel = undefined;
+      });
+    }
   };
 
   /**
