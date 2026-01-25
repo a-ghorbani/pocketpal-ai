@@ -74,6 +74,7 @@ class ModelStore {
 
   appState: AppStateStatus = AppState.currentState;
   useAutoRelease: boolean = true;
+  // UI loading state - true during model load/release transitions
   isContextLoading: boolean = false;
   loadingModel: Model | undefined = undefined;
 
@@ -106,11 +107,16 @@ class ModelStore {
 
   inferencing: boolean = false;
   isStreaming: boolean = false;
-  isInitializing: boolean = false; // Prevent concurrent model initialization
 
   // Track active completion promise for safe context release
   // This prevents race condition where context is freed while completion is still running
   private activeCompletionPromise: Promise<any> | null = null;
+
+  // Mutex to serialize model load/release operations to prevent memory leaks
+  private contextOperationMutex: Promise<void> = Promise.resolve();
+
+  // Last requested model ID - enables "last one wins" during rapid switching
+  private pendingModelId: string | null = null;
 
   downloadError: ErrorState | null = null;
   modelLoadError: ErrorState | null = null;
@@ -968,132 +974,143 @@ class ModelStore {
    * @returns The initialized LlamaContext
    */
   initContext = async (model: Model, mmProjPath?: string) => {
-    // Guard: Prevent concurrent initialization
-    if (this.isInitializing) {
-      console.warn(
-        '[ModelStore] Model initialization already in progress, ignoring concurrent call',
-      );
-      return null;
-    }
+    this.pendingModelId = model.id;
 
-    // Set flag before any async work
     runInAction(() => {
-      this.isInitializing = true;
+      this.isContextLoading = true;
+      this.loadingModel = model;
     });
 
-    try {
-      await this.releaseContext();
-      const filePath = await this.getModelFullPath(model);
-      if (!filePath) {
-        throw new Error('Model path is undefined');
-      }
-
-      // Determine if this is a multimodal initialization
-      let isMultimodalInit = false;
-      let projectionModel: Model | undefined;
-
-      // Check if vision is enabled for this model
-      const visionEnabled = this.getModelVisionPreference(model);
-
-      // If mmProjPath is provided directly, use it (but only if vision is enabled)
-      if (mmProjPath && visionEnabled) {
-        isMultimodalInit = true;
-      }
-      // Otherwise, check if the model has a default projection model and vision is enabled
-      else if (
-        model.supportsMultimodal &&
-        model.defaultProjectionModel &&
-        visionEnabled
-      ) {
-        projectionModel = this.models.find(
-          m => m.id === model.defaultProjectionModel,
-        );
-        if (projectionModel?.isDownloaded) {
-          mmProjPath = await this.getModelFullPath(projectionModel);
-          isMultimodalInit = true;
-        }
-      }
-
-      // Check both memory and device capability for models
-      let hasMemory = true;
+    // Entire operation must be inside mutex, not just release
+    const operationPromise = this.contextOperationMutex.then(async () => {
       try {
-        hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
-      } catch (error) {
-        console.error('Memory check failed:', error);
-        return null;
-      }
-      const isCapable = isMultimodalInit ? await isHighEndDevice() : true;
-
-      // Determine what warnings to show
-      const hasMemoryIssue = !hasMemory;
-      const hasCapabilityIssue = isMultimodalInit && !isCapable;
-
-      if (hasMemoryIssue || hasCapabilityIssue) {
-        console.warn(
-          `Device performance warning for model: ${model.name} - Memory: ${hasMemoryIssue}, Capability: ${hasCapabilityIssue}`,
-        );
-
-        // Determine appropriate alert message
-        let title: string;
-        let message: string;
-
-        if (hasMemoryIssue && hasCapabilityIssue) {
-          // Both memory and multimodal capability issues
-          title = uiStore.l10n.memory.alerts.combinedWarningTitle;
-          message = uiStore.l10n.memory.alerts.combinedWarningMessage;
-        } else if (hasMemoryIssue) {
-          // Only memory issue
-          title = uiStore.l10n.memory.alerts.memoryWarningTitle;
-          message = uiStore.l10n.memory.alerts.memoryWarningMessage;
-        } else {
-          // Only multimodal capability issue
-          title = uiStore.l10n.memory.alerts.multimodalWarningTitle;
-          message = uiStore.l10n.memory.alerts.multimodalWarningMessage;
+        if (this.pendingModelId !== model.id) {
+          console.log(
+            `[ModelStore] Skipping outdated load for "${model.name}" - user now wants model "${this.pendingModelId}"`,
+          );
+          return null;
         }
 
-        // Show alert and let user decide
-        return new Promise((resolve, reject) => {
-          Alert.alert(title, message, [
-            {
-              text: uiStore.l10n.memory.alerts.cancel,
-              style: 'cancel',
-              onPress: () => {
-                reject(new Error('Model loading cancelled by user'));
-              },
+        if (this.activeModelId === model.id && this.context) {
+          console.log(
+            `[ModelStore] Model "${model.name}" is already loaded, skipping`,
+          );
+          return this.context;
+        }
+        await this._releaseContextInternal();
+
+        // Small delay for native cleanup before loading next model
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const filePath = await this.getModelFullPath(model);
+        if (!filePath) {
+          throw new Error('Model path is undefined');
+        }
+
+        let isMultimodalInit = false;
+        let projectionModel: Model | undefined;
+        const visionEnabled = this.getModelVisionPreference(model);
+
+        if (mmProjPath && visionEnabled) {
+          isMultimodalInit = true;
+        } else if (
+          model.supportsMultimodal &&
+          model.defaultProjectionModel &&
+          visionEnabled
+        ) {
+          projectionModel = this.models.find(
+            m => m.id === model.defaultProjectionModel,
+          );
+          if (projectionModel?.isDownloaded) {
+            mmProjPath = await this.getModelFullPath(projectionModel);
+            isMultimodalInit = true;
+          }
+        }
+
+        let hasMemory = true;
+        try {
+          hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
+        } catch (error) {
+          console.error('Memory check failed:', error);
+          return null;
+        }
+        const isCapable = isMultimodalInit ? await isHighEndDevice() : true;
+        const hasMemoryIssue = !hasMemory;
+        const hasCapabilityIssue = isMultimodalInit && !isCapable;
+
+        if (hasMemoryIssue || hasCapabilityIssue) {
+          console.warn(
+            `Device performance warning for model: ${model.name} - Memory: ${hasMemoryIssue}, Capability: ${hasCapabilityIssue}`,
+          );
+
+          let title: string;
+          let message: string;
+
+          if (hasMemoryIssue && hasCapabilityIssue) {
+            title = uiStore.l10n.memory.alerts.combinedWarningTitle;
+            message = uiStore.l10n.memory.alerts.combinedWarningMessage;
+          } else if (hasMemoryIssue) {
+            title = uiStore.l10n.memory.alerts.memoryWarningTitle;
+            message = uiStore.l10n.memory.alerts.memoryWarningMessage;
+          } else {
+            title = uiStore.l10n.memory.alerts.multimodalWarningTitle;
+            message = uiStore.l10n.memory.alerts.multimodalWarningMessage;
+          }
+
+          // Blocks mutex while waiting for user decision
+          const alertResult = await new Promise<LlamaContext | null>(
+            (resolve, reject) => {
+              Alert.alert(title, message, [
+                {
+                  text: uiStore.l10n.memory.alerts.cancel,
+                  style: 'cancel',
+                  onPress: () => {
+                    reject(new Error('Model loading cancelled by user'));
+                  },
+                },
+                {
+                  text: uiStore.l10n.memory.alerts.continue,
+                  onPress: async () => {
+                    try {
+                      const ctx = await this.proceedWithInitialization(
+                        model,
+                        mmProjPath,
+                        isMultimodalInit,
+                        projectionModel,
+                      );
+                      resolve(ctx);
+                    } catch (error) {
+                      reject(error);
+                    }
+                  },
+                },
+              ]);
             },
-            {
-              text: uiStore.l10n.memory.alerts.continue,
-              onPress: async () => {
-                try {
-                  const ctx = await this.proceedWithInitialization(
-                    model,
-                    mmProjPath,
-                    isMultimodalInit,
-                    projectionModel,
-                  );
-                  resolve(ctx);
-                } catch (error) {
-                  reject(error);
-                }
-              },
-            },
-          ]);
+          );
+          return alertResult;
+        }
+
+        const result = await this.proceedWithInitialization(
+          model,
+          mmProjPath,
+          isMultimodalInit,
+          projectionModel,
+        );
+        return result;
+      } finally {
+        runInAction(() => {
+          this.isContextLoading = false;
+          this.loadingModel = undefined;
         });
       }
+    });
 
-      // If device is capable or not multimodal, proceed with normal initialization
-      return this.proceedWithInitialization(
-        model,
-        mmProjPath,
-        isMultimodalInit,
-        projectionModel,
-      );
-    } finally {
-      // Always clear flag, even on error
-      runInAction(() => {
-        this.isInitializing = false;
-      });
-    }
+    // Swallow errors to keep mutex chain intact; callers get errors via operationPromise
+    this.contextOperationMutex = operationPromise
+      .then(() => {})
+      .catch(() => {});
+
+    return operationPromise;
   };
 
   /**
@@ -1111,8 +1128,6 @@ class ModelStore {
     }
 
     runInAction(() => {
-      this.isContextLoading = true;
-      this.loadingModel = model;
       this.isMultimodalActive = false; // Reset until we confirm it's enabled
       this.activeProjectionModelId = projectionModel?.id;
     });
@@ -1180,8 +1195,9 @@ class ModelStore {
 
       runInAction(() => {
         this.context = ctx;
-        this.activeContextSettings = contextInitParams; // Already properly versioned
+        this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
+        this.pendingModelId = null;
       });
       return ctx;
     } catch (error) {
@@ -1205,14 +1221,15 @@ class ModelStore {
       throw error;
     } finally {
       runInAction(() => {
-        this.isContextLoading = false;
-        this.loadingModel = undefined;
         this.lastUsedModelId = model.id;
       });
     }
   }
 
-  releaseContext = async (clearActiveModel: boolean = false) => {
+  /** Internal release - caller must already hold the mutex. */
+  private _releaseContextInternal = async (
+    clearActiveModel: boolean = false,
+  ) => {
     console.log('attempt to release');
     chatSessionStore.exitEditMode();
     if (!this.context) {
@@ -1224,7 +1241,7 @@ class ModelStore {
           this.activeProjectionModelId = undefined;
         });
       }
-      return Promise.resolve('No context to release');
+      return 'No context to release';
     }
 
     try {
@@ -1307,6 +1324,20 @@ class ModelStore {
       });
     }
     return 'Context released successfully';
+  };
+
+  /** Acquires mutex before releasing context. */
+  releaseContext = async (clearActiveModel: boolean = false) => {
+    const operationPromise = this.contextOperationMutex.then(async () => {
+      return this._releaseContextInternal(clearActiveModel);
+    });
+
+    // Swallow errors to keep mutex chain intact
+    this.contextOperationMutex = operationPromise
+      .then(() => {})
+      .catch(() => {});
+
+    return operationPromise;
   };
 
   manualReleaseContext = async () => {
@@ -1862,9 +1893,8 @@ class ModelStore {
       return true;
     }
 
-    // If not active, check with the context
-    if (!this.context) {
-      console.log('isMultimodalEnabled: No context available');
+    // Avoid "Context not found" errors during transitions
+    if (!this.context || this.isContextLoading) {
       return false;
     }
 

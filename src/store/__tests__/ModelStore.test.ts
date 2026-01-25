@@ -1966,7 +1966,7 @@ describe('ModelStore', () => {
         modelStore.models = [];
         modelStore.context = undefined;
         modelStore.activeModelId = undefined;
-        modelStore.isInitializing = false;
+        modelStore.isContextLoading = false;
       });
 
       // Get the mock function - use named export
@@ -1977,7 +1977,7 @@ describe('ModelStore', () => {
     afterEach(() => {
       // Ensure flag is always cleared after each test
       runInAction(() => {
-        modelStore.isInitializing = false;
+        modelStore.isContextLoading = false;
       });
     });
 
@@ -2010,7 +2010,7 @@ describe('ModelStore', () => {
       expect(initLlamaMock).toHaveBeenCalledTimes(1);
     });
 
-    it('should clear isInitializing after successful init', async () => {
+    it('should clear isContextLoading after successful init', async () => {
       const model = basicModel;
       const mockContext = {release: jest.fn()} as unknown as LlamaContext;
       initLlamaMock.mockReset();
@@ -2018,10 +2018,10 @@ describe('ModelStore', () => {
 
       await modelStore.initContext(model);
 
-      expect(modelStore.isInitializing).toBe(false);
+      expect(modelStore.isContextLoading).toBe(false);
     });
 
-    it('should clear isInitializing even when init fails', async () => {
+    it('should clear isContextLoading even when init fails', async () => {
       const model = basicModel;
       initLlamaMock.mockReset();
       initLlamaMock.mockRejectedValue(new Error('Init failed'));
@@ -2033,41 +2033,66 @@ describe('ModelStore', () => {
       }
 
       // Flag should still be cleared
-      expect(modelStore.isInitializing).toBe(false);
+      expect(modelStore.isContextLoading).toBe(false);
     });
 
-    it('should return null when concurrent call is prevented', async () => {
+    it('should return existing context when same model is already loaded', async () => {
       const model = basicModel;
+      const mockContext = {
+        release: jest.fn(),
+        isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+      } as unknown as LlamaContext;
 
-      // Manually set flag to simulate in-progress init
+      // Set up as if model is already loaded
       runInAction(() => {
-        modelStore.isInitializing = true;
+        modelStore.context = mockContext;
+        modelStore.activeModelId = model.id;
       });
+
+      initLlamaMock.mockReset();
 
       const result = await modelStore.initContext(model);
 
-      expect(result).toBeNull();
-
-      // No need to clean up - afterEach will handle it
+      // Should return existing context without calling initLlama
+      expect(result).toBeTruthy();
+      expect(initLlamaMock).not.toHaveBeenCalled();
     });
 
-    it('should log warning when concurrent init is prevented', async () => {
-      const model = basicModel;
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    it('should skip outdated load requests during rapid switching', async () => {
+      const modelA = {...basicModel, id: 'model-a', name: 'Model A'};
+      const modelB = {...basicModel, id: 'model-b', name: 'Model B'};
+      const mockContextB = {release: jest.fn()} as unknown as LlamaContext;
 
-      // Manually set flag
       runInAction(() => {
-        modelStore.isInitializing = true;
+        modelStore.models = [modelA, modelB];
       });
 
-      await modelStore.initContext(model);
-
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('already in progress'),
+      // Mock initLlama with a delay to simulate slow loading
+      initLlamaMock.mockReset();
+      initLlamaMock.mockImplementation(
+        () =>
+          new Promise(resolve => setTimeout(() => resolve(mockContextB), 100)),
       );
 
-      consoleWarnSpy.mockRestore();
-      // No need to clean up flag - afterEach will handle it
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Start loading A, then immediately request B
+      const loadA = modelStore.initContext(modelA);
+      const loadB = modelStore.initContext(modelB);
+
+      // Wait for both to complete
+      const [resultA, resultB] = await Promise.all([loadA, loadB]);
+
+      // A should be skipped (null), B should succeed
+      expect(resultA).toBeNull();
+      expect(resultB).toBeTruthy();
+
+      // Should log that A was skipped
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping outdated load'),
+      );
+
+      consoleLogSpy.mockRestore();
     });
   });
 
