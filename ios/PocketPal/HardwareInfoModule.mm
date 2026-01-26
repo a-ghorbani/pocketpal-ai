@@ -2,7 +2,7 @@
 #import <UIKit/UIKit.h>
 #import <Metal/Metal.h>
 #import <mach/mach.h>
-#import <sys/sysctl.h>
+#import <os/proc.h>
 
 @interface HardwareInfoModule : NSObject <RCTBridgeModule>
 @end
