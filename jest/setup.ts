@@ -71,6 +71,7 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
       }),
     ),
     getChipset: jest.fn(() => Promise.resolve('Mock Chipset')),
+    getAvailableMemory: jest.fn(() => Promise.resolve(3 * 1000 * 1000 * 1000)), // 3GB
   },
 }));
 
