@@ -1443,6 +1443,8 @@ class ModelStore {
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
+        // Clear loaded model memory tracking
+        this.loadedModelMemoryUsage = undefined;
         // Clear active model if requested (for deletion scenarios)
         if (clearActiveModel) {
           this.activeModelId = undefined;
