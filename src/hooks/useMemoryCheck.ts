@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
 import {L10nContext} from '../utils';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 
 function memoryRequirementEstimate(modelSize: number, isMultimodal = false) {
   // Model parameters derived by fitting a linear regression to benchmark data
@@ -21,12 +22,52 @@ export const hasEnoughMemory = async (
   modelSize: number,
   isMultimodal = false,
 ): Promise<boolean> => {
-  const totalMemory = await DeviceInfo.getTotalMemory();
-  const totalMemoryGB = totalMemory / 1000 / 1000 / 1000;
-  const availableMemory = Math.min(totalMemoryGB * 0.65, totalMemoryGB - 1.2);
-  const memoryRequirement = memoryRequirementEstimate(modelSize, isMultimodal);
+  let availableMemoryGB: number;
 
-  return memoryRequirement <= availableMemory;
+  try {
+    // Try native API first (actual available memory from OS)
+    const availableBytes = await NativeHardwareInfo.getAvailableMemory();
+    // Apply 10% safety margin
+    const safeAvailableBytes = availableBytes * 0.9;
+    availableMemoryGB = safeAvailableBytes / 1000 / 1000 / 1000;
+
+    // Debug logging to validate accuracy
+    if (__DEV__) {
+      const totalMemory = await DeviceInfo.getTotalMemory();
+      const totalMemoryGB = totalMemory / 1000 / 1000 / 1000;
+      const heuristicAvailable = Math.min(
+        totalMemoryGB * 0.65,
+        totalMemoryGB - 1.2,
+      );
+      console.log(
+        '[MemoryCheck] Actual available:',
+        availableMemoryGB.toFixed(2),
+        'GB',
+      );
+      console.log(
+        '[MemoryCheck] Heuristic estimate:',
+        heuristicAvailable.toFixed(2),
+        'GB',
+      );
+      console.log(
+        '[MemoryCheck] Difference:',
+        (
+          ((heuristicAvailable - availableMemoryGB) / availableMemoryGB) *
+          100
+        ).toFixed(1),
+        '%',
+      );
+    }
+  } catch (error) {
+    // Fallback to heuristic if native API fails
+    console.warn('[MemoryCheck] Native API failed, using heuristic:', error);
+    const totalMemory = await DeviceInfo.getTotalMemory();
+    const totalMemoryGB = totalMemory / 1000 / 1000 / 1000;
+    availableMemoryGB = Math.min(totalMemoryGB * 0.65, totalMemoryGB - 1.2);
+  }
+
+  const memoryRequirement = memoryRequirementEstimate(modelSize, isMultimodal);
+  return memoryRequirement <= availableMemoryGB;
 };
 
 export const useMemoryCheck = (modelSize: number, isMultimodal = false) => {
