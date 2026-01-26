@@ -3,6 +3,7 @@ import {renderHook} from '@testing-library/react-hooks';
 
 import {largeMemoryModel, localModel} from '../../../jest/fixtures/models';
 import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
+import {modelStore} from '../../store';
 
 // Unmock the hook for actual testing
 jest.unmock('../useMemoryCheck');
@@ -179,5 +180,105 @@ describe('useMemoryCheck', () => {
     (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
       3 * 1000 * 1000 * 1000,
     );
+  });
+
+  describe('Phase 2: Effective Available Memory', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      // Clear modelStore state
+      (modelStore as any).loadedModelMemoryUsage = undefined;
+      (modelStore as any).activeModelId = undefined;
+      (modelStore as any).isMultimodalActive = false;
+    });
+
+    it('should add back actual loaded model memory to available', async () => {
+      // Setup: 2GB model loaded, consuming 2.2GB actual memory
+      // Native API reports 3GB available (after current model loaded)
+      // Effective available = 3GB + 2.2GB = 5.2GB
+
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        3 * 1000 * 1000 * 1000, // 3GB available
+      );
+
+      // Mock loaded model memory - use a real model from fixtures
+      // localModel is 2GB
+      (modelStore as any).loadedModelMemoryUsage = 2.2 * 1000 * 1000 * 1000; // 2.2GB
+      (modelStore as any).activeModelId = localModel.id; // Sets activeModel via computed
+      (modelStore as any).isMultimodalActive = false;
+
+      // Test loading a 4GB model (requires ~4.1GB with formula)
+      const modelSize = 4 * 1000 * 1000 * 1000;
+      const {result, waitForNextUpdate} = renderHook(() =>
+        useMemoryCheck(modelSize),
+      );
+
+      try {
+        await waitForNextUpdate();
+      } catch {
+        // Ignoring timeout
+      }
+
+      // Should PASS because effective 5.2GB > required 4.1GB
+      expect(result.current.memoryWarning).toBe('');
+    });
+
+    it('should add back estimated memory when actual unavailable', async () => {
+      // Setup: 2GB model loaded, but no actual measurement
+      // Native API reports 3GB available
+      // Model estimate: 0.43 + 0.92 * 2 = 2.27GB
+      // Effective available = 3GB + 2.27GB = 5.27GB
+
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        3 * 1000 * 1000 * 1000,
+      );
+
+      // No actual measurement, only active model
+      (modelStore as any).loadedModelMemoryUsage = undefined;
+      (modelStore as any).activeModelId = localModel.id; // Sets activeModel via computed
+      (modelStore as any).isMultimodalActive = false;
+
+      // Test loading a 4GB model (requires ~4.1GB)
+      const modelSize = 4 * 1000 * 1000 * 1000;
+      const {result, waitForNextUpdate} = renderHook(() =>
+        useMemoryCheck(modelSize),
+      );
+
+      try {
+        await waitForNextUpdate();
+      } catch {
+        // Ignoring timeout
+      }
+
+      // Should PASS because effective 5.27GB > required 4.1GB
+      expect(result.current.memoryWarning).toBe('');
+    });
+
+    it('should not add memory if no model loaded', async () => {
+      // Setup: No model loaded
+      // Native API reports 3GB available
+      // Effective available = 3GB (no adjustment)
+
+      (NativeHardwareInfo.getAvailableMemory as jest.Mock).mockResolvedValue(
+        3 * 1000 * 1000 * 1000,
+      );
+
+      (modelStore as any).loadedModelMemoryUsage = undefined;
+      (modelStore as any).activeModelId = undefined; // No active model
+
+      // Test loading a 4GB model (requires ~4.1GB)
+      const modelSize = 4 * 1000 * 1000 * 1000;
+      const {result, waitForNextUpdate} = renderHook(() =>
+        useMemoryCheck(modelSize),
+      );
+
+      try {
+        await waitForNextUpdate();
+      } catch {
+        // Ignoring timeout
+      }
+
+      // Should FAIL because 3GB < required 4.1GB
+      expect(result.current.memoryWarning).toBe(l10n.en.memory.warning);
+    });
   });
 });
