@@ -13,6 +13,7 @@ import {
 } from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 
 import {uiStore, hfStore} from '.';
 import {chatSessionStore} from './ChatSessionStore';
@@ -1216,6 +1217,21 @@ class ModelStore {
       // Create properly versioned ContextInitParams
       const contextInitParams = createContextInitParams(effectiveSettings);
 
+      // Measure memory before model load
+      let memoryBeforeLoad: number | undefined;
+      try {
+        memoryBeforeLoad = await NativeHardwareInfo.getAvailableMemory();
+        if (__DEV__) {
+          console.log(
+            '[ModelStore] Memory before load:',
+            (memoryBeforeLoad / 1000 / 1000 / 1000).toFixed(2),
+            'GB',
+          );
+        }
+      } catch (error) {
+        console.warn('[ModelStore] Failed to measure memory before load:', error);
+      }
+
       const t0 = Date.now();
       const ctx = await initLlama(
         {
@@ -1229,6 +1245,41 @@ class ModelStore {
       );
       const t1 = Date.now();
       console.log('init time: ', t1 - t0);
+
+      // Measure memory after model load
+      if (memoryBeforeLoad !== undefined) {
+        try {
+          const memoryAfterLoad = await NativeHardwareInfo.getAvailableMemory();
+          const memoryDelta = memoryBeforeLoad - memoryAfterLoad;
+
+          if (__DEV__) {
+            console.log(
+              '[ModelStore] Memory after load:',
+              (memoryAfterLoad / 1000 / 1000 / 1000).toFixed(2),
+              'GB',
+            );
+            console.log(
+              '[ModelStore] Memory consumed:',
+              (memoryDelta / 1000 / 1000 / 1000).toFixed(2),
+              'GB',
+            );
+          }
+
+          // Only store positive deltas (sanity check)
+          if (memoryDelta > 0) {
+            runInAction(() => {
+              this.loadedModelMemoryUsage = memoryDelta;
+            });
+          } else {
+            console.warn('[ModelStore] Unexpected memory delta:', memoryDelta);
+          }
+        } catch (error) {
+          console.warn(
+            '[ModelStore] Failed to measure memory after load:',
+            error,
+          );
+        }
+      }
 
       await this.updateModelStopTokens(ctx, model);
 
