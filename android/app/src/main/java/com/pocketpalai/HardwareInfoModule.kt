@@ -11,6 +11,8 @@ import javax.microedition.khronos.egl.EGL10
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
+import android.app.ActivityManager
+import android.content.Context
 
 @ReactModule(name = NativeHardwareInfoSpec.NAME)
 class HardwareInfoModule(reactContext: ReactApplicationContext) :
@@ -191,6 +193,20 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
       }
 
       promise.resolve(cpuInfo)
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  override fun getAvailableMemory(promise: Promise) {
+    try {
+      val activityManager = reactApplicationContext
+        .getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+      val memInfo = ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memInfo)
+
+      // availMem is already in bytes
+      promise.resolve(memInfo.availMem.toDouble())
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
     }

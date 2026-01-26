@@ -13,6 +13,7 @@ import {
 } from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 
 import {uiStore, hfStore} from '.';
 import {chatSessionStore} from './ChatSessionStore';
@@ -95,6 +96,15 @@ class ModelStore {
   context: LlamaContext | undefined = undefined;
 
   lastUsedModelId: string | undefined = undefined;
+
+  /**
+   * Actual memory consumed by the currently loaded model (bytes).
+   * Measured by comparing available memory before/after model load.
+   * Used to provide accurate "effective available" memory when checking
+   * if a new model will fit (the current model can be released).
+   * undefined = no measurement available (use estimate fallback)
+   */
+  loadedModelMemoryUsage: number | undefined = undefined;
 
   // Auto-release tracking (persistent)
   wasAutoReleased: boolean = false;
@@ -1207,6 +1217,24 @@ class ModelStore {
       // Create properly versioned ContextInitParams
       const contextInitParams = createContextInitParams(effectiveSettings);
 
+      // Measure memory before model load
+      let memoryBeforeLoad: number | undefined;
+      try {
+        memoryBeforeLoad = await NativeHardwareInfo.getAvailableMemory();
+        if (__DEV__) {
+          console.log(
+            '[ModelStore] Memory before load:',
+            (memoryBeforeLoad / 1000 / 1000 / 1000).toFixed(2),
+            'GB',
+          );
+        }
+      } catch (error) {
+        console.warn(
+          '[ModelStore] Failed to measure memory before load:',
+          error,
+        );
+      }
+
       const t0 = Date.now();
       const ctx = await initLlama(
         {
@@ -1256,6 +1284,42 @@ class ModelStore {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
           });
+        }
+      }
+
+      // Measure memory after ALL model loading (main model + mmproj if multimodal)
+      // This captures total memory consumption for accurate model switching estimates
+      if (memoryBeforeLoad !== undefined) {
+        try {
+          const memoryAfterLoad = await NativeHardwareInfo.getAvailableMemory();
+          const memoryDelta = memoryBeforeLoad - memoryAfterLoad;
+
+          if (__DEV__) {
+            console.log(
+              '[ModelStore] Memory after load:',
+              (memoryAfterLoad / 1000 / 1000 / 1000).toFixed(2),
+              'GB',
+            );
+            console.log(
+              '[ModelStore] Memory consumed (including mmproj if multimodal):',
+              (memoryDelta / 1000 / 1000 / 1000).toFixed(2),
+              'GB',
+            );
+          }
+
+          // Only store positive deltas (sanity check)
+          if (memoryDelta > 0) {
+            runInAction(() => {
+              this.loadedModelMemoryUsage = memoryDelta;
+            });
+          } else {
+            console.warn('[ModelStore] Unexpected memory delta:', memoryDelta);
+          }
+        } catch (error) {
+          console.warn(
+            '[ModelStore] Failed to measure memory after load:',
+            error,
+          );
         }
       }
 
@@ -1383,6 +1447,8 @@ class ModelStore {
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
+        // Clear loaded model memory tracking
+        this.loadedModelMemoryUsage = undefined;
         // Clear active model if requested (for deletion scenarios)
         if (clearActiveModel) {
           this.activeModelId = undefined;

@@ -2,6 +2,7 @@ export const deviceInfo = {
   freeDiskStorage: 8 * 1000 ** 3,
   totalMemory: 4 * 1000 ** 3,
   usedMemory: 2 * 1000 ** 3,
+  availableMemory: 3 * 1000 ** 3, // More accurate than totalMemory - usedMemory
   version: '1.0.0',
   buildNumber: '1',
 };

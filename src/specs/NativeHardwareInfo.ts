@@ -34,6 +34,13 @@ export interface Spec extends TurboModule {
   getCPUInfo(): Promise<CPUInfo>;
   getGPUInfo(): Promise<GPUInfo>;
   getChipset?(): Promise<string>; // Android only
+  /**
+   * Get available memory in bytes from the operating system.
+   * - Android: Uses ActivityManager.getMemoryInfo() to get availMem
+   * - iOS: Uses os_proc_available_memory()
+   * @returns Promise<number> Available memory in bytes
+   */
+  getAvailableMemory(): Promise<number>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('HardwareInfo');
