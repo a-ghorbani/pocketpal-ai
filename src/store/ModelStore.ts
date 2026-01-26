@@ -1229,7 +1229,10 @@ class ModelStore {
           );
         }
       } catch (error) {
-        console.warn('[ModelStore] Failed to measure memory before load:', error);
+        console.warn(
+          '[ModelStore] Failed to measure memory before load:',
+          error,
+        );
       }
 
       const t0 = Date.now();
