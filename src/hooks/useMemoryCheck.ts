@@ -3,6 +3,7 @@ import DeviceInfo from 'react-native-device-info';
 import {L10nContext} from '../utils';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
+import {modelStore} from '../store';
 
 function memoryRequirementEstimate(modelSize: number, isMultimodal = false) {
   // Model parameters derived by fitting a linear regression to benchmark data
@@ -66,8 +67,66 @@ export const hasEnoughMemory = async (
     availableMemoryGB = Math.min(totalMemoryGB * 0.65, totalMemoryGB - 1.2);
   }
 
+  // Calculate effective available memory by adding back loaded model memory
+  // This allows switching to a new model that would fit after releasing current one
+  let effectiveAvailableGB = availableMemoryGB;
+
+  if (modelStore.loadedModelMemoryUsage !== undefined) {
+    // Use actual measured memory consumption
+    const loadedModelMemoryGB =
+      modelStore.loadedModelMemoryUsage / 1000 / 1000 / 1000;
+    effectiveAvailableGB += loadedModelMemoryGB;
+
+    if (__DEV__) {
+      console.log(
+        '[MemoryCheck] Loaded model memory (measured):',
+        loadedModelMemoryGB.toFixed(2),
+        'GB',
+      );
+      console.log(
+        '[MemoryCheck] Effective available:',
+        effectiveAvailableGB.toFixed(2),
+        'GB',
+      );
+    }
+  } else if (modelStore.activeModel) {
+    // Fallback: estimate loaded model memory using formula
+    const activeModelIsMultimodal = modelStore.isMultimodalActive;
+    const estimatedMemoryGB = memoryRequirementEstimate(
+      modelStore.activeModel.size,
+      activeModelIsMultimodal,
+    );
+    effectiveAvailableGB += estimatedMemoryGB;
+
+    if (__DEV__) {
+      console.log(
+        '[MemoryCheck] Loaded model memory (estimated):',
+        estimatedMemoryGB.toFixed(2),
+        'GB',
+      );
+      console.log(
+        '[MemoryCheck] Effective available:',
+        effectiveAvailableGB.toFixed(2),
+        'GB',
+      );
+    }
+  }
+
   const memoryRequirement = memoryRequirementEstimate(modelSize, isMultimodal);
-  return memoryRequirement <= availableMemoryGB;
+
+  if (__DEV__) {
+    console.log(
+      '[MemoryCheck] Required for new model:',
+      memoryRequirement.toFixed(2),
+      'GB',
+    );
+    console.log(
+      '[MemoryCheck] Check result:',
+      memoryRequirement <= effectiveAvailableGB ? 'PASS' : 'FAIL',
+    );
+  }
+
+  return memoryRequirement <= effectiveAvailableGB;
 };
 
 export const useMemoryCheck = (modelSize: number, isMultimodal = false) => {
