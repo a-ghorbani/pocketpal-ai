@@ -96,6 +96,15 @@ class ModelStore {
 
   lastUsedModelId: string | undefined = undefined;
 
+  /**
+   * Actual memory consumed by the currently loaded model (bytes).
+   * Measured by comparing available memory before/after model load.
+   * Used to provide accurate "effective available" memory when checking
+   * if a new model will fit (the current model can be released).
+   * undefined = no measurement available (use estimate fallback)
+   */
+  loadedModelMemoryUsage: number | undefined = undefined;
+
   // Auto-release tracking (persistent)
   wasAutoReleased: boolean = false;
   lastAutoReleasedModelId: string | undefined = undefined;
