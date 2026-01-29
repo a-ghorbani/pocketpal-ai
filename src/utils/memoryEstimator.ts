@@ -25,20 +25,13 @@ function calculateKVCacheMemory(
   metadata: GGUFMetadata,
   contextSettings: ContextInitParams,
 ): number {
-  const {
-    n_layers,
-    n_embd_head_k,
-    n_embd_head_v,
-    n_head_kv,
-    sliding_window,
-  } = metadata;
+  const {n_layers, n_embd_head_k, n_embd_head_v, n_head_kv, sliding_window} =
+    metadata;
 
   const {n_ctx, cache_type_k, cache_type_v} = contextSettings;
 
   // For SWA (Sliding Window Attention) models like Gemma
-  const effectiveCtx = sliding_window
-    ? Math.min(n_ctx, sliding_window)
-    : n_ctx;
+  const effectiveCtx = sliding_window ? Math.min(n_ctx, sliding_window) : n_ctx;
 
   // Calculate key and value cache separately (may have different quantization)
   const bytesPerK = getKVCacheTypeBytes(cache_type_k || 'f16');
@@ -115,7 +108,11 @@ export function getModelMemoryRequirement(
       console.log('  KV Cache:', (kvCacheSize / 1e9).toFixed(2), 'GB');
       console.log('  Compute Buffer:', (computeBuffer / 1e9).toFixed(2), 'GB');
       console.log('  mmproj:', (mmProjSize / 1e9).toFixed(2), 'GB');
-      console.log('  Total (with 10% overhead):', (totalMemory / 1e9).toFixed(2), 'GB');
+      console.log(
+        '  Total (with 10% overhead):',
+        (totalMemory / 1e9).toFixed(2),
+        'GB',
+      );
     }
 
     return totalMemory;
@@ -129,7 +126,11 @@ export function getModelMemoryRequirement(
     console.log('[MemoryEstimator] Using fallback calculation:');
     console.log('  Model size:', (model.size / 1e9).toFixed(2), 'GB');
     console.log('  mmproj size:', (mmProjSize / 1e9).toFixed(2), 'GB');
-    console.log('  Total (with 10% overhead):', (estimated / 1e9).toFixed(2), 'GB');
+    console.log(
+      '  Total (with 10% overhead):',
+      (estimated / 1e9).toFixed(2),
+      'GB',
+    );
   }
 
   return estimated;
