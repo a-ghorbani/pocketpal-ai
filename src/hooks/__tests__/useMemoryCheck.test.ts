@@ -27,9 +27,11 @@ describe('useMemoryCheck', () => {
   });
 
   it('returns no warning when model size is within calibrated ceiling', async () => {
-    // localModel.size is ~2GB, which should fit in 5GB ceiling with 10% margin
+    // localModel.size is 2GB, requirement = 2GB × 1.2 = 2.4GB (fallback estimation)
+    // ceiling = max(4GB, 5GB) = 5GB
+    // 2.4GB <= 5GB → passes
     const {result, waitForNextUpdate} = renderHook(() =>
-      useMemoryCheck(localModel.size),
+      useMemoryCheck(localModel),
     );
 
     try {
@@ -52,9 +54,11 @@ describe('useMemoryCheck', () => {
       modelStore.largestSuccessfulLoad = 2 * 1e9; // 2GB
     });
 
-    // largeMemoryModel requires ~4.48GB, should exceed 2GB * 0.9 = 1.8GB safe ceiling
+    // largeMemoryModel.size = totalMemory × 1.1 (from fixture)
+    // requirement = size × 1.2 (fallback estimation)
+    // This will exceed the 2GB ceiling
     const {result, waitForNextUpdate} = renderHook(() =>
-      useMemoryCheck(largeMemoryModel.size),
+      useMemoryCheck(largeMemoryModel),
     );
 
     try {
@@ -78,12 +82,13 @@ describe('useMemoryCheck', () => {
     });
 
     // Mock getTotalMemory to return 6GB
-    // localModel requires ~2.27GB
-    // Cold start: 50% of 6GB = 3GB ceiling, after 10% margin = 2.7GB (should fit)
+    // localModel.size = 2GB, requirement = 2GB × 1.2 = 2.4GB
+    // Cold start ceiling: 50% of 6GB = 3GB
+    // 2.4GB <= 3GB → passes
     (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6 * 1e9);
 
     const {result, waitForNextUpdate} = renderHook(() =>
-      useMemoryCheck(localModel.size),
+      useMemoryCheck(localModel),
     );
 
     try {
@@ -102,13 +107,15 @@ describe('useMemoryCheck', () => {
   it('uses maximum of largestSuccessfulLoad and availableMemoryCeiling', async () => {
     // Set largestSuccessfulLoad higher than availableMemoryCeiling
     runInAction(() => {
-      modelStore.availableMemoryCeiling = 3 * 1e9; // 3GB
+      modelStore.availableMemoryCeiling = 2 * 1e9; // 2GB
       modelStore.largestSuccessfulLoad = 5 * 1e9; // 5GB (larger)
     });
 
-    // Model should pass because ceiling is max(3GB, 5GB) = 5GB
+    // localModel.size = 2GB, requirement = 2.4GB
+    // ceiling = max(2GB, 5GB) = 5GB
+    // 2.4GB <= 5GB → passes
     const {result, waitForNextUpdate} = renderHook(() =>
-      useMemoryCheck(localModel.size),
+      useMemoryCheck(localModel),
     );
 
     try {
@@ -124,17 +131,18 @@ describe('useMemoryCheck', () => {
     });
   });
 
-  it('applies 10% safety margin to calibrated ceiling', async () => {
-    // Set ceiling so that after 10% margin it's clearly enough for the model
-    // Model requirement: 0.43 + (0.92 * 2GB) = 2.27GB
-    // Set ceiling to 3GB so after 10% margin (2.7GB) it passes
+  it('uses single estimation function for memory requirement', async () => {
+    // The memory requirement is calculated using getModelMemoryRequirement()
+    // which applies 1.2× safety margin for fallback (no GGUF metadata)
+    // localModel.size = 2GB, requirement = 2GB × 1.2 = 2.4GB
+    // ceiling = 3GB → 2.4GB <= 3GB → passes
     runInAction(() => {
       modelStore.availableMemoryCeiling = 3 * 1e9;
       modelStore.largestSuccessfulLoad = 3 * 1e9;
     });
 
     const {result, waitForNextUpdate} = renderHook(() =>
-      useMemoryCheck(localModel.size),
+      useMemoryCheck(localModel),
     );
 
     try {
@@ -143,19 +151,18 @@ describe('useMemoryCheck', () => {
       // Ignoring timeout
     }
 
-    // After 10% margin: 3GB * 0.9 = 2.7GB
-    // Model requirement: 2.27GB
-    // Should pass with margin
     expect(result.current.memoryWarning).toBe('');
 
     // Now test that a lower ceiling would fail
+    // localModel.size = 2GB, requirement = 2.4GB
+    // ceiling = 2GB → 2.4GB > 2GB → fails
     runInAction(() => {
-      modelStore.availableMemoryCeiling = 2.2 * 1e9; // Lower ceiling
-      modelStore.largestSuccessfulLoad = 2.2 * 1e9;
+      modelStore.availableMemoryCeiling = 2 * 1e9;
+      modelStore.largestSuccessfulLoad = 2 * 1e9;
     });
 
     const {result: result2, waitForNextUpdate: wait2} = renderHook(() =>
-      useMemoryCheck(localModel.size),
+      useMemoryCheck(localModel),
     );
 
     try {
@@ -164,8 +171,6 @@ describe('useMemoryCheck', () => {
       // Ignoring timeout
     }
 
-    // After 10% margin: 2.2GB * 0.9 = 1.98GB < 2.27GB requirement
-    // Should fail
     expect(result2.current.memoryWarning).toBe(l10n.en.memory.warning);
   });
 
@@ -186,7 +191,7 @@ describe('useMemoryCheck', () => {
       .mockImplementation(() => {});
 
     const {result, waitForNextUpdate} = renderHook(() =>
-      useMemoryCheck(largeMemoryModel.size),
+      useMemoryCheck(largeMemoryModel),
     );
 
     try {

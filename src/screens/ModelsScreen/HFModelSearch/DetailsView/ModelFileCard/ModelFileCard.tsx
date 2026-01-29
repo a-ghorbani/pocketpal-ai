@@ -91,10 +91,8 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
       ),
     ).get();
 
-    const {shortMemoryWarning, multimodalWarning} = useMemoryCheck(
-      convertedModel.size,
-      convertedModel.supportsMultimodal,
-    );
+    const {shortMemoryWarning, multimodalWarning} =
+      useMemoryCheck(convertedModel);
 
     const warnings = [
       !modelFile.canFitInStorage && {

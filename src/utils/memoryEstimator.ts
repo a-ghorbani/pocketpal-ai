@@ -62,16 +62,11 @@ function calculateComputeBuffer(
 /**
  * Get model memory requirement estimate in bytes
  *
- * This is the single source of truth for model memory estimation.
- * Used for both:
- * - Checking if a model fits before loading
- * - Tracking largestSuccessfulLoad after successful load
- *
  * When GGUF metadata is available:
  *   Uses accurate formula: (Weights + KV Cache + Compute Buffer) × 1.1
  *
  * When GGUF metadata is NOT available:
- *   Uses fallback: (modelSize + mmProjSize) × 1.1
+ *   Uses fallback: (modelSize + mmProjSize) × 1.2
  *
  * @param model - The model to estimate memory for
  * @param projectionModel - Optional mmproj model for multimodal
@@ -120,14 +115,14 @@ export function getModelMemoryRequirement(
 
   // Fallback: simple size-based estimation
   const totalSize = model.size + mmProjSize;
-  const estimated = totalSize * 1.1; // 10% overhead
+  const estimated = totalSize * 1.2; // 20% overhead (more conservative when no metadata)
 
   if (__DEV__) {
     console.log('[MemoryEstimator] Using fallback calculation:');
     console.log('  Model size:', (model.size / 1e9).toFixed(2), 'GB');
     console.log('  mmproj size:', (mmProjSize / 1e9).toFixed(2), 'GB');
     console.log(
-      '  Total (with 10% overhead):',
+      '  Total (with 20% overhead):',
       (estimated / 1e9).toFixed(2),
       'GB',
     );

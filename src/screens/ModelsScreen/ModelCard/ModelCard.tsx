@@ -89,7 +89,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const [isExpanded, setIsExpanded] = useState(false);
 
     const {memoryWarning, shortMemoryWarning, multimodalWarning} =
-      useMemoryCheck(model.size, model.supportsMultimodal);
+      useMemoryCheck(model);
     const {isOk: storageOk, message: storageNOkMessage} = useStorageCheck(
       model,
       {

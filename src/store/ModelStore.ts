@@ -1125,10 +1125,11 @@ class ModelStore {
   private checkMemoryAndConfirm = async (
     model: Model,
     isMultimodalInit: boolean,
+    projectionModel?: Model,
   ): Promise<boolean> => {
     let hasMemory = true;
     try {
-      hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
+      hasMemory = await hasEnoughMemory(model, projectionModel);
     } catch (error) {
       console.error('Memory check failed:', error);
       return false;
@@ -1215,6 +1216,7 @@ class ModelStore {
       const shouldProceed = await this.checkMemoryAndConfirm(
         model,
         isMultimodalInit,
+        projectionModel,
       );
 
       if (!shouldProceed) {
