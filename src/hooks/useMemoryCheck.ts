@@ -2,72 +2,70 @@ import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
 import {L10nContext} from '../utils';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
-import NativeHardwareInfo from '../specs/NativeHardwareInfo';
+import {modelStore} from '../store';
 
-function memoryRequirementEstimate(modelSize: number, isMultimodal = false) {
-  // Model parameters derived by fitting a linear regression to benchmark data
-  // from: https://huggingface.co/spaces/a-ghorbani/ai-phone-leaderboard
-  const baseRequirement = 0.43 + (0.92 * modelSize) / 1000 / 1000 / 1000;
-
-  // Add overhead for multimodal models
-  if (isMultimodal) {
-    // Additional memory for mmproj model, image processing, and larger context
-    return baseRequirement + 1.8; // ~1.8GB additional overhead. THis is rough estimate and needs to be revisited.
-  }
-
-  return baseRequirement;
-}
-
+/**
+ * Check if there's enough memory to load a model
+ * Uses calibrated ceiling from ModelStore (largestSuccessfulLoad + availableMemoryCeiling)
+ * with 10% safety margin
+ */
 export const hasEnoughMemory = async (
   modelSize: number,
   isMultimodal = false,
 ): Promise<boolean> => {
-  let availableMemoryGB: number;
+  // Get calibration data from ModelStore
+  const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
 
-  try {
-    // Try native API first (actual available memory from OS)
-    const availableBytes = await NativeHardwareInfo.getAvailableMemory();
-    // Apply 10% safety margin
-    const safeAvailableBytes = availableBytes * 0.9;
-    availableMemoryGB = safeAvailableBytes / 1000 / 1000 / 1000;
-
-    // Debug logging to validate accuracy
+  // Calculate ceiling from calibration data
+  let ceiling: number;
+  if (
+    largestSuccessfulLoad !== undefined &&
+    availableMemoryCeiling !== undefined
+  ) {
+    // Use the maximum of both calibration signals
+    ceiling = Math.max(largestSuccessfulLoad, availableMemoryCeiling);
+  } else if (largestSuccessfulLoad !== undefined) {
+    ceiling = largestSuccessfulLoad;
+  } else if (availableMemoryCeiling !== undefined) {
+    ceiling = availableMemoryCeiling;
+  } else {
+    // Cold start: no calibration data yet, use conservative fallback
+    const totalMemory = await DeviceInfo.getTotalMemory();
+    ceiling = totalMemory * 0.5; // Conservative 50% of total RAM
     if (__DEV__) {
-      const totalMemory = await DeviceInfo.getTotalMemory();
-      const totalMemoryGB = totalMemory / 1000 / 1000 / 1000;
-      const heuristicAvailable = Math.min(
-        totalMemoryGB * 0.65,
-        totalMemoryGB - 1.2,
-      );
       console.log(
-        '[MemoryCheck] Actual available:',
-        availableMemoryGB.toFixed(2),
+        '[MemoryCheck] Cold start: using 50% of total RAM as ceiling:',
+        (ceiling / 1e9).toFixed(2),
         'GB',
-      );
-      console.log(
-        '[MemoryCheck] Heuristic estimate:',
-        heuristicAvailable.toFixed(2),
-        'GB',
-      );
-      console.log(
-        '[MemoryCheck] Difference:',
-        (
-          ((heuristicAvailable - availableMemoryGB) / availableMemoryGB) *
-          100
-        ).toFixed(1),
-        '%',
       );
     }
-  } catch (error) {
-    // Fallback to heuristic if native API fails
-    console.warn('[MemoryCheck] Native API failed, using heuristic:', error);
-    const totalMemory = await DeviceInfo.getTotalMemory();
-    const totalMemoryGB = totalMemory / 1000 / 1000 / 1000;
-    availableMemoryGB = Math.min(totalMemoryGB * 0.65, totalMemoryGB - 1.2);
   }
 
-  const memoryRequirement = memoryRequirementEstimate(modelSize, isMultimodal);
-  return memoryRequirement <= availableMemoryGB;
+  // Apply 10% safety margin
+  const safeCeiling = ceiling * 0.9;
+
+  // Simple model requirement estimation
+  // This is a fallback when GGUF metadata is not available
+  // For more accurate estimation, use getModelMemoryRequirement() with GGUF metadata
+  const baseRequirement = 0.43 + (0.92 * modelSize) / 1e9;
+  const mmProjOverhead = isMultimodal ? 1.8 : 0; // Rough estimate
+  const memoryRequirement = (baseRequirement + mmProjOverhead) * 1e9;
+
+  if (__DEV__) {
+    console.log('[MemoryCheck] Ceiling:', (ceiling / 1e9).toFixed(2), 'GB');
+    console.log(
+      '[MemoryCheck] Safe ceiling (90%):',
+      (safeCeiling / 1e9).toFixed(2),
+      'GB',
+    );
+    console.log(
+      '[MemoryCheck] Model requirement:',
+      (memoryRequirement / 1e9).toFixed(2),
+      'GB',
+    );
+  }
+
+  return memoryRequirement <= safeCeiling;
 };
 
 export const useMemoryCheck = (modelSize: number, isMultimodal = false) => {
