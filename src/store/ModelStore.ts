@@ -1026,14 +1026,16 @@ class ModelStore {
       // Extract GGUF metadata fields
       const metadata = {
         architecture: (modelInfo as any)['general.architecture'],
-        n_layers: (modelInfo as any)['llama.block_count'],
-        n_embd: (modelInfo as any)['llama.embedding_length'],
-        n_head: (modelInfo as any)['llama.attention.head_count'],
-        n_head_kv: (modelInfo as any)['llama.attention.head_count_kv'],
-        n_vocab: (modelInfo as any)['llama.vocab_size'],
-        n_embd_head_k: (modelInfo as any)['llama.attention.key_length'],
-        n_embd_head_v: (modelInfo as any)['llama.attention.value_length'],
-        sliding_window: (modelInfo as any)['llama.attention.sliding_window'],
+        n_layers: Number((modelInfo as any)['llama.block_count']),
+        n_embd: Number((modelInfo as any)['llama.embedding_length']),
+        n_head: Number((modelInfo as any)['llama.attention.head_count']),
+        n_head_kv: Number((modelInfo as any)['llama.attention.head_count_kv']),
+        n_vocab: Number((modelInfo as any)['llama.vocab_size']),
+        n_embd_head_k: Number((modelInfo as any)['llama.attention.key_length']),
+        n_embd_head_v: Number((modelInfo as any)['llama.attention.value_length']),
+        sliding_window: (modelInfo as any)['llama.attention.sliding_window']
+          ? Number((modelInfo as any)['llama.attention.sliding_window'])
+          : undefined,
       };
 
       // Validate required fields exist
