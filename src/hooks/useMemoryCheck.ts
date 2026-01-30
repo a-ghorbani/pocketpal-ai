@@ -136,7 +136,13 @@ export const useMemoryCheck = (
     };
 
     checkMemory();
-  }, [model, projectionModel, l10n]);
+  }, [
+    model,
+    projectionModel,
+    l10n,
+    modelStore.availableMemoryCeiling,
+    modelStore.largestSuccessfulLoad,
+  ]);
 
   return {memoryWarning, shortMemoryWarning, multimodalWarning};
 };
