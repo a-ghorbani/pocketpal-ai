@@ -1,4 +1,5 @@
 import {AppState, AppStateStatus, Platform, Alert} from 'react-native';
+import DeviceInfo from 'react-native-device-info';
 
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
@@ -451,10 +452,22 @@ class ModelStore {
           );
         }
       } catch (error) {
+        // Fallback when native call fails
         console.warn(
-          '[ModelStore] Failed to initialize availableMemoryCeiling:',
+          '[ModelStore] Native getAvailableMemory failed, using fallback:',
           error,
         );
+        const totalMemory = await DeviceInfo.getTotalMemory();
+        runInAction(() => {
+          this.availableMemoryCeiling = totalMemory * 0.5;
+        });
+        if (__DEV__) {
+          console.log(
+            '[ModelStore] Fallback availableMemoryCeiling (50% of RAM):',
+            (totalMemory * 0.5 / 1e9).toFixed(2),
+            'GB',
+          );
+        }
       }
     }
 
