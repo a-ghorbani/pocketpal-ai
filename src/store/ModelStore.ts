@@ -464,7 +464,7 @@ class ModelStore {
         if (__DEV__) {
           console.log(
             '[ModelStore] Fallback availableMemoryCeiling (50% of RAM):',
-            (totalMemory * 0.5 / 1e9).toFixed(2),
+            ((totalMemory * 0.5) / 1e9).toFixed(2),
             'GB',
           );
         }
@@ -1048,7 +1048,9 @@ class ModelStore {
         n_head_kv: Number((modelInfo as any)['llama.attention.head_count_kv']),
         n_vocab: Number((modelInfo as any)['llama.vocab_size']),
         n_embd_head_k: Number((modelInfo as any)['llama.attention.key_length']),
-        n_embd_head_v: Number((modelInfo as any)['llama.attention.value_length']),
+        n_embd_head_v: Number(
+          (modelInfo as any)['llama.attention.value_length'],
+        ),
         sliding_window: (modelInfo as any)['llama.attention.sliding_window']
           ? Number((modelInfo as any)['llama.attention.sliding_window'])
           : undefined,
@@ -1116,7 +1118,11 @@ class ModelStore {
           await this.fetchAndPersistGGUFMetadata(model);
         } catch (error) {
           // Log but continue - not critical for startup
-          console.warn('[ModelStore] Failed to fetch metadata for', model.name, error);
+          console.warn(
+            '[ModelStore] Failed to fetch metadata for',
+            model.name,
+            error,
+          );
         }
       }
       if (__DEV__) {

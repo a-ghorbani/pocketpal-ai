@@ -89,16 +89,23 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const [isExpanded, setIsExpanded] = useState(false);
 
     // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
-    const projectionModelForCheck = useMemo(() => {
-      if (
-        model.supportsMultimodal &&
-        modelStore.getModelVisionPreference(model) &&
-        model.defaultProjectionModel
-      ) {
-        return modelStore.models.find(m => m.id === model.defaultProjectionModel);
-      }
-      return undefined;
-    }, [model, modelStore.models]);
+    // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
+    const projectionModelForCheck = useMemo(
+      () => {
+        if (
+          model.supportsMultimodal &&
+          modelStore.getModelVisionPreference(model) &&
+          model.defaultProjectionModel
+        ) {
+          return modelStore.models.find(
+            m => m.id === model.defaultProjectionModel,
+          );
+        }
+        return undefined;
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observable tracked by observer()
+      [model, modelStore.models],
+    );
 
     const {memoryWarning, shortMemoryWarning, multimodalWarning} =
       useMemoryCheck(model, projectionModelForCheck);

@@ -99,6 +99,13 @@ export const useMemoryCheck = (
   const [shortMemoryWarning, setShortMemoryWarning] = useState('');
   const [multimodalWarning, setMultimodalWarning] = useState('');
 
+  // Read MobX observables during render so changes trigger re-render in observer components
+  // This also creates a stable dependency for useEffect
+  const calibrationCeiling = Math.max(
+    modelStore.largestSuccessfulLoad ?? 0,
+    modelStore.availableMemoryCeiling ?? 0,
+  );
+
   useEffect(() => {
     const checkMemory = async () => {
       // Reset warnings first
@@ -136,13 +143,7 @@ export const useMemoryCheck = (
     };
 
     checkMemory();
-  }, [
-    model,
-    projectionModel,
-    l10n,
-    modelStore.availableMemoryCeiling,
-    modelStore.largestSuccessfulLoad,
-  ]);
+  }, [model, projectionModel, l10n, calibrationCeiling]);
 
   return {memoryWarning, shortMemoryWarning, multimodalWarning};
 };
