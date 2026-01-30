@@ -1,0 +1,1 @@
+export {DeviceMemoryBar} from './DeviceMemoryBar';
