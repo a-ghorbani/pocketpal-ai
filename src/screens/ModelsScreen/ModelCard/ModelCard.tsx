@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useEffect} from 'react';
+import React, {useCallback, useState, useEffect, useMemo} from 'react';
 import {
   Alert,
   Linking,
@@ -88,8 +88,20 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const [integrityError, setIntegrityError] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
 
+    // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
+    const projectionModelForCheck = useMemo(() => {
+      if (
+        model.supportsMultimodal &&
+        modelStore.getModelVisionPreference(model) &&
+        model.defaultProjectionModel
+      ) {
+        return modelStore.models.find(m => m.id === model.defaultProjectionModel);
+      }
+      return undefined;
+    }, [model, modelStore.models]);
+
     const {memoryWarning, shortMemoryWarning, multimodalWarning} =
-      useMemoryCheck(model);
+      useMemoryCheck(model, projectionModelForCheck);
     const {isOk: storageOk, message: storageNOkMessage} = useStorageCheck(
       model,
       {

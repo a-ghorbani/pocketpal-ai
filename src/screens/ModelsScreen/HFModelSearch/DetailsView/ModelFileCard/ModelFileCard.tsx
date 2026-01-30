@@ -91,8 +91,21 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
       ),
     ).get();
 
+    // Resolve projection model for memory check
+    const projectionModelForCheck = useMemo(() => {
+      if (
+        convertedModel.supportsMultimodal &&
+        convertedModel.defaultProjectionModel
+      ) {
+        return modelStore.models.find(
+          m => m.id === convertedModel.defaultProjectionModel,
+        );
+      }
+      return undefined;
+    }, [convertedModel, modelStore.models]);
+
     const {shortMemoryWarning, multimodalWarning} =
-      useMemoryCheck(convertedModel);
+      useMemoryCheck(convertedModel, projectionModelForCheck);
 
     const warnings = [
       !modelFile.canFitInStorage && {
