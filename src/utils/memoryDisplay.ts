@@ -54,17 +54,11 @@ export async function getDeviceMemoryInfo(): Promise<{
 }> {
   const totalBytes = await DeviceInfo.getTotalMemory();
 
-  // Get learned available ceiling
-  const availableCeiling = Math.max(
+  // Get learned available ceiling (already includes fallback from ModelStore.initializeStore)
+  const availableBytes = Math.max(
     modelStore.largestSuccessfulLoad ?? 0,
     modelStore.availableMemoryCeiling ?? 0,
   );
-
-  // If no calibration data, use fallback
-  let availableBytes = availableCeiling;
-  if (availableCeiling === 0) {
-    availableBytes = Math.min(totalBytes * 0.6, totalBytes - 1.2 * 1e9);
-  }
 
   return {
     availableBytes,

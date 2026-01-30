@@ -1,10 +1,11 @@
 import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
-import {L10nContext} from '../utils';
+import {L10nContext, formatBytes} from '../utils';
 import {Model} from '../utils/types';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {modelStore} from '../store';
+import {MemoryFitStatus} from '../utils/memoryDisplay';
 
 /**
  * Check if there's enough memory to load a model.
@@ -89,6 +90,46 @@ export const hasEnoughMemory = async (
 };
 
 /**
+ * Get memory fit status with details
+ */
+async function getMemoryFitDetails(
+  model: Model,
+  projectionModel?: Model,
+): Promise<{
+  status: MemoryFitStatus;
+  requiredBytes: number;
+  availableBytes: number;
+}> {
+  // Get memory requirement
+  const requiredBytes = getModelMemoryRequirement(
+    model,
+    projectionModel,
+    modelStore.contextInitParams,
+  );
+
+  // Get device total memory
+  const totalMemory = await DeviceInfo.getTotalMemory();
+
+  // Get learned available ceiling (already includes fallback from ModelStore.initializeStore)
+  const availableBytes = Math.max(
+    modelStore.largestSuccessfulLoad ?? 0,
+    modelStore.availableMemoryCeiling ?? 0,
+  );
+
+  // Determine status
+  let status: MemoryFitStatus;
+  if (requiredBytes <= availableBytes) {
+    status = 'fits';
+  } else if (requiredBytes <= totalMemory) {
+    status = 'tight';
+  } else {
+    status = 'wont_fit';
+  }
+
+  return {status, requiredBytes, availableBytes};
+}
+
+/**
  * Hook for checking memory availability for a model.
  *
  * @param model - The model to check (or a partial model with at least size)
@@ -102,6 +143,7 @@ export const useMemoryCheck = (
   const [memoryWarning, setMemoryWarning] = useState('');
   const [shortMemoryWarning, setShortMemoryWarning] = useState('');
   const [multimodalWarning, setMultimodalWarning] = useState('');
+  const [fitStatus, setFitStatus] = useState<MemoryFitStatus>('fits');
 
   // Read MobX observables during render so changes trigger re-render in observer components
   // This also creates a stable dependency for useEffect
@@ -116,16 +158,36 @@ export const useMemoryCheck = (
       setMemoryWarning('');
       setShortMemoryWarning('');
       setMultimodalWarning('');
+      setFitStatus('fits');
 
       try {
-        const hasMemory = await hasEnoughMemory(
-          model as Model,
-          projectionModel,
-        );
+        const {status, requiredBytes, availableBytes} =
+          await getMemoryFitDetails(model as Model, projectionModel);
 
-        if (!hasMemory) {
-          setShortMemoryWarning(l10n.memory.shortWarning);
-          setMemoryWarning(l10n.memory.warning);
+        setFitStatus(status);
+
+        if (status === 'tight') {
+          // Concise badge text
+          setShortMemoryWarning(l10n.memory.memoryTight);
+          // Detailed message with numbers
+          const neededText = formatBytes(requiredBytes, 1);
+          const availableText = formatBytes(availableBytes, 1);
+          setMemoryWarning(
+            l10n.memory.memoryDetailMessage
+              .replace('{needed}', neededText)
+              .replace('{available}', availableText),
+          );
+        } else if (status === 'wont_fit') {
+          // Concise badge text
+          setShortMemoryWarning(l10n.memory.lowMemory);
+          // Detailed message with numbers
+          const neededText = formatBytes(requiredBytes, 1);
+          const availableText = formatBytes(availableBytes, 1);
+          setMemoryWarning(
+            l10n.memory.memoryDetailMessage
+              .replace('{needed}', neededText)
+              .replace('{available}', availableText),
+          );
         }
 
         // Additional check for multimodal capability
@@ -142,6 +204,7 @@ export const useMemoryCheck = (
         setMemoryWarning('');
         setShortMemoryWarning('');
         setMultimodalWarning('');
+        setFitStatus('fits');
         console.error('Memory check failed:', error);
       }
     };
@@ -149,5 +212,5 @@ export const useMemoryCheck = (
     checkMemory();
   }, [model, projectionModel, l10n, calibrationCeiling]);
 
-  return {memoryWarning, shortMemoryWarning, multimodalWarning};
+  return {memoryWarning, shortMemoryWarning, multimodalWarning, fitStatus};
 };

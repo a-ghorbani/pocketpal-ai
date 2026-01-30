@@ -13,7 +13,8 @@ export const createStyles = (theme: Theme) =>
       borderWidth: 1,
     },
     cardContent: {
-      paddingVertical: 6,
+      paddingBottom: 6,
+      paddingTop: 0,
       //paddingHorizontal: 12,
     },
     downloadProgressContainer: {
@@ -33,8 +34,8 @@ export const createStyles = (theme: Theme) =>
     warningContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      margin: 0,
-      marginTop: 6,
+      paddingHorizontal: 8,
+      marginBottom: 12,
     },
     warningContent: {
       flex: 1,
@@ -42,8 +43,7 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'center',
     },
     warningIcon: {
-      marginLeft: 0,
-      marginRight: 2,
+      margin: 0,
     },
     warningText: {
       color: theme.colors.error,

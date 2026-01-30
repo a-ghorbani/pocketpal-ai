@@ -44,6 +44,7 @@ describe('useMemoryCheck', () => {
       memoryWarning: '',
       shortMemoryWarning: '',
       multimodalWarning: '',
+      fitStatus: 'fits',
     });
   });
 
@@ -67,26 +68,22 @@ describe('useMemoryCheck', () => {
       // Ignoring timeout
     }
 
-    expect(result.current).toEqual({
-      memoryWarning: l10n.en.memory.warning,
-      shortMemoryWarning: l10n.en.memory.shortWarning,
-      multimodalWarning: '',
-    });
+    // Should have tight or wont_fit status with appropriate warnings
+    expect(result.current.fitStatus).not.toBe('fits');
+    expect(result.current.shortMemoryWarning).toBeTruthy();
+    expect(result.current.memoryWarning).toContain('needs');
+    expect(result.current.multimodalWarning).toBe('');
   });
 
-  it('uses cold start fallback when calibration data unavailable', async () => {
-    // Clear calibration data
+  it('relies on ModelStore calibration data (no local fallback)', async () => {
     runInAction(() => {
-      modelStore.availableMemoryCeiling = undefined;
+      modelStore.availableMemoryCeiling = 5 * 1e9; // 5GB from store
       modelStore.largestSuccessfulLoad = undefined;
     });
 
-    // Mock getTotalMemory to return 6GB
-    // localModel.size = 2GB, requirement = 2GB × 1.2 = 2.4GB
-    // Cold start ceiling: 50% of 6GB = 3GB
-    // 2.4GB <= 3GB → passes
-    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6 * 1e9);
-
+    // localModel.size = 2GB, requirement = 2.4GB
+    // availableBytes = max(0, 5GB) = 5GB
+    // 2.4GB <= 5GB → fits
     const {result, waitForNextUpdate} = renderHook(() =>
       useMemoryCheck(localModel),
     );
@@ -101,6 +98,7 @@ describe('useMemoryCheck', () => {
       memoryWarning: '',
       shortMemoryWarning: '',
       multimodalWarning: '',
+      fitStatus: 'fits',
     });
   });
 
@@ -128,6 +126,7 @@ describe('useMemoryCheck', () => {
       memoryWarning: '',
       shortMemoryWarning: '',
       multimodalWarning: '',
+      fitStatus: 'fits',
     });
   });
 
@@ -152,10 +151,11 @@ describe('useMemoryCheck', () => {
     }
 
     expect(result.current.memoryWarning).toBe('');
+    expect(result.current.fitStatus).toBe('fits');
 
     // Now test that a lower ceiling would fail
     // localModel.size = 2GB, requirement = 2.4GB
-    // ceiling = 2GB → 2.4GB > 2GB → fails
+    // ceiling = 2GB → 2.4GB > 2GB → fails (tight or wont_fit)
     runInAction(() => {
       modelStore.availableMemoryCeiling = 2 * 1e9;
       modelStore.largestSuccessfulLoad = 2 * 1e9;
@@ -171,7 +171,10 @@ describe('useMemoryCheck', () => {
       // Ignoring timeout
     }
 
-    expect(result2.current.memoryWarning).toBe(l10n.en.memory.warning);
+    // Should show memory tight or low memory warning with detailed message
+    expect(result2.current.fitStatus).not.toBe('fits');
+    expect(result2.current.shortMemoryWarning).toBeTruthy();
+    expect(result2.current.memoryWarning).toContain('needs');
   });
 
   it('handles errors gracefully when DeviceInfo.getTotalMemory fails on cold start', async () => {
@@ -205,6 +208,7 @@ describe('useMemoryCheck', () => {
       memoryWarning: '',
       shortMemoryWarning: '',
       multimodalWarning: '',
+      fitStatus: 'fits',
     });
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -216,5 +220,56 @@ describe('useMemoryCheck', () => {
 
     // Restore mock
     (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(4 * 1e9);
+  });
+
+  it('returns memoryTight for tight status', async () => {
+    // Set ceiling so requirement is between available and total
+    // This creates a "tight" situation
+    runInAction(() => {
+      modelStore.availableMemoryCeiling = 2 * 1e9; // 2GB available
+      modelStore.largestSuccessfulLoad = 2 * 1e9;
+    });
+
+    // Mock total memory to be higher than requirement
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8 * 1e9); // 8GB total
+
+    const {result, waitForNextUpdate} = renderHook(
+      () => useMemoryCheck(localModel), // 2GB model → 2.4GB requirement
+    );
+
+    try {
+      await waitForNextUpdate();
+    } catch {
+      // Ignoring timeout
+    }
+
+    // 2.4GB > 2GB available but < 8GB total → tight
+    expect(result.current.fitStatus).toBe('tight');
+    expect(result.current.shortMemoryWarning).toBe(l10n.en.memory.memoryTight);
+  });
+
+  it('returns lowMemory for wont_fit status', async () => {
+    // Set ceiling and total memory so requirement exceeds both
+    runInAction(() => {
+      modelStore.availableMemoryCeiling = 2 * 1e9;
+      modelStore.largestSuccessfulLoad = 2 * 1e9;
+    });
+
+    // Mock total memory to be less than requirement
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(2 * 1e9); // 2GB total
+
+    const {result, waitForNextUpdate} = renderHook(
+      () => useMemoryCheck(localModel), // 2GB model → 2.4GB requirement
+    );
+
+    try {
+      await waitForNextUpdate();
+    } catch {
+      // Ignoring timeout
+    }
+
+    // 2.4GB > 2GB total → wont_fit
+    expect(result.current.fitStatus).toBe('wont_fit');
+    expect(result.current.shortMemoryWarning).toBe(l10n.en.memory.lowMemory);
   });
 });

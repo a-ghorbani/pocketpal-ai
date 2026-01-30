@@ -181,6 +181,14 @@ export const l10n = {
       fits: 'fits',
       tight: 'tight',
       wontFit: "won't fit",
+      // Concise badge labels for model card
+      memoryTight: 'Memory tight',
+      lowMemory: 'Low memory',
+      // Detailed message for snackbar (with numbers)
+      memoryDetailMessage:
+        'This model needs ~{needed} but only ~{available} is estimated as usable. Estimates improve as you use the app.',
+      // For expanded section
+      estimatedMemory: 'Estimated memory: ~{size}',
       deviceMemory: '~{available}/{total} GB usable',
       deviceMemoryTooltip:
         'Estimated usable memory. As you use the app, we keep learning what works for your device.',
@@ -1510,6 +1518,14 @@ export const l10n = {
       fits: '適合',
       tight: 'ギリギリ',
       wontFit: '不適合',
+      // Concise badge labels for model card
+      memoryTight: 'メモリ不足気味',
+      lowMemory: 'メモリ不足',
+      // Detailed message for snackbar (with numbers)
+      memoryDetailMessage:
+        'このモデルは~{needed}必要ですが、使用可能なメモリは~{available}と推定されています。アプリを使用するにつれて推定精度が向上します。',
+      // For expanded section
+      estimatedMemory: '推定メモリ: ~{size}',
       deviceMemory: '~{available}/{total} GB使用可能',
       deviceMemoryTooltip:
         '推定使用可能メモリです。アプリを使用するにつれて、お使いのデバイスに最適な値を学習し続けます。',
@@ -2823,6 +2839,14 @@ export const l10n = {
       fits: '适合',
       tight: '紧张',
       wontFit: '不适合',
+      // Concise badge labels for model card
+      memoryTight: '内存紧张',
+      lowMemory: '内存不足',
+      // Detailed message for snackbar (with numbers)
+      memoryDetailMessage:
+        '此模型需要约{needed}，但可用内存估计仅为约{available}。随着您使用应用，估计会更加准确。',
+      // For expanded section
+      estimatedMemory: '预估内存: ~{size}',
       deviceMemory: '~{available}/{total} GB可用',
       deviceMemoryTooltip:
         '估计可用内存。随着您使用应用，我们会不断学习您的设备最适合的配置。',
