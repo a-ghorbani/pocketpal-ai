@@ -177,6 +177,13 @@ export const l10n = {
         'Warning: Model size may exceed available memory. This could affect performance and stability of your device.',
       multimodalWarning:
         'This device may not have sufficient resources for multimodal models.',
+      requiredRAM: 'Required RAM: ~{size}',
+      fits: 'fits',
+      tight: 'tight',
+      wontFit: "won't fit",
+      deviceMemory: '~{available}/{total} GB usable',
+      deviceMemoryTooltip:
+        'Estimated usable memory. As you use the app, we keep learning what works for your device.',
       alerts: {
         memoryWarningTitle: 'Memory Warning',
         memoryWarningMessage:
@@ -1499,6 +1506,13 @@ export const l10n = {
         '警告：モデルサイズが利用可能なメモリを超える可能性があります、デバイスのパフォーマンスと安定性に影響する可能性があります',
       multimodalWarning:
         'このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります',
+      requiredRAM: '必要なRAM: ~{size}',
+      fits: '適合',
+      tight: 'ギリギリ',
+      wontFit: '不適合',
+      deviceMemory: '~{available}/{total} GB使用可能',
+      deviceMemoryTooltip:
+        '推定使用可能メモリです。アプリを使用するにつれて、お使いのデバイスに最適な値を学習し続けます。',
       alerts: {
         memoryWarningTitle: 'メモリ警告',
         memoryWarningMessage:
@@ -2805,6 +2819,13 @@ export const l10n = {
       warning:
         '警告：模型大小可能会超过可用内存，这可能会影响设备的性能和稳定性',
       multimodalWarning: '此设备可能没有足够的资源运行多模态模型',
+      requiredRAM: '所需内存: ~{size}',
+      fits: '适合',
+      tight: '紧张',
+      wontFit: '不适合',
+      deviceMemory: '~{available}/{total} GB可用',
+      deviceMemoryTooltip:
+        '估计可用内存。随着您使用应用，我们会不断学习您的设备最适合的配置。',
       alerts: {
         memoryWarningTitle: '内存警告',
         memoryWarningMessage:
