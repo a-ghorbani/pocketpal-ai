@@ -25,8 +25,14 @@ function calculateKVCacheMemory(
   metadata: GGUFMetadata,
   contextSettings: ContextInitParams,
 ): number {
-  const {n_layers, n_embd_head_k, n_embd_head_v, n_head_kv, sliding_window} =
-    metadata;
+  // Defensive: Convert to numbers in case metadata was persisted as strings
+  const n_layers = Number(metadata.n_layers);
+  const n_embd_head_k = Number(metadata.n_embd_head_k);
+  const n_embd_head_v = Number(metadata.n_embd_head_v);
+  const n_head_kv = Number(metadata.n_head_kv);
+  const sliding_window = metadata.sliding_window
+    ? Number(metadata.sliding_window)
+    : undefined;
 
   const {n_ctx, cache_type_k, cache_type_v} = contextSettings;
 
@@ -52,7 +58,9 @@ function calculateComputeBuffer(
   metadata: GGUFMetadata,
   contextSettings: ContextInitParams,
 ): number {
-  const {n_vocab, n_embd} = metadata;
+  // Defensive: Convert to numbers in case metadata was persisted as strings
+  const n_vocab = Number(metadata.n_vocab);
+  const n_embd = Number(metadata.n_embd);
   const {n_ubatch} = contextSettings;
 
   // Compute buffer: (n_vocab + n_embd) × n_ubatch × 4 bytes
@@ -98,7 +106,12 @@ export function getModelMemoryRequirement(
     const totalMemory = baseMemory * 1.1 + mmProjSize * 1.1;
 
     if (__DEV__) {
-      console.log('[MemoryEstimator] Using GGUF-based calculation:');
+      console.log(
+        '[MemoryEstimator] Using GGUF-based calculation:',
+        model.name,
+        'd: ',
+        model.isDownloaded,
+      );
       console.log('  Weights:', (weightsSize / 1e9).toFixed(2), 'GB');
       console.log('  KV Cache:', (kvCacheSize / 1e9).toFixed(2), 'GB');
       console.log('  Compute Buffer:', (computeBuffer / 1e9).toFixed(2), 'GB');
@@ -108,6 +121,8 @@ export function getModelMemoryRequirement(
         (totalMemory / 1e9).toFixed(2),
         'GB',
       );
+      console.log('metadata: ', metadata);
+      console.log('contextSettings: ', contextSettings);
     }
 
     return totalMemory;
@@ -118,7 +133,12 @@ export function getModelMemoryRequirement(
   const estimated = totalSize * 1.2; // 20% overhead (more conservative when no metadata)
 
   if (__DEV__) {
-    console.log('[MemoryEstimator] Using fallback calculation:');
+    console.log(
+      '[MemoryEstimator] Using fallback calculation:',
+      model.name,
+      'd: ',
+      model.isDownloaded,
+    );
     console.log('  Model size:', (model.size / 1e9).toFixed(2), 'GB');
     console.log('  mmproj size:', (mmProjSize / 1e9).toFixed(2), 'GB');
     console.log(
