@@ -30,7 +30,10 @@ import {
   ModelFile,
   ModelOrigin,
 } from '../../../../../utils/types';
-import {VisionDownloadSheet} from '../../../../../components';
+import {
+  VisionDownloadSheet,
+  MemoryRequirement,
+} from '../../../../../components';
 import {ChevronRightIcon} from '../../../../../assets/icons';
 
 interface ModelFileCardProps {
@@ -295,6 +298,10 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
                 testID={`model-file-name-${modelFile.rfilename}`}>
                 {modelFile.rfilename}
               </Text>
+              <MemoryRequirement
+                model={convertedModel}
+                projectionModel={projectionModelForCheck}
+              />
               <View style={styles.metadataRow}>
                 {isModelInfoReady && modelFile.size && (
                   <Text variant="labelSmall" style={styles.fileSize}>
