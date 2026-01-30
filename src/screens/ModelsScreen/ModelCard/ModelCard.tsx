@@ -25,7 +25,7 @@ import {
   HelperText,
 } from 'react-native-paper';
 
-import {ProjectionModelSelector} from '../../../components';
+import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
@@ -686,6 +686,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                     {model.name}
                   </Text>
                 </View>
+
+                {/* Memory Requirement */}
+                {model.isDownloaded && (
+                  <MemoryRequirement
+                    model={model}
+                    projectionModel={projectionModelForCheck}
+                  />
+                )}
 
                 {/* Description - matching updated React example */}
                 {model.capabilities && model.capabilities.length > 0 && (
