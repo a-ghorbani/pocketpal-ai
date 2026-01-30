@@ -14,6 +14,15 @@ export const createStyles = (theme: Theme) =>
     listContainer: {
       paddingBottom: 150,
     },
+    header: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.outlineVariant,
+    },
     filterContainer: {
       flexDirection: 'row',
       padding: 4,
