@@ -1969,6 +1969,9 @@ class ModelStore {
       ];
       model.chatTemplate = {...defaultSettings.chatTemplate};
       model.stopWords = [...(defaultSettings?.completionParams?.stop || [])];
+
+      // Clear GGUF metadata to force re-fetch with correct number types
+      model.ggufMetadata = undefined;
     });
 
     const hfModels = this.models.filter(
@@ -1985,6 +1988,9 @@ class ModelStore {
       ];
       model.chatTemplate = {...defaultSettings.chatTemplate};
       model.stopWords = [...(defaultSettings?.completionParams?.stop || [])];
+
+      // Clear GGUF metadata to force re-fetch with correct number types
+      model.ggufMetadata = undefined;
     });
 
     runInAction(() => {
@@ -1994,6 +2000,9 @@ class ModelStore {
 
       this.models = [...this.models, ...localModels, ...hfModels];
     });
+
+    // Re-fetch GGUF metadata with correct number types
+    this.loadMissingGGUFMetadata();
   };
 
   resetModelChatTemplate = (modelId: string) => {
