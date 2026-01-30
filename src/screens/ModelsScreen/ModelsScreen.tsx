@@ -21,7 +21,6 @@ import {
   ErrorSnackbar,
   ModelSettingsSheet,
   ModelErrorReportSheet,
-  DeviceMemoryBar,
 } from '../../components';
 
 import {uiStore, modelStore, hfStore, UIStore} from '../../store';
@@ -337,12 +336,6 @@ export const ModelsScreen: React.FC = observer(() => {
     }))
     .filter(group => group.items.length > 0);
 
-  const renderHeader = () => (
-    <View style={styles.header} testID="models-screen-header">
-      <DeviceMemoryBar />
-    </View>
-  );
-
   return (
     <View style={styles.container} testID="models-screen">
       {/* Show Error Snackbar only if no dialog is visible */}
@@ -363,7 +356,6 @@ export const ModelsScreen: React.FC = observer(() => {
         data={flatListModels}
         keyExtractor={item => item.type}
         extraData={activeModelId}
-        ListHeaderComponent={renderHeader}
         renderItem={renderGroupHeader}
         refreshControl={
           <RefreshControl

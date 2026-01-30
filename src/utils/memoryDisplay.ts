@@ -42,30 +42,3 @@ export async function getMemoryFitStatus(
     return 'wont_fit';
   }
 }
-
-/**
- * Get device memory information for display
- *
- * @returns Object with availableBytes, totalBytes for formatting
- */
-export async function getDeviceMemoryInfo(): Promise<{
-  availableBytes: number;
-  totalBytes: number;
-}> {
-  const totalBytes = await DeviceInfo.getTotalMemory();
-
-  // Get learned available ceiling (already includes fallback from ModelStore.initializeStore)
-  const availableBytes = Math.max(
-    modelStore.largestSuccessfulLoad ?? 0,
-    modelStore.availableMemoryCeiling ?? 0,
-  );
-
-  return {
-    availableBytes,
-    totalBytes,
-  };
-}
-
-// NOTE: Use formatBytes from src/utils/formatters.ts for display:
-// formatBytes(bytes, 1) → "3.2 GB"
-// formatBytes(bytes, 0) → "8 GB"
