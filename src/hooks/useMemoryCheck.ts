@@ -52,10 +52,14 @@ export const hasEnoughMemory = async (
   } else {
     // Cold start: no calibration data yet, use conservative fallback
     const totalMemory = await DeviceInfo.getTotalMemory();
-    ceiling = totalMemory * 0.5; // Conservative 50% of total RAM
+    // Use heuristic: min(60% of RAM, RAM - 1.2GB)
+    ceiling = Math.max(
+      Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9),
+      0, // Ensure non-negative
+    );
     if (__DEV__) {
       console.log(
-        '[MemoryCheck] Cold start: using 50% of total RAM as ceiling:',
+        '[MemoryCheck] Cold start fallback ceiling:',
         (ceiling / 1e9).toFixed(2),
         'GB',
       );

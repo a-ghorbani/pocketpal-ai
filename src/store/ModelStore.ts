@@ -458,13 +458,18 @@ class ModelStore {
           error,
         );
         const totalMemory = await DeviceInfo.getTotalMemory();
+        // Use conservative heuristic: min(60% of RAM, RAM - 1.2GB)
+        const fallbackCeiling = Math.min(
+          totalMemory * 0.6,
+          totalMemory - 1.2 * 1e9,
+        );
         runInAction(() => {
-          this.availableMemoryCeiling = totalMemory * 0.5;
+          this.availableMemoryCeiling = Math.max(fallbackCeiling, 0); // Ensure non-negative
         });
         if (__DEV__) {
           console.log(
-            '[ModelStore] Fallback availableMemoryCeiling (50% of RAM):',
-            ((totalMemory * 0.5) / 1e9).toFixed(2),
+            '[ModelStore] Fallback availableMemoryCeiling:',
+            (Math.max(fallbackCeiling, 0) / 1e9).toFixed(2),
             'GB',
           );
         }
