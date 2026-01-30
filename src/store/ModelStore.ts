@@ -1157,7 +1157,10 @@ class ModelStore {
    */
   private loadMissingGGUFMetadata = () => {
     const modelsNeedingMetadata = this.models.filter(
-      m => m.isDownloaded && !m.ggufMetadata,
+      m =>
+        m.isDownloaded &&
+        !m.ggufMetadata &&
+        m.modelType !== ModelType.PROJECTION,
     );
 
     if (modelsNeedingMetadata.length === 0) {
