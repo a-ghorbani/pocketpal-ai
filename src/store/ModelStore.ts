@@ -458,6 +458,9 @@ class ModelStore {
       }
     }
 
+    // Load missing GGUF metadata for downloaded models (background, non-blocking)
+    this.loadMissingGGUFMetadata();
+
     // Check if we need to reload an auto-released model (for app restarts)
     this.checkAndReloadAutoReleasedModel();
   };
@@ -1067,6 +1070,46 @@ class ModelStore {
     } catch (error) {
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
     }
+  };
+
+  /**
+   * Load GGUF metadata for downloaded models that don't have it yet.
+   * Runs in background, doesn't block startup.
+   */
+  private loadMissingGGUFMetadata = () => {
+    const modelsNeedingMetadata = this.models.filter(
+      m => m.isDownloaded && !m.ggufMetadata,
+    );
+
+    if (modelsNeedingMetadata.length === 0) {
+      if (__DEV__) {
+        console.log('[ModelStore] All downloaded models have GGUF metadata');
+      }
+      return;
+    }
+
+    if (__DEV__) {
+      console.log(
+        '[ModelStore] Loading GGUF metadata for',
+        modelsNeedingMetadata.length,
+        'models in background',
+      );
+    }
+
+    // Fetch in background, don't block startup
+    (async () => {
+      for (const model of modelsNeedingMetadata) {
+        try {
+          await this.fetchAndPersistGGUFMetadata(model);
+        } catch (error) {
+          // Log but continue - not critical for startup
+          console.warn('[ModelStore] Failed to fetch metadata for', model.name, error);
+        }
+      }
+      if (__DEV__) {
+        console.log('[ModelStore] Background metadata loading complete');
+      }
+    })();
   };
 
   /**
