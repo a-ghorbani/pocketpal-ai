@@ -447,13 +447,6 @@ class ModelStore {
         runInAction(() => {
           this.availableMemoryCeiling = availableBytes;
         });
-        if (__DEV__) {
-          console.log(
-            '[ModelStore] Initialized availableMemoryCeiling:',
-            (availableBytes / 1e9).toFixed(2),
-            'GB',
-          );
-        }
       } catch (error) {
         // Fallback when native call fails
         console.warn(
@@ -469,13 +462,6 @@ class ModelStore {
         runInAction(() => {
           this.availableMemoryCeiling = Math.max(fallbackCeiling, 0); // Ensure non-negative
         });
-        if (__DEV__) {
-          console.log(
-            '[ModelStore] Fallback availableMemoryCeiling:',
-            (Math.max(fallbackCeiling, 0) / 1e9).toFixed(2),
-            'GB',
-          );
-        }
       }
     }
 
@@ -1085,14 +1071,6 @@ class ModelStore {
         return defaultValue;
       };
 
-      if (__DEV__) {
-        console.log('[ModelStore] GGUF metadata for', model.name);
-        console.log('  Architecture:', architecture);
-        const keys = Object.keys(modelInfo as object);
-        console.log('  Available keys:', keys.slice(0, 20).join(', '));
-        console.log('  Total keys:', keys.length);
-      }
-
       // Extract core fields (these are required)
       const n_layers = getArchValue('block_count');
       const n_embd = getArchValue('embedding_length');
@@ -1100,13 +1078,6 @@ class ModelStore {
 
       // Validate core fields exist - without these we can't estimate memory
       if (!n_layers || !n_embd || !n_head) {
-        if (__DEV__) {
-          console.warn('[ModelStore] Missing core GGUF fields:', {
-            n_layers,
-            n_embd,
-            n_head,
-          });
-        }
         return;
       }
 
@@ -1138,17 +1109,9 @@ class ModelStore {
         sliding_window,
       };
 
-      if (__DEV__) {
-        console.log('[ModelStore] Extracted metadata:', metadata);
-      }
-
       runInAction(() => {
         model.ggufMetadata = metadata;
       });
-
-      if (__DEV__) {
-        console.log('[ModelStore] Persisted GGUF metadata for', model.name);
-      }
     } catch (error) {
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
     }
@@ -1167,18 +1130,7 @@ class ModelStore {
     );
 
     if (modelsNeedingMetadata.length === 0) {
-      if (__DEV__) {
-        console.log('[ModelStore] All downloaded models have GGUF metadata');
-      }
       return;
-    }
-
-    if (__DEV__) {
-      console.log(
-        '[ModelStore] Loading GGUF metadata for',
-        modelsNeedingMetadata.length,
-        'models in background',
-      );
     }
 
     // Fetch in background, don't block startup
@@ -1194,9 +1146,6 @@ class ModelStore {
             error,
           );
         }
-      }
-      if (__DEV__) {
-        console.log('[ModelStore] Background metadata loading complete');
       }
     })();
   };
@@ -1515,13 +1464,6 @@ class ModelStore {
             estimated > this.largestSuccessfulLoad
           ) {
             this.largestSuccessfulLoad = estimated;
-            if (__DEV__) {
-              console.log(
-                '[ModelStore] Updated largestSuccessfulLoad:',
-                (estimated / 1e9).toFixed(2),
-                'GB',
-              );
-            }
           }
         });
       } catch (error) {
@@ -1664,13 +1606,6 @@ class ModelStore {
             availableBytes > this.availableMemoryCeiling
           ) {
             this.availableMemoryCeiling = availableBytes;
-            if (__DEV__) {
-              console.log(
-                '[ModelStore] Updated availableMemoryCeiling after release:',
-                (availableBytes / 1e9).toFixed(2),
-                'GB',
-              );
-            }
           }
         });
       } catch (error) {

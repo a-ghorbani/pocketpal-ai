@@ -35,10 +35,7 @@ export const hasEnoughMemory = async (
       if (updatedModel) {
         modelForCalc = updatedModel;
       }
-    } catch (error) {
-      if (__DEV__) {
-        console.log('[MemoryCheck] Could not fetch GGUF metadata:', error);
-      }
+    } catch {
       // Continue with fallback estimation
     }
   }
@@ -62,13 +59,6 @@ export const hasEnoughMemory = async (
       Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9),
       0, // Ensure non-negative
     );
-    if (__DEV__) {
-      console.log(
-        '[MemoryCheck] Cold start fallback ceiling:',
-        (ceiling / 1e9).toFixed(2),
-        'GB',
-      );
-    }
   }
 
   const memoryRequirement = getModelMemoryRequirement(
@@ -76,19 +66,6 @@ export const hasEnoughMemory = async (
     projectionModel,
     modelStore.contextInitParams,
   );
-
-  if (__DEV__) {
-    console.log('[MemoryCheck] Ceiling:', (ceiling / 1e9).toFixed(2), 'GB');
-    console.log(
-      '[MemoryCheck] Model requirement:',
-      (memoryRequirement / 1e9).toFixed(2),
-      'GB',
-    );
-    console.log(
-      '[MemoryCheck] Result:',
-      memoryRequirement <= ceiling ? 'PASS' : 'FAIL',
-    );
-  }
 
   return memoryRequirement <= ceiling;
 };

@@ -105,48 +105,12 @@ export function getModelMemoryRequirement(
     const baseMemory = weightsSize + kvCacheSize + computeBuffer;
     const totalMemory = baseMemory * 1.1 + mmProjSize * 1.1;
 
-    if (__DEV__) {
-      console.log(
-        '[MemoryEstimator] Using GGUF-based calculation:',
-        model.name,
-        'd: ',
-        model.isDownloaded,
-      );
-      console.log('  Weights:', (weightsSize / 1e9).toFixed(2), 'GB');
-      console.log('  KV Cache:', (kvCacheSize / 1e9).toFixed(2), 'GB');
-      console.log('  Compute Buffer:', (computeBuffer / 1e9).toFixed(2), 'GB');
-      console.log('  mmproj:', (mmProjSize / 1e9).toFixed(2), 'GB');
-      console.log(
-        '  Total (with 10% overhead):',
-        (totalMemory / 1e9).toFixed(2),
-        'GB',
-      );
-      console.log('metadata: ', metadata);
-      console.log('contextSettings: ', contextSettings);
-    }
-
     return totalMemory;
   }
 
   // Fallback: simple size-based estimation
   const totalSize = model.size + mmProjSize;
   const estimated = totalSize * 1.2; // 20% overhead (more conservative when no metadata)
-
-  if (__DEV__) {
-    console.log(
-      '[MemoryEstimator] Using fallback calculation:',
-      model.name,
-      'd: ',
-      model.isDownloaded,
-    );
-    console.log('  Model size:', (model.size / 1e9).toFixed(2), 'GB');
-    console.log('  mmproj size:', (mmProjSize / 1e9).toFixed(2), 'GB');
-    console.log(
-      '  Total (with 20% overhead):',
-      (estimated / 1e9).toFixed(2),
-      'GB',
-    );
-  }
 
   return estimated;
 }
