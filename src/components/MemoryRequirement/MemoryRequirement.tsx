@@ -42,8 +42,7 @@ export const MemoryRequirement: React.FC<MemoryRequirementProps> = observer(
       <View style={styles.container} testID="memory-requirement">
         <View
           style={styles.row}
-          accessibilityLabel={displayText}
-          accessibilityHint="Tap for more information">
+          accessibilityLabel={displayText}>
           <Text
             variant="bodySmall"
             style={styles.text}
