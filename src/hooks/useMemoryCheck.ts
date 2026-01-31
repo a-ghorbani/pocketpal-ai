@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
 import {L10nContext, formatBytes} from '../utils';
-import {Model} from '../utils/types';
+import {Model, ContextInitParams} from '../utils/types';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 // Note: This creates a circular dependency with ModelStore (which imports hasEnoughMemory).
@@ -75,7 +75,8 @@ export const hasEnoughMemory = async (
  */
 async function getMemoryFitDetails(
   model: Model,
-  projectionModel?: Model,
+  projectionModel: Model | undefined,
+  contextInitParams: ContextInitParams,
 ): Promise<{
   status: MemoryFitStatus;
   requiredBytes: number;
@@ -85,7 +86,7 @@ async function getMemoryFitDetails(
   const requiredBytes = getModelMemoryRequirement(
     model,
     projectionModel,
-    modelStore.contextInitParams,
+    contextInitParams,
   );
 
   // Get device total memory
@@ -133,6 +134,10 @@ export const useMemoryCheck = (
     modelStore.availableMemoryCeiling ?? 0,
   );
 
+  // Read context settings that affect memory estimation
+  // This ensures the hook re-runs when user changes context size, cache types, etc.
+  const contextInitParams = modelStore.contextInitParams;
+
   useEffect(() => {
     const checkMemory = async () => {
       // Reset warnings first
@@ -143,7 +148,11 @@ export const useMemoryCheck = (
 
       try {
         const {status, requiredBytes, availableBytes} =
-          await getMemoryFitDetails(model as Model, projectionModel);
+          await getMemoryFitDetails(
+            model as Model,
+            projectionModel,
+            contextInitParams,
+          );
 
         setFitStatus(status);
 
@@ -191,7 +200,7 @@ export const useMemoryCheck = (
     };
 
     checkMemory();
-  }, [model, projectionModel, l10n, calibrationCeiling]);
+  }, [model, projectionModel, l10n, calibrationCeiling, contextInitParams]);
 
   return {memoryWarning, shortMemoryWarning, multimodalWarning, fitStatus};
 };
