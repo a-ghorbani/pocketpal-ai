@@ -1,6 +1,27 @@
 import {Model, GGUFMetadata, ContextInitParams} from './types';
 
 /**
+ * Validate that GGUF metadata has valid numeric values for core fields.
+ * Returns false if any required field is NaN, undefined, or non-positive.
+ * This catches corrupted metadata from older app versions.
+ */
+function isValidGGUFMetadata(metadata: GGUFMetadata): boolean {
+  const requiredFields = [
+    metadata.n_layers,
+    metadata.n_embd,
+    metadata.n_head,
+    metadata.n_head_kv,
+    metadata.n_vocab,
+    metadata.n_embd_head_k,
+    metadata.n_embd_head_v,
+  ];
+
+  return requiredFields.every(
+    value => typeof value === 'number' && !isNaN(value) && value > 0,
+  );
+}
+
+/**
  * Get bytes per element for KV cache based on quantization type
  * Reference: llama.cpp cache type sizes
  */
@@ -88,8 +109,12 @@ export function getModelMemoryRequirement(
 ): number {
   const mmProjSize = projectionModel?.size || 0;
 
-  // If GGUF metadata is available, use accurate formula
-  if (model.ggufMetadata && contextSettings) {
+  // If GGUF metadata is available and valid, use accurate formula
+  if (
+    model.ggufMetadata &&
+    contextSettings &&
+    isValidGGUFMetadata(model.ggufMetadata)
+  ) {
     const metadata = model.ggufMetadata;
 
     // Weights: already quantized in GGUF file
