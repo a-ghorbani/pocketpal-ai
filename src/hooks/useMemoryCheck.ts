@@ -4,6 +4,10 @@ import {L10nContext, formatBytes} from '../utils';
 import {Model} from '../utils/types';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
+// Note: This creates a circular dependency with ModelStore (which imports hasEnoughMemory).
+// This is intentional and runtime-safe because:
+// 1. modelStore is instantiated after class definition
+// 2. hasEnoughMemory is only called at runtime, not during module initialization
 import {modelStore} from '../store';
 import {MemoryFitStatus} from '../utils/memoryDisplay';
 

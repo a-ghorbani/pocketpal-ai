@@ -1,7 +1,6 @@
 #import <React/RCTBridgeModule.h>
 #import <UIKit/UIKit.h>
 #import <Metal/Metal.h>
-#import <mach/mach.h>
 #import <os/proc.h>
 
 @interface HardwareInfoModule : NSObject <RCTBridgeModule>

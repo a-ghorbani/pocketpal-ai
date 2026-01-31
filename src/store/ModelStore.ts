@@ -174,7 +174,10 @@ class ModelStore {
           });
 
           // Fetch and persist GGUF metadata after download completes
-          await this.fetchAndPersistGGUFMetadata(model);
+          // Skip for projection models (CLIP) - they have different metadata structure
+          if (model.modelType !== ModelType.PROJECTION) {
+            await this.fetchAndPersistGGUFMetadata(model);
+          }
         }
       },
       onError: (modelId, error) => {
