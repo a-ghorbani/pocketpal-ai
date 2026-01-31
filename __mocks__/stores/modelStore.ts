@@ -19,6 +19,10 @@ class MockModelStore {
   isStreaming = false;
   context: LlamaContext | undefined = undefined;
 
+  // Memory calibration variables
+  availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
+  largestSuccessfulLoad: number | undefined = 4 * 1e9; // 4GB largest successful load
+
   refreshDownloadStatuses: jest.Mock;
   addLocalModel: jest.Mock;
   setNContext: jest.Mock;

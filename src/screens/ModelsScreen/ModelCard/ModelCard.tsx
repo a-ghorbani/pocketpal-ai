@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useEffect} from 'react';
+import React, {useCallback, useState, useEffect, useMemo} from 'react';
 import {
   Alert,
   Linking,
@@ -25,7 +25,7 @@ import {
   HelperText,
 } from 'react-native-paper';
 
-import {ProjectionModelSelector} from '../../../components';
+import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
@@ -88,8 +88,27 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const [integrityError, setIntegrityError] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
 
+    // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
+    // Resolve projection model for memory check (same logic as ModelStore.checkMemoryAndConfirm)
+    const projectionModelForCheck = useMemo(
+      () => {
+        if (
+          model.supportsMultimodal &&
+          modelStore.getModelVisionPreference(model) &&
+          model.defaultProjectionModel
+        ) {
+          return modelStore.models.find(
+            m => m.id === model.defaultProjectionModel,
+          );
+        }
+        return undefined;
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observable tracked by observer()
+      [model, modelStore.models],
+    );
+
     const {memoryWarning, shortMemoryWarning, multimodalWarning} =
-      useMemoryCheck(model.size, model.supportsMultimodal);
+      useMemoryCheck(model, projectionModelForCheck);
     const {isOk: storageOk, message: storageNOkMessage} = useStorageCheck(
       model,
       {
@@ -667,6 +686,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                     {model.name}
                   </Text>
                 </View>
+
+                {/* Memory Requirement */}
+                {model.isDownloaded && (
+                  <MemoryRequirement
+                    model={model}
+                    projectionModel={projectionModelForCheck}
+                  />
+                )}
 
                 {/* Description - matching updated React example */}
                 {model.capabilities && model.capabilities.length > 0 && (

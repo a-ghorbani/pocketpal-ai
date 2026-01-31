@@ -1,6 +1,7 @@
 #import <React/RCTBridgeModule.h>
 #import <UIKit/UIKit.h>
 #import <Metal/Metal.h>
+#import <os/proc.h>
 
 @interface HardwareInfoModule : NSObject <RCTBridgeModule>
 @end
@@ -49,6 +50,24 @@ RCT_EXPORT_METHOD(getGPUInfo:(RCTPromiseResolveBlock)resolve
     resolve(result);
   } @catch (NSException *exception) {
     reject(@"error_getting_gpu_info", @"Could not retrieve GPU info", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(getAvailableMemory:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  @try {
+    // Get available memory using os_proc_available_memory()
+    uint64_t availableMemory = os_proc_available_memory();
+
+    if (availableMemory == 0) {
+      reject(@"error_getting_available_memory", @"Could not retrieve available memory", nil);
+      return;
+    }
+
+    resolve(@(availableMemory));
+  } @catch (NSException *exception) {
+    reject(@"error_getting_available_memory", @"Could not retrieve available memory", nil);
   }
 }
 

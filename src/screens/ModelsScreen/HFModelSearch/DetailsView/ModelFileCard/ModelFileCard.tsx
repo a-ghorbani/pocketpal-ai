@@ -91,9 +91,27 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
       ),
     ).get();
 
+    // Resolve projection model for memory check
+    // Resolve projection model for memory check
+    const projectionModelForCheck = useMemo(
+      () => {
+        if (
+          convertedModel.supportsMultimodal &&
+          convertedModel.defaultProjectionModel
+        ) {
+          return modelStore.models.find(
+            m => m.id === convertedModel.defaultProjectionModel,
+          );
+        }
+        return undefined;
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observable tracked by observer()
+      [convertedModel, modelStore.models],
+    );
+
     const {shortMemoryWarning, multimodalWarning} = useMemoryCheck(
-      convertedModel.size,
-      convertedModel.supportsMultimodal,
+      convertedModel,
+      projectionModelForCheck,
     );
 
     const warnings = [

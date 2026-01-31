@@ -336,6 +336,22 @@ export enum ModelType {
   LLM = 'llm',
 }
 
+/**
+ * GGUF metadata (currently this is used for memory estimation)
+ * Parsed from model file using llama.rn's loadLlamaModelInfo()
+ */
+export interface GGUFMetadata {
+  architecture: string;
+  n_layers: number;
+  n_embd: number;
+  n_head: number;
+  n_head_kv: number;
+  n_vocab: number;
+  n_embd_head_k: number; // Key head dimension
+  n_embd_head_v: number; // Value head dimension
+  sliding_window?: number; // For SWA models
+}
+
 export interface Model {
   id: string;
   author: string;
@@ -366,6 +382,9 @@ export interface Model {
 
   // Thinking capabilities
   supportsThinking?: boolean; // Whether this model supports thinking/reasoning mode
+
+  // GGUF metadata (for memory estimation)
+  ggufMetadata?: GGUFMetadata;
 
   defaultChatTemplate: ChatTemplateConfig;
   chatTemplate: ChatTemplateConfig;

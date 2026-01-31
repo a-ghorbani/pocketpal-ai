@@ -173,10 +173,16 @@ export const l10n = {
     },
     memory: {
       shortWarning: 'Memory Warning',
-      warning:
-        'Warning: Model size may exceed available memory. This could affect performance and stability of your device.',
       multimodalWarning:
         'This device may not have sufficient resources for multimodal models.',
+      // Concise badge labels for model card
+      memoryTight: 'Memory tight',
+      lowMemory: 'Low memory',
+      // Detailed message for snackbar (with numbers)
+      memoryDetailMessage:
+        'This model needs ~{needed} but only ~{available} is estimated as usable. Estimates improve as you use the app.',
+      // For expanded section
+      estimatedMemory: 'Estimated memory: ~{size}',
       alerts: {
         memoryWarningTitle: 'Memory Warning',
         memoryWarningMessage:
@@ -1495,10 +1501,16 @@ export const l10n = {
     },
     memory: {
       shortWarning: 'メモリ警告',
-      warning:
-        '警告：モデルサイズが利用可能なメモリを超える可能性があります、デバイスのパフォーマンスと安定性に影響する可能性があります',
       multimodalWarning:
         'このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります',
+      // Concise badge labels for model card
+      memoryTight: 'メモリ不足気味',
+      lowMemory: 'メモリ不足',
+      // Detailed message for snackbar (with numbers)
+      memoryDetailMessage:
+        'このモデルは~{needed}必要ですが、使用可能なメモリは~{available}と推定されています。アプリを使用するにつれて推定精度が向上します。',
+      // For expanded section
+      estimatedMemory: '推定メモリ: ~{size}',
       alerts: {
         memoryWarningTitle: 'メモリ警告',
         memoryWarningMessage:
@@ -2802,9 +2814,15 @@ export const l10n = {
     },
     memory: {
       shortWarning: '内存警告',
-      warning:
-        '警告：模型大小可能会超过可用内存，这可能会影响设备的性能和稳定性',
       multimodalWarning: '此设备可能没有足够的资源运行多模态模型',
+      // Concise badge labels for model card
+      memoryTight: '内存紧张',
+      lowMemory: '内存不足',
+      // Detailed message for snackbar (with numbers)
+      memoryDetailMessage:
+        '此模型需要约{needed}，但可用内存估计仅为约{available}。随着您使用应用，估计会更加准确。',
+      // For expanded section
+      estimatedMemory: '预估内存: ~{size}',
       alerts: {
         memoryWarningTitle: '内存警告',
         memoryWarningMessage:

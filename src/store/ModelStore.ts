@@ -1,4 +1,5 @@
 import {AppState, AppStateStatus, Platform, Alert} from 'react-native';
+import DeviceInfo from 'react-native-device-info';
 
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
@@ -60,6 +61,9 @@ import {
   createContextInitParams,
   createDefaultContextInitParams,
 } from '../utils/contextInitParamsVersions';
+import NativeHardwareInfo from '../specs/NativeHardwareInfo';
+import {getModelMemoryRequirement} from '../utils/memoryEstimator';
+import {loadLlamaModelInfo} from 'llama.rn';
 
 class ModelStore {
   models: Model[] = [];
@@ -121,6 +125,12 @@ class ModelStore {
   downloadError: ErrorState | null = null;
   modelLoadError: ErrorState | null = null;
 
+  // Memory calibration variables (persisted)
+  // Updated at app startup and after model release
+  availableMemoryCeiling: number | undefined = undefined;
+  // Updated after successful model load using GGUF estimator
+  largestSuccessfulLoad: number | undefined = undefined;
+
   constructor() {
     makeAutoObservable(this, {activeModel: computed});
     this.initializeThreadCount();
@@ -134,6 +144,8 @@ class ModelStore {
         'lastUsedModelId',
         'wasAutoReleased',
         'lastAutoReleasedModelId',
+        'availableMemoryCeiling',
+        'largestSuccessfulLoad',
       ],
       storage: AsyncStorage,
     }).then(async () => {
@@ -153,13 +165,19 @@ class ModelStore {
           });
         }
       },
-      onComplete: modelId => {
+      onComplete: async modelId => {
         const model = this.models.find(m => m.id === modelId);
         if (model) {
           runInAction(() => {
             model.progress = 100;
             model.isDownloaded = true;
           });
+
+          // Fetch and persist GGUF metadata after download completes
+          // Skip for projection models (CLIP) - they have different metadata structure
+          if (model.modelType !== ModelType.PROJECTION) {
+            await this.fetchAndPersistGGUFMetadata(model);
+          }
         }
       },
       onError: (modelId, error) => {
@@ -421,6 +439,34 @@ class ModelStore {
     }
 
     await this.initializeGpuSettings(); // Should be awaited to ensure GPU settings are applied before initializing context
+
+    // Initialize available memory ceiling at app startup if not set
+    if (this.availableMemoryCeiling === undefined) {
+      try {
+        const availableBytes = await NativeHardwareInfo.getAvailableMemory();
+        runInAction(() => {
+          this.availableMemoryCeiling = availableBytes;
+        });
+      } catch (error) {
+        // Fallback when native call fails
+        console.warn(
+          '[ModelStore] Native getAvailableMemory failed, using fallback:',
+          error,
+        );
+        const totalMemory = await DeviceInfo.getTotalMemory();
+        // Use conservative heuristic: min(60% of RAM, RAM - 1.2GB)
+        const fallbackCeiling = Math.min(
+          totalMemory * 0.6,
+          totalMemory - 1.2 * 1e9,
+        );
+        runInAction(() => {
+          this.availableMemoryCeiling = Math.max(fallbackCeiling, 0); // Ensure non-negative
+        });
+      }
+    }
+
+    // Load missing GGUF metadata for downloaded models (background, non-blocking)
+    this.loadMissingGGUFMetadata();
 
     // Check if we need to reload an auto-released model (for app restarts)
     this.checkAndReloadAutoReleasedModel();
@@ -968,6 +1014,143 @@ class ModelStore {
   };
 
   /**
+   * Fetch and persist GGUF metadata for a downloaded model
+   * Called after download completes to enable accurate memory estimation
+   */
+  fetchAndPersistGGUFMetadata = async (model: Model) => {
+    try {
+      const filePath = await this.getModelFullPath(model);
+      if (!filePath) {
+        console.warn(
+          '[ModelStore] Cannot fetch GGUF metadata: model path is undefined',
+        );
+        return;
+      }
+
+      const modelInfo = await loadLlamaModelInfo(filePath);
+      if (!modelInfo || typeof modelInfo !== 'object') {
+        console.warn('[ModelStore] Invalid model info returned');
+        return;
+      }
+
+      // Default vocab sizes by architecture (matches Python memory_estimator.py)
+      const ARCH_DEFAULT_VOCAB: Record<string, number> = {
+        llama: 128256,
+        gemma2: 256000,
+        gemma3n: 262144,
+        qwen2: 151936,
+        qwen3: 151936,
+        lfm2: 65536,
+        phi3: 32064,
+        mistral: 32000,
+        deepseek2: 102400,
+        clip: 49408, // CLIP models have smaller vocab
+      };
+
+      // Get the architecture to determine the correct key prefix
+      const architecture: string =
+        (modelInfo as any)['general.architecture'] || 'llama';
+
+      // Helper to get architecture-specific value with fallback (matches Python get_arch_value)
+      const getArchValue = (
+        field: string,
+        defaultValue?: number,
+      ): number | undefined => {
+        const key = `${architecture}.${field}`;
+        const value = (modelInfo as any)[key];
+        if (value !== undefined && value !== null) {
+          // Handle string values (GGUF sometimes returns strings)
+          if (typeof value === 'string') {
+            const parsed = value.includes('.')
+              ? parseFloat(value)
+              : parseInt(value, 10);
+            return isNaN(parsed) ? defaultValue : parsed;
+          }
+          return typeof value === 'number' ? value : defaultValue;
+        }
+        return defaultValue;
+      };
+
+      // Extract core fields (these are required)
+      const n_layers = getArchValue('block_count');
+      const n_embd = getArchValue('embedding_length');
+      const n_head = getArchValue('attention.head_count');
+
+      // Validate core fields exist - without these we can't estimate memory
+      if (!n_layers || !n_embd || !n_head) {
+        return;
+      }
+
+      // Extract optional fields with fallbacks (matches Python ModelInfo.__post_init__)
+      const n_head_kv = getArchValue('attention.head_count_kv', n_head); // fallback to n_head
+      const n_vocab =
+        getArchValue('vocab_size') ||
+        ARCH_DEFAULT_VOCAB[architecture] ||
+        128000;
+
+      // Derive head dimensions if not present (matches Python)
+      const n_embd_head_k =
+        getArchValue('attention.key_length') || Math.floor(n_embd / n_head);
+      const n_embd_head_v =
+        getArchValue('attention.value_length') || Math.floor(n_embd / n_head);
+
+      // SWA (Sliding Window Attention) - optional
+      const sliding_window = getArchValue('attention.sliding_window');
+
+      const metadata = {
+        architecture,
+        n_layers,
+        n_embd,
+        n_head,
+        n_head_kv: n_head_kv!,
+        n_vocab,
+        n_embd_head_k,
+        n_embd_head_v,
+        sliding_window,
+      };
+
+      runInAction(() => {
+        model.ggufMetadata = metadata;
+      });
+    } catch (error) {
+      console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
+    }
+  };
+
+  /**
+   * Load GGUF metadata for downloaded models that don't have it yet.
+   * Runs in background, doesn't block startup.
+   */
+  private loadMissingGGUFMetadata = () => {
+    const modelsNeedingMetadata = this.models.filter(
+      m =>
+        m.isDownloaded &&
+        !m.ggufMetadata &&
+        m.modelType !== ModelType.PROJECTION,
+    );
+
+    if (modelsNeedingMetadata.length === 0) {
+      return;
+    }
+
+    // Fetch in background, don't block startup
+    (async () => {
+      for (const model of modelsNeedingMetadata) {
+        try {
+          await this.fetchAndPersistGGUFMetadata(model);
+        } catch (error) {
+          // Log but continue - not critical for startup
+          console.warn(
+            '[ModelStore] Failed to fetch metadata for',
+            model.name,
+            error,
+          );
+        }
+      }
+    })();
+  };
+
+  /**
    * Determines whether multimodal (vision) should be enabled for a model load.
    *
    * Resolves multimodal config: enables vision if model supports it and a projection
@@ -1025,10 +1208,11 @@ class ModelStore {
   private checkMemoryAndConfirm = async (
     model: Model,
     isMultimodalInit: boolean,
+    projectionModel?: Model,
   ): Promise<boolean> => {
     let hasMemory = true;
     try {
-      hasMemory = await hasEnoughMemory(model.size, isMultimodalInit);
+      hasMemory = await hasEnoughMemory(model, projectionModel);
     } catch (error) {
       console.error('Memory check failed:', error);
       return false;
@@ -1115,6 +1299,7 @@ class ModelStore {
       const shouldProceed = await this.checkMemoryAndConfirm(
         model,
         isMultimodalInit,
+        projectionModel,
       );
 
       if (!shouldProceed) {
@@ -1265,6 +1450,29 @@ class ModelStore {
         this.setActiveModel(model.id);
         this.pendingModelId = null;
       });
+
+      // Update largestSuccessfulLoad using GGUF estimator
+      try {
+        const estimated = getModelMemoryRequirement(
+          model,
+          projectionModel,
+          contextInitParams,
+        );
+        runInAction(() => {
+          if (
+            this.largestSuccessfulLoad === undefined ||
+            estimated > this.largestSuccessfulLoad
+          ) {
+            this.largestSuccessfulLoad = estimated;
+          }
+        });
+      } catch (error) {
+        console.warn(
+          '[ModelStore] Failed to update largestSuccessfulLoad:',
+          error,
+        );
+      }
+
       return ctx;
     } catch (error) {
       console.error(
@@ -1388,6 +1596,24 @@ class ModelStore {
           this.activeModelId = undefined;
         }
       });
+
+      // Update availableMemoryCeiling after release (clean state)
+      try {
+        const availableBytes = await NativeHardwareInfo.getAvailableMemory();
+        runInAction(() => {
+          if (
+            this.availableMemoryCeiling === undefined ||
+            availableBytes > this.availableMemoryCeiling
+          ) {
+            this.availableMemoryCeiling = availableBytes;
+          }
+        });
+      } catch (error) {
+        console.warn(
+          '[ModelStore] Failed to update availableMemoryCeiling:',
+          error,
+        );
+      }
     }
     return 'Context released successfully';
   };
@@ -1681,6 +1907,9 @@ class ModelStore {
       ];
       model.chatTemplate = {...defaultSettings.chatTemplate};
       model.stopWords = [...(defaultSettings?.completionParams?.stop || [])];
+
+      // Clear GGUF metadata to force re-fetch with correct number types
+      model.ggufMetadata = undefined;
     });
 
     const hfModels = this.models.filter(
@@ -1697,6 +1926,9 @@ class ModelStore {
       ];
       model.chatTemplate = {...defaultSettings.chatTemplate};
       model.stopWords = [...(defaultSettings?.completionParams?.stop || [])];
+
+      // Clear GGUF metadata to force re-fetch with correct number types
+      model.ggufMetadata = undefined;
     });
 
     runInAction(() => {
@@ -1706,6 +1938,9 @@ class ModelStore {
 
       this.models = [...this.models, ...localModels, ...hfModels];
     });
+
+    // Re-fetch GGUF metadata with correct number types
+    this.loadMissingGGUFMetadata();
   };
 
   resetModelChatTemplate = (modelId: string) => {
