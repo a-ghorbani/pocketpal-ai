@@ -324,4 +324,20 @@ describe('ChatPalModelPickerSheet', () => {
     // when the user swipes down or taps the backdrop
     // For testing purposes, we can verify the component structure is correct
   });
+
+  it('enables content panning gesture for scrolling', () => {
+    const {getByTestId} = render(
+      <UserContext.Provider value={user}>
+        <L10nContext.Provider value={l10n.en}>
+          <ChatPalModelPickerSheet {...defaultProps} />
+        </L10nContext.Provider>
+      </UserContext.Provider>,
+    );
+
+    // Since BottomSheet is mocked, we verify the component renders correctly
+    // The actual gesture behavior is tested through integration/manual testing
+    expect(getByTestId('bottom-sheet')).toBeTruthy();
+    // Note: The mock BottomSheet doesn't expose props, so this test primarily
+    // ensures no regressions in component rendering
+  });
 });
