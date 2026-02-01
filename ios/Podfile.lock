@@ -59,7 +59,7 @@ PODS:
   - hermes-engine (0.82.1):
     - hermes-engine/Pre-built (= 0.82.1)
   - hermes-engine/Pre-built (0.82.1)
-  - llama-rn (0.11.0-rc.2):
+  - llama-rn (0.11.0-rc.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -3655,7 +3655,7 @@ SPEC CHECKSUMS:
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
-  llama-rn: 5ef85105315906ec955b886532f6cb1fd52f2d2f
+  llama-rn: 03974fd682bcc0f1e0d7e536d988337076b83e57
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
