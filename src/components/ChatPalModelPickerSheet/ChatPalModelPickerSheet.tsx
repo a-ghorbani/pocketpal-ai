@@ -373,7 +373,7 @@ export const ChatPalModelPickerSheet = observer(
           backgroundColor: theme.colors.primary,
         }}
         // Add these props to better handle gestures
-        enableContentPanningGesture={false}
+        enableContentPanningGesture={true} // Allow vertical scrolling within content
         enableHandlePanningGesture>
         <BottomSheetView>
           <View style={styles.tabs}>
