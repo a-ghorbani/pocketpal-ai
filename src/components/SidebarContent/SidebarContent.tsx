@@ -567,7 +567,11 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
 
     return (
       <GestureHandlerRootView style={styles.sidebarContainer}>
-        <View style={[styles.contentWrapper, {paddingTop: insets.top}]}>
+        <View
+          style={[
+            styles.contentWrapper,
+            {paddingTop: insets.top, paddingBottom: insets.bottom},
+          ]}>
           {chatSessionStore.isSelectionMode ? (
             <>
               <SelectionModeHeader
