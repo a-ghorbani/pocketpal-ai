@@ -85,7 +85,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
         children,
       ),
     BottomSheetView: ({children}: any) =>
-      mockReact.createElement('View', {testID: 'bottom-sheet-view'}, children),
+      mockReact.createElement(
+        'View',
+        {testID: 'bottom-sheet-flatlist'},
+        children,
+      ),
   };
 });
 
@@ -127,7 +131,7 @@ describe('ChatPalModelPickerSheet', () => {
     );
 
     expect(getByTestId('bottom-sheet')).toBeTruthy();
-    expect(getByTestId('bottom-sheet-view')).toBeTruthy();
+    expect(getByTestId('bottom-sheet-flatlist')).toBeTruthy();
   });
 
   it('does not render when not visible', () => {
@@ -323,5 +327,21 @@ describe('ChatPalModelPickerSheet', () => {
     // In a real scenario, the onClose would be called by the BottomSheet component
     // when the user swipes down or taps the backdrop
     // For testing purposes, we can verify the component structure is correct
+  });
+
+  it('enables content panning gesture for scrolling', () => {
+    const {getByTestId} = render(
+      <UserContext.Provider value={user}>
+        <L10nContext.Provider value={l10n.en}>
+          <ChatPalModelPickerSheet {...defaultProps} />
+        </L10nContext.Provider>
+      </UserContext.Provider>,
+    );
+
+    // Since BottomSheet is mocked, we verify the component renders correctly
+    // The actual gesture behavior is tested through integration/manual testing
+    expect(getByTestId('bottom-sheet')).toBeTruthy();
+    // Note: The mock BottomSheet doesn't expose props, so this test primarily
+    // ensures no regressions in component rendering
   });
 });

@@ -6,7 +6,6 @@ import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetFlatListMethods,
   BottomSheetScrollView,
-  BottomSheetView,
 } from '@gorhom/bottom-sheet';
 
 import {useTheme} from '../../hooks';
@@ -375,24 +374,22 @@ export const ChatPalModelPickerSheet = observer(
         // Add these props to better handle gestures
         enableContentPanningGesture={false}
         enableHandlePanningGesture>
-        <BottomSheetView>
-          <View style={styles.tabs}>
-            {TABS.map((tab, index) => renderTab(tab.id, tab.label, index))}
-          </View>
-          <BottomSheetFlatList
-            ref={flatListRef}
-            data={TABS}
-            renderItem={renderContent}
-            bounces={false}
-            showsVerticalScrollIndicator={false}
-            keyExtractor={item => item.id}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-          />
-        </BottomSheetView>
+        <View style={styles.tabs}>
+          {TABS.map((tab, index) => renderTab(tab.id, tab.label, index))}
+        </View>
+        <BottomSheetFlatList
+          ref={flatListRef}
+          data={TABS}
+          renderItem={renderContent}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={item => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+        />
       </BottomSheet>
     );
   },

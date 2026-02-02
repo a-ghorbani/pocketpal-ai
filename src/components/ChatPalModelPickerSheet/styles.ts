@@ -57,8 +57,6 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     itemContent: {
       flex: 1,
       marginLeft: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
       justifyContent: 'space-between',
     },
     itemTextContent: {
