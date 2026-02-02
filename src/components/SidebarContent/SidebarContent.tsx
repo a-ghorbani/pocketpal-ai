@@ -13,7 +13,6 @@ import {Menu, RenameModal, Checkbox} from '..';
 import {
   BenchmarkIcon,
   ChatIcon,
-  CheckCircleIcon,
   EditIcon,
   ModelIcon,
   PalIcon,
@@ -145,10 +144,7 @@ const SessionItem = React.memo<SessionItemProps>(
                 onPressSelect(session.id);
                 onMenuDismiss();
               }}
-              label={l10n.components.sidebarContent.select}
-              leadingIcon={() => (
-                <CheckCircleIcon stroke={theme.colors.primary} />
-              )}
+              label={`${l10n.components.sidebarContent.select}...`}
             />
           </Menu>
         )}
@@ -162,10 +158,7 @@ SessionItem.displayName = 'SessionItem';
 // Selection mode header component
 interface SelectionModeHeaderProps {
   selectedCount: number;
-  allSelected: boolean;
   onCancel: () => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
   onExport: () => void;
   onDelete: () => void;
   l10n: any;
@@ -175,18 +168,13 @@ interface SelectionModeHeaderProps {
 
 const SelectionModeHeader: React.FC<SelectionModeHeaderProps> = ({
   selectedCount,
-  allSelected,
   onCancel,
-  onSelectAll,
-  onDeselectAll,
   onExport,
   onDelete,
   l10n,
   theme,
   styles,
 }) => {
-  const [overflowVisible, setOverflowVisible] = React.useState(false);
-
   return (
     <View style={styles.selectionModeHeader}>
       <TouchableOpacity onPress={onCancel} testID="cancel-selection-button">
@@ -200,58 +188,76 @@ const SelectionModeHeader: React.FC<SelectionModeHeaderProps> = ({
         )}
       </Text>
 
-      <Menu
-        visible={overflowVisible}
-        onDismiss={() => setOverflowVisible(false)}
-        anchor={
-          <TouchableOpacity
-            onPress={() => setOverflowVisible(true)}
-            testID="overflow-menu-button">
-            <Text style={styles.overflowMenuButton}>•••</Text>
-          </TouchableOpacity>
-        }
-        anchorPosition="bottom">
-        <Menu.Item
-          onPress={() => {
-            allSelected ? onDeselectAll() : onSelectAll();
-            setOverflowVisible(false);
-          }}
-          label={
-            allSelected
-              ? l10n.components.sidebarContent.deselectAll
-              : l10n.components.sidebarContent.selectAll
-          }
-        />
-        <Divider />
-        <Menu.Item
-          onPress={() => {
-            onExport();
-            setOverflowVisible(false);
-          }}
-          label={l10n.components.sidebarContent.exportCount.replace(
-            '{{count}}',
-            selectedCount.toString(),
-          )}
+      <View style={styles.headerActions}>
+        <TouchableOpacity
+          onPress={onExport}
           disabled={selectedCount === 0}
-        />
-        <Menu.Item
-          onPress={() => {
-            onDelete();
-            setOverflowVisible(false);
-          }}
-          label={l10n.components.sidebarContent.deleteCount.replace(
-            '{{count}}',
-            selectedCount.toString(),
-          )}
-          labelStyle={{color: theme.colors.error}}
+          style={[
+            styles.headerActionButton,
+            selectedCount === 0 && styles.headerActionButtonDisabled,
+          ]}
+          testID="bulk-export-button">
+          <ShareIcon
+            stroke={
+              selectedCount === 0
+                ? theme.colors.onSurfaceDisabled
+                : theme.colors.primary
+            }
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onDelete}
           disabled={selectedCount === 0}
-        />
-      </Menu>
+          style={[
+            styles.headerActionButton,
+            selectedCount === 0 && styles.headerActionButtonDisabled,
+          ]}
+          testID="bulk-delete-button">
+          <TrashIcon
+            stroke={
+              selectedCount === 0
+                ? theme.colors.onSurfaceDisabled
+                : theme.colors.error
+            }
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 SelectionModeHeader.displayName = 'SelectionModeHeader';
+
+// Select all row component
+interface SelectAllRowProps {
+  allSelected: boolean;
+  onToggle: () => void;
+  l10n: any;
+  styles: any;
+}
+
+const SelectAllRow: React.FC<SelectAllRowProps> = ({
+  allSelected,
+  onToggle,
+  l10n,
+  styles,
+}) => {
+  return (
+    <TouchableOpacity
+      onPress={onToggle}
+      style={styles.selectAllRow}
+      testID="select-all-row">
+      <View style={styles.selectAllCheckbox}>
+        <Checkbox checked={allSelected} onPress={onToggle} />
+      </View>
+      <Text style={styles.selectAllText}>
+        {l10n.components.sidebarContent.selectAll}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+SelectAllRow.displayName = 'SelectAllRow';
 
 export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
   props => {
@@ -566,16 +572,24 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
             <>
               <SelectionModeHeader
                 selectedCount={chatSessionStore.selectedCount}
-                allSelected={chatSessionStore.allSelected}
                 onCancel={handleExitSelectionMode}
-                onSelectAll={() => chatSessionStore.selectAllSessions()}
-                onDeselectAll={() => chatSessionStore.deselectAllSessions()}
                 onExport={handleBulkExport}
                 onDelete={handleBulkDelete}
                 l10n={l10n}
                 theme={theme}
                 styles={styles}
               />
+              <SelectAllRow
+                allSelected={chatSessionStore.allSelected}
+                onToggle={() =>
+                  chatSessionStore.allSelected
+                    ? chatSessionStore.deselectAllSessions()
+                    : chatSessionStore.selectAllSessions()
+                }
+                l10n={l10n}
+                styles={styles}
+              />
+              <Divider style={styles.selectAllDivider} />
               <SectionList
                 sections={sections}
                 keyExtractor={keyExtractor}

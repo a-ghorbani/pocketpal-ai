@@ -84,8 +84,35 @@ export const createStyles = (theme: MD3Theme) =>
     menuDivider: {
       marginVertical: 4,
     },
-    overflowMenuButton: {
-      color: theme.colors.primary,
-      fontSize: 20,
+    // Header action buttons (export, delete icons)
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    headerActionButton: {
+      padding: 4,
+    },
+    headerActionButtonDisabled: {
+      opacity: 0.4,
+    },
+    // Select all row
+    selectAllRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: theme.colors.surface,
+    },
+    selectAllCheckbox: {
+      marginRight: 12,
+    },
+    selectAllText: {
+      fontSize: 16,
+      color: theme.colors.onSurface,
+    },
+    selectAllDivider: {
+      backgroundColor: theme.colors.outline,
+      opacity: 0.3,
     },
   });
