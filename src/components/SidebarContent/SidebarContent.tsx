@@ -561,7 +561,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
 
     return (
       <GestureHandlerRootView style={styles.sidebarContainer}>
-        <View style={styles.contentWrapper}>
+        <View style={[styles.contentWrapper, {paddingTop: insets.top}]}>
           {chatSessionStore.isSelectionMode ? (
             <>
               <SelectionModeHeader
@@ -582,10 +582,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
                 renderItem={renderItem}
                 renderSectionHeader={renderSectionHeader}
                 stickySectionHeadersEnabled={false}
-                contentContainerStyle={[
-                  styles.scrollViewContent,
-                  {paddingTop: insets.top},
-                ]}
+                contentContainerStyle={styles.scrollViewContent}
               />
             </>
           ) : (
@@ -596,10 +593,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
               renderSectionHeader={renderSectionHeader}
               ListHeaderComponent={ListHeaderComponent}
               stickySectionHeadersEnabled={false}
-              contentContainerStyle={[
-                styles.scrollViewContent,
-                {paddingTop: insets.top},
-              ]}
+              contentContainerStyle={styles.scrollViewContent}
             />
           )}
         </View>
