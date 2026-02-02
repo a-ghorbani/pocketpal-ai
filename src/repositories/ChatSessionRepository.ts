@@ -350,6 +350,63 @@ class ChatSessionRepository {
     });
   }
 
+  // Delete multiple sessions in a single transaction
+  async deleteSessions(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await database.write(async () => {
+      for (const id of ids) {
+        const session = await database.collections
+          .get('chat_sessions')
+          .find(id)
+          .catch(() => null);
+
+        if (!session) {
+          console.warn(`Session ${id} not found during bulk delete, skipping`);
+          continue;
+        }
+
+        // Delete associated messages
+        const messages = await database.collections
+          .get('messages')
+          .query(Q.where('session_id', id))
+          .fetch();
+
+        for (const message of messages) {
+          await message.destroyPermanently();
+        }
+
+        // Delete associated completion settings
+        const settings = await database.collections
+          .get('completion_settings')
+          .query(Q.where('session_id', id))
+          .fetch();
+
+        for (const setting of settings) {
+          await setting.destroyPermanently();
+        }
+
+        // Delete the session itself
+        await session.destroyPermanently();
+      }
+    });
+  }
+
+  // Export multiple sessions
+  async exportSessions(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    const {exportChatSession} = await import('../utils/exportUtils');
+
+    for (const id of ids) {
+      await exportChatSession(id);
+    }
+  }
+
   // Add a message to a session
   async addMessageToSession(
     sessionId: string,

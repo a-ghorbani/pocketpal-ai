@@ -61,6 +61,9 @@ class ChatSessionStore {
   // Migration status
   isMigrating: boolean = false;
   migrationComplete: boolean = false;
+  // Selection mode state
+  isSelectionMode: boolean = false;
+  selectedSessionIds: Set<string> = new Set();
 
   constructor() {
     makeAutoObservable(this);
@@ -797,6 +800,102 @@ class ChatSessionStore {
       return session?.activePalId;
     }
     return this.newChatPalId;
+  }
+
+  // Selection mode computed properties
+  get selectedCount(): number {
+    return this.selectedSessionIds.size;
+  }
+
+  get allSelected(): boolean {
+    return (
+      this.sessions.length > 0 &&
+      this.selectedSessionIds.size === this.sessions.length
+    );
+  }
+
+  // Selection mode actions
+  enterSelectionMode(sessionId?: string) {
+    runInAction(() => {
+      this.isSelectionMode = true;
+      this.selectedSessionIds.clear();
+      if (sessionId) {
+        this.selectedSessionIds.add(sessionId);
+      }
+    });
+  }
+
+  exitSelectionMode() {
+    runInAction(() => {
+      this.isSelectionMode = false;
+      this.selectedSessionIds.clear();
+    });
+  }
+
+  toggleSessionSelection(sessionId: string) {
+    runInAction(() => {
+      if (this.selectedSessionIds.has(sessionId)) {
+        this.selectedSessionIds.delete(sessionId);
+      } else {
+        this.selectedSessionIds.add(sessionId);
+      }
+    });
+  }
+
+  selectAllSessions() {
+    runInAction(() => {
+      this.sessions.forEach(session => {
+        this.selectedSessionIds.add(session.id);
+      });
+    });
+  }
+
+  deselectAllSessions() {
+    runInAction(() => {
+      this.selectedSessionIds.clear();
+    });
+  }
+
+  async bulkDeleteSessions(): Promise<void> {
+    try {
+      const idsToDelete = Array.from(this.selectedSessionIds);
+
+      // Delete from database
+      await chatSessionRepository.deleteSessions(idsToDelete);
+
+      // Check if active session was deleted
+      const wasActiveSessionDeleted =
+        this.activeSessionId && idsToDelete.includes(this.activeSessionId);
+
+      if (wasActiveSessionDeleted) {
+        this.resetActiveSession();
+      }
+
+      // Update local state and exit selection mode
+      runInAction(() => {
+        this.sessions = this.sessions.filter(
+          session => !idsToDelete.includes(session.id),
+        );
+        this.exitSelectionMode();
+      });
+    } catch (error) {
+      console.error('Failed to bulk delete sessions:', error);
+      throw error;
+    }
+  }
+
+  async bulkExportSessions(): Promise<void> {
+    try {
+      const idsToExport = Array.from(this.selectedSessionIds);
+      await chatSessionRepository.exportSessions(idsToExport);
+
+      runInAction(() => {
+        this.exitSelectionMode();
+      });
+    } catch (error) {
+      console.error('Failed to bulk export sessions:', error);
+      throw error;
+    }
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {
