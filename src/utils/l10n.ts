@@ -9,6 +9,8 @@ export const l10n = {
       reset: 'Reset',
       save: 'Save',
       update: 'Update',
+      error: 'Error',
+      export: 'Export',
       networkError: 'Network error. Please try again.',
       downloadETA: 'ETA',
       calculating: 'calculating...',
@@ -953,6 +955,22 @@ export const l10n = {
         },
         deleteChatTitle: 'Delete Chat',
         deleteChatMessage: 'Are you sure you want to delete this chat?',
+        // Selection mode
+        select: 'Select',
+        nSelected: '{{count}} selected',
+        selectAll: 'Select All',
+        deselectAll: 'Deselect All',
+        // Overflow menu actions
+        exportCount: 'Export ({{count}})',
+        deleteCount: 'Delete ({{count}})',
+        // Bulk delete confirmation
+        bulkDeleteTitle: 'Delete Chat Sessions',
+        bulkDeleteMessage:
+          'Delete {{count}} chat session(s)? This action cannot be undone.',
+        bulkDeleteError: 'Failed to delete chat sessions. Please try again.',
+        // Bulk export
+        exportError: 'Failed to export chat session. Please try again.',
+        bulkExportError: 'Failed to export chat sessions. Please try again.',
         dateGroups: {
           today: 'Today',
           yesterday: 'Yesterday',
@@ -1333,6 +1351,8 @@ export const l10n = {
       reset: 'リセット',
       save: '保存',
       update: '更新',
+      error: 'エラー',
+      export: 'エクスポート',
       networkError: 'ネットワークエラーが発生しました、もう一度お試しください',
       downloadETA: '残り',
       minutes: '分',
@@ -2276,6 +2296,25 @@ export const l10n = {
         },
         deleteChatTitle: 'チャットを削除',
         deleteChatMessage: 'このチャットを削除してもよろしいですか？',
+        // Selection mode
+        select: '選択',
+        nSelected: '{{count}}件選択中',
+        selectAll: 'すべて選択',
+        deselectAll: 'すべて解除',
+        // Overflow menu actions
+        exportCount: 'エクスポート ({{count}})',
+        deleteCount: '削除 ({{count}})',
+        // Bulk delete confirmation
+        bulkDeleteTitle: 'チャットを削除',
+        bulkDeleteMessage:
+          '{{count}}件のチャットを削除しますか？この操作は取り消せません。',
+        bulkDeleteError:
+          'チャットの削除に失敗しました。もう一度お試しください。',
+        // Bulk export
+        exportError:
+          'チャットのエクスポートに失敗しました。もう一度お試しください。',
+        bulkExportError:
+          'チャットのエクスポートに失敗しました。もう一度お試しください。',
         dateGroups: {
           today: '今日',
           yesterday: '昨日',
@@ -2664,6 +2703,8 @@ export const l10n = {
       reset: '重置',
       save: '保存',
       update: '更新',
+      error: '错误',
+      export: '导出',
       networkError: '网络错误，请重试',
       downloadETA: '预计时间',
       calculating: '计算中...',
@@ -3543,6 +3584,21 @@ export const l10n = {
         },
         deleteChatTitle: '删除聊天',
         deleteChatMessage: '确定要删除这个聊天记录吗？',
+        // Selection mode
+        select: '选择',
+        nSelected: '已选择 {{count}} 项',
+        selectAll: '全选',
+        deselectAll: '取消全选',
+        // Overflow menu actions
+        exportCount: '导出 ({{count}})',
+        deleteCount: '删除 ({{count}})',
+        // Bulk delete confirmation
+        bulkDeleteTitle: '删除聊天',
+        bulkDeleteMessage: '删除 {{count}} 个聊天？此操作无法撤销。',
+        bulkDeleteError: '删除聊天失败，请重试。',
+        // Bulk export
+        exportError: '导出聊天失败，请重试。',
+        bulkExportError: '导出聊天失败，请重试。',
         dateGroups: {
           today: '今天',
           yesterday: '昨天',

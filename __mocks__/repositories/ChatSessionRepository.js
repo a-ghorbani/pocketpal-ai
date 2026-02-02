@@ -71,6 +71,16 @@ class ChatSessionRepository {
     return; // Mock: do nothing
   }
 
+  // Delete multiple sessions
+  async deleteSessions(ids) {
+    return; // Mock: do nothing
+  }
+
+  // Export multiple sessions
+  async exportSessions(ids) {
+    return; // Mock: do nothing
+  }
+
   // Add a message to a session
   async addMessageToSession(sessionId, message) {
     return {
