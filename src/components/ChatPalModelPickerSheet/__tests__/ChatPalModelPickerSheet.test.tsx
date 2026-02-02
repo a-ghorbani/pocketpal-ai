@@ -85,7 +85,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
         children,
       ),
     BottomSheetView: ({children}: any) =>
-      mockReact.createElement('View', {testID: 'bottom-sheet-view'}, children),
+      mockReact.createElement(
+        'View',
+        {testID: 'bottom-sheet-flatlist'},
+        children,
+      ),
   };
 });
 
@@ -127,7 +131,7 @@ describe('ChatPalModelPickerSheet', () => {
     );
 
     expect(getByTestId('bottom-sheet')).toBeTruthy();
-    expect(getByTestId('bottom-sheet-view')).toBeTruthy();
+    expect(getByTestId('bottom-sheet-flatlist')).toBeTruthy();
   });
 
   it('does not render when not visible', () => {
