@@ -1,5 +1,5 @@
 import React from 'react';
-import {Text, Alert} from 'react-native';
+import {Text} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {NavigationContainer} from '@react-navigation/native';
