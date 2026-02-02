@@ -54,4 +54,38 @@ export const createStyles = (theme: MD3Theme) =>
     sessionTouchable: {
       flex: 1,
     },
+    // Selection mode styles
+    selectionModeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.outline,
+      backgroundColor: theme.colors.surface,
+    },
+    selectedCountText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.onSurface,
+      flex: 1,
+      textAlign: 'center',
+    },
+    sessionItemContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      position: 'relative',
+    },
+    sessionCheckbox: {
+      marginLeft: 8,
+      marginRight: 4,
+    },
+    menuDivider: {
+      marginVertical: 4,
+    },
+    overflowMenuButton: {
+      color: theme.colors.primary,
+      fontSize: 20,
+    },
   });
