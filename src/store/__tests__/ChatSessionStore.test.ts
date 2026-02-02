@@ -15,6 +15,8 @@ jest.spyOn(chatSessionRepository, 'getSessionById');
 jest.spyOn(chatSessionRepository, 'getSessionMetadataWithSettings');
 jest.spyOn(chatSessionRepository, 'createSession');
 jest.spyOn(chatSessionRepository, 'deleteSession');
+jest.spyOn(chatSessionRepository, 'deleteSessions');
+jest.spyOn(chatSessionRepository, 'exportSessions');
 jest.spyOn(chatSessionRepository, 'addMessageToSession');
 jest.spyOn(chatSessionRepository, 'updateMessage');
 jest.spyOn(chatSessionRepository, 'updateSessionTitle');
@@ -36,6 +38,8 @@ describe('chatSessionStore', () => {
     jest.clearAllMocks();
     chatSessionStore.sessions = [];
     chatSessionStore.activeSessionId = null;
+    chatSessionStore.isSelectionMode = false;
+    chatSessionStore.selectedSessionIds.clear();
   });
 
   describe('loadSessionList', () => {
@@ -1550,6 +1554,321 @@ describe('chatSessionStore', () => {
       await chatSessionStore.setActiveSession('session2');
       expect(chatSessionStore.sessions[1].messages[0].id).toBe('msg2');
       expect(chatSessionStore.sessions[1].messagesLoaded).toBe(true);
+    });
+  });
+
+  describe('Selection Mode', () => {
+    beforeEach(() => {
+      // Set up some sessions for selection tests
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: 'Session 1',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+        {
+          id: 'session2',
+          title: 'Session 2',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+        {
+          id: 'session3',
+          title: 'Session 3',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+    });
+
+    describe('enterSelectionMode', () => {
+      it('sets isSelectionMode to true', () => {
+        chatSessionStore.enterSelectionMode();
+        expect(chatSessionStore.isSelectionMode).toBe(true);
+      });
+
+      it('pre-selects the session when sessionId is provided', () => {
+        chatSessionStore.enterSelectionMode('session2');
+        expect(chatSessionStore.isSelectionMode).toBe(true);
+        expect(chatSessionStore.selectedSessionIds.has('session2')).toBe(true);
+        expect(chatSessionStore.selectedCount).toBe(1);
+      });
+
+      it('clears previous selections when entering selection mode', () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.enterSelectionMode('session2');
+        expect(chatSessionStore.selectedSessionIds.has('session1')).toBe(false);
+        expect(chatSessionStore.selectedSessionIds.has('session2')).toBe(true);
+        expect(chatSessionStore.selectedCount).toBe(1);
+      });
+
+      it('enters selection mode without pre-selection when no sessionId provided', () => {
+        chatSessionStore.enterSelectionMode();
+        expect(chatSessionStore.isSelectionMode).toBe(true);
+        expect(chatSessionStore.selectedCount).toBe(0);
+      });
+    });
+
+    describe('exitSelectionMode', () => {
+      it('sets isSelectionMode to false', () => {
+        chatSessionStore.isSelectionMode = true;
+        chatSessionStore.exitSelectionMode();
+        expect(chatSessionStore.isSelectionMode).toBe(false);
+      });
+
+      it('clears all selections', () => {
+        chatSessionStore.isSelectionMode = true;
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session2');
+        chatSessionStore.exitSelectionMode();
+        expect(chatSessionStore.selectedSessionIds.size).toBe(0);
+      });
+    });
+
+    describe('toggleSessionSelection', () => {
+      it('adds session ID when not selected', () => {
+        chatSessionStore.toggleSessionSelection('session1');
+        expect(chatSessionStore.selectedSessionIds.has('session1')).toBe(true);
+        expect(chatSessionStore.selectedCount).toBe(1);
+      });
+
+      it('removes session ID when already selected', () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.toggleSessionSelection('session1');
+        expect(chatSessionStore.selectedSessionIds.has('session1')).toBe(false);
+        expect(chatSessionStore.selectedCount).toBe(0);
+      });
+
+      it('handles multiple toggles correctly', () => {
+        chatSessionStore.toggleSessionSelection('session1');
+        chatSessionStore.toggleSessionSelection('session2');
+        expect(chatSessionStore.selectedCount).toBe(2);
+        chatSessionStore.toggleSessionSelection('session1');
+        expect(chatSessionStore.selectedCount).toBe(1);
+        expect(chatSessionStore.selectedSessionIds.has('session2')).toBe(true);
+      });
+    });
+
+    describe('selectAllSessions', () => {
+      it('adds all session IDs to selectedSessionIds', () => {
+        chatSessionStore.selectAllSessions();
+        expect(chatSessionStore.selectedCount).toBe(3);
+        expect(chatSessionStore.selectedSessionIds.has('session1')).toBe(true);
+        expect(chatSessionStore.selectedSessionIds.has('session2')).toBe(true);
+        expect(chatSessionStore.selectedSessionIds.has('session3')).toBe(true);
+      });
+
+      it('works when some sessions are already selected', () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectAllSessions();
+        expect(chatSessionStore.selectedCount).toBe(3);
+      });
+    });
+
+    describe('deselectAllSessions', () => {
+      it('clears all selected session IDs', () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session2');
+        chatSessionStore.deselectAllSessions();
+        expect(chatSessionStore.selectedCount).toBe(0);
+        expect(chatSessionStore.selectedSessionIds.size).toBe(0);
+      });
+    });
+
+    describe('selectedCount computed property', () => {
+      it('returns correct count of selected sessions', () => {
+        expect(chatSessionStore.selectedCount).toBe(0);
+        chatSessionStore.selectedSessionIds.add('session1');
+        expect(chatSessionStore.selectedCount).toBe(1);
+        chatSessionStore.selectedSessionIds.add('session2');
+        expect(chatSessionStore.selectedCount).toBe(2);
+      });
+    });
+
+    describe('allSelected computed property', () => {
+      it('returns true when all sessions are selected', () => {
+        chatSessionStore.selectAllSessions();
+        expect(chatSessionStore.allSelected).toBe(true);
+      });
+
+      it('returns false when partially selected', () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        expect(chatSessionStore.allSelected).toBe(false);
+      });
+
+      it('returns false when no sessions are selected', () => {
+        expect(chatSessionStore.allSelected).toBe(false);
+      });
+
+      it('returns false when sessions array is empty', () => {
+        chatSessionStore.sessions = [];
+        expect(chatSessionStore.allSelected).toBe(false);
+      });
+    });
+
+    describe('bulkDeleteSessions', () => {
+      it('calls repository deleteSessions with correct IDs', async () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session2');
+
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionRepository.deleteSessions).toHaveBeenCalledWith([
+          'session1',
+          'session2',
+        ]);
+      });
+
+      it('updates local state correctly after deletion', async () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session3');
+
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionStore.sessions.length).toBe(1);
+        expect(chatSessionStore.sessions[0].id).toBe('session2');
+      });
+
+      it('resets active session if it was deleted', async () => {
+        chatSessionStore.activeSessionId = 'session2';
+        chatSessionStore.selectedSessionIds.add('session2');
+
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        const resetSpy = jest.spyOn(chatSessionStore, 'resetActiveSession');
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(resetSpy).toHaveBeenCalled();
+      });
+
+      it('does not reset active session if it was not deleted', async () => {
+        chatSessionStore.activeSessionId = 'session3';
+        chatSessionStore.selectedSessionIds.add('session1');
+
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        const resetSpy = jest.spyOn(chatSessionStore, 'resetActiveSession');
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(resetSpy).not.toHaveBeenCalled();
+      });
+
+      it('exits selection mode on success', async () => {
+        chatSessionStore.isSelectionMode = true;
+        chatSessionStore.selectedSessionIds.add('session1');
+
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionStore.isSelectionMode).toBe(false);
+        expect(chatSessionStore.selectedCount).toBe(0);
+      });
+
+      it('handles errors gracefully and re-throws', async () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+
+        const error = new Error('Database error');
+        (chatSessionRepository.deleteSessions as jest.Mock).mockRejectedValue(
+          error,
+        );
+
+        await expect(chatSessionStore.bulkDeleteSessions()).rejects.toThrow(
+          'Database error',
+        );
+
+        // State should not be modified on error
+        expect(chatSessionStore.sessions.length).toBe(3);
+      });
+
+      it('handles empty selection gracefully', async () => {
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionRepository.deleteSessions).toHaveBeenCalledWith([]);
+        expect(chatSessionStore.sessions.length).toBe(3);
+      });
+    });
+
+    describe('bulkExportSessions', () => {
+      it('calls repository exportSessions with selected IDs', async () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session3');
+
+        (chatSessionRepository.exportSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkExportSessions();
+
+        expect(chatSessionRepository.exportSessions).toHaveBeenCalledWith([
+          'session1',
+          'session3',
+        ]);
+      });
+
+      it('exits selection mode on success', async () => {
+        chatSessionStore.isSelectionMode = true;
+        chatSessionStore.selectedSessionIds.add('session1');
+
+        (chatSessionRepository.exportSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkExportSessions();
+
+        expect(chatSessionStore.isSelectionMode).toBe(false);
+        expect(chatSessionStore.selectedCount).toBe(0);
+      });
+
+      it('handles errors gracefully and re-throws', async () => {
+        chatSessionStore.selectedSessionIds.add('session1');
+
+        const error = new Error('Export failed');
+        (chatSessionRepository.exportSessions as jest.Mock).mockRejectedValue(
+          error,
+        );
+
+        await expect(chatSessionStore.bulkExportSessions()).rejects.toThrow(
+          'Export failed',
+        );
+      });
+
+      it('handles empty selection gracefully', async () => {
+        (chatSessionRepository.exportSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkExportSessions();
+
+        expect(chatSessionRepository.exportSessions).toHaveBeenCalledWith([]);
+      });
     });
   });
 });
