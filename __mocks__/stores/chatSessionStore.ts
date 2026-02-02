@@ -33,6 +33,9 @@ export const mockChatSessionStore = {
   newChatCompletionSettings: mockDefaultCompletionSettings,
   isMigrating: false,
   migrationComplete: true,
+  // Selection mode state
+  isSelectionMode: false,
+  selectedSessionIds: new Set<string>(),
   loadSessionList: jest.fn().mockResolvedValue(undefined),
   loadGlobalSettings: jest.fn().mockResolvedValue(undefined),
   deleteSession: jest.fn().mockResolvedValue(undefined),
@@ -65,6 +68,14 @@ export const mockChatSessionStore = {
   getCurrentCompletionSettings: jest
     .fn()
     .mockResolvedValue(mockDefaultCompletionSettings),
+  // Selection mode methods
+  enterSelectionMode: jest.fn(),
+  exitSelectionMode: jest.fn(),
+  toggleSessionSelection: jest.fn(),
+  selectAllSessions: jest.fn(),
+  deselectAllSessions: jest.fn(),
+  bulkDeleteSessions: jest.fn().mockResolvedValue(undefined),
+  bulkExportSessions: jest.fn().mockResolvedValue(undefined),
   dateGroupNames: {
     today: 'Today',
     yesterday: 'Yesterday',
@@ -92,5 +103,20 @@ Object.defineProperty(mockChatSessionStore, 'activePalId', {
 
 Object.defineProperty(mockChatSessionStore, 'shouldShowHeaderDivider', {
   get: jest.fn(() => true),
+  configurable: true,
+});
+
+Object.defineProperty(mockChatSessionStore, 'selectedCount', {
+  get: jest.fn(() => mockChatSessionStore.selectedSessionIds.size),
+  configurable: true,
+});
+
+Object.defineProperty(mockChatSessionStore, 'allSelected', {
+  get: jest.fn(
+    () =>
+      mockChatSessionStore.sessions.length > 0 &&
+      mockChatSessionStore.selectedSessionIds.size ===
+        mockChatSessionStore.sessions.length,
+  ),
   configurable: true,
 });
