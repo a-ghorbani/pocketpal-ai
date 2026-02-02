@@ -98,7 +98,7 @@ describe('SidebarContent Component', () => {
       // Skip: Complex menu interaction with react-native-paper Menu component
     });
 
-    it('selection mode shows header with Cancel, count, and overflow menu', () => {
+    it('selection mode shows header with Cancel, count, and action icons', () => {
       runInAction(() => {
         chatSessionStore.isSelectionMode = true;
         chatSessionStore.selectedSessionIds.add('session-1');
@@ -112,8 +112,12 @@ describe('SidebarContent Component', () => {
       // Check for count text
       expect(getByText('1 selected')).toBeTruthy();
 
-      // Check for overflow menu button
-      expect(getByTestId('overflow-menu-button')).toBeTruthy();
+      // Check for direct action icons (export and delete)
+      expect(getByTestId('bulk-export-button')).toBeTruthy();
+      expect(getByTestId('bulk-delete-button')).toBeTruthy();
+
+      // Check for Select all row
+      expect(getByTestId('select-all-row')).toBeTruthy();
     });
 
     it('checkboxes appear next to sessions in selection mode', () => {
