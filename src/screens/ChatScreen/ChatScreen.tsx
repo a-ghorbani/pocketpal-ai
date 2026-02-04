@@ -148,6 +148,11 @@ export const ChatScreen: React.FC = observer(() => {
   }
 
   // Otherwise, show the regular chat view
+  const translatePlaceholder =
+    uiStore.language === 'zh'
+      ? '请输入要翻译的文本'
+      : 'Enter text to translate';
+
   return (
     <>
       <ChatView
@@ -162,12 +167,13 @@ export const ChatScreen: React.FC = observer(() => {
         isThinking={isThinking}
         isStreaming={modelStore.isStreaming}
         sendButtonVisibilityMode="always"
-        showImageUpload={true}
+        showImageUpload={false}
+        showPalSelector={false}
         isVisionEnabled={multimodalEnabled}
         initialInputText={pendingMessage || undefined}
         onInitialTextConsumed={clearPendingMessage}
         inputProps={{
-          showThinkingToggle: thinkingSupported,
+          showThinkingToggle: false,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
         }}
@@ -176,7 +182,7 @@ export const ChatScreen: React.FC = observer(() => {
             ? modelStore.isContextLoading
               ? l10n.chat.loadingModel
               : l10n.chat.modelNotLoaded
-            : l10n.chat.typeYourMessage,
+            : translatePlaceholder,
         }}
       />
       {uiStore.chatWarning && (

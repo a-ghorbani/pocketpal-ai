@@ -145,6 +145,8 @@ export interface ChatProps extends ChatTopLevelProps {
   showDateHeaders?: boolean;
   /** Whether to show the image upload button in the chat input */
   showImageUpload?: boolean;
+  /** Whether to show the pal selector button in the chat input */
+  showPalSelector?: boolean;
   /** Whether to enable vision mode for the chat input */
   isVisionEnabled?: boolean;
   /** Initial text to prefill the input (e.g., from deep linking) */
@@ -193,6 +195,7 @@ export const ChatView = observer(
     showUserNames = false,
     showDateHeaders = false,
     showImageUpload = false,
+    showPalSelector = true,
     isVisionEnabled = false,
     initialInputText,
     onInitialTextConsumed,
@@ -935,11 +938,14 @@ export const ChatView = observer(
                   chatInputHeight,
                   inputBackgroundColor,
                   onCancelEdit: handleCancelEdit,
-                  onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
+                  onPalBtnPress: showPalSelector
+                    ? () => setIsPickerVisible(!isPickerVisible)
+                    : undefined,
                   isStopVisible,
                   isPickerVisible,
                   sendButtonVisibilityMode,
                   showImageUpload,
+                  showPalSelector,
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
@@ -958,7 +964,7 @@ export const ChatView = observer(
             {/* Pal/Model picker sheet */}
             {/* Conditionally render the sheet to avoid keyboard issues.
             It makes the disappearing sudden, but it's better than the keyboard issue.*/}
-            {isPickerVisible && (
+            {showPalSelector && isPickerVisible && (
               <ChatPalModelPickerSheet
                 isVisible={isPickerVisible}
                 onClose={() => setIsPickerVisible(false)}

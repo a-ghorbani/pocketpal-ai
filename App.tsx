@@ -23,27 +23,11 @@ import {initLocale} from './src/utils';
 import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
 
-import {
-  SidebarContent,
-  ModelsHeaderRight,
-  PalHeaderRight,
-  HeaderLeft,
-  AppWithMigration,
-} from './src/components';
+import {SidebarContent, HeaderLeft, AppWithMigration} from './src/components';
 import {
   ChatScreen,
   ModelsScreen,
-  SettingsScreen,
-  BenchmarkScreen,
-  AboutScreen,
-
-  // Dev tools screen. Only available in debug mode.
-  DevToolsScreen,
 } from './src/screens';
-import PalsScreen from './src/screens/PalsScreen';
-
-// Check if app is in debug mode
-const isDebugMode = __DEV__;
 
 const Drawer = createDrawerNavigator();
 
@@ -95,59 +79,13 @@ const App = observer(() => {
                       }}
                     />
                     <Drawer.Screen
-                      name={ROUTES.PALS}
-                      component={gestureHandlerRootHOC(PalsScreen)}
-                      options={{
-                        headerRight: () => <PalHeaderRight />,
-                        headerStyle: styles.headerWithoutDivider,
-                        title: currentL10n.screenTitles.pals,
-                      }}
-                    />
-                    <Drawer.Screen
                       name={ROUTES.MODELS}
                       component={gestureHandlerRootHOC(ModelsScreen)}
                       options={{
-                        headerRight: () => <ModelsHeaderRight />,
                         headerStyle: styles.headerWithoutDivider,
                         title: currentL10n.screenTitles.models,
                       }}
                     />
-                    <Drawer.Screen
-                      name={ROUTES.BENCHMARK}
-                      component={gestureHandlerRootHOC(BenchmarkScreen)}
-                      options={{
-                        headerStyle: styles.headerWithoutDivider,
-                        title: currentL10n.screenTitles.benchmark,
-                      }}
-                    />
-                    <Drawer.Screen
-                      name={ROUTES.SETTINGS}
-                      component={gestureHandlerRootHOC(SettingsScreen)}
-                      options={{
-                        headerStyle: styles.headerWithoutDivider,
-                        title: currentL10n.screenTitles.settings,
-                      }}
-                    />
-                    <Drawer.Screen
-                      name={ROUTES.APP_INFO}
-                      component={gestureHandlerRootHOC(AboutScreen)}
-                      options={{
-                        headerStyle: styles.headerWithoutDivider,
-                        title: currentL10n.screenTitles.appInfo,
-                      }}
-                    />
-
-                    {/* Only show Dev Tools screen in debug mode */}
-                    {isDebugMode && (
-                      <Drawer.Screen
-                        name={ROUTES.DEV_TOOLS}
-                        component={gestureHandlerRootHOC(DevToolsScreen)}
-                        options={{
-                          headerStyle: styles.headerWithoutDivider,
-                          title: 'Dev Tools',
-                        }}
-                      />
-                    )}
                   </Drawer.Navigator>
                 </BottomSheetModalProvider>
               </NavigationContainer>

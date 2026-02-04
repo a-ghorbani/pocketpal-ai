@@ -1,21 +1,20 @@
 import React from 'react';
 import {Platform, View} from 'react-native';
 import {observer} from 'mobx-react';
-
-import {createStyles} from './styles';
-import {HeaderRight} from '../HeaderRight';
-import {ChatHeaderTitle} from '../ChatHeaderTitle';
+import {Text} from 'react-native-paper';
 import {
   useSafeAreaFrame,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import {getDefaultHeaderHeight} from '@react-navigation/elements';
+
+import {createStyles} from './styles';
 import {useTheme} from '../../hooks';
-import {chatSessionStore} from '../../store';
-import {HeaderLeft} from '../HeaderLeft';
+import {L10nContext} from '../../utils';
 
 export const ChatHeader: React.FC = observer(() => {
   const theme = useTheme();
+  const l10n = React.useContext(L10nContext);
 
   const insets = useSafeAreaInsets();
   const layout = useSafeAreaFrame();
@@ -31,17 +30,9 @@ export const ChatHeader: React.FC = observer(() => {
 
   const styles = createStyles({theme, insets, headerHeight});
 
-  const headerStyle = chatSessionStore?.shouldShowHeaderDivider
-    ? styles.headerWithDivider
-    : styles.headerWithoutDivider;
-
   return (
-    <View testID="header-view" style={[styles.container, headerStyle]}>
-      <View style={styles.leftSection}>
-        <HeaderLeft />
-        <ChatHeaderTitle />
-      </View>
-      <HeaderRight />
+    <View testID="header-view" style={[styles.container, styles.header]}>
+      <Text style={styles.title}>{l10n.screenTitles.chat}</Text>
     </View>
   );
 });
