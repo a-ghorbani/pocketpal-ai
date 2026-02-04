@@ -2,18 +2,8 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {supabase} from './supabase';
-import {
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  APP_URL,
-  GOOGLE_IOS_CLIENT_ID,
-  GOOGLE_WEB_CLIENT_ID,
-} from '@env';
+import {SUPABASE_URL, SUPABASE_ANON_KEY, APP_URL} from '@env';
 import type {User, Session} from '@supabase/supabase-js';
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
 
 export interface Profile {
   id: string;
@@ -61,8 +51,6 @@ class AuthService {
         );
         // Listen for auth state changes
         this.initAuthListener();
-        // Configure Google Sign-In
-        this.configureGoogleSignIn();
         // Check for existing session
         this.checkExistingSession().then(() => {
           console.log('AuthService: Session restoration completed');
@@ -191,102 +179,6 @@ class AuthService {
     }
   }
 
-  private configureGoogleSignIn() {
-    try {
-      GoogleSignin.configure({
-        webClientId: GOOGLE_WEB_CLIENT_ID,
-        iosClientId: GOOGLE_IOS_CLIENT_ID,
-        offlineAccess: false,
-      });
-      console.log('Google Sign-In configured successfully');
-    } catch (error) {
-      console.error('Error configuring Google Sign-In:', error);
-    }
-  }
-
-  async signInWithGoogle() {
-    if (!this.isSupabaseConfigured()) {
-      runInAction(() => {
-        this.error = 'Authentication not configured';
-      });
-      return;
-    }
-
-    try {
-      runInAction(() => {
-        this.isLoading = true;
-        this.error = null;
-      });
-
-      // Check if Google Play Services are available
-      console.log('Checking Google Play Services...');
-      await GoogleSignin.hasPlayServices();
-      console.log('Google Play Services available');
-
-      // Check if user is already signed in
-      console.log('Checking current user...');
-      try {
-        const currentUser = GoogleSignin.getCurrentUser();
-        if (currentUser) {
-          console.log('User already signed in, signing out first...');
-          await GoogleSignin.signOut();
-        }
-      } catch (error) {
-        console.log('No current user signed in: ', error);
-      }
-
-      // Sign in with Google
-      console.log('Starting Google Sign-In...');
-      const userInfo = await GoogleSignin.signIn();
-      console.log('Google Sign-In completed:', !!userInfo.data);
-
-      if (userInfo.data?.idToken) {
-        console.log(
-          'Google sign-in successful, attempting Supabase authentication...',
-        );
-        console.log('ID Token length:', userInfo.data.idToken.length);
-
-        // Use the ID token to sign in with Supabase (nonce disabled)
-        const {data, error} = await supabase!.auth.signInWithIdToken({
-          provider: 'google',
-          token: userInfo.data.idToken,
-        });
-
-        if (error) {
-          runInAction(() => {
-            this.error = error.message;
-          });
-          console.error('Supabase Google sign-in error:', error);
-        } else {
-          console.log('Google sign-in successful:', data);
-        }
-      } else {
-        runInAction(() => {
-          this.error = 'No ID token received from Google';
-        });
-        console.error('No ID token present in Google sign-in response');
-      }
-    } catch (error: any) {
-      let errorMessage = 'Failed to sign in with Google';
-
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        errorMessage = 'Sign-in was cancelled';
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        errorMessage = 'Sign-in is already in progress';
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        errorMessage = 'Google Play Services not available';
-      }
-
-      runInAction(() => {
-        this.error = errorMessage;
-      });
-      console.error('Google sign-in error:', error);
-    } finally {
-      runInAction(() => {
-        this.isLoading = false;
-      });
-    }
-  }
 
   async signInWithEmail(email: string, password: string) {
     if (!this.isSupabaseConfigured()) {
@@ -382,13 +274,6 @@ class AuthService {
         }
       }
 
-      // Also sign out from Google if user was signed in with Google
-      try {
-        await GoogleSignin.signOut();
-      } catch (googleError) {
-        console.warn('Error signing out from Google:', googleError);
-        // Don't fail the entire sign-out process if Google sign-out fails
-      }
     } catch (error) {
       runInAction(() => {
         this.error = 'Failed to sign out';

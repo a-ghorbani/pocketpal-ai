@@ -12,23 +12,18 @@ import {
   DownloadErrorDialog,
   ErrorSnackbar,
   ModelSettingsSheet,
-  ModelErrorReportSheet,
 } from '../../components';
 
 import {modelStore, uiStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model} from '../../utils/types';
-import {ErrorState} from '../../utils/errors';
 
 export const ModelsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | undefined>();
   const [settingsVisible, setSettingsVisible] = useState(false);
-
-  const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
-  const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
 
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -76,19 +71,6 @@ export const ModelsScreen: React.FC = observer(() => {
     handleDismissError();
   };
 
-  const handleReportModelError = () => {
-    if (activeError?.context === 'modelInit') {
-      setErrorToReport(activeError);
-      setIsErrorReportVisible(true);
-      handleDismissError();
-    }
-  };
-
-  const handleCloseErrorReport = () => {
-    setIsErrorReportVisible(false);
-    setErrorToReport(null);
-  };
-
   const renderModelItem = ({item}: {item: Model}) => (
     <ModelCard
       model={item}
@@ -132,7 +114,6 @@ export const ModelsScreen: React.FC = observer(() => {
           error={activeError}
           onDismiss={handleDismissError}
           onRetry={handleRetryAction}
-          onReport={handleReportModelError}
         />
       )}
 
@@ -141,12 +122,6 @@ export const ModelsScreen: React.FC = observer(() => {
         error={downloadError || null}
         onDismiss={handleDismissError}
         onRetry={handleRetryAction}
-      />
-
-      <ModelErrorReportSheet
-        isVisible={isErrorReportVisible}
-        onClose={handleCloseErrorReport}
-        error={errorToReport}
       />
 
       <Portal>

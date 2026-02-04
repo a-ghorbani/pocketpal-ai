@@ -16,10 +16,6 @@ buildscript {
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
 
-        // Add the Google Services plugin dependency
-        // This is used exclusively for sending benchmarks (with user consent) to Hugging Face Spaces via Firebase.
-        // Firebase is used for App Check functionality, allowing unauthenticated users to submit their benchmark data securely.
-        classpath 'com.google.gms:google-services:4.4.4'
     }
 }
 

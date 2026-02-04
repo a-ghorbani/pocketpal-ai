@@ -91,7 +91,7 @@ describe('ErrorSnackbar', () => {
     const error: ErrorState = createErrorState(
       new ServerError('Server unavailable'),
       'search',
-      'firebase',
+      'localapi',
       {
         context: 'search',
       },

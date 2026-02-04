@@ -25,14 +25,6 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>$(REVERSED_GOOGLE_IOS_CLIENT_ID)</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>com.pocketpalai.deeplink</string>
 			<key>CFBundleURLSchemes</key>
@@ -43,10 +35,6 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
-	<false/>
-	<key>GIDClientID</key>
-	<string>$(GOOGLE_WEB_CLIENT_ID)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
