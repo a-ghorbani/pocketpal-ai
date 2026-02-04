@@ -1,6 +1,4 @@
 import UIKit
-import RNFBAppCheck
-import FirebaseCore
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
@@ -16,12 +14,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    // Initialize Firebase
-    // This is used exclusively for sending model benchmarks (with user consent) to Firebase.
-    // Firebase is used for App Check functionality, allowing unauthenticated users to submit their benchmark data securely.
-    RNFBAppCheckModule.sharedInstance() 
-    FirebaseApp.configure()
-
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -57,7 +49,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       return true
     }
 
-    // Handle other URL schemes (e.g., Google Sign-In)
     return false
   }
 

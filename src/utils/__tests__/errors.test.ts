@@ -4,7 +4,6 @@ import {
   createMultimodalWarning,
   NetworkError,
   ServerError,
-  AppCheckError,
 } from '../errors';
 
 // Mock uiStore
@@ -50,12 +49,6 @@ describe('errors.ts', () => {
       expect(error instanceof Error).toBe(true);
     });
 
-    it('should create AppCheckError correctly', () => {
-      const error = new AppCheckError('App check failed');
-      expect(error.name).toBe('AppCheckError');
-      expect(error.message).toBe('App check failed');
-      expect(error instanceof Error).toBe(true);
-    });
   });
 
   describe('createErrorState', () => {

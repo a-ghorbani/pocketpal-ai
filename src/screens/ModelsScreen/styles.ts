@@ -3,34 +3,16 @@ import {Theme} from '../../utils/types';
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    safeArea: {
-      flex: 1,
-    },
     container: {
       flex: 1,
-      padding: 2,
-      backgroundColor: theme.colors.surface,
+      padding: 16,
+      backgroundColor: theme.colors.background,
     },
-    listContainer: {
-      paddingBottom: 150,
+    listContent: {
+      paddingBottom: 24,
+      gap: 12,
     },
-    header: {
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.outlineVariant,
-    },
-    filterContainer: {
-      flexDirection: 'row',
-      padding: 4,
-      gap: 1,
-      justifyContent: 'flex-end',
-    },
-    filterIcon: {
-      borderRadius: 8,
-      marginHorizontal: 2,
+    emptyContainer: {
+      paddingVertical: 24,
     },
   });

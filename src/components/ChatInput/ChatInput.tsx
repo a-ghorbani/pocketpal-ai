@@ -64,6 +64,8 @@ export interface ChatInputTopLevelProps {
   onPromptTextChange?: (text: string) => void;
   /** Whether to show the image upload button */
   showImageUpload?: boolean;
+  /** Whether to show the pal selector button */
+  showPalSelector?: boolean;
   isVisionEnabled?: boolean;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
@@ -82,6 +84,8 @@ export interface ChatInputAdditionalProps {
   onPromptTextChange?: (text: string) => void;
   /** Whether to show the image upload button */
   showImageUpload?: boolean;
+  /** Whether to show the pal selector button */
+  showPalSelector?: boolean;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
   /** Whether thinking mode is currently enabled */
@@ -116,6 +120,7 @@ export const ChatInput = observer(
     promptText,
     onPromptTextChange,
     showImageUpload = false,
+    showPalSelector = true,
     isVisionEnabled = false,
     defaultImages,
     onDefaultImagesChange,
@@ -494,53 +499,55 @@ export const ChatInput = observer(
               )}
 
               {/* Pal Selector */}
-              <View style={styles.palSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.palBtn,
-                    {
-                      backgroundColor:
-                        uiStore.colorScheme === 'dark'
-                          ? theme.colors.inverseOnSurface
-                          : theme.colors.inverseSurface,
-                    },
-                    currentActivePal?.color && {
-                      backgroundColor: currentActivePal?.color?.[0],
-                    },
-                  ]}
-                  onPress={onPalBtnPress}
-                  accessibilityLabel="Select Pal"
-                  accessibilityRole="button">
-                  <Animated.View
-                    style={{
-                      transform: [{rotate: rotateInterpolate}],
-                    }}>
-                    <ChevronUpIcon stroke={inputBackgroundColor} />
-                  </Animated.View>
-                </TouchableOpacity>
-
-                {/* Pal Name Display */}
-                {currentActivePal?.name && hasActiveModel && (
-                  <Text
+              {showPalSelector && (
+                <View style={styles.palSelector}>
+                  <TouchableOpacity
                     style={[
-                      styles.palNameCompact,
+                      styles.palBtn,
                       {
-                        color: onSurfaceColor,
+                        backgroundColor:
+                          uiStore.colorScheme === 'dark'
+                            ? theme.colors.inverseOnSurface
+                            : theme.colors.inverseSurface,
                       },
-                    ]}>
-                    Pal:{' '}
+                      currentActivePal?.color && {
+                        backgroundColor: currentActivePal?.color?.[0],
+                      },
+                    ]}
+                    onPress={onPalBtnPress}
+                    accessibilityLabel="Select Pal"
+                    accessibilityRole="button">
+                    <Animated.View
+                      style={{
+                        transform: [{rotate: rotateInterpolate}],
+                      }}>
+                      <ChevronUpIcon stroke={inputBackgroundColor} />
+                    </Animated.View>
+                  </TouchableOpacity>
+
+                  {/* Pal Name Display */}
+                  {currentActivePal?.name && hasActiveModel && (
                     <Text
                       style={[
-                        styles.palNameValueCompact,
+                        styles.palNameCompact,
                         {
                           color: onSurfaceColor,
                         },
                       ]}>
-                      {currentActivePal?.name}
+                      Pal:{' '}
+                      <Text
+                        style={[
+                          styles.palNameValueCompact,
+                          {
+                            color: onSurfaceColor,
+                          },
+                        ]}>
+                        {currentActivePal?.name}
+                      </Text>
                     </Text>
-                  </Text>
-                )}
-              </View>
+                  )}
+                </View>
+              )}
 
               {/* Thinking Toggle Button */}
               {showThinkingToggle && !isCameraActive && (

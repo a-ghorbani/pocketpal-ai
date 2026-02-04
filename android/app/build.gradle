@@ -3,11 +3,6 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "org.jetbrains.kotlin.kapt"
 apply plugin: "com.facebook.react"
 
-// Add the Google Services plugin dependency
-// This is used exclusively for sending benchmarks (with user consent) to Hugging Face Spaces via Firebase.
-// Firebase is used for App Check functionality, allowing unauthenticated users to submit their benchmark data securely.
-apply plugin: "com.google.gms.google-services"
-
 apply from: "../../node_modules/react-native-config/android/dotenv.gradle"
 
 /**
@@ -147,12 +142,6 @@ dependencies {
         implementation jscFlavor
     }
 
-    // The Firebase Android BoM (Bill of Materials) lets you manage all your Firebase library versions 
-    // by specifying only one version — the BoM's version.
-    implementation platform('com.google.firebase:firebase-bom:34.4.0')
-    implementation 'com.google.firebase:firebase-appcheck-playintegrity'
-    implementation 'com.google.firebase:firebase-appcheck-debug'
-
     // Room dependencies for DownloadModule
     def room_version = "2.8.2"
     implementation("androidx.room:room-runtime:$room_version")
@@ -178,4 +167,3 @@ project.ext.vectoricons = [
 ]
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
-

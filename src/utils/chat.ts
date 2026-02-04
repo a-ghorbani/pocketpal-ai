@@ -173,6 +173,13 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     chatTemplate: '',
     systemPrompt: '',
   },
+  translation: {
+    ...Templates.templates.default,
+    name: 'translation',
+    addGenerationPrompt: true,
+    systemPrompt:
+      'You are a professional translation engine.\nRules:\n- Translate faithfully and literally.\n- Do not add explanations, notes, or summaries.\n- Keep original structure, line breaks, and HTML tags unchanged.\n- Do NOT translate proper nouns, code, URLs, or symbols unless necessary.\n- If a segment should not be translated, keep it exactly as is.\n- Output translation only.',
+  },
   danube3: {
     ...Templates.templates.danube2,
     name: 'danube3',

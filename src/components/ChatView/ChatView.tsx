@@ -61,10 +61,8 @@ import {
   ChatHeader,
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
-  ContentReportSheet,
 } from '..';
 import {
-  AlertIcon,
   CopyIcon,
   GridIcon,
   PencilLineIcon,
@@ -145,6 +143,8 @@ export interface ChatProps extends ChatTopLevelProps {
   showDateHeaders?: boolean;
   /** Whether to show the image upload button in the chat input */
   showImageUpload?: boolean;
+  /** Whether to show the pal selector button in the chat input */
+  showPalSelector?: boolean;
   /** Whether to enable vision mode for the chat input */
   isVisionEnabled?: boolean;
   /** Initial text to prefill the input (e.g., from deep linking) */
@@ -193,6 +193,7 @@ export const ChatView = observer(
     showUserNames = false,
     showDateHeaders = false,
     showImageUpload = false,
+    showPalSelector = true,
     isVisionEnabled = false,
     initialInputText,
     onInitialTextConsumed,
@@ -231,8 +232,6 @@ export const ChatView = observer(
     const [menuPosition, setMenuPosition] = React.useState({x: 0, y: 0});
     const [selectedMessage, setSelectedMessage] =
       React.useState<MessageType.Any | null>(null);
-    const [isReportSheetVisible, setIsReportSheetVisible] =
-      React.useState(false);
 
     // Pagination state
     const [isNextPageLoading, setNextPageLoading] = React.useState(false);
@@ -535,7 +534,6 @@ export const ChatView = observer(
       regenerate: regenerateLabel,
       regenerateWith: regenerateWithLabel,
       edit: editLabel,
-      reportContent: reportContentLabel,
     } = l10n.components.chatView.menuItems;
 
     const menuItems = React.useMemo((): MenuItem[] => {
@@ -597,16 +595,6 @@ export const ChatView = observer(
         });
       }
 
-      baseItems.push({
-        label: reportContentLabel,
-        onPress: () => {
-          setIsReportSheetVisible(true);
-          handleMenuDismiss();
-        },
-        icon: () => <AlertIcon stroke={theme.colors.primary} />,
-        disabled: false,
-      });
-
       return baseItems;
     }, [
       selectedMessage,
@@ -622,7 +610,6 @@ export const ChatView = observer(
       regenerateLabel,
       regenerateWithLabel,
       editLabel,
-      reportContentLabel,
     ]);
 
     // ============ RENDER FUNCTIONS ============
@@ -935,11 +922,14 @@ export const ChatView = observer(
                   chatInputHeight,
                   inputBackgroundColor,
                   onCancelEdit: handleCancelEdit,
-                  onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
+                  onPalBtnPress: showPalSelector
+                    ? () => setIsPickerVisible(!isPickerVisible)
+                    : undefined,
                   isStopVisible,
                   isPickerVisible,
                   sendButtonVisibilityMode,
                   showImageUpload,
+                  showPalSelector,
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
@@ -958,7 +948,7 @@ export const ChatView = observer(
             {/* Pal/Model picker sheet */}
             {/* Conditionally render the sheet to avoid keyboard issues.
             It makes the disappearing sudden, but it's better than the keyboard issue.*/}
-            {isPickerVisible && (
+            {showPalSelector && isPickerVisible && (
               <ChatPalModelPickerSheet
                 isVisible={isPickerVisible}
                 onClose={() => setIsPickerVisible(false)}
@@ -987,11 +977,6 @@ export const ChatView = observer(
             {menuItems.map(renderMenuItem)}
           </Menu>
 
-          {/* Content report sheet */}
-          <ContentReportSheet
-            isVisible={isReportSheetVisible}
-            onClose={() => setIsReportSheetVisible(false)}
-          />
         </View>
       </UserContext.Provider>
     );

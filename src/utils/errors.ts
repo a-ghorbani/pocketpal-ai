@@ -16,17 +16,6 @@ export class NetworkError extends Error {
 }
 
 /**
- * AppCheckError - Used for Firebase App Check verification errors
- * Examples: App not installed from official store, verification failed, etc.
- */
-export class AppCheckError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AppCheckError';
-  }
-}
-
-/**
  * ServerError - Used for backend server errors
  * Examples: 500 errors, API unavailable, etc.
  */
@@ -49,7 +38,7 @@ export interface ErrorState {
     | 'server'
     | 'multimodal'
     | 'unknown';
-  service?: 'huggingface' | 'firebase' | 'localapi';
+  service?: 'huggingface' | 'localapi';
   message: string;
   context: 'search' | 'download' | 'modelDetails' | 'chat' | 'modelInit';
   recoverable: boolean;

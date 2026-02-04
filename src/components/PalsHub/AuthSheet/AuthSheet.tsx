@@ -5,7 +5,6 @@ import {observer} from 'mobx-react-lite';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Text, Button, TextInput, ActivityIndicator} from 'react-native-paper';
 
-import {GoogleIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
 
@@ -18,8 +17,6 @@ interface AuthSheetProps {
   isVisible: boolean;
   onClose: () => void;
 }
-
-const GoogleButtonIcon = () => <GoogleIcon width={20} height={20} />;
 
 export const AuthSheet: React.FC<AuthSheetProps> = observer(
   ({isVisible, onClose}) => {
@@ -77,21 +74,6 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
       } catch (error) {
         const errorInfo = PalsHubErrorHandler.handle(error);
         Alert.alert('Authentication Error', errorInfo.userMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const handleGoogleAuth = async () => {
-      try {
-        setIsLoading(true);
-        authService.clearError();
-
-        await authService.signInWithGoogle();
-        // Sheet will close automatically via useEffect when auth state changes
-      } catch (error) {
-        const errorInfo = PalsHubErrorHandler.handle(error);
-        Alert.alert('Google Sign-In Error', errorInfo.userMessage);
       } finally {
         setIsLoading(false);
       }
@@ -214,25 +196,6 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
               </Button>
             )}
           </View>
-
-          {/* Divider */}
-          <View style={styles.authDivider}>
-            <View style={styles.authDividerLine} />
-            <Text style={styles.authDividerText}>or</Text>
-            <View style={styles.authDividerLine} />
-          </View>
-
-          {/* Google Sign-In */}
-          <Button
-            mode="outlined"
-            onPress={handleGoogleAuth}
-            loading={isLoading}
-            disabled={authState.isLoading}
-            style={styles.authSocialButton}
-            contentStyle={styles.authButtonContent}
-            icon={GoogleButtonIcon}>
-            Continue with Google
-          </Button>
 
           {/* Toggle Sign Up/Sign In */}
           <View style={styles.authToggle}>

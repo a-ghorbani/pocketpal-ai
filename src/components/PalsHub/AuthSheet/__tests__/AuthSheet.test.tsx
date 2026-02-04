@@ -289,39 +289,6 @@ describe('AuthSheet', () => {
     });
   });
 
-  describe('Google Sign In', () => {
-    it('signs in with Google when Google button is pressed', async () => {
-      const {getByText} = render(<AuthSheet {...defaultProps} />);
-
-      const googleButton = getByText('Continue with Google');
-      fireEvent.press(googleButton);
-
-      await waitFor(() => {
-        expect(authService.signInWithGoogle).toHaveBeenCalled();
-        expect(authService.clearError).toHaveBeenCalled();
-      });
-    });
-
-    it('handles Google sign in error gracefully', async () => {
-      (authService.signInWithGoogle as jest.Mock).mockRejectedValueOnce(
-        new Error('Google sign in failed'),
-      );
-
-      const {getByText} = render(<AuthSheet {...defaultProps} />);
-
-      const googleButton = getByText('Continue with Google');
-      fireEvent.press(googleButton);
-
-      await waitFor(() => {
-        expect(PalsHubErrorHandler.handle).toHaveBeenCalled();
-        expect(Alert.alert).toHaveBeenCalledWith(
-          'Google Sign-In Error',
-          'An error occurred',
-        );
-      });
-    });
-  });
-
   describe('Forgot Password', () => {
     it('shows forgot password button in sign in mode', () => {
       const {getByText} = render(<AuthSheet {...defaultProps} />);

@@ -37,8 +37,6 @@ export const ErrorSnackbar: React.FC<ErrorSnackbarProps> = ({
       switch (error.service) {
         case 'huggingface':
           return 'key-alert'; // Specific icon for HF auth issues
-        case 'firebase':
-          return 'firebase'; // Firebase-specific icon
         default:
           return 'shield-alert-outline'; // Generic auth icon
       }
