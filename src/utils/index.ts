@@ -447,10 +447,15 @@ export function hfAsModel(
     }
   }
 
+  // Extract repo from hfModel.id (format: "author/repo-name")
+  const repoParts = hfModel.id.split('/');
+  const repo = repoParts.length >= 2 ? repoParts[1] : undefined;
+
   const _model: Model = {
     id: hfModel.id + '/' + modelFile.rfilename,
     type: extractHFModelType(hfModel.id),
     author: hfModel.author,
+    repo: repo,
     name: extractHFModelTitle(modelFile.rfilename),
     size: modelFile.size ?? 0,
     params: hfModel.specs?.gguf?.total ?? 0,
