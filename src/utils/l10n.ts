@@ -83,7 +83,7 @@ export const l10n = {
         'Using {{threads}} of {{maxThreads}} available threads',
       imageMaxTokens: 'Image Max Tokens',
       imageMaxTokensDescription:
-        'Maximum tokens for image processing: {{tokens}} (lower = faster, less detail)',
+        'Maximum tokens for image processing: {{tokens}}{{effectiveTokens}} (lower = faster, less detail)',
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: 'Enable Flash Attention for faster processing',
@@ -1430,7 +1430,7 @@ export const l10n = {
         '利用可能な{{maxThreads}}スレッドのうち{{threads}}を使用',
       imageMaxTokens: '画像最大トークン数',
       imageMaxTokensDescription:
-        '画像処理の最大トークン数: {{tokens}} (低い = 高速、詳細度低)',
+        '画像処理の最大トークン数: {{tokens}}{{effectiveTokens}} (低い = 高速、詳細度低)',
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: '高速処理のためのFlash Attentionを有効化',
@@ -2781,7 +2781,7 @@ export const l10n = {
         '使用{{threads}}个线程（可用{{maxThreads}}个线程）',
       imageMaxTokens: '图像最大令牌数',
       imageMaxTokensDescription:
-        '图像处理的最大令牌数: {{tokens}} (较低 = 更快，细节较少)',
+        '图像处理的最大令牌数: {{tokens}}{{effectiveTokens}} (较低 = 更快，细节较少)',
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: '启用Flash Attention以加快处理速度',

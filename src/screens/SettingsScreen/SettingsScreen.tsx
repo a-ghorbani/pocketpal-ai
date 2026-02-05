@@ -570,12 +570,20 @@ export const SettingsScreen: React.FC = observer(() => {
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.imageMaxTokensDescription.replace(
-                        '{{tokens}}',
-                        (
-                          modelStore.contextInitParams.image_max_tokens ?? 512
-                        ).toString(),
-                      )}
+                      {l10n.settings.imageMaxTokensDescription
+                        .replace(
+                          '{{tokens}}',
+                          (
+                            modelStore.contextInitParams.image_max_tokens ?? 512
+                          ).toString(),
+                        )
+                        .replace(
+                          '{{effectiveTokens}}',
+                          (modelStore.contextInitParams.image_max_tokens ??
+                            512) > modelStore.contextInitParams.n_ctx
+                            ? ` (${l10n.settings.effectiveLabel}: ${modelStore.contextInitParams.n_ctx})`
+                            : '',
+                        )}
                     </Text>
                   </View>
                   <Divider />
