@@ -52,6 +52,10 @@ class MockModelStore {
   resetModelStopWords: jest.Mock;
   updateModelName: jest.Mock;
   resetModelName: jest.Mock;
+  setImageMaxTokens: jest.Mock;
+  setNThreads: jest.Mock;
+  setNBatch: jest.Mock;
+  setNUBatch: jest.Mock;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
 
@@ -83,6 +87,10 @@ class MockModelStore {
       resetModelStopWords: false,
       updateModelName: false,
       resetModelName: false,
+      setImageMaxTokens: false,
+      setNThreads: false,
+      setNBatch: false,
+      setNUBatch: false,
       lastUsedModel: computed,
       activeModel: computed,
       displayModels: computed,
@@ -121,6 +129,10 @@ class MockModelStore {
     this.resetModelStopWords = jest.fn();
     this.updateModelName = jest.fn();
     this.resetModelName = jest.fn();
+    this.setImageMaxTokens = jest.fn();
+    this.setNThreads = jest.fn();
+    this.setNBatch = jest.fn();
+    this.setNUBatch = jest.fn();
   }
 
   setActiveModel = (modelId: string) => {

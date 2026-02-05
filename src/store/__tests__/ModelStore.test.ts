@@ -1186,6 +1186,11 @@ describe('ModelStore', () => {
       modelStore.setNGPULayers(25);
       expect(modelStore.contextInitParams.n_gpu_layers).toBe(25);
     });
+
+    it('should set image_max_tokens', () => {
+      modelStore.setImageMaxTokens(768);
+      expect(modelStore.contextInitParams.image_max_tokens).toBe(768);
+    });
   });
 
   // Add tests for auto-release functionality

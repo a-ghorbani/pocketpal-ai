@@ -186,4 +186,48 @@ describe('SettingsScreen', () => {
 
     expect(uiStore.setDisplayMemUsage).toHaveBeenCalledWith(true);
   });
+
+  it('renders image max tokens slider in advanced settings', async () => {
+    jest.useFakeTimers();
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    // Expand advanced settings
+    const advancedSettingsButton = getByText('Advanced Settings');
+    fireEvent.press(advancedSettingsButton);
+
+    await waitFor(() => {
+      expect(getByTestId('image-max-tokens-slider')).toBeTruthy();
+    });
+  });
+
+  it('updates image max tokens correctly', async () => {
+    jest.useFakeTimers();
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    // Expand advanced settings
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('image-max-tokens-slider')).toBeTruthy();
+    });
+
+    const slider = getByTestId('image-max-tokens-slider');
+
+    act(() => {
+      fireEvent(slider, 'onValueChange', 768);
+    });
+
+    // Fast-forward time by 300ms to trigger debounced callback within act
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(modelStore.setImageMaxTokens).toHaveBeenCalledWith(768);
+  });
 });
