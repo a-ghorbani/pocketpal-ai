@@ -32,6 +32,8 @@ class MockLlamaContext {
   completion = jest.fn();
   stopCompletion = jest.fn();
   bench = jest.fn();
+  initMultimodal = jest.fn().mockResolvedValue(true);
+  isMultimodalEnabled = jest.fn().mockResolvedValue(false);
   // Add other methods if needed.
 }
 
