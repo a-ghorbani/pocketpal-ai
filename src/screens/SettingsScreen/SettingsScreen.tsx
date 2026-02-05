@@ -316,7 +316,9 @@ export const SettingsScreen: React.FC = observer(() => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled">
           {/* Model Initialization Settings */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.modelInitializationSettings} />
