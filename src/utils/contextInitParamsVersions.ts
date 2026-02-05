@@ -13,7 +13,7 @@ import {Platform} from 'react-native';
 
 // Current version of the context init params schema
 // Increment this when adding new parameters or changing existing ones
-export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.0';
+export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.1';
 
 /**
  * Creates properly versioned ContextInitParams from ContextParams (excluding model)
@@ -54,6 +54,9 @@ export const createContextInitParams = (
     devices: (params as any).devices,
     kv_unified: (params as any).kv_unified ?? true, // CRITICAL default
     n_parallel: (params as any).n_parallel ?? 1, // Blocking completion only
+
+    // v2.1+
+    image_max_tokens: (params as any).image_max_tokens ?? 512, // Device-appropriate default
   };
 };
 
@@ -163,6 +166,16 @@ export function migrateContextInitParams(
     migratedParams.version = '2.0';
   }
 
+  // Migration from 2.0 to 2.1: image_max_tokens
+  if (migratedParams.version === '2.0') {
+    // Add image_max_tokens with device-appropriate default
+    if (migratedParams.image_max_tokens === undefined) {
+      migratedParams.image_max_tokens = 512;
+    }
+
+    migratedParams.version = '2.1';
+  }
+
   // Ensure the final version is set correctly
   migratedParams.version = CURRENT_CONTEXT_INIT_PARAMS_VERSION;
 
@@ -221,5 +234,8 @@ export function createDefaultContextInitParams(): ContextInitParams {
     flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
     kv_unified: true, // CRITICAL: saves ~7GB memory
     n_parallel: 1, // App only uses blocking completion()
+
+    // v2.1 parameters
+    image_max_tokens: 512, // Device-appropriate default
   };
 }
