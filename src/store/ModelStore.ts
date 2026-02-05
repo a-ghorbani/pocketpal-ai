@@ -726,10 +726,29 @@ class ModelStore {
       return newPath;
     }
 
-    // For HF models, use author/model structure
+    // For HF models, use author/repo/model structure with backwards compatibility
     if (model.origin === ModelOrigin.HF) {
       const author = model.author || 'unknown';
-      return `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
+      const repo = model.repo || 'unknown';
+
+      // Old path structure (for backwards compatibility)
+      const oldPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
+
+      // New path structure includes repository name
+      const newPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${repo}/${model.filename}`;
+
+      // Check if file exists at old path (backwards compatibility)
+      // This handles: existing downloads, models after reset, models after app update
+      try {
+        if (await RNFS.exists(oldPath)) {
+          return oldPath;
+        }
+      } catch (err) {
+        console.log('Error checking old HF model path:', err);
+      }
+
+      // Otherwise use new path
+      return newPath;
     }
 
     // Fallback (shouldn't reach here)

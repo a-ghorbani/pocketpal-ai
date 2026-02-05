@@ -867,16 +867,19 @@ describe('ModelStore', () => {
       await modelStore.downloadHFModel(hfModel as any, modelFile as any, {
         enableVision: true,
       });
+      // Wait for checkSpaceAndDownload to complete (it's not awaited in downloadHFModel)
+      await new Promise(resolve => setTimeout(resolve, 300));
       expect(downloadManager.startDownload).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'test/hf-model/model-01.gguf',
           type: 'hf',
           author: 'test',
+          repo: 'hf-model',
         }),
         expect.stringContaining(
-          '/path/to/documents/models/hf/test/model-01.gguf',
+          '/path/to/documents/models/hf/test/hf-model/model-01.gguf',
         ),
-        'mockPass',
+        'mockPass', // authToken from keychain mock
       );
     });
 
