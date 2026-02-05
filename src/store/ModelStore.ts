@@ -1426,10 +1426,14 @@ class ModelStore {
           console.log('Initializing multimodal support with path:', mmProjPath);
 
           // Initialize multimodal with the new API format
+          // Apply effective value: clamp image_max_tokens to n_ctx
           const success = await ctx.initMultimodal({
             path: mmProjPath,
             use_gpu: !this.contextInitParams.no_gpu_devices,
-            image_max_tokens: this.contextInitParams.image_max_tokens,
+            image_max_tokens: Math.min(
+              this.contextInitParams.image_max_tokens ?? 512,
+              this.contextInitParams.n_ctx,
+            ),
           });
 
           if (!success) {
