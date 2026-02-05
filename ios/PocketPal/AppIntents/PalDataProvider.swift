@@ -215,12 +215,26 @@ class PalDataProvider {
             return newPath
         }
 
-        // For HF models, use author/model structure
+        // For HF models, use author/repo/model structure with backwards compatibility
         if origin == "hf" {
             let author = dict["author"] as? String ?? "unknown"
-            let path = documentsPath.appendingPathComponent("models/hf/\(author)/\(filename)").path
-            print("[PalDataProvider] Constructed HF model path: \(path)")
-            return path
+            let repo = dict["repo"] as? String ?? "unknown"
+
+            // Old path structure (for backwards compatibility)
+            let oldPath = documentsPath.appendingPathComponent("models/hf/\(author)/\(filename)").path
+
+            // New path structure includes repository name
+            let newPath = documentsPath.appendingPathComponent("models/hf/\(author)/\(repo)/\(filename)").path
+
+            // Check if file exists at old path (backwards compatibility)
+            if fileManager.fileExists(atPath: oldPath) {
+                print("[PalDataProvider] Found HF model at old path: \(oldPath)")
+                return oldPath
+            }
+
+            // Otherwise use new path
+            print("[PalDataProvider] Using new HF model path: \(newPath)")
+            return newPath
         }
 
         // Fallback (shouldn't reach here)
