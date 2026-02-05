@@ -1191,6 +1191,39 @@ describe('ModelStore', () => {
       modelStore.setImageMaxTokens(768);
       expect(modelStore.contextInitParams.image_max_tokens).toBe(768);
     });
+
+    it('should clamp image_max_tokens to n_ctx when value exceeds context size', () => {
+      // Set n_ctx to 2048
+      modelStore.contextInitParams.n_ctx = 2048;
+
+      // Try to set image_max_tokens to 3000 (> n_ctx)
+      modelStore.setImageMaxTokens(3000);
+
+      // Should be clamped to n_ctx (2048)
+      expect(modelStore.contextInitParams.image_max_tokens).toBe(2048);
+    });
+
+    it('should clamp image_max_tokens to 4096 when n_ctx is larger', () => {
+      // Set n_ctx to 8192 (> 4096)
+      modelStore.contextInitParams.n_ctx = 8192;
+
+      // Try to set image_max_tokens to 5000 (> 4096 but < n_ctx)
+      modelStore.setImageMaxTokens(5000);
+
+      // Should be clamped to 4096 (the hard maximum)
+      expect(modelStore.contextInitParams.image_max_tokens).toBe(4096);
+    });
+
+    it('should allow image_max_tokens value when within both limits', () => {
+      // Set n_ctx to 4096
+      modelStore.contextInitParams.n_ctx = 4096;
+
+      // Set image_max_tokens to 1024 (< both 4096 and n_ctx)
+      modelStore.setImageMaxTokens(1024);
+
+      // Should be set to 1024
+      expect(modelStore.contextInitParams.image_max_tokens).toBe(1024);
+    });
   });
 
   // Add tests for auto-release functionality
