@@ -309,9 +309,11 @@ class ModelStore {
 
   setImageMaxTokens = (image_max_tokens: number) => {
     runInAction(() => {
+      // Clamp to context size - image tokens can't exceed available context
+      const maxAllowed = Math.min(4096, this.contextInitParams.n_ctx);
       this.contextInitParams = {
         ...this.contextInitParams,
-        image_max_tokens,
+        image_max_tokens: Math.min(image_max_tokens, maxAllowed),
       };
     });
   };
