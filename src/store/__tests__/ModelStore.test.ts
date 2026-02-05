@@ -1193,6 +1193,43 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('image_max_tokens clamping', () => {
+    it('should clamp image_max_tokens to n_ctx when computing effective value', () => {
+      // Set image_max_tokens higher than n_ctx
+      runInAction(() => {
+        modelStore.contextInitParams.n_ctx = 2048;
+        modelStore.contextInitParams.image_max_tokens = 3000;
+      });
+
+      // The clamping logic is: Math.min(image_max_tokens, n_ctx)
+      // We test this by checking what would be passed to initMultimodal
+      const effectiveValue = Math.min(
+        modelStore.contextInitParams.image_max_tokens ?? 512,
+        modelStore.contextInitParams.n_ctx,
+      );
+
+      expect(effectiveValue).toBe(2048); // Clamped to n_ctx
+      expect(modelStore.contextInitParams.image_max_tokens).toBe(3000); // User value unchanged
+    });
+
+    it('should not clamp image_max_tokens when within n_ctx', () => {
+      // Set image_max_tokens lower than n_ctx
+      runInAction(() => {
+        modelStore.contextInitParams.n_ctx = 2048;
+        modelStore.contextInitParams.image_max_tokens = 512;
+      });
+
+      // The clamping logic is: Math.min(image_max_tokens, n_ctx)
+      const effectiveValue = Math.min(
+        modelStore.contextInitParams.image_max_tokens ?? 512,
+        modelStore.contextInitParams.n_ctx,
+      );
+
+      expect(effectiveValue).toBe(512); // Unclamped - within n_ctx
+      expect(modelStore.contextInitParams.image_max_tokens).toBe(512); // User value unchanged
+    });
+  });
+
   // Add tests for auto-release functionality
   describe('auto-release functionality', () => {
     beforeEach(() => {

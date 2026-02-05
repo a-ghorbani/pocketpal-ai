@@ -230,4 +230,30 @@ describe('SettingsScreen', () => {
 
     expect(modelStore.setImageMaxTokens).toHaveBeenCalledWith(768);
   });
+
+  it('shows effective value when image_max_tokens exceeds n_ctx', async () => {
+    jest.useFakeTimers();
+    const {getByText, queryByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    // Expand advanced settings
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      // Initially, with image_max_tokens = 512 and n_ctx = 2048, no effective label should show
+      expect(queryByText(/effective:/)).toBeFalsy();
+    });
+
+    // Now set image_max_tokens > n_ctx to trigger effective display
+    act(() => {
+      modelStore.contextInitParams.image_max_tokens = 3000;
+    });
+
+    await waitFor(() => {
+      // Should show effective value clamped to n_ctx (2048)
+      expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
 });
