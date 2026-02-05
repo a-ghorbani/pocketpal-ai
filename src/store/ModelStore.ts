@@ -307,6 +307,15 @@ class ModelStore {
     });
   };
 
+  setImageMaxTokens = (image_max_tokens: number) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        image_max_tokens,
+      };
+    });
+  };
+
   setUseMlock = (use_mlock: boolean) => {
     runInAction(() => {
       this.contextInitParams = {
@@ -1420,6 +1429,7 @@ class ModelStore {
           const success = await ctx.initMultimodal({
             path: mmProjPath,
             use_gpu: !this.contextInitParams.no_gpu_devices,
+            image_max_tokens: this.contextInitParams.image_max_tokens,
           });
 
           if (!success) {
