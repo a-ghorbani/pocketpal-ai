@@ -139,6 +139,51 @@ describe('contextInitParamsVersions', () => {
       expect(migrated.use_mmap).toBe('false'); // Preserved
       expect(migrated.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
     });
+
+    it('should migrate from v2.0 to v2.1 with default image_max_tokens', () => {
+      const v20Params = {
+        version: '2.0',
+        n_ctx: 2048,
+        n_batch: 512,
+        n_ubatch: 512,
+        n_threads: 4,
+        cache_type_k: CacheType.F16,
+        cache_type_v: CacheType.F16,
+        n_gpu_layers: 99,
+        use_mlock: false,
+        use_mmap: 'true' as const,
+        kv_unified: true,
+        n_parallel: 1,
+      };
+
+      const migrated = migrateContextInitParams(v20Params);
+
+      expect(migrated.version).toBe('2.1');
+      expect(migrated.image_max_tokens).toBe(512);
+    });
+
+    it('should preserve existing image_max_tokens when migrating from v2.0 to v2.1', () => {
+      const v20ParamsWithTokens = {
+        version: '2.0',
+        n_ctx: 2048,
+        n_batch: 512,
+        n_ubatch: 512,
+        n_threads: 4,
+        cache_type_k: CacheType.F16,
+        cache_type_v: CacheType.F16,
+        n_gpu_layers: 99,
+        use_mlock: false,
+        use_mmap: 'true' as const,
+        kv_unified: true,
+        n_parallel: 1,
+        image_max_tokens: 1024, // Custom value
+      };
+
+      const migrated = migrateContextInitParams(v20ParamsWithTokens);
+
+      expect(migrated.version).toBe('2.1');
+      expect(migrated.image_max_tokens).toBe(1024); // Should preserve custom value
+    });
   });
 
   describe('validateContextInitParams', () => {
@@ -188,6 +233,13 @@ describe('contextInitParamsVersions', () => {
       expect(defaultSettings.n_gpu_layers).toBe(99);
       expect(defaultSettings.use_mlock).toBe(false);
       expect(defaultSettings.use_mmap).toBe('true'); // Default for non-Android platforms
+    });
+
+    it('should include image_max_tokens with default value', () => {
+      const defaultSettings = createDefaultContextInitParams();
+
+      expect(defaultSettings.image_max_tokens).toBe(512);
+      expect(defaultSettings.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
     });
   });
 });

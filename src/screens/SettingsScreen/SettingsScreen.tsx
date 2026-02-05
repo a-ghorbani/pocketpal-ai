@@ -316,7 +316,9 @@ export const SettingsScreen: React.FC = observer(() => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled">
           {/* Model Initialization Settings */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.modelInitializationSettings} />
@@ -549,6 +551,40 @@ export const SettingsScreen: React.FC = observer(() => {
                         .replace(
                           '{{maxThreads}}',
                           modelStore.max_threads.toString(),
+                        )}
+                    </Text>
+                  </View>
+                  <Divider />
+
+                  {/* Image Max Tokens Slider */}
+                  <View style={styles.settingItemContainer}>
+                    <InputSlider
+                      testID="image-max-tokens-slider"
+                      label={l10n.settings.imageMaxTokens}
+                      value={
+                        modelStore.contextInitParams.image_max_tokens ?? 512
+                      }
+                      onValueChange={value =>
+                        modelStore.setImageMaxTokens(Math.round(value))
+                      }
+                      min={256}
+                      max={4096}
+                      step={1}
+                    />
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.imageMaxTokensDescription
+                        .replace(
+                          '{{tokens}}',
+                          (
+                            modelStore.contextInitParams.image_max_tokens ?? 512
+                          ).toString(),
+                        )
+                        .replace(
+                          '{{effectiveTokens}}',
+                          (modelStore.contextInitParams.image_max_tokens ??
+                            512) > modelStore.contextInitParams.n_ctx
+                            ? ` (${l10n.settings.effectiveLabel}: ${modelStore.contextInitParams.n_ctx})`
+                            : '',
                         )}
                     </Text>
                   </View>
