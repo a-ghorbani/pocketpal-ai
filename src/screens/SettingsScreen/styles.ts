@@ -102,6 +102,6 @@ export const createStyles = (theme: Theme) =>
       marginLeft: 4,
     },
     segmentedButtons: {
-      marginTop: 8,
+      marginVertical: 8,
     },
   });
