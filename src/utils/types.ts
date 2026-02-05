@@ -512,6 +512,10 @@ export interface ContextInitParams
   kv_unified?: boolean; // Unified KV cache (CRITICAL: saves ~7GB memory)
   n_parallel?: number; // Max parallel sequences (default: 1 for blocking completion)
 
+  // v2.1+
+  /** Maximum number of tokens for image input (for dynamic resolution VLMs). Default: 512 */
+  image_max_tokens?: number;
+
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */
   no_gpu_devices?: boolean;
