@@ -554,6 +554,32 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Divider />
 
+                  {/* Image Max Tokens Slider */}
+                  <View style={styles.settingItemContainer}>
+                    <InputSlider
+                      testID="image-max-tokens-slider"
+                      label={l10n.settings.imageMaxTokens}
+                      value={
+                        modelStore.contextInitParams.image_max_tokens ?? 512
+                      }
+                      onValueChange={value =>
+                        modelStore.setImageMaxTokens(Math.round(value))
+                      }
+                      min={256}
+                      max={4096}
+                      step={1}
+                    />
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.imageMaxTokensDescription.replace(
+                        '{{tokens}}',
+                        (
+                          modelStore.contextInitParams.image_max_tokens ?? 512
+                        ).toString(),
+                      )}
+                    </Text>
+                  </View>
+                  <Divider />
+
                   {/* Flash Attention Type */}
                   <View style={styles.settingItemContainer}>
                     <Text variant="titleMedium" style={styles.textLabel}>
