@@ -1508,6 +1508,78 @@ describe('ModelStore', () => {
       expect(path).toContain('/models/hf/test-author/model.gguf');
     });
 
+    it('should construct new path with repo for HF model', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock old path doesn't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      expect(path).toContain('/models/hf/test-author/test-repo/model.gguf');
+    });
+
+    it('should use old path if file exists there for HF model (backwards compatibility)', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock old path exists
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      expect(path).toContain('/models/hf/test-author/model.gguf');
+      expect(path).not.toContain('/test-repo/');
+    });
+
+    it('should fallback to unknown if repo field missing for HF model', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        // repo field intentionally missing
+      };
+
+      // Mock old path doesn't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      expect(path).toContain('/models/hf/test-author/unknown/model.gguf');
+    });
+
+    it('should handle error when checking old path for HF model', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock RNFS.exists to throw error
+      (RNFS.exists as jest.Mock).mockRejectedValue(
+        new Error('File system error'),
+      );
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should still return new path despite error
+      expect(path).toContain('/models/hf/test-author/test-repo/model.gguf');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking old HF model path:',
+        expect.any(Error),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
     it('should handle error when checking old path for preset model', async () => {
       const presetModel = {
         origin: ModelOrigin.PRESET,

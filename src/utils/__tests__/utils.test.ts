@@ -259,3 +259,52 @@ describe('safeParseJSON', () => {
     });
   });
 });
+
+describe('hfAsModel', () => {
+  const {hfAsModel} = require('..');
+  const {mockHFModel1, mockHFModelFiles1} = require('../../../jest/fixtures/models');
+
+  it('should extract and set repo from hfModel.id', () => {
+    const model = hfAsModel(mockHFModel1, mockHFModelFiles1[0]);
+
+    expect(model.repo).toBe('hf-model-name-1');
+    expect(model.author).toBe('owner');
+  });
+
+  it('should handle hfModel.id with different author/repo format', () => {
+    const customHFModel = {
+      ...mockHFModel1,
+      id: 'bartowski/gemma-2-2b-it-GGUF',
+      author: 'bartowski',
+    };
+
+    const model = hfAsModel(customHFModel, mockHFModelFiles1[0]);
+
+    expect(model.repo).toBe('gemma-2-2b-it-GGUF');
+    expect(model.author).toBe('bartowski');
+  });
+
+  it('should handle hfModel.id with no slash (undefined repo)', () => {
+    const malformedHFModel = {
+      ...mockHFModel1,
+      id: 'just-a-name',
+      author: 'unknown',
+    };
+
+    const model = hfAsModel(malformedHFModel, mockHFModelFiles1[0]);
+
+    expect(model.repo).toBeUndefined();
+  });
+
+  it('should handle hfModel.id with single slash (undefined repo)', () => {
+    const singleSlashHFModel = {
+      ...mockHFModel1,
+      id: 'author/',
+      author: 'author',
+    };
+
+    const model = hfAsModel(singleSlashHFModel, mockHFModelFiles1[0]);
+
+    expect(model.repo).toBe('');
+  });
+});
