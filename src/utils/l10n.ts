@@ -84,6 +84,8 @@ export const l10n = {
       imageMaxTokens: 'Image Max Tokens',
       imageMaxTokensDescription:
         'Maximum tokens for image processing: {{tokens}} (lower = faster, less detail)',
+      imageMaxTokensCappedToContext:
+        'Limited by context size ({{n_ctx}} tokens)',
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: 'Enable Flash Attention for faster processing',
@@ -1431,6 +1433,8 @@ export const l10n = {
       imageMaxTokens: '画像最大トークン数',
       imageMaxTokensDescription:
         '画像処理の最大トークン数: {{tokens}} (低い = 高速、詳細度低)',
+      imageMaxTokensCappedToContext:
+        'コンテキストサイズに制限されています（{{n_ctx}}トークン）',
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: '高速処理のためのFlash Attentionを有効化',
@@ -2782,6 +2786,7 @@ export const l10n = {
       imageMaxTokens: '图像最大令牌数',
       imageMaxTokensDescription:
         '图像处理的最大令牌数: {{tokens}} (较低 = 更快，细节较少)',
+      imageMaxTokensCappedToContext: '受上下文大小限制（{{n_ctx}}个令牌）',
       // Flash Attention
       flashAttention: 'Flash Attention',
       flashAttentionDescription: '启用Flash Attention以加快处理速度',

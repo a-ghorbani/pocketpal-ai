@@ -566,7 +566,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setImageMaxTokens(Math.round(value))
                       }
                       min={256}
-                      max={4096}
+                      max={Math.min(4096, modelStore.contextInitParams.n_ctx)}
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
@@ -577,6 +577,20 @@ export const SettingsScreen: React.FC = observer(() => {
                         ).toString(),
                       )}
                     </Text>
+                    {(modelStore.contextInitParams.image_max_tokens ?? 512) >=
+                      modelStore.contextInitParams.n_ctx && (
+                      <Text
+                        variant="labelSmall"
+                        style={[
+                          styles.textDescription,
+                          {color: theme.colors.primary},
+                        ]}>
+                        {l10n.settings.imageMaxTokensCappedToContext.replace(
+                          '{{n_ctx}}',
+                          modelStore.contextInitParams.n_ctx.toString(),
+                        )}
+                      </Text>
+                    )}
                   </View>
                   <Divider />
 
