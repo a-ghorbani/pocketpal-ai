@@ -262,7 +262,10 @@ describe('safeParseJSON', () => {
 
 describe('hfAsModel', () => {
   const {hfAsModel} = require('..');
-  const {mockHFModel1, mockHFModelFiles1} = require('../../../jest/fixtures/models');
+  const {
+    mockHFModel1,
+    mockHFModelFiles1,
+  } = require('../../../jest/fixtures/models');
 
   it('should extract and set repo from hfModel.id', () => {
     const model = hfAsModel(mockHFModel1, mockHFModelFiles1[0]);
