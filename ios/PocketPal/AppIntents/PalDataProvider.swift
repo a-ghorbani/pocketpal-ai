@@ -167,6 +167,13 @@ class PalDataProvider {
     ///
     /// IMPORTANT: This logic MUST stay in sync with TypeScript implementation
     /// See: src/store/ModelStore.ts - getModelFullPath() method (lines ~618-659)
+    /// Infers repository name from HF model ID format: "author/repo/filename"
+    private func inferRepoFromModelId(_ modelId: String) -> String? {
+        let parts = modelId.components(separatedBy: "/")
+        // HF model IDs should have at least 3 parts: author/repo/filename
+        return parts.count >= 3 ? parts[1] : nil
+    }
+
     private func parseModelPath(from json: String) -> String? {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -202,25 +209,64 @@ class PalDataProvider {
         // For preset models, check both old and new paths
         if origin == "preset" {
             let author = dict["author"] as? String ?? "unknown"
-            let oldPath = documentsPath.appendingPathComponent(filename).path
-            let newPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(filename)").path
+            let repo = dict["repo"] as? String ?? "unknown"
 
-            // If the file exists in old path, use that (for backwards compatibility)
+            // Very old path (deprecated, for backwards compatibility)
+            let veryOldPath = documentsPath.appendingPathComponent(filename).path
+
+            // Old path (deprecated, for backwards compatibility)
+            let oldPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(filename)").path
+
+            // New path structure includes repository name
+            let newPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(repo)/\(filename)").path
+
+            // Check if file exists at very old path first (for backwards compatibility)
+            if fileManager.fileExists(atPath: veryOldPath) {
+                print("[PalDataProvider] Found preset model at very old path: \(veryOldPath)")
+                return veryOldPath
+            }
+
+            // Check if file exists at old path (for backwards compatibility)
             if fileManager.fileExists(atPath: oldPath) {
-                print("[PalDataProvider] Found model at old path")
+                print("[PalDataProvider] Found preset model at old path: \(oldPath)")
                 return oldPath
             }
 
             // Otherwise use new path
+            print("[PalDataProvider] Using new preset model path: \(newPath)")
             return newPath
         }
 
-        // For HF models, use author/model structure
+        // For HF models, use author/repo/model structure with backwards compatibility
         if origin == "hf" {
             let author = dict["author"] as? String ?? "unknown"
-            let path = documentsPath.appendingPathComponent("models/hf/\(author)/\(filename)").path
-            print("[PalDataProvider] Constructed HF model path: \(path)")
-            return path
+
+            // Try to get repo from dict, or infer from model ID, or fallback to 'unknown'
+            var repo = dict["repo"] as? String ?? "unknown"
+            if repo == "unknown" {
+                // Try to infer from model ID
+                if let modelId = dict["id"] as? String,
+                   let inferredRepo = inferRepoFromModelId(modelId) {
+                    repo = inferredRepo
+                    print("[PalDataProvider] Inferred repo '\(repo)' from model ID: \(modelId)")
+                }
+            }
+
+            // Old path structure (for backwards compatibility)
+            let oldPath = documentsPath.appendingPathComponent("models/hf/\(author)/\(filename)").path
+
+            // New path structure includes repository name
+            let newPath = documentsPath.appendingPathComponent("models/hf/\(author)/\(repo)/\(filename)").path
+
+            // Check if file exists at old path (backwards compatibility)
+            if fileManager.fileExists(atPath: oldPath) {
+                print("[PalDataProvider] Found HF model at old path: \(oldPath)")
+                return oldPath
+            }
+
+            // Otherwise use new path
+            print("[PalDataProvider] Using new HF model path: \(newPath)")
+            return newPath
         }
 
         // Fallback (shouldn't reach here)

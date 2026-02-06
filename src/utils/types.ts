@@ -355,6 +355,7 @@ export interface GGUFMetadata {
 export interface Model {
   id: string;
   author: string;
+  repo?: string; // Repository name (e.g., "gemma-2-2b-it-GGUF")
   name: string;
   type?: string;
   capabilities?: SkillKey[]; // Array of capability keys

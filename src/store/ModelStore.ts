@@ -24,6 +24,7 @@ import {
   hfAsModel,
   getMmprojFiles,
   filterProjectionModels,
+  inferRepoFromModelId,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -433,6 +434,7 @@ class ModelStore {
 
   initializeStore = async () => {
     const storedVersion = this.version || 0;
+    console.log('models: ', this.models);
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
@@ -567,6 +569,17 @@ class ModelStore {
           ...(model.stopWords || []),
           ...(model.defaultStopWords || []),
         ];
+
+        // Infer repo from model.id if missing (for existing HF models)
+        if (model.origin === ModelOrigin.HF && !model.repo) {
+          const inferredRepo = inferRepoFromModelId(model.id);
+          if (inferredRepo) {
+            model.repo = inferredRepo;
+            console.log(
+              `[ModelStore] Inferred repo "${inferredRepo}" from model.id: ${model.id}`,
+            );
+          }
+        }
       }
     });
 
@@ -710,26 +723,67 @@ class ModelStore {
     // For preset models, check both old and new paths
     if (model.origin === ModelOrigin.PRESET) {
       const author = model.author || 'unknown';
-      const oldPath = `${RNFS.DocumentDirectoryPath}/${model.filename}`; // old path is deprecated. We keep it for now for backwards compatibility.
-      const newPath = `${RNFS.DocumentDirectoryPath}/models/preset/${author}/${model.filename}`;
+      const repo = model.repo || 'unknown';
 
-      // If the file exists in old path, use that (for backwards compatibility)
+      // Very old path (deprecated, for backwards compatibility)
+      const veryOldPath = `${RNFS.DocumentDirectoryPath}/${model.filename}`;
+
+      // Old path (deprecated, for backwards compatibility)
+      const oldPath = `${RNFS.DocumentDirectoryPath}/models/preset/${author}/${model.filename}`;
+
+      // New path structure includes repository name
+      const newPath = `${RNFS.DocumentDirectoryPath}/models/preset/${author}/${repo}/${model.filename}`;
+
+      // Check if file exists at very old path first (for backwards compatibility)
+      try {
+        if (await RNFS.exists(veryOldPath)) {
+          return veryOldPath;
+        }
+      } catch (err) {
+        console.log('Error checking very old preset path:', err);
+      }
+
+      // Check if file exists at old path (for backwards compatibility)
       try {
         if (await RNFS.exists(oldPath)) {
           return oldPath;
         }
       } catch (err) {
-        console.log('Error checking old path:', err);
+        console.log('Error checking old preset path:', err);
       }
 
       // Otherwise use new path
       return newPath;
     }
 
-    // For HF models, use author/model structure
+    // For HF models, use author/repo/model structure with backwards compatibility
     if (model.origin === ModelOrigin.HF) {
       const author = model.author || 'unknown';
-      return `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
+
+      // Try to get repo from model, or infer from model.id, or fallback to 'unknown'
+      let repo = model.repo;
+      if (!repo) {
+        repo = inferRepoFromModelId(model.id) || 'unknown';
+      }
+
+      // Old path structure (for backwards compatibility)
+      const oldPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
+
+      // New path structure includes repository name
+      const newPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${repo}/${model.filename}`;
+
+      // Check if file exists at old path (backwards compatibility)
+      // This handles: existing downloads, models after reset, models after app update
+      try {
+        if (await RNFS.exists(oldPath)) {
+          return oldPath;
+        }
+      } catch (err) {
+        console.log('Error checking old HF model path:', err);
+      }
+
+      // Otherwise use new path
+      return newPath;
     }
 
     // Fallback (shouldn't reach here)

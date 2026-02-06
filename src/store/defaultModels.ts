@@ -3,7 +3,7 @@ import {chatTemplates} from '../utils/chat';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {Platform} from 'react-native';
 
-export const MODEL_LIST_VERSION = 13;
+export const MODEL_LIST_VERSION = 14;
 
 const iosOnlyModels: Model[] = [];
 
@@ -14,6 +14,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
     author: 'bartowski',
+    repo: 'gemma-2-2b-it-GGUF',
     name: 'Gemma-2-2b-it (Q6_K)',
     type: 'Gemma',
     capabilities: ['questionAnswering', 'summarization', 'reasoning'],
@@ -60,6 +61,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'TheDrummer/Gemmasutra-Mini-2B-v1-GGUF/Gemmasutra-Mini-2B-v1-Q6_K.gguf',
     author: 'TheDrummer',
+    repo: 'Gemmasutra-Mini-2B-v1-GGUF',
     name: 'Gemmasutra-Mini-2B-v1 (Q6_K)',
     type: 'Gemma',
     capabilities: ['roleplay'],
@@ -106,6 +108,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'MaziyarPanahi/Phi-3.5-mini-instruct-GGUF/Phi-3.5-mini-instruct.Q4_K_M.gguf',
     author: 'MaziyarPanahi',
+    repo: 'Phi-3.5-mini-instruct-GGUF',
     name: 'Phi-3.5 mini 4k instruct (Q4_K_M)',
     type: 'Phi',
     capabilities: ['reasoning', 'code', 'math', 'multilingual'],
@@ -150,6 +153,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'Qwen/Qwen2.5-1.5B-Instruct-GGUF/qwen2.5-1.5b-instruct-q8_0.gguf',
     author: 'Qwen',
+    repo: 'Qwen2.5-1.5B-Instruct-GGUF',
     name: 'Qwen2.5-1.5B-Instruct (Q8_0)',
     type: 'Qwen',
     capabilities: ['instructions', 'roleplay', 'multilingual'],
@@ -194,6 +198,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'Qwen/Qwen2.5-3B-Instruct-GGUF/qwen2.5-3b-instruct-q5_k_m.gguf',
     author: 'Qwen',
+    repo: 'Qwen2.5-3B-Instruct-GGUF',
     name: 'Qwen2.5-3B-Instruct (Q5_K_M)',
     type: 'Qwen',
     capabilities: ['instructions', 'roleplay', 'multilingual'],
@@ -239,6 +244,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'hugging-quants/Llama-3.2-1B-Instruct-Q8_0-GGUF/llama-3.2-1b-instruct-q8_0.gguf',
     author: 'hugging-quants',
+    repo: 'Llama-3.2-1B-Instruct-Q8_0-GGUF',
     name: 'Llama-3.2-1b-instruct (Q8_0)',
     type: 'Llama',
     capabilities: ['instructions', 'summarization', 'rewriting'],
@@ -283,6 +289,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
     author: 'bartowski',
+    repo: 'Llama-3.2-3B-Instruct-GGUF',
     name: 'Llama-3.2-3B-Instruct (Q6_K)',
     type: 'Llama',
     capabilities: ['instructions', 'summarization', 'rewriting'],
@@ -327,6 +334,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'bartowski/SmolLM2-1.7B-Instruct-GGUF/SmolLM2-1.7B-Instruct-Q8_0.gguf',
     author: 'bartowski',
+    repo: 'SmolLM2-1.7B-Instruct-GGUF',
     name: 'SmolLM2-1.7B-Instruct (Q8_0)',
     type: 'SmolLM',
     size: 1820414944,
@@ -371,6 +379,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
     author: 'ggml-org',
+    repo: 'SmolVLM-500M-Instruct-GGUF',
     name: 'SmolVLM2-500M-Instruct (Q8_0)',
     type: 'SmolVLM',
     capabilities: ['vision'],
@@ -417,6 +426,7 @@ const crossPlatformModels: Model[] = [
   {
     id: 'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
     author: 'ggml-org',
+    repo: 'SmolVLM-500M-Instruct-GGUF',
     name: 'mmproj-SmolVLM2-500M-Instruct (Q8_0)',
     type: 'SmolVLM',
     capabilities: [],

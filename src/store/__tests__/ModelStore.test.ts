@@ -407,6 +407,9 @@ describe('ModelStore', () => {
     });
 
     it('should automatically cleanup orphaned projection model when LLM is deleted', async () => {
+      // Mock RNFS.exists to return false so backwards compat checks use new path consistently
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
       const projModel = {
         ...defaultModels[0],
         id: 'test-proj-model',
@@ -867,16 +870,19 @@ describe('ModelStore', () => {
       await modelStore.downloadHFModel(hfModel as any, modelFile as any, {
         enableVision: true,
       });
+      // Wait for checkSpaceAndDownload to complete (it's not awaited in downloadHFModel)
+      await new Promise(resolve => setTimeout(resolve, 300));
       expect(downloadManager.startDownload).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'test/hf-model/model-01.gguf',
           type: 'hf',
           author: 'test',
+          repo: 'hf-model',
         }),
         expect.stringContaining(
-          '/path/to/documents/models/hf/test/model-01.gguf',
+          '/path/to/documents/models/hf/test/hf-model/model-01.gguf',
         ),
-        'mockPass',
+        'mockPass', // authToken from keychain mock
       );
     });
 
@@ -1472,11 +1478,12 @@ describe('ModelStore', () => {
         author: 'test-author',
       };
 
-      // Mock RNFS.exists to return false for old path
+      // Mock RNFS.exists to return false for both old paths
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
 
       const path = await modelStore.getModelFullPath(presetModel as any);
-      expect(path).toContain('/models/preset/test-author/model.gguf');
+      // Without repo field, should use 'unknown' as fallback
+      expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
     });
 
     it('should get old path for preset model if it exists', async () => {
@@ -1505,6 +1512,78 @@ describe('ModelStore', () => {
       expect(path).toContain('/models/hf/test-author/model.gguf');
     });
 
+    it('should construct new path with repo for HF model', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock old path doesn't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      expect(path).toContain('/models/hf/test-author/test-repo/model.gguf');
+    });
+
+    it('should use old path if file exists there for HF model (backwards compatibility)', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock old path exists
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      expect(path).toContain('/models/hf/test-author/model.gguf');
+      expect(path).not.toContain('/test-repo/');
+    });
+
+    it('should fallback to unknown if repo field missing for HF model', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        // repo field intentionally missing
+      };
+
+      // Mock old path doesn't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      expect(path).toContain('/models/hf/test-author/unknown/model.gguf');
+    });
+
+    it('should handle error when checking old path for HF model', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock RNFS.exists to throw error
+      (RNFS.exists as jest.Mock).mockRejectedValue(
+        new Error('File system error'),
+      );
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should still return new path despite error
+      expect(path).toContain('/models/hf/test-author/test-repo/model.gguf');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking old HF model path:',
+        expect.any(Error),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
     it('should handle error when checking old path for preset model', async () => {
       const presetModel = {
         origin: ModelOrigin.PRESET,
@@ -1512,21 +1591,318 @@ describe('ModelStore', () => {
         author: 'test-author',
       };
 
-      // Mock RNFS.exists to throw error for old path
-      (RNFS.exists as jest.Mock).mockRejectedValue(
-        new Error('File system error'),
-      );
+      // Mock RNFS.exists to throw error for very old path, then throw for old path
+      (RNFS.exists as jest.Mock)
+        .mockRejectedValueOnce(new Error('File system error')) // very old path
+        .mockRejectedValueOnce(new Error('File system error')); // old path
 
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const path = await modelStore.getModelFullPath(presetModel as any);
-      expect(path).toContain('/models/preset/test-author/model.gguf');
+      // Without repo field, should use 'unknown' as fallback
+      expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking old path:',
+        'Error checking very old preset path:',
+        expect.any(Error),
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking old preset path:',
         expect.any(Error),
       );
 
       consoleLogSpy.mockRestore();
+    });
+  });
+
+  describe('getModelFullPath - PRESET models with repo field', () => {
+    it('should construct new path with repo for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
+    });
+
+    it('should use very old path if file exists there for PRESET model (backwards compatibility)', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock very old path exists (first call returns true)
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/model.gguf');
+      expect(path).not.toContain('/models/preset/');
+      expect(path).not.toContain('/test-repo/');
+    });
+
+    it('should use old path if very old path does not exist but old path exists for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock very old path doesn't exist (first call), but old path exists (second call)
+      (RNFS.exists as jest.Mock)
+        .mockResolvedValueOnce(false) // very old path
+        .mockResolvedValueOnce(true); // old path
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/models/preset/test-author/model.gguf');
+      expect(path).not.toContain('/test-repo/');
+    });
+
+    it('should fallback to unknown if repo field missing for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        // repo field intentionally missing
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
+    });
+
+    it('should handle error when checking very old path for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock RNFS.exists to throw error for very old path, then return false for old path
+      (RNFS.exists as jest.Mock)
+        .mockRejectedValueOnce(new Error('File system error')) // very old path
+        .mockResolvedValueOnce(false); // old path
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      // Should still check old path and eventually return new path
+      expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking very old preset path:',
+        expect.any(Error),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should handle error when checking old path for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock very old path doesn't exist, old path throws error
+      (RNFS.exists as jest.Mock)
+        .mockResolvedValueOnce(false) // very old path
+        .mockRejectedValueOnce(new Error('File system error')); // old path
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      // Should still return new path despite error
+      expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking old preset path:',
+        expect.any(Error),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+  });
+
+  describe('getModelFullPath - HF models with repo inference', () => {
+    it('should infer repo from model.id when repo field is missing', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        id: 'bartowski/gemma-2-2b-it-GGUF/model.gguf',
+        filename: 'model.gguf',
+        author: 'bartowski',
+        // repo field intentionally missing (simulates existing model before update)
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should infer repo from model.id
+      expect(path).toContain(
+        '/models/hf/bartowski/gemma-2-2b-it-GGUF/model.gguf',
+      );
+    });
+
+    it('should use explicit repo field over inferred value', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        id: 'bartowski/gemma-2-2b-it-GGUF/model.gguf',
+        filename: 'model.gguf',
+        author: 'bartowski',
+        repo: 'explicit-repo-name',
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should use explicit repo field
+      expect(path).toContain(
+        '/models/hf/bartowski/explicit-repo-name/model.gguf',
+      );
+    });
+
+    it('should fallback to unknown if repo missing and cannot infer', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        id: 'invalid-id', // Malformed ID - cannot infer repo
+        filename: 'model.gguf',
+        author: 'bartowski',
+        // repo field intentionally missing
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should fallback to 'unknown'
+      expect(path).toContain('/models/hf/bartowski/unknown/model.gguf');
+    });
+  });
+
+  describe('mergeModelLists - repo inference for HF models', () => {
+    it('should infer and set repo field for existing HF models', async () => {
+      // Set up store with existing HF model (no repo field)
+      modelStore.models = [
+        {
+          id: 'test-author/test-repo/model.gguf',
+          origin: ModelOrigin.HF,
+          author: 'test-author',
+          filename: 'model.gguf',
+          // repo field missing (simulates existing model before update)
+          isDownloaded: true,
+          hfModel: {id: 'test-author/test-repo'} as any,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Run mergeModelLists
+      modelStore.mergeModelLists();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Check repo was inferred and set
+      expect(modelStore.models[0].repo).toBe('test-repo');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[ModelStore] Inferred repo "test-repo"'),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should not override existing repo field', async () => {
+      // Set up store with HF model that already has repo field
+      modelStore.models = [
+        {
+          id: 'test-author/inferred-repo/model.gguf',
+          origin: ModelOrigin.HF,
+          author: 'test-author',
+          filename: 'model.gguf',
+          repo: 'existing-repo', // Already has repo field
+          isDownloaded: true,
+          hfModel: {id: 'test-author/inferred-repo'} as any,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      modelStore.mergeModelLists();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should keep existing repo field
+      expect(modelStore.models[0].repo).toBe('existing-repo');
+    });
+
+    it('should handle HF models with malformed IDs gracefully', async () => {
+      modelStore.models = [
+        {
+          id: 'malformed-id',
+          origin: ModelOrigin.HF,
+          author: 'test-author',
+          filename: 'model.gguf',
+          // repo field missing, ID is malformed
+          isDownloaded: true,
+          hfModel: {id: 'malformed'} as any,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      // Should not throw error
+      expect(() => modelStore.mergeModelLists()).not.toThrow();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Repo should remain undefined
+      expect(modelStore.models[0].repo).toBeUndefined();
+    });
+
+    it('should not affect PRESET models', async () => {
+      modelStore.models = [
+        {
+          id: 'preset-model',
+          origin: ModelOrigin.PRESET,
+          author: 'preset-author',
+          filename: 'model.gguf',
+          // repo field missing
+          isDownloaded: true,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      modelStore.mergeModelLists();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Preset models should not be affected by HF repo inference
+      expect(modelStore.models[0].repo).toBeUndefined();
     });
   });
 

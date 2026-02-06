@@ -447,10 +447,15 @@ export function hfAsModel(
     }
   }
 
+  // Extract repo from hfModel.id (format: "author/repo-name")
+  const repoParts = hfModel.id.split('/');
+  const repo = repoParts.length >= 2 ? repoParts[1] : undefined;
+
   const _model: Model = {
     id: hfModel.id + '/' + modelFile.rfilename,
     type: extractHFModelType(hfModel.id),
     author: hfModel.author,
+    repo: repo,
     name: extractHFModelTitle(modelFile.rfilename),
     size: modelFile.size ?? 0,
     params: hfModel.specs?.gguf?.total ?? 0,
@@ -489,6 +494,27 @@ export function hfAsModel(
 
   return _model;
 }
+
+/**
+ * Infers the repository name from a HuggingFace model ID.
+ * HF model IDs have format: "author/repo/filename"
+ *
+ * @param modelId - The full model ID (e.g., "bartowski/gemma-2-2b-it-GGUF/model.gguf")
+ * @returns The repository name, or undefined if not parseable
+ *
+ * @example
+ * inferRepoFromModelId("bartowski/gemma-2-2b-it-GGUF/model.gguf")
+ * // Returns: "gemma-2-2b-it-GGUF"
+ */
+export function inferRepoFromModelId(modelId: string): string | undefined {
+  if (!modelId) {
+    return undefined;
+  }
+  const parts = modelId.split('/');
+  // HF model IDs should have at least 3 parts: author/repo/filename
+  return parts.length >= 3 ? parts[1] : undefined;
+}
+
 export const randId = () => Math.random().toString(36).substring(2, 11);
 
 // There is a an issue with RNFS.hash: https://github.com/birdofpreyru/react-native-fs/issues/99
