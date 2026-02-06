@@ -167,6 +167,13 @@ class PalDataProvider {
     ///
     /// IMPORTANT: This logic MUST stay in sync with TypeScript implementation
     /// See: src/store/ModelStore.ts - getModelFullPath() method (lines ~618-659)
+    /// Infers repository name from HF model ID format: "author/repo/filename"
+    private func inferRepoFromModelId(_ modelId: String) -> String? {
+        let parts = modelId.components(separatedBy: "/")
+        // HF model IDs should have at least 3 parts: author/repo/filename
+        return parts.count >= 3 ? parts[1] : nil
+    }
+
     private func parseModelPath(from json: String) -> String? {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -233,7 +240,17 @@ class PalDataProvider {
         // For HF models, use author/repo/model structure with backwards compatibility
         if origin == "hf" {
             let author = dict["author"] as? String ?? "unknown"
-            let repo = dict["repo"] as? String ?? "unknown"
+
+            // Try to get repo from dict, or infer from model ID, or fallback to 'unknown'
+            var repo = dict["repo"] as? String ?? "unknown"
+            if repo == "unknown" {
+                // Try to infer from model ID
+                if let modelId = dict["id"] as? String,
+                   let inferredRepo = inferRepoFromModelId(modelId) {
+                    repo = inferredRepo
+                    print("[PalDataProvider] Inferred repo '\(repo)' from model ID: \(modelId)")
+                }
+            }
 
             // Old path structure (for backwards compatibility)
             let oldPath = documentsPath.appendingPathComponent("models/hf/\(author)/\(filename)").path

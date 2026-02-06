@@ -507,6 +507,9 @@ export function hfAsModel(
  * // Returns: "gemma-2-2b-it-GGUF"
  */
 export function inferRepoFromModelId(modelId: string): string | undefined {
+  if (!modelId) {
+    return undefined;
+  }
   const parts = modelId.split('/');
   // HF model IDs should have at least 3 parts: author/repo/filename
   return parts.length >= 3 ? parts[1] : undefined;

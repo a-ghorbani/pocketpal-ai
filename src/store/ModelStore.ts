@@ -759,7 +759,12 @@ class ModelStore {
     // For HF models, use author/repo/model structure with backwards compatibility
     if (model.origin === ModelOrigin.HF) {
       const author = model.author || 'unknown';
-      const repo = model.repo || 'unknown';
+
+      // Try to get repo from model, or infer from model.id, or fallback to 'unknown'
+      let repo = model.repo;
+      if (!repo) {
+        repo = inferRepoFromModelId(model.id) || 'unknown';
+      }
 
       // Old path structure (for backwards compatibility)
       const oldPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
