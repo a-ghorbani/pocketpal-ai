@@ -202,16 +202,31 @@ class PalDataProvider {
         // For preset models, check both old and new paths
         if origin == "preset" {
             let author = dict["author"] as? String ?? "unknown"
-            let oldPath = documentsPath.appendingPathComponent(filename).path
-            let newPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(filename)").path
+            let repo = dict["repo"] as? String ?? "unknown"
 
-            // If the file exists in old path, use that (for backwards compatibility)
+            // Very old path (deprecated, for backwards compatibility)
+            let veryOldPath = documentsPath.appendingPathComponent(filename).path
+
+            // Old path (deprecated, for backwards compatibility)
+            let oldPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(filename)").path
+
+            // New path structure includes repository name
+            let newPath = documentsPath.appendingPathComponent("models/preset/\(author)/\(repo)/\(filename)").path
+
+            // Check if file exists at very old path first (for backwards compatibility)
+            if fileManager.fileExists(atPath: veryOldPath) {
+                print("[PalDataProvider] Found preset model at very old path: \(veryOldPath)")
+                return veryOldPath
+            }
+
+            // Check if file exists at old path (for backwards compatibility)
             if fileManager.fileExists(atPath: oldPath) {
-                print("[PalDataProvider] Found model at old path")
+                print("[PalDataProvider] Found preset model at old path: \(oldPath)")
                 return oldPath
             }
 
             // Otherwise use new path
+            print("[PalDataProvider] Using new preset model path: \(newPath)")
             return newPath
         }
 
