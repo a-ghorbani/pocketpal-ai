@@ -407,6 +407,9 @@ describe('ModelStore', () => {
     });
 
     it('should automatically cleanup orphaned projection model when LLM is deleted', async () => {
+      // Mock RNFS.exists to return false so backwards compat checks use new path consistently
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
       const projModel = {
         ...defaultModels[0],
         id: 'test-proj-model',
