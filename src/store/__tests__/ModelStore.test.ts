@@ -1475,11 +1475,12 @@ describe('ModelStore', () => {
         author: 'test-author',
       };
 
-      // Mock RNFS.exists to return false for old path
+      // Mock RNFS.exists to return false for both old paths
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
 
       const path = await modelStore.getModelFullPath(presetModel as any);
-      expect(path).toContain('/models/preset/test-author/model.gguf');
+      // Without repo field, should use 'unknown' as fallback
+      expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
     });
 
     it('should get old path for preset model if it exists', async () => {
@@ -1587,17 +1588,141 @@ describe('ModelStore', () => {
         author: 'test-author',
       };
 
-      // Mock RNFS.exists to throw error for old path
-      (RNFS.exists as jest.Mock).mockRejectedValue(
-        new Error('File system error'),
-      );
+      // Mock RNFS.exists to throw error for very old path, then throw for old path
+      (RNFS.exists as jest.Mock)
+        .mockRejectedValueOnce(new Error('File system error')) // very old path
+        .mockRejectedValueOnce(new Error('File system error')); // old path
 
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const path = await modelStore.getModelFullPath(presetModel as any);
-      expect(path).toContain('/models/preset/test-author/model.gguf');
+      // Without repo field, should use 'unknown' as fallback
+      expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking old path:',
+        'Error checking very old preset path:',
+        expect.any(Error),
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking old preset path:',
+        expect.any(Error),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+  });
+
+  describe('getModelFullPath - PRESET models with repo field', () => {
+    it('should construct new path with repo for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
+    });
+
+    it('should use very old path if file exists there for PRESET model (backwards compatibility)', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock very old path exists (first call returns true)
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/model.gguf');
+      expect(path).not.toContain('/models/preset/');
+      expect(path).not.toContain('/test-repo/');
+    });
+
+    it('should use old path if very old path does not exist but old path exists for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock very old path doesn't exist (first call), but old path exists (second call)
+      (RNFS.exists as jest.Mock)
+        .mockResolvedValueOnce(false) // very old path
+        .mockResolvedValueOnce(true); // old path
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/models/preset/test-author/model.gguf');
+      expect(path).not.toContain('/test-repo/');
+    });
+
+    it('should fallback to unknown if repo field missing for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        // repo field intentionally missing
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
+    });
+
+    it('should handle error when checking very old path for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock RNFS.exists to throw error for very old path, then return false for old path
+      (RNFS.exists as jest.Mock)
+        .mockRejectedValueOnce(new Error('File system error')) // very old path
+        .mockResolvedValueOnce(false); // old path
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      // Should still check old path and eventually return new path
+      expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking very old preset path:',
+        expect.any(Error),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should handle error when checking old path for PRESET model', async () => {
+      const presetModel = {
+        origin: ModelOrigin.PRESET,
+        filename: 'model.gguf',
+        author: 'test-author',
+        repo: 'test-repo',
+      };
+
+      // Mock very old path doesn't exist, old path throws error
+      (RNFS.exists as jest.Mock)
+        .mockResolvedValueOnce(false) // very old path
+        .mockRejectedValueOnce(new Error('File system error')); // old path
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const path = await modelStore.getModelFullPath(presetModel as any);
+      // Should still return new path despite error
+      expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        'Error checking old preset path:',
         expect.any(Error),
       );
 
