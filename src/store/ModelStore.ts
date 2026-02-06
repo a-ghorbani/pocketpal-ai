@@ -24,6 +24,7 @@ import {
   hfAsModel,
   getMmprojFiles,
   filterProjectionModels,
+  inferRepoFromModelId,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -568,6 +569,17 @@ class ModelStore {
           ...(model.stopWords || []),
           ...(model.defaultStopWords || []),
         ];
+
+        // Infer repo from model.id if missing (for existing HF models)
+        if (model.origin === ModelOrigin.HF && !model.repo) {
+          const inferredRepo = inferRepoFromModelId(model.id);
+          if (inferredRepo) {
+            model.repo = inferredRepo;
+            console.log(
+              `[ModelStore] Inferred repo "${inferredRepo}" from model.id: ${model.id}`,
+            );
+          }
+        }
       }
     });
 
