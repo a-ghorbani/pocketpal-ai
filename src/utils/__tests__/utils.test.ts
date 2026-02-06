@@ -260,6 +260,41 @@ describe('safeParseJSON', () => {
   });
 });
 
+describe('inferRepoFromModelId', () => {
+  const {inferRepoFromModelId} = require('..');
+
+  it('should extract repo from valid HF model ID', () => {
+    const modelId = 'bartowski/gemma-2-2b-it-GGUF/model.gguf';
+    expect(inferRepoFromModelId(modelId)).toBe('gemma-2-2b-it-GGUF');
+  });
+
+  it('should handle model ID with special characters in repo', () => {
+    const modelId = 'author/repo-name_v2.0/file.gguf';
+    expect(inferRepoFromModelId(modelId)).toBe('repo-name_v2.0');
+  });
+
+  it('should return undefined for malformed ID (no slashes)', () => {
+    const modelId = 'invalid-id';
+    expect(inferRepoFromModelId(modelId)).toBeUndefined();
+  });
+
+  it('should return undefined for ID with only one slash', () => {
+    const modelId = 'author/filename.gguf';
+    expect(inferRepoFromModelId(modelId)).toBeUndefined();
+  });
+
+  it('should handle model ID with extra slashes', () => {
+    const modelId = 'author/repo/subdir/file.gguf';
+    expect(inferRepoFromModelId(modelId)).toBe('repo');
+  });
+
+  it('should handle null/undefined input', () => {
+    expect(inferRepoFromModelId(null as any)).toBeUndefined();
+    expect(inferRepoFromModelId(undefined as any)).toBeUndefined();
+    expect(inferRepoFromModelId('')).toBeUndefined();
+  });
+});
+
 describe('hfAsModel', () => {
   const {hfAsModel} = require('..');
   const {

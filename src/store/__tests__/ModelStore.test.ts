@@ -1730,6 +1730,179 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('getModelFullPath - HF models with repo inference', () => {
+    it('should infer repo from model.id when repo field is missing', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        id: 'bartowski/gemma-2-2b-it-GGUF/model.gguf',
+        filename: 'model.gguf',
+        author: 'bartowski',
+        // repo field intentionally missing (simulates existing model before update)
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should infer repo from model.id
+      expect(path).toContain(
+        '/models/hf/bartowski/gemma-2-2b-it-GGUF/model.gguf',
+      );
+    });
+
+    it('should use explicit repo field over inferred value', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        id: 'bartowski/gemma-2-2b-it-GGUF/model.gguf',
+        filename: 'model.gguf',
+        author: 'bartowski',
+        repo: 'explicit-repo-name',
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should use explicit repo field
+      expect(path).toContain(
+        '/models/hf/bartowski/explicit-repo-name/model.gguf',
+      );
+    });
+
+    it('should fallback to unknown if repo missing and cannot infer', async () => {
+      const hfModel = {
+        origin: ModelOrigin.HF,
+        id: 'invalid-id', // Malformed ID - cannot infer repo
+        filename: 'model.gguf',
+        author: 'bartowski',
+        // repo field intentionally missing
+      };
+
+      // Mock both old paths don't exist
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      const path = await modelStore.getModelFullPath(hfModel as any);
+      // Should fallback to 'unknown'
+      expect(path).toContain('/models/hf/bartowski/unknown/model.gguf');
+    });
+  });
+
+  describe('mergeModelLists - repo inference for HF models', () => {
+    it('should infer and set repo field for existing HF models', async () => {
+      // Set up store with existing HF model (no repo field)
+      modelStore.models = [
+        {
+          id: 'test-author/test-repo/model.gguf',
+          origin: ModelOrigin.HF,
+          author: 'test-author',
+          filename: 'model.gguf',
+          // repo field missing (simulates existing model before update)
+          isDownloaded: true,
+          hfModel: {id: 'test-author/test-repo'} as any,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Run mergeModelLists
+      modelStore.mergeModelLists();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Check repo was inferred and set
+      expect(modelStore.models[0].repo).toBe('test-repo');
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[ModelStore] Inferred repo "test-repo"'),
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should not override existing repo field', async () => {
+      // Set up store with HF model that already has repo field
+      modelStore.models = [
+        {
+          id: 'test-author/inferred-repo/model.gguf',
+          origin: ModelOrigin.HF,
+          author: 'test-author',
+          filename: 'model.gguf',
+          repo: 'existing-repo', // Already has repo field
+          isDownloaded: true,
+          hfModel: {id: 'test-author/inferred-repo'} as any,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      modelStore.mergeModelLists();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should keep existing repo field
+      expect(modelStore.models[0].repo).toBe('existing-repo');
+    });
+
+    it('should handle HF models with malformed IDs gracefully', async () => {
+      modelStore.models = [
+        {
+          id: 'malformed-id',
+          origin: ModelOrigin.HF,
+          author: 'test-author',
+          filename: 'model.gguf',
+          // repo field missing, ID is malformed
+          isDownloaded: true,
+          hfModel: {id: 'malformed'} as any,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      // Should not throw error
+      expect(() => modelStore.mergeModelLists()).not.toThrow();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Repo should remain undefined
+      expect(modelStore.models[0].repo).toBeUndefined();
+    });
+
+    it('should not affect PRESET models', async () => {
+      modelStore.models = [
+        {
+          id: 'preset-model',
+          origin: ModelOrigin.PRESET,
+          author: 'preset-author',
+          filename: 'model.gguf',
+          // repo field missing
+          isDownloaded: true,
+          chatTemplate: {},
+          stopWords: [],
+          defaultChatTemplate: {},
+          defaultStopWords: [],
+        } as any,
+      ];
+
+      modelStore.mergeModelLists();
+
+      // Wait for async initializeDownloadStatus to complete
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Preset models should not be affected by HF repo inference
+      expect(modelStore.models[0].repo).toBeUndefined();
+    });
+  });
+
   // Add tests for download error handling
   describe('download error handling', () => {
     beforeEach(() => {
