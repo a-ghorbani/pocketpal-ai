@@ -121,34 +121,76 @@
         return nil;
     }
 
-    // Configure sampling parameters
+    // 1. REWIND - Reset all completion state (critical for sequential calls).
+    // rewind() clears antiprompt, grammar, n_past, stopped_* flags, generated_text, etc.
+    // Without this, the second completion (after session cache warm-up) inherits stale state.
+    completion->rewind();
+
+    // 2. SET ALL PARAMETERS (after rewind which clears antiprompt/grammar, before initSampling).
+    // Note: the JSI path sets params BEFORE rewind(), which means antiprompt and grammar get
+    // wiped by rewind(). We intentionally set params AFTER rewind() so stop words actually work.
     _context->params.prompt = [prompt UTF8String];
 
     if (params[@"n_predict"]) {
         _context->params.n_predict = [params[@"n_predict"] intValue];
     }
 
-    if (params[@"temperature"]) {
-        _context->params.sampling.temp = [params[@"temperature"] floatValue];
-    }
-
-    if (params[@"top_k"]) {
-        _context->params.sampling.top_k = [params[@"top_k"] intValue];
-    }
-
-    if (params[@"top_p"]) {
-        _context->params.sampling.top_p = [params[@"top_p"] floatValue];
-    }
-
-    if (params[@"min_p"]) {
-        _context->params.sampling.min_p = [params[@"min_p"] floatValue];
-    }
+    // Sampling parameters - match JSIParams.cpp parseCompletionParams (lines 228-276)
+    auto& sparams = _context->params.sampling;
 
     if (params[@"seed"]) {
-        _context->params.sampling.seed = [params[@"seed"] unsignedIntValue];
+        sparams.seed = [params[@"seed"] unsignedIntValue];
+    }
+    if (params[@"temperature"]) {
+        sparams.temp = [params[@"temperature"] floatValue];
+    }
+    if (params[@"top_k"]) {
+        sparams.top_k = [params[@"top_k"] intValue];
+    }
+    if (params[@"top_p"]) {
+        sparams.top_p = [params[@"top_p"] floatValue];
+    }
+    if (params[@"min_p"]) {
+        sparams.min_p = [params[@"min_p"] floatValue];
+    }
+    if (params[@"n_probs"]) {
+        sparams.n_probs = [params[@"n_probs"] intValue];
+    }
+    if (params[@"penalty_last_n"]) {
+        sparams.penalty_last_n = [params[@"penalty_last_n"] intValue];
+    }
+    if (params[@"penalty_repeat"]) {
+        sparams.penalty_repeat = [params[@"penalty_repeat"] floatValue];
+    }
+    if (params[@"penalty_freq"]) {
+        sparams.penalty_freq = [params[@"penalty_freq"] floatValue];
+    }
+    if (params[@"penalty_present"]) {
+        sparams.penalty_present = [params[@"penalty_present"] floatValue];
+    }
+    if (params[@"mirostat"]) {
+        sparams.mirostat = [params[@"mirostat"] intValue];
+    }
+    if (params[@"mirostat_tau"]) {
+        sparams.mirostat_tau = [params[@"mirostat_tau"] floatValue];
+    }
+    if (params[@"mirostat_eta"]) {
+        sparams.mirostat_eta = [params[@"mirostat_eta"] floatValue];
+    }
+    if (params[@"typical_p"]) {
+        sparams.typ_p = [params[@"typical_p"] floatValue];
+    }
+    if (params[@"xtc_threshold"]) {
+        sparams.xtc_threshold = [params[@"xtc_threshold"] floatValue];
+    }
+    if (params[@"xtc_probability"]) {
+        sparams.xtc_probability = [params[@"xtc_probability"] floatValue];
+    }
+    if (params[@"ignore_eos"]) {
+        sparams.ignore_eos = [params[@"ignore_eos"] boolValue];
     }
 
-    // Set up stop words
+    // Set up stop words (after rewind which clears antiprompt)
     _context->params.antiprompt.clear();
     if (params[@"stop"]) {
         NSArray *stopWords = params[@"stop"];
@@ -157,7 +199,7 @@
         }
     }
 
-    // Initialize sampling
+    // 3. INIT SAMPLING (creates sampler from the params we just set)
     if (!completion->initSampling()) {
         if (error) {
             *error = [NSError errorWithDomain:@"LlamaContextWrapper"
@@ -167,29 +209,66 @@
         return nil;
     }
 
-    // Tokenize and load prompt
+    // 4. BEGIN COMPLETION (sets n_remain = n_predict, is_predicting = true)
+    completion->beginCompletion();
+
+    // 5. LOAD PROMPT (tokenizes prompt, feeds to sampler, sets has_next_token = true)
     std::vector<std::string> emptyMediaPaths;
     completion->loadPrompt(emptyMediaPaths);
 
-    // Begin completion
-    completion->beginCompletion();
+    // 6. CHECK CONTEXT FULL (after loadPrompt, matching JSI at RNLlamaJSI.cpp:1021-1024)
+    if (completion->context_full) {
+        completion->endCompletion();
+        if (error) {
+            *error = [NSError errorWithDomain:@"LlamaContextWrapper"
+                                         code:1005
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Context is full"}];
+        }
+        return nil;
+    }
 
-    // Generate tokens
+    // 7. TOKEN GENERATION LOOP (matching JSI at RNLlamaJSI.cpp:1028-1087)
     std::string resultText;
+    size_t sent_count = 0;
 
-    while (completion->has_next_token) {
-        auto tokenOutput = completion->doCompletion();
+    while (completion->has_next_token && !completion->is_interrupted) {
+        const rnllama::completion_token_output tokenOutput = completion->doCompletion();
 
-        if (!tokenOutput.text.empty()) {
-            resultText += tokenOutput.text;
+        // Skip invalid tokens and incomplete UTF-8 sequences (matching JSI behavior)
+        if (tokenOutput.tok == -1 || completion->incomplete) {
+            continue;
+        }
 
-            if (tokenCallback) {
-                NSString *tokenStr = [NSString stringWithUTF8String:tokenOutput.text.c_str()];
+        const std::string token_text = common_token_to_piece(_context->ctx, tokenOutput.tok);
+        size_t pos = std::min(sent_count, completion->generated_text.size());
+        const std::string str_test = completion->generated_text.substr(pos);
+
+        // Check for stop words (critical: doCompletion does NOT check stop words internally,
+        // this must be done by the caller, matching JSI behavior at RNLlamaJSI.cpp:1038-1048)
+        bool is_stop_full = false;
+        size_t stop_pos = completion->findStoppingStrings(str_test, token_text.size(), rnllama::STOP_FULL);
+        if (stop_pos != std::string::npos) {
+            is_stop_full = true;
+            completion->generated_text.erase(
+                completion->generated_text.begin() + pos + stop_pos,
+                completion->generated_text.end());
+            pos = std::min(sent_count, completion->generated_text.size());
+        } else {
+            stop_pos = completion->findStoppingStrings(str_test, token_text.size(), rnllama::STOP_PARTIAL);
+        }
+
+        if (stop_pos == std::string::npos ||
+            (!completion->has_next_token && !is_stop_full && stop_pos > 0)) {
+            const std::string to_send = completion->generated_text.substr(pos, std::string::npos);
+            sent_count += to_send.size();
+            resultText += to_send;
+
+            if (tokenCallback && !to_send.empty()) {
+                NSString *tokenStr = [NSString stringWithUTF8String:to_send.c_str()];
                 tokenCallback(tokenStr);
             }
         }
 
-        // Check for stop conditions
         if (completion->stopped_eos || completion->stopped_word || completion->stopped_limit) {
             break;
         }
