@@ -55,6 +55,7 @@ import {
   clearAllSessionCaches,
   getSessionCacheInfo,
 } from '../../utils';
+import {t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
 import {getDeviceOptions, DeviceOption} from '../../utils/deviceSelection';
@@ -373,10 +374,10 @@ export const SettingsScreen: React.FC = observer(() => {
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.layersOnGPU.replace(
-                        '{{gpuLayers}}',
-                        modelStore.contextInitParams.n_gpu_layers.toString(),
-                      )}
+                      {t(l10n.settings.layersOnGPU, {
+                        gpuLayers:
+                          modelStore.contextInitParams.n_gpu_layers.toString(),
+                      })}
                     </Text>
                   </>
                 ) : (
@@ -437,17 +438,15 @@ export const SettingsScreen: React.FC = observer(() => {
                   keyboardType="numeric"
                   value={contextSize}
                   onChangeText={handleContextSizeChange}
-                  placeholder={l10n.settings.contextSizePlaceholder.replace(
-                    '{{minContextSize}}',
-                    modelStore.MIN_CONTEXT_SIZE.toString(),
-                  )}
+                  placeholder={t(l10n.settings.contextSizePlaceholder, {
+                    minContextSize: modelStore.MIN_CONTEXT_SIZE.toString(),
+                  })}
                 />
                 {!isValidInput && (
                   <Text style={styles.errorText}>
-                    {l10n.settings.invalidContextSizeError.replace(
-                      '{{minContextSize}}',
-                      modelStore.MIN_CONTEXT_SIZE.toString(),
-                    )}
+                    {t(l10n.settings.invalidContextSizeError, {
+                      minContextSize: modelStore.MIN_CONTEXT_SIZE.toString(),
+                    })}
                   </Text>
                 )}
                 <Text variant="labelSmall" style={styles.textDescription}>
@@ -477,18 +476,15 @@ export const SettingsScreen: React.FC = observer(() => {
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.batchSizeDescription
-                        .replace(
-                          '{{batchSize}}',
+                      {t(l10n.settings.batchSizeDescription, {
+                        batchSize:
                           modelStore.contextInitParams.n_batch.toString(),
-                        )
-                        .replace(
-                          '{{effectiveBatch}}',
+                        effectiveBatch:
                           modelStore.contextInitParams.n_batch >
-                            modelStore.contextInitParams.n_ctx
+                          modelStore.contextInitParams.n_ctx
                             ? ` (${l10n.settings.effectiveLabel}: ${modelStore.contextInitParams.n_ctx})`
                             : '',
-                        )}
+                      })}
                     </Text>
                   </View>
                   <Divider />
@@ -507,24 +503,21 @@ export const SettingsScreen: React.FC = observer(() => {
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.physicalBatchSizeDescription
-                        .replace(
-                          '{{physicalBatchSize}}',
+                      {t(l10n.settings.physicalBatchSizeDescription, {
+                        physicalBatchSize:
                           modelStore.contextInitParams.n_ubatch.toString(),
-                        )
-                        .replace(
-                          '{{effectivePhysicalBatch}}',
+                        effectivePhysicalBatch:
                           modelStore.contextInitParams.n_ubatch >
-                            Math.min(
-                              modelStore.contextInitParams.n_batch,
-                              modelStore.contextInitParams.n_ctx,
-                            )
+                          Math.min(
+                            modelStore.contextInitParams.n_batch,
+                            modelStore.contextInitParams.n_ctx,
+                          )
                             ? ` (${l10n.settings.effectiveLabel}: ${Math.min(
                                 modelStore.contextInitParams.n_batch,
                                 modelStore.contextInitParams.n_ctx,
                               )})`
                             : '',
-                        )}
+                      })}
                     </Text>
                   </View>
                   <Divider />
@@ -543,15 +536,11 @@ export const SettingsScreen: React.FC = observer(() => {
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.cpuThreadsDescription
-                        .replace(
-                          '{{threads}}',
+                      {t(l10n.settings.cpuThreadsDescription, {
+                        threads:
                           modelStore.contextInitParams.n_threads.toString(),
-                        )
-                        .replace(
-                          '{{maxThreads}}',
-                          modelStore.max_threads.toString(),
-                        )}
+                        maxThreads: modelStore.max_threads.toString(),
+                      })}
                     </Text>
                   </View>
                   <Divider />
@@ -572,20 +561,16 @@ export const SettingsScreen: React.FC = observer(() => {
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.imageMaxTokensDescription
-                        .replace(
-                          '{{tokens}}',
-                          (
-                            modelStore.contextInitParams.image_max_tokens ?? 512
-                          ).toString(),
-                        )
-                        .replace(
-                          '{{effectiveTokens}}',
+                      {t(l10n.settings.imageMaxTokensDescription, {
+                        tokens: (
+                          modelStore.contextInitParams.image_max_tokens ?? 512
+                        ).toString(),
+                        effectiveTokens:
                           (modelStore.contextInitParams.image_max_tokens ??
                             512) > modelStore.contextInitParams.n_ctx
                             ? ` (${l10n.settings.effectiveLabel}: ${modelStore.contextInitParams.n_ctx})`
                             : '',
-                        )}
+                      })}
                     </Text>
                   </View>
                   <Divider />
@@ -1112,13 +1097,13 @@ export const SettingsScreen: React.FC = observer(() => {
                           const formattedSize = formatBytes(
                             cacheInfo.totalSizeBytes,
                           );
-                          const confirmMessage =
-                            l10n.settings.clearCachesConfirmMessage
-                              .replace(
-                                '{{fileCount}}',
-                                cacheInfo.fileCount.toString(),
-                              )
-                              .replace('{{size}}', formattedSize);
+                          const confirmMessage = t(
+                            l10n.settings.clearCachesConfirmMessage,
+                            {
+                              fileCount: cacheInfo.fileCount.toString(),
+                              size: formattedSize,
+                            },
+                          );
 
                           Alert.alert(
                             l10n.settings.clearCachesConfirmTitle,
@@ -1135,11 +1120,10 @@ export const SettingsScreen: React.FC = observer(() => {
                                   try {
                                     const deletedCount =
                                       await clearAllSessionCaches();
-                                    const successMessage =
-                                      l10n.settings.clearCachesSuccess.replace(
-                                        '{{count}}',
-                                        deletedCount.toString(),
-                                      );
+                                    const successMessage = t(
+                                      l10n.settings.clearCachesSuccess,
+                                      {count: deletedCount.toString()},
+                                    );
                                     Alert.alert(
                                       l10n.settings.clearPalCaches,
                                       successMessage,

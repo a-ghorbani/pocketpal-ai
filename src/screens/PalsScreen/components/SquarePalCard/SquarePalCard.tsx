@@ -25,6 +25,7 @@ import {chatSessionStore, modelStore} from '../../../../store';
 import type {PalsHubPal} from '../../../../types/palshub';
 
 import {L10nContext} from '../../../../utils';
+import {t} from '../../../../locales';
 import {exportPal} from '../../../../utils/exportUtils';
 import {ROUTES} from '../../../../utils/navigationConstants';
 import {getContrastColor} from '../../../../utils/colorUtils';
@@ -354,7 +355,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
       const palName = isPalsHubPal(pal) ? pal.title : pal.name;
       Alert.alert(
         l10n.palsScreen.deletePal,
-        l10n.palsScreen.deletePalConfirmation.replace('{{palName}}', palName),
+        t(l10n.palsScreen.deletePalConfirmation, {palName}),
         [
           {text: l10n.common.cancel, style: 'cancel'},
           {

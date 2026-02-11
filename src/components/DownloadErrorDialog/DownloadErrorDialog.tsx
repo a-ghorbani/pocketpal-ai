@@ -6,6 +6,7 @@ import {Dialog, DialogAction} from '../Dialog';
 import {Model} from '../../utils/types';
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {ErrorState} from '../../utils/errors';
 import {createStyles} from './styles';
 import {CheckCircleIcon} from '../../assets/icons';
@@ -112,7 +113,7 @@ export const DownloadErrorDialog: React.FC<DownloadErrorDialogProps> = ({
         return alerts.getTokenMessage;
       default:
         return !error?.message
-          ? alerts.downloadFailedMessage.replace('{message}', '')
+          ? t(alerts.downloadFailedMessage, {message: ''})
           : undefined;
     }
   };

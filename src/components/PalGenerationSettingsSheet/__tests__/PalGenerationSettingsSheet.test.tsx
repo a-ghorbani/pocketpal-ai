@@ -5,7 +5,7 @@ import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
 import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
 import {chatSessionStore, defaultCompletionSettings} from '../../../store';
 import {L10nContext} from '../../../utils';
-import {l10n} from '../../../locales';
+import {l10n, t} from '../../../locales';
 import {validateCompletionSettings} from '../../../utils/modelSettings';
 import {mockCompletionParams} from '../../../../jest/fixtures/models';
 
@@ -103,8 +103,9 @@ describe('PalGenerationSettingsSheet', () => {
 
       expect(
         getByText(
-          l10n.en.components.palGenerationSettingsSheet.inheritedSettingsFor(
-            'Test Pal',
+          t(
+            l10n.en.components.palGenerationSettingsSheet.inheritedSettingsFor,
+            {palName: 'Test Pal'},
           ),
         ),
       ).toBeTruthy();
@@ -122,9 +123,9 @@ describe('PalGenerationSettingsSheet', () => {
 
       expect(
         getByText(
-          l10n.en.components.palGenerationSettingsSheet.customSettingsFor(
-            'Test Pal',
-          ),
+          t(l10n.en.components.palGenerationSettingsSheet.customSettingsFor, {
+            palName: 'Test Pal',
+          }),
         ),
       ).toBeTruthy();
     });

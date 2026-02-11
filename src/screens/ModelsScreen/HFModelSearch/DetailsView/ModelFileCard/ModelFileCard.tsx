@@ -23,6 +23,7 @@ import {
   getVisionModelSizeBreakdown,
   isVisionRepo,
 } from '../../../../../utils';
+import {t} from '../../../../../locales';
 import {isLegacyQuantization} from '../../../../../utils/modelSettings';
 import {
   HuggingFaceModel,
@@ -312,10 +313,9 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
                       />
                       <Text style={styles.warningText}>
                         {warnings.length > 1
-                          ? l10n.models.modelFile.warnings.multiple.replace(
-                              '{count}',
-                              warnings.length.toString(),
-                            )
+                          ? t(l10n.models.modelFile.warnings.multiple, {
+                              count: warnings.length.toString(),
+                            })
                           : warnings[0].shortMessage}
                       </Text>
                     </View>
@@ -362,10 +362,9 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
               {/* Download Speed */}
               {isDownloading && downloadSpeed && (
                 <Text variant="bodySmall" style={styles.downloadSpeed}>
-                  {l10n.models.modelFile.labels.downloadSpeed.replace(
-                    '{speed}',
-                    downloadSpeed,
-                  )}
+                  {t(l10n.models.modelFile.labels.downloadSpeed, {
+                    speed: downloadSpeed,
+                  })}
                 </Text>
               )}
             </View>

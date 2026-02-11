@@ -16,6 +16,7 @@ import {
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore} from '..';
+import {t} from '../../locales';
 
 // Mock the HF API
 jest.mock('../../api/hf', () => ({
@@ -918,10 +919,9 @@ describe('ModelStore', () => {
       // Check that Alert.alert is called with the error message
       expect(alertSpy).toHaveBeenCalledWith(
         uiStore.l10n.errors.downloadSetupFailedTitle,
-        uiStore.l10n.errors.downloadSetupFailedMessage.replace(
-          '{message}',
-          'Mock error',
-        ),
+        t(uiStore.l10n.errors.downloadSetupFailedMessage, {
+          message: 'Mock error',
+        }),
       );
 
       // Clean up mocks

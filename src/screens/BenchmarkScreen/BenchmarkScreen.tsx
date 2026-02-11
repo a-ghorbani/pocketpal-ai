@@ -14,6 +14,7 @@ import {Menu, Dialog, Checkbox} from '../../components';
 
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 
 import {createStyles} from './styles';
 import {DeviceInfoCard} from './DeviceInfoCard';
@@ -366,10 +367,9 @@ export const BenchmarkScreen: React.FC = observer(() => {
             {name === 'pp' && modelStore.activeContextSettings && (
               <Text style={styles.maxValueHint}>
                 {' '}
-                {l10n.benchmark.messages.modelMaxValue.replace(
-                  '{{maxValue}}',
-                  getMaxPPValue().toString(),
-                )}
+                {t(l10n.benchmark.messages.modelMaxValue, {
+                  maxValue: getMaxPPValue().toString(),
+                })}
               </Text>
             )}
           </Text>

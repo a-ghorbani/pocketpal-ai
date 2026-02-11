@@ -13,6 +13,7 @@ import {createStyles} from './styles';
 import {modelStore, palStore, chatSessionStore} from '../../store';
 import {CustomBackdrop} from '../Sheet/CustomBackdrop';
 import {getModelSkills, L10nContext, Model} from '../../utils';
+import {t} from '../../locales';
 import type {Pal} from '../../types/pal';
 import {CloseIcon, SettingsIcon} from '../../assets/icons';
 import {SkillsDisplay} from '../SkillsDisplay';
@@ -168,10 +169,9 @@ export const ChatPalModelPickerSheet = observer(
           if (palDefaultModel) {
             Alert.alert(
               l10n.components.chatPalModelPickerSheet.confirmationTitle,
-              l10n.components.chatPalModelPickerSheet.modelSwitchMessage.replace(
-                '{{modelName}}',
-                palDefaultModel.name,
-              ),
+              t(l10n.components.chatPalModelPickerSheet.modelSwitchMessage, {
+                modelName: palDefaultModel.name,
+              }),
               [
                 {
                   text: l10n.components.chatPalModelPickerSheet.keepButton,

@@ -9,6 +9,7 @@ import {Divider} from '../../../components';
 
 import {useTheme} from '../../../hooks';
 import {L10nContext} from '../../../utils';
+import {t} from '../../../locales';
 
 import {createStyles} from './styles';
 
@@ -174,16 +175,18 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
               {l10n.benchmark.deviceInfoCard.title}
             </Text>
             <Text variant="bodySmall" style={styles.headerSummary}>
-              {l10n.benchmark.deviceInfoCard.deviceSummary
-                .replace('{{brand}}', deviceInfo.brand)
-                .replace('{{model}}', deviceInfo.model)
-                .replace('{{systemName}}', deviceInfo.systemName)
-                .replace('{{systemVersion}}', deviceInfo.systemVersion)}
+              {t(l10n.benchmark.deviceInfoCard.deviceSummary, {
+                brand: deviceInfo.brand,
+                model: deviceInfo.model,
+                systemName: deviceInfo.systemName,
+                systemVersion: deviceInfo.systemVersion,
+              })}
             </Text>
             <Text variant="bodySmall" style={styles.headerSummary}>
-              {l10n.benchmark.deviceInfoCard.coreSummary
-                .replace('{{cores}}', deviceInfo.cpuDetails.cores.toString())
-                .replace('{{memory}}', formatBytes(deviceInfo.totalMemory))}
+              {t(l10n.benchmark.deviceInfoCard.coreSummary, {
+                cores: deviceInfo.cpuDetails.cores.toString(),
+                memory: formatBytes(deviceInfo.totalMemory),
+              })}
             </Text>
           </View>
           <Icon
@@ -270,31 +273,20 @@ export const DeviceInfoCard = ({onDeviceInfo, testId}: Props) => {
                     {l10n.benchmark.deviceInfoCard.fields.instructions}
                   </Text>
                   <Text variant="bodySmall" style={styles.deviceInfoValue}>
-                    {l10n.benchmark.deviceInfoCard.instructions.format
-                      .replace(
-                        '{{fp16}}',
-                        deviceInfo.cpuDetails.hasFp16
-                          ? l10n.benchmark.deviceInfoCard.instructions.yes
-                          : l10n.benchmark.deviceInfoCard.instructions.no,
-                      )
-                      .replace(
-                        '{{dotProd}}',
-                        deviceInfo.cpuDetails.hasDotProd
-                          ? l10n.benchmark.deviceInfoCard.instructions.yes
-                          : l10n.benchmark.deviceInfoCard.instructions.no,
-                      )
-                      .replace(
-                        '{{sve}}',
-                        deviceInfo.cpuDetails.hasSve
-                          ? l10n.benchmark.deviceInfoCard.instructions.yes
-                          : l10n.benchmark.deviceInfoCard.instructions.no,
-                      )
-                      .replace(
-                        '{{i8mm}}',
-                        deviceInfo.cpuDetails.hasI8mm
-                          ? l10n.benchmark.deviceInfoCard.instructions.yes
-                          : l10n.benchmark.deviceInfoCard.instructions.no,
-                      )}
+                    {t(l10n.benchmark.deviceInfoCard.instructions.format, {
+                      fp16: deviceInfo.cpuDetails.hasFp16
+                        ? l10n.benchmark.deviceInfoCard.instructions.yes
+                        : l10n.benchmark.deviceInfoCard.instructions.no,
+                      dotProd: deviceInfo.cpuDetails.hasDotProd
+                        ? l10n.benchmark.deviceInfoCard.instructions.yes
+                        : l10n.benchmark.deviceInfoCard.instructions.no,
+                      sve: deviceInfo.cpuDetails.hasSve
+                        ? l10n.benchmark.deviceInfoCard.instructions.yes
+                        : l10n.benchmark.deviceInfoCard.instructions.no,
+                      i8mm: deviceInfo.cpuDetails.hasI8mm
+                        ? l10n.benchmark.deviceInfoCard.instructions.yes
+                        : l10n.benchmark.deviceInfoCard.instructions.no,
+                    })}
                   </Text>
                 </View>
               )}

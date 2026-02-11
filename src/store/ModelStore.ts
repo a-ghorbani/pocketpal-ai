@@ -57,6 +57,7 @@ import {
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
 import {supportsThinking} from '../utils/thinkingCapabilityDetection';
+import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
   createContextInitParams,
@@ -1773,10 +1774,9 @@ class ModelStore {
       console.error('Failed to set up HF model download:', error);
       Alert.alert(
         uiStore.l10n.errors.downloadSetupFailedTitle,
-        uiStore.l10n.errors.downloadSetupFailedMessage.replace(
-          '{message}',
-          (error as Error).message,
-        ),
+        t(uiStore.l10n.errors.downloadSetupFailedMessage, {
+          message: (error as Error).message,
+        }),
       );
     }
   };

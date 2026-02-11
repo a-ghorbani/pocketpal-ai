@@ -23,6 +23,7 @@ import {chatSessionStore, modelStore, uiStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model} from '../../utils/types';
+import {t} from '../../locales';
 import {importChatSessions} from '../../utils/importUtils';
 import {
   exportChatSession,
@@ -129,7 +130,7 @@ export const HeaderRight: React.FC = observer(() => {
       if (count > 0) {
         Alert.alert(
           'Import Success',
-          l10n.settings.importSuccess.replace('{{count}}', count.toString()),
+          t(l10n.settings.importSuccess, {count: count.toString()}),
         );
         // Refresh the chat sessions
         await chatSessionStore.loadSessionList();
