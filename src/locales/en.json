@@ -1,0 +1,1181 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "dismiss": "Dismiss",
+    "rename": "Rename",
+    "reset": "Reset",
+    "save": "Save",
+    "update": "Update",
+    "error": "Error",
+    "export": "Export",
+    "networkError": "Network error. Please try again.",
+    "downloadETA": "ETA",
+    "calculating": "calculating...",
+    "second": "sec",
+    "seconds": "sec",
+    "year": "year",
+    "years": "years",
+    "month": "month",
+    "months": "months",
+    "week": "week",
+    "weeks": "weeks",
+    "day": "day",
+    "days": "days",
+    "hour": "hour",
+    "hours": "hours",
+    "minute": "min",
+    "minutes": "min",
+    "justNow": "just now",
+    "ok": "OK",
+    "close": "Close",
+    "clear": "Clear All",
+    "gallery": "Gallery"
+  },
+  "settings": {
+    "modelInitializationSettings": "Model Initialization Settings",
+    "metal": "Metal",
+    "metalDescription": "Apple's hardware-accelerated API.",
+    "metalRequiresNewerIOS": "Metal acceleration requires iOS 18 or higher. Please upgrade your device to use this feature.",
+    "openCL": "OpenCL (Experimental)",
+    "openCLDescription": "GPU acceleration for Adreno GPUs. Faster prompt processing, but generation may not always be faster.",
+    "openCLNotAvailable": "OpenCL is not available on this device. Requires Adreno GPU with i8mm and dotprod CPU features.",
+    "openCLMissingCPUFeatures": "OpenCL requires i8mm and dotprod CPU features, which are not available on this device.",
+    "openCLQuantizationNote": "Note: Pure Q4_0 quantized models perform best with OpenCL.",
+    "openCLDocsLink": "See llama.cpp OpenCL docs for details.",
+    "layersOnGPU": "Layers on GPU: {{gpuLayers}}",
+    "deviceSelection": "Device Selection",
+    "deviceSelectionIOS": "Device (Metal)",
+    "deviceSelectionIOSDescription": "Choose Metal GPU or CPU-only mode",
+    "deviceSelectionAndroidDescription": "Select compute device (CPU, GPU, or Hexagon NPU)",
+    "cpuOnlyNoAccelerators": "CPU only - No hardware accelerators detected",
+    "contextSize": "Context Size",
+    "contextSizePlaceholder": "Enter context size (min {{minContextSize}})",
+    "invalidContextSizeError": "Please enter a valid number (minimum {{minContextSize}})",
+    "modelReloadNotice": "Model reload needed for changes to take effect.",
+    "advancedSettings": "Advanced Settings",
+    "batchSize": "Batch Size",
+    "batchSizeDescription": "Batch size: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "effective",
+    "physicalBatchSize": "Physical Batch Size",
+    "physicalBatchSizeDescription": "Physical batch size: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "CPU Threads",
+    "cpuThreadsDescription": "Using {{threads}} of {{maxThreads}} available threads",
+    "imageMaxTokens": "Image Max Tokens",
+    "imageMaxTokensDescription": "Maximum tokens for image processing: {{tokens}}{{effectiveTokens}} (lower = faster, less detail)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionDescription": "Enable Flash Attention for faster processing",
+    "flashAttentionIOSDescription": "Memory-efficient attention (auto-enabled on Metal)",
+    "flashAttentionAndroidDescription": "Must be disabled for OpenCL state save/load",
+    "flashAttentionAuto": "Auto",
+    "flashAttentionOn": "On",
+    "flashAttentionOff": "Off",
+    "keyCacheType": "Key Cache Type",
+    "keyCacheTypeDescription": "Select the cache type for key computation",
+    "keyCacheTypeDisabledDescription": "Enable Flash Attention to change cache type",
+    "valueCacheType": "Value Cache Type",
+    "valueCacheTypeDescription": "Select the cache type for value computation",
+    "valueCacheTypeDisabledDescription": "Enable Flash Attention to change cache type",
+    "memorySettings": "Memory Settings",
+    "useMlock": "Use Memory Lock",
+    "useMlockDescription": "Force system to keep model in RAM rather than swapping or compressing",
+    "useMmap": "Memory Mapping",
+    "useMmapDescription": "Use memory-mapped files for faster model loading",
+    "useMmapTrue": "Enabled",
+    "useMmapFalse": "Disabled",
+    "useMmapSmart": "Smart",
+    "useMmapTrueDescription": "Always use memory mapping for faster loading",
+    "useMmapFalseDescription": "Never use memory mapping (slower loading but may reduce memory usage)",
+    "useMmapSmartDescription": "Automatically choose based on model type (Android only)",
+    "useMmapRecommended": "Recommended for performance - Memory-mapped with locked pages. Combines fast loading with consistent performance",
+    "modelLoadingSettings": "Model Loading Settings",
+    "autoOffloadLoad": "Auto Offload/Load",
+    "autoOffloadLoadDescription": "Offload model when app is in background.",
+    "autoNavigateToChat": "Auto-Navigate to Chat",
+    "autoNavigateToChatDescription": "Navigate to chat when loading starts.",
+    "appSettings": "App Settings",
+    "language": "Language",
+    "darkMode": "Dark Mode",
+    "displayMemoryUsage": "Display Memory Usage",
+    "displayMemoryUsageDescription": "Display memory usage in the chat page.",
+    "exportOptions": "Export Options",
+    "exportLegacyChats": "Export Legacy Chats",
+    "exportLegacyChatsDescription": "Use this if migration failed or you need to recover old chat sessions.",
+    "exportButton": "Export",
+    "importChats": "Import Chat Sessions",
+    "importChatsDescription": "Import chat sessions from am (exported) JSON file.",
+    "importButton": "Import",
+    "importSuccess": "Successfully imported {{count}} chat session(s).",
+    "importError": "Failed to import chat sessions. Please check the file format.",
+    "apiSettingsTitle": "API Settings",
+    "huggingFaceTokenLabel": "Hugging Face Token",
+    "tokenIsSetDescription": "Token is set. Required for accessing gated models.",
+    "setTokenDescription": "Set a token to access gated models from Hugging Face.",
+    "setTokenButton": "Set Token",
+    "useHfTokenLabel": "Use HF Token",
+    "useHfTokenDescription": "Enable to use token for API requests. Disable if token is causing authentication issues.",
+    "cacheStorageTitle": "Cache & Storage",
+    "clearPalCaches": "Clear Shortcuts Caches",
+    "clearPalCachesDescription": "Clears cached data used to speed up Shortcuts. This won't affect your Pals or chat history.",
+    "clearCachesButton": "Clear Caches",
+    "clearCachesConfirmTitle": "Clear Shortcuts Caches?",
+    "clearCachesConfirmMessage": "This will clear all cached session data ({{fileCount}} files, {{size}}). Shortcuts may be slower on first use after clearing. This won't affect your Pals or chat history.",
+    "clearCachesSuccess": "Successfully cleared {{count}} cache file(s).",
+    "clearCachesError": "Failed to clear caches. Please try again.",
+    "noCachesToClear": "No caches to clear."
+  },
+  "memory": {
+    "shortWarning": "Memory Warning",
+    "multimodalWarning": "This device may not have sufficient resources for multimodal models.",
+    "memoryTight": "Memory tight",
+    "lowMemory": "Low memory",
+    "memoryDetailMessage": "This model needs ~{{needed}} but only ~{{available}} is estimated as usable. Estimates improve as you use the app.",
+    "estimatedMemory": "Estimated memory: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "Memory Warning",
+      "memoryWarningMessage": "This model may exceed available memory, which could cause instability. Continue loading?",
+      "multimodalWarningTitle": "Device Performance Warning",
+      "multimodalWarningMessage": "This device may not have sufficient resources for multimodal models. Loading may cause instability. Continue anyway?",
+      "combinedWarningTitle": "Performance Warning",
+      "combinedWarningMessage": "This model may exceed available memory and this device may not have sufficient resources for multimodal models. Loading may cause instability. Continue anyway?",
+      "cancel": "Cancel",
+      "continue": "Continue"
+    }
+  },
+  "storage": {
+    "checkFailed": "Failed to check storage",
+    "lowStorage": "Storage low! Model {{modelSize}} > {{freeSpace}} free"
+  },
+  "generation": {
+    "modelNotInitialized": "Model context not initialized",
+    "failedToGenerate": "Failed to generate output"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "File already exists",
+      "fileAlreadyExistsMessage": "A file with this name already exists. What would you like to do?",
+      "replace": "Replace",
+      "keepBoth": "Keep Both"
+    },
+    "labels": {
+      "localModel": "Local",
+      "hfModel": "HF",
+      "unknownGroup": "Unknown",
+      "availableToUse": "Ready to Use",
+      "availableToDownload": "Available to Download",
+      "useAddButtonForMore": "Use + button to find more models"
+    },
+    "vision": "Vision",
+    "mmproj": "Projector",
+    "multimodal": {
+      "settings": "Multimodal Settings",
+      "projectionModels": "Projection Models",
+      "noCompatibleModels": "No compatible projection models found",
+      "noProjectionModels": "No projection models available",
+      "selected": "Selected",
+      "select": "Select",
+      "download": "Download",
+      "projectionNeededTitle": "Projection Model Needed",
+      "projectionNeededMessage": "This model requires a projection model for multimodal capabilities.",
+      "projectionMissingWarning": "Projection model missing",
+      "projectionMissingShort": "Missing projection",
+      "reloadModelTitle": "Reload Model",
+      "reloadModelMessage": "The model needs to be reloaded to apply the new projection model. Do you want to reload now?",
+      "reload": "Reload",
+      "deleteProjectionTitle": "Delete Projection Model",
+      "deleteProjectionMessage": "Are you sure you want to delete this projection model?",
+      "cannotDeleteTitle": "Cannot Delete",
+      "visionControls": {
+        "enableVision": "Enable vision capabilities",
+        "disableVision": "Disable vision capabilities",
+        "visionEnabled": "Vision enabled",
+        "visionDisabled": "Vision disabled",
+        "textOnlyMode": "Text only",
+        "visionMode": "Vision enabled",
+        "downloadWithVision": "Download with vision",
+        "downloadTextOnly": "Download text only",
+        "visionToggleDescription": "Enable image processing capabilities",
+        "projectionModelSize": "+{{size}} projection model",
+        "visionModeDescription": "Process images and text",
+        "textOnlyModeDescription": "Process text only",
+        "includesVisionCapability": "Includes vision capability",
+        "requiresProjectionModel": "Download a compatible projection model first"
+      },
+      "cannotDeleteActive": "This projection model is currently active.",
+      "cannotDeleteInUse": "This projection model is used by downloaded LLM models:",
+      "dependentModels": "Dependent models:",
+      "visionWillBeDisabled": "Vision capabilities will be disabled for these models."
+    },
+    "buttons": {
+      "addFromHuggingFace": "Add from Hugging Face",
+      "addLocalModel": "Add Local Model",
+      "reset": "Reset"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Face Models",
+      "menuTitleDownloaded": "Downloaded Models",
+      "menuTitleGrouped": "Group by Model Type",
+      "menuTitleReset": "Reset Models List"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Proceed with Reset",
+      "confirmReset": "Confirm Reset"
+    },
+    "chatTemplate": {
+      "label": "Base Chat Template:"
+    },
+    "details": {
+      "title": "Available GGUF Files"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "Cannot Remove",
+        "modelPreset": "The model is preset.",
+        "downloadedFirst": "The model is downloaded. Please delete the file first.",
+        "removeTitle": "Remove Model",
+        "removeMessage": "Are you sure you want to remove this model from the list?",
+        "removeError": "Failed to remove the model.",
+        "alreadyDownloadedTitle": "Model Already Downloaded",
+        "alreadyDownloadedMessage": "The model is already downloaded.",
+        "deleteTitle": "Delete Model",
+        "deleteMessage": "Are you sure you want to delete this downloaded model?"
+      },
+      "buttons": {
+        "remove": "Remove"
+      },
+      "warnings": {
+        "storage": {
+          "message": "Not enough storage space available.",
+          "shortMessage": "Low Storage"
+        },
+        "memory": {
+          "message": "Model size is close to or exceeds your device's total memory. This may cause unexpected behavior."
+        },
+        "legacy": {
+          "message": "Legacy quantization format - model may not run.",
+          "shortMessage": "Legacy quantization"
+        },
+        "multiple": "{{count}} Warnings"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "search": {
+      "noResults": "No models found",
+      "loadingMore": "Loading more...",
+      "searchPlaceholder": "Search Hugging Face models",
+      "modelUpdatedLong": "Updated {{time}} ago",
+      "modelUpdatedShort": "{{time}} ago",
+      "modelUpdatedJustNowLong": "Updated just now",
+      "modelUpdatedJustNowShort": "just now",
+      "errorOccurred": "Unable to load models. Please try again.",
+      "filters": {
+        "author": "Author",
+        "authorPlaceholder": "Filter by author...",
+        "sortBy": "Sort by",
+        "clearFilters": "Clear Filters",
+        "showFilters": "Show Filters",
+        "hideFilters": "Hide Filters",
+        "sortRelevance": "Relevance",
+        "sortDownloads": "Downloads",
+        "sortRecent": "Recently Updated",
+        "sortLikes": "Most Liked"
+      }
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "Delete Model",
+        "deleteMessage": "Are you sure you want to delete this downloaded model?",
+        "removeTitle": "Remove Model",
+        "removeMessage": "Are you sure you want to remove this model from the list?"
+      },
+      "buttons": {
+        "settings": "Settings",
+        "download": "Download",
+        "remove": "Remove",
+        "load": "Load",
+        "offload": "Offload"
+      },
+      "labels": {
+        "skills": "Skills: ",
+        "vision": "Vision",
+        "capabilities": "capabilities.",
+        "modelName": "Model Name",
+        "contextLength": "Context Length",
+        "architecture": "Architecture",
+        "author": "Author",
+        "requiresProjectionModel": "Requires projection model",
+        "downloadProjectionModel": "Download projection model",
+        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
+      },
+      "accessibility": {
+        "expandDetails": "Expand details",
+        "collapseDetails": "Collapse details",
+        "memoryWarning": "Memory warning",
+        "integrityWarning": "Integrity warning",
+        "downloadProgress": "Download progress",
+        "loadingIndicator": "Loading",
+        "loadButton": "Load model",
+        "offloadButton": "Offload model",
+        "downloadButton": "Download model",
+        "settingsButton": "Model settings",
+        "deleteButton": "Delete model",
+        "removeButton": "Remove model",
+        "expandDetailsButton": "Expand model details",
+        "memoryWarningButton": "Show memory warning details",
+        "integrityWarningButton": "Show integrity warning details",
+        "memoryWarningSnackbar": "Memory warning notification"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "Template:",
+        "editButton": "Edit",
+        "dialogTitle": "Edit Chat Template",
+        "note1": "Note: Changing the template may alter BOS, EOS, and system prompt.",
+        "note2": "Uses Nunjucks. Leave empty to use model's template.",
+        "placeholder": "Enter your chat template here...",
+        "closeButton": "Close"
+      },
+      "stopWords": {
+        "label": "STOP WORDS",
+        "placeholder": "Add new stop word"
+      },
+      "tokenSettings": {
+        "bos": "BOS",
+        "eos": "EOS",
+        "addGenerationPrompt": "Add Generation Prompt",
+        "bosTokenPlaceholder": "BOS Token",
+        "eosTokenPlaceholder": "EOS Token",
+        "systemPrompt": "System Prompt"
+      }
+    },
+    "modelDescription": {
+      "size": "Size: ",
+      "parameters": "Parameters: ",
+      "separator": " | ",
+      "notAvailable": "N/A"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "Question Answering",
+      "summarization": "Summarization",
+      "reasoning": "Reasoning",
+      "roleplay": "Role-play",
+      "instructions": "Instruction following",
+      "code": "Code generation",
+      "math": "Math solving",
+      "multilingual": "Multilingual",
+      "rewriting": "Rewriting",
+      "creativity": "Creative writing",
+      "vision": "Vision"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "Include AI thinking/reasoning parts in the context sent to the model. Disabling this can save context space. It might impact performance.",
+    "jinja": "Enable Jinja templating for chat formatting. When enabled, uses Jinja-based chat template processing for better compatibility with modern models.",
+    "grammar": "Enforce specific grammar rules to ensure the generated text follows a particular structure or format",
+    "stop": "Define specific phrases that will stop text generation",
+    "n_predict": "Set how long the generated response should be (in tokens)",
+    "n_probs": "Show probability scores for alternative words.",
+    "top_k": "Control creativity by limiting word choices to the K most likely options. Lower values make responses more focused",
+    "top_p": "Balance creativity and coherence. Higher values (near 1.0) allow more creative but potentially less focused responses",
+    "min_p": "The minimum probability for a token to be considered. Filter out unlikely words to reduce nonsensical or out-of-context responses",
+    "temperature": "Control creativity vs predictability. Higher values make responses more creative but less focused",
+    "penalty_last_n": "How far back to check for repetition. Larger values help prevent long-term repetition",
+    "penalty_repeat": "Discourage word repetition. Higher values make responses use more diverse language",
+    "penalty_freq": "Penalize overused words. Higher values encourage using a broader vocabulary",
+    "penalty_present": "Reduce repetition of themes and ideas. Higher values encourage more diverse content",
+    "mirostat": "Enable advanced control over response creativity. Set to 1 or 2 (smoother) for smart, real-time adjustments to randomness and coherence.",
+    "mirostat_tau": "Set the target creativity level for Mirostat. Higher values allow for more diverse and imaginative responses, while lower values ensure more focused outputs.",
+    "mirostat_eta": "How quickly Mirostat adjusts creativity. Higher values mean faster adjustments",
+    "dry_multiplier": "Strength of the DRY (Don't Repeat Yourself) feature. Higher values strongly prevent repetition",
+    "dry_base": "Base penalty for repetition in DRY mode. Higher values are more aggressive at preventing repetition",
+    "dry_allowed_length": "How many words can repeat before DRY penalty kicks in",
+    "dry_penalty_last_n": "How far back to look for repetition in DRY mode",
+    "dry_sequence_breakers": "Symbols that reset the repetition checker in DRY mode",
+    "ignore_eos": "Continue generating even if the model wants to stop. Useful for forcing longer responses",
+    "logit_bias": "Influence how likely specific words are to appear in the response",
+    "seed": "Set the random number generator seed. Useful for reproducible results",
+    "xtc_probability": "Set the chance for token removal via XTC sampler. 0 is disabled",
+    "xtc_threshold": "Set a minimum probability threshold for tokens to be removed via XTC sampler. (> 0.5 disables XTC)",
+    "typical_p": "Enable locally typical sampling with parameter p. 1.0 is disabled"
+  },
+  "about": {
+    "screenTitle": "App Info",
+    "description": "An app that brings language models directly to your phone. Sits on the shoulders of llama.cpp and llama.rn.",
+    "supportProject": "Support the Project",
+    "supportProjectDescription": "If you enjoy using PocketPal AI, please consider supporting the project by:",
+    "githubButton": "Star on GitHub",
+    "orText": "or",
+    "orBy": "or by",
+    "sponsorButton": "Become a Sponsor",
+    "versionCopiedTitle": "Version copied",
+    "versionCopiedDescription": "Version information has been copied to clipboard"
+  },
+  "feedback": {
+    "title": "Send Feedback",
+    "description": "Your voice matters! Tell us how PocketPal AI is helping you and what we can do to make it even more useful.",
+    "shareThoughtsButton": "Sharing your thoughts",
+    "useCase": {
+      "label": "What are you using PocketPal AI for?",
+      "placeholder": "e.g., summarization, roleplay, etc."
+    },
+    "featureRequests": {
+      "label": "Feature Request",
+      "placeholder": "What features would you like to see?"
+    },
+    "generalFeedback": {
+      "label": "General Feedback",
+      "placeholder": "Share any other thoughts you may have."
+    },
+    "usageFrequency": {
+      "label": "How often do you use PocketPal AI? (Optional)",
+      "options": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "rarely": "Rarely"
+      }
+    },
+    "email": {
+      "label": "Contact Email (Optional)",
+      "placeholder": "Your email address"
+    },
+    "submit": "Submit Feedback",
+    "validation": {
+      "required": "Please provide at least some feedback"
+    },
+    "success": "Thank you for your feedback!",
+    "error": {
+      "general": "Error sending feedback. Please try again."
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "Send media"
+    },
+    "bubble": {
+      "timingsString": "{{predictedMs}}ms/token, {{predictedPerSecond}} tokens/sec"
+    },
+    "exportUtils": {
+      "fileSaved": "File Saved",
+      "fileSavedMessage": "The file has been saved to your Downloads folder as {{filename}}",
+      "share": "Share",
+      "ok": "OK",
+      "shareError": "Share Error",
+      "shareErrorMessage": "Could not share the file. Please try again.",
+      "saveError": "Error saving to Downloads",
+      "saveOptions": "Save Options",
+      "saveOptionsMessage": "Unable to save directly to Downloads. Would you like to share the file instead?",
+      "cancel": "Cancel",
+      "shareContentErrorMessage": "Could not share the content. Please try again.",
+      "exportError": "Export Error",
+      "exportErrorMessage": "There was an error exporting the file. Please try again.",
+      "permissionRequired": "Storage Permission Required",
+      "permissionMessage": "We need permission to save your export into the Download folder.",
+      "permissionDenied": "Permission Denied",
+      "permissionDeniedMessage": "Without storage permission, the export feature will be disabled.",
+      "continue": "Continue"
+    },
+    "thinkingBubble": {
+      "reasoning": "Reasoning"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "No Models Available",
+      "noModelsDescription": "Download a model to start chatting with PocketPal",
+      "noModelsButton": "Download Model",
+      "activateModelTitle": "Activate Model To Get Started",
+      "activateModelDescription": "Select the model and download it. After downloading, tap Load next to the model and start chatting.",
+      "activateModelButton": "Select Model",
+      "loading": "Loading..."
+    },
+    "chatInput": {
+      "inputPlaceholder": "Message",
+      "thinkingToggle": {
+        "enableThinking": "Enable thinking mode",
+        "disableThinking": "Disable thinking mode",
+        "thinkingEnabled": "Thinking mode enabled",
+        "thinkingDisabled": "Thinking mode disabled",
+        "thinkText": "Think"
+      }
+    },
+    "contentReportSheet": {
+      "title": "Report Content",
+      "privacyNote": "We do not send any message content or conversation details. Please describe the specific issue you encountered.",
+      "categoryLabel": "Report Category",
+      "selectCategory": "Select a category",
+      "categories": {
+        "hate": "Hate Speech",
+        "sexual": "Sexual Content",
+        "selfHarm": "Self-Harm",
+        "violence": "Violence",
+        "other": "Other"
+      },
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Please describe the issue with this content...",
+      "includeModelInfo": "Include model information",
+      "includeModelInfoDescription": "Include the model name and identifier to help us investigate",
+      "noActiveModelNote": "No model is currently active",
+      "submit": "Submit Report",
+      "validation": {
+        "title": "Missing Information",
+        "message": "Please select a category and provide a description."
+      },
+      "success": {
+        "title": "Report Submitted",
+        "message": "Thank you for your report. We will review it and take appropriate action."
+      },
+      "error": {
+        "title": "Report Failed",
+        "message": "Failed to submit report. Please try again."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "Report Model Loading Issue",
+      "privacyNote": "Help us improve PocketPal by sharing details about this error. Review below what will be shared - you can deselect any items you prefer not to include.",
+      "errorMessage": "Error message",
+      "modelInfo": "Model Information",
+      "modelName": "Name",
+      "modelSource": "Source",
+      "modelSize": "Size",
+      "contextParams": "Context Parameters",
+      "deviceInfo": "Device Information",
+      "deviceModel": "Device",
+      "osVersion": "OS",
+      "memoryInfo": "Memory",
+      "cpuArchitecture": "CPU",
+      "isEmulator": "Emulator",
+      "additionalInfoLabel": "Additional context (optional)",
+      "additionalInfoPlaceholder": "Any additional details that might help us understand the issue...",
+      "submit": "Submit Report",
+      "success": {
+        "title": "Report Submitted",
+        "message": "Thank you for helping us improve PocketPal. Your report will help us fix this issue."
+      },
+      "error": {
+        "title": "Report Failed",
+        "message": "Failed to submit report. Please try again later."
+      }
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "Invalid Values",
+      "invalidNumericValuesMessage": "Must be a valid number",
+      "pleaseCorrect": "Please correct the following:",
+      "ok": "OK",
+      "saveChanges": "Save Changes",
+      "saveAsPreset": "Save as Preset",
+      "title_session": "Chat Generation Settings (Session)",
+      "title_preset": "Chat Generation Settings (Preset)",
+      "resetToSystemDefaults": "Reset to System Defaults",
+      "resetToPreset": "Reset to Preset",
+      "applytoPresetAlert": {
+        "title": "Success",
+        "message": "These settings will be applied to all future sessions"
+      },
+      "palSettings": "Pal Settings",
+      "settingsSource": "Settings Source"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "Generation Settings - {{palName}}",
+      "invalidValues": "Invalid Values",
+      "invalidNumericValuesMessage": "Must be a valid number",
+      "pleaseCorrect": "Please correct the following:",
+      "ok": "OK",
+      "error": "Error",
+      "failedToSave": "Failed to save pal settings",
+      "resetToGlobal": "Reset to Global Defaults",
+      "resetToSystem": "Reset to System Defaults",
+      "clearPalSettings": "Clear Pal Settings",
+      "customSettingsFor": "Custom settings for {{palName}}",
+      "inheritedSettingsFor": "Inherited settings for {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "Chat"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "File"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "Models",
+      "palsTab": "Pals",
+      "noPal": "No Pal",
+      "disablePal": "Disable active pal",
+      "noDescription": "No description",
+      "assistantType": "Assistant",
+      "roleplayType": "Roleplay",
+      "videoType": "Video",
+      "confirmationTitle": "Confirmation",
+      "modelSwitchMessage": "This pal has a different default model ({{modelName}}). Would you like to switch to the pal's default model?",
+      "keepButton": "Keep",
+      "switchButton": "Switch"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "Download Failed",
+      "downloadFailedMessage": "Failed to download model: {{message}}",
+      "unauthorizedTitle": "Authentication Failed",
+      "unauthorizedMessage": "Your Hugging Face token appears to be invalid or expired. Please update your token in the settings.",
+      "forbiddenTitle": "Access Denied",
+      "forbiddenMessage": "You do not have permission to access this model. Please ensure:",
+      "forbiddenSteps": [
+        "Your token has \"read\" permission",
+        "You requested and were granted access to this model",
+        "The model owner approved your access request"
+      ],
+      "getTokenTitle": "Get Hugging Face Token",
+      "getTokenMessage": "This model requires a Hugging Face token to download.",
+      "getTokenSteps": [
+        "Go to huggingface.co and sign in",
+        "Navigate to Settings > Access Tokens",
+        "Create a new token with \"read\" access",
+        "Copy the token and paste it in the token field"
+      ],
+      "tokenDisabledTitle": "Token is Disabled",
+      "tokenDisabledMessage": "You have a Hugging Face token set, but it is currently disabled. This model requires a token to download. Enable your token to continue.",
+      "enableAndRetry": "Enable and Retry",
+      "goToSettings": "Go to Settings",
+      "tryAgain": "Try Again",
+      "viewOnHuggingFace": "View Model on HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "Delete Chat",
+      "deleteChatMessage": "Are you sure you want to delete this chat?",
+      "generationSettings": "Generation settings",
+      "model": "Model",
+      "duplicateChatHistory": "Duplicate chat history",
+      "makeChatTemporary": "Make chat temporary",
+      "export": "Export/Import",
+      "exportCurrentSession": "Export current session",
+      "exportAllSessions": "Export all sessions",
+      "exportChatSession": "Export chat session",
+      "importSessions": "Import sessions"
+    },
+    "hfTokenSheet": {
+      "title": "Hugging Face Token",
+      "description": "Required to access gated models",
+      "inputLabel": "Personal Access Token",
+      "inputPlaceholder": "Paste your token here",
+      "save": "Save Token",
+      "saved": "Token saved successfully",
+      "reset": "Reset Token",
+      "resetSuccess": "Token removed successfully",
+      "instructions": "How to get a token:",
+      "instructionsSteps": [
+        "Go to huggingface.co and sign in",
+        "Navigate to Settings > Access Tokens",
+        "Create a new token with \"read\" access",
+        "Copy the token and paste it below"
+      ],
+      "getTokenLink": "Get a token from huggingface.co ↗",
+      "error": {
+        "saving": "Error saving token",
+        "missing": "Hugging Face token required",
+        "invalid": "Invalid or expired token",
+        "gatedModelAccess": "Access to this gated model was denied"
+      },
+      "gatedModelIndicator": "Requires Token",
+      "tokenRequired": "This model requires a Hugging Face access token",
+      "searchErrorHint": "Your Hugging Face API token is invalid or expired. To continue searching, please either remove the token or disable token authentication in Settings.",
+      "disableAndRetry": "Disable Token & Retry"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "Model Settings",
+      "saveChanges": "Save Changes"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Face Models",
+      "menuTitleDownloaded": "Downloaded Models",
+      "menuTitleGrouped": "Group by Model Type",
+      "menuTitleReset": "Reset Models List"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Proceed with Reset",
+      "confirmReset": "Confirm Reset"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Edit Pal",
+        "newPal": "New Pal",
+        "newVideoPal": "New Video Pal"
+      },
+      "description": "Description",
+      "descriptionPlaceholder": "Enter a brief description of your pal",
+      "parameters": "Parameters",
+      "generationSettings": "Generation Settings",
+      "configureGenerationSettings": "Configure Generation Settings",
+      "validation": {
+        "nameRequired": "Name is required",
+        "generatingPromptRequired": "Generating prompt is required when using AI prompt",
+        "promptModelRequired": "Prompt generation model is required when using AI prompt"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "Create Assistant Pal",
+        "edit": "Edit Assistant Pal"
+      },
+      "palName": "Pal Name",
+      "palNamePlaceholder": "Name",
+      "defaultModel": "Default Model",
+      "defaultModelPlaceholder": "Select model",
+      "validation": {
+        "generatingPromptRequired": "Generating prompt is required",
+        "promptModelRequired": "Prompt generation model is required"
+      },
+      "create": "Create"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "You do not have any models downloaded yet. Please download a model first.",
+      "downloadAModel": "Download a model",
+      "defaultModelNotDownloaded": "This pal recommends a specific model that needs to be downloaded, or you can select a different model.",
+      "modelNotDownloadedShort": "Model not downloaded",
+      "recommendedModel": "Recommended Model",
+      "cancelDownload": "Cancel download",
+      "download": "Download"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "Create Roleplay Pal",
+        "edit": "Edit Roleplay Pal"
+      },
+      "palName": "Pal Name",
+      "palNamePlaceholder": "Name",
+      "defaultModel": "Default Model",
+      "defaultModelPlaceholder": "Select model",
+      "descriptionSection": "Description",
+      "world": "World",
+      "worldPlaceholder": "Fantasy",
+      "location": "Location",
+      "locationPlaceholder": "Enchanted Forest",
+      "locationSublabel": "Where does the story take place?",
+      "aiRole": "AI's Role",
+      "aiRolePlaceholder": "Eldara, a mischievous forest sprite",
+      "aiRoleSublabel": "Set the role for character",
+      "userRole": "User Role",
+      "userRolePlaceholder": "Sir Elandor, a brave knight",
+      "userRoleSublabel": "Who are you?",
+      "situation": "Situation",
+      "situationPlaceholder": "Rescue mission, solving a mystery",
+      "toneStyle": "Tone/Style",
+      "toneStylePlaceholder": "Serious",
+      "validation": {
+        "promptModelRequired": "Prompt generation model is required"
+      },
+      "create": "Create"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Create Lookie Pal",
+        "edit": "Edit Lookie Pal"
+      },
+      "palName": "Pal Name",
+      "palNamePlaceholder": "Enter a name for your Lookie Pal",
+      "visionModel": "Vision Model",
+      "visionModelPlaceholder": "Select a vision model",
+      "requiredModelsSection": "Required Models",
+      "captureInterval": "Capture Interval",
+      "captureIntervalHelper": "Time between automatic captures in milliseconds",
+      "create": "Create"
+    },
+    "sendButton": {
+      "accessibilityLabel": "Send"
+    },
+    "systemPromptSection": {
+      "sectionTitle": "System Prompt",
+      "useAIPrompt": "Use AI to generate system prompt",
+      "modelSelector": {
+        "label": "Select Model for Generation*",
+        "sublabel": "Recommended: Llama 3.2 3B or Qwen3 4B Instruct 2507.",
+        "placeholder": "Select model"
+      },
+      "generatingPrompt": {
+        "label": "Purpose & Context",
+        "placeholder": "Describe the role, purpose, or scenario for this pal..."
+      },
+      "buttons": {
+        "loadingModel": "Loading model...",
+        "stopGenerating": "Stop Generating",
+        "generatePrompt": "Generate System Prompt",
+        "resetParameters": "Reset Parameters",
+        "resetTemplate": "Reset Template"
+      },
+      "systemPrompt": {
+        "label": "System Prompt",
+        "sublabel": "Feel free to edit and experiment to find the optimal prompt for your scenario",
+        "placeholder": "You are a helpful assistant"
+      },
+      "warnings": {
+        "promptChanged": "System prompt has been manually changed"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "Chat",
+        "models": "Models",
+        "pals": "Pals",
+        "benchmark": "Benchmark",
+        "settings": "Settings",
+        "appInfo": "App Info",
+        "testCompletion": "Test Completion"
+      },
+      "deleteChatTitle": "Delete Chat",
+      "deleteChatMessage": "Are you sure you want to delete this chat?",
+      "select": "Select",
+      "nSelected": "{{count}} selected",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "exportCount": "Export ({{count}})",
+      "deleteCount": "Delete ({{count}})",
+      "bulkDeleteTitle": "Delete Chat Sessions",
+      "bulkDeleteMessage": "Delete {{count}} chat session(s)? This action cannot be undone.",
+      "bulkDeleteError": "Failed to delete chat sessions. Please try again.",
+      "exportError": "Failed to export chat session. Please try again.",
+      "bulkExportError": "Failed to export chat sessions. Please try again.",
+      "dateGroups": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "thisWeek": "This week",
+        "lastWeek": "Last week",
+        "twoWeeksAgo": "2 weeks ago",
+        "threeWeeksAgo": "3 weeks ago",
+        "fourWeeksAgo": "4 weeks ago",
+        "lastMonth": "Last month",
+        "older": "Older"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "Memory Usage",
+        "used": "Used: ",
+        "total": "Total: ",
+        "usage": "Usage: "
+      },
+      "byteSizes": [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "Copy",
+        "regenerate": "Regenerate",
+        "regenerateWith": "Regenerate with",
+        "edit": "Edit",
+        "reportContent": "Report Content"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "Export all pals",
+      "importPals": "Import pals",
+      "importSuccess": "Successfully imported {{count}} pal(s).",
+      "importError": "Failed to import pals. Please check the file format."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "My Pals (local)",
+      "myLibrary": "My Library (palshub.ai)",
+      "discoverPals": "Discover Pals (palshub.ai)"
+    },
+    "systemPrompt": "System Prompt",
+    "videoAnalysis": "Video Analysis",
+    "videoAnalysisDescription": "This is a video-based AI assistant that provides real-time commentary on video streams from your device's camera.",
+    "captureInterval": "Capture Interval",
+    "captureIntervalUnit": "ms",
+    "world": "World",
+    "toneStyle": "Tone/Style",
+    "aiRole": "AI's Role",
+    "userRole": "My Role",
+    "prompt": "Prompt",
+    "assistant": "Assistant",
+    "roleplay": "Roleplay",
+    "video": "Video",
+    "deletePal": "Delete Pal",
+    "deletePalMessage": "Are you sure you want to delete this pal?",
+    "missingModel": "Missing Model",
+    "missingModelMessage": "The default model \"{{modelName}}\" for this pal is not available. Please download it in the edit sheet or select a different model.",
+    "search": "Search",
+    "profile": "Profile",
+    "signIn": "Sign In",
+    "addPal": "Add Pal",
+    "signInToAccessLibrary": "Sign in to access your library from palshub.ai",
+    "signOut": "Sign Out",
+    "signOutConfirmation": "Are you sure you want to sign out?",
+    "signOutError": "Failed to sign out. Please try again.",
+    "account": "Account",
+    "signInToPalsHub": "Sign In to PalsHub",
+    "signInDescription": "Access your library, create private Pals, and sync across devices",
+    "searchAllPals": "Search all Pals...",
+    "deletePalConfirmation": "Are you sure you want to delete \"{{palName}}\"?",
+    "filters": {
+      "all": "All",
+      "myPals": "My Pals",
+      "local": "Local",
+      "video": "Video",
+      "free": "Free",
+      "premium": "Premium"
+    },
+    "labels": {
+      "free": "Free",
+      "premium": "Premium",
+      "private": "Private",
+      "download": "Download",
+      "getFree": "Get Free"
+    },
+    "premiumPalDescription": "Premium pal from the palshub.ai community",
+    "premiumInfoText": "Visit palshub.ai to explore more pals",
+    "sortOptions": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "rating": "Highest Rated",
+      "popular": "Most Popular"
+    },
+    "palDetailSheet": {
+      "by": "by",
+      "unknown": "Unknown",
+      "rating": "Rating",
+      "reviews": "Reviews",
+      "created": "Created",
+      "description": "Description",
+      "noDescriptionAvailable": "No description available.",
+      "categories": "Categories",
+      "tags": "Tags",
+      "systemPrompt": "System Prompt",
+      "downloaded": "Downloaded",
+      "success": "Success",
+      "palAddedToCollection": "Pal has been added to your collection!",
+      "error": "Error",
+      "failedToLoadDetails": "Failed to load pal details",
+      "failedToDownload": "Failed to download pal",
+      "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
+      "notAvailable": "N/A"
+    }
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "systemPromptRequired": "System prompt is required",
+    "worldRequired": "World is required",
+    "locationRequired": "Location is required",
+    "aiRoleRequired": "AI's role is required",
+    "userRoleRequired": "User role is required",
+    "situationRequired": "Situation is required",
+    "toneStyleRequired": "Tone/Style is required"
+  },
+  "camera": {
+    "permissionTitle": "Camera Permission Required",
+    "permissionMessage": "PocketPal needs camera access to analyze images",
+    "requestingPermission": "Requesting camera permission...",
+    "noDevice": "No camera device found",
+    "errorTitle": "Camera Error",
+    "errorMessage": "An error occurred while taking the photo",
+    "flip": "Flip",
+    "analyzing": "Analyzing image...",
+    "startCamera": "Start Camera",
+    "stopCamera": "Stop Camera",
+    "promptPlaceholder": "What do you want to know about this image?",
+    "takePhoto": "Camera"
+  },
+  "video": {
+    "permissionTitle": "Camera Permission Required",
+    "permissionMessage": "PocketPal needs camera access for video analysis",
+    "requestingPermission": "Requesting camera permission...",
+    "noDevice": "No camera device found",
+    "errorTitle": "Camera Error",
+    "errorMessage": "An error occurred with the camera",
+    "flip": "Flip",
+    "analyzing": "Analyzing video...",
+    "startCamera": "Start Camera",
+    "stopCamera": "Stop Camera",
+    "promptPlaceholder": "What do you want to know about this video?",
+    "captureInterval": "Capture Interval",
+    "captureIntervalUnit": "ms",
+    "liveCommentary": "Live Commentary",
+    "emptyPlaceholder": {
+      "title": "Welcome to Lookie",
+      "subtitle": "Private On-Device Real-time Video Analysis",
+      "experimentalNotice": "This is an experimental feature. Accuracy depends on the selected model, speed depends on your device specs, and some models might fail.",
+      "howToUse": "How to use:",
+      "step1": "• Edit the prompt (optional) to guide the analysis",
+      "step2": "• Tap the camera button to start live video analysis",
+      "step3": "• Adjust snapshot frequency while camera is active",
+      "step4": "• Switch to another pal for normal text chat"
+    }
+  },
+  "screenTitles": {
+    "chat": "Chat",
+    "models": "Models",
+    "pals": "Pals (experimental)",
+    "benchmark": "Benchmark",
+    "settings": "Settings",
+    "appInfo": "App Info",
+    "testCompletion": "Test Completion"
+  },
+  "chat": {
+    "conversationReset": "Conversation reset!",
+    "modelNotLoaded": "Model not loaded. Please initialize the model.",
+    "completionFailed": "Completion failed: ",
+    "loadingModel": "Loading model ...",
+    "typeYourMessage": "Type your message here",
+    "load": "Load",
+    "goToModels": "Go to Models",
+    "readyToChat": "Ready to chat? Load the last used model.",
+    "pleaseLoadModel": "Load a model to chat.",
+    "multimodalNotEnabled": "Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.",
+    "cannotSendWithoutModel": "Load a model first"
+  },
+  "benchmark": {
+    "title": "Benchmark",
+    "modelSelector": {
+      "prompt": "Select Model"
+    },
+    "buttons": {
+      "advancedSettings": "Advanced Settings",
+      "startTest": "Start Test",
+      "runningTest": "Running Test...",
+      "clearAll": "Clear All",
+      "done": "Done",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "share": "Share",
+      "sharing": "Sharing...",
+      "viewRawData": "View Raw Data",
+      "hideRawData": "Hide Raw Data"
+    },
+    "messages": {
+      "pleaseSelectModel": "Please select and initialize a model first",
+      "testWarning": "Note: Test could run for up to 2-5 minutes for larger models and cannot be interrupted once started.",
+      "keepScreenOpen": "Please keep this screen open.",
+      "initializingModel": "Initializing model...",
+      "modelMaxValue": "(max: {{maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "Advanced Settings",
+        "testProfile": "Test Profile",
+        "customParameters": "Custom Parameters",
+        "description": "Fine-tune the benchmark parameters for specific testing scenarios."
+      },
+      "deleteResult": {
+        "title": "Delete Result",
+        "message": "Are you sure you want to delete this benchmark result?"
+      },
+      "clearAllResults": {
+        "title": "Clear All Results",
+        "message": "Are you sure you want to delete all benchmark results?"
+      },
+      "shareResults": {
+        "title": "Share Benchmark Results",
+        "sharedDataTitle": "Shared data includes:",
+        "deviceAndModelInfo": "• Device specs & model info",
+        "performanceMetrics": "• Performance metrics",
+        "dontShowAgain": "Don't show this message again"
+      }
+    },
+    "sections": {
+      "testResults": "Test Results"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "params"
+      },
+      "config": {
+        "title": "Benchmark Config",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "Model Settings",
+        "context": "Context: {{context}}",
+        "batch": "Batch: {{batch}}",
+        "ubatch": "UBatch: {{ubatch}}",
+        "cpuThreads": "CPU Threads: {{threads}}",
+        "gpuLayers": "GPU Layers: {{layers}}",
+        "device": "Device: {{device}}",
+        "flashAttentionEnabled": "Flash Attention Enabled",
+        "flashAttentionDisabled": "Flash Attention Disabled",
+        "cacheTypes": "Cache Types: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "Prompt Processing",
+        "tokenGeneration": "Token Generation",
+        "totalTime": "Total Time",
+        "peakMemory": "Peak Memory",
+        "tokensPerSecond": "t/s"
+      },
+      "actions": {
+        "deleteButton": "",
+        "submittedText": "✓ Shared to",
+        "leaderboardLink": "AI Phone Leaderboard ↗",
+        "cannotShare": "Cannot share",
+        "cannotShareTooltip": "Local model results cannot be shared",
+        "submitButton": "Submit to Leaderboard",
+        "viewLeaderboard": "View leaderboard ↗"
+      },
+      "errors": {
+        "networkRetry": "Check connection & retry",
+        "appCheckRetry": "Retry submission",
+        "serverRetry": "Try again later",
+        "genericRetry": "Retry",
+        "failedToSubmit": "Failed to submit benchmark"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "Device Information",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} cores • {{memory}}",
+      "sections": {
+        "basicInfo": "Basic Info",
+        "cpuDetails": "CPU Details",
+        "gpuDetails": "GPU Details",
+        "hexagonDetails": "Hexagon DSP",
+        "appInfo": "App Info"
+      },
+      "fields": {
+        "architecture": "Architecture",
+        "totalMemory": "Total Memory",
+        "deviceId": "Device ID",
+        "cpuCores": "CPU Cores",
+        "cpuModel": "CPU Model",
+        "chipset": "Chipset",
+        "instructions": "Instructions",
+        "version": "Version",
+        "gpuType": "GPU Type",
+        "gpuRenderer": "Renderer",
+        "gpuVendor": "Vendor",
+        "metalSupport": "Metal Support",
+        "openclSupport": "OpenCL Support",
+        "openclRequirement": "Requires i8mm & dotprod"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "An unexpected error occurred",
+    "hfAuthenticationError": "Hugging Face authentication error: Token is missing or invalid",
+    "hfAuthenticationErrorSearch": "Hugging Face authentication error: Invalid token",
+    "authenticationError": "Authentication error: Token is missing or invalid",
+    "hfAuthorizationError": "Hugging Face authorization error: No permission to access this resource",
+    "authorizationError": "Authorization error: No permission to access this resource",
+    "hfServerError": "Hugging Face server error: API server issue",
+    "serverError": "Server error: API server issue",
+    "hfNetworkTimeout": "Network timeout: Request to Hugging Face took too long to complete",
+    "networkTimeout": "Network timeout: Request took too long to complete",
+    "hfNetworkError": "Network error: Unable to connect to Hugging Face API",
+    "networkError": "Network error: Unable to connect to API",
+    "downloadSetupFailedTitle": "Download Setup Failed",
+    "downloadSetupFailedMessage": "Failed to prepare model for download: {{message}}",
+    "cameraErrorTitle": "Camera Error",
+    "cameraErrorMessage": "Failed to take photo",
+    "galleryErrorTitle": "Gallery Error",
+    "galleryErrorMessage": "Failed to select images"
+  },
+  "simulator": {
+    "cameraNotAvailable": "Camera not available in simulator. Please use a physical device."
+  }
+}
