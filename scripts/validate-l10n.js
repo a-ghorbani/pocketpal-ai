@@ -74,9 +74,7 @@ for (const lang of ['ja', 'zh']) {
       const enPlaceholders = getPlaceholders(enValue);
       const langPlaceholders = getPlaceholders(langValue);
 
-      if (
-        JSON.stringify(enPlaceholders) !== JSON.stringify(langPlaceholders)
-      ) {
+      if (JSON.stringify(enPlaceholders) !== JSON.stringify(langPlaceholders)) {
         console.error(
           `${lang}.json: placeholder mismatch at "${key}": ` +
             `en has [${enPlaceholders.join(', ')}] but ${lang} has [${langPlaceholders.join(', ')}]`,
