@@ -2825,8 +2825,8 @@ class ModelStore {
   //  */
   // getL10n() {
   //   const language = uiStore.language;
-  //   // Import the l10n object from utils
-  //   const {l10n} = require('../utils/l10n');
+  //   // Import the l10n object from locales
+  //   const {l10n} = require('../locales');
   //   // Return the localized strings for the current language
   //   return l10n[language];
   // }

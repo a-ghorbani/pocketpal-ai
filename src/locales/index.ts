@@ -26,8 +26,7 @@ export function t(
   template: string,
   params: Record<string, string | number>,
 ): string {
-  return template.replace(
-    /\{\{(\w+)\}\}/g,
-    (_, key) => String(params[key] ?? `{{${key}}}`),
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) =>
+    String(params[key] ?? `{{${key}}}`),
   );
 }
