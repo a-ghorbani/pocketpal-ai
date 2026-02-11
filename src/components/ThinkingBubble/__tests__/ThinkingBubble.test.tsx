@@ -3,7 +3,7 @@ import {Text} from 'react-native';
 import {render, fireEvent} from '../../../../jest/test-utils';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {L10nContext} from '../../../utils';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {LayoutAnimation} from 'react-native';
 import {Animated} from 'react-native';
 

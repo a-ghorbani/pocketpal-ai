@@ -6,7 +6,7 @@
  */
 
 import type {PalsHubPal} from '../types/palshub';
-import {l10n} from './l10n';
+import {l10n} from '../locales';
 import {uiStore} from '../store';
 
 /**

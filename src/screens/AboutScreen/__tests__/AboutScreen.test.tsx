@@ -7,7 +7,7 @@ import {
 } from '../../../../jest/test-utils';
 import {AboutScreen} from '../AboutScreen';
 import {submitFeedback} from '../../../api/feedback';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});

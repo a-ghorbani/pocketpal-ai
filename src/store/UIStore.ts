@@ -3,7 +3,7 @@ import {Appearance} from 'react-native';
 import {makePersistable} from 'mobx-persist-store';
 import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {l10n} from '../utils/l10n';
+import {l10n} from '../locales';
 import {ErrorState} from '../utils/errors';
 
 // Define available languages type

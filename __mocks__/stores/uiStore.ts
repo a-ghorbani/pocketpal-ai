@@ -1,4 +1,4 @@
-import {l10n} from '../../src/utils/l10n';
+import {l10n} from '../../src/locales';
 
 export class UIStore {
   static readonly GROUP_KEYS = {

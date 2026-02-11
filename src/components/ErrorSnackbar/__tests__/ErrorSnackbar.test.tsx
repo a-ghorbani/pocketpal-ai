@@ -4,7 +4,7 @@ import {render, fireEvent} from '../../../../jest/test-utils';
 import {ErrorSnackbar} from '../ErrorSnackbar';
 import {ErrorState, NetworkError, ServerError} from '../../../utils/errors';
 import {createErrorState} from '../../../utils/errors';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 describe('ErrorSnackbar', () => {
   const mockDismiss = jest.fn();

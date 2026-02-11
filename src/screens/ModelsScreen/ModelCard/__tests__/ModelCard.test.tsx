@@ -19,7 +19,7 @@ import {downloadManager} from '../../../../services/downloads';
 import {modelStore, uiStore} from '../../../../store';
 import {ModelType} from '../../../../utils/types';
 
-import {l10n} from '../../../../utils/l10n';
+import {l10n} from '../../../../locales';
 
 jest.useFakeTimers(); // Mock all timers
 

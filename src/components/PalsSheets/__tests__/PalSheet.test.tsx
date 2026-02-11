@@ -1,7 +1,7 @@
 import React from 'react';
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {PalSheet} from '../PalSheet';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {L10nContext} from '../../../utils';
 import type {Pal} from '../../../types/pal';
 import {modelsList} from '../../../../jest/fixtures/models';

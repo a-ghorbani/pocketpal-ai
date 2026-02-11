@@ -5,7 +5,7 @@ import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
 import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
 import {chatSessionStore, defaultCompletionSettings} from '../../../store';
 import {L10nContext} from '../../../utils';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {validateCompletionSettings} from '../../../utils/modelSettings';
 import {mockCompletionParams} from '../../../../jest/fixtures/models';
 
