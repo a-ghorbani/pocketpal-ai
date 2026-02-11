@@ -23,19 +23,31 @@ async function uploadSourceFile() {
   const enPath = path.join(__dirname, '../src/locales/en.json');
 
   if (!fs.existsSync(enPath)) {
-    console.error('❌ Source file en.json not found');
+    console.error('Source file en.json not found');
     process.exit(1);
   }
 
   try {
-    const formData = new FormData();
     const fileContent = fs.readFileSync(enPath);
+    const formData = new FormData();
     formData.append('file', new Blob([fileContent]), 'en.json');
+    formData.append('method', 'replace');
 
-    console.log('✅ Uploaded source file to Weblate');
+    const response = await axios.post(
+      `${WEBLATE_API_URL}/translations/${PROJECT_SLUG}/${COMPONENT_SLUG}/en/file/`,
+      formData,
+      {
+        headers: {
+          Authorization: `Token ${WEBLATE_TOKEN}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+
+    console.log('Uploaded source file to Weblate:', response.status);
   } catch (error) {
     console.error(
-      '❌ Failed to upload source file:',
+      'Failed to upload source file:',
       error.response?.data || error.message,
     );
   }
@@ -47,7 +59,7 @@ async function downloadTranslations() {
   for (const lang of languages) {
     try {
       const response = await axios.get(
-        `${WEBLATE_API_URL}/projects/${PROJECT_SLUG}/components/${COMPONENT_SLUG}/translations/${lang}/file/`,
+        `${WEBLATE_API_URL}/translations/${PROJECT_SLUG}/${COMPONENT_SLUG}/${lang}/file/`,
         {
           headers: {
             Authorization: `Token ${WEBLATE_TOKEN}`,
