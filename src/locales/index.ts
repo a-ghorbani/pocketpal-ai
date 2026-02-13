@@ -12,7 +12,7 @@ import type {Translations} from './types';
 const en: Translations = enData;
 const ja: Translations = _.merge({}, enData, jaData);
 const zh: Translations = _.merge({}, enData, zhData);
-const id: Translations = _.merge({}, edData, idData);
+const id: Translations = _.merge({}, enData, idData);
 
 export const l10n = {en, ja, zh, id} as const;
 
