@@ -65,6 +65,16 @@ Please add tests for any new features or changes. We use **Jest** for unit testi
 
 If your changes affect the app's behavior, ensure you include or update tests as appropriate.
 
+### Translations (Localization)
+
+PocketPal uses [Weblate](https://hosted.weblate.org/translate/pocketpal-ai) for managing translations. When adding or changing user-facing strings:
+
+- **Only edit `src/locales/en.json`** (the English source file). Do not edit `ja.json`, `zh.json`, or other language files directly — they are managed by translators through Weblate and will be overwritten.
+- Use `{{placeholder}}` syntax (double braces) for dynamic values, e.g. `"Imported {{count}} sessions"`.
+- Run `yarn l10n:validate` to check that your JSON is valid and placeholders are consistent.
+
+**To contribute translations**, visit [PocketPal on Weblate](https://hosted.weblate.org/translate/pocketpal-ai) — no code changes needed.
+
 ### Commit Message Guidelines
 
 We follow the **Conventional Commits** specification for our commit messages to ensure clarity and consistency. Use one of the following prefixes for your commits:
