@@ -4,6 +4,7 @@ import {l10n, t} from '../index';
 import enData from '../en.json';
 import jaData from '../ja.json';
 import zhData from '../zh.json';
+import idData from '../id.json';
 
 import type {Translations} from '../types';
 
@@ -32,7 +33,7 @@ const EXPECTED_SECTIONS = [
 describe('l10n object', () => {
   it('has all 3 languages', () => {
     expect(Object.keys(l10n)).toEqual(
-      expect.arrayContaining(['en', 'ja', 'zh']),
+      expect.arrayContaining(['en', 'ja', 'zh', 'id']),
     );
     expect(Object.keys(l10n)).toHaveLength(3);
   });
@@ -107,10 +108,10 @@ describe('l10n object', () => {
     expect(enData).toEqual(enClone);
   });
 
-  it('AvailableLanguage type resolves to en | ja | zh', () => {
+  it('AvailableLanguage type resolves to en | ja | zh | id', () => {
     // Type-level check: keyof typeof l10n should be 'en' | 'ja' | 'zh'
     // At runtime we verify the keys match
-    const keys: Array<keyof typeof l10n> = ['en', 'ja', 'zh'];
+    const keys: Array<keyof typeof l10n> = ['en', 'ja', 'zh', 'id'];
     expect(Object.keys(l10n).sort()).toEqual(keys.sort());
 
     // This would cause a compile error if AvailableLanguage were wrong:
