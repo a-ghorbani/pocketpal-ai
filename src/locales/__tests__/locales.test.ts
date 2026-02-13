@@ -31,11 +31,11 @@ const EXPECTED_SECTIONS = [
 ];
 
 describe('l10n object', () => {
-  it('has all 3 languages', () => {
+  it('has all 4 languages', () => {
     expect(Object.keys(l10n)).toEqual(
       expect.arrayContaining(['en', 'ja', 'zh', 'id']),
     );
-    expect(Object.keys(l10n)).toHaveLength(3);
+    expect(Object.keys(l10n)).toHaveLength(4);
   });
 
   it('l10n.en has all 19 expected top-level sections', () => {
@@ -62,6 +62,14 @@ describe('l10n object', () => {
     expect(zhSections).toHaveLength(EXPECTED_SECTIONS.length);
   });
 
+  it('l10n.id has all 19 expected top-level sections', () => {
+    const zhSections = Object.keys(l10n.id);
+    for (const section of EXPECTED_SECTIONS) {
+      expect(idSections).toContain(section);
+    }
+    expect(idSections).toHaveLength(EXPECTED_SECTIONS.length);
+  });
+
   it('l10n.en matches the raw en.json data', () => {
     expect(l10n.en).toEqual(enData);
   });
@@ -76,6 +84,12 @@ describe('l10n object', () => {
     // zh.json has its own translation for common.cancel
     expect(l10n.zh.common.cancel).toBe(zhData.common.cancel);
     expect(l10n.zh.common.cancel).not.toBe(l10n.en.common.cancel);
+  });
+
+  it('l10n.id contains Indonesian translations where they exist', () => {
+    // id.json has its own translation for common.cancel
+    expect(l10n.id.common.cancel).toBe(idData.common.cancel);
+    expect(l10n.id.common.cancel).not.toBe(l10n.id.common.cancel);
   });
 
   it('l10n.ja falls back to English for missing keys', () => {
