@@ -63,7 +63,7 @@ describe('l10n object', () => {
   });
 
   it('l10n.id has all 19 expected top-level sections', () => {
-    const zhSections = Object.keys(l10n.id);
+    const idSections = Object.keys(l10n.id);
     for (const section of EXPECTED_SECTIONS) {
       expect(idSections).toContain(section);
     }
