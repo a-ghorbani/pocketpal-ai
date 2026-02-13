@@ -1,1181 +1,638 @@
 {
-  "common": {
-    "cancel": "",
-    "delete": "",
-    "dismiss": "",
-    "rename": "",
-    "reset": "",
-    "save": "",
-    "update": "",
-    "error": "",
-    "export": "",
-    "networkError": "",
-    "downloadETA": "",
-    "calculating": "",
-    "second": "",
-    "seconds": "",
-    "year": "",
-    "years": "",
-    "month": "",
-    "months": "",
-    "week": "",
-    "weeks": "",
-    "day": "",
-    "days": "",
-    "hour": "",
-    "hours": "",
-    "minute": "",
-    "minutes": "",
-    "justNow": "",
-    "ok": "",
-    "close": "",
-    "clear": "",
-    "gallery": ""
+  "about": {
+    "screenTitle": "應用程式資訊",
+    "description": "一個能把語言模型直接帶到你手機上的應用程式，基於 llama.cpp 與 llama.rn 構建。",
+    "supportProject": "支援此專案",
+    "supportProjectDescription": "如果您喜歡使用 PocketPal AI, 請考慮透過以下方式支援此專案:",
+    "githubButton": "GitHub 上打星狀",
+    "orText": "或",
+    "orBy": "或通過",
+    "sponsorButton": "成為贊助商",
+    "versionCopiedTitle": "版本已複製",
+    "versionCopiedDescription": "版本資訊已複製至剪貼板"
   },
-  "settings": {
-    "modelInitializationSettings": "",
-    "metal": "",
-    "metalDescription": "",
-    "metalRequiresNewerIOS": "",
-    "openCL": "",
-    "openCLDescription": "",
-    "openCLNotAvailable": "",
-    "openCLMissingCPUFeatures": "",
-    "openCLQuantizationNote": "",
-    "openCLDocsLink": "",
-    "layersOnGPU": "",
-    "deviceSelection": "",
-    "deviceSelectionIOS": "",
-    "deviceSelectionIOSDescription": "",
-    "deviceSelectionAndroidDescription": "",
-    "cpuOnlyNoAccelerators": "",
-    "contextSize": "",
-    "contextSizePlaceholder": "",
-    "invalidContextSizeError": "",
-    "modelReloadNotice": "",
-    "advancedSettings": "",
-    "batchSize": "",
-    "batchSizeDescription": "",
-    "effectiveLabel": "",
-    "physicalBatchSize": "",
-    "physicalBatchSizeDescription": "",
-    "cpuThreads": "",
-    "cpuThreadsDescription": "",
-    "imageMaxTokens": "",
-    "imageMaxTokensDescription": "",
-    "flashAttention": "",
-    "flashAttentionDescription": "",
-    "flashAttentionIOSDescription": "",
-    "flashAttentionAndroidDescription": "",
-    "flashAttentionAuto": "",
-    "flashAttentionOn": "",
-    "flashAttentionOff": "",
-    "keyCacheType": "",
-    "keyCacheTypeDescription": "",
-    "keyCacheTypeDisabledDescription": "",
-    "valueCacheType": "",
-    "valueCacheTypeDescription": "",
-    "valueCacheTypeDisabledDescription": "",
-    "memorySettings": "",
-    "useMlock": "",
-    "useMlockDescription": "",
-    "useMmap": "",
-    "useMmapDescription": "",
-    "useMmapTrue": "",
-    "useMmapFalse": "",
-    "useMmapSmart": "",
-    "useMmapTrueDescription": "",
-    "useMmapFalseDescription": "",
-    "useMmapSmartDescription": "",
-    "useMmapRecommended": "",
-    "modelLoadingSettings": "",
-    "autoOffloadLoad": "",
-    "autoOffloadLoadDescription": "",
-    "autoNavigateToChat": "",
-    "autoNavigateToChatDescription": "",
-    "appSettings": "",
-    "language": "",
-    "darkMode": "",
-    "displayMemoryUsage": "",
-    "displayMemoryUsageDescription": "",
-    "exportOptions": "",
-    "exportLegacyChats": "",
-    "exportLegacyChatsDescription": "",
-    "exportButton": "",
-    "importChats": "",
-    "importChatsDescription": "",
-    "importButton": "",
-    "importSuccess": "",
-    "importError": "",
-    "apiSettingsTitle": "",
-    "huggingFaceTokenLabel": "",
-    "tokenIsSetDescription": "",
-    "setTokenDescription": "",
-    "setTokenButton": "",
-    "useHfTokenLabel": "",
-    "useHfTokenDescription": "",
-    "cacheStorageTitle": "",
-    "clearPalCaches": "",
-    "clearPalCachesDescription": "",
-    "clearCachesButton": "",
-    "clearCachesConfirmTitle": "",
-    "clearCachesConfirmMessage": "",
-    "clearCachesSuccess": "",
-    "clearCachesError": "",
-    "noCachesToClear": ""
-  },
-  "memory": {
-    "shortWarning": "",
-    "multimodalWarning": "",
-    "memoryTight": "",
-    "lowMemory": "",
-    "memoryDetailMessage": "",
-    "estimatedMemory": "",
-    "alerts": {
-      "memoryWarningTitle": "",
-      "memoryWarningMessage": "",
-      "multimodalWarningTitle": "",
-      "multimodalWarningMessage": "",
-      "combinedWarningTitle": "",
-      "combinedWarningMessage": "",
-      "cancel": "",
-      "continue": ""
+  "benchmark": {
+    "title": "基準",
+    "modelSelector": {
+      "prompt": "選擇模型"
+    },
+    "buttons": {
+      "advancedSettings": "進階設定",
+      "startTest": "開始測試",
+      "runningTest": "正在執行測試…",
+      "clearAll": "全部清除",
+      "done": "已完成",
+      "cancel": "取消",
+      "delete": "刪除",
+      "share": "分享",
+      "sharing": "正在分享…",
+      "viewRawData": "查看原始資料",
+      "hideRawData": "隱藏原始資料"
+    },
+    "messages": {
+      "pleaseSelectModel": "請先選擇並初始化模型",
+      "testWarning": "注意: 測試對於較大的模型可能需要 2–5 分鐘, 且一旦啟動後無法中斷。",
+      "keepScreenOpen": "請保持此畫面開啟。",
+      "initializingModel": "正在初始化模型…",
+      "modelMaxValue": "(最大值: {{maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "進階設定",
+        "testProfile": "測試配置檔案",
+        "customParameters": "自訂參數",
+        "description": "為特定測試場景微調基準參數。"
+      },
+      "clearAllResults": {
+        "title": "清除所有結果",
+        "message": "您確定要刪除所有基準測試結果嗎?"
+      },
+      "deleteResult": {
+        "title": "刪除結果",
+        "message": "您確定要刪除此基準測試結果嗎?"
+      },
+      "shareResults": {
+        "title": "分享基準測試結果",
+        "sharedDataTitle": "共享資料包含:",
+        "deviceAndModelInfo": "• 裝置規格與模型資訊",
+        "performanceMetrics": "• 測量值",
+        "dontShowAgain": "不要再顯示此訊息"
+      }
+    },
+    "sections": {
+      "testResults": "測試結果"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "參數"
+      },
+      "config": {
+        "title": "基準測試配置",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "模型設定",
+        "context": "上下文: {{context}}",
+        "batch": "批次: {{batch}}",
+        "ubatch": "U 批次: {{ubatch}}",
+        "cpuThreads": "CPU 執行緒: {{threads}}",
+        "gpuLayers": "GPU 層數: {{layers}}",
+        "flashAttentionEnabled": "已啟用 Flash Attention",
+        "flashAttentionDisabled": "已停用 Flash Attention",
+        "cacheTypes": "緩存類型: {{cacheK}} / {{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "提示處理",
+        "tokenGeneration": "詞元生成",
+        "totalTime": "總耗時",
+        "peakMemory": "峰值記憶體",
+        "tokensPerSecond": "t/s"
+      },
+      "actions": {
+        "submittedText": "✓ 已共享至",
+        "leaderboardLink": "AI 手機排行榜 ↗",
+        "cannotShare": "無法共享",
+        "cannotShareTooltip": "本地模型結果無法共享",
+        "submitButton": "提交至排行榜",
+        "viewLeaderboard": "查看排行榜 ↗"
+      },
+      "errors": {
+        "networkRetry": "檢查連線並重試",
+        "appCheckRetry": "重試提交",
+        "serverRetry": "稍後再試",
+        "genericRetry": "重試",
+        "failedToSubmit": "提交基準測試失敗"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "裝置資訊",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} 核心 • {{memory}}",
+      "sections": {
+        "basicInfo": "基本資訊",
+        "cpuDetails": "CPU 詳情",
+        "appInfo": "應用程式資訊"
+      },
+      "fields": {
+        "architecture": "架構",
+        "totalMemory": "總記憶體",
+        "deviceId": "裝置 ID",
+        "cpuCores": "CPU 核心",
+        "cpuModel": "CPU 型號",
+        "chipset": "晶片組",
+        "instructions": "指令集",
+        "version": "版本"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
     }
   },
-  "storage": {
-    "checkFailed": "",
-    "lowStorage": ""
+  "chat": {
+    "conversationReset": "對話已重置!",
+    "modelNotLoaded": "模型尚未載入。請先初始化模型。",
+    "completionFailed": "完成失敗: ",
+    "loadingModel": "正在載入模型…",
+    "typeYourMessage": "在此輸入您的訊息",
+    "load": "載入",
+    "goToModels": "前往模型",
+    "readyToChat": "準備聊天? 載入上一次使用的模型。",
+    "pleaseLoadModel": "載入模型以聊天。"
+  },
+  "common": {
+    "cancel": "取消",
+    "delete": "刪除",
+    "dismiss": "關閉",
+    "rename": "重新命名",
+    "reset": "重置",
+    "save": "儲存",
+    "networkError": "網路錯誤, 請重試。",
+    "downloadETA": "估計完成時間",
+    "second": "秒",
+    "seconds": "秒",
+    "year": "年",
+    "years": "年",
+    "month": "月",
+    "months": "月",
+    "week": "週",
+    "weeks": "週",
+    "day": "天",
+    "days": "天",
+    "hour": "小時",
+    "hours": "小時",
+    "minute": "分鐘",
+    "minutes": "分鐘",
+    "justNow": "剛剛",
+    "calculating": "計算中…"
+  },
+  "completionParams": {
+    "grammar": "如何在生成文字本時強制執行特定語法規則（快速指南）",
+    "stop": "定義將停止文字生成的特定短語",
+    "n_predict": "設定生成回覆的長度 (以詞元為單位)",
+    "n_probs": "顯示替代詞彙的機率分數。",
+    "top_k": "透過將可選單詞限制為最可能的前 K 個, 來控制創造性。較低的值會使回覆更聚焦",
+    "top_p": "平衡創造力與連貫性。較高的值 (接近1.0) 允許更具創意但可能不那麼聚焦的回覆",
+    "min_p": "一個詞元被考慮的最小機率。過濾掉不太可能出現的單詞, 以減少無意義或脫離上下文的回應",
+    "temperature": "控制創造力與可預測性。數值越高, 回覆越有創意, 但針對性越差",
+    "penalty_last_n": "檢查重複時的回溯距離。較大的值能有效防止長期重複",
+    "penalty_repeat": "抑制單詞重複。較高的值會讓回覆使用更為多樣化的語言",
+    "penalty_freq": "懲罰過度使用的單詞。較高的值鼓勵使用更廣泛的詞彙",
+    "penalty_present": "減少主題和概念的重複。較高的值會鼓勵產出更具多樣性的內容",
+    "mirostat": "啟用進階控制功能, 以調節回覆的創造力。將值設為 1 或 2 (較平滑) 即可在即時進行隨機性與連貫性的智能調整。",
+    "mirostat_tau": "設定 Mirostat 的目標創造力等級。較高的值可產生更為多樣化、富有想像力的回覆, 較低的值則能確保輸出更加聚焦。",
+    "mirostat_eta": "Mirostat 的創造力調整速度。數值越高, 表示調整越快",
+    "dry_multiplier": "DRY (不要重複自己) 功能的強度。數值越高, 越能嚴格防止重複",
+    "dry_base": "DRY 模式下的基礎重複懲罰。數值越高, 防止重複的力度就越大",
+    "dry_allowed_length": "在 DRY 懲罰生效前, 允許重複多少個單詞",
+    "dry_penalty_last_n": "DRY 模式下檢查重複的回溯範圍是多少",
+    "dry_sequence_breakers": "在 DRY 模式下重置重複檢查器的符號",
+    "ignore_eos": "即使模型想停止，也繼續生成。這對於強制產生更長回覆很有用",
+    "typical_p": "使用參數 p 啟用本機典型抽樣，p=1.0 是停用",
+    "logit_bias": "影響特定單詞在回覆中出現的可能性",
+    "seed": "設置隨機數生成器種子。對於可重現結果非常有用",
+    "xtc_probability": "設定 XTC 抽樣器刪除詞元令牌的機會, 0 為關閉",
+    "xtc_threshold": "設定 XTC 刪除詞元所需的最低機率。(超過 0.5 表示停用 XTC)"
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "發送媒體"
+    },
+    "bubble": {
+      "timingsString": "{{predictedMs}} 毫秒/個詞元, {{predictedPerSecond}} 個詞元/秒"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "無可用模型",
+      "noModelsDescription": "下載模型後即可開始使用 PocketPal 進行聊天",
+      "noModelsButton": "下載模型",
+      "activateModelTitle": "啟動模型以開始",
+      "activateModelDescription": "請先選擇模型並下載。下載完成後，點擊模型右側的「載入」按鈕即可開始對話。",
+      "activateModelButton": "選擇模型",
+      "loading": "正在載入..."
+    },
+    "chatInput": {
+      "inputPlaceholder": "訊息"
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "無效的數值",
+      "invalidNumericValuesMessage": "必須是有效的數值",
+      "pleaseCorrect": "請糾正以下內容:",
+      "ok": "確定",
+      "saveChanges": "儲存更改",
+      "saveAsPreset": "另存為預設",
+      "title_session": "聊天生成設定 (會話)",
+      "title_preset": "聊天生成設定 (預設)",
+      "resetToSystemDefaults": "恢復為系統預設值",
+      "resetToPreset": "恢復為預設",
+      "applytoPresetAlert": {
+        "title": "成功",
+        "message": "這些設定將應用於所有未來會話"
+      }
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Face 模型",
+      "menuTitleDownloaded": "已下載模型",
+      "menuTitleGrouped": "按模型類型分組",
+      "menuTitleReset": "重置模型列表"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "繼續重置",
+      "confirmReset": "確認重置"
+    },
+    "usageStats": {
+      "byteSizes": [
+        "位元組",
+        "KB",
+        "MB",
+        "GB"
+      ],
+      "tooltip": {
+        "usage": "使用率: ",
+        "total": "總計: ",
+        "used": "已使用: ",
+        "title": "記憶體使用量"
+      }
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "檔案"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "聊天"
+    },
+    "sidebarContent": {
+      "dateGroups": {
+        "older": "較舊",
+        "lastMonth": "上個月",
+        "fourWeeksAgo": "四週前",
+        "threeWeeksAgo": "三週前",
+        "twoWeeksAgo": "二週前",
+        "lastWeek": "上週",
+        "thisWeek": "本週",
+        "yesterday": "昨天",
+        "today": "今天"
+      },
+      "deleteChatMessage": "您確定要刪除此聊天嗎?",
+      "deleteChatTitle": "刪除聊天",
+      "menuItems": {
+        "testCompletion": "測試完成",
+        "appInfo": "應用程式資訊",
+        "settings": "設定",
+        "benchmark": "基準測試",
+        "pals": "Pal",
+        "models": "模型",
+        "chat": "聊天"
+      }
+    },
+    "systemPromptSection": {
+      "warnings": {
+        "promptChanged": "系統提示已手動更改"
+      },
+      "systemPrompt": {
+        "placeholder": "您是一位樂於協助的助手",
+        "label": "系統提示",
+        "sublabel": "隨意編輯與實驗, 找到最符合您情境的最佳提示"
+      },
+      "buttons": {
+        "generatePrompt": "生成系統提示",
+        "stopGenerating": "停止生成",
+        "loadingModel": "正在載入模型..."
+      },
+      "sectionTitle": "系統提示",
+      "useAIPrompt": "使用 AI 生成系統提示",
+      "modelSelector": {
+        "label": "選擇生成模型*",
+        "sublabel": "推薦: Llama 3.2 3B 或 Qwen2.5 3B。",
+        "placeholder": "選擇模型"
+      },
+      "generatingPrompt": {
+        "label": "生成提示",
+        "placeholder": "輸入生成提示"
+      }
+    },
+    "chatPalModelPickerSheet": {
+      "palsTab": "Pal",
+      "modelsTab": "模型",
+      "noPal": "沒好友",
+      "disablePal": "停用活躍 pal",
+      "noDescription": "未提供描述",
+      "assistantType": "助手",
+      "roleplayType": "角色扮演",
+      "confirmationTitle": "確認",
+      "modelSwitchMessage": "此 pal 的預設模型不同 ({{modelName}})。您是否想切換到 Pal 的預設模型?",
+      "keepButton": "保持",
+      "switchButton": "切換"
+    },
+    "headerRight": {
+      "deleteChatTitle": "刪除聊天",
+      "deleteChatMessage": "您確定要刪除此聊天嗎?",
+      "generationSettings": "生成設定",
+      "model": "模型",
+      "duplicateChatHistory": "重複聊天紀錄",
+      "makeChatTemporary": "把聊天暫存",
+      "exportChatSession": "匯出聊天會話"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "模型設定",
+      "saveChanges": "儲存更改"
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "建立助手 Pal",
+        "edit": "編輯助手 Pal"
+      },
+      "palName": "Pal 名稱",
+      "palNamePlaceholder": "名稱",
+      "defaultModel": "預設模型",
+      "defaultModelPlaceholder": "選擇模型",
+      "validation": {
+        "generatingPromptRequired": "需要生成提示",
+        "promptModelRequired": "必須指定提示生成模型"
+      },
+      "create": "新建"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "您尚未下載任何模型。請先下載一個模型。",
+      "downloadAModel": "下載模型",
+      "defaultModelNotDownloaded": "預設模型尚未下載。請先下載。",
+      "cancelDownload": "取消下載",
+      "download": "下載"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "建立角色扮演 Pal",
+        "edit": "編輯角色扮演 Pal"
+      },
+      "palName": "Pal 名稱",
+      "palNamePlaceholder": "名稱",
+      "defaultModel": "預設模型",
+      "defaultModelPlaceholder": "選擇模型",
+      "descriptionSection": "描述",
+      "world": "世界",
+      "worldPlaceholder": "幻想",
+      "location": "位置",
+      "locationPlaceholder": "魔法森林",
+      "locationSublabel": "這個故事的背景是什麼?",
+      "aiRole": "AI 的角色",
+      "aiRolePlaceholder": "埃爾達拉, 森林中的調皮小精靈",
+      "aiRoleSublabel": "為角色設定職責",
+      "userRole": "使用者角色",
+      "userRolePlaceholder": "伊蘭多爵士, 一位勇敢的騎士",
+      "userRoleSublabel": "你是誰?",
+      "situation": "情況",
+      "situationPlaceholder": "拯救行動, 破解謎案",
+      "toneStyle": "語氣 / 文風",
+      "toneStylePlaceholder": "嚴肅",
+      "validation": {
+        "promptModelRequired": "需要提示生成模型"
+      },
+      "create": "新建"
+    },
+    "sendButton": {
+      "accessibilityLabel": "發送"
+    }
+  },
+  "feedback": {
+    "title": "送出反饋",
+    "description": "您的聲音很重要！告訴我們 PocketPal AI 如何幫助您，以及我們可以做什麼讓它更有用。",
+    "shareThoughtsButton": "分享您的想法",
+    "useCase": {
+      "label": "您正在使用 PocketPal AI 做什麼?",
+      "placeholder": "例如: 摘要、角色扮演等。"
+    },
+    "featureRequests": {
+      "label": "功能需求",
+      "placeholder": "您希望看到哪些功能?"
+    },
+    "generalFeedback": {
+      "label": "整體回饋",
+      "placeholder": "分享您可能有的其他想法。"
+    },
+    "usageFrequency": {
+      "label": "您多久使用一次 PocketPal AI? (可選)",
+      "options": {
+        "daily": "每日",
+        "weekly": "每週",
+        "monthly": "每月",
+        "rarely": "很少使用"
+      }
+    },
+    "email": {
+      "label": "聯絡電子郵件 (可選)",
+      "placeholder": "您的電子郵件地址"
+    },
+    "submit": "提交回饋",
+    "validation": {
+      "required": "請至少提供一些回饋"
+    },
+    "success": "感謝您的回饋!",
+    "error": {
+      "general": "發送回饋時出錯。請重試。"
+    }
   },
   "generation": {
-    "modelNotInitialized": "",
-    "failedToGenerate": ""
+    "modelNotInitialized": "模型上下文尚未初始化",
+    "failedToGenerate": "生成輸出失敗"
+  },
+  "memory": {
+    "shortWarning": "記憶體警告",
+    "warning": "警告：模型大小可能超出可用記憶體。此情況可能會降低您的裝置效能並影響穩定性。"
   },
   "models": {
     "fileManagement": {
-      "fileAlreadyExists": "",
-      "fileAlreadyExistsMessage": "",
-      "replace": "",
-      "keepBoth": ""
+      "fileAlreadyExists": "檔案已存在",
+      "fileAlreadyExistsMessage": "同名檔案已存在。您想要怎麼做?",
+      "replace": "替換",
+      "keepBoth": "保留兩者"
     },
     "labels": {
-      "localModel": "",
-      "hfModel": "",
-      "unknownGroup": "",
-      "availableToUse": "",
-      "availableToDownload": "",
-      "useAddButtonForMore": ""
-    },
-    "vision": "",
-    "mmproj": "",
-    "multimodal": {
-      "settings": "",
-      "projectionModels": "",
-      "noCompatibleModels": "",
-      "noProjectionModels": "",
-      "selected": "",
-      "select": "",
-      "download": "",
-      "projectionNeededTitle": "",
-      "projectionNeededMessage": "",
-      "projectionMissingWarning": "",
-      "projectionMissingShort": "",
-      "reloadModelTitle": "",
-      "reloadModelMessage": "",
-      "reload": "",
-      "deleteProjectionTitle": "",
-      "deleteProjectionMessage": "",
-      "cannotDeleteTitle": "",
-      "visionControls": {
-        "enableVision": "",
-        "disableVision": "",
-        "visionEnabled": "",
-        "visionDisabled": "",
-        "textOnlyMode": "",
-        "visionMode": "",
-        "downloadWithVision": "",
-        "downloadTextOnly": "",
-        "visionToggleDescription": "",
-        "projectionModelSize": "",
-        "visionModeDescription": "",
-        "textOnlyModeDescription": "",
-        "includesVisionCapability": "",
-        "requiresProjectionModel": ""
-      },
-      "cannotDeleteActive": "",
-      "cannotDeleteInUse": "",
-      "dependentModels": "",
-      "visionWillBeDisabled": ""
+      "localModel": "本機",
+      "hfModel": "HF",
+      "unknownGroup": "未知",
+      "availableToUse": "準備使用",
+      "availableToDownload": "可用下載",
+      "useAddButtonForMore": "點擊「+」按鈕即可搜尋更多模型"
     },
     "buttons": {
-      "addFromHuggingFace": "",
-      "addLocalModel": "",
-      "reset": ""
+      "addFromHuggingFace": "從 Hugging Face 新增",
+      "addLocalModel": "新增本地模型",
+      "reset": "重置"
     },
     "modelsHeaderRight": {
-      "menuTitleHf": "",
-      "menuTitleDownloaded": "",
-      "menuTitleGrouped": "",
-      "menuTitleReset": ""
+      "menuTitleHf": "Hugging Face 模型",
+      "menuTitleDownloaded": "已下載模型",
+      "menuTitleGrouped": "按模型類型分組",
+      "menuTitleReset": "重置模型列表"
     },
     "modelsResetDialog": {
-      "proceedWithReset": "",
-      "confirmReset": ""
+      "proceedWithReset": "繼續重置",
+      "confirmReset": "確認重置"
     },
     "chatTemplate": {
-      "label": ""
+      "label": "基礎聊天模板:"
     },
     "details": {
-      "title": ""
+      "title": "可用的 GGUF 檔案"
     },
     "modelFile": {
       "alerts": {
-        "cannotRemoveTitle": "",
-        "modelPreset": "",
-        "downloadedFirst": "",
-        "removeTitle": "",
-        "removeMessage": "",
-        "removeError": "",
-        "alreadyDownloadedTitle": "",
-        "alreadyDownloadedMessage": "",
-        "deleteTitle": "",
-        "deleteMessage": ""
+        "removeTitle": "移除模型",
+        "modelPreset": "模型已預設。",
+        "cannotRemoveTitle": "無法移除",
+        "downloadedFirst": "模型已下載。請先刪除該檔案。",
+        "removeMessage": "您確定要從列表中移除此模型嗎?",
+        "removeError": "無法移除模型。",
+        "alreadyDownloadedTitle": "模型已下載",
+        "alreadyDownloadedMessage": "該模型已經下載。",
+        "deleteTitle": "刪除模型",
+        "deleteMessage": "您確定要刪除已下載的模型嗎?"
       },
       "buttons": {
-        "remove": ""
+        "remove": "移除"
       },
       "warnings": {
         "storage": {
-          "message": "",
-          "shortMessage": ""
+          "message": "儲存空間不足, 無法使用。",
+          "shortMessage": "儲存空間不足"
         },
         "memory": {
-          "message": ""
+          "message": "模型大小接近或超出您裝置的總記憶體。這可能導致意外行為。"
         },
         "legacy": {
-          "message": "",
-          "shortMessage": ""
+          "message": "舊版量化格式 - 模型可能無法執行。",
+          "shortMessage": "舊版量化"
         },
-        "multiple": ""
+        "multiple": "{count} 個警告"
       },
       "labels": {
-        "downloadSpeed": ""
+        "downloadSpeed": "{speed}"
       }
     },
     "search": {
-      "noResults": "",
-      "loadingMore": "",
-      "searchPlaceholder": "",
-      "modelUpdatedLong": "",
-      "modelUpdatedShort": "",
-      "modelUpdatedJustNowLong": "",
-      "modelUpdatedJustNowShort": "",
-      "errorOccurred": "",
-      "filters": {
-        "author": "",
-        "authorPlaceholder": "",
-        "sortBy": "",
-        "clearFilters": "",
-        "showFilters": "",
-        "hideFilters": "",
-        "sortRelevance": "",
-        "sortDownloads": "",
-        "sortRecent": "",
-        "sortLikes": ""
-      }
+      "noResults": "未找到模型",
+      "loadingMore": "正在載入更多…",
+      "searchPlaceholder": "搜尋 Hugging Face 模型",
+      "ago": "前"
     },
     "modelCard": {
       "alerts": {
-        "deleteTitle": "",
-        "deleteMessage": "",
-        "removeTitle": "",
-        "removeMessage": ""
+        "deleteTitle": "刪除模型",
+        "deleteMessage": "您確定要刪除已下載的模型嗎?",
+        "removeTitle": "移除模型",
+        "removeMessage": "您確定要從列表中移除此模型嗎?"
       },
       "buttons": {
-        "settings": "",
-        "download": "",
-        "remove": "",
-        "load": "",
-        "offload": ""
+        "settings": "設定",
+        "download": "下載",
+        "remove": "移除",
+        "load": "載入",
+        "offload": "卸載"
       },
       "labels": {
-        "skills": "",
-        "vision": "",
-        "capabilities": "",
-        "modelName": "",
-        "contextLength": "",
-        "architecture": "",
-        "author": "",
-        "requiresProjectionModel": "",
-        "downloadProjectionModel": "",
-        "viewModelCardOnHuggingFace": ""
-      },
-      "accessibility": {
-        "expandDetails": "",
-        "collapseDetails": "",
-        "memoryWarning": "",
-        "integrityWarning": "",
-        "downloadProgress": "",
-        "loadingIndicator": "",
-        "loadButton": "",
-        "offloadButton": "",
-        "downloadButton": "",
-        "settingsButton": "",
-        "deleteButton": "",
-        "removeButton": "",
-        "expandDetailsButton": "",
-        "memoryWarningButton": "",
-        "integrityWarningButton": "",
-        "memoryWarningSnackbar": ""
+        "skills": "技能: "
       }
     },
     "modelSettings": {
       "template": {
-        "label": "",
-        "editButton": "",
-        "dialogTitle": "",
-        "note1": "",
-        "note2": "",
-        "placeholder": "",
-        "closeButton": ""
+        "label": "範本:",
+        "editButton": "編輯",
+        "dialogTitle": "編輯聊天範本",
+        "note1": "注意: 更改範本可能會改變 BOS、EOS 及系統提示。",
+        "note2": "使用 Nunjucks。留空則使用模型的範本。",
+        "placeholder": "請在此輸入您的聊天範本...",
+        "closeButton": "關閉"
       },
       "stopWords": {
-        "label": "",
-        "placeholder": ""
+        "label": "停止詞",
+        "placeholder": "新增停止詞"
       },
       "tokenSettings": {
-        "bos": "",
-        "eos": "",
-        "addGenerationPrompt": "",
-        "bosTokenPlaceholder": "",
-        "eosTokenPlaceholder": "",
-        "systemPrompt": ""
+        "bos": "BOS",
+        "eos": "EOS",
+        "addGenerationPrompt": "新增生成提示",
+        "bosTokenPlaceholder": "BOS 詞元",
+        "eosTokenPlaceholder": "EOS 詞元",
+        "systemPrompt": "系統提示"
       }
     },
     "modelDescription": {
-      "size": "",
-      "parameters": "",
-      "separator": "",
-      "notAvailable": ""
+      "size": "大小: ",
+      "parameters": "參數: ",
+      "separator": " | ",
+      "notAvailable": "不適用"
     },
     "modelCapabilities": {
-      "questionAnswering": "",
-      "summarization": "",
-      "reasoning": "",
-      "roleplay": "",
-      "instructions": "",
-      "code": "",
-      "math": "",
-      "multilingual": "",
-      "rewriting": "",
-      "creativity": "",
-      "vision": ""
-    }
-  },
-  "completionParams": {
-    "include_thinking_in_context": "",
-    "jinja": "",
-    "grammar": "",
-    "stop": "",
-    "n_predict": "",
-    "n_probs": "",
-    "top_k": "",
-    "top_p": "",
-    "min_p": "",
-    "temperature": "",
-    "penalty_last_n": "",
-    "penalty_repeat": "",
-    "penalty_freq": "",
-    "penalty_present": "",
-    "mirostat": "",
-    "mirostat_tau": "",
-    "mirostat_eta": "",
-    "dry_multiplier": "",
-    "dry_base": "",
-    "dry_allowed_length": "",
-    "dry_penalty_last_n": "",
-    "dry_sequence_breakers": "",
-    "ignore_eos": "",
-    "logit_bias": "",
-    "seed": "",
-    "xtc_probability": "",
-    "xtc_threshold": "",
-    "typical_p": ""
-  },
-  "about": {
-    "screenTitle": "",
-    "description": "",
-    "supportProject": "",
-    "supportProjectDescription": "",
-    "githubButton": "",
-    "orText": "",
-    "orBy": "",
-    "sponsorButton": "",
-    "versionCopiedTitle": "",
-    "versionCopiedDescription": ""
-  },
-  "feedback": {
-    "title": "",
-    "description": "",
-    "shareThoughtsButton": "",
-    "useCase": {
-      "label": "",
-      "placeholder": ""
-    },
-    "featureRequests": {
-      "label": "",
-      "placeholder": ""
-    },
-    "generalFeedback": {
-      "label": "",
-      "placeholder": ""
-    },
-    "usageFrequency": {
-      "label": "",
-      "options": {
-        "daily": "",
-        "weekly": "",
-        "monthly": "",
-        "rarely": ""
-      }
-    },
-    "email": {
-      "label": "",
-      "placeholder": ""
-    },
-    "submit": "",
-    "validation": {
-      "required": ""
-    },
-    "success": "",
-    "error": {
-      "general": ""
-    }
-  },
-  "components": {
-    "attachmentButton": {
-      "attachmentButtonAccessibilityLabel": ""
-    },
-    "bubble": {
-      "timingsString": ""
-    },
-    "exportUtils": {
-      "fileSaved": "",
-      "fileSavedMessage": "",
-      "share": "",
-      "ok": "",
-      "shareError": "",
-      "shareErrorMessage": "",
-      "saveError": "",
-      "saveOptions": "",
-      "saveOptionsMessage": "",
-      "cancel": "",
-      "shareContentErrorMessage": "",
-      "exportError": "",
-      "exportErrorMessage": "",
-      "permissionRequired": "",
-      "permissionMessage": "",
-      "permissionDenied": "",
-      "permissionDeniedMessage": "",
-      "continue": ""
-    },
-    "thinkingBubble": {
-      "reasoning": ""
-    },
-    "chatEmptyPlaceholder": {
-      "noModelsTitle": "",
-      "noModelsDescription": "",
-      "noModelsButton": "",
-      "activateModelTitle": "",
-      "activateModelDescription": "",
-      "activateModelButton": "",
-      "loading": ""
-    },
-    "chatInput": {
-      "inputPlaceholder": "",
-      "thinkingToggle": {
-        "enableThinking": "",
-        "disableThinking": "",
-        "thinkingEnabled": "",
-        "thinkingDisabled": "",
-        "thinkText": ""
-      }
-    },
-    "contentReportSheet": {
-      "title": "",
-      "privacyNote": "",
-      "categoryLabel": "",
-      "selectCategory": "",
-      "categories": {
-        "hate": "",
-        "sexual": "",
-        "selfHarm": "",
-        "violence": "",
-        "other": ""
-      },
-      "descriptionLabel": "",
-      "descriptionPlaceholder": "",
-      "includeModelInfo": "",
-      "includeModelInfoDescription": "",
-      "noActiveModelNote": "",
-      "submit": "",
-      "validation": {
-        "title": "",
-        "message": ""
-      },
-      "success": {
-        "title": "",
-        "message": ""
-      },
-      "error": {
-        "title": "",
-        "message": ""
-      }
-    },
-    "modelErrorReportSheet": {
-      "title": "",
-      "privacyNote": "",
-      "errorMessage": "",
-      "modelInfo": "",
-      "modelName": "",
-      "modelSource": "",
-      "modelSize": "",
-      "contextParams": "",
-      "deviceInfo": "",
-      "deviceModel": "",
-      "osVersion": "",
-      "memoryInfo": "",
-      "cpuArchitecture": "",
-      "isEmulator": "",
-      "additionalInfoLabel": "",
-      "additionalInfoPlaceholder": "",
-      "submit": "",
-      "success": {
-        "title": "",
-        "message": ""
-      },
-      "error": {
-        "title": "",
-        "message": ""
-      }
-    },
-    "chatGenerationSettingsSheet": {
-      "invalidValues": "",
-      "invalidNumericValuesMessage": "",
-      "pleaseCorrect": "",
-      "ok": "",
-      "saveChanges": "",
-      "saveAsPreset": "",
-      "title_session": "",
-      "title_preset": "",
-      "resetToSystemDefaults": "",
-      "resetToPreset": "",
-      "applytoPresetAlert": {
-        "title": "",
-        "message": ""
-      },
-      "palSettings": "",
-      "settingsSource": ""
-    },
-    "palGenerationSettingsSheet": {
-      "title": "",
-      "invalidValues": "",
-      "invalidNumericValuesMessage": "",
-      "pleaseCorrect": "",
-      "ok": "",
-      "error": "",
-      "failedToSave": "",
-      "resetToGlobal": "",
-      "resetToSystem": "",
-      "clearPalSettings": "",
-      "customSettingsFor": "",
-      "inheritedSettingsFor": ""
-    },
-    "chatHeaderTitle": {
-      "defaultTitle": ""
-    },
-    "fileMessage": {
-      "fileButtonAccessibilityLabel": ""
-    },
-    "chatPalModelPickerSheet": {
-      "modelsTab": "",
-      "palsTab": "",
-      "noPal": "",
-      "disablePal": "",
-      "noDescription": "",
-      "assistantType": "",
-      "roleplayType": "",
-      "videoType": "",
-      "confirmationTitle": "",
-      "modelSwitchMessage": "",
-      "keepButton": "",
-      "switchButton": ""
-    },
-    "downloadErrorDialog": {
-      "downloadFailedTitle": "",
-      "downloadFailedMessage": "",
-      "unauthorizedTitle": "",
-      "unauthorizedMessage": "",
-      "forbiddenTitle": "",
-      "forbiddenMessage": "",
-      "forbiddenSteps": [
-        "",
-        "",
-        ""
-      ],
-      "getTokenTitle": "",
-      "getTokenMessage": "",
-      "getTokenSteps": [
-        "",
-        "",
-        "",
-        ""
-      ],
-      "tokenDisabledTitle": "",
-      "tokenDisabledMessage": "",
-      "enableAndRetry": "",
-      "goToSettings": "",
-      "tryAgain": "",
-      "viewOnHuggingFace": ""
-    },
-    "headerRight": {
-      "deleteChatTitle": "",
-      "deleteChatMessage": "",
-      "generationSettings": "",
-      "model": "",
-      "duplicateChatHistory": "",
-      "makeChatTemporary": "",
-      "export": "",
-      "exportCurrentSession": "",
-      "exportAllSessions": "",
-      "exportChatSession": "",
-      "importSessions": ""
-    },
-    "hfTokenSheet": {
-      "title": "",
-      "description": "",
-      "inputLabel": "",
-      "inputPlaceholder": "",
-      "save": "",
-      "saved": "",
-      "reset": "",
-      "resetSuccess": "",
-      "instructions": "",
-      "instructionsSteps": [
-        "",
-        "",
-        "",
-        ""
-      ],
-      "getTokenLink": "",
-      "error": {
-        "saving": "",
-        "missing": "",
-        "invalid": "",
-        "gatedModelAccess": ""
-      },
-      "gatedModelIndicator": "",
-      "tokenRequired": "",
-      "searchErrorHint": "",
-      "disableAndRetry": ""
-    },
-    "modelSettingsSheet": {
-      "modelSettings": "",
-      "saveChanges": ""
-    },
-    "modelsHeaderRight": {
-      "menuTitleHf": "",
-      "menuTitleDownloaded": "",
-      "menuTitleGrouped": "",
-      "menuTitleReset": ""
-    },
-    "modelsResetDialog": {
-      "proceedWithReset": "",
-      "confirmReset": ""
-    },
-    "palSheet": {
-      "title": {
-        "edit": "",
-        "newPal": "",
-        "newVideoPal": ""
-      },
-      "description": "",
-      "descriptionPlaceholder": "",
-      "parameters": "",
-      "generationSettings": "",
-      "configureGenerationSettings": "",
-      "validation": {
-        "nameRequired": "",
-        "generatingPromptRequired": "",
-        "promptModelRequired": ""
-      }
-    },
-    "assistantPalSheet": {
-      "title": {
-        "create": "",
-        "edit": ""
-      },
-      "palName": "",
-      "palNamePlaceholder": "",
-      "defaultModel": "",
-      "defaultModelPlaceholder": "",
-      "validation": {
-        "generatingPromptRequired": "",
-        "promptModelRequired": ""
-      },
-      "create": ""
-    },
-    "modelNotAvailable": {
-      "noModelsDownloaded": "",
-      "downloadAModel": "",
-      "defaultModelNotDownloaded": "",
-      "modelNotDownloadedShort": "",
-      "recommendedModel": "",
-      "cancelDownload": "",
-      "download": ""
-    },
-    "roleplayPalSheet": {
-      "title": {
-        "create": "",
-        "edit": ""
-      },
-      "palName": "",
-      "palNamePlaceholder": "",
-      "defaultModel": "",
-      "defaultModelPlaceholder": "",
-      "descriptionSection": "",
-      "world": "",
-      "worldPlaceholder": "",
-      "location": "",
-      "locationPlaceholder": "",
-      "locationSublabel": "",
-      "aiRole": "",
-      "aiRolePlaceholder": "",
-      "aiRoleSublabel": "",
-      "userRole": "",
-      "userRolePlaceholder": "",
-      "userRoleSublabel": "",
-      "situation": "",
-      "situationPlaceholder": "",
-      "toneStyle": "",
-      "toneStylePlaceholder": "",
-      "validation": {
-        "promptModelRequired": ""
-      },
-      "create": ""
-    },
-    "lookiePalSheet": {
-      "title": {
-        "create": "",
-        "edit": ""
-      },
-      "palName": "",
-      "palNamePlaceholder": "",
-      "visionModel": "",
-      "visionModelPlaceholder": "",
-      "requiredModelsSection": "",
-      "captureInterval": "",
-      "captureIntervalHelper": "",
-      "create": ""
-    },
-    "sendButton": {
-      "accessibilityLabel": ""
-    },
-    "systemPromptSection": {
-      "sectionTitle": "",
-      "useAIPrompt": "",
-      "modelSelector": {
-        "label": "",
-        "sublabel": "",
-        "placeholder": ""
-      },
-      "generatingPrompt": {
-        "label": "",
-        "placeholder": ""
-      },
-      "buttons": {
-        "loadingModel": "",
-        "stopGenerating": "",
-        "generatePrompt": "",
-        "resetParameters": "",
-        "resetTemplate": ""
-      },
-      "systemPrompt": {
-        "label": "",
-        "sublabel": "",
-        "placeholder": ""
-      },
-      "warnings": {
-        "promptChanged": ""
-      }
-    },
-    "sidebarContent": {
-      "menuItems": {
-        "chat": "",
-        "models": "",
-        "pals": "",
-        "benchmark": "",
-        "settings": "",
-        "appInfo": "",
-        "testCompletion": ""
-      },
-      "deleteChatTitle": "",
-      "deleteChatMessage": "",
-      "select": "",
-      "nSelected": "",
-      "selectAll": "",
-      "deselectAll": "",
-      "exportCount": "",
-      "deleteCount": "",
-      "bulkDeleteTitle": "",
-      "bulkDeleteMessage": "",
-      "bulkDeleteError": "",
-      "exportError": "",
-      "bulkExportError": "",
-      "dateGroups": {
-        "today": "",
-        "yesterday": "",
-        "thisWeek": "",
-        "lastWeek": "",
-        "twoWeeksAgo": "",
-        "threeWeeksAgo": "",
-        "fourWeeksAgo": "",
-        "lastMonth": "",
-        "older": ""
-      }
-    },
-    "usageStats": {
-      "tooltip": {
-        "title": "",
-        "used": "",
-        "total": "",
-        "usage": ""
-      },
-      "byteSizes": [
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    "chatView": {
-      "menuItems": {
-        "copy": "",
-        "regenerate": "",
-        "regenerateWith": "",
-        "edit": "",
-        "reportContent": ""
-      }
-    },
-    "palHeaderRight": {
-      "exportAllPals": "",
-      "importPals": "",
-      "importSuccess": "",
-      "importError": ""
-    }
-  },
-  "palsScreen": {
-    "sectionTitles": {
-      "myPalsLocal": "",
-      "myLibrary": "",
-      "discoverPals": ""
-    },
-    "systemPrompt": "",
-    "videoAnalysis": "",
-    "videoAnalysisDescription": "",
-    "captureInterval": "",
-    "captureIntervalUnit": "",
-    "world": "",
-    "toneStyle": "",
-    "aiRole": "",
-    "userRole": "",
-    "prompt": "",
-    "assistant": "",
-    "roleplay": "",
-    "video": "",
-    "deletePal": "",
-    "deletePalMessage": "",
-    "missingModel": "",
-    "missingModelMessage": "",
-    "search": "",
-    "profile": "",
-    "signIn": "",
-    "addPal": "",
-    "signInToAccessLibrary": "",
-    "signOut": "",
-    "signOutConfirmation": "",
-    "signOutError": "",
-    "account": "",
-    "signInToPalsHub": "",
-    "signInDescription": "",
-    "searchAllPals": "",
-    "deletePalConfirmation": "",
-    "filters": {
-      "all": "",
-      "myPals": "",
-      "local": "",
-      "video": "",
-      "free": "",
-      "premium": ""
-    },
-    "labels": {
-      "free": "",
-      "premium": "",
-      "private": "",
-      "download": "",
-      "getFree": ""
-    },
-    "premiumPalDescription": "",
-    "premiumInfoText": "",
-    "sortOptions": {
-      "newest": "",
-      "oldest": "",
-      "rating": "",
-      "popular": ""
-    },
-    "palDetailSheet": {
-      "by": "",
-      "unknown": "",
-      "rating": "",
-      "reviews": "",
-      "created": "",
-      "description": "",
-      "noDescriptionAvailable": "",
-      "categories": "",
-      "tags": "",
-      "systemPrompt": "",
-      "downloaded": "",
-      "success": "",
-      "palAddedToCollection": "",
-      "error": "",
-      "failedToLoadDetails": "",
-      "failedToDownload": "",
-      "premiumPalMessage": "",
-      "notAvailable": ""
-    }
-  },
-  "validation": {
-    "nameRequired": "",
-    "systemPromptRequired": "",
-    "worldRequired": "",
-    "locationRequired": "",
-    "aiRoleRequired": "",
-    "userRoleRequired": "",
-    "situationRequired": "",
-    "toneStyleRequired": ""
-  },
-  "camera": {
-    "permissionTitle": "",
-    "permissionMessage": "",
-    "requestingPermission": "",
-    "noDevice": "",
-    "errorTitle": "",
-    "errorMessage": "",
-    "flip": "",
-    "analyzing": "",
-    "startCamera": "",
-    "stopCamera": "",
-    "promptPlaceholder": "",
-    "takePhoto": ""
-  },
-  "video": {
-    "permissionTitle": "",
-    "permissionMessage": "",
-    "requestingPermission": "",
-    "noDevice": "",
-    "errorTitle": "",
-    "errorMessage": "",
-    "flip": "",
-    "analyzing": "",
-    "startCamera": "",
-    "stopCamera": "",
-    "promptPlaceholder": "",
-    "captureInterval": "",
-    "captureIntervalUnit": "",
-    "liveCommentary": "",
-    "emptyPlaceholder": {
-      "title": "",
-      "subtitle": "",
-      "experimentalNotice": "",
-      "howToUse": "",
-      "step1": "",
-      "step2": "",
-      "step3": "",
-      "step4": ""
+      "questionAnswering": "問答",
+      "summarization": "摘要",
+      "reasoning": "推理",
+      "roleplay": "角色扮演",
+      "instructions": "遵循指示",
+      "code": "程式碼生成",
+      "math": "數學求解",
+      "multilingual": "多種語言",
+      "rewriting": "重新撰寫",
+      "creativity": "創意寫作"
     }
   },
   "screenTitles": {
-    "chat": "",
-    "models": "",
-    "pals": "",
-    "benchmark": "",
-    "settings": "",
-    "appInfo": "",
-    "testCompletion": ""
+    "chat": "聊天",
+    "models": "模型",
+    "pals": "Pal (實驗)",
+    "benchmark": "基準測試",
+    "settings": "設定",
+    "appInfo": "應用程式資訊",
+    "testCompletion": "測試完成"
   },
-  "chat": {
-    "conversationReset": "",
-    "modelNotLoaded": "",
-    "completionFailed": "",
-    "loadingModel": "",
-    "typeYourMessage": "",
-    "load": "",
-    "goToModels": "",
-    "readyToChat": "",
-    "pleaseLoadModel": "",
-    "multimodalNotEnabled": "",
-    "cannotSendWithoutModel": ""
+  "settings": {
+    "modelInitializationSettings": "模型初始化設定",
+    "metal": "Metal",
+    "metalDescription": "蘋果的硬體加速 API。",
+    "metalRequiresNewerIOS": "Metal 加速需要 iOS 18 或更高版本。請升級您的裝置以使用此功能。",
+    "layersOnGPU": "GPU 上的層數: {{gpuLayers}}",
+    "contextSize": "上下文大小",
+    "contextSizePlaceholder": "輸入上下文大小 (至少 {{minContextSize}})",
+    "invalidContextSizeError": "請輸入有效數字 (至少{{minContextSize}})",
+    "modelReloadNotice": "需要重新載入模型以使更改生效。",
+    "advancedSettings": "進階設定",
+    "batchSize": "批次大小",
+    "batchSizeDescription": "批次大小: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "有效",
+    "physicalBatchSize": "實體批次大小",
+    "physicalBatchSizeDescription": "實體批次大小: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "CPU 執行緒",
+    "cpuThreadsDescription": "使用 {{threads}} 個可用線程中的 {{maxThreads}}",
+    "flashAttention": "Flash Attention (閃電注意力)",
+    "flashAttentionDescription": "啟用 Flash Attention 以加速處理",
+    "keyCacheType": "鍵緩存類型",
+    "keyCacheTypeDescription": "選擇鍵計算所使用的緩存類型",
+    "valueCacheTypeDisabledDescription": "啟用 Flash Attention 以更改緩存類型",
+    "valueCacheType": "值緩存類型",
+    "keyCacheTypeDisabledDescription": "啟用 Flash Attention 以更改緩存類型",
+    "valueCacheTypeDescription": "選擇值計算所使用的緩存類型",
+    "modelLoadingSettings": "模型載入設定",
+    "autoOffloadLoad": "自動卸載 / 載入",
+    "autoOffloadLoadDescription": "應用程式進入背景時卸載模型。",
+    "autoNavigateToChat": "自動導向聊天",
+    "autoNavigateToChatDescription": "開始載入即跳轉到聊天。",
+    "appSettings": "應用程式設定",
+    "language": "語言",
+    "darkMode": "深色模式",
+    "displayMemoryUsage": "顯示記憶體使用量",
+    "displayMemoryUsageDescription": "在聊天頁面顯示記憶體使用量。"
   },
-  "benchmark": {
-    "title": "",
-    "modelSelector": {
-      "prompt": ""
-    },
-    "buttons": {
-      "advancedSettings": "",
-      "startTest": "",
-      "runningTest": "",
-      "clearAll": "",
-      "done": "",
-      "cancel": "",
-      "delete": "",
-      "share": "",
-      "sharing": "",
-      "viewRawData": "",
-      "hideRawData": ""
-    },
-    "messages": {
-      "pleaseSelectModel": "",
-      "testWarning": "",
-      "keepScreenOpen": "",
-      "initializingModel": "",
-      "modelMaxValue": ""
-    },
-    "dialogs": {
-      "advancedSettings": {
-        "title": "",
-        "testProfile": "",
-        "customParameters": "",
-        "description": ""
-      },
-      "deleteResult": {
-        "title": "",
-        "message": ""
-      },
-      "clearAllResults": {
-        "title": "",
-        "message": ""
-      },
-      "shareResults": {
-        "title": "",
-        "sharedDataTitle": "",
-        "deviceAndModelInfo": "",
-        "performanceMetrics": "",
-        "dontShowAgain": ""
-      }
-    },
-    "sections": {
-      "testResults": ""
-    },
-    "benchmarkResultCard": {
-      "modelMeta": {
-        "params": ""
-      },
-      "config": {
-        "title": "",
-        "format": ""
-      },
-      "modelSettings": {
-        "title": "",
-        "context": "",
-        "batch": "",
-        "ubatch": "",
-        "cpuThreads": "",
-        "gpuLayers": "",
-        "device": "",
-        "flashAttentionEnabled": "",
-        "flashAttentionDisabled": "",
-        "cacheTypes": ""
-      },
-      "results": {
-        "promptProcessing": "",
-        "tokenGeneration": "",
-        "totalTime": "",
-        "peakMemory": "",
-        "tokensPerSecond": ""
-      },
-      "actions": {
-        "deleteButton": "",
-        "submittedText": "",
-        "leaderboardLink": "",
-        "cannotShare": "",
-        "cannotShareTooltip": "",
-        "submitButton": "",
-        "viewLeaderboard": ""
-      },
-      "errors": {
-        "networkRetry": "",
-        "appCheckRetry": "",
-        "serverRetry": "",
-        "genericRetry": "",
-        "failedToSubmit": ""
-      }
-    },
-    "deviceInfoCard": {
-      "title": "",
-      "deviceSummary": "",
-      "coreSummary": "",
-      "sections": {
-        "basicInfo": "",
-        "cpuDetails": "",
-        "gpuDetails": "",
-        "hexagonDetails": "",
-        "appInfo": ""
-      },
-      "fields": {
-        "architecture": "",
-        "totalMemory": "",
-        "deviceId": "",
-        "cpuCores": "",
-        "cpuModel": "",
-        "chipset": "",
-        "instructions": "",
-        "version": "",
-        "gpuType": "",
-        "gpuRenderer": "",
-        "gpuVendor": "",
-        "metalSupport": "",
-        "openclSupport": "",
-        "openclRequirement": ""
-      },
-      "instructions": {
-        "format": "",
-        "yes": "",
-        "no": ""
-      },
-      "versionFormat": ""
-    }
+  "storage": {
+    "checkFailed": "無法檢查存儲",
+    "lowStorage": "儲存空間不足！模型 {{modelSize}} 佔用的容量大於剩餘空間 {{freeSpace}}"
   },
-  "errors": {
-    "unexpectedError": "",
-    "hfAuthenticationError": "",
-    "hfAuthenticationErrorSearch": "",
-    "authenticationError": "",
-    "hfAuthorizationError": "",
-    "authorizationError": "",
-    "hfServerError": "",
-    "serverError": "",
-    "hfNetworkTimeout": "",
-    "networkTimeout": "",
-    "hfNetworkError": "",
-    "networkError": "",
-    "downloadSetupFailedTitle": "",
-    "downloadSetupFailedMessage": "",
-    "cameraErrorTitle": "",
-    "cameraErrorMessage": "",
-    "galleryErrorTitle": "",
-    "galleryErrorMessage": ""
-  },
-  "simulator": {
-    "cameraNotAvailable": ""
+  "validation": {
+    "nameRequired": "名稱為必填",
+    "systemPromptRequired": "系統提示詞是必須的",
+    "worldRequired": "世界為必填",
+    "locationRequired": "位置為必填",
+    "aiRoleRequired": "AI 的角色為必填",
+    "userRoleRequired": "使用者角色為必填",
+    "situationRequired": "情境為必填",
+    "toneStyleRequired": "語氣／風格為必填"
   }
 }
