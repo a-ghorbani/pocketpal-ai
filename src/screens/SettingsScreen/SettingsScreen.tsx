@@ -68,6 +68,7 @@ import {
 // Language display names in their native form
 const languageNames: Record<AvailableLanguage, string> = {
   en: 'English (EN)',
+  id: 'Bahasa Indonesia (ID)',
   //es: 'Español (ES)',
   //de: 'Deutsch (DE)',
   ja: '日本語 (JA)',
