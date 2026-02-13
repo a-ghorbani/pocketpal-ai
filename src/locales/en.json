@@ -1104,7 +1104,7 @@
         "tokensPerSecond": "t/s"
       },
       "actions": {
-        "deleteButton": "",
+        "deleteButton": "Delete",
         "submittedText": "✓ Shared to",
         "leaderboardLink": "AI Phone Leaderboard ↗",
         "cannotShare": "Cannot share",
