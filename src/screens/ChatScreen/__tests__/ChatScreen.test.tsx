@@ -12,7 +12,7 @@ import {ChatScreen} from '../ChatScreen';
 
 import {chatSessionStore, modelStore} from '../../../store';
 
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
 
 const render = (ui: React.ReactElement, options: any = {}) =>

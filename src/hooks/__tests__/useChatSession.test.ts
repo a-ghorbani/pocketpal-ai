@@ -14,7 +14,7 @@ import {useChatSession} from '../useChatSession';
 
 import {chatSessionStore, modelStore, palStore} from '../../store';
 
-import {l10n} from '../../utils/l10n';
+import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
 
 const mockAssistant = {

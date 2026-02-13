@@ -22,6 +22,7 @@ import {
   AppInfoIcon,
 } from '../../assets/icons';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {ROUTES} from '../../utils/navigationConstants';
 import {exportChatSession} from '../../utils/exportUtils';
 
@@ -182,10 +183,9 @@ const SelectionModeHeader: React.FC<SelectionModeHeaderProps> = ({
       </TouchableOpacity>
 
       <Text style={styles.selectedCountText}>
-        {l10n.components.sidebarContent.nSelected.replace(
-          '{{count}}',
-          selectedCount.toString(),
-        )}
+        {t(l10n.components.sidebarContent.nSelected, {
+          count: selectedCount.toString(),
+        })}
       </Text>
 
       <View style={styles.headerActions}>
@@ -384,10 +384,9 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
 
       Alert.alert(
         l10n.components.sidebarContent.bulkDeleteTitle,
-        l10n.components.sidebarContent.bulkDeleteMessage.replace(
-          '{{count}}',
-          count.toString(),
-        ),
+        t(l10n.components.sidebarContent.bulkDeleteMessage, {
+          count: count.toString(),
+        }),
         [
           {
             text: l10n.common.cancel,

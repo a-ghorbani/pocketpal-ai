@@ -6,7 +6,7 @@ import {ModelNotLoadedMessage} from '../ModelNotLoadedMessage';
 
 import {modelStore} from '../../../../store';
 
-import {l10n} from '../../../../utils/l10n';
+import {l10n} from '../../../../locales';
 import {basicModel, modelsList} from '../../../../../jest/fixtures/models';
 
 const mockNavigate = jest.fn();

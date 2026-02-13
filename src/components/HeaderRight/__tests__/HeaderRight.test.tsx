@@ -9,7 +9,7 @@ import {chatSessionStore, modelStore, uiStore} from '../../../store';
 import {defaultCompletionSettings} from '../../../store/ChatSessionStore';
 import {L10nContext} from '../../../utils';
 import {modelsList} from '../../../../jest/fixtures/models';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 jest.mock('../../UsageStats', () => ({
   UsageStats: jest.fn(() => {

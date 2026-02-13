@@ -6,7 +6,7 @@ import {ChatPalModelPickerSheet} from '../ChatPalModelPickerSheet';
 import {modelStore, chatSessionStore} from '../../../store';
 import {user} from '../../../../jest/fixtures';
 import {UserContext, L10nContext} from '../../../utils';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 // Mock stores
 jest.mock('../../../store', () => ({

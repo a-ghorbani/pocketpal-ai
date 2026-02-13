@@ -13,6 +13,7 @@ import {styles} from './styles';
 
 import {UserContext, L10nContext} from '../../utils';
 import {MessageType} from '../../utils/types';
+import {t} from '../../locales';
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -37,12 +38,10 @@ export const Bubble = ({
   const currentUserIsAuthor = user?.id === message.author.id;
   const {copyable, timings} = message.metadata || {};
 
-  const timingsString = l10n.components.bubble.timingsString
-    .replace('{{predictedMs}}', timings?.predicted_per_token_ms?.toFixed())
-    .replace(
-      '{{predictedPerSecond}}',
-      timings?.predicted_per_second?.toFixed(2),
-    );
+  const timingsString = t(l10n.components.bubble.timingsString, {
+    predictedMs: timings?.predicted_per_token_ms?.toFixed() ?? '',
+    predictedPerSecond: timings?.predicted_per_second?.toFixed(2) ?? '',
+  });
 
   // Add time to first token if available
   const timeToFirstTokenString =

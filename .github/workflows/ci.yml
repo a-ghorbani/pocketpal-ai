@@ -41,7 +41,11 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      # Step 4: Run linters (ESLint)
+      # Step 4: Validate l10n files
+      - name: Validate l10n files
+        run: node scripts/validate-l10n.js
+
+      # Step 5: Run linters (ESLint)
       - name: Run ESLint
         run: yarn lint
 

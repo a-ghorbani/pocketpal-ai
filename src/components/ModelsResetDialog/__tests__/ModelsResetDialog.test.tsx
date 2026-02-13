@@ -4,7 +4,7 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {ModelsResetDialog} from '../ModelsResetDialog';
 
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 describe('ModelsResetDialog', () => {
   const mockOnDismiss = jest.fn();

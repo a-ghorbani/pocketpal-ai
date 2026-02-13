@@ -5,6 +5,7 @@ import {Card, Text, Button, Tooltip} from 'react-native-paper';
 
 import {useTheme} from '../../../hooks';
 import {L10nContext} from '../../../utils';
+import {t} from '../../../locales';
 
 import {createStyles} from './styles';
 
@@ -144,11 +145,12 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
               {l10n.benchmark.benchmarkResultCard.config.title}
             </Text>
             <Text style={styles.configText}>
-              {l10n.benchmark.benchmarkResultCard.config.format
-                .replace('{{pp}}', result.config.pp.toString())
-                .replace('{{tg}}', result.config.tg.toString())
-                .replace('{{pl}}', result.config.pl.toString())
-                .replace('{{nr}}', result.config.nr.toString())}
+              {t(l10n.benchmark.benchmarkResultCard.config.format, {
+                pp: result.config.pp.toString(),
+                tg: result.config.tg.toString(),
+                pl: result.config.pl.toString(),
+                nr: result.config.nr.toString(),
+              })}
             </Text>
           </View>
 
@@ -159,39 +161,47 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
               </Text>
               <View style={styles.configTextContainer}>
                 <Text style={styles.configText}>
-                  {l10n.benchmark.benchmarkResultCard.modelSettings.context.replace(
-                    '{{context}}',
-                    (result.initSettings.n_ctx || 0).toString(),
-                  )}{' '}
+                  {t(l10n.benchmark.benchmarkResultCard.modelSettings.context, {
+                    context: (result.initSettings.n_ctx || 0).toString(),
+                  })}{' '}
                   •{' '}
-                  {l10n.benchmark.benchmarkResultCard.modelSettings.batch.replace(
-                    '{{batch}}',
-                    (result.initSettings.n_batch || 0).toString(),
-                  )}{' '}
+                  {t(l10n.benchmark.benchmarkResultCard.modelSettings.batch, {
+                    batch: (result.initSettings.n_batch || 0).toString(),
+                  })}{' '}
                   •{' '}
-                  {l10n.benchmark.benchmarkResultCard.modelSettings.ubatch.replace(
-                    '{{ubatch}}',
-                    (result.initSettings.n_ubatch || 0).toString(),
-                  )}
+                  {t(l10n.benchmark.benchmarkResultCard.modelSettings.ubatch, {
+                    ubatch: (result.initSettings.n_ubatch || 0).toString(),
+                  })}
                 </Text>
                 <Text style={styles.configText}>
-                  {l10n.benchmark.benchmarkResultCard.modelSettings.cpuThreads.replace(
-                    '{{threads}}',
-                    (result.initSettings.n_threads || 0).toString(),
+                  {t(
+                    l10n.benchmark.benchmarkResultCard.modelSettings.cpuThreads,
+                    {
+                      threads: (result.initSettings.n_threads || 0).toString(),
+                    },
                   )}{' '}
                   •{' '}
-                  {l10n.benchmark.benchmarkResultCard.modelSettings.gpuLayers.replace(
-                    '{{layers}}',
-                    (result.initSettings.n_gpu_layers || 0).toString(),
+                  {t(
+                    l10n.benchmark.benchmarkResultCard.modelSettings.gpuLayers,
+                    {
+                      layers: (
+                        result.initSettings.n_gpu_layers || 0
+                      ).toString(),
+                    },
                   )}
                   {(result.initSettings as any).devices &&
                     (result.initSettings as any).devices.length > 0 && (
                       <>
                         {' '}
                         •{' '}
-                        {l10n.benchmark.benchmarkResultCard.modelSettings.device.replace(
-                          '{{device}}',
-                          (result.initSettings as any).devices.join(', '),
+                        {t(
+                          l10n.benchmark.benchmarkResultCard.modelSettings
+                            .device,
+                          {
+                            device: (result.initSettings as any).devices.join(
+                              ', ',
+                            ),
+                          },
                         )}
                       </>
                     )}
@@ -217,19 +227,17 @@ export const BenchResultCard = ({result, onDelete, onShare}: Props) => {
                     }
                   })()}{' '}
                   •{' '}
-                  {l10n.benchmark.benchmarkResultCard.modelSettings.cacheTypes
-                    .replace(
-                      '{{cacheK}}',
-                      (
+                  {t(
+                    l10n.benchmark.benchmarkResultCard.modelSettings.cacheTypes,
+                    {
+                      cacheK: (
                         result.initSettings.cache_type_k || 'unknown'
                       ).toString(),
-                    )
-                    .replace(
-                      '{{cacheV}}',
-                      (
+                      cacheV: (
                         result.initSettings.cache_type_v || 'unknown'
                       ).toString(),
-                    )}
+                    },
+                  )}
                 </Text>
               </View>
             </View>

@@ -8,7 +8,7 @@ import DeviceInfo from 'react-native-device-info';
 import Blob from 'react-native/Libraries/Blob/Blob';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {l10n} from './l10n';
+import {l10n} from '../locales';
 import {modelStore} from '../store';
 import {getHFDefaultSettings} from './chat';
 import {formatBytes, formatNumber} from './formatters';

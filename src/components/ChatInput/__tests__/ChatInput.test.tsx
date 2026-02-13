@@ -5,7 +5,7 @@ import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
 import {user} from '../../../../jest/fixtures';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {UserContext} from '../../../utils';
 import {ChatInput} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';

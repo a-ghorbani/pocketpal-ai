@@ -1,0 +1,45 @@
+# Weblate Translation Workflow Lifecycle:
+#
+# 1. Developer adds/changes English strings in src/locales/en.json, merges PR to main
+# 2. This workflow auto-uploads en.json to Weblate on merge
+# 3. Translators work in Weblate UI at https://hosted.weblate.org/translate/pocketpal-ai
+# 4. Weblate auto-creates a PR with translated files (requires Weblate admin to
+#    configure push mode to GitHub)
+# 5. Human reviews and merges the Weblate PR
+# 6. scripts/sync-weblate.js download remains as a backup/convenience tool
+#
+# Required admin setup:
+#   - Configure the Weblate component with GitHub PR push mode
+#   - Set WEBLATE_TOKEN secret in repo settings -> Secrets -> Actions
+
+name: Upload translations to Weblate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/locales/en.json'
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.21.0'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Upload to Weblate
+        env:
+          WEBLATE_TOKEN: ${{ secrets.WEBLATE_TOKEN }}
+        run: node scripts/sync-weblate.js upload

@@ -4,6 +4,7 @@ import DeviceInfo from 'react-native-device-info';
 
 import {formatBytes, hasEnoughSpace} from '../utils';
 import {L10nContext} from '../utils';
+import {t} from '../locales';
 
 import {Model, ModelOrigin} from '../utils/types';
 
@@ -60,9 +61,10 @@ export const useStorageCheck = (
           }
 
           // Use localized template string with variables
-          const message = l10n.storage.lowStorage
-            .replace('{{modelSize}}', formatBytes(model.size))
-            .replace('{{freeSpace}}', formatBytes(freeDisk));
+          const message = t(l10n.storage.lowStorage, {
+            modelSize: formatBytes(model.size),
+            freeSpace: formatBytes(freeDisk),
+          });
 
           setStorageStatus({
             isOk: false,

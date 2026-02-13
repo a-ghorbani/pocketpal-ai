@@ -2,7 +2,7 @@ import React from 'react';
 import {EnhancedSearchBar} from '../EnhancedSearchBar';
 import {SearchFilters} from '../../../store/HFStore';
 import {fireEvent, render} from '../../../../jest/test-utils';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 // Mock the theme hook
 jest.mock('../../../hooks', () => ({

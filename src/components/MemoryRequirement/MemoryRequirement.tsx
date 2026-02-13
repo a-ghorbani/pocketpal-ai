@@ -5,6 +5,7 @@ import {observer} from 'mobx-react-lite';
 
 import {useTheme} from '../../hooks';
 import {L10nContext, formatBytes} from '../../utils';
+import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {Model} from '../../utils/types';
 import {modelStore} from '../../store';
@@ -36,7 +37,7 @@ export const MemoryRequirement: React.FC<MemoryRequirementProps> = observer(
     );
 
     const sizeText = formatBytes(memoryRequirement, 1); // "2.5 GB"
-    const displayText = l10n.memory.estimatedMemory.replace('{size}', sizeText);
+    const displayText = t(l10n.memory.estimatedMemory, {size: sizeText});
 
     return (
       <View style={styles.container} testID="memory-requirement">

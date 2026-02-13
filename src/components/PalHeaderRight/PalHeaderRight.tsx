@@ -7,6 +7,7 @@ import {IconButton, useTheme} from 'react-native-paper';
 
 import {createStyles} from './styles';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 
 import {Menu} from '..';
 import {DotsVerticalIcon, ShareIcon} from '../../assets/icons';
@@ -46,10 +47,9 @@ export const PalHeaderRight = observer(() => {
       if (count > 0) {
         Alert.alert(
           'Import Success',
-          l10n.components.palHeaderRight.importSuccess.replace(
-            '{{count}}',
-            count.toString(),
-          ),
+          t(l10n.components.palHeaderRight.importSuccess, {
+            count: count.toString(),
+          }),
         );
       }
     } catch (error) {

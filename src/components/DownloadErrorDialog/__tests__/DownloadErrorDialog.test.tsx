@@ -5,7 +5,7 @@ import {DownloadErrorDialog} from '../DownloadErrorDialog';
 import {Linking} from 'react-native';
 import {hfStore} from '../../../store';
 import {createModel} from '../../../../jest/fixtures/models';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {createErrorState, ErrorState} from '../../../utils/errors';
 
 // Mock Linking - need to spy on the actual Linking object

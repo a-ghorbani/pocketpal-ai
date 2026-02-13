@@ -8,7 +8,7 @@ import {
   textMessage,
   user,
 } from '../../../../jest/fixtures';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 import {MessageType} from '../../../utils/types';
 import {ChatView} from '../ChatView';
 import {fireEvent, render} from '../../../../jest/test-utils';

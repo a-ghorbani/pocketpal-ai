@@ -10,7 +10,7 @@ url = https://hosted.weblate.org/
 url = https://hosted.weblate.org/projects/pocketpal-ai/translations/
 
 # File format configuration
-file_format = json
+file_format = json-nested
 new_lang = add
 source_language = en
 

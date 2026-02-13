@@ -10,7 +10,7 @@ jest.unmock('../useMemoryCheck');
 
 import {useMemoryCheck} from '../useMemoryCheck';
 
-import {l10n} from '../../utils/l10n';
+import {l10n} from '../../locales';
 
 describe('useMemoryCheck', () => {
   beforeEach(() => {

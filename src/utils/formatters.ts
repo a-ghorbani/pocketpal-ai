@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import {l10n} from './l10n';
+import {l10n} from '../locales';
 import {defaultModels} from '../store/defaultModels';
 import {ModelOrigin} from './types';
 

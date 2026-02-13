@@ -6,7 +6,7 @@ import {
   mockHFModel2,
 } from '../../../../../../jest/fixtures/models';
 import {formatNumber, timeAgo} from '../../../../../utils';
-import {l10n} from '../../../../../utils/l10n';
+import {l10n} from '../../../../../locales';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});

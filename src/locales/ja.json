@@ -1,0 +1,1181 @@
+{
+  "common": {
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "dismiss": "閉じる",
+    "rename": "名前変更",
+    "reset": "リセット",
+    "save": "保存",
+    "update": "更新",
+    "error": "エラー",
+    "export": "エクスポート",
+    "networkError": "ネットワークエラーが発生しました、もう一度お試しください",
+    "downloadETA": "残り",
+    "minutes": "分",
+    "second": "秒",
+    "seconds": "秒",
+    "calculating": "計算中...",
+    "year": "年",
+    "years": "年",
+    "month": "ヶ月",
+    "months": "ヶ月",
+    "week": "週間",
+    "weeks": "週間",
+    "day": "日",
+    "days": "日",
+    "hour": "時間",
+    "hours": "時間",
+    "minute": "分",
+    "justNow": "たった今",
+    "ok": "OK",
+    "close": "閉じる",
+    "clear": "すべてクリア",
+    "gallery": "ギャラリー"
+  },
+  "settings": {
+    "modelInitializationSettings": "モデル初期化設定",
+    "metal": "Metal",
+    "metalDescription": "Appleのハードウェア加速API",
+    "metalRequiresNewerIOS": "Metal加速機能にはiOS 18以上が必要です、この機能を利用するにはデバイスを更新してください",
+    "openCL": "OpenCL（実験的）",
+    "openCLDescription": "Adreno GPU向けのGPU加速。プロンプト処理は高速化されますが、生成速度は必ずしも速くなりません。",
+    "openCLNotAvailable": "このデバイスではOpenCLを利用できません。i8mmとdotprodのCPU機能を備えたAdreno GPUが必要です。",
+    "openCLMissingCPUFeatures": "OpenCLにはi8mmとdotprodのCPU機能が必要ですが、このデバイスでは利用できません。",
+    "openCLQuantizationNote": "注：純粋なQ4_0量子化モデルがOpenCLで最高のパフォーマンスを発揮します。",
+    "openCLDocsLink": "詳細はllama.cpp OpenCLドキュメントをご覧ください。",
+    "layersOnGPU": "GPUレイヤー：{{gpuLayers}}",
+    "deviceSelection": "デバイス選択",
+    "deviceSelectionIOS": "デバイス（Metal）",
+    "deviceSelectionIOSDescription": "Metal GPUまたはCPUのみモードを選択",
+    "deviceSelectionAndroidDescription": "計算デバイスを選択（CPU、GPU、またはHexagon NPU）",
+    "cpuOnlyNoAccelerators": "CPUのみ - ハードウェアアクセラレータが検出されませんでした",
+    "contextSize": "コンテキストサイズ",
+    "contextSizePlaceholder": "コンテキストサイズを入力（最小{{minContextSize}}）",
+    "invalidContextSizeError": "有効な数値を入力してください（最小{{minContextSize}}）",
+    "modelReloadNotice": "変更を適用にするにはモデルの再読み込みが必要です",
+    "advancedSettings": "詳細設定",
+    "batchSize": "バッチサイズ",
+    "batchSizeDescription": "バッチサイズ: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "有効",
+    "physicalBatchSize": "物理バッチサイズ",
+    "physicalBatchSizeDescription": "物理バッチサイズ: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "CPUスレッド",
+    "cpuThreadsDescription": "利用可能な{{maxThreads}}スレッドのうち{{threads}}を使用",
+    "imageMaxTokens": "画像最大トークン数",
+    "imageMaxTokensDescription": "画像処理の最大トークン数: {{tokens}}{{effectiveTokens}} (低い = 高速、詳細度低)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionDescription": "高速処理のためのFlash Attentionを有効化",
+    "flashAttentionIOSDescription": "メモリ効率的なアテンション（Metalで自動有効化）",
+    "flashAttentionAndroidDescription": "OpenCL状態の保存/読み込みには無効化が必要",
+    "flashAttentionAuto": "自動",
+    "flashAttentionOn": "オン",
+    "flashAttentionOff": "オフ",
+    "keyCacheType": "キーキャッシュタイプ",
+    "keyCacheTypeDescription": "キー計算用のキャッシュタイプを選択",
+    "keyCacheTypeDisabledDescription": "キャッシュタイプを変更するにはFlash Attentionを有効にしてください",
+    "valueCacheType": "値キャッシュタイプ",
+    "valueCacheTypeDescription": "値計算用のキャッシュタイプを選択",
+    "valueCacheTypeDisabledDescription": "キャッシュタイプを変更するにはFlash Attentionを有効にしてください",
+    "memorySettings": "メモリ設定",
+    "useMlock": "メモリロックを使用",
+    "useMlockDescription": "モデルをRAMに保持し、スワップや圧縮を防ぎます",
+    "useMmap": "メモリマッピング",
+    "useMmapDescription": "メモリマップファイルを使用してモデルの読み込みを高速化",
+    "useMmapTrue": "有効",
+    "useMmapFalse": "無効",
+    "useMmapSmart": "スマート",
+    "useMmapTrueDescription": "常にメモリマッピングを使用して高速読み込み",
+    "useMmapFalseDescription": "メモリマッピングを使用しない（読み込みは遅くなりますがメモリ使用量を削減する可能性があります）",
+    "useMmapSmartDescription": "モデルタイプに基づいて自動選択（Androidのみ）",
+    "useMmapRecommended": "パフォーマンス推奨 - ロックされたページでメモリマップ。高速読み込みと一貫したパフォーマンスを組み合わせます",
+    "modelLoadingSettings": "モデル読み込み設定",
+    "autoOffloadLoad": "自動オフロード/ロード",
+    "autoOffloadLoadDescription": "アプリがバックグラウンドにあるときにモデルをオフロードします",
+    "autoNavigateToChat": "チャットへ自動移動",
+    "autoNavigateToChatDescription": "読み込みが開始されたらチャット画面へ移動します",
+    "appSettings": "アプリ設定",
+    "language": "言語",
+    "darkMode": "ダークモード",
+    "displayMemoryUsage": "メモリ使用量を表示",
+    "displayMemoryUsageDescription": "チャット画面にメモリ使用量を表示します",
+    "exportOptions": "エクスポートオプション",
+    "exportLegacyChats": "旧チャットセッションをエクスポート",
+    "exportLegacyChatsDescription": "移行に失敗した場合や古いチャットセッションを復元する必要がある場合に使用します",
+    "exportButton": "エクスポート",
+    "importChats": "チャットセッションをインポート",
+    "importChatsDescription": "JSONファイルからチャットセッションをインポートします",
+    "importButton": "インポート",
+    "importSuccess": "{{count}}個のチャットセッションをインポートしました",
+    "importError": "チャットセッションのインポートに失敗しました、ファイル形式を確認してください",
+    "apiSettingsTitle": "API設定",
+    "huggingFaceTokenLabel": "Hugging Faceトークン",
+    "tokenIsSetDescription": "トークンが設定されています、制限付きモデルへのアクセスに必要です",
+    "setTokenDescription": "Hugging Faceから制限付きモデルにアクセスするためのトークンを設定します",
+    "setTokenButton": "トークンを設定",
+    "useHfTokenLabel": "HFトークンを使用",
+    "useHfTokenDescription": "HFトークンを使用して制限付きモデルにアクセスします",
+    "cacheStorageTitle": "キャッシュとストレージ",
+    "clearPalCaches": "ショートカットキャッシュをクリア",
+    "clearPalCachesDescription": "ショートカットを高速化するために使用されるキャッシュデータをクリアします。Palやチャット履歴には影響しません。",
+    "clearCachesButton": "キャッシュをクリア",
+    "clearCachesConfirmTitle": "ショートカットキャッシュをクリアしますか？",
+    "clearCachesConfirmMessage": "すべてのキャッシュされたセッションデータ（{{fileCount}}ファイル、{{size}}）をクリアします。クリア後、ショートカットの初回使用時は遅くなる可能性があります。Palやチャット履歴には影響しません。",
+    "clearCachesSuccess": "{{count}}個のキャッシュファイルをクリアしました。",
+    "clearCachesError": "キャッシュのクリアに失敗しました。もう一度お試しください。",
+    "noCachesToClear": "クリアするキャッシュがありません。"
+  },
+  "memory": {
+    "shortWarning": "メモリ警告",
+    "multimodalWarning": "このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります",
+    "memoryTight": "メモリ不足気味",
+    "lowMemory": "メモリ不足",
+    "memoryDetailMessage": "このモデルは~{{needed}}必要ですが、使用可能なメモリは~{{available}}と推定されています。アプリを使用するにつれて推定精度が向上します。",
+    "estimatedMemory": "推定メモリ: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "メモリ警告",
+      "memoryWarningMessage": "このモデルは利用可能なメモリを超える可能性があり、不安定になる可能性があります、読み込みを続行しますか？",
+      "multimodalWarningTitle": "デバイス性能警告",
+      "multimodalWarningMessage": "このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります、読み込みにより不安定になる可能性があります、続行しますか？",
+      "combinedWarningTitle": "性能警告",
+      "combinedWarningMessage": "このモデルは利用可能なメモリを超える可能性があり、このデバイスはマルチモーダルモデルに十分なリソースがない可能性があります、読み込みにより不安定になる可能性があります、続行しますか？",
+      "cancel": "キャンセル",
+      "continue": "続行"
+    }
+  },
+  "storage": {
+    "checkFailed": "ストレージの確認に失敗しました",
+    "lowStorage": "ストレージ容量不足！モデル {{modelSize}} > 空き容量 {{freeSpace}}"
+  },
+  "generation": {
+    "modelNotInitialized": "モデルコンテキストが初期化されていません",
+    "failedToGenerate": "出力の生成に失敗しました"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "ファイルが既に存在します",
+      "fileAlreadyExistsMessage": "この名前のファイルは既に存在します、どうしますか？",
+      "replace": "置き換え",
+      "keepBoth": "両方保持する"
+    },
+    "labels": {
+      "localModel": "ローカル",
+      "hfModel": "HF",
+      "unknownGroup": "不明",
+      "availableToUse": "使用可能",
+      "availableToDownload": "ダウンロード可能",
+      "useAddButtonForMore": "+ ボタンを他のモデルを探す"
+    },
+    "vision": "ビジョン",
+    "mmproj": "プロジェクター",
+    "multimodal": {
+      "settings": "マルチモーダル設定",
+      "projectionModels": "投影モデル",
+      "noCompatibleModels": "互換性のある投影モデルが見つかりません",
+      "noProjectionModels": "利用可能な投影モデルがありません",
+      "selected": "選択済み",
+      "select": "選択",
+      "download": "ダウンロード",
+      "projectionNeededTitle": "投影モデルが必要です",
+      "projectionNeededMessage": "このモデルはマルチモーダル機能のために投影モデルが必要です",
+      "projectionMissingWarning": "投影モデルが不足しています",
+      "projectionMissingShort": "投影モデル不足",
+      "reloadModelTitle": "モデルを再読み込み",
+      "reloadModelMessage": "新しい投影モデルを適用するにはモデルを再読み込みする必要があります、今すぐ再読み込みしますか？",
+      "reload": "再読み込み",
+      "deleteProjectionTitle": "投影モデルを削除",
+      "deleteProjectionMessage": "この投影モデルを削除してもよろしいですか？",
+      "cannotDeleteTitle": "削除できません",
+      "visionControls": {
+        "enableVision": "ビジョン機能を有効にする",
+        "disableVision": "ビジョン機能を無効にする",
+        "visionEnabled": "ビジョン有効",
+        "visionDisabled": "ビジョン無効",
+        "textOnlyMode": "テキストのみ",
+        "visionMode": "ビジョン有効",
+        "downloadWithVision": "ビジョン付きでダウンロード",
+        "downloadTextOnly": "テキストのみダウンロード",
+        "visionToggleDescription": "画像処理機能を有効にする",
+        "projectionModelSize": "+{{size}} 投影モデル",
+        "visionModeDescription": "画像とテキストを処理",
+        "textOnlyModeDescription": "テキストのみ処理",
+        "includesVisionCapability": "ビジョン機能を含む",
+        "requiresProjectionModel": "先に互換性のある投影モデルをダウンロードしてください"
+      },
+      "cannotDeleteActive": "この投影モデルは現在アクティブです",
+      "cannotDeleteInUse": "この投影モデルはダウンロード済みのLLMモデルで使用されています：",
+      "dependentModels": "依存モデル：",
+      "visionWillBeDisabled": "これらのモデルのビジョン機能が無効になります"
+    },
+    "buttons": {
+      "addFromHuggingFace": "Hugging Faceから追加",
+      "addLocalModel": "ローカルモデルを追加",
+      "reset": "リセット"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Faceモデル",
+      "menuTitleDownloaded": "ダウンロード済みモデル",
+      "menuTitleGrouped": "モデルタイプでグループ化",
+      "menuTitleReset": "モデルリストをリセット"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "リセットを続行",
+      "confirmReset": "リセットの確認"
+    },
+    "chatTemplate": {
+      "label": "基本チャットテンプレート:"
+    },
+    "details": {
+      "title": "利用可能な GGUF ファイル"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "削除できません",
+        "modelPreset": "このモデルはプリセットです",
+        "downloadedFirst": "モデルがダウンロード済みです、先にファイルを削除してください",
+        "removeTitle": "モデルを削除",
+        "removeMessage": "このモデルをリストから削除してもよろしいですか？",
+        "removeError": "モデルの削除に失敗しました",
+        "alreadyDownloadedTitle": "既にダウンロード済み",
+        "alreadyDownloadedMessage": "このモデルは既にダウンロードされています",
+        "deleteTitle": "モデルを削除",
+        "deleteMessage": "このダウンロード済みモデルを削除してもよろしいですか？"
+      },
+      "buttons": {
+        "remove": "削除"
+      },
+      "warnings": {
+        "storage": {
+          "message": "十分なストレージ容量がありません",
+          "shortMessage": "ストレージ容量不足"
+        },
+        "memory": {
+          "message": "モデルサイズがデバイスの総メモリに近いか超えています、予期しない動作が発生する可能性があります"
+        },
+        "legacy": {
+          "message": "旧式の量子化形式です - モデルが実行できない可能性があります",
+          "shortMessage": "旧式の量子化"
+        },
+        "multiple": "{{count}}件の警告"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "search": {
+      "noResults": "モデルが見つかりません",
+      "loadingMore": "読み込み中...",
+      "searchPlaceholder": "Hugging Faceモデルを検索",
+      "modelUpdatedLong": "{{time}}前に更新",
+      "modelUpdatedShort": "{{time}}前",
+      "modelUpdatedJustNowLong": "たった今更新",
+      "modelUpdatedJustNowShort": "たった今",
+      "errorOccurred": "モデルを読み込めませんでした、もう一度お試しください",
+      "filters": {
+        "author": "作者",
+        "authorPlaceholder": "作者でフィルタ...",
+        "sortBy": "並び順",
+        "clearFilters": "フィルタをクリア",
+        "showFilters": "フィルタを表示",
+        "hideFilters": "フィルタを非表示",
+        "sortRelevance": "関連度",
+        "sortDownloads": "ダウンロード数",
+        "sortRecent": "最近更新",
+        "sortLikes": "いいね数"
+      }
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "モデルを削除",
+        "deleteMessage": "このダウンロード済みモデルを削除してもよろしいですか？",
+        "removeTitle": "モデルを削除",
+        "removeMessage": "このモデルをリストから削除してもよろしいですか？"
+      },
+      "buttons": {
+        "settings": "設定",
+        "download": "ダウンロード",
+        "remove": "削除",
+        "load": "読み込み",
+        "offload": "オフロード"
+      },
+      "labels": {
+        "skills": "スキル: ",
+        "vision": "ビジョン",
+        "capabilities": "機能。",
+        "modelName": "モデル名",
+        "contextLength": "コンテキスト長",
+        "architecture": "アーキテクチャ",
+        "author": "作者",
+        "requiresProjectionModel": "投影モデルが必要",
+        "downloadProjectionModel": "投影モデルをダウンロード",
+        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示"
+      },
+      "accessibility": {
+        "expandDetails": "詳細を展開",
+        "collapseDetails": "詳細を折りたたむ",
+        "memoryWarning": "メモリ警告",
+        "integrityWarning": "整合性警告",
+        "downloadProgress": "ダウンロード進行状況",
+        "loadingIndicator": "読み込み中",
+        "loadButton": "モデルを読み込む",
+        "offloadButton": "モデルをアンロード",
+        "downloadButton": "モデルをダウンロード",
+        "settingsButton": "モデル設定",
+        "deleteButton": "モデルを削除",
+        "removeButton": "モデルを削除",
+        "expandDetailsButton": "モデル詳細を展開",
+        "memoryWarningButton": "メモリ警告詳細を表示",
+        "integrityWarningButton": "整合性警告詳細を表示",
+        "memoryWarningSnackbar": "メモリ警告通知"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "テンプレート:",
+        "editButton": "編集",
+        "dialogTitle": "チャットテンプレートを編集",
+        "note1": "注意: テンプレートを変更すると開始トークン、終了トークン、システムプロンプトが変更される可能性があります",
+        "note2": "Nunjucksを使用します、空白の場合はモデルのデフォルトテンプレートを使用します",
+        "placeholder": "チャットテンプレートをここに入力...",
+        "closeButton": "閉じる"
+      },
+      "stopWords": {
+        "label": "ストップワード",
+        "placeholder": "新しいストップワードを追加"
+      },
+      "tokenSettings": {
+        "bos": "開始",
+        "eos": "終了",
+        "addGenerationPrompt": "生成プロンプトを追加",
+        "bosTokenPlaceholder": "開始トークン",
+        "eosTokenPlaceholder": "終了トークン",
+        "systemPrompt": "システムプロンプト"
+      }
+    },
+    "modelDescription": {
+      "size": "サイズ: ",
+      "parameters": "パラメータ: ",
+      "separator": " | ",
+      "notAvailable": "不明"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "質問応答",
+      "summarization": "要約",
+      "reasoning": "推論",
+      "roleplay": "ロールプレイ",
+      "instructions": "指示への対応",
+      "code": "コード生成",
+      "math": "数学問題の解決",
+      "multilingual": "多言語対応",
+      "rewriting": "文章の書き換え",
+      "creativity": "創作文章",
+      "vision": "ビジョン"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "AIの思考/推論部分をモデルに送信するコンテキストに含めます、無効にするとコンテキスト容量を節約できますが、パフォーマンスに影響する可能性があります",
+    "jinja": "チャットフォーマットにJinjaテンプレートを使用します、有効にすると、最新のモデルとの互換性を向上させるためにJinjaベースのチャットテンプレート処理を使用します",
+    "grammar": "生成テキストが特定の構造や形式に従うよう、文法ルールを適用します",
+    "stop": "テキスト生成を停止する特定のフレーズを設定します",
+    "n_predict": "生成する応答の長さをトークン単位で設定します",
+    "n_probs": "代替単語の確率スコアを表示します",
+    "top_k": "最も可能性の高いK個の選択肢に単語の選択を限定することで創造性を制御します、値が低いほど応答がより焦点を絞ったものになります",
+    "top_p": "創造性と一貫性のバランスを調整します、高い値（1.0に近い）ではより創造的ですが、焦点が少ない応答が生成される可能性があります",
+    "min_p": "トークンが考慮される最小確率です、確率の低い単語を除外して、不自然または文脈にそぐわない応答を減らします",
+    "temperature": "創造性と予測可能性を制御します、値が高いほど応答がより創造的ですが焦点が少なくなります",
+    "penalty_last_n": "繰り返しをチェックする範囲です、大きな値は長期的な繰り返しを防ぎます",
+    "penalty_repeat": "単語の繰り返しを抑制します、値が高いほど応答はより多様な表現を使用します",
+    "penalty_freq": "頻出用語にペナルティを与えます、値が高いほど幅広い語彙の使用を促します",
+    "penalty_present": "テーマやアイデアの繰り返しを減らします、値が高いほどより多様なコンテンツを生成します",
+    "mirostat": "応答の創造性を高度に制御します、1か2（よりスムーズ）に設定して、ランダム性と一貫性をリアルタイムに調整します",
+    "mirostat_tau": "Mirostatの創造性レベルを設定します、高い値ではより多様で想像力豊かな応答が、低い値ではより焦点を絞った出力が得られます",
+    "mirostat_eta": "Mirostatが創造性を調整する速さです、値が高いほど調整が速くなります",
+    "dry_multiplier": "DRY（Don't Repeat Yourself）機能の強さです、値が高いほど繰り返しを強く防ぎます",
+    "dry_base": "DRYモードでの繰り返しに対する基本ペナルティです、高い値は繰り返しをより防ぎます",
+    "dry_allowed_length": "DRYペナルティが適用される前に繰り返し可能な単語数です",
+    "dry_penalty_last_n": "DRYモードで繰り返しをチェックする範囲です",
+    "dry_sequence_breakers": "DRYモードで繰り返しチェックをリセットする記号です",
+    "ignore_eos": "モデルが停止しようとしても生成を続けます、より長い応答を強制するのに役立ちます",
+    "logit_bias": "特定の単語が応答に現れる確率を調整します",
+    "seed": "乱数生成のシードを設定します、再現可能な結果に役立ちます",
+    "xtc_probability": "XTCサンプラーによるトークン削除の確率を設定します、0は無効です",
+    "xtc_threshold": "XTCサンプラーによって削除されるトークンの最小確率閾値を設定します、0.5以上でXTCは無効になります",
+    "typical_p": "パラメータpを使用してローカルに典型的なサンプリングを有効にします、1.0は無効です"
+  },
+  "about": {
+    "screenTitle": "アプリ情報",
+    "description": "言語モデルをスマートフォンで直接利用できるアプリです、llama.cppとllama.rnをベースに開発されています",
+    "supportProject": "プロジェクトを応援する",
+    "supportProjectDescription": "PocketPal AIをご利用いただき楽しんでいただけているなら、以下の方法でプロジェクトを応援いただけると幸いです：",
+    "githubButton": "GitHubでスターをつける",
+    "orText": "または",
+    "orBy": "または",
+    "sponsorButton": "スポンサーになる",
+    "versionCopiedTitle": "バージョンをコピーしました",
+    "versionCopiedDescription": "バージョン情報がクリップボードにコピーされました"
+  },
+  "feedback": {
+    "title": "フィードバックを送信",
+    "description": "ご意見をお聞かせください！PocketPal AIの使い心地やより便利にするためのアイデアをお寄せください",
+    "shareThoughtsButton": "ご意見を共有する",
+    "useCase": {
+      "label": "PocketPal AIをどのように使っていますか？",
+      "placeholder": "例：要約、ロールプレイなど"
+    },
+    "featureRequests": {
+      "label": "希望する機能",
+      "placeholder": "追加してほしい機能をお知らせください"
+    },
+    "generalFeedback": {
+      "label": "一般的なご意見",
+      "placeholder": "その他のご感想やアイデアをぜひお聞かせください"
+    },
+    "usageFrequency": {
+      "label": "どのくらいの頻度で利用されていますか？（任意）",
+      "options": {
+        "daily": "毎日",
+        "weekly": "週に1回以上",
+        "monthly": "月に1回以上",
+        "rarely": "ほとんど使わない"
+      }
+    },
+    "email": {
+      "label": "連絡先メール（任意）",
+      "placeholder": "メールアドレス"
+    },
+    "submit": "フィードバックを送信",
+    "validation": {
+      "required": "フィードバック内容を入力してください"
+    },
+    "success": "フィードバックをありがとうございます！",
+    "error": {
+      "general": "フィードバックの送信中にエラーが発生しました、もう一度お試しください"
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "メディアを送信"
+    },
+    "bubble": {
+      "timingsString": "トークンあたり{{predictedMs}}ms、1秒あたり{{predictedPerSecond}}トークン"
+    },
+    "exportUtils": {
+      "fileSaved": "ファイル保存完了",
+      "fileSavedMessage": "ファイルはダウンロードフォルダに{{filename}}として保存されました",
+      "share": "共有",
+      "ok": "OK",
+      "shareError": "共有エラー",
+      "shareErrorMessage": "ファイルを共有できませんでした、もう一度お試しください",
+      "saveError": "ダウンロードフォルダへの保存エラー",
+      "saveOptions": "保存オプション",
+      "saveOptionsMessage": "ダウンロードフォルダに直接保存できません、代わりにファイルを共有しますか？",
+      "cancel": "キャンセル",
+      "shareContentErrorMessage": "コンテンツを共有できませんでした、もう一度お試しください",
+      "exportError": "エクスポートエラー",
+      "exportErrorMessage": "ファイルのエクスポート中にエラーが発生しました、もう一度お試しください",
+      "permissionRequired": "ストレージへのアクセス許可が必要です",
+      "permissionMessage": "ダウンロードフォルダにファイルを保存するには許可が必要です",
+      "permissionDenied": "アクセス許可が拒否されました",
+      "permissionDeniedMessage": "ストレージへのアクセス許可がないため、エクスポート機能は利用できません",
+      "continue": "続ける"
+    },
+    "thinkingBubble": {
+      "reasoning": "考える"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "利用可能なモデルがありません",
+      "noModelsDescription": "PocketPalとチャットを始めるにはモデルをダウンロードしてください",
+      "noModelsButton": "モデルをダウンロード",
+      "activateModelTitle": "開始するにはモデルを有効化してください",
+      "activateModelDescription": "モデルを選択してダウンロードしてください、ダウンロード後、モデルの横にある読み込みをタップしてチャットを開始します",
+      "activateModelButton": "モデルを選択",
+      "loading": "読み込み中..."
+    },
+    "chatInput": {
+      "inputPlaceholder": "メッセージを入力",
+      "thinkingToggle": {
+        "enableThinking": "思考モードを有効にする",
+        "disableThinking": "思考モードを無効にする",
+        "thinkingEnabled": "思考モードが有効",
+        "thinkingDisabled": "思考モードが無効",
+        "thinkText": "思考"
+      }
+    },
+    "contentReportSheet": {
+      "title": "コンテンツを報告",
+      "privacyNote": "メッセージの内容や会話の詳細は送信されません。遭遇した具体的な問題について説明してください。",
+      "categoryLabel": "報告カテゴリ",
+      "selectCategory": "カテゴリを選択",
+      "categories": {
+        "hate": "ヘイトスピーチ",
+        "sexual": "性的コンテンツ",
+        "selfHarm": "自傷行為",
+        "violence": "暴力",
+        "other": "その他"
+      },
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "このコンテンツの問題について説明してください...",
+      "includeModelInfo": "モデル情報を含める",
+      "includeModelInfoDescription": "調査に役立つようにモデル名と識別子を含める",
+      "noActiveModelNote": "現在アクティブなモデルがありません",
+      "submit": "報告を送信",
+      "validation": {
+        "title": "情報が不足しています",
+        "message": "カテゴリを選択し、説明を入力してください。"
+      },
+      "success": {
+        "title": "報告が送信されました",
+        "message": "ご報告ありがとうございます。内容を確認し、適切な対応を取らせていただきます。"
+      },
+      "error": {
+        "title": "報告に失敗しました",
+        "message": "報告の送信に失敗しました。もう一度お試しください。"
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "モデル読み込みエラーを報告",
+      "privacyNote": "このエラーの詳細を共有してPocketPalの改善にご協力ください。以下の共有内容を確認し、含めたくない項目は選択解除できます。",
+      "errorMessage": "エラーメッセージ",
+      "modelInfo": "モデル情報",
+      "modelName": "名前",
+      "modelSource": "ソース",
+      "modelSize": "サイズ",
+      "contextParams": "コンテキストパラメータ",
+      "deviceInfo": "デバイス情報",
+      "deviceModel": "デバイス",
+      "osVersion": "OS",
+      "memoryInfo": "メモリ",
+      "cpuArchitecture": "CPU",
+      "isEmulator": "エミュレータ",
+      "additionalInfoLabel": "追加情報（任意）",
+      "additionalInfoPlaceholder": "問題の理解に役立つ追加情報があればお書きください...",
+      "submit": "報告を送信",
+      "success": {
+        "title": "報告が送信されました",
+        "message": "PocketPalの改善にご協力いただきありがとうございます。この問題の修正に役立てます。"
+      },
+      "error": {
+        "title": "報告に失敗しました",
+        "message": "報告の送信に失敗しました。後でもう一度お試しください。"
+      }
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "無効な値",
+      "invalidNumericValuesMessage": "有効な数値を入力してください",
+      "pleaseCorrect": "以下を修正してください：",
+      "ok": "OK",
+      "saveChanges": "変更を保存",
+      "saveAsPreset": "プリセットとして保存",
+      "title_session": "チャット生成設定 (セッション)",
+      "title_preset": "チャット生成設定 (プリセット)",
+      "resetToSystemDefaults": "デフォルト設定に戻す",
+      "resetToPreset": "プリセットに戻す",
+      "applytoPresetAlert": {
+        "title": "保存完了",
+        "message": "これらの設定は今後すべてのセッションに適用されます"
+      },
+      "palSettings": "Pal設定",
+      "settingsSource": "設定ソース"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "生成設定 - {{palName}}",
+      "invalidValues": "無効な値",
+      "invalidNumericValuesMessage": "有効な数値を入力してください",
+      "pleaseCorrect": "以下を修正してください：",
+      "ok": "OK",
+      "error": "エラー",
+      "failedToSave": "Pal設定の保存に失敗しました",
+      "resetToGlobal": "グローバル設定に戻す",
+      "resetToSystem": "システム設定に戻す",
+      "clearPalSettings": "Pal設定をクリア",
+      "customSettingsFor": "{{palName}}のカスタム設定",
+      "inheritedSettingsFor": "{{palName}}の継承設定"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "チャット"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "ファイル"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "モデル",
+      "palsTab": "アシスタント",
+      "noPal": "アシスタントなし",
+      "disablePal": "現在のアシスタントを無効化",
+      "noDescription": "説明なし",
+      "assistantType": "アシスタント",
+      "roleplayType": "ロールプレイ",
+      "videoType": "ビデオ",
+      "confirmationTitle": "確認",
+      "modelSwitchMessage": "このアシスタントには別のデフォルトモデル({{modelName}})があります、アシスタントのデフォルトモデルに切り替えますか？",
+      "keepButton": "現在のモデルを使用",
+      "switchButton": "切り替える"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "ダウンロード失敗",
+      "downloadFailedMessage": "モデルのダウンロードに失敗しました: {{message}}",
+      "unauthorizedTitle": "認証失敗",
+      "unauthorizedMessage": "Hugging Faceトークンが無効または期限切れのようです、設定でトークンを更新してください",
+      "forbiddenTitle": "アクセス拒否",
+      "forbiddenMessage": "このモデルにアクセスする権限がありません、以下を確認してください:",
+      "forbiddenSteps": [
+        "トークンに「読み取り」権限があること",
+        "このモデルへのアクセスをリクエストし、許可されていること",
+        "モデル所有者があなたのアクセスリクエストを承認していること"
+      ],
+      "getTokenTitle": "Hugging Faceトークンを取得",
+      "getTokenMessage": "このモデルをダウンロードするにはHugging Faceトークンが必要です",
+      "getTokenSteps": [
+        "huggingface.coにアクセスしてサインインする",
+        "設定 > アクセストークンに移動",
+        "「読み取り」アクセス権を持つ新しいトークンを作成",
+        "トークンをコピーしてトークンフィールドに貼り付ける"
+      ],
+      "tokenDisabledTitle": "トークンが無効",
+      "tokenDisabledMessage": "Hugging Faceトークンが設定されていますが、現在無効になっています、このモデルをダウンロードするにはトークンが必要です、続行するにはトークンを有効にしてください",
+      "enableAndRetry": "トークンを有効にして再試行",
+      "goToSettings": "設定へ移動",
+      "tryAgain": "再試行",
+      "viewOnHuggingFace": "HFでモデルを表示 ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "チャットを削除",
+      "deleteChatMessage": "このチャットを削除してもよろしいですか？",
+      "generationSettings": "生成設定",
+      "model": "モデル",
+      "duplicateChatHistory": "チャット履歴を複製",
+      "makeChatTemporary": "一時的なチャットにする",
+      "export": "エクスポート/インポート",
+      "exportCurrentSession": "現在のセッションをエクスポート",
+      "exportAllSessions": "すべてのセッションをエクスポート",
+      "exportChatSession": "チャットをエクスポート",
+      "importSessions": "セッションをインポート"
+    },
+    "hfTokenSheet": {
+      "title": "Hugging Face トークン",
+      "description": "制限付きモデルへのアクセスに必要",
+      "inputLabel": "個人アクセストークン",
+      "inputPlaceholder": "トークンをここに貼り付けてください",
+      "save": "トークンを保存",
+      "saved": "トークンが正常に保存されました",
+      "reset": "トークンをリセット",
+      "resetSuccess": "トークンが正常に削除されました",
+      "instructions": "トークンの取得方法：",
+      "instructionsSteps": [
+        "huggingface.coにサインインします",
+        "設定 > アクセストークンに移動",
+        "「read」権限で新しいトークンを作成",
+        "トークンをコピーして下に貼り付け"
+      ],
+      "getTokenLink": "huggingface.coでトークンを取得 ↗",
+      "error": {
+        "saving": "トークンの保存エラー",
+        "missing": "Hugging Faceトークンが必要です",
+        "invalid": "無効または期限切れのトークン",
+        "gatedModelAccess": "このゲートモデルへのアクセスが拒否されました"
+      },
+      "gatedModelIndicator": "トークンが必要",
+      "tokenRequired": "このモデルはHugging Faceアクセストークンが必要です",
+      "searchErrorHint": "Hugging Face APIトークンが無効または期限切れです、検索を続けるには、設定でトークンを削除するか、トークン認証を無効にしてください",
+      "disableAndRetry": "トークンを無効にして再試行"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "モデル設定",
+      "saveChanges": "変更を保存"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Faceモデル",
+      "menuTitleDownloaded": "ダウンロード済みモデル",
+      "menuTitleGrouped": "モデルタイプでグループ化",
+      "menuTitleReset": "モデルリストをリセット"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "リセットする",
+      "confirmReset": "リセットの確認"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "アシスタントを編集",
+        "newPal": "新しいアシスタント",
+        "newVideoPal": "新しいビデオアシスタント"
+      },
+      "description": "説明",
+      "descriptionPlaceholder": "アシスタントの簡単な説明を入力",
+      "parameters": "パラメータ",
+      "generationSettings": "生成設定",
+      "configureGenerationSettings": "生成設定を構成",
+      "validation": {
+        "nameRequired": "名前は必須です",
+        "generatingPromptRequired": "AIプロンプトを使用する場合、生成プロンプトが必要です",
+        "promptModelRequired": "AIプロンプトを使用する場合、プロンプト生成モデルが必要です"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "アシスタントを作成",
+        "edit": "アシスタントを編集"
+      },
+      "palName": "アシスタント名",
+      "palNamePlaceholder": "名前",
+      "defaultModel": "デフォルトモデル",
+      "defaultModelPlaceholder": "モデルを選択",
+      "validation": {
+        "generatingPromptRequired": "生成プロンプトが必要です",
+        "promptModelRequired": "プロンプト生成モデルが必要です"
+      },
+      "create": "作成する"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "モデルがダウンロードされていません、先にモデルをダウンロードしてください",
+      "downloadAModel": "モデルをダウンロード",
+      "defaultModelNotDownloaded": "このパルは特定のモデルを推奨していますが、ダウンロードが必要です。または別のモデルを選択できます",
+      "modelNotDownloadedShort": "モデル未ダウンロード",
+      "recommendedModel": "推奨モデル",
+      "cancelDownload": "キャンセル",
+      "download": "ダウンロード"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "ロールプレイを作成",
+        "edit": "ロールプレイを編集"
+      },
+      "palName": "名前",
+      "palNamePlaceholder": "名前",
+      "defaultModel": "デフォルトモデル",
+      "defaultModelPlaceholder": "モデルを選択",
+      "descriptionSection": "説明",
+      "world": "世界観",
+      "worldPlaceholder": "ファンタジー",
+      "location": "場所",
+      "locationPlaceholder": "魔法の森",
+      "locationSublabel": "物語の舞台はどこですか？",
+      "aiRole": "AIの役割",
+      "aiRolePlaceholder": "エルダラ、いたずら好きな森の精霊",
+      "aiRoleSublabel": "キャラクター設定",
+      "userRole": "ユーザーの役割",
+      "userRolePlaceholder": "エランドール卿、勇敢な騎士",
+      "userRoleSublabel": "あなたは誰を演じますか？",
+      "situation": "状況",
+      "situationPlaceholder": "救出ミッション、謎解き",
+      "toneStyle": "雰囲気/スタイル",
+      "toneStylePlaceholder": "真面目",
+      "validation": {
+        "promptModelRequired": "プロンプト生成モデルが必要です"
+      },
+      "create": "作成する"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Lookieアシスタントを作成",
+        "edit": "Lookieアシスタントを編集"
+      },
+      "palName": "アシスタント名",
+      "palNamePlaceholder": "Lookieアシスタントの名前を入力",
+      "visionModel": "ビジョンモデル",
+      "visionModelPlaceholder": "ビジョンモデルを選択",
+      "requiredModelsSection": "必要なモデル",
+      "captureInterval": "キャプチャ間隔",
+      "captureIntervalHelper": "自動キャプチャ間の時間（ミリ秒）",
+      "create": "作成する"
+    },
+    "sendButton": {
+      "accessibilityLabel": "送信"
+    },
+    "systemPromptSection": {
+      "sectionTitle": "システムプロンプト",
+      "useAIPrompt": "AIを使用してシステムプロンプトを生成する",
+      "modelSelector": {
+        "label": "生成用モデルを選択*",
+        "sublabel": "推奨: Llama 3.2 3B または Qwen3 4B Instruct 2507.",
+        "placeholder": "モデルを選択"
+      },
+      "generatingPrompt": {
+        "label": "目的とコンテキスト",
+        "placeholder": "このPalの役割、目的、シナリオを説明してください..."
+      },
+      "buttons": {
+        "loadingModel": "モデルを読み込み中...",
+        "stopGenerating": "生成を停止",
+        "generatePrompt": "システムプロンプトを生成",
+        "resetParameters": "パラメータをリセット",
+        "resetTemplate": "テンプレートをリセット"
+      },
+      "systemPrompt": {
+        "label": "システムプロンプト",
+        "sublabel": "最適な結果が得られるよう、自由に編集してください",
+        "placeholder": "あなたは役立つアシスタントです"
+      },
+      "warnings": {
+        "promptChanged": "システムプロンプトが変更されました"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "チャット",
+        "models": "モデル",
+        "pals": "アシスタント",
+        "benchmark": "ベンチマーク",
+        "settings": "設定",
+        "appInfo": "アプリ情報",
+        "testCompletion": "テスト完了"
+      },
+      "deleteChatTitle": "チャットを削除",
+      "deleteChatMessage": "このチャットを削除してもよろしいですか？",
+      "select": "選択",
+      "nSelected": "{{count}}件選択中",
+      "selectAll": "すべて選択",
+      "deselectAll": "すべて解除",
+      "exportCount": "エクスポート ({{count}})",
+      "deleteCount": "削除 ({{count}})",
+      "bulkDeleteTitle": "チャットを削除",
+      "bulkDeleteMessage": "{{count}}件のチャットを削除しますか？この操作は取り消せません。",
+      "bulkDeleteError": "チャットの削除に失敗しました。もう一度お試しください。",
+      "exportError": "チャットのエクスポートに失敗しました。もう一度お試しください。",
+      "bulkExportError": "チャットのエクスポートに失敗しました。もう一度お試しください。",
+      "dateGroups": {
+        "today": "今日",
+        "yesterday": "昨日",
+        "thisWeek": "今週",
+        "lastWeek": "先週",
+        "twoWeeksAgo": "2週間前",
+        "threeWeeksAgo": "3週間前",
+        "fourWeeksAgo": "4週間前",
+        "lastMonth": "先月",
+        "older": "それ以前"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "メモリ使用量",
+        "used": "使用中: ",
+        "total": "合計: ",
+        "usage": "使用率: "
+      },
+      "byteSizes": [
+        "B",
+        "KB",
+        "MB",
+        "GB"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "コピー",
+        "regenerate": "再生成",
+        "regenerateWith": "再生成（モデル選択）",
+        "edit": "編集",
+        "reportContent": "コンテンツを報告"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "すべてのアシスタントをエクスポート",
+      "importPals": "アシスタントをインポート",
+      "importSuccess": "{{count}}個のアシスタントをインポートしました。",
+      "importError": "アシスタントのインポートに失敗しました。ファイル形式を確認してください。"
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "マイアシスタント (ローカル)",
+      "myLibrary": "マイライブラリ (palshub.ai)",
+      "discoverPals": "アシスタントを探す (palshub.ai)"
+    },
+    "systemPrompt": "システムプロンプト",
+    "videoAnalysis": "動画解析",
+    "videoAnalysisDescription": "デバイスのカメラからの動画ストリームにリアルタイムでコメントを提供する動画ベースのAIアシスタントです",
+    "captureInterval": "キャプチャ間隔",
+    "captureIntervalUnit": "ミリ秒",
+    "world": "世界観",
+    "toneStyle": "雰囲気/スタイル",
+    "aiRole": "AIの役割",
+    "userRole": "ユーザーの役割",
+    "prompt": "プロンプト",
+    "assistant": "アシスタント",
+    "roleplay": "ロールプレイ",
+    "video": "動画",
+    "deletePal": "Palを削除",
+    "deletePalMessage": "このPalを削除してもよろしいですか？",
+    "missingModel": "モデルが見つかりません",
+    "missingModelMessage": "このPalのデフォルトモデル「{{modelName}}」が利用できません、編集シートでダウンロードするか、別のモデルを選択してください",
+    "search": "検索",
+    "profile": "プロフィール",
+    "signIn": "サインイン",
+    "addPal": "Palを追加",
+    "signInToAccessLibrary": "palshub.aiのライブラリにアクセスするにはサインインしてください",
+    "signOut": "サインアウト",
+    "signOutConfirmation": "サインアウトしてもよろしいですか？",
+    "signOutError": "サインアウトに失敗しました。もう一度お試しください。",
+    "account": "アカウント",
+    "signInToPalsHub": "PalsHubにサインイン",
+    "signInDescription": "ライブラリにアクセスし、プライベートPalを作成し、デバイス間で同期",
+    "searchAllPals": "すべてのPalを検索...",
+    "deletePalConfirmation": "「{{palName}}」を削除してもよろしいですか？",
+    "filters": {
+      "all": "すべて",
+      "myPals": "マイPal",
+      "local": "ローカル",
+      "video": "動画",
+      "free": "無料",
+      "premium": "プレミアム"
+    },
+    "labels": {
+      "free": "無料",
+      "premium": "プレミアム",
+      "private": "プライベート",
+      "download": "ダウンロード",
+      "getFree": "無料で入手"
+    },
+    "premiumPalDescription": "palshub.aiコミュニティのプレミアムPal",
+    "premiumInfoText": "アプリ外でpalshub.aiにアクセスして、より多くのPalを探索",
+    "sortOptions": {
+      "newest": "新着順",
+      "oldest": "古い順",
+      "rating": "評価順",
+      "popular": "人気順"
+    },
+    "palDetailSheet": {
+      "by": "by",
+      "unknown": "不明",
+      "rating": "評価",
+      "reviews": "レビュー",
+      "created": "作成日",
+      "description": "説明",
+      "noDescriptionAvailable": "説明がありません。",
+      "categories": "カテゴリ",
+      "tags": "タグ",
+      "systemPrompt": "システムプロンプト",
+      "downloaded": "ダウンロード済み",
+      "success": "成功",
+      "palAddedToCollection": "Palがコレクションに追加されました！",
+      "error": "エラー",
+      "failedToLoadDetails": "Palの詳細の読み込みに失敗しました",
+      "failedToDownload": "Palのダウンロードに失敗しました",
+      "premiumPalMessage": "これはプレミアムPalです。\n• Palshubアカウントで既にアンロックしている場合は、サインインして詳細にアクセスしてください。\n• まだアンロックしていない場合は、palshub.aiアプリにアクセスして詳細をご確認ください。",
+      "notAvailable": "N/A"
+    }
+  },
+  "validation": {
+    "nameRequired": "名前を入力してください",
+    "systemPromptRequired": "システムプロンプトを入力してください",
+    "worldRequired": "世界観を入力してください",
+    "locationRequired": "場所を入力してください",
+    "aiRoleRequired": "AIの役割を入力してください",
+    "userRoleRequired": "ユーザーの役割を入力してください",
+    "situationRequired": "状況を入力してください",
+    "toneStyleRequired": "雰囲気/スタイルを入力してください"
+  },
+  "camera": {
+    "permissionTitle": "カメラ許可が必要",
+    "permissionMessage": "PocketPalが画像を分析するにはカメラへのアクセスが必要です",
+    "requestingPermission": "カメラの許可をリクエスト中...",
+    "noDevice": "カメラデバイスが見つかりません",
+    "errorTitle": "カメラエラー",
+    "errorMessage": "写真撮影中にエラーが発生しました",
+    "flip": "反転",
+    "analyzing": "画像を分析中...",
+    "startCamera": "カメラを起動",
+    "stopCamera": "カメラを停止",
+    "promptPlaceholder": "この画像について何を知りたいですか？",
+    "takePhoto": "カメラ"
+  },
+  "video": {
+    "permissionTitle": "カメラ許可が必要",
+    "permissionMessage": "PocketPalが動画を分析するにはカメラへのアクセスが必要です",
+    "requestingPermission": "カメラの許可をリクエスト中...",
+    "noDevice": "カメラデバイスが見つかりません",
+    "errorTitle": "カメラエラー",
+    "errorMessage": "カメラでエラーが発生しました",
+    "flip": "反転",
+    "analyzing": "動画を分析中...",
+    "startCamera": "カメラを起動",
+    "stopCamera": "カメラを停止",
+    "promptPlaceholder": "この動画について何を知りたいですか？",
+    "captureInterval": "キャプチャ間隔",
+    "captureIntervalUnit": "ミリ秒",
+    "liveCommentary": "ライブ解説",
+    "emptyPlaceholder": {
+      "title": "Lookieへようこそ",
+      "subtitle": "プライベート・オンデバイス・リアルタイム動画解析",
+      "experimentalNotice": "これは実験的な機能です、精度は選択したモデルに依存し、速度はデバイスの性能に依存し、一部のモデルは失敗する可能性があります",
+      "howToUse": "使い方：",
+      "step1": "• プロンプトを編集（任意）して解析を誘導",
+      "step2": "• カメラボタンをタップしてライブ動画解析を開始",
+      "step3": "• カメラ起動中にスナップショット頻度を調整",
+      "step4": "• 通常のテキストチャットには別のアシスタントに切り替え"
+    }
+  },
+  "screenTitles": {
+    "chat": "チャット",
+    "models": "モデル",
+    "pals": "アシスタント（実験的）",
+    "benchmark": "ベンチマーク",
+    "settings": "設定",
+    "appInfo": "アプリ情報",
+    "testCompletion": "テスト完了"
+  },
+  "chat": {
+    "conversationReset": "会話をリセットしました",
+    "modelNotLoaded": "モデルが読み込まれていません、モデルを初期化してください",
+    "completionFailed": "生成に失敗しました: ",
+    "loadingModel": "モデルを読み込み中...",
+    "typeYourMessage": "メッセージを入力",
+    "load": "読み込む",
+    "goToModels": "モデルへ移動",
+    "readyToChat": "チャットを始めましょう、前回使用したモデルを読み込みます",
+    "pleaseLoadModel": "チャットを開始するにはモデルを読み込んでください",
+    "multimodalNotEnabled": "このモデルではマルチモーダル機能が有効になっていません、画像は表示されますが、AIによって処理されません",
+    "cannotSendWithoutModel": "モデルを読み込んでください"
+  },
+  "benchmark": {
+    "title": "ベンチマーク",
+    "modelSelector": {
+      "prompt": "モデルを選択"
+    },
+    "buttons": {
+      "advancedSettings": "詳細設定",
+      "startTest": "テスト開始",
+      "runningTest": "テスト実行中...",
+      "clearAll": "すべて消去",
+      "done": "完了",
+      "cancel": "キャンセル",
+      "delete": "削除",
+      "share": "共有",
+      "sharing": "共有中...",
+      "viewRawData": "生データを表示",
+      "hideRawData": "生データを隠す"
+    },
+    "messages": {
+      "pleaseSelectModel": "モデルを選択して初期化してください",
+      "testWarning": "注意：大きなモデルでは最大2～5分かかる場合があり、開始後は中断できません",
+      "keepScreenOpen": "画面を開いたままにしておいてください",
+      "initializingModel": "モデルを初期化中...",
+      "modelMaxValue": "(最大: {{maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "詳細設定",
+        "testProfile": "テストプロファイル",
+        "customParameters": "カスタムパラメーター",
+        "description": "特定のテストシナリオに合わせてベンチマーク設定を調整できます"
+      },
+      "deleteResult": {
+        "title": "結果を削除",
+        "message": "このベンチマーク結果を削除してもよろしいですか？"
+      },
+      "clearAllResults": {
+        "title": "すべての結果を消去",
+        "message": "すべてのベンチマーク結果を削除してもよろしいですか？"
+      },
+      "shareResults": {
+        "title": "ベンチマーク結果を共有",
+        "sharedDataTitle": "共有されるデータ：",
+        "deviceAndModelInfo": "• デバイス仕様とモデル情報",
+        "performanceMetrics": "• パフォーマンス指標",
+        "dontShowAgain": "次回から表示しない"
+      }
+    },
+    "sections": {
+      "testResults": "テスト結果"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "パラメータ"
+      },
+      "config": {
+        "title": "ベンチマーク設定",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "モデル設定",
+        "context": "コンテキスト: {{context}}",
+        "batch": "バッチ: {{batch}}",
+        "ubatch": "Uバッチ: {{ubatch}}",
+        "cpuThreads": "CPUスレッド: {{threads}}",
+        "gpuLayers": "GPUレイヤー: {{layers}}",
+        "device": "デバイス: {{device}}",
+        "flashAttentionEnabled": "Flash Attention 有効",
+        "flashAttentionDisabled": "Flash Attention 無効",
+        "cacheTypes": "キャッシュタイプ: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "プロンプト処理",
+        "tokenGeneration": "トークン生成",
+        "totalTime": "合計時間",
+        "peakMemory": "最大メモリ使用量",
+        "tokensPerSecond": "トークン/秒"
+      },
+      "actions": {
+        "deleteButton": "",
+        "submittedText": "✓ 共有先：",
+        "leaderboardLink": "AIスマホリーダーボード ↗",
+        "cannotShare": "共有できません",
+        "cannotShareTooltip": "ローカルモデルの結果は共有できません",
+        "submitButton": "リーダーボードに送信",
+        "viewLeaderboard": "リーダーボードを表示 ↗"
+      },
+      "errors": {
+        "networkRetry": "接続を確認して再試行",
+        "appCheckRetry": "送信をやり直す",
+        "serverRetry": "後でもう一度お試しください",
+        "genericRetry": "再試行",
+        "failedToSubmit": "ベンチマーク結果の送信に失敗しました"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "デバイス情報",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}}コア • {{memory}}",
+      "sections": {
+        "basicInfo": "基本情報",
+        "cpuDetails": "CPU詳細",
+        "gpuDetails": "GPU詳細",
+        "hexagonDetails": "Hexagon DSP",
+        "appInfo": "アプリ情報"
+      },
+      "fields": {
+        "architecture": "アーキテクチャ",
+        "totalMemory": "総メモリ",
+        "deviceId": "デバイスID",
+        "cpuCores": "CPUコア数",
+        "cpuModel": "CPUモデル",
+        "chipset": "チップセット",
+        "instructions": "命令セット",
+        "version": "バージョン",
+        "gpuType": "GPUタイプ",
+        "gpuRenderer": "レンダラー",
+        "gpuVendor": "ベンダー",
+        "metalSupport": "Metalサポート",
+        "openclSupport": "OpenCLサポート",
+        "openclRequirement": "i8mmとdotprodが必要"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "予期しないエラーが発生しました",
+    "hfAuthenticationError": "Hugging Face認証エラー: トークンが見つからないか無効です",
+    "hfAuthenticationErrorSearch": "Hugging Face認証エラー: トークンが見つからないか無効です",
+    "authenticationError": "認証エラー: トークンが見つからないか無効です",
+    "hfAuthorizationError": "Hugging Face認可エラー: このリソースにアクセスする権限がありません",
+    "authorizationError": "認可エラー: このリソースにアクセスする権限がありません",
+    "hfServerError": "Hugging Faceサーバーエラー: APIサーバーの問題",
+    "serverError": "サーバーエラー: APIサーバーの問題",
+    "hfNetworkTimeout": "ネットワークタイムアウト: Hugging Faceへのリクエストが完了するのに時間がかかりすぎました",
+    "networkTimeout": "ネットワークタイムアウト: リクエストが完了するのに時間がかかりすぎました",
+    "hfNetworkError": "ネットワークエラー: Hugging Face APIに接続できません",
+    "networkError": "ネットワークエラー: APIに接続できません",
+    "downloadSetupFailedTitle": "ダウンロード設定失敗",
+    "downloadSetupFailedMessage": "モデルのダウンロード準備に失敗しました: {{message}}",
+    "cameraErrorTitle": "カメラエラー",
+    "cameraErrorMessage": "写真撮影に失敗しました",
+    "galleryErrorTitle": "ギャラリーエラー",
+    "galleryErrorMessage": "画像選択に失敗しました"
+  },
+  "simulator": {
+    "cameraNotAvailable": "シミュレーターではカメラを使用できません、実機をご使用ください"
+  }
+}

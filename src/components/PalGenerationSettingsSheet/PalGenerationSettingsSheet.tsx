@@ -10,6 +10,7 @@ import {
 import {Alert, View} from 'react-native';
 import {Button, Text, Icon} from 'react-native-paper';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
 import {ChevronDownIcon} from '../../assets/icons';
 import {Menu} from '../Menu';
 
@@ -94,12 +95,12 @@ const SettingsLevelIndicator = ({
       />
       <Text variant="bodySmall" style={styles.settingsLevelText}>
         {hasCustomSettings
-          ? l10n.components.palGenerationSettingsSheet.customSettingsFor(
+          ? t(l10n.components.palGenerationSettingsSheet.customSettingsFor, {
               palName,
-            )
-          : l10n.components.palGenerationSettingsSheet.inheritedSettingsFor(
+            })
+          : t(l10n.components.palGenerationSettingsSheet.inheritedSettingsFor, {
               palName,
-            )}
+            })}
       </Text>
     </View>
   );
@@ -229,7 +230,7 @@ export const PalGenerationSettingsSheet = ({
 
   return (
     <Sheet
-      title={l10n.components.palGenerationSettingsSheet.title(palName)}
+      title={t(l10n.components.palGenerationSettingsSheet.title, {palName})}
       isVisible={isVisible}
       onClose={onCloseSheet}>
       <Sheet.ScrollView

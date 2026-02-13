@@ -6,7 +6,7 @@ import {PalHeaderRight} from '../PalHeaderRight';
 import {exportAllPals} from '../../../utils/exportUtils';
 import {importPals} from '../../../utils/importUtils';
 import {L10nContext} from '../../../utils';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 // Mock utilities
 jest.mock('../../../utils/exportUtils', () => ({

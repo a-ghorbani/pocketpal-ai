@@ -57,6 +57,7 @@ import {
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
 import {supportsThinking} from '../utils/thinkingCapabilityDetection';
+import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
   createContextInitParams,
@@ -1773,10 +1774,9 @@ class ModelStore {
       console.error('Failed to set up HF model download:', error);
       Alert.alert(
         uiStore.l10n.errors.downloadSetupFailedTitle,
-        uiStore.l10n.errors.downloadSetupFailedMessage.replace(
-          '{message}',
-          (error as Error).message,
-        ),
+        t(uiStore.l10n.errors.downloadSetupFailedMessage, {
+          message: (error as Error).message,
+        }),
       );
     }
   };
@@ -2825,8 +2825,8 @@ class ModelStore {
   //  */
   // getL10n() {
   //   const language = uiStore.language;
-  //   // Import the l10n object from utils
-  //   const {l10n} = require('../utils/l10n');
+  //   // Import the l10n object from locales
+  //   const {l10n} = require('../locales');
   //   // Return the localized strings for the current language
   //   return l10n[language];
   // }

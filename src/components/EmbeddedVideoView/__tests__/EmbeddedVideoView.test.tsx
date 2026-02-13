@@ -4,7 +4,7 @@ import {Alert, Platform} from 'react-native';
 
 import {EmbeddedVideoView} from '../EmbeddedVideoView';
 import {L10nContext} from '../../../utils';
-import {l10n} from '../../../utils/l10n';
+import {l10n} from '../../../locales';
 
 // Mock react-native-vision-camera
 jest.mock('react-native-vision-camera', () => {

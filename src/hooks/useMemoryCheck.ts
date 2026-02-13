@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import DeviceInfo from 'react-native-device-info';
 import {L10nContext, formatBytes} from '../utils';
+import {t} from '../locales';
 import {Model, ContextInitParams} from '../utils/types';
 import {isHighEndDevice} from '../utils/deviceCapabilities';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
@@ -163,9 +164,10 @@ export const useMemoryCheck = (
           const neededText = formatBytes(requiredBytes, 1);
           const availableText = formatBytes(availableBytes, 1);
           setMemoryWarning(
-            l10n.memory.memoryDetailMessage
-              .replace('{needed}', neededText)
-              .replace('{available}', availableText),
+            t(l10n.memory.memoryDetailMessage, {
+              needed: neededText,
+              available: availableText,
+            }),
           );
         } else if (status === 'wont_fit') {
           // Concise badge text
@@ -174,9 +176,10 @@ export const useMemoryCheck = (
           const neededText = formatBytes(requiredBytes, 1);
           const availableText = formatBytes(availableBytes, 1);
           setMemoryWarning(
-            l10n.memory.memoryDetailMessage
-              .replace('{needed}', neededText)
-              .replace('{available}', availableText),
+            t(l10n.memory.memoryDetailMessage, {
+              needed: neededText,
+              available: availableText,
+            }),
           );
         }
 
