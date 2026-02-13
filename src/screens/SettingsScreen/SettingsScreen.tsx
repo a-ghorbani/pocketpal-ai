@@ -70,6 +70,7 @@ const languageNames: Record<AvailableLanguage, string> = {
   en: 'English (EN)',
   //es: 'Español (ES)',
   //de: 'Deutsch (DE)',
+  id: 'Indonesia (ID)',
   ja: '日本語 (JA)',
   //ko: '한국어 (KO)',
   //pl: 'Polski (PL)',
@@ -316,7 +317,7 @@ export const SettingsScreen: React.FC = observer(() => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <TouchableWithoutFeedback onPress={handleOutsidePress}>
+      <TouchableWithoutFeedback onPress={handleOutsidePress} accessible={false}>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
@@ -921,6 +922,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   <View style={styles.menuContainer}>
                     <Button
                       ref={languageButtonRef}
+                      testID="language-selector-button"
                       mode="outlined"
                       onPress={handleLanguagePress}
                       style={styles.menuButton}
@@ -938,6 +940,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       {uiStore.supportedLanguages.map(lang => (
                         <Menu.Item
                           key={lang}
+                          testID={`language-option-${lang}`}
                           style={styles.menu}
                           label={languageNames[lang]}
                           selected={lang === uiStore.language}

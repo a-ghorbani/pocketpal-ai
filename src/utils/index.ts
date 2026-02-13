@@ -90,6 +90,7 @@ export const initLocale = (locale?: keyof typeof l10n) => {
     // uk: require('dayjs/locale/uk'),
     // ca: require('dayjs/locale/ca'),
     // de: require('dayjs/locale/de'),
+    id: require('dayjs/locale/id'),
     ja: require('dayjs/locale/ja'),
     zh: require('dayjs/locale/zh'),
   };

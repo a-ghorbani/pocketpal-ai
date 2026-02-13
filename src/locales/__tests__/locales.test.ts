@@ -30,11 +30,11 @@ const EXPECTED_SECTIONS = [
 ];
 
 describe('l10n object', () => {
-  it('has all 3 languages', () => {
+  it('has all 4 languages', () => {
     expect(Object.keys(l10n)).toEqual(
-      expect.arrayContaining(['en', 'ja', 'zh']),
+      expect.arrayContaining(['en', 'id', 'ja', 'zh']),
     );
-    expect(Object.keys(l10n)).toHaveLength(3);
+    expect(Object.keys(l10n)).toHaveLength(4);
   });
 
   it('l10n.en has all 19 expected top-level sections', () => {
@@ -107,10 +107,10 @@ describe('l10n object', () => {
     expect(enData).toEqual(enClone);
   });
 
-  it('AvailableLanguage type resolves to en | ja | zh', () => {
-    // Type-level check: keyof typeof l10n should be 'en' | 'ja' | 'zh'
+  it('AvailableLanguage type resolves to en | id | ja | zh', () => {
+    // Type-level check: keyof typeof l10n should be 'en' | 'id' | 'ja' | 'zh'
     // At runtime we verify the keys match
-    const keys: Array<keyof typeof l10n> = ['en', 'ja', 'zh'];
+    const keys: Array<keyof typeof l10n> = ['en', 'id', 'ja', 'zh'];
     expect(Object.keys(l10n).sort()).toEqual(keys.sort());
 
     // This would cause a compile error if AvailableLanguage were wrong:

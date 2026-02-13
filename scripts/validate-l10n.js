@@ -42,7 +42,7 @@ try {
 const enKeys = getKeys(en);
 console.log(`en.json: ${enKeys.length} keys`);
 
-for (const lang of ['ja', 'zh']) {
+for (const lang of ['id', 'ja', 'zh']) {
   const langPath = path.join(LOCALES_DIR, `${lang}.json`);
   let langData;
 
