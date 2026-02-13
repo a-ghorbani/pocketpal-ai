@@ -70,7 +70,7 @@ const languageNames: Record<AvailableLanguage, string> = {
   en: 'English (EN)',
   //es: 'Español (ES)',
   //de: 'Deutsch (DE)',
-  id: 'Bahasa Indonesia (ID)',
+  id: 'Indonesia (ID)',
   ja: '日本語 (JA)',
   //ko: '한국어 (KO)',
   //pl: 'Polski (PL)',
