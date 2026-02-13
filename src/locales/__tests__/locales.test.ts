@@ -89,7 +89,7 @@ describe('l10n object', () => {
   it('l10n.id contains Indonesian translations where they exist', () => {
     // id.json has its own translation for common.cancel
     expect(l10n.id.common.cancel).toBe(idData.common.cancel);
-    expect(l10n.id.common.cancel).not.toBe(l10n.id.common.cancel);
+    expect(l10n.id.common.cancel).not.toBe(l10n.en.common.cancel);
   });
 
   it('l10n.ja falls back to English for missing keys', () => {
