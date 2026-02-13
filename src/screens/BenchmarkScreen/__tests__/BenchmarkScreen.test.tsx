@@ -405,14 +405,15 @@ describe('BenchmarkScreen', () => {
       // Add results to store
       benchmarkStore.results = [mockResult, mockSubmittedResult];
 
-      const {getAllByTestId, getByText} = render(<BenchmarkScreen />);
+      const {getAllByTestId, getAllByText} = render(<BenchmarkScreen />);
 
       // Delete first result
       const deleteButtons = getAllByTestId('delete-result-button');
       fireEvent.press(deleteButtons[0]);
 
-      // Confirm deletion
-      fireEvent.press(getByText('Delete'));
+      // Confirm deletion (dialog button is the last "Delete" text on screen)
+      const allDeleteTexts = getAllByText('Delete');
+      fireEvent.press(allDeleteTexts[allDeleteTexts.length - 1]);
 
       // Verify deletion
       expect(benchmarkStore.removeResult).toHaveBeenCalledWith(
