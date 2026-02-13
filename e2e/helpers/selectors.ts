@@ -39,6 +39,17 @@ export const byText = (text: string): string => {
 };
 
 /**
+ * Create selector targeting only static text elements (excludes buttons).
+ * Useful when a text appears both in a hidden drawer button and a visible nav title.
+ */
+export const byStaticText = (text: string): string => {
+  if (isAndroid()) {
+    return `//android.widget.TextView[@text="${text}"]`;
+  }
+  return `-ios class chain:**/XCUIElementTypeStaticText[\`label == "${text}"\`]`;
+};
+
+/**
  * Create selector by partial text match
  */
 export const byPartialText = (text: string): string => {
@@ -316,6 +327,11 @@ export const Selectors = {
     get contextSizeInput(): string {
       return byTestId('context-size-input');
     },
+    get languageSelectorButton(): string {
+      return byTestId('language-selector-button');
+    },
+    languageOption: (lang: string): string =>
+      byTestId(`language-option-${lang}`),
   },
 
   // Common dialogs and sheets
