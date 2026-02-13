@@ -12,6 +12,44 @@ permissions:
   contents: read
 
 jobs:
+  # Detect if changes are translation-only (src/locales/ files)
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      translation_only: ${{ steps.check.outputs.translation_only }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check if translation-only
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Check if ALL changed files are under src/locales/
+          TRANSLATION_ONLY="true"
+          while IFS= read -r file; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+            case "$file" in
+              src/locales/*) ;;
+              *) TRANSLATION_ONLY="false"; break ;;
+            esac
+          done <<< "$CHANGED"
+
+          echo "translation_only=$TRANSLATION_ONLY" >> "$GITHUB_OUTPUT"
+          echo "Translation only: $TRANSLATION_ONLY"
+
   # Job for linting, type checking, unit testing
   build-and-test:
     runs-on: ubuntu-latest
@@ -60,7 +98,8 @@ jobs:
   # Job for Android build
   build-android:
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: [build-and-test, detect-changes]
+    if: needs.detect-changes.outputs.translation_only != 'true'
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -169,7 +208,8 @@ jobs:
   # Job for iOS build
   build-ios:
     runs-on: macos-15  # macOS 15 with Xcode 16
-    needs: build-and-test
+    needs: [build-and-test, detect-changes]
+    if: needs.detect-changes.outputs.translation_only != 'true'
     steps:
       - name: Check out code
         uses: actions/checkout@v3
