@@ -81,6 +81,7 @@ export const hashCode = (text = '') => {
 export const initLocale = (locale?: keyof typeof l10n) => {
   const locales: {[key in keyof typeof l10n]: unknown} = {
     en: require('dayjs/locale/en'),
+    id: require('dayjs/locale/id'),
     // es: require('dayjs/locale/es'),
     // ko: require('dayjs/locale/ko'),
     // pl: require('dayjs/locale/pl'),
