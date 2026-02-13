@@ -39,7 +39,6 @@ async function uploadSourceFile() {
       {
         headers: {
           Authorization: `Token ${WEBLATE_TOKEN}`,
-          'Content-Type': 'multipart/form-data',
         },
       },
     );

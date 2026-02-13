@@ -103,7 +103,7 @@
     "exportLegacyChatsDescription": "Use this if migration failed or you need to recover old chat sessions.",
     "exportButton": "Export",
     "importChats": "Import Chat Sessions",
-    "importChatsDescription": "Import chat sessions from am (exported) JSON file.",
+    "importChatsDescription": "Import chat sessions from an (exported) JSON file.",
     "importButton": "Import",
     "importSuccess": "Successfully imported {{count}} chat session(s).",
     "importError": "Failed to import chat sessions. Please check the file format.",
