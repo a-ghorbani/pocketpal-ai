@@ -116,10 +116,10 @@
     "useHfTokenDescription": "הפעל שימוש בטוקן עבור בקשות API. השבת אם הטוקן גורם לבעיות אימות.",
     "cacheStorageTitle": "מטמון ואחסון",
     "clearPalCaches": "נקה מטמון קיצורי דרך",
-    "clearPalCachesDescription": "מנקה נתונים מהמטמון המשמשים להאצת קיצורי דרך. פעולה זו לא תשפיע על החברים (Pals) שלך או על היסטוריית הצ'אט.",
+    "clearPalCachesDescription": "מנקה נתונים מהמטמון המשמשים להאצת קיצורי דרך. פעולה זו לא תשפיע על ה-Pals שלך או על היסטוריית הצ'אט.",
     "clearCachesButton": "נקה מטמון",
     "clearCachesConfirmTitle": "לנקות מטמון קיצורי דרך?",
-    "clearCachesConfirmMessage": "פעולה זו תמחק את כל נתוני הסשנים המאוחסנים במטמון ({{fileCount}} קבצים, {{size}}). קיצורי דרך עשויים להיות איטיים יותר בשימוש הראשון לאחר הניקוי. פעולה זו לא תשפיע על החברים (Pals) שלך או על היסטוריית הצ'אט.",
+    "clearCachesConfirmMessage": "פעולה זו תמחק את כל נתוני הסשנים המאוחסנים במטמון ({{fileCount}} קבצים, {{size}}). קיצורי דרך עשויים להיות איטיים יותר בשימוש הראשון לאחר הניקוי. פעולה זו לא תשפיע על ה-Pals שלך או על היסטוריית הצ'אט.",
     "clearCachesSuccess": "ניקוי של {{count}} קבצי מטמון בוצע בהצלחה.",
     "clearCachesError": "ניקוי המטמון נכשל. אנא נסה שוב.",
     "noCachesToClear": "אין מטמון לניקוי."
@@ -169,21 +169,21 @@
     "mmproj": "שכבת התאמה",
     "multimodal": {
       "settings": "הגדרות רב-מודאליות",
-      "projectionModels": "מודלי מקרן (mmproj)",
-      "noCompatibleModels": "לא נמצאו מודלי מקרן (mmproj) תואמים",
-      "noProjectionModels": "אין דגמי מקרן (mmproj) זמינים",
+      "projectionModels": "מודלי שכבת התאמה",
+      "noCompatibleModels": "לא נמצאו מודלי שכבת התאמה תואמים",
+      "noProjectionModels": "אין מודלי שכבת התאמה זמינים",
       "selected": "נבחר",
       "select": "בחר",
       "download": "הורדה",
-      "projectionNeededTitle": "נדרש מודל מקרן (mmproj)",
-      "projectionNeededMessage": "מודל זה דורש מודל מקרן (mmproj) עבור יכולות רב-מודאליות.",
-      "projectionMissingWarning": "מודל המקרן (mmproj) חסר",
-      "projectionMissingShort": "חסר מקרן (mmproj)",
+      "projectionNeededTitle": "נדרש מודל שכבת התאמה",
+      "projectionNeededMessage": "מודל זה דורש מודל שכבת התאמה עבור יכולות רב-מודאליות.",
+      "projectionMissingWarning": "מודל שכבת התאמה חסר",
+      "projectionMissingShort": "שכבת ההתאמה חסרה",
       "reloadModelTitle": "טען מודל מחדש",
-      "reloadModelMessage": "יש לטעון מחדש את המודל כדי להחיל את מודל המקרן (mmproj) החדש. האם ברצונך לטעון מחדש כעת?",
+      "reloadModelMessage": "יש לטעון מחדש את המודל כדי להחיל את מודל שכבת ההתאמה החדש. האם ברצונך לטעון מחדש כעת?",
       "reload": "טען מחדש",
-      "deleteProjectionTitle": "טען מודל מקרן (mmproj)",
-      "deleteProjectionMessage": "האם אתה בטוח שברצונך למחוק את מודל המקרן (mmproj) הזה?",
+      "deleteProjectionTitle": "טען מודל שכבת התאמה",
+      "deleteProjectionMessage": "האם אתה בטוח שברצונך למחוק את מודל שכבת ההתאמה הזה?",
       "cannotDeleteTitle": "לא ניתן למחוק",
       "visionControls": {
         "enableVision": "אפשר יכולות ראייה",
@@ -195,16 +195,16 @@
         "downloadWithVision": "הורד עם ראייה",
         "downloadTextOnly": "הורד טקסט בלבד",
         "visionToggleDescription": "הפעלת יכולות עיבוד תמונה",
-        "projectionModelSize": "+ מודל מקרן (mmproj) {{size}}",
+        "projectionModelSize": "+ מודל שכבת התאמה {{size}}",
         "visionModeDescription": "עיבוד תמונות וטקסט",
         "textOnlyModeDescription": "עיבוד טקסט בלבד",
         "includesVisionCapability": "כולל יכולת ראייה",
-        "requiresProjectionModel": "הורד תחילה מודל מקרן תואם"
+        "requiresProjectionModel": "הורד תחילה מודל שכבת התאמה תואם"
       },
-      "cannotDeleteActive": "מודל מקרן זה פעיל כעת.",
-      "cannotDeleteInUse": "מודל מקרן זה משמש את מודלי LLM שהורדו:",
-      "dependentModels": "מודלים תלויים:",
-      "visionWillBeDisabled": "יכולות הראייה יושבתו עבור דגמים אלה."
+      "cannotDeleteActive": "מודל שכבת התאמה זה פעיל כעת.",
+      "cannotDeleteInUse": "מודל שכבת התאמה זה משמש את מודלי ה-LLM שהורדו:",
+      "dependentModels": "מודלים מושפעים:",
+      "visionWillBeDisabled": "יכולות הראייה יושבתו עבור מודלים אלו."
     },
     "buttons": {
       "addFromHuggingFace": "הוסף מ-Hugging Face",
@@ -271,8 +271,8 @@
       "modelUpdatedJustNowShort": "עכשיו",
       "errorOccurred": "לא ניתן לטעון מודלים. אנא נסה שוב.",
       "filters": {
-        "author": "מחבר",
-        "authorPlaceholder": "סנן לפי מחבר...",
+        "author": "בעלים",
+        "authorPlaceholder": "סנן לפי בעלים...",
         "sortBy": "מיין לפי",
         "clearFilters": "נקה מסננים",
         "showFilters": "הצג מסננים",
@@ -294,8 +294,8 @@
         "settings": "הגדרות",
         "download": "הורדה",
         "remove": "הסר",
-        "load": "טעינה",
-        "offload": "פריקה"
+        "load": "טען",
+        "offload": "פרוק"
       },
       "labels": {
         "skills": "מיומנויות: ",
@@ -304,16 +304,16 @@
         "modelName": "שם מודל",
         "contextLength": "אורך הקשר",
         "architecture": "ארכיטקטורה",
-        "author": "מחבר",
-        "requiresProjectionModel": "דורש מודל מקרן",
-        "downloadProjectionModel": "הורד מודל מקרן",
+        "author": "בעלים",
+        "requiresProjectionModel": "דורש מודל שכבת התאמה",
+        "downloadProjectionModel": "הורד מודל שכבת התאמה",
         "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face"
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
         "collapseDetails": "כווץ פרטים",
         "memoryWarning": "אזהרת זיכרון",
-        "integrityWarning": "אזהרת שלמות",
+        "integrityWarning": "אזהרת תקינות",
         "downloadProgress": "התקדמות ההורדה",
         "loadingIndicator": "טוען",
         "loadButton": "טען מודל",
@@ -324,7 +324,7 @@
         "removeButton": "הסר מודל",
         "expandDetailsButton": "הרחב פרטי מודל",
         "memoryWarningButton": "הצג פרטי אזהרת זיכרון",
-        "integrityWarningButton": "הצג פרטי אזהרת שלמות",
+        "integrityWarningButton": "הצג פרטי אזהרת תקינות",
         "memoryWarningSnackbar": "הודעת אזהרת זיכרון"
       }
     },
@@ -333,7 +333,7 @@
         "label": "תבנית:",
         "editButton": "ערוך",
         "dialogTitle": "ערוך תבנית צ'אט",
-        "note1": "הערה: שינוי התבנית עשוי לשנות את BOS, EOS ואת פרומפט המערכת.",
+        "note1": "הערה: שינוי התבנית עשוי לשנות את BOS, EOS ואת הנחיית המערכת.",
         "note2": "משתמש ב-Nunjucks. השאר ריק כדי להשתמש בתבנית של המודל.",
         "placeholder": "הזן כאן את תבנית הצ'אט שלך...",
         "closeButton": "סגור"
@@ -345,10 +345,10 @@
       "tokenSettings": {
         "bos": "BOS",
         "eos": "EOS",
-        "addGenerationPrompt": "הוסף פרומפט יצירה",
+        "addGenerationPrompt": "הוסף הנחיית יצירה",
         "bosTokenPlaceholder": "טוקן BOS",
         "eosTokenPlaceholder": "טוקן EOS",
-        "systemPrompt": "פרומפט מערכת"
+        "systemPrompt": "הנחיית מערכת"
       }
     },
     "modelDescription": {
@@ -362,7 +362,7 @@
       "summarization": "סיכום",
       "reasoning": "הנמקה",
       "roleplay": "משחק תפקידים",
-      "instructions": "ההוראות הבאות",
+      "instructions": "ביצוע הוראות",
       "code": "יצירת קוד",
       "math": "פתרון מתמטיקה",
       "multilingual": "רב-לשוניות",
@@ -373,15 +373,15 @@
   },
   "completionParams": {
     "include_thinking_in_context": "כלול חלקי חשיבה/הנמקה של ה-AI בהקשר שנשלח למודל. השבתת אפשרות זו יכולה לחסוך מקום בהקשר. הדבר עלול להשפיע על הביצועים.",
-    "jinja": "הפעל תבניות Jinja לעיצוב צ'אט. כאשר מופעלת, נעשה שימוש בעיבוד תבניות צ'אט מבוססות Jinja לצורך תאימות טובה יותר עם מודלים מודרניים.",
+    "jinja": "הפעל תבניות Jinja לעיצוב צ'אט. כאשר מופעל, נעשה שימוש בעיבוד תבניות צ'אט מבוססות Jinja לצורך תאימות טובה יותר עם מודלים מודרניים.",
     "grammar": "אכוף כללי דקדוק ספציפיים כדי להבטיח שהטקסט שנוצר יעקוב אחר מבנה או פורמט מסוימים",
-    "stop": "הגדירו ביטויים ספציפיים שיעצרו את יצירת הטקסט",
+    "stop": "הגדר ביטויים ספציפיים שיעצרו את יצירת הטקסט",
     "n_predict": "הגדר את אורך התגובה שתיווצר (בטוקנים)",
     "n_probs": "הצג ציוני הסתברות עבור מילים חלופיות.",
     "top_k": "שלוט ביצירתיות על ידי הגבלת בחירת המילים ל-K האפשרויות הסבירות ביותר. ערכים נמוכים יותר הופכים את התשובות לממוקדות יותר",
-    "top_p": "איזון בין יצירתיות לקוהרנטיות. ערכים גבוהים יותר (בקרבת 1.0) מאפשרים תגובות יצירתיות יותר אך פחות ממוקדות",
+    "top_p": "אזן בין יצירתיות לקוהרנטיות. ערכים גבוהים יותר (בקרבת 1.0) מאפשרים תגובות יצירתיות יותר אך פחות ממוקדות",
     "min_p": "ההסתברות המינימלית הנדרשת כדי שטוקן יילקח בחשבון. מסנן מילים בעלות סבירות נמוכה כדי לצמצם תגובות חסרות היגיון או כאלו שאינן קשורות להקשר",
-    "temperature": "שלוט באיזון שבין יצירתיות לבין יכולת ניבוי. ערכים גבוהים יותר הופכים את התגובות ליצירתיות יותר, אך פחות ממוקדות",
+    "temperature": "אזן בין יצירתיות לבין יכולת ניבוי. ערכים גבוהים יותר הופכים את התגובות ליצירתיות יותר, אך פחות ממוקדות",
     "penalty_last_n": "כמה רחוק אחורה לבדוק חזרתיות. ערכים גבוהים יותר עוזרים למנוע חזרתיות לטווח ארוך",
     "penalty_repeat": "הימנע מחזרה על מילים. ערכים גבוהים יותר גורמים למודלים להשתמש בשפה מגוונת יותר",
     "penalty_freq": "הענש מילים שנעשה בהן שימוש יתר. ערכים גבוהים יותר מעודדים שימוש באוצר מילים רחב יותר",
@@ -389,7 +389,7 @@
     "mirostat": "אפשר שליטה מתקדמת על יצירתיות התגובה. הגדר ל-1 או 2 (חלק יותר) להתאמות חכמות בזמן אמת לאקראיות ולקוהרנטיות.",
     "mirostat_tau": "הגדר את רמת היצירתיות הרצויה עבור ה-Mirostat. ערכים גבוהים יותר מאפשרים תגובות מגוונות ודמיוניות יותר, בעוד ערכים נמוכים יותר מבטיחים תוצרים ממוקדים יותר.",
     "mirostat_eta": "כמה מהר ה-Mirostat מתאים את היצירתיות. ערכים גבוהים יותר משמעותם התאמות מהירות יותר",
-    "dry_multiplier": "עוצמת תכונת ה-DRY (אל תחזור על עצמך). ערכים גבוהים יותר מונעים חזרתיות בצורה משמעותית",
+    "dry_multiplier": "עוצמת תכונת ה-DRY (\"אל תחזור על עצמך\"). ערכים גבוהים יותר מונעים חזרתיות בצורה משמעותית",
     "dry_base": "קנס הבסיס על חזרתיות במצב DRY. ערכים גבוהים יותר הם אגרסיביים יותר במניעת חזרתיות",
     "dry_allowed_length": "כמה מילים יכולות לחזור על עצמן לפני שקנס ה-DRY נכנס לתוקף",
     "dry_penalty_last_n": "כמה רחוק אחורה לבדוק חזרתיות במצב DRY",
@@ -486,7 +486,7 @@
       "noModelsDescription": "הורד מודל כדי להתחיל לשוחח בצ'אט עם PocketPal",
       "noModelsButton": "הורד מודל",
       "activateModelTitle": "הפעל מודל כדי להתחיל",
-      "activateModelDescription": "בחר את המודל והורד אותו. לאחר ההורדה, הקש על \"טעינה\" ליד המודל והתחל לשוחח בצ'אט.",
+      "activateModelDescription": "בחר את המודל והורד אותו. לאחר ההורדה, הקש על \"טען\" ליד המודל והתחל לשוחח בצ'אט.",
       "activateModelButton": "בחר מודל",
       "loading": "טוען..."
     },
@@ -501,19 +501,19 @@
       }
     },
     "contentReportSheet": {
-      "title": "תוכן דיווח",
+      "title": "דיווח על תוכן",
       "privacyNote": "איננו שולחים תוכן הודעות או פרטי שיחה. אנא תאר את הבעיה הספציפית שנתקלת בה.",
       "categoryLabel": "קטגוריית דיווח",
       "selectCategory": "בחר קטגוריה",
       "categories": {
-        "hate": "דברי שנאה",
+        "hate": "ביטויי שנאה",
         "sexual": "תוכן מיני",
         "selfHarm": "פגיעה עצמית",
         "violence": "אלימות",
         "other": "אחר"
       },
       "descriptionLabel": "תיאור",
-      "descriptionPlaceholder": "אנא תאר את הבעיה עם התוכן הזה...",
+      "descriptionPlaceholder": "אנא תאר מה הבעיה בתוכן הזה...",
       "includeModelInfo": "כלול מידע על המודל",
       "includeModelInfoDescription": "כלול את שם המודל והמזהה שלו כדי שנוכל לחקור",
       "noActiveModelNote": "אין מודל פעיל כרגע",
@@ -539,12 +539,12 @@
       "modelName": "שם",
       "modelSource": "מקור",
       "modelSize": "גודל",
-      "contextParams": "פרמטרים של הקשר",
+      "contextParams": "פרמטרי הקשר",
       "deviceInfo": "מידע על המכשיר",
       "deviceModel": "מכשיר",
       "osVersion": "מערכת הפעלה",
       "memoryInfo": "זיכרון",
-      "cpuArchitecture": "CPU",
+      "cpuArchitecture": "מעבד",
       "isEmulator": "אמולטור",
       "additionalInfoLabel": "הקשר נוסף (אופציונלי)",
       "additionalInfoPlaceholder": "כל פרט נוסף שיכול לעזור לנו להבין את הבעיה...",
@@ -705,7 +705,7 @@
       "configureGenerationSettings": "הגדרות תצורת יצירה",
       "validation": {
         "nameRequired": "נדרש שם",
-        "generatingPromptRequired": "נדרשת יצירת הנחייה בעת שימוש בהנחיית AI",
+        "generatingPromptRequired": "נדרשת הנחיית יצירה לצורך שימוש בהנחיית AI",
         "promptModelRequired": "נדרש מודל יצירת הנחיות בעת שימוש בהנחיית AI"
       }
     },
@@ -719,7 +719,7 @@
       "defaultModel": "מודל ברירת המחדל",
       "defaultModelPlaceholder": "בחר מודל",
       "validation": {
-        "generatingPromptRequired": "נדרשת יצירת הנחייה",
+        "generatingPromptRequired": "נדרשת הנחיית יצירה",
         "promptModelRequired": "נדרש מודל יצירת הנחייה"
       },
       "create": "צור"
@@ -754,7 +754,7 @@
       "userRole": "תפקיד המשתמש",
       "userRolePlaceholder": "סר אלנדור, אביר אמיץ",
       "userRoleSublabel": "מי אתה?",
-      "situation": "מצב",
+      "situation": "סיטואציה",
       "situationPlaceholder": "משימת חילוץ, פתרון תעלומה",
       "toneStyle": "טון/סגנון",
       "toneStylePlaceholder": "רציני",
@@ -870,18 +870,18 @@
       "exportAllPals": "ייצוא כל ה-Pals",
       "importPals": "ייבוא Pals",
       "importSuccess": "ייבוא של {{count}} Pals בוצע בהצלחה.",
-      "importError": "ייבוא החברים נכשל. אנא בדוק את פורמט הקובץ."
+      "importError": "ייבוא ה-Pals נכשל. אנא בדוק את פורמט הקובץ."
     }
   },
   "palsScreen": {
     "sectionTitles": {
-      "myPalsLocal": "החברים שלי (מקומי)",
+      "myPalsLocal": "ה-Pals שלי (מקומי)",
       "myLibrary": "הספרייה שלי (palshub.ai)",
-      "discoverPals": "גלו את החברים (palshub.ai)"
+      "discoverPals": "גלו את ה-Pals (palshub.ai)"
     },
     "systemPrompt": "הנחיית מערכת",
     "videoAnalysis": "ניתוח וידאו",
-    "videoAnalysisDescription": "זהו סייען בינה מלאכותית מבוסס וידאו המספק פרשנות בזמן אמת על שידורי וידאו ממצלמת המכשיר שלך.",
+    "videoAnalysisDescription": "זהו סייען AI מבוסס וידאו המספק פרשנות בזמן אמת על שידורי וידאו ממצלמת המכשיר שלך.",
     "captureInterval": "מרווח צילומים",
     "captureIntervalUnit": "מילישניות",
     "world": "עולם",
@@ -893,9 +893,9 @@
     "roleplay": "משחק תפקידים",
     "video": "וידאו",
     "deletePal": "מחק Pal",
-    "deletePalMessage": "האם אתה בטוח שאתה רוצה למחוק את החבר הזה?",
+    "deletePalMessage": "האם אתה בטוח שאתה רוצה למחוק את ה-Pal הזה?",
     "missingModel": "חסר מודל",
-    "missingModelMessage": "מודל ברירת המחדל \"{{modelName}}\" עבור חבר זה אינו זמין. אנא הורד אותו בלשונית העריכה או לבחור מודל אחר.",
+    "missingModelMessage": "מודל ברירת המחדל \"{{modelName}}\" עבור Pal זה אינו זמין. אנא הורד אותו בלשונית העריכה או בחר מודל אחר.",
     "search": "חיפוש",
     "profile": "פרופיל",
     "signIn": "התחברות",
@@ -906,12 +906,12 @@
     "signOutError": "ההתנתקות נכשלה. אנא נסה שוב.",
     "account": "חשבון",
     "signInToPalsHub": "התחבר ל-PalsHub",
-    "signInDescription": "גש לספרייה שלך, צור חברים פרטיים וסנכרן בין מכשירים",
-    "searchAllPals": "חפש את כל החברים...",
+    "signInDescription": "גש לספרייה שלך, צור Pals פרטיים וסנכרן בין מכשירים",
+    "searchAllPals": "חפש את כל ה-Pals...",
     "deletePalConfirmation": "האם אתה בטוח שברצונך למחוק את \"{{palName}}\"?",
     "filters": {
       "all": "הכל",
-      "myPals": "החברים שלי",
+      "myPals": "ה-Pals שלי",
       "local": "מקומי",
       "video": "וידאו",
       "free": "בחינם",
@@ -924,8 +924,8 @@
       "download": "הורדה",
       "getFree": "קבל בחינם"
     },
-    "premiumPalDescription": "חבר פרימיום מקהילת palshub.ai",
-    "premiumInfoText": "בקרו באתר palshub.ai כדי לגלות עוד חברים",
+    "premiumPalDescription": "Pal פרימיום מקהילת palshub.ai",
+    "premiumInfoText": "בקרו באתר palshub.ai כדי לגלות עוד Pals",
     "sortOptions": {
       "newest": "החדש ביותר",
       "oldest": "הישן ביותר",
@@ -945,11 +945,11 @@
       "systemPrompt": "הנחיית מערכת",
       "downloaded": "הורדו",
       "success": "הצליח",
-      "palAddedToCollection": "פאל נוסף לאוסף שלך!",
+      "palAddedToCollection": "Pal נוסף לאוסף שלך!",
       "error": "שגיאה",
-      "failedToLoadDetails": "טעינת פרטי החבר נכשלה",
-      "failedToDownload": "נכשל בהורדת חבר",
-      "premiumPalMessage": "זהו חבר פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלכם, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
+      "failedToLoadDetails": "טעינת פרטי ה-Pal נכשלה",
+      "failedToDownload": "הורדת Pal נכשלה",
+      "premiumPalMessage": "זהו Pal פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלך, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
       "notAvailable": "N/A"
     }
   },
@@ -958,8 +958,8 @@
     "systemPromptRequired": "נדרשת הנחיית מערכת",
     "worldRequired": "נדרש עולם",
     "locationRequired": "נדרש מיקום",
-    "aiRoleRequired": "נדרש תפקיד ה-AI",
-    "userRoleRequired": "נדרש תפקיד המשתמש",
+    "aiRoleRequired": "נדרש תפקיד AI",
+    "userRoleRequired": "נדרש תפקיד משתמש",
     "situationRequired": "נדרש מצב",
     "toneStyleRequired": "נדרש טון/סגנון"
   },
@@ -967,14 +967,14 @@
     "permissionTitle": "נדרשת הרשאת מצלמה",
     "permissionMessage": "PocketPal זקוק לגישה למצלמה כדי לנתח תמונות",
     "requestingPermission": "מבקש הרשאת מצלמה...",
-    "noDevice": "לא נמצא מצלמה במכשיר",
+    "noDevice": "לא נמצאה מצלמה במכשיר",
     "errorTitle": "שגיאת מצלמה",
     "errorMessage": "אירעה שגיאה בעת צילום התמונה",
     "flip": "היפוך",
     "analyzing": "ניתוח תמונה...",
     "startCamera": "הפעל את המצלמה",
     "stopCamera": "עצור את המצלמה",
-    "promptPlaceholder": "מה אתם רוצים לדעת על התמונה הזו?",
+    "promptPlaceholder": "מה אתה רוצה לדעת על התמונה הזו?",
     "takePhoto": "מצלמה"
   },
   "video": {
@@ -1000,7 +1000,7 @@
       "step1": "• ערוך את ההנחיה (אופציונלי) כדי להנחות את הניתוח",
       "step2": "• לחץ על כפתור המצלמה כדי להתחיל ניתוח וידאו חי",
       "step3": "• כוונן את תדירות הצילום בזמן שהמצלמה פעילה",
-      "step4": "• עבור לחבר אחר לצ'אט טקסט רגיל"
+      "step4": "• עבור ל-Pal אחר עבור צ'אט טקסט רגיל"
     }
   },
   "screenTitles": {
@@ -1022,7 +1022,7 @@
     "goToModels": "עבור למודלים",
     "readyToChat": "מוכן לשוחח? טען את המודל האחרון שהיה בשימוש.",
     "pleaseLoadModel": "טען מודל כדי לשוחח.",
-    "multimodalNotEnabled": "מולטי-מודאל אינו מופעל עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
+    "multimodalNotEnabled": "רב-מודאליות אינה מופעלת עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
     "cannotSendWithoutModel": "טען מודל תחילה"
   },
   "benchmark": {
@@ -1082,7 +1082,7 @@
       },
       "config": {
         "title": "תצורת מבחן ביצועים",
-        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • ענישת חזרתיות: {{nr}}"
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
       },
       "modelSettings": {
         "title": "הגדרות מודל",
@@ -1128,7 +1128,7 @@
         "basicInfo": "מידע בסיסי",
         "cpuDetails": "פרטי המעבד",
         "gpuDetails": "פרטי GPU",
-        "hexagonDetails": "מעבד אותות Hexagon (DSP)",
+        "hexagonDetails": "Hexagon DSP",
         "appInfo": "מידע על האפליקציה"
       },
       "fields": {
@@ -1141,8 +1141,8 @@
         "instructions": "הוראות",
         "version": "גרסה",
         "gpuType": "סוג ה-GPU",
-        "gpuRenderer": "רינדור",
-        "gpuVendor": "מוכר",
+        "gpuRenderer": "מרנדר",
+        "gpuVendor": "יצרן",
         "metalSupport": "תומך ב-Metal",
         "openclSupport": "תומך ב-OpenCL",
         "openclRequirement": "דורש i8mm ו-dotprod"
