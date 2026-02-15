@@ -9,10 +9,10 @@
     "update": "עדכן",
     "error": "שגיאה",
     "export": "ייצוא",
-    "networkError": "שגיאת אינטרנט. אנא נסה שנית.",
+    "networkError": "שגיאת אינטרנט. אנא נסה שוב.",
     "downloadETA": "ETA",
     "calculating": "חישוב...",
-    "second": "שניות",
+    "second": "שנייה",
     "seconds": "שניות",
     "year": "שנה",
     "years": "שנים",
@@ -26,7 +26,7 @@
     "hours": "שעות",
     "minute": "דקה",
     "minutes": "דקות",
-    "justNow": "רק עכשיו",
+    "justNow": "עכשיו",
     "ok": "אישור",
     "close": "סגור",
     "clear": "נקה הכל",
@@ -47,7 +47,7 @@
     "deviceSelection": "בחירת מכשיר",
     "deviceSelectionIOS": "מכשיר (Metal)",
     "deviceSelectionIOSDescription": "בחר מצב Metal GPU או מצב CPU בלבד",
-    "deviceSelectionAndroidDescription": "בחר התקן מחשוב (CPU, GPU או NPU משושה)",
+    "deviceSelectionAndroidDescription": "בחר התקן מחשוב (CPU, GPU או NPU מקבילי)",
     "cpuOnlyNoAccelerators": "CPU בלבד - לא זוהו מאיצי חומרה",
     "contextSize": "אורך הקשר",
     "contextSizePlaceholder": "הזן אורך הקשר (לפחות {{minContextSize}})",
@@ -63,7 +63,7 @@
     "cpuThreadsDescription": "שימוש ב-{{threads}} מתוך {{maxThreads}} שרשורים זמינים",
     "imageMaxTokens": "מקסימום טוקני תמונה",
     "imageMaxTokensDescription": "מספר מקסימלי של טוקנים לעיבוד תמונה: {{tokens}}{{effectiveTokens}} (נמוך יותר = מהיר יותר, פחות פרטים)",
-    "flashAttention": "Flash Attention (תשומת לב מהירה)",
+    "flashAttention": "Flash Attention (קשב מהיר)",
     "flashAttentionDescription": "הפעל Flash Attention לעיבוד מהיר יותר",
     "flashAttentionIOSDescription": "קשב יעיל בזיכרון (מופעל אוטומטית ב-Metal)",
     "flashAttentionAndroidDescription": "יש להשבית את ההגדרה לשמירה/טעינה של מצב OpenCL",
@@ -102,24 +102,24 @@
     "exportLegacyChats": "ייצוא צ'אטים ישנים",
     "exportLegacyChatsDescription": "השתמש באפשרות זו אם ההעברה נכשלה או שאתה צריך לשחזר הפעלות צ'אט ישנות.",
     "exportButton": "ייצוא",
-    "importChats": "ייבוא מפגשי צ'אט",
-    "importChatsDescription": "ייבוא שיחות צ'אט מקובץ JSON (מיוצא).",
+    "importChats": "ייבוא סשני צ'אט",
+    "importChatsDescription": "ייבוא סשני צ'אט מקובץ JSON (מיוצא).",
     "importButton": "ייבוא",
-    "importSuccess": "יובא בהצלחה {{count}} שיחות צ'אט.",
-    "importError": "ייבוא שיחות הצ'אט נכשל. אנא בדוק את פורמט הקובץ.",
+    "importSuccess": "יובאו בהצלחה {{count}} סשני צ'אט.",
+    "importError": "ייבוא סשני צ'אט נכשל. אנא בדוק את פורמט הקובץ.",
     "apiSettingsTitle": "הגדרות API",
     "huggingFaceTokenLabel": "טוקן Hugging Face",
-    "tokenIsSetDescription": "טוקן הוגדר. נדרש לגישה למודלים עם הגבלות גישה.",
-    "setTokenDescription": "הגדר טוקן לגישה למודלים עם הגבלות גישה מ-Hugging Face.",
+    "tokenIsSetDescription": "טוקן הוגדר. נדרש לגישה למודלים מגודרים.",
+    "setTokenDescription": "הגדר טוקן לגישה למודלים מגודרים מ-Hugging Face.",
     "setTokenButton": "הגדר טוקן",
     "useHfTokenLabel": "השתמש בטוקן Hugging Face",
     "useHfTokenDescription": "הפעל שימוש בטוקן עבור בקשות API. השבת אם הטוקן גורם לבעיות אימות.",
     "cacheStorageTitle": "מטמון ואחסון",
     "clearPalCaches": "נקה מטמון קיצורי דרך",
-    "clearPalCachesDescription": "מנקה נתונים מהמטמון המשמשים להאצת קיצורי דרך. פעולה זו לא תשפיע על חבריך או על היסטוריית הצ'אט.",
+    "clearPalCachesDescription": "מנקה נתונים מהמטמון המשמשים להאצת קיצורי דרך. פעולה זו לא תשפיע על החברים (Pals) שלך או על היסטוריית הצ'אט.",
     "clearCachesButton": "נקה מטמון",
     "clearCachesConfirmTitle": "לנקות מטמון קיצורי דרך?",
-    "clearCachesConfirmMessage": "פעולה זו תמחק את כל נתוני הסשנים המאוחסנים במטמון ({{fileCount}} קבצים, {{size}}). קיצורי דרך עשויים להיות איטיים יותר בשימוש הראשון לאחר הניקוי. פעולה זו לא תשפיע על חבריך או על היסטוריית הצ'אט.",
+    "clearCachesConfirmMessage": "פעולה זו תמחק את כל נתוני הסשנים המאוחסנים במטמון ({{fileCount}} קבצים, {{size}}). קיצורי דרך עשויים להיות איטיים יותר בשימוש הראשון לאחר הניקוי. פעולה זו לא תשפיע על החברים (Pals) שלך או על היסטוריית הצ'אט.",
     "clearCachesSuccess": "ניקוי של {{count}} קבצי מטמון בוצע בהצלחה.",
     "clearCachesError": "ניקוי המטמון נכשל. אנא נסה שוב.",
     "noCachesToClear": "אין מטמון לניקוי."
@@ -163,12 +163,12 @@
       "unknownGroup": "לא ידוע",
       "availableToUse": "מוכן לשימוש",
       "availableToDownload": "זמין להורדה",
-      "useAddButtonForMore": "השתמש בכפתור + כדי למצוא דגמים נוספים"
+      "useAddButtonForMore": "השתמש בכפתור + כדי להוסיף מודלים נוספים"
     },
     "vision": "ראיה",
-    "mmproj": "מקרן (mmproj)",
+    "mmproj": "שכבת התאמה",
     "multimodal": {
-      "settings": "הגדרות מולטי-מודאליות",
+      "settings": "הגדרות רב-מודאליות",
       "projectionModels": "מודלי מקרן (mmproj)",
       "noCompatibleModels": "לא נמצאו מודלי מקרן (mmproj) תואמים",
       "noProjectionModels": "אין דגמי מקרן (mmproj) זמינים",
@@ -614,568 +614,568 @@
       "downloadFailedTitle": "ההורדה נכשלה",
       "downloadFailedMessage": "הורדת המודל נכשלה: {{message}}",
       "unauthorizedTitle": "אימות נכשל",
-      "unauthorizedMessage": "",
-      "forbiddenTitle": "",
-      "forbiddenMessage": "",
+      "unauthorizedMessage": "נראה שטוקן ה-נראה שטוקן ה-Hugging Face שלך אינו תקף או פג תוקף. אנא עדכן את הטוקן שלך בהגדרות.",
+      "forbiddenTitle": "הגישה נדחתה",
+      "forbiddenMessage": "אין לך הרשאה לגשת למודל זה. אנא ודא:",
       "forbiddenSteps": [
-        "",
-        "",
-        ""
+        "לטוקן שלך יש הרשאת \"קריאה\"",
+        "ביקשת וקיבלת גישה למודל זה",
+        "בעל המודל אישר את בקשת הגישה שלך"
       ],
-      "getTokenTitle": "",
-      "getTokenMessage": "",
+      "getTokenTitle": "קבל טוקן Hugging Face",
+      "getTokenMessage": "הורדה של דגם זה דורשת טוקן Hugging Face.",
       "getTokenSteps": [
-        "",
-        "",
-        "",
-        ""
+        "כנס לאתר huggingface.co והתחבר",
+        "נווט אל הגדרות > טוקני גישה",
+        "צור טוקן חדש עם גישת \"קריאה\"",
+        "העתק את הטוקן והדבק אותו כאן בשדה הטוקן"
       ],
-      "tokenDisabledTitle": "",
-      "tokenDisabledMessage": "",
-      "enableAndRetry": "",
-      "goToSettings": "",
-      "tryAgain": "",
-      "viewOnHuggingFace": ""
+      "tokenDisabledTitle": "הטוקן מושבת",
+      "tokenDisabledMessage": "יש לך טוקן Hugging Face מוגדר, אך הוא מושבת כרגע. הורדת מודל זה דורשת טוקן. הפעל את הטוקן שלך כדי להמשיך.",
+      "enableAndRetry": "הפעלה וניסיון חוזר",
+      "goToSettings": "עבור אל ההגדרות",
+      "tryAgain": "נסה שוב",
+      "viewOnHuggingFace": "הצג מודל ב-HF ↖"
     },
     "headerRight": {
-      "deleteChatTitle": "",
-      "deleteChatMessage": "",
-      "generationSettings": "",
-      "model": "",
-      "duplicateChatHistory": "",
-      "makeChatTemporary": "",
-      "export": "",
-      "exportCurrentSession": "",
-      "exportAllSessions": "",
-      "exportChatSession": "",
-      "importSessions": ""
+      "deleteChatTitle": "מחק צ'אט",
+      "deleteChatMessage": "האם אתה בטוח שאתה רוצה למחוק את הצ'אט הזה?",
+      "generationSettings": "הגדרות יצירה",
+      "model": "מודל",
+      "duplicateChatHistory": "שכפל את היסטוריית הצ'אט",
+      "makeChatTemporary": "הפוך את הצ'אט לזמני",
+      "export": "ייצוא/ייבוא",
+      "exportCurrentSession": "ייצוא הסשן הנוכחי",
+      "exportAllSessions": "ייצוא כל הסשנים",
+      "exportChatSession": "ייצוא סשן צ'אט",
+      "importSessions": "ייבוא סשנים"
     },
     "hfTokenSheet": {
-      "title": "",
-      "description": "",
-      "inputLabel": "",
-      "inputPlaceholder": "",
-      "save": "",
-      "saved": "",
-      "reset": "",
-      "resetSuccess": "",
-      "instructions": "",
+      "title": "טוקן Hugging Face",
+      "description": "נדרש לגישה למודלים עם הגבלות גישה",
+      "inputLabel": "טוקן גישה אישי",
+      "inputPlaceholder": "הדבק את הטוקן שלך כאן",
+      "save": "שמור טוקן",
+      "saved": "שמירת טוקן הצליחה",
+      "reset": "איפוס טוקן",
+      "resetSuccess": "הסרת טוקן הצליחה",
+      "instructions": "איך להשיג טוקן:",
       "instructionsSteps": [
-        "",
-        "",
-        "",
-        ""
+        "כנס לאתר huggingface.co והתחבר",
+        "נווט אל הגדרות > טוקני גישה",
+        "צור טוקן חדש עם גישת \"קריאה\"",
+        "העתק את הטוקן והדבק אותו כאן למטה"
       ],
-      "getTokenLink": "",
+      "getTokenLink": "קבל טוקן מ-huggingface.co ↖",
       "error": {
-        "saving": "",
-        "missing": "",
-        "invalid": "",
-        "gatedModelAccess": ""
+        "saving": "שגיאה בשמירת טוקן",
+        "missing": "נדרש טוקן Hugging Face",
+        "invalid": "טוקן לא חוקי או פג תוקף",
+        "gatedModelAccess": "הגישה למודל מגודר זה נדחתה"
       },
-      "gatedModelIndicator": "",
-      "tokenRequired": "",
-      "searchErrorHint": "",
-      "disableAndRetry": ""
+      "gatedModelIndicator": "דורש טוקן",
+      "tokenRequired": "מודל זה דורש טוקן גישה של Hugging Face",
+      "searchErrorHint": "טוקן ה-API של Hugging Face שלך אינו חוקי או פג תוקף. כדי להמשיך בחיפוש, אנא הסר את הטוקן או השבת את אימות הטוקן בהגדרות.",
+      "disableAndRetry": "השבת את הטוקן ונסה שוב"
     },
     "modelSettingsSheet": {
-      "modelSettings": "",
-      "saveChanges": ""
+      "modelSettings": "הגדרות מודל",
+      "saveChanges": "שמור שינויים"
     },
     "modelsHeaderRight": {
-      "menuTitleHf": "",
-      "menuTitleDownloaded": "",
-      "menuTitleGrouped": "",
-      "menuTitleReset": ""
+      "menuTitleHf": "מודלי Hugging Face",
+      "menuTitleDownloaded": "מודלים שהורדו",
+      "menuTitleGrouped": "קיבוץ לפי סוג מודל",
+      "menuTitleReset": "איפוס רשימת מודלים"
     },
     "modelsResetDialog": {
-      "proceedWithReset": "",
-      "confirmReset": ""
+      "proceedWithReset": "המשך עם האיפוס",
+      "confirmReset": "אישור איפוס"
     },
     "palSheet": {
       "title": {
-        "edit": "",
-        "newPal": "",
-        "newVideoPal": ""
+        "edit": "ערוך Pal",
+        "newPal": "Pal חדש",
+        "newVideoPal": "Pal וידיאו חדש"
       },
-      "description": "",
-      "descriptionPlaceholder": "",
-      "parameters": "",
-      "generationSettings": "",
-      "configureGenerationSettings": "",
+      "description": "תאור",
+      "descriptionPlaceholder": "הזן תיאור קצר של ה-Pal",
+      "parameters": "פרמטרים",
+      "generationSettings": "הגדרות יצירה",
+      "configureGenerationSettings": "הגדרות תצורת יצירה",
       "validation": {
-        "nameRequired": "",
-        "generatingPromptRequired": "",
-        "promptModelRequired": ""
+        "nameRequired": "נדרש שם",
+        "generatingPromptRequired": "נדרשת יצירת הנחייה בעת שימוש בהנחיית AI",
+        "promptModelRequired": "נדרש מודל יצירת הנחיות בעת שימוש בהנחיית AI"
       }
     },
     "assistantPalSheet": {
       "title": {
-        "create": "",
-        "edit": ""
+        "create": "צור Pal סייען",
+        "edit": "ערוך Pal סייען"
       },
-      "palName": "",
-      "palNamePlaceholder": "",
-      "defaultModel": "",
-      "defaultModelPlaceholder": "",
+      "palName": "שם Pal",
+      "palNamePlaceholder": "שם",
+      "defaultModel": "מודל ברירת המחדל",
+      "defaultModelPlaceholder": "בחר מודל",
       "validation": {
-        "generatingPromptRequired": "",
-        "promptModelRequired": ""
+        "generatingPromptRequired": "נדרשת יצירת הנחייה",
+        "promptModelRequired": "נדרש מודל יצירת הנחייה"
       },
-      "create": ""
+      "create": "צור"
     },
     "modelNotAvailable": {
-      "noModelsDownloaded": "",
-      "downloadAModel": "",
-      "defaultModelNotDownloaded": "",
-      "modelNotDownloadedShort": "",
-      "recommendedModel": "",
-      "cancelDownload": "",
-      "download": ""
+      "noModelsDownloaded": "עדיין לא הורדת מודלים. אנא הורד מודל תחילה.",
+      "downloadAModel": "הורד מודל",
+      "defaultModelNotDownloaded": "Pal זה ממליץ על מודל ספציפי שיש להוריד, או שבאפשרותך לבחור במודל אחר.",
+      "modelNotDownloadedShort": "המודל לא הורד",
+      "recommendedModel": "דגם מומלץ",
+      "cancelDownload": "בטל הורדה",
+      "download": "הורדה"
     },
     "roleplayPalSheet": {
       "title": {
-        "create": "",
-        "edit": ""
+        "create": "צור Pal משחק תפקידים",
+        "edit": "ערוך Pal משחק תפקידים"
       },
-      "palName": "",
-      "palNamePlaceholder": "",
-      "defaultModel": "",
-      "defaultModelPlaceholder": "",
-      "descriptionSection": "",
-      "world": "",
-      "worldPlaceholder": "",
-      "location": "",
-      "locationPlaceholder": "",
-      "locationSublabel": "",
-      "aiRole": "",
-      "aiRolePlaceholder": "",
-      "aiRoleSublabel": "",
-      "userRole": "",
-      "userRolePlaceholder": "",
-      "userRoleSublabel": "",
-      "situation": "",
-      "situationPlaceholder": "",
-      "toneStyle": "",
-      "toneStylePlaceholder": "",
+      "palName": "שם Pal",
+      "palNamePlaceholder": "שם",
+      "defaultModel": "מודל ברירת המחדל",
+      "defaultModelPlaceholder": "בחר מודל",
+      "descriptionSection": "תאור",
+      "world": "עולם",
+      "worldPlaceholder": "פנטזיה",
+      "location": "מיקום",
+      "locationPlaceholder": "יער קסום",
+      "locationSublabel": "היכן מתרחש הסיפור?",
+      "aiRole": "תפקיד ה-AI",
+      "aiRolePlaceholder": "אלדרה, דמות יער שובבה",
+      "aiRoleSublabel": "הגדר את התפקיד עבור הדמות",
+      "userRole": "תפקיד המשתמש",
+      "userRolePlaceholder": "סר אלנדור, אביר אמיץ",
+      "userRoleSublabel": "מי אתה?",
+      "situation": "מצב",
+      "situationPlaceholder": "משימת חילוץ, פתרון תעלומה",
+      "toneStyle": "טון/סגנון",
+      "toneStylePlaceholder": "רציני",
       "validation": {
-        "promptModelRequired": ""
+        "promptModelRequired": "נדרש מודל יצירת הנחייה"
       },
-      "create": ""
+      "create": "צור"
     },
     "lookiePalSheet": {
       "title": {
-        "create": "",
-        "edit": ""
+        "create": "יצירת Lookie Pal - סייען חזותי",
+        "edit": "ערוך Lookie Pal"
       },
-      "palName": "",
-      "palNamePlaceholder": "",
-      "visionModel": "",
-      "visionModelPlaceholder": "",
-      "requiredModelsSection": "",
-      "captureInterval": "",
-      "captureIntervalHelper": "",
-      "create": ""
+      "palName": "שם Pal",
+      "palNamePlaceholder": "הזן שם ל-Lookie Pal שלך",
+      "visionModel": "מודל ראייה",
+      "visionModelPlaceholder": "בחר מודל ראייה",
+      "requiredModelsSection": "נדרש מודל",
+      "captureInterval": "תדירות צילום",
+      "captureIntervalHelper": "זמן בין צילומים אוטומטיים במילישניות",
+      "create": "צור"
     },
     "sendButton": {
-      "accessibilityLabel": ""
+      "accessibilityLabel": "שלח"
     },
     "systemPromptSection": {
-      "sectionTitle": "",
-      "useAIPrompt": "",
+      "sectionTitle": "הנחיית מערכת",
+      "useAIPrompt": "השתמש ב-AI כדי ליצור הנחיות מערכת",
       "modelSelector": {
-        "label": "",
-        "sublabel": "",
-        "placeholder": ""
+        "label": "בחר מודל ליצירה*",
+        "sublabel": "מומלץ: Llama 3.2 3B או Qwen3 4B Instruct 2507.",
+        "placeholder": "בחר מודל"
       },
       "generatingPrompt": {
-        "label": "",
-        "placeholder": ""
+        "label": "מטרה והקשר",
+        "placeholder": "תאר את התפקיד, המטרה או התרחיש של pal זה..."
       },
       "buttons": {
-        "loadingModel": "",
-        "stopGenerating": "",
-        "generatePrompt": "",
-        "resetParameters": "",
-        "resetTemplate": ""
+        "loadingModel": "טוען מודל...",
+        "stopGenerating": "עצור יצירה",
+        "generatePrompt": "צור הנחיית מערכת",
+        "resetParameters": "איפוס פרמטרים",
+        "resetTemplate": "איפוס תבנית"
       },
       "systemPrompt": {
-        "label": "",
-        "sublabel": "",
-        "placeholder": ""
+        "label": "הנחיית מערכת",
+        "sublabel": "אל תהססו לערוך ולנסות כדי למצוא את ההנחיה האופטימלית לתרחיש שלכם",
+        "placeholder": "אתה סייען מועיל"
       },
       "warnings": {
-        "promptChanged": ""
+        "promptChanged": "הנחיית המערכת שונתה באופן ידני"
       }
     },
     "sidebarContent": {
       "menuItems": {
-        "chat": "",
-        "models": "",
-        "pals": "",
-        "benchmark": "",
-        "settings": "",
-        "appInfo": "",
-        "testCompletion": ""
+        "chat": "צ'אט",
+        "models": "מודלים",
+        "pals": "Pals",
+        "benchmark": "מבחן ביצועים",
+        "settings": "הגדרות",
+        "appInfo": "מידע על האפליקציה",
+        "testCompletion": "בדיקת השלמת טקסט"
       },
-      "deleteChatTitle": "",
-      "deleteChatMessage": "",
-      "select": "",
-      "nSelected": "",
-      "selectAll": "",
-      "deselectAll": "",
-      "exportCount": "",
-      "deleteCount": "",
-      "bulkDeleteTitle": "",
-      "bulkDeleteMessage": "",
-      "bulkDeleteError": "",
-      "exportError": "",
-      "bulkExportError": "",
+      "deleteChatTitle": "מחק צ'אט",
+      "deleteChatMessage": "האם אתה בטוח שאתה רוצה למחוק את הצ'אט הזה?",
+      "select": "בחר",
+      "nSelected": "נבחרו {{count}}",
+      "selectAll": "בחר הכל",
+      "deselectAll": "בטל בחירה בהכל",
+      "exportCount": "ייצוא ({{count}})",
+      "deleteCount": "מחיקה ({{count}})",
+      "bulkDeleteTitle": "מחק סשני צ'אט",
+      "bulkDeleteMessage": "למחוק {{count}} מפגשי צ'אט? לא יהיה ניתן לבטל פעולה זו.",
+      "bulkDeleteError": "מחיקת מפגשי הצ'אט נכשלה. אנא נסה שוב.",
+      "exportError": "ייצוא סשן הצ'אט נכשל. אנא נסה שוב.",
+      "bulkExportError": "ייצוא מפגשי הצ'אט נכשל. אנא נסה שוב.",
       "dateGroups": {
-        "today": "",
-        "yesterday": "",
-        "thisWeek": "",
-        "lastWeek": "",
-        "twoWeeksAgo": "",
-        "threeWeeksAgo": "",
-        "fourWeeksAgo": "",
-        "lastMonth": "",
-        "older": ""
+        "today": "היום",
+        "yesterday": "אתמול",
+        "thisWeek": "השבוע",
+        "lastWeek": "בשבוע שעבר",
+        "twoWeeksAgo": "לפני שבועיים",
+        "threeWeeksAgo": "לפני 3 שבועות",
+        "fourWeeksAgo": "לפני 4 שבועות",
+        "lastMonth": "בחודש שעבר",
+        "older": "לפני זמן רב"
       }
     },
     "usageStats": {
       "tooltip": {
-        "title": "",
-        "used": "",
-        "total": "",
-        "usage": ""
+        "title": "שימוש בזיכרון",
+        "used": "בשימוש: ",
+        "total": "סה\"כ: ",
+        "usage": "שימוש: "
       },
       "byteSizes": [
-        "",
-        "",
-        "",
-        ""
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
       ]
     },
     "chatView": {
       "menuItems": {
-        "copy": "",
-        "regenerate": "",
-        "regenerateWith": "",
-        "edit": "",
-        "reportContent": ""
+        "copy": "העתק",
+        "regenerate": "צור מחדש",
+        "regenerateWith": "צור עם",
+        "edit": "ערוך",
+        "reportContent": "דווח על תוכן"
       }
     },
     "palHeaderRight": {
-      "exportAllPals": "",
-      "importPals": "",
-      "importSuccess": "",
-      "importError": ""
+      "exportAllPals": "ייצוא כל ה-Pals",
+      "importPals": "ייבוא Pals",
+      "importSuccess": "ייבוא של {{count}} Pals בוצע בהצלחה.",
+      "importError": "ייבוא החברים נכשל. אנא בדוק את פורמט הקובץ."
     }
   },
   "palsScreen": {
     "sectionTitles": {
-      "myPalsLocal": "",
-      "myLibrary": "",
-      "discoverPals": ""
+      "myPalsLocal": "החברים שלי (מקומי)",
+      "myLibrary": "הספרייה שלי (palshub.ai)",
+      "discoverPals": "גלו את החברים (palshub.ai)"
     },
-    "systemPrompt": "",
-    "videoAnalysis": "",
-    "videoAnalysisDescription": "",
-    "captureInterval": "",
-    "captureIntervalUnit": "",
-    "world": "",
-    "toneStyle": "",
-    "aiRole": "",
-    "userRole": "",
-    "prompt": "",
-    "assistant": "",
-    "roleplay": "",
-    "video": "",
-    "deletePal": "",
-    "deletePalMessage": "",
-    "missingModel": "",
-    "missingModelMessage": "",
-    "search": "",
-    "profile": "",
-    "signIn": "",
-    "addPal": "",
-    "signInToAccessLibrary": "",
-    "signOut": "",
-    "signOutConfirmation": "",
-    "signOutError": "",
-    "account": "",
-    "signInToPalsHub": "",
-    "signInDescription": "",
-    "searchAllPals": "",
-    "deletePalConfirmation": "",
+    "systemPrompt": "הנחיית מערכת",
+    "videoAnalysis": "ניתוח וידאו",
+    "videoAnalysisDescription": "זהו סייען בינה מלאכותית מבוסס וידאו המספק פרשנות בזמן אמת על שידורי וידאו ממצלמת המכשיר שלך.",
+    "captureInterval": "מרווח צילומים",
+    "captureIntervalUnit": "מילישניות",
+    "world": "עולם",
+    "toneStyle": "טון/סגנון",
+    "aiRole": "כל התפקידים",
+    "userRole": "התפקיד שלי",
+    "prompt": "הנחייה",
+    "assistant": "סייען",
+    "roleplay": "משחק תפקידים",
+    "video": "וידאו",
+    "deletePal": "מחק Pal",
+    "deletePalMessage": "האם אתה בטוח שאתה רוצה למחוק את החבר הזה?",
+    "missingModel": "חסר מודל",
+    "missingModelMessage": "מודל ברירת המחדל \"{{modelName}}\" עבור חבר זה אינו זמין. אנא הורד אותו בלשונית העריכה או לבחור מודל אחר.",
+    "search": "חיפוש",
+    "profile": "פרופיל",
+    "signIn": "התחברות",
+    "addPal": "הוסף Pal",
+    "signInToAccessLibrary": "התחבר כדי לגשת לספרייה שלך מ-palshub.ai",
+    "signOut": "התנתקות",
+    "signOutConfirmation": "האם אתה בטוח שאתה רוצה להתנתק?",
+    "signOutError": "ההתנתקות נכשלה. אנא נסה שוב.",
+    "account": "חשבון",
+    "signInToPalsHub": "התחבר ל-PalsHub",
+    "signInDescription": "גש לספרייה שלך, צור חברים פרטיים וסנכרן בין מכשירים",
+    "searchAllPals": "חפש את כל החברים...",
+    "deletePalConfirmation": "האם אתה בטוח שברצונך למחוק את \"{{palName}}\"?",
     "filters": {
-      "all": "",
-      "myPals": "",
-      "local": "",
-      "video": "",
-      "free": "",
-      "premium": ""
+      "all": "הכל",
+      "myPals": "החברים שלי",
+      "local": "מקומי",
+      "video": "וידאו",
+      "free": "בחינם",
+      "premium": "פרימיום"
     },
     "labels": {
-      "free": "",
-      "premium": "",
-      "private": "",
-      "download": "",
-      "getFree": ""
+      "free": "בחינם",
+      "premium": "פרימיום",
+      "private": "פרטי",
+      "download": "הורדה",
+      "getFree": "קבל בחינם"
     },
-    "premiumPalDescription": "",
-    "premiumInfoText": "",
+    "premiumPalDescription": "חבר פרימיום מקהילת palshub.ai",
+    "premiumInfoText": "בקרו באתר palshub.ai כדי לגלות עוד חברים",
     "sortOptions": {
-      "newest": "",
-      "oldest": "",
-      "rating": "",
-      "popular": ""
+      "newest": "החדש ביותר",
+      "oldest": "הישן ביותר",
+      "rating": "הדירוג הגבוה ביותר",
+      "popular": "הכי פופולרי"
     },
     "palDetailSheet": {
-      "by": "",
-      "unknown": "",
-      "rating": "",
-      "reviews": "",
-      "created": "",
-      "description": "",
-      "noDescriptionAvailable": "",
-      "categories": "",
-      "tags": "",
-      "systemPrompt": "",
-      "downloaded": "",
-      "success": "",
-      "palAddedToCollection": "",
-      "error": "",
-      "failedToLoadDetails": "",
-      "failedToDownload": "",
-      "premiumPalMessage": "",
-      "notAvailable": ""
+      "by": "על ידי",
+      "unknown": "לא ידוע",
+      "rating": "דירוג",
+      "reviews": "ביקורות",
+      "created": "נוצר",
+      "description": "תאור",
+      "noDescriptionAvailable": "אין תיאור זמין.",
+      "categories": "קטגוריות",
+      "tags": "תגיות",
+      "systemPrompt": "הנחיית מערכת",
+      "downloaded": "הורדו",
+      "success": "הצליח",
+      "palAddedToCollection": "פאל נוסף לאוסף שלך!",
+      "error": "שגיאה",
+      "failedToLoadDetails": "טעינת פרטי החבר נכשלה",
+      "failedToDownload": "נכשל בהורדת חבר",
+      "premiumPalMessage": "זהו חבר פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלכם, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
+      "notAvailable": "N/A"
     }
   },
   "validation": {
-    "nameRequired": "",
-    "systemPromptRequired": "",
-    "worldRequired": "",
-    "locationRequired": "",
-    "aiRoleRequired": "",
-    "userRoleRequired": "",
-    "situationRequired": "",
-    "toneStyleRequired": ""
+    "nameRequired": "נדרש שם",
+    "systemPromptRequired": "נדרשת הנחיית מערכת",
+    "worldRequired": "נדרש עולם",
+    "locationRequired": "נדרש מיקום",
+    "aiRoleRequired": "נדרש תפקיד ה-AI",
+    "userRoleRequired": "נדרש תפקיד המשתמש",
+    "situationRequired": "נדרש מצב",
+    "toneStyleRequired": "נדרש טון/סגנון"
   },
   "camera": {
-    "permissionTitle": "",
-    "permissionMessage": "",
-    "requestingPermission": "",
-    "noDevice": "",
-    "errorTitle": "",
-    "errorMessage": "",
-    "flip": "",
-    "analyzing": "",
-    "startCamera": "",
-    "stopCamera": "",
-    "promptPlaceholder": "",
-    "takePhoto": ""
+    "permissionTitle": "נדרשת הרשאת מצלמה",
+    "permissionMessage": "PocketPal זקוק לגישה למצלמה כדי לנתח תמונות",
+    "requestingPermission": "מבקש הרשאת מצלמה...",
+    "noDevice": "לא נמצא מצלמה במכשיר",
+    "errorTitle": "שגיאת מצלמה",
+    "errorMessage": "אירעה שגיאה בעת צילום התמונה",
+    "flip": "היפוך",
+    "analyzing": "ניתוח תמונה...",
+    "startCamera": "הפעל את המצלמה",
+    "stopCamera": "עצור את המצלמה",
+    "promptPlaceholder": "מה אתם רוצים לדעת על התמונה הזו?",
+    "takePhoto": "מצלמה"
   },
   "video": {
-    "permissionTitle": "",
-    "permissionMessage": "",
-    "requestingPermission": "",
-    "noDevice": "",
-    "errorTitle": "",
-    "errorMessage": "",
-    "flip": "",
-    "analyzing": "",
-    "startCamera": "",
-    "stopCamera": "",
-    "promptPlaceholder": "",
-    "captureInterval": "",
-    "captureIntervalUnit": "",
-    "liveCommentary": "",
+    "permissionTitle": "נדרשת הרשאת מצלמה",
+    "permissionMessage": "PocketPal זקוק לגישה למצלמה לצורך ניתוח וידאו",
+    "requestingPermission": "מבקש הרשאת מצלמה...",
+    "noDevice": "לא נמצאה מצלמה במכשיר",
+    "errorTitle": "שגיאת מצלמה",
+    "errorMessage": "אירעה שגיאה במצלמה",
+    "flip": "היפוך",
+    "analyzing": "מאתחל וידאו...",
+    "startCamera": "הפעל את המצלמה",
+    "stopCamera": "עצור את המצלמה",
+    "promptPlaceholder": "מה אתה רוצה לדעת על הסרטון הזה?",
+    "captureInterval": "מרווח צילומים",
+    "captureIntervalUnit": "מילישניות",
+    "liveCommentary": "פרשנות חיה",
     "emptyPlaceholder": {
-      "title": "",
-      "subtitle": "",
-      "experimentalNotice": "",
-      "howToUse": "",
-      "step1": "",
-      "step2": "",
-      "step3": "",
-      "step4": ""
+      "title": "ברוך הבא ל-Lookie",
+      "subtitle": "ניתוח וידאו פרטי בזמן אמת במכשיר",
+      "experimentalNotice": "זוהי תכונה ניסיונית. הדיוק תלוי במודל שנבחר, המהירות תלויה במפרט המכשיר שלך, וחלק מהמודלים עלולים להיכשל.",
+      "howToUse": "כיצד להשתמש:",
+      "step1": "• ערוך את ההנחיה (אופציונלי) כדי להנחות את הניתוח",
+      "step2": "• לחץ על כפתור המצלמה כדי להתחיל ניתוח וידאו חי",
+      "step3": "• כוונן את תדירות הצילום בזמן שהמצלמה פעילה",
+      "step4": "• עבור לחבר אחר לצ'אט טקסט רגיל"
     }
   },
   "screenTitles": {
-    "chat": "",
-    "models": "",
-    "pals": "",
-    "benchmark": "",
-    "settings": "",
-    "appInfo": "",
-    "testCompletion": ""
+    "chat": "צ'אט",
+    "models": "מודלים",
+    "pals": "Pals (ניסיוני)",
+    "benchmark": "מבחן ביצועים",
+    "settings": "הגדרות",
+    "appInfo": "מידע על האפליקציה",
+    "testCompletion": "בדיקת השלמת טקסט"
   },
   "chat": {
-    "conversationReset": "",
-    "modelNotLoaded": "",
-    "completionFailed": "",
-    "loadingModel": "",
-    "typeYourMessage": "",
-    "load": "",
-    "goToModels": "",
-    "readyToChat": "",
-    "pleaseLoadModel": "",
-    "multimodalNotEnabled": "",
-    "cannotSendWithoutModel": ""
+    "conversationReset": "שיחה אופסה!",
+    "modelNotLoaded": "המודל לא נטען. אנא אתחל את המודל.",
+    "completionFailed": "השלמה נכשלה: ",
+    "loadingModel": "טוען מודל...",
+    "typeYourMessage": "הקלד את הודעתך כאן",
+    "load": "טעינה",
+    "goToModels": "עבור למודלים",
+    "readyToChat": "מוכן לשוחח? טען את המודל האחרון שהיה בשימוש.",
+    "pleaseLoadModel": "טען מודל כדי לשוחח.",
+    "multimodalNotEnabled": "מולטי-מודאל אינו מופעל עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
+    "cannotSendWithoutModel": "טען מודל תחילה"
   },
   "benchmark": {
-    "title": "",
+    "title": "מבחן ביצועים",
     "modelSelector": {
-      "prompt": ""
+      "prompt": "בחר מודל"
     },
     "buttons": {
-      "advancedSettings": "",
-      "startTest": "",
-      "runningTest": "",
-      "clearAll": "",
-      "done": "",
-      "cancel": "",
-      "delete": "",
-      "share": "",
-      "sharing": "",
-      "viewRawData": "",
-      "hideRawData": ""
+      "advancedSettings": "הגדרות מתקדמות",
+      "startTest": "התחל בדיקה",
+      "runningTest": "מריץ בדיקה...",
+      "clearAll": "נקה הכל",
+      "done": "בוצע",
+      "cancel": "ביטול",
+      "delete": "מחק",
+      "share": "שתף",
+      "sharing": "שיתוף...",
+      "viewRawData": "הצג נתונים גולמיים",
+      "hideRawData": "הסתר נתונים גולמיים"
     },
     "messages": {
-      "pleaseSelectModel": "",
-      "testWarning": "",
-      "keepScreenOpen": "",
-      "initializingModel": "",
-      "modelMaxValue": ""
+      "pleaseSelectModel": "אנא בחר ואתחל מודל תחילה",
+      "testWarning": "הערה: הבדיקה יכולה להימשך עד 2-5 דקות עבור מודלים גדולים ולא ניתן להפסיק אותה לאחר תחילתה.",
+      "keepScreenOpen": "אנא השאר את המסך הזה פתוח.",
+      "initializingModel": "אתחול מודל...",
+      "modelMaxValue": "(מקסימום: {{maxValue}})"
     },
     "dialogs": {
       "advancedSettings": {
-        "title": "",
-        "testProfile": "",
-        "customParameters": "",
-        "description": ""
+        "title": "הגדרות מתקדמות",
+        "testProfile": "פרופיל בדיקה",
+        "customParameters": "פרמטרים מותאמים אישית",
+        "description": "כוונן את פרמטרי מבחן הביצועים עבור תרחישי בדיקה ספציפיים."
       },
       "deleteResult": {
-        "title": "",
-        "message": ""
+        "title": "מחק תוצאה",
+        "message": "האם אתה בטוח שברצונך למחוק את התוצאה הזו של מבחן הביצועים?"
       },
       "clearAllResults": {
-        "title": "",
-        "message": ""
+        "title": "נקה את כל התוצאות",
+        "message": "האם אתה בטוח שברצונך למחוק את כל תוצאות מבחן הביצועים?"
       },
       "shareResults": {
-        "title": "",
-        "sharedDataTitle": "",
-        "deviceAndModelInfo": "",
-        "performanceMetrics": "",
-        "dontShowAgain": ""
+        "title": "שתף תוצאות מבחן ביצועים",
+        "sharedDataTitle": "הנתונים ששותפו כוללים:",
+        "deviceAndModelInfo": "• מפרט המכשיר ומידע על המודל",
+        "performanceMetrics": "• מדדי ביצועים",
+        "dontShowAgain": "אל תציג הודעה זו שוב"
       }
     },
     "sections": {
-      "testResults": ""
+      "testResults": "תוצאות בדיקה"
     },
     "benchmarkResultCard": {
       "modelMeta": {
-        "params": ""
+        "params": "פרמטרים"
       },
       "config": {
-        "title": "",
-        "format": ""
+        "title": "תצורת מבחן ביצועים",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • ענישת חזרתיות: {{nr}}"
       },
       "modelSettings": {
-        "title": "",
-        "context": "",
-        "batch": "",
-        "ubatch": "",
-        "cpuThreads": "",
-        "gpuLayers": "",
-        "device": "",
-        "flashAttentionEnabled": "",
-        "flashAttentionDisabled": "",
-        "cacheTypes": ""
+        "title": "הגדרות מודל",
+        "context": "הקשר: {{context}}",
+        "batch": "אצווה: {{batch}}",
+        "ubatch": "אצוות משתמש: {{ubatch}}",
+        "cpuThreads": "שרשורי CPU: {{threads}}",
+        "gpuLayers": "שכבות GPU: {{layers}}",
+        "device": "מכשיר: {{device}}",
+        "flashAttentionEnabled": "קשב מהיר (Flash Attention) מופעל",
+        "flashAttentionDisabled": "קשב מהיר (Flash Attention) מושבת",
+        "cacheTypes": "סוגי מטמון: {{cacheK}}/{{cacheV}}"
       },
       "results": {
-        "promptProcessing": "",
-        "tokenGeneration": "",
-        "totalTime": "",
-        "peakMemory": "",
-        "tokensPerSecond": ""
+        "promptProcessing": "עיבוד הנחיה",
+        "tokenGeneration": "יצירת טוקן",
+        "totalTime": "זמן כולל",
+        "peakMemory": "שיא הזיכרון",
+        "tokensPerSecond": "טוקנים/שניה"
       },
       "actions": {
-        "deleteButton": "",
-        "submittedText": "",
-        "leaderboardLink": "",
-        "cannotShare": "",
-        "cannotShareTooltip": "",
-        "submitButton": "",
-        "viewLeaderboard": ""
+        "deleteButton": "מחק",
+        "submittedText": "✓ שותף ל",
+        "leaderboardLink": "טבלת מכשירי AI מובילים ↖",
+        "cannotShare": "לא ניתן לשתף",
+        "cannotShareTooltip": "לא ניתן לשתף תוצאות של מודל מקומי",
+        "submitButton": "שלח לטבלת המובילים",
+        "viewLeaderboard": "צפה בטבלת המובילים ↖"
       },
       "errors": {
-        "networkRetry": "",
-        "appCheckRetry": "",
-        "serverRetry": "",
-        "genericRetry": "",
-        "failedToSubmit": ""
+        "networkRetry": "בדוק את החיבור ונסה שוב",
+        "appCheckRetry": "נסה לשלוח שוב",
+        "serverRetry": "נסה שוב מאוחר יותר",
+        "genericRetry": "נסה שוב",
+        "failedToSubmit": "שליחת מבחן הביצועים נכשלה"
       }
     },
     "deviceInfoCard": {
-      "title": "",
-      "deviceSummary": "",
-      "coreSummary": "",
+      "title": "מידע על המכשיר",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} ליבות • {{memory}}",
       "sections": {
-        "basicInfo": "",
-        "cpuDetails": "",
-        "gpuDetails": "",
-        "hexagonDetails": "",
-        "appInfo": ""
+        "basicInfo": "מידע בסיסי",
+        "cpuDetails": "פרטי המעבד",
+        "gpuDetails": "פרטי GPU",
+        "hexagonDetails": "מעבד אותות Hexagon (DSP)",
+        "appInfo": "מידע על האפליקציה"
       },
       "fields": {
-        "architecture": "",
-        "totalMemory": "",
-        "deviceId": "",
-        "cpuCores": "",
-        "cpuModel": "",
-        "chipset": "",
-        "instructions": "",
-        "version": "",
-        "gpuType": "",
-        "gpuRenderer": "",
-        "gpuVendor": "",
-        "metalSupport": "",
-        "openclSupport": "",
-        "openclRequirement": ""
+        "architecture": "ארכיטקטורה",
+        "totalMemory": "זיכרון כולל",
+        "deviceId": "מזהה מכשיר",
+        "cpuCores": "ליבות CPU",
+        "cpuModel": "מודל CPU",
+        "chipset": "ערכת שבבים",
+        "instructions": "הוראות",
+        "version": "גרסה",
+        "gpuType": "סוג ה-GPU",
+        "gpuRenderer": "רינדור",
+        "gpuVendor": "מוכר",
+        "metalSupport": "תומך ב-Metal",
+        "openclSupport": "תומך ב-OpenCL",
+        "openclRequirement": "דורש i8mm ו-dotprod"
       },
       "instructions": {
-        "format": "",
-        "yes": "",
-        "no": ""
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
       },
-      "versionFormat": ""
+      "versionFormat": "{{version}} ({{buildNumber}})"
     }
   },
   "errors": {
-    "unexpectedError": "",
-    "hfAuthenticationError": "",
-    "hfAuthenticationErrorSearch": "",
-    "authenticationError": "",
-    "hfAuthorizationError": "",
-    "authorizationError": "",
-    "hfServerError": "",
-    "serverError": "",
-    "hfNetworkTimeout": "",
-    "networkTimeout": "",
-    "hfNetworkError": "",
-    "networkError": "",
-    "downloadSetupFailedTitle": "",
-    "downloadSetupFailedMessage": "",
-    "cameraErrorTitle": "",
-    "cameraErrorMessage": "",
-    "galleryErrorTitle": "",
-    "galleryErrorMessage": ""
+    "unexpectedError": "אירעה שגיאה בלתי צפויה",
+    "hfAuthenticationError": "שגיאת אימות Hugging Face: טוקן חסר או פג תוקף",
+    "hfAuthenticationErrorSearch": "שגיאת אימות Hugging Face: טוקן פג תוקף",
+    "authenticationError": "שגיאת אימות: טוקן חסר או פג תוקף",
+    "hfAuthorizationError": "שגיאת אימות Hugging Face: אין הרשאה לגשת למשאב זה",
+    "authorizationError": "שגיאת אימות: אין הרשאה לגשת למשאב זה",
+    "hfServerError": "שגיאת שרת Hugging Face: בעיה בשרת ה-API",
+    "serverError": "שגיאה בשרת: בעיה בשרת ה-API",
+    "hfNetworkTimeout": "שגיאת רשת: הבקשה ל-Hugging Face התעכבה יתר על המידה",
+    "networkTimeout": "שגיאת רשת: הבקשה התעכבה יתר על המידה",
+    "hfNetworkError": "שגיאת רשת: לא ניתן להתחבר ל-API של Hugging Face",
+    "networkError": "שגיאת רשת: התחברות ל-API נכשלה",
+    "downloadSetupFailedTitle": "הגדרת ההורדה נכשלה",
+    "downloadSetupFailedMessage": "נכשלה הכנת המודל להורדה: {{message}}",
+    "cameraErrorTitle": "שגיאת מצלמה",
+    "cameraErrorMessage": "צילום תמונה נכשל",
+    "galleryErrorTitle": "שגיאת גלריה",
+    "galleryErrorMessage": "בחירת תמונות נכשלה"
   },
   "simulator": {
-    "cameraNotAvailable": ""
+    "cameraNotAvailable": "מצלמה אינה זמינה בסימולטור. אנא השתמש במכשיר פיזי."
   }
 }
