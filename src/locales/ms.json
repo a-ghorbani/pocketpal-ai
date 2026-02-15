@@ -1,0 +1,1181 @@
+{
+  "common": {
+    "cancel": "Batal",
+    "delete": "Padam",
+    "dismiss": "Tutup",
+    "rename": "Tukar Nama",
+    "reset": "Tetap Semula",
+    "save": "Simpan",
+    "update": "Kemas Kini",
+    "error": "Ralat",
+    "export": "Eksport",
+    "networkError": "Ralat rangkaian. Sila cuba lagi.",
+    "downloadETA": "Anggaran masa tiba",
+    "calculating": "Mengira...",
+    "second": "saat",
+    "seconds": "saat",
+    "year": "tahun",
+    "years": "tahun",
+    "month": "bulan",
+    "months": "bulan",
+    "week": "minggu",
+    "weeks": "minggu",
+    "day": "hari",
+    "days": "hari",
+    "hour": "jam",
+    "hours": "jam",
+    "minute": "minit",
+    "minutes": "minit",
+    "justNow": "baru sahaja",
+    "ok": "OK",
+    "close": "Tutup",
+    "clear": "Kosongkan",
+    "gallery": "Galeri"
+  },
+  "settings": {
+    "modelInitializationSettings": "Tetapan Permulaan Model",
+    "metal": "Metal",
+    "metalDescription": "API pemecutan perkakasan daripada Apple.",
+    "metalRequiresNewerIOS": "Pemecutan Metal memerlukan iOS 18 atau versi lebih baharu. Sila kemas kini peranti anda untuk menggunakan ciri ini.",
+    "openCL": "OpenCL (Percubaan)",
+    "openCLDescription": "Pemecutan GPU untuk GPU Adreno. Mempercepatkan pemprosesan prompt, tetapi penjanaan respons belum semestinya lebih pantas.",
+    "openCLNotAvailable": "OpenCL tidak tersedia pada peranti ini. Memerlukan GPU Adreno dengan sokongan i8mm dan ciri dotprod pada CPU.",
+    "openCLMissingCPUFeatures": "OpenCL memerlukan ciri CPU i8mm dan dotprod, yang tidak tersedia pada peranti ini.",
+    "openCLQuantizationNote": "Nota: Model terkuantum Q4_0 tulen memberikan prestasi terbaik apabila menggunakan OpenCL.",
+    "openCLDocsLink": "Lihat dokumentasi OpenCL llama.cpp untuk maklumat lanjut.",
+    "layersOnGPU": "Lapisan pada GPU: {{gpuLayers}}",
+    "deviceSelection": "Pemilihan Peranti",
+    "deviceSelectionIOS": "Peranti (Metal)",
+    "deviceSelectionIOSDescription": "Pilih mod GPU Metal atau mod CPU sahaja",
+    "deviceSelectionAndroidDescription": "Pilih jenis pengkomputeran peranti (CPU, GPU, atau Hexagon NPU)",
+    "cpuOnlyNoAccelerators": "CPU sahaja – Tiada pemecut perkakasan dikesan",
+    "contextSize": "Saiz Konteks",
+    "contextSizePlaceholder": "Masukkan saiz konteks (minimum {{minContextSize}})",
+    "invalidContextSizeError": "Sila masukkan nombor yang sah (minimum {{minContextSize}})",
+    "modelReloadNotice": "Model perlu dimuat semula supaya perubahan dikuatkuasakan.",
+    "advancedSettings": "Tetapan Lanjutan",
+    "batchSize": "Saiz Batch",
+    "batchSizeDescription": "Saiz batch: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "berkesan",
+    "physicalBatchSize": "Saiz Batch Fizikal",
+    "physicalBatchSizeDescription": "Saiz batch fizikal: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "Thread CPU",
+    "cpuThreadsDescription": "Menggunakan {{threads}} daripada {{maxThreads}} thread yang tersedia",
+    "imageMaxTokens": "Token Maksimum Imej",
+    "imageMaxTokensDescription": "Bilangan token maksimum untuk pemprosesan imej: {{tokens}}{{effectiveTokens}} (lebih rendah = lebih pantas, kurang terperinci)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionDescription": "Dayakan Flash Attention untuk mempercepatkan pemprosesan",
+    "flashAttentionIOSDescription": "Perhatian yang cekap penggunaan memori (dihidupkan secara automatik dalam Metal)",
+    "flashAttentionAndroidDescription": "Disyorkan dimatikan semasa menyimpan/memuat semula status OpenCL",
+    "flashAttentionAuto": "Auto",
+    "flashAttentionOn": "Hidup",
+    "flashAttentionOff": "Mati",
+    "keyCacheType": "Jenis Cache Kunci",
+    "keyCacheTypeDescription": "Pilih jenis cache untuk pengkomputeran kunci",
+    "keyCacheTypeDisabledDescription": "Dayakan Flash Attention untuk menukar jenis cache",
+    "valueCacheType": "Jenis Cache Nilai",
+    "valueCacheTypeDescription": "Pilih jenis cache untuk pengkomputeran nilai",
+    "valueCacheTypeDisabledDescription": "Dayakan Flash Attention untuk menukar jenis cache",
+    "memorySettings": "Tetapan Memori",
+    "useMlock": "Guna Kunci Memori",
+    "useMlockDescription": "Paksa sistem menyimpan model dalam RAM, bukan menukarnya atau memampatkannya",
+    "useMmap": "Pemetaan Memori",
+    "useMmapDescription": "Guna fail yang dipetakan ke memori untuk pemuatan model yang lebih pantas",
+    "useMmapTrue": "Didayakan",
+    "useMmapFalse": "Dilumpuhkan",
+    "useMmapSmart": "Pintar",
+    "useMmapTrueDescription": "Sentiasa guna pemetaan memori untuk pemuatan lebih pantas",
+    "useMmapFalseDescription": "Jangan sekali-kali guna pemetaan memori (pemuatan lebih perlahan tetapi mungkin menjimatkan penggunaan memori)",
+    "useMmapSmartDescription": "Pilih secara automatik berdasarkan jenis model (Android sahaja)",
+    "useMmapRecommended": "Disyorkan untuk prestasi – Pemetaan memori dengan halaman terkunci. Menggabungkan pemuatan pantas dan prestasi konsisten",
+    "modelLoadingSettings": "Tetapan Pemuatan Model",
+    "autoOffloadLoad": "Muat/Muat Semula Automatik",
+    "autoOffloadLoadDescription": "Muat semula model apabila aplikasi berada di latar belakang.",
+    "autoNavigateToChat": "Navigasi Automatik ke Sembang",
+    "autoNavigateToChatDescription": "Navigasi ke sembang apabila pemuatan bermula.",
+    "appSettings": "Tetapan Aplikasi",
+    "language": "Bahasa",
+    "darkMode": "Mod Gelap",
+    "displayMemoryUsage": "Papar Penggunaan Memori",
+    "displayMemoryUsageDescription": "Papar penggunaan memori di halaman sembang.",
+    "exportOptions": "Pilihan Eksport",
+    "exportLegacyChats": "Eksport Sembang Lama",
+    "exportLegacyChatsDescription": "Guna ini jika penghijrahan gagal atau anda perlu memulihkan sesi sembang lama.",
+    "exportButton": "Eksport",
+    "importChats": "Import Sesi Sembang",
+    "importChatsDescription": "Import sesi sembang daripada fail JSON (hasil eksport).",
+    "importButton": "Import",
+    "importSuccess": "Berjaya mengimport {{count}} sesi sembang.",
+    "importError": "Gagal mengimport sesi sembang. Sila semak format fail.",
+    "apiSettingsTitle": "Tetapan API",
+    "huggingFaceTokenLabel": "Token Hugging Face",
+    "tokenIsSetDescription": "Token telah ditetapkan. Diperlukan untuk mengakses model berpintu.",
+    "setTokenDescription": "Tetapkan token untuk mengakses model berpintu daripada Hugging Face.",
+    "setTokenButton": "Tetapkan Token",
+    "useHfTokenLabel": "Guna Token HF",
+    "useHfTokenDescription": "Dayakan untuk menggunakan token dalam permintaan API. Lumpuhkan jika token menyebabkan masalah pengesahan.",
+    "cacheStorageTitle": "Cache & Storan",
+    "clearPalCaches": "Kosongkan Cache Shortcut",
+    "clearPalCachesDescription": "Memadam data cache yang digunakan untuk mempercepatkan Shortcut. Tidak memberi kesan kepada Pal atau sejarah sembang anda.",
+    "clearCachesButton": "Kosongkan Cache",
+    "clearCachesConfirmTitle": "Kosongkan Cache Shortcut?",
+    "clearCachesConfirmMessage": "Ini akan memadam semua data sesi cache ({{fileCount}} fail, {{size}}). Shortcut mungkin lebih perlahan apabila digunakan buat pertama kali selepas dikosongkan. Tidak memberi kesan kepada Pal atau sejarah sembang anda.",
+    "clearCachesSuccess": "Berjaya mengosongkan {{count}} fail cache.",
+    "clearCachesError": "Gagal mengosongkan cache. Sila cuba lagi.",
+    "noCachesToClear": "Tiada cache untuk dikosongkan."
+  },
+  "memory": {
+    "shortWarning": "Amaran Memori",
+    "multimodalWarning": "Peranti ini mungkin tidak mempunyai sumber yang mencukupi untuk model multimodal.",
+    "memoryTight": "Memori terhad",
+    "lowMemory": "Memori rendah",
+    "memoryDetailMessage": "Model ini memerlukan ~{{needed}}, tetapi hanya ~{{available}} dianggarkan boleh digunakan. Anggaran akan menjadi lebih tepat dengan penggunaan aplikasi.",
+    "estimatedMemory": "Anggaran memori: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "Amaran Memori",
+      "memoryWarningMessage": "Model ini mungkin melebihi memori yang tersedia, yang boleh menyebabkan ketidakstabilan. Teruskan memuat?",
+      "multimodalWarningTitle": "Amaran Prestasi Peranti",
+      "multimodalWarningMessage": "Peranti ini mungkin tidak mempunyai sumber yang mencukupi untuk model multimodal. Pemuatan boleh menyebabkan ketidakstabilan. Teruskan?",
+      "combinedWarningTitle": "Amaran Prestasi",
+      "combinedWarningMessage": "Model ini mungkin melebihi memori yang tersedia dan peranti ini mungkin tidak mempunyai sumber yang mencukupi untuk model multimodal. Pemuatan boleh menyebabkan ketidakstabilan. Teruskan?",
+      "cancel": "Batal",
+      "continue": "Teruskan"
+    }
+  },
+  "storage": {
+    "checkFailed": "Gagal menyemak storan",
+    "lowStorage": "Storan hampir habis! Model {{modelSize}} > {{freeSpace}} baki"
+  },
+  "generation": {
+    "modelNotInitialized": "Konteks model belum dimulakan",
+    "failedToGenerate": "Gagal menjana respons"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "Fail sudah wujud",
+      "fileAlreadyExistsMessage": "Fail dengan nama ini sudah wujud. Apa yang anda mahu lakukan?",
+      "replace": "Gantikan",
+      "keepBoth": "Simpan Kedua-duanya"
+    },
+    "labels": {
+      "localModel": "Tempatan",
+      "hfModel": "HF",
+      "unknownGroup": "Tidak Diketahui",
+      "availableToUse": "Sedia Digunakan",
+      "availableToDownload": "Tersedia untuk Dimuat Turun",
+      "useAddButtonForMore": "Guna butang + untuk mencari model lain"
+    },
+    "vision": "Penglihatan",
+    "mmproj": "Projektor",
+    "multimodal": {
+      "settings": "Tetapan Multimodal",
+      "projectionModels": "Model Unjuran",
+      "noCompatibleModels": "Tiada model unjuran yang serasi ditemui",
+      "noProjectionModels": "Tiada model unjuran tersedia",
+      "selected": "Dipilih",
+      "select": "Pilih",
+      "download": "Muat Turun",
+      "projectionNeededTitle": "Model Unjuran Diperlukan",
+      "projectionNeededMessage": "Model ini memerlukan model unjuran untuk keupayaan multimodal.",
+      "projectionMissingWarning": "Model unjuran tidak ditemui",
+      "projectionMissingShort": "Unjuran tidak ditemui",
+      "reloadModelTitle": "Muat Semula Model",
+      "reloadModelMessage": "Model perlu dimuat semula supaya model unjuran baharu diaplikasikan. Muat semula sekarang?",
+      "reload": "Muat Semula",
+      "deleteProjectionTitle": "Padam Model Unjuran",
+      "deleteProjectionMessage": "Pasti mahu memadam model unjuran ini?",
+      "cannotDeleteTitle": "Tidak Boleh Dipadam",
+      "visionControls": {
+        "enableVision": "Dayakan keupayaan penglihatan",
+        "disableVision": "Lumpuhkan keupayaan penglihatan",
+        "visionEnabled": "Penglihatan didayakan",
+        "visionDisabled": "Penglihatan dilumpuhkan",
+        "textOnlyMode": "Mod teks sahaja",
+        "visionMode": "Penglihatan didayakan",
+        "downloadWithVision": "Muat turun dengan penglihatan",
+        "downloadTextOnly": "Muat turun teks sahaja",
+        "visionToggleDescription": "Dayakan keupayaan pemprosesan imej",
+        "projectionModelSize": "+{{size}} model unjuran",
+        "visionModeDescription": "Memproses imej dan teks",
+        "textOnlyModeDescription": "Memproses teks sahaja",
+        "includesVisionCapability": "Termasuk keupayaan penglihatan",
+        "requiresProjectionModel": "Muat turun model unjuran yang serasi terlebih dahulu"
+      },
+      "cannotDeleteActive": "Model unjuran ini sedang aktif.",
+      "cannotDeleteInUse": "Model unjuran ini digunakan oleh model LLM yang telah dimuat turun:",
+      "dependentModels": "Model yang bergantung:",
+      "visionWillBeDisabled": "Keupayaan penglihatan akan dilumpuhkan untuk model-model ini."
+    },
+    "buttons": {
+      "addFromHuggingFace": "Tambah daripada Hugging Face",
+      "addLocalModel": "Tambah Model Tempatan",
+      "reset": "Tetap Semula"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Model Hugging Face",
+      "menuTitleDownloaded": "Model yang Dimuat Turun",
+      "menuTitleGrouped": "Kumpulkan Mengikut Jenis Model",
+      "menuTitleReset": "Tetap Semula Senarai Model"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Teruskan Tetapan Semula",
+      "confirmReset": "Sahkan Tetapan Semula"
+    },
+    "chatTemplate": {
+      "label": "Templat Sembang Asas:"
+    },
+    "details": {
+      "title": "Fail GGUF yang Tersedia"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "Tidak Boleh Dipadam",
+        "modelPreset": "Model ini telah ditetapkan terlebih dahulu.",
+        "downloadedFirst": "Model ini telah dimuat turun. Sila padam fail terlebih dahulu.",
+        "removeTitle": "Buang Model",
+        "removeMessage": "Pasti mahu membuang model ini daripada senarai?",
+        "removeError": "Gagal membuang model.",
+        "alreadyDownloadedTitle": "Model Sudah Dimuat Turun",
+        "alreadyDownloadedMessage": "Model ini sudah dimuat turun.",
+        "deleteTitle": "Padam Model",
+        "deleteMessage": "Pasti mahu memadam model yang telah dimuat turun ini?"
+      },
+      "buttons": {
+        "remove": "Buang"
+      },
+      "warnings": {
+        "storage": {
+          "message": "Ruang storan tidak mencukupi.",
+          "shortMessage": "Storan Rendah"
+        },
+        "memory": {
+          "message": "Saiz model hampir atau melebihi jumlah memori peranti. Ini boleh menyebabkan kelakuan tidak menentu."
+        },
+        "legacy": {
+          "message": "Format kuantuman lama – model mungkin tidak berjalan.",
+          "shortMessage": "Kuantuman lama"
+        },
+        "multiple": "{{count}} Amaran"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "search": {
+      "noResults": "Model tidak ditemui",
+      "loadingMore": "Memuatkan lebih banyak...",
+      "searchPlaceholder": "Cari model Hugging Face",
+      "modelUpdatedLong": "Dikemas kini {{time}} lalu",
+      "modelUpdatedShort": "{{time}} lalu",
+      "modelUpdatedJustNowLong": "Dikemas kini baru sahaja",
+      "modelUpdatedJustNowShort": "baru sahaja",
+      "errorOccurred": "Gagal memuatkan model. Sila cuba lagi.",
+      "filters": {
+        "author": "Pengarang",
+        "authorPlaceholder": "Tapis mengikut pengarang...",
+        "sortBy": "Isih mengikut",
+        "clearFilters": "Kosongkan Penapis",
+        "showFilters": "Papar Penapis",
+        "hideFilters": "Sembunyikan Penapis",
+        "sortRelevance": "Kerelevanan",
+        "sortDownloads": "Bilangan Muat Turun",
+        "sortRecent": "Dikemas Kini Terkini",
+        "sortLikes": "Paling Disukai"
+      }
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "Padam Model",
+        "deleteMessage": "Pasti mahu memadam model yang telah dimuat turun ini?",
+        "removeTitle": "Buang Model",
+        "removeMessage": "Pasti mahu membuang model ini daripada senarai?"
+      },
+      "buttons": {
+        "settings": "Tetapan",
+        "download": "Muat Turun",
+        "remove": "Buang",
+        "load": "Muat",
+        "offload": "Muat Semula"
+      },
+      "labels": {
+        "skills": "Kemahiran: ",
+        "vision": "Penglihatan",
+        "capabilities": "keupayaan.",
+        "modelName": "Nama Model",
+        "contextLength": "Panjang Konteks",
+        "architecture": "Seni Bina",
+        "author": "Pengarang",
+        "requiresProjectionModel": "Memerlukan model unjuran",
+        "downloadProjectionModel": "Muat turun model unjuran",
+        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face"
+      },
+      "accessibility": {
+        "expandDetails": "Kembangkan butiran",
+        "collapseDetails": "Runtuhkan butiran",
+        "memoryWarning": "Amaran memori",
+        "integrityWarning": "Amaran integriti",
+        "downloadProgress": "Kemajuan muat turun",
+        "loadingIndicator": "Memuat",
+        "loadButton": "Muat model",
+        "offloadButton": "Muat semula model",
+        "downloadButton": "Muat turun model",
+        "settingsButton": "Tetapan model",
+        "deleteButton": "Padam model",
+        "removeButton": "Buang model",
+        "expandDetailsButton": "Kembangkan butiran model",
+        "memoryWarningButton": "Papar butiran amaran memori",
+        "integrityWarningButton": "Papar butiran amaran integriti",
+        "memoryWarningSnackbar": "Notifikasi amaran memori"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "Templat:",
+        "editButton": "Sunting",
+        "dialogTitle": "Sunting Templat Sembang",
+        "note1": "Nota: Menukar templat boleh menukar token BOS, EOS, dan prompt sistem.",
+        "note2": "Menggunakan Nunjucks. Biarkan kosong untuk menggunakan templat lalai model.",
+        "placeholder": "Masukkan templat sembang anda di sini...",
+        "closeButton": "Tutup"
+      },
+      "stopWords": {
+        "label": "PERKATAAN HENTI",
+        "placeholder": "Tambah perkataan henti baharu"
+      },
+      "tokenSettings": {
+        "bos": "BOS",
+        "eos": "EOS",
+        "addGenerationPrompt": "Tambah Prompt Penjanaan",
+        "bosTokenPlaceholder": "Token BOS",
+        "eosTokenPlaceholder": "Token EOS",
+        "systemPrompt": "Prompt Sistem"
+      }
+    },
+    "modelDescription": {
+      "size": "Saiz: ",
+      "parameters": "Parameter: ",
+      "separator": " | ",
+      "notAvailable": "T/A"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "Menjawab Soalan",
+      "summarization": "Meringkaskan",
+      "reasoning": "Penaakulan",
+      "roleplay": "Main Peranan",
+      "instructions": "Mengikut Arahan",
+      "code": "Penjanaan Kod",
+      "math": "Menyelesaikan Matematik",
+      "multilingual": "Pelbagai Bahasa",
+      "rewriting": "Menulis Semula",
+      "creativity": "Penulisan Kreatif",
+      "vision": "Penglihatan"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "Sertakan bahagian pemikiran/penaakulan AI dalam konteks yang dihantar ke model. Melumpuhkan ini boleh menjimatkan ruang konteks, tetapi mungkin memberi kesan kepada prestasi.",
+    "jinja": "Dayakan templat Jinja untuk format sembang. Apabila didayakan, menggunakan pemprosesan templat berasaskan Jinja untuk keserasian yang lebih baik dengan model moden.",
+    "grammar": "Laksanakan peraturan tatabahasa tertentu supaya teks yang dihasilkan mengikut struktur atau format tertentu",
+    "stop": "Tentukan frasa khusus yang akan menghentikan penjanaan teks",
+    "n_predict": "Tetapkan panjang respons yang dihasilkan (dalam token)",
+    "n_probs": "Paparkan skor kebarangkalian untuk perkataan alternatif.",
+    "top_k": "Kawal kreativiti dengan mengehadkan pilihan perkataan hanya kepada K pilihan paling berkemungkinan. Nilai lebih rendah menjadikan respons lebih fokus",
+    "top_p": "Seimbangkan kreativiti dan kekohesifan. Nilai lebih tinggi (menghampiri 1.0) membenarkan respons lebih kreatif tetapi mungkin kurang fokus",
+    "min_p": "Kebarangkalian minimum supaya suatu token dipertimbangkan. Menapis perkataan yang tidak berkemungkinan untuk mengurangkan respons yang tidak masuk akal atau di luar konteks",
+    "temperature": "Kawal kreativiti vs kebolehjangkaan. Nilai lebih tinggi menjadikan respons lebih kreatif tetapi kurang fokus",
+    "penalty_last_n": "Sejauh mana ke belakang untuk memeriksa pengulangan. Nilai lebih besar membantu mencegah pengulangan jangka panjang",
+    "penalty_repeat": "Kurangkan pengulangan perkataan. Nilai lebih tinggi menjadikan respons menggunakan bahasa yang lebih pelbagai",
+    "penalty_freq": "Denda perkataan yang terlalu kerap digunakan. Nilai lebih tinggi menggalakkan penggunaan perbendaharaan kata yang lebih luas",
+    "penalty_present": "Kurangkan pengulangan tema dan idea. Nilai lebih tinggi menggalakkan kandungan yang lebih pelbagai",
+    "mirostat": "Dayakan kawalan lanjutan ke atas kreativiti respons. Tetapkan kepada 1 atau 2 (lebih halus) untuk pelarasan pintar terhadap keawaman dan kekohesifan secara masa nyata.",
+    "mirostat_tau": "Tetapkan tahap kreativiti sasaran untuk Mirostat. Nilai lebih tinggi membenarkan respons lebih pelbagai dan imaginatif, manakala nilai lebih rendah memastikan output lebih fokus.",
+    "mirostat_eta": "Seberapa pantas Mirostat melaraskan kreativiti. Nilai lebih tinggi bermaksud pelarasan lebih pantas",
+    "dry_multiplier": "Kekuatan ciri DRY (Don't Repeat Yourself). Nilai lebih tinggi sangat mencegah pengulangan",
+    "dry_base": "Denda asas untuk pengulangan dalam mod DRY. Nilai lebih tinggi lebih agresif mencegah pengulangan",
+    "dry_allowed_length": "Berapa banyak perkataan yang dibenarkan diulang sebelum denda DRY dikenakan",
+    "dry_penalty_last_n": "Sejauh mana ke belakang untuk mencari pengulangan dalam mod DRY",
+    "dry_sequence_breakers": "Simbol yang menetapkan semula pemeriksa pengulangan dalam mod DRY",
+    "ignore_eos": "Terus menjana walaupun model mahu berhenti. Berguna untuk memaksa respons lebih panjang",
+    "logit_bias": "Pengaruhi sejauh mana kemungkinan perkataan tertentu muncul dalam respons",
+    "seed": "Tetapkan seed penjana nombor rawak. Berguna untuk hasil yang boleh direproduksi",
+    "xtc_probability": "Tetapkan kebarangkalian penyingkiran token melalui sampler XTC. 0 bermaksud dilumpuhkan",
+    "xtc_threshold": "Tetapkan ambang kebarangkalian minimum supaya token disingkirkan melalui sampler XTC. (> 0.5 melumpuhkan XTC)",
+    "typical_p": "Dayakan persampelan locally typical dengan parameter p. 1.0 bermaksud dilumpuhkan"
+  },
+  "about": {
+    "screenTitle": "Maklumat Aplikasi",
+    "description": "Aplikasi yang membawa model bahasa terus ke telefon anda. Dibina di atas llama.cpp dan llama.rn.",
+    "supportProject": "Sokong Projek Ini",
+    "supportProjectDescription": "Jika anda menikmati menggunakan PocketPal AI, pertimbangkan untuk menyokong projek ini dengan:",
+    "githubButton": "Beri Bintang di GitHub",
+    "orText": "atau",
+    "orBy": "atau dengan",
+    "sponsorButton": "Jadi Penaja",
+    "versionCopiedTitle": "Versi Disalin",
+    "versionCopiedDescription": "Maklumat versi telah disalin ke papan klip"
+  },
+  "feedback": {
+    "title": "Hantar Maklum Balas",
+    "description": "Suara anda penting! Ceritakan bagaimana PocketPal AI membantu anda dan apa yang boleh kami lakukan untuk menjadikannya lebih berguna.",
+    "shareThoughtsButton": "Kongsi pemikiran anda",
+    "useCase": {
+      "label": "Untuk apa anda menggunakan PocketPal AI?",
+      "placeholder": "cth., meringkaskan, main peranan, dll."
+    },
+    "featureRequests": {
+      "label": "Permintaan Ciri",
+      "placeholder": "Ciri apa yang anda mahu lihat?"
+    },
+    "generalFeedback": {
+      "label": "Maklum Balas Umum",
+      "placeholder": "Kongsi pemikiran lain yang anda ada."
+    },
+    "usageFrequency": {
+      "label": "Seberapa kerap anda menggunakan PocketPal AI? (Pilihan)",
+      "options": {
+        "daily": "Setiap hari",
+        "weekly": "Mingguan",
+        "monthly": "Bulanan",
+        "rarely": "Jarang"
+      }
+    },
+    "email": {
+      "label": "Emel Hubungan (Pilihan)",
+      "placeholder": "Alamat emel anda"
+    },
+    "submit": "Hantar Maklum Balas",
+    "validation": {
+      "required": "Sila berikan sekurang-kurangnya sedikit maklum balas"
+    },
+    "success": "Terima kasih atas maklum balas anda!",
+    "error": {
+      "general": "Gagal menghantar maklum balas. Sila cuba lagi."
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "Hantar media"
+    },
+    "bubble": {
+      "timingsString": "{{predictedMs}}ms/token, {{predictedPerSecond}} token/saat"
+    },
+    "exportUtils": {
+      "fileSaved": "Fail Disimpan",
+      "fileSavedMessage": "Fail telah disimpan ke folder Muat Turun anda sebagai {{filename}}",
+      "share": "Kongsi",
+      "ok": "OK",
+      "shareError": "Ralat Perkongsian",
+      "shareErrorMessage": "Tidak dapat berkongsi fail. Sila cuba lagi.",
+      "saveError": "Ralat menyimpan ke Muat Turun",
+      "saveOptions": "Pilihan Simpan",
+      "saveOptionsMessage": "Tidak dapat menyimpan terus ke Muat Turun. Adakah anda mahu berkongsi fail tersebut?",
+      "cancel": "Batal",
+      "shareContentErrorMessage": "Tidak dapat berkongsi kandungan. Sila cuba lagi.",
+      "exportError": "Ralat Eksport",
+      "exportErrorMessage": "Berlaku ralat semasa mengeksport fail. Sila cuba lagi.",
+      "permissionRequired": "Kebenaran Storan Diperlukan",
+      "permissionMessage": "Kami memerlukan kebenaran untuk menyimpan eksport anda ke folder Muat Turun.",
+      "permissionDenied": "Kebenaran Ditolak",
+      "permissionDeniedMessage": "Tanpa kebenaran storan, ciri eksport akan dilumpuhkan.",
+      "continue": "Teruskan"
+    },
+    "thinkingBubble": {
+      "reasoning": "Berpikir"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "Tiada Model Tersedia",
+      "noModelsDescription": "Muat turun model untuk mula bersembang dengan PocketPal",
+      "noModelsButton": "Muat Turun Model",
+      "activateModelTitle": "Dayakan Model untuk Memulakan",
+      "activateModelDescription": "Pilih model dan muat turun. Selepas dimuat turun, ketik Muat di sebelah model dan mula bersembang.",
+      "activateModelButton": "Pilih Model",
+      "loading": "Memuat..."
+    },
+    "chatInput": {
+      "inputPlaceholder": "Mesej",
+      "thinkingToggle": {
+        "enableThinking": "Dayakan mod berfikir",
+        "disableThinking": "Lumpuhkan mod berfikir",
+        "thinkingEnabled": "Mod berfikir didayakan",
+        "thinkingDisabled": "Mod berfikir dilumpuhkan",
+        "thinkText": "Berpikir"
+      }
+    },
+    "contentReportSheet": {
+      "title": "Laporkan Kandungan",
+      "privacyNote": "Kami tidak menghantar kandungan mesej atau butiran perbualan. Sila terangkan masalah khusus yang anda temui.",
+      "categoryLabel": "Kategori Laporan",
+      "selectCategory": "Pilih kategori",
+      "categories": {
+        "hate": "Ucapan Kebencian",
+        "sexual": "Kandungan Seksual",
+        "selfHarm": "Mencederakan Diri Sendiri",
+        "violence": "Keganasan",
+        "other": "Lain-lain"
+      },
+      "descriptionLabel": "Penerangan",
+      "descriptionPlaceholder": "Sila terangkan masalah dengan kandungan ini...",
+      "includeModelInfo": "Sertakan maklumat model",
+      "includeModelInfoDescription": "Sertakan nama dan pengenalan model untuk membantu siasatan",
+      "noActiveModelNote": "Tiada model yang aktif buat masa ini",
+      "submit": "Hantar Laporan",
+      "validation": {
+        "title": "Maklumat Tidak Mencukupi",
+        "message": "Sila pilih kategori dan berikan penerangan."
+      },
+      "success": {
+        "title": "Laporan Dihantar",
+        "message": "Terima kasih atas laporan anda. Kami akan menyemak dan mengambil tindakan yang sesuai."
+      },
+      "error": {
+        "title": "Gagal Menghantar Laporan",
+        "message": "Gagal menghantar laporan. Sila cuba lagi."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "Laporkan Masalah Pemuatan Model",
+      "privacyNote": "Bantu kami memperbaiki PocketPal dengan berkongsi butiran tentang ralat ini. Semak di bawah apa yang akan dikongsi – anda boleh membatalkan mana-mana item yang tidak mahu disertakan.",
+      "errorMessage": "Mesej ralat",
+      "modelInfo": "Maklumat Model",
+      "modelName": "Nama",
+      "modelSource": "Sumber",
+      "modelSize": "Saiz",
+      "contextParams": "Parameter Konteks",
+      "deviceInfo": "Maklumat Peranti",
+      "deviceModel": "Peranti",
+      "osVersion": "OS",
+      "memoryInfo": "Memori",
+      "cpuArchitecture": "CPU",
+      "isEmulator": "Emulator",
+      "additionalInfoLabel": "Konteks tambahan (pilihan)",
+      "additionalInfoPlaceholder": "Sebarang butiran tambahan yang boleh membantu kami memahami masalah...",
+      "submit": "Hantar Laporan",
+      "success": {
+        "title": "Laporan Dihantar",
+        "message": "Terima kasih kerana membantu kami memperbaiki PocketPal. Laporan anda akan membantu kami membetulkan masalah ini."
+      },
+      "error": {
+        "title": "Gagal Menghantar Laporan",
+        "message": "Gagal menghantar laporan. Sila cuba lagi kemudian."
+      }
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "Nilai Tidak Sah",
+      "invalidNumericValuesMessage": "Mesti nombor yang sah",
+      "pleaseCorrect": "Sila betulkan yang berikut:",
+      "ok": "OK",
+      "saveChanges": "Simpan Perubahan",
+      "saveAsPreset": "Simpan sebagai Preset",
+      "title_session": "Tetapan Penjanaan Sembang (Sesi)",
+      "title_preset": "Tetapan Penjanaan Sembang (Preset)",
+      "resetToSystemDefaults": "Tetap Semula ke Lalai Sistem",
+      "resetToPreset": "Tetap Semula ke Preset",
+      "applytoPresetAlert": {
+        "title": "Berjaya",
+        "message": "Tetapan ini akan diaplikasikan kepada semua sesi akan datang"
+      },
+      "palSettings": "Tetapan Pal",
+      "settingsSource": "Sumber Tetapan"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "Tetapan Penjanaan - {{palName}}",
+      "invalidValues": "Nilai Tidak Sah",
+      "invalidNumericValuesMessage": "Mesti nombor yang sah",
+      "pleaseCorrect": "Sila betulkan yang berikut:",
+      "ok": "OK",
+      "error": "Ralat",
+      "failedToSave": "Gagal menyimpan tetapan pal",
+      "resetToGlobal": "Tetap Semula ke Lalai Global",
+      "resetToSystem": "Tetap Semula ke Lalai Sistem",
+      "clearPalSettings": "Kosongkan Tetapan Pal",
+      "customSettingsFor": "Tetapan tersuai untuk {{palName}}",
+      "inheritedSettingsFor": "Tetapan warisan untuk {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "Sembang"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "Fail"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "Model",
+      "palsTab": "Pal",
+      "noPal": "Tiada Pal",
+      "disablePal": "Lumpuhkan pal aktif",
+      "noDescription": "Tiada penerangan",
+      "assistantType": "Pembantu",
+      "roleplayType": "Main Peranan",
+      "videoType": "Video",
+      "confirmationTitle": "Pengesahan",
+      "modelSwitchMessage": "Pal ini mempunyai model lalai yang berbeza ({{modelName}}). Adakah anda mahu bertukar kepada model lalai pal tersebut?",
+      "keepButton": "Kekalkan",
+      "switchButton": "Tukar"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "Muat Turun Gagal",
+      "downloadFailedMessage": "Gagal memuat turun model: {{message}}",
+      "unauthorizedTitle": "Pengesahan Gagal",
+      "unauthorizedMessage": "Token Hugging Face anda nampaknya tidak sah atau tamat tempoh. Sila kemas kini token anda dalam tetapan.",
+      "forbiddenTitle": "Capaian Ditolak",
+      "forbiddenMessage": "Anda tidak mempunyai keizinan untuk mengakses model ini. Pastikan:",
+      "forbiddenSteps": [
+        "Token anda mempunyai keizinan \"read\"",
+        "Anda telah memohon dan diberikan capaian kepada model ini",
+        "Pemilik model telah meluluskan permohonan capaian anda"
+      ],
+      "getTokenTitle": "Dapatkan Token Hugging Face",
+      "getTokenMessage": "Model ini memerlukan token Hugging Face untuk dimuat turun.",
+      "getTokenSteps": [
+        "Buka huggingface.co dan log masuk",
+        "Buka Tetapan > Access Tokens",
+        "Cipta token baharu dengan capaian \"read\"",
+        "Salin token dan tampalkan dalam medan token"
+      ],
+      "tokenDisabledTitle": "Token Dilumpuhkan",
+      "tokenDisabledMessage": "Anda mempunyai token Hugging Face yang ditetapkan, tetapi kini dilumpuhkan. Model ini memerlukan token untuk dimuat turun. Dayakan token anda untuk meneruskan.",
+      "enableAndRetry": "Dayakan dan Cuba Lagi",
+      "goToSettings": "Pergi ke Tetapan",
+      "tryAgain": "Cuba Lagi",
+      "viewOnHuggingFace": "Lihat Model di HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "Padam Sembang",
+      "deleteChatMessage": "Pasti mahu memadam sembang ini?",
+      "generationSettings": "tetapan penjanaan",
+      "model": "Model",
+      "duplicateChatHistory": "Duplikasi sejarah sembang",
+      "makeChatTemporary": "Jadikan sembang sementara",
+      "export": "Eksport/Import",
+      "exportCurrentSession": "Eksport sesi semasa",
+      "exportAllSessions": "Eksport semua sesi",
+      "exportChatSession": "Eksport sesi sembang",
+      "importSessions": "Import sesi"
+    },
+    "hfTokenSheet": {
+      "title": "Token Hugging Face",
+      "description": "Diperlukan untuk mengakses model berpintu",
+      "inputLabel": "Token Akses Persendirian",
+      "inputPlaceholder": "Tampalkan token anda di sini",
+      "save": "Simpan Token",
+      "saved": "Token berjaya disimpan",
+      "reset": "Tetap Semula Token",
+      "resetSuccess": "Token berjaya dipadam",
+      "instructions": "Cara mendapatkan token:",
+      "instructionsSteps": [
+        "Buka huggingface.co dan log masuk",
+        "Buka Tetapan > Access Tokens",
+        "Cipta token baharu dengan capaian \"read\"",
+        "Salin token dan tampalkan di bawah"
+      ],
+      "getTokenLink": "Dapatkan token daripada huggingface.co ↗",
+      "error": {
+        "saving": "Ralat menyimpan token",
+        "missing": "Token Hugging Face diperlukan",
+        "invalid": "Token tidak sah atau tamat tempoh",
+        "gatedModelAccess": "Capaian kepada model berpintu ini ditolak"
+      },
+      "gatedModelIndicator": "Memerlukan Token",
+      "tokenRequired": "Model ini memerlukan token capaian Hugging Face",
+      "searchErrorHint": "Token API Hugging Face anda tidak sah atau tamat tempoh. Untuk meneruskan carian, sila padam token atau lumpuhkan pengesahan token dalam Tetapan.",
+      "disableAndRetry": "Lumpuhkan Token & Cuba Lagi"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "Tetapan Model",
+      "saveChanges": "Simpan Perubahan"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Model Hugging Face",
+      "menuTitleDownloaded": "Model yang Dimuat Turun",
+      "menuTitleGrouped": "Kumpulkan Mengikut Jenis Model",
+      "menuTitleReset": "Tetap Semula Senarai Model"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Teruskan Tetapan Semula",
+      "confirmReset": "Sahkan Tetapan Semula"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Sunting Pal",
+        "newPal": "Pal Baharu",
+        "newVideoPal": "Pal Video Baharu"
+      },
+      "description": "Penerangan",
+      "descriptionPlaceholder": "Masukkan penerangan ringkas Pal anda",
+      "parameters": "Parameter",
+      "generationSettings": "Tetapan Penjanaan",
+      "configureGenerationSettings": "Konfigurasi Tetapan Penjanaan",
+      "validation": {
+        "nameRequired": "Nama diperlukan",
+        "generatingPromptRequired": "Prompt penjanaan diperlukan apabila menggunakan prompt AI",
+        "promptModelRequired": "Model penjanaan prompt diperlukan apabila menggunakan prompt AI"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "Cipta Pal Pembantu",
+        "edit": "Sunting Pal Pembantu"
+      },
+      "palName": "Nama Pal",
+      "palNamePlaceholder": "Nama",
+      "defaultModel": "Model Lalai",
+      "defaultModelPlaceholder": "Pilih model",
+      "validation": {
+        "generatingPromptRequired": "Prompt penjanaan diperlukan",
+        "promptModelRequired": "Model penjanaan prompt diperlukan"
+      },
+      "create": "Cipta"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "Anda belum memuat turun sebarang model. Sila muat turun model terlebih dahulu.",
+      "downloadAModel": "Muat turun model",
+      "defaultModelNotDownloaded": "Pal ini mengesyorkan model tertentu yang perlu dimuat turun, atau anda boleh memilih model lain.",
+      "modelNotDownloadedShort": "Model belum dimuat turun",
+      "recommendedModel": "Model yang Disyorkan",
+      "cancelDownload": "Batal Muat Turun",
+      "download": "Muat Turun"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "Cipta Pal Main Peranan",
+        "edit": "Sunting Pal Main Peranan"
+      },
+      "palName": "Nama Pal",
+      "palNamePlaceholder": "Nama",
+      "defaultModel": "Model Lalai",
+      "defaultModelPlaceholder": "Pilih model",
+      "descriptionSection": "Penerangan",
+      "world": "Dunia",
+      "worldPlaceholder": "Fantasi",
+      "location": "Lokasi",
+      "locationPlaceholder": "Hutan Ajaib",
+      "locationSublabel": "Di manakah cerita berlaku?",
+      "aiRole": "Peranan AI",
+      "aiRolePlaceholder": "Eldara, peri hutan yang nakal",
+      "aiRoleSublabel": "Tentukan peranan watak",
+      "userRole": "Peranan Pengguna",
+      "userRolePlaceholder": "Sir Elandor, pahlawan pemberani",
+      "userRoleSublabel": "Siapakah anda?",
+      "situation": "Situasi",
+      "situationPlaceholder": "Misi penyelamat, menyelesaikan misteri",
+      "toneStyle": "Nada/Gaya",
+      "toneStylePlaceholder": "Serius",
+      "validation": {
+        "promptModelRequired": "Model penjanaan prompt diperlukan"
+      },
+      "create": "Cipta"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Cipta Pal Lookie",
+        "edit": "Sunting Pal Lookie"
+      },
+      "palName": "Nama Pal",
+      "palNamePlaceholder": "Masukkan nama untuk Pal Lookie anda",
+      "visionModel": "Model Penglihatan",
+      "visionModelPlaceholder": "Pilih model penglihatan",
+      "requiredModelsSection": "Model yang Diperlukan",
+      "captureInterval": "Sela Tangkapan",
+      "captureIntervalHelper": "Masa antara tangkapan automatik dalam milisaat",
+      "create": "Cipta"
+    },
+    "sendButton": {
+      "accessibilityLabel": "Hantar"
+    },
+    "systemPromptSection": {
+      "sectionTitle": "Prompt Sistem",
+      "useAIPrompt": "Guna AI untuk menjana prompt sistem",
+      "modelSelector": {
+        "label": "Pilih Model untuk Penjanaan*",
+        "sublabel": "Disyorkan: Llama 3.2 3B atau Qwen3 4B Instruct 2507.",
+        "placeholder": "Pilih model"
+      },
+      "generatingPrompt": {
+        "label": "Tujuan & Konteks",
+        "placeholder": "Terangkan peranan, tujuan, atau senario untuk Pal ini..."
+      },
+      "buttons": {
+        "loadingModel": "Memuatkan model...",
+        "stopGenerating": "Hentikan Penjanaan",
+        "generatePrompt": "Jana Prompt Sistem",
+        "resetParameters": "Tetap Semula Parameter",
+        "resetTemplate": "Tetap Semula Templat"
+      },
+      "systemPrompt": {
+        "label": "Prompt Sistem",
+        "sublabel": "Sila sunting dan eksperimen untuk mencari prompt optimum untuk senario anda",
+        "placeholder": "Anda adalah pembantu yang membantu"
+      },
+      "warnings": {
+        "promptChanged": "Prompt sistem telah diubah secara manual"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "Sembang",
+        "models": "Model",
+        "pals": "Pal",
+        "benchmark": "Tolok Ukur",
+        "settings": "Tetapan",
+        "appInfo": "Maklumat Aplikasi",
+        "testCompletion": "Uji Penyiapan"
+      },
+      "deleteChatTitle": "Padam Sembang",
+      "deleteChatMessage": "Pasti mahu memadam sembang ini?",
+      "select": "Pilih",
+      "nSelected": "{{count}} dipilih",
+      "selectAll": "Pilih Semua",
+      "deselectAll": "Nyahpilih Semua",
+      "exportCount": "Eksport ({{count}})",
+      "deleteCount": "Padam ({{count}})",
+      "bulkDeleteTitle": "Padam Sesi Sembang",
+      "bulkDeleteMessage": "Padam {{count}} sesi sembang? Tindakan ini tidak boleh diundur.",
+      "bulkDeleteError": "Gagal memadam sesi sembang. Sila cuba lagi.",
+      "exportError": "Gagal mengeksport sesi sembang. Sila cuba lagi.",
+      "bulkExportError": "Gagal mengeksport sesi sembang. Sila cuba lagi.",
+      "dateGroups": {
+        "today": "Hari Ini",
+        "yesterday": "Semalam",
+        "thisWeek": "Minggu Ini",
+        "lastWeek": "Minggu Lalu",
+        "twoWeeksAgo": "2 Minggu Lalu",
+        "threeWeeksAgo": "3 Minggu Lalu",
+        "fourWeeksAgo": "4 Minggu Lalu",
+        "lastMonth": "Bulan Lalu",
+        "older": "Lebih Lama"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "Penggunaan Memori",
+        "used": "Digunakan: ",
+        "total": "Jumlah: ",
+        "usage": "Penggunaan: "
+      },
+      "byteSizes": [
+        "Bait",
+        "KB",
+        "MB",
+        "GB"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "Salin",
+        "regenerate": "Jana Semula",
+        "regenerateWith": "Jana Semula dengan",
+        "edit": "Sunting",
+        "reportContent": "Laporkan Kandungan"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "Eksport semua pal",
+      "importPals": "Import pal",
+      "importSuccess": "Berjaya mengimport {{count}} pal.",
+      "importError": "Gagal mengimport pal. Sila semak format fail."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "Pal Saya (tempatan)",
+      "myLibrary": "Pustaka Saya (palshub.ai)",
+      "discoverPals": "Temui Pal (palshub.ai)"
+    },
+    "systemPrompt": "Prompt Sistem",
+    "videoAnalysis": "Analisis Video",
+    "videoAnalysisDescription": "Ini adalah pembantu AI berasaskan video yang memberikan ulasan masa nyata pada strim video daripada kamera peranti anda.",
+    "captureInterval": "Sela Tangkapan",
+    "captureIntervalUnit": "ms",
+    "world": "Dunia",
+    "toneStyle": "Nada/Gaya",
+    "aiRole": "Peranan AI",
+    "userRole": "Peranan Saya",
+    "prompt": "Prompt",
+    "assistant": "Pembantu",
+    "roleplay": "Main Peranan",
+    "video": "Video",
+    "deletePal": "Padam Pal",
+    "deletePalMessage": "Pasti mahu memadam pal ini?",
+    "missingModel": "Model Tidak Ditemui",
+    "missingModelMessage": "Model lalai \"{{modelName}}\" untuk pal ini tidak tersedia. Sila muat turun dalam helaian sunting atau pilih model lain.",
+    "search": "Cari",
+    "profile": "Profil",
+    "signIn": "Log Masuk",
+    "addPal": "Tambah Pal",
+    "signInToAccessLibrary": "Log masuk untuk mengakses pustaka anda daripada palshub.ai",
+    "signOut": "Log Keluar",
+    "signOutConfirmation": "Pasti mahu log keluar?",
+    "signOutError": "Gagal log keluar. Sila cuba lagi.",
+    "account": "Akaun",
+    "signInToPalsHub": "Log Masuk ke PalsHub",
+    "signInDescription": "Akses pustaka anda, cipta Pal persendirian, dan segerak merentas peranti",
+    "searchAllPals": "Cari semua Pal...",
+    "deletePalConfirmation": "Pasti mahu memadam \"{{palName}}\"?",
+    "filters": {
+      "all": "Semua",
+      "myPals": "Pal Saya",
+      "local": "Tempatan",
+      "video": "Video",
+      "free": "Percuma",
+      "premium": "Premium"
+    },
+    "labels": {
+      "free": "Percuma",
+      "premium": "Premium",
+      "private": "Persendirian",
+      "download": "Muat Turun",
+      "getFree": "Dapatkan Percuma"
+    },
+    "premiumPalDescription": "Pal premium daripada komuniti palshub.ai",
+    "premiumInfoText": "Lawati palshub.ai untuk meneroka lebih banyak pal",
+    "sortOptions": {
+      "newest": "Terbaharu",
+      "oldest": "Terlama",
+      "rating": "Rating Tertinggi",
+      "popular": "Paling Popular"
+    },
+    "palDetailSheet": {
+      "by": "oleh",
+      "unknown": "Tidak Diketahui",
+      "rating": "Rating",
+      "reviews": "Ulasan",
+      "created": "Dicipta",
+      "description": "Penerangan",
+      "noDescriptionAvailable": "Tiada penerangan tersedia.",
+      "categories": "Kategori",
+      "tags": "Tag",
+      "systemPrompt": "Prompt Sistem",
+      "downloaded": "Dimuat Turun",
+      "success": "Berjaya",
+      "palAddedToCollection": "Pal telah ditambah ke koleksi anda!",
+      "error": "Ralat",
+      "failedToLoadDetails": "Gagal memuatkan butiran pal",
+      "failedToDownload": "Gagal memuat turun pal",
+      "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika anda sudah membukanya dengan akaun Palshub, hanya log masuk untuk mengakses butiran penuhnya.\n• Belum membukanya? Lawati aplikasi palshub.ai untuk maklumat lanjut.",
+      "notAvailable": "T/A"
+    }
+  },
+  "validation": {
+    "nameRequired": "Nama diperlukan",
+    "systemPromptRequired": "Prompt sistem diperlukan",
+    "worldRequired": "Dunia diperlukan",
+    "locationRequired": "Lokasi diperlukan",
+    "aiRoleRequired": "Peranan AI diperlukan",
+    "userRoleRequired": "Peranan pengguna diperlukan",
+    "situationRequired": "Situasi diperlukan",
+    "toneStyleRequired": "Nada/Gaya diperlukan"
+  },
+  "camera": {
+    "permissionTitle": "Kebenaran Kamera Diperlukan",
+    "permissionMessage": "PocketPal memerlukan capaian kamera untuk menganalisis imej",
+    "requestingPermission": "Memohon kebenaran kamera...",
+    "noDevice": "Tiada peranti kamera ditemui",
+    "errorTitle": "Ralat Kamera",
+    "errorMessage": "Berlaku ralat semasa mengambil gambar",
+    "flip": "Terbalik",
+    "analyzing": "Menganalisis imej...",
+    "startCamera": "Mulakan Kamera",
+    "stopCamera": "Hentikan Kamera",
+    "promptPlaceholder": "Apa yang anda mahu ketahui tentang imej ini?",
+    "takePhoto": "Kamera"
+  },
+  "video": {
+    "permissionTitle": "Kebenaran Kamera Diperlukan",
+    "permissionMessage": "PocketPal memerlukan capaian kamera untuk analisis video",
+    "requestingPermission": "Memohon kebenaran kamera...",
+    "noDevice": "Tiada peranti kamera ditemui",
+    "errorTitle": "Ralat Kamera",
+    "errorMessage": "Berlaku ralat dengan kamera",
+    "flip": "Terbalik",
+    "analyzing": "Menganalisis video...",
+    "startCamera": "Mulakan Kamera",
+    "stopCamera": "Hentikan Kamera",
+    "promptPlaceholder": "Apa yang anda mahu ketahui tentang video ini?",
+    "captureInterval": "Sela Tangkapan",
+    "captureIntervalUnit": "ms",
+    "liveCommentary": "Ulasan Langsung",
+    "emptyPlaceholder": {
+      "title": "Selamat Datang ke Lookie",
+      "subtitle": "Analisis Video Masa Nyata On-Device Persendirian",
+      "experimentalNotice": "Ini adalah ciri percubaan. Ketepatan bergantung kepada model yang dipilih, kelajuan bergantung kepada spesifikasi peranti anda, dan sesetengah model mungkin gagal.",
+      "howToUse": "Cara menggunakan:",
+      "step1": "• Sunting prompt (pilihan) untuk memandu analisis",
+      "step2": "• Ketik butang kamera untuk memulakan analisis video langsung",
+      "step3": "• Laraskan kekerapan tangkapan semasa kamera aktif",
+      "step4": "• Bertukar kepada pal lain untuk sembang teks biasa"
+    }
+  },
+  "screenTitles": {
+    "chat": "Sembang",
+    "models": "Model",
+    "pals": "Pal (percubaan)",
+    "benchmark": "Tolok Ukur",
+    "settings": "Tetapan",
+    "appInfo": "Maklumat Aplikasi",
+    "testCompletion": "Uji Penyiapan"
+  },
+  "chat": {
+    "conversationReset": "Sembang telah ditetapkan semula!",
+    "modelNotLoaded": "Model belum dimuat. Sila mulakan model.",
+    "completionFailed": "Gagal menyiapkan: ",
+    "loadingModel": "Memuatkan model...",
+    "typeYourMessage": "Taip mesej anda di sini",
+    "load": "Muat",
+    "goToModels": "Pergi ke Model",
+    "readyToChat": "Sedia bersembang? Muat model yang terakhir digunakan.",
+    "pleaseLoadModel": "Muat model untuk bersembang.",
+    "multimodalNotEnabled": "Multimodal tidak didayakan untuk model ini. Imej akan dipaparkan tetapi tidak diproses oleh AI.",
+    "cannotSendWithoutModel": "Muat model terlebih dahulu"
+  },
+  "benchmark": {
+    "title": "Tolok Ukur",
+    "modelSelector": {
+      "prompt": "Pilih Model"
+    },
+    "buttons": {
+      "advancedSettings": "Tetapan Lanjutan",
+      "startTest": "Mula Ujian",
+      "runningTest": "Menjalankan Ujian...",
+      "clearAll": "Kosongkan Semua",
+      "done": "Selesai",
+      "cancel": "Batal",
+      "delete": "Padam",
+      "share": "Kongsi",
+      "sharing": "Mengongsi...",
+      "viewRawData": "Lihat Data Mentah",
+      "hideRawData": "Sembunyikan Data Mentah"
+    },
+    "messages": {
+      "pleaseSelectModel": "Sila pilih dan mulakan model terlebih dahulu",
+      "testWarning": "Nota: Ujian boleh berjalan sehingga 2-5 minit untuk model besar dan tidak boleh dihentikan selepas dimulakan.",
+      "keepScreenOpen": "Sila biarkan skrin ini kekal terbuka.",
+      "initializingModel": "Memulakan model...",
+      "modelMaxValue": "(maks: {{maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "Tetapan Lanjutan",
+        "testProfile": "Profil Ujian",
+        "customParameters": "Parameter Tersuai",
+        "description": "Sesuaikan parameter tolok ukur untuk senario pengujian tertentu."
+      },
+      "deleteResult": {
+        "title": "Padam Keputusan",
+        "message": "Pasti mahu memadam keputusan tolok ukur ini?"
+      },
+      "clearAllResults": {
+        "title": "Kosongkan Semua Keputusan",
+        "message": "Pasti mahu memadam semua keputusan tolok ukur?"
+      },
+      "shareResults": {
+        "title": "Kongsi Keputusan Tolok Ukur",
+        "sharedDataTitle": "Data yang dikongsi termasuk:",
+        "deviceAndModelInfo": "• Spesifikasi peranti & maklumat model",
+        "performanceMetrics": "• Metrik prestasi",
+        "dontShowAgain": "Jangan paparkan mesej ini lagi"
+      }
+    },
+    "sections": {
+      "testResults": "Keputusan Ujian"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "parameter"
+      },
+      "config": {
+        "title": "Konfigurasi Tolok Ukur",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rep: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "Tetapan Model",
+        "context": "Konteks: {{context}}",
+        "batch": "Batch: {{batch}}",
+        "ubatch": "UBatch: {{ubatch}}",
+        "cpuThreads": "Thread CPU: {{threads}}",
+        "gpuLayers": "Lapisan GPU: {{layers}}",
+        "device": "Peranti: {{device}}",
+        "flashAttentionEnabled": "Flash Attention Didayakan",
+        "flashAttentionDisabled": "Flash Attention Dilumpuhkan",
+        "cacheTypes": "Jenis Cache: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "Pemprosesan Prompt",
+        "tokenGeneration": "Penjanaan Token",
+        "totalTime": "Jumlah Masa",
+        "peakMemory": "Memori Puncak",
+        "tokensPerSecond": "t/s"
+      },
+      "actions": {
+        "deleteButton": " ",
+        "submittedText": "✓ Dikongsi ke",
+        "leaderboardLink": "Papan Pendahulu Telefon AI ↗",
+        "cannotShare": "Tidak Boleh Dikongsi",
+        "cannotShareTooltip": "Keputusan model tempatan tidak boleh dikongsi",
+        "submitButton": "Hantar ke Papan Pendahulu",
+        "viewLeaderboard": "Lihat papan pendahulu ↗"
+      },
+      "errors": {
+        "networkRetry": "Semak sambungan & cuba lagi",
+        "appCheckRetry": "Cuba hantar semula",
+        "serverRetry": "Cuba lagi kemudian",
+        "genericRetry": "Cuba lagi",
+        "failedToSubmit": "Gagal menghantar tolok ukur"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "Maklumat Peranti",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} teras • {{memory}}",
+      "sections": {
+        "basicInfo": "Maklumat Asas",
+        "cpuDetails": "Butiran CPU",
+        "gpuDetails": "Butiran GPU",
+        "hexagonDetails": "Hexagon DSP",
+        "appInfo": "Maklumat Aplikasi"
+      },
+      "fields": {
+        "architecture": "Seni Bina",
+        "totalMemory": "Jumlah Memori",
+        "deviceId": "ID Peranti",
+        "cpuCores": "Teras CPU",
+        "cpuModel": "Model CPU",
+        "chipset": "Cipset",
+        "instructions": "Arahan",
+        "version": "Versi",
+        "gpuType": "Jenis GPU",
+        "gpuRenderer": "Renderer",
+        "gpuVendor": "Vendor",
+        "metalSupport": "Sokongan Metal",
+        "openclSupport": "Sokongan OpenCL",
+        "openclRequirement": "Memerlukan i8mm & dotprod"
+      },
+      "instructions": {
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
+        "yes": "✓",
+        "no": "✗"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "Berlaku ralat yang tidak dijangka",
+    "hfAuthenticationError": "Ralat pengesahan Hugging Face: Token tidak wujud atau tidak sah",
+    "hfAuthenticationErrorSearch": "Ralat pengesahan Hugging Face: Token tidak sah",
+    "authenticationError": "Ralat pengesahan: Token tidak wujud atau tidak sah",
+    "hfAuthorizationError": "Ralat keizinan Hugging Face: Tidak mempunyai keizinan untuk mengakses sumber ini",
+    "authorizationError": "Ralat keizinan: Tidak mempunyai keizinan untuk mengakses sumber ini",
+    "hfServerError": "Ralat pelayan Hugging Face: Masalah pada pelayan API",
+    "serverError": "Ralat pelayan: Masalah pada pelayan API",
+    "hfNetworkTimeout": "Masa tamat rangkaian: Permintaan ke Hugging Face terlalu lama",
+    "networkTimeout": "Masa tamat rangkaian: Permintaan terlalu lama",
+    "hfNetworkError": "Ralat rangkaian: Tidak dapat bersambung ke API Hugging Face",
+    "networkError": "Ralat rangkaian: Tidak dapat bersambung ke API",
+    "downloadSetupFailedTitle": "Persediaan Muat Turun Gagal",
+    "downloadSetupFailedMessage": "Gagal menyediakan model untuk dimuat turun: {{message}}",
+    "cameraErrorTitle": "Ralat Kamera",
+    "cameraErrorMessage": "Gagal mengambil gambar",
+    "galleryErrorTitle": "Ralat Galeri",
+    "galleryErrorMessage": "Gagal memilih imej"
+  },
+  "simulator": {
+    "cameraNotAvailable": "Kamera tidak tersedia dalam simulator. Sila gunakan peranti fizikal."
+  }
+}
