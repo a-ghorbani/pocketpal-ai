@@ -21,6 +21,7 @@ use_frameworks! :linkage => :static
 $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+ENV['RNLLAMA_BUILD_FROM_SOURCE'] = '1'
 
 target 'PocketPal' do
   config = use_native_modules!
