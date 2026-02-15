@@ -606,14 +606,14 @@
       "roleplayType": "משחק תפקידים",
       "videoType": "וידיאו",
       "confirmationTitle": "אישור",
-      "modelSwitchMessage": "",
-      "keepButton": "",
-      "switchButton": ""
+      "modelSwitchMessage": "ל-Pal הזה יש מודל ברירת מחדל שונה ({{modelName}}). האם ברצונך לעבור למודל ברירת המחדל של ה-Pal?",
+      "keepButton": "השאר",
+      "switchButton": "החלף"
     },
     "downloadErrorDialog": {
-      "downloadFailedTitle": "",
-      "downloadFailedMessage": "",
-      "unauthorizedTitle": "",
+      "downloadFailedTitle": "ההורדה נכשלה",
+      "downloadFailedMessage": "הורדת המודל נכשלה: {{message}}",
+      "unauthorizedTitle": "אימות נכשל",
       "unauthorizedMessage": "",
       "forbiddenTitle": "",
       "forbiddenMessage": "",
