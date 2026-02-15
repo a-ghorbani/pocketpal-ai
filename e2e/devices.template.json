@@ -1,0 +1,49 @@
+{
+  "_comment": "Copy to devices.json and customize for your machine. See e2e/scripts/run-e2e-pipeline.ts for details.",
+  "devices": [
+    {
+      "id": "iphone-17-pro-sim",
+      "name": "iPhone 17 Pro Simulator",
+      "platform": "ios",
+      "type": "simulator",
+      "enabled": true,
+      "deviceName": "iPhone 17 Pro",
+      "platformVersion": "26.0",
+      "appPath": "../ios/build/Build/Products/Release-iphonesimulator/PocketPal.app"
+    },
+    {
+      "id": "iphone-15-real",
+      "name": "iPhone 15 (USB)",
+      "platform": "ios",
+      "type": "real",
+      "enabled": false,
+      "deviceName": "iPhone 15",
+      "platformVersion": "18.2",
+      "udid": "00008110-XXXXXXXXXXXX",
+      "appPath": "../ios/build/PocketPal.ipa",
+      "_note": "Real devices require an IPA signed for the device, not the simulator .app"
+    },
+    {
+      "id": "pixel-8-emu",
+      "name": "Pixel 8 Emulator",
+      "platform": "android",
+      "type": "emulator",
+      "enabled": true,
+      "deviceName": "emulator-5554",
+      "platformVersion": "16",
+      "appPath": "../android/app/build/outputs/apk/release/app-release.apk"
+    },
+    {
+      "id": "galaxy-s24-real",
+      "name": "Samsung Galaxy S24 (USB)",
+      "platform": "android",
+      "type": "real",
+      "enabled": false,
+      "deviceName": "Samsung Galaxy S24",
+      "platformVersion": "14",
+      "udid": "RXXXXXXXXXXXXXXX",
+      "appPath": "../android/app/build/outputs/apk/release/app-release.apk",
+      "_note": "Get UDID via 'adb devices'. Ensure USB debugging is enabled."
+    }
+  ]
+}

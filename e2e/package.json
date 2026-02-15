@@ -12,6 +12,9 @@
     "test:models:android": "npx ts-node scripts/run-model-tests.ts --platform android",
     "crash-repro": "npx ts-node scripts/run-crash-repro.ts",
     "crash-repro:local": "npx ts-node scripts/run-crash-repro.ts --local",
+    "pipeline": "npx ts-node scripts/run-e2e-pipeline.ts",
+    "pipeline:ios": "npx ts-node scripts/run-e2e-pipeline.ts --platform ios",
+    "pipeline:android": "npx ts-node scripts/run-e2e-pipeline.ts --platform android",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "yarn@1.22.22",

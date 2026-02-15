@@ -90,3 +90,7 @@ e2e/debug-output/
 e2e/device-farm-artifacts/
 e2e/test-package.zip
 e2e/testspec-*-allmodels.yml
+
+# E2E pipeline
+e2e/devices.json
+e2e/reports/
