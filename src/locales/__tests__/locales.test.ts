@@ -60,6 +60,14 @@ describe('l10n object', () => {
     expect(jaSections).toHaveLength(EXPECTED_SECTIONS.length);
   });
 
+  it('l10n.id has all 19 expected top-level sections', () => {
+    const idSections = Object.keys(l10n.id);
+    for (const section of EXPECTED_SECTIONS) {
+      expect(idSections).toContain(section);
+    }
+    expect(idSections).toHaveLength(EXPECTED_SECTIONS.length);
+  });
+
   it('l10n.zh has all 19 expected top-level sections', () => {
     const zhSections = Object.keys(l10n.zh);
     for (const section of EXPECTED_SECTIONS) {
@@ -70,6 +78,24 @@ describe('l10n object', () => {
 
   it('l10n.en matches the raw en.json data', () => {
     expect(l10n.en).toEqual(enData);
+  });
+
+  it('l10n.id contains Indonesian translations where they exist', () => {
+    const idData = require('../id.json');
+    expect(l10n.id.common.cancel).toBe(idData.common.cancel);
+    expect(l10n.id.common.cancel).not.toBe(l10n.en.common.cancel);
+  });
+
+  it('returns cached result on repeated access for id', () => {
+    const first = l10n.id;
+    const second = l10n.id;
+    expect(first).toBe(second); // same reference = cached
+  });
+
+  it('returns cached result on repeated access for zh', () => {
+    const first = l10n.zh;
+    const second = l10n.zh;
+    expect(first).toBe(second); // same reference = cached
   });
 
   it('l10n.ja contains Japanese translations where they exist', () => {
@@ -118,9 +144,49 @@ describe('l10n object', () => {
     expect(first).toBe(second); // same reference = cached
   });
 
-  it('supports in operator', () => {
+  it('supports in operator for all languages', () => {
+    expect('en' in l10n).toBe(true);
+    expect('id' in l10n).toBe(true);
     expect('ja' in l10n).toBe(true);
+    expect('zh' in l10n).toBe(true);
     expect('xx' in l10n).toBe(false);
+    expect('fr' in l10n).toBe(false);
+  });
+
+  it('returns undefined for unsupported language key', () => {
+    // Access a property that does not exist on the l10n object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((l10n as any).xx).toBeUndefined();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((l10n as any).fr).toBeUndefined();
+  });
+
+  it('Object.keys does NOT trigger lazy-loading getters', () => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+
+      // Before any property access, only en is cached
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+
+      // Object.keys should enumerate property names without invoking getters
+      const keys = Object.keys(freshModule.l10n);
+      expect(keys).toEqual(['en', 'id', 'ja', 'zh']);
+
+      // Cache should still only have en -- getters were not called
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+    });
+  });
+
+  it('l10n.en getter does not trigger lazy-loading of other languages', () => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+
+      // Access en -- should NOT add any non-en languages to cache
+      const _en = freshModule.l10n.en;
+      expect(_en).toBeDefined();
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+    });
   });
 });
 
@@ -141,6 +207,20 @@ describe('exports', () => {
     expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
     expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
     expect(languageDisplayNames.id).toBe('Indonesia (ID)');
+  });
+
+  it('languageDisplayNames has exactly the same keys as supportedLanguages', () => {
+    const displayKeys = Object.keys(languageDisplayNames).sort();
+    const supported = [...supportedLanguages].sort();
+    expect(displayKeys).toEqual(supported);
+  });
+
+  it('supportedLanguages is a non-empty array of strings', () => {
+    expect(supportedLanguages.length).toBeGreaterThan(0);
+    for (const lang of supportedLanguages) {
+      expect(typeof lang).toBe('string');
+      expect(lang.length).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -168,6 +248,51 @@ describe('lazy loading', () => {
 
       // After access: en and ja
       expect(freshModule._testGetCacheKeys()).toContain('ja');
+    });
+  });
+
+  it('accessing id populates the cache', () => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+
+      const _id = freshModule.l10n.id;
+      expect(_id).toBeDefined();
+      expect(freshModule._testGetCacheKeys()).toContain('id');
+    });
+  });
+
+  it('accessing zh populates the cache', () => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+
+      const _zh = freshModule.l10n.zh;
+      expect(_zh).toBeDefined();
+      expect(freshModule._testGetCacheKeys()).toContain('zh');
+    });
+  });
+
+  it('accessing all languages populates the full cache', () => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+
+      // Access each non-en language
+      const _id = freshModule.l10n.id;
+      const _ja = freshModule.l10n.ja;
+      const _zh = freshModule.l10n.zh;
+
+      expect(_id).toBeDefined();
+      expect(_ja).toBeDefined();
+      expect(_zh).toBeDefined();
+
+      const cacheKeys = freshModule._testGetCacheKeys();
+      expect(cacheKeys).toContain('en');
+      expect(cacheKeys).toContain('id');
+      expect(cacheKeys).toContain('ja');
+      expect(cacheKeys).toContain('zh');
+      expect(cacheKeys).toHaveLength(4);
     });
   });
 
