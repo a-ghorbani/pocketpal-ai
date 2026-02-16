@@ -1,11 +1,16 @@
 import _ from 'lodash';
 
-import {l10n, t} from '../index';
+import {
+  l10n,
+  t,
+  supportedLanguages,
+  languageDisplayNames,
+  _testGetCacheKeys,
+} from '../index';
 import enData from '../en.json';
-import jaData from '../ja.json';
-import zhData from '../zh.json';
 
 import type {Translations} from '../types';
+import type {AvailableLanguage} from '../index';
 
 const EXPECTED_SECTIONS = [
   'common',
@@ -30,11 +35,13 @@ const EXPECTED_SECTIONS = [
 ];
 
 describe('l10n object', () => {
-  it('has all 4 languages', () => {
-    expect(Object.keys(l10n)).toEqual(
-      expect.arrayContaining(['en', 'id', 'ja', 'zh']),
-    );
-    expect(Object.keys(l10n)).toHaveLength(4);
+  it('supports all expected languages', () => {
+    expect(supportedLanguages).toEqual(['en', 'id', 'ja', 'zh']);
+    expect(Object.keys(l10n)).toEqual(['en', 'id', 'ja', 'zh']);
+  });
+
+  it('l10n.en is eagerly loaded and equals raw enData', () => {
+    expect(l10n.en).toBe(enData); // same reference, not a copy
   });
 
   it('l10n.en has all 19 expected top-level sections', () => {
@@ -66,20 +73,19 @@ describe('l10n object', () => {
   });
 
   it('l10n.ja contains Japanese translations where they exist', () => {
-    // ja.json has its own translation for common.cancel
+    const jaData = require('../ja.json');
     expect(l10n.ja.common.cancel).toBe(jaData.common.cancel);
     expect(l10n.ja.common.cancel).not.toBe(l10n.en.common.cancel);
   });
 
   it('l10n.zh contains Chinese translations where they exist', () => {
-    // zh.json has its own translation for common.cancel
+    const zhData = require('../zh.json');
     expect(l10n.zh.common.cancel).toBe(zhData.common.cancel);
     expect(l10n.zh.common.cancel).not.toBe(l10n.en.common.cancel);
   });
 
   it('l10n.ja falls back to English for missing keys', () => {
-    // Simulate fallback behavior: if a key were missing in ja, _.merge fills from en.
-    // Since ja.json is complete, we verify the merge mechanism by building a partial ja
+    // Verify the merge mechanism by building a partial ja
     // and checking that merge fills in the gap.
     const partialJa = {common: {cancel: 'partial-ja-cancel'}};
     const merged: Translations = _.merge({}, enData, partialJa);
@@ -92,7 +98,6 @@ describe('l10n object', () => {
   });
 
   it('l10n.zh falls back to English for missing keys', () => {
-    // Same verification for zh fallback mechanism
     const partialZh = {common: {cancel: 'partial-zh-cancel'}};
     const merged: Translations = _.merge({}, enData, partialZh);
 
@@ -107,13 +112,84 @@ describe('l10n object', () => {
     expect(enData).toEqual(enClone);
   });
 
-  it('AvailableLanguage type resolves to en | id | ja | zh', () => {
-    // Type-level check: keyof typeof l10n should be 'en' | 'id' | 'ja' | 'zh'
+  it('returns cached result on repeated access', () => {
+    const first = l10n.ja;
+    const second = l10n.ja;
+    expect(first).toBe(second); // same reference = cached
+  });
+
+  it('supports in operator', () => {
+    expect('ja' in l10n).toBe(true);
+    expect('xx' in l10n).toBe(false);
+  });
+});
+
+describe('exports', () => {
+  it('supportedLanguages matches expected array', () => {
+    expect(supportedLanguages).toEqual(['en', 'id', 'ja', 'zh']);
+  });
+
+  it('languageDisplayNames has entries for all supported languages', () => {
+    for (const lang of supportedLanguages) {
+      expect(languageDisplayNames[lang]).toBeDefined();
+      expect(typeof languageDisplayNames[lang]).toBe('string');
+    }
+  });
+
+  it('languageDisplayNames contains expected values', () => {
+    expect(languageDisplayNames.en).toBe('English (EN)');
+    expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
+    expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
+    expect(languageDisplayNames.id).toBe('Indonesia (ID)');
+  });
+});
+
+describe('lazy loading', () => {
+  it('non-en languages are NOT loaded at module import time', () => {
+    // Use jest.isolateModules to get a fresh module instance
+    // and verify only 'en' is in cache before any property access.
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+      const cacheKeys = freshModule._testGetCacheKeys();
+      expect(cacheKeys).toEqual(['en']);
+    });
+  });
+
+  it('accessing a language populates the cache', () => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+
+      // Before access: only en
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+
+      // Access ja
+      const _ja = freshModule.l10n.ja;
+      expect(_ja).toBeDefined();
+
+      // After access: en and ja
+      expect(freshModule._testGetCacheKeys()).toContain('ja');
+    });
+  });
+
+  it('_testGetCacheKeys is exported and returns an array', () => {
+    const keys = _testGetCacheKeys();
+    expect(Array.isArray(keys)).toBe(true);
+    expect(keys).toContain('en');
+  });
+});
+
+describe('type safety', () => {
+  it('AvailableLanguage matches supported languages', () => {
+    const keys: AvailableLanguage[] = ['en', 'id', 'ja', 'zh'];
+    expect(keys).toEqual(supportedLanguages);
+  });
+
+  it('keyof typeof l10n resolves to literal union', () => {
     // At runtime we verify the keys match
     const keys: Array<keyof typeof l10n> = ['en', 'id', 'ja', 'zh'];
     expect(Object.keys(l10n).sort()).toEqual(keys.sort());
 
-    // This would cause a compile error if AvailableLanguage were wrong:
+    // This would cause a compile error if the type were wrong:
     const lang: keyof typeof l10n = 'en';
     expect(l10n[lang]).toBeDefined();
   });

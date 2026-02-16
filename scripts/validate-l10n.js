@@ -42,7 +42,8 @@ try {
 const enKeys = getKeys(en);
 console.log(`en.json: ${enKeys.length} keys`);
 
-const langFiles = fs.readdirSync(LOCALES_DIR)
+const langFiles = fs
+  .readdirSync(LOCALES_DIR)
   .filter(f => f.endsWith('.json') && f !== 'en.json')
   .map(f => f.replace('.json', ''));
 
