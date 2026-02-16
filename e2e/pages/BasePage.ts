@@ -109,13 +109,40 @@ export abstract class BasePage {
     const isIOS = (browser as unknown as {isIOS?: boolean}).isIOS;
 
     if (isIOS) {
-      // iOS: Tap Return/Done/Search key on keyboard
+      // Check if keyboard is actually shown; skip if not
+      const isShown = await (
+        browser as unknown as {isKeyboardShown: () => Promise<boolean>}
+      )
+        .isKeyboardShown()
+        .catch(() => false);
+      if (!isShown) {
+        return;
+      }
+
+      // iOS: Try Return/Done/Search key first (standard text keyboards)
       const keyboardKey = browser.$(
         '-ios predicate string:name == "Return" OR name == "Done" OR name == "Search"',
       );
       if (await keyboardKey.isExisting()) {
         await keyboardKey.click();
         await browser.pause(200);
+      } else {
+        // Numeric keyboards have no Return/Done key.
+        // Tap the sheet/screen content area to blur the input.
+        // Use 40% from top to stay well inside a bottom sheet
+        // (avoids close button at top and keyboard at bottom).
+        const {width, height} = await (
+          browser as unknown as {
+            getWindowSize: () => Promise<{width: number; height: number}>;
+          }
+        ).getWindowSize();
+        await browser
+          .action('pointer', {parameters: {pointerType: 'touch'}})
+          .move({x: Math.floor(width / 2), y: Math.floor(height * 0.4)})
+          .down()
+          .up()
+          .perform();
+        await browser.pause(300);
       }
     } else {
       // Android: hideKeyboard() works reliably

@@ -11,11 +11,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {ChatPage} from '../pages/ChatPage';
-import {DrawerPage} from '../pages/DrawerPage';
-import {SettingsPage} from '../pages/SettingsPage';
-import {byText, byStaticText} from '../helpers/selectors';
-import {SCREENSHOT_DIR} from '../wdio.shared.conf';
+import {ChatPage} from '../../pages/ChatPage';
+import {DrawerPage} from '../../pages/DrawerPage';
+import {SettingsPage} from '../../pages/SettingsPage';
+import {byText, byStaticText} from '../../helpers/selectors';
+import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
