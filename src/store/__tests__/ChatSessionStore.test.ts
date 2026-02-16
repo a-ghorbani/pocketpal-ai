@@ -235,6 +235,97 @@ describe('chatSessionStore', () => {
         (chatSessionStore.sessions[0].messages[0] as MessageType.Text).text,
       ).toBe(updatedMessage.text);
     });
+
+    it('should merge metadata instead of replacing when updating a message', async () => {
+      const messageWithMetadata = {
+        ...mockMessage,
+        metadata: {
+          contextId: 'ctx-1',
+          partialCompletionResult: {
+            reasoning_content: 'I need to think about this...',
+            content: 'The answer is 42.',
+          },
+        },
+      };
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [messageWithMetadata],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [mockSession];
+      chatSessionStore.activeSessionId = mockSession.id;
+
+      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      // Update with timings - should merge, not replace
+      await chatSessionStore.updateMessage(
+        mockMessage.id,
+        mockSession.id,
+        {
+          metadata: {
+            timings: {total: 100},
+            copyable: true,
+          },
+        },
+      );
+
+      const updatedMetadata = (
+        chatSessionStore.sessions[0].messages[0] as MessageType.Text
+      ).metadata;
+
+      // New metadata should be present
+      expect(updatedMetadata?.timings).toEqual({total: 100});
+      expect(updatedMetadata?.copyable).toBe(true);
+
+      // Existing metadata should be preserved (not wiped)
+      expect(updatedMetadata?.contextId).toBe('ctx-1');
+      expect(updatedMetadata?.partialCompletionResult?.reasoning_content).toBe(
+        'I need to think about this...',
+      );
+    });
+
+    it('should handle updateMessage when existing message has no metadata', async () => {
+      const messageWithoutMetadata = {
+        ...mockMessage,
+        metadata: undefined,
+      };
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [messageWithoutMetadata],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [mockSession];
+      chatSessionStore.activeSessionId = mockSession.id;
+
+      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.updateMessage(
+        mockMessage.id,
+        mockSession.id,
+        {
+          metadata: {
+            timings: {total: 100},
+          },
+        },
+      );
+
+      const updatedMetadata = (
+        chatSessionStore.sessions[0].messages[0] as MessageType.Text
+      ).metadata;
+      expect(updatedMetadata?.timings).toEqual({total: 100});
+    });
   });
 
   describe('updateSessionTitle', () => {
