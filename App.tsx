@@ -18,8 +18,7 @@ import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
 
-import {l10n} from './src/locales';
-import {initLocale} from './src/utils';
+import {l10n, initLocale} from './src/locales';
 import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
 

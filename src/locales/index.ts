@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import dayjs from 'dayjs';
 
 import enData from './en.json';
 
@@ -97,3 +98,16 @@ export function t(
     String(params[key] ?? `{{${key}}}`),
   );
 }
+
+// ─── Dayjs locale ───────────────────────────────────────────────────
+export const initLocale = (locale?: AvailableLanguage) => {
+  const locales: Record<AvailableLanguage, unknown> = {
+    en: require('dayjs/locale/en'),
+    id: require('dayjs/locale/id'),
+    ja: require('dayjs/locale/ja'),
+    zh: require('dayjs/locale/zh'),
+  };
+
+  locale ? locales[locale] : locales.en;
+  dayjs.locale(locale);
+};
