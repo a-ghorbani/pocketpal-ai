@@ -42,7 +42,29 @@ try {
 const enKeys = getKeys(en);
 console.log(`en.json: ${enKeys.length} keys`);
 
-for (const lang of ['id', 'ja', 'zh']) {
+// Read integrated languages from locales/index.ts languageRegistry.
+// Falls back to auto-discovery if index.ts is missing or unparseable.
+let langFiles;
+const indexPath = path.join(LOCALES_DIR, 'index.ts');
+if (fs.existsSync(indexPath)) {
+  const indexSrc = fs.readFileSync(indexPath, 'utf-8');
+  const registryMatch = indexSrc.match(
+    /const languageRegistry\s*=\s*\{([\s\S]*?)\}\s*(?:as const|;)/,
+  );
+  if (registryMatch) {
+    langFiles = [...registryMatch[1].matchAll(/^\s*(\w+)\s*:/gm)]
+      .map(m => m[1])
+      .filter(l => l !== 'en');
+  }
+}
+if (!langFiles) {
+  langFiles = fs
+    .readdirSync(LOCALES_DIR)
+    .filter(f => f.endsWith('.json') && f !== 'en.json')
+    .map(f => f.replace('.json', ''));
+}
+
+for (const lang of langFiles) {
   const langPath = path.join(LOCALES_DIR, `${lang}.json`);
   let langData;
 
