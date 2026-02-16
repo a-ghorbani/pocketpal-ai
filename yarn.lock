@@ -6502,7 +6502,7 @@ lines-and-columns@^1.1.6:
 
 "llama.rn@https://github.com/a-ghorbani/llama.rn/releases/download/v0.11.0-tiny-aya/llama.rn-0.11.0.tgz":
   version "0.11.0"
-  resolved "https://github.com/a-ghorbani/llama.rn/releases/download/v0.11.0-tiny-aya/llama.rn-0.11.0.tgz#3ffe58ef9e7d2264b7153960588f809b8342ccd6"
+  resolved "https://github.com/a-ghorbani/llama.rn/releases/download/v0.11.0-tiny-aya/llama.rn-0.11.0.tgz"
 
 locate-path@^5.0.0:
   version "5.0.0"
