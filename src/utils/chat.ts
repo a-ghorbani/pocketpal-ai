@@ -321,6 +321,7 @@ export const stops = [
   '<end_of_turn>',
   '<|endoftext|>',
   '<|return|>', // gpt-oss
+  '<|END_RESPONSE|>', // cohere
 ];
 
 /**
