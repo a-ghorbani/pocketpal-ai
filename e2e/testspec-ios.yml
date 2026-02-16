@@ -69,7 +69,7 @@ phases:
         APPIUM_PORT=4723
         DEVICE_UDID=$DEVICEFARM_DEVICE_UDID
         APP_PATH=$DEVICEFARM_APP_PATH
-        npx ts-node scripts/run-model-tests.ts --platform ios --device-farm
+        npx ts-node scripts/run-e2e.ts --platform ios --each-model --mode device-farm
 
   post_test:
     commands:
