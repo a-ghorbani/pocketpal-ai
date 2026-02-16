@@ -15,6 +15,7 @@ yarn install
 |------|---------------|----------|
 | `quick-smoke` | Full user journey: navigate to Models → search HuggingFace → download SmolLM2-135M → load model → chat → verify inference completes | ~50-70s/device |
 | `load-stress` | Download model, run multiple load/unload cycles with inference between each. Catches crash-on-reload bugs | ~5-10 min/device |
+| `thinking` | Loads Qwen3-0.6B (thinking model), verifies thinking toggle, thinking bubble appears, toggle off suppresses it | ~3-5 min/device |
 | `diagnostic` | Dumps Appium page source XML at each screen. For debugging selectors, not a real test | ~10s |
 
 ## Local Testing
@@ -176,7 +177,10 @@ e2e/
 ├── specs/                        # Test specifications
 │   ├── quick-smoke.spec.ts       # Core smoke test (model download + chat)
 │   ├── load-stress.spec.ts       # Load/unload cycle crash repro
-│   └── diagnostic.spec.ts        # Page source dumper for debugging
+│   ├── diagnostic.spec.ts        # Page source dumper for debugging
+│   └── features/                 # Feature-level tests
+│       ├── thinking.spec.ts      # Thinking toggle + reasoning bubble
+│       └── language.spec.ts      # Language switching UI validation
 ├── pages/                        # Page Object Model
 │   ├── BasePage.ts               # Abstract base (waitFor, tap, type)
 │   ├── ChatPage.ts               # Chat screen interactions
@@ -186,7 +190,8 @@ e2e/
 │   └── ModelDetailsSheet.ts      # Model details + download
 ├── helpers/
 │   ├── selectors.ts              # Cross-platform element selectors
-│   └── gestures.ts               # Swipe/scroll gestures (W3C Actions)
+│   ├── gestures.ts               # Swipe/scroll gestures (W3C Actions)
+│   └── model-actions.ts          # Reusable download/load/inference helpers
 ├── fixtures/
 │   ├── models.ts                 # Test model configurations + timeouts
 │   └── test-image.jpg            # For vision model tests

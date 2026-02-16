@@ -404,6 +404,49 @@ export const Selectors = {
     },
   },
 
+  // Thinking / generation settings
+  thinking: {
+    /** "Think" toggle button - when thinking is currently enabled */
+    get toggleEnabled(): string {
+      return byAccessibilityLabel('Disable thinking mode');
+    },
+    /** "Think" toggle button - when thinking is currently disabled */
+    get toggleDisabled(): string {
+      return byAccessibilityLabel('Enable thinking mode');
+    },
+    /** "Reasoning" header text inside the ThinkingBubble */
+    get bubble(): string {
+      return byText('Reasoning');
+    },
+    /** Chevron icon inside the ThinkingBubble */
+    get chevronIcon(): string {
+      return byTestId('chevron-icon');
+    },
+  },
+
+  // Generation settings sheet
+  generationSettings: {
+    get completionSettings(): string {
+      return byTestId('completion-settings');
+    },
+    /** Temperature slider's text input (testID: temperature-slider-input) */
+    get temperatureInput(): string {
+      return byTestId('temperature-slider-input');
+    },
+    /** Seed integer input (testID: seed-input) */
+    get seedInput(): string {
+      return byTestId('seed-input');
+    },
+    /** Save button (session context) */
+    get saveButton(): string {
+      return byText('Save');
+    },
+    /** Save changes button (preset context) */
+    get saveChangesButton(): string {
+      return byText('Save Changes');
+    },
+  },
+
   // Benchmark screen
   benchmark: {
     get startTestButton(): string {
