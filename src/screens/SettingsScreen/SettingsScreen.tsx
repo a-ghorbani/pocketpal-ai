@@ -45,8 +45,8 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {AvailableLanguage} from '../../store/UIStore';
 import {modelStore, uiStore, hfStore} from '../../store';
+import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
 import {
@@ -64,23 +64,6 @@ import {
   getAllowedCacheTypeKOptions,
   getAllowedCacheTypeVOptions,
 } from '../../utils/flashAttnCompatibility';
-
-// Language display names in their native form
-const languageNames: Record<AvailableLanguage, string> = {
-  en: 'English (EN)',
-  //es: 'Español (ES)',
-  //de: 'Deutsch (DE)',
-  id: 'Indonesia (ID)',
-  ja: '日本語 (JA)',
-  //ko: '한국어 (KO)',
-  //pl: 'Polski (PL)',
-  //pt: 'Português (PT)',
-  //ru: 'Русский (RU)',
-  //tr: 'Türkçe (TR)',
-  //uk: 'Українська (UK)',
-  //ca: 'Català (CA)',
-  zh: '中文 (ZH)',
-};
 
 // OpenCL documentation URL (not localized)
 const OPENCL_DOCS_URL =
@@ -930,7 +913,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       icon={({size, color}) => (
                         <Icon source="chevron-down" size={size} color={color} />
                       )}>
-                      {languageNames[uiStore.language]}
+                      {languageDisplayNames[uiStore.language]}
                     </Button>
                     <Menu
                       visible={showLanguageMenu}
@@ -942,7 +925,7 @@ export const SettingsScreen: React.FC = observer(() => {
                           key={lang}
                           testID={`language-option-${lang}`}
                           style={styles.menu}
-                          label={languageNames[lang]}
+                          label={languageDisplayNames[lang]}
                           selected={lang === uiStore.language}
                           onPress={() => {
                             uiStore.setLanguage(lang);
