@@ -264,16 +264,12 @@ describe('chatSessionStore', () => {
       );
 
       // Update with timings - should merge, not replace
-      await chatSessionStore.updateMessage(
-        mockMessage.id,
-        mockSession.id,
-        {
-          metadata: {
-            timings: {total: 100},
-            copyable: true,
-          },
+      await chatSessionStore.updateMessage(mockMessage.id, mockSession.id, {
+        metadata: {
+          timings: {total: 100},
+          copyable: true,
         },
-      );
+      });
 
       const updatedMetadata = (
         chatSessionStore.sessions[0].messages[0] as MessageType.Text
@@ -311,15 +307,11 @@ describe('chatSessionStore', () => {
         undefined,
       );
 
-      await chatSessionStore.updateMessage(
-        mockMessage.id,
-        mockSession.id,
-        {
-          metadata: {
-            timings: {total: 100},
-          },
+      await chatSessionStore.updateMessage(mockMessage.id, mockSession.id, {
+        metadata: {
+          timings: {total: 100},
         },
-      );
+      });
 
       const updatedMetadata = (
         chatSessionStore.sessions[0].messages[0] as MessageType.Text
