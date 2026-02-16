@@ -9,6 +9,7 @@ import Blob from 'react-native/Libraries/Blob/Blob';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {l10n} from '../locales';
+import type {AvailableLanguage} from '../locales';
 import {modelStore} from '../store';
 import {getHFDefaultSettings} from './chat';
 import {formatBytes, formatNumber} from './formatters';
@@ -78,18 +79,9 @@ export const hashCode = (text = '') => {
 };
 
 /** Inits dayjs locale */
-export const initLocale = (locale?: keyof typeof l10n) => {
-  const locales: {[key in keyof typeof l10n]: unknown} = {
+export const initLocale = (locale?: AvailableLanguage) => {
+  const locales: Record<AvailableLanguage, unknown> = {
     en: require('dayjs/locale/en'),
-    // es: require('dayjs/locale/es'),
-    // ko: require('dayjs/locale/ko'),
-    // pl: require('dayjs/locale/pl'),
-    // pt: require('dayjs/locale/pt'),
-    // ru: require('dayjs/locale/ru'),
-    // tr: require('dayjs/locale/tr'),
-    // uk: require('dayjs/locale/uk'),
-    // ca: require('dayjs/locale/ca'),
-    // de: require('dayjs/locale/de'),
     id: require('dayjs/locale/id'),
     ja: require('dayjs/locale/ja'),
     zh: require('dayjs/locale/zh'),
