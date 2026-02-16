@@ -42,7 +42,11 @@ try {
 const enKeys = getKeys(en);
 console.log(`en.json: ${enKeys.length} keys`);
 
-for (const lang of ['id', 'ja', 'zh']) {
+const langFiles = fs.readdirSync(LOCALES_DIR)
+  .filter(f => f.endsWith('.json') && f !== 'en.json')
+  .map(f => f.replace('.json', ''));
+
+for (const lang of langFiles) {
   const langPath = path.join(LOCALES_DIR, `${lang}.json`);
   let langData;
 
