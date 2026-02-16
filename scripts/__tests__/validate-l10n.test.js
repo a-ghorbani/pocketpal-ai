@@ -134,9 +134,9 @@ describe('validate-l10n.js', () => {
     expect(result.output).toContain('All l10n files valid');
   });
 
-  it('auto-discovers new locale files added to the directory', () => {
-    // Add a new locale file (ko.json) via overrides -- the script should
-    // auto-discover it and validate it without any hardcoded list change.
+  it('falls back to auto-discovery when index.ts is absent', () => {
+    // Without index.ts in the temp dir, the script falls back to
+    // filesystem scanning and picks up any .json file present.
     const enContent = fs.readFileSync(
       path.join(LOCALES_DIR, 'en.json'),
       'utf-8',
@@ -145,13 +145,11 @@ describe('validate-l10n.js', () => {
       'ko.json': enContent,
     });
     expect(result.exitCode).toBe(0);
-    // The script should report ko.json as valid
     expect(result.output).toContain('ko.json: valid JSON');
     expect(result.output).toContain('All l10n files valid');
   });
 
-  it('auto-discovers and reports errors in new locale files', () => {
-    // Add an invalid new locale file -- script should detect and report it
+  it('falls back to auto-discovery and reports errors', () => {
     const result = runWithLocales({
       'ko.json': '{ invalid json',
     });
