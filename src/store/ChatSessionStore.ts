@@ -551,10 +551,7 @@ class ChatSessionStore {
 
               // Merge metadata instead of replacing, to preserve existing fields
               // (e.g., partialCompletionResult from streaming)
-              if (
-                update.metadata !== undefined &&
-                existingMessage.metadata
-              ) {
+              if (update.metadata !== undefined && existingMessage.metadata) {
                 mergedUpdate.metadata = {
                   ...existingMessage.metadata,
                   ...update.metadata,
