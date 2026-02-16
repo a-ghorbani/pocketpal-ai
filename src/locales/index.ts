@@ -80,10 +80,7 @@ export const l10n = {
   },
 };
 
-// NOTE: Do NOT use `as const` on the l10n getter object — `as const` on getters
-// is a no-op (getters already lack setters) and would be misleading.
-
-// ─── Interpolation helper (unchanged) ────────────────────────────────
+// ─── Interpolation helper ────────────────────────────────────────────
 /**
  * Typed interpolation helper.
  * Replaces all {{placeholder}} patterns in the template with values from the params object.

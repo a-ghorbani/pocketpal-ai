@@ -10,9 +10,6 @@ import {
 } from '../locales';
 import {ErrorState} from '../utils/errors';
 
-// Re-export so existing consumers importing from '../store' still work
-export type {AvailableLanguage} from '../locales';
-
 export class UIStore {
   static readonly GROUP_KEYS = {
     READY_TO_USE: 'ready_to_use',
