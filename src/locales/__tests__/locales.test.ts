@@ -34,81 +34,59 @@ const EXPECTED_SECTIONS = [
   'simulator',
 ];
 
+const ALL_LANGUAGES: AvailableLanguage[] = [
+  'en',
+  'he',
+  'id',
+  'ja',
+  'ko',
+  'ms',
+  'ru',
+  'zh',
+];
+
 describe('l10n object', () => {
   it('supports all expected languages', () => {
-    expect(supportedLanguages).toEqual(['en', 'id', 'ja', 'zh']);
-    expect(Object.keys(l10n)).toEqual(['en', 'id', 'ja', 'zh']);
+    expect(supportedLanguages).toEqual(ALL_LANGUAGES);
+    expect(Object.keys(l10n)).toEqual(ALL_LANGUAGES);
   });
 
   it('l10n.en is eagerly loaded and equals raw enData', () => {
     expect(l10n.en).toBe(enData); // same reference, not a copy
   });
 
-  it('l10n.en has all 19 expected top-level sections', () => {
-    const enSections = Object.keys(l10n.en);
-    for (const section of EXPECTED_SECTIONS) {
-      expect(enSections).toContain(section);
-    }
-    expect(enSections).toHaveLength(EXPECTED_SECTIONS.length);
-  });
-
-  it('l10n.ja has all 19 expected top-level sections', () => {
-    const jaSections = Object.keys(l10n.ja);
-    for (const section of EXPECTED_SECTIONS) {
-      expect(jaSections).toContain(section);
-    }
-    expect(jaSections).toHaveLength(EXPECTED_SECTIONS.length);
-  });
-
-  it('l10n.id has all 19 expected top-level sections', () => {
-    const idSections = Object.keys(l10n.id);
-    for (const section of EXPECTED_SECTIONS) {
-      expect(idSections).toContain(section);
-    }
-    expect(idSections).toHaveLength(EXPECTED_SECTIONS.length);
-  });
-
-  it('l10n.zh has all 19 expected top-level sections', () => {
-    const zhSections = Object.keys(l10n.zh);
-    for (const section of EXPECTED_SECTIONS) {
-      expect(zhSections).toContain(section);
-    }
-    expect(zhSections).toHaveLength(EXPECTED_SECTIONS.length);
-  });
+  it.each(ALL_LANGUAGES)(
+    'l10n.%s has all 19 expected top-level sections',
+    lang => {
+      const sections = Object.keys(l10n[lang]);
+      for (const section of EXPECTED_SECTIONS) {
+        expect(sections).toContain(section);
+      }
+      expect(sections).toHaveLength(EXPECTED_SECTIONS.length);
+    },
+  );
 
   it('l10n.en matches the raw en.json data', () => {
     expect(l10n.en).toEqual(enData);
   });
 
-  it('l10n.id contains Indonesian translations where they exist', () => {
-    const idData = require('../id.json');
-    expect(l10n.id.common.cancel).toBe(idData.common.cancel);
-    expect(l10n.id.common.cancel).not.toBe(l10n.en.common.cancel);
-  });
+  it.each(['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+    'l10n.%s contains translations where they exist',
+    lang => {
+      const langData = require(`../${lang}.json`);
+      expect(l10n[lang].common.cancel).toBe(langData.common.cancel);
+      expect(l10n[lang].common.cancel).not.toBe(l10n.en.common.cancel);
+    },
+  );
 
-  it('returns cached result on repeated access for id', () => {
-    const first = l10n.id;
-    const second = l10n.id;
-    expect(first).toBe(second); // same reference = cached
-  });
-
-  it('returns cached result on repeated access for zh', () => {
-    const first = l10n.zh;
-    const second = l10n.zh;
-    expect(first).toBe(second); // same reference = cached
-  });
-
-  it('l10n.ja contains Japanese translations where they exist', () => {
-    const jaData = require('../ja.json');
-    expect(l10n.ja.common.cancel).toBe(jaData.common.cancel);
-    expect(l10n.ja.common.cancel).not.toBe(l10n.en.common.cancel);
-  });
-
-  it('l10n.zh contains Chinese translations where they exist', () => {
-    const zhData = require('../zh.json');
-    expect(l10n.zh.common.cancel).toBe(zhData.common.cancel);
-    expect(l10n.zh.common.cancel).not.toBe(l10n.en.common.cancel);
-  });
+  it.each(['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+    'returns cached result on repeated access for %s',
+    lang => {
+      const first = l10n[lang];
+      const second = l10n[lang];
+      expect(first).toBe(second); // same reference = cached
+    },
+  );
 
   it('l10n.ja falls back to English for missing keys', () => {
     // Verify the merge mechanism by building a partial ja
@@ -138,16 +116,14 @@ describe('l10n object', () => {
     expect(enData).toEqual(enClone);
   });
 
-  it('returns cached result on repeated access', () => {
-    const first = l10n.ja;
-    const second = l10n.ja;
-    expect(first).toBe(second); // same reference = cached
-  });
-
   it('supports in operator for all languages', () => {
     expect('en' in l10n).toBe(true);
+    expect('he' in l10n).toBe(true);
     expect('id' in l10n).toBe(true);
     expect('ja' in l10n).toBe(true);
+    expect('ko' in l10n).toBe(true);
+    expect('ms' in l10n).toBe(true);
+    expect('ru' in l10n).toBe(true);
     expect('zh' in l10n).toBe(true);
     expect('xx' in l10n).toBe(false);
     expect('fr' in l10n).toBe(false);
@@ -170,7 +146,7 @@ describe('l10n object', () => {
 
       // Object.keys should enumerate property names without invoking getters
       const keys = Object.keys(freshModule.l10n);
-      expect(keys).toEqual(['en', 'id', 'ja', 'zh']);
+      expect(keys).toEqual(ALL_LANGUAGES);
 
       // Cache should still only have en -- getters were not called
       expect(freshModule._testGetCacheKeys()).toEqual(['en']);
@@ -192,7 +168,7 @@ describe('l10n object', () => {
 
 describe('exports', () => {
   it('supportedLanguages matches expected array', () => {
-    expect(supportedLanguages).toEqual(['en', 'id', 'ja', 'zh']);
+    expect(supportedLanguages).toEqual(ALL_LANGUAGES);
   });
 
   it('languageDisplayNames has entries for all supported languages', () => {
@@ -204,9 +180,13 @@ describe('exports', () => {
 
   it('languageDisplayNames contains expected values', () => {
     expect(languageDisplayNames.en).toBe('English (EN)');
-    expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
-    expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
+    expect(languageDisplayNames.he).toBe('\u05E2\u05D1\u05E8\u05D9\u05EA (HE)');
     expect(languageDisplayNames.id).toBe('Indonesia (ID)');
+    expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
+    expect(languageDisplayNames.ko).toBe('\uD55C\uAD6D\uC5B4 (KO)');
+    expect(languageDisplayNames.ms).toBe('Melayu (MS)');
+    expect(languageDisplayNames.ru).toBe('\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)');
+    expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
   });
 
   it('languageDisplayNames has exactly the same keys as supportedLanguages', () => {
@@ -235,43 +215,19 @@ describe('lazy loading', () => {
     });
   });
 
-  it('accessing a language populates the cache', () => {
-    jest.isolateModules(() => {
-      const freshModule = require('../index');
+  it.each(['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+    'accessing %s populates the cache',
+    lang => {
+      jest.isolateModules(() => {
+        const freshModule = require('../index');
+        expect(freshModule._testGetCacheKeys()).toEqual(['en']);
 
-      // Before access: only en
-      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
-
-      // Access ja
-      const _ja = freshModule.l10n.ja;
-      expect(_ja).toBeDefined();
-
-      // After access: en and ja
-      expect(freshModule._testGetCacheKeys()).toContain('ja');
-    });
-  });
-
-  it('accessing id populates the cache', () => {
-    jest.isolateModules(() => {
-      const freshModule = require('../index');
-      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
-
-      const _id = freshModule.l10n.id;
-      expect(_id).toBeDefined();
-      expect(freshModule._testGetCacheKeys()).toContain('id');
-    });
-  });
-
-  it('accessing zh populates the cache', () => {
-    jest.isolateModules(() => {
-      const freshModule = require('../index');
-      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
-
-      const _zh = freshModule.l10n.zh;
-      expect(_zh).toBeDefined();
-      expect(freshModule._testGetCacheKeys()).toContain('zh');
-    });
-  });
+        const _data = freshModule.l10n[lang];
+        expect(_data).toBeDefined();
+        expect(freshModule._testGetCacheKeys()).toContain(lang);
+      });
+    },
+  );
 
   it('accessing all languages populates the full cache', () => {
     jest.isolateModules(() => {
@@ -279,20 +235,17 @@ describe('lazy loading', () => {
       expect(freshModule._testGetCacheKeys()).toEqual(['en']);
 
       // Access each non-en language
-      const _id = freshModule.l10n.id;
-      const _ja = freshModule.l10n.ja;
-      const _zh = freshModule.l10n.zh;
-
-      expect(_id).toBeDefined();
-      expect(_ja).toBeDefined();
-      expect(_zh).toBeDefined();
+      const nonEn = ALL_LANGUAGES.filter(l => l !== 'en');
+      for (const lang of nonEn) {
+        const _data = freshModule.l10n[lang];
+        expect(_data).toBeDefined();
+      }
 
       const cacheKeys = freshModule._testGetCacheKeys();
-      expect(cacheKeys).toContain('en');
-      expect(cacheKeys).toContain('id');
-      expect(cacheKeys).toContain('ja');
-      expect(cacheKeys).toContain('zh');
-      expect(cacheKeys).toHaveLength(4);
+      for (const lang of ALL_LANGUAGES) {
+        expect(cacheKeys).toContain(lang);
+      }
+      expect(cacheKeys).toHaveLength(ALL_LANGUAGES.length);
     });
   });
 
@@ -305,13 +258,22 @@ describe('lazy loading', () => {
 
 describe('type safety', () => {
   it('AvailableLanguage matches supported languages', () => {
-    const keys: AvailableLanguage[] = ['en', 'id', 'ja', 'zh'];
+    const keys: AvailableLanguage[] = ALL_LANGUAGES;
     expect(keys).toEqual(supportedLanguages);
   });
 
   it('keyof typeof l10n resolves to literal union', () => {
     // At runtime we verify the keys match
-    const keys: Array<keyof typeof l10n> = ['en', 'id', 'ja', 'zh'];
+    const keys: Array<keyof typeof l10n> = [
+      'en',
+      'he',
+      'id',
+      'ja',
+      'ko',
+      'ms',
+      'ru',
+      'zh',
+    ];
     expect(Object.keys(l10n).sort()).toEqual(keys.sort());
 
     // This would cause a compile error if the type were wrong:
