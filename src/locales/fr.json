@@ -696,7 +696,6 @@
         "tokensPerSecond": "t/s"
       },
       "actions": {
-        "deleteButton": "",
         "submittedText": "✓ Partagé à",
         "leaderboardLink": "Classement AI Phone ↗",
         "cannotShare": "Impossible de partager",
