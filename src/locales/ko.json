@@ -683,7 +683,6 @@
   },
   "memory": {
     "shortWarning": "메모리 부족 주의",
-    "warning": "주의: 모델 크기가 사용 가능한 메모리를 초과할 수 있습니다. 이는 기기의 성능과 안정성에 영향을 줄 수 있습니다.",
     "multimodalWarning": "이 기기는 멀티모달 모델을 실행하기 위한 사양이 부족할 수 있습니다.",
     "memoryTight": "메모리 부족",
     "lowMemory": "메모리 낮음",
@@ -774,7 +773,6 @@
       "noResults": "모델을 찾을 수 없습니다",
       "loadingMore": "더 불러오는 중...",
       "searchPlaceholder": "Hugging Face 모델 검색",
-      "ago": "전",
       "modelUpdatedLong": "{{time}} 전 업데이트됨",
       "modelUpdatedShort": "{{time}} 전",
       "modelUpdatedJustNowLong": "방금 업데이트됨",
