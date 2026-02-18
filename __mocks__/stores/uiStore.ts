@@ -1,4 +1,4 @@
-import {l10n} from '../../src/locales';
+import {l10n, supportedLanguages} from '../../src/locales';
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -22,7 +22,7 @@ export const mockUiStore = {
     },
   },
   language: 'en',
-  supportedLanguages: ['en', 'id', 'ja', 'zh'],
+  supportedLanguages: [...supportedLanguages],
   l10n: l10n.en,
   setValue: jest.fn(),
   displayMemUsage: false,

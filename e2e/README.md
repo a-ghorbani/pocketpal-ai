@@ -15,9 +15,10 @@ yarn install
 |------|---------------|----------|
 | `quick-smoke` | Full user journey: navigate to Models → search HuggingFace → download SmolLM2-135M → load model → chat → verify inference completes | ~50-70s/device |
 | `load-stress` | Download model, run multiple load/unload cycles with inference between each. Catches crash-on-reload bugs | ~5-10 min/device |
+| `thinking` | Loads Qwen3-0.6B (thinking model), verifies thinking toggle, thinking bubble appears, toggle off suppresses it | ~3-5 min/device |
 | `diagnostic` | Dumps Appium page source XML at each screen. For debugging selectors, not a real test | ~10s |
 
-## Local Testing (Single Device)
+## Local Testing
 
 ### Prerequisites
 - Xcode configured (for iOS)
@@ -37,23 +38,66 @@ yarn ios:build:ipa
 cd android && ./gradlew assembleRelease
 ```
 
-### Run on a Single Device
+### Unified E2E Runner
+
+All local test execution goes through a single `yarn e2e` command:
 
 ```bash
-# iOS simulator (default: iPhone 17 Pro, iOS 26.0)
-yarn test:ios:local
+# Simple smoke test on default device
+yarn e2e:ios --spec quick-smoke
+yarn e2e:android --spec quick-smoke
 
-# Android emulator (default: emulator-5554, Android 16)
-yarn test:android:local
+# Test each model in isolation (one WDIO process per model)
+yarn e2e:ios --each-model
+yarn e2e:ios --each-model --models smollm2-135m,qwen3-0.6b
 
-# Override device via env vars
-E2E_DEVICE_NAME="iPhone 16 Pro" E2E_PLATFORM_VERSION="18.2" yarn test:ios:local
+# Crash reproduction (load-stress on a specific model)
+yarn e2e --platform ios --spec load-stress --models gemma-2-2b
 
-# Run a specific spec
-yarn test:ios:local --spec specs/load-stress.spec.ts
+# Multi-device pipeline (iterate across devices from devices.json)
+yarn e2e:ios --each-device
+yarn e2e:ios --devices virtual-only --skip-build
 
-# Test with a specific model
-TEST_MODELS=qwen3-0.6b yarn test:ios:local --spec specs/quick-smoke.spec.ts
+# Run on whatever real devices are currently plugged in
+yarn e2e:android --devices connected --skip-build
+
+# Full matrix: every model x every device
+yarn e2e:ios --each-device --each-model
+
+# Include crash-repro models in the pool
+yarn e2e:ios --each-model --all-models
+
+# Dry run (preview what would execute)
+yarn e2e --platform both --each-device --each-model --dry-run
+
+# List available models
+yarn e2e --list-models
+```
+
+### Flags
+
+| Flag | Values | Default | Description |
+|------|--------|---------|-------------|
+| `--platform` | `ios`, `android`, `both` | _(required)_ | Which platform(s) to test |
+| `--spec` | `quick-smoke`, `load-stress`, `diagnostic`, `language`, `all` | `quick-smoke` | Which test spec to run |
+| `--models` | comma-separated model IDs | _(all)_ | Specific model(s) to test |
+| `--each-model` | _(flag)_ | off | Iterate spec once per model (isolated process) |
+| `--all-models` | _(flag)_ | off | Include crash-repro models in the pool |
+| `--devices` | `all`, `virtual-only`, `real-only`, `connected`, or comma-separated IDs | `all` | Device filter (implies `--each-device`) |
+| `--each-device` | _(flag)_ | off | Iterate across devices from `devices.json` |
+| `--mode` | `local`, `device-farm` | `local` | Execution mode (switches wdio config) |
+| `--skip-build` | _(flag)_ | builds by default | Skip app builds, reuse existing |
+| `--dry-run` | _(flag)_ | off | Print what would run without executing |
+| `--report-dir` | path | auto-timestamped | Override report output directory |
+| `--list-models` | _(flag)_ | off | List all available models and exit |
+
+### Direct WDIO Commands
+
+For ad-hoc runs where you need to pass WDIO-specific flags, invoke WDIO directly:
+
+```bash
+npx wdio run wdio.ios.local.conf.ts --spec specs/quick-smoke.spec.ts
+npx wdio run wdio.android.local.conf.ts --spec specs/load-stress.spec.ts
 ```
 
 ### Environment Variables (WDIO Configs)
@@ -67,67 +111,19 @@ Both `wdio.ios.local.conf.ts` and `wdio.android.local.conf.ts` accept these env 
 | `E2E_DEVICE_UDID` | _(none)_ | _(none)_ | Device UDID (required for real devices) |
 | `E2E_APP_PATH` | `../ios/build/.../PocketPal.app` | `../android/.../app-release.apk` | Path to built app |
 | `E2E_APPIUM_PORT` | `4723` | `4723` | Appium server port |
+| `E2E_XCODE_ORG_ID` | _(none)_ | N/A | Apple Team ID (required for real iOS devices) |
+| `E2E_XCODE_SIGNING_ID` | `Apple Development` | N/A | Code signing identity for WDA |
 
-## Multi-Device Pipeline
+### Multi-Device Setup
 
-Run E2E tests sequentially across multiple simulators, emulators, and USB-connected real devices.
+To use `--each-device`, set up a device inventory:
 
-### Setup
-
-1. Copy the device inventory template:
+1. Copy the template:
    ```bash
    cp devices.template.json devices.json
    ```
 
-2. Edit `devices.json` with your actual devices:
-   ```json
-   {
-     "devices": [
-       {
-         "id": "iphone-17-pro-sim",
-         "name": "iPhone 17 Pro Simulator",
-         "platform": "ios",
-         "type": "simulator",
-         "enabled": true,
-         "deviceName": "iPhone 17 Pro",
-         "platformVersion": "26.0",
-         "appPath": "../ios/build/Build/Products/Release-iphonesimulator/PocketPal.app"
-       },
-       {
-         "id": "my-iphone",
-         "name": "My iPhone (USB)",
-         "platform": "ios",
-         "type": "real",
-         "enabled": true,
-         "deviceName": "My iPhone",
-         "platformVersion": "18.2",
-         "udid": "00008110-XXXXXXXXXXXX",
-         "appPath": "../ios/build/PocketPal.ipa"
-       },
-       {
-         "id": "android-emu",
-         "name": "Android Emulator",
-         "platform": "android",
-         "type": "emulator",
-         "enabled": true,
-         "deviceName": "emulator-5554",
-         "platformVersion": "16",
-         "appPath": "../android/app/build/outputs/apk/release/app-release.apk"
-       },
-       {
-         "id": "pixel-9",
-         "name": "Pixel 9 (USB)",
-         "platform": "android",
-         "type": "real",
-         "enabled": true,
-         "deviceName": "Pixel 9",
-         "platformVersion": "16",
-         "udid": "XXXXXXXXXXXXXXX",
-         "appPath": "../android/app/build/outputs/apk/release/app-release.apk"
-       }
-     ]
-   }
-   ```
+2. Edit `devices.json` with your actual devices (simulators, emulators, USB-connected real devices). See `devices.template.json` for the format.
 
    **Finding device UDIDs:**
    ```bash
@@ -140,81 +136,18 @@ Run E2E tests sequentially across multiple simulators, emulators, and USB-connec
 
    > `devices.json` is gitignored — each machine has its own.
 
-### Run the Pipeline
-
-```bash
-# Build + run quick-smoke on all enabled devices (both platforms)
-yarn pipeline --spec quick-smoke
-
-# iOS only
-yarn pipeline:ios --spec quick-smoke
-
-# Android only
-yarn pipeline:android --spec quick-smoke
-
-# Skip build (reuse existing builds)
-yarn pipeline --platform both --spec quick-smoke --skip-build
-
-# Run all specs on all devices
-yarn pipeline --platform both --spec all --skip-build
-
-# Specific devices by ID
-yarn pipeline --platform both --devices iphone-17-pro-sim,pixel-9 --spec quick-smoke --skip-build
-
-# Only virtual devices (simulators + emulators, no real devices)
-yarn pipeline --platform both --devices virtual-only --spec quick-smoke --skip-build
-
-# Only real devices
-yarn pipeline --platform both --devices real-only --spec quick-smoke --skip-build
-
-# Dry run (preview what would execute)
-yarn pipeline --platform both --dry-run
-```
-
-### Pipeline Flags
-
-| Flag | Values | Default | Description |
-|------|--------|---------|-------------|
-| `--platform` | `ios`, `android`, `both` | `both` | Which platform(s) to test |
-| `--spec` | `quick-smoke`, `load-stress`, `all` | `quick-smoke` | Which test spec(s) to run |
-| `--devices` | `all`, `virtual-only`, `real-only`, or comma-separated IDs | `all` | Which devices to include |
-| `--skip-build` | _(flag)_ | builds by default | Skip app builds, reuse existing |
-| `--dry-run` | _(flag)_ | off | Print what would run without executing |
-| `--report-dir` | path | auto-timestamped | Override report output directory |
-
 ### Reports
 
-Each pipeline run creates a timestamped directory under `e2e/reports/`:
+Each run creates a timestamped directory under `e2e/reports/`:
 
 ```
 e2e/reports/2026-02-13T16-14-12-758/
-  summary.json              # Overall results + per-device breakdown
+  summary.json              # Overall results + per-run breakdown
   junit-results.xml         # Merged JUnit XML (for CI integration)
-  iphone-17-pro-sim/        # Per-device artifacts
-    junit-unknown.xml
-    report-smollm2-135m.json
-    screenshots/
-  pixel-9/
-    ...
-```
-
-`summary.json` example:
-```json
-{
-  "timestamp": "2026-02-13T16-14-12-758",
-  "branch": "feature/my-branch",
-  "commit": "abc1234",
-  "platform": "both",
-  "spec": "quick-smoke",
-  "totalDevices": 4,
-  "passed": 3,
-  "failed": 1,
-  "totalDuration": 180167,
-  "results": [
-    { "deviceId": "iphone-17-pro-sim", "success": true, "duration": 48671 },
-    { "deviceId": "pixel-9", "success": true, "duration": 64057 }
-  ]
-}
+  iphone-17-pro-sim/        # Per-device subdirectory (when --each-device)
+    smollm2-135m/           # Per-model subdirectory (when --each-model)
+      junit-smollm2-135m.xml
+      screenshots/
 ```
 
 ## AWS Device Farm Testing
@@ -234,7 +167,7 @@ e2e/reports/2026-02-13T16-14-12-758/
 
 ### Run manually
 ```bash
-yarn test:aws --platform android --app path/to/app.apk
+yarn e2e:aws --platform android --app path/to/app.apk
 ```
 
 ## Project Structure
@@ -244,7 +177,10 @@ e2e/
 ├── specs/                        # Test specifications
 │   ├── quick-smoke.spec.ts       # Core smoke test (model download + chat)
 │   ├── load-stress.spec.ts       # Load/unload cycle crash repro
-│   └── diagnostic.spec.ts        # Page source dumper for debugging
+│   ├── diagnostic.spec.ts        # Page source dumper for debugging
+│   └── features/                 # Feature-level tests
+│       ├── thinking.spec.ts      # Thinking toggle + reasoning bubble
+│       └── language.spec.ts      # Language switching UI validation
 ├── pages/                        # Page Object Model
 │   ├── BasePage.ts               # Abstract base (waitFor, tap, type)
 │   ├── ChatPage.ts               # Chat screen interactions
@@ -254,15 +190,14 @@ e2e/
 │   └── ModelDetailsSheet.ts      # Model details + download
 ├── helpers/
 │   ├── selectors.ts              # Cross-platform element selectors
-│   └── gestures.ts               # Swipe/scroll gestures (W3C Actions)
+│   ├── gestures.ts               # Swipe/scroll gestures (W3C Actions)
+│   └── model-actions.ts          # Reusable download/load/inference helpers
 ├── fixtures/
 │   ├── models.ts                 # Test model configurations + timeouts
 │   └── test-image.jpg            # For vision model tests
 ├── scripts/
-│   ├── run-e2e-pipeline.ts       # Multi-device pipeline runner
-│   ├── run-model-tests.ts        # Sequential per-model test runner
-│   ├── run-aws-device-farm.ts    # AWS Device Farm orchestration
-│   └── run-crash-repro.ts        # Crash reproduction CLI
+│   ├── run-e2e.ts                # Unified E2E test runner (models, devices, specs)
+│   └── run-aws-device-farm.ts    # AWS Device Farm orchestration
 ├── devices.template.json         # Device inventory template (copy to devices.json)
 ├── wdio.shared.conf.ts           # Shared WDIO configuration
 ├── wdio.ios.local.conf.ts        # Local iOS (env-var-driven)

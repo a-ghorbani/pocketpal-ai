@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy to devices.json and customize for your machine. See e2e/scripts/run-e2e-pipeline.ts for details.",
+  "_comment": "Copy to devices.json and customize for your machine. See e2e/scripts/run-e2e.ts for details.",
   "devices": [
     {
       "id": "iphone-17-pro-sim",
@@ -21,7 +21,9 @@
       "platformVersion": "18.2",
       "udid": "00008110-XXXXXXXXXXXX",
       "appPath": "../ios/build/PocketPal.ipa",
-      "_note": "Real devices require an IPA signed for the device, not the simulator .app"
+      "xcodeOrgId": "YOUR_TEAM_ID",
+      "xcodeSigningId": "Apple Development",
+      "_note": "Real iOS devices require: (1) a signed IPA, (2) xcodeOrgId for WebDriverAgent signing. Find your Team ID in Xcode → Signing & Capabilities, or 'security find-identity -v -p codesigning'"
     },
     {
       "id": "pixel-8-emu",

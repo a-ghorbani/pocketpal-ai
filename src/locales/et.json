@@ -1,0 +1,14 @@
+{
+  "common": {
+    "cancel": "Katkesta",
+    "delete": "Kustuta",
+    "dismiss": "Loobu",
+    "rename": "Muuda nime",
+    "reset": "Lähtesta",
+    "save": "Salvesta",
+    "update": "Uuenda",
+    "error": "Viga",
+    "export": "Ekspordi",
+    "networkError": "Võrguühenduse viga. Palun proovi uuesti."
+  }
+}

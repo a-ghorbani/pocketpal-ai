@@ -79,7 +79,8 @@
         "gpuLayers": "GPU 레이어: {{layers}}",
         "flashAttentionEnabled": "Flash Attention 활성화됨",
         "flashAttentionDisabled": "Flash Attention 비활성화됨",
-        "cacheTypes": "캐시 유형: {{cacheK}}/{{cacheV}}"
+        "cacheTypes": "캐시 유형: {{cacheK}}/{{cacheV}}",
+        "device": "기기: {{device}}"
       },
       "results": {
         "promptProcessing": "프롬프트 처리 속도",
@@ -94,7 +95,8 @@
         "cannotShare": "공유할 수 없음",
         "cannotShareTooltip": "로컬 모델 결과는 공유할 수 없습니다.",
         "submitButton": "리더보드에 제출하기",
-        "viewLeaderboard": "리더보드 보기 ↗"
+        "viewLeaderboard": "리더보드 보기 ↗",
+        "deleteButton": " "
       },
       "errors": {
         "networkRetry": "네트워크 연결 확인 후 다시 시도",
@@ -111,7 +113,9 @@
       "sections": {
         "basicInfo": "기본 정보",
         "cpuDetails": "CPU 세부 정보",
-        "appInfo": "앱 정보"
+        "appInfo": "앱 정보",
+        "gpuDetails": "GPU 세부정보",
+        "hexagonDetails": "Hexagon DSP"
       },
       "fields": {
         "architecture": "아키텍처",
@@ -121,7 +125,13 @@
         "cpuModel": "CPU 모델",
         "chipset": "칩셋",
         "instructions": "지침",
-        "version": "버전"
+        "version": "버전",
+        "gpuType": "GPU 유형",
+        "gpuRenderer": "렌더링 엔진",
+        "gpuVendor": "제조사",
+        "metalSupport": "Metal 지원",
+        "openclSupport": "OpenCL 지원",
+        "openclRequirement": "i8mm 및 dotprod 기능 필요"
       },
       "instructions": {
         "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
@@ -140,7 +150,9 @@
     "load": "불러오기",
     "goToModels": "모델 목록으로 이동",
     "readyToChat": "채팅을 시작할까요? 마지막으로 사용한 모델을 불러옵니다.",
-    "pleaseLoadModel": "채팅을 시작하려면 모델을 로드해 주세요."
+    "pleaseLoadModel": "채팅을 시작하려면 모델을 로드해 주세요.",
+    "multimodalNotEnabled": "이 모델은 멀티모달 기능이 활성화되지 않았습니다. 이미지는 표시되지만 AI가 처리하지는 않습니다.",
+    "cannotSendWithoutModel": "모델을 먼저 로드해 주세요"
   },
   "common": {
     "cancel": "취소",
@@ -166,7 +178,14 @@
     "hours": "시간",
     "minute": "분",
     "minutes": "분",
-    "justNow": "방금 전"
+    "justNow": "방금 전",
+    "update": "업데이트",
+    "export": "내보내기",
+    "ok": "확인",
+    "close": "닫기",
+    "clear": "모두 삭제",
+    "gallery": "갤러리",
+    "error": "오류"
   },
   "completionParams": {
     "grammar": "특정 문법 규칙을 적용하여 생성된 텍스트가 정해진 구조나 형식을 따르도록 강제합니다.",
@@ -194,7 +213,9 @@
     "seed": "난수 생성기 시드를 설정합니다. 동일한 결과를 다시 생성하고 싶을 때 유용합니다.",
     "xtc_probability": "XTC 샘플러를 통한 토큰 제거 확률을 설정합니다. 0으로 설정하면 비활성화됩니다.",
     "xtc_threshold": "XTC 샘플러가 토큰을 제거하기 위한 최소 확률 임계값을 설정합니다. (0.5보다 크면 XTC 비활성화)",
-    "typical_p": "p값을 조절하여 문맥에 적합한 전형적인 단어들을 우선적으로 선택합니다. 1.0은 기능을 사용하지 않음을 의미합니다."
+    "typical_p": "p값을 조절하여 문맥에 적합한 전형적인 단어들을 우선적으로 선택합니다. 1.0은 기능을 사용하지 않음을 의미합니다.",
+    "include_thinking_in_context": "모델에 전달되는 컨텍스트에 AI의 사고/추론 과정을 포함합니다. 이 기능을 끄면 컨텍스트 공간을 절약할 수 있지만, 답변의 품질이 떨어질 수 있습니다.",
+    "jinja": "채팅 형식에 Jinja 템플릿을 사용합니다. 활성화 시 Jinja 기반의 채팅 템플릿 프로세싱을 통해 최신 모델과의 호환성을 높입니다."
   },
   "components": {
     "attachmentButton": {
@@ -213,7 +234,14 @@
       "activateModelButton": "모델 선택"
     },
     "chatInput": {
-      "inputPlaceholder": "메시지"
+      "inputPlaceholder": "메시지",
+      "thinkingToggle": {
+        "enableThinking": "사고 모드 활성화",
+        "disableThinking": "사고 모드 비활성화",
+        "thinkingEnabled": "사고 모드 활성화됨",
+        "thinkingDisabled": "사고 모드 비활성화됨",
+        "thinkText": "사고"
+      }
     },
     "chatGenerationSettingsSheet": {
       "invalidValues": "유효하지 않은 값",
@@ -229,7 +257,9 @@
       "applytoPresetAlert": {
         "title": "성공",
         "message": "변경사항이 향후 모든 세션에 적용됩니다."
-      }
+      },
+      "palSettings": "Pal 설정",
+      "settingsSource": "설정 소스"
     },
     "modelsResetDialog": {
       "confirmReset": "재설정 확인",
@@ -258,7 +288,8 @@
       "confirmationTitle": "확인",
       "modelSwitchMessage": "해당 Pal에 설정된 기본 모델({{modelName}})이 현재 모델과 다릅니다. 모델을 전환하겠습니까?",
       "keepButton": "유지",
-      "switchButton": "전환"
+      "switchButton": "전환",
+      "videoType": "비디오"
     },
     "headerRight": {
       "deleteChatTitle": "채팅 삭제하기",
@@ -267,7 +298,11 @@
       "model": "모델",
       "duplicateChatHistory": "채팅 복제하기",
       "makeChatTemporary": "임시 채팅 사용하기",
-      "exportChatSession": "대화 내역 내보내기"
+      "exportChatSession": "채팅 세션 내보내기",
+      "export": "내보내기/가져오기",
+      "exportCurrentSession": "현재 세션 내보내기",
+      "exportAllSessions": "모든 세션 내보내기",
+      "importSessions": "세션 가져오기"
     },
     "modelSettingsSheet": {
       "modelSettings": "모델 설정",
@@ -323,7 +358,9 @@
       "downloadAModel": "모델 다운로드",
       "defaultModelNotDownloaded": "기본 모델이 아직 다운로드되지 않았습니다. 먼저 다운로드해 주세요.",
       "cancelDownload": "다운로드 취소",
-      "download": "다운로드"
+      "download": "다운로드",
+      "modelNotDownloadedShort": "모델 다운로드되지 않음",
+      "recommendedModel": "추천 모델"
     },
     "sendButton": {
       "accessibilityLabel": "전송"
@@ -343,7 +380,9 @@
       "buttons": {
         "loadingModel": "모델 로딩 중...",
         "stopGenerating": "생성 중단",
-        "generatePrompt": "시스템 프롬프트 생성"
+        "generatePrompt": "시스템 프롬프트 생성",
+        "resetParameters": "파라미터 초기화",
+        "resetTemplate": "템플릿 초기화"
       },
       "systemPrompt": {
         "label": "시스템 프롬프트",
@@ -376,7 +415,18 @@
         "fourWeeksAgo": "4주 전",
         "lastMonth": "지난 달",
         "older": "오래된 항목"
-      }
+      },
+      "select": "선택",
+      "nSelected": "{{count}}개 선택됨",
+      "selectAll": "전체 선택",
+      "deselectAll": "전체 선택 해제",
+      "exportCount": "내보내기 ({{count}})",
+      "deleteCount": "삭제 ({{count}})",
+      "bulkDeleteTitle": "채팅 세션 삭제",
+      "bulkDeleteMessage": "{{Count}}개의 채팅 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      "bulkDeleteError": "채팅 세션 삭제에 실패했습니다. 다시 시도해 주세요.",
+      "exportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요.",
+      "bulkExportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요."
     },
     "usageStats": {
       "tooltip": {
@@ -391,6 +441,202 @@
         "MB",
         "GB"
       ]
+    },
+    "exportUtils": {
+      "fileSaved": "파일 저장됨",
+      "fileSavedMessage": "{{filename}} 파일이 다운로드 폴더에 저장되었습니다.",
+      "share": "공유",
+      "ok": "확인",
+      "shareError": "공유 실패",
+      "shareErrorMessage": "파일을 공유할 수 없습니다. 다시 시도해 주세요.",
+      "saveError": "다운로드 폴더에 저장하는데 오류 발생",
+      "saveOptions": "저장 옵션",
+      "saveOptionsMessage": "다운로드 폴더에 직접 저장할 수 없습니다. 대신 파일을 공유하시겠습니까?",
+      "cancel": "취소",
+      "shareContentErrorMessage": "콘텐츠 공유에 실패했습니다. 다시 시도해 주세요.",
+      "exportError": "내보내기 오류",
+      "exportErrorMessage": "파일을 내보내는 중 오류가 발생했습니다. 다시 시도해 주세요.",
+      "permissionRequired": "저장공간 접근 권한 필요",
+      "permissionMessage": "내보낼 파일을 다운로드 폴더에 저장하기 위해 권한 허용이 필요합니다.",
+      "permissionDenied": "권한 거부됨",
+      "permissionDeniedMessage": "저장공간 접근 권한이 없으면 내보내기 기능을 사용할 수 없습니다.",
+      "continue": "계속"
+    },
+    "thinkingBubble": {
+      "reasoning": "추론 중"
+    },
+    "contentReportSheet": {
+      "title": "콘텐츠 신고",
+      "privacyNote": "메시지 내용이나 대화 세부 정보는 전송되지 않습니다. 발생한 구체적인 문제를 설명해 주세요.",
+      "categoryLabel": "신고 유형",
+      "selectCategory": "유형을 선택하세요",
+      "categories": {
+        "hate": "혐오 표현",
+        "sexual": "성적 콘텐츠",
+        "selfHarm": "자해 및 자살",
+        "violence": "폭력적인 콘텐츠",
+        "other": "기타"
+      },
+      "descriptionLabel": "설명",
+      "descriptionPlaceholder": "이 콘텐츠에서 발견된 문제를 설명해 주세요...",
+      "includeModelInfo": "모델 정보 포함",
+      "includeModelInfoDescription": "조사에 도움이 되도록 모델 이름과 식별자를 포함해 주세요.",
+      "noActiveModelNote": "현재 활성화된 모델이 없습니다.",
+      "submit": "리포트 제출",
+      "validation": {
+        "title": "정보 누락됨",
+        "message": "카테고리를 선택하고 설명을 입력해 주세요."
+      },
+      "success": {
+        "title": "리포트 제출됨",
+        "message": "제보해 주셔서 감사합니다. 검토 후 적절한 조치를 취하겠습니다."
+      },
+      "error": {
+        "title": "리포트 제출 실패",
+        "message": "리포트 제출에 실패했습니다. 다시 시도해 주세요."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "모델 로드 문제 신고",
+      "privacyNote": "오류 상세 내용을 공유하여 PocketPal의 성능 개선을 도와주세요. 공유되는 항목을 아래에서 확인하고, 포함하고 싶지 않은 항목은 선택 해제할 수 있습니다.",
+      "errorMessage": "오류 메시지",
+      "modelInfo": "모델 정보",
+      "modelName": "이름",
+      "modelSource": "출처",
+      "modelSize": "크기",
+      "contextParams": "컨텍스트 파라미터",
+      "deviceInfo": "기기 정보",
+      "deviceModel": "기기 모델",
+      "osVersion": "OS",
+      "memoryInfo": "메모리 정보",
+      "cpuArchitecture": "CPU 정보",
+      "isEmulator": "에뮬레이터",
+      "additionalInfoLabel": "추가 정보 (선택 사항)",
+      "additionalInfoPlaceholder": "문제 해결에 도움이 될 수 있는 상세 내용을 입력해 주세요.",
+      "submit": "리포트 제출",
+      "success": {
+        "title": "리포트 제출됨",
+        "message": "PocketPal의 개선을 도와주셔서 감사합니다. 보내주신 리포트는 문제를 해결하는 데 큰 도움이 됩니다."
+      },
+      "error": {
+        "title": "리포트 제출 실패",
+        "message": "리포트 제출에 실패했습니다. 나중에 다시 시도해 주세요."
+      }
+    },
+    "palGenerationSettingsSheet": {
+      "title": "생성 설정 - {{palName}}",
+      "invalidValues": "유효하지 않은 값",
+      "invalidNumericValuesMessage": "유효한 숫자를 입력해 주세요",
+      "pleaseCorrect": "아래 내용을 수정해 주세요:",
+      "ok": "확인",
+      "error": "오류",
+      "failedToSave": "Pal 설정 저장에 실패했습니다.",
+      "resetToGlobal": "전체 기본값으로 재설정",
+      "resetToSystem": "시스템 기본값으로 초기화",
+      "clearPalSettings": "Pal 설정 지우기",
+      "customSettingsFor": "{{palName}} 개별 설정",
+      "inheritedSettingsFor": "{{palName}}에 적용된 기본 설정"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "다운로드 실패",
+      "downloadFailedMessage": "모델 다운로드 실패: {{message}}",
+      "unauthorizedTitle": "인증 실패",
+      "unauthorizedMessage": "Hugging Face 토큰이 유효하지 않거나 만료되었습니다. 설정에서 토큰을 업데이트해 주세요.",
+      "forbiddenTitle": "접근 거부됨",
+      "forbiddenMessage": "이 모델에 접근할 권한이 없습니다. 아래 항목들을 확인해 보시기 바랍니다:",
+      "forbiddenSteps": [
+        "사용 중인 토큰에 \"읽기\" 권한이 있는지 확인",
+        "모델 접근 권한을 요청하고 승인받았는지 확인",
+        "모델 소유자가 접근 요청을 승인했습니다"
+      ],
+      "getTokenTitle": "Hugging Face 토큰 받기",
+      "getTokenMessage": "이 모델을 다운로드하려면 Hugging Face 토큰이 필요합니다.",
+      "getTokenSteps": [
+        "huggingface.co로 이동하여 로그인하세요",
+        "설정 > 액세스 토큰으로 이동하세요",
+        "\"읽기\" 권한이 있는 새 토큰을 생성하세요",
+        "토큰을 복사하여 토큰 입력란에 붙여넣으세요"
+      ],
+      "tokenDisabledTitle": "토큰 비활성화됨",
+      "tokenDisabledMessage": "Hugging Face 토큰이 설정되어 있지만, 현재 비활성 상태입니다. 이 모델을 다운로드하려면 토큰을 활성화하세요.",
+      "enableAndRetry": "활성화 및 재시도",
+      "goToSettings": "설정으로 이동",
+      "tryAgain": "다시 시도",
+      "viewOnHuggingFace": "HF에서 모델 보기 ↗"
+    },
+    "hfTokenSheet": {
+      "title": "Hugging Face 토큰",
+      "description": "접근 권한이 필요한 모델을 이용하기 위해 설정해야 합니다.",
+      "inputLabel": "개인 액세스 토큰",
+      "inputPlaceholder": "토큰을 여기에 입력하세요",
+      "save": "토큰 저장",
+      "saved": "토큰이 성공적으로 저장되었습니다.",
+      "reset": "토큰 초기화",
+      "resetSuccess": "토큰이 성공적으로 제거되었습니다.",
+      "instructions": "토큰 발급 방법:",
+      "instructionsSteps": [
+        "huggingface.co로 이동하여 로그인하세요",
+        "설정 > 액세스 토큰으로 이동하세요",
+        "\"읽기\" 권한이 있는 새 토큰을 생성하세요",
+        "토큰을 복사하여 토큰 입력란에 붙여넣으세요"
+      ],
+      "getTokenLink": "huggingface.co에서 토큰 발급받기 ↗",
+      "error": {
+        "saving": "토큰 저장 오류",
+        "missing": "Hugging Face 토큰을 입력해 주세요",
+        "invalid": "유효하지 않거나 만료된 토큰입니다",
+        "gatedModelAccess": "이 모델은 승인이 필요하며, 현재 접근이 거부되었습니다."
+      },
+      "gatedModelIndicator": "토큰 필요",
+      "tokenRequired": "이 모델을 사용하려면 Hugging Face 액세스 토큰이 필요합니다.",
+      "searchErrorHint": "Hugging Face API 토큰이 유효하지 않거나 만료되었습니다. 검색을 계속하려면 설정에서 토큰을 제거하거나 토큰 인증을 비활성화하세요.",
+      "disableAndRetry": "토큰 비활성화 및 다시 시도"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Pal 수정",
+        "newPal": "새 Pal 만들기",
+        "newVideoPal": "새 Video Pal 만들기"
+      },
+      "description": "설명",
+      "descriptionPlaceholder": "Pal에 대한 간단한 설명을 입력해 주세요",
+      "parameters": "파라미터",
+      "generationSettings": "생성 설정",
+      "configureGenerationSettings": "생성 설정 구성",
+      "validation": {
+        "nameRequired": "이름을 입력해 주세요",
+        "generatingPromptRequired": "AI 프롬프트를 사용한다면 답변 생성 프롬프트를 입력해 주세요",
+        "promptModelRequired": "AI 프롬프트를 사용한다면 프롬프트 생성을 위한 모델를 선택해 주세요"
+      }
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Lookie Pal 만들기",
+        "edit": "Lookie Pal 수정"
+      },
+      "palName": "Pal 이름",
+      "palNamePlaceholder": "Lookie Pal의 이름을 입력하세요",
+      "visionModel": "시각 모델",
+      "visionModelPlaceholder": "시각 모델을 선택하세요",
+      "requiredModelsSection": "필요한 모델",
+      "captureInterval": "촬영 간격",
+      "captureIntervalHelper": "자동 촬영이 진행되는 시간(밀리세컨드 단위) 간격입니다.",
+      "create": "만들기"
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "복사",
+        "regenerate": "다시 생성",
+        "regenerateWith": "다른 모델로 다시 생성",
+        "edit": "수정",
+        "reportContent": "콘텐츠 리포트"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "모든 Pal 내보내기",
+      "importPals": "Pal 가져오기",
+      "importSuccess": "{{count}}개의 Pal을 성공적으로 가져왔습니다.",
+      "importError": "Pal을 가져오지 못했습니다. 파일 형식을 확인해 주세요."
     }
   },
   "feedback": {
@@ -437,7 +683,21 @@
   },
   "memory": {
     "shortWarning": "메모리 부족 주의",
-    "warning": "주의: 모델 크기가 사용 가능한 메모리를 초과할 수 있습니다. 이는 기기의 성능과 안정성에 영향을 줄 수 있습니다."
+    "multimodalWarning": "이 기기는 멀티모달 모델을 실행하기 위한 사양이 부족할 수 있습니다.",
+    "memoryTight": "메모리 부족",
+    "lowMemory": "메모리 낮음",
+    "memoryDetailMessage": "이 모델은 약 {{needed}}가 필요하지만, 사용 가능한 용량은 약 {{available}}로 추정됩니다. 앱을 사용할수록 추정치는 더 정확해집니다.",
+    "estimatedMemory": "예상 메모리 사용량: 약 {{size}}",
+    "alerts": {
+      "memoryWarningTitle": "메모리 경고",
+      "memoryWarningMessage": "메모리 용량을 초과하여 오류가 발생할 가능성이 있습니다. 계속해서 모델을 불러오시겠습니까?",
+      "multimodalWarningTitle": "기기 성능 저하 주의",
+      "multimodalWarningMessage": "이 기기는 멀티모달 모델을 실행하기 위한 리소스가 부족할 수 있습니다. 로딩 시 시스템이 불안정해질 수 있습니다. 계속하시겠습니까?",
+      "combinedWarningTitle": "성능 경고",
+      "combinedWarningMessage": "이 모델은 사용 가능한 메모리를 초과할 수 있으며, 이 기기의 리소스가 멀티모달 모델을 실행하기에 부족할 수 있습니다. 로드 시 시스템이 불안정해질 수 있습니다. 계속하시겠습니까?",
+      "cancel": "취소",
+      "continue": "계속"
+    }
   },
   "models": {
     "fileManagement": {
@@ -513,7 +773,23 @@
       "noResults": "모델을 찾을 수 없습니다",
       "loadingMore": "더 불러오는 중...",
       "searchPlaceholder": "Hugging Face 모델 검색",
-      "ago": "전"
+      "modelUpdatedLong": "{{time}} 전 업데이트됨",
+      "modelUpdatedShort": "{{time}} 전",
+      "modelUpdatedJustNowLong": "방금 업데이트됨",
+      "modelUpdatedJustNowShort": "방금",
+      "errorOccurred": "모델을 로드할 수 없습니다. 다시 시도해 주세요.",
+      "filters": {
+        "author": "제작자",
+        "authorPlaceholder": "제작자로 필터링...",
+        "sortBy": "정렬 기준:",
+        "clearFilters": "필터 초기화",
+        "showFilters": "필터 보기",
+        "hideFilters": "필터 숨기기",
+        "sortRelevance": "관련성",
+        "sortDownloads": "다운로드 수",
+        "sortRecent": "최근 업데이트",
+        "sortLikes": "많은 추천"
+      }
     },
     "modelCard": {
       "alerts": {
@@ -530,7 +806,34 @@
         "offload": "오프로드하기"
       },
       "labels": {
-        "skills": "주요 기능: "
+        "skills": "주요 기능: ",
+        "vision": "시각",
+        "capabilities": "기능.",
+        "modelName": "모델 이름",
+        "contextLength": "컨텍스트 길이",
+        "architecture": "아키텍처",
+        "author": "제작자",
+        "requiresProjectionModel": "프로젝션 모델 필요",
+        "downloadProjectionModel": "프로젝션 모델 다운로드",
+        "viewModelCardOnHuggingFace": "Hugging Face에서 모델 카드 보기"
+      },
+      "accessibility": {
+        "expandDetails": "세부정보 펼치기",
+        "collapseDetails": "세부정보 접기",
+        "memoryWarning": "메모리 경고",
+        "integrityWarning": "무결성 경고",
+        "downloadProgress": "다운로드 진행률",
+        "loadingIndicator": "로딩 중",
+        "loadButton": "모델 로드",
+        "offloadButton": "모델 오프로드",
+        "downloadButton": "모델 다운로드",
+        "settingsButton": "모델 설정",
+        "deleteButton": "모델 삭제",
+        "removeButton": "모델 제거",
+        "expandDetailsButton": "모델 세부정보 펼치기",
+        "memoryWarningButton": "메모리 경고 세부정보 보기",
+        "integrityWarningButton": "무결성 경고 세부정보 보기",
+        "memoryWarningSnackbar": "메모리 경고 알림"
       }
     },
     "modelSettings": {
@@ -572,7 +875,49 @@
       "math": "수학 문제 풀이",
       "multilingual": "다국어",
       "rewriting": "재작성",
-      "creativity": "창의적인 작문"
+      "creativity": "창의적인 작문",
+      "vision": "시각"
+    },
+    "vision": "시각",
+    "mmproj": "시각 프로젝터",
+    "multimodal": {
+      "settings": "멀티모달 설정",
+      "projectionModels": "프로젝션 모델",
+      "noCompatibleModels": "호환되는 프로젝션 모델이 없음",
+      "noProjectionModels": "프로젝션 모델이 없음",
+      "selected": "선택됨",
+      "select": "선택",
+      "download": "다운로드",
+      "projectionNeededTitle": "프로젝션 모델이 필요합니다",
+      "projectionNeededMessage": "이 모델은 멀티모달 기능을 사용하기 위해 프로젝션 모델이 필요합니다.",
+      "projectionMissingWarning": "프로젝션 모델을 찾을 수 없음",
+      "projectionMissingShort": "프로젝션 누락",
+      "reloadModelTitle": "모델 다시 로드",
+      "reloadModelMessage": "새 프로젝션 모델을 적용하려면 모델을 다시 불러와야 합니다. 지금 다시 로드하시겠습니까?",
+      "reload": "다시 로드",
+      "deleteProjectionTitle": "프로젝션 모델 삭제",
+      "deleteProjectionMessage": "이 프로젝션 모델을 삭제하시겠습니까?",
+      "cannotDeleteTitle": "삭제할 수 없음",
+      "visionControls": {
+        "enableVision": "시각 기능 활성화",
+        "disableVision": "시각 기능 비활성화",
+        "visionEnabled": "시각 활성화됨",
+        "visionDisabled": "시각 비활성화됨",
+        "textOnlyMode": "텍스트 전용",
+        "visionMode": "시각 활성화됨",
+        "downloadWithVision": "시각 기능 포함 다운로드",
+        "downloadTextOnly": "텍스트만 다운로드",
+        "visionToggleDescription": "이미지 처리 기능 활성화",
+        "projectionModelSize": "+{{size}} 프로젝션 모델",
+        "visionModeDescription": "이미지 및 텍스트 처리",
+        "textOnlyModeDescription": "텍스트만 처리",
+        "includesVisionCapability": "시각 기능 포함",
+        "requiresProjectionModel": "호환되는 프로젝션 모델을 먼저 다운로드하세요"
+      },
+      "cannotDeleteActive": "이 프로젝션 모델이 현재 활성화되어 있습니다.",
+      "cannotDeleteInUse": "이 프로젝션 모델은 다운로드된 LLM 모델에서 사용됩니다:",
+      "dependentModels": "종속된 모델:",
+      "visionWillBeDisabled": "이 모델들의 시각 기능이 비활성화됩니다."
     }
   },
   "screenTitles": {
@@ -619,7 +964,62 @@
     "language": "언어",
     "darkMode": "다크 모드",
     "displayMemoryUsage": "메모리 사용량 표시",
-    "displayMemoryUsageDescription": "채팅 화면에서 메모리 사용량을 표시합니다."
+    "displayMemoryUsageDescription": "채팅 화면에서 메모리 사용량을 표시합니다.",
+    "openCL": "OpenCL (실험적 기능)",
+    "openCLDescription": "Adreno GPU 가속을 지원합니다. 프롬프트 처리 속도는 빨라지지만, 생성 속도는 항상 더 빠르지 않을 수 있습니다.",
+    "openCLNotAvailable": "이 기기에서는 OpenCL을 사용할 수 없습니다. i8mm 및 dotprod CPU 기능을 갖춘 Adreno GPU가 필요합니다.",
+    "openCLMissingCPUFeatures": "OpenCL은 i8mm 및 dotprod CPU 기능이 필요하지만, 현재 기기에서는 지원되지 않습니다.",
+    "openCLQuantizationNote": "참고: 순수 Q4_0 양자화 모델은 OpenCL에서 최상의 성능을 발휘합니다.",
+    "openCLDocsLink": "자세한 내용은 llama.cpp OpenCL 문서를 참고하세요.",
+    "deviceSelection": "기기 선택",
+    "deviceSelectionIOS": "기기 (Metal)",
+    "deviceSelectionIOSDescription": "Metal GPU 또는 CPU 전용 모드 선택",
+    "deviceSelectionAndroidDescription": "연산 장치 선택 (CPU, GPU 또는 Hexagon NPU)",
+    "cpuOnlyNoAccelerators": "CPU 전용 - 하드웨어 가속기가 감지되지 않았습니다.",
+    "imageMaxTokens": "이미지 토큰 한도",
+    "imageMaxTokensDescription": "이미지 처리 최대 토큰: {{tokens}}{{effectiveTokens}} (낮을수록 빠르지만, 세부 묘사는 줄어듭니다)",
+    "flashAttentionIOSDescription": "메모리 효율적 어텐션 (Metal에서 자동 활성화됨)",
+    "flashAttentionAndroidDescription": "OpenCL 상태 저장/불러오기를 사용하려면 비활성화해야 합니다.",
+    "flashAttentionAuto": "자동",
+    "flashAttentionOn": "사용",
+    "flashAttentionOff": "사용 안 함",
+    "memorySettings": "메모리 설정",
+    "useMlock": "메모리 고정 활성화",
+    "useMlockDescription": "모델 데이터를 가상 메모리로 옮기거나 압축하지 않고, RAM 메모리에 고정하여 성능을 유지합니다.",
+    "useMmap": "메모리 매핑",
+    "useMmapDescription": "모델을 더 빠르게 불러오기 위해 메모리 맵 파일(mmap)을 사용합니다.",
+    "useMmapTrue": "활성화됨",
+    "useMmapFalse": "비활성화됨",
+    "useMmapSmart": "지능형",
+    "useMmapTrueDescription": "빠른 로딩을 위해 항상 메모리 매핑을 사용합니다.",
+    "useMmapFalseDescription": "메모리 매핑을 사용하지 않습니다. (로딩은 느려지지만 메모리 사용량은 줄어듭니다.)",
+    "useMmapSmartDescription": "모델 유형에 따라 자동 선택 (Android 전용)",
+    "useMmapRecommended": "성능 향상을 위한 추천: 페이지 고정(Locked pages) 방식의 메모리 맵을 사용합니다. 빠른 로딩 속도와 안정적인 성능을 결합합니다.",
+    "exportOptions": "내보내기 옵션",
+    "exportLegacyChats": "이전 채팅 내보내기",
+    "exportLegacyChatsDescription": "마이그레이션에 실패했거나 이전 채팅 세션을 복구해야 하는 경우 이 기능을 사용하세요.",
+    "exportButton": "내보내기",
+    "importChats": "채팅 세션 가져오기",
+    "importChatsDescription": "기존에 내보낸 JSON 파일을 선택하여 채팅 세션을 불러옵니다.",
+    "importButton": "가져오기",
+    "importSuccess": "채팅 세션 {{count}}개를 성공적으로 가져왔습니다.",
+    "importError": "채팅 세션을 가져오지 못했습니다. 파일 형식을 확인해 주세요.",
+    "apiSettingsTitle": "API 설정",
+    "huggingFaceTokenLabel": "Hugging Face 토큰",
+    "tokenIsSetDescription": "토큰이 설정되었습니다. 승인이 필요한 모델에 액세스하는 데 필요합니다.",
+    "setTokenDescription": "Hugging Face에서 승인이 필요한 모델을 사용하려면 액세스 토큰을 입력해야 합니다.",
+    "setTokenButton": "토큰 설정",
+    "useHfTokenLabel": "HF 토큰 사용",
+    "useHfTokenDescription": "API 요청 시 토큰을 사용하려면 활성화하세요. 토큰으로 인해 인증 문제가 발생하는 경우 비활성화하세요.",
+    "cacheStorageTitle": "캐시 및 저장공간",
+    "clearPalCaches": "단축어 캐시 삭제",
+    "clearPalCachesDescription": "단축어 실행 속도를 높이는 데 사용된 캐시 데이터를 삭제합니다. 이 작업은 Pals 또는 채팅 기록에는 영향을 주지 않습니다.",
+    "clearCachesButton": "캐시 삭제",
+    "clearCachesConfirmTitle": "단축어 캐시를 삭제하시겠습니까?",
+    "clearCachesConfirmMessage": "모든 캐시된 세션 데이터({{fileCount}}개 파일, {{size}})를 삭제합니다. 삭제 후 처음 실행할 때 단축어가 느려질 수 있습니다. Pals 또는 채팅 기록에는 영향을 주지 않습니다.",
+    "clearCachesSuccess": "캐시 파일 {{count}}개를 성공적으로 삭제했습니다.",
+    "clearCachesError": "캐시를 삭제하지 못했습니다. 다시 시도해 주세요.",
+    "noCachesToClear": "삭제할 캐시가 없습니다."
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
@@ -634,5 +1034,148 @@
     "userRoleRequired": "사용자 역할을 입력해 주세요",
     "situationRequired": "상황을 입력해 주세요",
     "toneStyleRequired": "말투 및 스타일을 입력해 주세요"
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "내 Pal (로컬)",
+      "myLibrary": "내 라이브러리 (palshub.ai)",
+      "discoverPals": "Pals 둘러보기 (palshub.ai)"
+    },
+    "systemPrompt": "시스템 프롬프트",
+    "videoAnalysis": "비디오 분석",
+    "videoAnalysisDescription": "기기 카메라의 비디오 스트림을 실시간으로 분석하고 해설해 주는 비디오 기반 AI 어시스턴트입니다.",
+    "captureInterval": "촬영 간격",
+    "captureIntervalUnit": "ms",
+    "world": "세계관",
+    "toneStyle": "말투 및 스타일",
+    "aiRole": "AI의 역할",
+    "userRole": "내 역할",
+    "roleplay": "역할극",
+    "prompt": "프롬프트",
+    "assistant": "어시스턴트",
+    "video": "비디오",
+    "deletePal": "Pal 삭제",
+    "deletePalMessage": "이 Pal을 삭제하시겠습니까?",
+    "missingModel": "모델 없음",
+    "missingModelMessage": "이 Pal의 기본 모델 \"{{modelName}}\"은(는) 사용할 수 없습니다. 편집 시트에서 다운로드하시거나 다른 모델을 선택해 주세요.",
+    "search": "검색",
+    "profile": "프로필",
+    "signIn": "로그인",
+    "addPal": "Pal 만들기",
+    "signInToAccessLibrary": "로그인하여 palshub.ai에서 귀하의 라이브러리에 접근하세요",
+    "signOut": "로그아웃",
+    "signOutConfirmation": "로그아웃 하시겠습니까?",
+    "signOutError": "로그아웃에 실패했습니다. 다시 시도해 주세요.",
+    "account": "계정",
+    "signInToPalsHub": "PalsHub에 로그인하기",
+    "signInDescription": "라이브러리에 접근하고, 비공개 Pals를 생성하며, 기기 간에 동기화하세요",
+    "searchAllPals": "모든 Pals 검색...",
+    "deletePalConfirmation": "\"{{palName}}\"을(를) 삭제하시겠습니까?",
+    "filters": {
+      "all": "전체",
+      "myPals": "내 Pal",
+      "local": "로컬",
+      "video": "비디오",
+      "free": "무료",
+      "premium": "프리미엄"
+    },
+    "labels": {
+      "free": "무료",
+      "premium": "프리미엄",
+      "private": "비공개",
+      "download": "다운로드",
+      "getFree": "무료로 얻기"
+    },
+    "premiumPalDescription": "Palshub.ai 커뮤니티에서 제작된 프리미엄 Pal",
+    "premiumInfoText": "Palshub.ai를 방문하여 더 많은 Pal을 찾아보세요",
+    "sortOptions": {
+      "newest": "최신순",
+      "oldest": "오래된순",
+      "rating": "높은 평점순",
+      "popular": "인기순"
+    },
+    "palDetailSheet": {
+      "by": "제작됨",
+      "unknown": "알 수 없음",
+      "rating": "평점",
+      "reviews": "리뷰",
+      "created": "제작됨",
+      "description": "설명",
+      "noDescriptionAvailable": "설명이 없습니다.",
+      "categories": "카테고리",
+      "tags": "태그",
+      "systemPrompt": "시스템 프롬프트",
+      "downloaded": "다운로드됨",
+      "success": "성공",
+      "palAddedToCollection": "Pal이 귀하의 컬렉션에 추가되었습니다!",
+      "error": "오류",
+      "failedToLoadDetails": "Pal 세부정보 로드에 실패함",
+      "failedToDownload": "Pal 다운로드 실패",
+      "premiumPalMessage": "이 Pal은 프리미엄입니다.\n• 이미 Palshub 계정으로 잠금을 해제하셨다면, 간단히 로그인하여 접근할 수 있습니다.\n• 아직 잠금 해제하지 않으셨나요? palshub.ai 앱을 방문하여 자세히 알아보세요.",
+      "notAvailable": "비어있음"
+    }
+  },
+  "video": {
+    "captureInterval": "촬영 간격",
+    "captureIntervalUnit": "ms",
+    "permissionTitle": "카메라 권한 필요",
+    "permissionMessage": "PocketPal은 비디오 분석을 위해 카메라 접근 권한이 필요합니다.",
+    "requestingPermission": "카메라 권한 요청 중...",
+    "noDevice": "카메라 기기를 찾을 수 없습니다",
+    "errorTitle": "카메라 오류",
+    "errorMessage": "카메라에 오류가 발생했습니다.",
+    "startCamera": "카메라 시작",
+    "stopCamera": "카메라 중지",
+    "emptyPlaceholder": {
+      "step2": "• 카메라 버튼을 눌러 실시간 비디오 분석을 시작하십시오.",
+      "step3": "• 카메라가 활성화된 동안 스냅샷 빈도를 조정하십시오.",
+      "title": "Lookie에 오신 것을 환영합니다",
+      "subtitle": "비공개 온디바이스 실시간 비디오 분석",
+      "experimentalNotice": "이 기능은 실험적 기능입니다. 정확도는 선택한 모델에 따라 다를 수 있으며, 기기 사양에 따라 속도에 차이가 있을 수 있습니다. 또한 일부 모델은 작동하지 않을 수 있습니다.",
+      "howToUse": "사용 방법:",
+      "step1": "• 분석 방향을 설정하려면 프롬프트를 수정하세요. (선택 사항)",
+      "step4": "• 일반적인 텍스트 기반의 대화를 원하시면 다른 Pal로 전환해 보세요."
+    },
+    "flip": "회전",
+    "analyzing": "비디오 분석 중...",
+    "promptPlaceholder": "이 비디오에 대해 무엇을 알고 싶나요?",
+    "liveCommentary": "실시간 해설"
+  },
+  "camera": {
+    "permissionTitle": "카메라 권한 필요",
+    "permissionMessage": "PocketPal은 이미지를 분석하기 위해 카메라 접근 권한이 필요합니다.",
+    "requestingPermission": "카메라 권한 요청 중...",
+    "noDevice": "카메라 기기를 찾을 수 없습니다",
+    "errorTitle": "카메라 오류",
+    "errorMessage": "사진을 촬영하는 중 오류가 발생했습니다.",
+    "flip": "회전",
+    "analyzing": "이미지 분석 중...",
+    "startCamera": "카메라 시작",
+    "stopCamera": "카메라 중지",
+    "promptPlaceholder": "이 이미지에 대해 무엇을 알고 싶으신가요?",
+    "takePhoto": "카메라"
+  },
+  "errors": {
+    "cameraErrorTitle": "카메라 오류",
+    "cameraErrorMessage": "사진 촬영에 실패했습니다.",
+    "unexpectedError": "예상치 못한 오류가 발생했습니다.",
+    "hfAuthenticationError": "Hugging Face 인증 오류: 토큰이 누락되었거나 유효하지 않음",
+    "hfAuthenticationErrorSearch": "Hugging Face 인증 오류: 토큰이 유효하지 않음",
+    "authenticationError": "인증 오류: 토큰이 누락되었거나 유효하지 않습니다.",
+    "hfAuthorizationError": "Hugging Face 인증 오류: 이 리소스에 접근할 권한이 없음",
+    "authorizationError": "인증 오류: 이 리소스에 접근할 권한이 없음",
+    "hfServerError": "Hugging Face 서버 오류: API 서버 문제",
+    "serverError": "서버 오류: API 서버 문제",
+    "hfNetworkTimeout": "네트워크 연결 시간 초과: Hugging Face 서버 응답 시간이 너무 길어 요청을 완료하지 못함",
+    "networkTimeout": "네트워크 연결 시간 초과: 응답 시간이 너무 길어 요청을 완료하지 못함",
+    "hfNetworkError": "네트워크 오류: Hugging Face API에 연결할 수 없음",
+    "networkError": "네트워크 오류: API에 연결할 수 없음",
+    "downloadSetupFailedTitle": "다운로드 설정 실패",
+    "downloadSetupFailedMessage": "모델 다운로드 준비에 실패했습니다: {{message}}",
+    "galleryErrorTitle": "갤러리 오류",
+    "galleryErrorMessage": "이미지 선택에 실패했습니다"
+  },
+  "simulator": {
+    "cameraNotAvailable": "시뮬레이터에서는 카메라를 사용할 수 없습니다. 실제 기기를 사용해 주세요."
   }
 }

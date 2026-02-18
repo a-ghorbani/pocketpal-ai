@@ -133,4 +133,39 @@ describe('validate-l10n.js', () => {
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('All l10n files valid');
   });
+
+  it('falls back to auto-discovery when index.ts is absent', () => {
+    // Without index.ts in the temp dir, the script falls back to
+    // filesystem scanning and picks up any .json file present.
+    const enContent = fs.readFileSync(
+      path.join(LOCALES_DIR, 'en.json'),
+      'utf-8',
+    );
+    const result = runWithLocales({
+      'ko.json': enContent,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('ko.json: valid JSON');
+    expect(result.output).toContain('All l10n files valid');
+  });
+
+  it('falls back to auto-discovery and reports errors', () => {
+    const result = runWithLocales({
+      'ko.json': '{ invalid json',
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain('ko.json');
+    expect(result.output).toContain('INVALID JSON');
+  });
+
+  it('does not validate en.json as a non-en language file', () => {
+    // en.json should only appear as the base reference, not as a target
+    // The auto-discovery filters out en.json from the language list
+    const result = runWithLocales();
+    // en.json should appear exactly once as the base, not as a validated language
+    const enValidLines = result.output
+      .split('\n')
+      .filter(line => line.includes('en.json: valid JSON'));
+    expect(enValidLines).toHaveLength(1);
+  });
 });

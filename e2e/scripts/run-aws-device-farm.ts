@@ -218,7 +218,7 @@ function createTestPackage(): string {
   // Include source files and configs, but NOT node_modules (too large - 4GB+)
   // Dependencies will be installed on Device Farm during the install phase
   // This keeps the package small (~1MB vs 500MB+)
-  // Note: scripts/ is included for run-model-tests.ts
+  // Note: scripts/ is included for run-e2e.ts
   execSync(
     `cd "${packageDir}" && zip -r test-package.zip specs pages helpers fixtures scripts wdio.*.conf.ts tsconfig.json package.json yarn.lock`,
     {stdio: 'inherit'},
@@ -242,10 +242,10 @@ function prepareTestSpec(targetPlatform: 'ios' | 'android', useAllModels: boolea
   // Read original testspec and add --all-models flag
   let content = fs.readFileSync(originalPath, 'utf8');
 
-  // Replace the run-model-tests.ts command to include --all-models
+  // Replace the run-e2e.ts command to include --all-models
   content = content.replace(
-    /npx ts-node scripts\/run-model-tests\.ts --platform (ios|android) --device-farm/g,
-    'npx ts-node scripts/run-model-tests.ts --platform $1 --device-farm --all-models',
+    /npx ts-node scripts\/run-e2e\.ts --platform (ios|android) --each-model --mode device-farm/g,
+    'npx ts-node scripts/run-e2e.ts --platform $1 --each-model --all-models --mode device-farm',
   );
 
   // Write to temporary file
