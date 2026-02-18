@@ -1104,7 +1104,7 @@
         "tokensPerSecond": "tok/sec"
       },
       "actions": {
-        "deleteButton": "删除",
+        "deleteButton": " ",
         "submittedText": "✓ 提交到",
         "leaderboardLink": "AI手机排行榜 ↗",
         "cannotShare": "无法共享",
