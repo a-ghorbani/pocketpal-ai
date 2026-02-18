@@ -21,7 +21,16 @@ function runWithLocales(overrides = {}) {
 
   try {
     // Copy original locale files to temp dir
-    for (const filename of ['en.json', 'id.json', 'ja.json', 'zh.json']) {
+    for (const filename of [
+      'en.json',
+      'he.json',
+      'id.json',
+      'ja.json',
+      'ko.json',
+      'ms.json',
+      'ru.json',
+      'zh.json',
+    ]) {
       const src = path.join(LOCALES_DIR, filename);
       const dest = path.join(tmpLocalesDir, filename);
       fs.copyFileSync(src, dest);
@@ -70,8 +79,12 @@ describe('validate-l10n.js', () => {
     const result = runWithLocales();
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('en.json: valid JSON');
+    expect(result.output).toContain('he.json: valid JSON');
     expect(result.output).toContain('id.json: valid JSON');
     expect(result.output).toContain('ja.json: valid JSON');
+    expect(result.output).toContain('ko.json: valid JSON');
+    expect(result.output).toContain('ms.json: valid JSON');
+    expect(result.output).toContain('ru.json: valid JSON');
     expect(result.output).toContain('zh.json: valid JSON');
     expect(result.output).toContain('All l10n files valid');
   });

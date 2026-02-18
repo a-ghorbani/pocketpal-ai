@@ -423,7 +423,7 @@
       "exportCount": "내보내기 ({{count}})",
       "deleteCount": "삭제 ({{count}})",
       "bulkDeleteTitle": "채팅 세션 삭제",
-      "bulkDeleteMessage": "{{Count}}개의 채팅 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      "bulkDeleteMessage": "{{count}}개의 채팅 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
       "bulkDeleteError": "채팅 세션 삭제에 실패했습니다. 다시 시도해 주세요.",
       "exportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요.",
       "bulkExportError": "채팅 세션 내보내기에 실패했습니다. 다시 시도해 주세요."
@@ -763,10 +763,10 @@
           "message": "구버전 양자화 형식 - 모델이 실행되지 않을 수 있습니다.",
           "shortMessage": "구버전 양자화"
         },
-        "multiple": "{count} 개의 경고"
+        "multiple": "{{count}} 개의 경고"
       },
       "labels": {
-        "downloadSpeed": "{speed}"
+        "downloadSpeed": "{{speed}}"
       }
     },
     "search": {
