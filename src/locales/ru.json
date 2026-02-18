@@ -96,7 +96,7 @@
         "cannotShareTooltip": "Невозможно поделиться результатами локальной модели",
         "submitButton": "Отправить в таблицу лидеров",
         "viewLeaderboard": "Посмотреть таблицу лидеров ↗",
-        "deleteButton": "Удалить"
+        "deleteButton": " "
       },
       "errors": {
         "networkRetry": "Проверить соединение и повторить",
