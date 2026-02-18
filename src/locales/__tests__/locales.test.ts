@@ -131,9 +131,9 @@ describe('l10n object', () => {
 
   it('returns undefined for unsupported language key', () => {
     // Access a property that does not exist on the l10n object
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect((l10n as any).xx).toBeUndefined();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect((l10n as any).fr).toBeUndefined();
   });
 
@@ -185,7 +185,9 @@ describe('exports', () => {
     expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
     expect(languageDisplayNames.ko).toBe('\uD55C\uAD6D\uC5B4 (KO)');
     expect(languageDisplayNames.ms).toBe('Melayu (MS)');
-    expect(languageDisplayNames.ru).toBe('\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)');
+    expect(languageDisplayNames.ru).toBe(
+      '\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)',
+    );
     expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
   });
 

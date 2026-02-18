@@ -96,7 +96,16 @@ describe('UIStore', () => {
     });
 
     it('supportedLanguages contains all expected languages', () => {
-      expect(uiStore.supportedLanguages).toEqual(['en', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh']);
+      expect(uiStore.supportedLanguages).toEqual([
+        'en',
+        'he',
+        'id',
+        'ja',
+        'ko',
+        'ms',
+        'ru',
+        'zh',
+      ]);
     });
   });
 });

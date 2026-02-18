@@ -21,7 +21,16 @@ function runWithLocales(overrides = {}) {
 
   try {
     // Copy original locale files to temp dir
-    for (const filename of ['en.json', 'he.json', 'id.json', 'ja.json', 'ko.json', 'ms.json', 'ru.json', 'zh.json']) {
+    for (const filename of [
+      'en.json',
+      'he.json',
+      'id.json',
+      'ja.json',
+      'ko.json',
+      'ms.json',
+      'ru.json',
+      'zh.json',
+    ]) {
       const src = path.join(LOCALES_DIR, filename);
       const dest = path.join(tmpLocalesDir, filename);
       fs.copyFileSync(src, dest);
