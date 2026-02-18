@@ -436,8 +436,7 @@
     "failedToGenerate": "生成輸出失敗"
   },
   "memory": {
-    "shortWarning": "記憶體警告",
-    "warning": "警告：模型大小可能超出可用記憶體。此情況可能會降低您的裝置效能並影響穩定性。"
+    "shortWarning": "記憶體警告"
   },
   "models": {
     "fileManagement": {
@@ -512,8 +511,7 @@
     "search": {
       "noResults": "未找到模型",
       "loadingMore": "正在載入更多…",
-      "searchPlaceholder": "搜尋 Hugging Face 模型",
-      "ago": "前"
+      "searchPlaceholder": "搜尋 Hugging Face 模型"
     },
     "modelCard": {
       "alerts": {
