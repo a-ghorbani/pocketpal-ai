@@ -1104,7 +1104,7 @@
         "tokensPerSecond": "טוקנים/שניה"
       },
       "actions": {
-        "deleteButton": "מחק",
+        "deleteButton": " ",
         "submittedText": "✓ שותף ל",
         "leaderboardLink": "טבלת מכשירי AI מובילים ↖",
         "cannotShare": "לא ניתן לשתף",
