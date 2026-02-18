@@ -96,7 +96,7 @@
         "cannotShareTooltip": "로컬 모델 결과는 공유할 수 없습니다.",
         "submitButton": "리더보드에 제출하기",
         "viewLeaderboard": "리더보드 보기 ↗",
-        "deleteButton": "삭제"
+        "deleteButton": " "
       },
       "errors": {
         "networkRetry": "네트워크 연결 확인 후 다시 시도",
