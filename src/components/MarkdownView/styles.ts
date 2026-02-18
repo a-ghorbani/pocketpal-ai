@@ -55,6 +55,37 @@ export const createTagsStyles = (theme: Theme) => ({
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
+  // Table styles — only `table` has an outer border frame;
+  // inner structure uses bottom borders on rows and right borders on cells.
+  table: {
+    borderWidth: 1,
+    borderColor: theme.colors.outline,
+    borderRadius: 4,
+    marginVertical: 8,
+    overflow: 'hidden' as const,
+  },
+  thead: {
+    backgroundColor: theme.colors.surfaceContainerHigh,
+  },
+  tr: {
+    flexDirection: 'row' as const,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.outline,
+  },
+  th: {
+    flex: 1,
+    padding: 8,
+    fontWeight: 'bold' as const,
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.outline,
+    backgroundColor: theme.colors.surfaceContainerHigh,
+  },
+  td: {
+    flex: 1,
+    padding: 8,
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.outline,
+  },
 });
 
 export const createStyles = (theme: Theme) =>
