@@ -1,4 +1,5 @@
 import React from 'react';
+import {ScrollView} from 'react-native';
 
 import {render, fireEvent} from '@testing-library/react-native';
 
@@ -54,5 +55,58 @@ describe('MarkdownView Component', () => {
     }
 
     expect(maxWidth).toBe(200);
+  });
+
+  it('renders markdown table with headers and data cells', () => {
+    const markdownText =
+      '| Name | Value |\n|------|-------|\n| A | 1 |\n| B | 2 |';
+    const {getByText} = render(
+      <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+    );
+
+    // Verify header cells are rendered
+    expect(getByText('Name')).toBeTruthy();
+    expect(getByText('Value')).toBeTruthy();
+
+    // Verify data cells are rendered
+    expect(getByText('A')).toBeTruthy();
+    expect(getByText('1')).toBeTruthy();
+    expect(getByText('B')).toBeTruthy();
+    expect(getByText('2')).toBeTruthy();
+  });
+
+  it('renders table alongside other markdown content', () => {
+    const markdownText =
+      '# Title\n\nSome text\n\n| Col1 | Col2 |\n|------|------|\n| X | Y |\n\nMore text';
+    const {getByText} = render(
+      <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+    );
+
+    expect(getByText('Title')).toBeTruthy();
+    expect(getByText('Some text')).toBeTruthy();
+    expect(getByText('Col1')).toBeTruthy();
+    expect(getByText('X')).toBeTruthy();
+    expect(getByText('More text')).toBeTruthy();
+  });
+
+  it('renders a table with empty cells', () => {
+    const markdownText = '| A | B |\n|---|---|\n|   | 1 |\n| 2 |   |';
+    const {getByText} = render(
+      <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+    );
+
+    expect(getByText('A')).toBeTruthy();
+    expect(getByText('B')).toBeTruthy();
+    expect(getByText('1')).toBeTruthy();
+    expect(getByText('2')).toBeTruthy();
+  });
+
+  it('wraps table in a horizontal ScrollView', () => {
+    const markdownText = '| A | B |\n|---|---|\n| 1 | 2 |';
+    const {UNSAFE_getByType} = render(
+      <MarkdownView markdownText={markdownText} maxMessageWidth={300} />,
+    );
+
+    expect(UNSAFE_getByType(ScrollView)).toBeTruthy();
   });
 });
