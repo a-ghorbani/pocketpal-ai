@@ -343,6 +343,11 @@ export const useChatSession = (
             copyable: true,
             // Add multimodal flag if this was a multimodal completion
             multimodal: hasImages && isMultimodalEnabled,
+            // Save the final completion result with reasoning_content
+            completionResult: {
+              reasoning_content: result.reasoning_content,
+              content: result.text,
+            },
           },
         },
       );
