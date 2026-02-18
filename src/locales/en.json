@@ -1028,7 +1028,8 @@
   "benchmark": {
     "title": "Benchmark",
     "modelSelector": {
-      "prompt": "Select Model"
+      "prompt": "Select Model",
+      "noModels": "No models downloaded"
     },
     "buttons": {
       "advancedSettings": "Advanced Settings",

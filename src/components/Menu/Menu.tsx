@@ -50,9 +50,14 @@ export const Menu: React.FC<MenuProps> & {
   const handleSubmenuOpen = () => setHasActiveSubmenu(true);
   const handleSubmenuClose = () => setHasActiveSubmenu(false);
 
+  // Guard: don't open menu with no children (prevents PaperMenu layout hang)
+  const effectiveVisible =
+    menuProps.visible && React.Children.toArray(children).length > 0;
+
   return (
     <PaperMenu
       {...menuProps}
+      visible={effectiveVisible}
       style={[
         styles.menu,
         hasActiveSubmenu && styles.menuWithSubmenu,
