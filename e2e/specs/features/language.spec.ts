@@ -11,11 +11,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {ChatPage} from '../pages/ChatPage';
-import {DrawerPage} from '../pages/DrawerPage';
-import {SettingsPage} from '../pages/SettingsPage';
-import {byText, byStaticText} from '../helpers/selectors';
-import {SCREENSHOT_DIR} from '../wdio.shared.conf';
+import {ChatPage} from '../../pages/ChatPage';
+import {DrawerPage} from '../../pages/DrawerPage';
+import {SettingsPage} from '../../pages/SettingsPage';
+import {byText, byStaticText} from '../../helpers/selectors';
+import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
@@ -33,6 +33,10 @@ const LANGUAGE_ASSERTIONS: Record<
     screenTitle: 'Settings',
     firstCardTitle: 'Model Initialization Settings',
   },
+  he: {
+    screenTitle: 'הגדרות',
+    firstCardTitle: 'הגדרות איתחול מודל',
+  },
   id: {
     screenTitle: 'Pengaturan',
     firstCardTitle: 'Pengaturan Inisialisasi Model',
@@ -41,6 +45,18 @@ const LANGUAGE_ASSERTIONS: Record<
     screenTitle: '設定',
     firstCardTitle: 'モデル初期化設定',
   },
+  ko: {
+    screenTitle: '설정',
+    firstCardTitle: '모델 초기화 설정',
+  },
+  ms: {
+    screenTitle: 'Tetapan',
+    firstCardTitle: 'Tetapan Permulaan Model',
+  },
+  ru: {
+    screenTitle: 'Настройки',
+    firstCardTitle: 'Настройки инициализации модели',
+  },
   zh: {
     screenTitle: '设置',
     firstCardTitle: '模型初始化设置',
@@ -48,7 +64,7 @@ const LANGUAGE_ASSERTIONS: Record<
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['id', 'ja', 'zh', 'en'];
+const LANGUAGE_ORDER = ['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;

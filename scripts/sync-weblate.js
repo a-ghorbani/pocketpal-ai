@@ -53,7 +53,7 @@ async function uploadSourceFile() {
 }
 
 async function downloadTranslations() {
-  const languages = ['id', 'ja', 'zh'];
+  const languages = ['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'];
 
   for (const lang of languages) {
     try {

@@ -135,7 +135,7 @@ USAGE:
 OPTIONS:
   --platform <platform>    Platform: 'ios', 'android', or 'both' (required)
   --spec <spec>            Test spec: 'quick-smoke', 'load-stress', 'diagnostic',
-                           'language', or 'all' (default: 'quick-smoke')
+                           'language', 'visual-capture', or 'all' (default: 'quick-smoke')
   --models <ids>           Comma-separated model IDs to test
   --each-model             Iterate spec once per model (isolated WDIO process each)
   --all-models             Include crash-repro models in the model pool
@@ -514,6 +514,29 @@ function buildApps(
 // WDIO Config Selection
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve a spec name to its file path.
+ * Checks specs/{name}.spec.ts first, then specs/features/{name}.spec.ts.
+ */
+function resolveSpecPath(spec: string): string {
+  if (spec === 'all') {
+    return '';
+  }
+
+  const direct = path.join(E2E_DIR, 'specs', `${spec}.spec.ts`);
+  if (fs.existsSync(direct)) {
+    return `specs/${spec}.spec.ts`;
+  }
+
+  const feature = path.join(E2E_DIR, 'specs', 'features', `${spec}.spec.ts`);
+  if (fs.existsSync(feature)) {
+    return `specs/features/${spec}.spec.ts`;
+  }
+
+  // Fallback: assume top-level (WDIO will report the error if missing)
+  return `specs/${spec}.spec.ts`;
+}
+
 function getWdioConfig(
   platform: 'ios' | 'android',
   mode: 'local' | 'device-farm',
@@ -597,7 +620,7 @@ function runSingleTest(opts: {
   const startTime = Date.now();
 
   const configFile = getWdioConfig(platform, mode);
-  const specArg = spec === 'all' ? '' : `--spec specs/${spec}.spec.ts`;
+  const specArg = spec === 'all' ? '' : `--spec ${resolveSpecPath(spec)}`;
   const label = getRunLabel(device, model, platform);
 
   // Per-run report subdirectory
@@ -925,7 +948,7 @@ function printDryRun(
         runIndex++;
         const configFile = getWdioConfig(platform, args.mode);
         const specArg =
-          args.spec === 'all' ? '' : `--spec specs/${args.spec}.spec.ts`;
+          args.spec === 'all' ? '' : `--spec ${resolveSpecPath(args.spec)}`;
         const port = BASE_APPIUM_PORT + portIndex;
         const label = getRunLabel(device, model, platform);
 

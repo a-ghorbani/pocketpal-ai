@@ -80,8 +80,7 @@
     "useHfTokenDescription": "Activez pour utiliser le token pour les requêtes API. Désactivez si le token cause des problèmes d'authentification."
   },
   "memory": {
-    "shortWarning": "Alerte mémoire",
-    "warning": "Attention : La taille du modèle peut dépasser la mémoire disponible. Cela pourrait affecter les performances et la stabilité de votre appareil."
+    "shortWarning": "Alerte mémoire"
   },
   "storage": {
     "checkFailed": "Échec de vérification du stockage",
@@ -697,7 +696,6 @@
         "tokensPerSecond": "t/s"
       },
       "actions": {
-        "deleteButton": "",
         "submittedText": "✓ Partagé à",
         "leaderboardLink": "Classement AI Phone ↗",
         "cannotShare": "Impossible de partager",

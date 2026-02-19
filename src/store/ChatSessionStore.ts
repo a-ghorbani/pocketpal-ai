@@ -544,9 +544,23 @@ class ChatSessionStore {
           if (index >= 0 && session.messages[index].type === 'text') {
             // Update local state - only update the specific message
             runInAction(() => {
+              const existingMessage = session.messages[
+                index
+              ] as MessageType.Text;
+              const mergedUpdate = {...update};
+
+              // Merge metadata instead of replacing, to preserve existing fields
+              // (e.g., partialCompletionResult from streaming)
+              if (update.metadata !== undefined && existingMessage.metadata) {
+                mergedUpdate.metadata = {
+                  ...existingMessage.metadata,
+                  ...update.metadata,
+                };
+              }
+
               session.messages[index] = {
-                ...session.messages[index],
-                ...update,
+                ...existingMessage,
+                ...mergedUpdate,
               } as MessageType.Text;
             });
           }

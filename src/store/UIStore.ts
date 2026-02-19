@@ -3,11 +3,12 @@ import {Appearance} from 'react-native';
 import {makePersistable} from 'mobx-persist-store';
 import {makeAutoObservable, runInAction} from 'mobx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {l10n} from '../locales';
+import {
+  l10n,
+  supportedLanguages as localesSupportedLanguages,
+  type AvailableLanguage,
+} from '../locales';
 import {ErrorState} from '../utils/errors';
-
-// Define available languages type
-export type AvailableLanguage = keyof typeof l10n;
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -34,8 +35,10 @@ export class UIStore {
   // Current selected language (default to English)
   _language: AvailableLanguage = 'en';
 
-  // List of supported languages
-  supportedLanguages: AvailableLanguage[] = ['en', 'id', 'ja', 'zh'];
+  // List of supported languages (derived from locales registry)
+  get supportedLanguages(): readonly AvailableLanguage[] {
+    return localesSupportedLanguages;
+  }
 
   displayMemUsage = false;
 

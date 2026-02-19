@@ -1104,7 +1104,7 @@
         "tokensPerSecond": "トークン/秒"
       },
       "actions": {
-        "deleteButton": "削除",
+        "deleteButton": " ",
         "submittedText": "✓ 共有先：",
         "leaderboardLink": "AIスマホリーダーボード ↗",
         "cannotShare": "共有できません",
