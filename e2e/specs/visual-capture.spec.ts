@@ -54,7 +54,7 @@ const captures: VisualCapture[] = capturesJson
   ? JSON.parse(capturesJson)
   : [];
 
-const models = getModelsToTest();
+const models = getModelsToTest(true);
 const model = models[0] || QUICK_TEST_MODEL;
 
 const VISUAL_DIR = path.join(SCREENSHOT_DIR, 'visual-captures');
