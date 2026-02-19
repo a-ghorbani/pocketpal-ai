@@ -33,6 +33,10 @@ const LANGUAGE_ASSERTIONS: Record<
     screenTitle: 'Settings',
     firstCardTitle: 'Model Initialization Settings',
   },
+  fa: {
+    screenTitle: 'تنظیمات',
+    firstCardTitle: 'تنظیمات راه‌اندازی مدل',
+  },
   he: {
     screenTitle: 'הגדרות',
     firstCardTitle: 'הגדרות איתחול מודל',
@@ -64,7 +68,7 @@ const LANGUAGE_ASSERTIONS: Record<
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh', 'en'];
+const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;

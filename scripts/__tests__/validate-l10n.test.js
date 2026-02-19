@@ -23,6 +23,7 @@ function runWithLocales(overrides = {}) {
     // Copy original locale files to temp dir
     for (const filename of [
       'en.json',
+      'fa.json',
       'he.json',
       'id.json',
       'ja.json',
@@ -79,6 +80,7 @@ describe('validate-l10n.js', () => {
     const result = runWithLocales();
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('en.json: valid JSON');
+    expect(result.output).toContain('fa.json: valid JSON');
     expect(result.output).toContain('he.json: valid JSON');
     expect(result.output).toContain('id.json: valid JSON');
     expect(result.output).toContain('ja.json: valid JSON');
