@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, ScrollView, Text as RNText} from 'react-native';
+import {View, Text as RNText} from 'react-native';
 import {
   HTMLElementModel,
   HTMLContentModel,
@@ -16,6 +16,7 @@ import type {Element} from '@native-html/transient-render-engine';
 
 import {useTheme} from '../../hooks';
 import {createTableStyles} from './tableStyles';
+import {ScrollView} from 'react-native-gesture-handler';
 
 // Element models: Tell react-native-render-html to treat table tags as renderable
 // block elements instead of silently dropping them (default "tabular" = content model "none").
