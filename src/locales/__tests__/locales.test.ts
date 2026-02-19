@@ -36,6 +36,7 @@ const EXPECTED_SECTIONS = [
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
   'en',
+  'fa',
   'he',
   'id',
   'ja',
@@ -70,7 +71,7 @@ describe('l10n object', () => {
     expect(l10n.en).toEqual(enData);
   });
 
-  it.each(['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+  it.each(['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
     'l10n.%s contains translations where they exist',
     lang => {
       const langData = require(`../${lang}.json`);
@@ -79,7 +80,7 @@ describe('l10n object', () => {
     },
   );
 
-  it.each(['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+  it.each(['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
     'returns cached result on repeated access for %s',
     lang => {
       const first = l10n[lang];
@@ -118,6 +119,7 @@ describe('l10n object', () => {
 
   it('supports in operator for all languages', () => {
     expect('en' in l10n).toBe(true);
+    expect('fa' in l10n).toBe(true);
     expect('he' in l10n).toBe(true);
     expect('id' in l10n).toBe(true);
     expect('ja' in l10n).toBe(true);
@@ -217,7 +219,7 @@ describe('lazy loading', () => {
     });
   });
 
-  it.each(['he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+  it.each(['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
     'accessing %s populates the cache',
     lang => {
       jest.isolateModules(() => {
@@ -268,6 +270,7 @@ describe('type safety', () => {
     // At runtime we verify the keys match
     const keys: Array<keyof typeof l10n> = [
       'en',
+      'fa',
       'he',
       'id',
       'ja',
