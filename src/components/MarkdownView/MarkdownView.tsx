@@ -11,6 +11,7 @@ import {ThinkingBubble} from '../ThinkingBubble';
 import {CodeBlockHeader} from '../CodeBlockHeader';
 
 import {createTagsStyles, createStyles} from './styles';
+import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
 
 marked.use({});
 
@@ -124,6 +125,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     const renderers = useMemo(
       () => ({
         code: (props: any) => CodeRenderer(props),
+        ...tableRenderers,
       }),
       [],
     );
@@ -169,6 +171,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               defaultTextProps={defaultTextProps}
               systemFonts={systemFonts}
               renderers={renderers}
+              customHTMLElementModels={tableHTMLElementModels}
             />
           </ThinkingBubble>
         )}
@@ -182,6 +185,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             defaultTextProps={defaultTextProps}
             systemFonts={systemFonts}
             renderers={renderers}
+            customHTMLElementModels={tableHTMLElementModels}
           />
         )}
       </View>

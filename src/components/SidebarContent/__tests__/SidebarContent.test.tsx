@@ -90,14 +90,6 @@ describe('SidebarContent Component', () => {
       });
     });
 
-    it.skip('long-press menu shows Rename, Export, Delete, and Select options', () => {
-      // Skip: Complex menu rendering with react-native-paper Menu component
-    });
-
-    it.skip('tapping Select in menu enters selection mode', () => {
-      // Skip: Complex menu interaction with react-native-paper Menu component
-    });
-
     it('selection mode shows header with Cancel, count, and action icons', () => {
       runInAction(() => {
         chatSessionStore.isSelectionMode = true;
@@ -178,34 +170,6 @@ describe('SidebarContent Component', () => {
       expect(getByText('2 selected')).toBeTruthy();
     });
 
-    it.skip('overflow menu shows Select All when partially selected', () => {
-      // Skip: Complex menu interaction with MobX computed properties
-    });
-
-    it.skip('overflow menu shows Deselect All when all selected', () => {
-      // Skip: Complex menu interaction with MobX computed properties
-    });
-
-    it.skip('overflow menu shows Export (N) with count', () => {
-      // Skip: Complex menu interaction with MobX computed properties
-    });
-
-    it.skip('overflow menu shows Delete (N) with count', () => {
-      // Skip: Complex menu interaction with MobX computed properties
-    });
-
-    it.skip('clicking Delete shows confirmation dialog', () => {
-      // Skip: Complex menu interaction requiring overflow menu to be visible
-    });
-
-    it.skip('confirming delete calls bulkDeleteSessions', async () => {
-      // Skip: Complex menu interaction requiring overflow menu to be visible
-    });
-
-    it.skip('canceling delete does not call bulkDeleteSessions', async () => {
-      // Skip: Complex menu interaction requiring overflow menu to be visible
-    });
-
     it('Cancel button exits selection mode', () => {
       runInAction(() => {
         chatSessionStore.isSelectionMode = true;
@@ -239,18 +203,6 @@ describe('SidebarContent Component', () => {
       // This is verified by checking that the session is still pressable for selection
       fireEvent.press(session1);
       expect(chatSessionStore.toggleSessionSelection).toHaveBeenCalled();
-    });
-
-    it.skip('tapping Select All calls selectAllSessions', () => {
-      // Skip: Complex menu interaction requiring overflow menu to be visible
-    });
-
-    it.skip('tapping Deselect All calls deselectAllSessions', () => {
-      // Skip: Complex menu interaction requiring overflow menu to be visible
-    });
-
-    it.skip('tapping Export (N) calls bulkExportSessions', async () => {
-      // Skip: Complex menu interaction requiring overflow menu to be visible
     });
 
     it('does not show checkboxes when not in selection mode', () => {
