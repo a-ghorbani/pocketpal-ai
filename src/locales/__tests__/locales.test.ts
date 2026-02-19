@@ -71,7 +71,16 @@ describe('l10n object', () => {
     expect(l10n.en).toEqual(enData);
   });
 
-  it.each(['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+  it.each([
+    'fa',
+    'he',
+    'id',
+    'ja',
+    'ko',
+    'ms',
+    'ru',
+    'zh',
+  ] as AvailableLanguage[])(
     'l10n.%s contains translations where they exist',
     lang => {
       const langData = require(`../${lang}.json`);
@@ -80,7 +89,16 @@ describe('l10n object', () => {
     },
   );
 
-  it.each(['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
+  it.each([
+    'fa',
+    'he',
+    'id',
+    'ja',
+    'ko',
+    'ms',
+    'ru',
+    'zh',
+  ] as AvailableLanguage[])(
     'returns cached result on repeated access for %s',
     lang => {
       const first = l10n[lang];
@@ -219,19 +237,25 @@ describe('lazy loading', () => {
     });
   });
 
-  it.each(['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh'] as AvailableLanguage[])(
-    'accessing %s populates the cache',
-    lang => {
-      jest.isolateModules(() => {
-        const freshModule = require('../index');
-        expect(freshModule._testGetCacheKeys()).toEqual(['en']);
+  it.each([
+    'fa',
+    'he',
+    'id',
+    'ja',
+    'ko',
+    'ms',
+    'ru',
+    'zh',
+  ] as AvailableLanguage[])('accessing %s populates the cache', lang => {
+    jest.isolateModules(() => {
+      const freshModule = require('../index');
+      expect(freshModule._testGetCacheKeys()).toEqual(['en']);
 
-        const _data = freshModule.l10n[lang];
-        expect(_data).toBeDefined();
-        expect(freshModule._testGetCacheKeys()).toContain(lang);
-      });
-    },
-  );
+      const _data = freshModule.l10n[lang];
+      expect(_data).toBeDefined();
+      expect(freshModule._testGetCacheKeys()).toContain(lang);
+    });
+  });
 
   it('accessing all languages populates the full cache', () => {
     jest.isolateModules(() => {
