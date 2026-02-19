@@ -10,6 +10,7 @@ import type {Translations} from './types';
 // 3) add case to requireLanguageData(), 4) add getter to l10n object.
 const languageRegistry = {
   en: {displayName: 'English (EN)'},
+  fa: {displayName: 'فارسی (FA)'},
   he: {displayName: 'עברית (HE)'},
   id: {displayName: 'Indonesia (ID)'},
   ja: {displayName: '日本語 (JA)'},
@@ -26,6 +27,7 @@ export const supportedLanguages = Object.keys(
 
 export const languageDisplayNames: Record<AvailableLanguage, string> = {
   en: languageRegistry.en.displayName,
+  fa: languageRegistry.fa.displayName,
   he: languageRegistry.he.displayName,
   id: languageRegistry.id.displayName,
   ja: languageRegistry.ja.displayName,
@@ -43,6 +45,8 @@ const cache: Partial<Record<AvailableLanguage, Translations>> = {
 // Metro bundles these at build time, but JS doesn't parse them until require() is called
 function requireLanguageData(lang: AvailableLanguage): object | null {
   switch (lang) {
+    case 'fa':
+      return require('./fa.json');
     case 'he':
       return require('./he.json');
     case 'id':
@@ -85,6 +89,9 @@ export function _testGetCacheKeys(): string[] {
 export const l10n = {
   get en(): Translations {
     return enData;
+  },
+  get fa(): Translations {
+    return getTranslations('fa');
   },
   get he(): Translations {
     return getTranslations('he');
@@ -131,6 +138,7 @@ export function t(
 export const initLocale = (locale?: AvailableLanguage) => {
   const locales: Record<AvailableLanguage, unknown> = {
     en: require('dayjs/locale/en'),
+    fa: require('dayjs/locale/fa'),
     he: require('dayjs/locale/he'),
     id: require('dayjs/locale/id'),
     ja: require('dayjs/locale/ja'),
