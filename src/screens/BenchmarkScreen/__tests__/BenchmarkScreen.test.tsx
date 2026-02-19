@@ -96,6 +96,22 @@ describe('BenchmarkScreen', () => {
       });
     });
 
+    it('should show placeholder when no models are available', () => {
+      const originalModels = modelStore.models;
+      modelStore.models = [];
+
+      const {getByText} = render(<BenchmarkScreen />);
+
+      // Open model selector
+      fireEvent.press(getByText('Select Model'));
+
+      // Verify placeholder is shown
+      expect(getByText('No models downloaded')).toBeDefined();
+
+      // Restore
+      modelStore.models = originalModels;
+    });
+
     it('should initialize model when selected', async () => {
       const {getByText} = render(<BenchmarkScreen />);
       const modelToSelect = modelStore.availableModels[0];

@@ -312,16 +312,24 @@ export const BenchmarkScreen: React.FC = observer(() => {
             l10n.benchmark.modelSelector.prompt}
         </Button>
       }>
-      {modelStore.availableModels.map(model => (
+      {modelStore.availableModels.length === 0 ? (
         <Menu.Item
-          key={model.id}
-          onPress={() => handleModelSelect(model)}
-          label={model.name}
-          leadingIcon={
-            model.id === modelStore.activeModelId ? 'check' : undefined
-          }
+          key="no-models"
+          label={l10n.benchmark.modelSelector.noModels}
+          disabled
         />
-      ))}
+      ) : (
+        modelStore.availableModels.map(model => (
+          <Menu.Item
+            key={model.id}
+            onPress={() => handleModelSelect(model)}
+            label={model.name}
+            leadingIcon={
+              model.id === modelStore.activeModelId ? 'check' : undefined
+            }
+          />
+        ))
+      )}
     </Menu>
   );
 
