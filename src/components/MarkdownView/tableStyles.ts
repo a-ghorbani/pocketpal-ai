@@ -23,9 +23,10 @@ export const createTableStyles = (theme: Theme) => ({
     backgroundColor: theme.colors.surfaceContainerHigh,
   },
   cell: {
-    flex: 1,
-    width: 0,
-    minWidth: 80,
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: 0,
+    minWidth: 100,
     padding: 8,
   },
   headerCell: {
