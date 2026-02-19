@@ -135,7 +135,7 @@ USAGE:
 OPTIONS:
   --platform <platform>    Platform: 'ios', 'android', or 'both' (required)
   --spec <spec>            Test spec: 'quick-smoke', 'load-stress', 'diagnostic',
-                           'language', or 'all' (default: 'quick-smoke')
+                           'language', 'visual-capture', or 'all' (default: 'quick-smoke')
   --models <ids>           Comma-separated model IDs to test
   --each-model             Iterate spec once per model (isolated WDIO process each)
   --all-models             Include crash-repro models in the model pool
