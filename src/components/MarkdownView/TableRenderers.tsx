@@ -150,16 +150,9 @@ const TableRenderer: CustomBlockRenderer = ({tnode}) => {
                         styles.cell,
                         isHeaderCell && styles.headerCell,
                         cellIndex < cells.length - 1 && styles.cellBorderRight,
-                        align
-                          ? {
-                              alignItems:
-                                align === 'center'
-                                  ? 'center'
-                                  : align === 'right'
-                                    ? 'flex-end'
-                                    : 'flex-start',
-                            }
-                          : undefined,
+                        align === 'center' && styles.alignCenter,
+                        align === 'right' && styles.alignRight,
+                        align === 'left' && styles.alignLeft,
                       ]}>
                       {cellTNode ? (
                         <TNodeChildrenRenderer tnode={cellTNode} />
