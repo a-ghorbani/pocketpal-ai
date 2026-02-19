@@ -55,9 +55,6 @@ export const createTagsStyles = (theme: Theme) => ({
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
-  // Table styles are handled entirely by the custom TableRenderer in TableRenderers.tsx.
-  // No tagsStyles needed for table sub-elements (thead, tr, th, td) because the renderer
-  // owns the entire subtree and renders with native View/Text components.
 });
 
 export const createStyles = (theme: Theme) =>

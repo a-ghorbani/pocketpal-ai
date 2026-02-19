@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, ScrollView, Text as RNText, ViewStyle} from 'react-native';
+import {View, ScrollView, Text as RNText} from 'react-native';
 import {
   HTMLElementModel,
   HTMLContentModel,
@@ -15,7 +15,7 @@ import type {
 import type {Element} from '@native-html/transient-render-engine';
 
 import {useTheme} from '../../hooks';
-import {Theme} from '../../utils/types';
+import {createTableStyles} from './tableStyles';
 
 // Element models: Tell react-native-render-html to treat table tags as renderable
 // block elements instead of silently dropping them (default "tabular" = content model "none").
@@ -110,47 +110,6 @@ function findTNodeForDomElement(
     }
   }
   return undefined;
-}
-
-// ---- Styles ----
-
-function createTableStyles(theme: Theme) {
-  return {
-    tableOuter: {
-      borderWidth: 1,
-      borderColor: theme.colors.outline,
-      borderRadius: 4,
-      marginVertical: 8,
-      overflow: 'hidden' as const,
-    } as ViewStyle,
-    tableInner: {
-      minWidth: '100%' as const,
-    } as ViewStyle,
-    row: {
-      flexDirection: 'row' as const,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.outline,
-    } as ViewStyle,
-    lastRow: {
-      borderBottomWidth: 0,
-    } as ViewStyle,
-    headerRow: {
-      backgroundColor: theme.colors.surfaceContainerHigh,
-    } as ViewStyle,
-    cell: {
-      flex: 1,
-      minWidth: 80,
-      padding: 8,
-    } as ViewStyle,
-    headerCell: {
-      backgroundColor: theme.colors.surfaceContainerHigh,
-      fontWeight: 'bold' as const,
-    } as ViewStyle,
-    cellBorderRight: {
-      borderRightWidth: 1,
-      borderRightColor: theme.colors.outline,
-    } as ViewStyle,
-  };
 }
 
 // ---- Table renderer ----
