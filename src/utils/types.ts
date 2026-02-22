@@ -328,6 +328,7 @@ export enum ModelOrigin {
   PRESET = 'preset',
   LOCAL = 'local',
   HF = 'hf',
+  OCI = 'oci',
 }
 
 export enum ModelType {
