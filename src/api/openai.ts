@@ -126,8 +126,9 @@ export async function testConnection(
  * Stream a chat completion from an OpenAI-compatible server.
  * POST /v1/chat/completions with stream: true
  *
- * Uses fetch + ReadableStream + SSEParser for efficient token-by-token streaming.
- * Implements connection timeout (30s) and idle timeout (60s between events).
+ * Uses XMLHttpRequest with incremental events for React Native compatibility.
+ * React Native's fetch does not expose response.body (ReadableStream), so
+ * XMLHttpRequest with onprogress is the standard approach for SSE streaming.
  */
 export async function streamChatCompletion(
   params: StreamChatParams,
@@ -138,106 +139,77 @@ export async function streamChatCompletion(
 ): Promise<CompletionResult> {
   const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
 
-  // Connection timeout: abort if no response within 30s
-  const connectionController = new AbortController();
-  const connectionTimeout = setTimeout(
-    () => connectionController.abort(),
-    CONNECTION_TIMEOUT_MS,
-  );
+  return new Promise<CompletionResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
 
-  // Combine external signal with connection timeout
-  const combinedSignal = signal
-    ? combineAbortSignals(signal, connectionController.signal)
-    : connectionController.signal;
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: buildHeaders(apiKey),
-      body: JSON.stringify({
-        model: params.model,
-        messages: params.messages,
-        temperature: params.temperature,
-        top_p: params.top_p,
-        max_tokens: params.max_tokens,
-        stop: params.stop,
-        stream: true,
-      }),
-      signal: combinedSignal,
-    });
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      if (signal?.aborted) {
-        throw new Error('Completion aborted');
-      }
-      throw new Error('Connection timed out');
+    // Set headers
+    const headers = buildHeaders(apiKey);
+    for (const [key, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(key, value);
     }
-    throw error;
-  } finally {
-    clearTimeout(connectionTimeout);
-  }
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error('Unauthorized: Invalid or missing API key');
-    }
-    const errorText = await response.text().catch(() => '');
-    throw new Error(
-      `Server error: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
-    );
-  }
+    const parser = new SSEParser();
+    let fullContent = '';
+    let fullReasoningContent = '';
+    let finishReason: string | null = null;
+    let tokensPredicted = 0;
+    let lastProcessedLength = 0;
+    let settled = false;
 
-  // Stream SSE events from the response body
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error('Response body is not readable');
-  }
-
-  const decoder = new TextDecoder();
-  const parser = new SSEParser();
-  let fullContent = '';
-  let fullReasoningContent = '';
-  let finishReason: string | null = null;
-  let tokensPredicted = 0;
-
-  // Idle timeout: reset on each SSE event
-  let idleTimer: ReturnType<typeof setTimeout> | null = null;
-  const resetIdleTimer = () => {
-    if (idleTimer) {
-      clearTimeout(idleTimer);
-    }
-    idleTimer = setTimeout(() => {
-      reader.cancel();
-    }, IDLE_TIMEOUT_MS);
-  };
-
-  try {
-    resetIdleTimer();
-
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) {
-        break;
+    // Connection timeout: abort if no headers received within 30s
+    const connectionTimer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        xhr.abort();
+        reject(new Error('Connection timed out'));
       }
+    }, CONNECTION_TIMEOUT_MS);
 
-      // Check if externally aborted
-      if (signal?.aborted) {
-        reader.cancel();
-        break;
+    // Idle timeout: abort if no data received within 60s
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const resetIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
       }
+      idleTimer = setTimeout(() => {
+        xhr.abort();
+      }, IDLE_TIMEOUT_MS);
+    };
 
-      const chunk = decoder.decode(value, {stream: true});
+    // Handle external abort signal
+    const onAbort = () => {
+      xhr.abort();
+    };
+    if (signal) {
+      if (signal.aborted) {
+        reject(new Error('Completion aborted'));
+        return;
+      }
+      signal.addEventListener('abort', onAbort, {once: true});
+    }
 
+    const cleanup = () => {
+      clearTimeout(connectionTimer);
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+      if (signal) {
+        signal.removeEventListener('abort', onAbort);
+      }
+    };
+
+    /**
+     * Process new SSE data from the response.
+     * Called from onprogress with the new text chunk.
+     */
+    const processChunk = (chunk: string) => {
       for (const event of parser.feed(chunk)) {
         if (event === 'done') {
-          break;
+          return;
         }
 
         if (!isValidChatChunk(event)) {
-          if (__DEV__) {
-            console.warn('Skipping malformed SSE event:', event);
-          }
           continue;
         }
 
@@ -256,7 +228,6 @@ export async function streamChatCompletion(
         if (reasoningContent) {
           fullReasoningContent += reasoningContent;
         }
-
         if (choice.finish_reason) {
           finishReason = choice.finish_reason;
         }
@@ -269,82 +240,157 @@ export async function streamChatCompletion(
           });
         }
       }
-    }
-
-    // Flush remaining buffer
-    for (const event of parser.flush()) {
-      if (event === 'done') {
-        break;
-      }
-      if (!isValidChatChunk(event)) {
-        continue;
-      }
-      const parsed = event as any;
-      const choice = parsed.choices[0];
-      const delta = choice.delta || {};
-      if (delta.content) {
-        fullContent += delta.content;
-        tokensPredicted++;
-      }
-      if (delta.reasoning_content) {
-        fullReasoningContent += delta.reasoning_content;
-      }
-      if (choice.finish_reason) {
-        finishReason = choice.finish_reason;
-      }
-    }
-  } finally {
-    if (idleTimer) {
-      clearTimeout(idleTimer);
-    }
-  }
-
-  // If externally aborted mid-stream, return what we have
-  if (signal?.aborted) {
-    return {
-      text: fullContent,
-      content: fullContent,
-      reasoning_content: fullReasoningContent || undefined,
-      tokens_predicted: tokensPredicted,
-      interrupted: true,
     };
-  }
 
-  // Map finish_reason to CompletionResult fields
-  const result: CompletionResult = {
-    text: fullContent,
-    content: fullContent,
-    reasoning_content: fullReasoningContent || undefined,
-    tokens_predicted: tokensPredicted,
-  };
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
+        // Headers received — clear connection timeout
+        clearTimeout(connectionTimer);
 
-  switch (finishReason) {
-    case 'stop':
-      result.stopped_eos = true;
-      break;
-    case 'length':
-      result.stopped_limit = 1;
-      break;
-    case 'content_filter':
-      result.interrupted = true;
-      break;
-  }
+        if (xhr.status !== 200) {
+          settled = true;
+          cleanup();
+          if (xhr.status === 401) {
+            reject(new Error('Unauthorized: Invalid or missing API key'));
+          } else {
+            reject(
+              new Error(
+                `Server error: ${xhr.status} ${xhr.statusText}`,
+              ),
+            );
+          }
+          xhr.abort();
+        } else {
+          resetIdleTimer();
+        }
+      }
+    };
 
-  return result;
-}
+    xhr.onprogress = () => {
+      // Extract only the new data since last onprogress
+      const newText = xhr.responseText.substring(lastProcessedLength);
+      lastProcessedLength = xhr.responseText.length;
 
-/**
- * Combine multiple AbortSignals into one.
- * Aborts when any of the input signals abort.
- */
-function combineAbortSignals(...signals: AbortSignal[]): AbortSignal {
-  const controller = new AbortController();
-  for (const sig of signals) {
-    if (sig.aborted) {
-      controller.abort();
-      return controller.signal;
-    }
-    sig.addEventListener('abort', () => controller.abort(), {once: true});
-  }
-  return controller.signal;
+      if (newText) {
+        processChunk(newText);
+      }
+    };
+
+    xhr.onload = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+
+      // Process any remaining data not yet seen in onprogress
+      const remaining = xhr.responseText.substring(lastProcessedLength);
+      if (remaining) {
+        processChunk(remaining);
+      }
+
+      // Flush the SSE parser buffer
+      for (const event of parser.flush()) {
+        if (event === 'done') {
+          break;
+        }
+        if (!isValidChatChunk(event)) {
+          continue;
+        }
+        const parsed = event as any;
+        const choice = parsed.choices[0];
+        const delta = choice.delta || {};
+        if (delta.content) {
+          fullContent += delta.content;
+          tokensPredicted++;
+        }
+        if (delta.reasoning_content) {
+          fullReasoningContent += delta.reasoning_content;
+        }
+        if (choice.finish_reason) {
+          finishReason = choice.finish_reason;
+        }
+      }
+
+      // Build result
+      if (signal?.aborted) {
+        resolve({
+          text: fullContent,
+          content: fullContent,
+          reasoning_content: fullReasoningContent || undefined,
+          tokens_predicted: tokensPredicted,
+          interrupted: true,
+        });
+        return;
+      }
+
+      const result: CompletionResult = {
+        text: fullContent,
+        content: fullContent,
+        reasoning_content: fullReasoningContent || undefined,
+        tokens_predicted: tokensPredicted,
+      };
+
+      switch (finishReason) {
+        case 'stop':
+          result.stopped_eos = true;
+          break;
+        case 'length':
+          result.stopped_limit = 1;
+          break;
+        case 'content_filter':
+          result.interrupted = true;
+          break;
+      }
+
+      resolve(result);
+    };
+
+    xhr.onerror = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+
+      if (signal?.aborted) {
+        reject(new Error('Completion aborted'));
+      } else {
+        reject(new Error('Network error'));
+      }
+    };
+
+    xhr.onabort = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+
+      if (signal?.aborted) {
+        // Externally aborted — resolve with partial content
+        resolve({
+          text: fullContent,
+          content: fullContent,
+          reasoning_content: fullReasoningContent || undefined,
+          tokens_predicted: tokensPredicted,
+          interrupted: true,
+        });
+      }
+      // If not externally aborted, the reject was already called
+      // by the timeout handler that triggered xhr.abort()
+    };
+
+    xhr.send(
+      JSON.stringify({
+        model: params.model,
+        messages: params.messages,
+        temperature: params.temperature,
+        top_p: params.top_p,
+        max_tokens: params.max_tokens,
+        stop: params.stop,
+        stream: true,
+      }),
+    );
+  });
 }

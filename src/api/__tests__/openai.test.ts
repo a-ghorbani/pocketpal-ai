@@ -1,32 +1,5 @@
 import {fetchModels, testConnection, streamChatCompletion} from '../openai';
 
-// Helper to create a mock SSE Response with a ReadableStream body
-function createMockSSEResponse(chunks: string[]) {
-  let index = 0;
-  const encoder = new TextEncoder();
-  return {
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    headers: new Map([['content-type', 'text/event-stream']]),
-    text: jest.fn().mockResolvedValue(''),
-    body: {
-      getReader: () => ({
-        read: jest.fn().mockImplementation(() => {
-          if (index < chunks.length) {
-            return Promise.resolve({
-              done: false,
-              value: encoder.encode(chunks[index++]),
-            });
-          }
-          return Promise.resolve({done: true, value: undefined});
-        }),
-        cancel: jest.fn(),
-      }),
-    },
-  };
-}
-
 describe('fetchModels', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -171,28 +144,91 @@ describe('testConnection', () => {
   });
 });
 
+// Mock XMLHttpRequest for streaming tests
+type XHREventHandler = (() => void) | null;
+
+class MockXHR {
+  static instances: MockXHR[] = [];
+  static HEADERS_RECEIVED = 2;
+  static DONE = 4;
+
+  method = '';
+  url = '';
+  requestHeaders: Record<string, string> = {};
+  requestBody = '';
+  responseText = '';
+  readyState = 0;
+  status = 0;
+  statusText = '';
+
+  onreadystatechange: XHREventHandler = null;
+  onprogress: XHREventHandler = null;
+  onload: XHREventHandler = null;
+  onerror: XHREventHandler = null;
+  onabort: XHREventHandler = null;
+
+  constructor() {
+    MockXHR.instances.push(this);
+  }
+
+  open(method: string, url: string) {
+    this.method = method;
+    this.url = url;
+  }
+
+  setRequestHeader(key: string, value: string) {
+    this.requestHeaders[key] = value;
+  }
+
+  send(body?: string) {
+    this.requestBody = body || '';
+  }
+
+  abort() {
+    this.onabort?.();
+  }
+
+  // Simulate receiving headers
+  simulateHeaders(status: number, statusText = 'OK') {
+    this.readyState = 2; // HEADERS_RECEIVED
+    this.status = status;
+    this.statusText = statusText;
+    this.onreadystatechange?.();
+  }
+
+  // Simulate receiving a chunk of SSE data
+  simulateProgress(text: string) {
+    this.responseText += text;
+    this.onprogress?.();
+  }
+
+  // Simulate request completion
+  simulateLoad() {
+    this.readyState = 4;
+    this.onload?.();
+  }
+
+  // Simulate network error
+  simulateError() {
+    this.onerror?.();
+  }
+}
+
 describe('streamChatCompletion', () => {
+  let originalXHR: typeof XMLHttpRequest;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
+    MockXHR.instances = [];
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    global.XMLHttpRequest = originalXHR;
   });
 
   it('streams tokens and returns full completion result', async () => {
-    const chunks = [
-      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
-      'data: {"choices":[{"delta":{"content":" world"},"finish_reason":null}]}\n\n',
-      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
-      'data: [DONE]\n\n',
-    ];
-
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(createMockSSEResponse(chunks));
-
     const onToken = jest.fn();
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
@@ -201,6 +237,27 @@ describe('streamChatCompletion', () => {
       undefined,
       onToken,
     );
+
+    // Get the mock XHR instance
+    const xhr = MockXHR.instances[0];
+
+    // Simulate successful headers
+    xhr.simulateHeaders(200);
+
+    // Simulate SSE chunks arriving
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":" world"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+
+    // Simulate completion
+    xhr.simulateLoad();
 
     const result = await resultPromise;
 
@@ -218,67 +275,8 @@ describe('streamChatCompletion', () => {
     );
   });
 
-  it('handles abort via AbortController', async () => {
-    const controller = new AbortController();
-    let readCallCount = 0;
-
-    const mockResponse = {
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      headers: new Map(),
-      text: jest.fn().mockResolvedValue(''),
-      body: {
-        getReader: () => ({
-          read: jest.fn().mockImplementation(() => {
-            readCallCount++;
-            if (readCallCount === 1) {
-              // First read returns a valid chunk
-              return Promise.resolve({
-                done: false,
-                value: new TextEncoder().encode(
-                  'data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}\n\n',
-                ),
-              });
-            }
-            // Second read: abort signal is triggered before this read
-            controller.abort();
-            return Promise.resolve({
-              done: false,
-              value: new TextEncoder().encode(
-                'data: {"choices":[{"delta":{"content":" more"},"finish_reason":null}]}\n\n',
-              ),
-            });
-          }),
-          cancel: jest.fn(),
-        }),
-      },
-    };
-
-    global.fetch = jest.fn().mockResolvedValueOnce(mockResponse);
-
-    const result = await streamChatCompletion(
-      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-      'http://localhost:1234',
-      undefined,
-      controller.signal,
-    );
-
-    expect(result.interrupted).toBe(true);
-    expect(result.content).toBe('partial');
-  });
-
-  it('sends correct request body', async () => {
-    const chunks = [
-      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
-      'data: [DONE]\n\n',
-    ];
-
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(createMockSSEResponse(chunks));
-
-    await streamChatCompletion(
+  it('sends correct request headers and body', async () => {
+    const resultPromise = streamChatCompletion(
       {
         messages: [{role: 'user', content: 'Hi'}],
         model: 'test-model',
@@ -291,82 +289,75 @@ describe('streamChatCompletion', () => {
       'sk-key',
     );
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:1234/v1/chat/completions',
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer sk-key',
-        },
-        body: JSON.stringify({
-          model: 'test-model',
-          messages: [{role: 'user', content: 'Hi'}],
-          temperature: 0.7,
-          top_p: 0.9,
-          max_tokens: 100,
-          stop: ['</s>'],
-          stream: true,
-        }),
-      }),
+    const xhr = MockXHR.instances[0];
+
+    expect(xhr.method).toBe('POST');
+    expect(xhr.url).toBe('http://localhost:1234/v1/chat/completions');
+    expect(xhr.requestHeaders['Content-Type']).toBe('application/json');
+    expect(xhr.requestHeaders.Authorization).toBe('Bearer sk-key');
+
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.model).toBe('test-model');
+    expect(body.temperature).toBe(0.7);
+    expect(body.top_p).toBe(0.9);
+    expect(body.max_tokens).toBe(100);
+    expect(body.stop).toEqual(['</s>']);
+    expect(body.stream).toBe(true);
+
+    // Complete the request
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
     );
+    xhr.simulateLoad();
+
+    await resultPromise;
   });
 
   it('maps finish_reason "length" to stopped_limit', async () => {
-    const chunks = [
-      'data: {"choices":[{"delta":{"content":"text"},"finish_reason":null}]}\n\n',
-      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n',
-      'data: [DONE]\n\n',
-    ];
-
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(createMockSSEResponse(chunks));
-
-    const result = await streamChatCompletion(
+    const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
       'http://localhost:1234',
     );
 
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"text"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
     expect(result.stopped_limit).toBe(1);
     expect(result.stopped_eos).toBeUndefined();
   });
 
   it('maps finish_reason "content_filter" to interrupted', async () => {
-    const chunks = [
-      'data: {"choices":[{"delta":{"content":"filtered"},"finish_reason":null}]}\n\n',
-      'data: {"choices":[{"delta":{},"finish_reason":"content_filter"}]}\n\n',
-      'data: [DONE]\n\n',
-    ];
-
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(createMockSSEResponse(chunks));
-
-    const result = await streamChatCompletion(
+    const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
       'http://localhost:1234',
     );
 
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"filtered"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"content_filter"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
     expect(result.interrupted).toBe(true);
   });
 
-  it('skips malformed SSE events with valid JSON but wrong structure', async () => {
-    // Suppress __DEV__ console.warn for this test
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-    const chunks = [
-      'data: {"not_choices":"wrong structure"}\n\n',
-      'data: {"choices":[{"delta":{"content":"valid"},"finish_reason":null}]}\n\n',
-      'data: [DONE]\n\n',
-    ];
-
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(createMockSSEResponse(chunks));
-
+  it('skips malformed SSE events', async () => {
     const onToken = jest.fn();
-    const result = await streamChatCompletion(
+    const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
       'http://localhost:1234',
       undefined,
@@ -374,26 +365,23 @@ describe('streamChatCompletion', () => {
       onToken,
     );
 
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress('data: {"not_choices":"wrong structure"}\n\n');
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"valid"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
     expect(result.content).toBe('valid');
     expect(onToken).toHaveBeenCalledTimes(1);
-
-    warnSpy.mockRestore();
   });
 
   it('handles reasoning_content in streaming delta', async () => {
-    const chunks = [
-      'data: {"choices":[{"delta":{"reasoning_content":"thinking..."},"finish_reason":null}]}\n\n',
-      'data: {"choices":[{"delta":{"content":"answer"},"finish_reason":null}]}\n\n',
-      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
-      'data: [DONE]\n\n',
-    ];
-
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(createMockSSEResponse(chunks));
-
     const onToken = jest.fn();
-    const result = await streamChatCompletion(
+    const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
       'http://localhost:1234',
       undefined,
@@ -401,6 +389,20 @@ describe('streamChatCompletion', () => {
       onToken,
     );
 
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"reasoning_content":"thinking..."},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"answer"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
     expect(result.reasoning_content).toBe('thinking...');
     expect(result.content).toBe('answer');
     expect(onToken).toHaveBeenCalledTimes(2);
@@ -409,36 +411,80 @@ describe('streamChatCompletion', () => {
     );
   });
 
-  it('throws on non-ok response', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      statusText: 'Unauthorized',
-      text: jest.fn().mockResolvedValue('Invalid API key'),
-    });
+  it('rejects on 401 response', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
 
-    await expect(
-      streamChatCompletion(
-        {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
-        'http://localhost:1234',
-      ),
-    ).rejects.toThrow('Unauthorized: Invalid or missing API key');
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(401, 'Unauthorized');
+
+    await expect(resultPromise).rejects.toThrow(
+      'Unauthorized: Invalid or missing API key',
+    );
   });
 
-  it('throws error when response body is not readable', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-      headers: new Map(),
-      body: null,
-    });
+  it('rejects on network error', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateError();
+
+    await expect(resultPromise).rejects.toThrow('Network error');
+  });
+
+  it('rejects on server error response', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(500, 'Internal Server Error');
+
+    await expect(resultPromise).rejects.toThrow(
+      'Server error: 500 Internal Server Error',
+    );
+  });
+
+  it('handles abort via AbortController', async () => {
+    const controller = new AbortController();
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+      undefined,
+      controller.signal,
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}\n\n',
+    );
+
+    // Trigger abort
+    controller.abort();
+
+    const result = await resultPromise;
+    expect(result.interrupted).toBe(true);
+    expect(result.content).toBe('partial');
+  });
+
+  it('rejects immediately if signal already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
 
     await expect(
       streamChatCompletion(
         {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
         'http://localhost:1234',
+        undefined,
+        controller.signal,
       ),
-    ).rejects.toThrow('Response body is not readable');
+    ).rejects.toThrow('Completion aborted');
   });
 });
