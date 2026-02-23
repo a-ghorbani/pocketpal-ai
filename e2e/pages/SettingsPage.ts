@@ -118,10 +118,29 @@ export class SettingsPage extends BasePage {
 
   /**
    * Tap the "Test Connection" button in the ServerConfigSheet.
+   * After filling form fields, the keyboard may cover the button.
+   * Dismiss keyboard first, then scroll the sheet to make buttons visible.
    */
   async tapTestConnection(): Promise<void> {
     await this.dismissKeyboard();
-    await browser.pause(300);
+    await browser.pause(500);
+
+    // The sheet is 70% height and buttons may be below the fold.
+    // Swipe up within the sheet area to reveal Test Connection and Save buttons.
+    const testBtn = browser.$(Selectors.serverConfig.testButton);
+    const isVisible = await testBtn.isDisplayed().catch(() => false);
+    if (!isVisible) {
+      // Swipe up in the lower half of screen (where the sheet is)
+      await Gestures.swipe({
+        startXPercent: 0.5,
+        startYPercent: 0.7,
+        endXPercent: 0.5,
+        endYPercent: 0.4,
+        duration: 300,
+      });
+      await browser.pause(300);
+    }
+
     await this.tap(Selectors.serverConfig.testButton);
   }
 
@@ -141,6 +160,19 @@ export class SettingsPage extends BasePage {
    * Tap the "Save" button in the ServerConfigSheet.
    */
   async tapSaveServer(): Promise<void> {
+    // Save button may also be below fold — scroll if not visible
+    const saveBtn = browser.$(Selectors.serverConfig.saveButton);
+    const isVisible = await saveBtn.isDisplayed().catch(() => false);
+    if (!isVisible) {
+      await Gestures.swipe({
+        startXPercent: 0.5,
+        startYPercent: 0.7,
+        endXPercent: 0.5,
+        endYPercent: 0.4,
+        duration: 300,
+      });
+      await browser.pause(300);
+    }
     await this.tap(Selectors.serverConfig.saveButton);
     await browser.pause(500);
   }
