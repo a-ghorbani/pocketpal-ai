@@ -459,4 +459,29 @@ export const Selectors = {
       return byTestId('clear-all-button');
     },
   },
+
+  // Remote server configuration
+  serverConfig: {
+    get addServerButton(): string {
+      return byTestId('add-server-button');
+    },
+    get nameInput(): string {
+      return byTestId('server-name-input');
+    },
+    get urlInput(): string {
+      return byTestId('server-url-input');
+    },
+    get apiKeyInput(): string {
+      return byTestId('server-apikey-input');
+    },
+    get testButton(): string {
+      return byTestId('server-test-button');
+    },
+    get saveButton(): string {
+      return byTestId('server-save-button');
+    },
+    get sheetCloseButton(): string {
+      return byTestId('sheet-close-button');
+    },
+  },
 };
