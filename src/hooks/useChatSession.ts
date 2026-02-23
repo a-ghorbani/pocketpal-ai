@@ -23,7 +23,7 @@ const prepareCompletion = async ({
   imageUris,
   message,
   systemMessages,
-  context,
+  contextId,
   assistant,
   conversationIdRef,
   isMultimodalEnabled,
@@ -33,7 +33,7 @@ const prepareCompletion = async ({
   imageUris: string[];
   message: MessageType.PartialText;
   systemMessages: Array<{role: 'system'; content: string}>;
-  context: any;
+  contextId: string;
   assistant: User;
   conversationIdRef: string;
   isMultimodalEnabled: boolean;
@@ -135,7 +135,7 @@ const prepareCompletion = async ({
     text: '',
     type: 'text',
     metadata: {
-      contextId: context.id,
+      contextId,
       conversationId: conversationIdRef,
       copyable: true,
       multimodal: hasImages, // Simple check based on presence of images
@@ -183,8 +183,15 @@ export const useChatSession = (
   };
 
   const handleSendPress = async (message: MessageType.PartialText) => {
-    const context = modelStore.context;
-    if (!context) {
+    // Guard on engine instead of context -- supports both local and remote models
+    const engine = modelStore.engine;
+    if (!engine) {
+      await addSystemMessage(l10n.chat.modelNotLoaded);
+      return;
+    }
+
+    const contextId = modelStore.contextId;
+    if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
       return;
     }
@@ -209,7 +216,7 @@ export const useChatSession = (
       type: 'text',
       imageUris: hasImages ? imageUris : undefined, // Include images directly in the text message
       metadata: {
-        contextId: context.id,
+        contextId,
         conversationId: conversationIdRef.current,
         copyable: true,
         multimodal: hasImages, // Mark as multimodal if it has images
@@ -247,7 +254,7 @@ export const useChatSession = (
       imageUris: imageUris || [],
       message,
       systemMessages,
-      context,
+      contextId,
       assistant,
       conversationIdRef: conversationIdRef.current,
       isMultimodalEnabled,
@@ -262,9 +269,9 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
-      // Create the completion promise and register it with modelStore
-      // This enables safe context release by waiting for the promise to finish
-      const completionPromise = context.completion(
+      // Create the completion promise using the engine interface
+      // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
+      const completionPromise = engine.completion(
         cleanCompletionParams,
         data => {
           if (currentMessageInfo.current) {
@@ -309,8 +316,11 @@ export const useChatSession = (
         },
       );
 
-      // Register the promise so releaseContext can wait for it
-      modelStore.registerCompletionPromise(completionPromise);
+      // Only register completion promise for local models -- protects native context from being freed mid-completion
+      // For remote models, stopCompletion() via AbortController handles cleanup
+      if (modelStore.context) {
+        modelStore.registerCompletionPromise(completionPromise);
+      }
 
       // Await the completion
       const result = await completionPromise;
@@ -362,34 +372,55 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
 
-      // Clean up the empty assistant message that was created before the error
+      // For remote models: preserve partial message if tokens were already streamed
+      // Instead of deleting the message, keep what we have and show error toast
       if (currentMessageInfo.current) {
-        try {
-          await chatSessionRepository.deleteMessage(
+        const session = chatSessionStore.sessions.find(
+          s => s.id === currentMessageInfo.current!.sessionId,
+        );
+        const currentMsg = session?.messages.find(
+          msg => msg.id === currentMessageInfo.current!.id,
+        );
+        const hasPartialContent =
+          currentMsg && 'text' in currentMsg && currentMsg.text;
+
+        if (hasPartialContent) {
+          // Partial content exists -- keep it and add error metadata
+          await chatSessionStore.updateMessage(
             currentMessageInfo.current.id,
+            currentMessageInfo.current.sessionId,
+            {
+              metadata: {
+                interrupted: true,
+                copyable: true,
+              },
+            },
           );
-          // Also remove from local state
-          const session = chatSessionStore.sessions.find(
-            s => s.id === currentMessageInfo.current!.sessionId,
-          );
-          if (session) {
-            runInAction(() => {
-              session.messages = session.messages.filter(
-                msg => msg.id !== currentMessageInfo.current!.id,
-              );
-            });
+        } else {
+          // No content was streamed -- clean up the empty assistant message
+          try {
+            await chatSessionRepository.deleteMessage(
+              currentMessageInfo.current.id,
+            );
+            // Also remove from local state
+            if (session) {
+              runInAction(() => {
+                session.messages = session.messages.filter(
+                  msg => msg.id !== currentMessageInfo.current!.id,
+                );
+              });
+            }
+          } catch (cleanupError) {
+            console.error(
+              'Failed to clean up empty message after error:',
+              cleanupError,
+            );
           }
-        } catch (cleanupError) {
-          console.error(
-            'Failed to clean up empty message after error:',
-            cleanupError,
-          );
         }
       }
 
       const errorMessage = (error as Error).message;
       if (errorMessage.includes('network')) {
-        // TODO: This can be removed. We don't use network for chat.
         await addSystemMessage(l10n.common.networkError);
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
@@ -410,9 +441,9 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    const context = modelStore.context;
-    if (modelStore.inferencing && context) {
-      context.stopCompletion();
+    // Use engine.stopCompletion() for both local and remote models
+    if (modelStore.inferencing && modelStore.engine) {
+      modelStore.engine.stopCompletion();
     }
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
