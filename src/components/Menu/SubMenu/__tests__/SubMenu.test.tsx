@@ -37,4 +37,17 @@ describe('SubMenu', () => {
     expect(getByText('Item 2')).toBeTruthy();
     expect(getByText('Item 3')).toBeTruthy();
   });
+
+  it('passes statusBarHeight to PaperMenu', () => {
+    const PaperMenu = require('react-native-paper').Menu;
+    const {UNSAFE_getByType} = render(
+      <SubMenu visible={true} onDismiss={() => {}} anchor={{x: 100, y: 100}}>
+        <MenuItem label="Item 1" onPress={() => {}} />
+      </SubMenu>,
+    );
+
+    const paperMenuInstance = UNSAFE_getByType(PaperMenu);
+    expect(paperMenuInstance.props.statusBarHeight).toBeDefined();
+    expect(typeof paperMenuInstance.props.statusBarHeight).toBe('number');
+  });
 });
