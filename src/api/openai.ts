@@ -11,7 +11,9 @@ export interface RemoteModelInfo {
 /** Chat message type compatible with OpenAI API format */
 export interface OpenAIChatMessage {
   role: string;
-  content?: string | Array<{type: string; text?: string; image_url?: {url?: string}}>;
+  content?:
+    | string
+    | Array<{type: string; text?: string; image_url?: {url?: string}}>;
 }
 
 /** Parameters for streaming chat completion */
@@ -87,7 +89,9 @@ export async function fetchModels(
       if (response.status === 401) {
         throw new Error('Unauthorized: Invalid or missing API key');
       }
-      throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Server error: ${response.status} ${response.statusText}`,
+      );
     }
 
     const data = await response.json();

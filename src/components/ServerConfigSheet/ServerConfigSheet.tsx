@@ -1,10 +1,6 @@
 import React, {useState, useContext, useEffect} from 'react';
 import {View} from 'react-native';
-import {
-  Text,
-  Button,
-  TextInput as PaperTextInput,
-} from 'react-native-paper';
+import {Text, Button, TextInput as PaperTextInput} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {Sheet, TextInput} from '..';
@@ -155,12 +151,13 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
       setTestResult(null);
 
       try {
-        // Create a temporary server config for testing
-        const tempServerId = server?.id || `temp-${Date.now()}`;
         if (!server) {
           // For new servers, use the openai client directly
           const {testConnection} = await import('../../api/openai');
-          const result = await testConnection(url.trim(), apiKey.trim() || undefined);
+          const result = await testConnection(
+            url.trim(),
+            apiKey.trim() || undefined,
+          );
           setTestResult(result);
         } else {
           const result = await serverStore.testServerConnection(server.id);
@@ -181,11 +178,7 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
       <Sheet
         isVisible={isVisible}
         onClose={onDismiss}
-        title={
-          isEditMode
-            ? l10n.settings.editServer
-            : l10n.settings.addServer
-        }
+        title={isEditMode ? l10n.settings.editServer : l10n.settings.addServer}
         snapPoints={['70%']}>
         <Sheet.ScrollView contentContainerStyle={styles.container}>
           {!serverStore.privacyNoticeAcknowledged && !isEditMode && (
@@ -212,7 +205,8 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
               error={!!nameError}
             />
             {nameError ? (
-              <Text style={{color: theme.colors.error, fontSize: 12, marginTop: 4}}>
+              <Text
+                style={{color: theme.colors.error, fontSize: 12, marginTop: 4}}>
                 {nameError}
               </Text>
             ) : null}
@@ -236,7 +230,8 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
               error={!!urlError}
             />
             {urlError ? (
-              <Text style={{color: theme.colors.error, fontSize: 12, marginTop: 4}}>
+              <Text
+                style={{color: theme.colors.error, fontSize: 12, marginTop: 4}}>
                 {urlError}
               </Text>
             ) : null}
@@ -313,9 +308,7 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
               loading={isTesting}
               disabled={isTesting || isSaving || !url.trim()}
               style={styles.testButton}>
-              {isTesting
-                ? l10n.settings.testing
-                : l10n.settings.testConnection}
+              {isTesting ? l10n.settings.testing : l10n.settings.testConnection}
             </Button>
             <Button
               testID="server-save-button"

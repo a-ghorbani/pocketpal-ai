@@ -4,11 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
-import {
-  fetchModels,
-  testConnection,
-  RemoteModelInfo,
-} from '../api/openai';
+import {fetchModels, testConnection, RemoteModelInfo} from '../api/openai';
 import {ServerConfig} from '../utils/types';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';

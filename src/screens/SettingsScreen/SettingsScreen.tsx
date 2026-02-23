@@ -1060,7 +1060,11 @@ export const SettingsScreen: React.FC = observer(() => {
               <View style={styles.settingItemContainer}>
                 {serverStore.servers.length === 0 ? (
                   <View style={{alignItems: 'center', paddingVertical: 16}}>
-                    <Icon source="cloud-plus-outline" size={48} color={theme.colors.onSurfaceVariant} />
+                    <Icon
+                      source="cloud-plus-outline"
+                      size={48}
+                      color={theme.colors.onSurfaceVariant}
+                    />
                     <Text
                       variant="bodyMedium"
                       style={{
@@ -1107,7 +1111,9 @@ export const SettingsScreen: React.FC = observer(() => {
                         {index > 0 && <Divider style={styles.divider} />}
                         <View style={styles.switchContainer}>
                           <View style={styles.textContainer}>
-                            <Text variant="titleMedium" style={styles.textLabel}>
+                            <Text
+                              variant="titleMedium"
+                              style={styles.textLabel}>
                               {server.name}
                             </Text>
                             <Text
@@ -1117,12 +1123,18 @@ export const SettingsScreen: React.FC = observer(() => {
                               {server.url}
                             </Text>
                           </View>
-                          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                            }}>
                             <Switch
                               testID={`server-active-switch-${server.id}`}
                               value={server.isActive}
                               onValueChange={value =>
-                                serverStore.updateServer(server.id, {isActive: value})
+                                serverStore.updateServer(server.id, {
+                                  isActive: value,
+                                })
                               }
                             />
                             <TouchableOpacity
@@ -1132,7 +1144,11 @@ export const SettingsScreen: React.FC = observer(() => {
                                 setShowServerConfigSheet(true);
                               }}
                               style={{marginLeft: 8}}>
-                              <Icon source="pencil-outline" size={20} color={theme.colors.primary} />
+                              <Icon
+                                source="pencil-outline"
+                                size={20}
+                                color={theme.colors.primary}
+                              />
                             </TouchableOpacity>
                             <TouchableOpacity
                               testID={`server-delete-${server.id}`}
@@ -1154,7 +1170,11 @@ export const SettingsScreen: React.FC = observer(() => {
                                 );
                               }}
                               style={{marginLeft: 8}}>
-                              <Icon source="delete-outline" size={20} color={theme.colors.error} />
+                              <Icon
+                                source="delete-outline"
+                                size={20}
+                                color={theme.colors.error}
+                              />
                             </TouchableOpacity>
                           </View>
                         </View>

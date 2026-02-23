@@ -15,7 +15,10 @@ import {
 } from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
-import {LocalCompletionEngine, OpenAICompletionEngine} from '../api/completionEngines';
+import {
+  LocalCompletionEngine,
+  OpenAICompletionEngine,
+} from '../api/completionEngines';
 
 import {uiStore, hfStore} from '.';
 import {serverStore} from './ServerStore';
