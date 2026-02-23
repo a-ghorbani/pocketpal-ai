@@ -23,7 +23,7 @@ import {BenchResultCard} from './BenchResultCard';
 import {modelStore, benchmarkStore, uiStore} from '../../store';
 
 import type {DeviceInfo, Model} from '../../utils/types';
-import {BenchmarkConfig, BenchmarkResult} from '../../utils/types';
+import {BenchmarkConfig, BenchmarkResult, ModelOrigin} from '../../utils/types';
 
 const DEFAULT_CONFIGS: BenchmarkConfig[] = [
   {pp: 512, tg: 128, pl: 1, nr: 3, label: 'Default'},
@@ -293,6 +293,10 @@ export const BenchmarkScreen: React.FC = observer(() => {
     );
   };
 
+  const localModels = modelStore.availableModels.filter(
+    m => m.origin !== ModelOrigin.REMOTE,
+  );
+
   const renderModelSelector = () => (
     <Menu
       visible={showModelMenu}
@@ -312,14 +316,14 @@ export const BenchmarkScreen: React.FC = observer(() => {
             l10n.benchmark.modelSelector.prompt}
         </Button>
       }>
-      {modelStore.availableModels.length === 0 ? (
+      {localModels.length === 0 ? (
         <Menu.Item
           key="no-models"
           label={l10n.benchmark.modelSelector.noModels}
           disabled
         />
       ) : (
-        modelStore.availableModels.map(model => (
+        localModels.map(model => (
           <Menu.Item
             key={model.id}
             onPress={() => handleModelSelect(model)}

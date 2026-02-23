@@ -147,7 +147,7 @@ export const ChatPalModelPickerSheet = observer(
         try {
           onModelSelect?.(model.id);
           onClose();
-          modelStore.initContext(model);
+          modelStore.selectModel(model);
         } catch (e) {
           console.log(`Error: ${e}`);
         }
@@ -180,7 +180,7 @@ export const ChatPalModelPickerSheet = observer(
                 {
                   text: l10n.components.chatPalModelPickerSheet.switchButton,
                   onPress: () => {
-                    modelStore.initContext(palDefaultModel);
+                    modelStore.selectModel(palDefaultModel);
                   },
                 },
               ],
