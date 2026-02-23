@@ -76,5 +76,10 @@ export const createStyles = (theme: Theme) => {
       color: theme.colors.onSurface,
       fontSize: 13,
     },
+    errorText: {
+      color: theme.colors.error,
+      fontSize: 12,
+      marginTop: 4,
+    },
   });
 };

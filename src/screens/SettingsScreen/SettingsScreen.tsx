@@ -1059,7 +1059,7 @@ export const SettingsScreen: React.FC = observer(() => {
             <Card.Content>
               <View style={styles.settingItemContainer}>
                 {serverStore.servers.length === 0 ? (
-                  <View style={{alignItems: 'center', paddingVertical: 16}}>
+                  <View style={styles.emptyServerContainer}>
                     <Icon
                       source="cloud-plus-outline"
                       size={48}
@@ -1067,12 +1067,7 @@ export const SettingsScreen: React.FC = observer(() => {
                     />
                     <Text
                       variant="bodyMedium"
-                      style={{
-                        color: theme.colors.onSurfaceVariant,
-                        textAlign: 'center',
-                        marginTop: 8,
-                        marginBottom: 16,
-                      }}>
+                      style={styles.emptyServerDescription}>
                       {l10n.settings.remoteServersDescription}
                     </Text>
                     <Button
@@ -1123,11 +1118,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               {server.url}
                             </Text>
                           </View>
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                            }}>
+                          <View style={styles.serverActionsRow}>
                             <Switch
                               testID={`server-active-switch-${server.id}`}
                               value={server.isActive}
@@ -1143,7 +1134,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                 setEditingServer(server);
                                 setShowServerConfigSheet(true);
                               }}
-                              style={{marginLeft: 8}}>
+                              style={styles.serverActionButton}>
                               <Icon
                                 source="pencil-outline"
                                 size={20}
@@ -1169,7 +1160,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                   ],
                                 );
                               }}
-                              style={{marginLeft: 8}}>
+                              style={styles.serverActionButton}>
                               <Icon
                                 source="delete-outline"
                                 size={20}

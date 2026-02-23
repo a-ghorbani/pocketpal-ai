@@ -205,10 +205,7 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
               error={!!nameError}
             />
             {nameError ? (
-              <Text
-                style={{color: theme.colors.error, fontSize: 12, marginTop: 4}}>
-                {nameError}
-              </Text>
+              <Text style={styles.errorText}>{nameError}</Text>
             ) : null}
           </View>
 
@@ -229,12 +226,7 @@ export const ServerConfigSheet: React.FC<ServerConfigSheetProps> = observer(
               keyboardType="url"
               error={!!urlError}
             />
-            {urlError ? (
-              <Text
-                style={{color: theme.colors.error, fontSize: 12, marginTop: 4}}>
-                {urlError}
-              </Text>
-            ) : null}
+            {urlError ? <Text style={styles.errorText}>{urlError}</Text> : null}
           </View>
 
           {showHttpWarning && (
