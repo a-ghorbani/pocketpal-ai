@@ -1,6 +1,5 @@
 import {SSEParser} from './sseParser';
 import {CompletionResult, CompletionStreamData} from '../utils/completionTypes';
-import {ChatMessage} from '../utils/types';
 
 /** Raw API response shape from OpenAI /v1/models */
 export interface RemoteModelInfo {
@@ -9,9 +8,15 @@ export interface RemoteModelInfo {
   owned_by: string;
 }
 
+/** Chat message type compatible with OpenAI API format */
+export interface OpenAIChatMessage {
+  role: string;
+  content?: string | Array<{type: string; text?: string; image_url?: {url?: string}}>;
+}
+
 /** Parameters for streaming chat completion */
 export interface StreamChatParams {
-  messages: ChatMessage[];
+  messages: OpenAIChatMessage[];
   model: string;
   temperature?: number;
   top_p?: number;
