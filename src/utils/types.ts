@@ -328,6 +328,15 @@ export enum ModelOrigin {
   PRESET = 'preset',
   LOCAL = 'local',
   HF = 'hf',
+  REMOTE = 'remote',
+}
+
+export interface ServerConfig {
+  id: string;
+  name: string;
+  url: string; // Base URL e.g. "http://192.168.1.100:1234"
+  isActive: boolean; // Whether to fetch models from this server
+  lastConnected?: number; // Timestamp
 }
 
 export enum ModelType {
@@ -396,6 +405,11 @@ export interface Model {
   hfModelFile?: ModelFile;
   hfModel?: HuggingFaceModel;
   hash?: string;
+
+  // Remote model fields (for models from OpenAI-compatible servers)
+  serverId?: string; // Reference to ServerConfig.id for remote models
+  serverName?: string; // Denormalized for display convenience
+  remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
 export type RootDrawerParamList = {
