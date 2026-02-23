@@ -159,7 +159,7 @@ describe('ModelCard', () => {
       fireEvent.press(getByTestId('load-button'));
     });
 
-    expect(modelStore.initContext).toHaveBeenCalledWith(downloadedModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(downloadedModel);
     expect(mockNavigate).not.toHaveBeenCalled();
 
     uiStore.autoNavigatetoChat = true;
@@ -318,7 +318,7 @@ describe('ModelCard', () => {
       // Reset modelStore to a clean state
       modelStore.isContextLoading = false;
       modelStore.loadingModel = undefined;
-      modelStore.initContext = jest.fn(); // optional: re-mock if necessary
+      modelStore.selectModel = jest.fn(); // optional: re-mock if necessary
 
       // Reset downloadManager mock to ensure models are not downloading
       (downloadManager.isDownloading as jest.Mock).mockImplementation(
@@ -341,7 +341,7 @@ describe('ModelCard', () => {
 
     it('handles model loading errors', async () => {
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      (modelStore.initContext as jest.Mock).mockRejectedValue(
+      (modelStore.selectModel as jest.Mock).mockRejectedValue(
         new Error('Loading failed'),
       );
 
