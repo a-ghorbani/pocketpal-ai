@@ -33,7 +33,8 @@ const GroupSeparator = () => {
   );
 };
 
-export interface MenuProps extends Omit<PaperMenuProps, 'theme'> {
+export interface MenuProps extends Omit<PaperMenuProps, 'theme' | 'children'> {
+  children?: React.ReactNode;
   selectable?: boolean;
 }
 
