@@ -102,7 +102,7 @@ export const BenchmarkScreen: React.FC = observer(() => {
     setShowModelMenu(false);
     if (model.id !== modelStore.activeModelId) {
       try {
-        await modelStore.initContext(model);
+        await modelStore.selectModel(model);
         setSelectedModel(model);
       } catch (error) {
         if (error instanceof Error) {
