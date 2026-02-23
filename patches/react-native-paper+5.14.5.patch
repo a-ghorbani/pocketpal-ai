@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-paper/src/components/Menu/Menu.tsx b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
-index 55922c1..9040c5c 100644
+index 55922c1..fbd3834 100644
 --- a/node_modules/react-native-paper/src/components/Menu/Menu.tsx
 +++ b/node_modules/react-native-paper/src/components/Menu/Menu.tsx
 @@ -303,6 +303,12 @@ const Menu = ({
@@ -15,7 +15,14 @@ index 55922c1..9040c5c 100644
      const windowLayoutResult = Dimensions.get('window');
      const [menuLayoutResult, anchorLayoutResult] = await Promise.all([
        measureMenuLayout(),
-@@ -346,6 +352,7 @@ const Menu = ({
+@@ -340,12 +346,13 @@ const Menu = ({
+     });
+ 
+     setWindowLayout({
+-      height: windowLayoutResult.height - keyboardHeightRef.current,
++      height: windowLayoutResult.height - keyboardHeightRef.current - insets.bottom,
+       width: windowLayoutResult.width,
+     });
  
      attachListeners();
      const { animation } = theme;
@@ -23,9 +30,12 @@ index 55922c1..9040c5c 100644
      Animated.parallel([
        Animated.timing(scaleAnimationRef.current, {
          toValue: { x: menuLayoutResult.width, y: menuLayoutResult.height },
-@@ -367,11 +374,15 @@ const Menu = ({
+@@ -365,13 +372,17 @@ const Menu = ({
+         prevRendered.current = true;
+       }
      });
-   }, [anchor, attachListeners, measureAnchorLayout, theme]);
+-  }, [anchor, attachListeners, measureAnchorLayout, theme]);
++  }, [anchor, attachListeners, insets.bottom, measureAnchorLayout, theme]);
  
 -  const hide = React.useCallback(() => {
 +  const hide = React.useCallback((callback?: () => unknown) => {
