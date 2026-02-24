@@ -412,6 +412,38 @@ describe('streamChatCompletion', () => {
     );
   });
 
+  it('handles delta.reasoning field (LM Studio format)', async () => {
+    const onToken = jest.fn();
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      onToken,
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"reasoning":"let me think..."},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"answer"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    expect(result.reasoning_content).toBe('let me think...');
+    expect(result.content).toBe('answer');
+    expect(onToken).toHaveBeenCalledTimes(2);
+    expect(onToken).toHaveBeenCalledWith(
+      expect.objectContaining({reasoning_content: 'let me think...'}),
+    );
+  });
+
   it('rejects on 401 response', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},

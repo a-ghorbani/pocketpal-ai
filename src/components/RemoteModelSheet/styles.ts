@@ -8,14 +8,22 @@ export const createStyles = (theme: Theme) => {
       paddingBottom: 32,
     },
     privacyContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
       marginBottom: 16,
-      backgroundColor: theme.colors.surfaceContainerLow,
-      padding: 16,
+      backgroundColor: theme.colors.tertiaryContainer,
+      padding: 12,
       borderRadius: 8,
     },
     privacyText: {
-      color: theme.colors.onSurface,
+      flex: 1,
+      color: theme.colors.onTertiaryContainer,
       fontSize: 13,
+      marginLeft: 8,
+    },
+    privacyDismiss: {
+      marginLeft: 8,
+      padding: 4,
     },
     chipsSection: {
       marginBottom: 16,

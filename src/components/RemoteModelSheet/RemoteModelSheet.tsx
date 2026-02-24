@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import {View} from 'react-native';
+import {View, TouchableOpacity} from 'react-native';
 import {
   Text,
   Button,
@@ -259,10 +259,6 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             await serverStore.setApiKey(serverId, apiKey.trim());
           }
         }
-        // Acknowledge privacy notice
-        if (!serverStore.privacyNoticeAcknowledged) {
-          serverStore.acknowledgePrivacyNotice();
-        }
         // Add model to user selections
         serverStore.addUserSelectedModel(serverId, selectedModelId);
         // Fetch models for this server so serverModels is populated
@@ -302,9 +298,24 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           {/* Privacy Notice */}
           {!serverStore.privacyNoticeAcknowledged && (
             <View style={styles.privacyContainer}>
+              <Icon
+                source="alert-outline"
+                size={18}
+                color={theme.colors.onTertiaryContainer}
+              />
               <Text style={styles.privacyText}>
                 {l10n.settings.remotePrivacyNotice}
               </Text>
+              <TouchableOpacity
+                testID="privacy-notice-dismiss"
+                style={styles.privacyDismiss}
+                onPress={() => serverStore.acknowledgePrivacyNotice()}>
+                <Icon
+                  source="close"
+                  size={18}
+                  color={theme.colors.onTertiaryContainer}
+                />
+              </TouchableOpacity>
             </View>
           )}
 
@@ -514,12 +525,18 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 const alreadyAdded =
                   !!selectedServerId && isModelAlreadyAdded(servId, model.id);
                 return (
-                  <View
+                  <TouchableOpacity
                     key={model.id}
+                    activeOpacity={alreadyAdded ? 1 : 0.6}
                     style={[
                       styles.modelRow,
                       alreadyAdded && styles.modelRowDisabled,
-                    ]}>
+                    ]}
+                    onPress={() => {
+                      if (!alreadyAdded) {
+                        setSelectedModelId(model.id);
+                      }
+                    }}>
                     <RadioButton
                       value={model.id}
                       status={
@@ -535,6 +552,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                         }
                       }}
                       disabled={alreadyAdded}
+                      uncheckedColor={theme.colors.onSurfaceVariant}
                     />
                     <Text style={styles.modelName}>{model.id}</Text>
                     {alreadyAdded && (
@@ -542,7 +560,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                         {l10n.settings.alreadyAdded}
                       </Text>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>

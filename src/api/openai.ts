@@ -220,7 +220,8 @@ export async function streamChatCompletion(
         const choice = parsed.choices[0];
         const delta = choice.delta || {};
         const content = delta.content || '';
-        const reasoningContent = delta.reasoning_content || '';
+        const reasoningContent =
+          delta.reasoning_content || delta.reasoning || '';
 
         if (content) {
           fullContent += content;
@@ -308,8 +309,8 @@ export async function streamChatCompletion(
           fullContent += delta.content;
           tokensPredicted++;
         }
-        if (delta.reasoning_content) {
-          fullReasoningContent += delta.reasoning_content;
+        if (delta.reasoning_content || delta.reasoning) {
+          fullReasoningContent += delta.reasoning_content || delta.reasoning;
         }
         if (choice.finish_reason) {
           finishReason = choice.finish_reason;
