@@ -85,7 +85,11 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
         return;
       }
       try {
-        new URL(trimmedUrl);
+        // Validate URL format — throws on invalid
+        const parsed = new URL(trimmedUrl);
+        if (!parsed.hostname) {
+          throw new Error('No hostname');
+        }
       } catch {
         return;
       }

@@ -126,7 +126,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           return;
         }
         try {
-          new URL(trimmedUrl);
+          // Validate URL format — throws on invalid
+          const parsed = new URL(trimmedUrl);
+          if (!parsed.hostname) {
+            throw new Error('No hostname');
+          }
         } catch {
           setUrlError(l10n.settings.serverUrlInvalid);
           return;
