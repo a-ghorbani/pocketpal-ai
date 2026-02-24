@@ -281,7 +281,8 @@ describe('ServerStore', () => {
       });
 
       it('returns empty array when no models for server', () => {
-        const result = serverStore.getUserSelectedModelsForServer('non-existent');
+        const result =
+          serverStore.getUserSelectedModelsForServer('non-existent');
 
         expect(result).toEqual([]);
       });

@@ -25,7 +25,7 @@ import {
   ServerDetailsSheet,
 } from '../../components';
 
-import {uiStore, modelStore, hfStore, UIStore} from '../../store';
+import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
@@ -122,6 +122,21 @@ export const ModelsScreen: React.FC = observer(() => {
 
   const handleAddRemoteModel = () => {
     setRemoteModelSheetVisible(true);
+  };
+
+  const handleManageServers = () => {
+    const servers = serverStore.servers;
+    if (servers.length === 1) {
+      handleOpenServerDetails(servers[0].id);
+    } else if (servers.length > 1) {
+      Alert.alert(l10n.settings.manageServers, undefined, [
+        ...servers.map(server => ({
+          text: server.name,
+          onPress: () => handleOpenServerDetails(server.id),
+        })),
+        {text: l10n.common.cancel, style: 'cancel' as const},
+      ]);
+    }
   };
 
   const handleOpenServerDetails = (serverId: string) => {
@@ -411,6 +426,8 @@ export const ModelsScreen: React.FC = observer(() => {
         onAddHFModel={() => setHFSearchVisible(true)}
         onAddLocalModel={handleAddLocalModel}
         onAddRemoteModel={handleAddRemoteModel}
+        onManageServers={handleManageServers}
+        hasServers={serverStore.servers.length > 0}
       />
       <ModelSettingsSheet
         isVisible={settingsVisible}

@@ -39,14 +39,13 @@ import {
   Divider,
   HFTokenSheet,
   InputSlider,
-  ServerDetailsSheet,
 } from '../../components';
 
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore, serverStore} from '../../store';
+import {modelStore, uiStore, hfStore} from '../../store';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -85,9 +84,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
-  const [serverDetailsSheetVisible, setServerDetailsSheetVisible] =
-    useState(false);
-  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
@@ -1052,55 +1048,6 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card.Content>
           </Card>
 
-          {/* Connected Servers -- only shown when servers exist */}
-          {serverStore.servers.length > 0 && (
-            <Card elevation={0} style={styles.card}>
-              <Card.Title title={l10n.settings.connectedServers} />
-              <Card.Content>
-                <View style={styles.settingItemContainer}>
-                  {serverStore.servers.map((server, index) => {
-                    const modelCount =
-                      serverStore.getUserSelectedModelsForServer(
-                        server.id,
-                      ).length;
-                    return (
-                      <React.Fragment key={server.id}>
-                        {index > 0 && <Divider style={styles.divider} />}
-                        <TouchableOpacity
-                          testID={`server-row-${server.id}`}
-                          onPress={() => {
-                            setSelectedServerId(server.id);
-                            setServerDetailsSheetVisible(true);
-                          }}
-                          style={styles.connectedServerRow}>
-                          <View style={styles.textContainer}>
-                            <Text
-                              variant="titleMedium"
-                              style={styles.textLabel}>
-                              {server.name}
-                            </Text>
-                            <Text
-                              variant="labelSmall"
-                              style={styles.textDescription}>
-                              {t(l10n.settings.modelsCount, {
-                                count: String(modelCount),
-                              })}
-                            </Text>
-                          </View>
-                          <Icon
-                            source="chevron-right"
-                            size={20}
-                            color={theme.colors.onSurfaceVariant}
-                          />
-                        </TouchableOpacity>
-                      </React.Fragment>
-                    );
-                  })}
-                </View>
-              </Card.Content>
-            </Card>
-          )}
-
           {/* Cache & Storage Settings - iOS only (for Shortcuts) */}
           {Platform.OS === 'ios' && (
             <Card elevation={0} style={styles.card}>
@@ -1246,14 +1193,6 @@ export const SettingsScreen: React.FC = observer(() => {
         isVisible={showHfTokenDialog}
         onDismiss={() => setShowHfTokenDialog(false)}
         onSave={() => setShowHfTokenDialog(false)}
-      />
-      <ServerDetailsSheet
-        isVisible={serverDetailsSheetVisible}
-        onDismiss={() => {
-          setServerDetailsSheetVisible(false);
-          setSelectedServerId(null);
-        }}
-        serverId={selectedServerId}
       />
     </SafeAreaView>
   );

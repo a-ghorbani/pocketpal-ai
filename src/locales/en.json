@@ -154,7 +154,8 @@
     "removeServerMessage": "Remove {{serverName}} and its {{count}} models?",
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
-    "enterUrlManually": "Enter URL manually"
+    "enterUrlManually": "Enter URL manually",
+    "manageServers": "Manage Servers"
   },
   "memory": {
     "shortWarning": "Memory Warning",

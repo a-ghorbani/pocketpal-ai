@@ -42,9 +42,7 @@ describe('FABGroup', () => {
 
     // FAB actions are rendered but hidden when FAB is closed; query with
     // includeHiddenElements following the existing ModelsScreen test pattern
-    expect(
-      getByTestId('hf-fab', {includeHiddenElements: true}),
-    ).toBeTruthy();
+    expect(getByTestId('hf-fab', {includeHiddenElements: true})).toBeTruthy();
     expect(
       getByTestId('local-fab', {includeHiddenElements: true}),
     ).toBeTruthy();

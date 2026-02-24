@@ -104,10 +104,4 @@ export const createStyles = (theme: Theme) =>
     segmentedButtons: {
       marginVertical: 8,
     },
-    connectedServerRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 8,
-    },
   });
