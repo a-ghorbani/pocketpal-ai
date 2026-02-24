@@ -235,8 +235,10 @@ export async function streamChatCompletion(
         if (onToken && (content || reasoningContent)) {
           onToken({
             token: content || reasoningContent,
-            content: content || undefined,
-            reasoning_content: reasoningContent || undefined,
+            // Pass accumulated content to match llama.rn's callback behavior
+            // (useChatSession replaces message text, not appends)
+            content: fullContent || undefined,
+            reasoning_content: fullReasoningContent || undefined,
           });
         }
       }
@@ -253,11 +255,7 @@ export async function streamChatCompletion(
           if (xhr.status === 401) {
             reject(new Error('Unauthorized: Invalid or missing API key'));
           } else {
-            reject(
-              new Error(
-                `Server error: ${xhr.status} ${xhr.statusText}`,
-              ),
-            );
+            reject(new Error(`Server error: ${xhr.status} ${xhr.statusText}`));
           }
           xhr.abort();
         } else {

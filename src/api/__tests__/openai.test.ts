@@ -267,11 +267,12 @@ describe('streamChatCompletion', () => {
     expect(result.tokens_predicted).toBe(2);
 
     expect(onToken).toHaveBeenCalledTimes(2);
+    // content is accumulated (matching llama.rn behavior), token is delta
     expect(onToken).toHaveBeenCalledWith(
       expect.objectContaining({content: 'Hello', token: 'Hello'}),
     );
     expect(onToken).toHaveBeenCalledWith(
-      expect.objectContaining({content: ' world', token: ' world'}),
+      expect.objectContaining({content: 'Hello world', token: ' world'}),
     );
   });
 
