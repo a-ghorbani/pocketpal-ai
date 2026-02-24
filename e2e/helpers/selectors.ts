@@ -192,7 +192,9 @@ export const Selectors = {
     get fabGroupClose(): string {
       return byAccessibilityLabel('Close menu');
     },
-    // FAB actions - use accessibilityLabel (react-native-paper uses label as accessibility label)
+    // FAB actions — react-native-paper FAB.Group renders actions as buttons
+    // with accessibilityLabel as the name; testID gets suffixed with
+    // "-container-outer-layer" so byTestId won't match the tappable element.
     get hfFab(): string {
       return byAccessibilityLabel('Add from Hugging Face');
     },

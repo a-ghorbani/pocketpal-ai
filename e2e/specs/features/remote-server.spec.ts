@@ -86,7 +86,7 @@ describe('Remote Server Features', () => {
     await drawerPage.navigateToModels();
     await modelsPage.waitForReady();
 
-    // Open the "Add Remote Model" sheet
+    // Open "Add Remote Model" via FAB speed-dial
     await modelsPage.openAddRemoteModel();
 
     // Enter server URL
@@ -123,7 +123,7 @@ describe('Remote Server Features', () => {
           await modelsPage.hideKeyboard();
         }
         // Wait for re-probe (800ms debounce + network time)
-        await browser.pause(3000);
+        await browser.pause(4000);
       }
     }
 
@@ -138,7 +138,7 @@ describe('Remote Server Features', () => {
     );
     expect(isConnected).toBe(true);
 
-    // Select a specific model if hint is provided
+    // Select a model — either by hint or tap the first radio button
     if (REMOTE_MODEL_HINT) {
       const modelEl = browser.$(byPartialText(REMOTE_MODEL_HINT));
       const visible = await modelEl
@@ -149,8 +149,28 @@ describe('Remote Server Features', () => {
         await modelEl.click();
         console.log(`Selected model matching "${REMOTE_MODEL_HINT}"`);
       }
+    } else {
+      // If only one model, it's auto-selected.
+      // If multiple models, select the first unchecked radio button.
+      const addBtn = browser.$(Selectors.remoteModel.addModelButton);
+      const alreadyEnabled = await addBtn.isEnabled().catch(() => false);
+      if (!alreadyEnabled) {
+        // react-native-paper RadioButton renders as XCUIElementTypeOther
+        // with value="radio button, unchecked"
+        const firstRadio = browser.$(
+          '-ios predicate string:value == "radio button, unchecked"',
+        );
+        const radioVisible = await firstRadio
+          .waitForDisplayed({timeout: 3000})
+          .then(() => true)
+          .catch(() => false);
+        if (radioVisible) {
+          await firstRadio.click();
+          console.log('Selected first model from radio list');
+          await browser.pause(500);
+        }
+      }
     }
-    // If no hint and only one model, it's auto-selected
 
     // Scroll to and tap "Add Model" button
     const addButton = browser.$(Selectors.remoteModel.addModelButton);

@@ -47,18 +47,25 @@ export class ModelsPage extends BasePage {
   }
 
   /**
-   * Check if FAB menu is expanded (HF fab button is visible)
+   * Check if FAB menu is expanded (any FAB action is visible)
    */
   async isFabMenuExpanded(): Promise<boolean> {
     return this.isElementDisplayed(Selectors.models.hfFab, 2000);
   }
 
   /**
-   * Expand FAB menu by tapping the FAB group
+   * Expand FAB menu by tapping the FAB group.
+   * Waits for the HF fab action to appear as confirmation.
    */
   async expandFabMenu(): Promise<void> {
-    await this.tap(Selectors.models.fabGroup);
-    await this.waitForElement(Selectors.models.hfFab, 5000);
+    const fab = browser.$(Selectors.models.fabGroup);
+    await fab.waitForDisplayed({timeout: 5000});
+    await fab.click();
+    // Wait for expand animation + actions to render
+    await browser.pause(1000);
+    // Verify expansion by checking for any FAB action
+    const hfFab = browser.$(Selectors.models.hfFab);
+    await hfFab.waitForDisplayed({timeout: 5000});
   }
 
   /**
@@ -96,7 +103,7 @@ export class ModelsPage extends BasePage {
   }
 
   /**
-   * Open the "Add Remote Model" sheet via the FAB menu
+   * Open the "Add Remote Model" sheet via the FAB menu.
    */
   async openAddRemoteModel(): Promise<void> {
     await this.closeFabMenuIfExpanded();
