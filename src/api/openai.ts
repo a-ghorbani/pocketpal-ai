@@ -156,6 +156,7 @@ export async function streamChatCompletion(
     let tokensPredicted = 0;
     let lastProcessedLength = 0;
     let settled = false;
+    let serverTimings: CompletionResult['timings'] | undefined;
 
     // Connection timeout: abort if no headers received within 30s
     const connectionTimer = setTimeout(() => {
@@ -230,6 +231,11 @@ export async function streamChatCompletion(
         }
         if (choice.finish_reason) {
           finishReason = choice.finish_reason;
+        }
+
+        // Extract server-side timings (llama.cpp includes these at event level)
+        if (parsed.timings) {
+          serverTimings = parsed.timings;
         }
 
         if (onToken && (content || reasoningContent)) {
@@ -308,6 +314,9 @@ export async function streamChatCompletion(
         if (choice.finish_reason) {
           finishReason = choice.finish_reason;
         }
+        if (parsed.timings) {
+          serverTimings = parsed.timings;
+        }
       }
 
       // Build result
@@ -327,6 +336,7 @@ export async function streamChatCompletion(
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
         tokens_predicted: tokensPredicted,
+        timings: serverTimings,
       };
 
       switch (finishReason) {

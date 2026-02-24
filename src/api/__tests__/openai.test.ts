@@ -475,6 +475,55 @@ describe('streamChatCompletion', () => {
     expect(result.content).toBe('partial');
   });
 
+  it('captures server-side timings from SSE events (llama.cpp)', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
+    );
+    // llama.cpp sends timings in the final event alongside finish_reason
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"timings":{"predicted_per_token_ms":12.5,"predicted_per_second":80.0,"prompt_per_token_ms":1.2,"prompt_per_second":833.3}}\n\n',
+    );
+    xhr.simulateProgress('data: [DONE]\n\n');
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    expect(result.timings).toEqual({
+      predicted_per_token_ms: 12.5,
+      predicted_per_second: 80.0,
+      prompt_per_token_ms: 1.2,
+      prompt_per_second: 833.3,
+    });
+    expect(result.content).toBe('Hello');
+    expect(result.stopped_eos).toBe(true);
+  });
+
+  it('returns no timings when server does not provide them', async () => {
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"content":"Hi"},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    expect(result.timings).toBeUndefined();
+  });
+
   it('rejects immediately if signal already aborted', async () => {
     const controller = new AbortController();
     controller.abort();

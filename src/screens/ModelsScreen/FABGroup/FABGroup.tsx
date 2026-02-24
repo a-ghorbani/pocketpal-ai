@@ -5,6 +5,7 @@ import {FAB} from 'react-native-paper';
 
 import {useTheme} from '../../../hooks';
 import {L10nContext} from '../../../utils';
+import {CloudPlusIcon} from '../../../assets/icons';
 import {createStyles} from './styles';
 
 interface FABGroupProps {
@@ -26,6 +27,10 @@ type IconComponentProps = {
 
 const HFIcon = (_props: IconComponentProps): React.ReactNode => (
   <Image source={require('../../../assets/icon-hf.png')} style={iconStyle} />
+);
+
+const RemoteIcon = (props: IconComponentProps): React.ReactNode => (
+  <CloudPlusIcon width={props.size} height={props.size} stroke={props.color} />
 );
 
 export const FABGroup: React.FC<FABGroupProps> = ({
@@ -66,7 +71,7 @@ export const FABGroup: React.FC<FABGroupProps> = ({
       },
       {
         testID: 'remote-fab',
-        icon: 'cloud-plus-outline',
+        icon: RemoteIcon,
         label: l10n.settings.addRemoteModel,
         accessibilityLabel: l10n.settings.addRemoteModel,
         style: styles.actionButton,

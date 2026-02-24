@@ -91,8 +91,7 @@ describe('Bubble', () => {
 
     const {getByText} = renderBubble(messageWithTimeToFirstToken);
 
-    // Should display the time to first token in addition to the regular timing info
-    expect(getByText(/250ms TTF/)).toBeTruthy();
+    expect(getByText('10ms/token, 100.00 tokens/sec, 250ms TTFT')).toBeTruthy();
   });
 
   it('does not display time to first token when null', () => {
@@ -108,10 +107,10 @@ describe('Bubble', () => {
       },
     };
 
-    const {queryByText} = renderBubble(messageWithNullTimeToFirstToken);
+    const {getByText} = renderBubble(messageWithNullTimeToFirstToken);
 
-    // Should not display time to first token when it's null
-    expect(queryByText(/to first token/)).toBeNull();
+    // Should show timing without TTFT
+    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
   });
 
   it('does not display time to first token when undefined', () => {
@@ -127,9 +126,67 @@ describe('Bubble', () => {
       },
     };
 
-    const {queryByText} = renderBubble(messageWithoutTimeToFirstToken);
+    const {getByText} = renderBubble(messageWithoutTimeToFirstToken);
 
-    // Should not display time to first token when it's undefined
-    expect(queryByText(/to first token/)).toBeNull();
+    // Should show timing without TTFT
+    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
+  });
+
+  it('shows only TTFT when server timings are not available', () => {
+    const messageWithTtftOnly = {
+      ...mockMessage,
+      metadata: {
+        copyable: true,
+        timings: {
+          time_to_first_token_ms: 150,
+        },
+      },
+    };
+
+    const {getByText} = renderBubble(messageWithTtftOnly);
+
+    expect(getByText('150ms TTFT')).toBeTruthy();
+  });
+
+  it('hides footer when timings not yet set (streaming in progress)', () => {
+    const messageWithCopyableOnly = {
+      ...mockMessage,
+      metadata: {
+        copyable: true,
+      },
+    };
+
+    const {queryByTestId} = renderBubble(messageWithCopyableOnly);
+
+    // Footer is gated on timings, not copyable — prevents showing
+    // an awkward copy icon before streaming has started/finished
+    expect(queryByTestId('message-timing')).toBeNull();
+  });
+
+  it('shows copy button when timings exist but have no server values', () => {
+    const messageWithEmptyTimings = {
+      ...mockMessage,
+      metadata: {
+        copyable: true,
+        timings: {},
+      },
+    };
+
+    const {getByText, queryByTestId} = renderBubble(messageWithEmptyTimings);
+
+    // Footer shows because timings object exists (set after completion)
+    expect(queryByTestId('message-timing')).toBeTruthy();
+    expect(getByText('content-copy')).toBeTruthy();
+  });
+
+  it('hides footer when metadata is empty', () => {
+    const messageWithNoFooter = {
+      ...mockMessage,
+      metadata: {},
+    };
+
+    const {queryByTestId} = renderBubble(messageWithNoFooter);
+
+    expect(queryByTestId('message-timing')).toBeNull();
   });
 });

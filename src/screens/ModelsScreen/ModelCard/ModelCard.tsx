@@ -134,16 +134,16 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       modelStore.getModelVisionPreference(model) && // Only show warning when vision is enabled
       projectionModelStatus.state === 'missing';
 
-    // Check integrity when model is downloaded
+    // Check integrity when model is downloaded (skip remote models — no local file)
     useEffect(() => {
-      if (isDownloaded) {
+      if (isDownloaded && !isRemoteModel) {
         checkModelFileIntegrity(model).then(({errorMessage}) => {
           setIntegrityError(errorMessage);
         });
       } else {
         setIntegrityError(null);
       }
-    }, [isDownloaded, model]);
+    }, [isDownloaded, isRemoteModel, model]);
 
     const handleDelete = useCallback(() => {
       if (model.isDownloaded) {
