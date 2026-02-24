@@ -35,6 +35,7 @@ describe('ServerStore', () => {
     runInAction(() => {
       serverStore.servers = [];
       serverStore.serverModels.clear();
+      serverStore.userSelectedModels = [];
       serverStore.isLoading = false;
       serverStore.error = null;
       serverStore.privacyNoticeAcknowledged = false;
@@ -57,6 +58,10 @@ describe('ServerStore', () => {
     it('has privacyNoticeAcknowledged false', () => {
       expect(serverStore.privacyNoticeAcknowledged).toBe(false);
     });
+
+    it('has empty userSelectedModels', () => {
+      expect(serverStore.userSelectedModels).toEqual([]);
+    });
   });
 
   describe('addServer', () => {
@@ -64,7 +69,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Test Server',
         url: 'http://localhost:1234',
-        isActive: true,
       });
 
       expect(typeof id).toBe('string');
@@ -72,14 +76,12 @@ describe('ServerStore', () => {
       expect(serverStore.servers).toHaveLength(1);
       expect(serverStore.servers[0].name).toBe('Test Server');
       expect(serverStore.servers[0].url).toBe('http://localhost:1234');
-      expect(serverStore.servers[0].isActive).toBe(true);
     });
 
-    it('does not auto-fetch when server is not active', () => {
+    it('does not auto-fetch models on add', () => {
       serverStore.addServer({
-        name: 'Inactive Server',
+        name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       expect(mockedFetchModels).not.toHaveBeenCalled();
@@ -89,12 +91,10 @@ describe('ServerStore', () => {
       const id1 = serverStore.addServer({
         name: 'Server 1',
         url: 'http://a.com',
-        isActive: false,
       });
       const id2 = serverStore.addServer({
         name: 'Server 2',
         url: 'http://b.com',
-        isActive: false,
       });
 
       expect(id1).not.toBe(id2);
@@ -106,7 +106,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Original',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       serverStore.updateServer(id, {name: 'Updated'});
@@ -118,30 +117,21 @@ describe('ServerStore', () => {
       serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       serverStore.updateServer('non-existent', {name: 'Updated'});
       expect(serverStore.servers[0].name).toBe('Server');
     });
 
-    it('clears models when server is deactivated', () => {
+    it('updates server URL', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
-      runInAction(() => {
-        serverStore.serverModels.set(id, [
-          {id: 'model-1', object: 'model', owned_by: 'system'},
-        ]);
-      });
-      expect(serverStore.serverModels.has(id)).toBe(true);
+      serverStore.updateServer(id, {url: 'http://localhost:5678'});
 
-      serverStore.updateServer(id, {isActive: false});
-
-      expect(serverStore.serverModels.has(id)).toBe(false);
+      expect(serverStore.servers[0].url).toBe('http://localhost:5678');
     });
   });
 
@@ -150,7 +140,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       expect(serverStore.servers).toHaveLength(1);
@@ -164,7 +153,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       runInAction(() => {
@@ -182,7 +170,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       serverStore.removeServer(id);
@@ -191,37 +178,228 @@ describe('ServerStore', () => {
         service: `pocketpal-server-${id}`,
       });
     });
+
+    it('removes all userSelectedModels entries for the server', () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'http://localhost:1234',
+      });
+
+      runInAction(() => {
+        serverStore.userSelectedModels = [
+          {serverId: id, remoteModelId: 'model-a'},
+          {serverId: id, remoteModelId: 'model-b'},
+          {serverId: 'other-server', remoteModelId: 'model-c'},
+        ];
+      });
+
+      serverStore.removeServer(id);
+
+      expect(serverStore.userSelectedModels).toEqual([
+        {serverId: 'other-server', remoteModelId: 'model-c'},
+      ]);
+    });
   });
 
-  describe('computed: activeServers', () => {
-    it('returns only active servers', () => {
-      serverStore.addServer({
-        name: 'Active',
-        url: 'http://a.com',
-        isActive: false,
-      });
-      serverStore.addServer({
-        name: 'Inactive',
-        url: 'http://b.com',
-        isActive: false,
-      });
-      serverStore.addServer({
-        name: 'Also Active',
-        url: 'http://c.com',
-        isActive: false,
+  describe('userSelectedModels', () => {
+    describe('addUserSelectedModel', () => {
+      it('adds a model selection', () => {
+        serverStore.addUserSelectedModel('server-1', 'model-a');
+
+        expect(serverStore.userSelectedModels).toEqual([
+          {serverId: 'server-1', remoteModelId: 'model-a'},
+        ]);
       });
 
-      // Activate first and third
+      it('prevents duplicate entries', () => {
+        serverStore.addUserSelectedModel('server-1', 'model-a');
+        serverStore.addUserSelectedModel('server-1', 'model-a');
+
+        expect(serverStore.userSelectedModels).toHaveLength(1);
+      });
+
+      it('allows same model from different servers', () => {
+        serverStore.addUserSelectedModel('server-1', 'model-a');
+        serverStore.addUserSelectedModel('server-2', 'model-a');
+
+        expect(serverStore.userSelectedModels).toHaveLength(2);
+      });
+
+      it('allows different models from same server', () => {
+        serverStore.addUserSelectedModel('server-1', 'model-a');
+        serverStore.addUserSelectedModel('server-1', 'model-b');
+
+        expect(serverStore.userSelectedModels).toHaveLength(2);
+      });
+    });
+
+    describe('removeUserSelectedModel', () => {
+      it('removes a specific model selection', () => {
+        runInAction(() => {
+          serverStore.userSelectedModels = [
+            {serverId: 'server-1', remoteModelId: 'model-a'},
+            {serverId: 'server-1', remoteModelId: 'model-b'},
+          ];
+        });
+
+        serverStore.removeUserSelectedModel('server-1', 'model-a');
+
+        expect(serverStore.userSelectedModels).toEqual([
+          {serverId: 'server-1', remoteModelId: 'model-b'},
+        ]);
+      });
+
+      it('does nothing when entry does not exist', () => {
+        runInAction(() => {
+          serverStore.userSelectedModels = [
+            {serverId: 'server-1', remoteModelId: 'model-a'},
+          ];
+        });
+
+        serverStore.removeUserSelectedModel('server-1', 'non-existent');
+
+        expect(serverStore.userSelectedModels).toHaveLength(1);
+      });
+    });
+
+    describe('getUserSelectedModelsForServer', () => {
+      it('returns models for a specific server', () => {
+        runInAction(() => {
+          serverStore.userSelectedModels = [
+            {serverId: 'server-1', remoteModelId: 'model-a'},
+            {serverId: 'server-2', remoteModelId: 'model-b'},
+            {serverId: 'server-1', remoteModelId: 'model-c'},
+          ];
+        });
+
+        const result = serverStore.getUserSelectedModelsForServer('server-1');
+
+        expect(result).toEqual([
+          {serverId: 'server-1', remoteModelId: 'model-a'},
+          {serverId: 'server-1', remoteModelId: 'model-c'},
+        ]);
+      });
+
+      it('returns empty array when no models for server', () => {
+        const result = serverStore.getUserSelectedModelsForServer('non-existent');
+
+        expect(result).toEqual([]);
+      });
+    });
+  });
+
+  describe('removeServerIfOrphaned', () => {
+    it('removes server when no user-selected models reference it', () => {
+      const id = serverStore.addServer({
+        name: 'Orphan Server',
+        url: 'http://localhost:1234',
+      });
+
+      // No userSelectedModels reference this server
+      serverStore.removeServerIfOrphaned(id);
+
+      expect(serverStore.servers).toHaveLength(0);
+    });
+
+    it('keeps server when user-selected models still reference it', () => {
+      const id = serverStore.addServer({
+        name: 'Active Server',
+        url: 'http://localhost:1234',
+      });
+
       runInAction(() => {
-        serverStore.servers[0].isActive = true;
-        serverStore.servers[2].isActive = true;
+        serverStore.userSelectedModels = [
+          {serverId: id, remoteModelId: 'model-a'},
+        ];
       });
 
-      expect(serverStore.activeServers).toHaveLength(2);
-      expect(serverStore.activeServers.map(s => s.name)).toEqual([
-        'Active',
-        'Also Active',
-      ]);
+      serverStore.removeServerIfOrphaned(id);
+
+      expect(serverStore.servers).toHaveLength(1);
+    });
+
+    it('cleans up API key when removing orphaned server', () => {
+      const id = serverStore.addServer({
+        name: 'Orphan',
+        url: 'http://localhost:1234',
+      });
+
+      serverStore.removeServerIfOrphaned(id);
+
+      expect(Keychain.resetGenericPassword).toHaveBeenCalledWith({
+        service: `pocketpal-server-${id}`,
+      });
+    });
+  });
+
+  describe('getModelsNotYetAdded', () => {
+    it('returns all models when none are user-selected', () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'http://localhost:1234',
+      });
+
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {id: 'model-a', object: 'model', owned_by: 'system'},
+          {id: 'model-b', object: 'model', owned_by: 'system'},
+        ]);
+      });
+
+      const result = serverStore.getModelsNotYetAdded(id);
+
+      expect(result).toHaveLength(2);
+      expect(result.map(m => m.id)).toEqual(['model-a', 'model-b']);
+    });
+
+    it('filters out already user-selected models', () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'http://localhost:1234',
+      });
+
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {id: 'model-a', object: 'model', owned_by: 'system'},
+          {id: 'model-b', object: 'model', owned_by: 'system'},
+          {id: 'model-c', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: id, remoteModelId: 'model-a'},
+          {serverId: id, remoteModelId: 'model-c'},
+        ];
+      });
+
+      const result = serverStore.getModelsNotYetAdded(id);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('model-b');
+    });
+
+    it('returns empty array when all models are selected', () => {
+      const id = serverStore.addServer({
+        name: 'Server',
+        url: 'http://localhost:1234',
+      });
+
+      runInAction(() => {
+        serverStore.serverModels.set(id, [
+          {id: 'model-a', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: id, remoteModelId: 'model-a'},
+        ];
+      });
+
+      const result = serverStore.getModelsNotYetAdded(id);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('returns empty array for server with no models fetched', () => {
+      const result = serverStore.getModelsNotYetAdded('non-existent');
+
+      expect(result).toEqual([]);
     });
   });
 
@@ -295,11 +473,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
-      });
-      // Set active so fetch proceeds
-      runInAction(() => {
-        serverStore.servers[0].isActive = true;
       });
       jest.clearAllMocks();
 
@@ -321,10 +494,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
-      });
-      runInAction(() => {
-        serverStore.servers[0].isActive = true;
       });
       jest.clearAllMocks();
 
@@ -337,19 +506,6 @@ describe('ServerStore', () => {
       expect(serverStore.isLoading).toBe(false);
     });
 
-    it('skips fetch for inactive server', async () => {
-      const id = serverStore.addServer({
-        name: 'Inactive',
-        url: 'http://localhost:1234',
-        isActive: false,
-      });
-      jest.clearAllMocks();
-
-      await serverStore.fetchModelsForServer(id);
-
-      expect(mockedFetchModels).not.toHaveBeenCalled();
-    });
-
     it('skips fetch for non-existent server id', async () => {
       await serverStore.fetchModelsForServer('non-existent');
 
@@ -360,10 +516,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
-      });
-      runInAction(() => {
-        serverStore.servers[0].isActive = true;
       });
       jest.clearAllMocks();
 
@@ -379,26 +531,18 @@ describe('ServerStore', () => {
   });
 
   describe('fetchAllRemoteModels', () => {
-    it('fetches models for all active servers', async () => {
+    it('fetches models for all servers', async () => {
       serverStore.addServer({
         name: 'Server 1',
         url: 'http://a.com',
-        isActive: false,
       });
       serverStore.addServer({
-        name: 'Inactive',
+        name: 'Server 2',
         url: 'http://b.com',
-        isActive: false,
       });
       serverStore.addServer({
         name: 'Server 3',
         url: 'http://c.com',
-        isActive: false,
-      });
-
-      runInAction(() => {
-        serverStore.servers[0].isActive = true;
-        serverStore.servers[2].isActive = true;
       });
       jest.clearAllMocks();
 
@@ -407,15 +551,10 @@ describe('ServerStore', () => {
 
       await serverStore.fetchAllRemoteModels();
 
-      expect(mockedFetchModels).toHaveBeenCalledTimes(2);
+      expect(mockedFetchModels).toHaveBeenCalledTimes(3);
     });
 
-    it('does nothing when no active servers', async () => {
-      serverStore.addServer({
-        name: 'Inactive',
-        url: 'http://a.com',
-        isActive: false,
-      });
+    it('does nothing when no servers exist', async () => {
       jest.clearAllMocks();
 
       await serverStore.fetchAllRemoteModels();
@@ -429,7 +568,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       mockedTestConnection.mockResolvedValueOnce({ok: true, modelCount: 5});
@@ -458,7 +596,6 @@ describe('ServerStore', () => {
       const id = serverStore.addServer({
         name: 'Server',
         url: 'http://localhost:1234',
-        isActive: false,
       });
 
       (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce({
