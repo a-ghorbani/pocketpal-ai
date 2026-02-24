@@ -10,6 +10,7 @@ import {createStyles} from './styles';
 interface FABGroupProps {
   onAddHFModel: () => void;
   onAddLocalModel: () => void;
+  onAddRemoteModel: () => void;
 }
 
 const iconStyle = {width: 24, height: 24};
@@ -28,6 +29,7 @@ const HFIcon = (_props: IconComponentProps): React.ReactNode => (
 export const FABGroup: React.FC<FABGroupProps> = ({
   onAddHFModel,
   onAddLocalModel,
+  onAddRemoteModel,
 }) => {
   const [open, setOpen] = useState(false);
   const l10n = useContext(L10nContext);
@@ -58,8 +60,18 @@ export const FABGroup: React.FC<FABGroupProps> = ({
           onAddLocalModel();
         },
       },
+      {
+        testID: 'remote-fab',
+        icon: 'cloud-plus-outline',
+        label: l10n.settings.addRemoteModel,
+        accessibilityLabel: l10n.settings.addRemoteModel,
+        style: styles.actionButton,
+        onPress: () => {
+          onAddRemoteModel();
+        },
+      },
     ],
-    [l10n, onAddHFModel, onAddLocalModel, styles.actionButton],
+    [l10n, onAddHFModel, onAddLocalModel, onAddRemoteModel, styles.actionButton],
   );
 
   return (

@@ -21,6 +21,8 @@ import {
   ErrorSnackbar,
   ModelSettingsSheet,
   ModelErrorReportSheet,
+  RemoteModelSheet,
+  ServerDetailsSheet,
 } from '../../components';
 
 import {uiStore, modelStore, hfStore, UIStore} from '../../store';
@@ -44,6 +46,12 @@ export const ModelsScreen: React.FC = observer(() => {
   // Model error report sheet state
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
+
+  // Remote model / server details sheets
+  const [remoteModelSheetVisible, setRemoteModelSheetVisible] = useState(false);
+  const [serverDetailsSheetVisible, setServerDetailsSheetVisible] =
+    useState(false);
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
 
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -110,6 +118,15 @@ export const ModelsScreen: React.FC = observer(() => {
   const handleCloseSettings = () => {
     setSettingsVisible(false);
     setSelectedModel(undefined);
+  };
+
+  const handleAddRemoteModel = () => {
+    setRemoteModelSheetVisible(true);
+  };
+
+  const handleOpenServerDetails = (serverId: string) => {
+    setSelectedServerId(serverId);
+    setServerDetailsSheetVisible(true);
   };
 
   const handleDismissError = () => {
@@ -322,6 +339,7 @@ export const ModelsScreen: React.FC = observer(() => {
               model={subItem}
               activeModelId={activeModelId}
               onOpenSettings={() => handleOpenSettings(subItem)}
+              onOpenServerDetails={handleOpenServerDetails}
             />
           )}
         />
@@ -392,6 +410,7 @@ export const ModelsScreen: React.FC = observer(() => {
       <FABGroup
         onAddHFModel={() => setHFSearchVisible(true)}
         onAddLocalModel={handleAddLocalModel}
+        onAddRemoteModel={handleAddRemoteModel}
       />
       <ModelSettingsSheet
         isVisible={settingsVisible}
@@ -402,6 +421,18 @@ export const ModelsScreen: React.FC = observer(() => {
         isVisible={isErrorReportVisible}
         onClose={handleCloseErrorReport}
         error={errorToReport}
+      />
+      <RemoteModelSheet
+        isVisible={remoteModelSheetVisible}
+        onDismiss={() => setRemoteModelSheetVisible(false)}
+      />
+      <ServerDetailsSheet
+        isVisible={serverDetailsSheetVisible}
+        onDismiss={() => {
+          setServerDetailsSheetVisible(false);
+          setSelectedServerId(null);
+        }}
+        serverId={selectedServerId}
       />
     </View>
   );
