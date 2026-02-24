@@ -32,7 +32,8 @@ import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
 import {createStyles} from './styles';
 
-import {uiStore, modelStore} from '../../../store';
+import {uiStore, modelStore, serverStore} from '../../../store';
+import {t} from '../../../locales';
 
 import {
   Model,
@@ -67,6 +68,7 @@ interface ModelCardProps {
   activeModelId?: string;
   onFocus?: () => void;
   onOpenSettings?: () => void;
+  onOpenServerDetails?: (serverId: string) => void;
 }
 
 // Enable LayoutAnimation on Android
@@ -78,7 +80,7 @@ if (
 }
 
 export const ModelCard: React.FC<ModelCardProps> = observer(
-  ({model, activeModelId, onOpenSettings}) => {
+  ({model, activeModelId, onOpenSettings, onOpenServerDetails}) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const styles = createStyles(theme);
@@ -331,11 +333,52 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       setIsExpanded(!isExpanded);
     }, [isExpanded]);
 
+    const handleRemoteDelete = useCallback(() => {
+      if (!model.serverId || !model.remoteModelId) {
+        return;
+      }
+      const sName = model.serverName || 'Remote';
+      Alert.alert(
+        l10n.common.delete,
+        t(l10n.settings.removeRemoteModel, {
+          modelName: model.name,
+          serverName: sName,
+        }),
+        [
+          {text: l10n.common.cancel, style: 'cancel'},
+          {
+            text: l10n.common.delete,
+            style: 'destructive',
+            onPress: () => {
+              if (isActiveModel) {
+                modelStore.manualReleaseContext();
+              }
+              serverStore.removeUserSelectedModel(
+                model.serverId!,
+                model.remoteModelId!,
+              );
+              serverStore.removeServerIfOrphaned(model.serverId!);
+            },
+          },
+        ],
+      );
+    }, [model, l10n, isActiveModel]);
+
     const renderActionButtons = () => {
-      // Remote models: simplified action row with just connect/disconnect
+      // Remote models: load/offload + delete
       if (isRemoteModel) {
         return (
-          <View style={styles.actionButtonsRow}>{renderModelLoadButton()}</View>
+          <View style={styles.actionButtonsRow}>
+            {renderModelLoadButton()}
+            <TouchableOpacity
+              testID="delete-button"
+              onPress={handleRemoteDelete}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.common.delete}>
+              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+            </TouchableOpacity>
+          </View>
         );
       }
 
@@ -598,16 +641,23 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               </View>
               <View style={styles.headerRight}>
                 {isRemoteModel ? (
-                  <View style={styles.sizeInfo}>
+                  <TouchableOpacity
+                    testID="server-link"
+                    onPress={() => {
+                      if (model.serverId && onOpenServerDetails) {
+                        onOpenServerDetails(model.serverId);
+                      }
+                    }}
+                    style={styles.serverLink}>
                     <Icon
                       source="cloud-outline"
                       size={12}
-                      color={theme.colors.secondary}
+                      color={theme.colors.primary}
                     />
-                    <Text style={styles.sizeInfoText}>
+                    <Text style={styles.serverLinkText}>
                       {model.serverName || 'Remote'}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ) : (
                   <View style={styles.sizeInfo}>
                     <CpuChipIcon
