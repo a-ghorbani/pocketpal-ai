@@ -1827,24 +1827,23 @@ class ModelStore {
    * Remote models are never stored in the models array (which is persisted).
    */
   get remoteModels(): Model[] {
-    const remoteList: Model[] = [];
-    for (const [serverId, serverModelList] of serverStore.serverModels) {
-      const server = serverStore.servers.find(s => s.id === serverId);
-      if (!server?.isActive) {
+    const models: Model[] = [];
+    for (const selected of serverStore.userSelectedModels) {
+      const server = serverStore.servers.find(s => s.id === selected.serverId);
+      if (!server) {
         continue;
       }
-      for (const rm of serverModelList) {
-        remoteList.push(
-          createRemoteModel({
-            serverId,
-            serverName: server.name,
-            remoteModelId: rm.id,
-            modelName: rm.id,
-          }),
-        );
-      }
+      // Use the remote model ID as the display name
+      models.push(
+        createRemoteModel({
+          serverId: selected.serverId,
+          serverName: server.name,
+          remoteModelId: selected.remoteModelId,
+          modelName: selected.remoteModelId,
+        }),
+      );
     }
-    return remoteList;
+    return models;
   }
 
   setActiveModel(modelId: string) {
