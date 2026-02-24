@@ -199,6 +199,12 @@ export const Selectors = {
     get localFab(): string {
       return byAccessibilityLabel('Add Local Model');
     },
+    get remoteFab(): string {
+      return byAccessibilityLabel('Add Remote Model');
+    },
+    get manageServersFab(): string {
+      return byAccessibilityLabel('Manage Servers');
+    },
     get flatList(): string {
       return byTestId('flat-list');
     },
@@ -460,28 +466,35 @@ export const Selectors = {
     },
   },
 
-  // Remote server configuration
-  serverConfig: {
-    get addServerButton(): string {
-      return byTestId('add-server-button');
+  // Remote model sheet (add model from server)
+  remoteModel: {
+    get urlInput(): string {
+      return byTestId('remote-url-input');
     },
     get nameInput(): string {
-      return byTestId('server-name-input');
-    },
-    get urlInput(): string {
-      return byTestId('server-url-input');
+      return byTestId('remote-name-input');
     },
     get apiKeyInput(): string {
-      return byTestId('server-apikey-input');
+      return byTestId('remote-apikey-input');
     },
-    get testButton(): string {
-      return byTestId('server-test-button');
+    get addModelButton(): string {
+      return byTestId('add-model-button');
+    },
+  },
+
+  // Server details sheet (edit/delete server)
+  serverDetails: {
+    get urlInput(): string {
+      return byTestId('server-details-url-input');
+    },
+    get apiKeyInput(): string {
+      return byTestId('server-details-apikey-input');
+    },
+    get removeButton(): string {
+      return byTestId('remove-server-button');
     },
     get saveButton(): string {
-      return byTestId('server-save-button');
-    },
-    get sheetCloseButton(): string {
-      return byTestId('sheet-close-button');
+      return byTestId('save-server-button');
     },
   },
 };

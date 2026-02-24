@@ -94,4 +94,35 @@ export class ModelsPage extends BasePage {
     await this.tap(Selectors.models.hfFab);
     await browser.pause(1000); // This is needed to ensure the animation is complete.
   }
+
+  /**
+   * Open the "Add Remote Model" sheet via the FAB menu
+   */
+  async openAddRemoteModel(): Promise<void> {
+    await this.closeFabMenuIfExpanded();
+    await this.expandFabMenu();
+    await browser.pause(500);
+    await this.tap(Selectors.models.remoteFab);
+    await browser.pause(1000);
+  }
+
+  /**
+   * Tap "Manage Servers" in the FAB menu.
+   * With a single server, ServerDetailsSheet opens directly.
+   * With multiple servers, an Alert appears with server names.
+   */
+  async tapManageServers(): Promise<void> {
+    await this.closeFabMenuIfExpanded();
+    await this.expandFabMenu();
+    await browser.pause(500);
+    await this.tap(Selectors.models.manageServersFab);
+    await browser.pause(1000);
+  }
+
+  /**
+   * Dismiss keyboard (exposed from BasePage for use in tests)
+   */
+  async hideKeyboard(): Promise<void> {
+    await this.dismissKeyboard();
+  }
 }

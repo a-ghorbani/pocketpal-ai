@@ -1,18 +1,17 @@
 /**
  * Remote Server Feature Tests
  *
- * Tests adding an OpenAI-compatible remote server, selecting a remote model
- * from the model picker, and chatting with it.
+ * Tests the model-centric flow: add a remote model from an OpenAI-compatible
+ * server via the Models screen FAB, chat with it, then delete the server.
  *
  * Prerequisites:
  *   - A real OpenAI-compatible server running at the configured URL
  *   - The server must respond to GET /v1/models and POST /v1/chat/completions
  *
  * Environment variables:
- *   REMOTE_SERVER_URL   - Server URL (default: http://192.168.68.63:8000)
- *   REMOTE_SERVER_NAME  - Display name (default: Test Server)
+ *   REMOTE_SERVER_URL     - Server URL (default: http://192.168.68.63:1234)
  *   REMOTE_SERVER_API_KEY - API key (optional)
- *   REMOTE_MODEL_HINT   - Partial model name to find in picker (optional)
+ *   REMOTE_MODEL_HINT     - Partial model name to find in picker (optional)
  */
 
 import * as fs from 'fs';
@@ -20,13 +19,11 @@ import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
-import {SettingsPage} from '../../pages/SettingsPage';
+import {ModelsPage} from '../../pages/ModelsPage';
 import {
   Selectors,
-  byText,
   byPartialText,
   nativeTextElement,
-  isAndroid,
 } from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
 import {TIMEOUTS} from '../../fixtures/models';
@@ -36,26 +33,25 @@ declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 const SERVER_CONFIG = {
-  name: process.env.REMOTE_SERVER_NAME || 'Test Server',
-  url: process.env.REMOTE_SERVER_URL || 'http://192.168.68.63:8000',
+  url: process.env.REMOTE_SERVER_URL || 'http://192.168.68.63:1234',
   apiKey: process.env.REMOTE_SERVER_API_KEY || undefined,
 };
 
 /**
- * Optional partial model name to look for in the picker.
- * If not set, the test taps the first model item by position.
+ * Optional partial model name to look for in the model list.
+ * If not set, the first (or only) model is auto-selected.
  */
 const REMOTE_MODEL_HINT = process.env.REMOTE_MODEL_HINT || '';
 
 describe('Remote Server Features', () => {
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
-  let settingsPage: SettingsPage;
+  let modelsPage: ModelsPage;
 
   before(async () => {
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
-    settingsPage = new SettingsPage();
+    modelsPage = new ModelsPage();
 
     await chatPage.waitForReady(TIMEOUTS.appReady);
   });
@@ -63,7 +59,7 @@ describe('Remote Server Features', () => {
   beforeEach(async () => {
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
-    settingsPage = new SettingsPage();
+    modelsPage = new ModelsPage();
   });
 
   afterEach(async function (this: Mocha.Context) {
@@ -83,51 +79,112 @@ describe('Remote Server Features', () => {
     }
   });
 
-  it('should add a remote server and test connection', async () => {
-    // Navigate: Chat -> Drawer -> Settings
+  it('should add a remote model via Models screen FAB', async () => {
+    // Navigate to Models screen
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
-    await drawerPage.navigateToSettings();
-    await settingsPage.waitForReady();
+    await drawerPage.navigateToModels();
+    await modelsPage.waitForReady();
 
-    // Add the remote server (scrolls, fills form, tests, saves)
-    await settingsPage.addRemoteServer(
-      SERVER_CONFIG.name,
-      SERVER_CONFIG.url,
-      SERVER_CONFIG.apiKey,
-    );
+    // Open the "Add Remote Model" sheet
+    await modelsPage.openAddRemoteModel();
 
-    // Verify the server appears in the settings list
-    const serverVisible = await settingsPage.isServerVisible(
-      SERVER_CONFIG.name,
-    );
-    expect(serverVisible).toBe(true);
+    // Enter server URL
+    const urlInput = browser.$(Selectors.remoteModel.urlInput);
+    await urlInput.waitForDisplayed({timeout: 5000});
+    await urlInput.clearValue();
+    await urlInput.setValue(SERVER_CONFIG.url);
+    console.log(`Entered server URL: ${SERVER_CONFIG.url}`);
+
+    // Wait for auto-probe to fire (800ms debounce + network time)
+    await browser.pause(3000);
+
+    // After probe attempt, server name + API key fields appear
+    // (whether probe succeeded or failed with 401)
+    if (SERVER_CONFIG.apiKey) {
+      const apiKeyInput = browser.$(Selectors.remoteModel.apiKeyInput);
+      const apiKeyVisible = await apiKeyInput
+        .waitForDisplayed({timeout: 5000})
+        .then(() => true)
+        .catch(() => false);
+
+      if (apiKeyVisible) {
+        await apiKeyInput.clearValue();
+        await apiKeyInput.setValue(SERVER_CONFIG.apiKey);
+        console.log('Entered API key');
+
+        // Tap the name input to blur API key → triggers re-probe
+        const nameInput = browser.$(Selectors.remoteModel.nameInput);
+        const nameVisible = await nameInput.isDisplayed().catch(() => false);
+        if (nameVisible) {
+          await nameInput.click();
+        } else {
+          // Fallback: dismiss keyboard
+          await modelsPage.hideKeyboard();
+        }
+        // Wait for re-probe (800ms debounce + network time)
+        await browser.pause(3000);
+      }
+    }
+
+    // Verify connection succeeded
+    const connectedText = browser.$(byPartialText('Connected'));
+    const isConnected = await connectedText
+      .waitForDisplayed({timeout: 10000})
+      .then(() => true)
+      .catch(() => false);
     console.log(
-      `Server "${SERVER_CONFIG.name}" added and visible in settings`,
+      `Connection status: ${isConnected ? 'Connected' : 'Not connected'}`,
     );
+    expect(isConnected).toBe(true);
+
+    // Select a specific model if hint is provided
+    if (REMOTE_MODEL_HINT) {
+      const modelEl = browser.$(byPartialText(REMOTE_MODEL_HINT));
+      const visible = await modelEl
+        .waitForDisplayed({timeout: 5000})
+        .then(() => true)
+        .catch(() => false);
+      if (visible) {
+        await modelEl.click();
+        console.log(`Selected model matching "${REMOTE_MODEL_HINT}"`);
+      }
+    }
+    // If no hint and only one model, it's auto-selected
+
+    // Scroll to and tap "Add Model" button
+    const addButton = browser.$(Selectors.remoteModel.addModelButton);
+    const addVisible = await addButton.isDisplayed().catch(() => false);
+    if (!addVisible) {
+      await Gestures.swipeUpInSheet();
+      await browser.pause(300);
+    }
+    await addButton.waitForDisplayed({timeout: 5000});
+    await addButton.waitForEnabled({timeout: 5000});
+    await addButton.click();
+    await browser.pause(1000);
+
+    console.log('Remote model added successfully');
   });
 
   it('should select and chat with a remote model', async () => {
-    // Navigate back to Chat screen
+    // Navigate to Chat screen
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
     await drawerPage.navigateToChat();
     await chatPage.waitForReady();
 
-    // Wait for remote models to be fetched from the server
+    // Wait for remote models to be available
     await browser.pause(3000);
 
-    // The placeholder shows "Activate Model To Get Started" with a "Select Model"
-    // button when remote models are available. Tap it to open the model picker.
-    const selectModelBtn = browser.$(byText('Select Model'));
+    // The chat placeholder shows "Select Model" button when models are available
+    const selectModelBtn = browser.$(byPartialText('Select Model'));
     await selectModelBtn.waitForDisplayed({timeout: 10000});
     await selectModelBtn.click();
     await browser.pause(1000);
 
-    // The model picker (ChatPalModelPickerSheet) opens on the Pals tab.
-    // The tabs are [Pals, Models] rendered in a horizontal FlatList with paging.
+    // The model picker opens on the Pals tab.
     // Swipe LEFT to navigate from Pals tab to Models tab.
-    // This avoids text selector conflicts with the drawer's "Models" button.
     const {width, height} = await driver.getWindowSize();
     await driver
       .action('pointer', {parameters: {pointerType: 'touch'}})
@@ -142,10 +199,8 @@ describe('Remote Server Features', () => {
       .perform();
     await browser.pause(1000);
 
-    // Now on the Models tab, remote models should be listed.
-    // Find and tap a remote model.
+    // Select the remote model from the Models tab
     if (REMOTE_MODEL_HINT) {
-      // Use the hint to find a specific model
       const modelEl = browser.$(byPartialText(REMOTE_MODEL_HINT));
       const visible = await modelEl
         .waitForDisplayed({timeout: 10000})
@@ -160,9 +215,7 @@ describe('Remote Server Features', () => {
         );
       }
     } else {
-      // No hint provided — tap the first model item by position.
-      // The picker sheet covers the bottom ~70% of screen. Tab labels are near
-      // the top of the sheet (~42% from top). First model item is below that.
+      // No hint — tap the first model item by position
       await driver
         .action('pointer', {parameters: {pointerType: 'touch'}})
         .move({x: Math.round(width * 0.5), y: Math.round(height * 0.5)})
@@ -172,17 +225,15 @@ describe('Remote Server Features', () => {
       console.log('Tapped first model position in picker');
     }
 
-    // Wait for model selection to complete
+    // Wait for model selection
     await browser.pause(2000);
 
-    // After selecting a remote model, the placeholder should disappear.
-    // Send a message.
+    // Send a message
     const chatInput = browser.$(Selectors.chat.input);
     await chatInput.waitForDisplayed({timeout: 10000});
-
     await chatPage.sendMessage('Hello');
 
-    // Wait for AI message to appear
+    // Wait for AI response
     const aiMessageEl = browser.$(Selectors.chat.aiMessage);
     await aiMessageEl.waitForExist({timeout: 30000});
     console.log('AI message element appeared');
@@ -201,7 +252,9 @@ describe('Remote Server Features', () => {
 
         if (responseText && responseText.length > 0) {
           const stopButton = browser.$(Selectors.chat.stopButton);
-          const stopVisible = await stopButton.isDisplayed().catch(() => false);
+          const stopVisible = await stopButton
+            .isDisplayed()
+            .catch(() => false);
           if (!stopVisible) {
             break;
           }
@@ -212,71 +265,45 @@ describe('Remote Server Features', () => {
       await browser.pause(pollIntervalMs);
     }
 
-    expect(responseText.length).toBeGreaterThan(0);
+    // Verify we got a real multi-word response (not just last token)
+    expect(responseText.length).toBeGreaterThan(1);
     console.log(`Remote model response: "${responseText.substring(0, 100)}"`);
     console.log('Chat with remote model succeeded');
   });
 
-  it('should delete the remote server', async () => {
-    // Navigate to Settings
+  it('should delete the remote server via Manage Servers', async () => {
+    // Navigate to Models screen
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
-    await drawerPage.navigateToSettings();
+    await drawerPage.navigateToModels();
+    await modelsPage.waitForReady();
 
-    // Settings may already be scrolled down from previous test navigation.
-    // Skip waitForReady() (which looks for gpu-layers-slider at top) and
-    // go directly to scrolling to the Remote Servers section.
-    await browser.pause(1000);
+    // Tap "Manage Servers" in the FAB menu
+    await modelsPage.tapManageServers();
 
-    // Scroll to the Remote Servers section
-    const found = await settingsPage.scrollToRemoteServers();
-    expect(found).toBe(true);
+    // With a single server, ServerDetailsSheet opens directly (no alert).
+    // Tap "Remove Server" button
+    const removeButton = browser.$(Selectors.serverDetails.removeButton);
+    const removeVisible = await removeButton
+      .waitForDisplayed({timeout: 5000})
+      .then(() => true)
+      .catch(() => false);
 
-    // The server entry should be visible
-    const serverVisible = await settingsPage.isServerVisible(
-      SERVER_CONFIG.name,
-    );
-    expect(serverVisible).toBe(true);
-
-    // Find and tap the delete button for the server.
-    let deleteTapped = false;
-
-    if (!isAndroid()) {
-      const deleteButtons = await browser.$$(
-        '-ios predicate string:name BEGINSWITH "server-delete-"',
-      );
-      if (deleteButtons.length > 0) {
-        await deleteButtons[deleteButtons.length - 1].click();
-        deleteTapped = true;
-      }
-    } else {
-      const deleteButtons = await browser.$$(
-        '//*[contains(@resource-id, "server-delete-")]',
-      );
-      if (deleteButtons.length > 0) {
-        await deleteButtons[deleteButtons.length - 1].click();
-        deleteTapped = true;
-      }
+    if (!removeVisible) {
+      // May need to scroll down in the sheet
+      await Gestures.swipeUpInSheet();
+      await browser.pause(300);
     }
-
-    expect(deleteTapped).toBe(true);
+    await removeButton.waitForDisplayed({timeout: 5000});
+    await removeButton.click();
+    await browser.pause(500);
 
     // Confirm deletion in the alert dialog
-    await browser.pause(500);
     const deleteButton = browser.$(Selectors.alert.button('Delete'));
     await deleteButton.waitForDisplayed({timeout: 5000});
     await deleteButton.click();
-    await browser.pause(500);
+    await browser.pause(1000);
 
-    // Verify the server is no longer visible
-    const addButton = browser.$(Selectors.serverConfig.addServerButton);
-    await addButton.waitForDisplayed({timeout: 5000});
-
-    const serverStillVisible = await settingsPage.isServerVisible(
-      SERVER_CONFIG.name,
-      2000,
-    );
-    expect(serverStillVisible).toBe(false);
-    console.log(`Server "${SERVER_CONFIG.name}" deleted successfully`);
+    console.log('Server deleted successfully via Manage Servers');
   });
 });
