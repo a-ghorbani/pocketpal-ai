@@ -15,6 +15,7 @@ const FETCH_THROTTLE_MS = 60000;
 class ServerStore {
   servers: ServerConfig[] = [];
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
+  userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
@@ -29,19 +30,14 @@ class ServerStore {
 
     makePersistable(this, {
       name: 'ServerStore',
-      properties: ['servers', 'privacyNoticeAcknowledged'],
+      properties: ['servers', 'privacyNoticeAcknowledged', 'userSelectedModels'],
       storage: AsyncStorage,
     }).then(() => {
-      // After hydration, fetch models for active servers
+      // After hydration, fetch models for all servers
       this.fetchAllRemoteModels();
     });
 
     this.setupAppStateListener();
-  }
-
-  // Computed
-  get activeServers(): ServerConfig[] {
-    return this.servers.filter(s => s.isActive);
   }
 
   // Actions
@@ -52,12 +48,6 @@ class ServerStore {
       id,
     };
     this.servers.push(newServer);
-
-    // Auto-fetch models for the new server if active
-    if (config.isActive) {
-      this.fetchModelsForServer(id);
-    }
-
     return id;
   }
 
@@ -65,23 +55,58 @@ class ServerStore {
     const server = this.servers.find(s => s.id === id);
     if (server) {
       Object.assign(server, updates);
-
-      // If server was activated, fetch its models
-      if (updates.isActive === true) {
-        this.fetchModelsForServer(id);
-      }
-      // If server was deactivated, clear its models
-      if (updates.isActive === false) {
-        this.serverModels.delete(id);
-      }
     }
   }
 
   removeServer(id: string): void {
     this.servers = this.servers.filter(s => s.id !== id);
     this.serverModels.delete(id);
+    // Remove all user-selected models for this server
+    this.userSelectedModels = this.userSelectedModels.filter(
+      m => m.serverId !== id,
+    );
     // Clean up API key from keychain
     this.removeApiKey(id);
+  }
+
+  addUserSelectedModel(serverId: string, remoteModelId: string): void {
+    const exists = this.userSelectedModels.some(
+      m => m.serverId === serverId && m.remoteModelId === remoteModelId,
+    );
+    if (!exists) {
+      this.userSelectedModels.push({serverId, remoteModelId});
+    }
+  }
+
+  removeUserSelectedModel(serverId: string, remoteModelId: string): void {
+    this.userSelectedModels = this.userSelectedModels.filter(
+      m => !(m.serverId === serverId && m.remoteModelId === remoteModelId),
+    );
+  }
+
+  removeServerIfOrphaned(serverId: string): void {
+    const hasModels = this.userSelectedModels.some(
+      m => m.serverId === serverId,
+    );
+    if (!hasModels) {
+      this.removeServer(serverId);
+    }
+  }
+
+  getModelsNotYetAdded(serverId: string): RemoteModelInfo[] {
+    const allModels = this.serverModels.get(serverId) || [];
+    return allModels.filter(
+      m =>
+        !this.userSelectedModels.some(
+          sel => sel.serverId === serverId && sel.remoteModelId === m.id,
+        ),
+    );
+  }
+
+  getUserSelectedModelsForServer(
+    serverId: string,
+  ): Array<{serverId: string; remoteModelId: string}> {
+    return this.userSelectedModels.filter(m => m.serverId === serverId);
   }
 
   // API key management (Keychain)
@@ -123,7 +148,7 @@ class ServerStore {
   // Remote model fetching
   async fetchModelsForServer(serverId: string): Promise<void> {
     const server = this.servers.find(s => s.id === serverId);
-    if (!server || !server.isActive) {
+    if (!server) {
       return;
     }
 
@@ -155,15 +180,14 @@ class ServerStore {
   }
 
   async fetchAllRemoteModels(): Promise<void> {
-    const active = this.activeServers;
-    if (active.length === 0) {
+    if (this.servers.length === 0) {
       return;
     }
 
     this.lastFetchTime = Date.now();
 
     await Promise.all(
-      active.map(server => this.fetchModelsForServer(server.id)),
+      this.servers.map(server => this.fetchModelsForServer(server.id)),
     );
   }
 

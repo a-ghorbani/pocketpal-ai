@@ -288,7 +288,6 @@ export const testServer: ServerConfig = {
   id: 'server1',
   name: 'Test LM Studio',
   url: 'http://192.168.1.100:1234',
-  isActive: true,
 };
 
 export const remoteModel: Model = createModel({

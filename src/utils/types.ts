@@ -335,7 +335,6 @@ export interface ServerConfig {
   id: string;
   name: string;
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
-  isActive: boolean; // Whether to fetch models from this server
   lastConnected?: number; // Timestamp
 }
 

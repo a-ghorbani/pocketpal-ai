@@ -6,6 +6,7 @@ import {RemoteModelInfo} from '../../src/api/openai';
 class MockServerStore {
   servers: ServerConfig[] = [];
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
+  userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
@@ -20,6 +21,11 @@ class MockServerStore {
   fetchAllRemoteModels: jest.Mock;
   testServerConnection: jest.Mock;
   acknowledgePrivacyNotice: jest.Mock;
+  addUserSelectedModel: jest.Mock;
+  removeUserSelectedModel: jest.Mock;
+  removeServerIfOrphaned: jest.Mock;
+  getModelsNotYetAdded: jest.Mock;
+  getUserSelectedModelsForServer: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -33,6 +39,11 @@ class MockServerStore {
       fetchAllRemoteModels: false,
       testServerConnection: false,
       acknowledgePrivacyNotice: false,
+      addUserSelectedModel: false,
+      removeUserSelectedModel: false,
+      removeServerIfOrphaned: false,
+      getModelsNotYetAdded: false,
+      getUserSelectedModelsForServer: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
     this.updateServer = jest.fn();
@@ -46,10 +57,11 @@ class MockServerStore {
       .fn()
       .mockResolvedValue({ok: true, modelCount: 3});
     this.acknowledgePrivacyNotice = jest.fn();
-  }
-
-  get activeServers() {
-    return this.servers.filter(s => s.isActive);
+    this.addUserSelectedModel = jest.fn();
+    this.removeUserSelectedModel = jest.fn();
+    this.removeServerIfOrphaned = jest.fn();
+    this.getModelsNotYetAdded = jest.fn().mockReturnValue([]);
+    this.getUserSelectedModelsForServer = jest.fn().mockReturnValue([]);
   }
 }
 
