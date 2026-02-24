@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
+import {render, fireEvent} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {serverStore} from '../../../store';
 
