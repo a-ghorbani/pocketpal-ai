@@ -1060,8 +1060,9 @@ export const SettingsScreen: React.FC = observer(() => {
                 <View style={styles.settingItemContainer}>
                   {serverStore.servers.map((server, index) => {
                     const modelCount =
-                      serverStore.getUserSelectedModelsForServer(server.id)
-                        .length;
+                      serverStore.getUserSelectedModelsForServer(
+                        server.id,
+                      ).length;
                     return (
                       <React.Fragment key={server.id}>
                         {index > 0 && <Divider style={styles.divider} />}

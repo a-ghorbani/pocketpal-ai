@@ -1,4 +1,11 @@
-import React, {useState, useContext, useEffect, useCallback, useMemo, useRef} from 'react';
+import React, {
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {View, Alert} from 'react-native';
 import {
   Text,
@@ -72,31 +79,28 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       ? serverStore.getUserSelectedModelsForServer(serverId)
       : [];
 
-    const probeServer = useCallback(
-      async (probeUrl: string) => {
-        const trimmedUrl = probeUrl.trim();
-        if (!trimmedUrl) {
-          return;
-        }
-        try {
-          new URL(trimmedUrl);
-        } catch {
-          return;
-        }
-        setIsProbing(true);
-        setProbeResult(null);
-        try {
-          const key = apiKeyRef.current.trim() || undefined;
-          const result = await testConnection(trimmedUrl, key);
-          setProbeResult({ok: result.ok, error: result.error});
-        } catch (error: any) {
-          setProbeResult({ok: false, error: error.message});
-        } finally {
-          setIsProbing(false);
-        }
-      },
-      [],
-    );
+    const probeServer = useCallback(async (probeUrl: string) => {
+      const trimmedUrl = probeUrl.trim();
+      if (!trimmedUrl) {
+        return;
+      }
+      try {
+        new URL(trimmedUrl);
+      } catch {
+        return;
+      }
+      setIsProbing(true);
+      setProbeResult(null);
+      try {
+        const key = apiKeyRef.current.trim() || undefined;
+        const result = await testConnection(trimmedUrl, key);
+        setProbeResult({ok: result.ok, error: result.error});
+      } catch (error: any) {
+        setProbeResult({ok: false, error: error.message});
+      } finally {
+        setIsProbing(false);
+      }
+    }, []);
 
     const debouncedProbe = useMemo(
       () => debounce(probeServer, 800),

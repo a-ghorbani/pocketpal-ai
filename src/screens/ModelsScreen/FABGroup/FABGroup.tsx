@@ -71,7 +71,13 @@ export const FABGroup: React.FC<FABGroupProps> = ({
         },
       },
     ],
-    [l10n, onAddHFModel, onAddLocalModel, onAddRemoteModel, styles.actionButton],
+    [
+      l10n,
+      onAddHFModel,
+      onAddLocalModel,
+      onAddRemoteModel,
+      styles.actionButton,
+    ],
   );
 
   return (

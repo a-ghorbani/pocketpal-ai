@@ -1,4 +1,11 @@
-import React, {useState, useContext, useEffect, useCallback, useMemo, useRef} from 'react';
+import React, {
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {View} from 'react-native';
 import {
   Text,
@@ -188,38 +195,35 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     );
 
     // Known server chip press
-    const handleServerChipPress = useCallback(
-      async (server: ServerConfig) => {
-        setSelectedServerId(server.id);
-        setServerName(server.name);
-        setUrl(server.url);
-        setIsProbing(true);
-        setProbeResult(null);
-        setAvailableModels([]);
-        setSelectedModelId(null);
-        setUrlError('');
-        try {
-          const key = await serverStore.getApiKey(server.id);
-          apiKeyRef.current = key || '';
-          setApiKey(key || '');
-          const models = await fetchModels(server.url, key || undefined);
-          runInAction(() => {
-            serverStore.serverModels.set(server.id, models);
-          });
-          const notYetAdded = serverStore.getModelsNotYetAdded(server.id);
-          setAvailableModels(models);
-          if (notYetAdded.length === 1) {
-            setSelectedModelId(notYetAdded[0].id);
-          }
-          setProbeResult({ok: true});
-        } catch (error: any) {
-          setProbeResult({ok: false, error: error.message});
-        } finally {
-          setIsProbing(false);
+    const handleServerChipPress = useCallback(async (server: ServerConfig) => {
+      setSelectedServerId(server.id);
+      setServerName(server.name);
+      setUrl(server.url);
+      setIsProbing(true);
+      setProbeResult(null);
+      setAvailableModels([]);
+      setSelectedModelId(null);
+      setUrlError('');
+      try {
+        const key = await serverStore.getApiKey(server.id);
+        apiKeyRef.current = key || '';
+        setApiKey(key || '');
+        const models = await fetchModels(server.url, key || undefined);
+        runInAction(() => {
+          serverStore.serverModels.set(server.id, models);
+        });
+        const notYetAdded = serverStore.getModelsNotYetAdded(server.id);
+        setAvailableModels(models);
+        if (notYetAdded.length === 1) {
+          setSelectedModelId(notYetAdded[0].id);
         }
-      },
-      [],
-    );
+        setProbeResult({ok: true});
+      } catch (error: any) {
+        setProbeResult({ok: false, error: error.message});
+      } finally {
+        setIsProbing(false);
+      }
+    }, []);
 
     const handleDeselectChip = useCallback(() => {
       setSelectedServerId(null);
@@ -414,9 +418,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                     }
                     size={16}
                     color={
-                      probeResult.ok
-                        ? theme.colors.primary
-                        : theme.colors.error
+                      probeResult.ok ? theme.colors.primary : theme.colors.error
                     }
                   />
                   <Text

@@ -30,7 +30,11 @@ class ServerStore {
 
     makePersistable(this, {
       name: 'ServerStore',
-      properties: ['servers', 'privacyNoticeAcknowledged', 'userSelectedModels'],
+      properties: [
+        'servers',
+        'privacyNoticeAcknowledged',
+        'userSelectedModels',
+      ],
       storage: AsyncStorage,
     }).then(() => {
       // After hydration, fetch models for all servers
