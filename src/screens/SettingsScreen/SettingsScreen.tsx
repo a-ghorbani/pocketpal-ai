@@ -39,7 +39,7 @@ import {
   Divider,
   HFTokenSheet,
   InputSlider,
-  ServerConfigSheet,
+  ServerDetailsSheet,
 } from '../../components';
 
 import {useTheme} from '../../hooks';
@@ -85,10 +85,9 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
-  const [showServerConfigSheet, setShowServerConfigSheet] = useState(false);
-  const [editingServer, setEditingServer] = useState<
-    import('../../utils/types').ServerConfig | undefined
-  >(undefined);
+  const [serverDetailsSheetVisible, setServerDetailsSheetVisible] =
+    useState(false);
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
@@ -1053,58 +1052,26 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card.Content>
           </Card>
 
-          {/* Remote Servers */}
-          <Card elevation={0} style={styles.card}>
-            <Card.Title title={l10n.settings.remoteServers} />
-            <Card.Content>
-              <View style={styles.settingItemContainer}>
-                {serverStore.servers.length === 0 ? (
-                  <View style={styles.emptyServerContainer}>
-                    <Icon
-                      source="cloud-plus-outline"
-                      size={48}
-                      color={theme.colors.onSurfaceVariant}
-                    />
-                    <Text
-                      variant="bodyMedium"
-                      style={styles.emptyServerDescription}>
-                      {l10n.settings.remoteServersDescription}
-                    </Text>
-                    <Button
-                      testID="add-server-button"
-                      mode="outlined"
-                      onPress={() => {
-                        if (!serverStore.privacyNoticeAcknowledged) {
-                          Alert.alert(
-                            l10n.settings.remoteServers,
-                            l10n.settings.remotePrivacyNotice,
-                            [
-                              {text: l10n.common.cancel, style: 'cancel'},
-                              {
-                                text: l10n.common.ok,
-                                onPress: () => {
-                                  serverStore.acknowledgePrivacyNotice();
-                                  setEditingServer(undefined);
-                                  setShowServerConfigSheet(true);
-                                },
-                              },
-                            ],
-                          );
-                        } else {
-                          setEditingServer(undefined);
-                          setShowServerConfigSheet(true);
-                        }
-                      }}
-                      icon="plus">
-                      {l10n.settings.addServer}
-                    </Button>
-                  </View>
-                ) : (
-                  <>
-                    {serverStore.servers.map((server, index) => (
+          {/* Connected Servers -- only shown when servers exist */}
+          {serverStore.servers.length > 0 && (
+            <Card elevation={0} style={styles.card}>
+              <Card.Title title={l10n.settings.connectedServers} />
+              <Card.Content>
+                <View style={styles.settingItemContainer}>
+                  {serverStore.servers.map((server, index) => {
+                    const modelCount =
+                      serverStore.getUserSelectedModelsForServer(server.id)
+                        .length;
+                    return (
                       <React.Fragment key={server.id}>
                         {index > 0 && <Divider style={styles.divider} />}
-                        <View style={styles.switchContainer}>
+                        <TouchableOpacity
+                          testID={`server-row-${server.id}`}
+                          onPress={() => {
+                            setSelectedServerId(server.id);
+                            setServerDetailsSheetVisible(true);
+                          }}
+                          style={styles.connectedServerRow}>
                           <View style={styles.textContainer}>
                             <Text
                               variant="titleMedium"
@@ -1113,80 +1080,25 @@ export const SettingsScreen: React.FC = observer(() => {
                             </Text>
                             <Text
                               variant="labelSmall"
-                              style={styles.textDescription}
-                              numberOfLines={1}>
-                              {server.url}
+                              style={styles.textDescription}>
+                              {t(l10n.settings.modelsCount, {
+                                count: String(modelCount),
+                              })}
                             </Text>
                           </View>
-                          <View style={styles.serverActionsRow}>
-                            <Switch
-                              testID={`server-active-switch-${server.id}`}
-                              value={server.isActive}
-                              onValueChange={value =>
-                                serverStore.updateServer(server.id, {
-                                  isActive: value,
-                                })
-                              }
-                            />
-                            <TouchableOpacity
-                              testID={`server-edit-${server.id}`}
-                              onPress={() => {
-                                setEditingServer(server);
-                                setShowServerConfigSheet(true);
-                              }}
-                              style={styles.serverActionButton}>
-                              <Icon
-                                source="pencil-outline"
-                                size={20}
-                                color={theme.colors.primary}
-                              />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              testID={`server-delete-${server.id}`}
-                              onPress={() => {
-                                Alert.alert(
-                                  l10n.settings.deleteServerTitle,
-                                  t(l10n.settings.deleteServerMessage, {
-                                    serverName: server.name,
-                                  }),
-                                  [
-                                    {text: l10n.common.cancel, style: 'cancel'},
-                                    {
-                                      text: l10n.common.delete,
-                                      style: 'destructive',
-                                      onPress: () =>
-                                        serverStore.removeServer(server.id),
-                                    },
-                                  ],
-                                );
-                              }}
-                              style={styles.serverActionButton}>
-                              <Icon
-                                source="delete-outline"
-                                size={20}
-                                color={theme.colors.error}
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
+                          <Icon
+                            source="chevron-right"
+                            size={20}
+                            color={theme.colors.onSurfaceVariant}
+                          />
+                        </TouchableOpacity>
                       </React.Fragment>
-                    ))}
-                    <Divider style={styles.divider} />
-                    <Button
-                      testID="add-server-button"
-                      mode="text"
-                      onPress={() => {
-                        setEditingServer(undefined);
-                        setShowServerConfigSheet(true);
-                      }}
-                      icon="plus">
-                      {l10n.settings.addServer}
-                    </Button>
-                  </>
-                )}
-              </View>
-            </Card.Content>
-          </Card>
+                    );
+                  })}
+                </View>
+              </Card.Content>
+            </Card>
+          )}
 
           {/* Cache & Storage Settings - iOS only (for Shortcuts) */}
           {Platform.OS === 'ios' && (
@@ -1334,13 +1246,13 @@ export const SettingsScreen: React.FC = observer(() => {
         onDismiss={() => setShowHfTokenDialog(false)}
         onSave={() => setShowHfTokenDialog(false)}
       />
-      <ServerConfigSheet
-        isVisible={showServerConfigSheet}
+      <ServerDetailsSheet
+        isVisible={serverDetailsSheetVisible}
         onDismiss={() => {
-          setShowServerConfigSheet(false);
-          setEditingServer(undefined);
+          setServerDetailsSheetVisible(false);
+          setSelectedServerId(null);
         }}
-        server={editingServer}
+        serverId={selectedServerId}
       />
     </SafeAreaView>
   );

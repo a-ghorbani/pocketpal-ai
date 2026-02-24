@@ -104,21 +104,10 @@ export const createStyles = (theme: Theme) =>
     segmentedButtons: {
       marginVertical: 8,
     },
-    emptyServerContainer: {
-      alignItems: 'center',
-      paddingVertical: 16,
-    },
-    emptyServerDescription: {
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'center',
-      marginTop: 8,
-      marginBottom: 16,
-    },
-    serverActionsRow: {
+    connectedServerRow: {
       flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-    },
-    serverActionButton: {
-      marginLeft: 8,
+      paddingVertical: 8,
     },
   });
