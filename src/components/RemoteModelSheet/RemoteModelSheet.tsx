@@ -287,6 +287,10 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       : null;
 
     const showPostConnection = probeResult?.ok === true;
+    // Show API key + server name fields when probe attempted (success OR auth failure)
+    // This lets users enter an API key after a 401, then retry
+    const showServerFields =
+      probeResult !== null && !isProbing && !selectedServerId;
 
     return (
       <Sheet
@@ -452,14 +456,15 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             </>
           )}
 
-          {/* Post-connection fields */}
-          {showPostConnection && !selectedServerId && (
+          {/* Server name + API key — shown after probe attempt (success OR failure)
+              so user can enter API key after 401 and retry */}
+          {showServerFields && (
             <>
               <View style={styles.inputSpacing}>
                 <TextInput
                   testID="remote-name-input"
                   label={l10n.settings.serverName}
-                  defaultValue={serverName}
+                  value={serverName}
                   onChangeText={setServerName}
                   autoCapitalize="none"
                 />
@@ -469,7 +474,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 <TextInput
                   testID="remote-apikey-input"
                   label={l10n.settings.apiKey}
-                  defaultValue={apiKey}
+                  value={apiKey}
                   onChangeText={setApiKey}
                   placeholder={l10n.settings.apiKeyPlaceholder}
                   autoCapitalize="none"
