@@ -249,7 +249,12 @@ export async function streamChatCompletion(
         clearTimeout(idleTimer);
       }
       idleTimer = setTimeout(() => {
-        xhr.abort();
+        if (!settled) {
+          settled = true;
+          cleanup();
+          xhr.abort();
+          reject(new Error('Idle timeout: no data received'));
+        }
       }, IDLE_TIMEOUT_MS);
     };
 

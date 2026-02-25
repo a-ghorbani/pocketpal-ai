@@ -133,6 +133,8 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
         });
         if (apiKey.trim()) {
           await serverStore.setApiKey(serverId, apiKey.trim());
+        } else {
+          await serverStore.removeApiKey(serverId);
         }
         onDismiss();
       } finally {

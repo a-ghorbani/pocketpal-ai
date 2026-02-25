@@ -730,14 +730,25 @@ class ModelStore {
       console.log('Active → Inactive: No auto-release action');
     } else if (this.appState === 'inactive' && nextAppState === 'background') {
       // inactive → background: release if enabled
-      if (this.isAutoReleaseEnabled && this.activeModelId) {
+      // Skip for remote models — no native context to release, and
+      // releaseContext() would clear the engine with no reload path.
+      if (
+        this.isAutoReleaseEnabled &&
+        this.activeModelId &&
+        this.activeModel?.origin !== ModelOrigin.REMOTE
+      ) {
         console.log('Inactive → Background: Auto-releasing context');
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
       }
     } else if (this.appState === 'active' && nextAppState === 'background') {
       // active → background: release if enabled (direct transition)
-      if (this.isAutoReleaseEnabled && this.activeModelId) {
+      // Skip for remote models — same reason as above.
+      if (
+        this.isAutoReleaseEnabled &&
+        this.activeModelId &&
+        this.activeModel?.origin !== ModelOrigin.REMOTE
+      ) {
         console.log('Active → Background: Auto-releasing context');
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
