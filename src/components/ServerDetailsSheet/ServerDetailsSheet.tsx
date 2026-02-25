@@ -144,25 +144,31 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       if (!serverId || !server) {
         return;
       }
+      const serverName = server.name;
       const modelCount = userModels.length;
-      Alert.alert(
-        l10n.settings.removeServer,
-        t(l10n.settings.removeServerMessage, {
-          serverName: server.name,
-          count: String(modelCount),
-        }),
-        [
-          {text: l10n.common.cancel, style: 'cancel'},
-          {
-            text: l10n.common.delete,
-            style: 'destructive',
-            onPress: () => {
-              serverStore.removeServer(serverId);
-              onDismiss();
+      // Dismiss the sheet first so the native alert can present on the main
+      // window — @gorhom/bottom-sheet renders on a separate overlay that can
+      // block native alerts on iOS.
+      onDismiss();
+      setTimeout(() => {
+        Alert.alert(
+          l10n.settings.removeServer,
+          t(l10n.settings.removeServerMessage, {
+            serverName,
+            count: String(modelCount),
+          }),
+          [
+            {text: l10n.common.cancel, style: 'cancel'},
+            {
+              text: l10n.common.delete,
+              style: 'destructive',
+              onPress: () => {
+                serverStore.removeServer(serverId);
+              },
             },
-          },
-        ],
-      );
+          ],
+        );
+      }, 300);
     }, [serverId, server, userModels.length, l10n, onDismiss]);
 
     if (!server) {

@@ -146,6 +146,7 @@ describe('ServerDetailsSheet', () => {
   });
 
   it('shows confirmation dialog when remove server is pressed', () => {
+    jest.useFakeTimers();
     jest.spyOn(Alert, 'alert').mockImplementation();
 
     const {getByTestId} = render(
@@ -157,6 +158,7 @@ describe('ServerDetailsSheet', () => {
     );
 
     fireEvent.press(getByTestId('remove-server-button'));
+    jest.advanceTimersByTime(300);
 
     expect(Alert.alert).toHaveBeenCalledWith(
       expect.any(String),
@@ -166,9 +168,11 @@ describe('ServerDetailsSheet', () => {
         expect.objectContaining({style: 'destructive'}),
       ]),
     );
+    jest.useRealTimers();
   });
 
   it('calls removeServer and dismisses on delete confirmation', () => {
+    jest.useFakeTimers();
     const mockDismiss = jest.fn();
     (Alert.alert as jest.Mock) = jest
       .fn()
@@ -188,9 +192,12 @@ describe('ServerDetailsSheet', () => {
     );
 
     fireEvent.press(getByTestId('remove-server-button'));
-
-    expect(serverStore.removeServer).toHaveBeenCalledWith('srv-1');
+    // onDismiss is called immediately (before the alert)
     expect(mockDismiss).toHaveBeenCalled();
+
+    jest.advanceTimersByTime(300);
+    expect(serverStore.removeServer).toHaveBeenCalledWith('srv-1');
+    jest.useRealTimers();
   });
 
   it('calls updateServer and setApiKey on save', async () => {
