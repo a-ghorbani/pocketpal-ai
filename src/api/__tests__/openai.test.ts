@@ -1,4 +1,19 @@
-import {fetchModels, testConnection, streamChatCompletion} from '../openai';
+import {
+  fetchModels,
+  fetchModelsWithHeaders,
+  detectServerType,
+  testConnection,
+  streamChatCompletion,
+} from '../openai';
+
+/** Build a minimal Headers-like object for fetch mocks. */
+function mockHeaders(entries: Record<string, string> = {}) {
+  const map = new Map(Object.entries(entries));
+  return {
+    forEach: (cb: (v: string, k: string) => void) =>
+      map.forEach((v, k) => cb(v, k)),
+  };
+}
 
 describe('fetchModels', () => {
   beforeEach(() => {
@@ -13,6 +28,7 @@ describe('fetchModels', () => {
 
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
+      headers: mockHeaders(),
       json: () => Promise.resolve({data: mockModels}),
     });
 
@@ -31,6 +47,7 @@ describe('fetchModels', () => {
   it('includes Authorization header when apiKey is provided', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
+      headers: mockHeaders(),
       json: () => Promise.resolve({data: []}),
     });
 
@@ -74,6 +91,7 @@ describe('fetchModels', () => {
   it('handles empty data field', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
+      headers: mockHeaders(),
       json: () => Promise.resolve({}),
     });
 
@@ -84,6 +102,7 @@ describe('fetchModels', () => {
   it('normalizes trailing slashes in server URL', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
+      headers: mockHeaders(),
       json: () => Promise.resolve({data: []}),
     });
 
@@ -93,6 +112,101 @@ describe('fetchModels', () => {
       'http://localhost:1234/v1/models',
       expect.any(Object),
     );
+  });
+});
+
+describe('fetchModelsWithHeaders', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('returns models and response headers', async () => {
+    const mockModels = [{id: 'model-1', object: 'model', owned_by: 'system'}];
+
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: mockHeaders({server: 'llama.cpp'}),
+      json: () => Promise.resolve({data: mockModels}),
+    });
+
+    const result = await fetchModelsWithHeaders('http://localhost:8080');
+
+    expect(result.models).toEqual(mockModels);
+    expect(result.headers.server).toBe('llama.cpp');
+  });
+});
+
+describe('detectServerType', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('detects llama.cpp from Server header', async () => {
+    const result = await detectServerType(
+      'http://localhost:8080',
+      [{id: 'model-1', object: 'model', owned_by: 'system'}],
+      {server: 'llama.cpp'},
+    );
+    expect(result).toBe('llama.cpp');
+  });
+
+  it('detects LM Studio from owned_by field', async () => {
+    const result = await detectServerType(
+      'http://localhost:1234',
+      [{id: 'model-1', object: 'model', owned_by: 'organization_owner'}],
+      {},
+    );
+    expect(result).toBe('LM Studio');
+  });
+
+  it('detects Ollama from GET / response', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      text: () => Promise.resolve('Ollama is running'),
+    });
+
+    const result = await detectServerType(
+      'http://localhost:11434',
+      [{id: 'model-1', object: 'model', owned_by: 'ollama'}],
+      {},
+    );
+    expect(result).toBe('Ollama');
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:11434',
+      expect.objectContaining({method: 'GET'}),
+    );
+  });
+
+  it('returns empty string for unknown server', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      text: () => Promise.resolve('<html>Not Ollama</html>'),
+    });
+
+    const result = await detectServerType(
+      'http://localhost:9999',
+      [{id: 'model-1', object: 'model', owned_by: 'custom'}],
+      {},
+    );
+    expect(result).toBe('');
+  });
+
+  it('returns empty string when Ollama probe fails', async () => {
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await detectServerType(
+      'http://localhost:9999',
+      [{id: 'model-1', object: 'model', owned_by: 'custom'}],
+      {},
+    );
+    expect(result).toBe('');
+  });
+
+  it('prefers llama.cpp header over LM Studio owned_by', async () => {
+    const result = await detectServerType(
+      'http://localhost:8080',
+      [{id: 'model-1', object: 'model', owned_by: 'organization_owner'}],
+      {server: 'llama.cpp'},
+    );
+    expect(result).toBe('llama.cpp');
   });
 });
 
@@ -110,6 +224,7 @@ describe('testConnection', () => {
 
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
+      headers: mockHeaders(),
       json: () => Promise.resolve({data: mockModels}),
     });
 

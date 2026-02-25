@@ -26,7 +26,12 @@ import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
 import {ServerConfig} from '../../utils/types';
-import {RemoteModelInfo, testConnection, fetchModels} from '../../api/openai';
+import {
+  RemoteModelInfo,
+  fetchModels,
+  fetchModelsWithHeaders,
+  detectServerType,
+} from '../../api/openai';
 import {t} from '../../locales';
 
 import {createStyles} from './styles';
@@ -36,28 +41,6 @@ interface RemoteModelSheetProps {
   isVisible: boolean;
   onDismiss: () => void;
   onModelAdded?: () => void;
-}
-
-/**
- * Smart server name from URL: detect common ports.
- */
-function guessServerName(urlStr: string): string {
-  try {
-    const parsed = new URL(urlStr);
-    const port = parsed.port;
-    if (port === '1234') {
-      return 'LM Studio';
-    }
-    if (port === '11434') {
-      return 'Ollama';
-    }
-    if (port === '8080') {
-      return 'llama.cpp';
-    }
-    return parsed.hostname;
-  } catch {
-    return '';
-  }
 }
 
 export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
@@ -140,16 +123,29 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setProbeResult(null);
         try {
           const key = apiKeyRef.current.trim() || undefined;
-          const result = await testConnection(trimmedUrl, key);
-          setProbeResult({ok: result.ok, error: result.error});
-          if (result.ok) {
-            setServerName(prev => prev || guessServerName(trimmedUrl));
-            const models = await fetchModels(trimmedUrl, key);
-            setAvailableModels(models);
-            if (models.length === 1) {
-              setSelectedModelId(models[0].id);
-            }
+          const {models, headers} = await fetchModelsWithHeaders(
+            trimmedUrl,
+            key,
+          );
+          setProbeResult({ok: true});
+          setAvailableModels(models);
+          if (models.length === 1) {
+            setSelectedModelId(models[0].id);
           }
+          const detected = await detectServerType(trimmedUrl, models, headers);
+          setServerName(prev => {
+            if (prev) {
+              return prev;
+            }
+            if (detected) {
+              return detected;
+            }
+            try {
+              return new URL(trimmedUrl).hostname;
+            } catch {
+              return '';
+            }
+          });
         } catch (error: any) {
           setProbeResult({ok: false, error: error.message});
         } finally {

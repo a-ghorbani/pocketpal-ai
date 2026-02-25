@@ -66,14 +66,20 @@ function normalizeUrl(serverUrl: string): string {
   return serverUrl.replace(/\/+$/, '');
 }
 
+/** Result from fetchModelsWithHeaders: models + raw response headers. */
+export interface FetchModelsResult {
+  models: RemoteModelInfo[];
+  headers: Record<string, string>;
+}
+
 /**
- * Fetch available models from an OpenAI-compatible server.
+ * Fetch available models and response headers from an OpenAI-compatible server.
  * GET /v1/models
  */
-export async function fetchModels(
+export async function fetchModelsWithHeaders(
   serverUrl: string,
   apiKey?: string,
-): Promise<RemoteModelInfo[]> {
+): Promise<FetchModelsResult> {
   const url = `${normalizeUrl(serverUrl)}/v1/models`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT_MS);
@@ -94,8 +100,16 @@ export async function fetchModels(
       );
     }
 
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value: string, key: string) => {
+      responseHeaders[key] = value;
+    });
+
     const data = await response.json();
-    return (data.data || []) as RemoteModelInfo[];
+    return {
+      models: (data.data || []) as RemoteModelInfo[],
+      headers: responseHeaders,
+    };
   } catch (error: any) {
     if (error.name === 'AbortError') {
       throw new Error('Connection timed out');
@@ -104,6 +118,18 @@ export async function fetchModels(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * Fetch available models from an OpenAI-compatible server.
+ * GET /v1/models
+ */
+export async function fetchModels(
+  serverUrl: string,
+  apiKey?: string,
+): Promise<RemoteModelInfo[]> {
+  const {models} = await fetchModelsWithHeaders(serverUrl, apiKey);
+  return models;
 }
 
 /**
@@ -120,6 +146,55 @@ export async function testConnection(
   } catch (error: any) {
     return {ok: false, modelCount: 0, error: error.message || 'Unknown error'};
   }
+}
+
+const DETECT_TIMEOUT_MS = 5000;
+
+/**
+ * Detect server type from response headers and model metadata.
+ * Checks (cheapest first):
+ * 1. Server header === 'llama.cpp'
+ * 2. Any model owned_by === 'organization_owner' → LM Studio
+ * 3. GET / body === 'Ollama is running' → Ollama
+ * 4. Unknown → ''
+ */
+export async function detectServerType(
+  serverUrl: string,
+  models: RemoteModelInfo[],
+  headers: Record<string, string>,
+): Promise<string> {
+  // 1. llama.cpp sets a Server header
+  const serverHeader = headers.server || headers.Server || '';
+  if (serverHeader === 'llama.cpp') {
+    return 'llama.cpp';
+  }
+
+  // 2. LM Studio sets owned_by to 'organization_owner'
+  if (models.some(m => m.owned_by === 'organization_owner')) {
+    return 'LM Studio';
+  }
+
+  // 3. Ollama responds with 'Ollama is running' at GET /
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), DETECT_TIMEOUT_MS);
+    try {
+      const response = await fetch(normalizeUrl(serverUrl), {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      const body = await response.text();
+      if (body.trim() === 'Ollama is running') {
+        return 'Ollama';
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch {
+    // Probe failed — not Ollama
+  }
+
+  return '';
 }
 
 /**

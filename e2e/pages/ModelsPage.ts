@@ -9,6 +9,7 @@ import {BasePage, ChainableElement} from './BasePage';
 import {Selectors} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
+declare const driver: WebdriverIO.Browser;
 
 export class ModelsPage extends BasePage {
   /**
@@ -64,8 +65,22 @@ export class ModelsPage extends BasePage {
     // Wait for expand animation + actions to render
     await browser.pause(1000);
     // Verify expansion by checking for any FAB action
-    const hfFab = browser.$(Selectors.models.hfFab);
-    await hfFab.waitForDisplayed({timeout: 5000});
+    let expanded = await this.isElementDisplayed(Selectors.models.hfFab, 3000);
+    if (!expanded) {
+      // FAB.Group's testID targets the container, not the tappable icon.
+      // When the selector tap misses, fall back to a position-based tap
+      // at the FAB's known screen location (bottom-right corner).
+      const {width, height} = await driver.getWindowSize();
+      await driver
+        .action('pointer', {parameters: {pointerType: 'touch'}})
+        .move({x: Math.round(width * 0.85), y: Math.round(height * 0.93)})
+        .down()
+        .up()
+        .perform();
+      await browser.pause(1000);
+      const hfFab = browser.$(Selectors.models.hfFab);
+      await hfFab.waitForDisplayed({timeout: 5000});
+    }
   }
 
   /**

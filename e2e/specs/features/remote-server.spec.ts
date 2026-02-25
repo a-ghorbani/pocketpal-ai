@@ -109,9 +109,27 @@ describe('Remote Server Features', () => {
         .catch(() => false);
 
       if (apiKeyVisible) {
-        await apiKeyInput.clearValue();
-        await apiKeyInput.setValue(SERVER_CONFIG.apiKey);
-        console.log('Entered API key');
+        // Toggle secure text entry OFF so keyboard typing works reliably
+        const eyeToggle = browser.$('~remote-apikey-toggle');
+        const eyeVisible = await eyeToggle
+          .waitForDisplayed({timeout: 3000})
+          .then(() => true)
+          .catch(() => false);
+        if (eyeVisible) {
+          await eyeToggle.click();
+          await browser.pause(300);
+        }
+
+        // Tap to focus, then type via keyboard simulation.
+        // This triggers React's onChangeText (unlike setValue which
+        // only sets the native value without firing JS callbacks).
+        await apiKeyInput.click();
+        await browser.pause(100);
+        for (const char of SERVER_CONFIG.apiKey!) {
+          await browser.keys([char]);
+        }
+        console.log('Typed API key via keyboard simulation');
+        await browser.pause(500);
 
         // Tap the name input to blur API key → triggers re-probe
         const nameInput = browser.$(Selectors.remoteModel.nameInput);
@@ -123,7 +141,7 @@ describe('Remote Server Features', () => {
           await modelsPage.hideKeyboard();
         }
         // Wait for re-probe (800ms debounce + network time)
-        await browser.pause(4000);
+        await browser.pause(5000);
       }
     }
 
@@ -305,22 +323,24 @@ describe('Remote Server Features', () => {
     // Tap "Remove Server" button
     const removeButton = browser.$(Selectors.serverDetails.removeButton);
     const removeVisible = await removeButton
-      .waitForDisplayed({timeout: 5000})
+      .waitForDisplayed({timeout: 8000})
       .then(() => true)
       .catch(() => false);
 
     if (!removeVisible) {
       // May need to scroll down in the sheet
       await Gestures.swipeUpInSheet();
-      await browser.pause(300);
+      await browser.pause(500);
     }
     await removeButton.waitForDisplayed({timeout: 5000});
     await removeButton.click();
-    await browser.pause(500);
+
+    // The sheet dismisses first, then a native alert appears (300ms delay)
+    await browser.pause(1500);
 
     // Confirm deletion in the alert dialog
     const deleteButton = browser.$(Selectors.alert.button('Delete'));
-    await deleteButton.waitForDisplayed({timeout: 5000});
+    await deleteButton.waitForDisplayed({timeout: 8000});
     await deleteButton.click();
     await browser.pause(1000);
 

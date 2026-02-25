@@ -29,8 +29,11 @@ jest.mock('../../Sheet', () => {
 
 // Mock the openai API module
 jest.mock('../../../api/openai', () => ({
-  testConnection: jest.fn(),
   fetchModels: jest.fn(),
+  fetchModelsWithHeaders: jest
+    .fn()
+    .mockResolvedValue({models: [], headers: {}}),
+  detectServerType: jest.fn().mockResolvedValue(''),
 }));
 
 // Mock lodash debounce to execute immediately
