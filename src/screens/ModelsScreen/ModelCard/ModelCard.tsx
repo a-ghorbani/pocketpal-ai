@@ -14,6 +14,7 @@ import {useNavigation} from '@react-navigation/native';
 import {DrawerNavigationProp} from '@react-navigation/drawer';
 import {
   Card,
+  Icon,
   ProgressBar,
   Button,
   IconButton,
@@ -31,7 +32,8 @@ import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
 import {createStyles} from './styles';
 
-import {uiStore, modelStore} from '../../../store';
+import {uiStore, modelStore, serverStore} from '../../../store';
+import {t} from '../../../locales';
 
 import {
   Model,
@@ -66,6 +68,7 @@ interface ModelCardProps {
   activeModelId?: string;
   onFocus?: () => void;
   onOpenSettings?: () => void;
+  onOpenServerDetails?: (serverId: string) => void;
 }
 
 // Enable LayoutAnimation on Android
@@ -77,7 +80,7 @@ if (
 }
 
 export const ModelCard: React.FC<ModelCardProps> = observer(
-  ({model, activeModelId, onOpenSettings}) => {
+  ({model, activeModelId, onOpenSettings, onOpenServerDetails}) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const styles = createStyles(theme);
@@ -121,6 +124,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const isDownloaded = model.isDownloaded;
     const isDownloading = modelStore.isDownloading(model.id);
     const isHfModel = model.origin === ModelOrigin.HF;
+    const isRemoteModel = model.origin === ModelOrigin.REMOTE;
 
     // Check projection model status for downloaded vision models
     const projectionModelStatus = modelStore.getProjectionModelStatus(model);
@@ -130,16 +134,16 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       modelStore.getModelVisionPreference(model) && // Only show warning when vision is enabled
       projectionModelStatus.state === 'missing';
 
-    // Check integrity when model is downloaded
+    // Check integrity when model is downloaded (skip remote models — no local file)
     useEffect(() => {
-      if (isDownloaded) {
+      if (isDownloaded && !isRemoteModel) {
         checkModelFileIntegrity(model).then(({errorMessage}) => {
           setIntegrityError(errorMessage);
         });
       } else {
         setIntegrityError(null);
       }
-    }, [isDownloaded, model]);
+    }, [isDownloaded, isRemoteModel, model]);
 
     const handleDelete = useCallback(() => {
       if (model.isDownloaded) {
@@ -329,7 +333,55 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       setIsExpanded(!isExpanded);
     }, [isExpanded]);
 
+    const handleRemoteDelete = useCallback(() => {
+      if (!model.serverId || !model.remoteModelId) {
+        return;
+      }
+      const sName = model.serverName || 'Remote';
+      Alert.alert(
+        l10n.common.delete,
+        t(l10n.settings.removeRemoteModel, {
+          modelName: model.name,
+          serverName: sName,
+        }),
+        [
+          {text: l10n.common.cancel, style: 'cancel'},
+          {
+            text: l10n.common.delete,
+            style: 'destructive',
+            onPress: () => {
+              if (isActiveModel) {
+                modelStore.manualReleaseContext();
+              }
+              serverStore.removeUserSelectedModel(
+                model.serverId!,
+                model.remoteModelId!,
+              );
+              serverStore.removeServerIfOrphaned(model.serverId!);
+            },
+          },
+        ],
+      );
+    }, [model, l10n, isActiveModel]);
+
     const renderActionButtons = () => {
+      // Remote models: load/offload + delete
+      if (isRemoteModel) {
+        return (
+          <View style={styles.actionButtonsRow}>
+            {renderModelLoadButton()}
+            <TouchableOpacity
+              testID="delete-button"
+              onPress={handleRemoteDelete}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.common.delete}>
+              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
       if (isDownloading) {
         // Downloading state - show cancel button
         return (
@@ -517,7 +569,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           modelStore.manualReleaseContext();
         } else {
           try {
-            await modelStore.initContext(model);
+            await modelStore.selectModel(model);
             if (uiStore.autoNavigatetoChat) {
               navigation.navigate('Chat');
             }
@@ -588,16 +640,36 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 </Text>
               </View>
               <View style={styles.headerRight}>
-                <View style={styles.sizeInfo}>
-                  <CpuChipIcon
-                    width={10}
-                    height={10}
-                    stroke={theme.colors.onSurfaceVariant}
-                  />
-                  <Text style={styles.sizeInfoText}>
-                    {getModelSizeString(model, isActiveModel, l10n)}
-                  </Text>
-                </View>
+                {isRemoteModel ? (
+                  <TouchableOpacity
+                    testID="server-link"
+                    onPress={() => {
+                      if (model.serverId && onOpenServerDetails) {
+                        onOpenServerDetails(model.serverId);
+                      }
+                    }}
+                    style={styles.serverLink}>
+                    <Icon
+                      source="cloud-outline"
+                      size={12}
+                      color={theme.colors.primary}
+                    />
+                    <Text style={styles.serverLinkText}>
+                      {model.serverName || 'Remote'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.sizeInfo}>
+                    <CpuChipIcon
+                      width={10}
+                      height={10}
+                      stroke={theme.colors.onSurfaceVariant}
+                    />
+                    <Text style={styles.sizeInfoText}>
+                      {getModelSizeString(model, isActiveModel, l10n)}
+                    </Text>
+                  </View>
+                )}
                 {getStatusDot()}
               </View>
             </View>
@@ -606,7 +678,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           {/* Content */}
           <View style={styles.cardContent}>
             {/* Storage Error Display */}
-            {!storageOk && !isDownloaded && (
+            {!isRemoteModel && !storageOk && !isDownloaded && (
               <HelperText
                 testID="storage-error-text"
                 type="error"
@@ -618,26 +690,28 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             )}
 
             {/* Display warnings */}
-            {(shortMemoryWarning || multimodalWarning) && isDownloaded && (
-              <TouchableRipple
-                testID="memory-warning-button"
-                onPress={handleWarningPress}
-                style={styles.warningContainer}>
-                <View style={styles.warningContent}>
-                  <IconButton
-                    icon="alert-circle-outline"
-                    iconColor={theme.colors.error}
-                    size={20}
-                    style={styles.warningIcon}
-                  />
-                  <Text style={styles.warningText}>
-                    {shortMemoryWarning || multimodalWarning}
-                  </Text>
-                </View>
-              </TouchableRipple>
-            )}
+            {!isRemoteModel &&
+              (shortMemoryWarning || multimodalWarning) &&
+              isDownloaded && (
+                <TouchableRipple
+                  testID="memory-warning-button"
+                  onPress={handleWarningPress}
+                  style={styles.warningContainer}>
+                  <View style={styles.warningContent}>
+                    <IconButton
+                      icon="alert-circle-outline"
+                      iconColor={theme.colors.error}
+                      size={20}
+                      style={styles.warningIcon}
+                    />
+                    <Text style={styles.warningText}>
+                      {shortMemoryWarning || multimodalWarning}
+                    </Text>
+                  </View>
+                </TouchableRipple>
+              )}
 
-            {integrityError && (
+            {!isRemoteModel && integrityError && (
               <TouchableRipple
                 testID="integrity-warning-button"
                 style={styles.warningContainer}>

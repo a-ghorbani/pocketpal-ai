@@ -21,9 +21,11 @@ import {
   ErrorSnackbar,
   ModelSettingsSheet,
   ModelErrorReportSheet,
+  RemoteModelSheet,
+  ServerDetailsSheet,
 } from '../../components';
 
-import {uiStore, modelStore, hfStore, UIStore} from '../../store';
+import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
@@ -44,6 +46,12 @@ export const ModelsScreen: React.FC = observer(() => {
   // Model error report sheet state
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
+
+  // Remote model / server details sheets
+  const [remoteModelSheetVisible, setRemoteModelSheetVisible] = useState(false);
+  const [serverDetailsSheetVisible, setServerDetailsSheetVisible] =
+    useState(false);
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
 
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -110,6 +118,30 @@ export const ModelsScreen: React.FC = observer(() => {
   const handleCloseSettings = () => {
     setSettingsVisible(false);
     setSelectedModel(undefined);
+  };
+
+  const handleAddRemoteModel = () => {
+    setRemoteModelSheetVisible(true);
+  };
+
+  const handleManageServers = () => {
+    const servers = serverStore.servers;
+    if (servers.length === 1) {
+      handleOpenServerDetails(servers[0].id);
+    } else if (servers.length > 1) {
+      Alert.alert(l10n.settings.manageServers, undefined, [
+        ...servers.map(server => ({
+          text: server.name,
+          onPress: () => handleOpenServerDetails(server.id),
+        })),
+        {text: l10n.common.cancel, style: 'cancel' as const},
+      ]);
+    }
+  };
+
+  const handleOpenServerDetails = (serverId: string) => {
+    setSelectedServerId(serverId);
+    setServerDetailsSheetVisible(true);
   };
 
   const handleDismissError = () => {
@@ -322,6 +354,7 @@ export const ModelsScreen: React.FC = observer(() => {
               model={subItem}
               activeModelId={activeModelId}
               onOpenSettings={() => handleOpenSettings(subItem)}
+              onOpenServerDetails={handleOpenServerDetails}
             />
           )}
         />
@@ -392,6 +425,9 @@ export const ModelsScreen: React.FC = observer(() => {
       <FABGroup
         onAddHFModel={() => setHFSearchVisible(true)}
         onAddLocalModel={handleAddLocalModel}
+        onAddRemoteModel={handleAddRemoteModel}
+        onManageServers={handleManageServers}
+        hasServers={serverStore.servers.length > 0}
       />
       <ModelSettingsSheet
         isVisible={settingsVisible}
@@ -402,6 +438,18 @@ export const ModelsScreen: React.FC = observer(() => {
         isVisible={isErrorReportVisible}
         onClose={handleCloseErrorReport}
         error={errorToReport}
+      />
+      <RemoteModelSheet
+        isVisible={remoteModelSheetVisible}
+        onDismiss={() => setRemoteModelSheetVisible(false)}
+      />
+      <ServerDetailsSheet
+        isVisible={serverDetailsSheetVisible}
+        onDismiss={() => {
+          setServerDetailsSheetVisible(false);
+          setSelectedServerId(null);
+        }}
+        serverId={selectedServerId}
       />
     </View>
   );

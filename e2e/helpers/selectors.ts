@@ -192,12 +192,20 @@ export const Selectors = {
     get fabGroupClose(): string {
       return byAccessibilityLabel('Close menu');
     },
-    // FAB actions - use accessibilityLabel (react-native-paper uses label as accessibility label)
+    // FAB actions — react-native-paper FAB.Group renders actions as buttons
+    // with accessibilityLabel as the name; testID gets suffixed with
+    // "-container-outer-layer" so byTestId won't match the tappable element.
     get hfFab(): string {
       return byAccessibilityLabel('Add from Hugging Face');
     },
     get localFab(): string {
       return byAccessibilityLabel('Add Local Model');
+    },
+    get remoteFab(): string {
+      return byAccessibilityLabel('Add Remote Model');
+    },
+    get manageServersFab(): string {
+      return byAccessibilityLabel('Manage Servers');
     },
     get flatList(): string {
       return byTestId('flat-list');
@@ -457,6 +465,38 @@ export const Selectors = {
     },
     get clearAllButton(): string {
       return byTestId('clear-all-button');
+    },
+  },
+
+  // Remote model sheet (add model from server)
+  remoteModel: {
+    get urlInput(): string {
+      return byTestId('remote-url-input');
+    },
+    get nameInput(): string {
+      return byTestId('remote-name-input');
+    },
+    get apiKeyInput(): string {
+      return byTestId('remote-apikey-input');
+    },
+    get addModelButton(): string {
+      return byTestId('add-model-button');
+    },
+  },
+
+  // Server details sheet (edit/delete server)
+  serverDetails: {
+    get urlInput(): string {
+      return byTestId('server-details-url-input');
+    },
+    get apiKeyInput(): string {
+      return byTestId('server-details-apikey-input');
+    },
+    get removeButton(): string {
+      return byTestId('remove-server-button');
+    },
+    get saveButton(): string {
+      return byTestId('save-server-button');
     },
   },
 };
