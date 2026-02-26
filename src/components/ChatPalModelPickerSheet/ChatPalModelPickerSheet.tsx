@@ -373,7 +373,12 @@ export const ChatPalModelPickerSheet = observer(
         }}
         // Add these props to better handle gestures
         enableContentPanningGesture={false}
-        enableHandlePanningGesture>
+        enableHandlePanningGesture
+        // Disable accessible so Appium/e2e tests can access child elements on iOS.
+        // Without this, BottomSheet sets accessible={true} which collapses all
+        // children from the accessibility tree. Same fix as Sheet.tsx.
+        // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
+        accessible={false}>
         <View style={styles.tabs}>
           {TABS.map((tab, index) => renderTab(tab.id, tab.label, index))}
         </View>

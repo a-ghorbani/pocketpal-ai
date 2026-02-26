@@ -511,7 +511,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           )}
 
           {/* Model Selection */}
-          {showPostConnection && availableModels.length > 1 && (
+          {showPostConnection && availableModels.length >= 1 && (
             <View style={styles.modelListSection}>
               <Text style={styles.modelListLabel}>
                 {l10n.settings.selectModel}
