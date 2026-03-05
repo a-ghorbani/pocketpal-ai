@@ -24,6 +24,7 @@ jest.spyOn(chatSessionRepository, 'updateSessionCompletionSettings');
 jest.spyOn(chatSessionRepository, 'getGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'saveGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'setSessionActivePal');
+jest.spyOn(chatSessionRepository, 'toggleSessionPinned');
 
 describe('chatSessionStore', () => {
   const mockMessage = {
@@ -1952,6 +1953,205 @@ describe('chatSessionStore', () => {
 
         expect(chatSessionRepository.exportSessions).toHaveBeenCalledWith([]);
       });
+    });
+  });
+
+  describe('pinned sessions', () => {
+    describe('togglePinSession', () => {
+      it('pins an unpinned session', async () => {
+        const session = {
+          id: 'session1',
+          title: 'Test Session',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal' as const,
+          pinned: false,
+        };
+
+        chatSessionStore.sessions = [session];
+
+        (
+          chatSessionRepository.toggleSessionPinned as jest.Mock
+        ).mockResolvedValue(true);
+
+        await chatSessionStore.togglePinSession('session1');
+
+        expect(
+          chatSessionRepository.toggleSessionPinned,
+        ).toHaveBeenCalledWith('session1');
+        expect(chatSessionStore.sessions[0].pinned).toBe(true);
+      });
+
+      it('unpins a pinned session', async () => {
+        const session = {
+          id: 'session1',
+          title: 'Test Session',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal' as const,
+          pinned: true,
+        };
+
+        chatSessionStore.sessions = [session];
+
+        (
+          chatSessionRepository.toggleSessionPinned as jest.Mock
+        ).mockResolvedValue(false);
+
+        await chatSessionStore.togglePinSession('session1');
+
+        expect(chatSessionStore.sessions[0].pinned).toBe(false);
+      });
+
+      it('handles errors gracefully', async () => {
+        chatSessionStore.sessions = [
+          {
+            id: 'session1',
+            title: 'Test Session',
+            date: new Date().toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: false,
+          },
+        ];
+
+        (
+          chatSessionRepository.toggleSessionPinned as jest.Mock
+        ).mockRejectedValue(new Error('DB error'));
+
+        await chatSessionStore.togglePinSession('session1');
+
+        // Should remain unchanged on error
+        expect(chatSessionStore.sessions[0].pinned).toBe(false);
+      });
+    });
+
+    describe('groupedSessions with pinned', () => {
+      it('shows pinned sessions in a separate group at the top', () => {
+        const today = new Date();
+
+        chatSessionStore.sessions = [
+          {
+            id: '1',
+            title: 'Pinned Session',
+            date: today.toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: true,
+          },
+          {
+            id: '2',
+            title: 'Regular Session',
+            date: today.toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: false,
+          },
+        ];
+
+        const grouped = chatSessionStore.groupedSessions;
+        const keys = Object.keys(grouped);
+
+        // Pinned should be the first group
+        expect(keys[0]).toBe('Pinned');
+        expect(grouped.Pinned).toHaveLength(1);
+        expect(grouped.Pinned[0].id).toBe('1');
+
+        // Regular session should be in Today
+        expect(grouped.Today).toHaveLength(1);
+        expect(grouped.Today[0].id).toBe('2');
+      });
+
+      it('does not show pinned group when no sessions are pinned', () => {
+        const today = new Date();
+
+        chatSessionStore.sessions = [
+          {
+            id: '1',
+            title: 'Regular Session',
+            date: today.toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: false,
+          },
+        ];
+
+        const grouped = chatSessionStore.groupedSessions;
+        expect(grouped.Pinned).toBeUndefined();
+        expect(grouped.Today).toHaveLength(1);
+      });
+
+      it('pinned sessions are excluded from date groups', () => {
+        const today = new Date();
+
+        chatSessionStore.sessions = [
+          {
+            id: '1',
+            title: 'Pinned Today',
+            date: today.toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: true,
+          },
+        ];
+
+        const grouped = chatSessionStore.groupedSessions;
+        expect(grouped.Pinned).toHaveLength(1);
+        expect(grouped.Today).toBeUndefined();
+      });
+
+      it('sorts multiple pinned sessions by date (newest first)', () => {
+        const older = new Date('2024-01-01');
+        const newer = new Date('2024-06-01');
+
+        chatSessionStore.sessions = [
+          {
+            id: '1',
+            title: 'Older Pinned',
+            date: older.toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: true,
+          },
+          {
+            id: '2',
+            title: 'Newer Pinned',
+            date: newer.toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal' as const,
+            pinned: true,
+          },
+        ];
+
+        const grouped = chatSessionStore.groupedSessions;
+        expect(grouped.Pinned).toHaveLength(2);
+        expect(grouped.Pinned[0].id).toBe('2'); // Newer first
+        expect(grouped.Pinned[1].id).toBe('1');
+      });
+    });
+
+    it('togglePinSession handles non-existent session in store', async () => {
+      chatSessionStore.sessions = [];
+
+      (
+        chatSessionRepository.toggleSessionPinned as jest.Mock
+      ).mockResolvedValue(true);
+
+      // Should not throw even though session doesn't exist locally
+      await chatSessionStore.togglePinSession('nonexistent');
+
+      expect(
+        chatSessionRepository.toggleSessionPinned,
+      ).toHaveBeenCalledWith('nonexistent');
     });
   });
 });

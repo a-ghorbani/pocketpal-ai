@@ -595,6 +595,28 @@ class ChatSessionRepository {
     });
   }
 
+  // Toggle pinned status for a session
+  async toggleSessionPinned(sessionId: string): Promise<boolean> {
+    const session = await database.collections
+      .get('chat_sessions')
+      .find(sessionId)
+      .catch(() => null);
+
+    if (!session) {
+      return false;
+    }
+
+    const newPinned = !(session as unknown as ChatSession).pinned;
+
+    await database.write(async () => {
+      await session.update((record: any) => {
+        record.pinned = newPinned;
+      });
+    });
+
+    return newPinned;
+  }
+
   // Set active pal for a session
   async setSessionActivePal(sessionId: string, palId?: string): Promise<void> {
     const session = await database.collections
