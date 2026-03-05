@@ -35,6 +35,7 @@ export const L10nContext = React.createContext<
   (typeof l10n)[keyof typeof l10n]
 >(l10n.en);
 export const UserContext = React.createContext<User | undefined>(undefined);
+export const SearchQueryContext = React.createContext<string>('');
 
 /** Returns size in bytes of the provided text */
 export const getTextSizeInBytes = (text: string) => new Blob([text]).size;
