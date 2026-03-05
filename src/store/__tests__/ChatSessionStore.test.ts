@@ -1954,4 +1954,151 @@ describe('chatSessionStore', () => {
       });
     });
   });
+
+  describe('Search mode', () => {
+    const setupSessionWithMessages = (messages: MessageType.Any[]) => {
+      const session = {
+        id: 'search-session',
+        title: 'Search Test Session',
+        date: new Date().toISOString(),
+        messages,
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [session];
+      chatSessionStore.activeSessionId = session.id;
+    };
+
+    beforeEach(() => {
+      chatSessionStore.exitSearchMode();
+    });
+
+    it('enters search mode with empty query', () => {
+      chatSessionStore.enterSearchMode();
+      expect(chatSessionStore.isSearchMode).toBe(true);
+      expect(chatSessionStore.searchQuery).toBe('');
+    });
+
+    it('exits search mode and clears query', () => {
+      chatSessionStore.enterSearchMode();
+      chatSessionStore.setSearchQuery('hello');
+      chatSessionStore.exitSearchMode();
+      expect(chatSessionStore.isSearchMode).toBe(false);
+      expect(chatSessionStore.searchQuery).toBe('');
+    });
+
+    it('sets search query', () => {
+      chatSessionStore.setSearchQuery('test query');
+      expect(chatSessionStore.searchQuery).toBe('test query');
+    });
+
+    it('returns all messages when not in search mode', () => {
+      setupSessionWithMessages([
+        {
+          id: 'msg1',
+          type: 'text',
+          text: 'Hello world',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+      ]);
+
+      chatSessionStore.isSearchMode = false;
+      const filtered = chatSessionStore.filteredSessionMessages;
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].id).toBe('msg1');
+    });
+
+    it('returns all messages when search query is empty', () => {
+      setupSessionWithMessages([
+        {
+          id: 'msg1',
+          type: 'text',
+          text: 'Hello world',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+      ]);
+
+      chatSessionStore.enterSearchMode();
+      chatSessionStore.setSearchQuery('   ');
+      const filtered = chatSessionStore.filteredSessionMessages;
+      expect(filtered).toHaveLength(1);
+    });
+
+    it('filters messages matching the search query', () => {
+      setupSessionWithMessages([
+        {
+          id: 'msg1',
+          type: 'text',
+          text: 'Hello world',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+        {
+          id: 'msg2',
+          type: 'text',
+          text: 'Goodbye world',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+        {
+          id: 'msg3',
+          type: 'text',
+          text: 'Hello again',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+      ]);
+
+      chatSessionStore.enterSearchMode();
+      chatSessionStore.setSearchQuery('Hello');
+      const filtered = chatSessionStore.filteredSessionMessages;
+      expect(filtered).toHaveLength(2);
+      expect(filtered[0].id).toBe('msg1');
+      expect(filtered[1].id).toBe('msg3');
+    });
+
+    it('performs case-insensitive search', () => {
+      setupSessionWithMessages([
+        {
+          id: 'msg1',
+          type: 'text',
+          text: 'HELLO World',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+      ]);
+
+      chatSessionStore.enterSearchMode();
+      chatSessionStore.setSearchQuery('hello');
+      const filtered = chatSessionStore.filteredSessionMessages;
+      expect(filtered).toHaveLength(1);
+    });
+
+    it('excludes non-text messages from search results', () => {
+      setupSessionWithMessages([
+        {
+          id: 'msg1',
+          type: 'text',
+          text: 'Hello world',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Text,
+        {
+          id: 'msg2',
+          type: 'image',
+          uri: 'test.jpg',
+          author: {id: 'user1'},
+          createdAt: Date.now(),
+        } as MessageType.Image,
+      ]);
+
+      chatSessionStore.enterSearchMode();
+      chatSessionStore.setSearchQuery('Hello');
+      const filtered = chatSessionStore.filteredSessionMessages;
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].type).toBe('text');
+    });
+  });
 });
