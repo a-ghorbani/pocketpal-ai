@@ -113,6 +113,10 @@ class ChatSessionRepository {
     return; // Mock: do nothing
   }
 
+  async toggleSessionPinned(sessionId) {
+    return true; // Mock: return new pinned state
+  }
+
   // Update session completion settings
   async updateSessionCompletionSettings(sessionId, settings) {
     return; // Mock: do nothing
