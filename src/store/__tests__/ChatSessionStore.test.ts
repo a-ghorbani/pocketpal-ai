@@ -1977,9 +1977,9 @@ describe('chatSessionStore', () => {
 
         await chatSessionStore.togglePinSession('session1');
 
-        expect(
-          chatSessionRepository.toggleSessionPinned,
-        ).toHaveBeenCalledWith('session1');
+        expect(chatSessionRepository.toggleSessionPinned).toHaveBeenCalledWith(
+          'session1',
+        );
         expect(chatSessionStore.sessions[0].pinned).toBe(true);
       });
 
@@ -2149,9 +2149,9 @@ describe('chatSessionStore', () => {
       // Should not throw even though session doesn't exist locally
       await chatSessionStore.togglePinSession('nonexistent');
 
-      expect(
-        chatSessionRepository.toggleSessionPinned,
-      ).toHaveBeenCalledWith('nonexistent');
+      expect(chatSessionRepository.toggleSessionPinned).toHaveBeenCalledWith(
+        'nonexistent',
+      );
     });
   });
 });
