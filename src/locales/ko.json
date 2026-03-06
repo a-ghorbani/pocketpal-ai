@@ -14,7 +14,8 @@
   "benchmark": {
     "title": "벤치마크",
     "modelSelector": {
-      "prompt": "모델 선택하기"
+      "prompt": "모델 선택하기",
+      "noModels": "다운로드된 모델 없음"
     },
     "buttons": {
       "advancedSettings": "고급 설정",

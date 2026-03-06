@@ -14,7 +14,8 @@
   "benchmark": {
     "title": "Бенчмарк",
     "modelSelector": {
-      "prompt": "Выбор модели"
+      "prompt": "Выбор модели",
+      "noModels": "Не загружено ни одной модели"
     },
     "buttons": {
       "advancedSettings": "Дополнительные настройки",
@@ -113,7 +114,7 @@
       "sections": {
         "basicInfo": "Основная информация",
         "cpuDetails": "Сведения о CPU",
-        "appInfo": "Информация о приложении",
+        "appInfo": "О приложении",
         "gpuDetails": "Сведения о GPU",
         "hexagonDetails": "Hexagon DSP"
       },
@@ -240,13 +241,13 @@
         "disableThinking": "Отключить режим рассуждения",
         "thinkingEnabled": "Режим рассуждения включён",
         "thinkingDisabled": "Режим рассуждения выключен",
-        "thinkText": "Рассуждать"
+        "thinkText": "Рассуждение"
       }
     },
     "chatGenerationSettingsSheet": {
       "invalidValues": "Неверные значения",
       "invalidNumericValuesMessage": "Должно быть числом",
-      "pleaseCorrect": "Пожалуйста, исправьте следующее:",
+      "pleaseCorrect": "Исправьте следующее:",
       "ok": "ОК",
       "saveChanges": "Сохранить изменения",
       "saveAsPreset": "Сохранить как предустановку",
@@ -305,7 +306,7 @@
       "menuTitleReset": "Сбросить список моделей"
     },
     "modelsResetDialog": {
-      "proceedWithReset": "Продолжить сброс",
+      "proceedWithReset": "Выполнить сброс",
       "confirmReset": "Подтвердить сброс"
     },
     "assistantPalSheet": {
@@ -367,7 +368,7 @@
     },
     "systemPromptSection": {
       "sectionTitle": "Системный промпт",
-      "useAIPrompt": "Использовать ИИ для генерации системного промпта",
+      "useAIPrompt": "Генерировать системный промпт с помощью ИИ",
       "modelSelector": {
         "label": "Выберите модель для генерации*",
         "sublabel": "Рекомендуется: Llama 3.2 3B или Qwen3 4B Instruct 2507.",
@@ -400,7 +401,7 @@
         "pals": "Pal",
         "benchmark": "Бенчмарк",
         "settings": "Настройки",
-        "appInfo": "Информация о приложении",
+        "appInfo": "О приложении",
         "testCompletion": "Завершение теста"
       },
       "deleteChatTitle": "Удалить чат",
@@ -531,8 +532,8 @@
       "ok": "ОК",
       "error": "Ошибка",
       "failedToSave": "Не удалось сохранить настройки Pal",
-      "resetToGlobal": "Сброс к глобальным настройкам по умолчанию",
-      "resetToSystem": "Сброс к системным настройкам по умолчанию",
+      "resetToGlobal": "Сброс к глобальным настройкам",
+      "resetToSystem": "Сброс к системным настройкам",
       "clearPalSettings": "Очистить настройки Pal",
       "customSettingsFor": "Пользовательские настройки для {{palName}}",
       "inheritedSettingsFor": "Унаследованные настройки для {{palName}}"
@@ -576,7 +577,7 @@
       "instructions": "Как получить токен:",
       "instructionsSteps": [
         "Перейдите на huggingface.co и выполните вход",
-        "Перейдите в Настройки > Токены доступа",
+        "Перейдите в Settings > Access Tokens",
         "Создайте новый токен с правом \"read\"",
         "Скопируйте токен и вставьте его ниже"
       ],
@@ -629,7 +630,7 @@
         "regenerate": "Сгенерировать заново",
         "regenerateWith": "Сгенерировать заново с",
         "edit": "Редактировать",
-        "reportContent": "Содержание отчёта"
+        "reportContent": "Жалоба на контент"
       }
     },
     "palHeaderRight": {
@@ -684,17 +685,17 @@
   "memory": {
     "shortWarning": "Предупреждение о памяти",
     "multimodalWarning": "На этом устройстве может быть недостаточно ресурсов для мультимодальных моделей.",
-    "memoryTight": "Память почти заполнена",
-    "lowMemory": "Мало памяти",
+    "memoryTight": "Может не хватить памяти",
+    "lowMemory": "Недостаточно памяти",
     "memoryDetailMessage": "Этой модели требуется ~{{needed}}, но доступно только ~{{available}}. Оценки становятся точнее по мере использования приложения.",
     "estimatedMemory": "Оценка памяти: ~{{size}}",
     "alerts": {
       "memoryWarningTitle": "Предупреждение о памяти",
-      "memoryWarningMessage": "Эта модель может превысить объем доступной памяти, что приведёт к нестабильности. Продолжить загрузку?",
+      "memoryWarningMessage": "Эта модель может превысить объем доступной памяти, что приведёт к нестабильной работе. Продолжить загрузку?",
       "multimodalWarningTitle": "Предупреждение о производительности",
-      "multimodalWarningMessage": "На этом устройстве может быть недостаточно ресурсов для мультимодальных моделей. Загрузка может вызвать сбои. Всё равно продолжить?",
+      "multimodalWarningMessage": "На этом устройстве может быть недостаточно ресурсов для мультимодальных моделей. Загрузка может привести к нестабильной работе. Всё равно продолжить?",
       "combinedWarningTitle": "Предупреждение о производительности",
-      "combinedWarningMessage": "Модель может превысить лимит памяти, а устройство может не справиться с мультимодальными задачами. Загрузка может вызвать сбои. Всё равно продолжить?",
+      "combinedWarningMessage": "Модель может превысить лимит памяти, а устройство может не справиться с мультимодальными задачами. Загрузка может привести к нестабильной работе. Всё равно продолжить?",
       "cancel": "Отмена",
       "continue": "Продолжить"
     }
@@ -705,7 +706,7 @@
         "modelPreset": "Эта модель является предустановленной.",
         "cannotRemoveTitle": "Невозможно удалить",
         "downloadedFirst": "Модель уже загружена. Пожалуйста, сначала удалите файл.",
-        "removeTitle": "Удалить модель",
+        "removeTitle": "Удалить из списка",
         "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?",
         "removeError": "Не удалось удалить модель.",
         "alreadyDownloadedTitle": "Модель уже загружена",
@@ -808,7 +809,7 @@
       "labels": {
         "skills": "Навыки: ",
         "vision": "Зрение",
-        "capabilities": "возможности.",
+        "capabilities": "поддерживает.",
         "modelName": "Название модели",
         "contextLength": "Длина контекста",
         "architecture": "Архитектура",
@@ -899,25 +900,25 @@
       "deleteProjectionMessage": "Вы уверены, что хотите удалить эту проекционную модель?",
       "cannotDeleteTitle": "Невозможно удалить",
       "visionControls": {
-        "enableVision": "Включить возможности зрения",
-        "disableVision": "Отключить возможности зрения",
+        "enableVision": "Включить поддержку зрения",
+        "disableVision": "Отключить поддержку зрения",
         "visionEnabled": "Зрение включено",
         "visionDisabled": "Зрение выключено",
         "textOnlyMode": "Только текст",
         "visionMode": "Зрение включено",
         "downloadWithVision": "Загрузить с поддержкой зрения",
         "downloadTextOnly": "Загрузить только текст",
-        "visionToggleDescription": "Включить возможности обработки изображений",
+        "visionToggleDescription": "Включить поддержку обработки изображений",
         "projectionModelSize": "+{{size}} модель проекции",
         "visionModeDescription": "Обработка изображений и текста",
         "textOnlyModeDescription": "Только текстовый режим",
-        "includesVisionCapability": "Включает возможности зрения",
+        "includesVisionCapability": "Включает поддержку зрения",
         "requiresProjectionModel": "Сначала загрузите совместимую модель проекции"
       },
       "cannotDeleteActive": "Эта модель проекции сейчас используется.",
       "cannotDeleteInUse": "Эта модель проекции используется загруженными LLM-моделями:",
       "dependentModels": "Зависимые модели:",
-      "visionWillBeDisabled": "Возможности зрения будут отключены для этих моделей."
+      "visionWillBeDisabled": "Поддержка зрения будет отключена для этих моделей."
     }
   },
   "screenTitles": {
@@ -925,7 +926,7 @@
     "models": "Модели",
     "benchmark": "Бенчмарк",
     "settings": "Настройки",
-    "appInfo": "Информация о приложении",
+    "appInfo": "О приложении",
     "testCompletion": "Завершение теста",
     "pals": "Pal (экспериментально)"
   },
