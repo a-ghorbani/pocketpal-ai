@@ -6,10 +6,11 @@ import type {
 
 // Mock defaultCompletionSettings to avoid circular imports
 // This should match the actual defaultCompletionSettings from ChatSessionStore
+// (n_predict default is -1 = unlimited since #687).
 export const mockDefaultCompletionSettings = {
   version: 3,
   include_thinking_in_context: true,
-  n_predict: 1024,
+  n_predict: -1,
   temperature: 0.7,
   top_k: 40,
   top_p: 0.95,
