@@ -5,6 +5,7 @@ export * from './ChatGenerationSettingsSheet';
 export * from './ChatInput';
 export * from './ChatView';
 export * from './ChatHeader';
+export * from './ChatSearchBar';
 export * from './ChatPalModelPickerSheet';
 export * from './ChatEmptyPlaceholder';
 export * from './ContentReportSheet';

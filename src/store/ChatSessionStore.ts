@@ -64,6 +64,9 @@ class ChatSessionStore {
   // Selection mode state
   isSelectionMode: boolean = false;
   selectedSessionIds: Set<string> = new Set();
+  // Search mode state
+  isSearchMode: boolean = false;
+  searchQuery: string = '';
 
   constructor() {
     makeAutoObservable(this);
@@ -910,6 +913,37 @@ class ChatSessionStore {
       console.error('Failed to bulk export sessions:', error);
       throw error;
     }
+  }
+
+  // Search mode actions
+  enterSearchMode() {
+    runInAction(() => {
+      this.isSearchMode = true;
+      this.searchQuery = '';
+    });
+  }
+
+  exitSearchMode() {
+    runInAction(() => {
+      this.isSearchMode = false;
+      this.searchQuery = '';
+    });
+  }
+
+  setSearchQuery(query: string) {
+    this.searchQuery = query;
+  }
+
+  get filteredSessionMessages(): MessageType.Any[] {
+    const messages = this.currentSessionMessages;
+    if (!this.isSearchMode || !this.searchQuery.trim()) {
+      return messages;
+    }
+
+    const query = this.searchQuery.toLowerCase().trim();
+    return messages.filter(
+      msg => msg.type === 'text' && msg.text.toLowerCase().includes(query),
+    );
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {
