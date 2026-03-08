@@ -15,7 +15,7 @@ import {
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {modelStore, uiStore} from '..';
+import {modelStore, uiStore, serverStore} from '..';
 import {t} from '../../locales';
 
 // Mock the HF API
@@ -2923,6 +2923,99 @@ describe('ModelStore', () => {
         expect.any(String),
         expect.any(String),
       );
+    });
+  });
+
+  describe('remoteModels computed', () => {
+    beforeEach(() => {
+      // Reset serverStore state for remote model tests
+      runInAction(() => {
+        serverStore.servers = [];
+        serverStore.serverModels.clear();
+        serverStore.userSelectedModels = [];
+      });
+    });
+
+    it('returns only user-selected models', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+          {id: 'codellama', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+      });
+
+      const remoteModels = modelStore.remoteModels;
+
+      expect(remoteModels).toHaveLength(1);
+      expect(remoteModels[0].name).toBe('llama-7b');
+      expect(remoteModels[0].origin).toBe(ModelOrigin.REMOTE);
+      expect(remoteModels[0].serverId).toBe('srv-1');
+      expect(remoteModels[0].serverName).toBe('LM Studio');
+    });
+
+    it('returns empty array when no models are user-selected', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+        ]);
+        // No userSelectedModels
+      });
+
+      expect(modelStore.remoteModels).toHaveLength(0);
+    });
+
+    it('skips models for non-existent servers', () => {
+      runInAction(() => {
+        // Server does not exist in servers array
+        serverStore.userSelectedModels = [
+          {serverId: 'non-existent', remoteModelId: 'model-a'},
+        ];
+      });
+
+      expect(modelStore.remoteModels).toHaveLength(0);
+    });
+
+    it('returns models from multiple servers', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+          {id: 'srv-2', name: 'Ollama', url: 'http://localhost:11434'},
+        ];
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+          {serverId: 'srv-2', remoteModelId: 'mistral'},
+        ];
+      });
+
+      const remoteModels = modelStore.remoteModels;
+
+      expect(remoteModels).toHaveLength(2);
+      expect(remoteModels[0].serverName).toBe('LM Studio');
+      expect(remoteModels[1].serverName).toBe('Ollama');
+    });
+
+    it('generates correct model id from serverId and remoteModelId', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+      });
+
+      const remoteModels = modelStore.remoteModels;
+
+      expect(remoteModels[0].id).toBe('srv-1/llama-7b');
     });
   });
 });

@@ -36,6 +36,16 @@ beforeEach(() => {
 
   // Fresh mocked context each test
   modelStore.context = new LlamaContext(mockLlamaContextParams);
+
+  // Set up a mock engine that delegates to context.completion
+  modelStore.engine = {
+    completion: jest.fn((params, onData) => {
+      return modelStore.context!.completion(params, onData);
+    }),
+    stopCompletion: jest.fn(async () => {
+      await modelStore.context?.stopCompletion();
+    }),
+  };
 });
 
 // Mock the applyChatTemplate function from utils/chat
@@ -63,6 +73,7 @@ describe('useChatSession', () => {
 
   it('should handle model not loaded scenario', async () => {
     modelStore.context = undefined;
+    modelStore.engine = undefined;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, assistant),
     );

@@ -14,6 +14,7 @@ export {default as ClockFastForwardIcon} from './clock-fast-forward.svg';
 export {default as CloseIcon} from './close.svg';
 export {default as CopyIcon} from './copy.svg';
 export {default as CloudIcon} from './cloud.svg';
+export {default as CloudPlusIcon} from './cloud-plus.svg';
 export {default as CpuChipIcon} from './cpu-chip.svg';
 export {default as DownloadIcon} from './download.svg';
 export {default as DotsVerticalIcon} from './dots-vertical.svg';
