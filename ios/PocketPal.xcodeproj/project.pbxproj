@@ -30,6 +30,8 @@
 		A8B4FFD92EA5731700CD3B4C /* PalEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFD12EA5731700CD3B4C /* PalEntity.swift */; };
 		A8B4FFDC2EA5736100CD3B4C /* DeepLinkModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */; };
 		A8B4FFDD2EA5736100CD3B4C /* DeepLinkModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */; };
+		0D85337A512F432695A638E3 /* StorefrontModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EDB347C521A41619835CAD9 /* StorefrontModule.swift */; };
+		C75985DD3D2E4F2083261F4B /* StorefrontModule.m in Sources */ = {isa = PBXBuildFile; fileRef = BB20B47BBDAD48C3B5711DA7 /* StorefrontModule.m */; };
 		C0270FB5CD74463CA3FF5284 /* Inter-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */; };
 		D2383657A264CC8550057BF7 /* Pods_PocketPal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DFBC07983ED2DF7BDC06A78 /* Pods_PocketPal.framework */; };
 		FF002F1D6D914619BAB71A78 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C5BB422A56184C889DB9EAFD /* Inter-SemiBold.ttf */; };
@@ -79,6 +81,8 @@
 		A8B4FFD22EA5731700CD3B4C /* PocketPalShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PocketPalShortcuts.swift; path = PocketPal/AppIntents/PocketPalShortcuts.swift; sourceTree = "<group>"; };
 		A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DeepLinkModule.m; path = PocketPal/DeepLinkModule.m; sourceTree = "<group>"; };
 		A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeepLinkModule.swift; path = PocketPal/DeepLinkModule.swift; sourceTree = "<group>"; };
+		BB20B47BBDAD48C3B5711DA7 /* StorefrontModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = StorefrontModule.m; path = PocketPal/StorefrontModule.m; sourceTree = "<group>"; };
+		5EDB347C521A41619835CAD9 /* StorefrontModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StorefrontModule.swift; path = PocketPal/StorefrontModule.swift; sourceTree = "<group>"; };
 		A8D9D0A86B69377BF32D2540 /* Pods-PocketPal.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.profiling.xcconfig"; sourceTree = "<group>"; };
 		AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light.ttf"; path = "../src/assets/fonts/Inter-Light.ttf"; sourceTree = "<group>"; };
 		B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.ttf"; path = "../src/assets/fonts/Inter-ExtraBold.ttf"; sourceTree = "<group>"; };
@@ -129,6 +133,8 @@
 				A86CF0D32EA57BE100BFFCEE /* LlamaContextWrapper.mm */,
 				A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */,
 				A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */,
+				BB20B47BBDAD48C3B5711DA7 /* StorefrontModule.m */,
+				5EDB347C521A41619835CAD9 /* StorefrontModule.swift */,
 				A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */,
 				A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */,
 				A8B4FFCF2EA5731700CD3B4C /* OpenPalChatIntent.swift */,
@@ -470,6 +476,8 @@
 				A8B4FFD42EA5731700CD3B4C /* AskPalIntent.swift in Sources */,
 				A8B4FFDC2EA5736100CD3B4C /* DeepLinkModule.swift in Sources */,
 				A8B4FFDD2EA5736100CD3B4C /* DeepLinkModule.m in Sources */,
+				0D85337A512F432695A638E3 /* StorefrontModule.swift in Sources */,
+				C75985DD3D2E4F2083261F4B /* StorefrontModule.m in Sources */,
 				A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */,
 				A8B4FFD52EA5731700CD3B4C /* PalDataProvider.swift in Sources */,
 				A8B4FFD62EA5731700CD3B4C /* PocketPalShortcuts.swift in Sources */,
