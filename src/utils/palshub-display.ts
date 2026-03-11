@@ -126,6 +126,13 @@ export function shouldShowPalContent(pal: PalsHubPal): boolean {
 }
 
 /**
+ * Get the purchase URL for a pal on PalsHub
+ */
+export function getPalBuyUrl(palId: string): string {
+  return `https://palshub.ai/pals/${palId}`;
+}
+
+/**
  * Get informational text for premium pals
  * This is purely informational, not a call-to-action
  */

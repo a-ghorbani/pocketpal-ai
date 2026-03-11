@@ -950,7 +950,8 @@
       "failedToLoadDetails": "Failed to load pal details",
       "failedToDownload": "Failed to download pal",
       "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "buyOnPalshub": "Buy on Palshub"
     }
   },
   "validation": {
