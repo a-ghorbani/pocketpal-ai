@@ -135,7 +135,6 @@ class ModelStore {
 
   constructor() {
     makeAutoObservable(this, {activeModel: computed});
-    this.initializeThreadCount();
     makePersistable(this, {
       name: 'ModelStore',
       properties: [
@@ -151,6 +150,7 @@ class ModelStore {
       ],
       storage: AsyncStorage,
     }).then(async () => {
+      await this.initializeThreadCount();
       this.initializeStore();
     });
 
@@ -206,24 +206,27 @@ class ModelStore {
   private async initializeThreadCount() {
     try {
       const cores = await getCpuCoreCount();
-      this.max_threads = cores;
-
-      const threads = await getRecommendedThreadCount();
       runInAction(() => {
-        this.contextInitParams = {
-          ...this.contextInitParams,
-          n_threads: threads,
-        };
+        this.max_threads = cores;
       });
+
+      // Only set recommended thread count on first launch.
+      // After hydration, this.version is set if the store was previously persisted.
+      // On fresh install, this.version is undefined (default).
+      const isFirstLaunch = this.version === undefined;
+      if (isFirstLaunch) {
+        const threads = await getRecommendedThreadCount();
+        runInAction(() => {
+          this.contextInitParams = {
+            ...this.contextInitParams,
+            n_threads: threads,
+          };
+        });
+      }
     } catch (error) {
       console.error('Failed to initialize thread count:', error);
-      // Fallback to 4 threads if we can't get the CPU info
       runInAction(() => {
         this.max_threads = 4;
-        this.contextInitParams = {
-          ...this.contextInitParams,
-          n_threads: 4,
-        };
       });
     }
   }
