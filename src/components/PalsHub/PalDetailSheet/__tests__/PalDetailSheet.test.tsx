@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Alert, Linking} from 'react-native';
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
@@ -69,6 +69,8 @@ describe('PalDetailSheet', () => {
     );
     // Reset downloadPalsHubPal to resolve successfully
     (palStore.downloadPalsHubPal as jest.Mock).mockResolvedValue(undefined);
+    // Reset isUSRegion to false (default non-US)
+    (palStore as any).isUSRegion = false;
     // Reset defaultProps with a fresh mock for each test
     defaultProps = {
       pal: mockPalsHubPal,
@@ -535,6 +537,84 @@ describe('PalDetailSheet', () => {
 
       // Resolve the download
       resolveDownload!();
+    });
+  });
+
+  describe('Premium Buy Button (US region)', () => {
+    beforeEach(() => {
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+    });
+
+    it('shows buy button for US users viewing unowned premium pals', async () => {
+      (palStore as any).isUSRegion = true;
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+    });
+
+    it('shows info text (not buy button) for non-US users viewing unowned premium pals', async () => {
+      (palStore as any).isUSRegion = false;
+
+      const {queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(queryByTestId('buy-button')).toBeNull();
+      });
+    });
+
+    it('opens correct palshub URL when buy button is pressed', async () => {
+      (palStore as any).isUSRegion = true;
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      expect(Linking.openURL).toHaveBeenCalledWith(
+        `https://palshub.ai/pals/${mockPremiumPalsHubPal.id}`,
+      );
+    });
+
+    it('does not show buy button for owned premium pals', async () => {
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockOwnedPremiumPal,
+      );
+
+      const {queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockOwnedPremiumPal} />,
+      );
+
+      await waitFor(() => {
+        expect(queryByTestId('buy-button')).toBeNull();
+      });
+    });
+
+    it('does not show buy button for free pals', async () => {
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(mockPalsHubPal);
+
+      const {queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(queryByTestId('buy-button')).toBeNull();
+      });
     });
   });
 });
