@@ -16,7 +16,8 @@ import {
 
 describe('palshub-display', () => {
   describe('getPalBuyUrl', () => {
-    it('returns correct URL with pal ID', () => {
+    it('returns URL using PALSHUB_API_BASE_URL from env', () => {
+      // PALSHUB_API_BASE_URL is 'https://palshub.ai' in __mocks__/external/@env.js
       expect(getPalBuyUrl('abc-123')).toBe('https://palshub.ai/pals/abc-123');
     });
 

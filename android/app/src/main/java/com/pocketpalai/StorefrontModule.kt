@@ -14,7 +14,7 @@ class StorefrontModule(reactContext: ReactApplicationContext) :
   override fun getCountryCode(promise: Promise) {
     try {
       val countryCode = Locale.getDefault().country
-      promise.resolve(countryCode)
+      promise.resolve(countryCode.ifEmpty { null })
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
     }

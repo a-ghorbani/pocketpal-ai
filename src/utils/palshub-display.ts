@@ -5,6 +5,8 @@
  * labels and actions based on pricing and ownership.
  */
 
+import {PALSHUB_API_BASE_URL} from '@env';
+
 import type {PalsHubPal} from '../types/palshub';
 import {l10n} from '../locales';
 import {uiStore} from '../store';
@@ -129,7 +131,7 @@ export function shouldShowPalContent(pal: PalsHubPal): boolean {
  * Get the purchase URL for a pal on PalsHub
  */
 export function getPalBuyUrl(palId: string): string {
-  return `https://palshub.ai/pals/${palId}`;
+  return `${PALSHUB_API_BASE_URL}/pals/${palId}`;
 }
 
 /**

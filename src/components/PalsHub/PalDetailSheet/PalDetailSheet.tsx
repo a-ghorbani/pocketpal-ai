@@ -327,7 +327,9 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
               <Button
                 testID="buy-button"
                 mode="contained"
-                onPress={() => Linking.openURL(getPalBuyUrl(displayPal.id))}
+                onPress={() =>
+                  Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {})
+                }
                 style={styles.primaryButton}>
                 {l10n.palsScreen.palDetailSheet.buyOnPalshub}
               </Button>

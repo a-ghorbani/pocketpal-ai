@@ -43,6 +43,9 @@ jest.mock('../../../Sheet/Sheet', () => {
 // Mock Alert
 jest.spyOn(Alert, 'alert');
 
+// Mock Linking.openURL to return a resolved Promise
+jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+
 // Mock icons
 jest.mock('../../../../assets/icons', () => ({
   StarIcon: () => null,
@@ -585,7 +588,7 @@ describe('PalDetailSheet', () => {
       fireEvent.press(getByTestId('buy-button'));
 
       expect(Linking.openURL).toHaveBeenCalledWith(
-        `https://palshub.ai/pals/${mockPremiumPalsHubPal.id}`,
+        expect.stringContaining(`/pals/${mockPremiumPalsHubPal.id}`),
       );
     });
 
