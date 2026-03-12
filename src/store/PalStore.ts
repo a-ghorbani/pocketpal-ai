@@ -26,6 +26,7 @@ import {HF_DOMAIN} from '../config/urls';
 import {palRepository} from '../repositories/PalRepository';
 
 import {hfAsModel} from '../utils';
+import {isUSStorefront} from '../utils/region';
 import {palsHubService} from '../services';
 import {defaultModels} from './defaultModels';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
@@ -56,6 +57,9 @@ class PalStore {
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
 
+  // Region state
+  isUSRegion: boolean = false;
+
   // Migration state
   isMigrating: boolean = false;
   migrationComplete: boolean = false;
@@ -83,6 +87,9 @@ class PalStore {
       // Initialize Lookie pal after database is loaded
       await this.initializeLookiePal();
 
+      // Check storefront region for buy button gating
+      this.checkRegion();
+
       console.log('Pal store initialization completed');
 
       runInAction(() => {
@@ -95,6 +102,17 @@ class PalStore {
         this.isMigrating = false;
         this.migrationComplete = false;
       });
+    }
+  }
+
+  private async checkRegion() {
+    try {
+      const isUS = await isUSStorefront();
+      runInAction(() => {
+        this.isUSRegion = isUS;
+      });
+    } catch (error) {
+      console.warn('Failed to check storefront region:', error);
     }
   }
 
