@@ -17,6 +17,19 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore} from '..';
 import {t} from '../../locales';
+import {
+  getCpuCoreCount,
+  getRecommendedThreadCount,
+} from '../../utils/deviceCapabilities';
+
+// Mock deviceCapabilities
+jest.mock('../../utils/deviceCapabilities', () => ({
+  ...jest.requireActual('../../utils/deviceCapabilities'),
+  getCpuCoreCount: jest.fn().mockResolvedValue(8),
+  getRecommendedThreadCount: jest.fn().mockResolvedValue(6),
+  checkGpuSupport: jest.fn().mockResolvedValue({isSupported: false}),
+  isHighEndDevice: jest.fn().mockResolvedValue(false),
+}));
 
 // Mock the HF API
 jest.mock('../../api/hf', () => ({
@@ -2923,6 +2936,66 @@ describe('ModelStore', () => {
         expect.any(String),
         expect.any(String),
       );
+    });
+  });
+
+  describe('initializeThreadCount', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should always update max_threads from hardware', async () => {
+      (getCpuCoreCount as jest.Mock).mockResolvedValue(10);
+      (getRecommendedThreadCount as jest.Mock).mockResolvedValue(8);
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.max_threads).toBe(10);
+    });
+
+    it('should set recommended n_threads on first launch (version === undefined)', async () => {
+      runInAction(() => {
+        modelStore.version = undefined;
+      });
+      (getCpuCoreCount as jest.Mock).mockResolvedValue(8);
+      (getRecommendedThreadCount as jest.Mock).mockResolvedValue(6);
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.contextInitParams.n_threads).toBe(6);
+    });
+
+    it('should preserve user-set n_threads on subsequent launches (version !== undefined)', async () => {
+      runInAction(() => {
+        modelStore.version = 1;
+        modelStore.contextInitParams = {
+          ...modelStore.contextInitParams,
+          n_threads: 4,
+        };
+      });
+      (getCpuCoreCount as jest.Mock).mockResolvedValue(8);
+      (getRecommendedThreadCount as jest.Mock).mockResolvedValue(6);
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.contextInitParams.n_threads).toBe(4);
+      expect(modelStore.max_threads).toBe(8);
+    });
+
+    it('should fallback max_threads to 4 on error without touching n_threads', async () => {
+      runInAction(() => {
+        modelStore.version = 1;
+        modelStore.contextInitParams = {
+          ...modelStore.contextInitParams,
+          n_threads: 3,
+        };
+      });
+      (getCpuCoreCount as jest.Mock).mockRejectedValue(new Error('fail'));
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.max_threads).toBe(4);
+      expect(modelStore.contextInitParams.n_threads).toBe(3);
     });
   });
 });
