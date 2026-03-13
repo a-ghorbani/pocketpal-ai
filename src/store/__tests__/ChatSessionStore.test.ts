@@ -1954,4 +1954,44 @@ describe('chatSessionStore', () => {
       });
     });
   });
+
+  describe('Draft autosave', () => {
+    it('saves and retrieves a draft', () => {
+      chatSessionStore.saveDraft('session1', 'Hello world');
+      expect(chatSessionStore.getDraft('session1')).toBe('Hello world');
+    });
+
+    it('returns empty string for non-existent draft', () => {
+      expect(chatSessionStore.getDraft('no-such-session')).toBe('');
+    });
+
+    it('clears a draft', () => {
+      chatSessionStore.saveDraft('session1', 'draft text');
+      chatSessionStore.clearDraft('session1');
+      expect(chatSessionStore.getDraft('session1')).toBe('');
+    });
+
+    it('does not store empty/whitespace-only drafts', () => {
+      chatSessionStore.saveDraft('session1', '   ');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+    });
+
+    it('removes draft when saving empty text', () => {
+      chatSessionStore.saveDraft('session1', 'some text');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(true);
+      chatSessionStore.saveDraft('session1', '');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+    });
+
+    it('handles multiple session drafts independently', () => {
+      chatSessionStore.saveDraft('session1', 'draft A');
+      chatSessionStore.saveDraft('session2', 'draft B');
+      expect(chatSessionStore.getDraft('session1')).toBe('draft A');
+      expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+
+      chatSessionStore.clearDraft('session1');
+      expect(chatSessionStore.getDraft('session1')).toBe('');
+      expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+    });
+  });
 });

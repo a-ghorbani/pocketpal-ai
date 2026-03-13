@@ -256,6 +256,26 @@ export const ChatView = observer(
       }
     }, [initialInputText, onInitialTextConsumed]);
 
+    // ============ DRAFT AUTOSAVE ============
+    // Save draft on session switch, restore draft for new session
+    const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
+    React.useEffect(() => {
+      // Save draft for the session we're leaving
+      if (prevSessionId && prevSessionId !== chatSessionStore.activeSessionId) {
+        chatSessionStore.saveDraft(prevSessionId, inputText);
+      }
+
+      // Restore draft for the session we're entering
+      const newSessionId = chatSessionStore.activeSessionId;
+      if (newSessionId) {
+        const draft = chatSessionStore.getDraft(newSessionId);
+        setInputText(draft);
+      } else {
+        setInputText('');
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatSessionStore.activeSessionId]);
+
     // ============ ACTIVE PAL MODEL INITIALIZATION ============
     // Initialize model context when active pal changes
     React.useEffect(() => {
@@ -388,6 +408,9 @@ export const ChatView = observer(
         }
         onSendPress(message);
         setInputText('');
+        if (chatSessionStore.activeSessionId) {
+          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
+        }
         Keyboard.dismiss();
       },
       [onSendPress],
