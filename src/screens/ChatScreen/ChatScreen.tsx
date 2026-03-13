@@ -9,6 +9,7 @@ import {
   ModelErrorReportSheet,
 } from '../../components';
 import {PalSheet} from '../../components/PalsSheets';
+import {QuickGenSettingsSheet} from '../../components/QuickGenSettingsSheet';
 
 import {useChatSession} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
@@ -59,6 +60,9 @@ export const ChatScreen: React.FC = observer(() => {
 
   // State for pal sheet
   const [isPalSheetVisible, setIsPalSheetVisible] = useState(false);
+
+  // State for quick generation settings panel
+  const [isGenSettingsVisible, setIsGenSettingsVisible] = useState(false);
 
   // State for model error report sheet
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
@@ -170,6 +174,9 @@ export const ChatScreen: React.FC = observer(() => {
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
+          onGenSettingsPress: chatSessionStore.activeSessionId
+            ? () => setIsGenSettingsVisible(true)
+            : undefined,
         }}
         textInputProps={{
           placeholder: !modelStore.context
@@ -204,6 +211,10 @@ export const ChatScreen: React.FC = observer(() => {
           pal={activePal}
         />
       )}
+      <QuickGenSettingsSheet
+        isVisible={isGenSettingsVisible}
+        onClose={() => setIsGenSettingsVisible(false)}
+      />
     </>
   );
 });
