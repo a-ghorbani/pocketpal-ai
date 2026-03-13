@@ -267,7 +267,7 @@ export const ChatView = observer(
 
           if (palDefaultModel) {
             // Initialize the model context
-            modelStore.initContext(palDefaultModel);
+            modelStore.selectModel(palDefaultModel);
           }
         }
       }
