@@ -55,7 +55,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       label: 'Auto',
       description: 'Automatically selects Metal GPU (Recommended)',
       devices: undefined,
-      n_gpu_layers: 99,
+      n_gpu_layers: 0,
       default_flash_attn_type: 'auto',
       valid_flash_attn_types: ['auto', 'on', 'off'],
       tag: 'Recommended',
@@ -69,7 +69,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       label: 'Metal',
       description: 'Explicitly use Metal GPU acceleration',
       devices: ['Metal'],
-      n_gpu_layers: 99,
+      n_gpu_layers: 0,
       default_flash_attn_type: 'auto',
       valid_flash_attn_types: ['auto', 'on', 'off'],
       platform: 'ios',
@@ -119,7 +119,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       label: `GPU (OpenCL)`,
       description: 'OpenCL GPU acceleration (Only for Q4_0/Q6_K models)',
       devices: [gpuDev.deviceName!],
-      n_gpu_layers: 99,
+      n_gpu_layers: 0,
       default_flash_attn_type: 'off', // Required for OpenCL
       valid_flash_attn_types: ['off'], // OpenCL only supports 'off'
       tag: 'Fastest',
@@ -137,7 +137,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       label: 'Hexagon',
       description: 'Qualcomm NPU (Experimental, fastest but may be unstable)',
       devices: ['HTP*'], // Wildcard for all HTP devices
-      n_gpu_layers: 99,
+      n_gpu_layers: 0,
       default_flash_attn_type: 'off',
       valid_flash_attn_types: ['off'], // Conservative: only 'off' is guaranteed safe
       tag: 'Experimental',
@@ -255,7 +255,7 @@ export function getDefaultDeviceConfig(): {
   if (Platform.OS === 'ios') {
     return {
       devices: undefined, // Auto-select Metal
-      n_gpu_layers: 99,
+      n_gpu_layers: 0,
       default_flash_attn_type: 'auto',
     };
   } else {
