@@ -225,7 +225,7 @@ export function createDefaultContextInitParams(): ContextInitParams {
     n_threads: 4,
     cache_type_k: 'f16',
     cache_type_v: 'f16',
-    n_gpu_layers: 0, // All layers
+    n_gpu_layers: 0, // Default to CPU-only
     use_mlock: false,
     use_mmap: Platform.OS === 'android' ? 'smart' : 'true',
 
