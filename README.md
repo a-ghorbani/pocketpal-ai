@@ -15,6 +15,8 @@ Since the majority of the users of this application are those who wish to gain a
 
 6. Optimized the template matching mechanism in version 132; besides the 10 recommended built-in models, it now prioritizes reading the model's own configuration to avoid mis-matching different model series. (Note: qwen3.5 models directly compiled from version 132 will output garbled text.)
 
+7. Critical modification! If the number of GPU unloading layers is too high, it can cause the model output to be garbled. However, in version 132, the default number of unloading layers is set to 99 (fully loaded), and I changed it to 0.
+
 A regrettable omission: I intended to implement real-time monitoring of memory (both RAM and virtual) usage, CPU utilization, and power consumption for performance debugging after evaluating feasibility, but decided against it due to complexity.
 
 <p align="center">
