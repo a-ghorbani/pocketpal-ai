@@ -1,32 +1,8 @@
 import React from 'react';
-import {Keyboard} from 'react-native';
 
 import {render, fireEvent, act} from '../../../../../jest/test-utils';
 
 import {ModelSettings} from '../ModelSettings';
-
-jest.useFakeTimers(); // Mock all timers
-
-// Mock Sheet component
-jest.mock('../../../../components/Sheet', () => {
-  const {View, TextInput, Button} = require('react-native');
-  const MockSheet = ({children, isVisible, onClose}) => {
-    if (!isVisible) {
-      return null;
-    }
-    return (
-      <View testID="sheet">
-        <Button title="Close" onPress={onClose} testID="sheet-close-button" />
-        {children}
-      </View>
-    );
-  };
-  MockSheet.ScrollView = View;
-  MockSheet.View = View;
-  MockSheet.TextInput = TextInput;
-  MockSheet.Actions = View;
-  return {Sheet: MockSheet};
-});
 
 describe('ModelSettings', () => {
   const defaultTemplate = {
@@ -63,7 +39,6 @@ describe('ModelSettings', () => {
     mockProps.onStopWordsChange = jest.fn();
 
     jest.clearAllMocks();
-    jest.spyOn(Keyboard, 'dismiss');
   });
 
   it('renders correctly with initial props', () => {
@@ -133,26 +108,13 @@ describe('ModelSettings', () => {
     expect(mockProps.onChange).toHaveBeenCalledWith('addBosToken', false);
   });
 
-  it('saves template changes', async () => {
-    const {getByText, getByPlaceholderText, getByTestId} = render(
-      <ModelSettings {...mockProps} />,
-    );
+  it('updates template changes inline', async () => {
+    const {getByTestId} = render(<ModelSettings {...mockProps} />);
 
-    // Open dialog
-    await act(async () => {
-      fireEvent.press(getByText('Edit'));
-    });
-
-    const templateInput = getByPlaceholderText(
-      'Enter your chat template here...',
-    );
+    const templateInput = getByTestId('template-editor-input');
     const newTemplate = 'New Template Content';
     await act(async () => {
       fireEvent.changeText(templateInput, newTemplate);
-    });
-
-    await act(async () => {
-      fireEvent.press(getByTestId('template-close-button'));
     });
 
     expect(mockProps.onChange).toHaveBeenCalledWith(
@@ -176,26 +138,11 @@ describe('ModelSettings', () => {
     expect(mockProps.onChange).toHaveBeenCalledWith('systemPrompt', newPrompt);
   });
 
-  it('dismisses keyboard when the template sheet is closed', async () => {
-    const {getByTestId, getByText, getByPlaceholderText} = render(
-      <ModelSettings {...mockProps} />,
-    );
-    const editButton = getByText('Edit');
-    await act(async () => {
-      fireEvent.press(editButton);
-    });
+  it('shows the prompt template section inline', () => {
+    const {getByText, getByTestId} = render(<ModelSettings {...mockProps} />);
 
-    const input = getByPlaceholderText('Enter your chat template here...');
-    await act(async () => {
-      fireEvent.changeText(input, 'New Template Content');
-    });
-
-    const sheetCloseButton = getByTestId('sheet-close-button');
-    await act(async () => {
-      fireEvent.press(sheetCloseButton);
-    });
-
-    expect(Keyboard.dismiss).toHaveBeenCalled();
+    expect(getByText('Prompt Template')).toBeTruthy();
+    expect(getByTestId('template-editor-input')).toBeTruthy();
   });
 
   it('handles stop words additions and removals', () => {

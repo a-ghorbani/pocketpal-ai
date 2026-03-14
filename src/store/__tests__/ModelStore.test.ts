@@ -8,6 +8,7 @@ import {defaultModels} from '../defaultModels';
 import {downloadManager} from '../../services/downloads';
 
 import {ModelOrigin, ModelType} from '../../utils/types';
+import {getLocalModelDefaultSettings} from '../../utils/chat';
 import {
   basicModel,
   mockLlamaContextParams,
@@ -162,6 +163,71 @@ describe('ModelStore', () => {
           fullPath: localPath,
           isDownloaded: true,
         }),
+      );
+    });
+
+    it('should keep local text models vision-disabled by default after importing mmproj files', async () => {
+      await modelStore.addLocalModel('/path/to/local-model.gguf');
+      await modelStore.addLocalModel('/path/to/mmproj-local.gguf');
+
+      const localModel = modelStore.models.find(
+        model => model.filename === 'local-model.gguf',
+      );
+      const projectionModel = modelStore.models.find(
+        model => model.filename === 'mmproj-local.gguf',
+      );
+
+      expect(localModel).toEqual(
+        expect.objectContaining({
+          supportsMultimodal: true,
+          visionEnabled: false,
+        }),
+      );
+      expect(modelStore.getModelVisionPreference(localModel!)).toBe(false);
+      expect(projectionModel?.modelType).toBe(ModelType.PROJECTION);
+    });
+
+    it('should use custom(empty) template defaults for local models', async () => {
+      await modelStore.addLocalModel('/path/to/Qwen3.5-0.8B-Q8_0.gguf');
+
+      const localModel = modelStore.models.find(
+        model => model.filename === 'Qwen3.5-0.8B-Q8_0.gguf',
+      );
+
+      expect(localModel?.chatTemplate).toEqual(
+        expect.objectContaining({
+          name: 'custom',
+          chatTemplate: '',
+          systemPrompt: '',
+        }),
+      );
+      expect(localModel?.stopWords).toEqual(
+        getLocalModelDefaultSettings().completionParams.stop,
+      );
+    });
+
+    it('should preserve an explicit local vision preference when syncing local projection models', async () => {
+      await modelStore.addLocalModel('/path/to/local-model.gguf');
+      const localModel = modelStore.models.find(
+        model => model.filename === 'local-model.gguf',
+      );
+
+      await modelStore.addLocalModel('/path/to/mmproj-local.gguf');
+      await modelStore.setModelVisionEnabled(localModel!.id, true);
+      await modelStore.addLocalModel('/path/to/mmproj-local-2.gguf');
+
+      const updatedLocalModel = modelStore.models.find(
+        model => model.id === localModel!.id,
+      );
+
+      expect(updatedLocalModel).toEqual(
+        expect.objectContaining({
+          supportsMultimodal: true,
+          visionEnabled: true,
+        }),
+      );
+      expect(modelStore.getModelVisionPreference(updatedLocalModel!)).toBe(
+        true,
       );
     });
 
@@ -681,7 +747,7 @@ describe('ModelStore', () => {
       expect(modelStore.context).toBeDefined();
     });
 
-    it('should reinitialize context when coming back to foreground', async () => {
+    it('should not auto-reinitialize context when coming back to foreground', async () => {
       // Setup
       modelStore.useAutoRelease = true;
       const model = {...defaultModels[0], isDownloaded: true}; // Ensure model is downloaded
@@ -701,7 +767,9 @@ describe('ModelStore', () => {
       modelStore.appState = 'background';
       await modelStore.handleAppStateChange('active');
 
-      expect(mockInitContext).toHaveBeenCalledWith(model);
+      expect(mockInitContext).not.toHaveBeenCalled();
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
     });
   });
 

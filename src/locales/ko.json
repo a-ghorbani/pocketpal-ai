@@ -797,7 +797,9 @@
         "deleteTitle": "모델 삭제",
         "deleteMessage": "이 다운로드된 모델을 삭제하겠습니까?",
         "removeTitle": "모델 삭제하기",
-        "removeMessage": "이 모델을 목록에서 삭제하겠습니까?"
+        "removeMessage": "이 모델을 목록에서 삭제하겠습니까?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "설정",
@@ -816,7 +818,9 @@
         "author": "제작자",
         "requiresProjectionModel": "프로젝션 모델 필요",
         "downloadProjectionModel": "프로젝션 모델 다운로드",
-        "viewModelCardOnHuggingFace": "Hugging Face에서 모델 카드 보기"
+        "viewModelCardOnHuggingFace": "Hugging Face에서 모델 카드 보기",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "세부정보 펼치기",

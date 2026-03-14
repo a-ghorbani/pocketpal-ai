@@ -54,5 +54,16 @@ export function toApiCompletionParams(
     delete apiParams[key];
   }
 
+  // Guardrail for messages-based completion:
+  // if both `messages` and `prompt` are present, some runtimes may prefer
+  // `prompt` and ignore `messages`, which can lead to empty-prompt generation.
+  if (
+    'messages' in apiParams &&
+    Array.isArray((apiParams as any).messages) &&
+    'prompt' in apiParams
+  ) {
+    delete (apiParams as any).prompt;
+  }
+
   return apiParams as ApiCompletionParams;
 }

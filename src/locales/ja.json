@@ -288,7 +288,9 @@
         "deleteTitle": "モデルを削除",
         "deleteMessage": "このダウンロード済みモデルを削除してもよろしいですか？",
         "removeTitle": "モデルを削除",
-        "removeMessage": "このモデルをリストから削除してもよろしいですか？"
+        "removeMessage": "このモデルをリストから削除してもよろしいですか？",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "設定",
@@ -307,7 +309,9 @@
         "author": "作者",
         "requiresProjectionModel": "投影モデルが必要",
         "downloadProjectionModel": "投影モデルをダウンロード",
-        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示"
+        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "詳細を展開",

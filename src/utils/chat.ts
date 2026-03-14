@@ -270,6 +270,16 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
   },
 };
 
+export const chatTemplateOptions: string[] = Object.keys(chatTemplates);
+
+export function getChatTemplateDisplayName(templateName: string): string {
+  const template = chatTemplates[templateName as keyof typeof chatTemplates];
+  if (!template) {
+    return templateName;
+  }
+  return template.name || templateName;
+}
+
 export function getLocalModelDefaultSettings(): {
   chatTemplate: ChatTemplateConfig;
   completionParams: CompletionParams;

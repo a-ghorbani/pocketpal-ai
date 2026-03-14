@@ -288,7 +288,9 @@
         "deleteTitle": "حذف مدل",
         "deleteMessage": "آیا مطمئنید که می‌خواهید این مدل دانلود شده را حذف کنید؟",
         "removeTitle": "حذف مدل",
-        "removeMessage": "آیا مطمئنید که می‌خواهید این مدل را از لیست حذف کنید؟"
+        "removeMessage": "آیا مطمئنید که می‌خواهید این مدل را از لیست حذف کنید؟",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "تنظیمات",
@@ -307,7 +309,9 @@
         "author": "نویسنده",
         "requiresProjectionModel": "نیاز به مدل پروجکشن",
         "downloadProjectionModel": "دانلود مدل پروجکشن",
-        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face"
+        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "نمایش جزئیات",

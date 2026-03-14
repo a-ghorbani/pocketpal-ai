@@ -288,7 +288,9 @@
         "deleteTitle": "מחק מודל",
         "deleteMessage": "האם אתה בטוח שברצונך למחוק את המודל שהורדת?",
         "removeTitle": "הסר מודל",
-        "removeMessage": "האם אתה בטוח שברצונך להסיר את המודל הזה מהרשימה?"
+        "removeMessage": "האם אתה בטוח שברצונך להסיר את המודל הזה מהרשימה?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "הגדרות",
@@ -307,7 +309,9 @@
         "author": "בעלים",
         "requiresProjectionModel": "דורש מודל שכבת התאמה",
         "downloadProjectionModel": "הורד מודל שכבת התאמה",
-        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face"
+        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",

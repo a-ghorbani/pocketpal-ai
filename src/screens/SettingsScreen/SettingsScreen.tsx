@@ -615,6 +615,49 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Divider />
 
+                  {/* KV Unified */}
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          KV Unified
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          Use unified KV cache to reduce memory usage.
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="kv-unified-switch"
+                        value={modelStore.contextInitParams.kv_unified ?? true}
+                        onValueChange={value => modelStore.setKvUnified(value)}
+                      />
+                    </View>
+                  </View>
+                  <Divider />
+
+                  {/* Parallel Sequences */}
+                  <View style={styles.settingItemContainer}>
+                    <InputSlider
+                      testID="parallel-sequences-slider"
+                      label="Parallel Sequences"
+                      value={modelStore.contextInitParams.n_parallel ?? 1}
+                      onValueChange={value =>
+                        modelStore.setNParallel(Math.round(value))
+                      }
+                      min={1}
+                      max={8}
+                      step={1}
+                    />
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {(modelStore.contextInitParams.n_parallel ?? 1) === 1
+                        ? 'Recommended for current blocking completion flow.'
+                        : 'Higher values increase concurrency but may raise memory usage.'}
+                    </Text>
+                  </View>
+                  <Divider />
+
                   {/* Cache Type K Selection */}
                   <View style={styles.settingItemContainer}>
                     <View style={styles.switchContainer}>

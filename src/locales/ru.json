@@ -797,7 +797,9 @@
         "deleteTitle": "Удалить модель",
         "deleteMessage": "Вы уверены, что хотите удалить эту загруженную модель?",
         "removeTitle": "Удалить из списка",
-        "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?"
+        "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Настройки",
@@ -816,7 +818,9 @@
         "author": "Автор",
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
-        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face"
+        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",

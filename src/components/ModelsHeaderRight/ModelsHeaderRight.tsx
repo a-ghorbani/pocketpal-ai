@@ -1,4 +1,4 @@
-import {Image, View} from 'react-native';
+import {Alert, Image, View} from 'react-native';
 import React, {useContext, useState} from 'react';
 
 import {observer} from 'mobx-react';
@@ -13,12 +13,18 @@ import {ModelsResetDialog} from '../ModelsResetDialog';
 import {modelStore, uiStore} from '../../store';
 
 import {L10nContext} from '../../utils';
+import {formatBytes} from '../../utils/formatters';
 
 import {Menu} from '..';
+import {
+  clearModelShareCache,
+  getModelShareCacheSizeBytes,
+} from '../../utils/exportUtils';
 
 export const ModelsHeaderRight = observer(() => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [resetDialogVisible, setResetDialogVisible] = useState(false);
+  const [shareCacheSize, setShareCacheSize] = useState(0);
   const [_, setTrigger] = useState<boolean>(false);
 
   const l10n = useContext(L10nContext);
@@ -51,6 +57,54 @@ export const ModelsHeaderRight = observer(() => {
     setFilters(newFilters);
   };
 
+  const refreshShareCacheSize = async () => {
+    try {
+      const sizeBytes = await getModelShareCacheSizeBytes();
+      setShareCacheSize(sizeBytes);
+    } catch (error) {
+      console.error('Failed to read model share cache size:', error);
+      setShareCacheSize(0);
+    }
+  };
+
+  const handleClearShareCache = async () => {
+    setMenuVisible(false);
+    Alert.alert(
+      l10n.components.modelsHeaderRight.clearShareCacheTitle,
+      l10n.components.modelsHeaderRight.clearShareCacheMessage,
+      [
+        {
+          text: l10n.common.cancel,
+          style: 'cancel',
+        },
+        {
+          text: l10n.common.ok,
+          onPress: async () => {
+            try {
+              const removedCount = await clearModelShareCache();
+              await refreshShareCacheSize();
+              Alert.alert(
+                l10n.components.modelsHeaderRight.clearShareCacheDoneTitle,
+                l10n.components.modelsHeaderRight.clearShareCacheDoneMessage.replace(
+                  '{{count}}',
+                  String(removedCount),
+                ),
+                [{text: l10n.common.ok}],
+              );
+            } catch (error) {
+              console.error('Failed to clear model share cache:', error);
+              Alert.alert(
+                l10n.components.modelsHeaderRight.clearShareCacheErrorTitle,
+                l10n.components.modelsHeaderRight.clearShareCacheErrorMessage,
+                [{text: l10n.common.ok}],
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ModelsResetDialog
@@ -68,7 +122,15 @@ export const ModelsHeaderRight = observer(() => {
             icon="tune-vertical"
             size={24}
             style={styles.iconButton}
-            onPress={() => setMenuVisible(true)}
+            onPress={() => {
+              refreshShareCacheSize().catch(error => {
+                console.error(
+                  'Failed to refresh model share cache size:',
+                  error,
+                );
+              });
+              setMenuVisible(true);
+            }}
             testID="models-menu-button"
           />
         }
@@ -111,6 +173,13 @@ export const ModelsHeaderRight = observer(() => {
             showResetDialog();
           }}
           label={l10n.components.modelsHeaderRight.menuTitleReset}
+        />
+        <Menu.Item
+          leadingIcon="broom"
+          onPress={handleClearShareCache}
+          label={`${l10n.components.modelsHeaderRight.menuTitleClearShareCache} (${formatBytes(
+            shareCacheSize,
+          )})`}
         />
       </Menu>
     </View>

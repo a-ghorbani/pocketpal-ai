@@ -389,6 +389,9 @@ export interface Model {
 
   defaultChatTemplate: ChatTemplateConfig;
   chatTemplate: ChatTemplateConfig;
+  // Cached template read from loaded GGUF metadata (tokenizer.chat_template).
+  // Kept after unload; refreshed on next successful load.
+  cachedRuntimeTemplateText?: string;
   defaultStopWords: CompletionParams['stop'];
   stopWords: CompletionParams['stop'];
   defaultCompletionSettings: CompletionParams;
@@ -402,6 +405,11 @@ export type RootDrawerParamList = {
   Chat: undefined;
   Models: undefined;
   Settings: undefined;
+  Benchmark: undefined;
+  'App Info': undefined;
+  Console: undefined;
+  'Pals (experimental)': undefined;
+  'Dev Tools': undefined;
 };
 
 export type TokenNativeEvent = {

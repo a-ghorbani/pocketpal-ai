@@ -162,6 +162,7 @@ export const CompletionSettings: React.FC<Props> = ({
           {renderSlider({name: 'mirostat_eta'})}
         </>
       )}
+      {renderIntegerInput({name: 'n_probs'})}
       {renderIntegerInput({name: 'seed'})}
       {renderSwitch('jinja')}
     </View>

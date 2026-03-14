@@ -1,10 +1,12 @@
-import React, {useEffect, useRef, useState, useContext} from 'react';
-import {TextInput as RNTextInput} from 'react-native';
-import {View, Keyboard} from 'react-native';
+import React, {useEffect, useState, useContext} from 'react';
+import {View, TextInput as RNTextInput} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+import {
+  NativeViewGestureHandler,
+  ScrollView,
+} from 'react-native-gesture-handler';
 
-import {Button, Text, Switch, Chip} from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
+import {Text, Switch, Chip, Button as PaperButton} from 'react-native-paper';
 
 import {Divider, TextInput} from '../../../components';
 
@@ -14,29 +16,34 @@ import {createStyles} from './styles';
 import {ChatTemplatePicker} from '../ChatTemplatePicker';
 
 import {ChatTemplateConfig} from '../../../utils/types';
-import {Sheet} from '../../../components/Sheet';
 import {L10nContext} from '../../../utils';
 import {CompletionParams} from '../../../utils/completionTypes';
+import {chatTemplates, getChatTemplateDisplayName} from '../../../utils/chat';
 
 interface ModelSettingsProps {
   modelName: string;
   chatTemplate: ChatTemplateConfig;
+  defaultTemplateText?: string;
+  runtimeTemplateText?: string;
   stopWords: CompletionParams['stop'];
   onChange: (name: string, value: any) => void;
   onStopWordsChange: (stopWords: CompletionParams['stop']) => void;
   onModelNameChange: (name: string) => void;
+  onTemplateScrollLockChange?: (locked: boolean) => void;
 }
 
 export const ModelSettings: React.FC<ModelSettingsProps> = ({
   modelName,
   chatTemplate,
+  defaultTemplateText,
+  runtimeTemplateText,
   stopWords,
   onChange,
   onStopWordsChange,
   onModelNameChange,
+  onTemplateScrollLockChange,
 }) => {
   const l10n = useContext(L10nContext);
-  const [isDialogVisible, setDialogVisible] = useState<boolean>(false);
   const [localChatTemplate, setLocalChatTemplate] = useState(
     chatTemplate.chatTemplate,
   );
@@ -49,18 +56,10 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   const theme = useTheme();
   const styles = createStyles(theme);
 
-  const textInputRef = useRef<RNTextInput>(null);
-
   useEffect(() => {
     setLocalChatTemplate(chatTemplate.chatTemplate);
     setSelectedTemplateName(chatTemplate.name);
   }, [chatTemplate]);
-
-  useEffect(() => {
-    if (textInputRef.current) {
-      textInputRef.current.setNativeProps({text: localChatTemplate});
-    }
-  }, [localChatTemplate, isDialogVisible]);
 
   useEffect(() => {
     if (selectedTemplateName !== chatTemplate.name) {
@@ -73,18 +72,26 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
     }
   }, [chatTemplate.name, selectedTemplateName, chatTemplate.chatTemplate]);
 
-  const handleSave = () => {
-    onChange('chatTemplate', localChatTemplate);
-    setDialogVisible(false);
-  };
-
   const handleChatTemplateNameChange = (chatTemplateName: string) => {
     setSelectedTemplateName(chatTemplateName);
     onChange('name', chatTemplateName);
+    const nextTemplate = chatTemplates[chatTemplateName];
+    if (nextTemplate) {
+      setLocalChatTemplate(nextTemplate.chatTemplate);
+      onChange('chatTemplate', nextTemplate.chatTemplate);
+    }
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
+  const setTemplateScrollLock = (locked: boolean) => {
+    onTemplateScrollLockChange?.(locked);
+  };
+
+  const handlePreviewTouchStart = () => {
+    setTemplateScrollLock(true);
+  };
+
+  const handlePreviewTouchEnd = () => {
+    setTemplateScrollLock(false);
   };
 
   const renderTokenSetting = (
@@ -117,34 +124,98 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
 
   const renderTemplateSection = () => (
     <View style={styles.settingsSection}>
-      <View style={styles.chatTemplateRow}>
-        <Text style={styles.chatTemplateLabel} variant="labelLarge">
-          {l10n.models.modelSettings.template.label}
-        </Text>
-        <MaskedView
-          style={styles.chatTemplateContainer}
-          maskElement={
-            <View style={styles.chatTemplateMaskContainer}>
-              <Text variant="labelSmall">
-                {chatTemplate.chatTemplate.trim().slice(0, 30)}
-              </Text>
-            </View>
-          }>
-          <LinearGradient
-            colors={[theme.colors.onSurface, 'transparent']}
-            style={styles.chatTemplatePreviewGradient}
-            start={{x: 0.7, y: 0}}
-            end={{x: 1, y: 0}}
-          />
-        </MaskedView>
-        <Button
-          onPress={() => {
-            setLocalChatTemplate(chatTemplate.chatTemplate);
-            setDialogVisible(true);
-          }}>
-          {l10n.models.modelSettings.template.editButton}
-        </Button>
+      <Text style={styles.sectionHeader} variant="titleMedium">
+        {l10n.models.modelSettings.template.sectionTitle}
+      </Text>
+      <ChatTemplatePicker
+        selectedTemplateName={selectedTemplateName}
+        handleChatTemplateNameChange={handleChatTemplateNameChange}
+      />
+      <Text variant="labelSmall" style={styles.templateMeta}>
+        {`${l10n.models.modelSettings.template.selectedLabel} ${getChatTemplateDisplayName(selectedTemplateName || chatTemplate.name)}`}
+      </Text>
+      <Text variant="labelSmall" style={styles.templateMeta}>
+        {l10n.models.modelSettings.template.autoMatchNote}
+      </Text>
+      <Text variant="labelSmall" style={styles.templateMeta}>
+        {l10n.models.modelSettings.template.thinkingNote}
+      </Text>
+      <View style={styles.templateEditor}>
+        <RNTextInput
+          value={localChatTemplate}
+          placeholder={l10n.models.modelSettings.template.placeholder}
+          placeholderTextColor={theme.colors.placeholder}
+          onChangeText={text => {
+            setLocalChatTemplate(text);
+            onChange('chatTemplate', text);
+          }}
+          multiline
+          scrollEnabled
+          textAlignVertical="top"
+          onFocus={() => setTemplateScrollLock(true)}
+          onBlur={() => setTemplateScrollLock(false)}
+          style={styles.templateEditorInput}
+          testID="template-editor-input"
+        />
       </View>
+      {!(localChatTemplate || '').trim() && (
+        <>
+          <Text variant="labelSmall" style={styles.templateMeta}>
+            {runtimeTemplateText?.trim()
+              ? l10n.models.modelSettings.template.effectiveSourceGguf
+              : defaultTemplateText?.trim()
+                ? l10n.models.modelSettings.template.effectiveSourceModelDefault
+                : l10n.models.modelSettings.template.effectiveSourceRuntimeAuto}
+          </Text>
+          <View
+            style={styles.effectiveTemplatePreviewInput}
+            onTouchStart={handlePreviewTouchStart}
+            onTouchEnd={handlePreviewTouchEnd}
+            onTouchCancel={handlePreviewTouchEnd}
+            testID="effective-template-preview">
+            <PaperButton
+              mode="text"
+              compact
+              style={styles.previewCopyButton}
+              onPress={() => {
+                const textToCopy =
+                  (runtimeTemplateText || '').trim() ||
+                  (defaultTemplateText || '').trim() ||
+                  l10n.models.modelSettings.template
+                    .builtInTemplateAvailableAfterLoad;
+                Clipboard.setString(textToCopy);
+              }}
+              accessibilityLabel={l10n.components.chatView.menuItems.copy}
+              testID="effective-template-copy-button"
+              contentStyle={styles.previewCopyButtonContent}
+              labelStyle={styles.previewCopyButtonLabel}>
+              {l10n.components.chatView.menuItems.copy}
+            </PaperButton>
+            <NativeViewGestureHandler
+              disallowInterruption
+              shouldActivateOnStart>
+              <ScrollView
+                style={styles.previewScrollView}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                onTouchStart={handlePreviewTouchStart}
+                onTouchEnd={handlePreviewTouchEnd}
+                onTouchCancel={handlePreviewTouchEnd}
+                onScrollBeginDrag={() => setTemplateScrollLock(true)}
+                onScrollEndDrag={() => setTemplateScrollLock(false)}
+                onMomentumScrollEnd={() => setTemplateScrollLock(false)}
+                contentContainerStyle={styles.previewScrollContent}>
+                <Text style={styles.effectiveTemplatePreviewText}>
+                  {(runtimeTemplateText || '').trim() ||
+                    (defaultTemplateText || '').trim() ||
+                    l10n.models.modelSettings.template
+                      .builtInTemplateAvailableAfterLoad}
+                </Text>
+              </ScrollView>
+            </NativeViewGestureHandler>
+          </View>
+        </>
+      )}
     </View>
   );
 
@@ -188,11 +259,6 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
       />
     </View>
   );
-
-  const onCloseSheet = () => {
-    dismissKeyboard();
-    setDialogVisible(false);
-  };
 
   return (
     <View style={styles.container} testID="settings-container">
@@ -255,55 +321,12 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
             label={l10n.models.modelSettings.tokenSettings.systemPrompt}
           />
         </View>
-
-        <Divider style={styles.divider} />
-
-        {renderTemplateSection()}
       </View>
 
       <Divider style={styles.divider} />
       {renderStopWords()}
-      {/** Chat Template Dialog */}
-      <Sheet
-        isVisible={isDialogVisible}
-        onClose={onCloseSheet}
-        title={l10n.models.modelSettings.template.dialogTitle}
-        enableContentPanningGesture={false}
-        displayFullHeight>
-        <Sheet.ScrollView
-          bottomOffset={16}
-          contentContainerStyle={styles.sheetContainer}>
-          <View>
-            <ChatTemplatePicker
-              selectedTemplateName={selectedTemplateName}
-              handleChatTemplateNameChange={handleChatTemplateNameChange}
-            />
-            <Text variant="labelSmall" style={styles.templateNote}>
-              {l10n.models.modelSettings.template.note1}
-            </Text>
-            <Text variant="labelSmall" style={styles.templateNote}>
-              {l10n.models.modelSettings.template.note2}
-            </Text>
-          </View>
-          <TextInput
-            ref={textInputRef}
-            placeholder={l10n.models.modelSettings.template.placeholder}
-            defaultValue={localChatTemplate}
-            onChangeText={text => setLocalChatTemplate(text)}
-            multiline
-            numberOfLines={10}
-            style={styles.textArea}
-          />
-        </Sheet.ScrollView>
-        <Sheet.Actions style={styles.actionsContainer}>
-          <Button
-            testID="template-close-button"
-            mode="contained"
-            onPress={handleSave}>
-            {l10n.models.modelSettings.template.closeButton}
-          </Button>
-        </Sheet.Actions>
-      </Sheet>
+      <Divider style={styles.divider} />
+      {renderTemplateSection()}
     </View>
   );
 };

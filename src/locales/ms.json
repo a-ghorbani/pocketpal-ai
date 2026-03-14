@@ -288,7 +288,9 @@
         "deleteTitle": "Padam Model",
         "deleteMessage": "Pasti mahu memadam model yang telah dimuat turun ini?",
         "removeTitle": "Buang Model",
-        "removeMessage": "Pasti mahu membuang model ini daripada senarai?"
+        "removeMessage": "Pasti mahu membuang model ini daripada senarai?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Tetapan",
@@ -307,7 +309,9 @@
         "author": "Pengarang",
         "requiresProjectionModel": "Memerlukan model unjuran",
         "downloadProjectionModel": "Muat turun model unjuran",
-        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Kembangkan butiran",

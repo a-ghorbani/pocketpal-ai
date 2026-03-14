@@ -103,7 +103,7 @@ jobs:
           APP_RELEASE_KEY_PASSWORD: dummy-ci-password
         run: |
           cd android
-          ./gradlew assembleRelease
+          bash ./gradlew assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

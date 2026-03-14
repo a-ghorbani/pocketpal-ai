@@ -288,7 +288,9 @@
         "deleteTitle": "Hapus Model",
         "deleteMessage": "Yakin ingin menghapus model yang telah diunduh ini?",
         "removeTitle": "Hapus Model",
-        "removeMessage": "Yakin ingin menghapus model ini dari daftar?"
+        "removeMessage": "Yakin ingin menghapus model ini dari daftar?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Pengaturan",
@@ -307,7 +309,9 @@
         "author": "Penulis",
         "requiresProjectionModel": "Memerlukan model proyeksi",
         "downloadProjectionModel": "Unduh model proyeksi",
-        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Perluas detail",

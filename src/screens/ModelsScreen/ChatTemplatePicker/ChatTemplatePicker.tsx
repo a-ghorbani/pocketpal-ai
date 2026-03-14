@@ -10,7 +10,10 @@ import {L10nContext} from '../../../utils';
 
 import {styles} from './styles';
 
-import {chatTemplates} from '../../../utils/chat';
+import {
+  chatTemplateOptions,
+  getChatTemplateDisplayName,
+} from '../../../utils/chat';
 
 const pickerHeight = 30;
 
@@ -35,8 +38,8 @@ export const ChatTemplatePicker: React.FC<TemplatePickerProps> = ({
 
   const pickerItems = useMemo(
     () =>
-      Object.entries(chatTemplates).map(([key, template]) => ({
-        label: template.name,
+      chatTemplateOptions.map(key => ({
+        label: getChatTemplateDisplayName(key),
         value: key,
       })),
     [],
