@@ -93,7 +93,7 @@ class ModelStore {
   }
 
   appState: AppStateStatus = AppState.currentState;
-  useAutoRelease: boolean = true;
+  useAutoRelease: boolean = false;
   // UI loading state - true during model load/release transitions
   isContextLoading: boolean = false;
   loadingModel: Model | undefined = undefined;
