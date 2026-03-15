@@ -17,6 +17,8 @@ Since the majority of the users of this application are those who wish to gain a
 
 7. Critical modification! If the number of GPU unloading layers is too high, it can cause the model output to be garbled. However, in version 132, the default number of unloading layers is set to 99 (fully loaded), and I changed it to 0.
 
+8. Add a template selector switch, allowing the selection of the chat-formatter / Nunjucks interpreter or the llama.cpp Jinja chat template interpreter.
+
 A regrettable omission: I intended to implement real-time monitoring of memory (both RAM and virtual) usage, CPU utilization, and power consumption for performance debugging after evaluating feasibility, but decided against it due to complexity.
 
 <p align="center">
