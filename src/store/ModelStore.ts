@@ -2997,7 +2997,7 @@ class ModelStore {
           messages as any,
           this.activeModel ?? null,
           this.context ?? null,
-          hasImages ? false : (cleanCompletionParams.enable_thinking ?? false),
+          false, // startImageCompletion always has images; disable thinking for multimodal
         );
         const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
         formattedPromptTextForRuntime = normalizedPrompt.prompt;
