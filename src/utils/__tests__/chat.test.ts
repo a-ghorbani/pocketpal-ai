@@ -2,6 +2,8 @@ import {Templates} from 'chat-formatter';
 import {
   applyChatTemplate,
   convertToChatMessages,
+  getEffectiveChatTemplateInterpreter,
+  normalizeChatTemplateResult,
   user,
   assistant,
 } from '../chat';
@@ -241,11 +243,54 @@ describe('Test Danube2 Chat Templates', () => {
       //isEndOfSequence: true,
       addGenerationPrompt: true,
       name: 'danube2',
+      templateInterpreter: 'jinja',
     };
     const model = createModel({chatTemplate: chatTemplate});
     const result = await applyChatTemplate(conversationWSystem, model, null);
     expect(result).toBe(
       'System prompt. </s><|prompt|>Hi there!</s><|answer|>Nice to meet you!</s><|prompt|>Can I ask a question?</s><|answer|>',
+    );
+  });
+});
+
+describe('template interpreter selection', () => {
+  it('forces non-custom templates to use nunjucks', () => {
+    expect(
+      getEffectiveChatTemplateInterpreter({
+        name: 'llama3',
+        templateInterpreter: 'jinja',
+      }),
+    ).toBe('nunjucks');
+  });
+
+  it('keeps custom templates on configured interpreter', () => {
+    expect(
+      getEffectiveChatTemplateInterpreter({
+        name: 'custom',
+        templateInterpreter: 'nunjucks',
+      }),
+    ).toBe('nunjucks');
+  });
+});
+
+describe('normalizeChatTemplateResult', () => {
+  it('preserves multimodal metadata from jinja results', () => {
+    const result = normalizeChatTemplateResult({
+      prompt: '<image>Describe this image',
+      additional_stops: ['<stop>'],
+      chat_parser: 'llama-3',
+      has_media: true,
+      media_paths: ['/tmp/example.png'],
+    } as any);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        prompt: '<image>Describe this image',
+        additionalStops: ['<stop>'],
+        chatParser: 'llama-3',
+        hasMedia: true,
+        mediaPaths: ['/tmp/example.png'],
+      }),
     );
   });
 });

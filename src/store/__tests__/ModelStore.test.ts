@@ -8,6 +8,7 @@ import {defaultModels} from '../defaultModels';
 import {downloadManager} from '../../services/downloads';
 
 import {ModelOrigin, ModelType} from '../../utils/types';
+import {getLocalModelDefaultSettings} from '../../utils/chat';
 import {
   basicModel,
   mockLlamaContextParams,
@@ -17,6 +18,11 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore} from '..';
 import {t} from '../../locales';
+
+const applyChatTemplateSpy = jest.spyOn(
+  require('../../utils/chat'),
+  'applyChatTemplate',
+);
 
 // Mock the HF API
 jest.mock('../../api/hf', () => ({
@@ -49,6 +55,7 @@ describe('ModelStore', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    applyChatTemplateSpy.mockClear();
 
     // Reset RNFS mock state
     (RNFS as any).__resetMockState?.();
@@ -162,6 +169,71 @@ describe('ModelStore', () => {
           fullPath: localPath,
           isDownloaded: true,
         }),
+      );
+    });
+
+    it('should keep local text models vision-disabled by default after importing mmproj files', async () => {
+      await modelStore.addLocalModel('/path/to/local-model.gguf');
+      await modelStore.addLocalModel('/path/to/mmproj-local.gguf');
+
+      const localModel = modelStore.models.find(
+        model => model.filename === 'local-model.gguf',
+      );
+      const projectionModel = modelStore.models.find(
+        model => model.filename === 'mmproj-local.gguf',
+      );
+
+      expect(localModel).toEqual(
+        expect.objectContaining({
+          supportsMultimodal: true,
+          visionEnabled: false,
+        }),
+      );
+      expect(modelStore.getModelVisionPreference(localModel!)).toBe(false);
+      expect(projectionModel?.modelType).toBe(ModelType.PROJECTION);
+    });
+
+    it('should use custom(empty) template defaults for local models', async () => {
+      await modelStore.addLocalModel('/path/to/Qwen3.5-0.8B-Q8_0.gguf');
+
+      const localModel = modelStore.models.find(
+        model => model.filename === 'Qwen3.5-0.8B-Q8_0.gguf',
+      );
+
+      expect(localModel?.chatTemplate).toEqual(
+        expect.objectContaining({
+          name: 'custom',
+          chatTemplate: '',
+          systemPrompt: '',
+        }),
+      );
+      expect(localModel?.stopWords).toEqual(
+        getLocalModelDefaultSettings().completionParams.stop,
+      );
+    });
+
+    it('should preserve an explicit local vision preference when syncing local projection models', async () => {
+      await modelStore.addLocalModel('/path/to/local-model.gguf');
+      const localModel = modelStore.models.find(
+        model => model.filename === 'local-model.gguf',
+      );
+
+      await modelStore.addLocalModel('/path/to/mmproj-local.gguf');
+      await modelStore.setModelVisionEnabled(localModel!.id, true);
+      await modelStore.addLocalModel('/path/to/mmproj-local-2.gguf');
+
+      const updatedLocalModel = modelStore.models.find(
+        model => model.id === localModel!.id,
+      );
+
+      expect(updatedLocalModel).toEqual(
+        expect.objectContaining({
+          supportsMultimodal: true,
+          visionEnabled: true,
+        }),
+      );
+      expect(modelStore.getModelVisionPreference(updatedLocalModel!)).toBe(
+        true,
       );
     });
 
@@ -681,7 +753,7 @@ describe('ModelStore', () => {
       expect(modelStore.context).toBeDefined();
     });
 
-    it('should reinitialize context when coming back to foreground', async () => {
+    it('should not auto-reinitialize context when coming back to foreground', async () => {
       // Setup
       modelStore.useAutoRelease = true;
       const model = {...defaultModels[0], isDownloaded: true}; // Ensure model is downloaded
@@ -701,7 +773,9 @@ describe('ModelStore', () => {
       modelStore.appState = 'background';
       await modelStore.handleAppStateChange('active');
 
-      expect(mockInitContext).toHaveBeenCalledWith(model);
+      expect(mockInitContext).not.toHaveBeenCalled();
+      expect(modelStore.wasAutoReleased).toBe(false);
+      expect(modelStore.lastAutoReleasedModelId).toBeUndefined();
     });
   });
 
@@ -2172,6 +2246,62 @@ describe('ModelStore', () => {
       expect(params.messages).toHaveLength(2);
       expect(params.messages[0].role).toBe('system');
       expect(params.messages[0].content).toBe('You are a helpful assistant.');
+    });
+
+    it('should use prompt plus media_paths for multimodal custom jinja templates', async () => {
+      const mockContext = {
+        isMultimodalEnabled: jest.fn().mockResolvedValue(true),
+        completion: jest.fn().mockResolvedValue({text: 'Response text'}),
+      };
+      const customJinjaVisionModel = {
+        ...basicModel,
+        id: 'custom-jinja-vision-model',
+        supportsMultimodal: true,
+        visionEnabled: true,
+        chatTemplate: {
+          ...basicModel.chatTemplate,
+          name: 'custom',
+          chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+          templateInterpreter: 'jinja' as const,
+        },
+      };
+      const originalIsMultimodalEnabled = modelStore.isMultimodalEnabled;
+
+      modelStore.context = mockContext as any;
+      modelStore.models = [customJinjaVisionModel as any];
+      modelStore.activeModelId = customJinjaVisionModel.id;
+      modelStore.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
+
+      applyChatTemplateSpy.mockResolvedValueOnce({
+        prompt: 'custom multimodal prompt',
+        additional_stops: ['<vision-stop>'],
+        media_paths: ['/path/to/image.jpg'],
+        has_media: true,
+        chat_parser: 'llama-3',
+      } as any);
+
+      try {
+        await modelStore.startImageCompletion({
+          prompt: 'Test prompt',
+          image_path: '/path/to/image.jpg',
+        });
+
+        expect(mockContext.completion).toHaveBeenCalledWith(
+          expect.objectContaining({
+            prompt: 'custom multimodal prompt',
+            media_paths: ['/path/to/image.jpg'],
+            chat_parser: 'llama-3',
+            jinja: false,
+            stop: expect.arrayContaining(['<vision-stop>']),
+          }),
+          expect.any(Function),
+        );
+        expect(
+          mockContext.completion.mock.calls[0][0].messages,
+        ).toBeUndefined();
+      } finally {
+        modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
+      }
     });
   });
 

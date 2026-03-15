@@ -16,6 +16,55 @@ export const assistantId = 'h3o3lc5xj';
 export const user = {id: userId};
 export const assistant = {id: assistantId};
 
+export type ChatTemplateInterpreter = 'nunjucks' | 'jinja';
+export type NormalizedChatTemplateResult = {
+  prompt: string;
+  additionalStops: string[];
+  grammar?: string;
+  grammarLazy?: boolean;
+  grammarTriggers?: unknown[];
+  preservedTokens?: unknown[];
+  chatParser?: string;
+  hasMedia?: boolean;
+  mediaPaths: string[];
+};
+
+export const chatTemplateInterpreterOptions: ChatTemplateInterpreter[] = [
+  'nunjucks',
+  'jinja',
+];
+
+export function getChatTemplateInterpreterDisplayName(
+  interpreter: ChatTemplateInterpreter,
+): string {
+  switch (interpreter) {
+    case 'jinja':
+      return 'llama.cpp / Jinja';
+    case 'nunjucks':
+    default:
+      return 'chat-formatter / Nunjucks';
+  }
+}
+
+export function getEffectiveChatTemplateInterpreter(
+  chatTemplate?: Partial<ChatTemplateConfig> | null,
+): ChatTemplateInterpreter {
+  if (chatTemplate?.name && chatTemplate.name !== 'custom') {
+    return 'nunjucks';
+  }
+
+  return chatTemplate?.templateInterpreter ?? 'jinja';
+}
+
+function toTextOnlyMessages(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map(msg => ({
+    ...msg,
+    content: Array.isArray(msg.content)
+      ? msg.content.find(part => part.type === 'text')?.text || ''
+      : msg.content,
+  }));
+}
+
 export function convertToChatMessages(
   messages: MessageType.Any[],
   isMultimodalEnabled: boolean = true,
@@ -117,8 +166,11 @@ export async function applyChatTemplate(
   messages: ChatMessage[],
   model: Model | null,
   context: LlamaContext | null,
+  enableThinking: boolean = false,
 ): Promise<string | JinjaFormattedChatResult> {
   const modelChatTemplate = model?.chatTemplate;
+  const effectiveInterpreter =
+    getEffectiveChatTemplateInterpreter(modelChatTemplate);
   const contextChatTemplate = (context?.model as any)?.metadata?.[
     'tokenizer.chat_template'
   ];
@@ -126,33 +178,38 @@ export async function applyChatTemplate(
   let formattedChat: string | JinjaFormattedChatResult | undefined;
 
   try {
-    // Model's custom chat template. This uses chat-formatter, which is based on Nunjucks (as opposed to Jinja2).
-    if (modelChatTemplate?.chatTemplate) {
-      // Convert multimodal messages to text-only for chat-formatter compatibility
-      const textOnlyMessages = messages.map(msg => ({
-        ...msg,
-        content: Array.isArray(msg.content)
-          ? msg.content.find(part => part.type === 'text')?.text || ''
-          : msg.content,
-      }));
-      formattedChat = applyTemplate(textOnlyMessages, {
+    if (effectiveInterpreter === 'jinja') {
+      if (context?.getFormattedChat) {
+        const customTemplate = modelChatTemplate?.chatTemplate?.trim() || null;
+        formattedChat = await (context as any).getFormattedChat(
+          messages,
+          customTemplate,
+          {
+            jinja: true,
+            enable_thinking: enableThinking,
+          },
+        );
+      }
+    } else if (modelChatTemplate?.chatTemplate?.trim()) {
+      formattedChat = applyTemplate(toTextOnlyMessages(messages) as any, {
         customTemplate: modelChatTemplate,
         addGenerationPrompt: modelChatTemplate.addGenerationPrompt,
       }) as string;
-    } else if (contextChatTemplate) {
-      // Context's model-specific chat template. This uses llama.cpp's getFormattedChat.
-      formattedChat = await context?.getFormattedChat(messages);
+    }
+
+    if (
+      !formattedChat &&
+      effectiveInterpreter === 'jinja' &&
+      contextChatTemplate
+    ) {
+      formattedChat = await (context as any)?.getFormattedChat(messages, null, {
+        jinja: true,
+        enable_thinking: enableThinking,
+      });
     }
 
     if (!formattedChat) {
-      // Default chat template - convert multimodal messages to text-only for chat-formatter compatibility
-      const textOnlyMessages = messages.map(msg => ({
-        ...msg,
-        content: Array.isArray(msg.content)
-          ? msg.content.find(part => part.type === 'text')?.text || ''
-          : msg.content,
-      }));
-      formattedChat = applyTemplate(textOnlyMessages, {
+      formattedChat = applyTemplate(toTextOnlyMessages(messages) as any, {
         customTemplate: chatTemplates.default,
         addGenerationPrompt: chatTemplates.default.addGenerationPrompt,
       }) as string;
@@ -164,6 +221,41 @@ export async function applyChatTemplate(
   return formattedChat || ' ';
 }
 
+export function normalizeChatTemplateResult(
+  formattedChat: string | JinjaFormattedChatResult,
+): NormalizedChatTemplateResult {
+  if (typeof formattedChat === 'string') {
+    return {
+      prompt: formattedChat,
+      additionalStops: [],
+      mediaPaths: [],
+    };
+  }
+
+  const jinjaResult = formattedChat as any;
+  const mediaPaths = Array.isArray(jinjaResult.media_paths)
+    ? jinjaResult.media_paths.filter(
+        (path: unknown): path is string =>
+          typeof path === 'string' && path.length > 0,
+      )
+    : typeof jinjaResult.media_paths === 'string' &&
+        jinjaResult.media_paths.length > 0
+      ? [jinjaResult.media_paths]
+      : [];
+
+  return {
+    prompt: jinjaResult.prompt || JSON.stringify(formattedChat),
+    additionalStops: jinjaResult.additional_stops || [],
+    grammar: jinjaResult.grammar,
+    grammarLazy: jinjaResult.grammar_lazy,
+    grammarTriggers: jinjaResult.grammar_triggers,
+    preservedTokens: jinjaResult.preserved_tokens,
+    chatParser: jinjaResult.chat_parser,
+    hasMedia: Boolean(jinjaResult.has_media) || mediaPaths.length > 0,
+    mediaPaths,
+  };
+}
+
 export const chatTemplates: Record<string, ChatTemplateConfig> = {
   custom: {
     name: 'custom',
@@ -172,6 +264,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     eosToken: '',
     chatTemplate: '',
     systemPrompt: '',
+    templateInterpreter: 'jinja',
   },
   danube3: {
     ...Templates.templates.danube2,
@@ -179,6 +272,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful assistant named H2O Danube3. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   danube2: {
     ...Templates.templates.danube2,
@@ -186,6 +280,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful assistant named H2O Danube2. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   phi3: {
     ...Templates.templates.phi3,
@@ -193,6 +288,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful conversational chat assistant. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   gemmaIt: {
     ...Templates.templates.gemmaIt,
@@ -200,6 +296,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful conversational chat assistant. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   chatML: {
     ...Templates.templates.chatML,
@@ -207,6 +304,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful conversational chat assistant. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   default: {
     ...Templates.templates.default,
@@ -214,6 +312,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful conversational chat assistant. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   llama3: {
     ...Templates.templates.llama3,
@@ -221,12 +320,14 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful conversational chat assistant. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   llama32: {
     ...Templates.templates.llama32,
     name: 'llama32',
     addGenerationPrompt: true,
     systemPrompt: '',
+    templateInterpreter: 'nunjucks',
   },
   gemmasutra: {
     ...Templates.templates.gemmasutra,
@@ -234,12 +335,14 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are a helpful conversational chat assistant. You are precise, concise, and casual.',
+    templateInterpreter: 'nunjucks',
   },
   qwen2: {
     ...Templates.templates.qwen2,
     name: 'qwen2',
     addGenerationPrompt: true,
     systemPrompt: 'You are a helpful assistant.',
+    templateInterpreter: 'nunjucks',
   },
   qwen25: {
     ...Templates.templates.qwen25,
@@ -247,6 +350,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addGenerationPrompt: true,
     systemPrompt:
       'You are Qwen, created by Alibaba Cloud. You are a helpful assistant.',
+    templateInterpreter: 'nunjucks',
   },
   smolLM: {
     name: 'smolLM',
@@ -257,6 +361,7 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addBosToken: false,
     addEosToken: false,
     chatTemplate: '',
+    templateInterpreter: 'nunjucks',
   },
   smolVLM: {
     name: 'smolVLM',
@@ -267,8 +372,19 @@ export const chatTemplates: Record<string, ChatTemplateConfig> = {
     addBosToken: false,
     addEosToken: false,
     chatTemplate: '',
+    templateInterpreter: 'nunjucks',
   },
 };
+
+export const chatTemplateOptions: string[] = Object.keys(chatTemplates);
+
+export function getChatTemplateDisplayName(templateName: string): string {
+  const template = chatTemplates[templateName as keyof typeof chatTemplates];
+  if (!template) {
+    return templateName;
+  }
+  return template.name || templateName;
+}
 
 export function getLocalModelDefaultSettings(): {
   chatTemplate: ChatTemplateConfig;
@@ -294,6 +410,7 @@ export function getHFDefaultSettings(hfModel: HuggingFaceModel): {
     addGenerationPrompt: true,
     systemPrompt: '',
     name: 'custom',
+    templateInterpreter: 'jinja' as const,
   };
 
   const _defaultCompletionParams = {

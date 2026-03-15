@@ -21,6 +21,7 @@ import {Theme} from './src/utils/types';
 import {l10n, initLocale} from './src/locales';
 import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
+import {initializeConsoleCapture} from './src/utils/debug';
 
 import {
   SidebarContent,
@@ -35,6 +36,7 @@ import {
   SettingsScreen,
   BenchmarkScreen,
   AboutScreen,
+  ConsoleScreen,
 
   // Dev tools screen. Only available in debug mode.
   DevToolsScreen,
@@ -55,6 +57,8 @@ const DeepLinkHandler = () => {
 };
 
 const App = observer(() => {
+  initializeConsoleCapture();
+
   const theme = useTheme();
   const styles = createStyles(theme);
   const currentL10n = l10n[uiStore.language];
@@ -133,6 +137,14 @@ const App = observer(() => {
                       options={{
                         headerStyle: styles.headerWithoutDivider,
                         title: currentL10n.screenTitles.appInfo,
+                      }}
+                    />
+                    <Drawer.Screen
+                      name={ROUTES.CONSOLE}
+                      component={gestureHandlerRootHOC(ConsoleScreen)}
+                      options={{
+                        headerStyle: styles.headerWithoutDivider,
+                        title: 'Console',
                       }}
                     />
 

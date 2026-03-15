@@ -215,14 +215,21 @@
       "menuTitleHf": "Hugging Face Models",
       "menuTitleDownloaded": "Downloaded Models",
       "menuTitleGrouped": "Group by Model Type",
-      "menuTitleReset": "Reset Models List"
+      "menuTitleReset": "Reset Models List",
+      "menuTitleClearShareCache": "Clear Share Cache",
+      "clearShareCacheTitle": "Clear Share Cache",
+      "clearShareCacheMessage": "Delete all cached files created for model sharing?",
+      "clearShareCacheDoneTitle": "Share Cache Cleared",
+      "clearShareCacheDoneMessage": "Removed {{count}} cache folder(s).",
+      "clearShareCacheErrorTitle": "Clear Failed",
+      "clearShareCacheErrorMessage": "Failed to clear share cache. Please try again."
     },
     "modelsResetDialog": {
       "proceedWithReset": "Proceed with Reset",
       "confirmReset": "Confirm Reset"
     },
     "chatTemplate": {
-      "label": "Base Chat Template:"
+      "label": "Base Template:"
     },
     "details": {
       "title": "Available GGUF Files"
@@ -288,7 +295,9 @@
         "deleteTitle": "Delete Model",
         "deleteMessage": "Are you sure you want to delete this downloaded model?",
         "removeTitle": "Remove Model",
-        "removeMessage": "Are you sure you want to remove this model from the list?"
+        "removeMessage": "Are you sure you want to remove this model from the list?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Settings",
@@ -307,7 +316,9 @@
         "author": "Author",
         "requiresProjectionModel": "Requires projection model",
         "downloadProjectionModel": "Download projection model",
-        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
+        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Expand details",
@@ -331,8 +342,18 @@
     "modelSettings": {
       "template": {
         "label": "Template:",
-        "editButton": "Edit",
+        "sectionTitle": "Prompt Template",
         "dialogTitle": "Edit Chat Template",
+        "interpreterLabel": "Template Interpreter:",
+        "interpreterLockedNote": "When Base Template is not custom, this is locked to chat-formatter / Nunjucks.",
+        "interpreterCustomNote": "For the custom base template, choose whether the template is interpreted by chat-formatter / Nunjucks or llama.cpp / Jinja.",
+        "selectedLabel": "Selected preset:",
+        "autoMatchNote": "Official built-in models downloaded from the preset catalog are matched to preset templates. Other imported/local models default to the GGUF built-in template unless you override it here.",
+        "thinkingNote": "Template changes can affect reasoning/thinking support and the Thinking toggle behavior.",
+        "effectiveSourceGguf": "Effective template source: GGUF built-in template (loaded context)",
+        "effectiveSourceModelDefault": "Effective template source: model default template",
+        "effectiveSourceRuntimeAuto": "Effective template source: runtime auto template",
+        "builtInTemplateAvailableAfterLoad": "Built-in template will be available after the model is loaded for the first time.",
         "note1": "Note: Changing the template may alter BOS, EOS, and system prompt.",
         "note2": "Uses Nunjucks. Leave empty to use model's template.",
         "placeholder": "Enter your chat template here...",
@@ -373,7 +394,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "Include AI thinking/reasoning parts in the context sent to the model. Disabling this can save context space. It might impact performance.",
-    "jinja": "Enable Jinja templating for chat formatting. When enabled, uses Jinja-based chat template processing for better compatibility with modern models.",
     "grammar": "Enforce specific grammar rules to ensure the generated text follows a particular structure or format",
     "stop": "Define specific phrases that will stop text generation",
     "n_predict": "Set how long the generated response should be (in tokens)",
@@ -686,7 +706,14 @@
       "menuTitleHf": "Hugging Face Models",
       "menuTitleDownloaded": "Downloaded Models",
       "menuTitleGrouped": "Group by Model Type",
-      "menuTitleReset": "Reset Models List"
+      "menuTitleReset": "Reset Models List",
+      "menuTitleClearShareCache": "Clear Share Cache",
+      "clearShareCacheTitle": "Clear Share Cache",
+      "clearShareCacheMessage": "Delete all cached files created for model sharing?",
+      "clearShareCacheDoneTitle": "Share Cache Cleared",
+      "clearShareCacheDoneMessage": "Removed {{count}} cache folder(s).",
+      "clearShareCacheErrorTitle": "Clear Failed",
+      "clearShareCacheErrorMessage": "Failed to clear share cache. Please try again."
     },
     "modelsResetDialog": {
       "proceedWithReset": "Proceed with Reset",

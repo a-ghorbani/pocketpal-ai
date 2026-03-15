@@ -26,6 +26,8 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         ? {
             minHeight: rest.numberOfLines * 18,
             textAlignVertical: 'top',
+            flexGrow: 1,
+            paddingTop: 8,
           }
         : {};
 
@@ -37,7 +39,12 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
           dense
           underlineColor={theme.colors.border}
           style={[styles.container, style]}
-          contentStyle={multilineStyle as PaperTextInputProps['contentStyle']}
+          contentStyle={
+            [
+              multilineStyle,
+              rest.contentStyle,
+            ] as PaperTextInputProps['contentStyle']
+          }
           placeholderTextColor={theme.colors.placeholder}
           error={error}
         />

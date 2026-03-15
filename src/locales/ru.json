@@ -215,8 +215,7 @@
     "xtc_probability": "Шанс удаления токенов через сэмплер XTC. 0 - отключено",
     "xtc_threshold": "Минимальный порог вероятности для удаления токенов в XTC (значения > 0.5 отключают XTC)",
     "typical_p": "Включить локально-типичное сэмплирование с параметром p. 1.0 - отключено",
-    "include_thinking_in_context": "Включать рассуждения ИИ в контекст, отправляемый модели. Отключение экономит место в контексте. Но может снизить качество ответов.",
-    "jinja": "Включить шаблоны Jinja для форматирования чата. При включении используется обработка шаблонов Jinja для лучшей совместимости с современными моделями."
+    "include_thinking_in_context": "Включать рассуждения ИИ в контекст, отправляемый модели. Отключение экономит место в контексте. Но может снизить качество ответов."
   },
   "components": {
     "attachmentButton": {
@@ -797,7 +796,9 @@
         "deleteTitle": "Удалить модель",
         "deleteMessage": "Вы уверены, что хотите удалить эту загруженную модель?",
         "removeTitle": "Удалить из списка",
-        "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?"
+        "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Настройки",
@@ -816,7 +817,9 @@
         "author": "Автор",
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
-        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face"
+        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",

@@ -542,6 +542,19 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
               onPress={() => props.navigation.navigate(ROUTES.APP_INFO)}
               style={styles.menuDrawerItem}
             />
+            <Drawer.Item
+              label="Console"
+              icon={() => (
+                <SettingsIcon
+                  width={24}
+                  height={24}
+                  stroke={theme.colors.primary}
+                />
+              )}
+              onPress={() => props.navigation.navigate(ROUTES.CONSOLE)}
+              style={styles.menuDrawerItem}
+              testID="drawer-item-console"
+            />
             {/* Only show Dev Tools in debug mode */}
             {isDebugMode && (
               <Drawer.Item

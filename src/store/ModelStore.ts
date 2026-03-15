@@ -26,15 +26,28 @@ import {
   filterProjectionModels,
   inferRepoFromModelId,
 } from '../utils';
-import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
+import {
+  getRecommendedProjectionModel,
+  isProjectionModel,
+} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
+import {
+  buildCompletionParamProbe,
+  getTextDiagnostics,
+  previewText,
+  scheduleVisionDebugHeartbeats,
+  visionDebugLog,
+} from '../utils/debug';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
 import {downloadManager} from '../services/downloads';
 
 import {
-  getHFDefaultSettings,
+  applyChatTemplate,
+  getEffectiveChatTemplateInterpreter,
   getLocalModelDefaultSettings,
+  getHFDefaultSettings,
+  normalizeChatTemplateResult,
   stops,
 } from '../utils/chat';
 import {
@@ -62,6 +75,7 @@ import {resolveUseMmap} from '../utils/memorySettings';
 import {
   createContextInitParams,
   createDefaultContextInitParams,
+  migrateContextInitParams,
 } from '../utils/contextInitParamsVersions';
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
@@ -79,7 +93,7 @@ class ModelStore {
   }
 
   appState: AppStateStatus = AppState.currentState;
-  useAutoRelease: boolean = true;
+  useAutoRelease: boolean = false;
   // UI loading state - true during model load/release transitions
   isContextLoading: boolean = false;
   loadingModel: Model | undefined = undefined;
@@ -435,7 +449,31 @@ class ModelStore {
 
   initializeStore = async () => {
     const storedVersion = this.version || 0;
-    console.log('models: ', this.models);
+    const totalModels = this.models.length;
+    const downloadedModels = this.models.filter(m => m.isDownloaded).length;
+    const localModels = this.models.filter(m => m.isLocal).length;
+    console.log('[ModelStore] models summary:', {
+      total: totalModels,
+      downloaded: downloadedModels,
+      local: localModels,
+    });
+
+    // Normalize persisted context params from older app versions.
+    try {
+      runInAction(() => {
+        this.contextInitParams = migrateContextInitParams(
+          this.contextInitParams,
+        );
+      });
+    } catch (error) {
+      console.warn(
+        '[ModelStore] Failed to migrate context init params, resetting to defaults:',
+        error,
+      );
+      runInAction(() => {
+        this.contextInitParams = createDefaultContextInitParams();
+      });
+    }
 
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
@@ -588,6 +626,7 @@ class ModelStore {
       this.models = mergedModels;
     });
 
+    this.syncLocalProjectionModels();
     this.initializeDownloadStatus();
   };
 
@@ -634,13 +673,12 @@ class ModelStore {
 
   checkAndReloadAutoReleasedModel = async () => {
     if (this.wasAutoReleased && this.lastAutoReleasedModelId) {
-      const model = this.models.find(
-        m => m.id === this.lastAutoReleasedModelId && m.isDownloaded,
+      // Do not auto-load model on app launch/foreground by default.
+      // Keep flags only for diagnostics, then clear them.
+      console.log(
+        'Auto-released model detected, skipping auto-reload by default:',
+        this.lastAutoReleasedModelId,
       );
-      if (model) {
-        console.log('Reloading auto-released model:', model.id);
-        await this.initContext(model);
-      }
       this.clearAutoReleaseFlags();
     }
   };
@@ -1236,9 +1274,20 @@ class ModelStore {
     projectionModel?: Model;
   }> => {
     const visionEnabled = this.getModelVisionPreference(model);
+    visionDebugLog('resolveMultimodalConfig:start', {
+      modelId: model.id,
+      visionEnabled,
+      supportsMultimodal: model.supportsMultimodal,
+      explicitMmprojProvided: Boolean(mmProjPath),
+      defaultProjectionModel: model.defaultProjectionModel,
+    });
 
     // Priority 1: Explicit path provided by caller
     if (mmProjPath && visionEnabled) {
+      visionDebugLog('resolveMultimodalConfig:explicit-mmproj', {
+        modelId: model.id,
+        mmProjPath,
+      });
       return {isMultimodalInit: true, resolvedMmProjPath: mmProjPath};
     }
 
@@ -1253,6 +1302,11 @@ class ModelStore {
       );
       if (projectionModel?.isDownloaded) {
         const resolvedPath = await this.getModelFullPath(projectionModel);
+        visionDebugLog('resolveMultimodalConfig:default-mmproj', {
+          modelId: model.id,
+          projectionModelId: projectionModel.id,
+          resolvedPath,
+        });
         return {
           isMultimodalInit: true,
           resolvedMmProjPath: resolvedPath,
@@ -1262,6 +1316,9 @@ class ModelStore {
     }
 
     // Default: No multimodal support
+    visionDebugLog('resolveMultimodalConfig:text-only', {
+      modelId: model.id,
+    });
     return {isMultimodalInit: false};
   };
 
@@ -1358,6 +1415,12 @@ class ModelStore {
       // Resolve multimodal configuration
       const {isMultimodalInit, resolvedMmProjPath, projectionModel} =
         await this.resolveMultimodalConfig(model, mmProjPath);
+      visionDebugLog('initContext:resolved-config', {
+        modelId: model.id,
+        isMultimodalInit,
+        resolvedMmProjPath,
+        projectionModelId: projectionModel?.id,
+      });
 
       // Check memory and get user confirmation if needed (no mutex - UI interaction)
       const shouldProceed = await this.checkMemoryAndConfirm(
@@ -1451,6 +1514,39 @@ class ModelStore {
     // so they're available for error reporting if initialization fails
     const effectiveSettings =
       await this.getEffectiveContextInitParams(filePath);
+    visionDebugLog('initContext:model-summary', {
+      model: {
+        id: model.id,
+        name: model.name,
+        filename: model.filename,
+        origin: model.origin,
+        path: filePath,
+      },
+      projectionModel: projectionModel
+        ? {
+            id: projectionModel.id,
+            name: projectionModel.name,
+            filename: projectionModel.filename,
+          }
+        : undefined,
+      multimodal: {
+        requested: isMultimodalInit,
+        mmProjPath,
+      },
+      initParams: {
+        n_ctx: effectiveSettings.n_ctx,
+        n_batch: effectiveSettings.n_batch,
+        n_ubatch: effectiveSettings.n_ubatch,
+        n_threads: effectiveSettings.n_threads,
+        n_gpu_layers: effectiveSettings.n_gpu_layers,
+        flash_attn: effectiveSettings.flash_attn,
+        cache_type_k: effectiveSettings.cache_type_k,
+        cache_type_v: effectiveSettings.cache_type_v,
+        use_mmap: effectiveSettings.use_mmap,
+        use_mlock: effectiveSettings.use_mlock,
+        no_gpu_devices: effectiveSettings.no_gpu_devices,
+      },
+    });
 
     try {
       // Create properly versioned ContextInitParams
@@ -1493,11 +1589,20 @@ class ModelStore {
 
           if (!success) {
             console.error('Failed to initialize multimodal support');
+            visionDebugLog('initMultimodal:failed', {
+              modelId: model.id,
+              mmProjPath,
+            });
           } else {
             console.log('Multimodal support initialized successfully');
             // Verify that multimodal is now enabled
             const isEnabled = await ctx.isMultimodalEnabled();
             console.log('Multimodal enabled status:', isEnabled);
+            visionDebugLog('initMultimodal:success', {
+              modelId: model.id,
+              mmProjPath,
+              isEnabled,
+            });
 
             // Update the multimodal active flag
             runInAction(() => {
@@ -1506,6 +1611,12 @@ class ModelStore {
           }
         } catch (error) {
           console.error('Error initializing multimodal support:', error);
+          visionDebugLog('initMultimodal:error', {
+            modelId: model.id,
+            mmProjPath,
+            error:
+              error instanceof Error ? error.message : JSON.stringify(error),
+          });
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
@@ -1514,6 +1625,14 @@ class ModelStore {
       }
 
       runInAction(() => {
+        const runtimeTemplateText = String(
+          (ctx.model as any)?.metadata?.['tokenizer.chat_template'] || '',
+        );
+        const storeModel = this.models.find(m => m.id === model.id);
+        if (storeModel && runtimeTemplateText.trim()) {
+          storeModel.cachedRuntimeTemplateText = runtimeTemplateText;
+        }
+
         this.context = ctx;
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
@@ -1894,26 +2013,35 @@ class ModelStore {
   };
 
   addLocalModel = async (localFilePath: string) => {
-    const filename = localFilePath.split('/').pop(); // Extract filename from path
+    const filename = localFilePath.split('/').pop();
     if (!filename) {
       throw new Error('Invalid local file path');
     }
 
     const defaultSettings = getLocalModelDefaultSettings();
+    const isProjection = isProjectionModel(filename);
+    let fileSize = 0;
+
+    try {
+      const stat = await RNFS.stat(localFilePath);
+      fileSize = Number(stat.size) || 0;
+    } catch (error) {
+      console.warn('Failed to read local model size:', localFilePath, error);
+    }
 
     const model: Model = {
-      id: uuidv4(), // Generate a unique ID
+      id: uuidv4(),
       author: '',
       name: filename,
-      size: 0, // Placeholder for UI to ignore
-      params: 0, // Placeholder for UI to ignore
+      size: fileSize,
+      params: 0,
       isDownloaded: true,
       downloadUrl: '',
       hfUrl: '',
       progress: 0,
       filename,
       fullPath: localFilePath,
-      isLocal: true, // Kept for backward compatibility
+      isLocal: true,
       origin: ModelOrigin.LOCAL,
       defaultChatTemplate: {...defaultSettings.chatTemplate},
       chatTemplate: {...defaultSettings.chatTemplate},
@@ -1921,11 +2049,72 @@ class ModelStore {
       stopWords: [...(defaultSettings?.completionParams?.stop || [])],
       defaultCompletionSettings: defaultSettings.completionParams,
       completionSettings: {...defaultSettings.completionParams},
+      modelType: isProjection ? ModelType.PROJECTION : undefined,
+      supportsMultimodal: isProjection ? false : undefined,
+      compatibleProjectionModels: undefined,
+      visionEnabled: undefined,
     };
 
     runInAction(() => {
       this.models.push(model);
-      this.refreshDownloadStatuses();
+    });
+
+    this.syncLocalProjectionModels();
+    this.refreshDownloadStatuses();
+  };
+
+  private syncLocalProjectionModels = () => {
+    const localProjectionModels = this.models.filter(
+      model =>
+        (model.isLocal || model.origin === ModelOrigin.LOCAL) &&
+        model.modelType === ModelType.PROJECTION,
+    );
+
+    const localProjectionIds = localProjectionModels.map(model => model.id);
+
+    runInAction(() => {
+      this.models.forEach(model => {
+        const isLocalModel =
+          model.isLocal || model.origin === ModelOrigin.LOCAL;
+
+        if (!isLocalModel) {
+          return;
+        }
+
+        if (model.modelType === ModelType.PROJECTION) {
+          model.supportsMultimodal = false;
+          model.compatibleProjectionModels = undefined;
+          model.defaultProjectionModel = undefined;
+          model.visionEnabled = undefined;
+          return;
+        }
+
+        model.modelType = undefined;
+        const hadMultimodalSupport = model.supportsMultimodal === true;
+        model.supportsMultimodal = localProjectionIds.length > 0;
+        model.compatibleProjectionModels =
+          localProjectionIds.length > 0 ? localProjectionIds : undefined;
+
+        // Local text models should only behave as VLMs after the user enables Vision.
+        if (
+          localProjectionIds.length > 0 &&
+          !hadMultimodalSupport &&
+          model.visionEnabled === undefined
+        ) {
+          model.visionEnabled = false;
+        }
+
+        if (
+          model.defaultProjectionModel &&
+          !localProjectionIds.includes(model.defaultProjectionModel)
+        ) {
+          model.defaultProjectionModel = undefined;
+        }
+
+        if (!model.supportsMultimodal) {
+          model.visionEnabled = undefined;
+        }
+      });
     });
   };
 
@@ -2145,7 +2334,41 @@ class ModelStore {
       // Add relevant stop tokens from chat templates
       // First check model's custom chat template.
       const template = storeModel.chatTemplate?.chatTemplate;
+      const contextTemplate = String(
+        (ctx.model as any)?.metadata?.['tokenizer.chat_template'] || '',
+      );
       console.log('template: ', template);
+      console.log('context template (gguf): ', contextTemplate);
+      console.log('[ModelStore] template summary:', {
+        modelId: model.id,
+        modelTemplateLength: template?.length ?? 0,
+      });
+      visionDebugLog('template:metadata', {
+        modelId: model.id,
+        modelFilename: model.filename,
+        modelTemplateName: storeModel.chatTemplate?.name,
+        modelTemplateLength: template?.length ?? 0,
+        contextTemplateLength: contextTemplate.length,
+        contextTemplatePreview: contextTemplate.slice(0, 160),
+        architecture:
+          (ctx.model as any)?.metadata?.['general.architecture'] ||
+          storeModel.ggufMetadata?.architecture,
+        modelTemplateFull: template || '',
+        contextTemplateFull: contextTemplate,
+        tokenizerMetadata: {
+          eosToken: (ctx.model as any)?.metadata?.['tokenizer.ggml.eos_token'],
+          bosToken: (ctx.model as any)?.metadata?.['tokenizer.ggml.bos_token'],
+          eosTokenId: (ctx.model as any)?.metadata?.[
+            'tokenizer.ggml.eos_token_id'
+          ],
+          bosTokenId: (ctx.model as any)?.metadata?.[
+            'tokenizer.ggml.bos_token_id'
+          ],
+          tokenizerModel:
+            (ctx.model as any)?.metadata?.['tokenizer.ggml.model'] ||
+            (ctx.model as any)?.metadata?.['tokenizer.model'],
+        },
+      });
       if (template) {
         const templateStops = stops.filter(stop => template.includes(stop));
         stopTokens.push(...templateStops);
@@ -2160,7 +2383,10 @@ class ModelStore {
         stopTokens.push(...contextStops);
       }
 
-      console.log('stopTokens: ', stopTokens);
+      console.log('[ModelStore] stopTokens summary:', {
+        modelId: model.id,
+        count: stopTokens.length,
+      });
       // Only update if we found stop tokens
       if (stopTokens.length > 0) {
         runInAction(() => {
@@ -2293,6 +2519,14 @@ class ModelStore {
     const model = this.models.find(m => m.id === modelId);
     if (!model || !model.supportsMultimodal) {
       return [];
+    }
+
+    if (model.isLocal || model.origin === ModelOrigin.LOCAL) {
+      return this.models.filter(
+        m =>
+          (m.isLocal || m.origin === ModelOrigin.LOCAL) &&
+          m.modelType === ModelType.PROJECTION,
+      );
     }
 
     // If the model has explicitly defined compatible projection models, use those
@@ -2658,6 +2892,10 @@ class ModelStore {
       this.isStreaming = false;
     });
 
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let completionSettled = false;
+    let cancelNativeCallHeartbeats: () => void = () => undefined;
+
     try {
       // Handle both single image_path and multiple image_paths
       let imagePaths: string[] = [];
@@ -2682,6 +2920,13 @@ class ModelStore {
             : path // Android: keep as is
           : path,
       );
+      visionDebugLog('startImageCompletion:request', {
+        activeModelId: this.activeModelId,
+        activeProjectionModelId: this.activeProjectionModelId,
+        imageCount: processedImagePaths.length,
+        promptLength: params.prompt.length,
+        imageSources: processedImagePaths.map(path => path.slice(0, 120)),
+      });
 
       // Create a system message if provided
       const systemMessage = params.systemMessage?.trim()
@@ -2730,30 +2975,298 @@ class ModelStore {
       const cleanCompletionParams = toApiCompletionParams(
         completionParamsWithAppProps,
       );
+      const modelTemplate =
+        this.activeModel?.chatTemplate?.chatTemplate?.trim();
+      const contextTemplate = (this.context?.model as any)?.metadata?.[
+        'tokenizer.chat_template'
+      ];
+      const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
+        this.activeModel?.chatTemplate,
+      );
+      let formattedPromptPreview = '';
+      let formattedPromptLength = 0;
+      let formattedPromptError: string | undefined;
+      let formattedPromptTextForRuntime = '';
+      let formattedPromptAdditionalStops: string[] = [];
+      let formattedPromptChatParser: string | undefined;
+      let formattedPromptHasMedia = false;
+      let formattedPromptMediaPaths: string[] = [];
+
+      try {
+        const formattedPrompt = await applyChatTemplate(
+          messages as any,
+          this.activeModel ?? null,
+          this.context ?? null,
+          false, // startImageCompletion always has images; disable thinking for multimodal
+        );
+        const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
+        formattedPromptTextForRuntime = normalizedPrompt.prompt;
+        formattedPromptLength = normalizedPrompt.prompt.length;
+        formattedPromptPreview = previewText(normalizedPrompt.prompt);
+        formattedPromptAdditionalStops = normalizedPrompt.additionalStops;
+        formattedPromptChatParser = normalizedPrompt.chatParser;
+        formattedPromptHasMedia = normalizedPrompt.hasMedia ?? false;
+        formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
+      } catch (error) {
+        formattedPromptError =
+          error instanceof Error ? error.message : JSON.stringify(error);
+      }
+
+      if (formattedPromptAdditionalStops.length > 0) {
+        const existingStopWords = Array.isArray(cleanCompletionParams.stop)
+          ? cleanCompletionParams.stop
+          : typeof cleanCompletionParams.stop === 'string'
+            ? [cleanCompletionParams.stop]
+            : [];
+        cleanCompletionParams.stop = Array.from(
+          new Set([...existingStopWords, ...formattedPromptAdditionalStops]),
+        );
+      }
+
+      if (formattedPromptChatParser) {
+        (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
+      }
+
+      if (
+        effectiveTemplateInterpreter === 'jinja' &&
+        modelTemplate &&
+        processedImagePaths.length > 0
+      ) {
+        (cleanCompletionParams as any).chatTemplate = modelTemplate;
+      }
+
+      const usePromptTransportForFormattedTemplate =
+        !!formattedPromptTextForRuntime &&
+        !formattedPromptError &&
+        formattedPromptMediaPaths.length > 0;
+
+      if (usePromptTransportForFormattedTemplate) {
+        (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
+        (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
+        delete (cleanCompletionParams as any).messages;
+        delete (cleanCompletionParams as any).chatTemplate;
+        (cleanCompletionParams as any).jinja = false;
+        // Disable thinking for multimodal: template already rendered with thinking off,
+        // and multimodal+thinking is a known suspect combination in native completion.
+        (cleanCompletionParams as any).enable_thinking = false;
+        delete (cleanCompletionParams as any).reasoning_format;
+      }
+
+      visionDebugLog('startImageCompletion:params', {
+        requestId,
+        completionTransport: usePromptTransportForFormattedTemplate
+          ? 'prompt-preformatted-template'
+          : 'messages-api',
+        activeModel: this.activeModel
+          ? {
+              id: this.activeModel.id,
+              name: this.activeModel.name,
+              filename: this.activeModel.filename,
+            }
+          : undefined,
+        activeProjectionModel: (() => {
+          const activeProjectionModel = this.activeProjectionModelId
+            ? this.models.find(m => m.id === this.activeProjectionModelId)
+            : undefined;
+
+          return activeProjectionModel
+            ? {
+                id: activeProjectionModel.id,
+                name: activeProjectionModel.name,
+                filename: activeProjectionModel.filename,
+              }
+            : undefined;
+        })(),
+        prompt: params.prompt,
+        systemMessage: params.systemMessage,
+        stop: stopWords,
+        settings: {
+          temperature: cleanCompletionParams.temperature,
+          top_k: cleanCompletionParams.top_k,
+          top_p: cleanCompletionParams.top_p,
+          min_p: cleanCompletionParams.min_p,
+          seed: cleanCompletionParams.seed,
+          n_predict: cleanCompletionParams.n_predict,
+          enable_thinking: cleanCompletionParams.enable_thinking,
+          reasoning_format: cleanCompletionParams.reasoning_format,
+        },
+        transportPayload: {
+          hasPrompt: typeof (cleanCompletionParams as any).prompt === 'string',
+          promptLength: String((cleanCompletionParams as any).prompt ?? '')
+            .length,
+          hasMessages: Array.isArray((cleanCompletionParams as any).messages),
+          messageCount: Array.isArray((cleanCompletionParams as any).messages)
+            ? (cleanCompletionParams as any).messages.length
+            : 0,
+          hasMediaPaths: Array.isArray(
+            (cleanCompletionParams as any).media_paths,
+          ),
+          mediaPathCount: Array.isArray(
+            (cleanCompletionParams as any).media_paths,
+          )
+            ? (cleanCompletionParams as any).media_paths.length
+            : 0,
+          jinja: (cleanCompletionParams as any).jinja,
+          chatTemplateLength: String(
+            (cleanCompletionParams as any).chatTemplate ?? '',
+          ).length,
+        },
+        template: {
+          selectedTemplateName: this.activeModel?.chatTemplate?.name,
+          effectiveTemplateInterpreter,
+          modelTemplateLength: modelTemplate?.length ?? 0,
+          contextTemplateLength: String(contextTemplate || '').length,
+          contextTemplatePreview: previewText(contextTemplate),
+          modelTemplateFull: modelTemplate || '',
+          contextTemplateFull: String(contextTemplate || ''),
+          formattedPromptLength,
+          formattedPromptPreview,
+          formattedPromptFull: formattedPromptTextForRuntime,
+          formattedPromptAdditionalStops,
+          formattedPromptHasMedia,
+          formattedPromptMediaPaths,
+          formattedPromptChatParser,
+          formattedPromptError,
+          note: usePromptTransportForFormattedTemplate
+            ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
+            : 'Runtime completion currently sends messages directly to llama.rn.',
+        },
+        contextMetadata: {
+          architecture: (this.context?.model as any)?.metadata?.[
+            'general.architecture'
+          ],
+          eosTokenId: (this.context?.model as any)?.metadata?.[
+            'tokenizer.ggml.eos_token_id'
+          ],
+        },
+      });
 
       // Create the completion promise and register it for safe context release
+      let streamTokenCount = 0;
+      let streamTokenPreview = '';
+      let firstAnomalousChunkLogged = false;
+      let nativeBridgeReturned = false;
+      let firstNativeChunkSeen = false;
+      const completionTransport = usePromptTransportForFormattedTemplate
+        ? 'prompt-preformatted-template'
+        : 'messages-api';
+
+      visionDebugLog('startImageCompletion:pre-native-call', {
+        requestId,
+        completionTransport,
+        probe: buildCompletionParamProbe(cleanCompletionParams as any),
+      });
+      cancelNativeCallHeartbeats = scheduleVisionDebugHeartbeats(
+        'startImageCompletion:native-call-heartbeat',
+        () => ({
+          requestId,
+          completionTransport,
+          nativeBridgeReturned,
+          firstNativeChunkSeen,
+          completionSettled,
+          isStreaming: this.isStreaming,
+          inferencing: this.inferencing,
+        }),
+      );
       const completionPromise = this.context.completion(
         cleanCompletionParams,
         data => {
+          if (
+            !firstNativeChunkSeen &&
+            (data.token || data.content || data.reasoning_content)
+          ) {
+            firstNativeChunkSeen = true;
+            visionDebugLog('startImageCompletion:first-native-chunk', {
+              requestId,
+              completionTransport,
+              callbackKeys: Object.keys(data || {}),
+              tokenPreview: previewText((data as any)?.token, 120),
+              contentPreview: previewText((data as any)?.content, 120),
+              reasoningPreview: previewText(
+                (data as any)?.reasoning_content,
+                120,
+              ),
+            });
+          }
           if (data.token) {
+            streamTokenCount += 1;
+            if (streamTokenPreview.length < 500) {
+              streamTokenPreview = previewText(
+                `${streamTokenPreview}${data.token}`,
+              );
+            }
             params.onToken?.(data.token);
+          }
+          if (
+            !firstAnomalousChunkLogged &&
+            (data.content || data.reasoning_content)
+          ) {
+            const contentDiag = getTextDiagnostics(data.content);
+            const reasoningDiag = getTextDiagnostics(data.reasoning_content);
+            if (
+              contentDiag.symbolRatio > 0.45 ||
+              contentDiag.repeatedCharMaxRun >= 6 ||
+              contentDiag.repeatedBigramCount >= 10 ||
+              reasoningDiag.symbolRatio > 0.45 ||
+              reasoningDiag.repeatedCharMaxRun >= 6 ||
+              reasoningDiag.repeatedBigramCount >= 10
+            ) {
+              firstAnomalousChunkLogged = true;
+              visionDebugLog('startImageCompletion:anomalous-chunk', {
+                requestId,
+                streamTokenCount,
+                callbackKeys: Object.keys(data || {}),
+                tokenPreview: previewText((data as any)?.token, 120),
+                contentDiag,
+                reasoningDiag,
+              });
+            }
           }
         },
       );
+      nativeBridgeReturned = true;
+      visionDebugLog('startImageCompletion:post-native-call', {
+        requestId,
+        completionTransport,
+        nativeBridgeReturned,
+        promiseCreated: Boolean(completionPromise),
+      });
 
       // Register the promise so releaseContext can wait for it
       this.registerCompletionPromise(completionPromise);
 
       const result = await completionPromise;
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
+      visionDebugLog('startImageCompletion:result', {
+        requestId,
+        activeModelId: this.activeModelId,
+        contentLength: result.text?.length ?? 0,
+        tokenCount: streamTokenCount,
+        tokenPreview: streamTokenPreview,
+        textPreview: previewText(result.text),
+        contentPreview: previewText(result.content),
+        reasoningPreview: previewText(result.reasoning_content),
+        textDiag: getTextDiagnostics(result.text),
+        contentDiag: getTextDiagnostics(result.content),
+        reasoningDiag: getTextDiagnostics(result.reasoning_content),
+      });
 
       // Clear the promise after completion finishes
       this.clearCompletionPromise();
 
       params.onComplete?.(result.text);
     } catch (error) {
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
       // Clear the promise on error too
       this.clearCompletionPromise();
       console.error('Error in multi-image completion:', error);
+      visionDebugLog('startImageCompletion:error', {
+        requestId,
+        activeModelId: this.activeModelId,
+        error: error instanceof Error ? error.message : JSON.stringify(error),
+      });
       params.onError?.(
         error instanceof Error ? error : new Error(String(error)),
       );

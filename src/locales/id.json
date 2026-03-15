@@ -288,7 +288,9 @@
         "deleteTitle": "Hapus Model",
         "deleteMessage": "Yakin ingin menghapus model yang telah diunduh ini?",
         "removeTitle": "Hapus Model",
-        "removeMessage": "Yakin ingin menghapus model ini dari daftar?"
+        "removeMessage": "Yakin ingin menghapus model ini dari daftar?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Pengaturan",
@@ -307,7 +309,9 @@
         "author": "Penulis",
         "requiresProjectionModel": "Memerlukan model proyeksi",
         "downloadProjectionModel": "Unduh model proyeksi",
-        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Perluas detail",
@@ -373,7 +377,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "Sertakan bagian pemikiran/penalaran AI dalam konteks yang dikirim ke model. Menonaktifkan ini dapat menghemat ruang konteks, tetapi mungkin memengaruhi performa.",
-    "jinja": "Aktifkan templat Jinja untuk format obrolan. Saat diaktifkan, menggunakan pemrosesan templat berbasis Jinja untuk kompatibilitas lebih baik dengan model modern.",
     "grammar": "Terapkan aturan tata bahasa tertentu agar teks yang dihasilkan mengikuti struktur atau format tertentu",
     "stop": "Tentukan frasa spesifik yang akan menghentikan generasi teks",
     "n_predict": "Atur panjang respons yang dihasilkan (dalam token)",

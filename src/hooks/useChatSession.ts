@@ -11,8 +11,21 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../store';
 import {MessageType, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
 import {resolveSystemMessages} from '../utils/systemPromptResolver';
-import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
+import {
+  applyChatTemplate,
+  convertToChatMessages,
+  getEffectiveChatTemplateInterpreter,
+  normalizeChatTemplateResult,
+  removeThinkingParts,
+} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
+import {
+  buildCompletionParamProbe,
+  getTextDiagnostics,
+  previewText,
+  scheduleVisionDebugHeartbeats,
+  visionDebugLog,
+} from '../utils/debug';
 import {
   toApiCompletionParams,
   CompletionParams,
@@ -40,6 +53,28 @@ const prepareCompletion = async ({
   l10n: any;
   currentMessages: MessageType.Any[];
 }) => {
+  const mergeStopWords = (
+    existingStops: unknown,
+    additionalStops: string[],
+  ) => {
+    const mergedStops = new Set<string>(
+      Array.isArray(existingStops)
+        ? existingStops.filter(
+            (stop): stop is string =>
+              typeof stop === 'string' && stop.length > 0,
+          )
+        : [],
+    );
+
+    additionalStops.forEach(stop => {
+      if (typeof stop === 'string' && stop.length > 0) {
+        mergedStops.add(stop);
+      }
+    });
+
+    return Array.from(mergedStops);
+  };
+
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
   const stopWords = toJS(modelStore.activeModel?.stopWords);
@@ -107,6 +142,19 @@ const prepareCompletion = async ({
       content: userMessageContent,
     },
   ];
+  visionDebugLog('prepareCompletion:messages', {
+    messageCount: messages.length,
+    hasImages,
+    isMultimodalEnabled,
+    lastUserMessage: Array.isArray(userMessageContent)
+      ? {
+          parts: userMessageContent.map(part => part.type),
+          textLength:
+            userMessageContent.find(part => part.type === 'text')?.text
+              ?.length ?? 0,
+        }
+      : {type: 'text', textLength: String(userMessageContent).length},
+  });
 
   // Create completion params with app-specific properties
   const completionParamsWithAppProps = {
@@ -125,6 +173,243 @@ const prepareCompletion = async ({
   if (cleanCompletionParams.enable_thinking) {
     cleanCompletionParams.reasoning_format = 'auto';
   }
+  const thinkingAssembly = {
+    enable_thinking: cleanCompletionParams.enable_thinking ?? false,
+    reasoning_format: cleanCompletionParams.reasoning_format ?? null,
+    include_thinking_in_context: includeThinkingInContext,
+    add_generation_prompt:
+      modelStore.activeModel?.chatTemplate?.addGenerationPrompt ?? false,
+  };
+
+  const modelTemplate =
+    modelStore.activeModel?.chatTemplate?.chatTemplate?.trim();
+  const contextTemplate = (context?.model as any)?.metadata?.[
+    'tokenizer.chat_template'
+  ];
+  const contextArchitecture = String(
+    (context?.model as any)?.metadata?.['general.architecture'] || '',
+  ).toLowerCase();
+  let formattedPromptPreview = '';
+  let formattedPromptLength = 0;
+  let formattedPromptError: string | undefined;
+  let formattedPromptTextForRuntime = '';
+  let formattedPromptAdditionalStops: string[] = [];
+  let formattedPromptGrammar: string | undefined;
+  let formattedPromptGrammarLazy: boolean | undefined;
+  let formattedPromptGrammarTriggers: unknown[] | undefined;
+  let formattedPromptPreservedTokens: unknown[] | undefined;
+  let formattedPromptChatParser: string | undefined;
+  let formattedPromptHasMedia = false;
+  let formattedPromptMediaPaths: string[] = [];
+  const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
+    modelStore.activeModel?.chatTemplate,
+  );
+  const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  try {
+    const formattedPrompt = await applyChatTemplate(
+      messages as any,
+      modelStore.activeModel ?? null,
+      context ?? null,
+      hasImages ? false : (cleanCompletionParams.enable_thinking ?? false),
+    );
+    const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
+    formattedPromptTextForRuntime = normalizedPrompt.prompt;
+    formattedPromptLength = normalizedPrompt.prompt.length;
+    formattedPromptPreview = previewText(normalizedPrompt.prompt);
+    formattedPromptAdditionalStops = normalizedPrompt.additionalStops;
+    formattedPromptGrammar = normalizedPrompt.grammar;
+    formattedPromptGrammarLazy = normalizedPrompt.grammarLazy;
+    formattedPromptGrammarTriggers = normalizedPrompt.grammarTriggers;
+    formattedPromptPreservedTokens = normalizedPrompt.preservedTokens;
+    formattedPromptChatParser = normalizedPrompt.chatParser;
+    formattedPromptHasMedia = normalizedPrompt.hasMedia ?? false;
+    formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
+  } catch (error) {
+    formattedPromptError =
+      error instanceof Error ? error.message : JSON.stringify(error);
+  }
+
+  if (formattedPromptAdditionalStops.length > 0) {
+    cleanCompletionParams.stop = mergeStopWords(
+      cleanCompletionParams.stop,
+      formattedPromptAdditionalStops,
+    );
+  }
+
+  if (formattedPromptGrammar) {
+    (cleanCompletionParams as any).grammar = formattedPromptGrammar;
+  }
+
+  if (formattedPromptGrammarLazy !== undefined) {
+    (cleanCompletionParams as any).grammar_lazy = formattedPromptGrammarLazy;
+  }
+
+  if (formattedPromptGrammarTriggers) {
+    (cleanCompletionParams as any).grammar_triggers =
+      formattedPromptGrammarTriggers;
+  }
+
+  if (formattedPromptPreservedTokens) {
+    (cleanCompletionParams as any).preserved_tokens =
+      formattedPromptPreservedTokens;
+  }
+
+  if (formattedPromptChatParser) {
+    (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
+  }
+
+  if (hasImages && effectiveTemplateInterpreter === 'jinja' && modelTemplate) {
+    (cleanCompletionParams as any).chatTemplate = modelTemplate;
+  }
+
+  // qwen35 fallback:
+  // force prompt transport to bypass runtime messages+jinja formatting path.
+  const canUsePromptTransportForMultimodal =
+    hasImages && formattedPromptMediaPaths.length > 0;
+  const usePromptFallbackForQwen35 =
+    !hasImages &&
+    contextArchitecture.includes('qwen35') &&
+    !!formattedPromptTextForRuntime &&
+    !formattedPromptError;
+  const usePromptTransportForFormattedTemplate =
+    !!formattedPromptTextForRuntime &&
+    !formattedPromptError &&
+    (!hasImages || canUsePromptTransportForMultimodal);
+
+  if (usePromptFallbackForQwen35 || usePromptTransportForFormattedTemplate) {
+    (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
+    delete (cleanCompletionParams as any).messages;
+    (cleanCompletionParams as any).jinja = false;
+
+    if (formattedPromptMediaPaths.length > 0) {
+      (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
+      // Disable thinking for multimodal: template already rendered with thinking off,
+      // and multimodal+thinking is a known suspect combination in native completion.
+      (cleanCompletionParams as any).enable_thinking = false;
+      delete (cleanCompletionParams as any).reasoning_format;
+    }
+
+    delete (cleanCompletionParams as any).chatTemplate;
+  }
+
+  const completionTransport = usePromptFallbackForQwen35
+    ? 'prompt-fallback-qwen35'
+    : usePromptTransportForFormattedTemplate
+      ? 'prompt-preformatted-template'
+      : 'messages-api';
+
+  // Core LLM observability logs: keep full template/system prompt/input.
+  console.log('[LLM Input] request', {
+    requestId,
+    completionTransport,
+    modelId: modelStore.activeModel?.id,
+    modelName: modelStore.activeModel?.name,
+    thinkingAssembly,
+    systemMessages,
+    userMessage: message.text,
+    modelTemplateFull: modelTemplate || '',
+    contextTemplateFull: String(contextTemplate || ''),
+    formattedPromptFull: formattedPromptTextForRuntime,
+    formattedPromptError,
+  });
+
+  visionDebugLog('prepareCompletion:params', {
+    requestId,
+    completionTransport,
+    activeModel: modelStore.activeModel
+      ? {
+          id: modelStore.activeModel.id,
+          name: modelStore.activeModel.name,
+          filename: modelStore.activeModel.filename,
+        }
+      : undefined,
+    activeProjectionModel: modelStore.activeProjectionModelId
+      ? modelStore.models.find(
+          model => model.id === modelStore.activeProjectionModelId,
+        )
+        ? {
+            id: modelStore.models.find(
+              model => model.id === modelStore.activeProjectionModelId,
+            )?.id,
+            name: modelStore.models.find(
+              model => model.id === modelStore.activeProjectionModelId,
+            )?.name,
+            filename: modelStore.models.find(
+              model => model.id === modelStore.activeProjectionModelId,
+            )?.filename,
+          }
+        : undefined
+      : undefined,
+    input: {
+      text: message.text,
+      imageCount: imageUris.length,
+      imageUris: imageUris.map(uri => uri.slice(0, 120)),
+      systemMessageCount: systemMessages.length,
+    },
+    settings: {
+      temperature: cleanCompletionParams.temperature,
+      top_k: cleanCompletionParams.top_k,
+      top_p: cleanCompletionParams.top_p,
+      min_p: cleanCompletionParams.min_p,
+      seed: cleanCompletionParams.seed,
+      n_predict: cleanCompletionParams.n_predict,
+      enable_thinking: cleanCompletionParams.enable_thinking,
+      reasoning_format: cleanCompletionParams.reasoning_format,
+      stop: cleanCompletionParams.stop,
+    },
+    settingsFull: cleanCompletionParams,
+    transportPayload: {
+      hasPrompt: typeof (cleanCompletionParams as any).prompt === 'string',
+      promptLength: String((cleanCompletionParams as any).prompt ?? '').length,
+      hasMessages: Array.isArray((cleanCompletionParams as any).messages),
+      messageCount: Array.isArray((cleanCompletionParams as any).messages)
+        ? (cleanCompletionParams as any).messages.length
+        : 0,
+      hasMediaPaths: Array.isArray((cleanCompletionParams as any).media_paths),
+      mediaPathCount: Array.isArray((cleanCompletionParams as any).media_paths)
+        ? (cleanCompletionParams as any).media_paths.length
+        : 0,
+      jinja: (cleanCompletionParams as any).jinja,
+      chatTemplateLength: String(
+        (cleanCompletionParams as any).chatTemplate ?? '',
+      ).length,
+    },
+    template: {
+      selectedTemplateName: modelStore.activeModel?.chatTemplate?.name,
+      effectiveTemplateInterpreter,
+      modelTemplateLength: modelTemplate?.length ?? 0,
+      contextTemplateLength: String(contextTemplate || '').length,
+      contextTemplatePreview: previewText(contextTemplate),
+      modelTemplateFull: modelTemplate || '',
+      contextTemplateFull: String(contextTemplate || ''),
+      formattedPromptLength,
+      formattedPromptPreview,
+      formattedPromptFull: formattedPromptTextForRuntime,
+      formattedPromptAdditionalStops,
+      formattedPromptHasMedia,
+      formattedPromptMediaPaths,
+      formattedPromptChatParser,
+      formattedPromptError,
+      note: usePromptFallbackForQwen35
+        ? 'Using formatted prompt fallback for qwen35 text completion.'
+        : usePromptTransportForFormattedTemplate
+          ? hasImages
+            ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
+            : 'Runtime completion sends the preformatted prompt directly to llama.rn.'
+          : 'Runtime completion currently sends messages directly to llama.rn.',
+    },
+    contextMetadata: {
+      architecture: (context?.model as any)?.metadata?.['general.architecture'],
+      eosTokenId: (context?.model as any)?.metadata?.[
+        'tokenizer.ggml.eos_token_id'
+      ],
+      bosTokenId: (context?.model as any)?.metadata?.[
+        'tokenizer.ggml.bos_token_id'
+      ],
+      chatTemplateHash: getTextDiagnostics(contextTemplate).hash,
+    },
+  });
 
   // Create empty assistant message in both database and store
   const createdAt = Date.now();
@@ -151,7 +436,7 @@ const prepareCompletion = async ({
     sessionId: chatSessionStore.activeSessionId!,
   };
 
-  return {cleanCompletionParams, messageInfo};
+  return {cleanCompletionParams, messageInfo, requestId, completionTransport};
 };
 
 export const useChatSession = (
@@ -243,24 +528,52 @@ export const useChatSession = (
     });
 
     // Prepare completion parameters and create message record
-    const {cleanCompletionParams, messageInfo} = await prepareCompletion({
-      imageUris: imageUris || [],
-      message,
-      systemMessages,
-      context,
-      assistant,
-      conversationIdRef: conversationIdRef.current,
-      isMultimodalEnabled,
-      l10n,
-      currentMessages,
-    });
+    const {cleanCompletionParams, messageInfo, requestId, completionTransport} =
+      await prepareCompletion({
+        imageUris: imageUris || [],
+        message,
+        systemMessages,
+        context,
+        assistant,
+        conversationIdRef: conversationIdRef.current,
+        isMultimodalEnabled,
+        l10n,
+        currentMessages,
+      });
 
     currentMessageInfo.current = messageInfo;
+
+    let completionSettled = false;
+    let cancelNativeCallHeartbeats: () => void = () => undefined;
 
     try {
       // Track time to first token
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
+      let streamChunkCount = 0;
+      let streamedContentPreview = '';
+      let streamedReasoningPreview = '';
+      let firstAnomalousChunkLogged = false;
+      let nativeBridgeReturned = false;
+      let firstNativeChunkSeen = false;
+
+      visionDebugLog('completion:pre-native-call', {
+        requestId,
+        transport: completionTransport,
+        probe: buildCompletionParamProbe(cleanCompletionParams as any),
+      });
+      cancelNativeCallHeartbeats = scheduleVisionDebugHeartbeats(
+        'completion:native-call-heartbeat',
+        () => ({
+          requestId,
+          transport: completionTransport,
+          nativeBridgeReturned,
+          firstNativeChunkSeen,
+          completionSettled,
+          isStreaming: modelStore.isStreaming,
+          inferencing: modelStore.inferencing,
+        }),
+      );
 
       // Create the completion promise and register it with modelStore
       // This enables safe context release by waiting for the promise to finish
@@ -273,6 +586,24 @@ export const useChatSession = (
               timeToFirstToken = Date.now() - completionStartTime;
             }
 
+            if (
+              !firstNativeChunkSeen &&
+              (data.token || data.content || data.reasoning_content)
+            ) {
+              firstNativeChunkSeen = true;
+              visionDebugLog('completion:first-native-chunk', {
+                requestId,
+                transport: completionTransport,
+                callbackKeys: Object.keys(data || {}),
+                tokenPreview: previewText((data as any)?.token, 120),
+                contentPreview: previewText((data as any)?.content, 120),
+                reasoningPreview: previewText(
+                  (data as any)?.reasoning_content,
+                  120,
+                ),
+              });
+            }
+
             if (!modelStore.isStreaming) {
               modelStore.setIsStreaming(true);
             }
@@ -280,6 +611,44 @@ export const useChatSession = (
             // Use content and reasoning_content from the streaming data
             // llama.rn already separates these for us when enable_thinking is true
             const {content = '', reasoning_content: reasoningContent} = data;
+
+            if (content || reasoningContent) {
+              streamChunkCount += 1;
+            }
+            if (content && streamedContentPreview.length < 500) {
+              streamedContentPreview = previewText(
+                `${streamedContentPreview}${content}`,
+              );
+            }
+            if (reasoningContent && streamedReasoningPreview.length < 500) {
+              streamedReasoningPreview = previewText(
+                `${streamedReasoningPreview}${reasoningContent}`,
+              );
+            }
+
+            if (!firstAnomalousChunkLogged && (content || reasoningContent)) {
+              const contentDiag = getTextDiagnostics(content);
+              const reasoningDiag = getTextDiagnostics(reasoningContent);
+              const suspiciousContent =
+                contentDiag.symbolRatio > 0.45 ||
+                contentDiag.repeatedCharMaxRun >= 6 ||
+                contentDiag.repeatedBigramCount >= 10;
+              const suspiciousReasoning =
+                reasoningDiag.symbolRatio > 0.45 ||
+                reasoningDiag.repeatedCharMaxRun >= 6 ||
+                reasoningDiag.repeatedBigramCount >= 10;
+              if (suspiciousContent || suspiciousReasoning) {
+                firstAnomalousChunkLogged = true;
+                visionDebugLog('completion:anomalous-chunk', {
+                  requestId,
+                  streamChunkCount,
+                  callbackKeys: Object.keys(data || {}),
+                  tokenPreview: previewText((data as any)?.token, 120),
+                  contentDiag,
+                  reasoningDiag,
+                });
+              }
+            }
 
             // Update message with the separated content
             if (content || reasoningContent) {
@@ -308,27 +677,50 @@ export const useChatSession = (
           }
         },
       );
+      nativeBridgeReturned = true;
+      visionDebugLog('completion:post-native-call', {
+        requestId,
+        transport: completionTransport,
+        nativeBridgeReturned,
+        promiseCreated: Boolean(completionPromise),
+      });
 
       // Register the promise so releaseContext can wait for it
       modelStore.registerCompletionPromise(completionPromise);
 
       // Await the completion
       const result = await completionPromise;
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
 
       // Clear the promise after completion finishes
       modelStore.clearCompletionPromise();
 
       // Log completion result with time to first token for debugging
-      if (__DEV__) {
-        console.log('Completion result:', {
-          ...result.timings,
-          time_to_first_token_ms: timeToFirstToken,
-          reasoning_content: result.reasoning_content,
-          content: result.content,
-          text: result.text,
-        });
-        console.log('result', result);
-      }
+      console.log('[LLM Output] completion result:', {
+        requestId,
+        ...result.timings,
+        time_to_first_token_ms: timeToFirstToken,
+        reasoning_content: result.reasoning_content,
+        content: result.content,
+        text: result.text,
+      });
+      visionDebugLog('completion:result', {
+        requestId,
+        timeToFirstToken,
+        streamChunkCount,
+        finalTextLength: result.text?.length ?? 0,
+        finalContentLength: result.content?.length ?? 0,
+        finalReasoningLength: result.reasoning_content?.length ?? 0,
+        streamedContentPreview,
+        streamedReasoningPreview,
+        finalTextPreview: previewText(result.text),
+        finalContentPreview: previewText(result.content),
+        finalReasoningPreview: previewText(result.reasoning_content),
+        finalTextDiag: getTextDiagnostics(result.text),
+        finalContentDiag: getTextDiagnostics(result.content),
+        finalReasoningDiag: getTextDiagnostics(result.reasoning_content),
+      });
 
       // Update final completion metadata
       await chatSessionStore.updateMessage(
@@ -355,9 +747,15 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
     } catch (error) {
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
       console.error('Completion error:', error);
+      visionDebugLog('completion:error', {
+        requestId,
+        error: error instanceof Error ? error.message : JSON.stringify(error),
+      });
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);

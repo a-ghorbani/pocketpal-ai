@@ -46,7 +46,7 @@ export const createContextInitParams = (
     n_threads: params.n_threads ?? 4,
     cache_type_k: params.cache_type_k ?? 'f16',
     cache_type_v: params.cache_type_v ?? 'f16',
-    n_gpu_layers: params.n_gpu_layers ?? 99, // Changed default from 0 to 99
+    n_gpu_layers: params.n_gpu_layers ?? 0, // Default to CPU-only unless explicitly configured
     use_mlock: params.use_mlock ?? false,
 
     // New parameters (v2.0+)
@@ -225,7 +225,7 @@ export function createDefaultContextInitParams(): ContextInitParams {
     n_threads: 4,
     cache_type_k: 'f16',
     cache_type_v: 'f16',
-    n_gpu_layers: 99, // All layers
+    n_gpu_layers: 0, // Default to CPU-only
     use_mlock: false,
     use_mmap: Platform.OS === 'android' ? 'smart' : 'true',
 

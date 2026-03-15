@@ -1,0 +1,7 @@
+old/
+node_modules/
+coverage/
+dist/
+build/
+android/
+ios/

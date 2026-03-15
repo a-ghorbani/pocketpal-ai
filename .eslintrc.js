@@ -13,6 +13,7 @@ module.exports = {
     'build/',
     'dist/',
     'e2e/',
+    'old/',
   ],
   rules: {
     'prettier/prettier': 'error',

@@ -288,7 +288,9 @@
         "deleteTitle": "モデルを削除",
         "deleteMessage": "このダウンロード済みモデルを削除してもよろしいですか？",
         "removeTitle": "モデルを削除",
-        "removeMessage": "このモデルをリストから削除してもよろしいですか？"
+        "removeMessage": "このモデルをリストから削除してもよろしいですか？",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "設定",
@@ -307,7 +309,9 @@
         "author": "作者",
         "requiresProjectionModel": "投影モデルが必要",
         "downloadProjectionModel": "投影モデルをダウンロード",
-        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示"
+        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "詳細を展開",
@@ -373,7 +377,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "AIの思考/推論部分をモデルに送信するコンテキストに含めます、無効にするとコンテキスト容量を節約できますが、パフォーマンスに影響する可能性があります",
-    "jinja": "チャットフォーマットにJinjaテンプレートを使用します、有効にすると、最新のモデルとの互換性を向上させるためにJinjaベースのチャットテンプレート処理を使用します",
     "grammar": "生成テキストが特定の構造や形式に従うよう、文法ルールを適用します",
     "stop": "テキスト生成を停止する特定のフレーズを設定します",
     "n_predict": "生成する応答の長さをトークン単位で設定します",

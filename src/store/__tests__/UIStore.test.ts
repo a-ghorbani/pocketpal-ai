@@ -8,7 +8,7 @@ jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
 describe('UIStore', () => {
   beforeEach(() => {
     uiStore.setColorScheme('light');
-    uiStore.setAutoNavigateToChat(true);
+    uiStore.setAutoNavigateToChat(false);
     uiStore.setDisplayMemUsage(false);
     uiStore.setValue('modelsScreen', 'filters', []);
     uiStore.setLanguage('en');
@@ -23,7 +23,7 @@ describe('UIStore', () => {
         },
       },
     });
-    expect(uiStore.autoNavigatetoChat).toBe(true);
+    expect(uiStore.autoNavigatetoChat).toBe(false);
     expect(uiStore.colorScheme).toBe('light');
     expect(uiStore.displayMemUsage).toBe(false);
   });

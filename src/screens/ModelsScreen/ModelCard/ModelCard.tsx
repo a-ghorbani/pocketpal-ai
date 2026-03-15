@@ -49,6 +49,7 @@ import {
 
 import {
   LinkExternalIcon,
+  ShareIcon,
   TrashIcon,
   SettingsIcon,
   CpuChipIcon,
@@ -58,6 +59,7 @@ import {
   ChevronSelectorVerticalIcon,
   ChevronSelectorExpandedVerticalIcon,
 } from '../../../assets/icons';
+import {exportModelFiles} from '../../../utils/exportUtils';
 
 type ChatScreenNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
 
@@ -129,6 +131,11 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       model.supportsMultimodal &&
       modelStore.getModelVisionPreference(model) && // Only show warning when vision is enabled
       projectionModelStatus.state === 'missing';
+    const linkedProjectionModel =
+      projectionModelStatus.projectionModel?.isDownloaded &&
+      projectionModelStatus.projectionModel.id !== model.id
+        ? projectionModelStatus.projectionModel
+        : undefined;
 
     // Check integrity when model is downloaded
     useEffect(() => {
@@ -226,6 +233,19 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         });
       }
     }, [model.hfUrl]);
+
+    const handleShareModelFiles = useCallback(async () => {
+      try {
+        await exportModelFiles(model, linkedProjectionModel);
+      } catch (error) {
+        console.error('Failed to share model files:', error);
+        Alert.alert(
+          l10n.components.exportUtils.shareError,
+          l10n.components.exportUtils.shareErrorMessage,
+          [{text: l10n.common.ok}],
+        );
+      }
+    }, [l10n, linkedProjectionModel, model]);
 
     const handleRemove = useCallback(() => {
       Alert.alert(
@@ -847,6 +867,26 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                           l10n.models.modelCard.labels
                             .viewModelCardOnHuggingFace
                         }
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                {isDownloaded && (
+                  <TouchableOpacity
+                    testID="share-model-files-button"
+                    onPress={handleShareModelFiles}
+                    style={styles.hfLinkButton}
+                    activeOpacity={0.7}>
+                    <View style={styles.hfLinkContent}>
+                      <ShareIcon
+                        width={16}
+                        height={16}
+                        stroke={theme.colors.primary}
+                      />
+                      <Text style={styles.hfLinkText}>
+                        {linkedProjectionModel
+                          ? l10n.models.modelCard.labels.shareModelFiles
+                          : l10n.models.modelCard.labels.shareModelFile}
                       </Text>
                     </View>
                   </TouchableOpacity>

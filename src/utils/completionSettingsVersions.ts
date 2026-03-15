@@ -44,7 +44,6 @@ export const defaultCompletionParams: CompletionParams = {
   seed: -1,
   n_probs: 0, // If greater than 0, the response also contains the probabilities of top N tokens for each generated token given the sampling settings.
   stop: ['</s>'],
-  jinja: true, // Whether to use Jinja templating for chat formatting
   enable_thinking: true, // Whether to enable thinking mode for compatible models
   // emit_partial_completion: true, // This is not used in the current version of llama.rn
 };
@@ -72,8 +71,8 @@ export function migrateCompletionSettings(settings: any): any {
   }
 
   if (migratedSettings.version < 2) {
-    // Migration to version 2: Add jinja parameter
-    migratedSettings.jinja = defaultCompletionParams.jinja;
+    // Migration to version 2: (jinja parameter removed, no-op)
+    delete migratedSettings.jinja;
     migratedSettings.version = 2;
   }
 

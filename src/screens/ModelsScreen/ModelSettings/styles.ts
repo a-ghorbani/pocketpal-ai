@@ -3,6 +3,7 @@ import {Dimensions, StyleSheet} from 'react-native';
 import {Theme} from '../../../utils/types';
 
 const screenHeight = Dimensions.get('window').height;
+const templateBoxHeight = screenHeight * 0.28;
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
@@ -60,6 +61,81 @@ export const createStyles = (theme: Theme) =>
     templateNote: {
       color: theme.colors.textSecondary,
       marginVertical: 8,
+    },
+    templateMeta: {
+      color: theme.colors.textSecondary,
+      marginTop: 6,
+      paddingHorizontal: 2,
+    },
+    sectionHeader: {
+      marginBottom: 8,
+      paddingHorizontal: 2,
+    },
+    templateEditor: {
+      borderRadius: 8,
+      height: templateBoxHeight,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      overflow: 'hidden',
+    },
+    templateEditorInput: {
+      flex: 1,
+      fontSize: 12,
+      lineHeight: 16,
+      paddingHorizontal: 12,
+      paddingTop: 10,
+      paddingBottom: 10,
+      color: theme.colors.text,
+    },
+    effectiveTemplatePreviewText: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: theme.colors.textSecondary,
+    },
+    effectiveTemplatePreviewInput: {
+      fontSize: 12,
+      lineHeight: 16,
+      borderRadius: 8,
+      height: templateBoxHeight,
+      marginTop: 8,
+      position: 'relative',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      overflow: 'hidden',
+    },
+    effectiveTemplatePreviewTextInput: {
+      flex: 1,
+    },
+    previewScrollView: {
+      flex: 1,
+    },
+    previewCopyButton: {
+      position: 'absolute',
+      right: 4,
+      top: 4,
+      zIndex: 2,
+      margin: 0,
+      minWidth: 64,
+      height: 28,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    previewCopyButtonContent: {
+      height: 28,
+    },
+    previewCopyButtonLabel: {
+      fontSize: 12,
+      marginVertical: 0,
+    },
+    previewScrollContent: {
+      paddingHorizontal: 12,
+      paddingTop: 36,
+      paddingBottom: 10,
     },
     stopLabel: {
       flexDirection: 'row',

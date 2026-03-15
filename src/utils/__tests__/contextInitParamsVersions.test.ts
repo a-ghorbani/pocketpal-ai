@@ -140,6 +140,28 @@ describe('contextInitParamsVersions', () => {
       expect(migrated.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
     });
 
+    it('should preserve GPU-enabled legacy settings by restoring the fallback offload value', () => {
+      const legacyGpuEnabledSettings = {
+        version: '1.0',
+        n_ctx: 2048,
+        n_batch: 512,
+        n_ubatch: 256,
+        n_threads: 4,
+        cache_type_k: CacheType.F16,
+        cache_type_v: CacheType.F16,
+        n_gpu_layers: 0,
+        no_gpu_devices: false,
+        use_mlock: false,
+        use_mmap: 'true' as const,
+      };
+
+      const migrated = migrateContextInitParams(legacyGpuEnabledSettings);
+
+      expect(migrated.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
+      expect(migrated.devices).toBeUndefined();
+      expect(migrated.n_gpu_layers).toBe(99);
+    });
+
     it('should migrate from v2.0 to v2.1 with default image_max_tokens', () => {
       const v20Params = {
         version: '2.0',
@@ -149,7 +171,7 @@ describe('contextInitParamsVersions', () => {
         n_threads: 4,
         cache_type_k: CacheType.F16,
         cache_type_v: CacheType.F16,
-        n_gpu_layers: 99,
+        n_gpu_layers: 0,
         use_mlock: false,
         use_mmap: 'true' as const,
         kv_unified: true,
@@ -171,7 +193,7 @@ describe('contextInitParamsVersions', () => {
         n_threads: 4,
         cache_type_k: CacheType.F16,
         cache_type_v: CacheType.F16,
-        n_gpu_layers: 99,
+        n_gpu_layers: 0,
         use_mlock: false,
         use_mmap: 'true' as const,
         kv_unified: true,
@@ -230,7 +252,7 @@ describe('contextInitParamsVersions', () => {
       expect(defaultSettings.flash_attn_type).toBe('auto');
       expect(defaultSettings.cache_type_k).toBe('f16');
       expect(defaultSettings.cache_type_v).toBe('f16');
-      expect(defaultSettings.n_gpu_layers).toBe(99);
+      expect(defaultSettings.n_gpu_layers).toBe(0);
       expect(defaultSettings.use_mlock).toBe(false);
       expect(defaultSettings.use_mmap).toBe('true'); // Default for non-Android platforms
     });

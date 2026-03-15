@@ -28,7 +28,6 @@ export const defaultCompletionParams = {
   seed: -1,
   n_probs: 0,
   stop: ['</s>'],
-  jinja: true,
 };
 
 export function migrateCompletionSettings(settings) {
@@ -49,8 +48,8 @@ export function migrateCompletionSettings(settings) {
   }
 
   if (migratedSettings.version < 2) {
-    // Migration to version 2: Add jinja parameter
-    migratedSettings.jinja = defaultCompletionParams.jinja;
+    // Migration to version 2: (jinja parameter removed, no-op)
+    delete migratedSettings.jinja;
     migratedSettings.version = 2;
   }
 
