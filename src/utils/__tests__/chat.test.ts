@@ -3,6 +3,7 @@ import {
   applyChatTemplate,
   convertToChatMessages,
   getEffectiveChatTemplateInterpreter,
+  normalizeChatTemplateResult,
   user,
   assistant,
 } from '../chat';
@@ -269,5 +270,27 @@ describe('template interpreter selection', () => {
         templateInterpreter: 'nunjucks',
       }),
     ).toBe('nunjucks');
+  });
+});
+
+describe('normalizeChatTemplateResult', () => {
+  it('preserves multimodal metadata from jinja results', () => {
+    const result = normalizeChatTemplateResult({
+      prompt: '<image>Describe this image',
+      additional_stops: ['<stop>'],
+      chat_parser: 'llama-3',
+      has_media: true,
+      media_paths: ['/tmp/example.png'],
+    } as any);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        prompt: '<image>Describe this image',
+        additionalStops: ['<stop>'],
+        chatParser: 'llama-3',
+        hasMedia: true,
+        mediaPaths: ['/tmp/example.png'],
+      }),
+    );
   });
 });

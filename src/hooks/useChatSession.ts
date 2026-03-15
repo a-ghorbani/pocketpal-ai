@@ -192,6 +192,9 @@ const prepareCompletion = async ({
   let formattedPromptGrammarLazy: boolean | undefined;
   let formattedPromptGrammarTriggers: unknown[] | undefined;
   let formattedPromptPreservedTokens: unknown[] | undefined;
+  let formattedPromptChatParser: string | undefined;
+  let formattedPromptHasMedia = false;
+  let formattedPromptMediaPaths: string[] = [];
   const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
     modelStore.activeModel?.chatTemplate,
   );
@@ -212,6 +215,9 @@ const prepareCompletion = async ({
     formattedPromptGrammarLazy = normalizedPrompt.grammarLazy;
     formattedPromptGrammarTriggers = normalizedPrompt.grammarTriggers;
     formattedPromptPreservedTokens = normalizedPrompt.preservedTokens;
+    formattedPromptChatParser = normalizedPrompt.chatParser;
+    formattedPromptHasMedia = normalizedPrompt.hasMedia ?? false;
+    formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
   } catch (error) {
     formattedPromptError =
       error instanceof Error ? error.message : JSON.stringify(error);
@@ -242,20 +248,42 @@ const prepareCompletion = async ({
       formattedPromptPreservedTokens;
   }
 
+  if (formattedPromptChatParser) {
+    (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
+  }
+
+  if (
+    hasImages &&
+    effectiveTemplateInterpreter === 'jinja' &&
+    modelTemplate
+  ) {
+    (cleanCompletionParams as any).chatTemplate = modelTemplate;
+  }
+
   // qwen35 fallback:
   // force prompt transport to bypass runtime messages+jinja formatting path.
+  const canUsePromptTransportForMultimodal =
+    hasImages && formattedPromptMediaPaths.length > 0;
   const usePromptFallbackForQwen35 =
     !hasImages &&
     contextArchitecture.includes('qwen35') &&
     !!formattedPromptTextForRuntime &&
     !formattedPromptError;
   const usePromptTransportForFormattedTemplate =
-    !hasImages && !!formattedPromptTextForRuntime && !formattedPromptError;
+    !!formattedPromptTextForRuntime &&
+    !formattedPromptError &&
+    (!hasImages || canUsePromptTransportForMultimodal);
 
   if (usePromptFallbackForQwen35 || usePromptTransportForFormattedTemplate) {
     (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
     delete (cleanCompletionParams as any).messages;
     (cleanCompletionParams as any).jinja = false;
+
+    if (formattedPromptMediaPaths.length > 0) {
+      (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
+    }
+
+    delete (cleanCompletionParams as any).chatTemplate;
   }
 
   const completionTransport = usePromptFallbackForQwen35
@@ -331,7 +359,14 @@ const prepareCompletion = async ({
       messageCount: Array.isArray((cleanCompletionParams as any).messages)
         ? (cleanCompletionParams as any).messages.length
         : 0,
+      hasMediaPaths: Array.isArray((cleanCompletionParams as any).media_paths),
+      mediaPathCount: Array.isArray((cleanCompletionParams as any).media_paths)
+        ? (cleanCompletionParams as any).media_paths.length
+        : 0,
       jinja: (cleanCompletionParams as any).jinja,
+      chatTemplateLength: String(
+        (cleanCompletionParams as any).chatTemplate ?? '',
+      ).length,
     },
     template: {
       selectedTemplateName: modelStore.activeModel?.chatTemplate?.name,
@@ -345,11 +380,16 @@ const prepareCompletion = async ({
       formattedPromptPreview,
       formattedPromptFull: formattedPromptTextForRuntime,
       formattedPromptAdditionalStops,
+      formattedPromptHasMedia,
+      formattedPromptMediaPaths,
+      formattedPromptChatParser,
       formattedPromptError,
       note: usePromptFallbackForQwen35
         ? 'Using formatted prompt fallback for qwen35 text completion.'
         : usePromptTransportForFormattedTemplate
-          ? 'Runtime completion sends the preformatted prompt directly to llama.rn.'
+          ? hasImages
+            ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
+            : 'Runtime completion sends the preformatted prompt directly to llama.rn.'
           : 'Runtime completion currently sends messages directly to llama.rn.',
     },
     contextMetadata: {

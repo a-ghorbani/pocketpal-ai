@@ -24,6 +24,9 @@ export type NormalizedChatTemplateResult = {
   grammarLazy?: boolean;
   grammarTriggers?: unknown[];
   preservedTokens?: unknown[];
+  chatParser?: string;
+  hasMedia?: boolean;
+  mediaPaths: string[];
 };
 
 export const chatTemplateInterpreterOptions: ChatTemplateInterpreter[] = [
@@ -222,10 +225,20 @@ export function normalizeChatTemplateResult(
     return {
       prompt: formattedChat,
       additionalStops: [],
+      mediaPaths: [],
     };
   }
 
   const jinjaResult = formattedChat as any;
+  const mediaPaths = Array.isArray(jinjaResult.media_paths)
+    ? jinjaResult.media_paths.filter(
+        (path: unknown): path is string =>
+          typeof path === 'string' && path.length > 0,
+      )
+    : typeof jinjaResult.media_paths === 'string' &&
+        jinjaResult.media_paths.length > 0
+      ? [jinjaResult.media_paths]
+      : [];
 
   return {
     prompt: jinjaResult.prompt || JSON.stringify(formattedChat),
@@ -234,6 +247,9 @@ export function normalizeChatTemplateResult(
     grammarLazy: jinjaResult.grammar_lazy,
     grammarTriggers: jinjaResult.grammar_triggers,
     preservedTokens: jinjaResult.preserved_tokens,
+    chatParser: jinjaResult.chat_parser,
+    hasMedia: Boolean(jinjaResult.has_media) || mediaPaths.length > 0,
+    mediaPaths,
   };
 }
 

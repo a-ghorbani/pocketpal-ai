@@ -38,8 +38,10 @@ import {downloadManager} from '../services/downloads';
 
 import {
   applyChatTemplate,
+  getEffectiveChatTemplateInterpreter,
   getLocalModelDefaultSettings,
   getHFDefaultSettings,
+  normalizeChatTemplateResult,
   stops,
 } from '../utils/chat';
 import {
@@ -2970,10 +2972,17 @@ class ModelStore {
       const contextTemplate = (this.context?.model as any)?.metadata?.[
         'tokenizer.chat_template'
       ];
+      const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
+        this.activeModel?.chatTemplate,
+      );
       let formattedPromptPreview = '';
       let formattedPromptLength = 0;
       let formattedPromptError: string | undefined;
       let formattedPromptTextForRuntime = '';
+      let formattedPromptAdditionalStops: string[] = [];
+      let formattedPromptChatParser: string | undefined;
+      let formattedPromptHasMedia = false;
+      let formattedPromptMediaPaths: string[] = [];
 
       try {
         const formattedPrompt = await applyChatTemplate(
@@ -2981,21 +2990,63 @@ class ModelStore {
           this.activeModel ?? null,
           this.context ?? null,
         );
-        const formattedPromptText =
-          typeof formattedPrompt === 'string'
-            ? formattedPrompt
-            : formattedPrompt?.prompt || JSON.stringify(formattedPrompt);
-        formattedPromptTextForRuntime = formattedPromptText;
-        formattedPromptLength = formattedPromptText.length;
-        formattedPromptPreview = previewText(formattedPromptText);
+        const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
+        formattedPromptTextForRuntime = normalizedPrompt.prompt;
+        formattedPromptLength = normalizedPrompt.prompt.length;
+        formattedPromptPreview = previewText(normalizedPrompt.prompt);
+        formattedPromptAdditionalStops = normalizedPrompt.additionalStops;
+        formattedPromptChatParser = normalizedPrompt.chatParser;
+        formattedPromptHasMedia = normalizedPrompt.hasMedia ?? false;
+        formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
       } catch (error) {
         formattedPromptError =
           error instanceof Error ? error.message : JSON.stringify(error);
       }
 
+      if (formattedPromptAdditionalStops.length > 0) {
+        const existingStopWords = Array.isArray(cleanCompletionParams.stop)
+          ? cleanCompletionParams.stop
+          : typeof cleanCompletionParams.stop === 'string'
+            ? [cleanCompletionParams.stop]
+            : [];
+        cleanCompletionParams.stop = Array.from(
+          new Set([
+            ...existingStopWords,
+            ...formattedPromptAdditionalStops,
+          ]),
+        );
+      }
+
+      if (formattedPromptChatParser) {
+        (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
+      }
+
+      if (
+        effectiveTemplateInterpreter === 'jinja' &&
+        modelTemplate &&
+        processedImagePaths.length > 0
+      ) {
+        (cleanCompletionParams as any).chatTemplate = modelTemplate;
+      }
+
+      const usePromptTransportForFormattedTemplate =
+        !!formattedPromptTextForRuntime &&
+        !formattedPromptError &&
+        formattedPromptMediaPaths.length > 0;
+
+      if (usePromptTransportForFormattedTemplate) {
+        (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
+        (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
+        delete (cleanCompletionParams as any).messages;
+        delete (cleanCompletionParams as any).chatTemplate;
+        (cleanCompletionParams as any).jinja = false;
+      }
+
       visionDebugLog('startImageCompletion:params', {
         requestId,
-        completionTransport: 'messages-api',
+        completionTransport: usePromptTransportForFormattedTemplate
+          ? 'prompt-preformatted-template'
+          : 'messages-api',
         activeModel: this.activeModel
           ? {
               id: this.activeModel.id,
@@ -3037,10 +3088,18 @@ class ModelStore {
           messageCount: Array.isArray((cleanCompletionParams as any).messages)
             ? (cleanCompletionParams as any).messages.length
             : 0,
+          hasMediaPaths: Array.isArray((cleanCompletionParams as any).media_paths),
+          mediaPathCount: Array.isArray((cleanCompletionParams as any).media_paths)
+            ? (cleanCompletionParams as any).media_paths.length
+            : 0,
           jinja: (cleanCompletionParams as any).jinja,
+          chatTemplateLength: String(
+            (cleanCompletionParams as any).chatTemplate ?? '',
+          ).length,
         },
         template: {
           selectedTemplateName: this.activeModel?.chatTemplate?.name,
+          effectiveTemplateInterpreter,
           modelTemplateLength: modelTemplate?.length ?? 0,
           contextTemplateLength: String(contextTemplate || '').length,
           contextTemplatePreview: previewText(contextTemplate),
@@ -3049,8 +3108,14 @@ class ModelStore {
           formattedPromptLength,
           formattedPromptPreview,
           formattedPromptFull: formattedPromptTextForRuntime,
+          formattedPromptAdditionalStops,
+          formattedPromptHasMedia,
+          formattedPromptMediaPaths,
+          formattedPromptChatParser,
           formattedPromptError,
-          note: 'Runtime completion currently sends messages directly to llama.rn.',
+          note: usePromptTransportForFormattedTemplate
+            ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
+            : 'Runtime completion currently sends messages directly to llama.rn.',
         },
         contextMetadata: {
           architecture: (this.context?.model as any)?.metadata?.[

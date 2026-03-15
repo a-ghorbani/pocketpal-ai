@@ -459,4 +459,66 @@ describe('useChatSession', () => {
       expect.any(Function),
     );
   });
+
+  it('should send multimodal custom jinja templates through prompt plus media_paths', async () => {
+    const customJinjaModel = {
+      ...mockBasicModel,
+      id: 'custom-jinja-vision-model',
+      chatTemplate: {
+        ...mockBasicModel.chatTemplate,
+        name: 'custom',
+        chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+        templateInterpreter: 'jinja' as const,
+      },
+    };
+    const multimodalMessage = {
+      ...textMessage,
+      imageUris: ['file:///path/to/image.jpg'],
+    };
+    const originalIsMultimodalEnabled = modelStore.isMultimodalEnabled;
+
+    modelStore.models = [customJinjaModel];
+    modelStore.setActiveModel(customJinjaModel.id);
+    modelStore.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
+
+    applyChatTemplateSpy.mockResolvedValueOnce({
+      prompt: 'custom multimodal prompt',
+      additional_stops: ['<image-stop>'],
+      media_paths: ['/path/to/image.jpg'],
+      has_media: true,
+      chat_parser: 'llama-3',
+    } as any);
+
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    try {
+      await act(async () => {
+        await result.current.handleSendPress(multimodalMessage as any);
+      });
+
+      expect(modelStore.context?.completion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prompt: 'custom multimodal prompt',
+          media_paths: ['/path/to/image.jpg'],
+          chat_parser: 'llama-3',
+          jinja: false,
+          stop: expect.arrayContaining(['<image-stop>']),
+        }),
+        expect.any(Function),
+      );
+      expect(
+        (modelStore.context?.completion as jest.Mock).mock.calls[0][0].messages,
+      ).toBeUndefined();
+    } finally {
+      modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
+    }
+  });
 });
