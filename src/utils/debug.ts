@@ -103,6 +103,8 @@ export function getTextDiagnostics(value: unknown) {
 }
 
 export function initializeConsoleCapture() {
+  debugStore.ensureLoaded();
+
   if (consoleCaptureInitialized) {
     return;
   }
