@@ -164,7 +164,6 @@ export const CompletionSettings: React.FC<Props> = ({
       )}
       {renderIntegerInput({name: 'n_probs'})}
       {renderIntegerInput({name: 'seed'})}
-      {renderSwitch('jinja')}
     </View>
   );
 };

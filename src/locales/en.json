@@ -394,7 +394,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "Include AI thinking/reasoning parts in the context sent to the model. Disabling this can save context space. It might impact performance.",
-    "jinja": "Enable Jinja templating for chat formatting. When enabled, uses Jinja-based chat template processing for better compatibility with modern models.",
     "grammar": "Enforce specific grammar rules to ensure the generated text follows a particular structure or format",
     "stop": "Define specific phrases that will stop text generation",
     "n_predict": "Set how long the generated response should be (in tokens)",

@@ -112,10 +112,6 @@ export const COMPLETION_PARAMS_METADATA: Partial<
     validation: {type: 'boolean', required: false},
     defaultValue: defaultCompletionParams.include_thinking_in_context,
   },
-  jinja: {
-    validation: {type: 'boolean', required: false},
-    defaultValue: defaultCompletionParams.jinja,
-  },
 };
 
 // Validation helpers
