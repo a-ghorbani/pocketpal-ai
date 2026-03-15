@@ -39,7 +39,7 @@ export class DebugStore {
     makeAutoObservable(this);
     makePersistable(this, {
       name: 'DebugStore',
-      properties: ['captureConsole', 'visionDebugEnabled'],
+      properties: ['logs', 'captureConsole', 'visionDebugEnabled'],
       storage: AsyncStorage,
     });
   }
