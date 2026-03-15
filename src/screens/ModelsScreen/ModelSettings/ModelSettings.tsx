@@ -67,7 +67,9 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   useEffect(() => {
     setLocalChatTemplate(chatTemplate.chatTemplate);
     setSelectedTemplateName(chatTemplate.name);
-    setSelectedTemplateInterpreter(getEffectiveChatTemplateInterpreter(chatTemplate));
+    setSelectedTemplateInterpreter(
+      getEffectiveChatTemplateInterpreter(chatTemplate),
+    );
   }, [chatTemplate]);
 
   useEffect(() => {

@@ -165,9 +165,8 @@ export async function applyChatTemplate(
   context: LlamaContext | null,
 ): Promise<string | JinjaFormattedChatResult> {
   const modelChatTemplate = model?.chatTemplate;
-  const effectiveInterpreter = getEffectiveChatTemplateInterpreter(
-    modelChatTemplate,
-  );
+  const effectiveInterpreter =
+    getEffectiveChatTemplateInterpreter(modelChatTemplate);
   const contextChatTemplate = (context?.model as any)?.metadata?.[
     'tokenizer.chat_template'
   ];
@@ -193,7 +192,11 @@ export async function applyChatTemplate(
       }) as string;
     }
 
-    if (!formattedChat && effectiveInterpreter === 'jinja' && contextChatTemplate) {
+    if (
+      !formattedChat &&
+      effectiveInterpreter === 'jinja' &&
+      contextChatTemplate
+    ) {
       formattedChat = await (context as any)?.getFormattedChat(messages, null, {
         jinja: true,
       });

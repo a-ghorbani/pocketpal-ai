@@ -47,11 +47,15 @@ const prepareCompletion = async ({
   l10n: any;
   currentMessages: MessageType.Any[];
 }) => {
-  const mergeStopWords = (existingStops: unknown, additionalStops: string[]) => {
+  const mergeStopWords = (
+    existingStops: unknown,
+    additionalStops: string[],
+  ) => {
     const mergedStops = new Set<string>(
       Array.isArray(existingStops)
         ? existingStops.filter(
-            (stop): stop is string => typeof stop === 'string' && stop.length > 0,
+            (stop): stop is string =>
+              typeof stop === 'string' && stop.length > 0,
           )
         : [],
     );
@@ -246,14 +250,9 @@ const prepareCompletion = async ({
     !!formattedPromptTextForRuntime &&
     !formattedPromptError;
   const usePromptTransportForFormattedTemplate =
-    !hasImages &&
-    !!formattedPromptTextForRuntime &&
-    !formattedPromptError;
+    !hasImages && !!formattedPromptTextForRuntime && !formattedPromptError;
 
-  if (
-    usePromptFallbackForQwen35 ||
-    usePromptTransportForFormattedTemplate
-  ) {
+  if (usePromptFallbackForQwen35 || usePromptTransportForFormattedTemplate) {
     (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
     delete (cleanCompletionParams as any).messages;
     (cleanCompletionParams as any).jinja = false;

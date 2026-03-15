@@ -210,7 +210,9 @@ describe('useChatSession', () => {
       });
 
       const lastApplyTemplateCall =
-        applyChatTemplateSpy.mock.calls[applyChatTemplateSpy.mock.calls.length - 1];
+        applyChatTemplateSpy.mock.calls[
+          applyChatTemplateSpy.mock.calls.length - 1
+        ];
       const formattedMessages = lastApplyTemplateCall?.[0] || [];
 
       if (shouldInclude && systemPrompt?.trim()) {
@@ -289,7 +291,9 @@ describe('useChatSession', () => {
     });
 
     const lastApplyTemplateCall =
-      applyChatTemplateSpy.mock.calls[applyChatTemplateSpy.mock.calls.length - 1];
+      applyChatTemplateSpy.mock.calls[
+        applyChatTemplateSpy.mock.calls.length - 1
+      ];
     const formattedMessages = lastApplyTemplateCall?.[0] || [];
 
     expect(formattedMessages.some((msg: any) => msg.role === 'system')).toBe(
@@ -396,7 +400,9 @@ describe('useChatSession', () => {
     });
 
     const lastApplyTemplateCall =
-      applyChatTemplateSpy.mock.calls[applyChatTemplateSpy.mock.calls.length - 1];
+      applyChatTemplateSpy.mock.calls[
+        applyChatTemplateSpy.mock.calls.length - 1
+      ];
     const formattedMessages = lastApplyTemplateCall?.[0] || [];
 
     expect(formattedMessages.some((msg: any) => msg.role === 'system')).toBe(
