@@ -143,3 +143,103 @@ export function visionDebugLog(message: string, payload?: unknown) {
 
   console.log('[VisionDebug]', message, payload);
 }
+
+type CompletionProbePayload = Record<string, unknown>;
+
+export function buildCompletionParamProbe(params: Record<string, unknown>) {
+  const prompt = typeof params.prompt === 'string' ? params.prompt : '';
+  const stopWords = Array.isArray(params.stop)
+    ? params.stop.filter(
+        (word): word is string => typeof word === 'string' && word.length > 0,
+      )
+    : [];
+  const mediaPaths = Array.isArray(params.media_paths)
+    ? params.media_paths.filter(
+        (path): path is string => typeof path === 'string' && path.length > 0,
+      )
+    : [];
+  const preservedTokens = Array.isArray(params.preserved_tokens)
+    ? params.preserved_tokens.filter(
+        (token): token is string => typeof token === 'string' && token.length > 0,
+      )
+    : [];
+  const grammarTriggers = Array.isArray(params.grammar_triggers)
+    ? params.grammar_triggers
+    : [];
+  const chatParser =
+    typeof params.chat_parser === 'string' ? params.chat_parser : '';
+  const suspectFlags: string[] = [];
+
+  if (mediaPaths.length > 0 && params.enable_thinking) {
+    suspectFlags.push('multimodal+thinking');
+  }
+  if (mediaPaths.length > 0 && chatParser) {
+    suspectFlags.push('multimodal+chat_parser');
+  }
+  if (mediaPaths.length > 0 && preservedTokens.length > 0) {
+    suspectFlags.push('multimodal+preserved_tokens');
+  }
+  if (prompt.includes('<__media__>')) {
+    suspectFlags.push('prompt-has-__media__-placeholder');
+  }
+  if (prompt.includes('<think>') && params.enable_thinking === false) {
+    suspectFlags.push('think-tag-present-while-thinking-disabled');
+  }
+
+  return {
+    paramKeys: Object.keys(params).sort(),
+    hasPrompt: prompt.length > 0,
+    hasMessages: Array.isArray(params.messages),
+    hasMediaPaths: mediaPaths.length > 0,
+    mediaPathCount: mediaPaths.length,
+    mediaPathPreview: mediaPaths.map(path => previewText(path, 120)),
+    enableThinking: params.enable_thinking ?? null,
+    reasoningFormat: params.reasoning_format ?? null,
+    hasChatParser: chatParser.length > 0,
+    chatParserLength: chatParser.length,
+    chatParserHash: getTextDiagnostics(chatParser).hash,
+    preservedTokenCount: preservedTokens.length,
+    preservedTokensPreview: preservedTokens.slice(0, 12),
+    grammarTriggersCount: grammarTriggers.length,
+    promptDiag: getTextDiagnostics(prompt),
+    promptHasMediaPlaceholder: prompt.includes('<__media__>'),
+    promptHasVisionTokens:
+      prompt.includes('<|vision_start|>') || prompt.includes('<|image_pad|>'),
+    promptHasThinkTag: prompt.includes('<think>'),
+    stopCount: stopWords.length,
+    stopPreview: stopWords.slice(0, 10),
+    suspectFlags,
+  };
+}
+
+export function scheduleVisionDebugHeartbeats(
+  message: string,
+  getPayload: () => CompletionProbePayload,
+  intervalsMs: number[] = [250, 1000, 3000, 8000],
+) {
+  if (!debugStore.visionDebugEnabled) {
+    return () => undefined;
+  }
+
+  let cancelled = false;
+  const timers: Array<ReturnType<typeof setTimeout>> = [];
+
+  intervalsMs.forEach(intervalMs => {
+    timers.push(
+      setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+        visionDebugLog(message, {
+          elapsedMs: intervalMs,
+          ...getPayload(),
+        });
+      }, intervalMs),
+    );
+  });
+
+  return () => {
+    cancelled = true;
+    timers.forEach(clearTimeout);
+  };
+}

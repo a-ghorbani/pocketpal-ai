@@ -31,7 +31,13 @@ import {
   isProjectionModel,
 } from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
-import {getTextDiagnostics, previewText, visionDebugLog} from '../utils/debug';
+import {
+  buildCompletionParamProbe,
+  getTextDiagnostics,
+  previewText,
+  scheduleVisionDebugHeartbeats,
+  visionDebugLog,
+} from '../utils/debug';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
 import {downloadManager} from '../services/downloads';
@@ -2887,6 +2893,8 @@ class ModelStore {
     });
 
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let completionSettled = false;
+    let cancelNativeCallHeartbeats = () => undefined;
 
     try {
       // Handle both single image_path and multiple image_paths
@@ -3132,9 +3140,49 @@ class ModelStore {
       let streamTokenCount = 0;
       let streamTokenPreview = '';
       let firstAnomalousChunkLogged = false;
+      let nativeBridgeReturned = false;
+      let firstNativeChunkSeen = false;
+      const completionTransport = usePromptTransportForFormattedTemplate
+        ? 'prompt-preformatted-template'
+        : 'messages-api';
+
+      visionDebugLog('startImageCompletion:pre-native-call', {
+        requestId,
+        completionTransport,
+        probe: buildCompletionParamProbe(cleanCompletionParams as any),
+      });
+      cancelNativeCallHeartbeats = scheduleVisionDebugHeartbeats(
+        'startImageCompletion:native-call-heartbeat',
+        () => ({
+          requestId,
+          completionTransport,
+          nativeBridgeReturned,
+          firstNativeChunkSeen,
+          completionSettled,
+          isStreaming: this.isStreaming,
+          inferencing: this.inferencing,
+        }),
+      );
       const completionPromise = this.context.completion(
         cleanCompletionParams,
         data => {
+          if (
+            !firstNativeChunkSeen &&
+            (data.token || data.content || data.reasoning_content)
+          ) {
+            firstNativeChunkSeen = true;
+            visionDebugLog('startImageCompletion:first-native-chunk', {
+              requestId,
+              completionTransport,
+              callbackKeys: Object.keys(data || {}),
+              tokenPreview: previewText((data as any)?.token, 120),
+              contentPreview: previewText((data as any)?.content, 120),
+              reasoningPreview: previewText(
+                (data as any)?.reasoning_content,
+                120,
+              ),
+            });
+          }
           if (data.token) {
             streamTokenCount += 1;
             if (streamTokenPreview.length < 500) {
@@ -3171,11 +3219,20 @@ class ModelStore {
           }
         },
       );
+      nativeBridgeReturned = true;
+      visionDebugLog('startImageCompletion:post-native-call', {
+        requestId,
+        completionTransport,
+        nativeBridgeReturned,
+        promiseCreated: Boolean(completionPromise),
+      });
 
       // Register the promise so releaseContext can wait for it
       this.registerCompletionPromise(completionPromise);
 
       const result = await completionPromise;
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
       visionDebugLog('startImageCompletion:result', {
         requestId,
         activeModelId: this.activeModelId,
@@ -3195,6 +3252,8 @@ class ModelStore {
 
       params.onComplete?.(result.text);
     } catch (error) {
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
       // Clear the promise on error too
       this.clearCompletionPromise();
       console.error('Error in multi-image completion:', error);

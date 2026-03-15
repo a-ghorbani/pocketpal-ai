@@ -19,7 +19,13 @@ import {
   removeThinkingParts,
 } from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
-import {getTextDiagnostics, previewText, visionDebugLog} from '../utils/debug';
+import {
+  buildCompletionParamProbe,
+  getTextDiagnostics,
+  previewText,
+  scheduleVisionDebugHeartbeats,
+  visionDebugLog,
+} from '../utils/debug';
 import {
   toApiCompletionParams,
   CompletionParams,
@@ -425,7 +431,7 @@ const prepareCompletion = async ({
     sessionId: chatSessionStore.activeSessionId!,
   };
 
-  return {cleanCompletionParams, messageInfo, requestId};
+  return {cleanCompletionParams, messageInfo, requestId, completionTransport};
 };
 
 export const useChatSession = (
@@ -517,7 +523,7 @@ export const useChatSession = (
     });
 
     // Prepare completion parameters and create message record
-    const {cleanCompletionParams, messageInfo, requestId} =
+    const {cleanCompletionParams, messageInfo, requestId, completionTransport} =
       await prepareCompletion({
         imageUris: imageUris || [],
         message,
@@ -532,6 +538,9 @@ export const useChatSession = (
 
     currentMessageInfo.current = messageInfo;
 
+    let completionSettled = false;
+    let cancelNativeCallHeartbeats = () => undefined;
+
     try {
       // Track time to first token
       const completionStartTime = Date.now();
@@ -540,6 +549,26 @@ export const useChatSession = (
       let streamedContentPreview = '';
       let streamedReasoningPreview = '';
       let firstAnomalousChunkLogged = false;
+      let nativeBridgeReturned = false;
+      let firstNativeChunkSeen = false;
+
+      visionDebugLog('completion:pre-native-call', {
+        requestId,
+        transport: completionTransport,
+        probe: buildCompletionParamProbe(cleanCompletionParams as any),
+      });
+      cancelNativeCallHeartbeats = scheduleVisionDebugHeartbeats(
+        'completion:native-call-heartbeat',
+        () => ({
+          requestId,
+          transport: completionTransport,
+          nativeBridgeReturned,
+          firstNativeChunkSeen,
+          completionSettled,
+          isStreaming: modelStore.isStreaming,
+          inferencing: modelStore.inferencing,
+        }),
+      );
 
       // Create the completion promise and register it with modelStore
       // This enables safe context release by waiting for the promise to finish
@@ -550,6 +579,24 @@ export const useChatSession = (
             // Capture time to first token on the first token received
             if (timeToFirstToken === null && (data.token || data.content)) {
               timeToFirstToken = Date.now() - completionStartTime;
+            }
+
+            if (
+              !firstNativeChunkSeen &&
+              (data.token || data.content || data.reasoning_content)
+            ) {
+              firstNativeChunkSeen = true;
+              visionDebugLog('completion:first-native-chunk', {
+                requestId,
+                transport: completionTransport,
+                callbackKeys: Object.keys(data || {}),
+                tokenPreview: previewText((data as any)?.token, 120),
+                contentPreview: previewText((data as any)?.content, 120),
+                reasoningPreview: previewText(
+                  (data as any)?.reasoning_content,
+                  120,
+                ),
+              });
             }
 
             if (!modelStore.isStreaming) {
@@ -625,12 +672,21 @@ export const useChatSession = (
           }
         },
       );
+      nativeBridgeReturned = true;
+      visionDebugLog('completion:post-native-call', {
+        requestId,
+        transport: completionTransport,
+        nativeBridgeReturned,
+        promiseCreated: Boolean(completionPromise),
+      });
 
       // Register the promise so releaseContext can wait for it
       modelStore.registerCompletionPromise(completionPromise);
 
       // Await the completion
       const result = await completionPromise;
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
 
       // Clear the promise after completion finishes
       modelStore.clearCompletionPromise();
@@ -686,6 +742,8 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
     } catch (error) {
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
       console.error('Completion error:', error);
