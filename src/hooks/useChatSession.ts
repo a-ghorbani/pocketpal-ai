@@ -539,7 +539,7 @@ export const useChatSession = (
     currentMessageInfo.current = messageInfo;
 
     let completionSettled = false;
-    let cancelNativeCallHeartbeats = () => undefined;
+    let cancelNativeCallHeartbeats: () => void = () => undefined;
 
     try {
       // Track time to first token

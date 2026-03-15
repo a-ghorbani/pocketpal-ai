@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn typecheck:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(ls /c/Users/user/Documents/GitHub/pocketpal-experimental/node_modules/.bin/tsc*)"
+    ]
+  }
+}

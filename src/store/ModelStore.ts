@@ -2894,7 +2894,7 @@ class ModelStore {
 
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     let completionSettled = false;
-    let cancelNativeCallHeartbeats = () => undefined;
+    let cancelNativeCallHeartbeats: () => void = () => undefined;
 
     try {
       // Handle both single image_path and multiple image_paths
