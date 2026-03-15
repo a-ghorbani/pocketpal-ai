@@ -248,4 +248,21 @@ describe('Test Danube2 Chat Templates', () => {
       'System prompt. </s><|prompt|>Hi there!</s><|answer|>Nice to meet you!</s><|prompt|>Can I ask a question?</s><|answer|>',
     );
   });
+
+  it('rethrows template errors instead of falling back to a blank prompt', async () => {
+    const model = createModel({
+      chatTemplate: {
+        name: 'invalid',
+        addGenerationPrompt: true,
+        bosToken: '',
+        eosToken: '',
+        chatTemplate: '{%- for message in messages[::-1] %}{{ message.content }}{%- endfor %}',
+        systemPrompt: '',
+      },
+    });
+
+    await expect(
+      applyChatTemplate(conversationWSystem, model, null),
+    ).rejects.toThrow();
+  });
 });

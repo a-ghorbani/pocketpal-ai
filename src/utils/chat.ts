@@ -158,10 +158,11 @@ export async function applyChatTemplate(
       }) as string;
     }
   } catch (error) {
-    console.error('Error applying chat template:', error); // TODO: handle error
+    console.error('Error applying chat template:', error);
+    throw error;
   }
 
-  return formattedChat || ' ';
+  return formattedChat || '';
 }
 
 export const chatTemplates: Record<string, ChatTemplateConfig> = {
