@@ -377,7 +377,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "Sertakan bahagian pemikiran/penaakulan AI dalam konteks yang dihantar ke model. Melumpuhkan ini boleh menjimatkan ruang konteks, tetapi mungkin memberi kesan kepada prestasi.",
-    "jinja": "Dayakan templat Jinja untuk format sembang. Apabila didayakan, menggunakan pemprosesan templat berasaskan Jinja untuk keserasian yang lebih baik dengan model moden.",
     "grammar": "Laksanakan peraturan tatabahasa tertentu supaya teks yang dihasilkan mengikut struktur atau format tertentu",
     "stop": "Tentukan frasa khusus yang akan menghentikan penjanaan teks",
     "n_predict": "Tetapkan panjang respons yang dihasilkan (dalam token)",
