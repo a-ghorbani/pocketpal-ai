@@ -31,16 +31,17 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.temperature).toBe(0.7);
   });
 
-  it('should migrate from version 1 to version 2', () => {
+  it('should migrate from version 1 to version 2 (jinja removed)', () => {
     const settings = {
       version: 1,
       temperature: 0.7,
       include_thinking_in_context: false,
+      jinja: true,
     };
     const migrated = migrateCompletionSettings(settings);
 
     expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
-    expect(migrated.jinja).toBe(defaultCompletionParams.jinja);
+    expect(migrated.jinja).toBeUndefined();
     expect(migrated.include_thinking_in_context).toBe(false);
     expect(migrated.temperature).toBe(0.7);
   });
@@ -50,7 +51,6 @@ describe('migrateCompletionSettings', () => {
       version: 2,
       temperature: 0.7,
       include_thinking_in_context: true,
-      jinja: true,
     };
     const migrated = migrateCompletionSettings(settings);
 
@@ -58,7 +58,6 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.enable_thinking).toBe(
       defaultCompletionParams.enable_thinking,
     );
-    expect(migrated.jinja).toBe(true);
     expect(migrated.include_thinking_in_context).toBe(true);
     expect(migrated.temperature).toBe(0.7);
   });
@@ -75,7 +74,7 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.include_thinking_in_context).toBe(
       defaultCompletionParams.include_thinking_in_context,
     );
-    expect(migrated.jinja).toBe(defaultCompletionParams.jinja);
+    expect(migrated.jinja).toBeUndefined();
     expect(migrated.enable_thinking).toBe(
       defaultCompletionParams.enable_thinking,
     );
@@ -88,7 +87,6 @@ describe('migrateCompletionSettings', () => {
       version: CURRENT_COMPLETION_SETTINGS_VERSION,
       temperature: 0.8,
       include_thinking_in_context: false,
-      jinja: false,
       enable_thinking: false,
     };
     const migrated = migrateCompletionSettings(settings);
@@ -109,7 +107,7 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.temperature).toBe(0.3);
     expect(migrated.include_thinking_in_context).toBe(false); // Preserved
     expect(migrated.top_k).toBe(50);
-    expect(migrated.jinja).toBe(defaultCompletionParams.jinja); // Added
+    expect(migrated.jinja).toBeUndefined(); // Removed in v2 migration
     expect(migrated.enable_thinking).toBe(
       defaultCompletionParams.enable_thinking,
     ); // Added
@@ -123,7 +121,7 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.include_thinking_in_context).toBe(
       defaultCompletionParams.include_thinking_in_context,
     );
-    expect(migrated.jinja).toBe(defaultCompletionParams.jinja);
+    expect(migrated.jinja).toBeUndefined();
     expect(migrated.enable_thinking).toBe(
       defaultCompletionParams.enable_thinking,
     );
@@ -155,9 +153,5 @@ describe('defaultCompletionParams', () => {
 
   it('should have include_thinking_in_context set to true by default', () => {
     expect(defaultCompletionParams.include_thinking_in_context).toBe(true);
-  });
-
-  it('should have jinja set to true by default', () => {
-    expect(defaultCompletionParams.jinja).toBe(true);
   });
 });
