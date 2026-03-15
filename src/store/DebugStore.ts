@@ -142,8 +142,12 @@ export class DebugStore {
       this.logs = [...this.logs.slice(-(MAX_LOG_ENTRIES - 1)), entry];
     });
 
-    void this.enqueueFileWrite(async () => {
-      await RNFS.appendFile(LOG_FILE_PATH, serializeLogEntry(entry), LOG_FILE_ENCODING);
+    this.enqueueFileWrite(async () => {
+      await RNFS.appendFile(
+        LOG_FILE_PATH,
+        serializeLogEntry(entry),
+        LOG_FILE_ENCODING,
+      );
 
       if (this.logs.length >= MAX_LOG_ENTRIES) {
         const currentLogs = this.logs.slice(-MAX_LOG_ENTRIES);
@@ -158,7 +162,7 @@ export class DebugStore {
       this.logs = [];
     });
 
-    void this.rewriteLogFile([]);
+    this.rewriteLogFile([]);
   }
 
   setCaptureConsole(enabled: boolean) {
