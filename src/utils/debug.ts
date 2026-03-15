@@ -160,7 +160,8 @@ export function buildCompletionParamProbe(params: Record<string, unknown>) {
     : [];
   const preservedTokens = Array.isArray(params.preserved_tokens)
     ? params.preserved_tokens.filter(
-        (token): token is string => typeof token === 'string' && token.length > 0,
+        (token): token is string =>
+          typeof token === 'string' && token.length > 0,
       )
     : [];
   const grammarTriggers = Array.isArray(params.grammar_triggers)
