@@ -3010,10 +3010,7 @@ class ModelStore {
             ? [cleanCompletionParams.stop]
             : [];
         cleanCompletionParams.stop = Array.from(
-          new Set([
-            ...existingStopWords,
-            ...formattedPromptAdditionalStops,
-          ]),
+          new Set([...existingStopWords, ...formattedPromptAdditionalStops]),
         );
       }
 
@@ -3088,8 +3085,12 @@ class ModelStore {
           messageCount: Array.isArray((cleanCompletionParams as any).messages)
             ? (cleanCompletionParams as any).messages.length
             : 0,
-          hasMediaPaths: Array.isArray((cleanCompletionParams as any).media_paths),
-          mediaPathCount: Array.isArray((cleanCompletionParams as any).media_paths)
+          hasMediaPaths: Array.isArray(
+            (cleanCompletionParams as any).media_paths,
+          ),
+          mediaPathCount: Array.isArray(
+            (cleanCompletionParams as any).media_paths,
+          )
             ? (cleanCompletionParams as any).media_paths.length
             : 0,
           jinja: (cleanCompletionParams as any).jinja,

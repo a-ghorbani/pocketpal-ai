@@ -252,11 +252,7 @@ const prepareCompletion = async ({
     (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
   }
 
-  if (
-    hasImages &&
-    effectiveTemplateInterpreter === 'jinja' &&
-    modelTemplate
-  ) {
+  if (hasImages && effectiveTemplateInterpreter === 'jinja' && modelTemplate) {
     (cleanCompletionParams as any).chatTemplate = modelTemplate;
   }
 

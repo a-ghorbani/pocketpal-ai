@@ -2296,7 +2296,9 @@ describe('ModelStore', () => {
           }),
           expect.any(Function),
         );
-        expect(mockContext.completion.mock.calls[0][0].messages).toBeUndefined();
+        expect(
+          mockContext.completion.mock.calls[0][0].messages,
+        ).toBeUndefined();
       } finally {
         modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
       }
