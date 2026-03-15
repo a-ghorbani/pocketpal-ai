@@ -59,6 +59,13 @@ describe('useChatSession', () => {
 
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalled();
     expect(modelStore.context?.completion).toHaveBeenCalled();
+    expect(modelStore.context?.completion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: 'mocked prompt',
+        jinja: false,
+      }),
+      expect.any(Function),
+    );
   });
 
   it('should handle model not loaded scenario', async () => {
@@ -188,15 +195,10 @@ describe('useChatSession', () => {
       modelStore.models = [testModel];
       modelStore.setActiveModel(testModel.id);
 
-      // Mock the completion function to capture the messages passed to it
-      let capturedMessages: any[] = [];
       if (modelStore.context) {
         modelStore.context.completion = jest
           .fn()
-          .mockImplementation((params, _onData) => {
-            capturedMessages = params.messages || [];
-            return Promise.resolve({timings: {total: 100}, usage: {}});
-          });
+          .mockResolvedValue({timings: {total: 100}, usage: {}});
       }
 
       const {result} = renderHook(() =>
@@ -207,16 +209,22 @@ describe('useChatSession', () => {
         await result.current.handleSendPress(textMessage);
       });
 
+      const lastApplyTemplateCall =
+        applyChatTemplateSpy.mock.calls[applyChatTemplateSpy.mock.calls.length - 1];
+      const formattedMessages = lastApplyTemplateCall?.[0] || [];
+
       if (shouldInclude && systemPrompt?.trim()) {
-        // Check that a system message was included in the messages passed to completion
-        expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-        const systemMessage = capturedMessages.find(
-          msg => msg.role === 'system',
+        expect(
+          formattedMessages.some((msg: any) => msg.role === 'system'),
+        ).toBe(true);
+        const systemMessage = formattedMessages.find(
+          (msg: any) => msg.role === 'system',
         );
         expect(systemMessage.content).toBe(systemPrompt);
       } else {
-        // Check that no system message was included
-        expect(capturedMessages.some(msg => msg.role === 'system')).toBe(false);
+        expect(
+          formattedMessages.some((msg: any) => msg.role === 'system'),
+        ).toBe(false);
       }
     },
   );
@@ -266,15 +274,10 @@ describe('useChatSession', () => {
     chatSessionStore.sessions = [mockSession];
     chatSessionStore.activeSessionId = 'test-session-id';
 
-    // Mock the completion function to capture the messages passed to it
-    let capturedMessages: any[] = [];
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockImplementation((params, _onData) => {
-          capturedMessages = params.messages || [];
-          return Promise.resolve({timings: {total: 100}, usage: {}});
-        });
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
     }
 
     const {result} = renderHook(() =>
@@ -285,9 +288,16 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // Check that a system message was included with the rendered template
-    expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-    const systemMessage = capturedMessages.find(msg => msg.role === 'system');
+    const lastApplyTemplateCall =
+      applyChatTemplateSpy.mock.calls[applyChatTemplateSpy.mock.calls.length - 1];
+    const formattedMessages = lastApplyTemplateCall?.[0] || [];
+
+    expect(formattedMessages.some((msg: any) => msg.role === 'system')).toBe(
+      true,
+    );
+    const systemMessage = formattedMessages.find(
+      (msg: any) => msg.role === 'system',
+    );
     expect(systemMessage.content).toBe(
       'You are Gandalf, a wizard in Middle-earth.',
     );
@@ -371,15 +381,10 @@ describe('useChatSession', () => {
     chatSessionStore.sessions = [mockSession];
     chatSessionStore.activeSessionId = 'test-session-id-no-params';
 
-    // Mock the completion function to capture the messages passed to it
-    let capturedMessages: any[] = [];
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockImplementation((params, _onData) => {
-          capturedMessages = params.messages || [];
-          return Promise.resolve({timings: {total: 100}, usage: {}});
-        });
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
     }
 
     const {result} = renderHook(() =>
@@ -390,9 +395,62 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // Check that a system message was included with the original prompt
-    expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-    const systemMessage = capturedMessages.find(msg => msg.role === 'system');
+    const lastApplyTemplateCall =
+      applyChatTemplateSpy.mock.calls[applyChatTemplateSpy.mock.calls.length - 1];
+    const formattedMessages = lastApplyTemplateCall?.[0] || [];
+
+    expect(formattedMessages.some((msg: any) => msg.role === 'system')).toBe(
+      true,
+    );
+    const systemMessage = formattedMessages.find(
+      (msg: any) => msg.role === 'system',
+    );
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+
+  it('should force custom jinja templates through the preformatted prompt path', async () => {
+    const customJinjaModel = {
+      ...mockBasicModel,
+      id: 'custom-jinja-model',
+      chatTemplate: {
+        ...mockBasicModel.chatTemplate,
+        name: 'custom',
+        chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+        templateInterpreter: 'jinja' as const,
+      },
+    };
+
+    modelStore.models = [customJinjaModel];
+    modelStore.setActiveModel(customJinjaModel.id);
+
+    applyChatTemplateSpy.mockResolvedValueOnce({
+      prompt: 'custom jinja prompt',
+      additional_stops: ['<custom-stop>'],
+      grammar: 'root ::= "ok"',
+    } as any);
+
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(modelStore.context?.completion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: 'custom jinja prompt',
+        jinja: false,
+        grammar: 'root ::= "ok"',
+        stop: expect.arrayContaining(['<custom-stop>']),
+      }),
+      expect.any(Function),
+    );
   });
 });

@@ -311,6 +311,7 @@ export interface ChatTemplateConfig extends TemplateConfig {
   addGenerationPrompt: boolean;
   systemPrompt?: string;
   name: string;
+  templateInterpreter?: 'nunjucks' | 'jinja';
 }
 
 export type ChatMessage = {

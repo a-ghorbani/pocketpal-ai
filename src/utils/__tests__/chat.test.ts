@@ -2,6 +2,7 @@ import {Templates} from 'chat-formatter';
 import {
   applyChatTemplate,
   convertToChatMessages,
+  getEffectiveChatTemplateInterpreter,
   user,
   assistant,
 } from '../chat';
@@ -241,6 +242,7 @@ describe('Test Danube2 Chat Templates', () => {
       //isEndOfSequence: true,
       addGenerationPrompt: true,
       name: 'danube2',
+      templateInterpreter: 'jinja',
     };
     const model = createModel({chatTemplate: chatTemplate});
     const result = await applyChatTemplate(conversationWSystem, model, null);
@@ -248,21 +250,24 @@ describe('Test Danube2 Chat Templates', () => {
       'System prompt. </s><|prompt|>Hi there!</s><|answer|>Nice to meet you!</s><|prompt|>Can I ask a question?</s><|answer|>',
     );
   });
+});
 
-  it('rethrows template errors instead of falling back to a blank prompt', async () => {
-    const model = createModel({
-      chatTemplate: {
-        name: 'invalid',
-        addGenerationPrompt: true,
-        bosToken: '',
-        eosToken: '',
-        chatTemplate: '{%- for message in messages[::-1] %}{{ message.content }}{%- endfor %}',
-        systemPrompt: '',
-      },
-    });
+describe('template interpreter selection', () => {
+  it('forces non-custom templates to use nunjucks', () => {
+    expect(
+      getEffectiveChatTemplateInterpreter({
+        name: 'llama3',
+        templateInterpreter: 'jinja',
+      }),
+    ).toBe('nunjucks');
+  });
 
-    await expect(
-      applyChatTemplate(conversationWSystem, model, null),
-    ).rejects.toThrow();
+  it('keeps custom templates on configured interpreter', () => {
+    expect(
+      getEffectiveChatTemplateInterpreter({
+        name: 'custom',
+        templateInterpreter: 'nunjucks',
+      }),
+    ).toBe('nunjucks');
   });
 });

@@ -54,4 +54,19 @@ describe('ChatTemplatePicker', () => {
     fireEvent(textInput, 'onValueChange', 'template2');
     expect(mockHandleChatTemplateNameChange).toHaveBeenCalledWith('template2');
   });
+
+  it('supports disabled state and custom label', () => {
+    const {getByText, getByTestId} = render(
+      <ChatTemplatePicker
+        label="Template Interpreter:"
+        selectedTemplateName="template1"
+        handleChatTemplateNameChange={jest.fn()}
+        disabled
+        inputTestID="custom_picker_input"
+      />,
+    );
+
+    expect(getByText('Template Interpreter:')).toBeTruthy();
+    expect(getByTestId('custom_picker_input')).toBeTruthy();
+  });
 });

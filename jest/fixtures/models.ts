@@ -90,6 +90,7 @@ export const mockDefaultChatTemplate = {
   eosToken: '<|default_eos|>',
   chatTemplate: 'default chat template',
   systemPrompt: 'default system prompt',
+  templateInterpreter: 'nunjucks' as const,
 };
 export const mockChatTemplate = {
   addGenerationPrompt: true,
@@ -98,6 +99,7 @@ export const mockChatTemplate = {
   eosToken: '<|test_eos|>',
   chatTemplate: 'test chat template',
   systemPrompt: 'test system prompt',
+  templateInterpreter: 'nunjucks' as const,
 };
 
 export const mockBasicModel: Model = {

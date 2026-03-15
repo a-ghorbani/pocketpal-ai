@@ -14,6 +14,8 @@ import {resolveSystemMessages} from '../utils/systemPromptResolver';
 import {
   applyChatTemplate,
   convertToChatMessages,
+  getEffectiveChatTemplateInterpreter,
+  normalizeChatTemplateResult,
   removeThinkingParts,
 } from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
@@ -45,6 +47,24 @@ const prepareCompletion = async ({
   l10n: any;
   currentMessages: MessageType.Any[];
 }) => {
+  const mergeStopWords = (existingStops: unknown, additionalStops: string[]) => {
+    const mergedStops = new Set<string>(
+      Array.isArray(existingStops)
+        ? existingStops.filter(
+            (stop): stop is string => typeof stop === 'string' && stop.length > 0,
+          )
+        : [],
+    );
+
+    additionalStops.forEach(stop => {
+      if (typeof stop === 'string' && stop.length > 0) {
+        mergedStops.add(stop);
+      }
+    });
+
+    return Array.from(mergedStops);
+  };
+
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
   const stopWords = toJS(modelStore.activeModel?.stopWords);
@@ -163,6 +183,14 @@ const prepareCompletion = async ({
   let formattedPromptLength = 0;
   let formattedPromptError: string | undefined;
   let formattedPromptTextForRuntime = '';
+  let formattedPromptAdditionalStops: string[] = [];
+  let formattedPromptGrammar: string | undefined;
+  let formattedPromptGrammarLazy: boolean | undefined;
+  let formattedPromptGrammarTriggers: unknown[] | undefined;
+  let formattedPromptPreservedTokens: unknown[] | undefined;
+  const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
+    modelStore.activeModel?.chatTemplate,
+  );
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   try {
@@ -171,16 +199,43 @@ const prepareCompletion = async ({
       modelStore.activeModel ?? null,
       context ?? null,
     );
-    const formattedPromptText =
-      typeof formattedPrompt === 'string'
-        ? formattedPrompt
-        : formattedPrompt?.prompt || JSON.stringify(formattedPrompt);
-    formattedPromptTextForRuntime = formattedPromptText;
-    formattedPromptLength = formattedPromptText.length;
-    formattedPromptPreview = previewText(formattedPromptText);
+    const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
+    formattedPromptTextForRuntime = normalizedPrompt.prompt;
+    formattedPromptLength = normalizedPrompt.prompt.length;
+    formattedPromptPreview = previewText(normalizedPrompt.prompt);
+    formattedPromptAdditionalStops = normalizedPrompt.additionalStops;
+    formattedPromptGrammar = normalizedPrompt.grammar;
+    formattedPromptGrammarLazy = normalizedPrompt.grammarLazy;
+    formattedPromptGrammarTriggers = normalizedPrompt.grammarTriggers;
+    formattedPromptPreservedTokens = normalizedPrompt.preservedTokens;
   } catch (error) {
     formattedPromptError =
       error instanceof Error ? error.message : JSON.stringify(error);
+  }
+
+  if (formattedPromptAdditionalStops.length > 0) {
+    cleanCompletionParams.stop = mergeStopWords(
+      cleanCompletionParams.stop,
+      formattedPromptAdditionalStops,
+    );
+  }
+
+  if (formattedPromptGrammar) {
+    (cleanCompletionParams as any).grammar = formattedPromptGrammar;
+  }
+
+  if (formattedPromptGrammarLazy !== undefined) {
+    (cleanCompletionParams as any).grammar_lazy = formattedPromptGrammarLazy;
+  }
+
+  if (formattedPromptGrammarTriggers) {
+    (cleanCompletionParams as any).grammar_triggers =
+      formattedPromptGrammarTriggers;
+  }
+
+  if (formattedPromptPreservedTokens) {
+    (cleanCompletionParams as any).preserved_tokens =
+      formattedPromptPreservedTokens;
   }
 
   // qwen35 fallback:
@@ -190,7 +245,15 @@ const prepareCompletion = async ({
     contextArchitecture.includes('qwen35') &&
     !!formattedPromptTextForRuntime &&
     !formattedPromptError;
-  if (usePromptFallbackForQwen35) {
+  const usePromptTransportForFormattedTemplate =
+    !hasImages &&
+    !!formattedPromptTextForRuntime &&
+    !formattedPromptError;
+
+  if (
+    usePromptFallbackForQwen35 ||
+    usePromptTransportForFormattedTemplate
+  ) {
     (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
     delete (cleanCompletionParams as any).messages;
     (cleanCompletionParams as any).jinja = false;
@@ -198,7 +261,9 @@ const prepareCompletion = async ({
 
   const completionTransport = usePromptFallbackForQwen35
     ? 'prompt-fallback-qwen35'
-    : 'messages-api';
+    : usePromptTransportForFormattedTemplate
+      ? 'prompt-preformatted-template'
+      : 'messages-api';
 
   // Core LLM observability logs: keep full template/system prompt/input.
   console.log('[LLM Input] request', {
@@ -257,7 +322,7 @@ const prepareCompletion = async ({
       n_predict: cleanCompletionParams.n_predict,
       enable_thinking: cleanCompletionParams.enable_thinking,
       reasoning_format: cleanCompletionParams.reasoning_format,
-      stop: stopWords,
+      stop: cleanCompletionParams.stop,
     },
     settingsFull: cleanCompletionParams,
     transportPayload: {
@@ -271,6 +336,7 @@ const prepareCompletion = async ({
     },
     template: {
       selectedTemplateName: modelStore.activeModel?.chatTemplate?.name,
+      effectiveTemplateInterpreter,
       modelTemplateLength: modelTemplate?.length ?? 0,
       contextTemplateLength: String(contextTemplate || '').length,
       contextTemplatePreview: previewText(contextTemplate),
@@ -279,10 +345,13 @@ const prepareCompletion = async ({
       formattedPromptLength,
       formattedPromptPreview,
       formattedPromptFull: formattedPromptTextForRuntime,
+      formattedPromptAdditionalStops,
       formattedPromptError,
       note: usePromptFallbackForQwen35
         ? 'Using formatted prompt fallback for qwen35 text completion.'
-        : 'Runtime completion currently sends messages directly to llama.rn.',
+        : usePromptTransportForFormattedTemplate
+          ? 'Runtime completion sends the preformatted prompt directly to llama.rn.'
+          : 'Runtime completion currently sends messages directly to llama.rn.',
     },
     contextMetadata: {
       architecture: (context?.model as any)?.metadata?.['general.architecture'],

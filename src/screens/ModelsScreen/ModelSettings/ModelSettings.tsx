@@ -18,7 +18,13 @@ import {ChatTemplatePicker} from '../ChatTemplatePicker';
 import {ChatTemplateConfig} from '../../../utils/types';
 import {L10nContext} from '../../../utils';
 import {CompletionParams} from '../../../utils/completionTypes';
-import {chatTemplates, getChatTemplateDisplayName} from '../../../utils/chat';
+import {
+  chatTemplateInterpreterOptions,
+  chatTemplates,
+  getChatTemplateDisplayName,
+  getChatTemplateInterpreterDisplayName,
+  getEffectiveChatTemplateInterpreter,
+} from '../../../utils/chat';
 
 interface ModelSettingsProps {
   modelName: string;
@@ -52,6 +58,8 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   const [selectedTemplateName, setSelectedTemplateName] = useState(
     chatTemplate.name,
   );
+  const [selectedTemplateInterpreter, setSelectedTemplateInterpreter] =
+    useState(getEffectiveChatTemplateInterpreter(chatTemplate));
 
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -59,6 +67,7 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   useEffect(() => {
     setLocalChatTemplate(chatTemplate.chatTemplate);
     setSelectedTemplateName(chatTemplate.name);
+    setSelectedTemplateInterpreter(getEffectiveChatTemplateInterpreter(chatTemplate));
   }, [chatTemplate]);
 
   useEffect(() => {
@@ -79,7 +88,19 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
     if (nextTemplate) {
       setLocalChatTemplate(nextTemplate.chatTemplate);
       onChange('chatTemplate', nextTemplate.chatTemplate);
+      setSelectedTemplateInterpreter(
+        getEffectiveChatTemplateInterpreter(nextTemplate),
+      );
+      onChange(
+        'templateInterpreter',
+        getEffectiveChatTemplateInterpreter(nextTemplate),
+      );
     }
+  };
+
+  const handleTemplateInterpreterChange = (interpreter: string) => {
+    setSelectedTemplateInterpreter(interpreter as 'nunjucks' | 'jinja');
+    onChange('templateInterpreter', interpreter);
   };
 
   const setTemplateScrollLock = (locked: boolean) => {
@@ -93,6 +114,15 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   const handlePreviewTouchEnd = () => {
     setTemplateScrollLock(false);
   };
+
+  const interpreterItems = chatTemplateInterpreterOptions.map(value => ({
+    label: getChatTemplateInterpreterDisplayName(value),
+    value,
+  }));
+  const isTemplateInterpreterLocked = selectedTemplateName !== 'custom';
+  const effectiveTemplateInterpreter = isTemplateInterpreterLocked
+    ? 'nunjucks'
+    : selectedTemplateInterpreter;
 
   const renderTokenSetting = (
     testID: string,
@@ -131,8 +161,21 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
         selectedTemplateName={selectedTemplateName}
         handleChatTemplateNameChange={handleChatTemplateNameChange}
       />
+      <ChatTemplatePicker
+        label={l10n.models.modelSettings.template.interpreterLabel}
+        selectedTemplateName={effectiveTemplateInterpreter}
+        handleChatTemplateNameChange={handleTemplateInterpreterChange}
+        items={interpreterItems}
+        disabled={isTemplateInterpreterLocked}
+        inputTestID="interpreter_picker_input"
+      />
       <Text variant="labelSmall" style={styles.templateMeta}>
         {`${l10n.models.modelSettings.template.selectedLabel} ${getChatTemplateDisplayName(selectedTemplateName || chatTemplate.name)}`}
+      </Text>
+      <Text variant="labelSmall" style={styles.templateMeta}>
+        {isTemplateInterpreterLocked
+          ? l10n.models.modelSettings.template.interpreterLockedNote
+          : l10n.models.modelSettings.template.interpreterCustomNote}
       </Text>
       <Text variant="labelSmall" style={styles.templateMeta}>
         {l10n.models.modelSettings.template.autoMatchNote}
