@@ -186,7 +186,7 @@ export async function applyChatTemplate(
         );
       }
     } else if (modelChatTemplate?.chatTemplate?.trim()) {
-      formattedChat = applyTemplate(toTextOnlyMessages(messages), {
+      formattedChat = applyTemplate(toTextOnlyMessages(messages) as any, {
         customTemplate: modelChatTemplate,
         addGenerationPrompt: modelChatTemplate.addGenerationPrompt,
       }) as string;
@@ -203,7 +203,7 @@ export async function applyChatTemplate(
     }
 
     if (!formattedChat) {
-      formattedChat = applyTemplate(toTextOnlyMessages(messages), {
+      formattedChat = applyTemplate(toTextOnlyMessages(messages) as any, {
         customTemplate: chatTemplates.default,
         addGenerationPrompt: chatTemplates.default.addGenerationPrompt,
       }) as string;
