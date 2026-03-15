@@ -211,6 +211,7 @@ const prepareCompletion = async ({
       messages as any,
       modelStore.activeModel ?? null,
       context ?? null,
+      hasImages ? false : (cleanCompletionParams.enable_thinking ?? false),
     );
     const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
     formattedPromptTextForRuntime = normalizedPrompt.prompt;
@@ -283,6 +284,10 @@ const prepareCompletion = async ({
 
     if (formattedPromptMediaPaths.length > 0) {
       (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
+      // Disable thinking for multimodal: template already rendered with thinking off,
+      // and multimodal+thinking is a known suspect combination in native completion.
+      (cleanCompletionParams as any).enable_thinking = false;
+      delete (cleanCompletionParams as any).reasoning_format;
     }
 
     delete (cleanCompletionParams as any).chatTemplate;

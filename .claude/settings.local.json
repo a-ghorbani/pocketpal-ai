@@ -4,7 +4,9 @@
       "Bash(yarn typecheck:*)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(node_modules/.bin/tsc --noEmit)",
-      "Bash(ls /c/Users/user/Documents/GitHub/pocketpal-experimental/node_modules/.bin/tsc*)"
+      "Bash(ls /c/Users/user/Documents/GitHub/pocketpal-experimental/node_modules/.bin/tsc*)",
+      "Bash(find c:/Users/user/Documents/GitHub/pocketpal-experimental -path */node_modules/llama.rn* -name *.ts)",
+      "Bash(find c:/Users/user/Documents/GitHub/pocketpal-experimental -path */node_modules/llama.rn* -name *.js)"
     ]
   }
 }

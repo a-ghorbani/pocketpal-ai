@@ -2997,6 +2997,7 @@ class ModelStore {
           messages as any,
           this.activeModel ?? null,
           this.context ?? null,
+          hasImages ? false : (cleanCompletionParams.enable_thinking ?? false),
         );
         const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
         formattedPromptTextForRuntime = normalizedPrompt.prompt;
@@ -3045,6 +3046,10 @@ class ModelStore {
         delete (cleanCompletionParams as any).messages;
         delete (cleanCompletionParams as any).chatTemplate;
         (cleanCompletionParams as any).jinja = false;
+        // Disable thinking for multimodal: template already rendered with thinking off,
+        // and multimodal+thinking is a known suspect combination in native completion.
+        (cleanCompletionParams as any).enable_thinking = false;
+        delete (cleanCompletionParams as any).reasoning_format;
       }
 
       visionDebugLog('startImageCompletion:params', {
