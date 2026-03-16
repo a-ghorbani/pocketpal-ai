@@ -1113,7 +1113,8 @@
       "failedToLoadDetails": "Pal 세부정보 로드에 실패함",
       "failedToDownload": "Pal 다운로드 실패",
       "premiumPalMessage": "이 Pal은 프리미엄입니다.\n• 이미 Palshub 계정으로 잠금을 해제하셨다면, 간단히 로그인하여 접근할 수 있습니다.\n• 아직 잠금 해제하지 않으셨나요? palshub.ai 앱을 방문하여 자세히 알아보세요.",
-      "notAvailable": "비어있음"
+      "notAvailable": "비어있음",
+      "buyOnPalshub": "Palshub에서 구매하기"
     }
   },
   "video": {
