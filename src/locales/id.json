@@ -950,7 +950,8 @@
       "failedToLoadDetails": "Gagal memuat detail pal",
       "failedToDownload": "Gagal mengunduh pal",
       "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika Anda sudah membukanya dengan akun Palshub, cukup masuk untuk mengakses detail lengkapnya.\n• Belum membukanya? Kunjungi aplikasi palshub.ai untuk informasi lebih lanjut.",
-      "notAvailable": "T/A"
+      "notAvailable": "T/A",
+      "buyOnPalshub": "Beli di Palshub"
     }
   },
   "validation": {
@@ -1028,7 +1029,8 @@
   "benchmark": {
     "title": "Benchmark",
     "modelSelector": {
-      "prompt": "Pilih Model"
+      "prompt": "Pilih Model",
+      "noModels": "Tidak ada model yang diunduh"
     },
     "buttons": {
       "advancedSettings": "Pengaturan Lanjutan",
