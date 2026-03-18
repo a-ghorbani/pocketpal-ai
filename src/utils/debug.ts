@@ -131,17 +131,45 @@ export function initializeConsoleCapture() {
   };
 }
 
-export function visionDebugLog(message: string, payload?: unknown) {
-  if (!debugStore.visionDebugEnabled) {
+function categoryLog(
+  enabled: boolean,
+  prefix: string,
+  message: string,
+  payload?: unknown,
+) {
+  if (!enabled) {
     return;
   }
-
   if (payload === undefined) {
-    console.log('[VisionDebug]', message);
-    return;
+    console.log(prefix, message);
+  } else {
+    console.log(prefix, message, payload);
   }
+}
 
-  console.log('[VisionDebug]', message, payload);
+/** 类1: 引擎输入 — 底层实际收到的参数包 */
+export function engineInputLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logEngineInput, '[EngineInput]', message, payload);
+}
+
+/** 类2: 引擎输出 — 底层吐出的结果与流式事件 */
+export function engineOutputLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logEngineOutput, '[EngineOutput]', message, payload);
+}
+
+/** 类3: Prompt 构建 — 模板选择、完整 prompt 文本 */
+export function promptBuildLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logPromptBuild, '[PromptBuild]', message, payload);
+}
+
+/** 类4: 参数来源 — session 设置、thinkingAssembly 推导链 */
+export function paramSourceLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logParamSource, '[ParamSource]', message, payload);
+}
+
+/** 类5: 模型生命周期 — 加载/释放/前后台切换 */
+export function lifecycleLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logModelLifecycle, '[Lifecycle]', message, payload);
 }
 
 type CompletionProbePayload = Record<string, unknown>;
@@ -213,12 +241,12 @@ export function buildCompletionParamProbe(params: Record<string, unknown>) {
   };
 }
 
-export function scheduleVisionDebugHeartbeats(
+export function scheduleEngineOutputHeartbeats(
   message: string,
   getPayload: () => CompletionProbePayload,
   intervalsMs: number[] = [250, 1000, 3000, 8000],
 ) {
-  if (!debugStore.visionDebugEnabled) {
+  if (!debugStore.logEngineOutput) {
     return () => undefined;
   }
 
@@ -231,7 +259,7 @@ export function scheduleVisionDebugHeartbeats(
         if (cancelled) {
           return;
         }
-        visionDebugLog(message, {
+        engineOutputLog(message, {
           elapsedMs: intervalMs,
           ...getPayload(),
         });

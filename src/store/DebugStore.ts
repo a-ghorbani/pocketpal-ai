@@ -60,7 +60,16 @@ function parseLogFile(content: string): DebugLogEntry[] {
 export class DebugStore {
   logs: DebugLogEntry[] = [];
   captureConsole = true;
-  visionDebugEnabled = false;
+  // 类1: 引擎输入 — 底层实际收到的参数包，默认开启
+  logEngineInput = true;
+  // 类2: 引擎输出 — 底层吐出的结果与流式事件，默认开启
+  logEngineOutput = true;
+  // 类3: Prompt 构建 — 模板选择、完整 prompt 文本，默认关闭
+  logPromptBuild = false;
+  // 类4: 参数来源 — session 设置、thinkingAssembly 推导链，默认关闭
+  logParamSource = false;
+  // 类5: 模型生命周期 — 加载/释放/前后台切换，默认关闭
+  logModelLifecycle = false;
   private fileWriteQueue: Promise<void> = Promise.resolve();
   private hasLoadedLogs = false;
   private loadLogsPromise: Promise<void> | null = null;
@@ -69,7 +78,14 @@ export class DebugStore {
     makeAutoObservable(this);
     makePersistable(this, {
       name: 'DebugStore',
-      properties: ['captureConsole', 'visionDebugEnabled'],
+      properties: [
+        'captureConsole',
+        'logEngineInput',
+        'logEngineOutput',
+        'logPromptBuild',
+        'logParamSource',
+        'logModelLifecycle',
+      ],
       storage: AsyncStorage,
     });
 
@@ -171,9 +187,33 @@ export class DebugStore {
     });
   }
 
-  setVisionDebugEnabled(enabled: boolean) {
+  setLogEngineInput(enabled: boolean) {
     runInAction(() => {
-      this.visionDebugEnabled = enabled;
+      this.logEngineInput = enabled;
+    });
+  }
+
+  setLogEngineOutput(enabled: boolean) {
+    runInAction(() => {
+      this.logEngineOutput = enabled;
+    });
+  }
+
+  setLogPromptBuild(enabled: boolean) {
+    runInAction(() => {
+      this.logPromptBuild = enabled;
+    });
+  }
+
+  setLogParamSource(enabled: boolean) {
+    runInAction(() => {
+      this.logParamSource = enabled;
+    });
+  }
+
+  setLogModelLifecycle(enabled: boolean) {
+    runInAction(() => {
+      this.logModelLifecycle = enabled;
     });
   }
 

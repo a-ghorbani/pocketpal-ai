@@ -21,10 +21,14 @@ import {
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
   buildCompletionParamProbe,
+  engineInputLog,
+  engineOutputLog,
   getTextDiagnostics,
+  lifecycleLog,
+  paramSourceLog,
   previewText,
-  scheduleVisionDebugHeartbeats,
-  visionDebugLog,
+  promptBuildLog,
+  scheduleEngineOutputHeartbeats,
 } from '../utils/debug';
 import {
   toApiCompletionParams,
@@ -142,7 +146,7 @@ const prepareCompletion = async ({
       content: userMessageContent,
     },
   ];
-  visionDebugLog('prepareCompletion:messages', {
+  promptBuildLog('prepareCompletion:messages', {
     messageCount: messages.length,
     hasImages,
     isMultimodalEnabled,
@@ -290,52 +294,17 @@ const prepareCompletion = async ({
       ? 'prompt-preformatted-template'
       : 'messages-api';
 
-  // Core LLM observability logs: keep full template/system prompt/input.
-  console.log('[LLM Input] request', {
+  // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包
+  engineInputLog('request', {
     requestId,
     completionTransport,
-    modelId: modelStore.activeModel?.id,
-    modelName: modelStore.activeModel?.name,
-    thinkingAssembly,
-    systemMessages,
-    userMessage: message.text,
-    modelTemplateFull: modelTemplate || '',
-    contextTemplateFull: String(contextTemplate || ''),
-    formattedPromptFull: formattedPromptTextForRuntime,
-    formattedPromptError,
-  });
-
-  visionDebugLog('prepareCompletion:params', {
-    requestId,
-    completionTransport,
-    activeModel: modelStore.activeModel
-      ? {
-          id: modelStore.activeModel.id,
-          name: modelStore.activeModel.name,
-          filename: modelStore.activeModel.filename,
-        }
-      : undefined,
-    activeProjectionModel: modelStore.activeProjectionModelId
-      ? modelStore.models.find(
-          model => model.id === modelStore.activeProjectionModelId,
-        )
-        ? {
-            id: modelStore.models.find(
-              model => model.id === modelStore.activeProjectionModelId,
-            )?.id,
-            name: modelStore.models.find(
-              model => model.id === modelStore.activeProjectionModelId,
-            )?.name,
-            filename: modelStore.models.find(
-              model => model.id === modelStore.activeProjectionModelId,
-            )?.filename,
-          }
-        : undefined
-      : undefined,
+    model: {
+      id: modelStore.activeModel?.id,
+      name: modelStore.activeModel?.name,
+    },
     input: {
-      text: message.text,
+      userMessageLength: message.text.length,
       imageCount: imageUris.length,
-      imageUris: imageUris.map(uri => uri.slice(0, 120)),
       systemMessageCount: systemMessages.length,
     },
     settings: {
@@ -349,7 +318,6 @@ const prepareCompletion = async ({
       reasoning_format: cleanCompletionParams.reasoning_format,
       stop: cleanCompletionParams.stop,
     },
-    settingsFull: cleanCompletionParams,
     transportPayload: {
       hasPrompt: typeof (cleanCompletionParams as any).prompt === 'string',
       promptLength: String((cleanCompletionParams as any).prompt ?? '').length,
@@ -361,11 +329,16 @@ const prepareCompletion = async ({
       mediaPathCount: Array.isArray((cleanCompletionParams as any).media_paths)
         ? (cleanCompletionParams as any).media_paths.length
         : 0,
-      jinja: (cleanCompletionParams as any).jinja,
-      chatTemplateLength: String(
-        (cleanCompletionParams as any).chatTemplate ?? '',
-      ).length,
     },
+  });
+
+  // 类4: 参数来源 — thinkingAssembly 推导链
+  paramSourceLog('thinkingAssembly', {requestId, thinkingAssembly});
+
+  // 类3: Prompt 构建 — 完整模板与 prompt 文本
+  promptBuildLog('prepareCompletion:params', {
+    requestId,
+    completionTransport,
     template: {
       selectedTemplateName: modelStore.activeModel?.chatTemplate?.name,
       effectiveTemplateInterpreter,
@@ -390,6 +363,7 @@ const prepareCompletion = async ({
             : 'Runtime completion sends the preformatted prompt directly to llama.rn.'
           : 'Runtime completion currently sends messages directly to llama.rn.',
     },
+    systemMessages,
     contextMetadata: {
       architecture: (context?.model as any)?.metadata?.['general.architecture'],
       eosTokenId: (context?.model as any)?.metadata?.[
@@ -548,12 +522,12 @@ export const useChatSession = (
       let nativeBridgeReturned = false;
       let firstNativeChunkSeen = false;
 
-      visionDebugLog('completion:pre-native-call', {
+      engineInputLog('completion:pre-native-call', {
         requestId,
         transport: completionTransport,
         probe: buildCompletionParamProbe(cleanCompletionParams as any),
       });
-      cancelNativeCallHeartbeats = scheduleVisionDebugHeartbeats(
+      cancelNativeCallHeartbeats = scheduleEngineOutputHeartbeats(
         'completion:native-call-heartbeat',
         () => ({
           requestId,
@@ -582,7 +556,7 @@ export const useChatSession = (
               (data.token || data.content || data.reasoning_content)
             ) {
               firstNativeChunkSeen = true;
-              visionDebugLog('completion:first-native-chunk', {
+              engineOutputLog('completion:first-native-chunk', {
                 requestId,
                 transport: completionTransport,
                 callbackKeys: Object.keys(data || {}),
@@ -630,7 +604,7 @@ export const useChatSession = (
                 reasoningDiag.repeatedBigramCount >= 10;
               if (suspiciousContent || suspiciousReasoning) {
                 firstAnomalousChunkLogged = true;
-                visionDebugLog('completion:anomalous-chunk', {
+                engineOutputLog('completion:anomalous-chunk', {
                   requestId,
                   streamChunkCount,
                   callbackKeys: Object.keys(data || {}),
@@ -669,7 +643,7 @@ export const useChatSession = (
         },
       );
       nativeBridgeReturned = true;
-      visionDebugLog('completion:post-native-call', {
+      engineOutputLog('completion:post-native-call', {
         requestId,
         transport: completionTransport,
         nativeBridgeReturned,
@@ -687,29 +661,17 @@ export const useChatSession = (
       // Clear the promise after completion finishes
       modelStore.clearCompletionPromise();
 
-      // Log completion result with time to first token for debugging
-      console.log('[LLM Output] completion result:', {
+      // 类2: 引擎输出 — 完成结果与性能数据
+      engineOutputLog('completion:result', {
         requestId,
-        ...result.timings,
+        timings: result.timings,
         time_to_first_token_ms: timeToFirstToken,
-        reasoning_content: result.reasoning_content,
-        content: result.content,
-        text: result.text,
-      });
-      visionDebugLog('completion:result', {
-        requestId,
-        timeToFirstToken,
         streamChunkCount,
         finalTextLength: result.text?.length ?? 0,
-        finalContentLength: result.content?.length ?? 0,
         finalReasoningLength: result.reasoning_content?.length ?? 0,
-        streamedContentPreview,
-        streamedReasoningPreview,
         finalTextPreview: previewText(result.text),
-        finalContentPreview: previewText(result.content),
         finalReasoningPreview: previewText(result.reasoning_content),
         finalTextDiag: getTextDiagnostics(result.text),
-        finalContentDiag: getTextDiagnostics(result.content),
         finalReasoningDiag: getTextDiagnostics(result.reasoning_content),
       });
 
@@ -743,7 +705,7 @@ export const useChatSession = (
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
       console.error('Completion error:', error);
-      visionDebugLog('completion:error', {
+      engineOutputLog('completion:error', {
         requestId,
         error: error instanceof Error ? error.message : JSON.stringify(error),
       });
