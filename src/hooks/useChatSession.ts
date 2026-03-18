@@ -185,9 +185,6 @@ const prepareCompletion = async ({
   const contextTemplate = (context?.model as any)?.metadata?.[
     'tokenizer.chat_template'
   ];
-  const contextArchitecture = String(
-    (context?.model as any)?.metadata?.['general.architecture'] || '',
-  ).toLowerCase();
   let formattedPromptPreview = '';
   let formattedPromptLength = 0;
   let formattedPromptError: string | undefined;
@@ -262,21 +259,14 @@ const prepareCompletion = async ({
     (cleanCompletionParams as any).chatTemplate = modelTemplate;
   }
 
-  // qwen35 fallback:
-  // force prompt transport to bypass runtime messages+jinja formatting path.
   const canUsePromptTransportForMultimodal =
     hasImages && formattedPromptMediaPaths.length > 0;
-  const usePromptFallbackForQwen35 =
-    !hasImages &&
-    contextArchitecture.includes('qwen35') &&
-    !!formattedPromptTextForRuntime &&
-    !formattedPromptError;
   const usePromptTransportForFormattedTemplate =
     !!formattedPromptTextForRuntime &&
     !formattedPromptError &&
     (!hasImages || canUsePromptTransportForMultimodal);
 
-  if (usePromptFallbackForQwen35 || usePromptTransportForFormattedTemplate) {
+  if (usePromptTransportForFormattedTemplate) {
     (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
     delete (cleanCompletionParams as any).messages;
     (cleanCompletionParams as any).jinja = false;
@@ -288,11 +278,9 @@ const prepareCompletion = async ({
     delete (cleanCompletionParams as any).chatTemplate;
   }
 
-  const completionTransport = usePromptFallbackForQwen35
-    ? 'prompt-fallback-qwen35'
-    : usePromptTransportForFormattedTemplate
-      ? 'prompt-preformatted-template'
-      : 'messages-api';
+  const completionTransport = usePromptTransportForFormattedTemplate
+    ? 'prompt-preformatted-template'
+    : 'messages-api';
 
   // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包
   engineInputLog('request', {
@@ -355,13 +343,11 @@ const prepareCompletion = async ({
       formattedPromptMediaPaths,
       formattedPromptChatParser,
       formattedPromptError,
-      note: usePromptFallbackForQwen35
-        ? 'Using formatted prompt fallback for qwen35 text completion.'
-        : usePromptTransportForFormattedTemplate
-          ? hasImages
-            ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
-            : 'Runtime completion sends the preformatted prompt directly to llama.rn.'
-          : 'Runtime completion currently sends messages directly to llama.rn.',
+      note: usePromptTransportForFormattedTemplate
+        ? hasImages
+          ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
+          : 'Runtime completion sends the preformatted prompt directly to llama.rn.'
+        : 'Runtime completion currently sends messages directly to llama.rn.',
     },
     systemMessages,
     contextMetadata: {
