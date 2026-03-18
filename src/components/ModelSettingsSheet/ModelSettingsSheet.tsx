@@ -129,12 +129,11 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
               <Text style={styles.multimodalSectionTitle}>
                 {l10n.models.multimodal.settings}
               </Text>
-              {tempChatTemplate?.name &&
-                tempChatTemplate.name !== 'custom' && (
-                  <Text style={styles.nunjucksWarning}>
-                    {l10n.models.multimodal.nunjucksWarning}
-                  </Text>
-                )}
+              {tempChatTemplate?.name && tempChatTemplate.name !== 'custom' && (
+                <Text style={styles.nunjucksWarning}>
+                  {l10n.models.multimodal.nunjucksWarning}
+                </Text>
+              )}
               <ProjectionModelSelector
                 model={model}
                 onProjectionModelSelect={projectionModelId => {
