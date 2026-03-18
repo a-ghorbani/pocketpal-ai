@@ -236,9 +236,7 @@ const prepareCompletion = async ({
         engineInputLog('thinking-diagnostic-error', {
           requestId,
           error:
-            diagError instanceof Error
-              ? diagError.message
-              : String(diagError),
+            diagError instanceof Error ? diagError.message : String(diagError),
         });
       }
     }
