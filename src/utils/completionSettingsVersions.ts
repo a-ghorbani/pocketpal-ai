@@ -46,7 +46,7 @@ export const defaultCompletionParams: CompletionParams = {
   n_probs: 0, // If greater than 0, the response also contains the probabilities of top N tokens for each generated token given the sampling settings.
   stop: ['</s>'],
   enable_thinking: true, // Whether to enable thinking mode for compatible models
-  reasoning_format: 'auto' as string | undefined, // The format for returning reasoning content ('auto' returns it in a separate field)
+  reasoning_format: 'auto' as const, // The format for returning reasoning content ('auto' returns it in a separate field)
   // emit_partial_completion: true, // This is not used in the current version of llama.rn
 };
 
