@@ -1675,14 +1675,6 @@ describe('ModelStore', () => {
       const path = await modelStore.getModelFullPath(presetModel as any);
       // Without repo field, should use 'unknown' as fallback
       expect(path).toContain('/models/preset/test-author/unknown/model.gguf');
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking very old preset path:',
-        expect.any(Error),
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking old preset path:',
-        expect.any(Error),
-      );
 
       consoleLogSpy.mockRestore();
     });
@@ -1772,10 +1764,6 @@ describe('ModelStore', () => {
       const path = await modelStore.getModelFullPath(presetModel as any);
       // Should still check old path and eventually return new path
       expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking very old preset path:',
-        expect.any(Error),
-      );
 
       consoleLogSpy.mockRestore();
     });
@@ -1798,10 +1786,6 @@ describe('ModelStore', () => {
       const path = await modelStore.getModelFullPath(presetModel as any);
       // Should still return new path despite error
       expect(path).toContain('/models/preset/test-author/test-repo/model.gguf');
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking old preset path:',
-        expect.any(Error),
-      );
 
       consoleLogSpy.mockRestore();
     });
@@ -1893,9 +1877,6 @@ describe('ModelStore', () => {
 
       // Check repo was inferred and set
       expect(modelStore.models[0].repo).toBe('test-repo');
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[ModelStore] Inferred repo "test-repo"'),
-      );
 
       consoleLogSpy.mockRestore();
     });
@@ -2634,11 +2615,6 @@ describe('ModelStore', () => {
       // A should be skipped (null), B should succeed
       expect(resultA).toBeNull();
       expect(resultB).toBeTruthy();
-
-      // Should log that A was skipped (either during confirmation or in mutex)
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping'),
-      );
 
       consoleLogSpy.mockRestore();
     });

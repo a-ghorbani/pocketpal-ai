@@ -184,7 +184,7 @@ const prepareCompletion = async ({
   const contextTemplate = (context?.model as any)?.metadata?.[
     'tokenizer.chat_template'
   ];
-  let formattedPromptPreview = '';
+
   let formattedPromptLength = 0;
   let formattedPromptError: string | undefined;
   let formattedPromptTextForRuntime = '';
@@ -213,7 +213,6 @@ const prepareCompletion = async ({
     const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
     formattedPromptTextForRuntime = normalizedPrompt.prompt;
     formattedPromptLength = normalizedPrompt.prompt.length;
-    formattedPromptPreview = previewText(normalizedPrompt.prompt);
     formattedPromptAdditionalStops = normalizedPrompt.additionalStops;
     formattedPromptGrammar = normalizedPrompt.grammar;
     formattedPromptGrammarLazy = normalizedPrompt.grammarLazy;
@@ -294,7 +293,7 @@ const prepareCompletion = async ({
     ? 'prompt-preformatted-template'
     : 'messages-api';
 
-  // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包
+  // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包（含产物A和产物B）
   engineInputLog('request', {
     requestId,
     completionTransport,
@@ -318,16 +317,26 @@ const prepareCompletion = async ({
       reasoning_format: cleanCompletionParams.reasoning_format,
       stop: cleanCompletionParams.stop,
     },
-    transportPayload: {
-      hasPrompt: typeof (cleanCompletionParams as any).prompt === 'string',
-      promptLength: String((cleanCompletionParams as any).prompt ?? '').length,
+    // 产物B: getFormattedChat 返回的元数据，告诉引擎如何解析输出
+    productB: {
+      chat_format: (cleanCompletionParams as any).chat_format,
+      thinking_forced_open: (cleanCompletionParams as any).thinking_forced_open,
+      chat_parser: (cleanCompletionParams as any).chat_parser,
+      additional_stops: formattedPromptAdditionalStops,
+      grammar: formattedPromptGrammar,
+      grammar_lazy: formattedPromptGrammarLazy,
+      grammar_triggers: formattedPromptGrammarTriggers,
+      preserved_tokens: formattedPromptPreservedTokens,
+      has_media: formattedPromptHasMedia,
+      media_paths: formattedPromptMediaPaths,
+    },
+    // 产物A: 渲染后实际送入模型的 prompt 全文
+    productA: {
+      prompt: formattedPromptTextForRuntime,
+      promptLength: formattedPromptLength,
       hasMessages: Array.isArray((cleanCompletionParams as any).messages),
       messageCount: Array.isArray((cleanCompletionParams as any).messages)
         ? (cleanCompletionParams as any).messages.length
-        : 0,
-      hasMediaPaths: Array.isArray((cleanCompletionParams as any).media_paths),
-      mediaPathCount: Array.isArray((cleanCompletionParams as any).media_paths)
-        ? (cleanCompletionParams as any).media_paths.length
         : 0,
     },
   });
@@ -335,7 +344,7 @@ const prepareCompletion = async ({
   // 类4: 参数来源 — thinkingAssembly 推导链
   paramSourceLog('thinkingAssembly', {requestId, thinkingAssembly});
 
-  // 类3: Prompt 构建 — 完整模板与 prompt 文本
+  // 类3: Prompt 构建 — 模板来源与渲染过程（不含产物A/B，已移至类1）
   promptBuildLog('prepareCompletion:params', {
     requestId,
     completionTransport,
@@ -347,13 +356,6 @@ const prepareCompletion = async ({
       contextTemplatePreview: previewText(contextTemplate),
       modelTemplateFull: modelTemplate || '',
       contextTemplateFull: String(contextTemplate || ''),
-      formattedPromptLength,
-      formattedPromptPreview,
-      formattedPromptFull: formattedPromptTextForRuntime,
-      formattedPromptAdditionalStops,
-      formattedPromptHasMedia,
-      formattedPromptMediaPaths,
-      formattedPromptChatParser,
       formattedPromptError,
       note: usePromptTransportForFormattedTemplate
         ? hasImages

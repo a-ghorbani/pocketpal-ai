@@ -46,8 +46,22 @@ export const createStyles = (theme: Theme) =>
       paddingBottom: 10,
       gap: 4,
     },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
     metaText: {
       color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      flex: 1,
+    },
+    expandButton: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    expandButtonText: {
+      color: theme.colors.primary,
       fontSize: 12,
     },
     messageText: {

@@ -1,5 +1,5 @@
-import React from 'react';
-import {ScrollView, View} from 'react-native';
+import React, {useState} from 'react';
+import {ScrollView, TouchableOpacity, View} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {observer} from 'mobx-react-lite';
 import {Button, Switch, Text} from 'react-native-paper';
@@ -9,9 +9,24 @@ import {debugStore} from '../../store/DebugStore';
 
 import {createStyles} from './styles';
 
+const COLLAPSE_THRESHOLD = 300;
+
 export const ConsoleScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleCopy = () => {
     Clipboard.setString(debugStore.formattedLogs || 'No logs captured.');
@@ -91,17 +106,36 @@ export const ConsoleScreen: React.FC = observer(() => {
           debugStore.logs
             .slice()
             .reverse()
-            .map(entry => (
-              <View key={entry.id} style={styles.logEntry}>
-                <Text style={styles.metaText}>
-                  {new Date(entry.timestamp).toLocaleTimeString()}{' '}
-                  {entry.level.toUpperCase()}
-                </Text>
-                <Text selectable style={styles.messageText}>
-                  {entry.message}
-                </Text>
-              </View>
-            ))
+            .map(entry => {
+              const isLong = entry.message.length > COLLAPSE_THRESHOLD;
+              const isExpanded = expandedIds.has(entry.id);
+              const displayMessage =
+                isLong && !isExpanded
+                  ? entry.message.slice(0, COLLAPSE_THRESHOLD) + '…'
+                  : entry.message;
+              return (
+                <View key={entry.id} style={styles.logEntry}>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaText}>
+                      {new Date(entry.timestamp).toLocaleTimeString()}{' '}
+                      {entry.level.toUpperCase()}
+                    </Text>
+                    {isLong && (
+                      <TouchableOpacity
+                        onPress={() => toggleExpand(entry.id)}
+                        style={styles.expandButton}>
+                        <Text style={styles.expandButtonText}>
+                          {isExpanded ? '▲' : '▶'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <Text selectable style={styles.messageText}>
+                    {displayMessage}
+                  </Text>
+                </View>
+              );
+            })
         )}
       </ScrollView>
     </View>
