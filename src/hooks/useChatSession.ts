@@ -209,6 +209,7 @@ const prepareCompletion = async ({
       modelStore.activeModel ?? null,
       context ?? null,
       hasImages ? false : (cleanCompletionParams.enable_thinking ?? false),
+      cleanCompletionParams.reasoning_format ?? undefined,
     );
     const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
     formattedPromptTextForRuntime = normalizedPrompt.prompt;
@@ -223,6 +224,25 @@ const prepareCompletion = async ({
     formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
     formattedPromptChatFormat = normalizedPrompt.chatFormat;
     formattedPromptThinkingForcedOpen = normalizedPrompt.thinkingForcedOpen;
+
+    // Fix: some models (e.g. Qwen3-heretic fine-tunes on Android) ignore
+    // enable_thinking in getFormattedChat and always produce the disabled
+    // pattern <think>\n\n</think>\n\n. Detect the mismatch and patch the
+    // prompt to open the think block so the model actually reasons.
+    const wantsThinking =
+      !hasImages && (cleanCompletionParams.enable_thinking ?? false);
+    const CLOSED_THINK = '<think>\n\n</think>\n\n';
+    const OPEN_THINK = '<think>\n';
+    if (
+      wantsThinking &&
+      !formattedPromptThinkingForcedOpen &&
+      formattedPromptTextForRuntime.slice(-CLOSED_THINK.length) === CLOSED_THINK
+    ) {
+      formattedPromptTextForRuntime =
+        formattedPromptTextForRuntime.slice(0, -CLOSED_THINK.length) +
+        OPEN_THINK;
+      formattedPromptThinkingForcedOpen = true;
+    }
   } catch (error) {
     formattedPromptError =
       error instanceof Error ? error.message : JSON.stringify(error);

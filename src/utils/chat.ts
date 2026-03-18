@@ -169,6 +169,7 @@ export async function applyChatTemplate(
   model: Model | null,
   context: LlamaContext | null,
   enableThinking: boolean = false,
+  reasoningFormat?: 'none' | 'auto' | 'deepseek',
 ): Promise<string | JinjaFormattedChatResult> {
   const modelChatTemplate = model?.chatTemplate;
   const effectiveInterpreter =
@@ -189,6 +190,7 @@ export async function applyChatTemplate(
           {
             jinja: true,
             enable_thinking: enableThinking,
+            reasoning_format: reasoningFormat,
           },
         );
       }
@@ -207,6 +209,7 @@ export async function applyChatTemplate(
       formattedChat = await (context as any)?.getFormattedChat(messages, null, {
         jinja: true,
         enable_thinking: enableThinking,
+        reasoning_format: reasoningFormat,
       });
     }
 
