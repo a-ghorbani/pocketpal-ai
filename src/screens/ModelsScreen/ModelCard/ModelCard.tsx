@@ -60,6 +60,7 @@ import {
   ChevronSelectorExpandedVerticalIcon,
 } from '../../../assets/icons';
 import {exportModelFiles} from '../../../utils/exportUtils';
+import {getEffectiveChatTemplateInterpreter} from '../../../utils/chat';
 
 type ChatScreenNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
 
@@ -776,12 +777,13 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 {model.supportsMultimodal &&
                   modelStore.getModelVisionPreference(model) && (
                     <View style={styles.projectionModelsContainer}>
-                      {model.chatTemplate?.name &&
-                        model.chatTemplate.name !== 'custom' && (
-                          <Text style={styles.nunjucksWarning}>
-                            {l10n.models.multimodal.nunjucksWarning}
-                          </Text>
-                        )}
+                      {getEffectiveChatTemplateInterpreter(
+                        model.chatTemplate,
+                      ) === 'nunjucks' && (
+                        <Text style={styles.nunjucksWarning}>
+                          {l10n.models.multimodal.nunjucksWarning}
+                        </Text>
+                      )}
                       <ProjectionModelSelector
                         model={model}
                         onProjectionModelSelect={handleProjectionModelSelect}

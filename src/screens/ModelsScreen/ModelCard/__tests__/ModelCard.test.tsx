@@ -555,6 +555,96 @@ describe('ModelCard', () => {
       });
     });
 
+    it('shows nunjucks warning for named (non-custom) template in multimodal mode', async () => {
+      const visionModelWithNunjucksTemplate = {
+        ...downloadedModel,
+        supportsMultimodal: true,
+        chatTemplate: {
+          name: 'llama-3',
+          chatTemplate: 'some template',
+          templateInterpreter: 'nunjucks' as const,
+          addGenerationPrompt: true,
+          bosToken: '',
+          eosToken: '',
+          systemPrompt: '',
+        },
+      };
+
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+
+      const {getByTestId, getByText} = customRender(
+        <ModelCard model={visionModelWithNunjucksTemplate} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(
+          getByText(l10n.en.models.multimodal.nunjucksWarning),
+        ).toBeTruthy();
+      });
+    });
+
+    it('shows nunjucks warning for custom template with nunjucks interpreter in multimodal mode', async () => {
+      const visionModelWithCustomNunjucks = {
+        ...downloadedModel,
+        supportsMultimodal: true,
+        chatTemplate: {
+          name: 'custom',
+          chatTemplate: 'User: {{message}}\nAssistant:',
+          templateInterpreter: 'nunjucks' as const,
+          addGenerationPrompt: true,
+          bosToken: '',
+          eosToken: '',
+          systemPrompt: '',
+        },
+      };
+
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+
+      const {getByTestId, getByText} = customRender(
+        <ModelCard model={visionModelWithCustomNunjucks} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(
+          getByText(l10n.en.models.multimodal.nunjucksWarning),
+        ).toBeTruthy();
+      });
+    });
+
+    it('does not show nunjucks warning for custom template with jinja interpreter', async () => {
+      const visionModelWithCustomJinja = {
+        ...downloadedModel,
+        supportsMultimodal: true,
+        chatTemplate: {
+          name: 'custom',
+          chatTemplate: '{{ messages[0].content }}',
+          templateInterpreter: 'jinja' as const,
+          addGenerationPrompt: true,
+          bosToken: '',
+          eosToken: '',
+          systemPrompt: '',
+        },
+      };
+
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+
+      const {getByTestId, queryByText} = customRender(
+        <ModelCard model={visionModelWithCustomJinja} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(
+          queryByText(l10n.en.models.multimodal.nunjucksWarning),
+        ).toBeNull();
+      });
+    });
+
     it('handles projection warning badge press to download missing projection model', async () => {
       const visionModelWithMissingProjection = {
         ...downloadedModel,

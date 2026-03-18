@@ -6,7 +6,10 @@ import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
 import {Model} from '../../utils/types';
 import {modelStore} from '../../store';
-import {chatTemplates} from '../../utils/chat';
+import {
+  chatTemplates,
+  getEffectiveChatTemplateInterpreter,
+} from '../../utils/chat';
 
 import {styles} from './styles';
 import {View} from 'react-native';
@@ -129,7 +132,8 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
               <Text style={styles.multimodalSectionTitle}>
                 {l10n.models.multimodal.settings}
               </Text>
-              {tempChatTemplate?.name && tempChatTemplate.name !== 'custom' && (
+              {getEffectiveChatTemplateInterpreter(tempChatTemplate) ===
+                'nunjucks' && (
                 <Text style={styles.nunjucksWarning}>
                   {l10n.models.multimodal.nunjucksWarning}
                 </Text>

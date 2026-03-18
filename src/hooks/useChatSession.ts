@@ -206,6 +206,42 @@ const prepareCompletion = async ({
     // ⑥: Nunjucks + multimodal → Nunjucks ignored, native uses built-in
 
     completionTransport = 'messages-api';
+
+    // 🔍 DIAGNOSTIC: Check if getFormattedChat properly renders thinking tokens
+    // Compare what getFormattedChat produces vs what completion() will do internally
+    if (context?.getFormattedChat && cleanCompletionParams.enable_thinking) {
+      try {
+        const diagResult = await (context as any).getFormattedChat(
+          (cleanCompletionParams as any).messages,
+          (cleanCompletionParams as any).chatTemplate || null,
+          {
+            jinja: true,
+            enable_thinking: cleanCompletionParams.enable_thinking,
+            reasoning_format: cleanCompletionParams.reasoning_format,
+          },
+        );
+        const diagPrompt =
+          typeof diagResult === 'string'
+            ? diagResult
+            : diagResult?.prompt || JSON.stringify(diagResult);
+        engineInputLog('thinking-diagnostic', {
+          requestId,
+          getFormattedChatResultType: typeof diagResult,
+          hasThinkTag: diagPrompt.includes('<think>'),
+          hasEnableThinkingInTemplate: diagPrompt.includes('enable_thinking'),
+          promptPreview: diagPrompt.slice(-300),
+          promptLength: diagPrompt.length,
+        });
+      } catch (diagError) {
+        engineInputLog('thinking-diagnostic-error', {
+          requestId,
+          error:
+            diagError instanceof Error
+              ? diagError.message
+              : String(diagError),
+        });
+      }
+    }
   }
 
   // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包
