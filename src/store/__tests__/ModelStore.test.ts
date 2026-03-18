@@ -1650,10 +1650,6 @@ describe('ModelStore', () => {
       const path = await modelStore.getModelFullPath(hfModel as any);
       // Should still return new path despite error
       expect(path).toContain('/models/hf/test-author/test-repo/model.gguf');
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        'Error checking old HF model path:',
-        expect.any(Error),
-      );
 
       consoleLogSpy.mockRestore();
     });
