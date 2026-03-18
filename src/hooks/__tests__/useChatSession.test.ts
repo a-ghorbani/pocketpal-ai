@@ -61,8 +61,8 @@ describe('useChatSession', () => {
     expect(modelStore.context?.completion).toHaveBeenCalled();
     expect(modelStore.context?.completion).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: 'mocked prompt',
-        jinja: false,
+        messages: expect.any(Array),
+        jinja: true,
       }),
       expect.any(Function),
     );
@@ -290,18 +290,14 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    const lastApplyTemplateCall =
-      applyChatTemplateSpy.mock.calls[
-        applyChatTemplateSpy.mock.calls.length - 1
-      ];
-    const formattedMessages = (lastApplyTemplateCall?.[0] || []) as any[];
+    // Check that completion was called with messages including the parametrized system prompt
+    const completionCall = (modelStore.context?.completion as jest.Mock).mock
+      .calls[0];
+    const params = completionCall[0];
+    const messages = params.messages as any[];
 
-    expect(formattedMessages.some((msg: any) => msg.role === 'system')).toBe(
-      true,
-    );
-    const systemMessage = formattedMessages.find(
-      (msg: any) => msg.role === 'system',
-    );
+    expect(messages.some((msg: any) => msg.role === 'system')).toBe(true);
+    const systemMessage = messages.find((msg: any) => msg.role === 'system');
     expect(systemMessage.content).toBe(
       'You are Gandalf, a wizard in Middle-earth.',
     );
@@ -399,22 +395,18 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    const lastApplyTemplateCall =
-      applyChatTemplateSpy.mock.calls[
-        applyChatTemplateSpy.mock.calls.length - 1
-      ];
-    const formattedMessages = (lastApplyTemplateCall?.[0] || []) as any[];
+    // Check that completion was called with messages including the system prompt
+    const completionCall = (modelStore.context?.completion as jest.Mock).mock
+      .calls[0];
+    const params = completionCall[0];
+    const messages = params.messages as any[];
 
-    expect(formattedMessages.some((msg: any) => msg.role === 'system')).toBe(
-      true,
-    );
-    const systemMessage = formattedMessages.find(
-      (msg: any) => msg.role === 'system',
-    );
+    expect(messages.some((msg: any) => msg.role === 'system')).toBe(true);
+    const systemMessage = messages.find((msg: any) => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
   });
 
-  it('should force custom jinja templates through the preformatted prompt path', async () => {
+  it('should use custom jinja templates with messages and chatTemplate parameter', async () => {
     const customJinjaModel = {
       ...mockBasicModel,
       id: 'custom-jinja-model',
@@ -428,12 +420,6 @@ describe('useChatSession', () => {
 
     modelStore.models = [customJinjaModel];
     modelStore.setActiveModel(customJinjaModel.id);
-
-    applyChatTemplateSpy.mockResolvedValueOnce({
-      prompt: 'custom jinja prompt',
-      additional_stops: ['<custom-stop>'],
-      grammar: 'root ::= "ok"',
-    } as any);
 
     if (modelStore.context) {
       modelStore.context.completion = jest
@@ -451,16 +437,15 @@ describe('useChatSession', () => {
 
     expect(modelStore.context?.completion).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: 'custom jinja prompt',
-        jinja: false,
-        grammar: 'root ::= "ok"',
-        stop: expect.arrayContaining(['<custom-stop>']),
+        messages: expect.any(Array),
+        jinja: true,
+        chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
       }),
       expect.any(Function),
     );
   });
 
-  it('should send multimodal custom jinja templates through prompt plus media_paths', async () => {
+  it('should send multimodal custom jinja templates with messages and chatTemplate', async () => {
     const customJinjaModel = {
       ...mockBasicModel,
       id: 'custom-jinja-vision-model',
@@ -481,14 +466,6 @@ describe('useChatSession', () => {
     modelStore.setActiveModel(customJinjaModel.id);
     modelStore.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
 
-    applyChatTemplateSpy.mockResolvedValueOnce({
-      prompt: 'custom multimodal prompt',
-      additional_stops: ['<image-stop>'],
-      media_paths: ['/path/to/image.jpg'],
-      has_media: true,
-      chat_parser: 'llama-3',
-    } as any);
-
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
@@ -506,17 +483,12 @@ describe('useChatSession', () => {
 
       expect(modelStore.context?.completion).toHaveBeenCalledWith(
         expect.objectContaining({
-          prompt: 'custom multimodal prompt',
-          media_paths: ['/path/to/image.jpg'],
-          chat_parser: 'llama-3',
-          jinja: false,
-          stop: expect.arrayContaining(['<image-stop>']),
+          messages: expect.any(Array),
+          jinja: true,
+          chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
         }),
         expect.any(Function),
       );
-      expect(
-        (modelStore.context?.completion as jest.Mock).mock.calls[0][0].messages,
-      ).toBeUndefined();
     } finally {
       modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
     }
