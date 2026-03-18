@@ -204,7 +204,8 @@
       "cannotDeleteActive": "This projection model is currently active.",
       "cannotDeleteInUse": "This projection model is used by downloaded LLM models:",
       "dependentModels": "Dependent models:",
-      "visionWillBeDisabled": "Vision capabilities will be disabled for these models."
+      "visionWillBeDisabled": "Vision capabilities will be disabled for these models.",
+      "nunjucksWarning": "The selected chat template (Nunjucks) is not supported in multimodal mode. The model's built-in template will be used instead."
     },
     "buttons": {
       "addFromHuggingFace": "Add from Hugging Face",

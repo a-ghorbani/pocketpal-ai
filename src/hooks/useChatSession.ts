@@ -15,7 +15,6 @@ import {
   applyChatTemplate,
   convertToChatMessages,
   getEffectiveChatTemplateInterpreter,
-  normalizeChatTemplateResult,
   removeThinkingParts,
 } from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
@@ -56,28 +55,6 @@ const prepareCompletion = async ({
   l10n: any;
   currentMessages: MessageType.Any[];
 }) => {
-  const mergeStopWords = (
-    existingStops: unknown,
-    additionalStops: string[],
-  ) => {
-    const mergedStops = new Set<string>(
-      Array.isArray(existingStops)
-        ? existingStops.filter(
-            (stop): stop is string =>
-              typeof stop === 'string' && stop.length > 0,
-          )
-        : [],
-    );
-
-    additionalStops.forEach(stop => {
-      if (typeof stop === 'string' && stop.length > 0) {
-        mergedStops.add(stop);
-      }
-    });
-
-    return Array.from(mergedStops);
-  };
-
   const sessionCompletionSettings =
     await chatSessionStore.getCurrentCompletionSettings();
   const stopWords = toJS(modelStore.activeModel?.stopWords);
@@ -185,135 +162,53 @@ const prepareCompletion = async ({
     'tokenizer.chat_template'
   ];
 
-  let formattedPromptLength = 0;
-  let formattedPromptError: string | undefined;
-  let formattedPromptTextForRuntime = '';
-  let formattedPromptAdditionalStops: string[] = [];
-  let formattedPromptGrammar: string | undefined;
-  let formattedPromptGrammarLazy: boolean | undefined;
-  let formattedPromptGrammarTriggers: unknown[] | undefined;
-  let formattedPromptPreservedTokens: unknown[] | undefined;
-  let formattedPromptChatParser: string | undefined;
-  let formattedPromptHasMedia = false;
-  let formattedPromptMediaPaths: string[] = [];
-  let formattedPromptChatFormat: number | undefined;
-  let formattedPromptThinkingForcedOpen: boolean | undefined;
   const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
     modelStore.activeModel?.chatTemplate,
   );
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  try {
-    const formattedPrompt = await applyChatTemplate(
-      messages as any,
-      modelStore.activeModel ?? null,
-      context ?? null,
-      hasImages ? false : (cleanCompletionParams.enable_thinking ?? false),
-      cleanCompletionParams.reasoning_format ?? undefined,
-    );
-    const normalizedPrompt = normalizeChatTemplateResult(formattedPrompt);
-    formattedPromptTextForRuntime = normalizedPrompt.prompt;
-    formattedPromptLength = normalizedPrompt.prompt.length;
-    formattedPromptAdditionalStops = normalizedPrompt.additionalStops;
-    formattedPromptGrammar = normalizedPrompt.grammar;
-    formattedPromptGrammarLazy = normalizedPrompt.grammarLazy;
-    formattedPromptGrammarTriggers = normalizedPrompt.grammarTriggers;
-    formattedPromptPreservedTokens = normalizedPrompt.preservedTokens;
-    formattedPromptChatParser = normalizedPrompt.chatParser;
-    formattedPromptHasMedia = normalizedPrompt.hasMedia ?? false;
-    formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
-    formattedPromptChatFormat = normalizedPrompt.chatFormat;
-    formattedPromptThinkingForcedOpen = normalizedPrompt.thinkingForcedOpen;
+  // Determine completion path based on template interpreter and multimodal status
+  const isNunjucks = effectiveTemplateInterpreter === 'nunjucks';
+  let completionTransport: string;
+  let nunjucksRenderError: string | undefined;
 
-    // Fix: some models (e.g. Qwen3-heretic fine-tunes on Android) ignore
-    // enable_thinking in getFormattedChat and always produce the disabled
-    // pattern <think>\n\n</think>\n\n. Detect the mismatch and patch the
-    // prompt to open the think block so the model actually reasons.
-    const wantsThinking =
-      !hasImages && (cleanCompletionParams.enable_thinking ?? false);
-    const CLOSED_THINK = '<think>\n\n</think>\n\n';
-    const OPEN_THINK = '<think>\n';
-    if (
-      wantsThinking &&
-      !formattedPromptThinkingForcedOpen &&
-      formattedPromptTextForRuntime.slice(-CLOSED_THINK.length) === CLOSED_THINK
-    ) {
-      formattedPromptTextForRuntime =
-        formattedPromptTextForRuntime.slice(0, -CLOSED_THINK.length) +
-        OPEN_THINK;
-      formattedPromptThinkingForcedOpen = true;
+  if (isNunjucks && !hasImages) {
+    // ⑤ Nunjucks + text-only → Path B (only case that needs JS-side rendering)
+    try {
+      const renderedPrompt = await applyChatTemplate(
+        messages as any,
+        modelStore.activeModel ?? null,
+        context ?? null,
+      );
+      const promptStr =
+        typeof renderedPrompt === 'string' ? renderedPrompt : '';
+      if (promptStr) {
+        (cleanCompletionParams as any).prompt = promptStr;
+        delete (cleanCompletionParams as any).messages;
+        (cleanCompletionParams as any).jinja = false;
+      }
+    } catch (error) {
+      nunjucksRenderError =
+        error instanceof Error ? error.message : JSON.stringify(error);
     }
-  } catch (error) {
-    formattedPromptError =
-      error instanceof Error ? error.message : JSON.stringify(error);
-  }
+    completionTransport = (cleanCompletionParams as any).prompt
+      ? 'prompt-preformatted-template'
+      : 'messages-api';
+  } else {
+    // ①②③④⑥ → Path A (native handles template rendering + all metadata)
+    (cleanCompletionParams as any).jinja = true;
 
-  if (formattedPromptAdditionalStops.length > 0) {
-    cleanCompletionParams.stop = mergeStopWords(
-      cleanCompletionParams.stop,
-      formattedPromptAdditionalStops,
-    );
-  }
-
-  if (formattedPromptGrammar) {
-    (cleanCompletionParams as any).grammar = formattedPromptGrammar;
-  }
-
-  if (formattedPromptGrammarLazy !== undefined) {
-    (cleanCompletionParams as any).grammar_lazy = formattedPromptGrammarLazy;
-  }
-
-  if (formattedPromptGrammarTriggers) {
-    (cleanCompletionParams as any).grammar_triggers =
-      formattedPromptGrammarTriggers;
-  }
-
-  if (formattedPromptPreservedTokens) {
-    (cleanCompletionParams as any).preserved_tokens =
-      formattedPromptPreservedTokens;
-  }
-
-  if (formattedPromptChatParser) {
-    (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
-  }
-
-  if (formattedPromptChatFormat !== undefined) {
-    (cleanCompletionParams as any).chat_format = formattedPromptChatFormat;
-  }
-
-  if (formattedPromptThinkingForcedOpen !== undefined) {
-    (cleanCompletionParams as any).thinking_forced_open =
-      formattedPromptThinkingForcedOpen;
-  }
-
-  if (hasImages && effectiveTemplateInterpreter === 'jinja' && modelTemplate) {
-    (cleanCompletionParams as any).chatTemplate = modelTemplate;
-  }
-
-  const canUsePromptTransportForMultimodal =
-    hasImages && formattedPromptMediaPaths.length > 0;
-  const usePromptTransportForFormattedTemplate =
-    !!formattedPromptTextForRuntime &&
-    !formattedPromptError &&
-    (!hasImages || canUsePromptTransportForMultimodal);
-
-  if (usePromptTransportForFormattedTemplate) {
-    (cleanCompletionParams as any).prompt = formattedPromptTextForRuntime;
-    delete (cleanCompletionParams as any).messages;
-    (cleanCompletionParams as any).jinja = false;
-
-    if (formattedPromptMediaPaths.length > 0) {
-      (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
+    if (!isNunjucks && modelTemplate) {
+      // ③④: Pass user's custom Jinja template to override model built-in
+      (cleanCompletionParams as any).chatTemplate = modelTemplate;
     }
+    // ①②: No chatTemplate → native uses model's built-in Jinja template
+    // ⑥: Nunjucks + multimodal → Nunjucks ignored, native uses built-in
 
-    delete (cleanCompletionParams as any).chatTemplate;
+    completionTransport = 'messages-api';
   }
 
-  const completionTransport = usePromptTransportForFormattedTemplate
-    ? 'prompt-preformatted-template'
-    : 'messages-api';
-
-  // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包（含产物A和产物B）
+  // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包
   engineInputLog('request', {
     requestId,
     completionTransport,
@@ -337,36 +232,19 @@ const prepareCompletion = async ({
       reasoning_format: cleanCompletionParams.reasoning_format,
       stop: cleanCompletionParams.stop,
     },
-    // 产物B: getFormattedChat 返回的元数据，告诉引擎如何解析输出
-    productB: {
-      chat_format: (cleanCompletionParams as any).chat_format,
-      thinking_forced_open: (cleanCompletionParams as any).thinking_forced_open,
-      chat_parser: (cleanCompletionParams as any).chat_parser,
-      additional_stops: formattedPromptAdditionalStops,
-      grammar: formattedPromptGrammar,
-      grammar_lazy: formattedPromptGrammarLazy,
-      grammar_triggers: formattedPromptGrammarTriggers,
-      preserved_tokens: formattedPromptPreservedTokens,
-      has_media: formattedPromptHasMedia,
-      media_paths: formattedPromptMediaPaths,
+    template: {
+      effectiveInterpreter: effectiveTemplateInterpreter,
+      hasCustomTemplate: Boolean(!isNunjucks && modelTemplate),
+      isNunjucksFallback: isNunjucks && hasImages,
+      nunjucksRenderError,
     },
-    // 产物A: 渲染后实际送入模型的 prompt 全文
-    productA: {
-      prompt: formattedPromptTextForRuntime,
-      promptLength: formattedPromptLength,
-      hasMessages: Array.isArray((cleanCompletionParams as any).messages),
-      messageCount: Array.isArray((cleanCompletionParams as any).messages)
-        ? (cleanCompletionParams as any).messages.length
-        : 0,
-    },
-    // 实际送入 native 的参数诊断
     probe: buildCompletionParamProbe(cleanCompletionParams as any),
   });
 
   // 类4: 参数来源 — thinkingAssembly 推导链
   paramSourceLog('thinkingAssembly', {requestId, thinkingAssembly});
 
-  // 类3: Prompt 构建 — 模板来源与渲染过程（不含产物A/B，已移至类1）
+  // 类3: Prompt 构建 — 模板来源信息
   promptBuildLog('prepareCompletion:params', {
     requestId,
     completionTransport,
@@ -375,12 +253,7 @@ const prepareCompletion = async ({
       effectiveTemplateInterpreter,
       modelTemplateFull: modelTemplate || '',
       contextTemplateFull: String(contextTemplate || ''),
-      formattedPromptError,
-      note: usePromptTransportForFormattedTemplate
-        ? hasImages
-          ? 'Runtime completion sends the preformatted multimodal prompt and media_paths directly to llama.rn.'
-          : 'Runtime completion sends the preformatted prompt directly to llama.rn.'
-        : 'Runtime completion currently sends messages directly to llama.rn.',
+      nunjucksRenderError,
     },
     systemMessages,
     contextMetadata: {

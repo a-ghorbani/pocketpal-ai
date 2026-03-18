@@ -210,6 +210,12 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 16,
       padding: 12,
     },
+    nunjucksWarning: {
+      fontSize: 13,
+      color: '#b26a00',
+      marginBottom: 8,
+      fontStyle: 'italic' as const,
+    },
     warningButton: {
       paddingVertical: 6,
       paddingHorizontal: 8,
