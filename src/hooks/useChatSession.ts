@@ -24,7 +24,6 @@ import {
   engineInputLog,
   engineOutputLog,
   getTextDiagnostics,
-  lifecycleLog,
   paramSourceLog,
   previewText,
   promptBuildLog,
