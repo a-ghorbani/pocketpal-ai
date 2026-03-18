@@ -67,10 +67,18 @@ export interface ChatInputTopLevelProps {
   isVisionEnabled?: boolean;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
-  /** Whether thinking mode is currently enabled */
+  /** Whether the UI thinking bubble is currently shown */
   isThinkingEnabled?: boolean;
-  /** Callback when thinking toggle is pressed */
+  /** Callback when thinking bubble UI toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether enable_thinking inference parameter is on */
+  isEnableThinkingOn?: boolean;
+  /** Callback when enable_thinking button is pressed */
+  onEnableThinkingToggle?: (enabled: boolean) => void;
+  /** Whether reasoning_format='auto' inference parameter is on */
+  isReasoningFormatOn?: boolean;
+  /** Callback when reasoning_format button is pressed */
+  onReasoningFormatToggle?: (enabled: boolean) => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -84,10 +92,18 @@ export interface ChatInputAdditionalProps {
   showImageUpload?: boolean;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
-  /** Whether thinking mode is currently enabled */
+  /** Whether the UI thinking bubble is currently shown */
   isThinkingEnabled?: boolean;
-  /** Callback when thinking toggle is pressed */
+  /** Callback when thinking bubble UI toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether enable_thinking inference parameter is on */
+  isEnableThinkingOn?: boolean;
+  /** Callback when enable_thinking button is pressed */
+  onEnableThinkingToggle?: (enabled: boolean) => void;
+  /** Whether reasoning_format='auto' inference parameter is on */
+  isReasoningFormatOn?: boolean;
+  /** Callback when reasoning_format button is pressed */
+  onReasoningFormatToggle?: (enabled: boolean) => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -122,6 +138,10 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    isEnableThinkingOn = false,
+    onEnableThinkingToggle,
+    isReasoningFormatOn = false,
+    onReasoningFormatToggle,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -542,7 +562,7 @@ export const ChatInput = observer(
                 )}
               </View>
 
-              {/* Thinking Toggle Button */}
+              {/* Thinking Toggle Button (UI: show/hide thinking bubble) */}
               {showThinkingToggle && !isCameraActive && (
                 <TouchableOpacity
                   style={[
@@ -575,6 +595,62 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                     ]}>
                     {l10n.components.chatInput.thinkingToggle.thinkText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Enable Thinking Button (inference param: enable_thinking) */}
+              {showThinkingToggle && !isCameraActive && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    isEnableThinkingOn && {backgroundColor: onSurfaceColor},
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={() => onEnableThinkingToggle?.(!isEnableThinkingOn)}
+                  accessibilityLabel={
+                    isEnableThinkingOn
+                      ? 'Disable enable_thinking parameter'
+                      : 'Enable enable_thinking parameter'
+                  }
+                  accessibilityRole="button">
+                  <Text
+                    style={[
+                      styles.thinkingToggleText,
+                      isEnableThinkingOn
+                        ? {color: inputBackgroundColor}
+                        : {color: onSurfaceColorVariant},
+                      {marginLeft: 0},
+                    ]}>
+                    ET
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Reasoning Format Button (inference param: reasoning_format) */}
+              {showThinkingToggle && !isCameraActive && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    isReasoningFormatOn && {backgroundColor: onSurfaceColor},
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={() => onReasoningFormatToggle?.(!isReasoningFormatOn)}
+                  accessibilityLabel={
+                    isReasoningFormatOn
+                      ? 'Disable reasoning_format=auto parameter'
+                      : 'Enable reasoning_format=auto parameter'
+                  }
+                  accessibilityRole="button">
+                  <Text
+                    style={[
+                      styles.thinkingToggleText,
+                      isReasoningFormatOn
+                        ? {color: inputBackgroundColor}
+                        : {color: onSurfaceColorVariant},
+                      {marginLeft: 0},
+                    ]}>
+                    RF
                   </Text>
                 </TouchableOpacity>
               )}

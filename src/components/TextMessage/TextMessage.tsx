@@ -15,6 +15,7 @@ import {
   PreviewData,
   REGEX_LINK,
 } from '@flyerhq/react-native-link-preview';
+import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 
@@ -27,6 +28,7 @@ import {
   getUserName,
   UserContext,
 } from '../../utils';
+import {chatSessionStore} from '../../store';
 
 export interface TextMessageTopLevelProps {
   /** @see {@link LinkPreviewProps.onPreviewDataFetched} */
@@ -48,7 +50,7 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
   showName: boolean;
 }
 
-export const TextMessage = ({
+export const TextMessage = observer(({
   enableAnimation,
   message,
   messageWidth,
@@ -58,6 +60,16 @@ export const TextMessage = ({
 }: TextMessageProps) => {
   const theme = useTheme();
   const user = React.useContext(UserContext);
+
+  const showThinkingBubble = (() => {
+    const currentSession = chatSessionStore.sessions.find(
+      s => s.id === chatSessionStore.activeSessionId,
+    );
+    const settings =
+      currentSession?.completionSettings ??
+      chatSessionStore.newChatCompletionSettings;
+    return settings.show_thinking_bubble ?? true;
+  })();
   const [previewData, setPreviewData] = React.useState(message.previewData);
   const [selectedImageIndex, setSelectedImageIndex] = React.useState<
     number | null
@@ -245,8 +257,10 @@ export const TextMessage = ({
             maxMessageWidth={messageWidth}
             selectable={false}
             reasoningContent={
-              message.metadata?.completionResult?.reasoning_content ||
-              message.metadata?.partialCompletionResult?.reasoning_content
+              showThinkingBubble
+                ? message.metadata?.completionResult?.reasoning_content ||
+                  message.metadata?.partialCompletionResult?.reasoning_content
+                : undefined
             }
           />
 
@@ -274,4 +288,4 @@ export const TextMessage = ({
       {renderImagePreview()}
     </>
   );
-};
+});

@@ -21,6 +21,13 @@ export type AppOnlyCompletionParams = {
    * When false, thinking parts are removed from the context to save context space.
    */
   include_thinking_in_context?: boolean;
+
+  /**
+   * Whether to render the thinking/reasoning content in a separate UI bubble.
+   * This is a UI-only setting and has no effect on the inference engine.
+   * When false, the ThinkingBubble component is hidden even if reasoning_content is returned.
+   */
+  show_thinking_bubble?: boolean;
   // Add other PocketPal-only fields here
 };
 
@@ -31,6 +38,7 @@ export type AppOnlyCompletionParams = {
 const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
   'version',
   'include_thinking_in_context',
+  'show_thinking_bubble',
 ];
 
 /**

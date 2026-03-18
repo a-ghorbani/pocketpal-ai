@@ -168,11 +168,6 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
-  // If enable_thinking is true, set reasoning_format to 'auto'
-  // This returns the reasoning content in a separate field (reasoning_content)
-  if (cleanCompletionParams.enable_thinking) {
-    cleanCompletionParams.reasoning_format = 'auto';
-  }
   const thinkingAssembly = {
     enable_thinking: cleanCompletionParams.enable_thinking ?? false,
     reasoning_format: cleanCompletionParams.reasoning_format ?? null,
@@ -284,10 +279,6 @@ const prepareCompletion = async ({
 
     if (formattedPromptMediaPaths.length > 0) {
       (cleanCompletionParams as any).media_paths = formattedPromptMediaPaths;
-      // Disable thinking for multimodal: template already rendered with thinking off,
-      // and multimodal+thinking is a known suspect combination in native completion.
-      (cleanCompletionParams as any).enable_thinking = false;
-      delete (cleanCompletionParams as any).reasoning_format;
     }
 
     delete (cleanCompletionParams as any).chatTemplate;

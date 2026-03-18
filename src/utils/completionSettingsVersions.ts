@@ -14,7 +14,7 @@ import {CompletionParams} from './completionTypes';
 
 // Current version of the completion settings schema
 // Increment this when adding new settings or changing existing ones
-export const CURRENT_COMPLETION_SETTINGS_VERSION = 3;
+export const CURRENT_COMPLETION_SETTINGS_VERSION = 4;
 
 /**
  * Default completion parameters used throughout the app
@@ -23,6 +23,7 @@ export const defaultCompletionParams: CompletionParams = {
   // App-specific properties
   version: CURRENT_COMPLETION_SETTINGS_VERSION, // Schema version for migrations
   include_thinking_in_context: true, // Whether to include thinking parts in the context sent to the model
+  show_thinking_bubble: true, // Whether to render the thinking/reasoning content in a separate UI bubble
 
   // llama.rn API properties
   prompt: '',
@@ -45,6 +46,7 @@ export const defaultCompletionParams: CompletionParams = {
   n_probs: 0, // If greater than 0, the response also contains the probabilities of top N tokens for each generated token given the sampling settings.
   stop: ['</s>'],
   enable_thinking: true, // Whether to enable thinking mode for compatible models
+  reasoning_format: 'auto' as string | undefined, // The format for returning reasoning content ('auto' returns it in a separate field)
   // emit_partial_completion: true, // This is not used in the current version of llama.rn
 };
 
@@ -84,11 +86,12 @@ export function migrateCompletionSettings(settings: any): any {
   }
 
   // Add future migrations here as needed
-  // if (migratedSettings.version < 4) {
-  //   // Migration to version 4
-  //   migratedSettings.new_field = defaultCompletionParams.new_field;
-  //   migratedSettings.version = 4;
-  // }
+  if (migratedSettings.version < 4) {
+    // Migration to version 4: Add show_thinking_bubble and reasoning_format
+    migratedSettings.show_thinking_bubble = defaultCompletionParams.show_thinking_bubble;
+    migratedSettings.reasoning_format = defaultCompletionParams.reasoning_format;
+    migratedSettings.version = 4;
+  }
 
   return migratedSettings;
 }
