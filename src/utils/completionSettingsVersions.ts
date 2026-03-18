@@ -88,8 +88,10 @@ export function migrateCompletionSettings(settings: any): any {
   // Add future migrations here as needed
   if (migratedSettings.version < 4) {
     // Migration to version 4: Add show_thinking_bubble and reasoning_format
-    migratedSettings.show_thinking_bubble = defaultCompletionParams.show_thinking_bubble;
-    migratedSettings.reasoning_format = defaultCompletionParams.reasoning_format;
+    migratedSettings.show_thinking_bubble =
+      defaultCompletionParams.show_thinking_bubble;
+    migratedSettings.reasoning_format =
+      defaultCompletionParams.reasoning_format;
     migratedSettings.version = 4;
   }
 

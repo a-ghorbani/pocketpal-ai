@@ -50,221 +50,222 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
   showName: boolean;
 }
 
-export const TextMessage = observer(({
-  enableAnimation,
-  message,
-  messageWidth,
-  onPreviewDataFetched,
-  showName,
-  usePreviewData,
-}: TextMessageProps) => {
-  const theme = useTheme();
-  const user = React.useContext(UserContext);
-
-  const showThinkingBubble = (() => {
-    const currentSession = chatSessionStore.sessions.find(
-      s => s.id === chatSessionStore.activeSessionId,
-    );
-    const settings =
-      currentSession?.completionSettings ??
-      chatSessionStore.newChatCompletionSettings;
-    return settings.show_thinking_bubble ?? true;
-  })();
-  const [previewData, setPreviewData] = React.useState(message.previewData);
-  const [selectedImageIndex, setSelectedImageIndex] = React.useState<
-    number | null
-  >(null);
-
-  const {
-    descriptionText,
-    headerText,
-    titleText,
-    text,
-    textContainer,
-    imageContainer,
-    imageThumbnail,
-    imageContent,
-    imagePreviewModal,
-    imagePreviewCloseButton,
-    imagePreviewContent,
-  } = styles({
+export const TextMessage = observer(
+  ({
+    enableAnimation,
     message,
-    theme,
-    user,
-  });
+    messageWidth,
+    onPreviewDataFetched,
+    showName,
+    usePreviewData,
+  }: TextMessageProps) => {
+    const theme = useTheme();
+    const user = React.useContext(UserContext);
 
-  // Extract imageUris from the message if available
-  const imageUris = (message as any).imageUris || [];
-  const hasImages = imageUris && imageUris.length > 0;
+    const showThinkingBubble = (() => {
+      const currentSession = chatSessionStore.sessions.find(
+        s => s.id === chatSessionStore.activeSessionId,
+      );
+      const settings =
+        currentSession?.completionSettings ??
+        chatSessionStore.newChatCompletionSettings;
+      return settings.show_thinking_bubble ?? true;
+    })();
+    const [previewData, setPreviewData] = React.useState(message.previewData);
+    const [selectedImageIndex, setSelectedImageIndex] = React.useState<
+      number | null
+    >(null);
 
-  const handleEmailPress = (email: string) => {
-    try {
-      Linking.openURL(`mailto:${email}`);
-    } catch {}
-  };
-
-  const handlePreviewDataFetched = (data: PreviewData) => {
-    setPreviewData(data);
-    onPreviewDataFetched?.({
-      // It's okay to cast here since we know it is a text message
-      // type-coverage:ignore-next-line
-      message: excludeDerivedMessageProps(message) as MessageType.Text,
-      previewData: data,
+    const {
+      descriptionText,
+      headerText,
+      titleText,
+      text,
+      textContainer,
+      imageContainer,
+      imageThumbnail,
+      imageContent,
+      imagePreviewModal,
+      imagePreviewCloseButton,
+      imagePreviewContent,
+    } = styles({
+      message,
+      theme,
+      user,
     });
-  };
 
-  const handleUrlPress = (url: string) => {
-    const uri = url.toLowerCase().startsWith('http') ? url : `https://${url}`;
+    // Extract imageUris from the message if available
+    const imageUris = (message as any).imageUris || [];
+    const hasImages = imageUris && imageUris.length > 0;
 
-    Linking.openURL(uri);
-  };
+    const handleEmailPress = (email: string) => {
+      try {
+        Linking.openURL(`mailto:${email}`);
+      } catch {}
+    };
 
-  const renderPreviewDescription = (description: string) => {
-    return (
-      <Text numberOfLines={3} style={descriptionText}>
-        {description}
-      </Text>
-    );
-  };
+    const handlePreviewDataFetched = (data: PreviewData) => {
+      setPreviewData(data);
+      onPreviewDataFetched?.({
+        // It's okay to cast here since we know it is a text message
+        // type-coverage:ignore-next-line
+        message: excludeDerivedMessageProps(message) as MessageType.Text,
+        previewData: data,
+      });
+    };
 
-  const renderPreviewHeader = (header: string) => {
-    return (
-      <Text numberOfLines={1} style={headerText}>
-        {header}
-      </Text>
-    );
-  };
+    const handleUrlPress = (url: string) => {
+      const uri = url.toLowerCase().startsWith('http') ? url : `https://${url}`;
 
-  const renderPreviewText = (previewText: string) => {
-    return (
-      <ParsedText
-        accessibilityRole="link"
-        parse={[
-          {
-            onPress: handleEmailPress,
-            style: [text, {textDecorationLine: 'underline'}],
-            type: 'email',
-          },
-          {
-            onPress: handleUrlPress,
-            pattern: REGEX_LINK,
-            style: [text, {textDecorationLine: 'underline'}],
-          },
-        ]}
-        style={text}>
-        {previewText}
-      </ParsedText>
-    );
-  };
+      Linking.openURL(uri);
+    };
 
-  const renderPreviewTitle = (title: string) => {
-    return (
-      <Text numberOfLines={2} style={titleText}>
-        {title}
-      </Text>
-    );
-  };
+    const renderPreviewDescription = (description: string) => {
+      return (
+        <Text numberOfLines={3} style={descriptionText}>
+          {description}
+        </Text>
+      );
+    };
 
-  // Render image thumbnails
-  const renderImages = () => {
-    if (!hasImages) {
-      return null;
-    }
+    const renderPreviewHeader = (header: string) => {
+      return (
+        <Text numberOfLines={1} style={headerText}>
+          {header}
+        </Text>
+      );
+    };
 
-    return (
-      <View style={imageContainer}>
-        {imageUris.map((uri: string, index: number) => (
-          <TouchableOpacity
-            key={index}
-            style={imageThumbnail}
-            onPress={() => setSelectedImageIndex(index)}>
-            <Image source={{uri}} style={imageContent} resizeMode="cover" />
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
+    const renderPreviewText = (previewText: string) => {
+      return (
+        <ParsedText
+          accessibilityRole="link"
+          parse={[
+            {
+              onPress: handleEmailPress,
+              style: [text, {textDecorationLine: 'underline'}],
+              type: 'email',
+            },
+            {
+              onPress: handleUrlPress,
+              pattern: REGEX_LINK,
+              style: [text, {textDecorationLine: 'underline'}],
+            },
+          ]}
+          style={text}>
+          {previewText}
+        </ParsedText>
+      );
+    };
 
-  // Render image preview modal
-  const renderImagePreview = () => {
-    if (selectedImageIndex === null) {
-      return null;
-    }
+    const renderPreviewTitle = (title: string) => {
+      return (
+        <Text numberOfLines={2} style={titleText}>
+          {title}
+        </Text>
+      );
+    };
 
-    return (
-      <Modal
-        visible={selectedImageIndex !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedImageIndex(null)}>
-        <View style={imagePreviewModal}>
-          <IconButton
-            icon="close"
-            size={24}
-            iconColor="white"
-            style={imagePreviewCloseButton}
-            onPress={() => setSelectedImageIndex(null)}
-          />
-          <Image
-            source={{uri: imageUris[selectedImageIndex]}}
-            style={imagePreviewContent}
-            resizeMode="contain"
-          />
+    // Render image thumbnails
+    const renderImages = () => {
+      if (!hasImages) {
+        return null;
+      }
+
+      return (
+        <View style={imageContainer}>
+          {imageUris.map((uri: string, index: number) => (
+            <TouchableOpacity
+              key={index}
+              style={imageThumbnail}
+              onPress={() => setSelectedImageIndex(index)}>
+              <Image source={{uri}} style={imageContent} resizeMode="cover" />
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
-    );
-  };
+      );
+    };
 
-  return (
-    <>
-      {usePreviewData &&
-      !!onPreviewDataFetched &&
-      REGEX_LINK.test(message.text.toLowerCase()) ? (
-        <LinkPreview
-          containerStyle={{
-            width: previewData?.image ? messageWidth : undefined,
-          }}
-          enableAnimation={enableAnimation}
-          header={showName ? getUserName(message.author) : undefined}
-          onPreviewDataFetched={handlePreviewDataFetched}
-          previewData={previewData}
-          renderDescription={renderPreviewDescription}
-          renderHeader={renderPreviewHeader}
-          renderText={renderPreviewText}
-          renderTitle={renderPreviewTitle}
-          text={message.text}
-          textContainerStyle={textContainer}
-          touchableWithoutFeedbackProps={{
-            accessibilityRole: undefined,
-            accessible: false,
-            disabled: true,
-          }}
-        />
-      ) : (
-        <View style={textContainer}>
-          {
-            // Tested inside the link preview
-            /* istanbul ignore next */ showName
-              ? renderPreviewHeader(getUserName(message.author))
-              : null
-          }
+    // Render image preview modal
+    const renderImagePreview = () => {
+      if (selectedImageIndex === null) {
+        return null;
+      }
 
-          {/* Render images above the text */}
-          {renderImages()}
+      return (
+        <Modal
+          visible={selectedImageIndex !== null}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSelectedImageIndex(null)}>
+          <View style={imagePreviewModal}>
+            <IconButton
+              icon="close"
+              size={24}
+              iconColor="white"
+              style={imagePreviewCloseButton}
+              onPress={() => setSelectedImageIndex(null)}
+            />
+            <Image
+              source={{uri: imageUris[selectedImageIndex]}}
+              style={imagePreviewContent}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+      );
+    };
 
-          <MarkdownView
-            markdownText={message.text.trim()}
-            maxMessageWidth={messageWidth}
-            selectable={false}
-            reasoningContent={
-              showThinkingBubble
-                ? message.metadata?.completionResult?.reasoning_content ||
-                  message.metadata?.partialCompletionResult?.reasoning_content
-                : undefined
-            }
+    return (
+      <>
+        {usePreviewData &&
+        !!onPreviewDataFetched &&
+        REGEX_LINK.test(message.text.toLowerCase()) ? (
+          <LinkPreview
+            containerStyle={{
+              width: previewData?.image ? messageWidth : undefined,
+            }}
+            enableAnimation={enableAnimation}
+            header={showName ? getUserName(message.author) : undefined}
+            onPreviewDataFetched={handlePreviewDataFetched}
+            previewData={previewData}
+            renderDescription={renderPreviewDescription}
+            renderHeader={renderPreviewHeader}
+            renderText={renderPreviewText}
+            renderTitle={renderPreviewTitle}
+            text={message.text}
+            textContainerStyle={textContainer}
+            touchableWithoutFeedbackProps={{
+              accessibilityRole: undefined,
+              accessible: false,
+              disabled: true,
+            }}
           />
+        ) : (
+          <View style={textContainer}>
+            {
+              // Tested inside the link preview
+              /* istanbul ignore next */ showName
+                ? renderPreviewHeader(getUserName(message.author))
+                : null
+            }
 
-          {/*Platform.OS === 'ios' ? (
+            {/* Render images above the text */}
+            {renderImages()}
+
+            <MarkdownView
+              markdownText={message.text.trim()}
+              maxMessageWidth={messageWidth}
+              selectable={false}
+              reasoningContent={
+                showThinkingBubble
+                  ? message.metadata?.completionResult?.reasoning_content ||
+                    message.metadata?.partialCompletionResult?.reasoning_content
+                  : undefined
+              }
+            />
+
+            {/*Platform.OS === 'ios' ? (
             <TextInput
               multiline
               editable={false}
@@ -281,11 +282,12 @@ export const TextMessage = observer(({
               {message.text}
             </Text>
           )*/}
-        </View>
-      )}
+          </View>
+        )}
 
-      {/* Image preview modal */}
-      {renderImagePreview()}
-    </>
-  );
-});
+        {/* Image preview modal */}
+        {renderImagePreview()}
+      </>
+    );
+  },
+);

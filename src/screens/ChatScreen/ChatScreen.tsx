@@ -167,7 +167,9 @@ export const ChatScreen: React.FC = observer(() => {
 
   // Inference param toggle: reasoning_format
   const handleReasoningFormatToggle = async (enabled: boolean) => {
-    await updateSessionSetting({reasoning_format: enabled ? 'auto' : undefined});
+    await updateSessionSetting({
+      reasoning_format: enabled ? 'auto' : undefined,
+    });
   };
 
   // If the active pal is a video pal, show the video pal screen

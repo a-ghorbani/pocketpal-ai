@@ -635,7 +635,9 @@ export const ChatInput = observer(
                     isReasoningFormatOn && {backgroundColor: onSurfaceColor},
                     {borderColor: onSurfaceColorVariant},
                   ]}
-                  onPress={() => onReasoningFormatToggle?.(!isReasoningFormatOn)}
+                  onPress={() =>
+                    onReasoningFormatToggle?.(!isReasoningFormatOn)
+                  }
                   accessibilityLabel={
                     isReasoningFormatOn
                       ? 'Disable reasoning_format=auto parameter'
