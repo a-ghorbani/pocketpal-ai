@@ -217,21 +217,16 @@ export function buildCompletionParamProbe(params: Record<string, unknown>) {
 
   return {
     paramKeys: Object.keys(params).sort(),
-    hasPrompt: prompt.length > 0,
     hasMessages: Array.isArray(params.messages),
-    hasMediaPaths: mediaPaths.length > 0,
-    mediaPathCount: mediaPaths.length,
     mediaPathPreview: mediaPaths.map(path => previewText(path, 120)),
     enableThinking: params.enable_thinking ?? null,
     reasoningFormat: params.reasoning_format ?? null,
-    hasChatParser: chatParser.length > 0,
     chatParserLength: chatParser.length,
     chatParserHash: getTextDiagnostics(chatParser).hash,
     preservedTokenCount: preservedTokens.length,
     preservedTokensPreview: preservedTokens.slice(0, 12),
     grammarTriggersCount: grammarTriggers.length,
     promptDiag: getTextDiagnostics(prompt),
-    promptHasMediaPlaceholder: prompt.includes('<__media__>'),
     promptHasVisionTokens:
       prompt.includes('<|vision_start|>') || prompt.includes('<|image_pad|>'),
     promptHasThinkTag: prompt.includes('<think>'),

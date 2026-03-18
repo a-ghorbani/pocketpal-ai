@@ -359,6 +359,8 @@ const prepareCompletion = async ({
         ? (cleanCompletionParams as any).messages.length
         : 0,
     },
+    // 实际送入 native 的参数诊断
+    probe: buildCompletionParamProbe(cleanCompletionParams as any),
   });
 
   // 类4: 参数来源 — thinkingAssembly 推导链
@@ -371,9 +373,6 @@ const prepareCompletion = async ({
     template: {
       selectedTemplateName: modelStore.activeModel?.chatTemplate?.name,
       effectiveTemplateInterpreter,
-      modelTemplateLength: modelTemplate?.length ?? 0,
-      contextTemplateLength: String(contextTemplate || '').length,
-      contextTemplatePreview: previewText(contextTemplate),
       modelTemplateFull: modelTemplate || '',
       contextTemplateFull: String(contextTemplate || ''),
       formattedPromptError,
@@ -536,17 +535,12 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
       let streamChunkCount = 0;
-      let streamedContentPreview = '';
-      let streamedReasoningPreview = '';
       let firstAnomalousChunkLogged = false;
       let nativeBridgeReturned = false;
       let firstNativeChunkSeen = false;
+      let firstCallbackKeys: string[] = [];
+      let firstTokenPreview = '';
 
-      engineInputLog('completion:pre-native-call', {
-        requestId,
-        transport: completionTransport,
-        probe: buildCompletionParamProbe(cleanCompletionParams as any),
-      });
       cancelNativeCallHeartbeats = scheduleEngineOutputHeartbeats(
         'completion:native-call-heartbeat',
         () => ({
@@ -576,17 +570,8 @@ export const useChatSession = (
               (data.token || data.content || data.reasoning_content)
             ) {
               firstNativeChunkSeen = true;
-              engineOutputLog('completion:first-native-chunk', {
-                requestId,
-                transport: completionTransport,
-                callbackKeys: Object.keys(data || {}),
-                tokenPreview: previewText((data as any)?.token, 120),
-                contentPreview: previewText((data as any)?.content, 120),
-                reasoningPreview: previewText(
-                  (data as any)?.reasoning_content,
-                  120,
-                ),
-              });
+              firstCallbackKeys = Object.keys(data || {});
+              firstTokenPreview = previewText((data as any)?.token, 120);
             }
 
             if (!modelStore.isStreaming) {
@@ -599,16 +584,6 @@ export const useChatSession = (
 
             if (content || reasoningContent) {
               streamChunkCount += 1;
-            }
-            if (content && streamedContentPreview.length < 500) {
-              streamedContentPreview = previewText(
-                `${streamedContentPreview}${content}`,
-              );
-            }
-            if (reasoningContent && streamedReasoningPreview.length < 500) {
-              streamedReasoningPreview = previewText(
-                `${streamedReasoningPreview}${reasoningContent}`,
-              );
             }
 
             if (!firstAnomalousChunkLogged && (content || reasoningContent)) {
@@ -663,12 +638,6 @@ export const useChatSession = (
         },
       );
       nativeBridgeReturned = true;
-      engineOutputLog('completion:post-native-call', {
-        requestId,
-        transport: completionTransport,
-        nativeBridgeReturned,
-        promiseCreated: Boolean(completionPromise),
-      });
 
       // Register the promise so releaseContext can wait for it
       modelStore.registerCompletionPromise(completionPromise);
@@ -687,10 +656,8 @@ export const useChatSession = (
         timings: result.timings,
         time_to_first_token_ms: timeToFirstToken,
         streamChunkCount,
-        finalTextLength: result.text?.length ?? 0,
-        finalReasoningLength: result.reasoning_content?.length ?? 0,
-        finalTextPreview: previewText(result.text),
-        finalReasoningPreview: previewText(result.reasoning_content),
+        firstCallbackKeys,
+        firstTokenPreview,
         finalTextDiag: getTextDiagnostics(result.text),
         finalReasoningDiag: getTextDiagnostics(result.reasoning_content),
       });
