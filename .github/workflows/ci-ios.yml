@@ -167,7 +167,11 @@ jobs:
           GOOGLE_WEB_CLIENT_ID=dummy-web-client-id.apps.googleusercontent.com
           EOL
 
-      # Step 8: Build iOS for simulator (no signing required)
+      # Step 8: Install xcpretty for readable build output
+      - name: Install xcpretty
+        run: gem install xcpretty
+
+      # Step 9: Build iOS for simulator (no signing required)
       - name: Build iOS Release (Simulator)
         run: |
           xcodebuild build \
