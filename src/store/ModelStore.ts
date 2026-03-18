@@ -33,6 +33,7 @@ import {
 import {getOriginalModelName} from '../utils/formatters';
 import {
   buildCompletionParamProbe,
+  engineInputLog,
   engineOutputLog,
   getTextDiagnostics,
   lifecycleLog,
