@@ -196,6 +196,8 @@ const prepareCompletion = async ({
   let formattedPromptChatParser: string | undefined;
   let formattedPromptHasMedia = false;
   let formattedPromptMediaPaths: string[] = [];
+  let formattedPromptChatFormat: number | undefined;
+  let formattedPromptThinkingForcedOpen: boolean | undefined;
   const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
     modelStore.activeModel?.chatTemplate,
   );
@@ -220,6 +222,8 @@ const prepareCompletion = async ({
     formattedPromptChatParser = normalizedPrompt.chatParser;
     formattedPromptHasMedia = normalizedPrompt.hasMedia ?? false;
     formattedPromptMediaPaths = normalizedPrompt.mediaPaths;
+    formattedPromptChatFormat = normalizedPrompt.chatFormat;
+    formattedPromptThinkingForcedOpen = normalizedPrompt.thinkingForcedOpen;
   } catch (error) {
     formattedPromptError =
       error instanceof Error ? error.message : JSON.stringify(error);
@@ -252,6 +256,15 @@ const prepareCompletion = async ({
 
   if (formattedPromptChatParser) {
     (cleanCompletionParams as any).chat_parser = formattedPromptChatParser;
+  }
+
+  if (formattedPromptChatFormat !== undefined) {
+    (cleanCompletionParams as any).chat_format = formattedPromptChatFormat;
+  }
+
+  if (formattedPromptThinkingForcedOpen !== undefined) {
+    (cleanCompletionParams as any).thinking_forced_open =
+      formattedPromptThinkingForcedOpen;
   }
 
   if (hasImages && effectiveTemplateInterpreter === 'jinja' && modelTemplate) {

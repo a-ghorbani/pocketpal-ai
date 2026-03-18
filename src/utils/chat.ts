@@ -27,6 +27,8 @@ export type NormalizedChatTemplateResult = {
   chatParser?: string;
   hasMedia?: boolean;
   mediaPaths: string[];
+  chatFormat?: number;
+  thinkingForcedOpen?: boolean;
 };
 
 export const chatTemplateInterpreterOptions: ChatTemplateInterpreter[] = [
@@ -253,6 +255,14 @@ export function normalizeChatTemplateResult(
     chatParser: jinjaResult.chat_parser,
     hasMedia: Boolean(jinjaResult.has_media) || mediaPaths.length > 0,
     mediaPaths,
+    chatFormat:
+      typeof jinjaResult.chat_format === 'number'
+        ? jinjaResult.chat_format
+        : undefined,
+    thinkingForcedOpen:
+      typeof jinjaResult.thinking_forced_open === 'boolean'
+        ? jinjaResult.thinking_forced_open
+        : undefined,
   };
 }
 
