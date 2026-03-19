@@ -171,25 +171,47 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
-      # Step 9: Create export options plist (no signing)
-      - name: Create export options plist
+      # Step 9: Create dummy GoogleService-Info.plist for CI
+      - name: Create dummy GoogleService-Info.plist for CI
         run: |
-          cat > /tmp/ExportOptions.plist << 'EOF'
+          cat > ios/GoogleService-Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>signingStyle</key>
-            <string>automatic</string>
-            <key>stripSwiftSymbols</key>
+            <key>CLIENT_ID</key>
+            <string>000000000000-dummy.apps.googleusercontent.com</string>
+            <key>REVERSED_CLIENT_ID</key>
+            <string>com.googleusercontent.apps.000000000000-dummy</string>
+            <key>API_KEY</key>
+            <string>dummy-api-key-for-ci-builds</string>
+            <key>GCM_SENDER_ID</key>
+            <string>000000000000</string>
+            <key>PLIST_VERSION</key>
+            <string>1</string>
+            <key>BUNDLE_ID</key>
+            <string>com.pocketpalai</string>
+            <key>PROJECT_ID</key>
+            <string>dummy-project-for-ci</string>
+            <key>STORAGE_BUCKET</key>
+            <string>dummy-project-for-ci.appspot.com</string>
+            <key>IS_ADS_ENABLED</key>
+            <false/>
+            <key>IS_ANALYTICS_ENABLED</key>
+            <false/>
+            <key>IS_APPINVITE_ENABLED</key>
             <true/>
-            <key>teamID</key>
-            <string></string>
+            <key>IS_GCM_ENABLED</key>
+            <true/>
+            <key>IS_SIGNIN_ENABLED</key>
+            <true/>
+            <key>GOOGLE_APP_ID</key>
+            <string>1:000000000000:ios:0000000000000000</string>
           </dict>
           </plist>
           EOF
 
-      # Step 10: Archive iOS build
+      # Step 10: Archive iOS build (no signing)
       - name: Archive iOS Release
         run: |
           xcodebuild archive \
@@ -198,16 +220,17 @@ jobs:
             -configuration Release \
             -archivePath build/PocketPal.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             | xcpretty
 
-      # Step 11: Export IPA without signing
-      - name: Export IPA (unsigned)
+      # Step 11: Package IPA from archive (no signing)
+      - name: Package IPA from archive
         run: |
-          xcodebuild -exportArchive \
-            -archivePath build/PocketPal.xcarchive \
-            -exportPath build/export \
-            -exportOptionsPlist /tmp/ExportOptions.plist \
-            | xcpretty
+          mkdir -p build/export/Payload
+          cp -r build/PocketPal.xcarchive/Products/Applications/PocketPal.app \
+            build/export/Payload/
+          cd build/export
+          zip -r PocketPal.ipa Payload/
 
       # Step 12: Upload unsigned IPA
       - name: Upload unsigned IPA
