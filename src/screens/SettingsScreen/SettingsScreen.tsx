@@ -1021,18 +1021,14 @@ export const SettingsScreen: React.FC = observer(() => {
                           {l10n.settings.displayMemoryUsage}
                         </Text>
                       </View>
-                      <Text
-                        variant="labelSmall"
-                        style={styles.textDescription}>
+                      <Text variant="labelSmall" style={styles.textDescription}>
                         {l10n.settings.displayMemoryUsageDescription}
                       </Text>
                     </View>
                     <Switch
                       testID="display-memory-usage-switch"
                       value={uiStore.displayMemUsage}
-                      onValueChange={value =>
-                        uiStore.setDisplayMemUsage(value)
-                      }
+                      onValueChange={value => uiStore.setDisplayMemUsage(value)}
                     />
                   </View>
                 </>
