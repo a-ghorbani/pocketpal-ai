@@ -321,6 +321,15 @@ export const ChatView = observer(
     const underflow = useSharedValue(true);
     const atLatest = useSharedValue(true);
 
+    // Guard to prevent runOnJS calls after unmount
+    const isMounted = useSharedValue(true);
+    React.useEffect(() => {
+      isMounted.value = true;
+      return () => {
+        isMounted.value = false;
+      };
+    }, []);
+
     const STICK = 24;
     const LEAVE = 40;
     const EPS = 1;
@@ -350,7 +359,9 @@ export const ChatView = observer(
         }
 
         // Update navigation bar state (throttled on JS thread)
-        runOnJS(updateNavState)(clampedY, Hc, Hv);
+        if (isMounted.value) {
+          runOnJS(updateNavState)(clampedY, Hc, Hv);
+        }
       },
     });
 
