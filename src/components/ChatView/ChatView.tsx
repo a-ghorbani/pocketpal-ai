@@ -27,6 +27,7 @@ import Reanimated, {
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useDerivedValue,
+  runOnJS,
 } from 'react-native-reanimated';
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
@@ -63,6 +64,10 @@ import {
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
 } from '..';
+import {
+  ChatNavigationBar,
+  UserMessageNode,
+} from '../ChatNavigationBar';
 import {
   AlertIcon,
   CopyIcon,
@@ -346,6 +351,9 @@ export const ChatView = observer(
         } else {
           if (clampedY < STICK) atLatest.value = true;
         }
+
+        // Update navigation bar state (throttled on JS thread)
+        runOnJS(updateNavState)(clampedY, Hc, Hv);
       },
     });
 
@@ -367,6 +375,177 @@ export const ChatView = observer(
         offset: 0,
       });
     }, []);
+
+    // ============ CHAT NAVIGATION BAR COMPUTATIONS ============
+    // Find indices of user messages in chatMessages (inverted list: index 0 = newest)
+    const userMessageIndices = React.useMemo(() => {
+      const indices: number[] = [];
+      chatMessages.forEach((msg, i) => {
+        if (msg.type !== 'dateHeader' && msg.author?.id === user.id) {
+          indices.push(i);
+        }
+      });
+      return indices;
+    }, [chatMessages, user.id]);
+
+    // Compute navigation bar props
+    const navBarProps = React.useMemo(() => {
+      if (
+        chatMessages.length === 0 ||
+        navContentHeight === 0 ||
+        navViewportHeight === 0
+      ) {
+        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
+      }
+
+      const totalH = navContentHeight;
+      const maxScroll = Math.max(0, totalH - navViewportHeight);
+
+      // In inverted FlatList: scrollY=0 → bottom (newest), scrollY=maxScroll → top (oldest)
+      // The "topmost visible point" (furthest from bottom) = navScrollY + navViewportHeight
+      // This represents how far "up" the user has scrolled in pixel terms
+      const visibleTop = navScrollY + navViewportHeight;
+
+      // Window: show last MAX_WINDOW_PX pixels from the current position
+      const windowEnd = visibleTop;
+      const windowStart = Math.max(0, windowEnd - MAX_WINDOW_PX);
+      const windowSize = windowEnd - windowStart;
+
+      if (windowSize === 0) {
+        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
+      }
+
+      // Scroll fraction: where is the current viewport within the window?
+      // navScrollY=0 → at bottom of window → fraction=1
+      // navScrollY=max within window → at top of window → fraction=0
+      const scrollFraction = 1 - (navScrollY - windowStart) / windowSize;
+
+      // Calculate node positions for user messages
+      // Approximate each message's pixel position: in inverted list,
+      // index 0 is at the bottom (offset=0), last index is at the top
+      const avgItemHeight =
+        totalH / Math.max(1, chatMessages.length);
+      const nodes: UserMessageNode[] = [];
+
+      userMessageIndices.forEach(idx => {
+        // Approximate pixel offset from bottom for this message
+        const pixelFromBottom = idx * avgItemHeight;
+
+        // Check if it falls within the window
+        if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
+          // Position within the window (0=top of window, 1=bottom of window)
+          const position = 1 - (pixelFromBottom - windowStart) / windowSize;
+          nodes.push({index: idx, position});
+        }
+      });
+
+      return {nodes, scrollFraction};
+    }, [
+      chatMessages.length,
+      navContentHeight,
+      navViewportHeight,
+      navScrollY,
+      userMessageIndices,
+      MAX_WINDOW_PX,
+    ]);
+
+    // Jump to previous user message (older = higher index in inverted list)
+    const handleNavPrevious = React.useCallback(() => {
+      if (userMessageIndices.length === 0 || navContentHeight === 0) {
+        return;
+      }
+
+      const totalH = navContentHeight;
+      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
+
+      // Current position from bottom in items
+      const currentItemApprox = navScrollY / avgItemHeight;
+
+      // Find the next user message with a higher index (older/above current position)
+      let targetIndex = -1;
+      for (const idx of userMessageIndices) {
+        if (idx > currentItemApprox + 0.5) {
+          targetIndex = idx;
+          break;
+        }
+      }
+
+      // If none found, wrap to the oldest user message
+      if (targetIndex === -1 && userMessageIndices.length > 0) {
+        targetIndex = userMessageIndices[userMessageIndices.length - 1];
+      }
+
+      if (targetIndex >= 0) {
+        list.current?.scrollToIndex({
+          index: targetIndex,
+          animated: true,
+          viewPosition: 1, // align to top of viewport (inverted list: 1=visual top)
+        });
+      }
+    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
+
+    // Jump to next user message (newer = lower index in inverted list)
+    const handleNavNext = React.useCallback(() => {
+      if (userMessageIndices.length === 0 || navContentHeight === 0) {
+        return;
+      }
+
+      const totalH = navContentHeight;
+      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
+
+      // Current position from bottom in items
+      const currentItemApprox = navScrollY / avgItemHeight;
+
+      // Find the next user message with a lower index (newer/below current position)
+      let targetIndex = -1;
+      for (let i = userMessageIndices.length - 1; i >= 0; i--) {
+        if (userMessageIndices[i] < currentItemApprox - 0.5) {
+          targetIndex = userMessageIndices[i];
+          break;
+        }
+      }
+
+      // If none found, wrap to the newest user message
+      if (targetIndex === -1 && userMessageIndices.length > 0) {
+        targetIndex = userMessageIndices[0];
+      }
+
+      if (targetIndex >= 0) {
+        list.current?.scrollToIndex({
+          index: targetIndex,
+          animated: true,
+          viewPosition: 1, // align to top of viewport (inverted list: 1=visual top)
+        });
+      }
+    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
+
+    // ============ CHAT NAVIGATION BAR STATE ============
+    // JS-thread state for navigation bar (doesn't need 60fps)
+    const [navScrollY, setNavScrollY] = React.useState(0);
+    const [navContentHeight, setNavContentHeight] = React.useState(0);
+    const [navViewportHeight, setNavViewportHeight] = React.useState(0);
+
+    // Approximate pixel height for "1000 visual lines" (~20px per line)
+    const MAX_WINDOW_PX = 20000;
+
+    // Throttle nav state updates to avoid excessive re-renders
+    const navUpdateTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
+    const updateNavState = React.useCallback(
+      (scrollY: number, contentH: number, viewportH: number) => {
+        if (navUpdateTimer.current) {
+          return;
+        }
+        navUpdateTimer.current = setTimeout(() => {
+          navUpdateTimer.current = null;
+          setNavScrollY(scrollY);
+          setNavContentHeight(contentH);
+          setNavViewportHeight(viewportH);
+        }, 100);
+      },
+      [],
+    );
 
     // ============ MESSAGE PROCESSING & CALCULATIONS ============
     // Calculate chat messages with date headers and user names
@@ -827,6 +1006,24 @@ export const ChatView = observer(
               onEndReached={handleEndReached}
               ref={list}
               renderItem={renderMessage}
+              onScrollToIndexFailed={info => {
+                // Scroll to approximate offset when index is not rendered yet
+                const offset = info.averageItemLength * info.index;
+                list.current?.scrollToOffset({offset, animated: true});
+                // Retry after layout
+                setTimeout(() => {
+                  if (
+                    list.current &&
+                    info.index < chatMessages.length
+                  ) {
+                    list.current.scrollToIndex({
+                      index: info.index,
+                      animated: true,
+                      viewPosition: 0,
+                    });
+                  }
+                }, 200);
+              }}
               maintainVisibleContentPosition={
                 isStreaming // || hasHiddenContentState
                   ? {
@@ -917,6 +1114,16 @@ export const ChatView = observer(
           <Reanimated.View style={styles.chatContainer}>
             {customContent}
             {renderChatList()}
+
+            {/* Chat navigation bar */}
+            <ChatNavigationBar
+              nodes={navBarProps.nodes}
+              scrollFraction={navBarProps.scrollFraction}
+              onPrevious={handleNavPrevious}
+              onNext={handleNavNext}
+              visible={chatMessages.length > 0}
+              bottomOffset={bottomComponentHeight}
+            />
 
             {/* Chat input */}
             <Reanimated.View

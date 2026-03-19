@@ -21,6 +21,7 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
+import {CollapsibleUserMessage} from '../CollapsibleUserMessage';
 
 import {MessageType} from '../../utils/types';
 import {
@@ -61,6 +62,8 @@ export const TextMessage = observer(
   }: TextMessageProps) => {
     const theme = useTheme();
     const user = React.useContext(UserContext);
+
+    const isCurrentUser = user?.id === message.author.id;
 
     const showThinkingBubble = (() => {
       const currentSession = chatSessionStore.sessions.find(
@@ -253,35 +256,28 @@ export const TextMessage = observer(
             {/* Render images above the text */}
             {renderImages()}
 
-            <MarkdownView
-              markdownText={message.text.trim()}
-              maxMessageWidth={messageWidth}
-              selectable={false}
-              reasoningContent={
-                showThinkingBubble
-                  ? message.metadata?.completionResult?.reasoning_content ||
-                    message.metadata?.partialCompletionResult?.reasoning_content
-                  : undefined
-              }
-            />
-
-            {/*Platform.OS === 'ios' ? (
-            <TextInput
-              multiline
-              editable={false}
-              style={[
-                text,
-                {
-                  lineHeight: undefined,
-                },
-              ]}>
-              {message.text.trim()}
-            </TextInput>
-          ) : (
-            <Text selectable={true} style={text}>
-              {message.text}
-            </Text>
-          )*/}
+            {isCurrentUser ? (
+              <CollapsibleUserMessage>
+                <MarkdownView
+                  markdownText={message.text.trim()}
+                  maxMessageWidth={messageWidth}
+                  selectable={false}
+                />
+              </CollapsibleUserMessage>
+            ) : (
+              <MarkdownView
+                markdownText={message.text.trim()}
+                maxMessageWidth={messageWidth}
+                selectable={false}
+                reasoningContent={
+                  showThinkingBubble
+                    ? message.metadata?.completionResult?.reasoning_content ||
+                      message.metadata?.partialCompletionResult
+                        ?.reasoning_content
+                    : undefined
+                }
+              />
+            )}
           </View>
         )}
 
