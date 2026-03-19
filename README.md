@@ -57,10 +57,13 @@ Only two JS remain on the entire pipeline.
 
 ---
 
-### Version Notes & Compatibility
-Emphasize that this version is developed based on the original repository's **1.12.2**; however, for this version of **llama.cpp**, control over **Qwen 3.5's thinking** cannot be handled correctly unless special rules are added to inputs, outputs, and the UI, which is quite messy. This is not planned at the moment; we await official adaptation from LLAMA. 
 
-Moreover, this new version supports **custom templates**, allowing you to add `{%- set enable_thinking = false %}` to control whether thinking occurs. Interestingly, however, the older version **1.11.21** can still use its "Think" button to control Qwen 3.5's thinking.
+### Version Notes & Compatibility
+the new llama version 0.11.3 (app-1.12.2 This repository is also developed based on this version) can control Qwen 3.5's thinking capabilities. In the default template, versions of 9B and above possess both enable/disable functions for thinking, whereas versions below 9B do not have this feature by default. Simply copy the 9B template and apply it to the 4B, 2B, and 0.8B models; you will then be able to control thinking with the new version!!!
+
+Please note that when you turn off the "resemble format" (RF button), your thinking chain will merge into the main text and thus won't appear in the thinking box. The next context will still carry over the thinking process, which I think is unnecessary to change since resemble format is usually disabled anyway.
+
+in the older llama version 0.11.0 （app-1.11.21）can you control their thinking without configuring templates for the 4B, 2B, and 0.8B models. This repository also includes a branch specifically designed to be compatible with llama version 0.11.0; please note that under the Android framework, engine switching is not possible—you can only have one engine per app.
 
 ### CI/CD & Downloads
 I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabling direct generation of **APK** and **IPA** installer packages via actions; feel free to compile and test them yourself.
@@ -68,8 +71,11 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 * [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
 * [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
 
----
-Would you like me to help you draft the GitHub Release notes based on this content?
+
+
+
+
+
 
 # PocketPal AI 📱🚀
 
