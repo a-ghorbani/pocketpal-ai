@@ -212,6 +212,8 @@ export const ChatView = observer(
     // ============ REFS ============
     const animationRef = React.useRef(false);
     const list = React.useRef<FlatList<MessageType.DerivedAny>>(null);
+    // Measured heights per FlatList index for accurate nav-bar node positioning
+    const itemHeightsRef = React.useRef(new Map<number, number>());
 
     // ============ COMPONENT STATE ============
     // Input state
@@ -442,6 +444,12 @@ export const ChatView = observer(
 
     const previousChatMessages = usePrevious(chatMessages);
 
+    // Clear cached item heights when the message list changes length
+    // (new messages shift indices in the inverted list)
+    React.useEffect(() => {
+      itemHeightsRef.current.clear();
+    }, [chatMessages.length]);
+
     // ============ CHAT NAVIGATION BAR COMPUTATIONS ============
     // Find indices of user messages in chatMessages (inverted list: index 0 = newest)
     const userMessageIndices = React.useMemo(() => {
@@ -480,11 +488,28 @@ export const ChatView = observer(
 
       const scrollFraction = 1 - (navScrollY - windowStart) / windowSize;
 
+      // Compute cumulative heights using actual measured heights when available,
+      // falling back to average for unmeasured items.
       const avgItemHeight = totalH / Math.max(1, chatMessages.length);
+      const heights = itemHeightsRef.current;
+
+      // Build cumulative height array: cumH[i] = sum of heights[0..i-1]
+      // In inverted list, index 0 is at bottom, so cumH[idx] = pixel offset
+      // from the bottom to the top edge of item idx.
+      const cumH = new Float64Array(chatMessages.length + 1);
+      for (let i = 0; i < chatMessages.length; i++) {
+        cumH[i + 1] = cumH[i] + (heights.get(i) ?? avgItemHeight);
+      }
+
+      // Scale factor: measured cumulative total may differ from actual
+      // contentSize (due to separators, headers, footers, etc.)
+      const measuredTotal = cumH[chatMessages.length];
+      const scale = measuredTotal > 0 ? totalH / measuredTotal : 1;
+
       const nodes: UserMessageNode[] = [];
 
       userMessageIndices.forEach(idx => {
-        const pixelFromBottom = idx * avgItemHeight;
+        const pixelFromBottom = cumH[idx] * scale;
         if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
           const position = 1 - (pixelFromBottom - windowStart) / windowSize;
           nodes.push({index: idx, position});
@@ -501,17 +526,31 @@ export const ChatView = observer(
       MAX_WINDOW_PX,
     ]);
 
+    // Helper: find which item index the current scroll position corresponds to,
+    // using actual measured heights when available.
+    const findCurrentItemIndex = React.useCallback(() => {
+      const heights = itemHeightsRef.current;
+      const avgH = navContentHeight / Math.max(1, chatMessages.length);
+      let cumH = 0;
+      for (let i = 0; i < chatMessages.length; i++) {
+        cumH += heights.get(i) ?? avgH;
+        if (cumH > navScrollY) {
+          return i;
+        }
+      }
+      return chatMessages.length - 1;
+    }, [navContentHeight, navScrollY, chatMessages.length]);
+
     // Jump to previous user message (older = higher index in inverted list)
     const handleNavPrevious = React.useCallback(() => {
       if (userMessageIndices.length === 0 || navContentHeight === 0) {
         return;
       }
-      const avgItemHeight = navContentHeight / Math.max(1, chatMessages.length);
-      const currentItemApprox = navScrollY / avgItemHeight;
+      const currentItem = findCurrentItemIndex();
 
       let targetIndex = -1;
       for (const idx of userMessageIndices) {
-        if (idx > currentItemApprox + 0.5) {
+        if (idx > currentItem) {
           targetIndex = idx;
           break;
         }
@@ -526,19 +565,18 @@ export const ChatView = observer(
           viewPosition: 1,
         });
       }
-    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
+    }, [userMessageIndices, navContentHeight, findCurrentItemIndex]);
 
     // Jump to next user message (newer = lower index in inverted list)
     const handleNavNext = React.useCallback(() => {
       if (userMessageIndices.length === 0 || navContentHeight === 0) {
         return;
       }
-      const avgItemHeight = navContentHeight / Math.max(1, chatMessages.length);
-      const currentItemApprox = navScrollY / avgItemHeight;
+      const currentItem = findCurrentItemIndex();
 
       let targetIndex = -1;
       for (let i = userMessageIndices.length - 1; i >= 0; i--) {
-        if (userMessageIndices[i] < currentItemApprox - 0.5) {
+        if (userMessageIndices[i] < currentItem) {
           targetIndex = userMessageIndices[i];
           break;
         }
@@ -553,7 +591,7 @@ export const ChatView = observer(
           viewPosition: 1,
         });
       }
-    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
+    }, [userMessageIndices, navContentHeight, findCurrentItemIndex]);
 
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
@@ -844,7 +882,13 @@ export const ChatView = observer(
 
     // Render individual message
     const renderMessage = React.useCallback(
-      ({item: message}: {item: MessageType.DerivedAny; index: number}) => {
+      ({
+        item: message,
+        index,
+      }: {
+        item: MessageType.DerivedAny;
+        index: number;
+      }) => {
         const messageWidth =
           showUserAvatars &&
           message.type !== 'dateHeader' &&
@@ -860,7 +904,10 @@ export const ChatView = observer(
         const showStatus = message.type !== 'dateHeader' && message.showStatus;
 
         return (
-          <View>
+          <View
+            onLayout={e => {
+              itemHeightsRef.current.set(index, e.nativeEvent.layout.height);
+            }}>
             <Message
               {...{
                 enableAnimation,
