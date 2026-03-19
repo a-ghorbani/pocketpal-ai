@@ -42,6 +42,8 @@ export const createStyles = (theme: Theme) =>
       position: 'absolute',
       left: 0,
       right: 0,
+      top: 0,
+      bottom: 0,
       backgroundColor: theme.colors.primary,
       opacity: 0.3,
       borderRadius: 3,

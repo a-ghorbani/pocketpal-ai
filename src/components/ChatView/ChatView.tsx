@@ -64,10 +64,7 @@ import {
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
 } from '..';
-import {
-  ChatNavigationBar,
-  UserMessageNode,
-} from '../ChatNavigationBar';
+import {ChatNavigationBar, UserMessageNode} from '../ChatNavigationBar';
 import {
   AlertIcon,
   CopyIcon,
@@ -399,9 +396,8 @@ export const ChatView = observer(
       }
 
       const totalH = navContentHeight;
-      const maxScroll = Math.max(0, totalH - navViewportHeight);
 
-      // In inverted FlatList: scrollY=0 → bottom (newest), scrollY=maxScroll → top (oldest)
+      // In inverted FlatList: scrollY=0 → bottom (newest), scrollY=(totalH-viewport) → top (oldest)
       // The "topmost visible point" (furthest from bottom) = navScrollY + navViewportHeight
       // This represents how far "up" the user has scrolled in pixel terms
       const visibleTop = navScrollY + navViewportHeight;
@@ -423,8 +419,7 @@ export const ChatView = observer(
       // Calculate node positions for user messages
       // Approximate each message's pixel position: in inverted list,
       // index 0 is at the bottom (offset=0), last index is at the top
-      const avgItemHeight =
-        totalH / Math.max(1, chatMessages.length);
+      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
       const nodes: UserMessageNode[] = [];
 
       userMessageIndices.forEach(idx => {
@@ -1012,10 +1007,7 @@ export const ChatView = observer(
                 list.current?.scrollToOffset({offset, animated: true});
                 // Retry after layout
                 setTimeout(() => {
-                  if (
-                    list.current &&
-                    info.index < chatMessages.length
-                  ) {
+                  if (list.current && info.index < chatMessages.length) {
                     list.current.scrollToIndex({
                       index: info.index,
                       animated: true,

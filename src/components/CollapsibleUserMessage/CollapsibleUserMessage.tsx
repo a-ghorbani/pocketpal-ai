@@ -2,11 +2,7 @@ import React, {useState, useCallback} from 'react';
 import {View, TouchableOpacity, Text, LayoutChangeEvent} from 'react-native';
 
 import {useTheme} from '../../hooks';
-import {createStyles} from './styles';
-
-const COLLAPSED_MAX_LINES = 8;
-const LINE_HEIGHT_ESTIMATE = 20; // approximate line height in px
-const COLLAPSED_HEIGHT = COLLAPSED_MAX_LINES * LINE_HEIGHT_ESTIMATE;
+import {createStyles, COLLAPSED_HEIGHT_PX} from './styles';
 
 interface CollapsibleUserMessageProps {
   children: React.ReactNode;
@@ -21,7 +17,7 @@ export const CollapsibleUserMessage: React.FC<CollapsibleUserMessageProps> =
     const [measured, setMeasured] = useState(false);
     const [expanded, setExpanded] = useState(false);
 
-    const needsCollapse = measured && contentHeight > COLLAPSED_HEIGHT + 10;
+    const needsCollapse = measured && contentHeight > COLLAPSED_HEIGHT_PX + 10;
 
     const handleLayout = useCallback((e: LayoutChangeEvent) => {
       const height = e.nativeEvent.layout.height;
@@ -45,12 +41,7 @@ export const CollapsibleUserMessage: React.FC<CollapsibleUserMessageProps> =
     return (
       <View>
         <View
-          style={[
-            !expanded && {
-              height: COLLAPSED_HEIGHT,
-              overflow: 'hidden',
-            },
-          ]}>
+          style={!expanded ? styles.collapsedContent : undefined}>
           <View onLayout={handleLayout}>{children}</View>
         </View>
 

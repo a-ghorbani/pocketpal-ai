@@ -55,15 +55,7 @@ export const ChatNavigationBar: React.FC<ChatNavigationBarProps> = React.memo(
         {/* Progress track */}
         <View style={styles.trackContainer}>
           {/* Track fill showing visible range */}
-          <View
-            style={[
-              styles.trackFill,
-              {
-                top: 0,
-                bottom: 0,
-              },
-            ]}
-          />
+          <View style={styles.trackFill} />
 
           {/* Node markers for user messages */}
           {nodes.map((node, i) => (

@@ -1,8 +1,14 @@
 import {StyleSheet} from 'react-native';
 import {Theme} from '../../utils/types';
 
+export const COLLAPSED_HEIGHT_PX = 160; // 8 lines * ~20px per line
+
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
+    collapsedContent: {
+      height: COLLAPSED_HEIGHT_PX,
+      overflow: 'hidden',
+    },
     fadeOverlay: {
       position: 'absolute',
       left: 0,
