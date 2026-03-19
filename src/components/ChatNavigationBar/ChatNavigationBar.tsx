@@ -7,15 +7,17 @@ import {createStyles} from './styles';
 export interface UserMessageNode {
   /** Index in the FlatList data array */
   index: number;
-  /** Relative position 0..1 within the visible progress window */
+  /** Relative position 0..1 within the track (0 = top/oldest, 1 = bottom/newest) */
   position: number;
 }
 
 interface ChatNavigationBarProps {
-  /** Node markers representing user message positions (0..1 in the window) */
+  /** Node markers representing user message positions (0..1) */
   nodes: UserMessageNode[];
-  /** Current scroll position as fraction 0..1 within the window */
-  scrollFraction: number;
+  /** Top edge of the thumb as fraction 0..1 */
+  thumbTop: number;
+  /** Height of the thumb as fraction 0..1 (viewport / content ratio) */
+  thumbHeight: number;
   /** Called when user presses "up" (previous user message) */
   onPrevious: () => void;
   /** Called when user presses "down" (next user message) */
@@ -27,7 +29,7 @@ interface ChatNavigationBarProps {
 }
 
 export const ChatNavigationBar: React.FC<ChatNavigationBarProps> = React.memo(
-  ({nodes, scrollFraction, onPrevious, onNext, visible, bottomOffset = 0}) => {
+  ({nodes, thumbTop, thumbHeight, onPrevious, onNext, visible, bottomOffset = 0}) => {
     const theme = useTheme();
     const styles = createStyles(theme);
 
@@ -35,8 +37,8 @@ export const ChatNavigationBar: React.FC<ChatNavigationBarProps> = React.memo(
       return null;
     }
 
-    // Clamp scroll fraction to 0..1
-    const clampedFraction = Math.max(0, Math.min(1, scrollFraction));
+    const clampedTop = Math.max(0, Math.min(1, thumbTop));
+    const clampedHeight = Math.max(0.02, Math.min(1, thumbHeight));
 
     return (
       <View
@@ -70,12 +72,13 @@ export const ChatNavigationBar: React.FC<ChatNavigationBarProps> = React.memo(
             />
           ))}
 
-          {/* Thumb indicator showing current position */}
+          {/* Thumb indicator representing current viewport */}
           <View
             style={[
               styles.thumbIndicator,
               {
-                top: `${clampedFraction * 100}%`,
+                top: `${clampedTop * 100}%`,
+                height: `${clampedHeight * 100}%`,
               },
             ]}
           />

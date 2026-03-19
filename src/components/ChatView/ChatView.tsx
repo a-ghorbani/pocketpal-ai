@@ -473,85 +473,109 @@ export const ChatView = observer(
       return indices;
     }, [chatMessages, user.id]);
 
-    // Compute navigation bar props
+    // Build cumulative height array from measured item heights.
+    // cumH[i] = pixel offset from bottom to the top edge of item i.
+    // Reused by navBarProps and navigation handlers.
+    const buildCumulativeHeights = React.useCallback(() => {
+      const len = chatMessages.length;
+      const totalH = navContentHeight;
+      const avgH = totalH / Math.max(1, len);
+      const heights = itemHeightsRef.current;
+      const cumH = new Float64Array(len + 1);
+      for (let i = 0; i < len; i++) {
+        cumH[i + 1] = cumH[i] + (heights.get(i) ?? avgH);
+      }
+      // Scale so cumulative total matches actual contentSize
+      const measured = cumH[len];
+      const scale = measured > 0 ? totalH / measured : 1;
+      if (scale !== 1) {
+        for (let i = 1; i <= len; i++) {
+          cumH[i] *= scale;
+        }
+      }
+      return cumH;
+    }, [chatMessages.length, navContentHeight]);
+
+    // Compute navigation bar props.
+    //
+    // Model (full-content mode, totalH ≤ MAX_WINDOW_PX):
+    //   Track = entire content (0 = oldest/top, 1 = newest/bottom)
+    //   Thumb = current viewport (has height proportional to viewport/content)
+    //   Node  = user message position in content
+    //   Alignment: thumb TOP touches node marker ↔ message at screen top
+    //
+    // In inverted FlatList: scrollY=0 → bottom (newest), scrollY grows → top (older)
+    // Mapping to track: fraction = 1 − pixelFromBottom / totalH
+    //   pixelFromBottom=0 (newest) → fraction=1 (track bottom)
+    //   pixelFromBottom=totalH (oldest) → fraction=0 (track top)
+    //
+    // Thumb top  = 1 − (scrollY + viewportH) / totalH  (top of viewport)
+    // Thumb height = viewportH / totalH
+    // Node position = 1 − pixelFromBottom / totalH
     const navBarProps = React.useMemo(() => {
       if (
         chatMessages.length === 0 ||
         navContentHeight === 0 ||
         navViewportHeight === 0
       ) {
-        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
+        return {
+          nodes: [] as UserMessageNode[],
+          thumbTop: 0,
+          thumbHeight: 1,
+        };
       }
 
       const totalH = navContentHeight;
-      const maxScroll = Math.max(1, totalH - navViewportHeight);
 
-      // Determine window range:
-      // - Content ≤ MAX_WINDOW_PX (~1000 lines): show ALL content in the track
-      // - Content > MAX_WINDOW_PX: sliding window around current viewport
-      let windowStart: number;
-      let windowEnd: number;
+      // Determine window for the track
+      let winStart: number;
+      let winSize: number;
 
       if (totalH <= MAX_WINDOW_PX) {
-        // Full-content mode: entire document fits on the progress bar
-        windowStart = 0;
-        windowEnd = totalH;
+        winStart = 0;
+        winSize = totalH;
       } else {
-        // Windowed mode: show MAX_WINDOW_PX around current viewport
         const visibleTop = navScrollY + navViewportHeight;
-        windowEnd = visibleTop;
-        windowStart = Math.max(0, windowEnd - MAX_WINDOW_PX);
+        winStart = Math.max(0, visibleTop - MAX_WINDOW_PX);
+        winSize = Math.min(totalH, MAX_WINDOW_PX);
       }
 
-      const windowSize = windowEnd - windowStart;
-      if (windowSize === 0) {
-        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
-      }
+      // Thumb: maps viewport position within the window
+      const vpTop = navScrollY + navViewportHeight; // top of viewport (pixels from bottom)
+      const vpBot = navScrollY; // bottom of viewport
+      const thumbTop = 1 - (vpTop - winStart) / winSize;
+      const thumbHeight = navViewportHeight / winSize;
 
-      // Map scroll position to 0..1 within the window
-      // scrollY=0 (bottom) → fraction=1, scrollY=maxScroll (top) → fraction≈0
-      const scrollFraction = 1 - navScrollY / maxScroll;
+      // Build cumulative heights
+      const cumH = buildCumulativeHeights();
 
-      // Compute cumulative heights using actual measured heights when available,
-      // falling back to average for unmeasured items.
-      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
-      const heights = itemHeightsRef.current;
-
-      // Build cumulative height array: cumH[i] = sum of heights[0..i-1]
-      // In inverted list, index 0 is at bottom, so cumH[idx] = pixel offset
-      // from the bottom to the top edge of item idx.
-      const cumH = new Float64Array(chatMessages.length + 1);
-      for (let i = 0; i < chatMessages.length; i++) {
-        cumH[i + 1] = cumH[i] + (heights.get(i) ?? avgItemHeight);
-      }
-
-      // Scale factor: measured cumulative total may differ from actual
-      // contentSize (due to separators, headers, footers, etc.)
-      const measuredTotal = cumH[chatMessages.length];
-      const scale = measuredTotal > 0 ? totalH / measuredTotal : 1;
-
+      // Node markers
       const nodes: UserMessageNode[] = [];
-
-      // Node position formula: align with thumb when the message is at
-      // the top of viewport. When scrollY = pixelFromBottom - viewportH,
-      // scrollFraction = 1 - (pixelFromBottom - viewportH) / maxScroll.
-      // So node position = 1 - max(0, pixelFromBottom - viewportH) / maxScroll.
       userMessageIndices.forEach(idx => {
-        const pixelFromBottom = cumH[idx] * scale;
-        if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
-          const scrollYWhenAtTop = Math.max(
-            0,
-            pixelFromBottom - navViewportHeight,
-          );
-          const position = Math.max(
-            0,
-            Math.min(1, 1 - scrollYWhenAtTop / maxScroll),
-          );
+        const pxFromBottom = cumH[idx];
+        if (pxFromBottom >= winStart && pxFromBottom <= winStart + winSize) {
+          const position = 1 - (pxFromBottom - winStart) / winSize;
           nodes.push({index: idx, position});
         }
       });
 
-      return {nodes, scrollFraction};
+      // Also include nodes for messages currently inside the viewport
+      // (between vpBot and vpTop) to ensure they're always visible
+      if (totalH > MAX_WINDOW_PX) {
+        userMessageIndices.forEach(idx => {
+          const pxFromBottom = cumH[idx];
+          if (
+            pxFromBottom >= vpBot &&
+            pxFromBottom <= vpTop &&
+            !nodes.some(n => n.index === idx)
+          ) {
+            const position = 1 - (pxFromBottom - winStart) / winSize;
+            nodes.push({index: idx, position});
+          }
+        });
+      }
+
+      return {nodes, thumbTop, thumbHeight};
     }, [
       chatMessages.length,
       navContentHeight,
@@ -559,37 +583,27 @@ export const ChatView = observer(
       navScrollY,
       userMessageIndices,
       MAX_WINDOW_PX,
+      buildCumulativeHeights,
     ]);
 
-    // Helper: find which item index the current scroll position corresponds to,
-    // using actual measured heights when available.
-    const findCurrentItemIndex = React.useCallback(() => {
-      const heights = itemHeightsRef.current;
-      const avgH = navContentHeight / Math.max(1, chatMessages.length);
-      let cumH = 0;
-      for (let i = 0; i < chatMessages.length; i++) {
-        cumH += heights.get(i) ?? avgH;
-        if (cumH > navScrollY) {
-          return i;
-        }
-      }
-      return chatMessages.length - 1;
-    }, [navContentHeight, navScrollY, chatMessages.length]);
-
-    // Jump to previous user message (older = higher index in inverted list)
+    // Jump to previous user message (older = higher index = scroll UP).
+    // Find the first user message whose position is ABOVE the current viewport top.
     const handleNavPrevious = React.useCallback(() => {
       if (userMessageIndices.length === 0 || navContentHeight === 0) {
         return;
       }
-      const currentItem = findCurrentItemIndex();
+      const cumH = buildCumulativeHeights();
+      const vpTop = navScrollY + navViewportHeight;
 
+      // Find user message above viewport top (with small tolerance)
       let targetIndex = -1;
       for (const idx of userMessageIndices) {
-        if (idx > currentItem) {
+        if (cumH[idx] > vpTop + 10) {
           targetIndex = idx;
           break;
         }
       }
+      // Wrap around to the top-most if none found above
       if (targetIndex === -1 && userMessageIndices.length > 0) {
         targetIndex = userMessageIndices[userMessageIndices.length - 1];
       }
@@ -600,22 +614,33 @@ export const ChatView = observer(
           viewPosition: 1,
         });
       }
-    }, [userMessageIndices, navContentHeight, findCurrentItemIndex]);
+    }, [
+      userMessageIndices,
+      navContentHeight,
+      navViewportHeight,
+      navScrollY,
+      buildCumulativeHeights,
+    ]);
 
-    // Jump to next user message (newer = lower index in inverted list)
+    // Jump to next user message (newer = lower index = scroll DOWN).
+    // Find the first user message whose position is BELOW the current viewport bottom.
     const handleNavNext = React.useCallback(() => {
       if (userMessageIndices.length === 0 || navContentHeight === 0) {
         return;
       }
-      const currentItem = findCurrentItemIndex();
+      const cumH = buildCumulativeHeights();
+      const vpBot = navScrollY;
 
+      // Find user message below viewport bottom (with small tolerance)
       let targetIndex = -1;
       for (let i = userMessageIndices.length - 1; i >= 0; i--) {
-        if (userMessageIndices[i] < currentItem) {
-          targetIndex = userMessageIndices[i];
+        const idx = userMessageIndices[i];
+        if (cumH[idx] < vpBot - 10) {
+          targetIndex = idx;
           break;
         }
       }
+      // Wrap around to the bottom-most if none found below
       if (targetIndex === -1 && userMessageIndices.length > 0) {
         targetIndex = userMessageIndices[0];
       }
@@ -626,7 +651,12 @@ export const ChatView = observer(
           viewPosition: 1,
         });
       }
-    }, [userMessageIndices, navContentHeight, findCurrentItemIndex]);
+    }, [
+      userMessageIndices,
+      navContentHeight,
+      navScrollY,
+      buildCumulativeHeights,
+    ]);
 
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
@@ -1195,7 +1225,8 @@ export const ChatView = observer(
             {/* Chat navigation bar */}
             <ChatNavigationBar
               nodes={navBarProps.nodes}
-              scrollFraction={navBarProps.scrollFraction}
+              thumbTop={navBarProps.thumbTop}
+              thumbHeight={navBarProps.thumbHeight}
               onPrevious={handleNavPrevious}
               onNext={handleNavNext}
               visible={chatMessages.length > 0}

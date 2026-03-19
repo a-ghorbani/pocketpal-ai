@@ -60,7 +60,7 @@ export const createStyles = (theme: Theme) =>
       position: 'absolute',
       left: -2,
       width: 10,
-      height: 14,
+      minHeight: 8,
       borderRadius: 5,
       backgroundColor: theme.colors.primary,
       opacity: 0.7,
