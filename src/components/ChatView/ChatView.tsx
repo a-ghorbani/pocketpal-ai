@@ -527,49 +527,39 @@ export const ChatView = observer(
 
       const totalH = navContentHeight;
 
-      // Determine window for the track
-      let winStart: number;
-      let winSize: number;
-
-      if (totalH <= MAX_WINDOW_PX) {
-        winStart = 0;
-        winSize = totalH;
-      } else {
-        const visibleTop = navScrollY + navViewportHeight;
-        winStart = Math.max(0, visibleTop - MAX_WINDOW_PX);
-        winSize = Math.min(totalH, MAX_WINDOW_PX);
-      }
-
-      // Thumb: maps viewport position within the window
-      const vpTop = navScrollY + navViewportHeight; // top of viewport (pixels from bottom)
-      const vpBot = navScrollY; // bottom of viewport
-      const thumbTop = 1 - (vpTop - winStart) / winSize;
-      const thumbHeight = navViewportHeight / winSize;
+      // Thumb always maps linearly to the FULL content, regardless of window.
+      // This gives a reliable sense of "where am I in the document".
+      //   track top (0) = oldest content, track bottom (1) = newest content
+      //   thumbTop  = 1 − (scrollY + viewportH) / totalH
+      //   thumbHeight = viewportH / totalH
+      const vpTop = navScrollY + navViewportHeight;
+      const thumbTop = 1 - vpTop / totalH;
+      const thumbHeight = navViewportHeight / totalH;
 
       // Build cumulative heights
       const cumH = buildCumulativeHeights();
 
-      // Node markers
+      // Node markers: position maps linearly to FULL content (same as thumb).
+      // In windowed mode, only show markers within MAX_WINDOW_PX of viewport.
       const nodes: UserMessageNode[] = [];
-      userMessageIndices.forEach(idx => {
-        const pxFromBottom = cumH[idx];
-        if (pxFromBottom >= winStart && pxFromBottom <= winStart + winSize) {
-          const position = 1 - (pxFromBottom - winStart) / winSize;
-          nodes.push({index: idx, position});
-        }
-      });
 
-      // Also include nodes for messages currently inside the viewport
-      // (between vpBot and vpTop) to ensure they're always visible
-      if (totalH > MAX_WINDOW_PX) {
+      if (totalH <= MAX_WINDOW_PX) {
+        // Full-content mode: show ALL markers
+        userMessageIndices.forEach(idx => {
+          const position = 1 - cumH[idx] / totalH;
+          nodes.push({index: idx, position});
+        });
+      } else {
+        // Windowed mode: only show markers near the viewport
+        const vpCenter = navScrollY + navViewportHeight / 2;
+        const half = MAX_WINDOW_PX / 2;
         userMessageIndices.forEach(idx => {
           const pxFromBottom = cumH[idx];
           if (
-            pxFromBottom >= vpBot &&
-            pxFromBottom <= vpTop &&
-            !nodes.some(n => n.index === idx)
+            pxFromBottom >= vpCenter - half &&
+            pxFromBottom <= vpCenter + half
           ) {
-            const position = 1 - (pxFromBottom - winStart) / winSize;
+            const position = 1 - pxFromBottom / totalH;
             nodes.push({index: idx, position});
           }
         });
