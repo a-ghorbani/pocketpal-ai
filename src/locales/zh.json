@@ -514,7 +514,9 @@
         "disableThinking": "禁用思考模式",
         "thinkingEnabled": "思考模式已启用",
         "thinkingDisabled": "思考模式已禁用",
-        "thinkText": "思考"
+        "thinkText": "显",
+        "enableThinkText": "思",
+        "saveThinkText": "录"
       }
     },
     "contentReportSheet": {

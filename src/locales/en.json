@@ -518,7 +518,9 @@
         "disableThinking": "Disable thinking mode",
         "thinkingEnabled": "Thinking mode enabled",
         "thinkingDisabled": "Thinking mode disabled",
-        "thinkText": "Think"
+        "thinkText": "Show",
+        "enableThinkText": "Think",
+        "saveThinkText": "Save"
       }
     },
     "contentReportSheet": {

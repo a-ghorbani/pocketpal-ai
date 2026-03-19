@@ -21,7 +21,6 @@ import {CompletionParams} from '../../../utils/completionTypes';
 import {
   chatTemplateInterpreterOptions,
   chatTemplates,
-  getChatTemplateDisplayName,
   getChatTemplateInterpreterDisplayName,
   getEffectiveChatTemplateInterpreter,
 } from '../../../utils/chat';
@@ -220,9 +219,7 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
           labelStyle={styles.previewCopyButtonLabel}>
           {l10n.components.chatView.menuItems.copy}
         </PaperButton>
-        <NativeViewGestureHandler
-          disallowInterruption
-          shouldActivateOnStart>
+        <NativeViewGestureHandler disallowInterruption shouldActivateOnStart>
           <ScrollView
             style={styles.previewScrollView}
             nestedScrollEnabled

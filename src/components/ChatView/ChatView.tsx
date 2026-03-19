@@ -355,7 +355,6 @@ export const ChatView = observer(
       (scrollY: number, contentH: number, viewportH: number) => {
         updateNavStateRef.current(scrollY, contentH, viewportH);
       },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       [],
     );
 
@@ -540,7 +539,10 @@ export const ChatView = observer(
       userMessageIndices.forEach(idx => {
         const pixelFromBottom = cumH[idx] * scale;
         if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
-          const scrollYWhenAtTop = Math.max(0, pixelFromBottom - navViewportHeight);
+          const scrollYWhenAtTop = Math.max(
+            0,
+            pixelFromBottom - navViewportHeight,
+          );
           const position = Math.max(
             0,
             Math.min(1, 1 - scrollYWhenAtTop / maxScroll),

@@ -622,7 +622,7 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                       {marginLeft: 0},
                     ]}>
-                    ET
+                    {l10n.components.chatInput.thinkingToggle.enableThinkText}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -652,7 +652,7 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                       {marginLeft: 0},
                     ]}>
-                    RF
+                    {l10n.components.chatInput.thinkingToggle.saveThinkText}
                   </Text>
                 </TouchableOpacity>
               )}
