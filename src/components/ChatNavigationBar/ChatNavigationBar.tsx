@@ -29,7 +29,15 @@ interface ChatNavigationBarProps {
 }
 
 export const ChatNavigationBar: React.FC<ChatNavigationBarProps> = React.memo(
-  ({nodes, thumbTop, thumbHeight, onPrevious, onNext, visible, bottomOffset = 0}) => {
+  ({
+    nodes,
+    thumbTop,
+    thumbHeight,
+    onPrevious,
+    onNext,
+    visible,
+    bottomOffset = 0,
+  }) => {
     const theme = useTheme();
     const styles = createStyles(theme);
 

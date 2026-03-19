@@ -534,8 +534,7 @@ export const ChatView = observer(
       //   covers exactly MAX_WINDOW_PX (e.g. bottom has only 400 lines
       //   → top gets 600 lines).
       let winStart: number;
-      const winSize =
-        totalH <= MAX_WINDOW_PX ? totalH : MAX_WINDOW_PX;
+      const winSize = totalH <= MAX_WINDOW_PX ? totalH : MAX_WINDOW_PX;
 
       if (totalH <= MAX_WINDOW_PX) {
         winStart = 0;
