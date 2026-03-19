@@ -576,76 +576,137 @@ export const ChatView = observer(
       buildCumulativeHeights,
     ]);
 
-    // Jump to previous user message (older = higher index = scroll UP).
-    // Find the first user message whose position is ABOVE the current viewport top.
-    const handleNavPrevious = React.useCallback(() => {
-      if (userMessageIndices.length === 0 || navContentHeight === 0) {
-        return;
+    // --- Pointer-based navigation ---
+    // Track current position in userMessageIndices array (-1 = uninitialized).
+    // userMessageIndices: [newest(idx0), ..., oldest(idxN)]
+    // UP = older = higher position in array, DOWN = newer = lower position.
+    const navCursorRef = React.useRef(-1);
+
+    // Reset cursor when the message list changes (new messages added, etc.)
+    React.useEffect(() => {
+      navCursorRef.current = -1;
+    }, [userMessageIndices.length]);
+
+    // Initialize cursor from current scroll position.
+    // Finds the position in userMessageIndices of the user message closest to
+    // the viewport top (the "standard position" reference point).
+    const initNavCursor = React.useCallback(() => {
+      if (userMessageIndices.length === 0) {
+        return 0;
       }
       const cumH = buildCumulativeHeights();
       const vpTop = navScrollY + navViewportHeight;
 
-      // Find user message above viewport top (with small tolerance)
-      let targetIndex = -1;
-      for (const idx of userMessageIndices) {
-        if (cumH[idx] > vpTop + 10) {
-          targetIndex = idx;
+      // Find the last user message whose bottom edge is at or below vpTop
+      // (i.e., visible on screen or below). Messages after this are above viewport.
+      let pos = 0;
+      for (let i = 0; i < userMessageIndices.length; i++) {
+        if (cumH[userMessageIndices[i]] <= vpTop) {
+          pos = i;
+        } else {
           break;
         }
       }
-      // Wrap around to the top-most if none found above
-      if (targetIndex === -1 && userMessageIndices.length > 0) {
-        targetIndex = userMessageIndices[userMessageIndices.length - 1];
-      }
-      if (targetIndex >= 0) {
-        list.current?.scrollToIndex({
-          index: targetIndex,
-          animated: true,
-          viewPosition: 1,
-        });
-      }
+      return pos;
     }, [
       userMessageIndices,
-      navContentHeight,
-      navViewportHeight,
-      navScrollY,
       buildCumulativeHeights,
+      navScrollY,
+      navViewportHeight,
     ]);
 
-    // Jump to next user message (newer = lower index = scroll DOWN).
-    // Find the first user message whose position is BELOW the current viewport bottom.
-    const handleNavNext = React.useCallback(() => {
-      if (userMessageIndices.length === 0 || navContentHeight === 0) {
+    // Skip clustered messages: when navigating to a user message, if subsequent
+    // messages in the same direction are within one viewport height (i.e., they'd
+    // all be visible on screen at the standard position), jump past them to the
+    // first message of the next cluster.
+    //
+    // UP: after stepping to cursor, keep advancing while the next older message
+    //     is within navViewportHeight of the current target → stop at the oldest
+    //     in that cluster (the "first" one the user would see at standard position).
+    // DOWN: after stepping to cursor, keep advancing while the next newer message
+    //     is within navViewportHeight of the current target → stop at the newest
+    //     in that cluster.
+
+    // Jump to previous user message (older = higher position in array = scroll UP).
+    const handleNavPrevious = React.useCallback(() => {
+      const len = userMessageIndices.length;
+      if (len === 0) {
         return;
       }
-      const cumH = buildCumulativeHeights();
-      const vpBot = navScrollY;
 
-      // Find user message below viewport bottom (with small tolerance)
-      let targetIndex = -1;
-      for (let i = userMessageIndices.length - 1; i >= 0; i--) {
-        const idx = userMessageIndices[i];
-        if (cumH[idx] < vpBot - 10) {
-          targetIndex = idx;
-          break;
-        }
+      let cursor = navCursorRef.current;
+      if (cursor === -1) {
+        cursor = initNavCursor() + 1;
+      } else {
+        cursor = cursor + 1;
       }
-      // Wrap around to the bottom-most if none found below
-      if (targetIndex === -1 && userMessageIndices.length > 0) {
-        targetIndex = userMessageIndices[0];
+
+      if (cursor >= len) {
+        cursor = len - 1;
       }
-      if (targetIndex >= 0) {
-        list.current?.scrollToIndex({
-          index: targetIndex,
-          animated: true,
-          viewPosition: 1,
-        });
+
+      // Skip cluster: keep going older while next message is within one screen
+      const cumH = buildCumulativeHeights();
+      const anchorH = cumH[userMessageIndices[cursor]];
+      while (
+        cursor + 1 < len &&
+        cumH[userMessageIndices[cursor + 1]] - anchorH < navViewportHeight
+      ) {
+        cursor++;
       }
+
+      navCursorRef.current = cursor;
+      list.current?.scrollToIndex({
+        index: userMessageIndices[cursor],
+        animated: true,
+        viewPosition: 1,
+      });
     }, [
       userMessageIndices,
-      navContentHeight,
-      navScrollY,
+      initNavCursor,
       buildCumulativeHeights,
+      navViewportHeight,
+    ]);
+
+    // Jump to next user message (newer = lower position in array = scroll DOWN).
+    const handleNavNext = React.useCallback(() => {
+      const len = userMessageIndices.length;
+      if (len === 0) {
+        return;
+      }
+
+      let cursor = navCursorRef.current;
+      if (cursor === -1) {
+        cursor = initNavCursor() - 1;
+      } else {
+        cursor = cursor - 1;
+      }
+
+      if (cursor < 0) {
+        cursor = 0;
+      }
+
+      // Skip cluster: keep going newer while next message is within one screen
+      const cumH = buildCumulativeHeights();
+      const anchorH = cumH[userMessageIndices[cursor]];
+      while (
+        cursor - 1 >= 0 &&
+        anchorH - cumH[userMessageIndices[cursor - 1]] < navViewportHeight
+      ) {
+        cursor--;
+      }
+
+      navCursorRef.current = cursor;
+      list.current?.scrollToIndex({
+        index: userMessageIndices[cursor],
+        animated: true,
+        viewPosition: 1,
+      });
+    }, [
+      userMessageIndices,
+      initNavCursor,
+      buildCumulativeHeights,
+      navViewportHeight,
     ]);
 
     // ============ MESSAGE INPUT HANDLERS ============
