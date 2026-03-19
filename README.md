@@ -71,8 +71,11 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 * [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
 * [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
 
----
-Would you like me to help you draft the GitHub Release notes based on this content?
+
+
+
+
+
 
 # PocketPal AI 📱🚀
 
