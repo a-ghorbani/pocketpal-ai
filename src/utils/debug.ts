@@ -2,17 +2,12 @@ import {debugStore} from '../store/DebugStore';
 
 let consoleCaptureInitialized = false;
 
-export function previewText(value: unknown, maxLength: number = 500): string {
+export function previewText(value: unknown, _maxLength?: number): string {
   if (value === undefined || value === null) {
     return '';
   }
 
-  const text = String(value);
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  return `${text.slice(0, maxLength)}...`;
+  return String(value);
 }
 
 function simpleHash(text: string): string {
@@ -98,7 +93,7 @@ export function getTextDiagnostics(value: unknown) {
     repeatedCharMaxRun: maxRun,
     repeatedBigramTop: topBigram,
     repeatedBigramCount: topBigramCount,
-    preview: previewText(text, 240),
+    preview: text,
   };
 }
 
@@ -224,14 +219,14 @@ export function buildCompletionParamProbe(params: Record<string, unknown>) {
     chatParserLength: chatParser.length,
     chatParserHash: getTextDiagnostics(chatParser).hash,
     preservedTokenCount: preservedTokens.length,
-    preservedTokensPreview: preservedTokens.slice(0, 12),
+    preservedTokensPreview: preservedTokens,
     grammarTriggersCount: grammarTriggers.length,
     promptDiag: getTextDiagnostics(prompt),
     promptHasVisionTokens:
       prompt.includes('<|vision_start|>') || prompt.includes('<|image_pad|>'),
     promptHasThinkTag: prompt.includes('<think>'),
     stopCount: stopWords.length,
-    stopPreview: stopWords.slice(0, 10),
+    stopPreview: stopWords,
     suspectFlags,
   };
 }

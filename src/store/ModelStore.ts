@@ -2355,7 +2355,7 @@ class ModelStore {
         modelTemplateName: storeModel.chatTemplate?.name,
         modelTemplateLength: template?.length ?? 0,
         contextTemplateLength: contextTemplate.length,
-        contextTemplatePreview: contextTemplate.slice(0, 160),
+        contextTemplatePreview: contextTemplate,
         architecture:
           (ctx.model as any)?.metadata?.['general.architecture'] ||
           storeModel.ggufMetadata?.architecture,
@@ -2934,7 +2934,7 @@ class ModelStore {
         activeProjectionModelId: this.activeProjectionModelId,
         imageCount: processedImagePaths.length,
         promptLength: params.prompt.length,
-        imageSources: processedImagePaths.map(path => path.slice(0, 120)),
+        imageSources: processedImagePaths,
       });
 
       // Create a system message if provided

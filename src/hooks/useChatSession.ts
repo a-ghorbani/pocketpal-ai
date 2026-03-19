@@ -230,7 +230,7 @@ const prepareCompletion = async ({
         getFormattedChatResultType: typeof diagResult,
         hasThinkTag: diagPrompt.includes('<think>'),
         hasEnableThinkingInTemplate: diagPrompt.includes('enable_thinking'),
-        promptPreview: diagPrompt.slice(-300),
+        promptPreview: diagPrompt,
         promptLength: diagPrompt.length,
       });
     } catch (diagError) {
