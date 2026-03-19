@@ -171,20 +171,6 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
         disabled={isTemplateInterpreterLocked}
         inputTestID="interpreter_picker_input"
       />
-      <Text variant="labelSmall" style={styles.templateMeta}>
-        {`${l10n.models.modelSettings.template.selectedLabel} ${getChatTemplateDisplayName(selectedTemplateName || chatTemplate.name)}`}
-      </Text>
-      <Text variant="labelSmall" style={styles.templateMeta}>
-        {isTemplateInterpreterLocked
-          ? l10n.models.modelSettings.template.interpreterLockedNote
-          : l10n.models.modelSettings.template.interpreterCustomNote}
-      </Text>
-      <Text variant="labelSmall" style={styles.templateMeta}>
-        {l10n.models.modelSettings.template.autoMatchNote}
-      </Text>
-      <Text variant="labelSmall" style={styles.templateMeta}>
-        {l10n.models.modelSettings.template.thinkingNote}
-      </Text>
       <View style={styles.templateEditor}>
         <RNTextInput
           value={localChatTemplate}
@@ -203,64 +189,60 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
           testID="template-editor-input"
         />
       </View>
-      {!(localChatTemplate || '').trim() && (
-        <>
-          <Text variant="labelSmall" style={styles.templateMeta}>
-            {runtimeTemplateText?.trim()
-              ? l10n.models.modelSettings.template.effectiveSourceGguf
-              : defaultTemplateText?.trim()
-                ? l10n.models.modelSettings.template.effectiveSourceModelDefault
-                : l10n.models.modelSettings.template.effectiveSourceRuntimeAuto}
-          </Text>
-          <View
-            style={styles.effectiveTemplatePreviewInput}
+      <Text variant="labelSmall" style={styles.templateMeta}>
+        {runtimeTemplateText?.trim()
+          ? l10n.models.modelSettings.template.effectiveSourceGguf
+          : defaultTemplateText?.trim()
+            ? l10n.models.modelSettings.template.effectiveSourceModelDefault
+            : l10n.models.modelSettings.template.effectiveSourceRuntimeAuto}
+      </Text>
+      <View
+        style={styles.effectiveTemplatePreviewInput}
+        onTouchStart={handlePreviewTouchStart}
+        onTouchEnd={handlePreviewTouchEnd}
+        onTouchCancel={handlePreviewTouchEnd}
+        testID="effective-template-preview">
+        <PaperButton
+          mode="text"
+          compact
+          style={styles.previewCopyButton}
+          onPress={() => {
+            const textToCopy =
+              (runtimeTemplateText || '').trim() ||
+              (defaultTemplateText || '').trim() ||
+              l10n.models.modelSettings.template
+                .builtInTemplateAvailableAfterLoad;
+            Clipboard.setString(textToCopy);
+          }}
+          accessibilityLabel={l10n.components.chatView.menuItems.copy}
+          testID="effective-template-copy-button"
+          contentStyle={styles.previewCopyButtonContent}
+          labelStyle={styles.previewCopyButtonLabel}>
+          {l10n.components.chatView.menuItems.copy}
+        </PaperButton>
+        <NativeViewGestureHandler
+          disallowInterruption
+          shouldActivateOnStart>
+          <ScrollView
+            style={styles.previewScrollView}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
             onTouchStart={handlePreviewTouchStart}
             onTouchEnd={handlePreviewTouchEnd}
             onTouchCancel={handlePreviewTouchEnd}
-            testID="effective-template-preview">
-            <PaperButton
-              mode="text"
-              compact
-              style={styles.previewCopyButton}
-              onPress={() => {
-                const textToCopy =
-                  (runtimeTemplateText || '').trim() ||
-                  (defaultTemplateText || '').trim() ||
-                  l10n.models.modelSettings.template
-                    .builtInTemplateAvailableAfterLoad;
-                Clipboard.setString(textToCopy);
-              }}
-              accessibilityLabel={l10n.components.chatView.menuItems.copy}
-              testID="effective-template-copy-button"
-              contentStyle={styles.previewCopyButtonContent}
-              labelStyle={styles.previewCopyButtonLabel}>
-              {l10n.components.chatView.menuItems.copy}
-            </PaperButton>
-            <NativeViewGestureHandler
-              disallowInterruption
-              shouldActivateOnStart>
-              <ScrollView
-                style={styles.previewScrollView}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-                onTouchStart={handlePreviewTouchStart}
-                onTouchEnd={handlePreviewTouchEnd}
-                onTouchCancel={handlePreviewTouchEnd}
-                onScrollBeginDrag={() => setTemplateScrollLock(true)}
-                onScrollEndDrag={() => setTemplateScrollLock(false)}
-                onMomentumScrollEnd={() => setTemplateScrollLock(false)}
-                contentContainerStyle={styles.previewScrollContent}>
-                <Text style={styles.effectiveTemplatePreviewText}>
-                  {(runtimeTemplateText || '').trim() ||
-                    (defaultTemplateText || '').trim() ||
-                    l10n.models.modelSettings.template
-                      .builtInTemplateAvailableAfterLoad}
-                </Text>
-              </ScrollView>
-            </NativeViewGestureHandler>
-          </View>
-        </>
-      )}
+            onScrollBeginDrag={() => setTemplateScrollLock(true)}
+            onScrollEndDrag={() => setTemplateScrollLock(false)}
+            onMomentumScrollEnd={() => setTemplateScrollLock(false)}
+            contentContainerStyle={styles.previewScrollContent}>
+            <Text style={styles.effectiveTemplatePreviewText}>
+              {(runtimeTemplateText || '').trim() ||
+                (defaultTemplateText || '').trim() ||
+                l10n.models.modelSettings.template
+                  .builtInTemplateAvailableAfterLoad}
+            </Text>
+          </ScrollView>
+        </NativeViewGestureHandler>
+      </View>
     </View>
   );
 

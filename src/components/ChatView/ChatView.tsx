@@ -432,6 +432,18 @@ export const ChatView = observer(
       });
     }, []);
 
+    // Fallback auto-scroll: when MVCP fails to keep up during fast streaming,
+    // actively snap to bottom if user was already at the bottom.
+    const handleContentSizeChange = React.useCallback(
+      (_w: number, _h: number) => {
+        if (isStreaming && atLatest.value) {
+          list.current?.scrollToOffset({offset: 0, animated: false});
+        }
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [isStreaming],
+    );
+
     // ============ MESSAGE PROCESSING & CALCULATIONS ============
     // Calculate chat messages with date headers and user names
     const {chatMessages, gallery} = calculateChatMessages(messages, user, {
@@ -1062,6 +1074,7 @@ export const ChatView = observer(
               style={[styles.flatList, {marginBottom: bottomComponentHeight}]}
               showsVerticalScrollIndicator={false}
               onScroll={handleScroll}
+              onContentSizeChange={handleContentSizeChange}
               {...unwrap(flatListProps)}
               data={chatMessages}
               inverted={chatMessages.length > 0}
@@ -1086,10 +1099,10 @@ export const ChatView = observer(
                 }, 200);
               }}
               maintainVisibleContentPosition={
-                isStreaming // || hasHiddenContentState
+                isStreaming
                   ? {
-                      autoscrollToTopThreshold: 20,
-                      minIndexForVisible: 1, //isStreaming ? 1 : 0,
+                      autoscrollToTopThreshold: 300,
+                      minIndexForVisible: 1,
                     }
                   : undefined
               }
@@ -1132,6 +1145,7 @@ export const ChatView = observer(
         renderListHeaderComponent,
         bottomComponentHeight,
         handleScroll,
+        handleContentSizeChange,
         flatListProps,
         keyExtractor,
         handleEndReached,
