@@ -27,7 +27,7 @@ export const defaultCompletionParams: CompletionParams = {
 
   // llama.rn API properties
   prompt: '',
-  n_predict: 1024, // The maximum number of tokens to predict when generating text.
+  n_predict: -1, // The maximum number of tokens to predict (-1 = unlimited).
   temperature: 0.7, // The randomness of the generated text.
   top_k: 40, // Limit the next token selection to the K most probable tokens.
   top_p: 0.95, // Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P.
