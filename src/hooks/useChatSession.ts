@@ -675,11 +675,7 @@ export const useChatSession = (
                     ? result.text.slice(thinkStart + 7, thinkEnd)
                     : result.text.slice(0, thinkEnd);
                 const cleanText = result.text.slice(thinkEnd + 8).trimStart();
-                return {
-                  reasoning_content:
-                    result.reasoning_content || thinkContent,
-                  content: cleanText,
-                };
+                return {reasoning_content: result.reasoning_content || thinkContent, content: cleanText};
               }
               return {
                 reasoning_content: result.reasoning_content,
