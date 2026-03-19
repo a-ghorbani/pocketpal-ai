@@ -448,6 +448,14 @@ export const useChatSession = (
       let firstCallbackKeys: string[] = [];
       let firstTokenPreview = '';
 
+      // State machine for real-time <think> tag parsing when RF is off.
+      // When RF is on, llama.rn natively splits reasoning_content/content.
+      // When RF is off, <think>...</think> is embedded in content stream.
+      let thinkParseInBlock = false; // currently inside <think>...</think>
+      let thinkParseDone = false; // </think> has been seen, now pure response
+      let thinkParseBuffer = ''; // partial tag buffer for split-chunk detection
+      let thinkParseAccumReasoning = ''; // accumulated reasoning for partial update
+
       cancelNativeCallHeartbeats = scheduleEngineOutputHeartbeats(
         'completion:native-call-heartbeat',
         () => ({
@@ -485,9 +493,80 @@ export const useChatSession = (
               modelStore.setIsStreaming(true);
             }
 
-            // Use content and reasoning_content from the streaming data
-            // llama.rn already separates these for us when enable_thinking is true
-            const {content = '', reasoning_content: reasoningContent} = data;
+            // Use content and reasoning_content from the streaming data.
+            // When RF is on, llama.rn natively splits them. When RF is off,
+            // we parse <think>...</think> from the content stream in real-time.
+            let {content = '', reasoning_content: reasoningContent} = data;
+            if (!reasoningContent && content && !thinkParseDone) {
+              // RF is off — run state machine on this chunk
+              let chunk = thinkParseBuffer + content;
+              thinkParseBuffer = '';
+              let parsedReasoning = '';
+              let parsedContent = '';
+              let i = 0;
+              while (i < chunk.length) {
+                if (!thinkParseInBlock && !thinkParseDone) {
+                  const openIdx = chunk.indexOf('<think>', i);
+                  if (openIdx === i) {
+                    thinkParseInBlock = true;
+                    i += 7;
+                  } else if (openIdx !== -1) {
+                    parsedContent += chunk.slice(i, openIdx);
+                    thinkParseInBlock = true;
+                    i = openIdx + 7;
+                  } else {
+                    // Check if chunk ends with a partial '<think>' prefix
+                    const tag = '<think>';
+                    let overlap = 0;
+                    for (let k = 1; k < tag.length; k++) {
+                      if (chunk.endsWith(tag.slice(0, k))) {
+                        overlap = k;
+                      }
+                    }
+                    if (overlap > 0) {
+                      parsedContent += chunk.slice(i, chunk.length - overlap);
+                      thinkParseBuffer = chunk.slice(chunk.length - overlap);
+                    } else {
+                      parsedContent += chunk.slice(i);
+                    }
+                    break;
+                  }
+                } else if (thinkParseInBlock) {
+                  const closeIdx = chunk.indexOf('</think>', i);
+                  if (closeIdx !== -1) {
+                    parsedReasoning += chunk.slice(i, closeIdx);
+                    thinkParseInBlock = false;
+                    thinkParseDone = true;
+                    i = closeIdx + 8;
+                  } else {
+                    // Check for partial '</think>' at end
+                    const tag = '</think>';
+                    let overlap = 0;
+                    for (let k = 1; k < tag.length; k++) {
+                      if (chunk.endsWith(tag.slice(0, k))) {
+                        overlap = k;
+                      }
+                    }
+                    if (overlap > 0) {
+                      parsedReasoning += chunk.slice(i, chunk.length - overlap);
+                      thinkParseBuffer = chunk.slice(chunk.length - overlap);
+                    } else {
+                      parsedReasoning += chunk.slice(i);
+                    }
+                    break;
+                  }
+                } else {
+                  // thinkParseDone — rest is pure response
+                  parsedContent += chunk.slice(i);
+                  break;
+                }
+              }
+              if (parsedReasoning) {
+                thinkParseAccumReasoning += parsedReasoning;
+              }
+              content = parsedContent;
+              reasoningContent = thinkParseAccumReasoning || undefined;
+            }
 
             if (content || reasoningContent) {
               streamChunkCount += 1;
@@ -582,11 +661,31 @@ export const useChatSession = (
             copyable: true,
             // Add multimodal flag if this was a multimodal completion
             multimodal: hasImages && isMultimodalEnabled,
-            // Save the final completion result with reasoning_content
-            completionResult: {
-              reasoning_content: result.reasoning_content,
-              content: result.text,
-            },
+            // Save the final completion result with reasoning_content.
+            // Parse </think> tag: model always embeds <think>...</think> in result.text.
+            // Strip it out so displayed content is clean, and use it as reasoning_content
+            // when RF is off (result.reasoning_content is empty). Also prevents OOM crash
+            // when RF is on and result.text === result.reasoning_content (identical content).
+            completionResult: (() => {
+              const thinkEnd = result.text.indexOf('</think>');
+              if (thinkEnd !== -1) {
+                const thinkStart = result.text.indexOf('<think>');
+                const thinkContent =
+                  thinkStart !== -1
+                    ? result.text.slice(thinkStart + 7, thinkEnd)
+                    : result.text.slice(0, thinkEnd);
+                const cleanText = result.text.slice(thinkEnd + 8).trimStart();
+                return {
+                  reasoning_content:
+                    result.reasoning_content || thinkContent,
+                  content: cleanText,
+                };
+              }
+              return {
+                reasoning_content: result.reasoning_content,
+                content: result.text,
+              };
+            })(),
           },
         },
       );
