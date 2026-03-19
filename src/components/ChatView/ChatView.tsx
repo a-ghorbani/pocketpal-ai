@@ -473,20 +473,33 @@ export const ChatView = observer(
       }
 
       const totalH = navContentHeight;
+      const maxScroll = Math.max(1, totalH - navViewportHeight);
 
-      // In inverted FlatList: scrollY=0 → bottom (newest), scrollY=(totalH-viewport) → top (oldest)
-      const visibleTop = navScrollY + navViewportHeight;
+      // Determine window range:
+      // - Content ≤ MAX_WINDOW_PX (~1000 lines): show ALL content in the track
+      // - Content > MAX_WINDOW_PX: sliding window around current viewport
+      let windowStart: number;
+      let windowEnd: number;
 
-      // Window: show last MAX_WINDOW_PX pixels from the current position
-      const windowEnd = visibleTop;
-      const windowStart = Math.max(0, windowEnd - MAX_WINDOW_PX);
+      if (totalH <= MAX_WINDOW_PX) {
+        // Full-content mode: entire document fits on the progress bar
+        windowStart = 0;
+        windowEnd = totalH;
+      } else {
+        // Windowed mode: show MAX_WINDOW_PX around current viewport
+        const visibleTop = navScrollY + navViewportHeight;
+        windowEnd = visibleTop;
+        windowStart = Math.max(0, windowEnd - MAX_WINDOW_PX);
+      }
+
       const windowSize = windowEnd - windowStart;
-
       if (windowSize === 0) {
         return {nodes: [] as UserMessageNode[], scrollFraction: 0};
       }
 
-      const scrollFraction = 1 - (navScrollY - windowStart) / windowSize;
+      // Map scroll position to 0..1 within the window
+      // scrollY=0 (bottom) → fraction=1, scrollY=maxScroll (top) → fraction≈0
+      const scrollFraction = 1 - navScrollY / maxScroll;
 
       // Compute cumulative heights using actual measured heights when available,
       // falling back to average for unmeasured items.
@@ -508,10 +521,18 @@ export const ChatView = observer(
 
       const nodes: UserMessageNode[] = [];
 
+      // Node position formula: align with thumb when the message is at
+      // the top of viewport. When scrollY = pixelFromBottom - viewportH,
+      // scrollFraction = 1 - (pixelFromBottom - viewportH) / maxScroll.
+      // So node position = 1 - max(0, pixelFromBottom - viewportH) / maxScroll.
       userMessageIndices.forEach(idx => {
         const pixelFromBottom = cumH[idx] * scale;
         if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
-          const position = 1 - (pixelFromBottom - windowStart) / windowSize;
+          const scrollYWhenAtTop = Math.max(0, pixelFromBottom - navViewportHeight);
+          const position = Math.max(
+            0,
+            Math.min(1, 1 - scrollYWhenAtTop / maxScroll),
+          );
           nodes.push({index: idx, position});
         }
       });
