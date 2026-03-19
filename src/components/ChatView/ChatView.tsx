@@ -316,6 +316,47 @@ export const ChatView = observer(
       [keyboard, trackingKeyboardMovement, bottomOffset],
     );
 
+    // ============ CHAT NAVIGATION BAR STATE ============
+    // JS-thread state for navigation bar (doesn't need 60fps)
+    const [navScrollY, setNavScrollY] = React.useState(0);
+    const [navContentHeight, setNavContentHeight] = React.useState(0);
+    const [navViewportHeight, setNavViewportHeight] = React.useState(0);
+
+    // Approximate pixel height for "1000 visual lines" (~20px per line)
+    const MAX_WINDOW_PX = 20000;
+
+    // Throttle nav state updates to avoid excessive re-renders
+    const navUpdateTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
+
+    // updateNavState: stable function for runOnJS in the scroll handler worklet.
+    // Uses a ref so the worklet always has a valid __remoteFunction binding,
+    // even across re-renders triggered by MobX observer.
+    const updateNavStateImpl = React.useCallback(
+      (scrollY: number, contentH: number, viewportH: number) => {
+        if (navUpdateTimer.current) {
+          return;
+        }
+        navUpdateTimer.current = setTimeout(() => {
+          navUpdateTimer.current = null;
+          setNavScrollY(scrollY);
+          setNavContentHeight(contentH);
+          setNavViewportHeight(viewportH);
+        }, 100);
+      },
+      [],
+    );
+    const updateNavStateRef = React.useRef(updateNavStateImpl);
+    updateNavStateRef.current = updateNavStateImpl;
+    const updateNavState = React.useCallback(
+      (scrollY: number, contentH: number, viewportH: number) => {
+        updateNavStateRef.current(scrollY, contentH, viewportH);
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [],
+    );
+
     // ============ SCROLL TRACKING & SCROLL-TO-BOTTOM ============
     // Shared values for tracking scroll position and content overflow
     const underflow = useSharedValue(true);
@@ -327,6 +368,10 @@ export const ChatView = observer(
       isMounted.value = true;
       return () => {
         isMounted.value = false;
+        if (navUpdateTimer.current) {
+          clearTimeout(navUpdateTimer.current);
+          navUpdateTimer.current = null;
+        }
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -384,34 +429,6 @@ export const ChatView = observer(
         offset: 0,
       });
     }, []);
-
-    // ============ CHAT NAVIGATION BAR STATE ============
-    // JS-thread state for navigation bar (doesn't need 60fps)
-    const [navScrollY, setNavScrollY] = React.useState(0);
-    const [navContentHeight, setNavContentHeight] = React.useState(0);
-    const [navViewportHeight, setNavViewportHeight] = React.useState(0);
-
-    // Approximate pixel height for "1000 visual lines" (~20px per line)
-    const MAX_WINDOW_PX = 20000;
-
-    // Throttle nav state updates to avoid excessive re-renders
-    const navUpdateTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
-      null,
-    );
-    const updateNavState = React.useCallback(
-      (scrollY: number, contentH: number, viewportH: number) => {
-        if (navUpdateTimer.current) {
-          return;
-        }
-        navUpdateTimer.current = setTimeout(() => {
-          navUpdateTimer.current = null;
-          setNavScrollY(scrollY);
-          setNavContentHeight(contentH);
-          setNavViewportHeight(viewportH);
-        }, 100);
-      },
-      [],
-    );
 
     // ============ MESSAGE PROCESSING & CALCULATIONS ============
     // Calculate chat messages with date headers and user names
