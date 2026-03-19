@@ -129,8 +129,7 @@ export const AboutScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
               <Text style={styles.llamaBuildText}>
-                llama.cpp {BuildInfo.number} ({BuildInfo.commit.substring(0, 7)}
-                )
+                llama.cpp {BuildInfo.number}
               </Text>
             </View>
           </View>
