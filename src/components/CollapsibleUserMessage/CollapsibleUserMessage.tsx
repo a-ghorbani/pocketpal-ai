@@ -40,8 +40,7 @@ export const CollapsibleUserMessage: React.FC<CollapsibleUserMessageProps> =
 
     return (
       <View>
-        <View
-          style={!expanded ? styles.collapsedContent : undefined}>
+        <View style={!expanded ? styles.collapsedContent : undefined}>
           <View onLayout={handleLayout}>{children}</View>
         </View>
 
