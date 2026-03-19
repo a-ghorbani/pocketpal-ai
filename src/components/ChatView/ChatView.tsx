@@ -373,147 +373,6 @@ export const ChatView = observer(
       });
     }, []);
 
-    // ============ CHAT NAVIGATION BAR COMPUTATIONS ============
-    // Find indices of user messages in chatMessages (inverted list: index 0 = newest)
-    const userMessageIndices = React.useMemo(() => {
-      const indices: number[] = [];
-      chatMessages.forEach((msg, i) => {
-        if (msg.type !== 'dateHeader' && msg.author?.id === user.id) {
-          indices.push(i);
-        }
-      });
-      return indices;
-    }, [chatMessages, user.id]);
-
-    // Compute navigation bar props
-    const navBarProps = React.useMemo(() => {
-      if (
-        chatMessages.length === 0 ||
-        navContentHeight === 0 ||
-        navViewportHeight === 0
-      ) {
-        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
-      }
-
-      const totalH = navContentHeight;
-
-      // In inverted FlatList: scrollY=0 → bottom (newest), scrollY=(totalH-viewport) → top (oldest)
-      // The "topmost visible point" (furthest from bottom) = navScrollY + navViewportHeight
-      // This represents how far "up" the user has scrolled in pixel terms
-      const visibleTop = navScrollY + navViewportHeight;
-
-      // Window: show last MAX_WINDOW_PX pixels from the current position
-      const windowEnd = visibleTop;
-      const windowStart = Math.max(0, windowEnd - MAX_WINDOW_PX);
-      const windowSize = windowEnd - windowStart;
-
-      if (windowSize === 0) {
-        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
-      }
-
-      // Scroll fraction: where is the current viewport within the window?
-      // navScrollY=0 → at bottom of window → fraction=1
-      // navScrollY=max within window → at top of window → fraction=0
-      const scrollFraction = 1 - (navScrollY - windowStart) / windowSize;
-
-      // Calculate node positions for user messages
-      // Approximate each message's pixel position: in inverted list,
-      // index 0 is at the bottom (offset=0), last index is at the top
-      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
-      const nodes: UserMessageNode[] = [];
-
-      userMessageIndices.forEach(idx => {
-        // Approximate pixel offset from bottom for this message
-        const pixelFromBottom = idx * avgItemHeight;
-
-        // Check if it falls within the window
-        if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
-          // Position within the window (0=top of window, 1=bottom of window)
-          const position = 1 - (pixelFromBottom - windowStart) / windowSize;
-          nodes.push({index: idx, position});
-        }
-      });
-
-      return {nodes, scrollFraction};
-    }, [
-      chatMessages.length,
-      navContentHeight,
-      navViewportHeight,
-      navScrollY,
-      userMessageIndices,
-      MAX_WINDOW_PX,
-    ]);
-
-    // Jump to previous user message (older = higher index in inverted list)
-    const handleNavPrevious = React.useCallback(() => {
-      if (userMessageIndices.length === 0 || navContentHeight === 0) {
-        return;
-      }
-
-      const totalH = navContentHeight;
-      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
-
-      // Current position from bottom in items
-      const currentItemApprox = navScrollY / avgItemHeight;
-
-      // Find the next user message with a higher index (older/above current position)
-      let targetIndex = -1;
-      for (const idx of userMessageIndices) {
-        if (idx > currentItemApprox + 0.5) {
-          targetIndex = idx;
-          break;
-        }
-      }
-
-      // If none found, wrap to the oldest user message
-      if (targetIndex === -1 && userMessageIndices.length > 0) {
-        targetIndex = userMessageIndices[userMessageIndices.length - 1];
-      }
-
-      if (targetIndex >= 0) {
-        list.current?.scrollToIndex({
-          index: targetIndex,
-          animated: true,
-          viewPosition: 1, // align to top of viewport (inverted list: 1=visual top)
-        });
-      }
-    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
-
-    // Jump to next user message (newer = lower index in inverted list)
-    const handleNavNext = React.useCallback(() => {
-      if (userMessageIndices.length === 0 || navContentHeight === 0) {
-        return;
-      }
-
-      const totalH = navContentHeight;
-      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
-
-      // Current position from bottom in items
-      const currentItemApprox = navScrollY / avgItemHeight;
-
-      // Find the next user message with a lower index (newer/below current position)
-      let targetIndex = -1;
-      for (let i = userMessageIndices.length - 1; i >= 0; i--) {
-        if (userMessageIndices[i] < currentItemApprox - 0.5) {
-          targetIndex = userMessageIndices[i];
-          break;
-        }
-      }
-
-      // If none found, wrap to the newest user message
-      if (targetIndex === -1 && userMessageIndices.length > 0) {
-        targetIndex = userMessageIndices[0];
-      }
-
-      if (targetIndex >= 0) {
-        list.current?.scrollToIndex({
-          index: targetIndex,
-          animated: true,
-          viewPosition: 1, // align to top of viewport (inverted list: 1=visual top)
-        });
-      }
-    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
-
     // ============ CHAT NAVIGATION BAR STATE ============
     // JS-thread state for navigation bar (doesn't need 60fps)
     const [navScrollY, setNavScrollY] = React.useState(0);
@@ -553,6 +412,119 @@ export const ChatView = observer(
     });
 
     const previousChatMessages = usePrevious(chatMessages);
+
+    // ============ CHAT NAVIGATION BAR COMPUTATIONS ============
+    // Find indices of user messages in chatMessages (inverted list: index 0 = newest)
+    const userMessageIndices = React.useMemo(() => {
+      const indices: number[] = [];
+      chatMessages.forEach((msg, i) => {
+        if (msg.type !== 'dateHeader' && msg.author?.id === user.id) {
+          indices.push(i);
+        }
+      });
+      return indices;
+    }, [chatMessages, user.id]);
+
+    // Compute navigation bar props
+    const navBarProps = React.useMemo(() => {
+      if (
+        chatMessages.length === 0 ||
+        navContentHeight === 0 ||
+        navViewportHeight === 0
+      ) {
+        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
+      }
+
+      const totalH = navContentHeight;
+
+      // In inverted FlatList: scrollY=0 → bottom (newest), scrollY=(totalH-viewport) → top (oldest)
+      const visibleTop = navScrollY + navViewportHeight;
+
+      // Window: show last MAX_WINDOW_PX pixels from the current position
+      const windowEnd = visibleTop;
+      const windowStart = Math.max(0, windowEnd - MAX_WINDOW_PX);
+      const windowSize = windowEnd - windowStart;
+
+      if (windowSize === 0) {
+        return {nodes: [] as UserMessageNode[], scrollFraction: 0};
+      }
+
+      const scrollFraction = 1 - (navScrollY - windowStart) / windowSize;
+
+      const avgItemHeight = totalH / Math.max(1, chatMessages.length);
+      const nodes: UserMessageNode[] = [];
+
+      userMessageIndices.forEach(idx => {
+        const pixelFromBottom = idx * avgItemHeight;
+        if (pixelFromBottom >= windowStart && pixelFromBottom <= windowEnd) {
+          const position = 1 - (pixelFromBottom - windowStart) / windowSize;
+          nodes.push({index: idx, position});
+        }
+      });
+
+      return {nodes, scrollFraction};
+    }, [
+      chatMessages.length,
+      navContentHeight,
+      navViewportHeight,
+      navScrollY,
+      userMessageIndices,
+      MAX_WINDOW_PX,
+    ]);
+
+    // Jump to previous user message (older = higher index in inverted list)
+    const handleNavPrevious = React.useCallback(() => {
+      if (userMessageIndices.length === 0 || navContentHeight === 0) {
+        return;
+      }
+      const avgItemHeight = navContentHeight / Math.max(1, chatMessages.length);
+      const currentItemApprox = navScrollY / avgItemHeight;
+
+      let targetIndex = -1;
+      for (const idx of userMessageIndices) {
+        if (idx > currentItemApprox + 0.5) {
+          targetIndex = idx;
+          break;
+        }
+      }
+      if (targetIndex === -1 && userMessageIndices.length > 0) {
+        targetIndex = userMessageIndices[userMessageIndices.length - 1];
+      }
+      if (targetIndex >= 0) {
+        list.current?.scrollToIndex({
+          index: targetIndex,
+          animated: true,
+          viewPosition: 1,
+        });
+      }
+    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
+
+    // Jump to next user message (newer = lower index in inverted list)
+    const handleNavNext = React.useCallback(() => {
+      if (userMessageIndices.length === 0 || navContentHeight === 0) {
+        return;
+      }
+      const avgItemHeight = navContentHeight / Math.max(1, chatMessages.length);
+      const currentItemApprox = navScrollY / avgItemHeight;
+
+      let targetIndex = -1;
+      for (let i = userMessageIndices.length - 1; i >= 0; i--) {
+        if (userMessageIndices[i] < currentItemApprox - 0.5) {
+          targetIndex = userMessageIndices[i];
+          break;
+        }
+      }
+      if (targetIndex === -1 && userMessageIndices.length > 0) {
+        targetIndex = userMessageIndices[0];
+      }
+      if (targetIndex >= 0) {
+        list.current?.scrollToIndex({
+          index: targetIndex,
+          animated: true,
+          viewPosition: 1,
+        });
+      }
+    }, [userMessageIndices, navContentHeight, navScrollY, chatMessages.length]);
 
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(

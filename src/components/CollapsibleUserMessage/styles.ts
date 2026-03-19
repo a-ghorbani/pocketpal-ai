@@ -13,11 +13,9 @@ export const createStyles = (theme: Theme) =>
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: 24, // above the toggle button
+      bottom: 24,
       height: 40,
-      background: undefined, // RN doesn't support CSS gradient
       backgroundColor: 'transparent',
-      // Use a semi-transparent overlay to hint at hidden content
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.outlineVariant,
     },
