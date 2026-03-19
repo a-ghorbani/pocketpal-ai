@@ -327,25 +327,38 @@ export const ChatView = observer(
     // Approximate pixel height for "1000 visual lines" (~20px per line)
     const MAX_WINDOW_PX = 20000;
 
-    // Throttle nav state updates to avoid excessive re-renders
+    // Throttle nav state updates to avoid excessive re-renders.
+    // Uses a "trailing" throttle: always stores the latest values in a ref,
+    // and the timer fires with whatever is newest — no stale closures.
     const navUpdateTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
       null,
     );
+    const navLatestValues = React.useRef({
+      scrollY: 0,
+      contentH: 0,
+      viewportH: 0,
+    });
 
     // updateNavState: stable function for runOnJS in the scroll handler worklet.
     // Uses a ref so the worklet always has a valid __remoteFunction binding,
     // even across re-renders triggered by MobX observer.
     const updateNavStateImpl = React.useCallback(
       (scrollY: number, contentH: number, viewportH: number) => {
+        // Always store the latest values
+        navLatestValues.current.scrollY = scrollY;
+        navLatestValues.current.contentH = contentH;
+        navLatestValues.current.viewportH = viewportH;
+
         if (navUpdateTimer.current) {
-          return;
+          return; // Timer already pending — it will read the latest ref values
         }
         navUpdateTimer.current = setTimeout(() => {
           navUpdateTimer.current = null;
-          setNavScrollY(scrollY);
-          setNavContentHeight(contentH);
-          setNavViewportHeight(viewportH);
-        }, 100);
+          const latest = navLatestValues.current;
+          setNavScrollY(latest.scrollY);
+          setNavContentHeight(latest.contentH);
+          setNavViewportHeight(latest.viewportH);
+        }, 32);
       },
       [],
     );
@@ -478,23 +491,31 @@ export const ChatView = observer(
     // Reused by navBarProps and navigation handlers.
     const buildCumulativeHeights = React.useCallback(() => {
       const len = chatMessages.length;
-      const totalH = navContentHeight;
-      const avgH = totalH / Math.max(1, len);
       const heights = itemHeightsRef.current;
+
+      // 1. 基于已测量到的真实消息，计算一个更靠谱的平均高度
+      let measuredSum = 0;
+      let measuredCount = 0;
+      for (let i = 0; i < len; i++) {
+        const h = heights.get(i);
+        if (h !== undefined) {
+          measuredSum += h;
+          measuredCount++;
+        }
+      }
+      // 如果还没渲染出任何内容，给一个合理的默认高度（比如 80px）
+      const avgH = measuredCount > 0 ? measuredSum / measuredCount : 80;
+
+      // 2. 依次累加高度，保留真实的物理空间
       const cumH = new Float64Array(len + 1);
       for (let i = 0; i < len; i++) {
         cumH[i + 1] = cumH[i] + (heights.get(i) ?? avgH);
       }
-      // Scale so cumulative total matches actual contentSize
-      const measured = cumH[len];
-      const scale = measured > 0 ? totalH / measured : 1;
-      if (scale !== 1) {
-        for (let i = 1; i <= len; i++) {
-          cumH[i] *= scale;
-        }
-      }
+
+      // 3. 彻底干掉原本的 scale 拉伸逻辑！
+      // 直接返回真实的累加高度，允许顶部/底部留有真实的 Header/Footer 空隙
       return cumH;
-    }, [chatMessages.length, navContentHeight]);
+    }, [chatMessages.length]);
 
     // Compute navigation bar props.
     //
@@ -558,7 +579,8 @@ export const ChatView = observer(
       const nodes: UserMessageNode[] = [];
       const winEnd = winStart + winSize;
       userMessageIndices.forEach(idx => {
-        const px = cumH[idx];
+        // cumH[idx+1] = top edge of message idx (the "standard position" reference)
+        const px = cumH[idx + 1];
         if (px >= winStart && px <= winEnd) {
           const position = 1 - (px - winStart) / winSize;
           nodes.push({index: idx, position});
@@ -597,11 +619,11 @@ export const ChatView = observer(
       const cumH = buildCumulativeHeights();
       const vpTop = navScrollY + navViewportHeight;
 
-      // Find the last user message whose bottom edge is at or below vpTop
+      // Find the last user message whose top edge is at or below vpTop
       // (i.e., visible on screen or below). Messages after this are above viewport.
       let pos = 0;
       for (let i = 0; i < userMessageIndices.length; i++) {
-        if (cumH[userMessageIndices[i]] <= vpTop) {
+        if (cumH[userMessageIndices[i] + 1] <= vpTop) {
           pos = i;
         } else {
           break;
@@ -647,10 +669,10 @@ export const ChatView = observer(
 
       // Skip cluster: keep going older while next message is within one screen
       const cumH = buildCumulativeHeights();
-      const anchorH = cumH[userMessageIndices[cursor]];
+      const anchorH = cumH[userMessageIndices[cursor] + 1];
       while (
         cursor + 1 < len &&
-        cumH[userMessageIndices[cursor + 1]] - anchorH < navViewportHeight
+        cumH[userMessageIndices[cursor + 1] + 1] - anchorH < navViewportHeight
       ) {
         cursor++;
       }
@@ -688,10 +710,10 @@ export const ChatView = observer(
 
       // Skip cluster: keep going newer while next message is within one screen
       const cumH = buildCumulativeHeights();
-      const anchorH = cumH[userMessageIndices[cursor]];
+      const anchorH = cumH[userMessageIndices[cursor] + 1];
       while (
         cursor - 1 >= 0 &&
-        anchorH - cumH[userMessageIndices[cursor - 1]] < navViewportHeight
+        anchorH - cumH[userMessageIndices[cursor - 1] + 1] < navViewportHeight
       ) {
         cursor--;
       }
