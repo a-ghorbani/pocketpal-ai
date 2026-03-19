@@ -27,6 +27,27 @@ A regrettable omission: I intended to implement real-time monitoring of memory (
   <img src="https://github.com/user-attachments/assets/d33515d5-eefd-47ff-a51b-ee1248b77b01" width="32%" />
 </p>
 
+Added compilation for Apple IPA installers.
+Split the single "Think" button into three buttons: whether to enable the UI-layer thinking box, whether to activate thinking at the parameter level, and whether to incorporate thinking into the context.
+New Architecture Goals --- Normalized inference flow
+① Jinja Built-in + Plain Text A { messages, jinja: true } ✓ Model Built-in
+② Jinja Built-in + Multimodal A { messages, jinja: true } ✓ Model Built-in
+③ Custom Jinja + Plain Text A { messages, chatTemplate, jinja: true } ✓ User Customized
+④ Custom Jinja + Multimodal A { messages, chatTemplate, jinja: true } ✓ User Customized
+⑤ Nunjucks + Plain Text B { prompt, jinja: false } ✓ JS Rendering
+⑥ Nunjucks + Multimodal A { messages, jinja: true } ✗ Falls back to Built-in Template (+ UI Hint)
+Only two JS remain on the entire pipeline.
+JS | Applicable Scenario | Can it be avoided?
+token callback | All 6 scenarios | No, as it is the sole streaming mechanism for llama.rn.
+applyChatTemplate() | Only scenario ⑤ | If users use Jinja exclusively, this JS will not be triggered at all.
+
+Just need to synchronize adaptations whenever llama.rn is updated.
+
+Emphasize that this version is developed based on the original repository's 1.12.2; however, for this version of llama.cpp, control over Qwen 3.5's thinking cannot be handled correctly unless special rules are added to inputs, outputs, and the UI, which is quite messy. This is not planned at the moment; we await official adaptation from LLAMA. Moreover, this new version supports custom templates, allowing you to add {%- set enable_thinking = false %} to control whether thinking occurs. Interestingly, however, the older version 1.11.21 can still use its "Think" button to control Qwen 3.5's thinking.
+I have optimized the compilation for versions 1.11.21 and 1.12.2, enabling direct generation of APK and IPA installer packages via actions; feel free to compile and test them yourself.
+https://github.com/CCSSNE/bianyi-1.11.21
+https://github.com/CCSSNE/bianyi-1.12.2
+
 # PocketPal AI 📱🚀
 
 PocketPal AI is a pocket-sized AI assistant powered by small language models (SLMs) that run directly on your phone. Designed for both iOS and Android, PocketPal AI lets you interact with various SLMs without the need for an internet connection. Your privacy is fully protected as all processing happens entirely on-device — your conversations, prompts, and data never leave your phone or get stored on external servers.
