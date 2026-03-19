@@ -1005,39 +1005,37 @@ export const SettingsScreen: React.FC = observer(() => {
                   />
                 </View>
 
-                {/* Display Memory Usage (iOS only) */}
-                {Platform.OS === 'ios' && (
-                  <>
-                    <Divider />
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <View style={styles.labelWithIconContainer}>
-                          <CpuChipIcon
-                            width={20}
-                            height={20}
-                            style={styles.settingIcon}
-                            stroke={theme.colors.onSurface}
-                          />
-                          <Text variant="titleMedium" style={styles.textLabel}>
-                            {l10n.settings.displayMemoryUsage}
-                          </Text>
-                        </View>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {l10n.settings.displayMemoryUsageDescription}
+                {/* Display Memory Usage */}
+                <>
+                  <Divider />
+                  <View style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <View style={styles.labelWithIconContainer}>
+                        <CpuChipIcon
+                          width={20}
+                          height={20}
+                          style={styles.settingIcon}
+                          stroke={theme.colors.onSurface}
+                        />
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          {l10n.settings.displayMemoryUsage}
                         </Text>
                       </View>
-                      <Switch
-                        testID="display-memory-usage-switch"
-                        value={uiStore.displayMemUsage}
-                        onValueChange={value =>
-                          uiStore.setDisplayMemUsage(value)
-                        }
-                      />
+                      <Text
+                        variant="labelSmall"
+                        style={styles.textDescription}>
+                        {l10n.settings.displayMemoryUsageDescription}
+                      </Text>
                     </View>
-                  </>
-                )}
+                    <Switch
+                      testID="display-memory-usage-switch"
+                      value={uiStore.displayMemUsage}
+                      onValueChange={value =>
+                        uiStore.setDisplayMemUsage(value)
+                      }
+                    />
+                  </View>
+                </>
               </View>
             </Card.Content>
           </Card>
