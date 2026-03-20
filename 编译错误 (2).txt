@@ -1,0 +1,72 @@
+Run bash ./gradlew assembleRelease
+Downloading https://services.gradle.org/distributions/gradle-9.0.0-bin.zip
+............10%.............20%.............30%.............40%.............50%............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 9.0.0!
+
+Here are the highlights of this release:
+ - Configuration Cache is the recommended execution mode
+ - Gradle requires JVM 17 or higher to run
+ - Build scripts use Kotlin 2.2 and Groovy 4.0
+ - Improved Kotlin DSL script compilation avoidance
+
+For more details see https://docs.gradle.org/9.0.0/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors
+> Task :gradle-plugin:settings-plugin:processResources
+> Task :gradle-plugin:shared:compileKotlin
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar
+> Task :gradle-plugin:settings-plugin:compileKotlin
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes
+> Task :gradle-plugin:settings-plugin:jar
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
+> Task :gradle-plugin:react-native-gradle-plugin:processResources
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:classes
+> Task :gradle-plugin:react-native-gradle-plugin:jar
+
+> Configure project :app
+Reading env from: .env
+
+> Configure project :llama.rn
+🚫 Hexagon SDK not found — building CPU-only
+
+[Incubating] Problems report is available at: file:///home/runner/work/pocketpal-experimental/pocketpal-experimental/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.0.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+433 actionable tasks: 433 executed
+
+* What went wrong:
+Execution failed for task ':react-native-math-view:compileReleaseJavaWithJavac'.
+> Compilation failed; see the compiler output below.
+  Note: Recompile with -Xlint:deprecation for details.
+  Note: /home/runner/work/pocketpal-experimental/pocketpal-experimental/node_modules/react-native-math-view/android/src/main/java/io/autodidact/rnmathview/RNMathViewManager.java uses unchecked or unsafe operations.
+  /home/runner/work/pocketpal-experimental/pocketpal-experimental/node_modules/react-native-math-view/android/src/main/java/io/autodidact/rnmathview/SVGShadowNode.java:14: error: cannot find symbol
+  import com.facebook.react.uimanager.UIManagerModuleListener;
+                                     ^
+    symbol:   class UIManagerModuleListener
+    location: package com.facebook.react.uimanager
+  Note: Recompile with -Xlint:unchecked for details.
+  Note: Some input files use or override a deprecated API.
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to generate a Build Scan (Powered by Develocity).
+
+BUILD FAILED in 19m 23s
+Error: Process completed with exit code 1.
