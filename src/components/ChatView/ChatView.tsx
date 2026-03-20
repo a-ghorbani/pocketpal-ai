@@ -657,24 +657,39 @@ export const ChatView = observer(
       }
 
       let cursor = navCursorRef.current;
+      let skipCluster = false;
+
       if (cursor === -1) {
+        // First press ever (or after message list change): initialize from scroll position.
         cursor = initNavCursor() + 1;
+        skipCluster = true;
       } else {
-        cursor = cursor + 1;
+        const currentPos = initNavCursor();
+        if (currentPos <= cursor - 1) {
+          // User manually scrolled back (newer direction) since last button press.
+          // Cursor is stale — re-initialize from the current scroll position.
+          cursor = currentPos + 1;
+          skipCluster = true;
+        } else {
+          cursor = cursor + 1;
+        }
       }
 
       if (cursor >= len) {
         cursor = len - 1;
       }
 
-      // Skip cluster: keep going older while next message is within one screen
-      const cumH = buildCumulativeHeights();
-      const anchorH = cumH[userMessageIndices[cursor] + 1];
-      while (
-        cursor + 1 < len &&
-        cumH[userMessageIndices[cursor + 1] + 1] - anchorH < navViewportHeight
-      ) {
-        cursor++;
+      // Skip cluster: keep going older while next message is within one screen.
+      // Skipped when cursor was just (re-)initialized to avoid overshooting.
+      if (!skipCluster) {
+        const cumH = buildCumulativeHeights();
+        const anchorH = cumH[userMessageIndices[cursor] + 1];
+        while (
+          cursor + 1 < len &&
+          cumH[userMessageIndices[cursor + 1] + 1] - anchorH < navViewportHeight
+        ) {
+          cursor++;
+        }
       }
 
       navCursorRef.current = cursor;
@@ -698,24 +713,39 @@ export const ChatView = observer(
       }
 
       let cursor = navCursorRef.current;
+      let skipCluster = false;
+
       if (cursor === -1) {
+        // First press ever (or after message list change): initialize from scroll position.
         cursor = initNavCursor() - 1;
+        skipCluster = true;
       } else {
-        cursor = cursor - 1;
+        const currentPos = initNavCursor();
+        if (currentPos >= cursor + 1) {
+          // User manually scrolled forward (older direction) since last button press.
+          // Cursor is stale — re-initialize from the current scroll position.
+          cursor = currentPos - 1;
+          skipCluster = true;
+        } else {
+          cursor = cursor - 1;
+        }
       }
 
       if (cursor < 0) {
         cursor = 0;
       }
 
-      // Skip cluster: keep going newer while next message is within one screen
-      const cumH = buildCumulativeHeights();
-      const anchorH = cumH[userMessageIndices[cursor] + 1];
-      while (
-        cursor - 1 >= 0 &&
-        anchorH - cumH[userMessageIndices[cursor - 1] + 1] < navViewportHeight
-      ) {
-        cursor--;
+      // Skip cluster: keep going newer while next message is within one screen.
+      // Skipped when cursor was just (re-)initialized to avoid overshooting.
+      if (!skipCluster) {
+        const cumH = buildCumulativeHeights();
+        const anchorH = cumH[userMessageIndices[cursor] + 1];
+        while (
+          cursor - 1 >= 0 &&
+          anchorH - cumH[userMessageIndices[cursor - 1] + 1] < navViewportHeight
+        ) {
+          cursor--;
+        }
       }
 
       navCursorRef.current = cursor;
@@ -1223,7 +1253,7 @@ export const ChatView = observer(
                 bottom:
                   bottomComponentHeight +
                   40 /* button height */ +
-                  20 /* padding */,
+                  60 /* padding */,
               },
             ]}>
             <KeyboardStickyView offset={{closed: 0, opened: insets.bottom}}>
