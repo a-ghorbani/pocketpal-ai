@@ -22,9 +22,10 @@ Since the majority of the users of this application are those who wish to gain a
 A regrettable omission: I intended to implement real-time monitoring of memory (both RAM and virtual) usage, CPU utilization, and power consumption for performance debugging after evaluating feasibility, but decided against it due to complexity.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="32%" />
-  <img src="https://github.com/user-attachments/assets/649eab64-8b39-4064-a34a-9ce29a9e538c" width="32%" />
-  <img src="https://github.com/user-attachments/assets/d33515d5-eefd-47ff-a51b-ee1248b77b01" width="32%" />
+  <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="25%" />
+  <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="25%" />
+  <img src="https://github.com/user-attachments/assets/9a808f3c-256e-419d-a455-2f337c04eb17" width="25%" />
+  <img src="https://github.com/user-attachments/assets/a1458b22-8833-4c16-8c9a-42b8415285d5" width="25%" />
 </p>
 
 * Added compilation for **Apple IPA installers**.
