@@ -504,7 +504,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setNBatch(Math.round(value))
                       }
                       min={1}
-                      max={4096}
+                      max={32768}
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
@@ -531,7 +531,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setNUBatch(Math.round(value))
                       }
                       min={1}
-                      max={4096}
+                      max={32768}
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
@@ -589,7 +589,7 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setImageMaxTokens(Math.round(value))
                       }
                       min={256}
-                      max={4096}
+                      max={32768}
                       step={1}
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
