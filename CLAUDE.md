@@ -49,10 +49,21 @@ import MathView from 'react-native-math-view/src/fallback';
 
 ---
 
+### 6. 写 mock/JS 文件时注意 prettier 格式规则
+
+**常见错误：**
+- 箭头函数单参数要去掉括号：`math =>` 而非 `(math) =>`
+- 超长字符串要换行（prettier 默认行宽 80）
+
+**规则：** 改完 `.js` / `.ts` 文件后用 `yarn lint --fix` 或手动对照规则检查，别让 prettier 错误进 CI。
+
+---
+
 ### 每次改完代码后务必在本地运行
 
 ```bash
 yarn typecheck   # 类型检查
+yarn lint        # prettier + eslint
 ```
 
 再提交，避免 CI 才发现错误。
