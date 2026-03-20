@@ -19,7 +19,9 @@ Since the majority of the users of this application are those who wish to gain a
 
 8. Add a template selector switch, allowing the selection of the chat-formatter / Nunjucks interpreter or the llama.cpp Jinja chat template interpreter.
 
-A regrettable omission: I intended to implement real-time monitoring of memory (both RAM and virtual) usage, CPU utilization, and power consumption for performance debugging after evaluating feasibility, but decided against it due to complexity.
+9. Add a progress bar featuring location markers for each conversation, along with up/down navigation toggles to quickly jump between different conversations.
+
+10. Real-time memory usage display has also been enabled on Android.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
@@ -71,14 +73,6 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 
 * [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
 * [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
-
-
-
-Add a progress bar featuring location markers for each conversation, along with up/down navigation toggles to quickly jump between different conversations.
-
-
-Added a progress bar with markers and buttons for navigating between previous/next topics, as well as a button to scroll directly to the bottom.
-
 
 # PocketPal AI 📱🚀
 
