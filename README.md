@@ -76,6 +76,8 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 Add a progress bar featuring location markers for each conversation, along with up/down navigation toggles to quickly jump between different conversations.
 
 
+Added a progress bar with markers and buttons for navigating between previous/next topics, as well as a button to scroll directly to the bottom.
+
 
 # PocketPal AI 📱🚀
 
