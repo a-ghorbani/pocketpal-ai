@@ -1,5 +1,5 @@
 import React from 'react';
-import MathView from 'react-native-math-view';
+import MathView from 'react-native-math-view/src/fallback';
 import {HTMLElementModel, HTMLContentModel} from 'react-native-render-html';
 import type {
   CustomBlockRenderer,
