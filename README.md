@@ -30,6 +30,8 @@ Since the majority of the users of this application are those who wish to gain a
 * Whether to activate thinking at the parameter level.
 * Whether to incorporate thinking into the context.
 
+12. Both the LLM and visual encoder are now controlled by settings; previously, the visual encoder was forced to use the GPU, which was inefficient and could cause Android crashes.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
