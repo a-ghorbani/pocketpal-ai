@@ -649,6 +649,17 @@ export const ChatView = observer(
     //     is within navViewportHeight of the current target → stop at the newest
     //     in that cluster.
 
+    // Check if the user message at the given position is off-screen
+    // (its top edge is below the viewport bottom in content coordinates).
+    const isMessageOffScreen = React.useCallback(
+      (pos: number) => {
+        const cumH = buildCumulativeHeights();
+        const msgTop = cumH[userMessageIndices[pos] + 1];
+        return msgTop < navScrollY;
+      },
+      [buildCumulativeHeights, userMessageIndices, navScrollY],
+    );
+
     // Jump to previous user message (older = higher position in array = scroll UP).
     const handleNavPrevious = React.useCallback(() => {
       const len = userMessageIndices.length;
@@ -661,14 +672,24 @@ export const ChatView = observer(
 
       if (cursor === -1) {
         // First press ever (or after message list change): initialize from scroll position.
-        cursor = initNavCursor() + 1;
+        const pos = initNavCursor();
+        if (isMessageOffScreen(pos)) {
+          // Current message's standard position is off-screen → jump to it first.
+          cursor = pos;
+        } else {
+          cursor = pos + 1;
+        }
         skipCluster = true;
       } else {
         const currentPos = initNavCursor();
         if (currentPos <= cursor - 1) {
           // User manually scrolled back (newer direction) since last button press.
           // Cursor is stale — re-initialize from the current scroll position.
-          cursor = currentPos + 1;
+          if (isMessageOffScreen(currentPos)) {
+            cursor = currentPos;
+          } else {
+            cursor = currentPos + 1;
+          }
           skipCluster = true;
         } else {
           cursor = cursor + 1;
@@ -701,6 +722,7 @@ export const ChatView = observer(
     }, [
       userMessageIndices,
       initNavCursor,
+      isMessageOffScreen,
       buildCumulativeHeights,
       navViewportHeight,
     ]);
@@ -717,14 +739,24 @@ export const ChatView = observer(
 
       if (cursor === -1) {
         // First press ever (or after message list change): initialize from scroll position.
-        cursor = initNavCursor() - 1;
+        const pos = initNavCursor();
+        if (isMessageOffScreen(pos)) {
+          // Current message's standard position is off-screen → jump to it first.
+          cursor = pos;
+        } else {
+          cursor = pos - 1;
+        }
         skipCluster = true;
       } else {
         const currentPos = initNavCursor();
         if (currentPos >= cursor + 1) {
           // User manually scrolled forward (older direction) since last button press.
           // Cursor is stale — re-initialize from the current scroll position.
-          cursor = currentPos - 1;
+          if (isMessageOffScreen(currentPos)) {
+            cursor = currentPos;
+          } else {
+            cursor = currentPos - 1;
+          }
           skipCluster = true;
         } else {
           cursor = cursor - 1;
@@ -757,6 +789,7 @@ export const ChatView = observer(
     }, [
       userMessageIndices,
       initNavCursor,
+      isMessageOffScreen,
       buildCumulativeHeights,
       navViewportHeight,
     ]);
