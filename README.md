@@ -23,18 +23,18 @@ Since the majority of the users of this application are those who wish to gain a
 
 10. Real-time memory usage display has also been enabled on Android.
 
+11. * Added compilation for **Apple IPA installers**.
+* Split the single "Think" button into **three buttons**:
+    * Whether to enable the UI-layer thinking box.
+    * Whether to activate thinking at the parameter level.
+    * Whether to incorporate thinking into the context.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
   <img src="https://github.com/user-attachments/assets/9a808f3c-256e-419d-a455-2f337c04eb17" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1458b22-8833-4c16-8c9a-42b8415285d5" width="24%" />
 </p>
-
-* Added compilation for **Apple IPA installers**.
-* Split the single "Think" button into **three buttons**:
-    * Whether to enable the UI-layer thinking box.
-    * Whether to activate thinking at the parameter level.
-    * Whether to incorporate thinking into the context.
 
 ## New Architecture Goals --- Normalized inference flow
 
@@ -59,7 +59,6 @@ Only two JS remain on the entire pipeline.
 > Just need to synchronize adaptations whenever **llama.rn** is updated.
 
 ---
-
 
 ### Version Notes & Compatibility
 the new llama version 0.11.3 (app-1.12.2 This repository is also developed based on this version) can control Qwen 3.5's thinking capabilities. In the default template, versions of 9B and above possess both enable/disable functions for thinking, whereas versions below 9B do not have this feature by default. Simply copy the 9B template and apply it to the 4B, 2B, and 0.8B models; you will then be able to control thinking with the new version!!!
