@@ -180,7 +180,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20Params);
 
-      expect(migrated.version).toBe('2.1');
+      expect(migrated.version).toBe('2.2');
       expect(migrated.image_max_tokens).toBe(512);
     });
 
@@ -203,7 +203,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20ParamsWithTokens);
 
-      expect(migrated.version).toBe('2.1');
+      expect(migrated.version).toBe('2.2');
       expect(migrated.image_max_tokens).toBe(1024); // Should preserve custom value
     });
   });
