@@ -78,7 +78,7 @@ export const mockDefaultCompletionParams: CompletionParams = {
 
 export const mockCompletionParams: CompletionParams = {
   ...mockDefaultCompletionParams,
-  n_predict: 500,
+  n_predict: -1,
   temperature: 0.01,
   stop: ['<stop1>', '<stop2>'],
 };

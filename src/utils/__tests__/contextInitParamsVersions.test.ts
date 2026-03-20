@@ -117,7 +117,7 @@ describe('contextInitParamsVersions', () => {
 
     it('should preserve existing values during migration', () => {
       const settings = {
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 1024,
         n_ubatch: 512,
         n_threads: 8,
@@ -143,7 +143,7 @@ describe('contextInitParamsVersions', () => {
     it('should preserve GPU-enabled legacy settings by restoring the fallback offload value', () => {
       const legacyGpuEnabledSettings = {
         version: '1.0',
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 512,
         n_ubatch: 256,
         n_threads: 4,
@@ -165,7 +165,7 @@ describe('contextInitParamsVersions', () => {
     it('should migrate from v2.0 to v2.1 with default image_max_tokens', () => {
       const v20Params = {
         version: '2.0',
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 512,
         n_ubatch: 512,
         n_threads: 4,
@@ -187,7 +187,7 @@ describe('contextInitParamsVersions', () => {
     it('should preserve existing image_max_tokens when migrating from v2.0 to v2.1', () => {
       const v20ParamsWithTokens = {
         version: '2.0',
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 512,
         n_ubatch: 512,
         n_threads: 4,

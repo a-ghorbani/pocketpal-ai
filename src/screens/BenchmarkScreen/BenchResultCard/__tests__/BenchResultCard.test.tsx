@@ -40,7 +40,7 @@ describe('BenchResultCard', () => {
     oid: 'model-oid', // This is needed for sharing
     initSettings: {
       version: '2.0',
-      n_ctx: 2048,
+      n_ctx: 8192,
       n_batch: 512,
       n_ubatch: 128,
       n_threads: 4,
@@ -382,7 +382,7 @@ describe('BenchResultCard', () => {
         ...mockResult,
         initSettings: {
           version: '2.0',
-          n_ctx: 2048,
+          n_ctx: 8192,
           n_batch: 512,
           n_ubatch: 128,
           n_threads: 4,
@@ -412,7 +412,7 @@ describe('BenchResultCard', () => {
         ...mockResult,
         initSettings: {
           version: '2.0',
-          n_ctx: 2048,
+          n_ctx: 8192,
           n_batch: 512,
           n_ubatch: 128,
           n_threads: 4,
@@ -442,7 +442,7 @@ describe('BenchResultCard', () => {
         ...mockResult,
         initSettings: {
           version: '2.0',
-          n_ctx: 2048,
+          n_ctx: 8192,
           n_batch: 512,
           n_ubatch: 128,
           n_threads: 4,
@@ -472,7 +472,7 @@ describe('BenchResultCard', () => {
         ...mockResult,
         initSettings: {
           version: '1.0',
-          n_ctx: 2048,
+          n_ctx: 8192,
           n_batch: 512,
           n_ubatch: 128,
           n_threads: 4,
@@ -503,7 +503,7 @@ describe('BenchResultCard', () => {
         ...mockResult,
         initSettings: {
           version: '1.0',
-          n_ctx: 2048,
+          n_ctx: 8192,
           n_batch: 512,
           n_ubatch: 128,
           n_threads: 4,
@@ -535,7 +535,7 @@ describe('BenchResultCard', () => {
         ...mockResult,
         initSettings: {
           version: '2.0',
-          n_ctx: 2048,
+          n_ctx: 8192,
           n_batch: 512,
           n_ubatch: 128,
           n_threads: 4,
