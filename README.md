@@ -23,11 +23,12 @@ Since the majority of the users of this application are those who wish to gain a
 
 10. Real-time memory usage display has also been enabled on Android.
 
-11. * Added compilation for **Apple IPA installers**.
+11. Added compilation for **Apple IPA installers**.
+
 * Split the single "Think" button into **three buttons**:
-    * Whether to enable the UI-layer thinking box.
-    * Whether to activate thinking at the parameter level.
-    * Whether to incorporate thinking into the context.
+* Whether to enable the UI-layer thinking box.
+* Whether to activate thinking at the parameter level.
+* Whether to incorporate thinking into the context.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
