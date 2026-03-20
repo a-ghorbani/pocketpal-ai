@@ -13,7 +13,7 @@ import {Platform} from 'react-native';
 
 // Current version of the context init params schema
 // Increment this when adding new parameters or changing existing ones
-export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.1';
+export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.2';
 
 /**
  * Creates properly versioned ContextInitParams from ContextParams (excluding model)
@@ -57,6 +57,9 @@ export const createContextInitParams = (
 
     // v2.1+
     image_max_tokens: (params as any).image_max_tokens ?? 512, // Device-appropriate default
+
+    // v2.2+
+    vision_device: (params as any).vision_device ?? 'cpu', // Default to CPU for safety
   };
 };
 
@@ -176,6 +179,16 @@ export function migrateContextInitParams(
     migratedParams.version = '2.1';
   }
 
+  // Migration from 2.1 to 2.2: vision_device
+  if (migratedParams.version === '2.1') {
+    // Add vision_device with safe default (CPU)
+    if (migratedParams.vision_device === undefined) {
+      migratedParams.vision_device = 'cpu';
+    }
+
+    migratedParams.version = '2.2';
+  }
+
   // Ensure the final version is set correctly
   migratedParams.version = CURRENT_CONTEXT_INIT_PARAMS_VERSION;
 
@@ -237,5 +250,8 @@ export function createDefaultContextInitParams(): ContextInitParams {
 
     // v2.1 parameters
     image_max_tokens: 512, // Device-appropriate default
+
+    // v2.2 parameters
+    vision_device: 'cpu', // Default to CPU for safety
   };
 }

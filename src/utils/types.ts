@@ -526,6 +526,10 @@ export interface ContextInitParams
   /** Maximum number of tokens for image input (for dynamic resolution VLMs). Default: 512 */
   image_max_tokens?: number;
 
+  // v2.2+
+  /** Device selection for vision encoder (mmproj). Maps to use_gpu in initMultimodal. Default: 'cpu' */
+  vision_device?: 'auto' | 'gpu' | 'hexagon' | 'cpu';
+
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */
   no_gpu_devices?: boolean;

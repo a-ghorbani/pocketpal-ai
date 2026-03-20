@@ -407,6 +407,58 @@ export const SettingsScreen: React.FC = observer(() => {
               </View>
               <Divider />
 
+              {/* Vision Encoder Device Selection */}
+              <View style={styles.settingItemContainer}>
+                {deviceOptions.length > 1 ? (
+                  <>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.visionDeviceSelectionIOS
+                        : l10n.settings.visionDeviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.visionDeviceSelectionIOSDescription
+                        : l10n.settings.visionDeviceSelectionDescription}
+                    </Text>
+                    <SegmentedButtons
+                      value={
+                        modelStore.contextInitParams.vision_device ?? 'cpu'
+                      }
+                      onValueChange={deviceId => {
+                        modelStore.setVisionDevice(
+                          deviceId as
+                            | 'auto'
+                            | 'gpu'
+                            | 'hexagon'
+                            | 'cpu',
+                        );
+                      }}
+                      density="medium"
+                      buttons={deviceOptions.map(option => ({
+                        value: option.id,
+                        label: option.label,
+                        labelStyle: {
+                          fontSize: 10,
+                        },
+                        testID: `vision-device-option-${option.id}`,
+                      }))}
+                      style={styles.segmentedButtons}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.visionDeviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.visionDeviceCpuOnly}
+                    </Text>
+                  </>
+                )}
+              </View>
+              <Divider />
+
               {/* Context Size */}
               <View style={styles.settingItemContainer}>
                 <Text variant="titleMedium" style={styles.textLabel}>

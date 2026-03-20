@@ -335,6 +335,15 @@ class ModelStore {
     });
   };
 
+  setVisionDevice = (vision_device: 'auto' | 'gpu' | 'hexagon' | 'cpu') => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        vision_device,
+      };
+    });
+  };
+
   setUseMlock = (use_mlock: boolean) => {
     runInAction(() => {
       this.contextInitParams = {
@@ -1584,11 +1593,10 @@ class ModelStore {
 
           // Initialize multimodal with the new API format
           // Apply effective value: clamp image_max_tokens to n_ctx
+          const visionDevice = this.contextInitParams.vision_device ?? 'cpu';
           const success = await ctx.initMultimodal({
             path: mmProjPath,
-            use_gpu:
-              !this.contextInitParams.no_gpu_devices &&
-              (this.contextInitParams.n_gpu_layers ?? 0) > 0,
+            use_gpu: visionDevice !== 'cpu',
             image_max_tokens: Math.min(
               this.contextInitParams.image_max_tokens ?? 512,
               this.contextInitParams.n_ctx,
