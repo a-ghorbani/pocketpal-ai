@@ -1,0 +1,21 @@
+diff --git a/node_modules/react-native-math-view/android/build.gradle b/node_modules/react-native-math-view/android/build.gradle
+index 1234567..abcdefg 100644
+--- a/node_modules/react-native-math-view/android/build.gradle
++++ b/node_modules/react-native-math-view/android/build.gradle
+@@ -31,8 +31,7 @@ buildscript {
+ buildscript {
+     repositories {
+         maven { url "https://maven.google.com" }
+-        jcenter()
+         google()
+         maven {
+             url 'https://maven.google.com/'
+             name 'Google'
+@@ -50,7 +49,6 @@ allprojects {
+ allprojects {
+     repositories {
+         mavenLocal()
+         maven { url "https://maven.google.com" }
+-        jcenter()
+         google()
+         maven {
