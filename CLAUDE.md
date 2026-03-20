@@ -39,6 +39,16 @@ import MathView from 'react-native-math-view/src/fallback';
 
 ---
 
+### 5. 改动 react-native-math-view 用法后必须同步更新 Jest mock
+
+**位置：** `__mocks__/external/react-native-math-view.js`
+
+**原因：** mock 只 export 了 `default`（MathView 组件）。改用 `MathjaxFactory` 后，Jest 测试里 `MathjaxFactory` 是 undefined，导致 34 个测试套件崩溃。
+
+**规则：** 每次新增从某个库导入的 named export，先检查 `__mocks__/external/` 目录里有没有对应的 mock 文件，有的话同步加上对应的 mock 实现。
+
+---
+
 ### 每次改完代码后务必在本地运行
 
 ```bash

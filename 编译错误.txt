@@ -1,0 +1,89 @@
+1m 13s
+Run yarn test --coverage
+yarn run v1.22.22
+$ jest --coverage
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+PASS src/store/__tests__/ChatSessionStore.test.ts (5.959 s)
+  ● Console
+
+    console.log
+      checkFileExists: marking as downloaded - this should not happen: pal-db-migration-complete.flag
+
+      at Object.log (__mocks__/external/@dr.pogodin/react-native-fs.js:13:13)
+
+    console.log
+      Pal store initialized
+
+      at new log (src/store/PalStore.ts:71:13)
+
+    console.log
+      Pals number:  0
+
+      at new log (src/store/PalStore.ts:72:13)
+
+    console.log
+      checkFileExists: marking as downloaded - this should not happen: db-migration-complete.flag
+
+      at Object.log (__mocks__/external/@dr.pogodin/react-native-fs.js:13:13)
+
+    console.log
+      Pal database migration already completed
+
+      at PalRepository.log (src/repositories/PalRepository.ts:23:17)
+
+    console.log
+      Creating default Lookie pal...
+
+      at PalStore.log (src/store/PalStore.ts:700:17)
+
+    console.log
+      Pal store initialization completed
+
+      at PalStore.log (src/store/PalStore.ts:93:15)
+
+    console.error
+      Failed to load session list: Error: Database error
+          at Object.<anonymous> (/home/runner/work/pocketpal-experimental/pocketpal-experimental/src/store/__tests__/ChatSessionStore.test.ts:86:9)
+         |                               ^
+      15 |
+      16 | function useMathSvg(math: string): ParseResult | null {
+      17 |   const toSVG = mathjax.toSVG as ((m: string) => ParseResult) & {
+
+      at Object.<anonymous> (src/components/MarkdownView/MathRenderers.tsx:14:31)
+      at Object.require (src/components/MarkdownView/MarkdownView.tsx:15:1)
+      at Object.require (src/components/MarkdownView/index.ts:1:1)
+      at Object.require (src/components/index.ts:31:1)
+      at Object.require (src/components/PalsSheets/SectionDivider.tsx:10:1)
+      at Object.require (src/components/PalsSheets/__tests__/SectionDivider.test.tsx:3:1)
+
+FAIL __tests__/App.test.tsx
+  ● Test suite failed to run
+
+    TypeError: (0 , _reactNativeMathView.MathjaxFactory) is not a function
+
+      12 | type ParseResult = {svg: string; size: {width: number; height: number}};
+      13 |
+    > 14 | const mathjax = MathjaxFactory();
+         |                               ^
+      15 |
+      16 | function useMathSvg(math: string): ParseResult | null {
+      17 |   const toSVG = mathjax.toSVG as ((m: string) => ParseResult) & {
+
+      at Object.<anonymous> (src/components/MarkdownView/MathRenderers.tsx:14:31)
+      at Object.require (src/components/MarkdownView/MarkdownView.tsx:15:1)
+      at Object.require (src/components/MarkdownView/index.ts:1:1)
+      at Object.require (src/components/index.ts:31:1)
+      at Object.require (App.tsx:26:1)
+      at Object.require (__tests__/App.test.tsx:7:1)
+
+
+Test Suites: 34 failed, 92 passed, 126 total
+Tests:       1245 passed, 1245 total
+Snapshots:   0 total
+Time:        71.658 s
+Ran all test suites.
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+Error: Process completed with exit code 1.
