@@ -1,11 +1,48 @@
-import React from 'react';
-import MathView from 'react-native-math-view/src/fallback';
+import React, {useEffect, useState} from 'react';
 import {HTMLElementModel, HTMLContentModel} from 'react-native-render-html';
 import type {
   CustomBlockRenderer,
   CustomTagRendererRecord,
   HTMLElementModelRecord,
 } from 'react-native-render-html';
+// @ts-ignore - react-native-math-view has no .d.ts; imported via "main": "src"
+import {MathjaxFactory} from 'react-native-math-view';
+import {SvgFromXml} from 'react-native-svg';
+
+type ParseResult = {svg: string; size: {width: number; height: number}};
+
+const mathjax = MathjaxFactory();
+
+function useMathSvg(math: string): ParseResult | null {
+  const toSVG = mathjax.toSVG as ((m: string) => ParseResult) & {
+    cache?: Map<string, ParseResult>;
+  };
+  const [result, setResult] = useState<ParseResult | null>(
+    () => toSVG.cache?.get(math) ?? null,
+  );
+  useEffect(() => {
+    try {
+      setResult(toSVG(math));
+    } catch {
+      // ignore parse errors
+    }
+  }, [math, toSVG]);
+  return result;
+}
+
+function MathSvg({math}: {math: string}) {
+  const result = useMathSvg(math);
+  if (!result) {
+    return null;
+  }
+  return (
+    <SvgFromXml
+      xml={result.svg}
+      width={result.size.width}
+      height={result.size.height}
+    />
+  );
+}
 
 /**
  * Custom HTML element models so react-native-render-html treats
@@ -38,7 +75,7 @@ const MathBlockRenderer: CustomBlockRenderer = ({tnode}) => {
   if (!formula) {
     return null;
   }
-  return <MathView math={formula} />;
+  return <MathSvg math={formula} />;
 };
 
 const MathInlineRenderer: CustomBlockRenderer = ({tnode}) => {
@@ -46,7 +83,7 @@ const MathInlineRenderer: CustomBlockRenderer = ({tnode}) => {
   if (!formula) {
     return null;
   }
-  return <MathView math={formula} />;
+  return <MathSvg math={formula} />;
 };
 
 export const mathRenderers: CustomTagRendererRecord = {
