@@ -427,11 +427,7 @@ export const SettingsScreen: React.FC = observer(() => {
                       }
                       onValueChange={deviceId => {
                         modelStore.setVisionDevice(
-                          deviceId as
-                            | 'auto'
-                            | 'gpu'
-                            | 'hexagon'
-                            | 'cpu',
+                          deviceId as 'auto' | 'gpu' | 'hexagon' | 'cpu',
                         );
                       }}
                       density="medium"
