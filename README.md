@@ -30,7 +30,7 @@ Since the majority of the users of this application are those who wish to gain a
 * Whether to activate thinking at the parameter level.
 * Whether to incorporate thinking into the context.
 
-12. Both the LLM and visual encoder are now controlled by settings; previously, the visual encoder was forced to use the GPU, which was inefficient and could cause Android crashes.
+12. Added an independent control for the visual encoder to freely choose between CPU or GPU loading, with CPU now set as the default. This improves compatibility compared to the original forced GPU mode, which caused various issues including crashes and image recognition errors.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
