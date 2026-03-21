@@ -47,6 +47,13 @@ Since the majority of the users of this application are those who wish to gain a
   <img src="https://github.com/user-attachments/assets/bb4a9ca2-ed13-4592-ae71-261d9aa4bad2" width="24%" />
 </p>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/9d62acaf-ef05-49b0-a9f2-99292fd4ae59" width="24%" />
+  <img src="https://github.com/user-attachments/assets/24e3edc5-c92c-43e6-9710-a301364f34c4" width="24%" />
+  <img src="https://github.com/user-attachments/assets/d72b6e40-ec67-4325-8aaa-85903623c401" width="24%" />
+  <img src="https://github.com/user-attachments/assets/d04d0e6b-29ad-4d6a-b625-24d9b7a75129" width="24%" />
+</p>
+
 ## New Architecture Goals --- Normalized inference flow
 
 | # | Architecture Type | Message Type | Logic | Status |
