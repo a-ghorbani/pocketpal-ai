@@ -709,8 +709,8 @@ export const ChatView = observer(
       let skipCluster = false;
       const prevCursor = cursor;
 
-      if (cursor === -1) {
-        // First press ever (or after message list change): initialize from scroll position.
+      if (cursor === -1 || hasUserScrolledAway()) {
+        // First press or user scrolled away: initialize from scroll position.
         const pos = initNavCursor();
         const offScreen = isMessageAboveScreen(pos);
         chatNavLog('UP init', {
@@ -720,28 +720,13 @@ export const ChatView = observer(
           vpH: navViewportHeight,
         });
         if (offScreen) {
-          // Current message's standard position is above screen → jump to it first.
           cursor = pos;
         } else {
           cursor = pos + 1;
         }
         skipCluster = true;
       } else {
-        const currentPos = initNavCursor();
-        if (currentPos !== cursor) {
-          // User manually scrolled since last button press.
-          // Cursor is stale — re-initialize from the current scroll position.
-          const offScreen = isMessageAboveScreen(currentPos);
-          chatNavLog('UP stale', {prevCursor: cursor, currentPos, offScreen});
-          if (offScreen) {
-            cursor = currentPos;
-          } else {
-            cursor = currentPos + 1;
-          }
-          skipCluster = true;
-        } else {
-          cursor = cursor + 1;
-        }
+        cursor = cursor + 1;
       }
 
       if (cursor >= len) {
