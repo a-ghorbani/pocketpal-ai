@@ -803,6 +803,13 @@ export const ChatView = observer(
       }
 
       if (cursor < 0) {
+        // No newer message — scroll to bottom
+        navCursorRef.current = -1;
+        lastNavTargetRef.current = -1;
+        list.current?.scrollToIndex({
+          index: 0,
+          animated: true,
+        });
         return;
       }
 
