@@ -14,15 +14,29 @@ const mathBlock = {
   name: 'mathBlock',
   level: 'block' as const,
   start(src: string) {
-    return src.indexOf('$$');
+    const dollar = src.indexOf('$$');
+    const bracket = src.indexOf('\\[');
+    if (dollar === -1) return bracket;
+    if (bracket === -1) return dollar;
+    return Math.min(dollar, bracket);
   },
   tokenizer(src: string) {
-    const match = /^\$\$([\s\S]+?)\$\$/.exec(src);
-    if (match) {
+    // $$...$$ syntax
+    const matchDollar = /^\$\$([\s\S]+?)\$\$/.exec(src);
+    if (matchDollar) {
       return {
         type: 'mathBlock',
-        raw: match[0],
-        formula: match[1].trim(),
+        raw: matchDollar[0],
+        formula: matchDollar[1].trim(),
+      };
+    }
+    // \[...\] syntax
+    const matchBracket = /^\\\[([\s\S]+?)\\\]/.exec(src);
+    if (matchBracket) {
+      return {
+        type: 'mathBlock',
+        raw: matchBracket[0],
+        formula: matchBracket[1].trim(),
       };
     }
     return undefined;
@@ -36,15 +50,29 @@ const mathInline = {
   name: 'mathInline',
   level: 'inline' as const,
   start(src: string) {
-    return src.indexOf('$');
+    const dollar = src.indexOf('$');
+    const paren = src.indexOf('\\(');
+    if (dollar === -1) return paren;
+    if (paren === -1) return dollar;
+    return Math.min(dollar, paren);
   },
   tokenizer(src: string) {
-    const match = /^\$([^\n$]+?)\$/.exec(src);
-    if (match) {
+    // $...$ syntax
+    const matchDollar = /^\$([^\n$]+?)\$/.exec(src);
+    if (matchDollar) {
       return {
         type: 'mathInline',
-        raw: match[0],
-        formula: match[1].trim(),
+        raw: matchDollar[0],
+        formula: matchDollar[1].trim(),
+      };
+    }
+    // \(...\) syntax
+    const matchParen = /^\\\(([^\n]+?)\\\)/.exec(src);
+    if (matchParen) {
+      return {
+        type: 'mathInline',
+        raw: matchParen[0],
+        formula: matchParen[1].trim(),
       };
     }
     return undefined;

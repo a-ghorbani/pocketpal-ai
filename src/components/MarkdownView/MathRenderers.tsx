@@ -1,7 +1,9 @@
 import React, {useEffect, useState} from 'react';
+import {View} from 'react-native';
 import {HTMLElementModel, HTMLContentModel} from 'react-native-render-html';
 import type {
   CustomBlockRenderer,
+  CustomTextualRenderer,
   CustomTagRendererRecord,
   HTMLElementModelRecord,
 } from 'react-native-render-html';
@@ -30,10 +32,27 @@ function useMathSvg(math: string): ParseResult | null {
   return result;
 }
 
-function MathSvg({math}: {math: string}) {
+function MathSvg({math, inline}: {math: string; inline?: boolean}) {
   const result = useMathSvg(math);
   if (!result) {
     return null;
+  }
+  if (inline) {
+    // Wrap in a View with explicit dimensions so it renders
+    // as an inline view inside <Text> (React Native supports this)
+    return (
+      <View
+        style={{
+          width: result.size.width,
+          height: result.size.height,
+        }}>
+        <SvgFromXml
+          xml={result.svg}
+          width={result.size.width}
+          height={result.size.height}
+        />
+      </View>
+    );
   }
   return (
     <SvgFromXml
@@ -46,8 +65,10 @@ function MathSvg({math}: {math: string}) {
 
 /**
  * Custom HTML element models so react-native-render-html treats
- * <math-block> and <math-inline> as renderable block elements
- * instead of silently dropping them.
+ * <math-block> and <math-inline> as renderable elements.
+ *
+ * math-block  → block element (own line, like $$...$$)
+ * math-inline → textual element (flows inline with text, like $...$)
  */
 export const mathHTMLElementModels: HTMLElementModelRecord = {
   'math-block': HTMLElementModel.fromCustomModel({
@@ -56,7 +77,7 @@ export const mathHTMLElementModels: HTMLElementModelRecord = {
   }),
   'math-inline': HTMLElementModel.fromCustomModel({
     tagName: 'math-inline',
-    contentModel: HTMLContentModel.block,
+    contentModel: HTMLContentModel.textual,
   }),
 };
 
@@ -78,12 +99,12 @@ const MathBlockRenderer: CustomBlockRenderer = ({tnode}) => {
   return <MathSvg math={formula} />;
 };
 
-const MathInlineRenderer: CustomBlockRenderer = ({tnode}) => {
+const MathInlineRenderer: CustomTextualRenderer = ({tnode}) => {
   const formula = getFormula(tnode);
   if (!formula) {
     return null;
   }
-  return <MathSvg math={formula} />;
+  return <MathSvg math={formula} inline />;
 };
 
 export const mathRenderers: CustomTagRendererRecord = {

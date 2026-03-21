@@ -59,6 +59,26 @@ import MathView from 'react-native-math-view/src/fallback';
 
 ---
 
+### 7. prettier 对函数参数格式有严格要求
+
+**规则：** 短参数列表必须写在一行，不能拆多行。Prettier 会强制合并为单行。
+
+```ts
+// ❌ 会被 prettier 报错
+function Foo({
+  math,
+  inline,
+}: {
+  math: string;
+  inline?: boolean;
+})
+
+// ✅ 正确
+function Foo({math, inline}: {math: string; inline?: boolean})
+```
+
+---
+
 ### 每次改完代码后务必在本地运行
 
 ```bash
