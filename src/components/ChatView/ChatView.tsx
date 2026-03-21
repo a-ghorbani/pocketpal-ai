@@ -604,10 +604,14 @@ export const ChatView = observer(
     // userMessageIndices: [newest(idx0), ..., oldest(idxN)]
     // UP = older = higher position in array, DOWN = newer = lower position.
     const navCursorRef = React.useRef(-1);
+    // The flatList index we last scrolled to. Used to detect if the user
+    // has manually scrolled away (the target is no longer on screen).
+    const lastNavTargetRef = React.useRef(-1);
 
     // Reset cursor when the message list changes (new messages added, etc.)
     React.useEffect(() => {
       navCursorRef.current = -1;
+      lastNavTargetRef.current = -1;
     }, [userMessageIndices.length]);
 
     // Initialize cursor from current scroll position.
@@ -676,6 +680,23 @@ export const ChatView = observer(
       },
       [buildCumulativeHeights, userMessageIndices, navScrollY],
     );
+
+    // Check if the last scroll target is still visible on screen.
+    // If not, the user has scrolled away and cursor should reinit.
+    const hasUserScrolledAway = React.useCallback(() => {
+      const target = lastNavTargetRef.current;
+      if (target < 0) {
+        return true;
+      }
+      const cumH = buildCumulativeHeights();
+      const msgTop = cumH[target + 1];
+      const vpTop = navScrollY + navViewportHeight;
+      return msgTop < navScrollY || msgTop > vpTop;
+    }, [
+      buildCumulativeHeights,
+      navScrollY,
+      navViewportHeight,
+    ]);
 
     // Jump to previous user message (older = higher position in array = scroll UP).
     const handleNavPrevious = React.useCallback(() => {
