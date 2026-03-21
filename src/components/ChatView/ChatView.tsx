@@ -691,7 +691,9 @@ export const ChatView = observer(
       const cumH = buildCumulativeHeights();
       const msgTop = cumH[target + 1];
       const vpTop = navScrollY + navViewportHeight;
-      return msgTop < navScrollY || msgTop > vpTop;
+      // viewPosition:1 places target at viewport top.
+      // If drifted >20px, user has scrolled.
+      return Math.abs(msgTop - vpTop) > 20;
     }, [buildCumulativeHeights, navScrollY, navViewportHeight]);
 
     // Jump to previous user message (older = higher position in array = scroll UP).
