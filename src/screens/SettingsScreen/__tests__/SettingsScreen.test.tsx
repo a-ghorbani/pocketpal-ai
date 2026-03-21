@@ -220,7 +220,8 @@ describe('SettingsScreen', () => {
     const slider = getByTestId('image-max-tokens-slider');
 
     act(() => {
-      fireEvent(slider, 'onValueChange', 768);
+      // Log-scale slider: pass log-space value
+      fireEvent(slider, 'onValueChange', Math.log(768));
     });
 
     // Fast-forward time by 300ms to trigger debounced callback within act
