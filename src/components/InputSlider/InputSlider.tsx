@@ -26,6 +26,8 @@ interface InputSliderProps {
   debounceMs?: number;
   /** Optional callback for immediate value changes (not debounced) */
   onImmediateChange?: (value: number) => void;
+  /** Scale mode: 'linear' (default) or 'log' (exponential feel). */
+  scale?: 'linear' | 'log';
 }
 
 export const InputSlider: React.FC<InputSliderProps> = ({
@@ -45,6 +47,7 @@ export const InputSlider: React.FC<InputSliderProps> = ({
   testID,
   debounceMs = 300,
   onImmediateChange,
+  scale = 'linear',
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -52,16 +55,46 @@ export const InputSlider: React.FC<InputSliderProps> = ({
   const [textValue, setTextValue] = useState(value.toString());
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  const isLog = scale === 'log';
+  const safeMin = isLog ? Math.max(1, min) : min;
+  const logMin = Math.log(safeMin);
+  const logMax = Math.log(max);
+
+  // Convert actual value → slider position (log space)
+  const toSlider = useCallback(
+    (v: number) => {
+      if (!isLog) {
+        return v;
+      }
+      return Math.log(Math.max(safeMin, v));
+    },
+    [isLog, safeMin],
+  );
+
+  // Convert slider position → actual value
+  const fromSlider = useCallback(
+    (s: number) => {
+      if (!isLog) {
+        return s;
+      }
+      return Math.round(Math.exp(s));
+    },
+    [isLog],
+  );
+
   const clamp = useCallback(
     (val: number | string): number => {
-      const num = typeof val === 'string' ? parseFloat(val) : val;
+      const num =
+        typeof val === 'string' ? parseFloat(val) : val;
       if (isNaN(num)) {
-        return min;
+        return safeMin;
       }
-      const clamped = Math.min(max, Math.max(min, num));
+      // Log scale: text input has no upper limit
+      const upper = isLog ? num : Math.min(max, num);
+      const clamped = Math.max(safeMin, upper);
       return parseFloat(clamped.toFixed(precision));
     },
-    [min, max, precision],
+    [safeMin, max, precision, isLog],
   );
 
   useEffect(() => {
@@ -84,7 +117,7 @@ export const InputSlider: React.FC<InputSliderProps> = ({
 
   const handleSliderChange = useCallback(
     (val: number) => {
-      const newValue = clamp(val);
+      const newValue = clamp(fromSlider(val));
       setTextValue(newValue.toString());
 
       // Call immediate change callback if provided
@@ -107,7 +140,7 @@ export const InputSlider: React.FC<InputSliderProps> = ({
         onValueChange(newValue);
       }
     },
-    [clamp, onValueChange, onImmediateChange, debounceMs],
+    [clamp, fromSlider, onValueChange, onImmediateChange, debounceMs],
   );
 
   const handleTextChange = (text: string) => {
@@ -144,10 +177,10 @@ export const InputSlider: React.FC<InputSliderProps> = ({
           <Slider
             testID={testID}
             style={styles.slider}
-            minimumValue={min}
-            maximumValue={max}
-            step={step}
-            value={value}
+            minimumValue={isLog ? logMin : min}
+            maximumValue={isLog ? logMax : max}
+            step={isLog ? 0 : step}
+            value={toSlider(value)}
             onValueChange={handleSliderChange}
             thumbTintColor={
               disabled ? theme.colors.outline : theme.colors.primary

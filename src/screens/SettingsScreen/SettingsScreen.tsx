@@ -504,8 +504,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setNBatch(Math.round(value))
                       }
                       min={1}
-                      max={32768}
-                      step={1}
+                      max={131072}
+                      scale="log"
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {t(l10n.settings.batchSizeDescription, {
@@ -531,8 +531,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setNUBatch(Math.round(value))
                       }
                       min={1}
-                      max={32768}
-                      step={1}
+                      max={131072}
+                      scale="log"
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {t(l10n.settings.physicalBatchSizeDescription, {
@@ -589,8 +589,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setImageMaxTokens(Math.round(value))
                       }
                       min={256}
-                      max={32768}
-                      step={1}
+                      max={131072}
+                      scale="log"
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {t(l10n.settings.imageMaxTokensDescription, {
