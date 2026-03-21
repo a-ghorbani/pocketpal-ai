@@ -33,7 +33,13 @@ Since the majority of the users of this application are those who wish to gain a
 12. Added an independent control for the visual encoder to freely choose between CPU or GPU loading, with CPU now set as the default. This improves compatibility compared to the original forced GPU mode, which caused various issues including crashes and image recognition errors.
 
 13. Add the formula rendering feature.
-
+    It is recommended to use this alongside system prompts to standardize the model's output.
+    
+    ```
+    数学公式用LaTeX格式输出：行内用$...$，独立用$$...$$。
+    Output math formulas in LaTeX: inline $...$ and display $$...$$.
+    Never use code blocks for math.
+    ```
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
