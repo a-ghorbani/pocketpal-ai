@@ -692,11 +692,7 @@ export const ChatView = observer(
       const msgTop = cumH[target + 1];
       const vpTop = navScrollY + navViewportHeight;
       return msgTop < navScrollY || msgTop > vpTop;
-    }, [
-      buildCumulativeHeights,
-      navScrollY,
-      navViewportHeight,
-    ]);
+    }, [buildCumulativeHeights, navScrollY, navViewportHeight]);
 
     // Jump to previous user message (older = higher position in array = scroll UP).
     const handleNavPrevious = React.useCallback(() => {

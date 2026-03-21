@@ -84,8 +84,7 @@ export const InputSlider: React.FC<InputSliderProps> = ({
 
   const clamp = useCallback(
     (val: number | string): number => {
-      const num =
-        typeof val === 'string' ? parseFloat(val) : val;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
       if (isNaN(num)) {
         return safeMin;
       }
