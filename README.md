@@ -91,3 +91,10 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 * [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
 * [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
 
+## 联系方式
+** 招募对手机推理大模型感兴趣的朋友。我们来共同改进这个应用。QQ2831835831
+
+下一步主要是增加更多的多模态输入输出，例如语音，生图，文件输入和MCP工具。多模态这方面，向mmn软件看齐
+
+或者是增加调用API的功能，或者是当API服务器(可以方便的在线本地模型对比，以后或许可以多模型聚合讨论)。**
+
