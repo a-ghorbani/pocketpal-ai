@@ -94,7 +94,7 @@ jobs:
   # Job for iOS build
   build-ios:
     runs-on: macos-15
-    needs: [build-and-test, detect-changes]
+    needs: [detect-changes]
     if: needs.detect-changes.outputs.translation_only != 'true'
     steps:
       - name: Check out code

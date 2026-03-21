@@ -32,14 +32,14 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.gemmaIt,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.0,
       penalty_repeat: 1.0,
     },
     completionSettings: {
       // https://huggingface.co/google/gemma-7b-it/discussions/38#65d7b14adb51f7c160769fa1
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.0,
       penalty_repeat: 1.0,
     },
@@ -79,13 +79,13 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.gemmasutra,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
       penalty_repeat: 1.0,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
       penalty_repeat: 1.0,
     },
@@ -126,12 +126,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.phi3,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.1,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.1,
     },
     defaultStopWords: ['<|end|>'],
@@ -171,12 +171,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.qwen25,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     defaultStopWords: ['<|im_end|>'],
@@ -216,12 +216,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.qwen25,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     defaultStopWords: ['<|im_end|>'],
@@ -263,12 +263,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.llama32,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     defaultStopWords: ['<|eot_id|>'],
@@ -307,12 +307,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.llama32,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.5,
     },
     defaultStopWords: ['<|eot_id|>'],
@@ -351,12 +351,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.smolLM,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
     },
     defaultStopWords: ['<|endoftext|>', '<|im_end|>'],
@@ -399,12 +399,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.smolVLM,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
     },
     defaultStopWords: ['<|endoftext|>', '<|im_end|>', '<end_of_utterance>'],
@@ -445,12 +445,12 @@ const crossPlatformModels: Model[] = [
     chatTemplate: chatTemplates.smolVLM,
     defaultCompletionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
     },
     completionSettings: {
       ...defaultCompletionParams,
-      n_predict: 500,
+      n_predict: -1,
       temperature: 0.7,
     },
     defaultStopWords: ['<|endoftext|>', '<|im_end|>', '<end_of_utterance>'],

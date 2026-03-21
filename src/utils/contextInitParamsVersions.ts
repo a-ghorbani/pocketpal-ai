@@ -232,7 +232,7 @@ export function validateContextInitParams(
 export function createDefaultContextInitParams(): ContextInitParams {
   return {
     version: CURRENT_CONTEXT_INIT_PARAMS_VERSION,
-    n_ctx: 2048,
+    n_ctx: 8192,
     n_batch: 512,
     n_ubatch: 512,
     n_threads: 4,

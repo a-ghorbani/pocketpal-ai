@@ -57,7 +57,7 @@ describe('benchmarkMigration', () => {
         modelName: 'Test Model',
         uuid: 'test-uuid',
         initSettings: {
-          n_ctx: 2048, // Modern property name
+          n_ctx: 8192, // Modern property name
           n_batch: 512,
           n_ubatch: 256,
           n_threads: 8,
@@ -242,7 +242,7 @@ describe('benchmarkMigration', () => {
           modelName: 'Test Model 2',
           uuid: 'test-uuid-2',
           initSettings: {
-            n_ctx: 2048, // Already modern
+            n_ctx: 8192, // Already modern
             n_batch: 1024,
             n_ubatch: 512,
             n_threads: 16,
