@@ -650,9 +650,20 @@ export const ChatView = observer(
     //     is within navViewportHeight of the current target → stop at the newest
     //     in that cluster.
 
-    // Check if the user message at the given position is off-screen
-    // (its top edge is below the viewport bottom in content coordinates).
-    const isMessageOffScreen = React.useCallback(
+    // Check if message is off-screen ABOVE viewport (scrolled past the top).
+    // Used by UP: only jump back to current message if it went off the top.
+    const isMessageAboveScreen = React.useCallback(
+      (pos: number) => {
+        const cumH = buildCumulativeHeights();
+        const msgTop = cumH[userMessageIndices[pos] + 1];
+        return msgTop > navScrollY + navViewportHeight;
+      },
+      [buildCumulativeHeights, userMessageIndices, navScrollY, navViewportHeight],
+    );
+
+    // Check if message is off-screen BELOW viewport (scrolled past the bottom).
+    // Used by DOWN: only jump back to current message if it went off the bottom.
+    const isMessageBelowScreen = React.useCallback(
       (pos: number) => {
         const cumH = buildCumulativeHeights();
         const msgTop = cumH[userMessageIndices[pos] + 1];
@@ -675,7 +686,7 @@ export const ChatView = observer(
       if (cursor === -1) {
         // First press ever (or after message list change): initialize from scroll position.
         const pos = initNavCursor();
-        const offScreen = isMessageOffScreen(pos);
+        const offScreen = isMessageAboveScreen(pos);
         chatNavLog('UP init', {
           pos,
           offScreen,
@@ -683,7 +694,7 @@ export const ChatView = observer(
           vpH: navViewportHeight,
         });
         if (offScreen) {
-          // Current message's standard position is off-screen → jump to it first.
+          // Current message's standard position is above screen → jump to it first.
           cursor = pos;
         } else {
           cursor = pos + 1;
@@ -694,7 +705,7 @@ export const ChatView = observer(
         if (currentPos !== cursor) {
           // User manually scrolled since last button press.
           // Cursor is stale — re-initialize from the current scroll position.
-          const offScreen = isMessageOffScreen(currentPos);
+          const offScreen = isMessageAboveScreen(currentPos);
           chatNavLog('UP stale', {prevCursor: cursor, currentPos, offScreen});
           if (offScreen) {
             cursor = currentPos;
@@ -708,7 +719,7 @@ export const ChatView = observer(
       }
 
       if (cursor >= len) {
-        cursor = len - 1;
+        return;
       }
 
       // Skip cluster: keep going older while next message is within one screen.
@@ -743,7 +754,7 @@ export const ChatView = observer(
     }, [
       userMessageIndices,
       initNavCursor,
-      isMessageOffScreen,
+      isMessageAboveScreen,
       buildCumulativeHeights,
       navViewportHeight,
       navScrollY,
@@ -763,7 +774,7 @@ export const ChatView = observer(
       if (cursor === -1) {
         // First press ever (or after message list change): initialize from scroll position.
         const pos = initNavCursor();
-        const offScreen = isMessageOffScreen(pos);
+        const offScreen = isMessageBelowScreen(pos);
         chatNavLog('DOWN init', {
           pos,
           offScreen,
@@ -771,7 +782,7 @@ export const ChatView = observer(
           vpH: navViewportHeight,
         });
         if (offScreen) {
-          // Current message's standard position is off-screen → jump to it first.
+          // Current message's standard position is below screen → jump to it first.
           cursor = pos;
         } else {
           cursor = pos - 1;
@@ -782,7 +793,7 @@ export const ChatView = observer(
         if (currentPos !== cursor) {
           // User manually scrolled since last button press.
           // Cursor is stale — re-initialize from the current scroll position.
-          const offScreen = isMessageOffScreen(currentPos);
+          const offScreen = isMessageBelowScreen(currentPos);
           chatNavLog('DOWN stale', {prevCursor: cursor, currentPos, offScreen});
           if (offScreen) {
             cursor = currentPos;
@@ -796,7 +807,7 @@ export const ChatView = observer(
       }
 
       if (cursor < 0) {
-        cursor = 0;
+        return;
       }
 
       // Skip cluster: keep going newer while next message is within one screen.
@@ -831,7 +842,7 @@ export const ChatView = observer(
     }, [
       userMessageIndices,
       initNavCursor,
-      isMessageOffScreen,
+      isMessageBelowScreen,
       buildCumulativeHeights,
       navViewportHeight,
       navScrollY,
