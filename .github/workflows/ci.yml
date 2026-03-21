@@ -91,7 +91,9 @@ jobs:
       - name: Run unit tests
         id: unit-tests
         continue-on-error: true
-        run: yarn test --coverage 2>&1 | tee test-output.log
+        run: |
+          set -o pipefail
+          yarn test --coverage 2>&1 | tee test-output.log
 
       - name: Upload test log
         if: steps.unit-tests.outcome == 'failure'
