@@ -658,7 +658,12 @@ export const ChatView = observer(
         const msgTop = cumH[userMessageIndices[pos] + 1];
         return msgTop > navScrollY + navViewportHeight;
       },
-      [buildCumulativeHeights, userMessageIndices, navScrollY, navViewportHeight],
+      [
+        buildCumulativeHeights,
+        userMessageIndices,
+        navScrollY,
+        navViewportHeight,
+      ],
     );
 
     // Check if message is off-screen BELOW viewport (scrolled past the bottom).
