@@ -44,7 +44,7 @@ Since the majority of the users of this application are those who wish to gain a
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
   <img src="https://github.com/user-attachments/assets/9a808f3c-256e-419d-a455-2f337c04eb17" width="24%" />
-  <img src="https://github.com/user-attachments/assets/a1458b22-8833-4c16-8c9a-42b8415285d5" width="24%" />
+  <img src="https://github.com/user-attachments/assets/bb4a9ca2-ed13-4592-ae71-261d9aa4bad2" width="24%" />
 </p>
 
 ## New Architecture Goals --- Normalized inference flow
