@@ -15,7 +15,7 @@ describe('CompletionSettings', () => {
     );
 
     expect(getByTestId('n_predict-input')).toBeTruthy();
-    expect(getByDisplayValue('500')).toBeTruthy();
+    expect(getByDisplayValue('-1')).toBeTruthy();
 
     expect(getByTestId('temperature-slider')).toBeTruthy();
     const temperatureSlider = getByTestId('temperature-slider');

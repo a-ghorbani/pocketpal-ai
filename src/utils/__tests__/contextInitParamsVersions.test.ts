@@ -131,7 +131,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(settings);
 
-      expect(migrated.n_ctx).toBe(2048);
+      expect(migrated.n_ctx).toBe(8192);
       expect(migrated.n_batch).toBe(1024);
       expect(migrated.flash_attn).toBe(true);
       expect(migrated.cache_type_k).toBe(CacheType.Q8_0);
@@ -245,7 +245,7 @@ describe('contextInitParamsVersions', () => {
 
       expect(validateContextInitParams(defaultSettings)).toBe(true);
       expect(defaultSettings.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
-      expect(defaultSettings.n_ctx).toBe(2048);
+      expect(defaultSettings.n_ctx).toBe(8192);
       expect(defaultSettings.n_batch).toBe(512);
       expect(defaultSettings.n_ubatch).toBe(512);
       expect(defaultSettings.n_threads).toBe(4);

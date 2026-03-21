@@ -70,7 +70,7 @@ describe('benchmarkMigration', () => {
 
       const migratedResult = migrateBenchmarkResult(modernResult);
 
-      expect(migratedResult.initSettings?.n_ctx).toBe(2048);
+      expect(migratedResult.initSettings?.n_ctx).toBe(8192);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
     });
 
@@ -259,7 +259,7 @@ describe('benchmarkMigration', () => {
       expect(migratedResults).toHaveLength(2);
       expect(migratedResults[0].initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResults[0].initSettings).not.toHaveProperty('n_context');
-      expect(migratedResults[1].initSettings?.n_ctx).toBe(2048);
+      expect(migratedResults[1].initSettings?.n_ctx).toBe(8192);
     });
   });
 
