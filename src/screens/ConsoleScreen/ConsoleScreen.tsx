@@ -87,6 +87,15 @@ export const ConsoleScreen: React.FC = observer(() => {
             onValueChange={value => debugStore.setLogModelLifecycle(value)}
           />
         </View>
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>
+            [类6] Chat Navigation (cursor / scroll / target)
+          </Text>
+          <Switch
+            value={debugStore.logChatNavigation}
+            onValueChange={value => debugStore.setLogChatNavigation(value)}
+          />
+        </View>
         <View style={styles.buttonRow}>
           <Button mode="contained" onPress={handleCopy}>
             Copy

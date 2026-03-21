@@ -70,6 +70,8 @@ export class DebugStore {
   logParamSource = false;
   // 类5: 模型生命周期 — 加载/释放/前后台切换，默认关闭
   logModelLifecycle = false;
+  // 类6: 聊天导航 — cursor/scroll/目标位置追踪，默认关闭
+  logChatNavigation = false;
   private fileWriteQueue: Promise<void> = Promise.resolve();
   private hasLoadedLogs = false;
   private loadLogsPromise: Promise<void> | null = null;
@@ -85,6 +87,7 @@ export class DebugStore {
         'logPromptBuild',
         'logParamSource',
         'logModelLifecycle',
+        'logChatNavigation',
       ],
       storage: AsyncStorage,
     });
@@ -214,6 +217,12 @@ export class DebugStore {
   setLogModelLifecycle(enabled: boolean) {
     runInAction(() => {
       this.logModelLifecycle = enabled;
+    });
+  }
+
+  setLogChatNavigation(enabled: boolean) {
+    runInAction(() => {
+      this.logChatNavigation = enabled;
     });
   }
 

@@ -167,6 +167,11 @@ export function lifecycleLog(message: string, payload?: unknown) {
   categoryLog(debugStore.logModelLifecycle, '[Lifecycle]', message, payload);
 }
 
+/** 类6: 聊天导航 — cursor/scroll/目标位置追踪 */
+export function chatNavLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logChatNavigation, '[ChatNav]', message, payload);
+}
+
 type CompletionProbePayload = Record<string, unknown>;
 
 export function buildCompletionParamProbe(params: Record<string, unknown>) {

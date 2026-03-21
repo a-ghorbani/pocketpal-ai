@@ -48,6 +48,7 @@ import {
   L10nContext,
 } from '../../utils';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
+import {chatNavLog} from '../../utils/debug';
 
 import {
   Message,
@@ -669,11 +670,14 @@ export const ChatView = observer(
 
       let cursor = navCursorRef.current;
       let skipCluster = false;
+      const prevCursor = cursor;
 
       if (cursor === -1) {
         // First press ever (or after message list change): initialize from scroll position.
         const pos = initNavCursor();
-        if (isMessageOffScreen(pos)) {
+        const offScreen = isMessageOffScreen(pos);
+        chatNavLog('UP init', {pos, offScreen, scrollY: navScrollY, vpH: navViewportHeight});
+        if (offScreen) {
           // Current message's standard position is off-screen → jump to it first.
           cursor = pos;
         } else {
@@ -682,10 +686,12 @@ export const ChatView = observer(
         skipCluster = true;
       } else {
         const currentPos = initNavCursor();
-        if (currentPos <= cursor - 1) {
-          // User manually scrolled back (newer direction) since last button press.
+        if (currentPos !== cursor) {
+          // User manually scrolled since last button press.
           // Cursor is stale — re-initialize from the current scroll position.
-          if (isMessageOffScreen(currentPos)) {
+          const offScreen = isMessageOffScreen(currentPos);
+          chatNavLog('UP stale', {prevCursor: cursor, currentPos, offScreen});
+          if (offScreen) {
             cursor = currentPos;
           } else {
             cursor = currentPos + 1;
@@ -705,14 +711,19 @@ export const ChatView = observer(
       if (!skipCluster) {
         const cumH = buildCumulativeHeights();
         const anchorH = cumH[userMessageIndices[cursor] + 1];
+        const beforeCluster = cursor;
         while (
           cursor + 1 < len &&
           cumH[userMessageIndices[cursor + 1] + 1] - anchorH < navViewportHeight
         ) {
           cursor++;
         }
+        if (cursor !== beforeCluster) {
+          chatNavLog('UP cluster skip', {from: beforeCluster, to: cursor});
+        }
       }
 
+      chatNavLog('UP result', {prevCursor, cursor, flatIdx: userMessageIndices[cursor], skipCluster});
       navCursorRef.current = cursor;
       list.current?.scrollToIndex({
         index: userMessageIndices[cursor],
@@ -725,6 +736,7 @@ export const ChatView = observer(
       isMessageOffScreen,
       buildCumulativeHeights,
       navViewportHeight,
+      navScrollY,
     ]);
 
     // Jump to next user message (newer = lower position in array = scroll DOWN).
@@ -736,11 +748,14 @@ export const ChatView = observer(
 
       let cursor = navCursorRef.current;
       let skipCluster = false;
+      const prevCursor = cursor;
 
       if (cursor === -1) {
         // First press ever (or after message list change): initialize from scroll position.
         const pos = initNavCursor();
-        if (isMessageOffScreen(pos)) {
+        const offScreen = isMessageOffScreen(pos);
+        chatNavLog('DOWN init', {pos, offScreen, scrollY: navScrollY, vpH: navViewportHeight});
+        if (offScreen) {
           // Current message's standard position is off-screen → jump to it first.
           cursor = pos;
         } else {
@@ -749,10 +764,12 @@ export const ChatView = observer(
         skipCluster = true;
       } else {
         const currentPos = initNavCursor();
-        if (currentPos >= cursor + 1) {
-          // User manually scrolled forward (older direction) since last button press.
+        if (currentPos !== cursor) {
+          // User manually scrolled since last button press.
           // Cursor is stale — re-initialize from the current scroll position.
-          if (isMessageOffScreen(currentPos)) {
+          const offScreen = isMessageOffScreen(currentPos);
+          chatNavLog('DOWN stale', {prevCursor: cursor, currentPos, offScreen});
+          if (offScreen) {
             cursor = currentPos;
           } else {
             cursor = currentPos - 1;
@@ -772,14 +789,19 @@ export const ChatView = observer(
       if (!skipCluster) {
         const cumH = buildCumulativeHeights();
         const anchorH = cumH[userMessageIndices[cursor] + 1];
+        const beforeCluster = cursor;
         while (
           cursor - 1 >= 0 &&
           anchorH - cumH[userMessageIndices[cursor - 1] + 1] < navViewportHeight
         ) {
           cursor--;
         }
+        if (cursor !== beforeCluster) {
+          chatNavLog('DOWN cluster skip', {from: beforeCluster, to: cursor});
+        }
       }
 
+      chatNavLog('DOWN result', {prevCursor, cursor, flatIdx: userMessageIndices[cursor], skipCluster});
       navCursorRef.current = cursor;
       list.current?.scrollToIndex({
         index: userMessageIndices[cursor],
@@ -792,6 +814,7 @@ export const ChatView = observer(
       isMessageOffScreen,
       buildCumulativeHeights,
       navViewportHeight,
+      navScrollY,
     ]);
 
     // ============ MESSAGE INPUT HANDLERS ============
