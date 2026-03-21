@@ -85,7 +85,10 @@ ios/Config/Env.xcconfig
 # Android native libraries (should not be committed)
 **/libggml-htp*.so
 
-# Local error logs
+# Local / IDE / AI
+.claude/
+.vscode/
+old/
 编译错误日志/
 
 # E2E debug output
