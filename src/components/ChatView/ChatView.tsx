@@ -676,7 +676,12 @@ export const ChatView = observer(
         // First press ever (or after message list change): initialize from scroll position.
         const pos = initNavCursor();
         const offScreen = isMessageOffScreen(pos);
-        chatNavLog('UP init', {pos, offScreen, scrollY: navScrollY, vpH: navViewportHeight});
+        chatNavLog('UP init', {
+          pos,
+          offScreen,
+          scrollY: navScrollY,
+          vpH: navViewportHeight,
+        });
         if (offScreen) {
           // Current message's standard position is off-screen → jump to it first.
           cursor = pos;
@@ -723,7 +728,12 @@ export const ChatView = observer(
         }
       }
 
-      chatNavLog('UP result', {prevCursor, cursor, flatIdx: userMessageIndices[cursor], skipCluster});
+      chatNavLog('UP result', {
+        prevCursor,
+        cursor,
+        flatIdx: userMessageIndices[cursor],
+        skipCluster,
+      });
       navCursorRef.current = cursor;
       list.current?.scrollToIndex({
         index: userMessageIndices[cursor],
@@ -754,7 +764,12 @@ export const ChatView = observer(
         // First press ever (or after message list change): initialize from scroll position.
         const pos = initNavCursor();
         const offScreen = isMessageOffScreen(pos);
-        chatNavLog('DOWN init', {pos, offScreen, scrollY: navScrollY, vpH: navViewportHeight});
+        chatNavLog('DOWN init', {
+          pos,
+          offScreen,
+          scrollY: navScrollY,
+          vpH: navViewportHeight,
+        });
         if (offScreen) {
           // Current message's standard position is off-screen → jump to it first.
           cursor = pos;
@@ -801,7 +816,12 @@ export const ChatView = observer(
         }
       }
 
-      chatNavLog('DOWN result', {prevCursor, cursor, flatIdx: userMessageIndices[cursor], skipCluster});
+      chatNavLog('DOWN result', {
+        prevCursor,
+        cursor,
+        flatIdx: userMessageIndices[cursor],
+        skipCluster,
+      });
       navCursorRef.current = cursor;
       list.current?.scrollToIndex({
         index: userMessageIndices[cursor],
