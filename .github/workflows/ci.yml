@@ -89,11 +89,12 @@ jobs:
 
       # Step 6: Run unit tests (Jest)
       - name: Run unit tests
-        run: yarn test --coverage 2>&1 | tee test-output.log
+        id: unit-tests
         continue-on-error: true
+        run: yarn test --coverage 2>&1 | tee test-output.log
 
-      - name: Upload test log on failure
-        if: failure() || steps.run-unit-tests.outcome == 'failure'
+      - name: Upload test log
+        if: steps.unit-tests.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: test-failure-log
@@ -101,11 +102,10 @@ jobs:
           retention-days: 7
 
       - name: Fail if tests failed
+        if: steps.unit-tests.outcome == 'failure'
         run: |
-          if grep -q "Test Suites:.*failed" test-output.log; then
-            echo "Tests failed — see uploaded test-failure-log artifact"
-            exit 1
-          fi
+          echo "Tests failed — download full log from Artifacts: test-failure-log"
+          exit 1
 
   # Job for Android build
   build-android:
