@@ -145,9 +145,12 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Create dummy google-services.json for CI
+      - name: Create google-services.json
         run: |
-          cat > android/app/google-services.json << 'EOL'
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+          else
+            cat > android/app/google-services.json << 'FALLBACK'
           {
             "project_info": {
               "project_number": "000000000000",
@@ -166,17 +169,18 @@ jobs:
               }]
             }]
           }
-          EOL
+          FALLBACK
+          fi
 
-      - name: Create dummy .env file for CI
+      - name: Create .env file
         run: |
           cat > .env << 'EOL'
-          FIREBASE_FUNCTIONS_URL=https://dummy-firebase-url.com
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
 
           # PalsHub/Supabase Configuration
-          SUPABASE_URL=https://dummy-supabase-url.supabase.co
-          SUPABASE_ANON_KEY=dummy-anon-key-for-ci-builds
-          PALSHUB_API_BASE_URL=https://dummy-palshub-api.com
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
 
           # App Configuration
           APP_URL=pocketpal://app
@@ -187,30 +191,34 @@ jobs:
           ENABLE_OFFLINE_MODE=true
 
           # Google Sign-In Configuration
-          GOOGLE_IOS_CLIENT_ID=dummy-ios-client-id.apps.googleusercontent.com
-          GOOGLE_WEB_CLIENT_ID=dummy-web-client-id.apps.googleusercontent.com
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
           EOL
 
-      - name: Create dummy release keystore for CI
+      - name: Set up Android Keystore
         working-directory: android/app
         run: |
-          # Generate a dummy keystore for CI builds
-          keytool -genkeypair -v \
-            -storetype PKCS12 \
-            -keystore pocketpal-release-key.keystore \
-            -alias pocketpal_key_alias \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass dummy-ci-password \
-            -keypass dummy-ci-password \
-            -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > pocketpal-release-key.keystore
+          else
+            # Generate a dummy keystore when no real one is configured
+            keytool -genkeypair -v \
+              -storetype PKCS12 \
+              -keystore pocketpal-release-key.keystore \
+              -alias pocketpal_key_alias \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass dummy-ci-password \
+              -keypass dummy-ci-password \
+              -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
+          fi
 
       - name: Build Android Release
         working-directory: android
         env:
-          APP_RELEASE_STORE_PASSWORD: dummy-ci-password
-          APP_RELEASE_KEY_PASSWORD: dummy-ci-password
+          APP_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'dummy-ci-password' }}
+          APP_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'dummy-ci-password' }}
         run: bash ./gradlew assembleRelease
 
       - name: Upload Android APK

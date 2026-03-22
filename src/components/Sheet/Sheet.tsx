@@ -103,13 +103,13 @@ export const Sheet = forwardRef(
         // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
         accessible={false}
         {...props}>
-        <View style={styles.header}>
+        <View style={styles.header} pointerEvents="box-none">
           {title && <Text variant="titleMedium">{title}</Text>}
           {showCloseButton && (
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={onDismiss}
-              hitSlop={10}
+              hitSlop={{top: 16, bottom: 16, left: 16, right: 16}}
               testID="sheet-close-button"
               accessibilityLabel="Close"
               accessibilityRole="button">

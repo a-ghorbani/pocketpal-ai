@@ -131,28 +131,28 @@ jobs:
         working-directory: ios
         run: pod install
 
-      # Step 6: Create dummy Env.xcconfig for CI
-      - name: Create dummy Env.xcconfig for CI
+      # Step 6: Create Env.xcconfig
+      - name: Create Env.xcconfig
         run: |
           mkdir -p ios/Config
           cat > ios/Config/Env.xcconfig << 'EOL'
           // This file contains environment-specific build settings.
 
-          GOOGLE_WEB_CLIENT_ID = dummy-web-client-id.apps.googleusercontent.com
-          REVERSED_GOOGLE_IOS_CLIENT_ID = com.googleusercontent.apps.dummy-ios-client-id
+          GOOGLE_WEB_CLIENT_ID = ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          REVERSED_GOOGLE_IOS_CLIENT_ID = ${{ vars.REVERSED_GOOGLE_IOS_CLIENT_ID }}
 
           EOL
 
-      # Step 7: Create dummy .env file for CI
-      - name: Create dummy .env file for CI
+      # Step 7: Create .env file
+      - name: Create .env file
         run: |
           cat > .env << 'EOL'
-          FIREBASE_FUNCTIONS_URL=https://dummy-firebase-url.com
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
 
           # PalsHub/Supabase Configuration
-          SUPABASE_URL=https://dummy-supabase-url.supabase.co
-          SUPABASE_ANON_KEY=dummy-anon-key-for-ci-builds
-          PALSHUB_API_BASE_URL=https://dummy-palshub-api.com
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
 
           # App Configuration
           APP_URL=pocketpal://app
@@ -163,18 +163,21 @@ jobs:
           ENABLE_OFFLINE_MODE=true
 
           # Google Sign-In Configuration
-          GOOGLE_IOS_CLIENT_ID=dummy-ios-client-id.apps.googleusercontent.com
-          GOOGLE_WEB_CLIENT_ID=dummy-web-client-id.apps.googleusercontent.com
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
           EOL
 
       # Step 8: Install xcpretty for readable build output
       - name: Install xcpretty
         run: gem install xcpretty
 
-      # Step 9: Create dummy GoogleService-Info.plist for CI
-      - name: Create dummy GoogleService-Info.plist for CI
+      # Step 9: Create GoogleService-Info.plist
+      - name: Create GoogleService-Info.plist
         run: |
-          cat > ios/GoogleService-Info.plist << 'EOF'
+          if [ -n "${{ secrets.GOOGLE_SERVICES_PLIST }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_PLIST }}' > ios/GoogleService-Info.plist
+          else
+            cat > ios/GoogleService-Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -210,6 +213,7 @@ jobs:
           </dict>
           </plist>
           EOF
+          fi
 
       # Step 10: Archive iOS build (no signing)
       - name: Archive iOS Release

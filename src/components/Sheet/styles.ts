@@ -7,6 +7,7 @@ export const styles = StyleSheet.create({
   closeBtn: {
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 999,
   },
   header: {
     marginHorizontal: 16,

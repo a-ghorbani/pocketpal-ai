@@ -39,6 +39,7 @@ export const CustomBackdrop = ({
       animatedIndex={animatedIndex}
       animatedPosition={animatedPosition}
       disappearsOnIndex={-1}
+      pressBehavior="close"
       style={containerStyle}
     />
   );

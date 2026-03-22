@@ -314,6 +314,25 @@ class HFStore {
     this.consecutiveSmallResults = 0;
     this.lastFetchMoreAttempt = 0;
 
+    // Safety net: force-clear isLoading after 20s no matter what
+    const safetyTimer = setTimeout(() => {
+      if (this.isLoading) {
+        console.warn(
+          '[HFStore] fetchModels safety timeout (20s) — forcing isLoading=false',
+        );
+        runInAction(() => {
+          this.isLoading = false;
+          if (!this.error) {
+            this.error = createErrorState(
+              new Error('Request timed out'),
+              'search',
+              'huggingface',
+            );
+          }
+        });
+      }
+    }, 20000);
+
     try {
       const authToken = this.shouldUseToken ? this.hfToken : null;
       const sortParams = this.getSortParams();
@@ -347,6 +366,7 @@ class HFStore {
         this.error = createErrorState(error, 'search', 'huggingface');
       });
     } finally {
+      clearTimeout(safetyTimer);
       runInAction(() => {
         this.isLoading = false;
       });

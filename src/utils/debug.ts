@@ -415,6 +415,93 @@ function bodyPreview(body: unknown): string | undefined {
   return str.length > 500 ? str.slice(0, 500) + '…' : str;
 }
 
+/**
+ * 网络连通性探针 — 同时测试多个 URL，诊断是哪层出了问题。
+ * 结果全部打到类7日志。
+ */
+export async function runNetworkDiagnostics() {
+  const targets = [
+    {label: 'google', url: 'https://www.google.com/generate_204'},
+    {label: 'cloudflare', url: 'https://1.1.1.1/cdn-cgi/trace'},
+    {label: 'httpbin', url: 'https://httpbin.org/get'},
+    {
+      label: 'huggingface-api',
+      url: 'https://huggingface.co/api/models?limit=1&filter=gguf',
+    },
+    {label: 'huggingface-home', url: 'https://huggingface.co/'},
+    {label: 'palshub', url: 'https://palshub.ai/'},
+  ];
+
+  networkLog('diagnostics:start', {
+    targetCount: targets.length,
+    urls: targets.map(t => t.label),
+  });
+
+  const results: Array<{
+    label: string;
+    url: string;
+    status?: number;
+    ok?: boolean;
+    elapsedMs: number;
+    error?: string;
+    bodyPreview?: string;
+  }> = [];
+
+  // 并发测试所有 URL，每个都有 10 秒超时
+  const promises = targets.map(async ({label, url}) => {
+    const start = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {Accept: 'text/plain, application/json, */*'},
+      });
+      clearTimeout(timer);
+      const elapsed = Date.now() - start;
+      let body = '';
+      try {
+        const text = await resp.text();
+        body = text.length > 300 ? text.slice(0, 300) + '…' : text;
+      } catch {
+        body = '<read failed>';
+      }
+      const entry = {
+        label,
+        url,
+        status: resp.status,
+        ok: resp.ok,
+        elapsedMs: elapsed,
+        bodyPreview: body,
+      };
+      results.push(entry);
+      networkLog(`diagnostics:result:${label}`, entry);
+    } catch (err) {
+      clearTimeout(timer);
+      const elapsed = Date.now() - start;
+      const entry = {
+        label,
+        url,
+        elapsedMs: elapsed,
+        error: err instanceof Error ? err.message : String(err),
+      };
+      results.push(entry);
+      networkLog(`diagnostics:result:${label}`, entry);
+    }
+  });
+
+  await Promise.allSettled(promises);
+
+  networkLog('diagnostics:summary', {
+    total: results.length,
+    ok: results.filter(r => r.ok).map(r => r.label),
+    failed: results
+      .filter(r => !r.ok)
+      .map(r => `${r.label}:${r.error || r.status}`),
+  });
+}
+
 type CompletionProbePayload = Record<string, unknown>;
 
 export function buildCompletionParamProbe(params: Record<string, unknown>) {

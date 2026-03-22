@@ -6,6 +6,7 @@ import {Button, Switch, Text} from 'react-native-paper';
 
 import {useTheme} from '../../hooks';
 import {debugStore} from '../../store/DebugStore';
+import {runNetworkDiagnostics} from '../../utils/debug';
 
 import {createStyles} from './styles';
 
@@ -123,6 +124,9 @@ export const ConsoleScreen: React.FC = observer(() => {
           </Button>
           <Button mode="outlined" onPress={() => debugStore.clearLogs()}>
             Clear
+          </Button>
+          <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
+            Net Diag
           </Button>
         </View>
       </View>

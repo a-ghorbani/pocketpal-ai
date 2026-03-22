@@ -1,4 +1,5 @@
 import React, {useState, useCallback, useMemo, useEffect} from 'react';
+import {BackHandler} from 'react-native';
 
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
@@ -30,6 +31,19 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       if (!visible) {
         setSelectedModel(null);
       }
+    }, [visible]);
+
+    // Android back button → close sheet
+    useEffect(() => {
+      if (!visible) {
+        return;
+      }
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleSheetDismiss();
+        return true;
+      });
+      return () => sub.remove();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible]);
 
     const debouncedSearch = useMemo(
