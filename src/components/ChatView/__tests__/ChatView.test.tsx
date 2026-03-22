@@ -224,7 +224,7 @@ describe('chat', () => {
   });
 
   it('serializes context usage estimates and applies only the latest result', async () => {
-    expect.assertions(4);
+    expect.assertions(5);
 
     runInAction(() => {
       modelStore.activeModelId = 'test-model-id';
