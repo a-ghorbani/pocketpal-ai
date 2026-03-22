@@ -1026,9 +1026,9 @@ export const ChatView = observer(
     );
     const [contextUsage, setContextUsage] =
       React.useState<ChatInputAdditionalProps['contextUsage']>();
-    const pendingContextUsageEstimateRef = React.useRef<Parameters<
-      typeof estimateChatContextUsage
-    >[0] | null>(null);
+    const pendingContextUsageEstimateRef = React.useRef<
+      Parameters<typeof estimateChatContextUsage>[0] | null
+    >(null);
     const isContextUsageEstimateRunningRef = React.useRef(false);
     const latestContextUsageEstimateIdRef = React.useRef(0);
     const appliedContextUsageEstimateIdRef = React.useRef(0);
@@ -1103,7 +1103,9 @@ export const ChatView = observer(
         reasoningFormat: sessionCompletionSettings?.reasoning_format,
       };
 
-      void runContextUsageEstimate();
+      runContextUsageEstimate().catch(error => {
+        console.error('Failed to estimate chat context usage:', error);
+      });
     }, [
       activeModel,
       contextSize,
