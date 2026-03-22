@@ -1,4 +1,4 @@
-import {debugStore} from '../store/DebugStore';
+﻿import {debugStore} from '../store/DebugStore';
 
 let consoleCaptureInitialized = false;
 const FNV_OFFSET_BASIS = 2166136261;
@@ -221,7 +221,7 @@ export function initializeNetworkIntercept() {
       method,
       url,
       headers: sanitizeHeaders(init?.headers as Record<string, string>),
-      bodyPreview: bodyPreview(init?.body),
+      body: bodyContent(init?.body),
     });
 
     try {
@@ -233,8 +233,7 @@ export function initializeNetworkIntercept() {
       let responseBody: string | undefined;
       try {
         const text = await cloned.text();
-        responseBody =
-          text.length > 2000 ? text.slice(0, 2000) + '…(truncated)' : text;
+        responseBody = text;
       } catch {
         responseBody = '<unable to read body>';
       }
@@ -247,7 +246,7 @@ export function initializeNetworkIntercept() {
         statusText: response.statusText,
         elapsedMs: elapsed,
         responseHeaders: headersToObj(response.headers),
-        bodyPreview: responseBody,
+        body: responseBody,
       });
 
       return response;
@@ -259,7 +258,7 @@ export function initializeNetworkIntercept() {
         url,
         elapsedMs: elapsed,
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
       });
       throw error;
     }
@@ -322,18 +321,15 @@ function interceptXHR() {
       method: debug.method,
       url: debug.url,
       headers: sanitizeHeaders(debug.headers),
-      bodyPreview: bodyPreview(body),
+      body: bodyContent(body),
     });
 
     this.addEventListener('load', () => {
       const elapsed = Date.now() - debug.startMs;
       const responseText =
         typeof this.responseText === 'string'
-          ? this.responseText.length > 2000
-            ? this.responseText.slice(0, 2000) + '…(truncated)'
-            : this.responseText
+          ? this.responseText
           : '<no responseText>';
-
       networkLog('xhr:response', {
         reqId: debug.reqId,
         method: debug.method,
@@ -341,8 +337,8 @@ function interceptXHR() {
         status: this.status,
         statusText: this.statusText,
         elapsedMs: elapsed,
-        responseHeaders: this.getAllResponseHeaders()?.slice(0, 1000),
-        bodyPreview: responseText,
+        responseHeaders: this.getAllResponseHeaders(),
+        body: responseText,
       });
     });
 
@@ -414,12 +410,18 @@ function headersToObj(headers: Headers): Record<string, string> {
   return obj;
 }
 
-function bodyPreview(body: unknown): string | undefined {
+function bodyContent(body: unknown): string | undefined {
   if (body === undefined || body === null) {
     return undefined;
   }
-  const str = typeof body === 'string' ? body : JSON.stringify(body);
-  return str.length > 500 ? str.slice(0, 500) + '…' : str;
+  if (typeof body === 'string') {
+    return body;
+  }
+  try {
+    return JSON.stringify(body);
+  } catch {
+    return String(body);
+  }
 }
 
 /**
@@ -451,7 +453,7 @@ export async function runNetworkDiagnostics() {
     ok?: boolean;
     elapsedMs: number;
     error?: string;
-    bodyPreview?: string;
+    body?: string;
   }> = [];
 
   // 并发测试所有 URL，每个都有 10 秒超时
@@ -470,7 +472,7 @@ export async function runNetworkDiagnostics() {
       let body = '';
       try {
         const text = await resp.text();
-        body = text.length > 300 ? text.slice(0, 300) + '…' : text;
+        body = text;
       } catch {
         body = '<read failed>';
       }
@@ -480,7 +482,7 @@ export async function runNetworkDiagnostics() {
         status: resp.status,
         ok: resp.ok,
         elapsedMs: elapsed,
-        bodyPreview: body,
+        body,
       };
       results.push(entry);
       networkLog(`diagnostics:result:${label}`, entry);

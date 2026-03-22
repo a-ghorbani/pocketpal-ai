@@ -1535,7 +1535,7 @@ class ModelStore {
     // so they're available for error reporting if initialization fails
     const effectiveSettings =
       await this.getEffectiveContextInitParams(filePath);
-    lifecycleLog('initContext:model-summary', {
+    lifecycleLog('initContext:model', {
       model: {
         id: model.id,
         name: model.name,
@@ -1554,19 +1554,7 @@ class ModelStore {
         requested: isMultimodalInit,
         mmProjPath,
       },
-      initParams: {
-        n_ctx: effectiveSettings.n_ctx,
-        n_batch: effectiveSettings.n_batch,
-        n_ubatch: effectiveSettings.n_ubatch,
-        n_threads: effectiveSettings.n_threads,
-        n_gpu_layers: effectiveSettings.n_gpu_layers,
-        flash_attn: effectiveSettings.flash_attn,
-        cache_type_k: effectiveSettings.cache_type_k,
-        cache_type_v: effectiveSettings.cache_type_v,
-        use_mmap: effectiveSettings.use_mmap,
-        use_mlock: effectiveSettings.use_mlock,
-        no_gpu_devices: effectiveSettings.no_gpu_devices,
-      },
+      initParams: effectiveSettings,
     });
 
     try {
@@ -1662,6 +1650,18 @@ class ModelStore {
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
         this.pendingModelId = null;
+      });
+
+      lifecycleLog('initContext:active-runtime-settings', {
+        modelId: model.id,
+        n_ctx: contextInitParams.n_ctx,
+        n_batch: contextInitParams.n_batch,
+        n_ubatch: contextInitParams.n_ubatch,
+        n_threads: contextInitParams.n_threads,
+        ctx_shift: contextInitParams.ctx_shift ?? true,
+        flash_attn_type: contextInitParams.flash_attn_type,
+        kv_unified: contextInitParams.kv_unified ?? true,
+        n_parallel: contextInitParams.n_parallel ?? 1,
       });
 
       // Update largestSuccessfulLoad using GGUF estimator
@@ -2373,9 +2373,14 @@ class ModelStore {
       );
       lifecycleLog('template: ', template);
       lifecycleLog('context template (gguf): ', contextTemplate);
-      lifecycleLog('[ModelStore] template summary:', {
+      lifecycleLog('[ModelStore] template metadata:', {
         modelId: model.id,
+        modelFilename: model.filename,
+        modelTemplateName: storeModel.chatTemplate?.name,
         modelTemplateLength: template?.length ?? 0,
+        contextTemplateLength: contextTemplate.length,
+        modelTemplateFull: template || '',
+        contextTemplateFull: contextTemplate,
       });
       promptBuildLog('template:metadata', {
         modelId: model.id,
@@ -2417,9 +2422,10 @@ class ModelStore {
         stopTokens.push(...contextStops);
       }
 
-      lifecycleLog('[ModelStore] stopTokens summary:', {
+      lifecycleLog('[ModelStore] stopTokens:', {
         modelId: model.id,
         count: stopTokens.length,
+        stopTokens,
       });
       // Only update if we found stop tokens
       if (stopTokens.length > 0) {

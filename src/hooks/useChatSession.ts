@@ -742,6 +742,16 @@ const prepareCompletion = async ({
       id: modelStore.activeModel?.id,
       name: modelStore.activeModel?.name,
     },
+    runtimeContext: {
+      n_ctx:
+        modelStore.activeContextSettings?.n_ctx ??
+        modelStore.contextInitParams.n_ctx,
+      ctx_shift:
+        modelStore.activeContextSettings?.ctx_shift ??
+        modelStore.contextInitParams.ctx_shift ??
+        true,
+      activeContextLoaded: Boolean(modelStore.activeContextSettings),
+    },
     input: {
       userMessageLength: message.text.length,
       imageCount: imageUris.length,
