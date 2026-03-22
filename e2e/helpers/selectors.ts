@@ -231,7 +231,8 @@ export const Selectors = {
     // Dynamic: model item by ID
     modelItem: (id: string): string => byTestId(`hf-model-item-${id}`),
     // Find model item by partial accessibilityLabel match (targets the TouchableOpacity)
-    modelItemByText: (text: string): string => byAccessibilityLabelContains(text),
+    modelItemByText: (text: string): string =>
+      byAccessibilityLabelContains(text),
   },
 
   // Model details/file cards

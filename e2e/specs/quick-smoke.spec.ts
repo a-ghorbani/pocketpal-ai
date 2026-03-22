@@ -138,7 +138,9 @@ describe('Quick Smoke Test', () => {
 
     // Wait for download to complete and load the model
     // Note: The model card element itself has no children - buttons are siblings in the container
-    const containerSelector = Selectors.modelCard.cardContainer(model.downloadFile);
+    const containerSelector = Selectors.modelCard.cardContainer(
+      model.downloadFile,
+    );
     const modelCardContainer = browser.$(containerSelector);
     await modelCardContainer.waitForDisplayed({timeout: TIMEOUTS.download});
 
@@ -187,7 +189,9 @@ describe('Quick Smoke Test', () => {
         console.log('[Timing] Inference complete - timing found');
         // Extract timing from accessibility label (content-desc on Android, label on iOS)
         const attrName = driver.isAndroid ? 'content-desc' : 'label';
-        const labelText = await timingElement.getAttribute(attrName).catch(() => '');
+        const labelText = await timingElement
+          .getAttribute(attrName)
+          .catch(() => '');
         const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
         timingText = timingMatch ? timingMatch[1] : labelText.slice(-100);
         inferenceComplete = true;
@@ -197,12 +201,17 @@ describe('Quick Smoke Test', () => {
       // Swipe up to scroll down while waiting (in case content is long)
       try {
         const {width, height} = await driver.getWindowSize();
-        await driver.action('pointer', {
-          parameters: {pointerType: 'touch'},
-        })
+        await driver
+          .action('pointer', {
+            parameters: {pointerType: 'touch'},
+          })
           .move({x: Math.floor(width / 2), y: Math.floor(height * 0.7)})
           .down()
-          .move({x: Math.floor(width / 2), y: Math.floor(height * 0.3), duration: 300})
+          .move({
+            x: Math.floor(width / 2),
+            y: Math.floor(height * 0.3),
+            duration: 300,
+          })
           .up()
           .perform();
         console.log('[Timing] Swiped up to scroll');
@@ -222,7 +231,9 @@ describe('Quick Smoke Test', () => {
     // Get response text from AI message
     const aiMessage = browser.$(Selectors.chat.aiMessage);
     const textView = aiMessage.$(nativeTextElement());
-    const responseText = await textView.getText().catch(() => 'Unable to extract response text');
+    const responseText = await textView
+      .getText()
+      .catch(() => 'Unable to extract response text');
 
     console.log(`\nSmoke Test Results:`);
     console.log(`  Model: ${model.id}`);
@@ -249,8 +260,11 @@ describe('Quick Smoke Test', () => {
     fs.writeFileSync(modelReportPath, JSON.stringify(testResult, null, 2));
 
     // Append to cumulative report (preserves all model results across runs)
-    const cumulativeReportPath = path.join(OUTPUT_DIR, 'all-models-report.json');
-    let allResults: typeof testResult[] = [];
+    const cumulativeReportPath = path.join(
+      OUTPUT_DIR,
+      'all-models-report.json',
+    );
+    let allResults: (typeof testResult)[] = [];
     if (fs.existsSync(cumulativeReportPath)) {
       try {
         allResults = JSON.parse(fs.readFileSync(cumulativeReportPath, 'utf8'));

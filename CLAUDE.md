@@ -5,6 +5,7 @@
 ### 1. 不要从 node_modules 内部路径导入
 
 **错误做法：**
+
 ```ts
 import MathView from 'react-native-math-view/src/fallback';
 ```
@@ -52,6 +53,7 @@ import MathView from 'react-native-math-view/src/fallback';
 ### 6. 写 mock/JS 文件时注意 prettier 格式规则
 
 **常见错误：**
+
 - 箭头函数单参数要去掉括号：`math =>` 而非 `(math) =>`
 - 超长字符串要换行（prettier 默认行宽 80）
 
@@ -65,16 +67,10 @@ import MathView from 'react-native-math-view/src/fallback';
 
 ```ts
 // ❌ 会被 prettier 报错
-function Foo({
-  math,
-  inline,
-}: {
-  math: string;
-  inline?: boolean;
-})
+function Foo({math, inline}: {math: string; inline?: boolean});
 
 // ✅ 正确
-function Foo({math, inline}: {math: string; inline?: boolean})
+function Foo({math, inline}: {math: string; inline?: boolean});
 ```
 
 ---

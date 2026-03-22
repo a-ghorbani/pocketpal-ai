@@ -50,9 +50,7 @@ interface VisualCapture {
 }
 
 const capturesJson = process.env.VISUAL_CAPTURES;
-const captures: VisualCapture[] = capturesJson
-  ? JSON.parse(capturesJson)
-  : [];
+const captures: VisualCapture[] = capturesJson ? JSON.parse(capturesJson) : [];
 
 const models = getModelsToTest(true);
 const model = models[0] || QUICK_TEST_MODEL;
@@ -100,7 +98,10 @@ describe('Visual Capture', () => {
           path.join(VISUAL_DIR, `failure-${testName}-${timestamp}.png`),
         );
       } catch (e) {
-        console.error('Failed to capture failure screenshot:', (e as Error).message);
+        console.error(
+          'Failed to capture failure screenshot:',
+          (e as Error).message,
+        );
       }
     }
   });

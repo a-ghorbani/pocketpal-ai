@@ -10,8 +10,8 @@ Note: Part of this guide is outdated. It will be updated soon.
 
 Note: This is a personal project, so I am working on it in my spare time. It might have bugs and issues, and obviously, I have not tested it on all devices. If you encounter any issues, open an issue, or even better, contribute to the project!
 
-
 ### Available Models
+
 PocketPal AI comes pre-configured with some popular SLMs:
 
 - Danube 2 and 3
@@ -33,7 +33,6 @@ Modells need to be downloaded before use. You can download and use these models 
 - Navigate to the “Models” page
 - Choose your desired model and hit download
 
-
 <div style="display: flex; justify-content: center;">
     <img src="../assets/add_model_1.webp" alt="Navigate to Models Page" style="width: 33%;">
     <img src="../assets/add_model_2.webp" alt="Download a Model" style="width: 33%;">
@@ -41,7 +40,8 @@ Modells need to be downloaded before use. You can download and use these models 
 </div>
 
 ### Loading a Model
-After downloading, tap *Load* to bring the model into memory. Now you’re ready to chat!
+
+After downloading, tap _Load_ to bring the model into memory. Now you’re ready to chat!
 
 ### Tips
 
@@ -88,6 +88,7 @@ The generation performance metric is also displayed. If interested, watch the ch
 Important Note: As of now, I haven’t found an easy way to select and copy text from the generated responses while preserving the text formatting, particularly Markdown support.
 
 In the meantime, here are the current options for copying text:
+
 - Paragraph-level copying: Long-press on a specific paragraph to copy its content.
 - Full response copying: Use the copy icon at the bottom of the text bubble to copy the entire AI-generated response.
 

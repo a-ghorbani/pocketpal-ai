@@ -3,7 +3,6 @@ name: CI Pipeline
 on:
   workflow_dispatch:
 
-
 permissions:
   contents: read
 

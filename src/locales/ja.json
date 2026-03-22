@@ -858,12 +858,7 @@
         "total": "合計: ",
         "usage": "使用率: "
       },
-      "byteSizes": [
-        "B",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["B", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {

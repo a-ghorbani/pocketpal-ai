@@ -17,7 +17,9 @@ import type {Options} from '@wdio/types';
 const DEVICE_NAME = process.env.E2E_DEVICE_NAME || 'emulator-5554';
 const PLATFORM_VERSION = process.env.E2E_PLATFORM_VERSION || '16';
 const DEVICE_UDID = process.env.E2E_DEVICE_UDID; // undefined = emulator auto-selection
-const APP_PATH = process.env.E2E_APP_PATH || '../android/app/build/outputs/apk/release/app-release.apk';
+const APP_PATH =
+  process.env.E2E_APP_PATH ||
+  '../android/app/build/outputs/apk/release/app-release.apk';
 const APPIUM_PORT = parseInt(process.env.E2E_APPIUM_PORT || '4723', 10);
 
 export const config: Options.Testrunner = {

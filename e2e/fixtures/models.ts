@@ -140,7 +140,10 @@ export const CRASH_REPRO_MODELS: ModelTestConfig[] = [
 /**
  * All available models (TEST_MODELS + CRASH_REPRO_MODELS)
  */
-export const ALL_MODELS: ModelTestConfig[] = [...TEST_MODELS, ...CRASH_REPRO_MODELS];
+export const ALL_MODELS: ModelTestConfig[] = [
+  ...TEST_MODELS,
+  ...CRASH_REPRO_MODELS,
+];
 
 /**
  * Get models to test based on environment variable filter

@@ -881,12 +881,7 @@
         "total": "总计: ",
         "usage": "使用率: "
       },
-      "byteSizes": [
-        "字节",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["字节", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {

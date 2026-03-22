@@ -71,17 +71,16 @@ export class ModelDetailsSheet extends BasePage {
    * @param filename - The exact filename (e.g., 'SmolLM2-135M-Instruct-Q4_0.gguf')
    * @param timeout - Timeout for waiting for elements
    */
-  async tapDownloadForFile(
-    filename: string,
-    timeout = 10000,
-  ): Promise<void> {
+  async tapDownloadForFile(filename: string, timeout = 10000): Promise<void> {
     // Wait for the specific file card to exist in DOM
     // We use waitForExist because isDisplayed is unreliable for sheet content on iOS
     const fileCardSelector = Selectors.modelDetails.fileCard(filename);
     const fileCard = await this.waitForExist(fileCardSelector, timeout);
 
     // Find the download button within this file card
-    const downloadButton = fileCard.$(Selectors.modelDetails.downloadButtonElement);
+    const downloadButton = fileCard.$(
+      Selectors.modelDetails.downloadButtonElement,
+    );
     // Wait for button to exist, then click
     // Note: We use waitForExist, not waitForDisplayed, due to iOS sheet visibility bug
     await downloadButton.waitForExist({timeout});

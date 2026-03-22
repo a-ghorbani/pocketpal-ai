@@ -585,12 +585,7 @@
         "total": "Totale : ",
         "usage": "Utilisation : "
       },
-      "byteSizes": [
-        "Octets",
-        "Ko",
-        "Mo",
-        "Go"
-      ]
+      "byteSizes": ["Octets", "Ko", "Mo", "Go"]
     }
   },
   "validation": {

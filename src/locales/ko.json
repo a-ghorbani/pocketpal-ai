@@ -435,12 +435,7 @@
         "total": "총 용량: ",
         "usage": "점유율: "
       },
-      "byteSizes": [
-        "바이트",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["바이트", "KB", "MB", "GB"]
     },
     "exportUtils": {
       "fileSaved": "파일 저장됨",

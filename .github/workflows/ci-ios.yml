@@ -3,7 +3,6 @@ name: CI Pipeline (iOS)
 on:
   workflow_dispatch:
 
-
 permissions:
   contents: read
 

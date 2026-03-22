@@ -242,12 +242,7 @@
       "confirmReset": "確認重置"
     },
     "usageStats": {
-      "byteSizes": [
-        "位元組",
-        "KB",
-        "MB",
-        "GB"
-      ],
+      "byteSizes": ["位元組", "KB", "MB", "GB"],
       "tooltip": {
         "usage": "使用率: ",
         "total": "總計: ",

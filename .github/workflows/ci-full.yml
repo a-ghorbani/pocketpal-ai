@@ -3,7 +3,6 @@ name: CI Full (Android + iOS)
 on:
   workflow_dispatch:
 
-
 permissions:
   contents: read
 

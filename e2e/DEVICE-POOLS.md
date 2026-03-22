@@ -14,14 +14,14 @@ From our crash analysis, we've identified that certain model + device combinatio
 
 Based on Play Vitals crash data, these devices have shown model loading issues:
 
-| Device | Model Code | Android | RAM | Use Case |
-|--------|------------|---------|-----|----------|
-| Samsung Galaxy Note 10+ | SM-N975F | 12 | 12GB | Top model load errors |
-| Realme C25 | RMX3261 | 11 | 4GB | Low-end device crashes |
-| Samsung Galaxy A32 5G | SM-A326U | 13 | 4GB | Mid-range issues |
-| Samsung Galaxy S24 Ultra | SM-S928B | 14 | 12GB | High-end flagship |
-| OnePlus Nord CE 2 5G | IV2201 | 12 | 6GB | Mid-range crashes |
-| Xiaomi Redmi Note 10 Pro | M2101K6G | 11 | 6GB | MIUI-specific issues |
+| Device                   | Model Code | Android | RAM  | Use Case               |
+| ------------------------ | ---------- | ------- | ---- | ---------------------- |
+| Samsung Galaxy Note 10+  | SM-N975F   | 12      | 12GB | Top model load errors  |
+| Realme C25               | RMX3261    | 11      | 4GB  | Low-end device crashes |
+| Samsung Galaxy A32 5G    | SM-A326U   | 13      | 4GB  | Mid-range issues       |
+| Samsung Galaxy S24 Ultra | SM-S928B   | 14      | 12GB | High-end flagship      |
+| OnePlus Nord CE 2 5G     | IV2201     | 12      | 6GB  | Mid-range crashes      |
+| Xiaomi Redmi Note 10 Pro | M2101K6G   | 11      | 6GB  | MIUI-specific issues   |
 
 ## Steps to Create a Device Pool
 
@@ -49,6 +49,7 @@ Based on Play Vitals crash data, these devices have shown model loading issues:
 ### 4. Copy the ARN
 
 After creating the pool:
+
 1. Click on the pool name
 2. Copy the **ARN** (looks like: `arn:aws:devicefarm:us-west-2:123456789:devicepool:abc123...`)
 
@@ -64,6 +65,7 @@ AWS_DEVICE_POOL_ARN_ANDROID="arn:aws:devicefarm:us-west-2:123456789:devicepool:a
 ```
 
 Then run:
+
 ```bash
 yarn crash-repro --model gemma-2-2b
 ```
@@ -115,6 +117,7 @@ For testing vision/multimodal models:
 ### 1. Identify the Crash
 
 From Play Vitals or user reports, identify:
+
 - Model ID (e.g., `gemma-2-2b`)
 - Device model code (e.g., `SM-N975F`)
 - Android version
@@ -136,6 +139,7 @@ yarn crash-repro --model gemma-2-2b --local
 ### 4. Analyze Results
 
 Check `e2e/debug-output/` for:
+
 - `load-stress-report-*.json` - detailed timing and error data
 - Screenshots on failures
 - Console output with error messages
