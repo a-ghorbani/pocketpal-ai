@@ -140,7 +140,7 @@ export function migrateContextInitParams(
     ) {
       if (migratedParams.flash_attn) {
         // Flash attention was enabled
-        migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
+        migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'on';
       } else {
         // Flash attention was disabled
         migratedParams.flash_attn_type = 'off';
