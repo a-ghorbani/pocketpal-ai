@@ -623,4 +623,26 @@ describe('useChatSession', () => {
     ).toBe(true);
     expect(result.truncation.historyRetainedPercent).toBeGreaterThan(0);
   });
+
+  it('should hard-trim all sections instead of falling back to original content when far over budget', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [{role: 'system', content: 'S'.repeat(1200)}] as any,
+      chatMessages: [
+        {role: 'assistant', content: 'A'.repeat(1200)},
+        {role: 'user', content: 'B'.repeat(1200)},
+      ] as any,
+      userMessage: {role: 'user', content: 'C'.repeat(1200)},
+      contextSize: 64,
+      reservedOutputTokens: 64,
+    });
+
+    const estimatedTokens = result.messages.reduce((sum, message) => {
+      const content =
+        typeof message.content === 'string' ? message.content.length : 0;
+      return sum + Math.ceil(content / 4);
+    }, 0);
+
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(estimatedTokens).toBeLessThanOrEqual(64);
+  });
 });

@@ -395,6 +395,59 @@ export async function pruneChatHistoryToFitContext({
     return nextContent;
   };
 
+  const applyHardTrimFallback = async () => {
+    for (
+      let index = 0;
+      index < keptHistory.length && totalTokens > inputTokenBudget;
+      index += 1
+    ) {
+      const historyMessage = keptHistory[index];
+      const historyChars = estimateMessageChars(historyMessage);
+
+      if (historyChars <= 0) {
+        continue;
+      }
+
+      keptHistory[index] = {
+        ...historyMessage,
+        content: trimContentFromHead(historyMessage.content, historyChars),
+      };
+      totalTokens = await getCurrentTokenCount();
+    }
+
+    if (totalTokens > inputTokenBudget) {
+      const userChars = estimateMessageChars(trimmedUserMessage);
+      if (userChars > 0) {
+        trimmedUserMessage = {
+          ...trimmedUserMessage,
+          content: trimContentFromTail(trimmedUserMessage.content, userChars),
+        };
+        totalTokens = await getCurrentTokenCount();
+      }
+    }
+
+    if (totalTokens > inputTokenBudget) {
+      for (
+        let index = trimmedSystemMessages.length - 1;
+        index >= 0 && totalTokens > inputTokenBudget;
+        index -= 1
+      ) {
+        const systemMessage = trimmedSystemMessages[index];
+        const systemChars = estimateMessageChars(systemMessage);
+
+        if (systemChars <= 0) {
+          continue;
+        }
+
+        trimmedSystemMessages[index] = {
+          ...systemMessage,
+          content: trimContentFromTail(systemMessage.content, systemChars),
+        };
+        totalTokens = await getCurrentTokenCount();
+      }
+    }
+  };
+
   const originalHistoryChars = sumChars(chatMessages);
   const originalInputChars = estimateMessageChars(userMessage);
   const originalSystemChars = sumChars(systemMessages as ChatMessage[]);
@@ -448,7 +501,7 @@ export async function pruneChatHistoryToFitContext({
 
     let low = 0;
     let high = maxTrimChars;
-    let bestContent = historyMessage.content;
+    let bestContent = trimContentFromHead(historyMessage.content, maxTrimChars);
     let bestFitsBudget = false;
 
     while (low <= high) {
@@ -491,7 +544,10 @@ export async function pruneChatHistoryToFitContext({
   if (totalTokens > inputTokenBudget && originalInputChars > 0) {
     let low = 0;
     let high = originalInputChars;
-    let bestContent = userMessage.content;
+    let bestContent = trimContentFromTail(
+      userMessage.content,
+      originalInputChars,
+    );
 
     while (low <= high) {
       const trimmedChars = Math.floor((low + high) / 2);
@@ -530,7 +586,7 @@ export async function pruneChatHistoryToFitContext({
       const systemChars = estimateMessageChars(systemMessage);
       let low = 0;
       let high = systemChars;
-      let bestContent = systemMessage.content;
+      let bestContent = trimContentFromTail(systemMessage.content, systemChars);
 
       while (low <= high) {
         const trimmedChars = Math.floor((low + high) / 2);
@@ -554,6 +610,10 @@ export async function pruneChatHistoryToFitContext({
       };
       totalTokens = await getCurrentTokenCount();
     }
+  }
+
+  if (totalTokens > inputTokenBudget) {
+    await applyHardTrimFallback();
   }
 
   const keptHistoryChars = sumChars(keptHistory);
