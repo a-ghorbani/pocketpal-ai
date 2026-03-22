@@ -297,6 +297,8 @@ describe('SettingsScreen', () => {
       fireEvent(pruneHistorySwitch, 'valueChange', false);
     });
 
-    expect(modelStore.setPruneChatHistoryBeforeSend).toHaveBeenCalledWith(false);
+    expect(modelStore.setPruneChatHistoryBeforeSend).toHaveBeenCalledWith(
+      false,
+    );
   });
 });
