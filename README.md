@@ -91,6 +91,33 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 * [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
 * [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
 
+Testing confirmed that everything else is working; the only issue is that PAL login is unusable.
+
+Since the original `release.yml` isn't hardcoded either, but rather retrieves values from GitHub Actions configuration:
+
+SUPABASE_URL=${{ vars.SUPABASE_URL }}
+
+SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+
+**PALSHUB_API_BASE_URL**
+
+I know the official value is https://palshub.ai. It directly determines the public Pals API base URL, so I added a fallback logic for it. Sources:
+
+1. The official site is indeed https://palshub.ai. Source: PalsHub Official Website
+2. Its homepage explicitly states "AI Pals for PocketPal AI," which is the official public site. The original public repository's `.env.example` directly sets the default value to PALSHUB_API_BASE_URL=https://palshub.ai. Source: a-ghorbani/pocketpal-ai/.env.example
+
+**SUPABASE_URL**
+
+Although I know it "should be some Supabase project address," I don't know which project the original is actually using. The `.env.example` only has the placeholder: https://your-project.supabase.co, so I can't guess a real value for it.
+
+**SUPABASE_ANON_KEY**
+
+Similarly, I don't know the real value and can't just write it in randomly.
+
+**You can decompile the official released APK to find these two hidden parameters and restore the login functionality.**
+
 ## 联系方式
 
 **招募对手机推理大模型感兴趣的朋友。我们来共同改进这个应用。QQ2831835831**
