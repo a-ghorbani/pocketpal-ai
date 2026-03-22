@@ -128,9 +128,11 @@ export const ConsoleScreen: React.FC = observer(() => {
           <Button mode="outlined" onPress={() => debugStore.clearLogs()}>
             Clear
           </Button>
-          <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
-            Net Diag
-          </Button>
+          {__DEV__ && (
+            <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
+              Net Diag
+            </Button>
+          )}
         </View>
       </View>
 

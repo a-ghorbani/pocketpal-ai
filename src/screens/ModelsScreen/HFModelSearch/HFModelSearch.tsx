@@ -1,8 +1,10 @@
 import React, {useState, useCallback, useMemo, useEffect} from 'react';
-import {BackHandler} from 'react-native';
+import {BackHandler, StyleSheet, TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
+import {Portal} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {SearchView} from './SearchView';
 import {DetailsView} from './DetailsView';
@@ -11,6 +13,8 @@ import {hfStore} from '../../../store';
 
 import {HuggingFaceModel} from '../../../utils/types';
 import {Sheet} from '../../../components';
+import {CloseIcon} from '../../../assets/icons';
+import {useTheme} from '../../../hooks';
 
 interface HFModelSearchProps {
   visible: boolean;
@@ -25,6 +29,8 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(
       null,
     );
+    const insets = useSafeAreaInsets();
+    const theme = useTheme();
 
     const debouncedSearch = useMemo(
       () =>
@@ -90,6 +96,27 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
 
     return (
       <>
+        {visible && (
+          <Portal>
+            <View style={styles.forceCloseOverlay} pointerEvents="box-none">
+              <TouchableOpacity
+                style={[
+                  styles.forceCloseButton,
+                  {
+                    top: Math.max(insets.top + 20, 36),
+                    backgroundColor: theme.colors.background,
+                  },
+                ]}
+                onPress={handleSheetDismiss}
+                hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
+                testID="hf-search-force-close-button"
+                accessibilityLabel="Force close Hugging Face search"
+                accessibilityRole="button">
+                <CloseIcon stroke={theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </Portal>
+        )}
         <Sheet
           isVisible={visible}
           snapPoints={['92%']}
@@ -118,3 +145,22 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     );
   },
 );
+
+const styles = StyleSheet.create({
+  forceCloseOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  forceCloseButton: {
+    position: 'absolute',
+    left: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000,
+    elevation: 10000,
+  },
+});
