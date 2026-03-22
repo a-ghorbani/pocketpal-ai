@@ -204,7 +204,7 @@ export function initializeNetworkIntercept() {
         ? input
         : input instanceof URL
           ? input.toString()
-          : (input as Request).url ?? String(input);
+          : ((input as Request).url ?? String(input));
     const method = init?.method ?? 'GET';
     const reqId = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const startMs = Date.now();
@@ -390,9 +390,7 @@ function sanitizeHeaders(
     } else {
       Object.entries(headers).forEach(([key, value]) => {
         obj[key] =
-          key.toLowerCase() === 'authorization'
-            ? '<redacted>'
-            : String(value);
+          key.toLowerCase() === 'authorization' ? '<redacted>' : String(value);
       });
     }
   } catch {
