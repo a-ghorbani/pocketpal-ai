@@ -1,5 +1,41 @@
 # PocketPal Build Lessons
 
+## Local Verification Checklist
+
+Before waiting for GitHub Actions to fail, always run these checks locally after each code change.
+
+### Windows commands
+
+```bash
+cmd /c yarn.cmd typecheck
+cmd /c npx.cmd jest --runInBand --coverage=false --runTestsByPath <test-file>
+cmd /c npx.cmd eslint <changed-file-1> <changed-file-2>
+```
+
+### Recommended workflow
+
+```bash
+cmd /c yarn.cmd typecheck
+cmd /c npx.cmd jest --runInBand --coverage=false --runTestsByPath src/components/ChatView/__tests__/ChatView.test.tsx
+cmd /c npx.cmd eslint src/components/ChatView/ChatView.tsx src/components/ChatView/__tests__/ChatView.test.tsx
+```
+
+### Notes
+
+- Use `cmd /c ...cmd` to avoid PowerShell execution-policy problems with `.ps1` shims.
+- Use `--runInBand` because restricted Windows environments may fail with `spawn EPERM`.
+- Use `--coverage=false` when validating a single test file, otherwise unrelated global coverage thresholds may fail the run.
+
+### Dependency setup
+
+If local tools are missing, install dependencies first:
+
+```bash
+cmd /c yarn.cmd install --ignore-scripts
+```
+
+On this Windows machine, plain `yarn install` may fail because the project `postinstall` runs `bash ./scripts/postinstall.sh`, and `bash` is not always available.
+
 ## 编译/typecheck 前必读
 
 ### 1. 不要从 node_modules 内部路径导入
