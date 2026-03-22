@@ -1,53 +1,25 @@
-import {View, Animated} from 'react-native';
-import React, {useEffect, useRef} from 'react';
+import {Text, View} from 'react-native';
+import React from 'react';
 
 import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
+import {CircularActivityIndicator} from '../CircularActivityIndicator';
 
-import {Theme} from '../../utils/types';
-
-interface LoadingDotProps {
-  delay: number;
-  theme: Theme;
-}
-
-const LoadingDot: React.FC<LoadingDotProps> = ({delay, theme}) => {
-  const opacity = useRef(new Animated.Value(0.3)).current;
-
-  useEffect(() => {
-    const animation = Animated.sequence([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 500,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0.3,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    Animated.loop(animation).start();
-  }, [opacity, delay]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.dot,
-        {
-          backgroundColor: theme.colors.outline,
-          opacity,
-        },
-      ]}
-    />
-  );
+type LoadingBubbleProps = {
+  label: string;
+  progress?: number | null;
 };
 
-export const LoadingBubble: React.FC = () => {
+export const LoadingBubble: React.FC<LoadingBubbleProps> = ({
+  label,
+  progress,
+}) => {
   const theme = useTheme();
+  const progressValue =
+    typeof progress === 'number'
+      ? Math.max(0, Math.min(100, Math.round(progress)))
+      : 0;
 
   return (
     <View
@@ -55,9 +27,10 @@ export const LoadingBubble: React.FC = () => {
         styles.container,
         {backgroundColor: theme.colors.surfaceVariant},
       ]}>
-      <LoadingDot delay={0} theme={theme} />
-      <LoadingDot delay={200} theme={theme} />
-      <LoadingDot delay={400} theme={theme} />
+      <CircularActivityIndicator color={theme.colors.primary} size={16} />
+      <Text style={[styles.text, {color: theme.colors.onSurfaceVariant}]}>
+        {label}... {progressValue}%
+      </Text>
     </View>
   );
 };

@@ -1177,6 +1177,7 @@ export const useChatSession = (
     await addMessage(textMessage);
     modelStore.setInferencing(true);
     modelStore.setIsStreaming(false);
+    modelStore.setPromptProcessingProgress(0);
     chatSessionStore.setIsGenerating(true);
 
     // Keep screen awake during completion
@@ -1264,6 +1265,22 @@ export const useChatSession = (
         cleanCompletionParams,
         data => {
           if (currentMessageInfo.current) {
+            const promptProgress =
+              typeof (data as any).prompt_progress === 'number'
+                ? Math.max(
+                    0,
+                    Math.min(100, Math.round((data as any).prompt_progress)),
+                  )
+                : null;
+            const hasStreamPayload = Boolean(
+              data.token || data.content || data.reasoning_content,
+            );
+
+            if (promptProgress !== null && !hasStreamPayload) {
+              modelStore.setPromptProcessingProgress(promptProgress);
+              return;
+            }
+
             // Capture time to first token on the first token received
             if (timeToFirstToken === null && (data.token || data.content)) {
               timeToFirstToken = Date.now() - completionStartTime;
@@ -1279,6 +1296,7 @@ export const useChatSession = (
             }
 
             if (!modelStore.isStreaming) {
+              modelStore.setPromptProcessingProgress(null);
               modelStore.setIsStreaming(true);
             }
 
@@ -1497,6 +1515,7 @@ export const useChatSession = (
           },
         },
       );
+      modelStore.setPromptProcessingProgress(null);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
@@ -1510,6 +1529,7 @@ export const useChatSession = (
         requestId,
         error: error instanceof Error ? error.message : JSON.stringify(error),
       });
+      modelStore.setPromptProcessingProgress(null);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
@@ -1566,6 +1586,7 @@ export const useChatSession = (
     if (modelStore.inferencing && context) {
       context.stopCompletion();
     }
+    modelStore.setPromptProcessingProgress(null);
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);

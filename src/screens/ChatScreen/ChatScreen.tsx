@@ -137,6 +137,7 @@ export const ChatScreen: React.FC = observer(() => {
 
   // Show loading bubble only during the thinking phase (inferencing but not streaming)
   const isThinking = modelStore.inferencing && !modelStore.isStreaming;
+  const promptProcessingProgress = modelStore.promptProcessingProgress;
 
   const updateSessionSetting = async (patch: Record<string, unknown>) => {
     const currentSession = chatSessionStore.sessions.find(
@@ -190,6 +191,7 @@ export const ChatScreen: React.FC = observer(() => {
         user={user}
         isStopVisible={modelStore.inferencing}
         isThinking={isThinking}
+        promptProcessingProgress={promptProcessingProgress}
         isStreaming={modelStore.isStreaming}
         sendButtonVisibilityMode="always"
         showImageUpload={true}

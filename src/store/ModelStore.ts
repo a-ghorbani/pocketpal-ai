@@ -131,6 +131,7 @@ class ModelStore {
 
   inferencing: boolean = false;
   isStreaming: boolean = false;
+  promptProcessingProgress: number | null = null;
 
   // Track active completion promise for safe context release
   // This prevents race condition where context is freed while completion is still running
@@ -2497,6 +2498,10 @@ class ModelStore {
 
   setIsStreaming(value: boolean) {
     this.isStreaming = value;
+  }
+
+  setPromptProcessingProgress(value: number | null) {
+    this.promptProcessingProgress = value;
   }
 
   /**

@@ -139,6 +139,8 @@ export interface ChatProps extends ChatTopLevelProps {
   isStreaming?: boolean;
   /** Indicates if the AI is currently thinking (processing but not yet streaming) */
   isThinking?: boolean;
+  /** Real prompt processing progress percentage reported by the engine */
+  promptProcessingProgress?: number | null;
   messages: MessageType.Any[];
   /** Used for pagination (infinite scroll). Called when user scrolls
    * to the very end of the list (minus `onEndReachedThreshold`).
@@ -184,6 +186,7 @@ export const ChatView = observer(
     isStopVisible,
     isStreaming = false,
     isThinking = false,
+    promptProcessingProgress = null,
     messages,
     onEndReached,
     onMessageLongPress: externalOnMessageLongPress,
@@ -1523,12 +1526,17 @@ export const ChatView = observer(
     // Render header (loading bubble and keyboard spacer)
     const renderListHeaderComponent = React.useCallback(
       () => (
-        <>
-          {isThinking && <LoadingBubble />}
+          <>
+          {isThinking && (
+            <LoadingBubble
+              label={l10n.benchmark.benchmarkResultCard.results.promptProcessing}
+              progress={promptProcessingProgress}
+            />
+          )}
           {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),
-      [isThinking, chatMessages.length, headerStyle],
+      [isThinking, promptProcessingProgress, chatMessages.length, headerStyle, l10n],
     );
 
     // Render complete chat list with scroll-to-bottom button

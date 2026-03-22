@@ -1,0 +1,168 @@
+﻿diff --git a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
+index 7819924..1b92efd 100644
+--- a/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
++++ b/node_modules/llama.rn/cpp/jsi/RNLlamaJSI.cpp
+@@ -1005,6 +1005,31 @@ namespace rnllama_jsi {
+                         throw std::runtime_error("Failed to initialize sampling");
+                     }
+ 
++                    ctx->completion->on_prompt_progress_callback = [onToken, contextId, runtimePtr, callInvoker](float progress, int32_t processed, int32_t total) {
++                        if (!onToken) {
++                            return;
++                        }
++
++                        auto runtime = runtimePtr;
++                        if (!runtime) {
++                            return;
++                        }
++
++                        callInvoker->invokeAsync([onToken, contextId, progress, processed, total, runtime]() {
++                            long ctxPtr = g_llamaContexts.get(contextId);
++                            if (!ctxPtr) {
++                                return;
++                            }
++
++                            auto& rt = *runtime;
++                            jsi::Object res(rt);
++                            res.setProperty(rt, "prompt_progress", (double)progress);
++                            res.setProperty(rt, "prompt_tokens_processed", (double)processed);
++                            res.setProperty(rt, "prompt_tokens_total", (double)total);
++                            onToken->call(rt, res);
++                        });
++                    };
++
+                     ctx->completion->prefill_text = prefill_text;
+                     ctx->completion->beginCompletion(chat_format, reasoning_format, thinking_forced_open, chat_parser);
+ 
+@@ -1087,6 +1112,7 @@ namespace rnllama_jsi {
+                     }
+ 
+                     common_perf_print(ctx->ctx, ctx->completion->ctx_sampling);
++                    ctx->completion->on_prompt_progress_callback = nullptr;
+                     ctx->completion->endCompletion();
+ 
+                     return [contextId](jsi::Runtime& rt) -> jsi::Value {
+diff --git a/node_modules/llama.rn/cpp/rn-completion.cpp b/node_modules/llama.rn/cpp/rn-completion.cpp
+index cfb69bb..41e45b1 100644
+--- a/node_modules/llama.rn/cpp/rn-completion.cpp
++++ b/node_modules/llama.rn/cpp/rn-completion.cpp
+@@ -5,6 +5,7 @@
+ #include "rn-common.hpp"
+ 
+ #include <algorithm>
++#include <cmath>
+ #include <cstdlib>
+ 
+ // Include multimodal support
+@@ -45,6 +46,7 @@ void llama_rn_context_completion::rewind() {
+     incomplete = false;
+     n_remain = 0;
+     n_past = 0;
++    last_prompt_progress = -1;
+     parent_ctx->params.sampling.n_prev = parent_ctx->n_ctx;
+     if (parent_ctx->isVocoderEnabled()) {
+         parent_ctx->tts_wrapper->audio_tokens.clear();
+@@ -53,6 +55,31 @@ void llama_rn_context_completion::rewind() {
+     }
+ }
+ 
++void llama_rn_context_completion::emitPromptProgress(int32_t processed, int32_t total) {
++    if (!on_prompt_progress_callback) {
++        return;
++    }
++
++    if (total <= 0) {
++        on_prompt_progress_callback(100.0f, 0, 0);
++        last_prompt_progress = 100;
++        return;
++    }
++
++    const int32_t clamped_processed = std::max(0, std::min(processed, total));
++    const int percentage = std::max(
++        0,
++        std::min(100, (int) std::round((double) clamped_processed * 100.0 / (double) total))
++    );
++
++    if (percentage == last_prompt_progress) {
++        return;
++    }
++
++    last_prompt_progress = percentage;
++    on_prompt_progress_callback((float) percentage, clamped_processed, total);
++}
++
+ bool llama_rn_context_completion::initSampling() {
+     if (ctx_sampling != nullptr) {
+         common_sampler_free(ctx_sampling);
+@@ -182,10 +209,11 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
+                     return;
+                 }
+ 
+-                n_past_batch += n_eval;
+-                n_remaining -= n_eval;
+-                n_past += n_eval;
+-            }
++                    n_past_batch += n_eval;
++                    n_remaining -= n_eval;
++                    n_past += n_eval;
++                    emitPromptProgress(n_past, num_prompt_tokens);
++                }
+         }
+         // Update token count for encoding
+         num_prompt_tokens = embd.size();
+@@ -205,6 +233,10 @@ void llama_rn_context_completion::loadPrompt(const std::vector<std::string> &med
+ 
+     has_next_token = true;
+ 
++    if (has_media) {
++        emitPromptProgress((int32_t)num_prompt_tokens, (int32_t)num_prompt_tokens);
++    }
++
+     LOG_INFO("[DEBUG] Input processed: n_past=%d, embd.size=%zu, num_prompt_tokens=%zu, has_media=%d",
+             n_past, embd.size(), num_prompt_tokens, has_media ? 1 : 0);
+ }
+@@ -286,6 +318,7 @@ completion_token_output llama_rn_context_completion::nextToken()
+             return result;
+         }
+         n_past += n_eval;
++        emitPromptProgress(n_past, (int32_t)embd.size());
+ 
+         if(is_interrupted) {
+             LOG_INFO("Decoding Interrupted");
+diff --git a/node_modules/llama.rn/cpp/rn-completion.h b/node_modules/llama.rn/cpp/rn-completion.h
+index 96f0135..bfa828e 100644
+--- a/node_modules/llama.rn/cpp/rn-completion.h
++++ b/node_modules/llama.rn/cpp/rn-completion.h
+@@ -81,6 +81,10 @@ struct llama_rn_context_completion {
+     // Sampling context
+     common_sampler *ctx_sampling = nullptr;
+ 
++    // Prompt processing progress callback
++    std::function<void(float progress, int32_t processed, int32_t total)> on_prompt_progress_callback;
++    int32_t last_prompt_progress = -1;
++
+     // Constructor
+     llama_rn_context_completion(llama_rn_context* parent);
+ 
+@@ -95,6 +99,7 @@ struct llama_rn_context_completion {
+     void beginCompletion();
+     void beginCompletion(int chat_format, common_reasoning_format reasoning_format, bool thinking_forced_open, const std::string &chat_parser = "");
+     void endCompletion();
++    void emitPromptProgress(int32_t processed, int32_t total);
+     completion_token_output nextToken();
+     size_t findStoppingStrings(const std::string &text, const size_t last_token_size, const stop_type type);
+     completion_token_output doCompletion();
+diff --git a/node_modules/llama.rn/src/index.ts b/node_modules/llama.rn/src/index.ts
+index f4406ea..3514ffe 100644
+--- a/node_modules/llama.rn/src/index.ts
++++ b/node_modules/llama.rn/src/index.ts
+@@ -177,6 +177,9 @@ export type ToolCall = {
+ export type TokenData = {
+   token: string
+   completion_probabilities?: Array<NativeCompletionTokenProb>
++  prompt_progress?: number
++  prompt_tokens_processed?: number
++  prompt_tokens_total?: number
+   // Parsed content from accumulated text
+   content?: string
+   reasoning_content?: string
