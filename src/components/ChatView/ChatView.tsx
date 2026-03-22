@@ -919,44 +919,43 @@ export const ChatView = observer(
         return;
       }
 
-      // Skip cluster: keep going newer while next message is within one screen.
+      // Skip cluster: use UP's precomputed stop points so DOWN visits
+      // the same positions in reverse, ensuring symmetric navigation.
       // Skipped when cursor was just (re-)initialized to avoid overshooting.
       if (!skipCluster) {
         const cumH = buildCumulativeHeights();
-        const anchorH = cumH[userMessageIndices[cursor] + 1];
         const beforeCluster = cursor;
-        chatNavLog('DOWN cluster check start', {
-          anchorPos: cursor,
-          anchorFlatIdx: userMessageIndices[cursor],
-          anchorH: Math.round(anchorH),
-          vpH: Math.round(navViewportHeight),
-        });
-        while (
-          cursor - 1 >= 0 &&
-          anchorH - cumH[userMessageIndices[cursor - 1] + 1] < navViewportHeight
-        ) {
-          const nextH = cumH[userMessageIndices[cursor - 1] + 1];
-          chatNavLog('DOWN cluster step', {
-            nextPos: cursor - 1,
-            nextFlatIdx: userMessageIndices[cursor - 1],
-            nextH: Math.round(nextH),
-            diff: Math.round(anchorH - nextH),
-            vpH: Math.round(navViewportHeight),
-            fits: true,
-          });
-          cursor--;
+
+        // Precompute UP's cluster stops (greedy from bottom).
+        const stops: number[] = [0];
+        let si = 0;
+        while (si < len) {
+          let sj = si + 1;
+          if (sj >= len) {
+            break;
+          }
+          const anchorH = cumH[userMessageIndices[sj] + 1];
+          while (
+            sj + 1 < len &&
+            cumH[userMessageIndices[sj + 1] + 1] - anchorH < navViewportHeight
+          ) {
+            sj++;
+          }
+          stops.push(sj);
+          si = sj;
         }
-        if (cursor - 1 >= 0) {
-          const nextH = cumH[userMessageIndices[cursor - 1] + 1];
-          chatNavLog('DOWN cluster stop', {
-            nextPos: cursor - 1,
-            nextFlatIdx: userMessageIndices[cursor - 1],
-            nextH: Math.round(nextH),
-            diff: Math.round(anchorH - nextH),
-            vpH: Math.round(navViewportHeight),
-            fits: false,
-          });
+
+        chatNavLog('DOWN cluster stops', {stops, cursor});
+
+        // Find the stop at or below the current cursor.
+        let stopIdx = stops.length - 1;
+        while (stopIdx >= 0 && stops[stopIdx] > cursor) {
+          stopIdx--;
         }
+        if (stopIdx >= 0) {
+          cursor = stops[stopIdx];
+        }
+
         if (cursor !== beforeCluster) {
           chatNavLog('DOWN cluster skip', {from: beforeCluster, to: cursor});
         }

@@ -172,6 +172,247 @@ export function chatNavLog(message: string, payload?: unknown) {
   categoryLog(debugStore.logChatNavigation, '[ChatNav]', message, payload);
 }
 
+/** 类7: 网络链路 — fetch/axios 请求、响应、错误全链路追踪 */
+export function networkLog(message: string, payload?: unknown) {
+  categoryLog(debugStore.logNetwork, '[Network]', message, payload);
+}
+
+let networkInterceptInitialized = false;
+
+/**
+ * 拦截全局 fetch 和 axios，记录完整的请求/响应链路到类7日志。
+ * 应在 App 启动时调用一次。
+ */
+export function initializeNetworkIntercept() {
+  if (networkInterceptInitialized) {
+    return;
+  }
+  networkInterceptInitialized = true;
+
+  // ── 拦截全局 fetch ──
+  const originalFetch = global.fetch;
+  global.fetch = async function interceptedFetch(
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
+    if (!debugStore.logNetwork) {
+      return originalFetch(input, init);
+    }
+
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : (input as Request).url ?? String(input);
+    const method = init?.method ?? 'GET';
+    const reqId = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const startMs = Date.now();
+
+    networkLog('fetch:request', {
+      reqId,
+      method,
+      url,
+      headers: sanitizeHeaders(init?.headers),
+      bodyPreview: bodyPreview(init?.body),
+    });
+
+    try {
+      const response = await originalFetch(input, init);
+      const elapsed = Date.now() - startMs;
+
+      // 克隆 response 以便读取 body 而不消耗原始流
+      const cloned = response.clone();
+      let responseBody: string | undefined;
+      try {
+        const text = await cloned.text();
+        responseBody =
+          text.length > 2000 ? text.slice(0, 2000) + '…(truncated)' : text;
+      } catch {
+        responseBody = '<unable to read body>';
+      }
+
+      networkLog('fetch:response', {
+        reqId,
+        method,
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        elapsedMs: elapsed,
+        responseHeaders: headersToObj(response.headers),
+        bodyPreview: responseBody,
+      });
+
+      return response;
+    } catch (error) {
+      const elapsed = Date.now() - startMs;
+      networkLog('fetch:error', {
+        reqId,
+        method,
+        url,
+        elapsedMs: elapsed,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack?.slice(0, 500) : undefined,
+      });
+      throw error;
+    }
+  };
+
+  // ── 拦截 axios（通过拦截 XMLHttpRequest）──
+  interceptXHR();
+}
+
+function interceptXHR() {
+  const OrigXHR = global.XMLHttpRequest;
+  if (!OrigXHR) {
+    return;
+  }
+
+  const origOpen = OrigXHR.prototype.open;
+  const origSend = OrigXHR.prototype.send;
+  const origSetRequestHeader = OrigXHR.prototype.setRequestHeader;
+
+  OrigXHR.prototype.open = function (
+    this: XMLHttpRequest & {_netDebug?: any},
+    method: string,
+    url: string | URL,
+    ...rest: any[]
+  ) {
+    this._netDebug = {
+      reqId: `x-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      method,
+      url: String(url),
+      headers: {} as Record<string, string>,
+      startMs: 0,
+    };
+    return origOpen.apply(this, [method, url, ...rest] as any);
+  };
+
+  OrigXHR.prototype.setRequestHeader = function (
+    this: XMLHttpRequest & {_netDebug?: any},
+    name: string,
+    value: string,
+  ) {
+    if (this._netDebug) {
+      this._netDebug.headers[name] = value;
+    }
+    return origSetRequestHeader.call(this, name, value);
+  };
+
+  OrigXHR.prototype.send = function (
+    this: XMLHttpRequest & {_netDebug?: any},
+    body?: any,
+  ) {
+    if (!debugStore.logNetwork || !this._netDebug) {
+      return origSend.call(this, body);
+    }
+
+    const debug = this._netDebug;
+    debug.startMs = Date.now();
+
+    networkLog('xhr:request', {
+      reqId: debug.reqId,
+      method: debug.method,
+      url: debug.url,
+      headers: sanitizeHeaders(debug.headers),
+      bodyPreview: bodyPreview(body),
+    });
+
+    this.addEventListener('load', () => {
+      const elapsed = Date.now() - debug.startMs;
+      const responseText =
+        typeof this.responseText === 'string'
+          ? this.responseText.length > 2000
+            ? this.responseText.slice(0, 2000) + '…(truncated)'
+            : this.responseText
+          : '<no responseText>';
+
+      networkLog('xhr:response', {
+        reqId: debug.reqId,
+        method: debug.method,
+        url: debug.url,
+        status: this.status,
+        statusText: this.statusText,
+        elapsedMs: elapsed,
+        responseHeaders: this.getAllResponseHeaders()?.slice(0, 1000),
+        bodyPreview: responseText,
+      });
+    });
+
+    this.addEventListener('error', () => {
+      const elapsed = Date.now() - debug.startMs;
+      networkLog('xhr:error', {
+        reqId: debug.reqId,
+        method: debug.method,
+        url: debug.url,
+        elapsedMs: elapsed,
+        status: this.status,
+        readyState: this.readyState,
+      });
+    });
+
+    this.addEventListener('timeout', () => {
+      const elapsed = Date.now() - debug.startMs;
+      networkLog('xhr:timeout', {
+        reqId: debug.reqId,
+        method: debug.method,
+        url: debug.url,
+        elapsedMs: elapsed,
+        timeout: this.timeout,
+      });
+    });
+
+    this.addEventListener('abort', () => {
+      networkLog('xhr:abort', {
+        reqId: debug.reqId,
+        method: debug.method,
+        url: debug.url,
+      });
+    });
+
+    return origSend.call(this, body);
+  };
+}
+
+function sanitizeHeaders(
+  headers: HeadersInit | Record<string, string> | undefined | null,
+): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const obj: Record<string, string> = {};
+  if (headers instanceof Headers) {
+    headers.forEach((value, key) => {
+      obj[key] = key.toLowerCase() === 'authorization' ? '<redacted>' : value;
+    });
+  } else if (Array.isArray(headers)) {
+    headers.forEach(([key, value]) => {
+      obj[key] = key.toLowerCase() === 'authorization' ? '<redacted>' : value;
+    });
+  } else {
+    Object.entries(headers).forEach(([key, value]) => {
+      obj[key] = key.toLowerCase() === 'authorization' ? '<redacted>' : value;
+    });
+  }
+  return obj;
+}
+
+function headersToObj(headers: Headers): Record<string, string> {
+  const obj: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    obj[key] = value;
+  });
+  return obj;
+}
+
+function bodyPreview(body: unknown): string | undefined {
+  if (body === undefined || body === null) {
+    return undefined;
+  }
+  const str = typeof body === 'string' ? body : JSON.stringify(body);
+  return str.length > 500 ? str.slice(0, 500) + '…' : str;
+}
+
 type CompletionProbePayload = Record<string, unknown>;
 
 export function buildCompletionParamProbe(params: Record<string, unknown>) {

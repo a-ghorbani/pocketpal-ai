@@ -297,6 +297,13 @@ class HFStore {
     }
   }
 
+  // Force-reset loading state (e.g. when the user closes the search sheet)
+  resetLoading() {
+    runInAction(() => {
+      this.isLoading = false;
+    });
+  }
+
   // Fetch the models from the Hugging Face API
   async fetchModels() {
     this.isLoading = true;

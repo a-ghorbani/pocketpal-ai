@@ -1,6 +1,9 @@
 import axios from 'axios';
 
 import {urls} from '../config';
+import {networkLog} from '../utils/debug';
+
+const HF_TIMEOUT_MS = 15000;
 
 import {
   GGUFSpecs,
@@ -47,6 +50,15 @@ export async function fetchModels({
   nextPageUrl?: string;
   authToken?: string | null;
 }): Promise<HuggingFaceModelsResponse> {
+  const targetUrl = nextPageUrl || urls.modelsList();
+  networkLog('hf:fetchModels:start', {
+    targetUrl,
+    search,
+    author,
+    filter,
+    limit,
+    hasAuthToken: !!authToken,
+  });
   try {
     const headers: Record<string, string> = {};
 
@@ -54,7 +66,7 @@ export async function fetchModels({
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await axios.get(nextPageUrl || urls.modelsList(), {
+    const response = await axios.get(targetUrl, {
       params: {
         search,
         author,
@@ -66,6 +78,7 @@ export async function fetchModels({
         config,
       },
       headers,
+      timeout: HF_TIMEOUT_MS,
     });
 
     const linkHeader = response.headers.link;
@@ -78,11 +91,24 @@ export async function fetchModels({
       }
     }
 
+    networkLog('hf:fetchModels:success', {
+      targetUrl,
+      status: response.status,
+      modelCount: (response.data as any[])?.length ?? 0,
+      nextLink,
+    });
+
     return {
       models: response.data as HuggingFaceModel[],
       nextLink,
     };
   } catch (error) {
+    networkLog('hf:fetchModels:error', {
+      targetUrl,
+      error: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      status: (error as any)?.response?.status,
+    });
     console.error('Error fetching models:', error);
     throw error;
   }
@@ -99,6 +125,7 @@ export const fetchModelFilesDetails = async (
   authToken?: string | null,
 ): Promise<ModelFileDetails[]> => {
   const url = `${urls.modelTree(modelId)}?recursive=true`;
+  networkLog('hf:fetchModelFiles:start', {url, modelId});
 
   try {
     const headers: Record<string, string> = {};
@@ -106,15 +133,23 @@ export const fetchModelFilesDetails = async (
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(url, {headers});
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HF_TIMEOUT_MS);
+    const response = await fetch(url, {headers, signal: controller.signal});
+    clearTimeout(timer);
 
     if (!response.ok) {
       throw new Error(`Error fetching model files: ${response.statusText}`);
     }
 
     const data: ModelFileDetails[] = await response.json();
+    networkLog('hf:fetchModelFiles:success', {url, fileCount: data.length});
     return data;
   } catch (error) {
+    networkLog('hf:fetchModelFiles:error', {
+      url,
+      error: error instanceof Error ? error.message : String(error),
+    });
     console.error('Failed to fetch model files:', error);
     throw error;
   }
@@ -131,6 +166,7 @@ export const fetchGGUFSpecs = async (
   authToken?: string | null,
 ): Promise<GGUFSpecs> => {
   const url = `${urls.modelSpecs(modelId)}?expand[]=gguf`;
+  networkLog('hf:fetchGGUFSpecs:start', {url, modelId});
 
   try {
     const headers: Record<string, string> = {};
@@ -138,15 +174,23 @@ export const fetchGGUFSpecs = async (
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(url, {headers});
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HF_TIMEOUT_MS);
+    const response = await fetch(url, {headers, signal: controller.signal});
+    clearTimeout(timer);
 
     if (!response.ok) {
       throw new Error(`Error fetching GGUF specs: ${response.statusText}`);
     }
 
     const data: GGUFSpecs = await response.json();
+    networkLog('hf:fetchGGUFSpecs:success', {url});
     return data;
   } catch (error) {
+    networkLog('hf:fetchGGUFSpecs:error', {
+      url,
+      error: error instanceof Error ? error.message : String(error),
+    });
     console.error('Failed to fetch GGUF specs:', error);
     throw error;
   }
@@ -183,12 +227,14 @@ export async function fetchModelInfo({
     ? `${urls.modelSpecs(repoId)}/revision/${revision}`
     : urls.modelSpecs(repoId);
 
+  networkLog('hf:fetchModelInfo:start', {url: base, repoId});
   try {
     const response = await axios.get<any>(base, {
       params: {
         full,
       },
       headers,
+      timeout: HF_TIMEOUT_MS,
     });
 
     const modelData: Partial<HuggingFaceModel> = {...response.data};
@@ -214,8 +260,16 @@ export async function fetchModelInfo({
       delete (modelData as any).gguf;
     }
 
+    networkLog('hf:fetchModelInfo:success', {url: base, repoId});
     return modelData;
   } catch (error) {
+    networkLog('hf:fetchModelInfo:error', {
+      url: base,
+      repoId,
+      error: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      status: (error as any)?.response?.status,
+    });
     console.error('Failed to fetch model info:', error);
     throw error;
   }

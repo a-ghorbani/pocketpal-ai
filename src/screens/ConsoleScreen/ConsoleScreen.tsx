@@ -106,6 +106,15 @@ export const ConsoleScreen: React.FC = observer(() => {
                 onValueChange={value => debugStore.setLogChatNavigation(value)}
               />
             </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类7] Network (fetch / XHR request &amp; response)
+              </Text>
+              <Switch
+                value={debugStore.logNetwork}
+                onValueChange={value => debugStore.setLogNetwork(value)}
+              />
+            </View>
           </View>
         )}
         <View style={styles.buttonRow}>

@@ -21,7 +21,10 @@ import {Theme} from './src/utils/types';
 import {l10n, initLocale} from './src/locales';
 import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
-import {initializeConsoleCapture} from './src/utils/debug';
+import {
+  initializeConsoleCapture,
+  initializeNetworkIntercept,
+} from './src/utils/debug';
 
 import {
   SidebarContent,
@@ -58,6 +61,7 @@ const DeepLinkHandler = () => {
 
 const App = observer(() => {
   initializeConsoleCapture();
+  initializeNetworkIntercept();
 
   const theme = useTheme();
   const styles = createStyles(theme);
