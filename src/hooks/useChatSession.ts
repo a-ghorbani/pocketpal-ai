@@ -96,6 +96,7 @@ function extractTokenUsage(
 const MIN_CONTEXT_SIZE = 32;
 const MIN_INPUT_TOKEN_BUDGET = 32;
 const INPUT_TOKEN_BUFFER = 128;
+const MIN_LAST_HISTORY_CHARS = 32;
 
 type TruncationMetrics = {
   wasTruncated: boolean;
@@ -431,45 +432,63 @@ export async function pruneChatHistoryToFitContext({
 
   let totalTokens = await getCurrentTokenCount();
 
-  while (totalTokens > inputTokenBudget && keptHistory.length > 1) {
-    const removedMessage = keptHistory.shift();
-    if (!removedMessage) {
-      break;
-    }
-    totalTokens = await getCurrentTokenCount();
-  }
+  let historyIndex = 0;
+  while (totalTokens > inputTokenBudget && historyIndex < keptHistory.length) {
+    const historyMessage = keptHistory[historyIndex];
+    const historyChars = estimateMessageChars(historyMessage);
 
-  if (totalTokens > inputTokenBudget && keptHistory.length > 0) {
-    const anchoredHistoryMessage = keptHistory[0];
-    const historyChars = estimateMessageChars(anchoredHistoryMessage);
+    if (historyChars <= 0) {
+      keptHistory.splice(historyIndex, 1);
+      totalTokens = await getCurrentTokenCount();
+      continue;
+    }
+
+    const isLastHistoryMessage = keptHistory.length === 1;
+    const minimumRetainedChars = isLastHistoryMessage
+      ? Math.min(historyChars, MIN_LAST_HISTORY_CHARS)
+      : 0;
+    const maxTrimChars = Math.max(0, historyChars - minimumRetainedChars);
+
     let low = 0;
-    let high = historyChars;
-    let bestContent = anchoredHistoryMessage.content;
+    let high = maxTrimChars;
+    let bestContent = historyMessage.content;
+    let bestFitsBudget = false;
 
     while (low <= high) {
       const trimmedChars = Math.floor((low + high) / 2);
-      keptHistory[0] = {
-        ...anchoredHistoryMessage,
-        content: trimContentFromHead(
-          anchoredHistoryMessage.content,
-          trimmedChars,
-        ),
+      keptHistory[historyIndex] = {
+        ...historyMessage,
+        content: trimContentFromHead(historyMessage.content, trimmedChars),
       };
       const candidateTokens = await getCurrentTokenCount();
 
       if (candidateTokens <= inputTokenBudget) {
-        bestContent = keptHistory[0].content;
+        bestContent = keptHistory[historyIndex].content;
+        bestFitsBudget = true;
         high = trimmedChars - 1;
       } else {
         low = trimmedChars + 1;
       }
     }
 
-    keptHistory[0] = {
-      ...anchoredHistoryMessage,
+    keptHistory[historyIndex] = {
+      ...historyMessage,
       content: bestContent,
     };
     totalTokens = await getCurrentTokenCount();
+
+    if (bestFitsBudget) {
+      continue;
+    }
+
+    const retainedChars = estimateMessageChars(keptHistory[historyIndex]);
+    if (retainedChars <= 0) {
+      keptHistory.splice(historyIndex, 1);
+      totalTokens = await getCurrentTokenCount();
+      continue;
+    }
+
+    historyIndex += 1;
   }
 
   if (totalTokens > inputTokenBudget && originalInputChars > 0) {
@@ -551,6 +570,7 @@ export async function pruneChatHistoryToFitContext({
     truncation: {
       wasTruncated:
         droppedMessageCount > 0 ||
+        keptHistoryChars < originalHistoryChars ||
         keptInputChars < originalInputChars ||
         keptSystemChars < originalSystemChars,
       historyRetainedPercent: clampPercent(

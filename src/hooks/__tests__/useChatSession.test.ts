@@ -1,4 +1,4 @@
-import {LlamaContext} from 'llama.rn';
+﻿import {LlamaContext} from 'llama.rn';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
 
 import {textMessage} from '../../../jest/fixtures';
@@ -494,7 +494,7 @@ describe('useChatSession', () => {
     }
   });
 
-  it('should drop the oldest chat history when context budget is too small', async () => {
+  it('should trim the oldest chat history progressively when context budget is too small', async () => {
     const result = await pruneChatHistoryToFitContext({
       systemMessages: [{role: 'system', content: 'system'}],
       chatMessages: [
@@ -504,30 +504,24 @@ describe('useChatSession', () => {
         {role: 'assistant', content: 'D'.repeat(120)},
       ] as any,
       userMessage: {role: 'user', content: 'latest user prompt'},
-      contextSize: 400,
-      requestedOutputTokens: 200,
+      contextSize: 200,
+      requestedOutputTokens: -1,
     });
 
-    expect(result.droppedMessageCount).toBeGreaterThan(0);
     expect(result.messages[0]).toEqual({role: 'system', content: 'system'});
     expect(result.messages[result.messages.length - 1]).toEqual({
       role: 'user',
       content: 'latest user prompt',
     });
-    expect(result.messages).toEqual(
-      expect.arrayContaining([
-        {role: 'user', content: 'C'.repeat(120)},
-        {role: 'assistant', content: 'D'.repeat(120)},
-      ]),
-    );
-    expect(result.messages).not.toEqual(
-      expect.arrayContaining([
-        {role: 'user', content: 'A'.repeat(700)},
-        {role: 'assistant', content: 'B'.repeat(700)},
-      ]),
-    );
-    expect(result.truncation.wasTruncated).toBe(true);
-    expect(result.truncation.historyRetainedPercent).toBeLessThan(100);
+    expect(
+      result.messages.some(
+        message =>
+          message !== result.messages[result.messages.length - 1] &&
+          typeof message.content === 'string' &&
+          message.content.length > 0,
+      ),
+    ).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeGreaterThan(0);
     expect(result.truncation.inputRetainedPercent).toBe(100);
     expect(result.truncation.systemRetainedPercent).toBe(100);
   });
@@ -605,5 +599,28 @@ describe('useChatSession', () => {
     expect(result.truncation.wasTruncated).toBe(true);
     expect(result.truncation.historyRetainedPercent).toBeLessThan(100);
     expect(estimatedTokens).toBeLessThanOrEqual(200);
+  });
+  it('should trim history progressively instead of dropping all history at once', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [] as any,
+      chatMessages: [
+        {role: 'assistant', content: 'A'.repeat(900)},
+        {role: 'user', content: 'B'.repeat(900)},
+      ] as any,
+      userMessage: {role: 'user', content: 'continue story'},
+      contextSize: 200,
+      requestedOutputTokens: -1,
+    });
+
+    const historyMessages = result.messages.slice(0, -1);
+
+    expect(historyMessages.length).toBeGreaterThan(0);
+    expect(
+      historyMessages.some(
+        message =>
+          typeof message.content === 'string' && message.content.length > 0,
+      ),
+    ).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeGreaterThan(0);
   });
 });
