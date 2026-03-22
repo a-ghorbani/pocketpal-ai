@@ -293,4 +293,19 @@ describe('chat', () => {
     expect(queryByText('42%')).toBeTruthy();
     expect(queryByText('9%')).toBeNull();
   });
+
+  it('renders real prompt processing progress while thinking', () => {
+    const {queryByText} = render(
+      <ChatView
+        messages={[]}
+        onSendPress={jest.fn()}
+        user={user}
+        isThinking
+        promptProcessingProgress={35}
+      />,
+      {withNavigation: true, withBottomSheetProvider: true},
+    );
+
+    expect(queryByText('Processing Prompt... 35%')).toBeTruthy();
+  });
 });

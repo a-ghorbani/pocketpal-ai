@@ -129,6 +129,7 @@ describe('useChatSession', () => {
   });
 
   it('should not stop completion when inferencing is false', () => {
+    modelStore.inferencing = false;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
@@ -167,6 +168,31 @@ describe('useChatSession', () => {
       await sendPromise;
     });
     expect(modelStore.inferencing).toBe(false);
+  });
+
+  it('should track real prompt processing progress and clear it on first token', async () => {
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockImplementation(async (_params, onToken) => {
+          onToken?.({prompt_progress: 35});
+          expect(modelStore.promptProcessingProgress).toBe(35);
+          onToken?.({token: 'A', content: 'A'});
+          expect(modelStore.promptProcessingProgress).toBeNull();
+          return {text: 'A', timings: {total: 100}, usage: {}};
+        });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(modelStore.promptProcessingProgress).toBeNull();
+    expect(modelStore.isStreaming).toBe(false);
   });
 
   test.each([

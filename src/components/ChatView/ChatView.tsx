@@ -1529,7 +1529,7 @@ export const ChatView = observer(
           <>
           {isThinking && (
             <LoadingBubble
-              label={l10n.benchmark.benchmarkResultCard.results.promptProcessing}
+              label={l10n.chat.promptProcessing}
               progress={promptProcessingProgress}
             />
           )}

@@ -1048,6 +1048,7 @@
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
     "loadingModel": "Loading model ...",
+    "promptProcessing": "Processing Prompt",
     "typeYourMessage": "Type your message here",
     "load": "Load",
     "goToModels": "Go to Models",

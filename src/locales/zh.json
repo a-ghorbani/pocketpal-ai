@@ -1043,6 +1043,7 @@
     "modelNotLoaded": "模型未加载，请初始化模型",
     "completionFailed": "生成失败: ",
     "loadingModel": "加载模型中...",
+    "promptProcessing": "正在处理 Prompt",
     "typeYourMessage": "输入消息",
     "load": "加载",
     "goToModels": "转到模型",

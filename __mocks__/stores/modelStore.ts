@@ -18,6 +18,7 @@ class MockModelStore {
   activeModelId: string | undefined;
   inferencing = false;
   isStreaming = false;
+  promptProcessingProgress: number | null = null;
   context: LlamaContext | undefined = undefined;
 
   // Memory calibration variables
@@ -152,6 +153,10 @@ class MockModelStore {
 
   setIsStreaming = (value: boolean) => {
     this.isStreaming = value;
+  };
+
+  setPromptProcessingProgress = (value: number | null) => {
+    this.promptProcessingProgress = value;
   };
 
   // Safe context release methods
