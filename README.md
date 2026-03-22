@@ -48,7 +48,9 @@ But Qwen3.5's chat template relies on the <|im_start|>/<|im_end|> structure to m
     Mainters of llama.cpp have also noted this issue; for modern models, context shift is unreliable by default.
 The phenomenon you encountered—where the model stops generating when the context is nearly full (e.g., 511/512)—is the natural result of being constrained by the context window length, meaning context shift failed to successfully "continue" the generation.
   
-16. Added the number of tokens for input and output to the debug information in each response, and added the percentage of used context next to the send button.
+15. Added the number of tokens for input and output to the debug information in each response, and added the percentage of used context next to the send button.
+
+16. Time spent processing the prompt, with a real progress bar instead of a frontend animation.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
