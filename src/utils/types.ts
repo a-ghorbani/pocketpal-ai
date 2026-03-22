@@ -519,6 +519,7 @@ export interface ContextInitParams
   // New parameters (v2.0+)
   devices?: string[]; // Device selection (undefined = auto-select)
   flash_attn_type?: 'auto' | 'on' | 'off'; // Replaces flash_attn boolean
+  ctx_shift?: boolean; // Enable context shifting for long generations
   kv_unified?: boolean; // Unified KV cache (CRITICAL: saves ~7GB memory)
   n_parallel?: number; // Max parallel sequences (default: 1 for blocking completion)
 
@@ -548,6 +549,7 @@ export interface LegacyContextInitParams {
   n_ubatch: number;
   n_threads: number;
   flash_attn: boolean;
+  ctx_shift?: boolean;
   cache_type_k:
     | 'f16'
     | 'f32'

@@ -257,4 +257,50 @@ describe('SettingsScreen', () => {
       expect(getByText(/effective: 8192/)).toBeTruthy();
     });
   });
+
+  it('toggles context shifting switch', async () => {
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('ctx-shift-switch')).toBeTruthy();
+    });
+
+    const ctxShiftSwitch = getByTestId('ctx-shift-switch');
+
+    await act(async () => {
+      fireEvent(ctxShiftSwitch, 'valueChange', false);
+    });
+
+    expect(modelStore.setCtxShift).toHaveBeenCalledWith(false);
+  });
+
+  it('toggles prune history before send switch', async () => {
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('prune-history-before-send-switch')).toBeTruthy();
+    });
+
+    const pruneHistorySwitch = getByTestId(
+      'prune-history-before-send-switch',
+    );
+
+    await act(async () => {
+      fireEvent(pruneHistorySwitch, 'valueChange', false);
+    });
+
+    expect(modelStore.setPruneChatHistoryBeforeSend).toHaveBeenCalledWith(
+      false,
+    );
+  });
 });

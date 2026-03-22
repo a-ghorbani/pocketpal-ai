@@ -51,6 +51,7 @@ export const createContextInitParams = (
 
     // New parameters (v2.0+)
     flash_attn_type,
+    ctx_shift: (params as any).ctx_shift ?? true,
     devices: (params as any).devices,
     kv_unified: (params as any).kv_unified ?? true, // CRITICAL default
     n_parallel: (params as any).n_parallel ?? 1, // Blocking completion only
@@ -161,6 +162,10 @@ export function migrateContextInitParams(
       migratedParams.n_parallel = 1; // App only uses blocking completion()
     }
 
+    if (migratedParams.ctx_shift === undefined) {
+      migratedParams.ctx_shift = true;
+    }
+
     // Increase default context size if it was the old default
     if (migratedParams.n_ctx === 1024) {
       migratedParams.n_ctx = 2048; // Increase to new recommended default
@@ -245,6 +250,7 @@ export function createDefaultContextInitParams(): ContextInitParams {
     // New v2.0 parameters
     devices: undefined, // Auto-select
     flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
+    ctx_shift: true,
     kv_unified: true, // CRITICAL: saves ~7GB memory
     n_parallel: 1, // App only uses blocking completion()
 

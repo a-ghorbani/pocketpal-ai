@@ -14,6 +14,7 @@ class MockModelStore {
   max_threads = 4;
   MIN_CONTEXT_SIZE = 200;
   useAutoRelease = true;
+  pruneChatHistoryBeforeSend = true;
   activeModelId: string | undefined;
   inferencing = false;
   isStreaming = false;
@@ -53,6 +54,8 @@ class MockModelStore {
   updateModelName: jest.Mock;
   resetModelName: jest.Mock;
   setImageMaxTokens: jest.Mock;
+  setCtxShift: jest.Mock;
+  setPruneChatHistoryBeforeSend: jest.Mock;
   setNThreads: jest.Mock;
   setNBatch: jest.Mock;
   setNUBatch: jest.Mock;
@@ -88,6 +91,8 @@ class MockModelStore {
       updateModelName: false,
       resetModelName: false,
       setImageMaxTokens: false,
+      setCtxShift: false,
+      setPruneChatHistoryBeforeSend: false,
       setNThreads: false,
       setNBatch: false,
       setNUBatch: false,
@@ -130,6 +135,8 @@ class MockModelStore {
     this.updateModelName = jest.fn();
     this.resetModelName = jest.fn();
     this.setImageMaxTokens = jest.fn();
+    this.setCtxShift = jest.fn();
+    this.setPruneChatHistoryBeforeSend = jest.fn();
     this.setNThreads = jest.fn();
     this.setNBatch = jest.fn();
     this.setNUBatch = jest.fn();

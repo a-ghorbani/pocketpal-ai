@@ -10,7 +10,10 @@ import {
   modelsList,
 } from '../../../jest/fixtures/models';
 
-import {useChatSession} from '../useChatSession';
+import {
+  pruneChatHistoryToFitContext,
+  useChatSession,
+} from '../useChatSession';
 
 import {chatSessionStore, modelStore, palStore} from '../../store';
 
@@ -492,5 +495,39 @@ describe('useChatSession', () => {
     } finally {
       modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
     }
+  });
+
+  it('should drop the oldest chat history when context budget is too small', () => {
+    const result = pruneChatHistoryToFitContext({
+      systemMessages: [{role: 'system', content: 'system'}],
+      chatMessages: [
+        {role: 'user', content: 'A'.repeat(700)},
+        {role: 'assistant', content: 'B'.repeat(700)},
+        {role: 'user', content: 'C'.repeat(120)},
+        {role: 'assistant', content: 'D'.repeat(120)},
+      ] as any,
+      userMessage: {role: 'user', content: 'latest user prompt'},
+      contextSize: 400,
+      requestedOutputTokens: 200,
+    });
+
+    expect(result.droppedMessageCount).toBeGreaterThan(0);
+    expect(result.messages[0]).toEqual({role: 'system', content: 'system'});
+    expect(result.messages[result.messages.length - 1]).toEqual({
+      role: 'user',
+      content: 'latest user prompt',
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        {role: 'user', content: 'C'.repeat(120)},
+        {role: 'assistant', content: 'D'.repeat(120)},
+      ]),
+    );
+    expect(result.messages).not.toEqual(
+      expect.arrayContaining([
+        {role: 'user', content: 'A'.repeat(700)},
+        {role: 'assistant', content: 'B'.repeat(700)},
+      ]),
+    );
   });
 });

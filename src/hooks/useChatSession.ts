@@ -32,6 +32,87 @@ import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {ChatMessage} from '../utils/types';
+
+const CHARS_PER_TOKEN_ESTIMATE = 4;
+const MIN_INPUT_TOKEN_BUDGET = 256;
+const INPUT_TOKEN_BUFFER = 128;
+
+function estimateMessageChars(message: ChatMessage): number {
+  if (typeof message.content === 'string') {
+    return message.content.length;
+  }
+
+  if (Array.isArray(message.content)) {
+    return message.content.reduce((total, part) => {
+      if (part.type === 'text') {
+        return total + (part.text?.length ?? 0);
+      }
+
+      // Images still consume prompt budget through template markers.
+      return total + 64;
+    }, 0);
+  }
+
+  return 0;
+}
+
+export function pruneChatHistoryToFitContext({
+  systemMessages,
+  chatMessages,
+  userMessage,
+  contextSize,
+  requestedOutputTokens,
+}: {
+  systemMessages: Array<{role: 'system'; content: string}>;
+  chatMessages: ChatMessage[];
+  userMessage: ChatMessage;
+  contextSize: number;
+  requestedOutputTokens?: number;
+}): {
+  messages: ChatMessage[];
+  droppedMessageCount: number;
+} {
+  const safeContextSize = Math.max(contextSize || 0, MIN_INPUT_TOKEN_BUDGET);
+  const reservedOutputTokens = Math.max(requestedOutputTokens ?? 512, 0);
+  const inputTokenBudget = Math.max(
+    MIN_INPUT_TOKEN_BUDGET,
+    safeContextSize - reservedOutputTokens - INPUT_TOKEN_BUFFER,
+  );
+  const inputCharBudget = inputTokenBudget * CHARS_PER_TOKEN_ESTIMATE;
+
+  const baseMessages = [...systemMessages, userMessage];
+  let usedChars = baseMessages.reduce(
+    (total, message) => total + estimateMessageChars(message as ChatMessage),
+    0,
+  );
+
+  if (usedChars >= inputCharBudget) {
+    return {
+      messages: baseMessages,
+      droppedMessageCount: chatMessages.length,
+    };
+  }
+
+  const keptHistory: ChatMessage[] = [];
+
+  for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
+    const historyMessage = chatMessages[index];
+    const historyChars = estimateMessageChars(historyMessage);
+
+    if (usedChars + historyChars > inputCharBudget) {
+      continue;
+    }
+
+    keptHistory.unshift(historyMessage);
+    usedChars += historyChars;
+  }
+
+  return {
+    messages: [...systemMessages, ...keptHistory, userMessage],
+    droppedMessageCount: chatMessages.length - keptHistory.length,
+  };
+}
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -114,16 +195,26 @@ const prepareCompletion = async ({
   }
 
   // Create the messages array for llama.rn - same format for all cases
-  const messages = [
-    ...systemMessages,
-    ...chatMessages,
-    {
-      role: 'user',
-      content: userMessageContent,
-    },
-  ];
+  const currentUserMessage: ChatMessage = {
+    role: 'user',
+    content: userMessageContent,
+  };
+  const {messages, droppedMessageCount} = modelStore.pruneChatHistoryBeforeSend
+    ? pruneChatHistoryToFitContext({
+        systemMessages,
+        chatMessages,
+        userMessage: currentUserMessage,
+        contextSize: modelStore.contextInitParams.n_ctx,
+        requestedOutputTokens: (sessionCompletionSettings as CompletionParams)
+          ?.n_predict,
+      })
+    : {
+        messages: [...systemMessages, ...chatMessages, currentUserMessage],
+        droppedMessageCount: 0,
+      };
   promptBuildLog('prepareCompletion:messages', {
     messageCount: messages.length,
+    droppedMessageCount,
     hasImages,
     isMultimodalEnabled,
     lastUserMessage: Array.isArray(userMessageContent)

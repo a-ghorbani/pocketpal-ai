@@ -1260,6 +1260,7 @@ describe('ModelStore', () => {
       expect(effective.n_ctx).toBe(2048);
       expect(effective.n_batch).toBe(1024);
       expect(effective.n_ubatch).toBe(512);
+      expect(effective.ctx_shift).toBe(true);
     });
 
     it('should set n_gpu_layers', () => {

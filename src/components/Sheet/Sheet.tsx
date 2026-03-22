@@ -95,6 +95,7 @@ export const Sheet = forwardRef(
 
     const handleRequestClose = () => {
       notifyCloseOnce();
+      dismissSheet();
     };
 
     const handleDismiss = () => {

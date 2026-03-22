@@ -103,6 +103,7 @@ class ModelStore {
 
   // Unified context initialization parameters
   contextInitParams: ContextInitParams = createDefaultContextInitParams();
+  pruneChatHistoryBeforeSend: boolean = true;
 
   max_threads: number = 4; // Will be set in constructor
 
@@ -160,6 +161,7 @@ class ModelStore {
         'version',
         'useAutoRelease',
         'contextInitParams',
+        'pruneChatHistoryBeforeSend',
         'lastUsedModelId',
         'wasAutoReleased',
         'lastAutoReleasedModelId',
@@ -317,6 +319,12 @@ class ModelStore {
     });
   };
 
+  setPruneChatHistoryBeforeSend = (enabled: boolean) => {
+    runInAction(() => {
+      this.pruneChatHistoryBeforeSend = enabled;
+    });
+  };
+
   setNGPULayers = (n_gpu_layers: number) => {
     runInAction(() => {
       this.contextInitParams = {
@@ -410,6 +418,7 @@ class ModelStore {
       n_ubatch: effectiveUBatch,
       n_threads: this.contextInitParams.n_threads,
       flash_attn_type, // NEW: replaces flash_attn boolean
+      ctx_shift: this.contextInitParams.ctx_shift ?? true,
       cache_type_k: this.contextInitParams.cache_type_k,
       cache_type_v: this.contextInitParams.cache_type_v,
       n_gpu_layers: this.contextInitParams.n_gpu_layers ?? 99,
@@ -2293,6 +2302,15 @@ class ModelStore {
               cache_type_k: CacheType.F16,
               cache_type_v: CacheType.F16,
             }),
+      };
+    });
+  };
+
+  setCtxShift = (ctx_shift: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        ctx_shift,
       };
     });
   };

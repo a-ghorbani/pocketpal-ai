@@ -706,6 +706,53 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Divider />
 
+                  {/* Context Shifting */}
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          Context Shifting
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          When context fills up, discard older tokens and keep
+                          generating instead of stopping.
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="ctx-shift-switch"
+                        value={modelStore.contextInitParams.ctx_shift ?? true}
+                        onValueChange={value => modelStore.setCtxShift(value)}
+                      />
+                    </View>
+                  </View>
+                  <Divider />
+
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          Prune History Before Send
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          Trim oldest chat messages only when the next request
+                          would exceed the context budget.
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="prune-history-before-send-switch"
+                        value={modelStore.pruneChatHistoryBeforeSend}
+                        onValueChange={value =>
+                          modelStore.setPruneChatHistoryBeforeSend(value)
+                        }
+                      />
+                    </View>
+                  </View>
+                  <Divider />
+
                   {/* Cache Type K Selection */}
                   <View style={styles.settingItemContainer}>
                     <View style={styles.switchContainer}>
