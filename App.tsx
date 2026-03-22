@@ -46,7 +46,7 @@ import {
 } from './src/screens';
 import PalsScreen from './src/screens/PalsScreen';
 
-// Check if app is in debug mode
+// Development-only tools should remain gated, but console capture is allowed in release.
 const isDebugMode = __DEV__;
 
 const Drawer = createDrawerNavigator();
@@ -60,8 +60,9 @@ const DeepLinkHandler = () => {
 };
 
 const App = observer(() => {
+  initializeConsoleCapture();
+
   if (isDebugMode) {
-    initializeConsoleCapture();
     initializeNetworkIntercept();
   }
 

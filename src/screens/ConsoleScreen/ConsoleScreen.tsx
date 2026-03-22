@@ -11,6 +11,7 @@ import {runNetworkDiagnostics} from '../../utils/debug';
 import {createStyles} from './styles';
 
 const COLLAPSE_THRESHOLD = 300;
+const canUseNetworkDebug = __DEV__;
 
 export const ConsoleScreen: React.FC = observer(() => {
   const theme = useTheme();
@@ -40,10 +41,10 @@ export const ConsoleScreen: React.FC = observer(() => {
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Capture console logs</Text>
           <TouchableOpacity
-            onPress={() => setCategoriesExpanded(p => !p)}
+            onPress={() => setCategoriesExpanded(prev => !prev)}
             style={styles.expandButton}>
             <Text style={styles.expandButtonText}>
-              {categoriesExpanded ? '▼' : '▶'}
+              {categoriesExpanded ? 'Hide' : 'Show'}
             </Text>
           </TouchableOpacity>
           <Switch
@@ -55,7 +56,7 @@ export const ConsoleScreen: React.FC = observer(() => {
           <View style={styles.categoryGroup}>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
-                [类1] Engine Input (params sent to llama.rn)
+                Engine Input (params sent to llama.rn)
               </Text>
               <Switch
                 value={debugStore.logEngineInput}
@@ -64,7 +65,7 @@ export const ConsoleScreen: React.FC = observer(() => {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
-                [类2] Engine Output (results &amp; stream events)
+                Engine Output (results and stream events)
               </Text>
               <Switch
                 value={debugStore.logEngineOutput}
@@ -73,7 +74,7 @@ export const ConsoleScreen: React.FC = observer(() => {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
-                [类3] Prompt Build (templates &amp; full prompt text)
+                Prompt Build (templates and full prompt text)
               </Text>
               <Switch
                 value={debugStore.logPromptBuild}
@@ -82,7 +83,7 @@ export const ConsoleScreen: React.FC = observer(() => {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
-                [类4] Param Source (session settings &amp; thinkingAssembly)
+                Param Source (session settings and thinkingAssembly)
               </Text>
               <Switch
                 value={debugStore.logParamSource}
@@ -91,7 +92,7 @@ export const ConsoleScreen: React.FC = observer(() => {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
-                [类5] Model Lifecycle (load / release / app state)
+                Model Lifecycle (load / release / app state)
               </Text>
               <Switch
                 value={debugStore.logModelLifecycle}
@@ -100,22 +101,24 @@ export const ConsoleScreen: React.FC = observer(() => {
             </View>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
-                [类6] Chat Navigation (cursor / scroll / target)
+                Chat Navigation (cursor / scroll / target)
               </Text>
               <Switch
                 value={debugStore.logChatNavigation}
                 onValueChange={value => debugStore.setLogChatNavigation(value)}
               />
             </View>
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>
-                [类7] Network (fetch / XHR request &amp; response)
-              </Text>
-              <Switch
-                value={debugStore.logNetwork}
-                onValueChange={value => debugStore.setLogNetwork(value)}
-              />
-            </View>
+            {canUseNetworkDebug && (
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>
+                  Network (fetch / XHR request and response)
+                </Text>
+                <Switch
+                  value={debugStore.logNetwork}
+                  onValueChange={value => debugStore.setLogNetwork(value)}
+                />
+              </View>
+            )}
           </View>
         )}
         <View style={styles.buttonRow}>
@@ -125,9 +128,11 @@ export const ConsoleScreen: React.FC = observer(() => {
           <Button mode="outlined" onPress={() => debugStore.clearLogs()}>
             Clear
           </Button>
-          <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
-            Net Diag
-          </Button>
+          {canUseNetworkDebug && (
+            <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
+              Net Diag
+            </Button>
+          )}
         </View>
       </View>
 
@@ -145,8 +150,9 @@ export const ConsoleScreen: React.FC = observer(() => {
               const isExpanded = expandedIds.has(entry.id);
               const displayMessage =
                 isLong && !isExpanded
-                  ? entry.message.slice(0, COLLAPSE_THRESHOLD) + '…'
+                  ? `${entry.message.slice(0, COLLAPSE_THRESHOLD)}...`
                   : entry.message;
+
               return (
                 <View key={entry.id} style={styles.logEntry}>
                   <View style={styles.metaRow}>
@@ -159,7 +165,7 @@ export const ConsoleScreen: React.FC = observer(() => {
                         onPress={() => toggleExpand(entry.id)}
                         style={styles.expandButton}>
                         <Text style={styles.expandButtonText}>
-                          {isExpanded ? '▲' : '▶'}
+                          {isExpanded ? 'Less' : 'More'}
                         </Text>
                       </TouchableOpacity>
                     )}
