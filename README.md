@@ -40,7 +40,7 @@ Since the majority of the users of this application are those who wish to gain a
     Never use code blocks for math.
     ```
 
-14. Added the ctx_shift parameter and automatic truncation logic for input; when both are enabled, you can achieve infinite rounds of chat even under a relatively small context window setting.
+14. Added the ctx_shift parameter and automatic truncation logic for input; when both are enabled, you can achieve infinite rounds of chat even under a relatively small context window setting. The debug information for each message will clearly indicate which content has been truncated.
   
 15. Added the number of tokens for input and output to the debug information in each response, and added the percentage of used context next to the send button.
 
