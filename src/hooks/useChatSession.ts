@@ -196,7 +196,7 @@ export async function estimateChatContextUsage({
   chatMessages,
   userMessage,
   contextSize,
-  requestedOutputTokens,
+  reservedOutputTokens,
   pruneHistory,
   context,
   model,
@@ -207,7 +207,7 @@ export async function estimateChatContextUsage({
   chatMessages: ChatMessage[];
   userMessage?: ChatMessage;
   contextSize: number;
-  requestedOutputTokens?: number;
+  reservedOutputTokens?: number;
   pruneHistory: boolean;
   context?: any;
   model?: any;
@@ -224,7 +224,7 @@ export async function estimateChatContextUsage({
           chatMessages,
           userMessage,
           contextSize,
-          requestedOutputTokens,
+          reservedOutputTokens,
           context,
           model,
           enableThinking,
@@ -272,7 +272,7 @@ export async function pruneChatHistoryToFitContext({
   chatMessages,
   userMessage,
   contextSize,
-  requestedOutputTokens,
+  reservedOutputTokens,
   context,
   model,
   enableThinking,
@@ -282,7 +282,7 @@ export async function pruneChatHistoryToFitContext({
   chatMessages: ChatMessage[];
   userMessage: ChatMessage;
   contextSize: number;
-  requestedOutputTokens?: number;
+  reservedOutputTokens?: number;
   context?: any;
   model?: any;
   enableThinking?: boolean;
@@ -293,13 +293,10 @@ export async function pruneChatHistoryToFitContext({
   truncation: TruncationMetrics;
 }> {
   const safeContextSize = Math.max(contextSize || 0, MIN_CONTEXT_SIZE);
-  const reservedOutputTokens =
-    requestedOutputTokens === -1
-      ? Math.min(INPUT_TOKEN_BUFFER, Math.floor(safeContextSize * 0.25))
-      : Math.max(requestedOutputTokens ?? 512, 0);
+  const safeReservedOutputTokens = Math.max(reservedOutputTokens ?? 128, 0);
   const inputTokenBudget = Math.max(
     MIN_INPUT_TOKEN_BUDGET,
-    safeContextSize - reservedOutputTokens - INPUT_TOKEN_BUFFER,
+    safeContextSize - safeReservedOutputTokens - INPUT_TOKEN_BUFFER,
   );
   const sumChars = (messages: ChatMessage[]) =>
     messages.reduce((total, item) => total + estimateMessageChars(item), 0);
@@ -678,8 +675,8 @@ const prepareCompletion = async ({
           contextSize:
             modelStore.activeContextSettings?.n_ctx ??
             modelStore.contextInitParams.n_ctx,
-          requestedOutputTokens: (sessionCompletionSettings as CompletionParams)
-            ?.n_predict,
+          reservedOutputTokens: (sessionCompletionSettings as CompletionParams)
+            ?.reserved_output_tokens,
           context,
           model: modelStore.activeModel,
           enableThinking: (sessionCompletionSettings as CompletionParams)
@@ -848,6 +845,9 @@ const prepareCompletion = async ({
         modelStore.contextInitParams.ctx_shift ??
         true,
       activeContextLoaded: Boolean(modelStore.activeContextSettings),
+      reserved_output_tokens:
+        (sessionCompletionSettings as CompletionParams)
+          ?.reserved_output_tokens ?? 128,
     },
     input: {
       userMessageLength: message.text.length,

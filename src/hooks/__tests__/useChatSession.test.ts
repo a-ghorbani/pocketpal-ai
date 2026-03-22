@@ -1,4 +1,4 @@
-﻿import {LlamaContext} from 'llama.rn';
+import {LlamaContext} from 'llama.rn';
 import {renderHook, act, waitFor} from '@testing-library/react-native';
 
 import {textMessage} from '../../../jest/fixtures';
@@ -505,7 +505,7 @@ describe('useChatSession', () => {
       ] as any,
       userMessage: {role: 'user', content: 'latest user prompt'},
       contextSize: 200,
-      requestedOutputTokens: -1,
+      reservedOutputTokens: 128,
     });
 
     expect(result.messages[0]).toEqual({role: 'system', content: 'system'});
@@ -535,7 +535,7 @@ describe('useChatSession', () => {
         content: 'important-head-' + 'Z'.repeat(2200),
       },
       contextSize: 400,
-      requestedOutputTokens: 200,
+      reservedOutputTokens: 200,
     });
 
     const trimmedUserMessage = result.messages[result.messages.length - 1];
@@ -564,7 +564,7 @@ describe('useChatSession', () => {
       chatMessages: [] as any,
       userMessage: {role: 'user', content: ''},
       contextSize: 400,
-      requestedOutputTokens: 200,
+      reservedOutputTokens: 200,
     });
 
     expect(result.messages[0].role).toBe('system');
@@ -587,7 +587,7 @@ describe('useChatSession', () => {
       chatMessages: [{role: 'assistant', content: 'A'.repeat(1200)}] as any,
       userMessage: {role: 'user', content: '继续'},
       contextSize: 200,
-      requestedOutputTokens: -1,
+      reservedOutputTokens: 64,
     });
 
     const estimatedTokens = result.messages.reduce((sum, message) => {
@@ -609,7 +609,7 @@ describe('useChatSession', () => {
       ] as any,
       userMessage: {role: 'user', content: 'continue story'},
       contextSize: 200,
-      requestedOutputTokens: -1,
+      reservedOutputTokens: 64,
     });
 
     const historyMessages = result.messages.slice(0, -1);

@@ -14,7 +14,7 @@ import {CompletionParams} from './completionTypes';
 
 // Current version of the completion settings schema
 // Increment this when adding new settings or changing existing ones
-export const CURRENT_COMPLETION_SETTINGS_VERSION = 4;
+export const CURRENT_COMPLETION_SETTINGS_VERSION = 5;
 
 /**
  * Default completion parameters used throughout the app
@@ -28,6 +28,7 @@ export const defaultCompletionParams: CompletionParams = {
   // llama.rn API properties
   prompt: '',
   n_predict: -1, // The maximum number of tokens to predict (-1 = unlimited).
+  reserved_output_tokens: 128, // Reserved generation budget used by input pruning.
   temperature: 0.7, // The randomness of the generated text.
   top_k: 40, // Limit the next token selection to the K most probable tokens.
   top_p: 0.95, // Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P.
@@ -93,6 +94,12 @@ export function migrateCompletionSettings(settings: any): any {
     migratedSettings.reasoning_format =
       defaultCompletionParams.reasoning_format;
     migratedSettings.version = 4;
+  }
+
+  if (migratedSettings.version < 5) {
+    migratedSettings.reserved_output_tokens =
+      defaultCompletionParams.reserved_output_tokens;
+    migratedSettings.version = 5;
   }
 
   return migratedSettings;

@@ -35,6 +35,10 @@ export const COMPLETION_PARAMS_METADATA: Partial<
     validation: {type: 'numeric', min: -1, max: Infinity, required: true},
     defaultValue: defaultCompletionParams.n_predict,
   },
+  reserved_output_tokens: {
+    validation: {type: 'numeric', min: 1, max: 32768, required: true},
+    defaultValue: defaultCompletionParams.reserved_output_tokens,
+  },
   temperature: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
     defaultValue: defaultCompletionParams.temperature,

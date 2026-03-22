@@ -1053,7 +1053,7 @@ export const ChatView = observer(
         chatMessages: convertToChatMessages(messages, isVisionEnabled),
         userMessage: draftMessage as any,
         contextSize,
-        requestedOutputTokens: sessionCompletionSettings?.n_predict,
+        reservedOutputTokens: sessionCompletionSettings?.reserved_output_tokens,
         pruneHistory: pruneChatHistoryBeforeSend,
         context: modelStore.context,
         model: activeModel,
@@ -1078,6 +1078,7 @@ export const ChatView = observer(
       pruneChatHistoryBeforeSend,
       sessionCompletionSettings?.enable_thinking,
       sessionCompletionSettings?.n_predict,
+      sessionCompletionSettings?.reserved_output_tokens,
       sessionCompletionSettings?.reasoning_format,
       systemMessages,
     ]);

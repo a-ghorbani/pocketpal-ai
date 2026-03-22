@@ -51,8 +51,9 @@ export const mockLlamaContextParams = {
 
 export const mockDefaultCompletionParams: CompletionParams = {
   // App-specific properties
-  version: 3,
+  version: 5,
   include_thinking_in_context: true,
+  reserved_output_tokens: 128,
 
   // llama.rn API properties
   prompt: '',

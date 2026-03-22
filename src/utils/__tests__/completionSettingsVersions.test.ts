@@ -125,6 +125,9 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.enable_thinking).toBe(
       defaultCompletionParams.enable_thinking,
     );
+    expect(migrated.reserved_output_tokens).toBe(
+      defaultCompletionParams.reserved_output_tokens,
+    );
   });
 
   it('should not mutate the original settings object', () => {
@@ -153,5 +156,9 @@ describe('defaultCompletionParams', () => {
 
   it('should have include_thinking_in_context set to true by default', () => {
     expect(defaultCompletionParams.include_thinking_in_context).toBe(true);
+  });
+
+  it('should have reserved_output_tokens set by default', () => {
+    expect(defaultCompletionParams.reserved_output_tokens).toBe(128);
   });
 });

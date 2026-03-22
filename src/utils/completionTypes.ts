@@ -28,6 +28,12 @@ export type AppOnlyCompletionParams = {
    * When false, the ThinkingBubble component is hidden even if reasoning_content is returned.
    */
   show_thinking_bubble?: boolean;
+
+  /**
+   * Number of tokens reserved for generation when pruning chat context.
+   * This is app-only and is not sent to llama.rn.
+   */
+  reserved_output_tokens?: number;
   // Add other PocketPal-only fields here
 };
 
@@ -39,6 +45,7 @@ const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
   'version',
   'include_thinking_in_context',
   'show_thinking_bubble',
+  'reserved_output_tokens',
 ];
 
 /**
