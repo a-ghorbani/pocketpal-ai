@@ -49,6 +49,7 @@ describe('useChatSession', () => {
   });
 
   it('should send a message and update the chat session', async () => {
+    modelStore.activeModelId = modelsList[0].id;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
@@ -60,11 +61,16 @@ describe('useChatSession', () => {
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalled();
     expect(modelStore.context?.completion).toHaveBeenCalled();
     expect(modelStore.context?.completion).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messages: expect.any(Array),
-        jinja: true,
-      }),
+      expect.any(Object),
       expect.any(Function),
+    );
+    expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author: mockAssistant,
+        metadata: expect.objectContaining({
+          modelDisplayName: modelsList[0].name,
+        }),
+      }),
     );
   });
 

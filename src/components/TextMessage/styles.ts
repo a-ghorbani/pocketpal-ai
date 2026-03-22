@@ -27,6 +27,13 @@ export const styles = ({
       ),
       marginBottom: 6,
     },
+    annotationText: {
+      ...(user?.id === message.author.id
+        ? theme.fonts.sentMessageLinkDescriptionTextStyle
+        : theme.fonts.receivedMessageLinkDescriptionTextStyle),
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: 6,
+    },
     titleText: {
       ...(user?.id === message.author.id
         ? theme.fonts.sentMessageLinkTitleTextStyle

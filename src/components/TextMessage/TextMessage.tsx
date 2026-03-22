@@ -80,6 +80,7 @@ export const TextMessage = observer(
     >(null);
 
     const {
+      annotationText,
       descriptionText,
       headerText,
       titleText,
@@ -100,6 +101,10 @@ export const TextMessage = observer(
     // Extract imageUris from the message if available
     const imageUris = (message as any).imageUris || [];
     const hasImages = imageUris && imageUris.length > 0;
+    const modelDisplayName =
+      !isCurrentUser && !message.metadata?.system
+        ? message.metadata?.modelDisplayName
+        : undefined;
 
     const handleEmailPress = (email: string) => {
       try {
@@ -252,6 +257,10 @@ export const TextMessage = observer(
                 ? renderPreviewHeader(getUserName(message.author))
                 : null
             }
+
+            {modelDisplayName ? (
+              <Text style={annotationText}>{modelDisplayName}</Text>
+            ) : null}
 
             {/* Render images above the text */}
             {renderImages()}

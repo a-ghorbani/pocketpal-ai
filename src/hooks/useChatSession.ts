@@ -1080,6 +1080,10 @@ const prepareCompletion = async ({
 
   // Create empty assistant message in both database and store
   const createdAt = Date.now();
+  const activeModelDisplayName =
+    modelStore.activeModel?.name ||
+    (context?.model as any)?.description ||
+    (context?.model as any)?.name;
   const emptyMessage: MessageType.Text = {
     author: assistant,
     createdAt: createdAt,
@@ -1090,6 +1094,7 @@ const prepareCompletion = async ({
       contextId: context.id,
       conversationId: conversationIdRef,
       copyable: true,
+      modelDisplayName: activeModelDisplayName,
       multimodal: hasImages, // Simple check based on presence of images
     },
   };

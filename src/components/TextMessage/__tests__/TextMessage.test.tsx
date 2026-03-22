@@ -109,4 +109,22 @@ describe('text message', () => {
     getPreviewDataMock.mockRestore();
     openUrlMock.mockRestore();
   });
+
+  it('renders assistant model annotation when present', () => {
+    const {getByText} = render(
+      <TextMessage
+        message={{
+          ...derivedTextMessage,
+          author: {id: 'assistant-id', firstName: 'Assistant'},
+          metadata: {modelDisplayName: 'Qwen 3 30B'},
+          text: 'hello',
+        }}
+        messageWidth={440}
+        showName={false}
+        usePreviewData={false}
+      />,
+    );
+
+    expect(getByText('Qwen 3 30B')).toBeTruthy();
+  });
 });
