@@ -249,7 +249,7 @@ describe('contextInitParamsVersions', () => {
       expect(defaultSettings.n_batch).toBe(512);
       expect(defaultSettings.n_ubatch).toBe(512);
       expect(defaultSettings.n_threads).toBe(4);
-      expect(defaultSettings.flash_attn_type).toBe('auto');
+      expect(defaultSettings.flash_attn_type).toBe('on');
       expect(defaultSettings.cache_type_k).toBe('f16');
       expect(defaultSettings.cache_type_v).toBe('f16');
       expect(defaultSettings.n_gpu_layers).toBe(0);
