@@ -1,6 +1,9 @@
 import {debugStore} from '../store/DebugStore';
 
 let consoleCaptureInitialized = false;
+const FNV_OFFSET_BASIS = 2166136261;
+const FNV_PRIME = 16777619;
+const UINT32_MAX = 4294967296;
 
 export function previewText(value: unknown, _maxLength?: number): string {
   if (value === undefined || value === null) {
@@ -11,12 +14,12 @@ export function previewText(value: unknown, _maxLength?: number): string {
 }
 
 function simpleHash(text: string): string {
-  let hash = 2166136261;
+  let hash = FNV_OFFSET_BASIS;
   for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+    // eslint-disable-next-line no-bitwise
+    hash = Math.imul(hash ^ text.charCodeAt(i), FNV_PRIME);
   }
-  return (hash >>> 0).toString(16);
+  return ((hash + UINT32_MAX) % UINT32_MAX).toString(16);
 }
 
 export function getTextDiagnostics(value: unknown) {
@@ -57,7 +60,7 @@ export function getTextDiagnostics(value: unknown) {
     if (/\s/.test(ch)) {
       whitespace += 1;
     }
-    if (/[\[\]{}()<>\\\/|^*"'`~.,;:!?%$#@&_+=-]/.test(ch)) {
+    if (/[[\]{}()<>\\/|^*"'`~.,;:!?%$#@&_+=-]/.test(ch)) {
       symbol += 1;
     }
     if (i > 0 && text[i - 1] === ch) {

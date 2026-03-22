@@ -4,7 +4,13 @@ import {
   BottomSheetTextInput,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import React, {forwardRef, useEffect, useMemo, useRef} from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/types';
 import {Text} from 'react-native-paper';
@@ -62,21 +68,21 @@ export const Sheet = forwardRef(
 
     const theme = useTheme();
 
-    const dismissSheet = () => {
+    const dismissSheet = useCallback(() => {
       if (typeof activeRef?.current?.dismiss === 'function') {
         activeRef.current.dismiss();
         return;
       }
       activeRef?.current?.close();
-    };
+    }, [activeRef]);
 
-    const notifyCloseOnce = () => {
+    const notifyCloseOnce = useCallback(() => {
       if (hasNotifiedCloseRef.current) {
         return;
       }
       hasNotifiedCloseRef.current = true;
       onClose?.();
-    };
+    }, [onClose]);
 
     useEffect(() => {
       if (isVisible) {
@@ -85,7 +91,7 @@ export const Sheet = forwardRef(
       } else {
         dismissSheet();
       }
-    }, [isVisible, activeRef]);
+    }, [dismissSheet, isVisible, activeRef]);
 
     const handleRequestClose = () => {
       notifyCloseOnce();
