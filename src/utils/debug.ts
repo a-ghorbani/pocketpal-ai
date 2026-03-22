@@ -213,7 +213,7 @@ export function initializeNetworkIntercept() {
       reqId,
       method,
       url,
-      headers: sanitizeHeaders(init?.headers),
+      headers: sanitizeHeaders(init?.headers as Record<string, string>),
       bodyPreview: bodyPreview(init?.body),
     });
 
@@ -375,24 +375,28 @@ function interceptXHR() {
 }
 
 function sanitizeHeaders(
-  headers: HeadersInit | Record<string, string> | undefined | null,
+  headers: Record<string, string> | undefined | null,
 ): Record<string, string> | undefined {
   if (!headers) {
     return undefined;
   }
   const obj: Record<string, string> = {};
-  if (headers instanceof Headers) {
-    headers.forEach((value, key) => {
-      obj[key] = key.toLowerCase() === 'authorization' ? '<redacted>' : value;
-    });
-  } else if (Array.isArray(headers)) {
-    headers.forEach(([key, value]) => {
-      obj[key] = key.toLowerCase() === 'authorization' ? '<redacted>' : value;
-    });
-  } else {
-    Object.entries(headers).forEach(([key, value]) => {
-      obj[key] = key.toLowerCase() === 'authorization' ? '<redacted>' : value;
-    });
+  try {
+    if (typeof (headers as any).forEach === 'function') {
+      (headers as any).forEach((value: string, key: string) => {
+        obj[key] =
+          key.toLowerCase() === 'authorization' ? '<redacted>' : String(value);
+      });
+    } else {
+      Object.entries(headers).forEach(([key, value]) => {
+        obj[key] =
+          key.toLowerCase() === 'authorization'
+            ? '<redacted>'
+            : String(value);
+      });
+    }
+  } catch {
+    return {_error: 'failed to parse headers'};
   }
   return obj;
 }
