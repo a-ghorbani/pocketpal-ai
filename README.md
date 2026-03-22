@@ -40,6 +40,8 @@ Since the majority of the users of this application are those who wish to gain a
     Output math formulas in LaTeX: inline $...$ and display $$...$$.
     Never use code blocks for math.
     ```
+14. Added the ctx_shift parameter and automatic truncation logic for input; when both are enabled, you can achieve infinite rounds of chat even under a relatively small context window setting.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
