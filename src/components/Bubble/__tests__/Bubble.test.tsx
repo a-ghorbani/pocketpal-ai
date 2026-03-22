@@ -136,4 +136,24 @@ describe('Bubble', () => {
     // Should not display time to first token when it's undefined
     expect(queryByText(/to first token/)).toBeNull();
   });
+
+  it('renders context truncation details on a second debug line when present', () => {
+    const truncatedMessage = {
+      ...mockMessage,
+      metadata: {
+        ...mockMessage.metadata,
+        context_truncation: {
+          history_retained_percent: 40,
+          input_retained_percent: 75,
+          prompt_retained_percent: 90,
+        },
+      },
+    };
+
+    const {getByText} = renderBubble(truncatedMessage);
+
+    expect(
+      getByText('Context truncated: history 40%, input 75%, prompt 90%'),
+    ).toBeTruthy();
+  });
 });

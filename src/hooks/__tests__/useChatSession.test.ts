@@ -526,5 +526,64 @@ describe('useChatSession', () => {
         {role: 'assistant', content: 'B'.repeat(700)},
       ]),
     );
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeLessThan(100);
+    expect(result.truncation.inputRetainedPercent).toBe(100);
+    expect(result.truncation.systemRetainedPercent).toBe(100);
+  });
+
+  it('should trim the current user input from the tail after history is exhausted', () => {
+    const result = pruneChatHistoryToFitContext({
+      systemMessages: [{role: 'system', content: 'system'}],
+      chatMessages: [] as any,
+      userMessage: {
+        role: 'user',
+        content: 'important-head-' + 'Z'.repeat(2200),
+      },
+      contextSize: 400,
+      requestedOutputTokens: 200,
+    });
+
+    const trimmedUserMessage = result.messages[result.messages.length - 1];
+
+    expect(trimmedUserMessage.role).toBe('user');
+    expect(typeof trimmedUserMessage.content).toBe('string');
+    expect(
+      (trimmedUserMessage.content as string).startsWith('important-head-'),
+    ).toBe(true);
+    expect((trimmedUserMessage.content as string).length).toBeLessThan(
+      ('important-head-' + 'Z'.repeat(2200)).length,
+    );
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBe(100);
+    expect(result.truncation.inputRetainedPercent).toBeLessThan(100);
+  });
+
+  it('should trim the system prompt from the tail only after history and input are exhausted', () => {
+    const result = pruneChatHistoryToFitContext({
+      systemMessages: [
+        {
+          role: 'system',
+          content: 'critical-prefix-' + 'P'.repeat(2200),
+        },
+      ],
+      chatMessages: [] as any,
+      userMessage: {role: 'user', content: ''},
+      contextSize: 400,
+      requestedOutputTokens: 200,
+    });
+
+    expect(result.messages[0].role).toBe('system');
+    expect(typeof result.messages[0].content).toBe('string');
+    expect(
+      (result.messages[0].content as string).startsWith('critical-prefix-'),
+    ).toBe(true);
+    expect((result.messages[0].content as string).length).toBeLessThan(
+      ('critical-prefix-' + 'P'.repeat(2200)).length,
+    );
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBe(100);
+    expect(result.truncation.inputRetainedPercent).toBe(100);
+    expect(result.truncation.systemRetainedPercent).toBeLessThan(100);
   });
 });

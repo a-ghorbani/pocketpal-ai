@@ -96,6 +96,14 @@ const CHARS_PER_TOKEN_ESTIMATE = 4;
 const MIN_INPUT_TOKEN_BUDGET = 256;
 const INPUT_TOKEN_BUFFER = 128;
 
+type TruncationMetrics = {
+  wasTruncated: boolean;
+  historyRetainedPercent: number;
+  inputRetainedPercent: number;
+  systemRetainedPercent: number;
+  droppedMessageCount: number;
+};
+
 function estimateMessageChars(message: ChatMessage): number {
   if (typeof message.content === 'string') {
     return message.content.length;
@@ -153,6 +161,13 @@ export function estimateChatContextUsage({
       : {
           messages: baseMessages,
           droppedMessageCount: 0,
+          truncation: {
+            wasTruncated: false,
+            historyRetainedPercent: 100,
+            inputRetainedPercent: 100,
+            systemRetainedPercent: 100,
+            droppedMessageCount: 0,
+          },
         };
 
   const usedTokens = estimateMessagesTokenCount(prunedResult.messages);
@@ -184,6 +199,7 @@ export function pruneChatHistoryToFitContext({
 }): {
   messages: ChatMessage[];
   droppedMessageCount: number;
+  truncation: TruncationMetrics;
 } {
   const safeContextSize = Math.max(contextSize || 0, MIN_INPUT_TOKEN_BUDGET);
   const reservedOutputTokens = Math.max(requestedOutputTokens ?? 512, 0);
@@ -193,36 +209,126 @@ export function pruneChatHistoryToFitContext({
   );
   const inputCharBudget = inputTokenBudget * CHARS_PER_TOKEN_ESTIMATE;
 
-  const baseMessages = [...systemMessages, userMessage];
-  let usedChars = baseMessages.reduce(
-    (total, message) => total + estimateMessageChars(message as ChatMessage),
-    0,
-  );
-
-  if (usedChars >= inputCharBudget) {
-    return {
-      messages: baseMessages,
-      droppedMessageCount: chatMessages.length,
-    };
-  }
-
-  const keptHistory: ChatMessage[] = [];
-
-  for (let index = chatMessages.length - 1; index >= 0; index -= 1) {
-    const historyMessage = chatMessages[index];
-    const historyChars = estimateMessageChars(historyMessage);
-
-    if (usedChars + historyChars > inputCharBudget) {
-      continue;
+  const sumChars = (messages: ChatMessage[]) =>
+    messages.reduce((total, item) => total + estimateMessageChars(item), 0);
+  const clampPercent = (retained: number, original: number) => {
+    if (original <= 0) {
+      return 100;
     }
 
-    keptHistory.unshift(historyMessage);
-    usedChars += historyChars;
+    return Math.max(0, Math.min(100, Math.round((retained / original) * 100)));
+  };
+  const trimContentFromTail = (
+    content: ChatMessage['content'],
+    charsToTrim: number,
+  ): ChatMessage['content'] => {
+    if (charsToTrim <= 0) {
+      return content;
+    }
+
+    if (typeof content === 'string') {
+      return content.slice(0, Math.max(0, content.length - charsToTrim));
+    }
+
+    if (!Array.isArray(content)) {
+      return content;
+    }
+
+    let remainingTrim = charsToTrim;
+    const nextContent = [...content];
+
+    for (let index = nextContent.length - 1; index >= 0; index -= 1) {
+      const part = nextContent[index];
+
+      if (part.type !== 'text') {
+        continue;
+      }
+
+      const text = part.text ?? '';
+      if (remainingTrim >= text.length) {
+        nextContent[index] = {...part, text: ''};
+        remainingTrim -= text.length;
+        continue;
+      }
+
+      nextContent[index] = {
+        ...part,
+        text: text.slice(0, Math.max(0, text.length - remainingTrim)),
+      };
+      remainingTrim = 0;
+      break;
+    }
+
+    return nextContent;
+  };
+
+  const originalHistoryChars = sumChars(chatMessages);
+  const originalInputChars = estimateMessageChars(userMessage);
+  const originalSystemChars = sumChars(systemMessages as ChatMessage[]);
+
+  let keptHistory = [...chatMessages];
+  let trimmedUserMessage = userMessage;
+  let trimmedSystemMessages = [...(systemMessages as ChatMessage[])];
+  let totalChars =
+    originalHistoryChars + originalInputChars + originalSystemChars;
+
+  while (totalChars > inputCharBudget && keptHistory.length > 0) {
+    const removedMessage = keptHistory.shift();
+    totalChars -= estimateMessageChars(removedMessage as ChatMessage);
   }
 
+  if (totalChars > inputCharBudget && originalInputChars > 0) {
+    const overflowChars = totalChars - inputCharBudget;
+    trimmedUserMessage = {
+      ...userMessage,
+      content: trimContentFromTail(userMessage.content, overflowChars),
+    };
+    totalChars =
+      sumChars(keptHistory) +
+      estimateMessageChars(trimmedUserMessage) +
+      sumChars(trimmedSystemMessages);
+  }
+
+  if (totalChars > inputCharBudget && trimmedSystemMessages.length > 0) {
+    for (
+      let index = trimmedSystemMessages.length - 1;
+      index >= 0 && totalChars > inputCharBudget;
+      index -= 1
+    ) {
+      const systemMessage = trimmedSystemMessages[index];
+      const overflowChars = totalChars - inputCharBudget;
+      trimmedSystemMessages[index] = {
+        ...systemMessage,
+        content: trimContentFromTail(systemMessage.content, overflowChars),
+      };
+      totalChars =
+        sumChars(keptHistory) +
+        estimateMessageChars(trimmedUserMessage) +
+        sumChars(trimmedSystemMessages);
+    }
+  }
+
+  const keptHistoryChars = sumChars(keptHistory);
+  const keptInputChars = estimateMessageChars(trimmedUserMessage);
+  const keptSystemChars = sumChars(trimmedSystemMessages);
+  const droppedMessageCount = chatMessages.length - keptHistory.length;
+
   return {
-    messages: [...systemMessages, ...keptHistory, userMessage],
-    droppedMessageCount: chatMessages.length - keptHistory.length,
+    messages: [...trimmedSystemMessages, ...keptHistory, trimmedUserMessage],
+    droppedMessageCount,
+    truncation: {
+      wasTruncated:
+        droppedMessageCount > 0 ||
+        keptInputChars < originalInputChars ||
+        keptSystemChars < originalSystemChars,
+      historyRetainedPercent: clampPercent(
+        keptHistoryChars,
+        originalHistoryChars,
+      ),
+      inputRetainedPercent: clampPercent(keptInputChars, originalInputChars),
+      systemRetainedPercent: clampPercent(keptSystemChars, originalSystemChars),
+      droppedMessageCount,
+    },
   };
 }
 
@@ -311,24 +417,33 @@ const prepareCompletion = async ({
     role: 'user',
     content: userMessageContent,
   };
-  const {messages, droppedMessageCount} = modelStore.pruneChatHistoryBeforeSend
-    ? pruneChatHistoryToFitContext({
-        systemMessages,
-        chatMessages,
-        userMessage: currentUserMessage,
-        contextSize: modelStore.contextInitParams.n_ctx,
-        requestedOutputTokens: (sessionCompletionSettings as CompletionParams)
-          ?.n_predict,
-      })
-    : {
-        messages: [...systemMessages, ...chatMessages, currentUserMessage],
-        droppedMessageCount: 0,
-      };
+  const {messages, droppedMessageCount, truncation} =
+    modelStore.pruneChatHistoryBeforeSend
+      ? pruneChatHistoryToFitContext({
+          systemMessages,
+          chatMessages,
+          userMessage: currentUserMessage,
+          contextSize: modelStore.contextInitParams.n_ctx,
+          requestedOutputTokens: (sessionCompletionSettings as CompletionParams)
+            ?.n_predict,
+        })
+      : {
+          messages: [...systemMessages, ...chatMessages, currentUserMessage],
+          droppedMessageCount: 0,
+          truncation: {
+            wasTruncated: false,
+            historyRetainedPercent: 100,
+            inputRetainedPercent: 100,
+            systemRetainedPercent: 100,
+            droppedMessageCount: 0,
+          },
+        };
   const inputTokenEstimate = estimateMessagesTokenCount(messages);
   promptBuildLog('prepareCompletion:messages', {
     messageCount: messages.length,
     droppedMessageCount,
     inputTokenEstimate,
+    truncation,
     hasImages,
     isMultimodalEnabled,
     lastUserMessage: Array.isArray(userMessageContent)
@@ -538,6 +653,7 @@ const prepareCompletion = async ({
     requestId,
     completionTransport,
     inputTokenEstimate,
+    truncation,
   };
 };
 
@@ -636,6 +752,7 @@ export const useChatSession = (
       requestId,
       completionTransport,
       inputTokenEstimate,
+      truncation,
     } = await prepareCompletion({
       imageUris: imageUris || [],
       message,
@@ -885,6 +1002,15 @@ export const useChatSession = (
               output_token_count: tokenUsage.outputTokens,
               total_token_count: tokenUsage.totalTokens,
             },
+            ...(truncation.wasTruncated
+              ? {
+                  context_truncation: {
+                    history_retained_percent: truncation.historyRetainedPercent,
+                    input_retained_percent: truncation.inputRetainedPercent,
+                    prompt_retained_percent: truncation.systemRetainedPercent,
+                  },
+                }
+              : {}),
             copyable: true,
             // Add multimodal flag if this was a multimodal completion
             multimodal: hasImages && isMultimodalEnabled,
