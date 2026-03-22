@@ -353,6 +353,50 @@ export async function pruneChatHistoryToFitContext({
     return nextContent;
   };
 
+  const trimContentFromHead = (
+    content: ChatMessage['content'],
+    charsToTrim: number,
+  ): ChatMessage['content'] => {
+    if (charsToTrim <= 0) {
+      return content;
+    }
+
+    if (typeof content === 'string') {
+      return content.slice(Math.min(content.length, charsToTrim));
+    }
+
+    if (!Array.isArray(content)) {
+      return content;
+    }
+
+    let remainingTrim = charsToTrim;
+    const nextContent = [...content];
+
+    for (let index = 0; index < nextContent.length; index += 1) {
+      const part = nextContent[index];
+
+      if (part.type !== 'text') {
+        continue;
+      }
+
+      const text = part.text ?? '';
+      if (remainingTrim >= text.length) {
+        nextContent[index] = {...part, text: ''};
+        remainingTrim -= text.length;
+        continue;
+      }
+
+      nextContent[index] = {
+        ...part,
+        text: text.slice(Math.min(text.length, remainingTrim)),
+      };
+      remainingTrim = 0;
+      break;
+    }
+
+    return nextContent;
+  };
+
   const originalHistoryChars = sumChars(chatMessages);
   const originalInputChars = estimateMessageChars(userMessage);
   const originalSystemChars = sumChars(systemMessages as ChatMessage[]);
@@ -387,11 +431,44 @@ export async function pruneChatHistoryToFitContext({
 
   let totalTokens = await getCurrentTokenCount();
 
-  while (totalTokens > inputTokenBudget && keptHistory.length > 0) {
+  while (totalTokens > inputTokenBudget && keptHistory.length > 1) {
     const removedMessage = keptHistory.shift();
     if (!removedMessage) {
       break;
     }
+    totalTokens = await getCurrentTokenCount();
+  }
+
+  if (totalTokens > inputTokenBudget && keptHistory.length > 0) {
+    const anchoredHistoryMessage = keptHistory[0];
+    const historyChars = estimateMessageChars(anchoredHistoryMessage);
+    let low = 0;
+    let high = historyChars;
+    let bestContent = anchoredHistoryMessage.content;
+
+    while (low <= high) {
+      const trimmedChars = Math.floor((low + high) / 2);
+      keptHistory[0] = {
+        ...anchoredHistoryMessage,
+        content: trimContentFromHead(
+          anchoredHistoryMessage.content,
+          trimmedChars,
+        ),
+      };
+      const candidateTokens = await getCurrentTokenCount();
+
+      if (candidateTokens <= inputTokenBudget) {
+        bestContent = keptHistory[0].content;
+        high = trimmedChars - 1;
+      } else {
+        low = trimmedChars + 1;
+      }
+    }
+
+    keptHistory[0] = {
+      ...anchoredHistoryMessage,
+      content: bestContent,
+    };
     totalTokens = await getCurrentTokenCount();
   }
 
