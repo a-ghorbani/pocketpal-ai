@@ -177,23 +177,20 @@ export function chatNavLog(message: string, payload?: unknown) {
 
 /** 类7: 网络链路 — fetch/axios 请求、响应、错误全链路追踪 */
 export function networkLog(message: string, payload?: unknown) {
-  if (!__DEV__) {
-    return;
-  }
   categoryLog(debugStore.logNetwork, '[Network]', message, payload);
 }
 
 let networkInterceptInitialized = false;
+
+function isNetworkInterceptEnabled() {
+  return debugStore.captureConsole && debugStore.logNetwork;
+}
 
 /**
  * 拦截全局 fetch 和 axios，记录完整的请求/响应链路到类7日志。
  * 应在 App 启动时调用一次。
  */
 export function initializeNetworkIntercept() {
-  if (!__DEV__) {
-    return;
-  }
-
   if (networkInterceptInitialized) {
     return;
   }
@@ -205,7 +202,7 @@ export function initializeNetworkIntercept() {
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> {
-    if (!debugStore.logNetwork) {
+    if (!isNetworkInterceptEnabled()) {
       return originalFetch(input, init);
     }
 
@@ -313,7 +310,7 @@ function interceptXHR() {
     this: XMLHttpRequest & {_netDebug?: any},
     body?: any,
   ) {
-    if (!debugStore.logNetwork || !this._netDebug) {
+    if (!isNetworkInterceptEnabled() || !this._netDebug) {
       return origSend.call(this, body);
     }
 

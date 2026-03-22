@@ -55,7 +55,7 @@ describe('debug utilities', () => {
     expect(addLog).toHaveBeenCalledWith('error', ['release error']);
   });
 
-  it('does not intercept network globals in release builds', () => {
+  it('intercepts network globals in release when network logging is enabled', () => {
     runtimeGlobal.__DEV__ = false;
 
     const fetchSpy = jest.fn();
@@ -77,6 +77,7 @@ describe('debug utilities', () => {
       debugStore: {
         addLog: jest.fn(),
         ensureLoaded: jest.fn(),
+        captureConsole: true,
         logNetwork: true,
       },
     }));
@@ -86,17 +87,17 @@ describe('debug utilities', () => {
       initializeNetworkIntercept();
     });
 
-    expect(runtimeGlobal.fetch).toBe(fetchSpy);
+    expect(runtimeGlobal.fetch).not.toBe(fetchSpy);
     expect(runtimeGlobal.XMLHttpRequest).toBe(MockXMLHttpRequest);
-    expect(MockXMLHttpRequest.prototype.open).toBe(originalOpen);
-    expect(MockXMLHttpRequest.prototype.send).toBe(originalSend);
-    expect(MockXMLHttpRequest.prototype.setRequestHeader).toBe(
+    expect(MockXMLHttpRequest.prototype.open).not.toBe(originalOpen);
+    expect(MockXMLHttpRequest.prototype.send).not.toBe(originalSend);
+    expect(MockXMLHttpRequest.prototype.setRequestHeader).not.toBe(
       originalSetRequestHeader,
     );
   });
 
-  it('intercepts network globals in debug builds only', () => {
-    runtimeGlobal.__DEV__ = true;
+  it('keeps network interception inactive when network logging is off', () => {
+    runtimeGlobal.__DEV__ = false;
 
     const fetchSpy = jest.fn();
     runtimeGlobal.fetch = fetchSpy as unknown as typeof global.fetch;
@@ -117,6 +118,7 @@ describe('debug utilities', () => {
       debugStore: {
         addLog: jest.fn(),
         ensureLoaded: jest.fn(),
+        captureConsole: true,
         logNetwork: false,
       },
     }));
@@ -127,10 +129,17 @@ describe('debug utilities', () => {
     });
 
     expect(runtimeGlobal.fetch).not.toBe(fetchSpy);
-    expect(MockXMLHttpRequest.prototype.open).not.toBe(originalOpen);
-    expect(MockXMLHttpRequest.prototype.send).not.toBe(originalSend);
-    expect(MockXMLHttpRequest.prototype.setRequestHeader).not.toBe(
-      originalSetRequestHeader,
-    );
+    expect(runtimeGlobal.XMLHttpRequest).toBe(MockXMLHttpRequest);
+
+    const fetchAfterInit = runtimeGlobal.fetch;
+    const xhrOpenAfterInit = MockXMLHttpRequest.prototype.open;
+    const xhrSendAfterInit = MockXMLHttpRequest.prototype.send;
+    const xhrSetRequestHeaderAfterInit =
+      MockXMLHttpRequest.prototype.setRequestHeader;
+
+    expect(typeof fetchAfterInit).toBe('function');
+    expect(xhrOpenAfterInit).not.toBe(originalOpen);
+    expect(xhrSendAfterInit).not.toBe(originalSend);
+    expect(xhrSetRequestHeaderAfterInit).not.toBe(originalSetRequestHeader);
   });
 });

@@ -98,23 +98,12 @@ export class DebugStore {
     this.ensureLoaded();
   }
 
-  private get shouldPersistLogs() {
-    return __DEV__;
-  }
-
   private enqueueFileWrite(task: () => Promise<void>) {
     this.fileWriteQueue = this.fileWriteQueue.then(task).catch(() => undefined);
     return this.fileWriteQueue;
   }
 
   private async loadLogsFromFile() {
-    if (!this.shouldPersistLogs) {
-      runInAction(() => {
-        this.hasLoadedLogs = true;
-      });
-      return;
-    }
-
     try {
       const exists = await RNFS.exists(LOG_FILE_PATH);
       if (!exists) {
@@ -140,10 +129,6 @@ export class DebugStore {
   }
 
   private rewriteLogFile(entries: DebugLogEntry[]) {
-    if (!this.shouldPersistLogs) {
-      return Promise.resolve();
-    }
-
     return this.enqueueFileWrite(async () => {
       const content = entries.map(serializeLogEntry).join('');
       await RNFS.writeFile(LOG_FILE_PATH, content, LOG_FILE_ENCODING);
@@ -179,10 +164,6 @@ export class DebugStore {
       this.logs = [...this.logs.slice(-(MAX_LOG_ENTRIES - 1)), entry];
     });
 
-    if (!this.shouldPersistLogs) {
-      return;
-    }
-
     this.enqueueFileWrite(async () => {
       await RNFS.appendFile(
         LOG_FILE_PATH,
@@ -209,6 +190,9 @@ export class DebugStore {
   setCaptureConsole(enabled: boolean) {
     runInAction(() => {
       this.captureConsole = enabled;
+      if (!enabled) {
+        this.logNetwork = false;
+      }
     });
   }
 
@@ -250,7 +234,7 @@ export class DebugStore {
 
   setLogNetwork(enabled: boolean) {
     runInAction(() => {
-      this.logNetwork = enabled;
+      this.logNetwork = enabled && this.captureConsole;
     });
   }
 

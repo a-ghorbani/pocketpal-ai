@@ -11,7 +11,6 @@ import {runNetworkDiagnostics} from '../../utils/debug';
 import {createStyles} from './styles';
 
 const COLLAPSE_THRESHOLD = 300;
-const canUseNetworkInterceptDebug = __DEV__;
 
 export const ConsoleScreen: React.FC = observer(() => {
   const theme = useTheme();
@@ -108,17 +107,16 @@ export const ConsoleScreen: React.FC = observer(() => {
                 onValueChange={value => debugStore.setLogChatNavigation(value)}
               />
             </View>
-            {canUseNetworkInterceptDebug && (
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>
-                  Network (fetch / XHR request and response)
-                </Text>
-                <Switch
-                  value={debugStore.logNetwork}
-                  onValueChange={value => debugStore.setLogNetwork(value)}
-                />
-              </View>
-            )}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                Network (fetch / XHR request and response)
+              </Text>
+              <Switch
+                disabled={!debugStore.captureConsole}
+                value={debugStore.captureConsole && debugStore.logNetwork}
+                onValueChange={value => debugStore.setLogNetwork(value)}
+              />
+            </View>
           </View>
         )}
         <View style={styles.buttonRow}>
@@ -128,11 +126,9 @@ export const ConsoleScreen: React.FC = observer(() => {
           <Button mode="outlined" onPress={() => debugStore.clearLogs()}>
             Clear
           </Button>
-          {__DEV__ && (
-            <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
-              Net Diag
-            </Button>
-          )}
+          <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
+            Net Diag
+          </Button>
         </View>
       </View>
 

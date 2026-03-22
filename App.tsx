@@ -62,9 +62,7 @@ const DeepLinkHandler = () => {
 const App = observer(() => {
   initializeConsoleCapture();
 
-  if (isDebugMode) {
-    initializeNetworkIntercept();
-  }
+  initializeNetworkIntercept();
 
   const theme = useTheme();
   const styles = createStyles(theme);
