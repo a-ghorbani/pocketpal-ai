@@ -11,7 +11,7 @@ import {runNetworkDiagnostics} from '../../utils/debug';
 import {createStyles} from './styles';
 
 const COLLAPSE_THRESHOLD = 300;
-const canUseNetworkDebug = __DEV__;
+const canUseNetworkInterceptDebug = __DEV__;
 
 export const ConsoleScreen: React.FC = observer(() => {
   const theme = useTheme();
@@ -108,7 +108,7 @@ export const ConsoleScreen: React.FC = observer(() => {
                 onValueChange={value => debugStore.setLogChatNavigation(value)}
               />
             </View>
-            {canUseNetworkDebug && (
+            {canUseNetworkInterceptDebug && (
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>
                   Network (fetch / XHR request and response)
@@ -128,11 +128,9 @@ export const ConsoleScreen: React.FC = observer(() => {
           <Button mode="outlined" onPress={() => debugStore.clearLogs()}>
             Clear
           </Button>
-          {canUseNetworkDebug && (
-            <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
-              Net Diag
-            </Button>
-          )}
+          <Button mode="outlined" onPress={() => runNetworkDiagnostics()}>
+            Net Diag
+          </Button>
         </View>
       </View>
 

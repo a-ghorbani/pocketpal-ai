@@ -51,6 +51,7 @@ export const Sheet = forwardRef(
   ) => {
     const insets = useSafeAreaInsets();
     const innerRef = useRef<BottomSheetModalMethods>(null);
+    const hasNotifiedCloseRef = useRef(false);
 
     const activeRef = useMemo(() => {
       if (ref && 'current' in ref && ref.current) {
@@ -61,17 +62,37 @@ export const Sheet = forwardRef(
 
     const theme = useTheme();
 
+    const dismissSheet = () => {
+      if (typeof activeRef?.current?.dismiss === 'function') {
+        activeRef.current.dismiss();
+        return;
+      }
+      activeRef?.current?.close();
+    };
+
+    const notifyCloseOnce = () => {
+      if (hasNotifiedCloseRef.current) {
+        return;
+      }
+      hasNotifiedCloseRef.current = true;
+      onClose?.();
+    };
+
     useEffect(() => {
       if (isVisible) {
+        hasNotifiedCloseRef.current = false;
         activeRef?.current?.present();
       } else {
-        activeRef?.current?.close();
+        dismissSheet();
       }
     }, [isVisible, activeRef]);
 
-    const onDismiss = () => {
-      activeRef?.current?.close();
-      onClose?.();
+    const handleRequestClose = () => {
+      notifyCloseOnce();
+    };
+
+    const handleDismiss = () => {
+      notifyCloseOnce();
     };
 
     const snapPoints = useMemo(() => {
@@ -98,7 +119,7 @@ export const Sheet = forwardRef(
           backgroundColor: theme.colors.background,
         }}
         snapPoints={snapPoints}
-        onDismiss={onDismiss}
+        onDismiss={handleDismiss}
         // Disable accessible to allow Appium/e2e tests to access child elements on iOS
         // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
         accessible={false}
@@ -108,7 +129,7 @@ export const Sheet = forwardRef(
           {showCloseButton && (
             <TouchableOpacity
               style={styles.closeBtn}
-              onPress={onDismiss}
+              onPress={handleRequestClose}
               hitSlop={{top: 16, bottom: 16, left: 16, right: 16}}
               testID="sheet-close-button"
               accessibilityLabel="Close"

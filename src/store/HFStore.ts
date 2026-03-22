@@ -301,6 +301,10 @@ class HFStore {
   resetLoading() {
     runInAction(() => {
       this.isLoading = false;
+      this.nextPageLink = null;
+      this.lastFetchedNextLink = null;
+      this.lastFetchMoreAttempt = 0;
+      this.consecutiveSmallResults = 0;
     });
   }
 
@@ -399,6 +403,25 @@ class HFStore {
     this.isLoading = true;
     this.error = null;
 
+    const safetyTimer = setTimeout(() => {
+      if (this.isLoading) {
+        console.warn(
+          '[HFStore] fetchMoreModels safety timeout (20s) - forcing isLoading=false',
+        );
+        runInAction(() => {
+          this.isLoading = false;
+          this.nextPageLink = null;
+          if (!this.error) {
+            this.error = createErrorState(
+              new Error('Request timed out'),
+              'search',
+              'huggingface',
+            );
+          }
+        });
+      }
+    }, 20000);
+
     try {
       const authToken = this.shouldUseToken ? this.hfToken : null;
       const {models, nextLink} = await fetchModels({
@@ -426,6 +449,7 @@ class HFStore {
         this.error = createErrorState(error, 'search', 'huggingface');
       });
     } finally {
+      clearTimeout(safetyTimer);
       runInAction(() => {
         this.isLoading = false;
       });

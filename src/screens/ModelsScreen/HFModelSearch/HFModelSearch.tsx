@@ -29,9 +29,11 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     // Clear state when closed
     useEffect(() => {
       if (!visible) {
+        debouncedSearch.cancel();
         setSelectedModel(null);
+        setDetailsVisible(false);
       }
-    }, [visible]);
+    }, [debouncedSearch, visible]);
 
     // Android back button → close sheet
     useEffect(() => {
@@ -81,6 +83,7 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
 
     const handleSheetDismiss = () => {
       console.log('Search sheet dismissed, clearing error/loading state');
+      debouncedSearch.cancel();
       hfStore.resetLoading();
       hfStore.clearError();
       onDismiss();
