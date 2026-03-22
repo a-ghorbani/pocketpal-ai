@@ -10,10 +10,7 @@ import {
   modelsList,
 } from '../../../jest/fixtures/models';
 
-import {
-  pruneChatHistoryToFitContext,
-  useChatSession,
-} from '../useChatSession';
+import {pruneChatHistoryToFitContext, useChatSession} from '../useChatSession';
 
 import {chatSessionStore, modelStore, palStore} from '../../store';
 

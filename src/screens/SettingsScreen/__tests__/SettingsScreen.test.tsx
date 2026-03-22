@@ -291,16 +291,12 @@ describe('SettingsScreen', () => {
       expect(getByTestId('prune-history-before-send-switch')).toBeTruthy();
     });
 
-    const pruneHistorySwitch = getByTestId(
-      'prune-history-before-send-switch',
-    );
+    const pruneHistorySwitch = getByTestId('prune-history-before-send-switch');
 
     await act(async () => {
       fireEvent(pruneHistorySwitch, 'valueChange', false);
     });
 
-    expect(modelStore.setPruneChatHistoryBeforeSend).toHaveBeenCalledWith(
-      false,
-    );
+    expect(modelStore.setPruneChatHistoryBeforeSend).toHaveBeenCalledWith(false);
   });
 });

@@ -68,7 +68,7 @@ class HFStore {
           this.hfToken = credentials.password;
         });
       }
-    } catch (error) {
+    } catch {
       return;
     }
   }
@@ -98,7 +98,7 @@ class HFStore {
         this.hfToken = token;
       });
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -114,7 +114,7 @@ class HFStore {
         this.hfToken = null;
       });
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
