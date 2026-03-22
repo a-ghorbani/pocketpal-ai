@@ -26,7 +26,16 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       null,
     );
 
-    // Clear state when closed
+    const debouncedSearch = useMemo(
+      () =>
+        debounce(async (query: string) => {
+          hfStore.setSearchQuery(query);
+          await hfStore.fetchModels();
+        }, DEBOUNCE_DELAY),
+      [],
+    );
+
+    // Clear state when closed.
     useEffect(() => {
       if (!visible) {
         debouncedSearch.cancel();
@@ -35,29 +44,7 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     }, [debouncedSearch, visible]);
 
-    // Android back button → close sheet
-    useEffect(() => {
-      if (!visible) {
-        return;
-      }
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        handleSheetDismiss();
-        return true;
-      });
-      return () => sub.remove();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [visible]);
-
-    const debouncedSearch = useMemo(
-      () =>
-        debounce(async (query: string) => {
-          hfStore.setSearchQuery(query);
-          await hfStore.fetchModels();
-        }, DEBOUNCE_DELAY),
-      [], // Empty dependencies since we don't want to recreate this
-    );
-
-    // Update search query without triggering immediate search
+    // Update search query without triggering immediate search.
     const handleSearchChange = useCallback(
       (query: string) => {
         debouncedSearch(query);
@@ -81,13 +68,25 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     };
 
-    const handleSheetDismiss = () => {
+    const handleSheetDismiss = useCallback(() => {
       console.log('Search sheet dismissed, clearing error/loading state');
       debouncedSearch.cancel();
       hfStore.resetLoading();
       hfStore.clearError();
       onDismiss();
-    };
+    }, [debouncedSearch, onDismiss]);
+
+    // Android back button should close the sheet.
+    useEffect(() => {
+      if (!visible) {
+        return;
+      }
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleSheetDismiss();
+        return true;
+      });
+      return () => sub.remove();
+    }, [handleSheetDismiss, visible]);
 
     return (
       <>
@@ -96,9 +95,9 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
           snapPoints={['92%']}
           enableDynamicSizing={false}
           enablePanDownToClose
-          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          enableContentPanningGesture={false}
           onClose={handleSheetDismiss}
-          showCloseButton={true}>
+          showCloseButton>
           <SearchView
             testID="hf-model-search-view"
             onModelSelect={handleModelSelect}
@@ -110,7 +109,7 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
           snapPoints={['90%']}
           enableDynamicSizing={false}
           enablePanDownToClose
-          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          enableContentPanningGesture={false}
           onClose={() => setDetailsVisible(false)}
           showCloseButton={false}>
           {selectedModel && <DetailsView hfModel={selectedModel} />}
