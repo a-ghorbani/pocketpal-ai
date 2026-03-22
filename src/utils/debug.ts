@@ -98,6 +98,10 @@ export function getTextDiagnostics(value: unknown) {
 }
 
 export function initializeConsoleCapture() {
+  if (!__DEV__) {
+    return;
+  }
+
   debugStore.ensureLoaded();
 
   if (consoleCaptureInitialized) {
@@ -184,6 +188,10 @@ let networkInterceptInitialized = false;
  * 应在 App 启动时调用一次。
  */
 export function initializeNetworkIntercept() {
+  if (!__DEV__) {
+    return;
+  }
+
   if (networkInterceptInitialized) {
     return;
   }
