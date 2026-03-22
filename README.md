@@ -41,8 +41,14 @@ Since the majority of the users of this application are those who wish to gain a
     ```
 
 14. Added the ctx_shift parameter and automatic truncation logic for input; when both are enabled, you can achieve infinite rounds of chat even under a relatively small context window setting. The debug information for each message will clearly indicate which content has been truncated.
+
+    The mechanism of context shift is: when the KV cache becomes full, the oldest batch of tokens is evicted so that new tokens can continue generating.
+But Qwen3.5's chat template relies on the `</`> structure to mark dialogue boundaries. After a shift, these structures are disrupted, causing anomalous model behavior or premature EOS generation.
+
+    Mainters of llama.cpp have also noted this issue; for modern models, context shift is unreliable by default.
+The phenomenon you encountered—where the model stops generating when the context is nearly full (e.g., 511/512)—is the natural result of being constrained by the context window length, meaning context shift failed to successfully "continue" the generation.
   
-15. Added the number of tokens for input and output to the debug information in each response, and added the percentage of used context next to the send button.
+16. Added the number of tokens for input and output to the debug information in each response, and added the percentage of used context next to the send button.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
