@@ -407,8 +407,7 @@ class ModelStore {
     }
 
     // Handle flash_attn_type (v2.0) - default on for all platforms
-    const flash_attn_type =
-      this.contextInitParams.flash_attn_type ?? 'on';
+    const flash_attn_type = this.contextInitParams.flash_attn_type ?? 'on';
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {

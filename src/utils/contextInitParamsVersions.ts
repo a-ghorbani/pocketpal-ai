@@ -32,8 +32,7 @@ export const createContextInitParams = (
         : (params.use_mmap ?? (Platform.OS === 'android' ? 'smart' : 'true'));
 
   // Handle flash_attn_type (new) vs flash_attn (old)
-  const flash_attn_type =
-    (params as any).flash_attn_type ?? 'on';
+  const flash_attn_type = (params as any).flash_attn_type ?? 'on';
 
   return {
     ...params,
