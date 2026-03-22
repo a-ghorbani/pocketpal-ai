@@ -187,8 +187,7 @@ export const SettingsScreen: React.FC = observer(() => {
   };
 
   const currentFlashAttnType =
-    modelStore.contextInitParams.flash_attn_type ??
-    (Platform.OS === 'ios' ? 'auto' : 'off');
+    modelStore.contextInitParams.flash_attn_type ?? 'on';
 
   // Get dynamic cache type options based on flash attention compatibility
   const cacheTypeKOptions = getAllowedCacheTypeKOptions(
@@ -265,8 +264,7 @@ export const SettingsScreen: React.FC = observer(() => {
 
     // Only update flash attention if current value is not valid for the selected device
     const currentFlashAttn =
-      modelStore.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
+      modelStore.contextInitParams.flash_attn_type ?? 'on';
 
     if (!option.valid_flash_attn_types.includes(currentFlashAttn)) {
       // Current setting is invalid for this device, use the default
@@ -619,8 +617,7 @@ export const SettingsScreen: React.FC = observer(() => {
                     </Text>
                     <SegmentedButtons
                       value={
-                        modelStore.contextInitParams.flash_attn_type ??
-                        (Platform.OS === 'ios' ? 'auto' : 'off')
+                        modelStore.contextInitParams.flash_attn_type ?? 'on'
                       }
                       onValueChange={value =>
                         modelStore.setFlashAttnType(

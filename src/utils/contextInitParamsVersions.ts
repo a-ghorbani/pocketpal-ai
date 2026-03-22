@@ -33,7 +33,7 @@ export const createContextInitParams = (
 
   // Handle flash_attn_type (new) vs flash_attn (old)
   const flash_attn_type =
-    (params as any).flash_attn_type ?? (Platform.OS === 'ios' ? 'auto' : 'off');
+    (params as any).flash_attn_type ?? 'on';
 
   return {
     ...params,
@@ -149,8 +149,8 @@ export function migrateContextInitParams(
       // Keep flash_attn for now (marked deprecated, will be removed in future version)
       // delete migratedParams.flash_attn;
     } else if (!migratedParams.flash_attn_type) {
-      // No flash_attn or flash_attn_type, set platform-specific default
-      migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
+      // No flash_attn or flash_attn_type, set default
+      migratedParams.flash_attn_type = 'on';
     }
 
     // Add new required parameters with defaults
@@ -249,7 +249,7 @@ export function createDefaultContextInitParams(): ContextInitParams {
 
     // New v2.0 parameters
     devices: undefined, // Auto-select
-    flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
+    flash_attn_type: 'on',
     ctx_shift: true,
     kv_unified: true, // CRITICAL: saves ~7GB memory
     n_parallel: 1, // App only uses blocking completion()

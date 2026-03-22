@@ -406,10 +406,9 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
-    // Handle flash_attn_type (v2.0) - platform-specific default
+    // Handle flash_attn_type (v2.0) - default on for all platforms
     const flash_attn_type =
-      this.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
+      this.contextInitParams.flash_attn_type ?? 'on';
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {

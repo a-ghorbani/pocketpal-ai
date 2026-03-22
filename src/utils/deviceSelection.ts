@@ -56,7 +56,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       description: 'Automatically selects Metal GPU (Recommended)',
       devices: undefined,
       n_gpu_layers: 0,
-      default_flash_attn_type: 'auto',
+      default_flash_attn_type: 'on',
       valid_flash_attn_types: ['auto', 'on', 'off'],
       tag: 'Recommended',
       platform: 'ios',
@@ -70,7 +70,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       description: 'Explicitly use Metal GPU acceleration',
       devices: ['Metal'],
       n_gpu_layers: 0,
-      default_flash_attn_type: 'auto',
+      default_flash_attn_type: 'on',
       valid_flash_attn_types: ['auto', 'on', 'off'],
       platform: 'ios',
     });
@@ -83,7 +83,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
       description: 'CPU only (slower, for testing or compatibility)',
       devices: ['CPU'],
       n_gpu_layers: 0,
-      default_flash_attn_type: 'auto',
+      default_flash_attn_type: 'on',
       valid_flash_attn_types: ['auto', 'on', 'off'],
       platform: 'ios',
     });
@@ -105,7 +105,7 @@ export async function getDeviceOptions(): Promise<DeviceOption[]> {
     description: 'CPU only (Slowest, but works with all models)',
     devices: ['CPU'],
     n_gpu_layers: 0,
-    default_flash_attn_type: 'off',
+    default_flash_attn_type: 'on',
     valid_flash_attn_types: ['auto', 'on', 'off'], // CPU supports all
     tag: 'Recommended', // CPU is the recommended/default option for reliability
     platform: 'android',
@@ -256,14 +256,14 @@ export function getDefaultDeviceConfig(): {
     return {
       devices: undefined, // Auto-select Metal
       n_gpu_layers: 0,
-      default_flash_attn_type: 'auto',
+      default_flash_attn_type: 'on',
     };
   } else {
     // Android: Default to CPU for reliability
     return {
       devices: ['CPU'],
       n_gpu_layers: 0,
-      default_flash_attn_type: 'off',
+      default_flash_attn_type: 'on',
     };
   }
 }
