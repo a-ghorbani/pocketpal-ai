@@ -1526,7 +1526,7 @@ export const ChatView = observer(
     // Render header (loading bubble and keyboard spacer)
     const renderListHeaderComponent = React.useCallback(
       () => (
-          <>
+        <>
           {isThinking && (
             <LoadingBubble
               label={l10n.chat.promptProcessing}
@@ -1536,7 +1536,13 @@ export const ChatView = observer(
           {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),
-      [isThinking, promptProcessingProgress, chatMessages.length, headerStyle, l10n],
+      [
+        isThinking,
+        promptProcessingProgress,
+        chatMessages.length,
+        headerStyle,
+        l10n,
+      ],
     );
 
     // Render complete chat list with scroll-to-bottom button
