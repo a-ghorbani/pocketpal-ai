@@ -82,6 +82,11 @@ export interface ChatInputTopLevelProps {
 }
 
 export interface ChatInputAdditionalProps {
+  contextUsage?: {
+    usedTokens: number;
+    maxTokens: number;
+    usagePercent: number;
+  };
   /** Camera-specific props */
   isCameraActive?: boolean;
   onStartCamera?: () => void;
@@ -128,6 +133,7 @@ export const ChatInput = observer(
     isPickerVisible,
     inputBackgroundColor,
     isCameraActive = false,
+    contextUsage,
     onStartCamera,
     promptText,
     onPromptTextChange,
@@ -665,6 +671,17 @@ export const ChatInput = observer(
                 <View style={styles.helperTextContainer}>
                   <Text variant="bodySmall" style={styles.helperText}>
                     {l10n.chat.cannotSendWithoutModel}
+                  </Text>
+                </View>
+              )}
+
+              {contextUsage && !isCameraActive && (
+                <View style={styles.contextUsageBadge} testID="context-usage">
+                  <Text style={styles.contextUsagePrimary}>
+                    {contextUsage.usagePercent}%
+                  </Text>
+                  <Text style={styles.contextUsageSecondary}>
+                    {contextUsage.usedTokens}/{contextUsage.maxTokens}
                   </Text>
                 </View>
               )}

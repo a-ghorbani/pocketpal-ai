@@ -34,6 +34,64 @@ import {
 } from '../utils/completionTypes';
 import {ChatMessage} from '../utils/types';
 
+function pickNumericValue(
+  source: Record<string, unknown> | undefined,
+  keys: string[],
+): number | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function extractTokenUsage(
+  usage: Record<string, unknown> | undefined,
+  fallbackOutputTokens: number,
+) {
+  const inputTokens = pickNumericValue(usage, [
+    'prompt_tokens',
+    'promptTokens',
+    'input_tokens',
+    'inputTokens',
+    'prompt_eval_count',
+    'prompt_n',
+    'input_token_count',
+  ]);
+  const outputTokens =
+    pickNumericValue(usage, [
+      'completion_tokens',
+      'completionTokens',
+      'output_tokens',
+      'outputTokens',
+      'eval_count',
+      'generated_tokens',
+      'output_token_count',
+    ]) ?? fallbackOutputTokens;
+  const totalTokens =
+    pickNumericValue(usage, [
+      'total_tokens',
+      'totalTokens',
+      'total_token_count',
+    ]) ??
+    [inputTokens, outputTokens]
+      .filter((value): value is number => typeof value === 'number')
+      .reduce((sum, value) => sum + value, 0);
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+  };
+}
+
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 const MIN_INPUT_TOKEN_BUDGET = 256;
 const INPUT_TOKEN_BUFFER = 128;
@@ -55,6 +113,60 @@ function estimateMessageChars(message: ChatMessage): number {
   }
 
   return 0;
+}
+
+function estimateMessagesTokenCount(messages: ChatMessage[]): number {
+  const totalChars = messages.reduce(
+    (sum, message) => sum + estimateMessageChars(message),
+    0,
+  );
+  return Math.max(0, Math.ceil(totalChars / CHARS_PER_TOKEN_ESTIMATE));
+}
+
+export function estimateChatContextUsage({
+  systemMessages,
+  chatMessages,
+  userMessage,
+  contextSize,
+  requestedOutputTokens,
+  pruneHistory,
+}: {
+  systemMessages: Array<{role: 'system'; content: string}>;
+  chatMessages: ChatMessage[];
+  userMessage?: ChatMessage;
+  contextSize: number;
+  requestedOutputTokens?: number;
+  pruneHistory: boolean;
+}) {
+  const baseMessages = userMessage
+    ? [...systemMessages, ...chatMessages, userMessage]
+    : [...systemMessages, ...chatMessages];
+  const prunedResult =
+    pruneHistory && userMessage
+      ? pruneChatHistoryToFitContext({
+          systemMessages,
+          chatMessages,
+          userMessage,
+          contextSize,
+          requestedOutputTokens,
+        })
+      : {
+          messages: baseMessages,
+          droppedMessageCount: 0,
+        };
+
+  const usedTokens = estimateMessagesTokenCount(prunedResult.messages);
+  const maxTokens = Math.max(contextSize || 0, MIN_INPUT_TOKEN_BUDGET);
+
+  return {
+    usedTokens,
+    maxTokens,
+    usagePercent:
+      maxTokens > 0
+        ? Math.min(100, Math.round((usedTokens / maxTokens) * 100))
+        : 0,
+    droppedMessageCount: prunedResult.droppedMessageCount,
+  };
 }
 
 export function pruneChatHistoryToFitContext({
@@ -212,9 +324,11 @@ const prepareCompletion = async ({
         messages: [...systemMessages, ...chatMessages, currentUserMessage],
         droppedMessageCount: 0,
       };
+  const inputTokenEstimate = estimateMessagesTokenCount(messages);
   promptBuildLog('prepareCompletion:messages', {
     messageCount: messages.length,
     droppedMessageCount,
+    inputTokenEstimate,
     hasImages,
     isMultimodalEnabled,
     lastUserMessage: Array.isArray(userMessageContent)
@@ -418,7 +532,13 @@ const prepareCompletion = async ({
     sessionId: chatSessionStore.activeSessionId!,
   };
 
-  return {cleanCompletionParams, messageInfo, requestId, completionTransport};
+  return {
+    cleanCompletionParams,
+    messageInfo,
+    requestId,
+    completionTransport,
+    inputTokenEstimate,
+  };
 };
 
 export const useChatSession = (
@@ -510,18 +630,23 @@ export const useChatSession = (
     });
 
     // Prepare completion parameters and create message record
-    const {cleanCompletionParams, messageInfo, requestId, completionTransport} =
-      await prepareCompletion({
-        imageUris: imageUris || [],
-        message,
-        systemMessages,
-        context,
-        assistant,
-        conversationIdRef: conversationIdRef.current,
-        isMultimodalEnabled,
-        l10n,
-        currentMessages,
-      });
+    const {
+      cleanCompletionParams,
+      messageInfo,
+      requestId,
+      completionTransport,
+      inputTokenEstimate,
+    } = await prepareCompletion({
+      imageUris: imageUris || [],
+      message,
+      systemMessages,
+      context,
+      assistant,
+      conversationIdRef: conversationIdRef.current,
+      isMultimodalEnabled,
+      l10n,
+      currentMessages,
+    });
 
     currentMessageInfo.current = messageInfo;
 
@@ -728,10 +853,18 @@ export const useChatSession = (
       modelStore.clearCompletionPromise();
 
       // 类2: 引擎输出 — 完成结果与性能数据
+      const tokenUsage = extractTokenUsage(
+        ((result as any)?.usage as Record<string, unknown> | undefined) ??
+          undefined,
+        streamChunkCount,
+      );
       engineOutputLog('completion:result', {
         requestId,
         timings: result.timings,
         time_to_first_token_ms: timeToFirstToken,
+        input_tokens: tokenUsage.inputTokens ?? inputTokenEstimate,
+        output_tokens: tokenUsage.outputTokens,
+        total_tokens: tokenUsage.totalTokens,
         streamChunkCount,
         firstCallbackKeys,
         firstTokenPreview,
@@ -748,6 +881,9 @@ export const useChatSession = (
             timings: {
               ...result.timings,
               time_to_first_token_ms: timeToFirstToken,
+              input_token_count: tokenUsage.inputTokens ?? inputTokenEstimate,
+              output_token_count: tokenUsage.outputTokens,
+              total_token_count: tokenUsage.totalTokens,
             },
             copyable: true,
             // Add multimodal flag if this was a multimodal completion

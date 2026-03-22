@@ -50,7 +50,16 @@ export const Bubble = ({
       ? `, ${timings.time_to_first_token_ms}ms TTFT`
       : '';
 
-  const fullTimingsString = timingsString + timeToFirstTokenString;
+  const tokenCountsString =
+    timings?.input_token_count !== undefined ||
+    timings?.output_token_count !== undefined
+      ? `, in ${timings?.input_token_count ?? 0} tok, out ${
+          timings?.output_token_count ?? 0
+        } tok`
+      : '';
+
+  const fullTimingsString =
+    timingsString + timeToFirstTokenString + tokenCountsString;
 
   const {contentContainer, dateHeaderContainer, dateHeader, iconContainer} =
     styles({

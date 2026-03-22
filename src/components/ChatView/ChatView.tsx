@@ -32,7 +32,12 @@ import Reanimated, {
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
 
-import {useTheme, useMessageActions, usePrevious} from '../../hooks';
+import {
+  useTheme,
+  useMessageActions,
+  usePrevious,
+  estimateChatContextUsage,
+} from '../../hooks';
 
 import ImageView from './ImageView';
 import {createStyles} from './styles';
@@ -49,6 +54,8 @@ import {
 } from '../../utils';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 import {chatNavLog} from '../../utils/debug';
+import {resolveSystemMessages} from '../../utils/systemPromptResolver';
+import {convertToChatMessages} from '../../utils/chat';
 
 import {
   Message,
@@ -998,6 +1005,61 @@ export const ChatView = observer(
       [onSendPress],
     );
 
+    const activeSession = chatSessionStore.sessions.find(
+      s => s.id === chatSessionStore.activeSessionId,
+    );
+    const activeModel = modelStore.activeModel;
+    const contextSize = modelStore.contextInitParams.n_ctx;
+    const pruneChatHistoryBeforeSend = modelStore.pruneChatHistoryBeforeSend;
+    const sessionCompletionSettings =
+      activeSession?.completionSettings ??
+      chatSessionStore.newChatCompletionSettings;
+    const systemMessages = React.useMemo(
+      () =>
+        resolveSystemMessages({
+          pal: activePal,
+          model: activeModel,
+        }),
+      [activeModel, activePal],
+    );
+    const contextUsage = React.useMemo(() => {
+      const draftText = inputText.trim();
+      const draftMessage =
+        draftText.length > 0 || inputImages.length > 0
+          ? {
+              role: 'user' as const,
+              content:
+                inputImages.length > 0
+                  ? [
+                      {type: 'text' as const, text: draftText},
+                      ...inputImages.map(path => ({
+                        type: 'image_url' as const,
+                        image_url: {url: path},
+                      })),
+                    ]
+                  : draftText,
+            }
+          : undefined;
+
+      return estimateChatContextUsage({
+        systemMessages,
+        chatMessages: convertToChatMessages(messages, isVisionEnabled),
+        userMessage: draftMessage as any,
+        contextSize,
+        requestedOutputTokens: sessionCompletionSettings?.n_predict,
+        pruneHistory: pruneChatHistoryBeforeSend,
+      });
+    }, [
+      contextSize,
+      inputImages,
+      inputText,
+      isVisionEnabled,
+      messages,
+      pruneChatHistoryBeforeSend,
+      sessionCompletionSettings?.n_predict,
+      systemMessages,
+    ]);
+
     const handleCancelEdit = React.useCallback(() => {
       setInputText('');
       setInputImages([]);
@@ -1578,6 +1640,7 @@ export const ChatView = observer(
                   onStopPress,
                   chatInputHeight,
                   inputBackgroundColor,
+                  contextUsage,
                   onCancelEdit: handleCancelEdit,
                   onPalBtnPress: () => setIsPickerVisible(!isPickerVisible),
                   isStopVisible,

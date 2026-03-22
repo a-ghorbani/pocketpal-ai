@@ -53,6 +53,26 @@ describe('input', () => {
     expect(textInput.props).toHaveProperty('value', 'text');
   });
 
+  it('renders context usage badge when provided', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
+
+    const {getByTestId, getByText} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          onSendPress={jest.fn()}
+          sendButtonVisibilityMode="always"
+          contextUsage={{usedTokens: 512, maxTokens: 8192, usagePercent: 6}}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByTestId('context-usage')).toBeTruthy();
+    expect(getByText('6%')).toBeTruthy();
+    expect(getByText('512/8192')).toBeTruthy();
+  });
+
   it('sends a text message', () => {
     expect.assertions(2);
     // Set up an active model for the test

@@ -29,6 +29,8 @@ describe('Bubble', () => {
       metadata: {
         copyable: true,
         timings: {
+          input_token_count: 42,
+          output_token_count: 128,
           predicted_per_token_ms: 10,
           predicted_per_second: 100,
         },
@@ -49,7 +51,9 @@ describe('Bubble', () => {
   it('renders correctly with all props', () => {
     const {getByText, getByTestId} = renderBubble(mockMessage);
     expect(getByTestId('child')).toBeTruthy();
-    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
+    expect(
+      getByText('10ms/token, 100.00 tokens/sec, in 42 tok, out 128 tok'),
+    ).toBeTruthy();
     expect(getByText('content-copy')).toBeTruthy();
   });
 
