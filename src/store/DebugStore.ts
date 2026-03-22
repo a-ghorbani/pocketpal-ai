@@ -72,8 +72,8 @@ export class DebugStore {
   logModelLifecycle = false;
   // 类6: 聊天导航 — cursor/scroll/目标位置追踪，默认关闭
   logChatNavigation = false;
-  // 类7: 网络链路 — fetch/axios 请求、响应、错误全链路追踪，默认开启
-  logNetwork = true;
+  // 类7: 网络链路 — fetch/axios 请求、响应、错误全链路追踪，默认关闭
+  logNetwork = false;
   private fileWriteQueue: Promise<void> = Promise.resolve();
   private hasLoadedLogs = false;
   private loadLogsPromise: Promise<void> | null = null;

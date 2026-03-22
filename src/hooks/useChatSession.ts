@@ -15,6 +15,7 @@ import {
   applyChatTemplate,
   convertToChatMessages,
   getEffectiveChatTemplateInterpreter,
+  normalizeChatTemplateResult,
   removeThinkingParts,
 } from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
@@ -92,8 +93,8 @@ function extractTokenUsage(
   };
 }
 
-const CHARS_PER_TOKEN_ESTIMATE = 4;
-const MIN_INPUT_TOKEN_BUDGET = 256;
+const MIN_CONTEXT_SIZE = 32;
+const MIN_INPUT_TOKEN_BUDGET = 32;
 const INPUT_TOKEN_BUFFER = 128;
 
 type TruncationMetrics = {
@@ -123,21 +124,83 @@ function estimateMessageChars(message: ChatMessage): number {
   return 0;
 }
 
-function estimateMessagesTokenCount(messages: ChatMessage[]): number {
-  const totalChars = messages.reduce(
-    (sum, message) => sum + estimateMessageChars(message),
-    0,
-  );
-  return Math.max(0, Math.ceil(totalChars / CHARS_PER_TOKEN_ESTIMATE));
+type ExactTokenUsageContext = {
+  context?: any;
+  model?: any;
+  messages: ChatMessage[];
+  enableThinking?: boolean;
+  reasoningFormat?: 'none' | 'auto' | 'deepseek';
+};
+
+async function countTokensExactly({
+  context,
+  model,
+  messages,
+  enableThinking = false,
+  reasoningFormat,
+}: ExactTokenUsageContext): Promise<number | null> {
+  if (!context?.tokenize) {
+    return null;
+  }
+
+  try {
+    const effectiveInterpreter = getEffectiveChatTemplateInterpreter(
+      model?.chatTemplate,
+    );
+    let prompt = '';
+    let mediaPaths: string[] = [];
+
+    if (
+      effectiveInterpreter === 'nunjucks' &&
+      !messages.some(message => Array.isArray(message.content))
+    ) {
+      const renderedPrompt = await applyChatTemplate(
+        messages as any,
+        model ?? null,
+        context ?? null,
+      );
+      prompt = typeof renderedPrompt === 'string' ? renderedPrompt : '';
+    } else if (context?.getFormattedChat) {
+      const formatted = await context.getFormattedChat(
+        messages as any,
+        effectiveInterpreter === 'jinja'
+          ? model?.chatTemplate?.chatTemplate?.trim() || null
+          : null,
+        {
+          jinja: true,
+          enable_thinking: enableThinking,
+          reasoning_format: reasoningFormat,
+        },
+      );
+      const normalized = normalizeChatTemplateResult(formatted as any);
+      prompt = normalized.prompt;
+      mediaPaths = normalized.mediaPaths;
+    }
+
+    if (!prompt) {
+      return null;
+    }
+
+    const tokenized = await context.tokenize(prompt, {
+      media_paths: mediaPaths,
+    });
+    return Array.isArray(tokenized?.tokens) ? tokenized.tokens.length : null;
+  } catch {
+    return null;
+  }
 }
 
-export function estimateChatContextUsage({
+export async function estimateChatContextUsage({
   systemMessages,
   chatMessages,
   userMessage,
   contextSize,
   requestedOutputTokens,
   pruneHistory,
+  context,
+  model,
+  enableThinking,
+  reasoningFormat,
 }: {
   systemMessages: Array<{role: 'system'; content: string}>;
   chatMessages: ChatMessage[];
@@ -145,18 +208,26 @@ export function estimateChatContextUsage({
   contextSize: number;
   requestedOutputTokens?: number;
   pruneHistory: boolean;
+  context?: any;
+  model?: any;
+  enableThinking?: boolean;
+  reasoningFormat?: 'none' | 'auto' | 'deepseek';
 }) {
   const baseMessages = userMessage
     ? [...systemMessages, ...chatMessages, userMessage]
     : [...systemMessages, ...chatMessages];
   const prunedResult =
     pruneHistory && userMessage
-      ? pruneChatHistoryToFitContext({
+      ? await pruneChatHistoryToFitContext({
           systemMessages,
           chatMessages,
           userMessage,
           contextSize,
           requestedOutputTokens,
+          context,
+          model,
+          enableThinking,
+          reasoningFormat,
         })
       : {
           messages: baseMessages,
@@ -170,8 +241,19 @@ export function estimateChatContextUsage({
           },
         };
 
-  const usedTokens = estimateMessagesTokenCount(prunedResult.messages);
-  const maxTokens = Math.max(contextSize || 0, MIN_INPUT_TOKEN_BUDGET);
+  const exactUsedTokens = await countTokensExactly({
+    context,
+    model,
+    messages: prunedResult.messages,
+    enableThinking,
+    reasoningFormat,
+  });
+  if (exactUsedTokens === null) {
+    return null;
+  }
+
+  const usedTokens = exactUsedTokens;
+  const maxTokens = Math.max(contextSize || 0, MIN_CONTEXT_SIZE);
 
   return {
     usedTokens,
@@ -184,31 +266,40 @@ export function estimateChatContextUsage({
   };
 }
 
-export function pruneChatHistoryToFitContext({
+export async function pruneChatHistoryToFitContext({
   systemMessages,
   chatMessages,
   userMessage,
   contextSize,
   requestedOutputTokens,
+  context,
+  model,
+  enableThinking,
+  reasoningFormat,
 }: {
   systemMessages: Array<{role: 'system'; content: string}>;
   chatMessages: ChatMessage[];
   userMessage: ChatMessage;
   contextSize: number;
   requestedOutputTokens?: number;
-}): {
+  context?: any;
+  model?: any;
+  enableThinking?: boolean;
+  reasoningFormat?: 'none' | 'auto' | 'deepseek';
+}): Promise<{
   messages: ChatMessage[];
   droppedMessageCount: number;
   truncation: TruncationMetrics;
-} {
-  const safeContextSize = Math.max(contextSize || 0, MIN_INPUT_TOKEN_BUDGET);
-  const reservedOutputTokens = Math.max(requestedOutputTokens ?? 512, 0);
+}> {
+  const safeContextSize = Math.max(contextSize || 0, MIN_CONTEXT_SIZE);
+  const reservedOutputTokens =
+    requestedOutputTokens === -1
+      ? Math.min(INPUT_TOKEN_BUFFER, Math.floor(safeContextSize * 0.25))
+      : Math.max(requestedOutputTokens ?? 512, 0);
   const inputTokenBudget = Math.max(
     MIN_INPUT_TOKEN_BUDGET,
     safeContextSize - reservedOutputTokens - INPUT_TOKEN_BUFFER,
   );
-  const inputCharBudget = inputTokenBudget * CHARS_PER_TOKEN_ESTIMATE;
-
   const sumChars = (messages: ChatMessage[]) =>
     messages.reduce((total, item) => total + estimateMessageChars(item), 0);
   const clampPercent = (retained: number, original: number) => {
@@ -269,42 +360,106 @@ export function pruneChatHistoryToFitContext({
   let keptHistory = [...chatMessages];
   let trimmedUserMessage = userMessage;
   let trimmedSystemMessages = [...(systemMessages as ChatMessage[])];
-  let totalChars =
-    originalHistoryChars + originalInputChars + originalSystemChars;
+  const getCurrentMessages = () => [
+    ...trimmedSystemMessages,
+    ...keptHistory,
+    trimmedUserMessage,
+  ];
+  const getCurrentTokenCount = async () => {
+    const exactCount = await countTokensExactly({
+      context,
+      model,
+      messages: getCurrentMessages(),
+      enableThinking,
+      reasoningFormat,
+    });
 
-  while (totalChars > inputCharBudget && keptHistory.length > 0) {
+    if (exactCount !== null) {
+      return exactCount;
+    }
+
+    const fallbackChars =
+      sumChars(trimmedSystemMessages) +
+      sumChars(keptHistory) +
+      estimateMessageChars(trimmedUserMessage);
+    return Math.ceil(fallbackChars / 4);
+  };
+
+  let totalTokens = await getCurrentTokenCount();
+
+  while (totalTokens > inputTokenBudget && keptHistory.length > 0) {
     const removedMessage = keptHistory.shift();
-    totalChars -= estimateMessageChars(removedMessage as ChatMessage);
+    if (!removedMessage) {
+      break;
+    }
+    totalTokens = await getCurrentTokenCount();
   }
 
-  if (totalChars > inputCharBudget && originalInputChars > 0) {
-    const overflowChars = totalChars - inputCharBudget;
+  if (totalTokens > inputTokenBudget && originalInputChars > 0) {
+    let low = 0;
+    let high = originalInputChars;
+    let bestContent = userMessage.content;
+
+    while (low <= high) {
+      const trimmedChars = Math.floor((low + high) / 2);
+      const candidateContent = trimContentFromTail(
+        userMessage.content,
+        trimmedChars,
+      );
+      trimmedUserMessage = {
+        ...userMessage,
+        content: candidateContent,
+      };
+      const candidateTokens = await getCurrentTokenCount();
+
+      if (candidateTokens <= inputTokenBudget) {
+        bestContent = candidateContent;
+        high = trimmedChars - 1;
+      } else {
+        low = trimmedChars + 1;
+      }
+    }
+
     trimmedUserMessage = {
       ...userMessage,
-      content: trimContentFromTail(userMessage.content, overflowChars),
+      content: bestContent,
     };
-    totalChars =
-      sumChars(keptHistory) +
-      estimateMessageChars(trimmedUserMessage) +
-      sumChars(trimmedSystemMessages);
+    totalTokens = await getCurrentTokenCount();
   }
 
-  if (totalChars > inputCharBudget && trimmedSystemMessages.length > 0) {
+  if (totalTokens > inputTokenBudget && trimmedSystemMessages.length > 0) {
     for (
       let index = trimmedSystemMessages.length - 1;
-      index >= 0 && totalChars > inputCharBudget;
+      index >= 0 && totalTokens > inputTokenBudget;
       index -= 1
     ) {
       const systemMessage = trimmedSystemMessages[index];
-      const overflowChars = totalChars - inputCharBudget;
+      const systemChars = estimateMessageChars(systemMessage);
+      let low = 0;
+      let high = systemChars;
+      let bestContent = systemMessage.content;
+
+      while (low <= high) {
+        const trimmedChars = Math.floor((low + high) / 2);
+        trimmedSystemMessages[index] = {
+          ...systemMessage,
+          content: trimContentFromTail(systemMessage.content, trimmedChars),
+        };
+        const candidateTokens = await getCurrentTokenCount();
+
+        if (candidateTokens <= inputTokenBudget) {
+          bestContent = trimmedSystemMessages[index].content;
+          high = trimmedChars - 1;
+        } else {
+          low = trimmedChars + 1;
+        }
+      }
+
       trimmedSystemMessages[index] = {
         ...systemMessage,
-        content: trimContentFromTail(systemMessage.content, overflowChars),
+        content: bestContent,
       };
-      totalChars =
-        sumChars(keptHistory) +
-        estimateMessageChars(trimmedUserMessage) +
-        sumChars(trimmedSystemMessages);
+      totalTokens = await getCurrentTokenCount();
     }
   }
 
@@ -419,13 +574,21 @@ const prepareCompletion = async ({
   };
   const {messages, droppedMessageCount, truncation} =
     modelStore.pruneChatHistoryBeforeSend
-      ? pruneChatHistoryToFitContext({
+      ? await pruneChatHistoryToFitContext({
           systemMessages,
           chatMessages,
           userMessage: currentUserMessage,
-          contextSize: modelStore.contextInitParams.n_ctx,
+          contextSize:
+            modelStore.activeContextSettings?.n_ctx ??
+            modelStore.contextInitParams.n_ctx,
           requestedOutputTokens: (sessionCompletionSettings as CompletionParams)
             ?.n_predict,
+          context,
+          model: modelStore.activeModel,
+          enableThinking: (sessionCompletionSettings as CompletionParams)
+            ?.enable_thinking,
+          reasoningFormat: (sessionCompletionSettings as CompletionParams)
+            ?.reasoning_format,
         })
       : {
           messages: [...systemMessages, ...chatMessages, currentUserMessage],
@@ -438,7 +601,16 @@ const prepareCompletion = async ({
             droppedMessageCount: 0,
           },
         };
-  const inputTokenEstimate = estimateMessagesTokenCount(messages);
+  const inputTokenEstimate =
+    (await countTokensExactly({
+      context,
+      model: modelStore.activeModel,
+      messages,
+      enableThinking: (sessionCompletionSettings as CompletionParams)
+        ?.enable_thinking,
+      reasoningFormat: (sessionCompletionSettings as CompletionParams)
+        ?.reasoning_format,
+    })) ?? 0;
   promptBuildLog('prepareCompletion:messages', {
     messageCount: messages.length,
     droppedMessageCount,

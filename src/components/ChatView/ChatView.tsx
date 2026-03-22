@@ -1009,7 +1009,9 @@ export const ChatView = observer(
       s => s.id === chatSessionStore.activeSessionId,
     );
     const activeModel = modelStore.activeModel;
-    const contextSize = modelStore.contextInitParams.n_ctx;
+    const contextSize =
+      modelStore.activeContextSettings?.n_ctx ??
+      modelStore.contextInitParams.n_ctx;
     const pruneChatHistoryBeforeSend = modelStore.pruneChatHistoryBeforeSend;
     const sessionCompletionSettings =
       activeSession?.completionSettings ??
@@ -1022,7 +1024,10 @@ export const ChatView = observer(
         }),
       [activeModel, activePal],
     );
-    const contextUsage = React.useMemo(() => {
+    const [contextUsage, setContextUsage] =
+      React.useState<ChatInputAdditionalProps['contextUsage']>();
+
+    React.useEffect(() => {
       const draftText = inputText.trim();
       const draftMessage =
         draftText.length > 0 || inputImages.length > 0
@@ -1041,22 +1046,39 @@ export const ChatView = observer(
             }
           : undefined;
 
-      return estimateChatContextUsage({
+      let isCancelled = false;
+
+      estimateChatContextUsage({
         systemMessages,
         chatMessages: convertToChatMessages(messages, isVisionEnabled),
         userMessage: draftMessage as any,
         contextSize,
         requestedOutputTokens: sessionCompletionSettings?.n_predict,
         pruneHistory: pruneChatHistoryBeforeSend,
+        context: modelStore.context,
+        model: activeModel,
+        enableThinking: sessionCompletionSettings?.enable_thinking,
+        reasoningFormat: sessionCompletionSettings?.reasoning_format,
+      }).then(result => {
+        if (!isCancelled) {
+          setContextUsage(result ?? undefined);
+        }
       });
+
+      return () => {
+        isCancelled = true;
+      };
     }, [
+      activeModel,
       contextSize,
       inputImages,
       inputText,
       isVisionEnabled,
       messages,
       pruneChatHistoryBeforeSend,
+      sessionCompletionSettings?.enable_thinking,
       sessionCompletionSettings?.n_predict,
+      sessionCompletionSettings?.reasoning_format,
       systemMessages,
     ]);
 

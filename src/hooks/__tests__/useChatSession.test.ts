@@ -494,8 +494,8 @@ describe('useChatSession', () => {
     }
   });
 
-  it('should drop the oldest chat history when context budget is too small', () => {
-    const result = pruneChatHistoryToFitContext({
+  it('should drop the oldest chat history when context budget is too small', async () => {
+    const result = await pruneChatHistoryToFitContext({
       systemMessages: [{role: 'system', content: 'system'}],
       chatMessages: [
         {role: 'user', content: 'A'.repeat(700)},
@@ -532,8 +532,8 @@ describe('useChatSession', () => {
     expect(result.truncation.systemRetainedPercent).toBe(100);
   });
 
-  it('should trim the current user input from the tail after history is exhausted', () => {
-    const result = pruneChatHistoryToFitContext({
+  it('should trim the current user input from the tail after history is exhausted', async () => {
+    const result = await pruneChatHistoryToFitContext({
       systemMessages: [{role: 'system', content: 'system'}],
       chatMessages: [] as any,
       userMessage: {
@@ -559,8 +559,8 @@ describe('useChatSession', () => {
     expect(result.truncation.inputRetainedPercent).toBeLessThan(100);
   });
 
-  it('should trim the system prompt from the tail only after history and input are exhausted', () => {
-    const result = pruneChatHistoryToFitContext({
+  it('should trim the system prompt from the tail only after history and input are exhausted', async () => {
+    const result = await pruneChatHistoryToFitContext({
       systemMessages: [
         {
           role: 'system',
@@ -585,5 +585,25 @@ describe('useChatSession', () => {
     expect(result.truncation.historyRetainedPercent).toBe(100);
     expect(result.truncation.inputRetainedPercent).toBe(100);
     expect(result.truncation.systemRetainedPercent).toBeLessThan(100);
+  });
+
+  it('should respect small n_ctx instead of forcing a 256-token floor', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [] as any,
+      chatMessages: [{role: 'assistant', content: 'A'.repeat(1200)}] as any,
+      userMessage: {role: 'user', content: '继续'},
+      contextSize: 200,
+      requestedOutputTokens: -1,
+    });
+
+    const estimatedTokens = result.messages.reduce((sum, message) => {
+      const content =
+        typeof message.content === 'string' ? message.content.length : 0;
+      return sum + Math.ceil(content / 4);
+    }, 0);
+
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeLessThan(100);
+    expect(estimatedTokens).toBeLessThanOrEqual(200);
   });
 });
