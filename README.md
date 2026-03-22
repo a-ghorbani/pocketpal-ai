@@ -91,7 +91,9 @@ I have optimized the compilation for versions **1.11.21** and **1.12.2**, enabli
 * [https://github.com/CCSSNE/bianyi-1.11.21](https://github.com/CCSSNE/bianyi-1.11.21)
 * [https://github.com/CCSSNE/bianyi-1.12.2](https://github.com/CCSSNE/bianyi-1.12.2)
 
-Testing confirmed that everything else is working; the only issue is that PAL login is unusable.
+
+
+## Compared to the original version; the only issue is that PAL login is unusable.
 
 Since the original `release.yml` isn't hardcoded either, but rather retrieves values from GitHub Actions configuration:
 
