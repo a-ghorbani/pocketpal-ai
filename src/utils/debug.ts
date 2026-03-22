@@ -177,6 +177,9 @@ export function chatNavLog(message: string, payload?: unknown) {
 
 /** 类7: 网络链路 — fetch/axios 请求、响应、错误全链路追踪 */
 export function networkLog(message: string, payload?: unknown) {
+  if (!__DEV__) {
+    return;
+  }
   categoryLog(debugStore.logNetwork, '[Network]', message, payload);
 }
 
