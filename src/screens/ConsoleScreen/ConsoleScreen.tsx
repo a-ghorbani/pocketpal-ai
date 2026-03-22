@@ -43,7 +43,7 @@ export const ConsoleScreen: React.FC = observer(() => {
             onPress={() => setCategoriesExpanded(prev => !prev)}
             style={styles.expandButton}>
             <Text style={styles.expandButtonText}>
-              {categoriesExpanded ? 'Hide' : 'Show'}
+              {categoriesExpanded ? '▼' : '▶'}
             </Text>
           </TouchableOpacity>
           <Switch
