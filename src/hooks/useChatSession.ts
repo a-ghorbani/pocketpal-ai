@@ -96,7 +96,7 @@ function extractTokenUsage(
 const MIN_CONTEXT_SIZE = 32;
 const MIN_INPUT_TOKEN_BUDGET = 32;
 const INPUT_TOKEN_BUFFER = 128;
-const MIN_LAST_HISTORY_CHARS = 32;
+const HISTORY_TRIM_STEP_CHARS = 64;
 
 type TruncationMetrics = {
   wasTruncated: boolean;
@@ -141,6 +141,10 @@ async function countTokensExactly({
   reasoningFormat,
 }: ExactTokenUsageContext): Promise<number | null> {
   if (!context?.tokenize) {
+    promptBuildLog('tokenize:exact-skipped', {
+      reason: 'missing-context-tokenize',
+      messageCount: messages.length,
+    });
     return null;
   }
 
@@ -186,7 +190,11 @@ async function countTokensExactly({
       media_paths: mediaPaths,
     });
     return Array.isArray(tokenized?.tokens) ? tokenized.tokens.length : null;
-  } catch {
+  } catch (error) {
+    promptBuildLog('tokenize:exact-failed', {
+      messageCount: messages.length,
+      error: error instanceof Error ? error.message : JSON.stringify(error),
+    });
     return null;
   }
 }
@@ -412,7 +420,8 @@ export async function pruneChatHistoryToFitContext({
         ...historyMessage,
         content: trimContentFromHead(historyMessage.content, historyChars),
       };
-      totalTokens = await getCurrentTokenCount();
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
     }
 
     if (totalTokens > inputTokenBudget) {
@@ -422,7 +431,8 @@ export async function pruneChatHistoryToFitContext({
           ...trimmedUserMessage,
           content: trimContentFromTail(trimmedUserMessage.content, userChars),
         };
-        totalTokens = await getCurrentTokenCount();
+        tokenCount = await getCurrentTokenCount();
+        totalTokens = tokenCount.count;
       }
     }
 
@@ -443,7 +453,8 @@ export async function pruneChatHistoryToFitContext({
           ...systemMessage,
           content: trimContentFromTail(systemMessage.content, systemChars),
         };
-        totalTokens = await getCurrentTokenCount();
+        tokenCount = await getCurrentTokenCount();
+        totalTokens = tokenCount.count;
       }
     }
   };
@@ -470,71 +481,123 @@ export async function pruneChatHistoryToFitContext({
     });
 
     if (exactCount !== null) {
-      return exactCount;
+      return {count: exactCount, mode: 'exact' as const};
     }
 
     const fallbackChars =
       sumChars(trimmedSystemMessages) +
       sumChars(keptHistory) +
       estimateMessageChars(trimmedUserMessage);
-    return Math.ceil(fallbackChars / 4);
+    const fallbackCount = Math.ceil(fallbackChars / 4);
+    promptBuildLog('prune:fallback-token-estimate', {
+      fallbackChars,
+      fallbackCount,
+      messageCount: getCurrentMessages().length,
+    });
+    return {count: fallbackCount, mode: 'fallback' as const};
   };
 
-  let totalTokens = await getCurrentTokenCount();
+  let tokenCount = await getCurrentTokenCount();
+  let totalTokens = tokenCount.count;
+  promptBuildLog('prune:start', {
+    contextSize,
+    safeContextSize,
+    reservedOutputTokens: safeReservedOutputTokens,
+    inputTokenBuffer: INPUT_TOKEN_BUFFER,
+    inputTokenBudget,
+    initialTotalTokens: totalTokens,
+    tokenCountMode: tokenCount.mode,
+    historyMessageCount: keptHistory.length,
+    originalHistoryChars,
+    originalInputChars,
+    originalSystemChars,
+  });
 
   let historyIndex = 0;
   while (totalTokens > inputTokenBudget && historyIndex < keptHistory.length) {
     const historyMessage = keptHistory[historyIndex];
     const historyChars = estimateMessageChars(historyMessage);
+    promptBuildLog('prune:history-branch', {
+      historyIndex,
+      historyChars,
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+    });
 
     if (historyChars <= 0) {
       keptHistory.splice(historyIndex, 1);
-      totalTokens = await getCurrentTokenCount();
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:history-empty-message-removed', {
+        historyIndex,
+        totalTokensAfter: totalTokens,
+        tokenCountMode: tokenCount.mode,
+      });
       continue;
     }
 
-    const isLastHistoryMessage = keptHistory.length === 1;
-    const minimumRetainedChars = isLastHistoryMessage
-      ? Math.min(historyChars, MIN_LAST_HISTORY_CHARS)
-      : 0;
-    const maxTrimChars = Math.max(0, historyChars - minimumRetainedChars);
-
-    let low = 0;
-    let high = maxTrimChars;
-    let bestContent = trimContentFromHead(historyMessage.content, maxTrimChars);
+    let trimmedChars = 0;
+    let bestContent = historyMessage.content;
     let bestFitsBudget = false;
 
-    while (low <= high) {
-      const trimmedChars = Math.floor((low + high) / 2);
+    while (trimmedChars < historyChars) {
+      trimmedChars = Math.min(
+        historyChars,
+        trimmedChars + HISTORY_TRIM_STEP_CHARS,
+      );
       keptHistory[historyIndex] = {
         ...historyMessage,
         content: trimContentFromHead(historyMessage.content, trimmedChars),
       };
-      const candidateTokens = await getCurrentTokenCount();
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:history-trim-attempt', {
+        historyIndex,
+        historyChars,
+        trimmedChars,
+        totalTokensAfter: totalTokens,
+        inputTokenBudget,
+        tokenCountMode: tokenCount.mode,
+      });
 
-      if (candidateTokens <= inputTokenBudget) {
+      if (totalTokens <= inputTokenBudget) {
         bestContent = keptHistory[historyIndex].content;
         bestFitsBudget = true;
-        high = trimmedChars - 1;
-      } else {
-        low = trimmedChars + 1;
+        break;
       }
     }
 
     keptHistory[historyIndex] = {
       ...historyMessage,
-      content: bestContent,
+      content: bestFitsBudget
+        ? bestContent
+        : trimContentFromHead(historyMessage.content, historyChars),
     };
-    totalTokens = await getCurrentTokenCount();
+    tokenCount = await getCurrentTokenCount();
+    totalTokens = tokenCount.count;
+    promptBuildLog('prune:history-trim-result', {
+      historyIndex,
+      bestFitsBudget,
+      retainedChars: estimateMessageChars(keptHistory[historyIndex]),
+      totalTokensAfter: totalTokens,
+      inputTokenBudget,
+      tokenCountMode: tokenCount.mode,
+    });
 
     if (bestFitsBudget) {
-      continue;
+      break;
     }
 
     const retainedChars = estimateMessageChars(keptHistory[historyIndex]);
     if (retainedChars <= 0) {
       keptHistory.splice(historyIndex, 1);
-      totalTokens = await getCurrentTokenCount();
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:history-message-fully-removed', {
+        historyIndex,
+        totalTokensAfter: totalTokens,
+        tokenCountMode: tokenCount.mode,
+      });
       continue;
     }
 
@@ -542,6 +605,11 @@ export async function pruneChatHistoryToFitContext({
   }
 
   if (totalTokens > inputTokenBudget && originalInputChars > 0) {
+    promptBuildLog('prune:input-branch', {
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+      originalInputChars,
+    });
     let low = 0;
     let high = originalInputChars;
     let bestContent = trimContentFromTail(
@@ -559,7 +627,14 @@ export async function pruneChatHistoryToFitContext({
         ...userMessage,
         content: candidateContent,
       };
-      const candidateTokens = await getCurrentTokenCount();
+      tokenCount = await getCurrentTokenCount();
+      const candidateTokens = tokenCount.count;
+      promptBuildLog('prune:input-trim-attempt', {
+        trimmedChars,
+        candidateTokens,
+        inputTokenBudget,
+        tokenCountMode: tokenCount.mode,
+      });
 
       if (candidateTokens <= inputTokenBudget) {
         bestContent = candidateContent;
@@ -573,10 +648,22 @@ export async function pruneChatHistoryToFitContext({
       ...userMessage,
       content: bestContent,
     };
-    totalTokens = await getCurrentTokenCount();
+    tokenCount = await getCurrentTokenCount();
+    totalTokens = tokenCount.count;
+    promptBuildLog('prune:input-trim-result', {
+      retainedChars: estimateMessageChars(trimmedUserMessage),
+      totalTokensAfter: totalTokens,
+      inputTokenBudget,
+      tokenCountMode: tokenCount.mode,
+    });
   }
 
   if (totalTokens > inputTokenBudget && trimmedSystemMessages.length > 0) {
+    promptBuildLog('prune:system-branch', {
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+      systemMessageCount: trimmedSystemMessages.length,
+    });
     for (
       let index = trimmedSystemMessages.length - 1;
       index >= 0 && totalTokens > inputTokenBudget;
@@ -594,7 +681,15 @@ export async function pruneChatHistoryToFitContext({
           ...systemMessage,
           content: trimContentFromTail(systemMessage.content, trimmedChars),
         };
-        const candidateTokens = await getCurrentTokenCount();
+        tokenCount = await getCurrentTokenCount();
+        const candidateTokens = tokenCount.count;
+        promptBuildLog('prune:system-trim-attempt', {
+          systemIndex: index,
+          trimmedChars,
+          candidateTokens,
+          inputTokenBudget,
+          tokenCountMode: tokenCount.mode,
+        });
 
         if (candidateTokens <= inputTokenBudget) {
           bestContent = trimmedSystemMessages[index].content;
@@ -608,12 +703,34 @@ export async function pruneChatHistoryToFitContext({
         ...systemMessage,
         content: bestContent,
       };
-      totalTokens = await getCurrentTokenCount();
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:system-trim-result', {
+        systemIndex: index,
+        retainedChars: estimateMessageChars(trimmedSystemMessages[index]),
+        totalTokensAfter: totalTokens,
+        inputTokenBudget,
+        tokenCountMode: tokenCount.mode,
+      });
     }
   }
 
   if (totalTokens > inputTokenBudget) {
+    promptBuildLog('prune:hard-fallback-branch', {
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+    });
     await applyHardTrimFallback();
+    tokenCount = await getCurrentTokenCount();
+    totalTokens = tokenCount.count;
+    promptBuildLog('prune:hard-fallback-result', {
+      totalTokensAfter: totalTokens,
+      inputTokenBudget,
+      tokenCountMode: tokenCount.mode,
+      remainingHistoryChars: sumChars(keptHistory),
+      remainingInputChars: estimateMessageChars(trimmedUserMessage),
+      remainingSystemChars: sumChars(trimmedSystemMessages),
+    });
   }
 
   const keptHistoryChars = sumChars(keptHistory);
