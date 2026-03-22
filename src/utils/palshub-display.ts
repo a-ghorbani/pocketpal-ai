@@ -131,7 +131,7 @@ export function shouldShowPalContent(pal: PalsHubPal): boolean {
  * Get the purchase URL for a pal on PalsHub
  */
 export function getPalBuyUrl(palId: string): string {
-  return `${PALSHUB_API_BASE_URL}/pals/${palId}`;
+  return `${PALSHUB_BASE_URL}/pals/${palId}`;
 }
 
 /**
@@ -172,3 +172,4 @@ export const PAL_SORT_OPTIONS = [
     label: l10n[uiStore.language].palsScreen.sortOptions.popular,
   },
 ] as const;
+const PALSHUB_BASE_URL = PALSHUB_API_BASE_URL || 'https://palshub.ai';

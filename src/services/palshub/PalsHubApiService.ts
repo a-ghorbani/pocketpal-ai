@@ -121,7 +121,7 @@ interface ApiMyPalsResponse {
 }
 
 class PalsHubApiService {
-  private apiBase = PALSHUB_API_BASE_URL;
+  private apiBase = PALSHUB_API_BASE_URL || 'https://palshub.ai';
 
   constructor() {
     networkLog('PalsHubApiService:init', {
