@@ -324,6 +324,8 @@ export const ChatView = observer(
     const [navScrollY, setNavScrollY] = React.useState(0);
     const [navContentHeight, setNavContentHeight] = React.useState(0);
     const [navViewportHeight, setNavViewportHeight] = React.useState(0);
+    // Cached viewport height from FlatList onLayout (available before first scroll)
+    const flatListViewportH = React.useRef(0);
 
     // Approximate pixel height for "1000 visual lines" (~20px per line)
     const MAX_WINDOW_PX = 20000;
@@ -448,13 +450,26 @@ export const ChatView = observer(
     // Fallback auto-scroll: when MVCP fails to keep up during fast streaming,
     // actively snap to bottom if user was already at the bottom.
     const handleContentSizeChange = React.useCallback(
-      (_w: number, _h: number) => {
+      (_w: number, h: number) => {
         if (isStreaming && atLatest.value) {
           list.current?.scrollToOffset({offset: 0, animated: false});
         }
+        // Seed nav bar state so the progress indicator is correct even
+        // before the user scrolls (e.g. opening an old conversation).
+        const vpH = flatListViewportH.current;
+        if (vpH > 0 && h > 0) {
+          updateNavState(0, h, vpH);
+        }
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [isStreaming],
+      [isStreaming, updateNavState],
+    );
+
+    const handleFlatListLayout = React.useCallback(
+      (e: {nativeEvent: {layout: {height: number}}}) => {
+        flatListViewportH.current = e.nativeEvent.layout.height;
+      },
+      [],
     );
 
     // ============ MESSAGE PROCESSING & CALCULATIONS ============
@@ -1419,6 +1434,7 @@ export const ChatView = observer(
               style={[styles.flatList, {marginBottom: bottomComponentHeight}]}
               showsVerticalScrollIndicator={false}
               onScroll={handleScroll}
+              onLayout={handleFlatListLayout}
               onContentSizeChange={handleContentSizeChange}
               {...unwrap(flatListProps)}
               data={chatMessages}
@@ -1490,6 +1506,7 @@ export const ChatView = observer(
         renderListHeaderComponent,
         bottomComponentHeight,
         handleScroll,
+        handleFlatListLayout,
         handleContentSizeChange,
         flatListProps,
         keyExtractor,
