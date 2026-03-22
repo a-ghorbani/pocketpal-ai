@@ -1124,7 +1124,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Switch
                     testID="use-hf-token-switch"
-                    value={hfStore.useHfToken}
+                    value={hfStore.shouldUseToken}
                     disabled={!hfStore.isTokenPresent}
                     onValueChange={value => hfStore.setUseHfToken(value)}
                   />
