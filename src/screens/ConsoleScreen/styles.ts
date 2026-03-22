@@ -22,7 +22,11 @@ export const createStyles = (theme: Theme) =>
     switchLabel: {
       color: theme.colors.onBackground,
       flex: 1,
-      marginRight: 16,
+      marginRight: 8,
+    },
+    categoryGroup: {
+      paddingLeft: 12,
+      gap: 4,
     },
     buttonRow: {
       flexDirection: 'row',

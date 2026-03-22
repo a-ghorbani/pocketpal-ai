@@ -624,6 +624,13 @@ export const ChatView = observer(
       const cumH = buildCumulativeHeights();
       const vpTop = navScrollY + navViewportHeight;
 
+      // Build a snapshot of every user message's cumH for logging
+      const msgMap = userMessageIndices.map((flatIdx, i) => ({
+        pos: i,
+        flatIdx,
+        cumH: Math.round(cumH[flatIdx + 1]),
+      }));
+
       // Find the last user message whose top edge is at or below vpTop
       // (i.e., visible on screen or below). Messages after this are above viewport.
       let pos = 0;
@@ -634,6 +641,13 @@ export const ChatView = observer(
           break;
         }
       }
+      chatNavLog('initNavCursor', {
+        vpTop: Math.round(vpTop),
+        scrollY: Math.round(navScrollY),
+        vpH: Math.round(navViewportHeight),
+        messages: msgMap,
+        result: pos,
+      });
       return pos;
     }, [
       userMessageIndices,
@@ -659,8 +673,18 @@ export const ChatView = observer(
     const isMessageAboveScreen = React.useCallback(
       (pos: number) => {
         const cumH = buildCumulativeHeights();
-        const msgTop = cumH[userMessageIndices[pos] + 1];
-        return msgTop > navScrollY + navViewportHeight;
+        const flatIdx = userMessageIndices[pos];
+        const msgTop = cumH[flatIdx + 1];
+        const vpTop = navScrollY + navViewportHeight;
+        const result = msgTop > vpTop;
+        chatNavLog('isMessageAboveScreen', {
+          pos,
+          flatIdx,
+          msgTop: Math.round(msgTop),
+          vpTop: Math.round(vpTop),
+          result,
+        });
+        return result;
       },
       [
         buildCumulativeHeights,
@@ -675,8 +699,17 @@ export const ChatView = observer(
     const isMessageBelowScreen = React.useCallback(
       (pos: number) => {
         const cumH = buildCumulativeHeights();
-        const msgTop = cumH[userMessageIndices[pos] + 1];
-        return msgTop < navScrollY;
+        const flatIdx = userMessageIndices[pos];
+        const msgTop = cumH[flatIdx + 1];
+        const result = msgTop < navScrollY;
+        chatNavLog('isMessageBelowScreen', {
+          pos,
+          flatIdx,
+          msgTop: Math.round(msgTop),
+          scrollY: Math.round(navScrollY),
+          result,
+        });
+        return result;
       },
       [buildCumulativeHeights, userMessageIndices, navScrollY],
     );
@@ -686,12 +719,29 @@ export const ChatView = observer(
     const hasUserScrolledAway = React.useCallback(() => {
       const target = lastNavTargetRef.current;
       if (target < 0) {
+        chatNavLog('hasUserScrolledAway', {
+          target,
+          result: true,
+          reason: 'no-target',
+        });
         return true;
       }
       const cumH = buildCumulativeHeights();
       const msgTop = cumH[target + 1];
       const vpTop = navScrollY + navViewportHeight;
-      return msgTop < navScrollY || msgTop > vpTop;
+      const below = msgTop < navScrollY;
+      const above = msgTop > vpTop;
+      const result = below || above;
+      chatNavLog('hasUserScrolledAway', {
+        target,
+        msgTop: Math.round(msgTop),
+        scrollY: Math.round(navScrollY),
+        vpTop: Math.round(vpTop),
+        below,
+        above,
+        result,
+      });
+      return result;
     }, [buildCumulativeHeights, navScrollY, navViewportHeight]);
 
     // Jump to previous user message (older = higher position in array = scroll UP).
@@ -704,16 +754,19 @@ export const ChatView = observer(
       let cursor = navCursorRef.current;
       let skipCluster = false;
       const prevCursor = cursor;
+      chatNavLog('UP entry', {
+        cursor,
+        lastNavTarget: lastNavTargetRef.current,
+      });
 
       if (cursor === -1 || hasUserScrolledAway()) {
         // First press or user scrolled away: initialize from scroll position.
         const pos = initNavCursor();
         const offScreen = isMessageAboveScreen(pos);
-        chatNavLog('UP init', {
+        chatNavLog('UP init branch', {
           pos,
           offScreen,
-          scrollY: navScrollY,
-          vpH: navViewportHeight,
+          decision: offScreen ? 'cursor=pos' : 'cursor=pos+1',
         });
         if (offScreen) {
           cursor = pos;
@@ -722,10 +775,15 @@ export const ChatView = observer(
         }
         skipCluster = true;
       } else {
+        chatNavLog('UP step branch', {
+          from: cursor,
+          to: cursor + 1,
+        });
         cursor = cursor + 1;
       }
 
       if (cursor >= len) {
+        chatNavLog('UP bail', {cursor, len, reason: 'cursor>=len'});
         return;
       }
 
@@ -735,15 +793,43 @@ export const ChatView = observer(
         const cumH = buildCumulativeHeights();
         const anchorH = cumH[userMessageIndices[cursor] + 1];
         const beforeCluster = cursor;
+        chatNavLog('UP cluster check start', {
+          anchorPos: cursor,
+          anchorFlatIdx: userMessageIndices[cursor],
+          anchorH: Math.round(anchorH),
+          vpH: Math.round(navViewportHeight),
+        });
         while (
           cursor + 1 < len &&
           cumH[userMessageIndices[cursor + 1] + 1] - anchorH < navViewportHeight
         ) {
+          const nextH = cumH[userMessageIndices[cursor + 1] + 1];
+          chatNavLog('UP cluster step', {
+            nextPos: cursor + 1,
+            nextFlatIdx: userMessageIndices[cursor + 1],
+            nextH: Math.round(nextH),
+            diff: Math.round(nextH - anchorH),
+            vpH: Math.round(navViewportHeight),
+            fits: true,
+          });
           cursor++;
+        }
+        if (cursor + 1 < len) {
+          const nextH = cumH[userMessageIndices[cursor + 1] + 1];
+          chatNavLog('UP cluster stop', {
+            nextPos: cursor + 1,
+            nextFlatIdx: userMessageIndices[cursor + 1],
+            nextH: Math.round(nextH),
+            diff: Math.round(nextH - anchorH),
+            vpH: Math.round(navViewportHeight),
+            fits: false,
+          });
         }
         if (cursor !== beforeCluster) {
           chatNavLog('UP cluster skip', {from: beforeCluster, to: cursor});
         }
+      } else {
+        chatNavLog('UP cluster skipped (init)', {cursor});
       }
 
       chatNavLog('UP result', {
@@ -766,7 +852,6 @@ export const ChatView = observer(
       hasUserScrolledAway,
       buildCumulativeHeights,
       navViewportHeight,
-      navScrollY,
     ]);
 
     // Jump to next user message (newer = lower position in array = scroll DOWN).
@@ -779,16 +864,19 @@ export const ChatView = observer(
       let cursor = navCursorRef.current;
       let skipCluster = false;
       const prevCursor = cursor;
+      chatNavLog('DOWN entry', {
+        cursor,
+        lastNavTarget: lastNavTargetRef.current,
+      });
 
       if (cursor === -1 || hasUserScrolledAway()) {
         // First press or user scrolled away: initialize from scroll position.
         const pos = initNavCursor();
         const offScreen = isMessageBelowScreen(pos);
-        chatNavLog('DOWN init', {
+        chatNavLog('DOWN init branch', {
           pos,
           offScreen,
-          scrollY: navScrollY,
-          vpH: navViewportHeight,
+          decision: offScreen ? 'cursor=pos' : 'cursor=pos-1',
         });
         if (offScreen) {
           cursor = pos;
@@ -797,11 +885,16 @@ export const ChatView = observer(
         }
         skipCluster = true;
       } else {
+        chatNavLog('DOWN step branch', {
+          from: cursor,
+          to: cursor - 1,
+        });
         cursor = cursor - 1;
       }
 
       if (cursor < 0) {
         // No newer message — scroll to bottom
+        chatNavLog('DOWN bail', {cursor, reason: 'cursor<0, scroll to bottom'});
         navCursorRef.current = -1;
         lastNavTargetRef.current = -1;
         list.current?.scrollToIndex({
@@ -817,15 +910,43 @@ export const ChatView = observer(
         const cumH = buildCumulativeHeights();
         const anchorH = cumH[userMessageIndices[cursor] + 1];
         const beforeCluster = cursor;
+        chatNavLog('DOWN cluster check start', {
+          anchorPos: cursor,
+          anchorFlatIdx: userMessageIndices[cursor],
+          anchorH: Math.round(anchorH),
+          vpH: Math.round(navViewportHeight),
+        });
         while (
           cursor - 1 >= 0 &&
           anchorH - cumH[userMessageIndices[cursor - 1] + 1] < navViewportHeight
         ) {
+          const nextH = cumH[userMessageIndices[cursor - 1] + 1];
+          chatNavLog('DOWN cluster step', {
+            nextPos: cursor - 1,
+            nextFlatIdx: userMessageIndices[cursor - 1],
+            nextH: Math.round(nextH),
+            diff: Math.round(anchorH - nextH),
+            vpH: Math.round(navViewportHeight),
+            fits: true,
+          });
           cursor--;
+        }
+        if (cursor - 1 >= 0) {
+          const nextH = cumH[userMessageIndices[cursor - 1] + 1];
+          chatNavLog('DOWN cluster stop', {
+            nextPos: cursor - 1,
+            nextFlatIdx: userMessageIndices[cursor - 1],
+            nextH: Math.round(nextH),
+            diff: Math.round(anchorH - nextH),
+            vpH: Math.round(navViewportHeight),
+            fits: false,
+          });
         }
         if (cursor !== beforeCluster) {
           chatNavLog('DOWN cluster skip', {from: beforeCluster, to: cursor});
         }
+      } else {
+        chatNavLog('DOWN cluster skipped (init)', {cursor});
       }
 
       chatNavLog('DOWN result', {
@@ -848,7 +969,6 @@ export const ChatView = observer(
       hasUserScrolledAway,
       buildCumulativeHeights,
       navViewportHeight,
-      navScrollY,
     ]);
 
     // ============ MESSAGE INPUT HANDLERS ============

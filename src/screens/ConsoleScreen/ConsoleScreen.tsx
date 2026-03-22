@@ -15,6 +15,7 @@ export const ConsoleScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -37,65 +38,76 @@ export const ConsoleScreen: React.FC = observer(() => {
       <View style={styles.controls}>
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Capture console logs</Text>
+          <TouchableOpacity
+            onPress={() => setCategoriesExpanded(p => !p)}
+            style={styles.expandButton}>
+            <Text style={styles.expandButtonText}>
+              {categoriesExpanded ? '▼' : '▶'}
+            </Text>
+          </TouchableOpacity>
           <Switch
             value={debugStore.captureConsole}
             onValueChange={value => debugStore.setCaptureConsole(value)}
           />
         </View>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            [类1] Engine Input (params sent to llama.rn)
-          </Text>
-          <Switch
-            value={debugStore.logEngineInput}
-            onValueChange={value => debugStore.setLogEngineInput(value)}
-          />
-        </View>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            [类2] Engine Output (results &amp; stream events)
-          </Text>
-          <Switch
-            value={debugStore.logEngineOutput}
-            onValueChange={value => debugStore.setLogEngineOutput(value)}
-          />
-        </View>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            [类3] Prompt Build (templates &amp; full prompt text)
-          </Text>
-          <Switch
-            value={debugStore.logPromptBuild}
-            onValueChange={value => debugStore.setLogPromptBuild(value)}
-          />
-        </View>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            [类4] Param Source (session settings &amp; thinkingAssembly)
-          </Text>
-          <Switch
-            value={debugStore.logParamSource}
-            onValueChange={value => debugStore.setLogParamSource(value)}
-          />
-        </View>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            [类5] Model Lifecycle (load / release / app state)
-          </Text>
-          <Switch
-            value={debugStore.logModelLifecycle}
-            onValueChange={value => debugStore.setLogModelLifecycle(value)}
-          />
-        </View>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>
-            [类6] Chat Navigation (cursor / scroll / target)
-          </Text>
-          <Switch
-            value={debugStore.logChatNavigation}
-            onValueChange={value => debugStore.setLogChatNavigation(value)}
-          />
-        </View>
+        {categoriesExpanded && (
+          <View style={styles.categoryGroup}>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类1] Engine Input (params sent to llama.rn)
+              </Text>
+              <Switch
+                value={debugStore.logEngineInput}
+                onValueChange={value => debugStore.setLogEngineInput(value)}
+              />
+            </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类2] Engine Output (results &amp; stream events)
+              </Text>
+              <Switch
+                value={debugStore.logEngineOutput}
+                onValueChange={value => debugStore.setLogEngineOutput(value)}
+              />
+            </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类3] Prompt Build (templates &amp; full prompt text)
+              </Text>
+              <Switch
+                value={debugStore.logPromptBuild}
+                onValueChange={value => debugStore.setLogPromptBuild(value)}
+              />
+            </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类4] Param Source (session settings &amp; thinkingAssembly)
+              </Text>
+              <Switch
+                value={debugStore.logParamSource}
+                onValueChange={value => debugStore.setLogParamSource(value)}
+              />
+            </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类5] Model Lifecycle (load / release / app state)
+              </Text>
+              <Switch
+                value={debugStore.logModelLifecycle}
+                onValueChange={value => debugStore.setLogModelLifecycle(value)}
+              />
+            </View>
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>
+                [类6] Chat Navigation (cursor / scroll / target)
+              </Text>
+              <Switch
+                value={debugStore.logChatNavigation}
+                onValueChange={value => debugStore.setLogChatNavigation(value)}
+              />
+            </View>
+          </View>
+        )}
         <View style={styles.buttonRow}>
           <Button mode="contained" onPress={handleCopy}>
             Copy
