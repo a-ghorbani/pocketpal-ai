@@ -1026,6 +1026,50 @@ export const ChatView = observer(
     );
     const [contextUsage, setContextUsage] =
       React.useState<ChatInputAdditionalProps['contextUsage']>();
+    const pendingContextUsageEstimateRef = React.useRef<Parameters<
+      typeof estimateChatContextUsage
+    >[0] | null>(null);
+    const isContextUsageEstimateRunningRef = React.useRef(false);
+    const latestContextUsageEstimateIdRef = React.useRef(0);
+    const appliedContextUsageEstimateIdRef = React.useRef(0);
+    const isContextUsageEstimatorMountedRef = React.useRef(true);
+
+    React.useEffect(() => {
+      return () => {
+        isContextUsageEstimatorMountedRef.current = false;
+      };
+    }, []);
+
+    const runContextUsageEstimate = React.useCallback(async () => {
+      if (isContextUsageEstimateRunningRef.current) {
+        return;
+      }
+
+      isContextUsageEstimateRunningRef.current = true;
+
+      try {
+        while (pendingContextUsageEstimateRef.current) {
+          const pendingEstimate = pendingContextUsageEstimateRef.current;
+          pendingContextUsageEstimateRef.current = null;
+
+          const estimateId = ++latestContextUsageEstimateIdRef.current;
+          const result = await estimateChatContextUsage(pendingEstimate);
+
+          if (
+            !isContextUsageEstimatorMountedRef.current ||
+            estimateId < latestContextUsageEstimateIdRef.current ||
+            estimateId < appliedContextUsageEstimateIdRef.current
+          ) {
+            continue;
+          }
+
+          appliedContextUsageEstimateIdRef.current = estimateId;
+          setContextUsage(result ?? undefined);
+        }
+      } finally {
+        isContextUsageEstimateRunningRef.current = false;
+      }
+    }, []);
 
     React.useEffect(() => {
       const draftText = inputText.trim();
@@ -1046,9 +1090,7 @@ export const ChatView = observer(
             }
           : undefined;
 
-      let isCancelled = false;
-
-      estimateChatContextUsage({
+      pendingContextUsageEstimateRef.current = {
         systemMessages,
         chatMessages: convertToChatMessages(messages, isVisionEnabled),
         userMessage: draftMessage as any,
@@ -1059,15 +1101,9 @@ export const ChatView = observer(
         model: activeModel,
         enableThinking: sessionCompletionSettings?.enable_thinking,
         reasoningFormat: sessionCompletionSettings?.reasoning_format,
-      }).then(result => {
-        if (!isCancelled) {
-          setContextUsage(result ?? undefined);
-        }
-      });
-
-      return () => {
-        isCancelled = true;
       };
+
+      void runContextUsageEstimate();
     }, [
       activeModel,
       contextSize,
@@ -1081,6 +1117,7 @@ export const ChatView = observer(
       sessionCompletionSettings?.reserved_output_tokens,
       sessionCompletionSettings?.reasoning_format,
       systemMessages,
+      runContextUsageEstimate,
     ]);
 
     const handleCancelEdit = React.useCallback(() => {
