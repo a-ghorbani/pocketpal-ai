@@ -387,10 +387,7 @@ class ModelStore {
       (Platform.OS === 'ios' ? 'auto' : 'off');
 
     // Build the params object, filtering out undefined values
-    // Note: no_extra_bufts requires llama.rn PR #307 to be merged
-    const params: Partial<Omit<ContextParams, 'model'>> & {
-      no_extra_bufts?: boolean;
-    } = {
+    const params: Partial<Omit<ContextParams, 'model'>> = {
       n_ctx: effectiveContext,
       n_batch: effectiveBatch,
       n_ubatch: effectiveUBatch,
