@@ -14,11 +14,11 @@ declare const browser: WebdriverIO.Browser;
 export class SettingsPage extends BasePage {
   /**
    * Wait for settings screen to be ready.
-   * Uses the gpu-layers-slider testID as the ready indicator since it's
-   * in the first visible card and is language-agnostic.
+   * Uses the context-size-input testID as the ready indicator since it's
+   * always visible in the first card and is language-agnostic.
    */
   async waitForReady(timeout = 10000): Promise<void> {
-    await this.waitForElement(byTestId('gpu-layers-slider'), timeout);
+    await this.waitForElement(byTestId('context-size-input'), timeout);
   }
 
   /**
@@ -29,7 +29,7 @@ export class SettingsPage extends BasePage {
   async scrollToLanguageSelector(): Promise<boolean> {
     return Gestures.scrollToElement(
       Selectors.settings.languageSelectorButton,
-      5,
+      7,
     );
   }
 
