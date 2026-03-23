@@ -4,6 +4,7 @@ import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.pocketpal.specs.NativeHardwareInfoSpec
 import android.os.Build
+import android.os.Debug
 import java.io.File
 import java.util.regex.Pattern
 import android.opengl.GLES20
@@ -13,6 +14,8 @@ import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
 import android.app.ActivityManager
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 
 @ReactModule(name = NativeHardwareInfoSpec.NAME)
 class HardwareInfoModule(reactContext: ReactApplicationContext) :
@@ -207,6 +210,70 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
 
       // availMem is already in bytes
       promise.resolve(memInfo.availMem.toDouble())
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  override fun getMemoryProfile(promise: Promise) {
+    try {
+      val profile = Arguments.createMap()
+
+      // PSS Total (Debug.getPss() returns KB)
+      val pssKb = Debug.getPss()
+      profile.putDouble("pss_total", pssKb * 1024.0)
+
+      // Native heap allocated (bytes)
+      profile.putDouble("native_heap_allocated", Debug.getNativeHeapAllocatedSize().toDouble())
+
+      // Available memory (same as getAvailableMemory)
+      val activityManager = reactApplicationContext
+          .getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+      val memInfo = ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memInfo)
+      profile.putDouble("available_memory", memInfo.availMem.toDouble())
+
+      promise.resolve(profile)
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  override fun writeMemorySnapshot(label: String, promise: Promise) {
+    try {
+      // Collect memory metrics
+      val pssKb = Debug.getPss()
+      val nativeHeap = Debug.getNativeHeapAllocatedSize()
+      val activityManager = reactApplicationContext
+          .getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+      val memInfo = ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memInfo)
+
+      val snapshot = JSONObject().apply {
+        put("label", label)
+        put("timestamp", java.time.Instant.now().toString())
+        put("native", JSONObject().apply {
+          put("pss_total", pssKb * 1024.0)
+          put("native_heap_allocated", nativeHeap.toDouble())
+          put("available_memory", memInfo.availMem.toDouble())
+        })
+      }
+
+      // Write to external files dir so adb pull works without root on real devices
+      val dir = reactApplicationContext.getExternalFilesDir(null) ?: reactApplicationContext.filesDir
+      val file = File(dir, "memory-snapshots.json")
+      val snapshots = if (file.exists()) {
+        JSONArray(file.readText())
+      } else {
+        JSONArray()
+      }
+      snapshots.put(snapshot)
+      file.writeText(snapshots.toString(2))
+
+      promise.resolve(Arguments.createMap().apply {
+        putString("label", label)
+        putString("status", "written")
+      })
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
     }

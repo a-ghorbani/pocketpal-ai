@@ -2,6 +2,7 @@
 #import <UIKit/UIKit.h>
 #import <Metal/Metal.h>
 #import <os/proc.h>
+#import <mach/mach.h>
 
 @interface HardwareInfoModule : NSObject <RCTBridgeModule>
 @end
@@ -68,6 +69,77 @@ RCT_EXPORT_METHOD(getAvailableMemory:(RCTPromiseResolveBlock)resolve
     resolve(@(availableMemory));
   } @catch (NSException *exception) {
     reject(@"error_getting_available_memory", @"Could not retrieve available memory", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(getMemoryProfile:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  @try {
+    task_vm_info_data_t vmInfo;
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO,
+                                     (task_info_t)&vmInfo, &count);
+
+    uint64_t physFootprint = 0;
+    if (result == KERN_SUCCESS) {
+      physFootprint = vmInfo.phys_footprint;
+    }
+
+    uint64_t availableMemory = os_proc_available_memory();
+
+    NSDictionary *profile = @{
+      @"phys_footprint": @(physFootprint),
+      @"available_memory": @(availableMemory),
+    };
+
+    resolve(profile);
+  } @catch (NSException *exception) {
+    reject(@"error_getting_memory_profile", @"Could not retrieve memory profile", nil);
+  }
+}
+
+RCT_EXPORT_METHOD(writeMemorySnapshot:(NSString *)label
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  @try {
+    task_vm_info_data_t vmInfo;
+    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+    kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO,
+                                     (task_info_t)&vmInfo, &count);
+    uint64_t physFootprint = (result == KERN_SUCCESS) ? vmInfo.phys_footprint : 0;
+    uint64_t availableMemory = os_proc_available_memory();
+
+    NSDictionary *snapshot = @{
+      @"label": label,
+      @"timestamp": [[NSISO8601DateFormatter new] stringFromDate:[NSDate date]],
+      @"native": @{
+        @"phys_footprint": @(physFootprint),
+        @"available_memory": @(availableMemory),
+      },
+    };
+
+    NSString *docsDir = NSSearchPathForDirectoriesInDomains(
+      NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+    NSString *filePath = [docsDir stringByAppendingPathComponent:@"memory-snapshots.json"];
+
+    NSMutableArray *snapshots = [NSMutableArray array];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+      NSData *data = [NSData dataWithContentsOfFile:filePath];
+      NSArray *existing = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+      if (existing) [snapshots addObjectsFromArray:existing];
+    }
+    [snapshots addObject:snapshot];
+
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:snapshots
+                                                      options:NSJSONWritingPrettyPrinted
+                                                        error:nil];
+    [jsonData writeToFile:filePath atomically:YES];
+
+    resolve(snapshot);
+  } @catch (NSException *exception) {
+    reject(@"error_writing_memory_snapshot", @"Could not write memory snapshot", nil);
   }
 }
 
