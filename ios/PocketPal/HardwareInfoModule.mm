@@ -148,7 +148,7 @@ RCT_EXPORT_METHOD(writeMemorySnapshot:(NSString *)label
                                                         error:nil];
     [jsonData writeToFile:filePath atomically:YES];
 
-    resolve(snapshot);
+    resolve(@{@"label": label, @"status": @"written"});
   } @catch (NSException *exception) {
     reject(@"error_writing_memory_snapshot", @"Could not write memory snapshot", nil);
   }
