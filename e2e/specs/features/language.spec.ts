@@ -131,9 +131,9 @@ describe('Language Switching', () => {
 
       // After language change, screen re-renders and scrolls to top.
       // Assert the navigation header title changed.
-      // Use byStaticText to target the nav bar title (XCUIElementTypeStaticText)
-      // and avoid matching the hidden drawer button (XCUIElementTypeButton).
-      const titleElement = browser.$(byStaticText(expected.screenTitle));
+      // On iOS, use byStaticText to avoid matching hidden drawer buttons.
+      // On Android, the nav header title is a View (not TextView), so use byText.
+      const titleElement = browser.$(byText(expected.screenTitle));
       await titleElement.waitForDisplayed({timeout: 5000});
       console.log(`  Screen title: "${expected.screenTitle}" - OK`);
 
