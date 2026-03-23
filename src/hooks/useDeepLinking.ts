@@ -67,8 +67,10 @@ export const useDeepLinking = () => {
 
       // Handle memory profiling deep links (E2E only)
       if (params.host === 'memory' && params.queryParams?.cmd) {
-        const {takeMemorySnapshot, clearMemorySnapshots} =
-          require('../utils/memoryProfile');
+        const {
+          takeMemorySnapshot,
+          clearMemorySnapshots,
+        } = require('../utils/memoryProfile');
         const cmd = params.queryParams.cmd;
         if (cmd.startsWith('snap::')) {
           const label = cmd.slice(6) || 'unnamed';

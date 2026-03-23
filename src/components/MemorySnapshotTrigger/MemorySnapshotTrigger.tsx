@@ -24,30 +24,27 @@ const READ_CMD = 'read::snapshots';
 export const MemorySnapshotTrigger: React.FC = () => {
   const [resultData, setResultData] = useState('');
 
-  const handleChangeText = useCallback(
-    (text: string) => {
-      // Update result with received text for debugging
-      setResultData(prev => (prev ? `${prev}|${text}` : text));
+  const handleChangeText = useCallback((text: string) => {
+    // Update result with received text for debugging
+    setResultData(prev => (prev ? `${prev}|${text}` : text));
 
-      const processCommand = async () => {
-        try {
-          if (text === CLEAR_CMD) {
-            await clearMemorySnapshots();
-          } else if (text === READ_CMD) {
-            const data = await readMemorySnapshots();
-            setResultData(data);
-          } else if (text.startsWith(SNAP_PREFIX)) {
-            const label = text.slice(SNAP_PREFIX.length) || 'unnamed';
-            await takeMemorySnapshot(label);
-          }
-        } catch (e) {
-          setResultData(`ERROR: ${(e as Error).message}`);
+    const processCommand = async () => {
+      try {
+        if (text === CLEAR_CMD) {
+          await clearMemorySnapshots();
+        } else if (text === READ_CMD) {
+          const data = await readMemorySnapshots();
+          setResultData(data);
+        } else if (text.startsWith(SNAP_PREFIX)) {
+          const label = text.slice(SNAP_PREFIX.length) || 'unnamed';
+          await takeMemorySnapshot(label);
         }
-      };
-      processCommand();
-    },
-    [],
-  );
+      } catch (e) {
+        setResultData(`ERROR: ${(e as Error).message}`);
+      }
+    };
+    processCommand();
+  }, []);
 
   return (
     <View testID="memory-snapshot-container" style={styles.container}>

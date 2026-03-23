@@ -73,9 +73,7 @@ describe('memoryProfile', () => {
     });
 
     it('propagates errors from RNFS.exists', async () => {
-      (exists as jest.Mock).mockRejectedValueOnce(
-        new Error('FS check failed'),
-      );
+      (exists as jest.Mock).mockRejectedValueOnce(new Error('FS check failed'));
 
       await expect(clearMemorySnapshots()).rejects.toThrow('FS check failed');
     });
