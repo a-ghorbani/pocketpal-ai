@@ -40,7 +40,7 @@ export const SendButton = ({
       testID="send-button"
       {...touchableOpacityProps}
       onPress={handlePress}
-      style={styles.sendButton}>
+      style={[styles.sendButton, touchableOpacityProps?.style]}>
       {theme.icons?.sendButtonIcon?.() ?? (
         <SendIcon
           stroke={color ?? theme.colors.inverseOnSurface}

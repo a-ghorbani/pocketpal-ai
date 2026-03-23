@@ -29,7 +29,7 @@ export const useMessageActions = ({
 
   const handleEdit = useCallback(
     async (message: MessageType.Text) => {
-      if (message.type !== 'text' || message.author.id !== user.id) {
+      if (message.type !== 'text') {
         return;
       }
 
@@ -38,8 +38,30 @@ export const useMessageActions = ({
       setInputText?.(message.text);
       setInputImages?.(message.imageUris || []);
     },
-    [setInputText, setInputImages, user.id],
+    [setInputText, setInputImages],
   );
+
+  const handleDelete = useCallback(
+    async (message: MessageType.Text) => {
+      if (message.type !== 'text') {
+        return;
+      }
+
+      await chatSessionStore.removeMessagesFromId(message.id, true);
+      setInputText?.('');
+      setInputImages?.([]);
+      chatSessionStore.exitEditMode();
+    },
+    [setInputImages, setInputText],
+  );
+
+  const handleBranch = useCallback(async (message: MessageType.Text) => {
+    if (message.type !== 'text') {
+      return;
+    }
+
+    await chatSessionStore.branchSessionFromMessage(message.id);
+  }, []);
 
   const handleTryAgain = useCallback(
     async (message: MessageType.Text) => {
@@ -106,6 +128,8 @@ export const useMessageActions = ({
 
   return {
     handleCopy,
+    handleDelete,
+    handleBranch,
     handleEdit,
     handleTryAgain,
     handleTryAgainWith,

@@ -40,7 +40,7 @@ describe('SettingsScreen', () => {
     expect(getByText('Model Initialization Settings')).toBeTruthy();
     expect(getByText('Model Loading Settings')).toBeTruthy();
     expect(getByText('App Settings')).toBeTruthy();
-    expect(getByDisplayValue('2048')).toBeTruthy(); // Context size
+    expect(getByDisplayValue('8192')).toBeTruthy(); // Context size
   });
 
   it('updates context size correctly', async () => {
@@ -49,7 +49,7 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const contextSizeInput = getByDisplayValue('2048');
+    const contextSizeInput = getByDisplayValue('8192');
 
     act(() => {
       fireEvent.changeText(contextSizeInput, '512');
@@ -73,7 +73,7 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const contextSizeInput = getByDisplayValue('2048');
+    const contextSizeInput = getByDisplayValue('8192');
 
     await act(async () => {
       fireEvent.changeText(contextSizeInput, '100'); // Below minimum size
@@ -87,14 +87,14 @@ describe('SettingsScreen', () => {
       withSafeArea: true,
       withNavigation: true,
     });
-    const contextSizeInput = getByDisplayValue('2048');
+    const contextSizeInput = getByDisplayValue('8192');
 
     fireEvent.changeText(contextSizeInput, '512');
     fireEvent.press(getByText('Model Initialization Settings'));
 
     await waitFor(() => {
       expect(Keyboard.dismiss).toHaveBeenCalled();
-      expect(getByDisplayValue('2048')).toBeTruthy(); // Reset back to original size
+      expect(getByDisplayValue('8192')).toBeTruthy(); // Reset back to original size
     });
   });
 
@@ -220,7 +220,8 @@ describe('SettingsScreen', () => {
     const slider = getByTestId('image-max-tokens-slider');
 
     act(() => {
-      fireEvent(slider, 'onValueChange', 768);
+      // Log-scale slider: pass log-space value
+      fireEvent(slider, 'onValueChange', Math.log(768));
     });
 
     // Fast-forward time by 300ms to trigger debounced callback within act
@@ -242,18 +243,62 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByText('Advanced Settings'));
 
     await waitFor(() => {
-      // Initially, with image_max_tokens = 512 and n_ctx = 2048, no effective label should show
+      // Initially, with image_max_tokens = 512 and n_ctx = 8192, no effective label should show
       expect(queryByText(/effective:/)).toBeFalsy();
     });
 
     // Now set image_max_tokens > n_ctx to trigger effective display
     act(() => {
-      modelStore.contextInitParams.image_max_tokens = 3000;
+      modelStore.contextInitParams.image_max_tokens = 10000;
     });
 
     await waitFor(() => {
-      // Should show effective value clamped to n_ctx (2048)
-      expect(getByText(/effective: 2048/)).toBeTruthy();
+      // Should show effective value clamped to n_ctx (8192)
+      expect(getByText(/effective: 8192/)).toBeTruthy();
     });
+  });
+
+  it('toggles context shifting switch', async () => {
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('ctx-shift-switch')).toBeTruthy();
+    });
+
+    const ctxShiftSwitch = getByTestId('ctx-shift-switch');
+
+    await act(async () => {
+      fireEvent(ctxShiftSwitch, 'valueChange', false);
+    });
+
+    expect(modelStore.setCtxShift).toHaveBeenCalledWith(false);
+  });
+
+  it('toggles prune history before send switch', async () => {
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('prune-history-before-send-switch')).toBeTruthy();
+    });
+
+    const pruneHistorySwitch = getByTestId('prune-history-before-send-switch');
+
+    await act(async () => {
+      fireEvent(pruneHistorySwitch, 'valueChange', false);
+    });
+
+    expect(modelStore.setPruneChatHistoryBeforeSend).toHaveBeenCalledWith(
+      false,
+    );
   });
 });

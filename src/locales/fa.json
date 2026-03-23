@@ -49,6 +49,11 @@
     "deviceSelectionIOSDescription": "انتخاب GPU با Metal یا حالت فقط CPU",
     "deviceSelectionAndroidDescription": "انتخاب واحد پردازشی (CPU، GPU یا Hexagon NPU)",
     "cpuOnlyNoAccelerators": "فقط CPU - شتاب‌دهنده سخت‌افزاری شناسایی نشد",
+    "visionDeviceSelection": "Vision Encoder Device",
+    "visionDeviceSelectionIOS": "Vision Encoder Device",
+    "visionDeviceSelectionDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceSelectionIOSDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceCpuOnly": "Vision encoder: CPU only - No hardware accelerators detected",
     "contextSize": "اندازه Context",
     "contextSizePlaceholder": "اندازه context را وارد کنید (حداقل {{minContextSize}})",
     "invalidContextSizeError": "لطفاً عددی معتبر وارد کنید (حداقل {{minContextSize}})",
@@ -288,7 +293,9 @@
         "deleteTitle": "حذف مدل",
         "deleteMessage": "آیا مطمئنید که می‌خواهید این مدل دانلود شده را حذف کنید؟",
         "removeTitle": "حذف مدل",
-        "removeMessage": "آیا مطمئنید که می‌خواهید این مدل را از لیست حذف کنید؟"
+        "removeMessage": "آیا مطمئنید که می‌خواهید این مدل را از لیست حذف کنید؟",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "تنظیمات",
@@ -307,7 +314,9 @@
         "author": "نویسنده",
         "requiresProjectionModel": "نیاز به مدل پروجکشن",
         "downloadProjectionModel": "دانلود مدل پروجکشن",
-        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face"
+        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "نمایش جزئیات",
@@ -373,7 +382,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "بخش‌های تفکر/استدلال هوش مصنوعی را در متنی که به مدل ارسال می‌شود بگنجانید. غیرفعال کردن این گزینه می‌تواند فضای متن را ذخیره کند. ممکن است روی عملکرد تأثیر بگذارد.",
-    "jinja": "قالب‌بندی Jinja را برای فرمت چت فعال کنید. وقتی فعال باشد، از پردازش قالب چت مبتنی بر Jinja برای سازگاری بهتر با مدل‌های جدید استفاده می‌شود.",
     "grammar": "اعمال قوانین دستوری خاص برای اطمینان از اینکه متن تولید شده از ساختار یا فرمت مشخصی پیروی کند",
     "stop": "عبارت‌های خاصی تعریف کنید که تولید متن را متوقف می‌کنند",
     "n_predict": "طول پاسخ تولید شده را تنظیم کنید (بر حسب token)",
@@ -850,12 +858,7 @@
         "total": "کل: ",
         "usage": "مصرف: "
       },
-      "byteSizes": [
-        "Bytes",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bytes", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {

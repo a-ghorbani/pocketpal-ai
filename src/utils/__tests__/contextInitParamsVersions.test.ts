@@ -117,7 +117,7 @@ describe('contextInitParamsVersions', () => {
 
     it('should preserve existing values during migration', () => {
       const settings = {
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 1024,
         n_ubatch: 512,
         n_threads: 8,
@@ -131,7 +131,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(settings);
 
-      expect(migrated.n_ctx).toBe(2048);
+      expect(migrated.n_ctx).toBe(8192);
       expect(migrated.n_batch).toBe(1024);
       expect(migrated.flash_attn).toBe(true);
       expect(migrated.cache_type_k).toBe(CacheType.Q8_0);
@@ -140,16 +140,38 @@ describe('contextInitParamsVersions', () => {
       expect(migrated.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
     });
 
+    it('should preserve GPU-enabled legacy settings by restoring the fallback offload value', () => {
+      const legacyGpuEnabledSettings = {
+        version: '1.0',
+        n_ctx: 8192,
+        n_batch: 512,
+        n_ubatch: 256,
+        n_threads: 4,
+        cache_type_k: CacheType.F16,
+        cache_type_v: CacheType.F16,
+        n_gpu_layers: 0,
+        no_gpu_devices: false,
+        use_mlock: false,
+        use_mmap: 'true' as const,
+      };
+
+      const migrated = migrateContextInitParams(legacyGpuEnabledSettings);
+
+      expect(migrated.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
+      expect(migrated.devices).toBeUndefined();
+      expect(migrated.n_gpu_layers).toBe(99);
+    });
+
     it('should migrate from v2.0 to v2.1 with default image_max_tokens', () => {
       const v20Params = {
         version: '2.0',
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 512,
         n_ubatch: 512,
         n_threads: 4,
         cache_type_k: CacheType.F16,
         cache_type_v: CacheType.F16,
-        n_gpu_layers: 99,
+        n_gpu_layers: 0,
         use_mlock: false,
         use_mmap: 'true' as const,
         kv_unified: true,
@@ -158,20 +180,20 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20Params);
 
-      expect(migrated.version).toBe('2.1');
+      expect(migrated.version).toBe('2.2');
       expect(migrated.image_max_tokens).toBe(512);
     });
 
     it('should preserve existing image_max_tokens when migrating from v2.0 to v2.1', () => {
       const v20ParamsWithTokens = {
         version: '2.0',
-        n_ctx: 2048,
+        n_ctx: 8192,
         n_batch: 512,
         n_ubatch: 512,
         n_threads: 4,
         cache_type_k: CacheType.F16,
         cache_type_v: CacheType.F16,
-        n_gpu_layers: 99,
+        n_gpu_layers: 0,
         use_mlock: false,
         use_mmap: 'true' as const,
         kv_unified: true,
@@ -181,7 +203,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20ParamsWithTokens);
 
-      expect(migrated.version).toBe('2.1');
+      expect(migrated.version).toBe('2.2');
       expect(migrated.image_max_tokens).toBe(1024); // Should preserve custom value
     });
   });
@@ -223,14 +245,14 @@ describe('contextInitParamsVersions', () => {
 
       expect(validateContextInitParams(defaultSettings)).toBe(true);
       expect(defaultSettings.version).toBe(CURRENT_CONTEXT_INIT_PARAMS_VERSION);
-      expect(defaultSettings.n_ctx).toBe(2048);
+      expect(defaultSettings.n_ctx).toBe(8192);
       expect(defaultSettings.n_batch).toBe(512);
       expect(defaultSettings.n_ubatch).toBe(512);
       expect(defaultSettings.n_threads).toBe(4);
-      expect(defaultSettings.flash_attn_type).toBe('auto');
+      expect(defaultSettings.flash_attn_type).toBe('on');
       expect(defaultSettings.cache_type_k).toBe('f16');
       expect(defaultSettings.cache_type_v).toBe('f16');
-      expect(defaultSettings.n_gpu_layers).toBe(99);
+      expect(defaultSettings.n_gpu_layers).toBe(0);
       expect(defaultSettings.use_mlock).toBe(false);
       expect(defaultSettings.use_mmap).toBe('true'); // Default for non-Android platforms
     });

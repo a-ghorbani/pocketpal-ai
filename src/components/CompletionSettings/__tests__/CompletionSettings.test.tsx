@@ -15,7 +15,13 @@ describe('CompletionSettings', () => {
     );
 
     expect(getByTestId('n_predict-input')).toBeTruthy();
-    expect(getByDisplayValue('500')).toBeTruthy();
+    expect(getByDisplayValue('-1')).toBeTruthy();
+
+    expect(getByTestId('reserved_output_tokens-slider')).toBeTruthy();
+    const reservedOutputTokensInput = getByTestId(
+      'reserved_output_tokens-slider-input',
+    );
+    expect(reservedOutputTokensInput.props.value).toBe('128');
 
     expect(getByTestId('temperature-slider')).toBeTruthy();
     const temperatureSlider = getByTestId('temperature-slider');
@@ -92,6 +98,24 @@ describe('CompletionSettings', () => {
     jest.advanceTimersByTime(300);
     expect(mockOnChange).toHaveBeenCalledWith('temperature', 0.8);
     jest.useRealTimers();
+  });
+
+  it('handles reserved output token slider changes', () => {
+    const mockOnChange = jest.fn();
+    const {getByTestId} = render(
+      <CompletionSettings
+        settings={mockCompletionParams}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const reservedOutputTokensInput = getByTestId(
+      'reserved_output_tokens-slider-input',
+    );
+
+    fireEvent.changeText(reservedOutputTokensInput, '256');
+    fireEvent(reservedOutputTokensInput, 'endEditing');
+    expect(mockOnChange).toHaveBeenCalledWith('reserved_output_tokens', 256);
   });
 
   it('handles text input changes', () => {

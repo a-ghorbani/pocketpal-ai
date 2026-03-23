@@ -32,6 +32,11 @@
     "metalDescription": "API accélérée par le matériel d'Apple.",
     "metalRequiresNewerIOS": "L'accélération Metal nécessite iOS 18 ou supérieur. Veuillez mettre à jour votre appareil pour utiliser cette fonctionnalité.",
     "layersOnGPU": "Couches sur GPU : {{gpuLayers}}",
+    "visionDeviceSelection": "Vision Encoder Device",
+    "visionDeviceSelectionIOS": "Vision Encoder Device",
+    "visionDeviceSelectionDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceSelectionIOSDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceCpuOnly": "Vision encoder: CPU only - No hardware accelerators detected",
     "contextSize": "Taille du contexte",
     "contextSizePlaceholder": "Entrez la taille du contexte (min {{minContextSize}})",
     "invalidContextSizeError": "Veuillez entrer un nombre valide (minimum {{minContextSize}})",
@@ -580,12 +585,7 @@
         "total": "Totale : ",
         "usage": "Utilisation : "
       },
-      "byteSizes": [
-        "Octets",
-        "Ko",
-        "Mo",
-        "Go"
-      ]
+      "byteSizes": ["Octets", "Ko", "Mo", "Go"]
     }
   },
   "validation": {

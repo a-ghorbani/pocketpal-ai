@@ -26,7 +26,6 @@ export class DownloadManager {
   private eventEmitter: NativeEventEmitter | null = null;
 
   constructor() {
-    console.log(`${TAG}: Initializing DownloadManager`);
     this.downloadJobs = observable.map(new Map());
     makeAutoObservable(this);
 
@@ -37,7 +36,6 @@ export class DownloadManager {
 
   private setupAndroidEventListener() {
     if (NativeDownloadModule) {
-      console.log(`${TAG}: Setting up Android event listeners`);
       this.eventEmitter = new NativeEventEmitter(NativeDownloadModule as any);
 
       this.eventEmitter.addListener('onDownloadProgress', event => {
@@ -178,16 +176,10 @@ export class DownloadManager {
       etaSeconds >= 60
         ? `${etaMinutes} ${l10nData.common.minutes}`
         : `${Math.ceil(etaSeconds)} ${l10nData.common.seconds}`;
-    console.log(`${TAG}: Calculated ETA:`, {
-      remainingBytes,
-      speedBps,
-      eta,
-    });
     return eta;
   }
 
   setCallbacks(callbacks: DownloadEventCallbacks) {
-    console.log(`${TAG}: Setting callbacks`);
     this.callbacks = callbacks;
   }
 
@@ -199,7 +191,6 @@ export class DownloadManager {
   getDownloadProgress(modelId: string): number {
     const progress =
       this.downloadJobs.get(modelId)?.state.progress?.progress || 0;
-    console.log(`${TAG}: Getting progress for model ${modelId}:`, progress);
     return progress;
   }
 
@@ -534,13 +525,13 @@ export class DownloadManager {
     }
 
     try {
-      console.log(`${TAG}: Syncing download jobs with native layer`);
-
       // Get active downloads from native module
       const activeDownloads = await NativeDownloadModule.getActiveDownloads();
-      console.log(
-        `${TAG}: Found ${activeDownloads.length} active downloads in native layer`,
-      );
+      if (activeDownloads.length > 0) {
+        console.log(
+          `${TAG}: Found ${activeDownloads.length} active downloads in native layer`,
+        );
+      }
 
       if (activeDownloads.length === 0) {
         return;

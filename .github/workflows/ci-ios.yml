@@ -1,0 +1,251 @@
+name: CI Pipeline (iOS)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Detect if changes are translation-only (src/locales/ files)
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      translation_only: ${{ steps.check.outputs.translation_only }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check if translation-only
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Check if ALL changed files are under src/locales/
+          TRANSLATION_ONLY="true"
+          while IFS= read -r file; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+            case "$file" in
+              src/locales/*) ;;
+              *) TRANSLATION_ONLY="false"; break ;;
+            esac
+          done <<< "$CHANGED"
+
+          echo "translation_only=$TRANSLATION_ONLY" >> "$GITHUB_OUTPUT"
+          echo "Translation only: $TRANSLATION_ONLY"
+
+  # Job for linting, type checking, unit testing
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the repository
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      # Cache node_modules
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock') }}
+
+      # Step 2: Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.21.0'
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: yarn install
+
+      # Step 4: Validate l10n files
+      - name: Validate l10n files
+        run: node scripts/validate-l10n.js
+
+      # Step 5: Run linters (ESLint)
+      - name: Run ESLint
+        run: yarn lint
+
+      # Step 5: Run TypeScript type checks
+      - name: Run TypeScript type check
+        run: yarn typecheck
+
+      # Step 6: Run unit tests (Jest)
+      - name: Run unit tests
+        run: yarn test --coverage
+
+  # Job for iOS build
+  build-ios:
+    runs-on: macos-15
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.translation_only != 'true'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      # Step 1: Setup Xcode
+      - name: Setup Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      # Step 2: Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.21.0'
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: yarn install
+
+      # Step 4: Set up Ruby and Bundler
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.3'
+          bundler-cache: true
+
+      # Step 5: Install CocoaPods dependencies
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      # Step 6: Create Env.xcconfig
+      - name: Create Env.xcconfig
+        run: |
+          mkdir -p ios/Config
+          cat > ios/Config/Env.xcconfig << 'EOL'
+          // This file contains environment-specific build settings.
+
+          GOOGLE_WEB_CLIENT_ID = ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          REVERSED_GOOGLE_IOS_CLIENT_ID = ${{ vars.REVERSED_GOOGLE_IOS_CLIENT_ID }}
+
+          EOL
+
+      # Step 7: Create .env file
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOL'
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
+
+          # PalsHub/Supabase Configuration
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+
+          # App Configuration
+          APP_URL=pocketpal://app
+
+          # Feature Flags (true/false)
+          ENABLE_PALSHUB_INTEGRATION=true
+          ENABLE_AUTHENTICATION=true
+          ENABLE_OFFLINE_MODE=true
+
+          # Google Sign-In Configuration
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          EOL
+
+      # Step 8: Install xcpretty for readable build output
+      - name: Install xcpretty
+        run: gem install xcpretty
+
+      # Step 9: Create GoogleService-Info.plist
+      - name: Create GoogleService-Info.plist
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_PLIST }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_PLIST }}' > ios/GoogleService-Info.plist
+          else
+            cat > ios/GoogleService-Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CLIENT_ID</key>
+            <string>000000000000-dummy.apps.googleusercontent.com</string>
+            <key>REVERSED_CLIENT_ID</key>
+            <string>com.googleusercontent.apps.000000000000-dummy</string>
+            <key>API_KEY</key>
+            <string>dummy-api-key-for-ci-builds</string>
+            <key>GCM_SENDER_ID</key>
+            <string>000000000000</string>
+            <key>PLIST_VERSION</key>
+            <string>1</string>
+            <key>BUNDLE_ID</key>
+            <string>com.pocketpalai</string>
+            <key>PROJECT_ID</key>
+            <string>dummy-project-for-ci</string>
+            <key>STORAGE_BUCKET</key>
+            <string>dummy-project-for-ci.appspot.com</string>
+            <key>IS_ADS_ENABLED</key>
+            <false/>
+            <key>IS_ANALYTICS_ENABLED</key>
+            <false/>
+            <key>IS_APPINVITE_ENABLED</key>
+            <true/>
+            <key>IS_GCM_ENABLED</key>
+            <true/>
+            <key>IS_SIGNIN_ENABLED</key>
+            <true/>
+            <key>GOOGLE_APP_ID</key>
+            <string>1:000000000000:ios:0000000000000000</string>
+          </dict>
+          </plist>
+          EOF
+          fi
+
+      # Step 10: Archive iOS build (no signing)
+      - name: Archive iOS Release
+        run: |
+          xcodebuild archive \
+            -workspace ios/PocketPal.xcworkspace \
+            -scheme PocketPal \
+            -configuration Release \
+            -archivePath build/PocketPal.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      # Step 11: Package IPA from archive (no signing)
+      - name: Package IPA from archive
+        run: |
+          mkdir -p build/export/Payload
+          cp -r build/PocketPal.xcarchive/Products/Applications/PocketPal.app \
+            build/export/Payload/
+          cd build/export
+          zip -r PocketPal.ipa Payload/
+
+      # Step 12: Upload unsigned IPA
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocketpal-unsigned-ipa
+          path: build/export/PocketPal.ipa
+          retention-days: 7
+
+      - name: Upload iOS build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ~/Library/Logs/gym/

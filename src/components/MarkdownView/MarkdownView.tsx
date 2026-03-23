@@ -12,8 +12,8 @@ import {CodeBlockHeader} from '../CodeBlockHeader';
 
 import {createTagsStyles, createStyles} from './styles';
 import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
-
-marked.use({});
+import {mathRenderers, mathHTMLElementModels} from './MathRenderers';
+import './mathExtension';
 
 interface MarkdownViewProps {
   markdownText: string;
@@ -126,7 +126,13 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
       () => ({
         code: (props: any) => CodeRenderer(props),
         ...tableRenderers,
+        ...mathRenderers,
       }),
+      [],
+    );
+
+    const customHTMLElementModels = useMemo(
+      () => ({...tableHTMLElementModels, ...mathHTMLElementModels}),
       [],
     );
 
@@ -171,7 +177,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               defaultTextProps={defaultTextProps}
               systemFonts={systemFonts}
               renderers={renderers}
-              customHTMLElementModels={tableHTMLElementModels}
+              customHTMLElementModels={customHTMLElementModels}
             />
           </ThinkingBubble>
         )}
@@ -185,7 +191,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             defaultTextProps={defaultTextProps}
             systemFonts={systemFonts}
             renderers={renderers}
-            customHTMLElementModels={tableHTMLElementModels}
+            customHTMLElementModels={customHTMLElementModels}
           />
         )}
       </View>

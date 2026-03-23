@@ -49,6 +49,11 @@
     "deviceSelectionIOSDescription": "בחר מצב Metal GPU או מצב CPU בלבד",
     "deviceSelectionAndroidDescription": "בחר התקן מחשוב (CPU, GPU או NPU מקבילי)",
     "cpuOnlyNoAccelerators": "CPU בלבד - לא זוהו מאיצי חומרה",
+    "visionDeviceSelection": "Vision Encoder Device",
+    "visionDeviceSelectionIOS": "Vision Encoder Device",
+    "visionDeviceSelectionDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceSelectionIOSDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceCpuOnly": "Vision encoder: CPU only - No hardware accelerators detected",
     "contextSize": "אורך הקשר",
     "contextSizePlaceholder": "הזן אורך הקשר (לפחות {{minContextSize}})",
     "invalidContextSizeError": "אנא הזן מספר תקין (לפחות {{minContextSize}})",
@@ -288,7 +293,9 @@
         "deleteTitle": "מחק מודל",
         "deleteMessage": "האם אתה בטוח שברצונך למחוק את המודל שהורדת?",
         "removeTitle": "הסר מודל",
-        "removeMessage": "האם אתה בטוח שברצונך להסיר את המודל הזה מהרשימה?"
+        "removeMessage": "האם אתה בטוח שברצונך להסיר את המודל הזה מהרשימה?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "הגדרות",
@@ -307,7 +314,9 @@
         "author": "בעלים",
         "requiresProjectionModel": "דורש מודל שכבת התאמה",
         "downloadProjectionModel": "הורד מודל שכבת התאמה",
-        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face"
+        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
@@ -373,7 +382,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "כלול חלקי חשיבה/הנמקה של ה-AI בהקשר שנשלח למודל. השבתת אפשרות זו יכולה לחסוך מקום בהקשר. הדבר עלול להשפיע על הביצועים.",
-    "jinja": "הפעל תבניות Jinja לעיצוב צ'אט. כאשר מופעל, נעשה שימוש בעיבוד תבניות צ'אט מבוססות Jinja לצורך תאימות טובה יותר עם מודלים מודרניים.",
     "grammar": "אכוף כללי דקדוק ספציפיים כדי להבטיח שהטקסט שנוצר יעקוב אחר מבנה או פורמט מסוימים",
     "stop": "הגדר ביטויים ספציפיים שיעצרו את יצירת הטקסט",
     "n_predict": "הגדר את אורך התגובה שתיווצר (בטוקנים)",
@@ -850,12 +858,7 @@
         "total": "סה\"כ: ",
         "usage": "שימוש: "
       },
-      "byteSizes": [
-        "Bytes",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bytes", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {

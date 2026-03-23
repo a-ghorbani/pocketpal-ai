@@ -1,4 +1,5 @@
 import React, {useState, useCallback, useMemo, useEffect} from 'react';
+import {BackHandler} from 'react-native';
 
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
@@ -24,13 +25,7 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
     const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(
       null,
     );
-
-    // Clear state when closed
-    useEffect(() => {
-      if (!visible) {
-        setSelectedModel(null);
-      }
-    }, [visible]);
+    const [isClosing, setIsClosing] = useState(false);
 
     const debouncedSearch = useMemo(
       () =>
@@ -38,10 +33,20 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
           hfStore.setSearchQuery(query);
           await hfStore.fetchModels();
         }, DEBOUNCE_DELAY),
-      [], // Empty dependencies since we don't want to recreate this
+      [],
     );
 
-    // Update search query without triggering immediate search
+    // Clear state when closed.
+    useEffect(() => {
+      if (!visible) {
+        debouncedSearch.cancel();
+        setSelectedModel(null);
+        setDetailsVisible(false);
+        setIsClosing(false);
+      }
+    }, [debouncedSearch, visible]);
+
+    // Update search query without triggering immediate search.
     const handleSearchChange = useCallback(
       (query: string) => {
         debouncedSearch(query);
@@ -65,23 +70,43 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
       }
     };
 
-    const handleSheetDismiss = () => {
-      console.log('Search sheet dismissed, clearing error state');
-      // Clear error state when the sheet is closed
+    const handleSheetDismiss = useCallback(() => {
+      if (isClosing) {
+        return;
+      }
+      setIsClosing(true);
+      debouncedSearch.cancel();
+      setSelectedModel(null);
+      setDetailsVisible(false);
+      hfStore.resetLoading();
       hfStore.clearError();
       onDismiss();
-    };
+    }, [debouncedSearch, isClosing, onDismiss]);
+
+    // Android back button should close the sheet.
+    useEffect(() => {
+      if (!visible) {
+        return;
+      }
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleSheetDismiss();
+        return true;
+      });
+      return () => sub.remove();
+    }, [handleSheetDismiss, visible]);
+
+    const sheetVisible = visible && !isClosing;
 
     return (
       <>
         <Sheet
-          isVisible={visible}
+          isVisible={sheetVisible}
           snapPoints={['92%']}
           enableDynamicSizing={false}
           enablePanDownToClose
-          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          enableContentPanningGesture={false}
           onClose={handleSheetDismiss}
-          showCloseButton={true}>
+          showCloseButton>
           <SearchView
             testID="hf-model-search-view"
             onModelSelect={handleModelSelect}
@@ -89,11 +114,11 @@ export const HFModelSearch: React.FC<HFModelSearchProps> = observer(
           />
         </Sheet>
         <Sheet
-          isVisible={detailsVisible}
+          isVisible={detailsVisible && sheetVisible}
           snapPoints={['90%']}
           enableDynamicSizing={false}
           enablePanDownToClose
-          enableContentPanningGesture={false} // Prevent gesture conflicts with FlatList scroll (Android)
+          enableContentPanningGesture={false}
           onClose={() => setDetailsVisible(false)}
           showCloseButton={false}>
           {selectedModel && <DetailsView hfModel={selectedModel} />}

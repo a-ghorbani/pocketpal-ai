@@ -311,6 +311,7 @@ export interface ChatTemplateConfig extends TemplateConfig {
   addGenerationPrompt: boolean;
   systemPrompt?: string;
   name: string;
+  templateInterpreter?: 'nunjucks' | 'jinja';
 }
 
 export type ChatMessage = {
@@ -389,6 +390,9 @@ export interface Model {
 
   defaultChatTemplate: ChatTemplateConfig;
   chatTemplate: ChatTemplateConfig;
+  // Cached template read from loaded GGUF metadata (tokenizer.chat_template).
+  // Kept after unload; refreshed on next successful load.
+  cachedRuntimeTemplateText?: string;
   defaultStopWords: CompletionParams['stop'];
   stopWords: CompletionParams['stop'];
   defaultCompletionSettings: CompletionParams;
@@ -402,6 +406,11 @@ export type RootDrawerParamList = {
   Chat: undefined;
   Models: undefined;
   Settings: undefined;
+  Benchmark: undefined;
+  'App Info': undefined;
+  Console: undefined;
+  'Pals (experimental)': undefined;
+  'Dev Tools': undefined;
 };
 
 export type TokenNativeEvent = {
@@ -510,12 +519,17 @@ export interface ContextInitParams
   // New parameters (v2.0+)
   devices?: string[]; // Device selection (undefined = auto-select)
   flash_attn_type?: 'auto' | 'on' | 'off'; // Replaces flash_attn boolean
+  ctx_shift?: boolean; // Enable context shifting for long generations
   kv_unified?: boolean; // Unified KV cache (CRITICAL: saves ~7GB memory)
   n_parallel?: number; // Max parallel sequences (default: 1 for blocking completion)
 
   // v2.1+
   /** Maximum number of tokens for image input (for dynamic resolution VLMs). Default: 512 */
   image_max_tokens?: number;
+
+  // v2.2+
+  /** Device selection for vision encoder (mmproj). Maps to use_gpu in initMultimodal. Default: 'cpu' */
+  vision_device?: 'auto' | 'gpu' | 'hexagon' | 'cpu';
 
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */
@@ -535,6 +549,7 @@ export interface LegacyContextInitParams {
   n_ubatch: number;
   n_threads: number;
   flash_attn: boolean;
+  ctx_shift?: boolean;
   cache_type_k:
     | 'f16'
     | 'f32'

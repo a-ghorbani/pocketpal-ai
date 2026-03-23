@@ -51,8 +51,9 @@ export const mockLlamaContextParams = {
 
 export const mockDefaultCompletionParams: CompletionParams = {
   // App-specific properties
-  version: 3,
+  version: 5,
   include_thinking_in_context: true,
+  reserved_output_tokens: 128,
 
   // llama.rn API properties
   prompt: '',
@@ -78,7 +79,7 @@ export const mockDefaultCompletionParams: CompletionParams = {
 
 export const mockCompletionParams: CompletionParams = {
   ...mockDefaultCompletionParams,
-  n_predict: 500,
+  n_predict: -1,
   temperature: 0.01,
   stop: ['<stop1>', '<stop2>'],
 };
@@ -90,6 +91,7 @@ export const mockDefaultChatTemplate = {
   eosToken: '<|default_eos|>',
   chatTemplate: 'default chat template',
   systemPrompt: 'default system prompt',
+  templateInterpreter: 'nunjucks' as const,
 };
 export const mockChatTemplate = {
   addGenerationPrompt: true,
@@ -98,6 +100,7 @@ export const mockChatTemplate = {
   eosToken: '<|test_eos|>',
   chatTemplate: 'test chat template',
   systemPrompt: 'test system prompt',
+  templateInterpreter: 'nunjucks' as const,
 };
 
 export const mockBasicModel: Model = {

@@ -4,7 +4,13 @@ import {
   BottomSheetTextInput,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import React, {forwardRef, useEffect, useMemo, useRef} from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/types';
 import {Text} from 'react-native-paper';
@@ -51,6 +57,7 @@ export const Sheet = forwardRef(
   ) => {
     const insets = useSafeAreaInsets();
     const innerRef = useRef<BottomSheetModalMethods>(null);
+    const hasNotifiedCloseRef = useRef(false);
 
     const activeRef = useMemo(() => {
       if (ref && 'current' in ref && ref.current) {
@@ -61,17 +68,38 @@ export const Sheet = forwardRef(
 
     const theme = useTheme();
 
+    const dismissSheet = useCallback(() => {
+      if (typeof activeRef?.current?.dismiss === 'function') {
+        activeRef.current.dismiss();
+        return;
+      }
+      activeRef?.current?.close();
+    }, [activeRef]);
+
+    const notifyCloseOnce = useCallback(() => {
+      if (hasNotifiedCloseRef.current) {
+        return;
+      }
+      hasNotifiedCloseRef.current = true;
+      onClose?.();
+    }, [onClose]);
+
     useEffect(() => {
       if (isVisible) {
+        hasNotifiedCloseRef.current = false;
         activeRef?.current?.present();
       } else {
-        activeRef?.current?.close();
+        dismissSheet();
       }
-    }, [isVisible, activeRef]);
+    }, [dismissSheet, isVisible, activeRef]);
 
-    const onDismiss = () => {
-      activeRef?.current?.close();
-      onClose?.();
+    const handleRequestClose = () => {
+      notifyCloseOnce();
+      dismissSheet();
+    };
+
+    const handleDismiss = () => {
+      notifyCloseOnce();
     };
 
     const snapPoints = useMemo(() => {
@@ -98,18 +126,18 @@ export const Sheet = forwardRef(
           backgroundColor: theme.colors.background,
         }}
         snapPoints={snapPoints}
-        onDismiss={onDismiss}
+        onDismiss={handleDismiss}
         // Disable accessible to allow Appium/e2e tests to access child elements on iOS
         // See: https://github.com/gorhom/react-native-bottom-sheet/issues/1141
         accessible={false}
         {...props}>
-        <View style={styles.header}>
+        <View style={styles.header} pointerEvents="box-none">
           {title && <Text variant="titleMedium">{title}</Text>}
           {showCloseButton && (
             <TouchableOpacity
               style={styles.closeBtn}
-              onPress={onDismiss}
-              hitSlop={10}
+              onPress={handleRequestClose}
+              hitSlop={{top: 16, bottom: 16, left: 16, right: 16}}
               testID="sheet-close-button"
               accessibilityLabel="Close"
               accessibilityRole="button">

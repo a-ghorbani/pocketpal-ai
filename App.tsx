@@ -21,6 +21,10 @@ import {Theme} from './src/utils/types';
 import {l10n, initLocale} from './src/locales';
 import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
+import {
+  initializeConsoleCapture,
+  initializeNetworkIntercept,
+} from './src/utils/debug';
 
 import {
   SidebarContent,
@@ -35,13 +39,14 @@ import {
   SettingsScreen,
   BenchmarkScreen,
   AboutScreen,
+  ConsoleScreen,
 
   // Dev tools screen. Only available in debug mode.
   DevToolsScreen,
 } from './src/screens';
 import PalsScreen from './src/screens/PalsScreen';
 
-// Check if app is in debug mode
+// Development-only tools should remain gated, but console capture is allowed in release.
 const isDebugMode = __DEV__;
 
 const Drawer = createDrawerNavigator();
@@ -55,6 +60,10 @@ const DeepLinkHandler = () => {
 };
 
 const App = observer(() => {
+  initializeConsoleCapture();
+
+  initializeNetworkIntercept();
+
   const theme = useTheme();
   const styles = createStyles(theme);
   const currentL10n = l10n[uiStore.language];
@@ -133,6 +142,14 @@ const App = observer(() => {
                       options={{
                         headerStyle: styles.headerWithoutDivider,
                         title: currentL10n.screenTitles.appInfo,
+                      }}
+                    />
+                    <Drawer.Screen
+                      name={ROUTES.CONSOLE}
+                      component={gestureHandlerRootHOC(ConsoleScreen)}
+                      options={{
+                        headerStyle: styles.headerWithoutDivider,
+                        title: 'Console',
                       }}
                     />
 

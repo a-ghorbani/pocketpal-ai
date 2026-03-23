@@ -37,6 +37,7 @@ export const Bubble = ({
   const l10n = useContext(L10nContext);
   const currentUserIsAuthor = user?.id === message.author.id;
   const {copyable, timings} = message.metadata || {};
+  const truncation = message.metadata?.context_truncation;
 
   const timingsString = t(l10n.components.bubble.timingsString, {
     predictedMs: timings?.predicted_per_token_ms?.toFixed() ?? '',
@@ -50,7 +51,19 @@ export const Bubble = ({
       ? `, ${timings.time_to_first_token_ms}ms TTFT`
       : '';
 
-  const fullTimingsString = timingsString + timeToFirstTokenString;
+  const tokenCountsString =
+    timings?.input_token_count !== undefined ||
+    timings?.output_token_count !== undefined
+      ? `, in ${timings?.input_token_count ?? 0} tok, out ${
+          timings?.output_token_count ?? 0
+        } tok`
+      : '';
+
+  const fullTimingsString =
+    timingsString + timeToFirstTokenString + tokenCountsString;
+  const truncationString = truncation
+    ? `Context truncated: history ${truncation.history_retained_percent}%, input ${truncation.input_retained_percent}%, prompt ${truncation.prompt_retained_percent}%`
+    : '';
 
   const {contentContainer, dateHeaderContainer, dateHeader, iconContainer} =
     styles({
@@ -84,7 +97,12 @@ export const Bubble = ({
               <Icon name="content-copy" style={iconContainer} />
             </TouchableOpacity>
           )}
-          {timings && <Text style={dateHeader}>{fullTimingsString}</Text>}
+          <View>
+            {timings && <Text style={dateHeader}>{fullTimingsString}</Text>}
+            {truncationString ? (
+              <Text style={dateHeader}>{truncationString}</Text>
+            ) : null}
+          </View>
         </View>
       )}
     </Animated.View>

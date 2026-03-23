@@ -144,6 +144,22 @@ describe('HFStore', () => {
       // Should have tracked consecutive small results
       expect((hfStore as any).consecutiveSmallResults).toBeGreaterThan(0);
     });
+
+    it('should fully reset pagination state when loading is reset', () => {
+      hfStore.isLoading = true;
+      hfStore.nextPageLink = 'next-page-url';
+      (hfStore as any).lastFetchMoreAttempt = Date.now();
+      (hfStore as any).consecutiveSmallResults = 2;
+      (hfStore as any).lastFetchedNextLink = 'next-page-url';
+
+      hfStore.resetLoading();
+
+      expect(hfStore.isLoading).toBe(false);
+      expect(hfStore.nextPageLink).toBeNull();
+      expect((hfStore as any).lastFetchMoreAttempt).toBe(0);
+      expect((hfStore as any).consecutiveSmallResults).toBe(0);
+      expect((hfStore as any).lastFetchedNextLink).toBeNull();
+    });
   });
 
   describe('fetchModelData', () => {

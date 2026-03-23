@@ -7,6 +7,11 @@ export const styles = StyleSheet.create({
   closeBtn: {
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 999,
+    minWidth: 44,
+    minHeight: 44,
+    padding: 8,
+    elevation: 8,
   },
   header: {
     marginHorizontal: 16,

@@ -13,7 +13,7 @@ import {Platform} from 'react-native';
 
 // Current version of the context init params schema
 // Increment this when adding new parameters or changing existing ones
-export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.1';
+export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.2';
 
 /**
  * Creates properly versioned ContextInitParams from ContextParams (excluding model)
@@ -32,8 +32,7 @@ export const createContextInitParams = (
         : (params.use_mmap ?? (Platform.OS === 'android' ? 'smart' : 'true'));
 
   // Handle flash_attn_type (new) vs flash_attn (old)
-  const flash_attn_type =
-    (params as any).flash_attn_type ?? (Platform.OS === 'ios' ? 'auto' : 'off');
+  const flash_attn_type = (params as any).flash_attn_type ?? 'on';
 
   return {
     ...params,
@@ -46,17 +45,21 @@ export const createContextInitParams = (
     n_threads: params.n_threads ?? 4,
     cache_type_k: params.cache_type_k ?? 'f16',
     cache_type_v: params.cache_type_v ?? 'f16',
-    n_gpu_layers: params.n_gpu_layers ?? 99, // Changed default from 0 to 99
+    n_gpu_layers: params.n_gpu_layers ?? 0, // Default to CPU-only unless explicitly configured
     use_mlock: params.use_mlock ?? false,
 
     // New parameters (v2.0+)
     flash_attn_type,
+    ctx_shift: (params as any).ctx_shift ?? true,
     devices: (params as any).devices,
     kv_unified: (params as any).kv_unified ?? true, // CRITICAL default
     n_parallel: (params as any).n_parallel ?? 1, // Blocking completion only
 
     // v2.1+
     image_max_tokens: (params as any).image_max_tokens ?? 512, // Device-appropriate default
+
+    // v2.2+
+    vision_device: (params as any).vision_device ?? 'cpu', // Default to CPU for safety
   };
 };
 
@@ -136,7 +139,7 @@ export function migrateContextInitParams(
     ) {
       if (migratedParams.flash_attn) {
         // Flash attention was enabled
-        migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
+        migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'on';
       } else {
         // Flash attention was disabled
         migratedParams.flash_attn_type = 'off';
@@ -145,8 +148,8 @@ export function migrateContextInitParams(
       // Keep flash_attn for now (marked deprecated, will be removed in future version)
       // delete migratedParams.flash_attn;
     } else if (!migratedParams.flash_attn_type) {
-      // No flash_attn or flash_attn_type, set platform-specific default
-      migratedParams.flash_attn_type = Platform.OS === 'ios' ? 'auto' : 'off';
+      // No flash_attn or flash_attn_type, set default
+      migratedParams.flash_attn_type = 'on';
     }
 
     // Add new required parameters with defaults
@@ -156,6 +159,10 @@ export function migrateContextInitParams(
 
     if (migratedParams.n_parallel === undefined) {
       migratedParams.n_parallel = 1; // App only uses blocking completion()
+    }
+
+    if (migratedParams.ctx_shift === undefined) {
+      migratedParams.ctx_shift = true;
     }
 
     // Increase default context size if it was the old default
@@ -174,6 +181,16 @@ export function migrateContextInitParams(
     }
 
     migratedParams.version = '2.1';
+  }
+
+  // Migration from 2.1 to 2.2: vision_device
+  if (migratedParams.version === '2.1') {
+    // Add vision_device with safe default (CPU)
+    if (migratedParams.vision_device === undefined) {
+      migratedParams.vision_device = 'cpu';
+    }
+
+    migratedParams.version = '2.2';
   }
 
   // Ensure the final version is set correctly
@@ -219,23 +236,27 @@ export function validateContextInitParams(
 export function createDefaultContextInitParams(): ContextInitParams {
   return {
     version: CURRENT_CONTEXT_INIT_PARAMS_VERSION,
-    n_ctx: 2048,
+    n_ctx: 8192,
     n_batch: 512,
     n_ubatch: 512,
     n_threads: 4,
     cache_type_k: 'f16',
     cache_type_v: 'f16',
-    n_gpu_layers: 99, // All layers
+    n_gpu_layers: 0, // Default to CPU-only
     use_mlock: false,
     use_mmap: Platform.OS === 'android' ? 'smart' : 'true',
 
     // New v2.0 parameters
     devices: undefined, // Auto-select
-    flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
+    flash_attn_type: 'on',
+    ctx_shift: true,
     kv_unified: true, // CRITICAL: saves ~7GB memory
     n_parallel: 1, // App only uses blocking completion()
 
     // v2.1 parameters
     image_max_tokens: 512, // Device-appropriate default
+
+    // v2.2 parameters
+    vision_device: 'cpu', // Default to CPU for safety
   };
 }

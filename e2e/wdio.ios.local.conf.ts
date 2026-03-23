@@ -22,10 +22,13 @@ import type {Options} from '@wdio/types';
 const DEVICE_NAME = process.env.E2E_DEVICE_NAME || 'iPhone 17 Pro';
 const PLATFORM_VERSION = process.env.E2E_PLATFORM_VERSION || '26.0';
 const DEVICE_UDID = process.env.E2E_DEVICE_UDID; // undefined = simulator auto-selection
-const APP_PATH = process.env.E2E_APP_PATH || '../ios/build/Build/Products/Release-iphonesimulator/PocketPal.app';
+const APP_PATH =
+  process.env.E2E_APP_PATH ||
+  '../ios/build/Build/Products/Release-iphonesimulator/PocketPal.app';
 const APPIUM_PORT = parseInt(process.env.E2E_APPIUM_PORT || '4723', 10);
 const XCODE_ORG_ID = process.env.E2E_XCODE_ORG_ID;
-const XCODE_SIGNING_ID = process.env.E2E_XCODE_SIGNING_ID || 'Apple Development';
+const XCODE_SIGNING_ID =
+  process.env.E2E_XCODE_SIGNING_ID || 'Apple Development';
 
 export const config: Options.Testrunner = {
   ...sharedConfig,

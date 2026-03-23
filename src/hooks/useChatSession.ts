@@ -11,12 +11,752 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../store';
 import {MessageType, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
 import {resolveSystemMessages} from '../utils/systemPromptResolver';
-import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
+import {
+  applyChatTemplate,
+  convertToChatMessages,
+  getEffectiveChatTemplateInterpreter,
+  normalizeChatTemplateResult,
+  removeThinkingParts,
+} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
+import {
+  buildCompletionParamProbe,
+  engineInputLog,
+  engineOutputLog,
+  getTextDiagnostics,
+  paramSourceLog,
+  previewText,
+  promptBuildLog,
+  scheduleEngineOutputHeartbeats,
+} from '../utils/debug';
 import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {ChatMessage} from '../utils/types';
+
+function pickNumericValue(
+  source: Record<string, unknown> | undefined,
+  keys: string[],
+): number | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function extractTokenUsage(
+  usage: Record<string, unknown> | undefined,
+  fallbackOutputTokens: number,
+) {
+  const inputTokens = pickNumericValue(usage, [
+    'prompt_tokens',
+    'promptTokens',
+    'input_tokens',
+    'inputTokens',
+    'prompt_eval_count',
+    'prompt_n',
+    'input_token_count',
+  ]);
+  const outputTokens =
+    pickNumericValue(usage, [
+      'completion_tokens',
+      'completionTokens',
+      'output_tokens',
+      'outputTokens',
+      'eval_count',
+      'generated_tokens',
+      'output_token_count',
+    ]) ?? fallbackOutputTokens;
+  const totalTokens =
+    pickNumericValue(usage, [
+      'total_tokens',
+      'totalTokens',
+      'total_token_count',
+    ]) ??
+    [inputTokens, outputTokens]
+      .filter((value): value is number => typeof value === 'number')
+      .reduce((sum, value) => sum + value, 0);
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+  };
+}
+
+const MIN_CONTEXT_SIZE = 32;
+const MIN_INPUT_TOKEN_BUDGET = 32;
+const INPUT_TOKEN_BUFFER = 128;
+const HISTORY_TRIM_STEP_CHARS = 64;
+
+type TruncationMetrics = {
+  wasTruncated: boolean;
+  historyRetainedPercent: number;
+  inputRetainedPercent: number;
+  systemRetainedPercent: number;
+  droppedMessageCount: number;
+};
+
+function estimateMessageChars(message: ChatMessage): number {
+  if (typeof message.content === 'string') {
+    return message.content.length;
+  }
+
+  if (Array.isArray(message.content)) {
+    return message.content.reduce((total, part) => {
+      if (part.type === 'text') {
+        return total + (part.text?.length ?? 0);
+      }
+
+      // Images still consume prompt budget through template markers.
+      return total + 64;
+    }, 0);
+  }
+
+  return 0;
+}
+
+type ExactTokenUsageContext = {
+  context?: any;
+  model?: any;
+  messages: ChatMessage[];
+  enableThinking?: boolean;
+  reasoningFormat?: 'none' | 'auto' | 'deepseek';
+};
+
+async function countTokensExactly({
+  context,
+  model,
+  messages,
+  enableThinking = false,
+  reasoningFormat,
+}: ExactTokenUsageContext): Promise<number | null> {
+  if (!context?.tokenize) {
+    promptBuildLog('tokenize:exact-skipped', {
+      reason: 'missing-context-tokenize',
+      messageCount: messages.length,
+    });
+    return null;
+  }
+
+  try {
+    const effectiveInterpreter = getEffectiveChatTemplateInterpreter(
+      model?.chatTemplate,
+    );
+    let prompt = '';
+    let mediaPaths: string[] = [];
+
+    if (
+      effectiveInterpreter === 'nunjucks' &&
+      !messages.some(message => Array.isArray(message.content))
+    ) {
+      const renderedPrompt = await applyChatTemplate(
+        messages as any,
+        model ?? null,
+        context ?? null,
+      );
+      prompt = typeof renderedPrompt === 'string' ? renderedPrompt : '';
+    } else if (context?.getFormattedChat) {
+      const formatted = await context.getFormattedChat(
+        messages as any,
+        effectiveInterpreter === 'jinja'
+          ? model?.chatTemplate?.chatTemplate?.trim() || null
+          : null,
+        {
+          jinja: true,
+          enable_thinking: enableThinking,
+          reasoning_format: reasoningFormat,
+        },
+      );
+      const normalized = normalizeChatTemplateResult(formatted as any);
+      prompt = normalized.prompt;
+      mediaPaths = normalized.mediaPaths;
+    }
+
+    if (!prompt) {
+      return null;
+    }
+
+    const tokenized = await context.tokenize(prompt, {
+      media_paths: mediaPaths,
+    });
+    return Array.isArray(tokenized?.tokens) ? tokenized.tokens.length : null;
+  } catch (error) {
+    promptBuildLog('tokenize:exact-failed', {
+      messageCount: messages.length,
+      error: error instanceof Error ? error.message : JSON.stringify(error),
+    });
+    return null;
+  }
+}
+
+export async function estimateChatContextUsage({
+  systemMessages,
+  chatMessages,
+  userMessage,
+  contextSize,
+  reservedOutputTokens,
+  pruneHistory,
+  context,
+  model,
+  enableThinking,
+  reasoningFormat,
+}: {
+  systemMessages: Array<{role: 'system'; content: string}>;
+  chatMessages: ChatMessage[];
+  userMessage?: ChatMessage;
+  contextSize: number;
+  reservedOutputTokens?: number;
+  pruneHistory: boolean;
+  context?: any;
+  model?: any;
+  enableThinking?: boolean;
+  reasoningFormat?: 'none' | 'auto' | 'deepseek';
+}) {
+  const baseMessages = userMessage
+    ? [...systemMessages, ...chatMessages, userMessage]
+    : [...systemMessages, ...chatMessages];
+  const prunedResult =
+    pruneHistory && userMessage
+      ? await pruneChatHistoryToFitContext({
+          systemMessages,
+          chatMessages,
+          userMessage,
+          contextSize,
+          reservedOutputTokens,
+          context,
+          model,
+          enableThinking,
+          reasoningFormat,
+        })
+      : {
+          messages: baseMessages,
+          droppedMessageCount: 0,
+          truncation: {
+            wasTruncated: false,
+            historyRetainedPercent: 100,
+            inputRetainedPercent: 100,
+            systemRetainedPercent: 100,
+            droppedMessageCount: 0,
+          },
+        };
+
+  const exactUsedTokens = await countTokensExactly({
+    context,
+    model,
+    messages: prunedResult.messages,
+    enableThinking,
+    reasoningFormat,
+  });
+  if (exactUsedTokens === null) {
+    return null;
+  }
+
+  const usedTokens = exactUsedTokens;
+  const maxTokens = Math.max(contextSize || 0, MIN_CONTEXT_SIZE);
+
+  return {
+    usedTokens,
+    maxTokens,
+    usagePercent:
+      maxTokens > 0
+        ? Math.min(100, Math.round((usedTokens / maxTokens) * 100))
+        : 0,
+    droppedMessageCount: prunedResult.droppedMessageCount,
+  };
+}
+
+export async function pruneChatHistoryToFitContext({
+  systemMessages,
+  chatMessages,
+  userMessage,
+  contextSize,
+  reservedOutputTokens,
+  context,
+  model,
+  enableThinking,
+  reasoningFormat,
+}: {
+  systemMessages: Array<{role: 'system'; content: string}>;
+  chatMessages: ChatMessage[];
+  userMessage: ChatMessage;
+  contextSize: number;
+  reservedOutputTokens?: number;
+  context?: any;
+  model?: any;
+  enableThinking?: boolean;
+  reasoningFormat?: 'none' | 'auto' | 'deepseek';
+}): Promise<{
+  messages: ChatMessage[];
+  droppedMessageCount: number;
+  truncation: TruncationMetrics;
+}> {
+  const safeContextSize = Math.max(contextSize || 0, MIN_CONTEXT_SIZE);
+  const safeReservedOutputTokens = Math.max(reservedOutputTokens ?? 128, 0);
+  const inputTokenBudget = Math.max(
+    MIN_INPUT_TOKEN_BUDGET,
+    safeContextSize - safeReservedOutputTokens - INPUT_TOKEN_BUFFER,
+  );
+  const sumChars = (messages: ChatMessage[]) =>
+    messages.reduce((total, item) => total + estimateMessageChars(item), 0);
+  const clampPercent = (retained: number, original: number) => {
+    if (original <= 0) {
+      return 100;
+    }
+
+    return Math.max(0, Math.min(100, Math.round((retained / original) * 100)));
+  };
+  const trimContentFromTail = (
+    content: ChatMessage['content'],
+    charsToTrim: number,
+  ): ChatMessage['content'] => {
+    if (charsToTrim <= 0) {
+      return content;
+    }
+
+    if (typeof content === 'string') {
+      return content.slice(0, Math.max(0, content.length - charsToTrim));
+    }
+
+    if (!Array.isArray(content)) {
+      return content;
+    }
+
+    let remainingTrim = charsToTrim;
+    const nextContent = [...content];
+
+    for (let index = nextContent.length - 1; index >= 0; index -= 1) {
+      const part = nextContent[index];
+
+      if (part.type !== 'text') {
+        continue;
+      }
+
+      const text = part.text ?? '';
+      if (remainingTrim >= text.length) {
+        nextContent[index] = {...part, text: ''};
+        remainingTrim -= text.length;
+        continue;
+      }
+
+      nextContent[index] = {
+        ...part,
+        text: text.slice(0, Math.max(0, text.length - remainingTrim)),
+      };
+      remainingTrim = 0;
+      break;
+    }
+
+    return nextContent;
+  };
+
+  const trimContentFromHead = (
+    content: ChatMessage['content'],
+    charsToTrim: number,
+  ): ChatMessage['content'] => {
+    if (charsToTrim <= 0) {
+      return content;
+    }
+
+    if (typeof content === 'string') {
+      return content.slice(Math.min(content.length, charsToTrim));
+    }
+
+    if (!Array.isArray(content)) {
+      return content;
+    }
+
+    let remainingTrim = charsToTrim;
+    const nextContent = [...content];
+
+    for (let index = 0; index < nextContent.length; index += 1) {
+      const part = nextContent[index];
+
+      if (part.type !== 'text') {
+        continue;
+      }
+
+      const text = part.text ?? '';
+      if (remainingTrim >= text.length) {
+        nextContent[index] = {...part, text: ''};
+        remainingTrim -= text.length;
+        continue;
+      }
+
+      nextContent[index] = {
+        ...part,
+        text: text.slice(Math.min(text.length, remainingTrim)),
+      };
+      remainingTrim = 0;
+      break;
+    }
+
+    return nextContent;
+  };
+
+  const applyHardTrimFallback = async () => {
+    for (
+      let index = 0;
+      index < keptHistory.length && totalTokens > inputTokenBudget;
+      index += 1
+    ) {
+      const historyMessage = keptHistory[index];
+      const historyChars = estimateMessageChars(historyMessage);
+
+      if (historyChars <= 0) {
+        continue;
+      }
+
+      keptHistory[index] = {
+        ...historyMessage,
+        content: trimContentFromHead(historyMessage.content, historyChars),
+      };
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+    }
+
+    if (totalTokens > inputTokenBudget) {
+      const userChars = estimateMessageChars(trimmedUserMessage);
+      if (userChars > 0) {
+        trimmedUserMessage = {
+          ...trimmedUserMessage,
+          content: trimContentFromTail(trimmedUserMessage.content, userChars),
+        };
+        tokenCount = await getCurrentTokenCount();
+        totalTokens = tokenCount.count;
+      }
+    }
+
+    if (totalTokens > inputTokenBudget) {
+      for (
+        let index = trimmedSystemMessages.length - 1;
+        index >= 0 && totalTokens > inputTokenBudget;
+        index -= 1
+      ) {
+        const systemMessage = trimmedSystemMessages[index];
+        const systemChars = estimateMessageChars(systemMessage);
+
+        if (systemChars <= 0) {
+          continue;
+        }
+
+        trimmedSystemMessages[index] = {
+          ...systemMessage,
+          content: trimContentFromTail(systemMessage.content, systemChars),
+        };
+        tokenCount = await getCurrentTokenCount();
+        totalTokens = tokenCount.count;
+      }
+    }
+  };
+
+  const originalHistoryChars = sumChars(chatMessages);
+  const originalInputChars = estimateMessageChars(userMessage);
+  const originalSystemChars = sumChars(systemMessages as ChatMessage[]);
+
+  let keptHistory = [...chatMessages];
+  let trimmedUserMessage = userMessage;
+  let trimmedSystemMessages = [...(systemMessages as ChatMessage[])];
+  const getCurrentMessages = () => [
+    ...trimmedSystemMessages,
+    ...keptHistory,
+    trimmedUserMessage,
+  ];
+  const getCurrentTokenCount = async () => {
+    const exactCount = await countTokensExactly({
+      context,
+      model,
+      messages: getCurrentMessages(),
+      enableThinking,
+      reasoningFormat,
+    });
+
+    if (exactCount !== null) {
+      return {count: exactCount, mode: 'exact' as const};
+    }
+
+    const fallbackChars =
+      sumChars(trimmedSystemMessages) +
+      sumChars(keptHistory) +
+      estimateMessageChars(trimmedUserMessage);
+    const fallbackCount = Math.ceil(fallbackChars / 4);
+    promptBuildLog('prune:fallback-token-estimate', {
+      fallbackChars,
+      fallbackCount,
+      messageCount: getCurrentMessages().length,
+    });
+    return {count: fallbackCount, mode: 'fallback' as const};
+  };
+
+  let tokenCount = await getCurrentTokenCount();
+  let totalTokens = tokenCount.count;
+  promptBuildLog('prune:start', {
+    contextSize,
+    safeContextSize,
+    reservedOutputTokens: safeReservedOutputTokens,
+    inputTokenBuffer: INPUT_TOKEN_BUFFER,
+    inputTokenBudget,
+    initialTotalTokens: totalTokens,
+    tokenCountMode: tokenCount.mode,
+    historyMessageCount: keptHistory.length,
+    originalHistoryChars,
+    originalInputChars,
+    originalSystemChars,
+  });
+
+  let historyIndex = 0;
+  while (totalTokens > inputTokenBudget && historyIndex < keptHistory.length) {
+    const historyMessage = keptHistory[historyIndex];
+    const historyChars = estimateMessageChars(historyMessage);
+    promptBuildLog('prune:history-branch', {
+      historyIndex,
+      historyChars,
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+    });
+
+    if (historyChars <= 0) {
+      keptHistory.splice(historyIndex, 1);
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:history-empty-message-removed', {
+        historyIndex,
+        totalTokensAfter: totalTokens,
+        tokenCountMode: tokenCount.mode,
+      });
+      continue;
+    }
+
+    let trimmedChars = 0;
+    let bestContent = historyMessage.content;
+    let bestFitsBudget = false;
+
+    while (trimmedChars < historyChars) {
+      trimmedChars = Math.min(
+        historyChars,
+        trimmedChars + HISTORY_TRIM_STEP_CHARS,
+      );
+      keptHistory[historyIndex] = {
+        ...historyMessage,
+        content: trimContentFromHead(historyMessage.content, trimmedChars),
+      };
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:history-trim-attempt', {
+        historyIndex,
+        historyChars,
+        trimmedChars,
+        totalTokensAfter: totalTokens,
+        inputTokenBudget,
+        tokenCountMode: tokenCount.mode,
+      });
+
+      if (totalTokens <= inputTokenBudget) {
+        bestContent = keptHistory[historyIndex].content;
+        bestFitsBudget = true;
+        break;
+      }
+    }
+
+    keptHistory[historyIndex] = {
+      ...historyMessage,
+      content: bestFitsBudget
+        ? bestContent
+        : trimContentFromHead(historyMessage.content, historyChars),
+    };
+    tokenCount = await getCurrentTokenCount();
+    totalTokens = tokenCount.count;
+    promptBuildLog('prune:history-trim-result', {
+      historyIndex,
+      bestFitsBudget,
+      retainedChars: estimateMessageChars(keptHistory[historyIndex]),
+      totalTokensAfter: totalTokens,
+      inputTokenBudget,
+      tokenCountMode: tokenCount.mode,
+    });
+
+    if (bestFitsBudget) {
+      break;
+    }
+
+    const retainedChars = estimateMessageChars(keptHistory[historyIndex]);
+    if (retainedChars <= 0) {
+      keptHistory.splice(historyIndex, 1);
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:history-message-fully-removed', {
+        historyIndex,
+        totalTokensAfter: totalTokens,
+        tokenCountMode: tokenCount.mode,
+      });
+      continue;
+    }
+
+    historyIndex += 1;
+  }
+
+  if (totalTokens > inputTokenBudget && originalInputChars > 0) {
+    promptBuildLog('prune:input-branch', {
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+      originalInputChars,
+    });
+    let low = 0;
+    let high = originalInputChars;
+    let bestContent = trimContentFromTail(
+      userMessage.content,
+      originalInputChars,
+    );
+
+    while (low <= high) {
+      const trimmedChars = Math.floor((low + high) / 2);
+      const candidateContent = trimContentFromTail(
+        userMessage.content,
+        trimmedChars,
+      );
+      trimmedUserMessage = {
+        ...userMessage,
+        content: candidateContent,
+      };
+      tokenCount = await getCurrentTokenCount();
+      const candidateTokens = tokenCount.count;
+      promptBuildLog('prune:input-trim-attempt', {
+        trimmedChars,
+        candidateTokens,
+        inputTokenBudget,
+        tokenCountMode: tokenCount.mode,
+      });
+
+      if (candidateTokens <= inputTokenBudget) {
+        bestContent = candidateContent;
+        high = trimmedChars - 1;
+      } else {
+        low = trimmedChars + 1;
+      }
+    }
+
+    trimmedUserMessage = {
+      ...userMessage,
+      content: bestContent,
+    };
+    tokenCount = await getCurrentTokenCount();
+    totalTokens = tokenCount.count;
+    promptBuildLog('prune:input-trim-result', {
+      retainedChars: estimateMessageChars(trimmedUserMessage),
+      totalTokensAfter: totalTokens,
+      inputTokenBudget,
+      tokenCountMode: tokenCount.mode,
+    });
+  }
+
+  if (totalTokens > inputTokenBudget && trimmedSystemMessages.length > 0) {
+    promptBuildLog('prune:system-branch', {
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+      systemMessageCount: trimmedSystemMessages.length,
+    });
+    for (
+      let index = trimmedSystemMessages.length - 1;
+      index >= 0 && totalTokens > inputTokenBudget;
+      index -= 1
+    ) {
+      const systemMessage = trimmedSystemMessages[index];
+      const systemChars = estimateMessageChars(systemMessage);
+      let low = 0;
+      let high = systemChars;
+      let bestContent = trimContentFromTail(systemMessage.content, systemChars);
+
+      while (low <= high) {
+        const trimmedChars = Math.floor((low + high) / 2);
+        trimmedSystemMessages[index] = {
+          ...systemMessage,
+          content: trimContentFromTail(systemMessage.content, trimmedChars),
+        };
+        tokenCount = await getCurrentTokenCount();
+        const candidateTokens = tokenCount.count;
+        promptBuildLog('prune:system-trim-attempt', {
+          systemIndex: index,
+          trimmedChars,
+          candidateTokens,
+          inputTokenBudget,
+          tokenCountMode: tokenCount.mode,
+        });
+
+        if (candidateTokens <= inputTokenBudget) {
+          bestContent = trimmedSystemMessages[index].content;
+          high = trimmedChars - 1;
+        } else {
+          low = trimmedChars + 1;
+        }
+      }
+
+      trimmedSystemMessages[index] = {
+        ...systemMessage,
+        content: bestContent,
+      };
+      tokenCount = await getCurrentTokenCount();
+      totalTokens = tokenCount.count;
+      promptBuildLog('prune:system-trim-result', {
+        systemIndex: index,
+        retainedChars: estimateMessageChars(trimmedSystemMessages[index]),
+        totalTokensAfter: totalTokens,
+        inputTokenBudget,
+        tokenCountMode: tokenCount.mode,
+      });
+    }
+  }
+
+  if (totalTokens > inputTokenBudget) {
+    promptBuildLog('prune:hard-fallback-branch', {
+      totalTokensBefore: totalTokens,
+      inputTokenBudget,
+    });
+    await applyHardTrimFallback();
+    tokenCount = await getCurrentTokenCount();
+    totalTokens = tokenCount.count;
+    promptBuildLog('prune:hard-fallback-result', {
+      totalTokensAfter: totalTokens,
+      inputTokenBudget,
+      tokenCountMode: tokenCount.mode,
+      remainingHistoryChars: sumChars(keptHistory),
+      remainingInputChars: estimateMessageChars(trimmedUserMessage),
+      remainingSystemChars: sumChars(trimmedSystemMessages),
+    });
+  }
+
+  const keptHistoryChars = sumChars(keptHistory);
+  const keptInputChars = estimateMessageChars(trimmedUserMessage);
+  const keptSystemChars = sumChars(trimmedSystemMessages);
+  const droppedMessageCount = chatMessages.length - keptHistory.length;
+
+  return {
+    messages: [...trimmedSystemMessages, ...keptHistory, trimmedUserMessage],
+    droppedMessageCount,
+    truncation: {
+      wasTruncated:
+        droppedMessageCount > 0 ||
+        keptHistoryChars < originalHistoryChars ||
+        keptInputChars < originalInputChars ||
+        keptSystemChars < originalSystemChars,
+      historyRetainedPercent: clampPercent(
+        keptHistoryChars,
+        originalHistoryChars,
+      ),
+      inputRetainedPercent: clampPercent(keptInputChars, originalInputChars),
+      systemRetainedPercent: clampPercent(keptSystemChars, originalSystemChars),
+      droppedMessageCount,
+    },
+  };
+}
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -99,14 +839,65 @@ const prepareCompletion = async ({
   }
 
   // Create the messages array for llama.rn - same format for all cases
-  const messages = [
-    ...systemMessages,
-    ...chatMessages,
-    {
-      role: 'user',
-      content: userMessageContent,
-    },
-  ];
+  const currentUserMessage: ChatMessage = {
+    role: 'user',
+    content: userMessageContent,
+  };
+  const {messages, droppedMessageCount, truncation} =
+    modelStore.pruneChatHistoryBeforeSend
+      ? await pruneChatHistoryToFitContext({
+          systemMessages,
+          chatMessages,
+          userMessage: currentUserMessage,
+          contextSize:
+            modelStore.activeContextSettings?.n_ctx ??
+            modelStore.contextInitParams.n_ctx,
+          reservedOutputTokens: (sessionCompletionSettings as CompletionParams)
+            ?.reserved_output_tokens,
+          context,
+          model: modelStore.activeModel,
+          enableThinking: (sessionCompletionSettings as CompletionParams)
+            ?.enable_thinking,
+          reasoningFormat: (sessionCompletionSettings as CompletionParams)
+            ?.reasoning_format,
+        })
+      : {
+          messages: [...systemMessages, ...chatMessages, currentUserMessage],
+          droppedMessageCount: 0,
+          truncation: {
+            wasTruncated: false,
+            historyRetainedPercent: 100,
+            inputRetainedPercent: 100,
+            systemRetainedPercent: 100,
+            droppedMessageCount: 0,
+          },
+        };
+  const inputTokenEstimate =
+    (await countTokensExactly({
+      context,
+      model: modelStore.activeModel,
+      messages,
+      enableThinking: (sessionCompletionSettings as CompletionParams)
+        ?.enable_thinking,
+      reasoningFormat: (sessionCompletionSettings as CompletionParams)
+        ?.reasoning_format,
+    })) ?? 0;
+  promptBuildLog('prepareCompletion:messages', {
+    messageCount: messages.length,
+    droppedMessageCount,
+    inputTokenEstimate,
+    truncation,
+    hasImages,
+    isMultimodalEnabled,
+    lastUserMessage: Array.isArray(userMessageContent)
+      ? {
+          parts: userMessageContent.map(part => part.type),
+          textLength:
+            userMessageContent.find(part => part.type === 'text')?.text
+              ?.length ?? 0,
+        }
+      : {type: 'text', textLength: String(userMessageContent).length},
+  });
 
   // Create completion params with app-specific properties
   const completionParamsWithAppProps = {
@@ -120,14 +911,179 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
-  // If enable_thinking is true, set reasoning_format to 'auto'
-  // This returns the reasoning content in a separate field (reasoning_content)
-  if (cleanCompletionParams.enable_thinking) {
-    cleanCompletionParams.reasoning_format = 'auto';
+  const thinkingAssembly = {
+    enable_thinking: cleanCompletionParams.enable_thinking ?? false,
+    reasoning_format: cleanCompletionParams.reasoning_format ?? null,
+    include_thinking_in_context: includeThinkingInContext,
+    add_generation_prompt:
+      modelStore.activeModel?.chatTemplate?.addGenerationPrompt ?? false,
+  };
+
+  const modelTemplate =
+    modelStore.activeModel?.chatTemplate?.chatTemplate?.trim();
+  const contextTemplate = (context?.model as any)?.metadata?.[
+    'tokenizer.chat_template'
+  ];
+
+  const effectiveTemplateInterpreter = getEffectiveChatTemplateInterpreter(
+    modelStore.activeModel?.chatTemplate,
+  );
+  const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  // Determine completion path based on template interpreter and multimodal status
+  const isNunjucks = effectiveTemplateInterpreter === 'nunjucks';
+  let completionTransport: string;
+  let nunjucksRenderError: string | undefined;
+
+  if (isNunjucks && !hasImages) {
+    // ⑤ Nunjucks + text-only → Path B (only case that needs JS-side rendering)
+    try {
+      const renderedPrompt = await applyChatTemplate(
+        messages as any,
+        modelStore.activeModel ?? null,
+        context ?? null,
+      );
+      const promptStr =
+        typeof renderedPrompt === 'string' ? renderedPrompt : '';
+      if (promptStr) {
+        (cleanCompletionParams as any).prompt = promptStr;
+        delete (cleanCompletionParams as any).messages;
+        (cleanCompletionParams as any).jinja = false;
+      }
+    } catch (error) {
+      nunjucksRenderError =
+        error instanceof Error ? error.message : JSON.stringify(error);
+    }
+    completionTransport = (cleanCompletionParams as any).prompt
+      ? 'prompt-preformatted-template'
+      : 'messages-api';
+  } else {
+    // ①②③④⑥ → Path A (native handles template rendering + all metadata)
+    (cleanCompletionParams as any).jinja = true;
+
+    if (!isNunjucks && modelTemplate) {
+      // ③④: Pass user's custom Jinja template to override model built-in
+      (cleanCompletionParams as any).chatTemplate = modelTemplate;
+    }
+    // ①②: No chatTemplate → native uses model's built-in Jinja template
+    // ⑥: Nunjucks + multimodal → Nunjucks ignored, native uses built-in
+
+    completionTransport = 'messages-api';
   }
+
+  // 🔍 DIAGNOSTIC: Check if getFormattedChat properly renders thinking tokens
+  // Compare what getFormattedChat produces vs what completion() will do internally
+  if (context?.getFormattedChat && cleanCompletionParams.enable_thinking) {
+    try {
+      const diagResult = await (context as any).getFormattedChat(
+        (cleanCompletionParams as any).messages,
+        (cleanCompletionParams as any).chatTemplate || null,
+        {
+          jinja: true,
+          enable_thinking: cleanCompletionParams.enable_thinking,
+          reasoning_format: cleanCompletionParams.reasoning_format,
+        },
+      );
+      const diagPrompt =
+        typeof diagResult === 'string'
+          ? diagResult
+          : diagResult?.prompt || JSON.stringify(diagResult);
+      engineInputLog('thinking-diagnostic', {
+        requestId,
+        getFormattedChatResultType: typeof diagResult,
+        hasThinkTag: diagPrompt.includes('<think>'),
+        hasEnableThinkingInTemplate: diagPrompt.includes('enable_thinking'),
+        promptPreview: diagPrompt,
+        promptLength: diagPrompt.length,
+      });
+    } catch (diagError) {
+      engineInputLog('thinking-diagnostic-error', {
+        requestId,
+        error:
+          diagError instanceof Error ? diagError.message : String(diagError),
+      });
+    }
+  }
+
+  // 类1: 引擎输入 — 实际发送给 llama.rn 的参数包
+  engineInputLog('request', {
+    requestId,
+    completionTransport,
+    model: {
+      id: modelStore.activeModel?.id,
+      name: modelStore.activeModel?.name,
+    },
+    runtimeContext: {
+      n_ctx:
+        modelStore.activeContextSettings?.n_ctx ??
+        modelStore.contextInitParams.n_ctx,
+      ctx_shift:
+        modelStore.activeContextSettings?.ctx_shift ??
+        modelStore.contextInitParams.ctx_shift ??
+        true,
+      activeContextLoaded: Boolean(modelStore.activeContextSettings),
+      reserved_output_tokens:
+        (sessionCompletionSettings as CompletionParams)
+          ?.reserved_output_tokens ?? 128,
+    },
+    input: {
+      userMessageLength: message.text.length,
+      imageCount: imageUris.length,
+      systemMessageCount: systemMessages.length,
+    },
+    settings: {
+      temperature: cleanCompletionParams.temperature,
+      top_k: cleanCompletionParams.top_k,
+      top_p: cleanCompletionParams.top_p,
+      min_p: cleanCompletionParams.min_p,
+      seed: cleanCompletionParams.seed,
+      n_predict: cleanCompletionParams.n_predict,
+      enable_thinking: cleanCompletionParams.enable_thinking,
+      reasoning_format: cleanCompletionParams.reasoning_format,
+      stop: cleanCompletionParams.stop,
+    },
+    template: {
+      effectiveInterpreter: effectiveTemplateInterpreter,
+      hasCustomTemplate: Boolean(!isNunjucks && modelTemplate),
+      isNunjucksFallback: isNunjucks && hasImages,
+      nunjucksRenderError,
+    },
+    probe: buildCompletionParamProbe(cleanCompletionParams as any),
+  });
+
+  // 类4: 参数来源 — thinkingAssembly 推导链
+  paramSourceLog('thinkingAssembly', {requestId, thinkingAssembly});
+
+  // 类3: Prompt 构建 — 模板来源信息
+  promptBuildLog('prepareCompletion:params', {
+    requestId,
+    completionTransport,
+    template: {
+      selectedTemplateName: modelStore.activeModel?.chatTemplate?.name,
+      effectiveTemplateInterpreter,
+      modelTemplateFull: modelTemplate || '',
+      contextTemplateFull: String(contextTemplate || ''),
+      nunjucksRenderError,
+    },
+    systemMessages,
+    contextMetadata: {
+      architecture: (context?.model as any)?.metadata?.['general.architecture'],
+      eosTokenId: (context?.model as any)?.metadata?.[
+        'tokenizer.ggml.eos_token_id'
+      ],
+      bosTokenId: (context?.model as any)?.metadata?.[
+        'tokenizer.ggml.bos_token_id'
+      ],
+      chatTemplateHash: getTextDiagnostics(contextTemplate).hash,
+    },
+  });
 
   // Create empty assistant message in both database and store
   const createdAt = Date.now();
+  const activeModelDisplayName =
+    modelStore.activeModel?.name ||
+    (context?.model as any)?.description ||
+    (context?.model as any)?.name;
   const emptyMessage: MessageType.Text = {
     author: assistant,
     createdAt: createdAt,
@@ -138,6 +1094,7 @@ const prepareCompletion = async ({
       contextId: context.id,
       conversationId: conversationIdRef,
       copyable: true,
+      modelDisplayName: activeModelDisplayName,
       multimodal: hasImages, // Simple check based on presence of images
     },
   };
@@ -151,7 +1108,14 @@ const prepareCompletion = async ({
     sessionId: chatSessionStore.activeSessionId!,
   };
 
-  return {cleanCompletionParams, messageInfo};
+  return {
+    cleanCompletionParams,
+    messageInfo,
+    requestId,
+    completionTransport,
+    inputTokenEstimate,
+    truncation,
+  };
 };
 
 export const useChatSession = (
@@ -218,6 +1182,7 @@ export const useChatSession = (
     await addMessage(textMessage);
     modelStore.setInferencing(true);
     modelStore.setIsStreaming(false);
+    modelStore.setPromptProcessingProgress(null);
     chatSessionStore.setIsGenerating(true);
 
     // Keep screen awake during completion
@@ -243,7 +1208,14 @@ export const useChatSession = (
     });
 
     // Prepare completion parameters and create message record
-    const {cleanCompletionParams, messageInfo} = await prepareCompletion({
+    const {
+      cleanCompletionParams,
+      messageInfo,
+      requestId,
+      completionTransport,
+      inputTokenEstimate,
+      truncation,
+    } = await prepareCompletion({
       imageUris: imageUris || [],
       message,
       systemMessages,
@@ -257,10 +1229,72 @@ export const useChatSession = (
 
     currentMessageInfo.current = messageInfo;
 
+    let completionSettled = false;
+    let cancelNativeCallHeartbeats: () => void = () => undefined;
+    let cancelEstimatedPromptProgress: () => void = () => undefined;
+
     try {
       // Track time to first token
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
+      let streamChunkCount = 0;
+      let firstAnomalousChunkLogged = false;
+      let nativeBridgeReturned = false;
+      let firstNativeChunkSeen = false;
+      let firstCallbackKeys: string[] = [];
+      let firstTokenPreview = '';
+      let promptProgressEventCount = 0;
+      let streamPayloadEventCount = 0;
+      let firstPromptProgressPayload: {
+        prompt_progress: unknown;
+        prompt_tokens_processed: unknown;
+        prompt_tokens_total: unknown;
+        keys: string[];
+      } | null = null;
+      const estimatedPromptDurationMs =
+        modelStore.getEstimatedPromptDurationMs(inputTokenEstimate);
+
+      // State machine for real-time <think> tag parsing when RF is off.
+      // When RF is on, llama.rn natively splits reasoning_content/content.
+      // When RF is off, <think>...</think> is embedded in content stream.
+      let thinkParseInBlock = false; // currently inside <think>...</think>
+      let thinkParseDone = false; // </think> has been seen, now pure response
+      let thinkParseBuffer = ''; // partial tag buffer for split-chunk detection
+      let thinkParseAccumReasoning = ''; // accumulated reasoning for partial update
+
+      cancelNativeCallHeartbeats = scheduleEngineOutputHeartbeats(
+        'completion:native-call-heartbeat',
+        () => ({
+          requestId,
+          transport: completionTransport,
+          nativeBridgeReturned,
+          firstNativeChunkSeen,
+          completionSettled,
+          isStreaming: modelStore.isStreaming,
+          inferencing: modelStore.inferencing,
+        }),
+      );
+
+      if (estimatedPromptDurationMs !== null) {
+        const estimateStartTime = Date.now();
+        const updateEstimatedPromptProgress = () => {
+          const elapsedMs = Date.now() - estimateStartTime;
+          const nextProgress = Math.max(
+            1,
+            Math.min(
+              95,
+              Math.round((elapsedMs / estimatedPromptDurationMs) * 100),
+            ),
+          );
+          modelStore.setPromptProcessingProgress(nextProgress);
+        };
+
+        updateEstimatedPromptProgress();
+        const intervalId = setInterval(updateEstimatedPromptProgress, 120);
+        cancelEstimatedPromptProgress = () => {
+          clearInterval(intervalId);
+        };
+      }
 
       // Create the completion promise and register it with modelStore
       // This enables safe context release by waiting for the promise to finish
@@ -268,18 +1302,190 @@ export const useChatSession = (
         cleanCompletionParams,
         data => {
           if (currentMessageInfo.current) {
+            const promptProgress =
+              typeof (data as any).prompt_progress === 'number'
+                ? Math.max(
+                    0,
+                    Math.min(100, Math.round((data as any).prompt_progress)),
+                  )
+                : null;
+            const hasStreamPayload = Boolean(
+              data.token || data.content || data.reasoning_content,
+            );
+
+            if (promptProgress !== null) {
+              promptProgressEventCount += 1;
+              if (!firstPromptProgressPayload) {
+                firstPromptProgressPayload = {
+                  prompt_progress: (data as any).prompt_progress,
+                  prompt_tokens_processed: (data as any)
+                    .prompt_tokens_processed,
+                  prompt_tokens_total: (data as any).prompt_tokens_total,
+                  keys: Object.keys(data || {}),
+                };
+              }
+              if (promptProgressEventCount <= 8) {
+                engineOutputLog('completion:prompt-progress-event', {
+                  requestId,
+                  eventIndex: promptProgressEventCount,
+                  prompt_progress: (data as any).prompt_progress,
+                  prompt_tokens_processed: (data as any)
+                    .prompt_tokens_processed,
+                  prompt_tokens_total: (data as any).prompt_tokens_total,
+                  hasStreamPayload,
+                  callbackKeys: Object.keys(data || {}),
+                });
+              }
+            }
+
+            if (promptProgress !== null && !hasStreamPayload) {
+              modelStore.setPromptProcessingProgress(promptProgress);
+              return;
+            }
+
             // Capture time to first token on the first token received
             if (timeToFirstToken === null && (data.token || data.content)) {
               timeToFirstToken = Date.now() - completionStartTime;
             }
 
+            if (
+              !firstNativeChunkSeen &&
+              (data.token || data.content || data.reasoning_content)
+            ) {
+              firstNativeChunkSeen = true;
+              firstCallbackKeys = Object.keys(data || {});
+              firstTokenPreview = previewText((data as any)?.token, 120);
+            }
+
+            if (hasStreamPayload) {
+              streamPayloadEventCount += 1;
+              if (streamPayloadEventCount <= 5) {
+                engineOutputLog('completion:stream-callback-event', {
+                  requestId,
+                  eventIndex: streamPayloadEventCount,
+                  callbackKeys: Object.keys(data || {}),
+                  tokenPreview: previewText((data as any)?.token, 120),
+                  contentPreview: previewText((data as any)?.content, 120),
+                  reasoningPreview: previewText(
+                    (data as any)?.reasoning_content,
+                    120,
+                  ),
+                  prompt_progress: (data as any)?.prompt_progress,
+                  prompt_tokens_processed: (data as any)
+                    ?.prompt_tokens_processed,
+                  prompt_tokens_total: (data as any)?.prompt_tokens_total,
+                });
+              }
+            }
+
             if (!modelStore.isStreaming) {
+              cancelEstimatedPromptProgress();
+              modelStore.setPromptProcessingProgress(null);
               modelStore.setIsStreaming(true);
             }
 
-            // Use content and reasoning_content from the streaming data
-            // llama.rn already separates these for us when enable_thinking is true
-            const {content = '', reasoning_content: reasoningContent} = data;
+            // Use content and reasoning_content from the streaming data.
+            // When RF is on, llama.rn natively splits them. When RF is off,
+            // we parse <think>...</think> from the content stream in real-time.
+            let {content = '', reasoning_content: reasoningContent} = data;
+            if (!reasoningContent && content && !thinkParseDone) {
+              // RF is off — run state machine on this chunk
+              let chunk = thinkParseBuffer + content;
+              thinkParseBuffer = '';
+              let parsedReasoning = '';
+              let parsedContent = '';
+              let i = 0;
+              while (i < chunk.length) {
+                if (!thinkParseInBlock && !thinkParseDone) {
+                  const openIdx = chunk.indexOf('<think>', i);
+                  if (openIdx === i) {
+                    thinkParseInBlock = true;
+                    i += 7;
+                  } else if (openIdx !== -1) {
+                    parsedContent += chunk.slice(i, openIdx);
+                    thinkParseInBlock = true;
+                    i = openIdx + 7;
+                  } else {
+                    // Check if chunk ends with a partial '<think>' prefix
+                    const tag = '<think>';
+                    let overlap = 0;
+                    for (let k = 1; k < tag.length; k++) {
+                      if (chunk.endsWith(tag.slice(0, k))) {
+                        overlap = k;
+                      }
+                    }
+                    if (overlap > 0) {
+                      parsedContent += chunk.slice(i, chunk.length - overlap);
+                      thinkParseBuffer = chunk.slice(chunk.length - overlap);
+                    } else {
+                      parsedContent += chunk.slice(i);
+                    }
+                    break;
+                  }
+                } else if (thinkParseInBlock) {
+                  const closeIdx = chunk.indexOf('</think>', i);
+                  if (closeIdx !== -1) {
+                    parsedReasoning += chunk.slice(i, closeIdx);
+                    thinkParseInBlock = false;
+                    thinkParseDone = true;
+                    i = closeIdx + 8;
+                  } else {
+                    // Check for partial '</think>' at end
+                    const tag = '</think>';
+                    let overlap = 0;
+                    for (let k = 1; k < tag.length; k++) {
+                      if (chunk.endsWith(tag.slice(0, k))) {
+                        overlap = k;
+                      }
+                    }
+                    if (overlap > 0) {
+                      parsedReasoning += chunk.slice(i, chunk.length - overlap);
+                      thinkParseBuffer = chunk.slice(chunk.length - overlap);
+                    } else {
+                      parsedReasoning += chunk.slice(i);
+                    }
+                    break;
+                  }
+                } else {
+                  // thinkParseDone — rest is pure response
+                  parsedContent += chunk.slice(i);
+                  break;
+                }
+              }
+              if (parsedReasoning) {
+                thinkParseAccumReasoning += parsedReasoning;
+              }
+              content = parsedContent;
+              reasoningContent = thinkParseAccumReasoning || undefined;
+            }
+
+            if (content || reasoningContent) {
+              streamChunkCount += 1;
+            }
+
+            if (!firstAnomalousChunkLogged && (content || reasoningContent)) {
+              const contentDiag = getTextDiagnostics(content);
+              const reasoningDiag = getTextDiagnostics(reasoningContent);
+              const suspiciousContent =
+                contentDiag.symbolRatio > 0.45 ||
+                contentDiag.repeatedCharMaxRun >= 6 ||
+                contentDiag.repeatedBigramCount >= 10;
+              const suspiciousReasoning =
+                reasoningDiag.symbolRatio > 0.45 ||
+                reasoningDiag.repeatedCharMaxRun >= 6 ||
+                reasoningDiag.repeatedBigramCount >= 10;
+              if (suspiciousContent || suspiciousReasoning) {
+                firstAnomalousChunkLogged = true;
+                engineOutputLog('completion:anomalous-chunk', {
+                  requestId,
+                  streamChunkCount,
+                  callbackKeys: Object.keys(data || {}),
+                  tokenPreview: previewText((data as any)?.token, 120),
+                  contentDiag,
+                  reasoningDiag,
+                });
+              }
+            }
 
             // Update message with the separated content
             if (content || reasoningContent) {
@@ -308,27 +1514,46 @@ export const useChatSession = (
           }
         },
       );
+      nativeBridgeReturned = true;
 
       // Register the promise so releaseContext can wait for it
       modelStore.registerCompletionPromise(completionPromise);
 
       // Await the completion
       const result = await completionPromise;
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
+      cancelEstimatedPromptProgress();
 
       // Clear the promise after completion finishes
       modelStore.clearCompletionPromise();
+      modelStore.updatePromptProcessingPrediction(
+        (result as any)?.timings?.prompt_n ?? inputTokenEstimate,
+        (result as any)?.timings?.prompt_ms,
+      );
 
-      // Log completion result with time to first token for debugging
-      if (__DEV__) {
-        console.log('Completion result:', {
-          ...result.timings,
-          time_to_first_token_ms: timeToFirstToken,
-          reasoning_content: result.reasoning_content,
-          content: result.content,
-          text: result.text,
-        });
-        console.log('result', result);
-      }
+      // 类2: 引擎输出 — 完成结果与性能数据
+      const tokenUsage = extractTokenUsage(
+        ((result as any)?.usage as Record<string, unknown> | undefined) ??
+          undefined,
+        streamChunkCount,
+      );
+      engineOutputLog('completion:result', {
+        requestId,
+        timings: result.timings,
+        time_to_first_token_ms: timeToFirstToken,
+        input_tokens: tokenUsage.inputTokens ?? inputTokenEstimate,
+        output_tokens: tokenUsage.outputTokens,
+        total_tokens: tokenUsage.totalTokens,
+        promptProgressEventCount,
+        streamPayloadEventCount,
+        firstPromptProgressPayload,
+        streamChunkCount,
+        firstCallbackKeys,
+        firstTokenPreview,
+        finalTextDiag: getTextDiagnostics(result.text),
+        finalReasoningDiag: getTextDiagnostics(result.reasoning_content),
+      });
 
       // Update final completion metadata
       await chatSessionStore.updateMessage(
@@ -339,25 +1564,65 @@ export const useChatSession = (
             timings: {
               ...result.timings,
               time_to_first_token_ms: timeToFirstToken,
+              input_token_count: tokenUsage.inputTokens ?? inputTokenEstimate,
+              output_token_count: tokenUsage.outputTokens,
+              total_token_count: tokenUsage.totalTokens,
             },
+            ...(truncation.wasTruncated
+              ? {
+                  context_truncation: {
+                    history_retained_percent: truncation.historyRetainedPercent,
+                    input_retained_percent: truncation.inputRetainedPercent,
+                    prompt_retained_percent: truncation.systemRetainedPercent,
+                  },
+                }
+              : {}),
             copyable: true,
             // Add multimodal flag if this was a multimodal completion
             multimodal: hasImages && isMultimodalEnabled,
-            // Save the final completion result with reasoning_content
-            completionResult: {
-              reasoning_content: result.reasoning_content,
-              content: result.text,
-            },
+            // Save the final completion result with reasoning_content.
+            // Parse </think> tag: model always embeds <think>...</think> in result.text.
+            // Strip it out so displayed content is clean, and use it as reasoning_content
+            // when RF is off (result.reasoning_content is empty). Also prevents OOM crash
+            // when RF is on and result.text === result.reasoning_content (identical content).
+            completionResult: (() => {
+              const thinkEnd = result.text.indexOf('</think>');
+              if (thinkEnd !== -1) {
+                const thinkStart = result.text.indexOf('<think>');
+                const thinkContent =
+                  thinkStart !== -1
+                    ? result.text.slice(thinkStart + 7, thinkEnd)
+                    : result.text.slice(0, thinkEnd);
+                const cleanText = result.text.slice(thinkEnd + 8).trimStart();
+                return {
+                  reasoning_content: result.reasoning_content || thinkContent,
+                  content: cleanText,
+                };
+              }
+              return {
+                reasoning_content: result.reasoning_content,
+                content: result.text,
+              };
+            })(),
           },
         },
       );
+      modelStore.setPromptProcessingProgress(null);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
     } catch (error) {
+      completionSettled = true;
+      cancelNativeCallHeartbeats();
+      cancelEstimatedPromptProgress();
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
       console.error('Completion error:', error);
+      engineOutputLog('completion:error', {
+        requestId,
+        error: error instanceof Error ? error.message : JSON.stringify(error),
+      });
+      modelStore.setPromptProcessingProgress(null);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
@@ -414,6 +1679,7 @@ export const useChatSession = (
     if (modelStore.inferencing && context) {
       context.stopCompletion();
     }
+    modelStore.setPromptProcessingProgress(null);
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);

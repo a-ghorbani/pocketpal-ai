@@ -242,12 +242,7 @@
       "confirmReset": "確認重置"
     },
     "usageStats": {
-      "byteSizes": [
-        "位元組",
-        "KB",
-        "MB",
-        "GB"
-      ],
+      "byteSizes": ["位元組", "KB", "MB", "GB"],
       "tooltip": {
         "usage": "使用率: ",
         "total": "總計: ",
@@ -588,6 +583,11 @@
     "metalDescription": "蘋果的硬體加速 API。",
     "metalRequiresNewerIOS": "Metal 加速需要 iOS 18 或更高版本。請升級您的裝置以使用此功能。",
     "layersOnGPU": "GPU 上的層數: {{gpuLayers}}",
+    "visionDeviceSelection": "Vision Encoder Device",
+    "visionDeviceSelectionIOS": "Vision Encoder Device",
+    "visionDeviceSelectionDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceSelectionIOSDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceCpuOnly": "Vision encoder: CPU only - No hardware accelerators detected",
     "contextSize": "上下文大小",
     "contextSizePlaceholder": "輸入上下文大小 (至少 {{minContextSize}})",
     "invalidContextSizeError": "請輸入有效數字 (至少{{minContextSize}})",

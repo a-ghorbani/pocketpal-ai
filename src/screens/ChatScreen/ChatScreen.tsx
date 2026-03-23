@@ -107,39 +107,70 @@ export const ChatScreen: React.FC = observer(() => {
 
   const thinkingSupported = modelStore.activeModel?.supportsThinking ?? false;
 
-  const thinkingEnabled = (() => {
+  const getCurrentSessionSettings = () => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
-    const settings =
+    return (
       currentSession?.completionSettings ??
-      chatSessionStore.newChatCompletionSettings;
+      chatSessionStore.newChatCompletionSettings
+    );
+  };
+
+  // UI toggle: show_thinking_bubble (controls ThinkingBubble rendering only)
+  const thinkingEnabled = (() => {
+    const settings = getCurrentSessionSettings();
+    return settings.show_thinking_bubble ?? true;
+  })();
+
+  // Inference param: enable_thinking
+  const enableThinkingEnabled = (() => {
+    const settings = getCurrentSessionSettings();
     return settings.enable_thinking ?? true;
+  })();
+
+  // Inference param: reasoning_format (true = 'auto')
+  const reasoningFormatEnabled = (() => {
+    const settings = getCurrentSessionSettings();
+    return settings.reasoning_format === 'auto';
   })();
 
   // Show loading bubble only during the thinking phase (inferencing but not streaming)
   const isThinking = modelStore.inferencing && !modelStore.isStreaming;
+  const promptProcessingProgress = modelStore.promptProcessingProgress;
 
-  const handleThinkingToggle = async (enabled: boolean) => {
+  const updateSessionSetting = async (patch: Record<string, unknown>) => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
-
     if (currentSession) {
-      // Update session-specific settings
-      const updatedSettings = {
+      await chatSessionStore.updateSessionCompletionSettings({
         ...currentSession.completionSettings,
-        enable_thinking: enabled,
-      };
-      await chatSessionStore.updateSessionCompletionSettings(updatedSettings);
+        ...patch,
+      });
     } else {
-      // Update global settings for new chats
-      const updatedSettings = {
+      await chatSessionStore.setNewChatCompletionSettings({
         ...chatSessionStore.newChatCompletionSettings,
-        enable_thinking: enabled,
-      };
-      await chatSessionStore.setNewChatCompletionSettings(updatedSettings);
+        ...patch,
+      });
     }
+  };
+
+  // UI toggle: controls show_thinking_bubble (ThinkingBubble rendering)
+  const handleThinkingToggle = async (enabled: boolean) => {
+    await updateSessionSetting({show_thinking_bubble: enabled});
+  };
+
+  // Inference param toggle: enable_thinking
+  const handleEnableThinkingToggle = async (enabled: boolean) => {
+    await updateSessionSetting({enable_thinking: enabled});
+  };
+
+  // Inference param toggle: reasoning_format
+  const handleReasoningFormatToggle = async (enabled: boolean) => {
+    await updateSessionSetting({
+      reasoning_format: enabled ? 'auto' : undefined,
+    });
   };
 
   // If the active pal is a video pal, show the video pal screen
@@ -160,6 +191,7 @@ export const ChatScreen: React.FC = observer(() => {
         user={user}
         isStopVisible={modelStore.inferencing}
         isThinking={isThinking}
+        promptProcessingProgress={promptProcessingProgress}
         isStreaming={modelStore.isStreaming}
         sendButtonVisibilityMode="always"
         showImageUpload={true}
@@ -170,6 +202,10 @@ export const ChatScreen: React.FC = observer(() => {
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
+          isEnableThinkingOn: enableThinkingEnabled,
+          onEnableThinkingToggle: handleEnableThinkingToggle,
+          isReasoningFormatOn: reasoningFormatEnabled,
+          onReasoningFormatToggle: handleReasoningFormatToggle,
         }}
         textInputProps={{
           placeholder: !modelStore.context

@@ -14,7 +14,7 @@ import {CompletionParams} from './completionTypes';
 
 // Current version of the completion settings schema
 // Increment this when adding new settings or changing existing ones
-export const CURRENT_COMPLETION_SETTINGS_VERSION = 3;
+export const CURRENT_COMPLETION_SETTINGS_VERSION = 5;
 
 /**
  * Default completion parameters used throughout the app
@@ -23,10 +23,12 @@ export const defaultCompletionParams: CompletionParams = {
   // App-specific properties
   version: CURRENT_COMPLETION_SETTINGS_VERSION, // Schema version for migrations
   include_thinking_in_context: true, // Whether to include thinking parts in the context sent to the model
+  show_thinking_bubble: true, // Whether to render the thinking/reasoning content in a separate UI bubble
 
   // llama.rn API properties
   prompt: '',
-  n_predict: 1024, // The maximum number of tokens to predict when generating text.
+  n_predict: -1, // The maximum number of tokens to predict (-1 = unlimited).
+  reserved_output_tokens: 128, // Reserved generation budget used by input pruning.
   temperature: 0.7, // The randomness of the generated text.
   top_k: 40, // Limit the next token selection to the K most probable tokens.
   top_p: 0.95, // Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P.
@@ -44,8 +46,8 @@ export const defaultCompletionParams: CompletionParams = {
   seed: -1,
   n_probs: 0, // If greater than 0, the response also contains the probabilities of top N tokens for each generated token given the sampling settings.
   stop: ['</s>'],
-  jinja: true, // Whether to use Jinja templating for chat formatting
   enable_thinking: true, // Whether to enable thinking mode for compatible models
+  reasoning_format: 'auto' as const, // The format for returning reasoning content ('auto' returns it in a separate field)
   // emit_partial_completion: true, // This is not used in the current version of llama.rn
 };
 
@@ -72,8 +74,8 @@ export function migrateCompletionSettings(settings: any): any {
   }
 
   if (migratedSettings.version < 2) {
-    // Migration to version 2: Add jinja parameter
-    migratedSettings.jinja = defaultCompletionParams.jinja;
+    // Migration to version 2: (jinja parameter removed, no-op)
+    delete migratedSettings.jinja;
     migratedSettings.version = 2;
   }
 
@@ -85,11 +87,20 @@ export function migrateCompletionSettings(settings: any): any {
   }
 
   // Add future migrations here as needed
-  // if (migratedSettings.version < 4) {
-  //   // Migration to version 4
-  //   migratedSettings.new_field = defaultCompletionParams.new_field;
-  //   migratedSettings.version = 4;
-  // }
+  if (migratedSettings.version < 4) {
+    // Migration to version 4: Add show_thinking_bubble and reasoning_format
+    migratedSettings.show_thinking_bubble =
+      defaultCompletionParams.show_thinking_bubble;
+    migratedSettings.reasoning_format =
+      defaultCompletionParams.reasoning_format;
+    migratedSettings.version = 4;
+  }
+
+  if (migratedSettings.version < 5) {
+    migratedSettings.reserved_output_tokens =
+      defaultCompletionParams.reserved_output_tokens;
+    migratedSettings.version = 5;
+  }
 
   return migratedSettings;
 }

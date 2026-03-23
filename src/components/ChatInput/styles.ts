@@ -2,28 +2,31 @@ import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 import {fontStyles} from '../../utils/theme';
+import {ControlBarLayout} from './ChatInput';
 
 export const createStyles = ({
   theme,
   isEditMode,
+  controlBarLayout,
 }: {
   theme: Theme;
   isEditMode: boolean;
+  controlBarLayout: ControlBarLayout;
 }) =>
   StyleSheet.create({
     container: {
       flexDirection: 'column',
     },
     palBtn: {
-      height: 28,
-      width: 28,
+      height: controlBarLayout.compactIconButtonSize,
+      width: controlBarLayout.compactIconButtonSize,
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 100,
     },
     plusButton: {
-      height: 28,
-      width: 28,
+      height: controlBarLayout.compactIconButtonSize,
+      width: controlBarLayout.compactIconButtonSize,
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 100,
@@ -44,17 +47,17 @@ export const createStyles = ({
       justifyContent: 'center',
       borderRadius: 16,
       borderWidth: 1,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      marginLeft: 8,
+      paddingHorizontal: controlBarLayout.togglePaddingHorizontal,
+      paddingVertical: controlBarLayout.togglePaddingVertical,
+      flexShrink: 1,
     },
     thinkingToggleLeftDisabled: {
       backgroundColor: 'transparent',
     },
     thinkingToggleText: {
-      fontSize: 12,
+      fontSize: controlBarLayout.toggleTextFontSize,
       fontWeight: '500',
-      marginLeft: 4,
+      marginLeft: controlBarLayout.toggleTextMarginLeft,
     },
     thinkingToggleTextDisabled: {
       // Dynamic color will be applied via theme
@@ -94,22 +97,49 @@ export const createStyles = ({
     },
     controlBar: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       justifyContent: 'space-between',
-      paddingHorizontal: 24,
+      paddingHorizontal: controlBarLayout.controlBarPaddingHorizontal,
       paddingVertical: 10,
       minHeight: 36,
     },
     leftControls: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: controlBarLayout.leftControlsGap,
       flex: 1,
+      minWidth: 0,
     },
     rightControls: {
       position: 'relative',
       flexDirection: 'row',
       alignItems: 'center',
+      gap: controlBarLayout.rightControlsGap,
+      marginLeft: controlBarLayout.rightControlsMarginLeft,
+      flexShrink: 0,
+    },
+    contextUsageBadge: {
+      minWidth: controlBarLayout.contextUsageMinWidth,
+      paddingHorizontal: controlBarLayout.contextUsagePaddingHorizontal,
+      paddingVertical: controlBarLayout.contextUsagePaddingVertical,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.surfaceVariant,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      marginRight: controlBarLayout.contextUsageMarginRight,
+    },
+    contextUsagePrimary: {
+      color: theme.colors.onSurface,
+      fontSize: controlBarLayout.contextUsagePrimaryFontSize,
+      lineHeight: controlBarLayout.contextUsagePrimaryLineHeight,
+      fontWeight: '700',
+    },
+    contextUsageSecondary: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: controlBarLayout.contextUsageSecondaryFontSize,
+      lineHeight: controlBarLayout.contextUsageSecondaryLineHeight,
     },
     editBar: {
       position: 'absolute',
@@ -272,5 +302,11 @@ export const createStyles = ({
       color: theme.colors.onErrorContainer,
       fontSize: 11,
       lineHeight: 14,
+    },
+    sendButtonSpacing: {
+      marginLeft: controlBarLayout.sendButtonSpacing,
+    },
+    noTextOffset: {
+      marginLeft: 0,
     },
   });

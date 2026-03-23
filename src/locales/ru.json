@@ -215,8 +215,7 @@
     "xtc_probability": "Шанс удаления токенов через сэмплер XTC. 0 - отключено",
     "xtc_threshold": "Минимальный порог вероятности для удаления токенов в XTC (значения > 0.5 отключают XTC)",
     "typical_p": "Включить локально-типичное сэмплирование с параметром p. 1.0 - отключено",
-    "include_thinking_in_context": "Включать рассуждения ИИ в контекст, отправляемый модели. Отключение экономит место в контексте. Но может снизить качество ответов.",
-    "jinja": "Включить шаблоны Jinja для форматирования чата. При включении используется обработка шаблонов Jinja для лучшей совместимости с современными моделями."
+    "include_thinking_in_context": "Включать рассуждения ИИ в контекст, отправляемый модели. Отключение экономит место в контексте. Но может снизить качество ответов."
   },
   "components": {
     "attachmentButton": {
@@ -436,12 +435,7 @@
         "total": "Всего: ",
         "usage": "Использование: "
       },
-      "byteSizes": [
-        "Байт",
-        "КБ",
-        "МБ",
-        "ГБ"
-      ]
+      "byteSizes": ["Байт", "КБ", "МБ", "ГБ"]
     },
     "exportUtils": {
       "fileSaved": "Файл сохранён",
@@ -797,7 +791,9 @@
         "deleteTitle": "Удалить модель",
         "deleteMessage": "Вы уверены, что хотите удалить эту загруженную модель?",
         "removeTitle": "Удалить из списка",
-        "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?"
+        "removeMessage": "Вы уверены, что хотите удалить эту модель из списка?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Настройки",
@@ -816,7 +812,9 @@
         "author": "Автор",
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
-        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face"
+        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",
@@ -977,6 +975,11 @@
     "deviceSelectionIOSDescription": "Выберите GPU Metal или режим работы только с CPU",
     "deviceSelectionAndroidDescription": "Выберите вычислительное устройство (CPU, GPU или Hexagon NPU)",
     "cpuOnlyNoAccelerators": "Только CPU - аппаратные ускорители не обнаружены",
+    "visionDeviceSelection": "Vision Encoder Device",
+    "visionDeviceSelectionIOS": "Vision Encoder Device",
+    "visionDeviceSelectionDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceSelectionIOSDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceCpuOnly": "Vision encoder: CPU only - No hardware accelerators detected",
     "imageMaxTokens": "Макс. токенов для изображения",
     "imageMaxTokensDescription": "Максимальное количество токенов для обработки изображения: {{tokens}}{{effectiveTokens}} (меньше = быстрее, но меньше деталей)",
     "flashAttentionIOSDescription": "Экономное использование памяти (автоматически включено на Metal)",

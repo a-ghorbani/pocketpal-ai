@@ -1,0 +1,1 @@
+export {CollapsibleUserMessage} from './CollapsibleUserMessage';

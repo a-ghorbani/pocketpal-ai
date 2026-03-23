@@ -11,16 +11,17 @@ yarn install
 
 ## Test Specs
 
-| Spec | What it tests | Duration |
-|------|---------------|----------|
-| `quick-smoke` | Full user journey: navigate to Models → search HuggingFace → download SmolLM2-135M → load model → chat → verify inference completes | ~50-70s/device |
-| `load-stress` | Download model, run multiple load/unload cycles with inference between each. Catches crash-on-reload bugs | ~5-10 min/device |
-| `thinking` | Loads Qwen3-0.6B (thinking model), verifies thinking toggle, thinking bubble appears, toggle off suppresses it | ~3-5 min/device |
-| `diagnostic` | Dumps Appium page source XML at each screen. For debugging selectors, not a real test | ~10s |
+| Spec          | What it tests                                                                                                                       | Duration         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `quick-smoke` | Full user journey: navigate to Models → search HuggingFace → download SmolLM2-135M → load model → chat → verify inference completes | ~50-70s/device   |
+| `load-stress` | Download model, run multiple load/unload cycles with inference between each. Catches crash-on-reload bugs                           | ~5-10 min/device |
+| `thinking`    | Loads Qwen3-0.6B (thinking model), verifies thinking toggle, thinking bubble appears, toggle off suppresses it                      | ~3-5 min/device  |
+| `diagnostic`  | Dumps Appium page source XML at each screen. For debugging selectors, not a real test                                               | ~10s             |
 
 ## Local Testing
 
 ### Prerequisites
+
 - Xcode configured (for iOS)
 - Android SDK configured (for Android)
 - Build the app first (see below)
@@ -76,20 +77,20 @@ yarn e2e --list-models
 
 ### Flags
 
-| Flag | Values | Default | Description |
-|------|--------|---------|-------------|
-| `--platform` | `ios`, `android`, `both` | _(required)_ | Which platform(s) to test |
-| `--spec` | `quick-smoke`, `load-stress`, `diagnostic`, `language`, `all` | `quick-smoke` | Which test spec to run |
-| `--models` | comma-separated model IDs | _(all)_ | Specific model(s) to test |
-| `--each-model` | _(flag)_ | off | Iterate spec once per model (isolated process) |
-| `--all-models` | _(flag)_ | off | Include crash-repro models in the pool |
-| `--devices` | `all`, `virtual-only`, `real-only`, `connected`, or comma-separated IDs | `all` | Device filter (implies `--each-device`) |
-| `--each-device` | _(flag)_ | off | Iterate across devices from `devices.json` |
-| `--mode` | `local`, `device-farm` | `local` | Execution mode (switches wdio config) |
-| `--skip-build` | _(flag)_ | builds by default | Skip app builds, reuse existing |
-| `--dry-run` | _(flag)_ | off | Print what would run without executing |
-| `--report-dir` | path | auto-timestamped | Override report output directory |
-| `--list-models` | _(flag)_ | off | List all available models and exit |
+| Flag            | Values                                                                  | Default           | Description                                    |
+| --------------- | ----------------------------------------------------------------------- | ----------------- | ---------------------------------------------- |
+| `--platform`    | `ios`, `android`, `both`                                                | _(required)_      | Which platform(s) to test                      |
+| `--spec`        | `quick-smoke`, `load-stress`, `diagnostic`, `language`, `all`           | `quick-smoke`     | Which test spec to run                         |
+| `--models`      | comma-separated model IDs                                               | _(all)_           | Specific model(s) to test                      |
+| `--each-model`  | _(flag)_                                                                | off               | Iterate spec once per model (isolated process) |
+| `--all-models`  | _(flag)_                                                                | off               | Include crash-repro models in the pool         |
+| `--devices`     | `all`, `virtual-only`, `real-only`, `connected`, or comma-separated IDs | `all`             | Device filter (implies `--each-device`)        |
+| `--each-device` | _(flag)_                                                                | off               | Iterate across devices from `devices.json`     |
+| `--mode`        | `local`, `device-farm`                                                  | `local`           | Execution mode (switches wdio config)          |
+| `--skip-build`  | _(flag)_                                                                | builds by default | Skip app builds, reuse existing                |
+| `--dry-run`     | _(flag)_                                                                | off               | Print what would run without executing         |
+| `--report-dir`  | path                                                                    | auto-timestamped  | Override report output directory               |
+| `--list-models` | _(flag)_                                                                | off               | List all available models and exit             |
 
 ### Direct WDIO Commands
 
@@ -104,21 +105,22 @@ npx wdio run wdio.android.local.conf.ts --spec specs/load-stress.spec.ts
 
 Both `wdio.ios.local.conf.ts` and `wdio.android.local.conf.ts` accept these env vars with backward-compatible defaults:
 
-| Env Var | iOS Default | Android Default | Purpose |
-|---------|-------------|-----------------|---------|
-| `E2E_DEVICE_NAME` | `iPhone 17 Pro` | `emulator-5554` | Device/simulator name |
-| `E2E_PLATFORM_VERSION` | `26.0` | `16` | OS version |
-| `E2E_DEVICE_UDID` | _(none)_ | _(none)_ | Device UDID (required for real devices) |
-| `E2E_APP_PATH` | `../ios/build/.../PocketPal.app` | `../android/.../app-release.apk` | Path to built app |
-| `E2E_APPIUM_PORT` | `4723` | `4723` | Appium server port |
-| `E2E_XCODE_ORG_ID` | _(none)_ | N/A | Apple Team ID (required for real iOS devices) |
-| `E2E_XCODE_SIGNING_ID` | `Apple Development` | N/A | Code signing identity for WDA |
+| Env Var                | iOS Default                      | Android Default                  | Purpose                                       |
+| ---------------------- | -------------------------------- | -------------------------------- | --------------------------------------------- |
+| `E2E_DEVICE_NAME`      | `iPhone 17 Pro`                  | `emulator-5554`                  | Device/simulator name                         |
+| `E2E_PLATFORM_VERSION` | `26.0`                           | `16`                             | OS version                                    |
+| `E2E_DEVICE_UDID`      | _(none)_                         | _(none)_                         | Device UDID (required for real devices)       |
+| `E2E_APP_PATH`         | `../ios/build/.../PocketPal.app` | `../android/.../app-release.apk` | Path to built app                             |
+| `E2E_APPIUM_PORT`      | `4723`                           | `4723`                           | Appium server port                            |
+| `E2E_XCODE_ORG_ID`     | _(none)_                         | N/A                              | Apple Team ID (required for real iOS devices) |
+| `E2E_XCODE_SIGNING_ID` | `Apple Development`              | N/A                              | Code signing identity for WDA                 |
 
 ### Multi-Device Setup
 
 To use `--each-device`, set up a device inventory:
 
 1. Copy the template:
+
    ```bash
    cp devices.template.json devices.json
    ```
@@ -126,6 +128,7 @@ To use `--each-device`, set up a device inventory:
 2. Edit `devices.json` with your actual devices (simulators, emulators, USB-connected real devices). See `devices.template.json` for the format.
 
    **Finding device UDIDs:**
+
    ```bash
    # iOS
    xcrun xctrace list devices
@@ -153,6 +156,7 @@ e2e/reports/2026-02-13T16-14-12-758/
 ## AWS Device Farm Testing
 
 ### Prerequisites
+
 1. AWS Account with Device Farm access
 2. Create a Device Farm project
 3. Set environment variables or GitHub Secrets:
@@ -161,11 +165,13 @@ e2e/reports/2026-02-13T16-14-12-758/
    - `AWS_DEVICE_FARM_PROJECT_ARN`
 
 ### Run via GitHub Actions
+
 1. Go to Actions → "E2E Tests (AWS Device Farm)"
 2. Click "Run workflow"
 3. Select platform (android, ios, or both)
 
 ### Run manually
+
 ```bash
 yarn e2e:aws --platform android --app path/to/app.apk
 ```
@@ -210,6 +216,7 @@ e2e/
 ## Writing Tests
 
 ### Selectors
+
 Use `testID` and `accessibilityLabel` for reliable cross-platform selectors:
 
 ```typescript
@@ -229,6 +236,7 @@ await $(Selectors.byAccessibilityLabel('Chat input')).click();
 ```
 
 ### Page Objects
+
 Use page objects for common interactions:
 
 ```typescript
@@ -241,10 +249,10 @@ await ModelsPage.openHuggingFaceSearch();
 
 ## Cost Estimation (AWS Device Farm)
 
-| Usage | Approximate Cost |
-|-------|------------------|
-| 10 min test run, 1 device | ~$1.70 |
-| 10 min test run, 2 devices (iOS+Android) | ~$3.40 |
-| 30 runs/month, 2 devices | ~$100/month |
+| Usage                                    | Approximate Cost |
+| ---------------------------------------- | ---------------- |
+| 10 min test run, 1 device                | ~$1.70           |
+| 10 min test run, 2 devices (iOS+Android) | ~$3.40           |
+| 30 runs/month, 2 devices                 | ~$100/month      |
 
 Pricing: $0.17 per device minute

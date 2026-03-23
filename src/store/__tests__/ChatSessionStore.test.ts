@@ -24,6 +24,7 @@ jest.spyOn(chatSessionRepository, 'updateSessionCompletionSettings');
 jest.spyOn(chatSessionRepository, 'getGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'saveGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'setSessionActivePal');
+jest.spyOn(chatSessionRepository, 'deleteMessage');
 
 describe('chatSessionStore', () => {
   const mockMessage = {
@@ -317,6 +318,69 @@ describe('chatSessionStore', () => {
         chatSessionStore.sessions[0].messages[0] as MessageType.Text
       ).metadata;
       expect(updatedMetadata?.timings).toEqual({total: 100});
+    });
+  });
+
+  describe('branchSessionFromMessage', () => {
+    it('creates a new session using history up to the selected message', async () => {
+      const olderMessage = {
+        ...mockMessage,
+        id: 'older',
+        text: 'Older message',
+      };
+      const selectedMessage = {
+        ...mockMessage,
+        id: 'selected',
+        text: 'Selected message',
+      };
+      const newerMessage = {
+        ...mockMessage,
+        id: 'newer',
+        text: 'Newer message',
+      };
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [newerMessage, selectedMessage, olderMessage],
+        completionSettings: defaultCompletionSettings,
+        activePalId: 'pal-1',
+        settingsSource: 'custom' as const,
+        messagesLoaded: true,
+      };
+      const branchedSession = {
+        id: 'session-branch',
+        date: new Date().toISOString(),
+      };
+
+      chatSessionStore.sessions = [mockSession];
+      chatSessionStore.activeSessionId = mockSession.id;
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
+        branchedSession,
+      );
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        session: branchedSession,
+        messages: [
+          {toMessageObject: () => selectedMessage},
+          {toMessageObject: () => olderMessage},
+        ],
+        completionSettings: {
+          getSettings: () => defaultCompletionSettings,
+        },
+      });
+
+      await chatSessionStore.branchSessionFromMessage('selected');
+
+      expect(chatSessionRepository.createSession).toHaveBeenCalledWith(
+        'Session 1 - Branch',
+        [selectedMessage, olderMessage],
+        mockSession.completionSettings,
+        'pal-1',
+      );
+      expect(chatSessionStore.activeSessionId).toBe('session-branch');
+      expect(
+        chatSessionStore.sessions.find(s => s.id === 'session-branch'),
+      ).toBeTruthy();
     });
   });
 

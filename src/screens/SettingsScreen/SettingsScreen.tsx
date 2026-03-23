@@ -187,8 +187,7 @@ export const SettingsScreen: React.FC = observer(() => {
   };
 
   const currentFlashAttnType =
-    modelStore.contextInitParams.flash_attn_type ??
-    (Platform.OS === 'ios' ? 'auto' : 'off');
+    modelStore.contextInitParams.flash_attn_type ?? 'on';
 
   // Get dynamic cache type options based on flash attention compatibility
   const cacheTypeKOptions = getAllowedCacheTypeKOptions(
@@ -265,8 +264,7 @@ export const SettingsScreen: React.FC = observer(() => {
 
     // Only update flash attention if current value is not valid for the selected device
     const currentFlashAttn =
-      modelStore.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
+      modelStore.contextInitParams.flash_attn_type ?? 'on';
 
     if (!option.valid_flash_attn_types.includes(currentFlashAttn)) {
       // Current setting is invalid for this device, use the default
@@ -407,6 +405,54 @@ export const SettingsScreen: React.FC = observer(() => {
               </View>
               <Divider />
 
+              {/* Vision Encoder Device Selection */}
+              <View style={styles.settingItemContainer}>
+                {deviceOptions.length > 1 ? (
+                  <>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.visionDeviceSelectionIOS
+                        : l10n.settings.visionDeviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {Platform.OS === 'ios'
+                        ? l10n.settings.visionDeviceSelectionIOSDescription
+                        : l10n.settings.visionDeviceSelectionDescription}
+                    </Text>
+                    <SegmentedButtons
+                      value={
+                        modelStore.contextInitParams.vision_device ?? 'cpu'
+                      }
+                      onValueChange={deviceId => {
+                        modelStore.setVisionDevice(
+                          deviceId as 'auto' | 'gpu' | 'hexagon' | 'cpu',
+                        );
+                      }}
+                      density="medium"
+                      buttons={deviceOptions.map(option => ({
+                        value: option.id,
+                        label: option.label,
+                        labelStyle: {
+                          fontSize: 10,
+                        },
+                        testID: `vision-device-option-${option.id}`,
+                      }))}
+                      style={styles.segmentedButtons}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.visionDeviceSelection}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.visionDeviceCpuOnly}
+                    </Text>
+                  </>
+                )}
+              </View>
+              <Divider />
+
               {/* Context Size */}
               <View style={styles.settingItemContainer}>
                 <Text variant="titleMedium" style={styles.textLabel}>
@@ -456,8 +502,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setNBatch(Math.round(value))
                       }
                       min={1}
-                      max={4096}
-                      step={1}
+                      max={131072}
+                      scale="log"
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {t(l10n.settings.batchSizeDescription, {
@@ -483,8 +529,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setNUBatch(Math.round(value))
                       }
                       min={1}
-                      max={4096}
-                      step={1}
+                      max={131072}
+                      scale="log"
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {t(l10n.settings.physicalBatchSizeDescription, {
@@ -541,8 +587,8 @@ export const SettingsScreen: React.FC = observer(() => {
                         modelStore.setImageMaxTokens(Math.round(value))
                       }
                       min={256}
-                      max={4096}
-                      step={1}
+                      max={131072}
+                      scale="log"
                     />
                     <Text variant="labelSmall" style={styles.textDescription}>
                       {t(l10n.settings.imageMaxTokensDescription, {
@@ -571,8 +617,7 @@ export const SettingsScreen: React.FC = observer(() => {
                     </Text>
                     <SegmentedButtons
                       value={
-                        modelStore.contextInitParams.flash_attn_type ??
-                        (Platform.OS === 'ios' ? 'auto' : 'off')
+                        modelStore.contextInitParams.flash_attn_type ?? 'on'
                       }
                       onValueChange={value =>
                         modelStore.setFlashAttnType(
@@ -612,6 +657,96 @@ export const SettingsScreen: React.FC = observer(() => {
                       })()}
                       style={styles.segmentedButtons}
                     />
+                  </View>
+                  <Divider />
+
+                  {/* KV Unified */}
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          KV Unified
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          Use unified KV cache to reduce memory usage.
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="kv-unified-switch"
+                        value={modelStore.contextInitParams.kv_unified ?? true}
+                        onValueChange={value => modelStore.setKvUnified(value)}
+                      />
+                    </View>
+                  </View>
+                  <Divider />
+
+                  {/* Parallel Sequences */}
+                  <View style={styles.settingItemContainer}>
+                    <InputSlider
+                      testID="parallel-sequences-slider"
+                      label="Parallel Sequences"
+                      value={modelStore.contextInitParams.n_parallel ?? 1}
+                      onValueChange={value =>
+                        modelStore.setNParallel(Math.round(value))
+                      }
+                      min={1}
+                      max={8}
+                      step={1}
+                    />
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {(modelStore.contextInitParams.n_parallel ?? 1) === 1
+                        ? 'Recommended for current blocking completion flow.'
+                        : 'Higher values increase concurrency but may raise memory usage.'}
+                    </Text>
+                  </View>
+                  <Divider />
+
+                  {/* Context Shifting */}
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          Context Shifting
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          When context fills up, discard older tokens and keep
+                          generating instead of stopping.
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="ctx-shift-switch"
+                        value={modelStore.contextInitParams.ctx_shift ?? true}
+                        onValueChange={value => modelStore.setCtxShift(value)}
+                      />
+                    </View>
+                  </View>
+                  <Divider />
+
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          Prune History Before Send
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          Trim oldest chat messages only when the next request
+                          would exceed the context budget.
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="prune-history-before-send-switch"
+                        value={modelStore.pruneChatHistoryBeforeSend}
+                        onValueChange={value =>
+                          modelStore.setPruneChatHistoryBeforeSend(value)
+                        }
+                      />
+                    </View>
                   </View>
                   <Divider />
 
@@ -962,39 +1097,33 @@ export const SettingsScreen: React.FC = observer(() => {
                   />
                 </View>
 
-                {/* Display Memory Usage (iOS only) */}
-                {Platform.OS === 'ios' && (
-                  <>
-                    <Divider />
-                    <View style={styles.switchContainer}>
-                      <View style={styles.textContainer}>
-                        <View style={styles.labelWithIconContainer}>
-                          <CpuChipIcon
-                            width={20}
-                            height={20}
-                            style={styles.settingIcon}
-                            stroke={theme.colors.onSurface}
-                          />
-                          <Text variant="titleMedium" style={styles.textLabel}>
-                            {l10n.settings.displayMemoryUsage}
-                          </Text>
-                        </View>
-                        <Text
-                          variant="labelSmall"
-                          style={styles.textDescription}>
-                          {l10n.settings.displayMemoryUsageDescription}
+                {/* Display Memory Usage */}
+                <>
+                  <Divider />
+                  <View style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <View style={styles.labelWithIconContainer}>
+                        <CpuChipIcon
+                          width={20}
+                          height={20}
+                          style={styles.settingIcon}
+                          stroke={theme.colors.onSurface}
+                        />
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          {l10n.settings.displayMemoryUsage}
                         </Text>
                       </View>
-                      <Switch
-                        testID="display-memory-usage-switch"
-                        value={uiStore.displayMemUsage}
-                        onValueChange={value =>
-                          uiStore.setDisplayMemUsage(value)
-                        }
-                      />
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.displayMemoryUsageDescription}
+                      </Text>
                     </View>
-                  </>
-                )}
+                    <Switch
+                      testID="display-memory-usage-switch"
+                      value={uiStore.displayMemUsage}
+                      onValueChange={value => uiStore.setDisplayMemUsage(value)}
+                    />
+                  </View>
+                </>
               </View>
             </Card.Content>
           </Card>
@@ -1039,7 +1168,7 @@ export const SettingsScreen: React.FC = observer(() => {
                   </View>
                   <Switch
                     testID="use-hf-token-switch"
-                    value={hfStore.useHfToken}
+                    value={hfStore.shouldUseToken}
                     disabled={!hfStore.isTokenPresent}
                     onValueChange={value => hfStore.setUseHfToken(value)}
                   />

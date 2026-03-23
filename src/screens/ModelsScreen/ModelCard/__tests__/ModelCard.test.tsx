@@ -12,7 +12,13 @@ import {
 // Unmock useMemoryCheck for memory warning tests
 jest.unmock('../../../../hooks/useMemoryCheck');
 
+jest.mock('../../../../utils/exportUtils', () => ({
+  ...jest.requireActual('../../../../utils/exportUtils'),
+  exportModelFiles: jest.fn(),
+}));
+
 import {ModelCard} from '../ModelCard';
+import {exportModelFiles} from '../../../../utils/exportUtils';
 
 import {downloadManager} from '../../../../services/downloads';
 
@@ -148,6 +154,89 @@ describe('ModelCard', () => {
     });
 
     expect(Linking.openURL).toHaveBeenCalledWith(basicModel.hfUrl);
+  });
+
+  it('shares a single GGUF file for a regular downloaded model', async () => {
+    const {getByTestId} = customRender(<ModelCard model={downloadedModel} />);
+
+    fireEvent.press(getByTestId('expand-details-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('share-model-files-button')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('share-model-files-button'));
+
+    expect(exportModelFiles).toHaveBeenCalledWith(downloadedModel, undefined);
+  });
+
+  it('shares both model and mmproj when a linked projection model exists', async () => {
+    const projectionModel = {
+      ...downloadedModel,
+      id: 'test/projection-model',
+      filename: 'mmproj-test.gguf',
+      modelType: ModelType.PROJECTION,
+    };
+    const visionModel = {
+      ...downloadedModel,
+      id: 'test/vision-model',
+      filename: 'vision-model.gguf',
+      supportsMultimodal: true,
+      defaultProjectionModel: projectionModel.id,
+    };
+
+    modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+      isAvailable: true,
+      state: 'downloaded',
+      projectionModel,
+    });
+
+    const {getByTestId} = customRender(<ModelCard model={visionModel} />);
+
+    fireEvent.press(getByTestId('expand-details-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('share-model-files-button')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('share-model-files-button'));
+
+    expect(exportModelFiles).toHaveBeenCalledWith(visionModel, projectionModel);
+  });
+
+  it('shows a single-file label when linked projection model is not downloaded', async () => {
+    const projectionModel = {
+      ...downloadedModel,
+      id: 'test/projection-model-missing',
+      filename: 'mmproj-missing.gguf',
+      modelType: ModelType.PROJECTION,
+      isDownloaded: false,
+    };
+    const visionModel = {
+      ...downloadedModel,
+      id: 'test/vision-model-single-share',
+      supportsMultimodal: true,
+      defaultProjectionModel: projectionModel.id,
+    };
+
+    modelStore.getProjectionModelStatus = jest.fn().mockReturnValue({
+      isAvailable: false,
+      state: 'missing',
+      projectionModel,
+    });
+
+    const {getByTestId, getByText} = customRender(
+      <ModelCard model={visionModel} />,
+    );
+
+    fireEvent.press(getByTestId('expand-details-button'));
+
+    await waitFor(() => {
+      expect(getByTestId('share-model-files-button')).toBeTruthy();
+      expect(
+        getByText(l10n.en.models.modelCard.labels.shareModelFile),
+      ).toBeTruthy();
+    });
   });
 
   it('handles model load correctly', async () => {
@@ -463,6 +552,96 @@ describe('ModelCard', () => {
 
       await waitFor(() => {
         expect(getByTestId('projection-warning-badge')).toBeTruthy();
+      });
+    });
+
+    it('shows nunjucks warning for named (non-custom) template in multimodal mode', async () => {
+      const visionModelWithNunjucksTemplate = {
+        ...downloadedModel,
+        supportsMultimodal: true,
+        chatTemplate: {
+          name: 'llama-3',
+          chatTemplate: 'some template',
+          templateInterpreter: 'nunjucks' as const,
+          addGenerationPrompt: true,
+          bosToken: '',
+          eosToken: '',
+          systemPrompt: '',
+        },
+      };
+
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+
+      const {getByTestId, getByText} = customRender(
+        <ModelCard model={visionModelWithNunjucksTemplate} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(
+          getByText(l10n.en.models.multimodal.nunjucksWarning),
+        ).toBeTruthy();
+      });
+    });
+
+    it('shows nunjucks warning for custom template with nunjucks interpreter in multimodal mode', async () => {
+      const visionModelWithCustomNunjucks = {
+        ...downloadedModel,
+        supportsMultimodal: true,
+        chatTemplate: {
+          name: 'custom',
+          chatTemplate: 'User: {{message}}\nAssistant:',
+          templateInterpreter: 'nunjucks' as const,
+          addGenerationPrompt: true,
+          bosToken: '',
+          eosToken: '',
+          systemPrompt: '',
+        },
+      };
+
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+
+      const {getByTestId, getByText} = customRender(
+        <ModelCard model={visionModelWithCustomNunjucks} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(
+          getByText(l10n.en.models.multimodal.nunjucksWarning),
+        ).toBeTruthy();
+      });
+    });
+
+    it('does not show nunjucks warning for custom template with jinja interpreter', async () => {
+      const visionModelWithCustomJinja = {
+        ...downloadedModel,
+        supportsMultimodal: true,
+        chatTemplate: {
+          name: 'custom',
+          chatTemplate: '{{ messages[0].content }}',
+          templateInterpreter: 'jinja' as const,
+          addGenerationPrompt: true,
+          bosToken: '',
+          eosToken: '',
+          systemPrompt: '',
+        },
+      };
+
+      modelStore.getModelVisionPreference = jest.fn().mockReturnValue(true);
+
+      const {getByTestId, queryByText} = customRender(
+        <ModelCard model={visionModelWithCustomJinja} />,
+      );
+
+      fireEvent.press(getByTestId('expand-details-button'));
+
+      await waitFor(() => {
+        expect(
+          queryByText(l10n.en.models.multimodal.nunjucksWarning),
+        ).toBeNull();
       });
     });
 

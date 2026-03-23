@@ -129,8 +129,12 @@ export const AboutScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
               <Text style={styles.llamaBuildText}>
-                llama.cpp {BuildInfo.number} ({BuildInfo.commit.substring(0, 7)}
-                )
+                {'llama.rn v' +
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  (require('llama.rn/package.json').version as string) +
+                  ' (llama.cpp build ' +
+                  BuildInfo.number +
+                  ')'}
               </Text>
             </View>
           </View>

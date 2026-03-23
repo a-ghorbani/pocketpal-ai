@@ -7,7 +7,7 @@ import {runInAction} from 'mobx';
 import {user} from '../../../../jest/fixtures';
 import {l10n} from '../../../locales';
 import {UserContext} from '../../../utils';
-import {ChatInput} from '../ChatInput';
+import {ChatInput, getResponsiveControlBarLayout} from '../ChatInput';
 import {render} from '../../../../jest/test-utils';
 import {palStore, chatSessionStore, modelStore} from '../../../store';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
@@ -23,6 +23,29 @@ jest.spyOn(Alert, 'alert');
 const renderScrollable = () => <ScrollView />;
 
 describe('input', () => {
+  it('shrinks control bar spacing on narrow screens', () => {
+    const narrowLayout = getResponsiveControlBarLayout({
+      screenWidth: 320,
+      toggleCount: 3,
+      hasContextUsage: true,
+    });
+    const wideLayout = getResponsiveControlBarLayout({
+      screenWidth: 430,
+      toggleCount: 3,
+      hasContextUsage: true,
+    });
+
+    expect(narrowLayout.controlBarPaddingHorizontal).toBeLessThan(
+      wideLayout.controlBarPaddingHorizontal,
+    );
+    expect(narrowLayout.leftControlsGap).toBeLessThan(
+      wideLayout.leftControlsGap,
+    );
+    expect(narrowLayout.sendButtonSpacing).toBeLessThan(
+      wideLayout.sendButtonSpacing,
+    );
+  });
+
   it('send button', () => {
     expect.assertions(2);
     // Set up an active model for the test
@@ -51,6 +74,26 @@ describe('input', () => {
     fireEvent.press(button);
     expect(onSendPress).toHaveBeenCalledWith({text: 'text', type: 'text'});
     expect(textInput.props).toHaveProperty('value', 'text');
+  });
+
+  it('renders context usage badge when provided', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'test-model-id';
+    });
+
+    const {getByTestId, getByText} = render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          onSendPress={jest.fn()}
+          sendButtonVisibilityMode="always"
+          contextUsage={{usedTokens: 512, maxTokens: 8192, usagePercent: 6}}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByTestId('context-usage')).toBeTruthy();
+    expect(getByText('6%')).toBeTruthy();
+    expect(getByText('512/8192')).toBeTruthy();
   });
 
   it('sends a text message', () => {

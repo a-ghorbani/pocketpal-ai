@@ -6,7 +6,10 @@ import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
 import {Model} from '../../utils/types';
 import {modelStore} from '../../store';
-import {chatTemplates} from '../../utils/chat';
+import {
+  chatTemplates,
+  getEffectiveChatTemplateInterpreter,
+} from '../../utils/chat';
 
 import {styles} from './styles';
 import {View} from 'react-native';
@@ -27,7 +30,12 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const [tempStopWords, setTempStopWords] = useState<string[]>(
       model?.stopWords || [],
     );
+    const [templateScrollLocked, setTemplateScrollLocked] = useState(false);
     const l10n = useContext(L10nContext);
+
+    const handleTemplateScrollLockChange = (locked: boolean) => {
+      setTemplateScrollLocked(prev => (prev === locked ? prev : locked));
+    };
 
     // Reset temp settings when model changes
     useEffect(() => {
@@ -92,15 +100,29 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         title={l10n.components.modelSettingsSheet.modelSettings}
         displayFullHeight>
         <Sheet.ScrollView
+          scrollEnabled={!templateScrollLocked}
           bottomOffset={16}
           contentContainerStyle={styles.sheetScrollViewContainer}>
           <ModelSettings
             modelName={tempModelName}
             chatTemplate={tempChatTemplate}
+            defaultTemplateText={model.defaultChatTemplate?.chatTemplate}
+            runtimeTemplateText={
+              modelStore.activeModelId === model.id
+                ? String(
+                    (modelStore.context?.model as any)?.metadata?.[
+                      'tokenizer.chat_template'
+                    ] ||
+                      model.cachedRuntimeTemplateText ||
+                      '',
+                  )
+                : model.cachedRuntimeTemplateText || ''
+            }
             stopWords={tempStopWords}
             onChange={handleSettingsUpdate}
             onStopWordsChange={value => setTempStopWords(value || [])}
             onModelNameChange={handleModelNameChange}
+            onTemplateScrollLockChange={handleTemplateScrollLockChange}
           />
 
           {/* Multimodal Settings Section */}
@@ -110,6 +132,12 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
               <Text style={styles.multimodalSectionTitle}>
                 {l10n.models.multimodal.settings}
               </Text>
+              {getEffectiveChatTemplateInterpreter(tempChatTemplate) ===
+                'nunjucks' && (
+                <Text style={styles.nunjucksWarning}>
+                  {l10n.models.multimodal.nunjucksWarning}
+                </Text>
+              )}
               <ProjectionModelSelector
                 model={model}
                 onProjectionModelSelect={projectionModelId => {

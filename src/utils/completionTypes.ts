@@ -21,6 +21,19 @@ export type AppOnlyCompletionParams = {
    * When false, thinking parts are removed from the context to save context space.
    */
   include_thinking_in_context?: boolean;
+
+  /**
+   * Whether to render the thinking/reasoning content in a separate UI bubble.
+   * This is a UI-only setting and has no effect on the inference engine.
+   * When false, the ThinkingBubble component is hidden even if reasoning_content is returned.
+   */
+  show_thinking_bubble?: boolean;
+
+  /**
+   * Number of tokens reserved for generation when pruning chat context.
+   * This is app-only and is not sent to llama.rn.
+   */
+  reserved_output_tokens?: number;
   // Add other PocketPal-only fields here
 };
 
@@ -31,6 +44,8 @@ export type AppOnlyCompletionParams = {
 const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
   'version',
   'include_thinking_in_context',
+  'show_thinking_bubble',
+  'reserved_output_tokens',
 ];
 
 /**
@@ -52,6 +67,17 @@ export function toApiCompletionParams(
 
   for (const key of APP_ONLY_KEYS) {
     delete apiParams[key];
+  }
+
+  // Guardrail for messages-based completion:
+  // if both `messages` and `prompt` are present, some runtimes may prefer
+  // `prompt` and ignore `messages`, which can lead to empty-prompt generation.
+  if (
+    'messages' in apiParams &&
+    Array.isArray((apiParams as any).messages) &&
+    'prompt' in apiParams
+  ) {
+    delete (apiParams as any).prompt;
   }
 
   return apiParams as ApiCompletionParams;

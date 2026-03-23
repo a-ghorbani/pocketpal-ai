@@ -16,4 +16,10 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
+  nunjucksWarning: {
+    fontSize: 13,
+    color: '#b26a00',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
 });

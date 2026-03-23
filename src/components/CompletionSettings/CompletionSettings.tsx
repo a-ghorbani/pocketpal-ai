@@ -32,13 +32,29 @@ export const CompletionSettings: React.FC<Props> = ({
   const styles = createStyles(theme);
   const l10n = React.useContext(L10nContext);
 
+  const getLabel = (name: string) => {
+    if (name === 'reserved_output_tokens') {
+      return 'RESERVED OUTPUT TOKENS';
+    }
+
+    return name.toUpperCase().replace(/_/g, ' ');
+  };
+
+  const getDescription = (name: string) => {
+    if (name === 'reserved_output_tokens') {
+      return 'Reserve this many tokens for generation before pruning input context';
+    }
+
+    return l10n.completionParams[name];
+  };
+
   const renderSlider = ({name, step = 0.01}: {name: string; step?: number}) => (
     <View style={styles.settingItem}>
       <InputSlider
         testID={`${name}-slider`}
-        label={name.toUpperCase().replace('_', ' ')}
+        label={getLabel(name)}
         labelVariant="labelSmall"
-        description={l10n.completionParams[name]}
+        description={getDescription(name)}
         value={settings[name]}
         onValueChange={value => onChange(name, value)}
         min={COMPLETION_PARAMS_METADATA[name]?.validation.min}
@@ -63,11 +79,9 @@ export const CompletionSettings: React.FC<Props> = ({
     return (
       <View style={styles.settingItem}>
         <Text variant="labelSmall" style={styles.settingLabel}>
-          {String(name).toUpperCase().replace('_', ' ')}
+          {getLabel(String(name))}
         </Text>
-        <Text style={styles.description}>
-          {l10n.completionParams[String(name)]}
-        </Text>
+        <Text style={styles.description}>{getDescription(String(name))}</Text>
         <TextInput
           value={value}
           onChangeText={
@@ -143,6 +157,23 @@ export const CompletionSettings: React.FC<Props> = ({
   return (
     <View style={styles.container} testID="completion-settings">
       {renderIntegerInput({name: 'n_predict'})}
+      <View style={styles.settingItem}>
+        <InputSlider
+          testID="reserved_output_tokens-slider"
+          label={getLabel('reserved_output_tokens')}
+          labelVariant="labelSmall"
+          description={getDescription('reserved_output_tokens')}
+          value={settings.reserved_output_tokens ?? 128}
+          onValueChange={value => onChange('reserved_output_tokens', value)}
+          min={1}
+          max={32768}
+          step={1}
+          precision={0}
+          debounceMs={300}
+          disabled={disabled}
+          scale="log"
+        />
+      </View>
       {renderSwitch('include_thinking_in_context')}
       {renderSlider({name: 'temperature'})}
       {renderSlider({name: 'top_k', step: 1})}
@@ -162,8 +193,8 @@ export const CompletionSettings: React.FC<Props> = ({
           {renderSlider({name: 'mirostat_eta'})}
         </>
       )}
+      {renderIntegerInput({name: 'n_probs'})}
       {renderIntegerInput({name: 'seed'})}
-      {renderSwitch('jinja')}
     </View>
   );
 };

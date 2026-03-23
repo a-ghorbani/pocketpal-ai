@@ -53,7 +53,6 @@ Make sure your code passes the lint and type check processes:
   yarn typecheck
   ```
 
-
 ### Writing Tests
 
 Please add tests for any new features or changes. We use **Jest** for unit testing:
@@ -92,6 +91,7 @@ We follow the **Conventional Commits** specification for our commit messages to 
 4. Follow the pull request template and fill in all relevant details.
 
 Before opening a pull request, make sure:
+
 - Your changes are focused and kept to a **single logical change**.
 - Your code is linted and passes type checks.
 - Tests are added or updated if applicable.

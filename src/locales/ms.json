@@ -49,6 +49,11 @@
     "deviceSelectionIOSDescription": "Pilih mod GPU Metal atau mod CPU sahaja",
     "deviceSelectionAndroidDescription": "Pilih jenis pengkomputeran peranti (CPU, GPU, atau Hexagon NPU)",
     "cpuOnlyNoAccelerators": "CPU sahaja – Tiada pemecut perkakasan dikesan",
+    "visionDeviceSelection": "Vision Encoder Device",
+    "visionDeviceSelectionIOS": "Vision Encoder Device",
+    "visionDeviceSelectionDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceSelectionIOSDescription": "Select compute device for vision encoder (mmproj). Default: CPU",
+    "visionDeviceCpuOnly": "Vision encoder: CPU only - No hardware accelerators detected",
     "contextSize": "Saiz Konteks",
     "contextSizePlaceholder": "Masukkan saiz konteks (minimum {{minContextSize}})",
     "invalidContextSizeError": "Sila masukkan nombor yang sah (minimum {{minContextSize}})",
@@ -288,7 +293,9 @@
         "deleteTitle": "Padam Model",
         "deleteMessage": "Pasti mahu memadam model yang telah dimuat turun ini?",
         "removeTitle": "Buang Model",
-        "removeMessage": "Pasti mahu membuang model ini daripada senarai?"
+        "removeMessage": "Pasti mahu membuang model ini daripada senarai?",
+        "projectionMissingTitle": "Projection model missing",
+        "projectionMissingMessage": "The main GGUF file was shared, but the linked projection model file could not be found."
       },
       "buttons": {
         "settings": "Tetapan",
@@ -307,7 +314,9 @@
         "author": "Pengarang",
         "requiresProjectionModel": "Memerlukan model unjuran",
         "downloadProjectionModel": "Muat turun model unjuran",
-        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face",
+        "shareModelFile": "Share GGUF file",
+        "shareModelFiles": "Share GGUF files"
       },
       "accessibility": {
         "expandDetails": "Kembangkan butiran",
@@ -373,7 +382,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "Sertakan bahagian pemikiran/penaakulan AI dalam konteks yang dihantar ke model. Melumpuhkan ini boleh menjimatkan ruang konteks, tetapi mungkin memberi kesan kepada prestasi.",
-    "jinja": "Dayakan templat Jinja untuk format sembang. Apabila didayakan, menggunakan pemprosesan templat berasaskan Jinja untuk keserasian yang lebih baik dengan model moden.",
     "grammar": "Laksanakan peraturan tatabahasa tertentu supaya teks yang dihasilkan mengikut struktur atau format tertentu",
     "stop": "Tentukan frasa khusus yang akan menghentikan penjanaan teks",
     "n_predict": "Tetapkan panjang respons yang dihasilkan (dalam token)",
@@ -850,12 +858,7 @@
         "total": "Jumlah: ",
         "usage": "Penggunaan: "
       },
-      "byteSizes": [
-        "Bait",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bait", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {

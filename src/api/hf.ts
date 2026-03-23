@@ -2,6 +2,8 @@ import axios from 'axios';
 
 import {urls} from '../config';
 
+const HF_TIMEOUT_MS = 15000;
+
 import {
   GGUFSpecs,
   HuggingFaceModel,
@@ -47,6 +49,7 @@ export async function fetchModels({
   nextPageUrl?: string;
   authToken?: string | null;
 }): Promise<HuggingFaceModelsResponse> {
+  const targetUrl = nextPageUrl || urls.modelsList();
   try {
     const headers: Record<string, string> = {};
 
@@ -54,7 +57,7 @@ export async function fetchModels({
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await axios.get(nextPageUrl || urls.modelsList(), {
+    const response = await axios.get(targetUrl, {
       params: {
         search,
         author,
@@ -66,6 +69,7 @@ export async function fetchModels({
         config,
       },
       headers,
+      timeout: HF_TIMEOUT_MS,
     });
 
     const linkHeader = response.headers.link;
@@ -83,7 +87,6 @@ export async function fetchModels({
       nextLink,
     };
   } catch (error) {
-    console.error('Error fetching models:', error);
     throw error;
   }
 }
@@ -106,7 +109,10 @@ export const fetchModelFilesDetails = async (
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(url, {headers});
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HF_TIMEOUT_MS);
+    const response = await fetch(url, {headers, signal: controller.signal});
+    clearTimeout(timer);
 
     if (!response.ok) {
       throw new Error(`Error fetching model files: ${response.statusText}`);
@@ -115,7 +121,6 @@ export const fetchModelFilesDetails = async (
     const data: ModelFileDetails[] = await response.json();
     return data;
   } catch (error) {
-    console.error('Failed to fetch model files:', error);
     throw error;
   }
 };
@@ -138,7 +143,10 @@ export const fetchGGUFSpecs = async (
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(url, {headers});
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HF_TIMEOUT_MS);
+    const response = await fetch(url, {headers, signal: controller.signal});
+    clearTimeout(timer);
 
     if (!response.ok) {
       throw new Error(`Error fetching GGUF specs: ${response.statusText}`);
@@ -147,7 +155,6 @@ export const fetchGGUFSpecs = async (
     const data: GGUFSpecs = await response.json();
     return data;
   } catch (error) {
-    console.error('Failed to fetch GGUF specs:', error);
     throw error;
   }
 };
@@ -189,6 +196,7 @@ export async function fetchModelInfo({
         full,
       },
       headers,
+      timeout: HF_TIMEOUT_MS,
     });
 
     const modelData: Partial<HuggingFaceModel> = {...response.data};
@@ -216,7 +224,6 @@ export async function fetchModelInfo({
 
     return modelData;
   } catch (error) {
-    console.error('Failed to fetch model info:', error);
     throw error;
   }
 }

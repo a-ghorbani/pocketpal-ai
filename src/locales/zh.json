@@ -49,6 +49,11 @@
     "deviceSelectionIOSDescription": "选择Metal GPU或仅CPU模式",
     "deviceSelectionAndroidDescription": "选择计算设备（CPU、GPU或Hexagon NPU）",
     "cpuOnlyNoAccelerators": "仅CPU - 未检测到硬件加速器",
+    "visionDeviceSelection": "视觉编码器设备",
+    "visionDeviceSelectionIOS": "视觉编码器设备",
+    "visionDeviceSelectionDescription": "选择视觉编码器（mmproj）的计算设备。默认：CPU",
+    "visionDeviceSelectionIOSDescription": "选择视觉编码器（mmproj）的计算设备。默认：CPU",
+    "visionDeviceCpuOnly": "视觉编码器：仅CPU - 未检测到硬件加速器",
     "contextSize": "上下文长度",
     "contextSizePlaceholder": "输入上下文长度（最小{{minContextSize}}）",
     "invalidContextSizeError": "请输入有效数字（最小{{minContextSize}}）",
@@ -215,14 +220,21 @@
       "menuTitleHf": "Hugging Face模型",
       "menuTitleDownloaded": "已下载模型",
       "menuTitleGrouped": "按模型类型分组",
-      "menuTitleReset": "重置模型列表"
+      "menuTitleReset": "重置模型列表",
+      "menuTitleClearShareCache": "清空分享缓存",
+      "clearShareCacheTitle": "清空分享缓存",
+      "clearShareCacheMessage": "要删除模型分享产生的所有缓存文件吗？",
+      "clearShareCacheDoneTitle": "分享缓存已清理",
+      "clearShareCacheDoneMessage": "已删除 {{count}} 个缓存目录。",
+      "clearShareCacheErrorTitle": "清理失败",
+      "clearShareCacheErrorMessage": "清空分享缓存失败，请重试。"
     },
     "modelsResetDialog": {
       "proceedWithReset": "继续重置",
       "confirmReset": "确认重置"
     },
     "chatTemplate": {
-      "label": "基础聊天模板:"
+      "label": "基础模板:"
     },
     "details": {
       "title": "可用 GGUF 文件"
@@ -288,7 +300,9 @@
         "deleteTitle": "删除模型",
         "deleteMessage": "你确定要删除此已下载的模型吗？",
         "removeTitle": "删除模型",
-        "removeMessage": "你确定要从列表中删除此模型吗？"
+        "removeMessage": "你确定要从列表中删除此模型吗？",
+        "projectionMissingTitle": "投影模型缺失",
+        "projectionMissingMessage": "主 GGUF 文件已分享，但关联的投影模型文件未找到。"
       },
       "buttons": {
         "settings": "设置",
@@ -307,7 +321,9 @@
         "author": "作者",
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下载投影模型",
-        "viewModelCardOnHuggingFace": "在Hugging Face上查看模型卡片"
+        "viewModelCardOnHuggingFace": "在Hugging Face上查看模型卡片",
+        "shareModelFile": "分享 GGUF 文件",
+        "shareModelFiles": "分享 GGUF 文件"
       },
       "accessibility": {
         "expandDetails": "展开详情",
@@ -331,8 +347,15 @@
     "modelSettings": {
       "template": {
         "label": "模板:",
-        "editButton": "编辑",
+        "sectionTitle": "提示词模板",
         "dialogTitle": "编辑聊天模板",
+        "selectedLabel": "当前预设:",
+        "autoMatchNote": "仅官方内置模型（通过预设下载）会匹配预设模板；其他导入/本地模型默认使用 GGUF 自带模板。你也可以在这里手动覆盖。",
+        "thinkingNote": "模板变更可能影响推理/思考能力识别，以及主界面 Thinking 开关的行为。",
+        "effectiveSourceGguf": "GGUF 内置模板",
+        "effectiveSourceModelDefault": "模型默认模板",
+        "effectiveSourceRuntimeAuto": "运行时自动模板",
+        "builtInTemplateAvailableAfterLoad": "首次载入模型后可读取内置模板",
         "note1": "注意: 更改模板可能会更改BOS、EOS和系统提示",
         "note2": "使用Nunjucks，留空以使用模型的模板",
         "placeholder": "在此输入聊天模板...",
@@ -373,7 +396,6 @@
   },
   "completionParams": {
     "include_thinking_in_context": "在发送给模型的上下文中包含AI的思考/推理部分，禁用此选项可以节省上下文空间；但可能会影响性能",
-    "jinja": "启用Jinja模板进行聊天格式化；启用时，使用基于Jinja的聊天模板处理以提高与现代模型的兼容性",
     "grammar": "应用特定的语法规则，以确保生成的文本遵循特定的结构或格式",
     "stop": "定义将停止文本生成的特定短语",
     "n_predict": "设置生成响应的长度（以token为单位）",
@@ -497,7 +519,9 @@
         "disableThinking": "禁用思考模式",
         "thinkingEnabled": "思考模式已启用",
         "thinkingDisabled": "思考模式已禁用",
-        "thinkText": "思考"
+        "thinkText": "显示",
+        "enableThinkText": "思考",
+        "saveThinkText": "切换"
       }
     },
     "contentReportSheet": {
@@ -686,7 +710,14 @@
       "menuTitleHf": "Hugging Face模型",
       "menuTitleDownloaded": "已下载模型",
       "menuTitleGrouped": "按模型类型分组",
-      "menuTitleReset": "重置模型列表"
+      "menuTitleReset": "重置模型列表",
+      "menuTitleClearShareCache": "清空分享缓存",
+      "clearShareCacheTitle": "清空分享缓存",
+      "clearShareCacheMessage": "要删除模型分享产生的所有缓存文件吗？",
+      "clearShareCacheDoneTitle": "分享缓存已清理",
+      "clearShareCacheDoneMessage": "已删除 {{count}} 个缓存目录。",
+      "clearShareCacheErrorTitle": "清理失败",
+      "clearShareCacheErrorMessage": "清空分享缓存失败，请重试。"
     },
     "modelsResetDialog": {
       "proceedWithReset": "继续重置",
@@ -850,16 +881,13 @@
         "total": "总计: ",
         "usage": "使用率: "
       },
-      "byteSizes": [
-        "字节",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["字节", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {
+        "branch": "从这里分支",
         "copy": "复制",
+        "delete": "删除",
         "regenerate": "重新生成",
         "regenerateWith": "重新生成（重选模型）",
         "edit": "编辑",
@@ -1017,6 +1045,7 @@
     "modelNotLoaded": "模型未加载，请初始化模型",
     "completionFailed": "生成失败: ",
     "loadingModel": "加载模型中...",
+    "promptProcessing": "正在处理 Prompt",
     "typeYourMessage": "输入消息",
     "load": "加载",
     "goToModels": "转到模型",

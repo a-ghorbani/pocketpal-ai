@@ -8,11 +8,10 @@ export const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginVertical: 8,
     marginHorizontal: 12,
-    gap: 4,
+    gap: 8,
+    alignItems: 'center',
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  text: {
+    fontSize: 14,
   },
 });

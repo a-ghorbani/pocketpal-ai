@@ -10,7 +10,7 @@ import {
   modelsList,
 } from '../../../jest/fixtures/models';
 
-import {useChatSession} from '../useChatSession';
+import {pruneChatHistoryToFitContext, useChatSession} from '../useChatSession';
 
 import {chatSessionStore, modelStore, palStore} from '../../store';
 
@@ -49,6 +49,7 @@ describe('useChatSession', () => {
   });
 
   it('should send a message and update the chat session', async () => {
+    modelStore.activeModelId = modelsList[0].id;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
@@ -59,6 +60,18 @@ describe('useChatSession', () => {
 
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalled();
     expect(modelStore.context?.completion).toHaveBeenCalled();
+    expect(modelStore.context?.completion).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Function),
+    );
+    expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author: mockAssistant,
+        metadata: expect.objectContaining({
+          modelDisplayName: modelsList[0].name,
+        }),
+      }),
+    );
   });
 
   it('should handle model not loaded scenario', async () => {
@@ -122,6 +135,7 @@ describe('useChatSession', () => {
   });
 
   it('should not stop completion when inferencing is false', () => {
+    modelStore.inferencing = false;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
@@ -162,6 +176,41 @@ describe('useChatSession', () => {
     expect(modelStore.inferencing).toBe(false);
   });
 
+  it('should use the previous prompt sample to predict progress and clear it on first token', async () => {
+    jest.useFakeTimers();
+    modelStore.getEstimatedPromptDurationMs = jest.fn(() => 1000) as any;
+    modelStore.updatePromptProcessingPrediction = jest.fn() as any;
+
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockImplementation(async (_params, onToken) => {
+          act(() => {
+            jest.advanceTimersByTime(240);
+          });
+          expect(modelStore.promptProcessingProgress).toBeGreaterThan(0);
+          onToken?.({token: 'A', content: 'A'});
+          expect(modelStore.promptProcessingProgress).toBeNull();
+          return {
+            text: 'A',
+            timings: {total: 100, prompt_n: 200, prompt_ms: 500},
+            usage: {},
+          };
+        });
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(modelStore.promptProcessingProgress).toBeNull();
+    expect(modelStore.isStreaming).toBe(false);
+  });
+
   test.each([
     {systemPrompt: undefined, shouldInclude: false, description: 'undefined'},
     {systemPrompt: '', shouldInclude: false, description: 'empty string'},
@@ -188,15 +237,10 @@ describe('useChatSession', () => {
       modelStore.models = [testModel];
       modelStore.setActiveModel(testModel.id);
 
-      // Mock the completion function to capture the messages passed to it
-      let capturedMessages: any[] = [];
       if (modelStore.context) {
         modelStore.context.completion = jest
           .fn()
-          .mockImplementation((params, _onData) => {
-            capturedMessages = params.messages || [];
-            return Promise.resolve({timings: {total: 100}, usage: {}});
-          });
+          .mockResolvedValue({timings: {total: 100}, usage: {}});
       }
 
       const {result} = renderHook(() =>
@@ -207,16 +251,24 @@ describe('useChatSession', () => {
         await result.current.handleSendPress(textMessage);
       });
 
+      const lastApplyTemplateCall =
+        applyChatTemplateSpy.mock.calls[
+          applyChatTemplateSpy.mock.calls.length - 1
+        ];
+      const formattedMessages = (lastApplyTemplateCall?.[0] || []) as any[];
+
       if (shouldInclude && systemPrompt?.trim()) {
-        // Check that a system message was included in the messages passed to completion
-        expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-        const systemMessage = capturedMessages.find(
-          msg => msg.role === 'system',
+        expect(
+          formattedMessages.some((msg: any) => msg.role === 'system'),
+        ).toBe(true);
+        const systemMessage = formattedMessages.find(
+          (msg: any) => msg.role === 'system',
         );
         expect(systemMessage.content).toBe(systemPrompt);
       } else {
-        // Check that no system message was included
-        expect(capturedMessages.some(msg => msg.role === 'system')).toBe(false);
+        expect(
+          formattedMessages.some((msg: any) => msg.role === 'system'),
+        ).toBe(false);
       }
     },
   );
@@ -266,15 +318,10 @@ describe('useChatSession', () => {
     chatSessionStore.sessions = [mockSession];
     chatSessionStore.activeSessionId = 'test-session-id';
 
-    // Mock the completion function to capture the messages passed to it
-    let capturedMessages: any[] = [];
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockImplementation((params, _onData) => {
-          capturedMessages = params.messages || [];
-          return Promise.resolve({timings: {total: 100}, usage: {}});
-        });
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
     }
 
     const {result} = renderHook(() =>
@@ -285,9 +332,14 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // Check that a system message was included with the rendered template
-    expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-    const systemMessage = capturedMessages.find(msg => msg.role === 'system');
+    // Check that completion was called with messages including the parametrized system prompt
+    const completionCall = (modelStore.context?.completion as jest.Mock).mock
+      .calls[0];
+    const params = completionCall[0];
+    const messages = params.messages as any[];
+
+    expect(messages.some((msg: any) => msg.role === 'system')).toBe(true);
+    const systemMessage = messages.find((msg: any) => msg.role === 'system');
     expect(systemMessage.content).toBe(
       'You are Gandalf, a wizard in Middle-earth.',
     );
@@ -371,15 +423,10 @@ describe('useChatSession', () => {
     chatSessionStore.sessions = [mockSession];
     chatSessionStore.activeSessionId = 'test-session-id-no-params';
 
-    // Mock the completion function to capture the messages passed to it
-    let capturedMessages: any[] = [];
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockImplementation((params, _onData) => {
-          capturedMessages = params.messages || [];
-          return Promise.resolve({timings: {total: 100}, usage: {}});
-        });
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
     }
 
     const {result} = renderHook(() =>
@@ -390,9 +437,254 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // Check that a system message was included with the original prompt
-    expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
-    const systemMessage = capturedMessages.find(msg => msg.role === 'system');
+    // Check that completion was called with messages including the system prompt
+    const completionCall = (modelStore.context?.completion as jest.Mock).mock
+      .calls[0];
+    const params = completionCall[0];
+    const messages = params.messages as any[];
+
+    expect(messages.some((msg: any) => msg.role === 'system')).toBe(true);
+    const systemMessage = messages.find((msg: any) => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+
+  it('should use custom jinja templates with messages and chatTemplate parameter', async () => {
+    const customJinjaModel = {
+      ...mockBasicModel,
+      id: 'custom-jinja-model',
+      chatTemplate: {
+        ...mockBasicModel.chatTemplate,
+        name: 'custom',
+        chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+        templateInterpreter: 'jinja' as const,
+      },
+    };
+
+    modelStore.models = [customJinjaModel];
+    modelStore.setActiveModel(customJinjaModel.id);
+
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(modelStore.context?.completion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.any(Array),
+        jinja: true,
+        chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it('should send multimodal custom jinja templates with messages and chatTemplate', async () => {
+    const customJinjaModel = {
+      ...mockBasicModel,
+      id: 'custom-jinja-vision-model',
+      chatTemplate: {
+        ...mockBasicModel.chatTemplate,
+        name: 'custom',
+        chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+        templateInterpreter: 'jinja' as const,
+      },
+    };
+    const multimodalMessage = {
+      ...textMessage,
+      imageUris: ['file:///path/to/image.jpg'],
+    };
+    const originalIsMultimodalEnabled = modelStore.isMultimodalEnabled;
+
+    modelStore.models = [customJinjaModel];
+    modelStore.setActiveModel(customJinjaModel.id);
+    modelStore.isMultimodalEnabled = jest.fn().mockResolvedValue(true);
+
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({timings: {total: 100}, usage: {}});
+    }
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    try {
+      await act(async () => {
+        await result.current.handleSendPress(multimodalMessage as any);
+      });
+
+      expect(modelStore.context?.completion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.any(Array),
+          jinja: true,
+          chatTemplate: '{{ bos_token }}{{ messages[0].content }}',
+        }),
+        expect.any(Function),
+      );
+    } finally {
+      modelStore.isMultimodalEnabled = originalIsMultimodalEnabled;
+    }
+  });
+
+  it('should trim the oldest chat history progressively when context budget is too small', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [{role: 'system', content: 'system'}],
+      chatMessages: [
+        {role: 'user', content: 'A'.repeat(700)},
+        {role: 'assistant', content: 'B'.repeat(700)},
+        {role: 'user', content: 'C'.repeat(120)},
+        {role: 'assistant', content: 'D'.repeat(120)},
+      ] as any,
+      userMessage: {role: 'user', content: 'latest user prompt'},
+      contextSize: 200,
+      reservedOutputTokens: 128,
+    });
+
+    expect(result.messages[0]).toEqual({role: 'system', content: 'system'});
+    expect(result.messages[result.messages.length - 1]).toEqual({
+      role: 'user',
+      content: 'latest user prompt',
+    });
+    expect(
+      result.messages.some(
+        message =>
+          message !== result.messages[result.messages.length - 1] &&
+          typeof message.content === 'string' &&
+          message.content.length > 0,
+      ),
+    ).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeGreaterThan(0);
+    expect(result.truncation.inputRetainedPercent).toBe(100);
+    expect(result.truncation.systemRetainedPercent).toBe(100);
+  });
+
+  it('should trim the current user input from the tail after history is exhausted', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [{role: 'system', content: 'system'}],
+      chatMessages: [] as any,
+      userMessage: {
+        role: 'user',
+        content: 'important-head-' + 'Z'.repeat(2200),
+      },
+      contextSize: 400,
+      reservedOutputTokens: 200,
+    });
+
+    const trimmedUserMessage = result.messages[result.messages.length - 1];
+
+    expect(trimmedUserMessage.role).toBe('user');
+    expect(typeof trimmedUserMessage.content).toBe('string');
+    expect(
+      (trimmedUserMessage.content as string).startsWith('important-head-'),
+    ).toBe(true);
+    expect((trimmedUserMessage.content as string).length).toBeLessThan(
+      ('important-head-' + 'Z'.repeat(2200)).length,
+    );
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBe(100);
+    expect(result.truncation.inputRetainedPercent).toBeLessThan(100);
+  });
+
+  it('should trim the system prompt from the tail only after history and input are exhausted', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [
+        {
+          role: 'system',
+          content: 'critical-prefix-' + 'P'.repeat(2200),
+        },
+      ],
+      chatMessages: [] as any,
+      userMessage: {role: 'user', content: ''},
+      contextSize: 400,
+      reservedOutputTokens: 200,
+    });
+
+    expect(result.messages[0].role).toBe('system');
+    expect(typeof result.messages[0].content).toBe('string');
+    expect(
+      (result.messages[0].content as string).startsWith('critical-prefix-'),
+    ).toBe(true);
+    expect((result.messages[0].content as string).length).toBeLessThan(
+      ('critical-prefix-' + 'P'.repeat(2200)).length,
+    );
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBe(100);
+    expect(result.truncation.inputRetainedPercent).toBe(100);
+    expect(result.truncation.systemRetainedPercent).toBeLessThan(100);
+  });
+
+  it('should respect small n_ctx instead of forcing a 256-token floor', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [] as any,
+      chatMessages: [{role: 'assistant', content: 'A'.repeat(1200)}] as any,
+      userMessage: {role: 'user', content: '继续'},
+      contextSize: 200,
+      reservedOutputTokens: 64,
+    });
+
+    const estimatedTokens = result.messages.reduce((sum, message) => {
+      const content =
+        typeof message.content === 'string' ? message.content.length : 0;
+      return sum + Math.ceil(content / 4);
+    }, 0);
+
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeLessThan(100);
+    expect(estimatedTokens).toBeLessThanOrEqual(200);
+  });
+  it('should trim history progressively instead of dropping all history at once', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [] as any,
+      chatMessages: [
+        {role: 'assistant', content: 'A'.repeat(900)},
+        {role: 'user', content: 'B'.repeat(900)},
+      ] as any,
+      userMessage: {role: 'user', content: 'continue story'},
+      contextSize: 200,
+      reservedOutputTokens: 64,
+    });
+
+    const historyMessages = result.messages.slice(0, -1);
+
+    expect(historyMessages.length).toBeGreaterThan(0);
+    expect(
+      historyMessages.some(
+        message =>
+          typeof message.content === 'string' && message.content.length > 0,
+      ),
+    ).toBe(true);
+    expect(result.truncation.historyRetainedPercent).toBeGreaterThan(0);
+  });
+
+  it('should hard-trim all sections instead of falling back to original content when far over budget', async () => {
+    const result = await pruneChatHistoryToFitContext({
+      systemMessages: [{role: 'system', content: 'S'.repeat(1200)}] as any,
+      chatMessages: [
+        {role: 'assistant', content: 'A'.repeat(1200)},
+        {role: 'user', content: 'B'.repeat(1200)},
+      ] as any,
+      userMessage: {role: 'user', content: 'C'.repeat(1200)},
+      contextSize: 64,
+      reservedOutputTokens: 64,
+    });
+
+    const estimatedTokens = result.messages.reduce((sum, message) => {
+      const content =
+        typeof message.content === 'string' ? message.content.length : 0;
+      return sum + Math.ceil(content / 4);
+    }, 0);
+
+    expect(result.truncation.wasTruncated).toBe(true);
+    expect(estimatedTokens).toBeLessThanOrEqual(64);
   });
 });

@@ -1,0 +1,33 @@
+diff --git a/node_modules/react-native-math-view/android/build.gradle b/node_modules/react-native-math-view/android/build.gradle
+index 1234567..abcdefg 100644
+--- a/node_modules/react-native-math-view/android/build.gradle
++++ b/node_modules/react-native-math-view/android/build.gradle
+@@ -31,8 +31,7 @@
+ buildscript {
+     repositories {
+         maven { url "https://maven.google.com" }
+-        jcenter()
+         google()
+         maven {
+             url 'https://maven.google.com/'
+             name 'Google'
+@@ -50,7 +49,6 @@
+ allprojects {
+     repositories {
+         mavenLocal()
+         maven { url "https://maven.google.com" }
+-        jcenter()
+         google()
+         maven {
+diff --git a/node_modules/react-native-math-view/android/src/main/java/io/autodidact/rnmathview/SVGShadowNode.java b/node_modules/react-native-math-view/android/src/main/java/io/autodidact/rnmathview/SVGShadowNode.java
+index 1234567..abcdefg 100644
+--- a/node_modules/react-native-math-view/android/src/main/java/io/autodidact/rnmathview/SVGShadowNode.java
++++ b/node_modules/react-native-math-view/android/src/main/java/io/autodidact/rnmathview/SVGShadowNode.java
+@@ -11,7 +11,6 @@
+ import com.facebook.react.uimanager.ReactStylesDiffMap;
+ import com.facebook.react.uimanager.UIBlock;
+ import com.facebook.react.uimanager.UIManagerModule;
+-import com.facebook.react.uimanager.UIManagerModuleListener;
+ import com.facebook.react.uimanager.annotations.ReactProp;
+ import com.facebook.yoga.YogaMeasureFunction;
+ import com.facebook.yoga.YogaMeasureMode;

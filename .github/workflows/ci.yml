@@ -1,12 +1,7 @@
 name: CI Pipeline
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -93,7 +88,25 @@ jobs:
 
       # Step 6: Run unit tests (Jest)
       - name: Run unit tests
-        run: yarn test --coverage
+        id: unit-tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          yarn test --coverage 2>&1 | tee test-output.log
+
+      - name: Upload test log
+        if: steps.unit-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-log
+          path: test-output.log
+          retention-days: 7
+
+      - name: Fail if tests failed
+        if: steps.unit-tests.outcome == 'failure'
+        run: |
+          echo "Tests failed — download full log from Artifacts: test-failure-log"
+          exit 1
 
   # Job for Android build
   build-android:
@@ -131,9 +144,12 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Create dummy google-services.json for CI
+      - name: Create google-services.json
         run: |
-          cat > android/app/google-services.json << 'EOL'
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+          else
+            cat > android/app/google-services.json << 'FALLBACK'
           {
             "project_info": {
               "project_number": "000000000000",
@@ -152,17 +168,18 @@ jobs:
               }]
             }]
           }
-          EOL
+          FALLBACK
+          fi
 
-      - name: Create dummy .env file for CI
+      - name: Create .env file
         run: |
           cat > .env << 'EOL'
-          FIREBASE_FUNCTIONS_URL=https://dummy-firebase-url.com
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
 
           # PalsHub/Supabase Configuration
-          SUPABASE_URL=https://dummy-supabase-url.supabase.co
-          SUPABASE_ANON_KEY=dummy-anon-key-for-ci-builds
-          PALSHUB_API_BASE_URL=https://dummy-palshub-api.com
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
 
           # App Configuration
           APP_URL=pocketpal://app
@@ -173,161 +190,38 @@ jobs:
           ENABLE_OFFLINE_MODE=true
 
           # Google Sign-In Configuration
-          GOOGLE_IOS_CLIENT_ID=dummy-ios-client-id.apps.googleusercontent.com
-          GOOGLE_WEB_CLIENT_ID=dummy-web-client-id.apps.googleusercontent.com
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
           EOL
 
-      - name: Create dummy release keystore for CI
+      - name: Set up Android Keystore
         working-directory: android/app
         run: |
-          # Generate a dummy keystore for CI builds
-          keytool -genkeypair -v \
-            -storetype PKCS12 \
-            -keystore pocketpal-release-key.keystore \
-            -alias pocketpal_key_alias \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass dummy-ci-password \
-            -keypass dummy-ci-password \
-            -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > pocketpal-release-key.keystore
+          else
+            # Generate a dummy keystore when no real one is configured
+            keytool -genkeypair -v \
+              -storetype PKCS12 \
+              -keystore pocketpal-release-key.keystore \
+              -alias pocketpal_key_alias \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass dummy-ci-password \
+              -keypass dummy-ci-password \
+              -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
+          fi
 
       - name: Build Android Release
         working-directory: android
         env:
-          APP_RELEASE_STORE_PASSWORD: dummy-ci-password
-          APP_RELEASE_KEY_PASSWORD: dummy-ci-password
-        run: ./gradlew assembleRelease
+          APP_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'dummy-ci-password' }}
+          APP_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'dummy-ci-password' }}
+        run: bash ./gradlew assembleRelease
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
-
-  # Job for iOS build
-  build-ios:
-    runs-on: macos-15  # macOS 15 with Xcode 16
-    needs: [build-and-test, detect-changes]
-    if: needs.detect-changes.outputs.translation_only != 'true'
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      # Set up Node.js environment
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22.21.0'
-          cache: 'yarn'
-
-      # Cache node_modules
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock') }}
-
-      - name: Install Yarn
-        run: npm install -g yarn
-
-      - name: Install dependencies
-        run: yarn install
-      
-      - name: Create Env.xcconfig
-        run: |
-          cat > ios/Config/Env.xcconfig << 'EOL'
-          // This file contains environment-specific build settings.
-
-          GOOGLE_WEB_CLIENT_ID = dummy-web-client-id.apps.googleusercontent.com
-          REVERSED_GOOGLE_IOS_CLIENT_ID = com.googleusercontent.apps.dummy-ios-client-id
-
-          EOL
-
-      - name: Create dummy .env file for CI
-        run: |
-          cat > .env << 'EOL'
-          FIREBASE_FUNCTIONS_URL=https://dummy-firebase-url.com
-
-          # PalsHub/Supabase Configuration
-          SUPABASE_URL=https://dummy-supabase-url.supabase.co
-          SUPABASE_ANON_KEY=dummy-anon-key-for-ci-builds
-          PALSHUB_API_BASE_URL=https://dummy-palshub-api.com
-
-          # App Configuration
-          APP_URL=pocketpal://app
-
-          # Feature Flags (true/false)
-          ENABLE_PALSHUB_INTEGRATION=true
-          ENABLE_AUTHENTICATION=true
-          ENABLE_OFFLINE_MODE=true
-
-          # Google Sign-In Configuration
-          GOOGLE_IOS_CLIENT_ID=dummy-ios-client-id.apps.googleusercontent.com
-          GOOGLE_WEB_CLIENT_ID=dummy-web-client-id.apps.googleusercontent.com
-          EOL
-
-      - name: Create dummy GoogleService-Info.plist for CI
-        run: |
-          cat > ios/GoogleService-Info.plist << 'EOL'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CLIENT_ID</key>
-            <string>dummy-client-id.apps.googleusercontent.com</string>
-            <key>REVERSED_CLIENT_ID</key>
-            <string>com.googleusercontent.apps.dummy-client-id</string>
-            <key>API_KEY</key>
-            <string>dummy-api-key-for-ci-builds</string>
-            <key>GCM_SENDER_ID</key>
-            <string>000000000000</string>
-            <key>PLIST_VERSION</key>
-            <string>1</string>
-            <key>BUNDLE_ID</key>
-            <string>ai.pocketpal</string>
-            <key>PROJECT_ID</key>
-            <string>dummy-project-for-ci</string>
-            <key>STORAGE_BUCKET</key>
-            <string>dummy-project-for-ci.appspot.com</string>
-            <key>IS_ADS_ENABLED</key>
-            <false/>
-            <key>IS_ANALYTICS_ENABLED</key>
-            <false/>
-            <key>IS_APPINVITE_ENABLED</key>
-            <false/>
-            <key>IS_GCM_ENABLED</key>
-            <true/>
-            <key>IS_SIGNIN_ENABLED</key>
-            <true/>
-            <key>GOOGLE_APP_ID</key>
-            <string>1:000000000000:ios:0000000000000000</string>
-          </dict>
-          </plist>
-          EOL
-
-      - name: Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod install
-          cd ..
-
-      - name: Install xcpretty
-        run: gem install xcpretty
-
-      - name: Build iOS Release
-        run: |
-          cd ios
-          # List available simulators for debugging
-          xcrun simctl list devices available
-          set -o pipefail && xcodebuild \
-            -workspace PocketPal.xcworkspace \
-            -scheme PocketPal \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            | xcpretty

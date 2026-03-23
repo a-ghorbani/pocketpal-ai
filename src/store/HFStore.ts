@@ -68,8 +68,8 @@ class HFStore {
           this.hfToken = credentials.password;
         });
       }
-    } catch (error) {
-      console.error('Failed to load token from secure storage:', error);
+    } catch {
+      return;
     }
   }
 
@@ -98,8 +98,7 @@ class HFStore {
         this.hfToken = token;
       });
       return true;
-    } catch (error) {
-      console.error('Failed to save HF token:', error);
+    } catch {
       return false;
     }
   }
@@ -115,8 +114,7 @@ class HFStore {
         this.hfToken = null;
       });
       return true;
-    } catch (error) {
-      console.error('Failed to clear HF token:', error);
+    } catch {
       return false;
     }
   }
@@ -172,7 +170,6 @@ class HFStore {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch GGUF specs:', error);
       runInAction(() => {
         this.error = createErrorState(error, 'modelDetails', 'huggingface');
       });
@@ -210,7 +207,6 @@ class HFStore {
   // Fetch the details (sizes, oid, lfs, ...) of the model files
   async fetchModelFileDetails(modelId: string) {
     try {
-      console.log('Fetching model file details for', modelId);
       const authToken = this.shouldUseToken ? this.hfToken : null;
       const fileDetails = await fetchModelFilesDetails(modelId, authToken);
       const model = this.models.find(m => m.id === modelId);
@@ -228,7 +224,6 @@ class HFStore {
         model.siblings = updatedSiblings;
       });
     } catch (error) {
-      console.error('Error fetching model file sizes:', error);
       runInAction(() => {
         this.error = createErrorState(error, 'modelDetails', 'huggingface');
       });
@@ -244,7 +239,6 @@ class HFStore {
       await this.fetchAndSetGGUFSpecs(modelId);
       await this.fetchModelFileDetails(modelId);
     } catch (error) {
-      console.error('Error fetching model data:', error);
       runInAction(() => {
         this.error = createErrorState(error, 'modelDetails', 'huggingface');
       });
@@ -262,15 +256,11 @@ class HFStore {
 
     // If we have very few models and recent attempts, apply debouncing
     if (this.models.length < 5 && timeSinceLastAttempt < 2000) {
-      console.log('🔵 Preventing fetchMore: too few models and recent attempt');
       return true;
     }
 
     // If we've had multiple consecutive small results, be more cautious
     if (this.consecutiveSmallResults >= 3 && timeSinceLastAttempt < 5000) {
-      console.log(
-        '🔵 Preventing fetchMore: multiple small results, applying longer debounce',
-      );
       return true;
     }
 
@@ -297,6 +287,17 @@ class HFStore {
     }
   }
 
+  // Force-reset loading state (e.g. when the user closes the search sheet)
+  resetLoading() {
+    runInAction(() => {
+      this.isLoading = false;
+      this.nextPageLink = null;
+      this.lastFetchedNextLink = null;
+      this.lastFetchMoreAttempt = 0;
+      this.consecutiveSmallResults = 0;
+    });
+  }
+
   // Fetch the models from the Hugging Face API
   async fetchModels() {
     this.isLoading = true;
@@ -306,6 +307,22 @@ class HFStore {
     this.lastFetchedNextLink = null;
     this.consecutiveSmallResults = 0;
     this.lastFetchMoreAttempt = 0;
+
+    // Safety net: force-clear isLoading after 20s no matter what
+    const safetyTimer = setTimeout(() => {
+      if (this.isLoading) {
+        runInAction(() => {
+          this.isLoading = false;
+          if (!this.error) {
+            this.error = createErrorState(
+              new Error('Request timed out'),
+              'search',
+              'huggingface',
+            );
+          }
+        });
+      }
+    }, 20000);
 
     try {
       const authToken = this.shouldUseToken ? this.hfToken : null;
@@ -340,6 +357,7 @@ class HFStore {
         this.error = createErrorState(error, 'search', 'huggingface');
       });
     } finally {
+      clearTimeout(safetyTimer);
       runInAction(() => {
         this.isLoading = false;
       });
@@ -348,7 +366,6 @@ class HFStore {
 
   // Fetch the next page of models
   async fetchMoreModels() {
-    console.log('fetchMoreModels called');
     if (!this.nextPageLink || this.isLoading) {
       return;
     }
@@ -360,10 +377,6 @@ class HFStore {
 
     // ⛔️ Don't refetch the same page over and over
     if (this.lastFetchedNextLink === this.nextPageLink) {
-      console.log(
-        '🔵 Skipping duplicate fetch for same nextPageLink:',
-        this.nextPageLink,
-      );
       return;
     }
     this.lastFetchedNextLink = this.nextPageLink;
@@ -371,6 +384,22 @@ class HFStore {
 
     this.isLoading = true;
     this.error = null;
+
+    const safetyTimer = setTimeout(() => {
+      if (this.isLoading) {
+        runInAction(() => {
+          this.isLoading = false;
+          this.nextPageLink = null;
+          if (!this.error) {
+            this.error = createErrorState(
+              new Error('Request timed out'),
+              'search',
+              'huggingface',
+            );
+          }
+        });
+      }
+    }, 20000);
 
     try {
       const authToken = this.shouldUseToken ? this.hfToken : null;
@@ -399,6 +428,7 @@ class HFStore {
         this.error = createErrorState(error, 'search', 'huggingface');
       });
     } finally {
+      clearTimeout(safetyTimer);
       runInAction(() => {
         this.isLoading = false;
       });

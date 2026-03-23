@@ -57,7 +57,7 @@ describe('benchmarkMigration', () => {
         modelName: 'Test Model',
         uuid: 'test-uuid',
         initSettings: {
-          n_ctx: 2048, // Modern property name
+          n_ctx: 8192, // Modern property name
           n_batch: 512,
           n_ubatch: 256,
           n_threads: 8,
@@ -70,7 +70,7 @@ describe('benchmarkMigration', () => {
 
       const migratedResult = migrateBenchmarkResult(modernResult);
 
-      expect(migratedResult.initSettings?.n_ctx).toBe(2048);
+      expect(migratedResult.initSettings?.n_ctx).toBe(8192);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
     });
 
@@ -125,7 +125,7 @@ describe('benchmarkMigration', () => {
       const migratedResult = migrateBenchmarkResult(originalResult);
 
       expect(originalResult).toEqual(originalCopy);
-      expect(migratedResult.initSettings?.version).toBe('2.1');
+      expect(migratedResult.initSettings?.version).toBe('2.2');
     });
 
     it('should not migrate if already at current version', () => {
@@ -143,7 +143,7 @@ describe('benchmarkMigration', () => {
         modelName: 'Test Model',
         uuid: 'test-uuid',
         initSettings: {
-          version: '2.1',
+          version: '2.2',
           n_ctx: N_CONTEXT,
           n_batch: 512,
           n_ubatch: 256,
@@ -154,6 +154,7 @@ describe('benchmarkMigration', () => {
           cache_type_v: CacheType.F16,
           n_gpu_layers: 0,
           image_max_tokens: 512,
+          vision_device: 'cpu',
         },
       };
 
@@ -196,7 +197,7 @@ describe('benchmarkMigration', () => {
 
       expect(migratedResult.initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
-      expect(migratedResult.initSettings?.version).toBe('2.1');
+      expect(migratedResult.initSettings?.version).toBe('2.2');
     });
   });
 
@@ -241,7 +242,7 @@ describe('benchmarkMigration', () => {
           modelName: 'Test Model 2',
           uuid: 'test-uuid-2',
           initSettings: {
-            n_ctx: 2048, // Already modern
+            n_ctx: 8192, // Already modern
             n_batch: 1024,
             n_ubatch: 512,
             n_threads: 16,
@@ -258,7 +259,7 @@ describe('benchmarkMigration', () => {
       expect(migratedResults).toHaveLength(2);
       expect(migratedResults[0].initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResults[0].initSettings).not.toHaveProperty('n_context');
-      expect(migratedResults[1].initSettings?.n_ctx).toBe(2048);
+      expect(migratedResults[1].initSettings?.n_ctx).toBe(8192);
     });
   });
 
@@ -294,7 +295,7 @@ describe('benchmarkMigration', () => {
 
       expect(migratedResult.initSettings?.n_ctx).toBe(N_CONTEXT);
       expect(migratedResult.initSettings).not.toHaveProperty('n_context');
-      expect(migratedResult.initSettings?.version).toBe('2.1');
+      expect(migratedResult.initSettings?.version).toBe('2.2');
     });
   });
 });

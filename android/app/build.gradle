@@ -91,7 +91,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 132 
-        versionName "1.12.2"
+        versionName "6.66"
         ndk {
             abiFilters "arm64-v8a", "x86_64"
         }
@@ -178,4 +178,5 @@ project.ext.vectoricons = [
 ]
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
 

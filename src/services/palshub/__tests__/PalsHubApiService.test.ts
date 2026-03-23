@@ -8,17 +8,33 @@ describe('PalsHubApiService', () => {
     global.fetch = undefined;
   });
 
-  it('throws when PALSHUB_API_BASE_URL is not configured', async () => {
+  it('falls back to the default PalsHub URL when PALSHUB_API_BASE_URL is not configured', async () => {
     jest.doMock('@env', () => ({PALSHUB_API_BASE_URL: undefined}));
     jest.doMock('../supabase', () => ({
       getAuthHeaders: jest.fn().mockResolvedValue({}),
     }));
+    // @ts-ignore
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        pals: [],
+        pagination: {page: 1, limit: 20, total: 0, has_more: false},
+        filters_applied: {},
+      }),
+    });
 
-    const {palsHubApiService, PalsHubError} = require('../PalsHubApiService');
+    const {palsHubApiService} = require('../PalsHubApiService');
 
-    await expect(palsHubApiService.getPals()).rejects.toThrow(PalsHubError);
-    await expect(palsHubApiService.getPals()).rejects.toThrow(
-      'PalsHub API not configured',
+    await expect(palsHubApiService.getPals()).resolves.toEqual({
+      pals: [],
+      total_count: 0,
+      page: 1,
+      limit: 20,
+      has_more: false,
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://palshub.ai/api/mobile/pals',
+      expect.any(Object),
     );
   });
 

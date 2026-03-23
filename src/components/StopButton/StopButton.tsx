@@ -42,7 +42,7 @@ export const StopButton = ({
       testID="stop-button"
       {...touchableOpacityProps}
       onPress={handlePress}
-      style={styles.stopButton}>
+      style={[styles.stopButton, touchableOpacityProps?.style]}>
       <StopIcon
         stroke={color ?? theme.colors.background}
         width={24}

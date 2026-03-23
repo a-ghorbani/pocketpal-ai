@@ -32,8 +32,12 @@ export const COMPLETION_PARAMS_METADATA: Partial<
     defaultValue: defaultCompletionParams.n_threads,
   },
   n_predict: {
-    validation: {type: 'numeric', min: 1, max: 4096, required: true},
+    validation: {type: 'numeric', min: -1, max: Infinity, required: true},
     defaultValue: defaultCompletionParams.n_predict,
+  },
+  reserved_output_tokens: {
+    validation: {type: 'numeric', min: 1, max: 32768, required: true},
+    defaultValue: defaultCompletionParams.reserved_output_tokens,
   },
   temperature: {
     validation: {type: 'numeric', min: 0, max: 2, required: true},
@@ -111,10 +115,6 @@ export const COMPLETION_PARAMS_METADATA: Partial<
   include_thinking_in_context: {
     validation: {type: 'boolean', required: false},
     defaultValue: defaultCompletionParams.include_thinking_in_context,
-  },
-  jinja: {
-    validation: {type: 'boolean', required: false},
-    defaultValue: defaultCompletionParams.jinja,
   },
 };
 

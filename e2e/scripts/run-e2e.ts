@@ -1065,9 +1065,7 @@ async function main(): Promise<void> {
   console.log(
     `Platform: ${args.platform} | Spec: ${args.spec} | Mode: ${args.mode}`,
   );
-  console.log(
-    `Devices: ${devices[0] === null ? 'default' : devices.length}`,
-  );
+  console.log(`Devices: ${devices[0] === null ? 'default' : devices.length}`);
   console.log(
     `Models: ${models[0] === null ? 'default' : (models as ModelTestConfig[]).map(m => m.id).join(', ')}`,
   );

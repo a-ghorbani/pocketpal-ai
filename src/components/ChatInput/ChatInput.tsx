@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useCameraPermission} from 'react-native-vision-camera';
@@ -67,13 +68,26 @@ export interface ChatInputTopLevelProps {
   isVisionEnabled?: boolean;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
-  /** Whether thinking mode is currently enabled */
+  /** Whether the UI thinking bubble is currently shown */
   isThinkingEnabled?: boolean;
-  /** Callback when thinking toggle is pressed */
+  /** Callback when thinking bubble UI toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether enable_thinking inference parameter is on */
+  isEnableThinkingOn?: boolean;
+  /** Callback when enable_thinking button is pressed */
+  onEnableThinkingToggle?: (enabled: boolean) => void;
+  /** Whether reasoning_format='auto' inference parameter is on */
+  isReasoningFormatOn?: boolean;
+  /** Callback when reasoning_format button is pressed */
+  onReasoningFormatToggle?: (enabled: boolean) => void;
 }
 
 export interface ChatInputAdditionalProps {
+  contextUsage?: {
+    usedTokens: number;
+    maxTokens: number;
+    usagePercent: number;
+  };
   /** Camera-specific props */
   isCameraActive?: boolean;
   onStartCamera?: () => void;
@@ -84,13 +98,90 @@ export interface ChatInputAdditionalProps {
   showImageUpload?: boolean;
   /** Whether to show the thinking toggle button */
   showThinkingToggle?: boolean;
-  /** Whether thinking mode is currently enabled */
+  /** Whether the UI thinking bubble is currently shown */
   isThinkingEnabled?: boolean;
-  /** Callback when thinking toggle is pressed */
+  /** Callback when thinking bubble UI toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether enable_thinking inference parameter is on */
+  isEnableThinkingOn?: boolean;
+  /** Callback when enable_thinking button is pressed */
+  onEnableThinkingToggle?: (enabled: boolean) => void;
+  /** Whether reasoning_format='auto' inference parameter is on */
+  isReasoningFormatOn?: boolean;
+  /** Callback when reasoning_format button is pressed */
+  onReasoningFormatToggle?: (enabled: boolean) => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
+
+export type ControlBarLayout = {
+  controlBarPaddingHorizontal: number;
+  leftControlsGap: number;
+  togglePaddingHorizontal: number;
+  togglePaddingVertical: number;
+  toggleTextFontSize: number;
+  toggleTextMarginLeft: number;
+  rightControlsGap: number;
+  rightControlsMarginLeft: number;
+  contextUsageMinWidth: number;
+  contextUsagePaddingHorizontal: number;
+  contextUsagePaddingVertical: number;
+  contextUsageMarginRight: number;
+  contextUsagePrimaryFontSize: number;
+  contextUsagePrimaryLineHeight: number;
+  contextUsageSecondaryFontSize: number;
+  contextUsageSecondaryLineHeight: number;
+  sendButtonSpacing: number;
+  compactIconButtonSize: number;
+  atomIconSize: number;
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function interpolate(min: number, max: number, compactness: number) {
+  return Math.round(max - (max - min) * compactness);
+}
+
+export function getResponsiveControlBarLayout({
+  screenWidth,
+  toggleCount,
+  hasContextUsage,
+}: {
+  screenWidth: number;
+  toggleCount: number;
+  hasContextUsage: boolean;
+}): ControlBarLayout {
+  const widthPressure = Math.max(0, (390 - screenWidth) / 40);
+  const togglePressure = clamp((toggleCount - 1) * 0.12, 0, 0.4);
+  const contextPressure = hasContextUsage ? 0.1 : 0;
+  const totalPressure = widthPressure + togglePressure + contextPressure;
+  const spacingPressure = clamp(totalPressure, 0, 1);
+  const shrinkPressure = clamp(totalPressure - 1, 0, 1);
+
+  return {
+    controlBarPaddingHorizontal: interpolate(12, 24, spacingPressure),
+    leftControlsGap: interpolate(2, 8, spacingPressure),
+    togglePaddingHorizontal: interpolate(2, 6, spacingPressure),
+    togglePaddingVertical: interpolate(3, 4, shrinkPressure),
+    toggleTextFontSize: interpolate(9, 11, shrinkPressure),
+    toggleTextMarginLeft: interpolate(2, 4, shrinkPressure),
+    rightControlsGap: interpolate(0, 4, spacingPressure),
+    rightControlsMarginLeft: interpolate(2, 8, spacingPressure),
+    contextUsageMinWidth: interpolate(34, 44, shrinkPressure),
+    contextUsagePaddingHorizontal: interpolate(2, 6, spacingPressure),
+    contextUsagePaddingVertical: interpolate(3, 5, shrinkPressure),
+    contextUsageMarginRight: interpolate(0, 2, spacingPressure),
+    contextUsagePrimaryFontSize: interpolate(11, 12, shrinkPressure),
+    contextUsagePrimaryLineHeight: interpolate(13, 14, shrinkPressure),
+    contextUsageSecondaryFontSize: interpolate(8, 9, shrinkPressure),
+    contextUsageSecondaryLineHeight: interpolate(10, 11, shrinkPressure),
+    sendButtonSpacing: interpolate(0, 6, spacingPressure),
+    compactIconButtonSize: interpolate(24, 28, shrinkPressure),
+    atomIconSize: interpolate(12, 14, shrinkPressure),
+  };
+}
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -112,6 +203,7 @@ export const ChatInput = observer(
     isPickerVisible,
     inputBackgroundColor,
     isCameraActive = false,
+    contextUsage,
     onStartCamera,
     promptText,
     onPromptTextChange,
@@ -122,10 +214,15 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    isEnableThinkingOn = false,
+    onEnableThinkingToggle,
+    isReasoningFormatOn = false,
+    onReasoningFormatToggle,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const user = React.useContext(UserContext);
+    const {width: screenWidth} = useWindowDimensions();
     const inputRef = React.useRef<TextInput>(null);
     const editBarHeight = React.useRef(new Animated.Value(0)).current;
     const iconRotation = React.useRef(new Animated.Value(0)).current;
@@ -152,7 +249,13 @@ export const ChatInput = observer(
     const [showModelWarning, setShowModelWarning] = React.useState(false);
     const isEditMode = chatSessionStore.isEditMode;
 
-    const styles = createStyles({theme, isEditMode});
+    const toggleCount = showThinkingToggle && !isCameraActive ? 3 : 0;
+    const controlBarLayout = getResponsiveControlBarLayout({
+      screenWidth,
+      toggleCount,
+      hasContextUsage: Boolean(contextUsage && !isCameraActive),
+    });
+    const styles = createStyles({theme, isEditMode, controlBarLayout});
 
     // For camera input, use promptText if provided
     const isVideoCapable =
@@ -477,7 +580,11 @@ export const ChatInput = observer(
                       }
                       accessibilityLabel="Add image"
                       accessibilityRole="button">
-                      <PlusIcon width={20} height={20} stroke={plusColor} />
+                      <PlusIcon
+                        width={controlBarLayout.atomIconSize + 6}
+                        height={controlBarLayout.atomIconSize + 6}
+                        stroke={plusColor}
+                      />
                     </TouchableOpacity>
                   }>
                   <Menu.Item
@@ -515,7 +622,11 @@ export const ChatInput = observer(
                     style={{
                       transform: [{rotate: rotateInterpolate}],
                     }}>
-                    <ChevronUpIcon stroke={inputBackgroundColor} />
+                    <ChevronUpIcon
+                      width={controlBarLayout.atomIconSize + 4}
+                      height={controlBarLayout.atomIconSize + 4}
+                      stroke={inputBackgroundColor}
+                    />
                   </Animated.View>
                 </TouchableOpacity>
 
@@ -542,7 +653,7 @@ export const ChatInput = observer(
                 )}
               </View>
 
-              {/* Thinking Toggle Button */}
+              {/* Thinking Toggle Button (UI: show/hide thinking bubble) */}
               {showThinkingToggle && !isCameraActive && (
                 <TouchableOpacity
                   style={[
@@ -558,8 +669,8 @@ export const ChatInput = observer(
                   }
                   accessibilityRole="button">
                   <AtomIcon
-                    width={14}
-                    height={14}
+                    width={controlBarLayout.atomIconSize}
+                    height={controlBarLayout.atomIconSize}
                     stroke={
                       isThinkingEnabled
                         ? inputBackgroundColor
@@ -568,6 +679,7 @@ export const ChatInput = observer(
                     strokeWidth={2}
                   />
                   <Text
+                    numberOfLines={1}
                     style={[
                       styles.thinkingToggleText,
                       isThinkingEnabled
@@ -575,6 +687,66 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                     ]}>
                     {l10n.components.chatInput.thinkingToggle.thinkText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Enable Thinking Button (inference param: enable_thinking) */}
+              {showThinkingToggle && !isCameraActive && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    isEnableThinkingOn && {backgroundColor: onSurfaceColor},
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={() => onEnableThinkingToggle?.(!isEnableThinkingOn)}
+                  accessibilityLabel={
+                    isEnableThinkingOn
+                      ? 'Disable enable_thinking parameter'
+                      : 'Enable enable_thinking parameter'
+                  }
+                  accessibilityRole="button">
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.thinkingToggleText,
+                      isEnableThinkingOn
+                        ? {color: inputBackgroundColor}
+                        : {color: onSurfaceColorVariant},
+                      styles.noTextOffset,
+                    ]}>
+                    {l10n.components.chatInput.thinkingToggle.enableThinkText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Reasoning Format Button (inference param: reasoning_format) */}
+              {showThinkingToggle && !isCameraActive && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    isReasoningFormatOn && {backgroundColor: onSurfaceColor},
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={() =>
+                    onReasoningFormatToggle?.(!isReasoningFormatOn)
+                  }
+                  accessibilityLabel={
+                    isReasoningFormatOn
+                      ? 'Disable reasoning_format=auto parameter'
+                      : 'Enable reasoning_format=auto parameter'
+                  }
+                  accessibilityRole="button">
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.thinkingToggleText,
+                      isReasoningFormatOn
+                        ? {color: inputBackgroundColor}
+                        : {color: onSurfaceColorVariant},
+                      styles.noTextOffset,
+                    ]}>
+                    {l10n.components.chatInput.thinkingToggle.saveThinkText}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -591,9 +763,24 @@ export const ChatInput = observer(
                 </View>
               )}
 
+              {contextUsage && !isCameraActive && (
+                <View style={styles.contextUsageBadge} testID="context-usage">
+                  <Text style={styles.contextUsagePrimary}>
+                    {contextUsage.usagePercent}%
+                  </Text>
+                  <Text style={styles.contextUsageSecondary}>
+                    {contextUsage.usedTokens}/{contextUsage.maxTokens}
+                  </Text>
+                </View>
+              )}
+
               {/* Send/Stop Button */}
               {isStopVisible ? (
-                <StopButton color={onSurfaceColor} onPress={onStopPress} />
+                <StopButton
+                  color={onSurfaceColor}
+                  onPress={onStopPress}
+                  touchableOpacityProps={{style: styles.sendButtonSpacing}}
+                />
               ) : isVideoCapable && !isCameraActive ? (
                 /* Compact Start Video Button for Video Pals */
                 <TouchableOpacity
@@ -619,7 +806,11 @@ export const ChatInput = observer(
               ) : (
                 isSendButtonVisible && (
                   <View style={{opacity: sendButtonOpacity}}>
-                    <SendButton color={onSurfaceColor} onPress={handleSend} />
+                    <SendButton
+                      color={onSurfaceColor}
+                      onPress={handleSend}
+                      touchableOpacityProps={{style: styles.sendButtonSpacing}}
+                    />
                   </View>
                 )
               )}

@@ -1,0 +1,347 @@
+name: CI Full (Android + iOS)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Detect if changes are translation-only (src/locales/ files)
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      translation_only: ${{ steps.check.outputs.translation_only }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check if translation-only
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          TRANSLATION_ONLY="true"
+          while IFS= read -r file; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+            case "$file" in
+              src/locales/*) ;;
+              *) TRANSLATION_ONLY="false"; break ;;
+            esac
+          done <<< "$CHANGED"
+
+          echo "translation_only=$TRANSLATION_ONLY" >> "$GITHUB_OUTPUT"
+          echo "Translation only: $TRANSLATION_ONLY"
+
+  # Lint, type check, unit tests
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock') }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.21.0'
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Validate l10n files
+        run: node scripts/validate-l10n.js
+
+      - name: Run ESLint
+        run: yarn lint
+
+      - name: Run TypeScript type check
+        run: yarn typecheck
+
+      - name: Run unit tests
+        id: unit-tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          yarn test --coverage 2>&1 | tee test-output.log
+
+      - name: Upload test log
+        if: steps.unit-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-log
+          path: test-output.log
+          retention-days: 7
+
+      - name: Fail if tests failed
+        if: steps.unit-tests.outcome == 'failure'
+        run: |
+          echo "Tests failed — download full log from Artifacts: test-failure-log"
+          exit 1
+
+  # Android build
+  build-android:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, detect-changes]
+    if: needs.detect-changes.outputs.translation_only != 'true'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.21.0'
+          cache: 'yarn'
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('yarn.lock') }}
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Create google-services.json
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+          else
+            cat > android/app/google-services.json << 'FALLBACK'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "dummy-project-for-ci",
+              "storage_bucket": "dummy-project-for-ci.appspot.com"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                "android_client_info": {
+                  "package_name": "com.pocketpalai"
+                }
+              },
+              "api_key": [{
+                "current_key": "dummy-api-key-for-ci-builds"
+              }]
+            }]
+          }
+          FALLBACK
+          fi
+
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOL'
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+          APP_URL=pocketpal://app
+          ENABLE_PALSHUB_INTEGRATION=true
+          ENABLE_AUTHENTICATION=true
+          ENABLE_OFFLINE_MODE=true
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          EOL
+
+      - name: Set up Android Keystore
+        working-directory: android/app
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > pocketpal-release-key.keystore
+          else
+            keytool -genkeypair -v \
+              -storetype PKCS12 \
+              -keystore pocketpal-release-key.keystore \
+              -alias pocketpal_key_alias \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass dummy-ci-password \
+              -keypass dummy-ci-password \
+              -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
+          fi
+
+      - name: Build Android Release
+        working-directory: android
+        env:
+          APP_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'dummy-ci-password' }}
+          APP_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'dummy-ci-password' }}
+        run: bash ./gradlew assembleRelease
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+
+  # iOS build
+  build-ios:
+    runs-on: macos-15
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.translation_only != 'true'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.21.0'
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.3'
+          bundler-cache: true
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      - name: Create Env.xcconfig
+        run: |
+          mkdir -p ios/Config
+          cat > ios/Config/Env.xcconfig << 'EOL'
+          // This file contains environment-specific build settings.
+
+          GOOGLE_WEB_CLIENT_ID = ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          REVERSED_GOOGLE_IOS_CLIENT_ID = ${{ vars.REVERSED_GOOGLE_IOS_CLIENT_ID }}
+
+          EOL
+
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOL'
+          FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
+          SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
+          APP_URL=pocketpal://app
+          ENABLE_PALSHUB_INTEGRATION=true
+          ENABLE_AUTHENTICATION=true
+          ENABLE_OFFLINE_MODE=true
+          GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          EOL
+
+      - name: Install xcpretty
+        run: gem install xcpretty
+
+      - name: Create GoogleService-Info.plist
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_PLIST }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_PLIST }}' > ios/GoogleService-Info.plist
+          else
+            cat > ios/GoogleService-Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CLIENT_ID</key>
+            <string>000000000000-dummy.apps.googleusercontent.com</string>
+            <key>REVERSED_CLIENT_ID</key>
+            <string>com.googleusercontent.apps.000000000000-dummy</string>
+            <key>API_KEY</key>
+            <string>dummy-api-key-for-ci-builds</string>
+            <key>GCM_SENDER_ID</key>
+            <string>000000000000</string>
+            <key>PLIST_VERSION</key>
+            <string>1</string>
+            <key>BUNDLE_ID</key>
+            <string>com.pocketpalai</string>
+            <key>PROJECT_ID</key>
+            <string>dummy-project-for-ci</string>
+            <key>STORAGE_BUCKET</key>
+            <string>dummy-project-for-ci.appspot.com</string>
+            <key>IS_ADS_ENABLED</key>
+            <false/>
+            <key>IS_ANALYTICS_ENABLED</key>
+            <false/>
+            <key>IS_APPINVITE_ENABLED</key>
+            <true/>
+            <key>IS_GCM_ENABLED</key>
+            <true/>
+            <key>IS_SIGNIN_ENABLED</key>
+            <true/>
+            <key>GOOGLE_APP_ID</key>
+            <string>1:000000000000:ios:0000000000000000</string>
+          </dict>
+          </plist>
+          EOF
+          fi
+
+      - name: Archive iOS Release
+        run: |
+          xcodebuild archive \
+            -workspace ios/PocketPal.xcworkspace \
+            -scheme PocketPal \
+            -configuration Release \
+            -archivePath build/PocketPal.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      - name: Package IPA from archive
+        run: |
+          mkdir -p build/export/Payload
+          cp -r build/PocketPal.xcarchive/Products/Applications/PocketPal.app \
+            build/export/Payload/
+          cd build/export
+          zip -r PocketPal.ipa Payload/
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocketpal-unsigned-ipa
+          path: build/export/PocketPal.ipa
+          retention-days: 7
+
+      - name: Upload iOS build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ~/Library/Logs/gym/

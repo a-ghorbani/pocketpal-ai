@@ -808,6 +808,66 @@ class ChatSessionStore {
     }
   }
 
+  async branchSessionFromMessage(messageId: string): Promise<void> {
+    if (!this.activeSessionId) {
+      return;
+    }
+
+    const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (!session) {
+      return;
+    }
+
+    const messageIndex = session.messages.findIndex(
+      msg => msg.id === messageId,
+    );
+    if (messageIndex < 0) {
+      return;
+    }
+
+    const branchedMessages = session.messages.slice(messageIndex);
+    const baseTitle =
+      session.title === NEW_SESSION_TITLE ? 'Branch' : session.title;
+    const branchTitle = `${baseTitle} - Branch`;
+
+    const newSession = await chatSessionRepository.createSession(
+      branchTitle,
+      branchedMessages,
+      session.completionSettings,
+      session.activePalId,
+    );
+
+    const sessionData = await chatSessionRepository.getSessionById(
+      newSession.id,
+    );
+    if (!sessionData) {
+      return;
+    }
+
+    const messages = sessionData.messages.map(msg => msg.toMessageObject());
+    const completionSettings = sessionData.completionSettings
+      ? sessionData.completionSettings.getSettings()
+      : session.completionSettings;
+
+    const metaData: SessionMetaData = {
+      id: newSession.id,
+      title: branchTitle,
+      date: newSession.date,
+      messages,
+      completionSettings,
+      activePalId: session.activePalId,
+      settingsSource: session.settingsSource,
+      messagesLoaded: true,
+    };
+
+    runInAction(() => {
+      this.sessions.push(metaData);
+      this.activeSessionId = newSession.id;
+      this.isEditMode = false;
+      this.editingMessageId = null;
+    });
+  }
+
   get activePalId(): string | undefined {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);

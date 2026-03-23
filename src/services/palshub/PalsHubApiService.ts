@@ -1,6 +1,7 @@
 import {authService} from './AuthService';
 import {getAuthHeaders} from './supabase';
 import {PALSHUB_API_BASE_URL} from '@env';
+import {networkLog} from '../../utils/debug';
 import type {
   PalsQuery,
   LibraryQuery,
@@ -120,9 +121,16 @@ interface ApiMyPalsResponse {
 }
 
 class PalsHubApiService {
-  private apiBase = PALSHUB_API_BASE_URL;
+  private apiBase = PALSHUB_API_BASE_URL || 'https://palshub.ai';
 
-  constructor() {}
+  constructor() {
+    networkLog('PalsHubApiService:init', {
+      PALSHUB_API_BASE_URL_raw: PALSHUB_API_BASE_URL,
+      apiBase: this.apiBase,
+      isConfigured: !!(this.apiBase && this.apiBase !== 'undefined'),
+      typeofApiBase: typeof this.apiBase,
+    });
+  }
 
   private isConfigured(): boolean {
     return !!(this.apiBase && this.apiBase !== 'undefined');
