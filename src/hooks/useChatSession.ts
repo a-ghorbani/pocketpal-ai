@@ -1242,6 +1242,14 @@ export const useChatSession = (
       let firstNativeChunkSeen = false;
       let firstCallbackKeys: string[] = [];
       let firstTokenPreview = '';
+      let promptProgressEventCount = 0;
+      let streamPayloadEventCount = 0;
+      let firstPromptProgressPayload: {
+        prompt_progress: unknown;
+        prompt_tokens_processed: unknown;
+        prompt_tokens_total: unknown;
+        keys: string[];
+      } | null = null;
 
       // State machine for real-time <think> tag parsing when RF is off.
       // When RF is on, llama.rn natively splits reasoning_content/content.
@@ -1281,6 +1289,31 @@ export const useChatSession = (
               data.token || data.content || data.reasoning_content,
             );
 
+            if (promptProgress !== null) {
+              promptProgressEventCount += 1;
+              if (!firstPromptProgressPayload) {
+                firstPromptProgressPayload = {
+                  prompt_progress: (data as any).prompt_progress,
+                  prompt_tokens_processed: (data as any)
+                    .prompt_tokens_processed,
+                  prompt_tokens_total: (data as any).prompt_tokens_total,
+                  keys: Object.keys(data || {}),
+                };
+              }
+              if (promptProgressEventCount <= 8) {
+                engineOutputLog('completion:prompt-progress-event', {
+                  requestId,
+                  eventIndex: promptProgressEventCount,
+                  prompt_progress: (data as any).prompt_progress,
+                  prompt_tokens_processed: (data as any)
+                    .prompt_tokens_processed,
+                  prompt_tokens_total: (data as any).prompt_tokens_total,
+                  hasStreamPayload,
+                  callbackKeys: Object.keys(data || {}),
+                });
+              }
+            }
+
             if (promptProgress !== null && !hasStreamPayload) {
               modelStore.setPromptProcessingProgress(promptProgress);
               return;
@@ -1298,6 +1331,27 @@ export const useChatSession = (
               firstNativeChunkSeen = true;
               firstCallbackKeys = Object.keys(data || {});
               firstTokenPreview = previewText((data as any)?.token, 120);
+            }
+
+            if (hasStreamPayload) {
+              streamPayloadEventCount += 1;
+              if (streamPayloadEventCount <= 5) {
+                engineOutputLog('completion:stream-callback-event', {
+                  requestId,
+                  eventIndex: streamPayloadEventCount,
+                  callbackKeys: Object.keys(data || {}),
+                  tokenPreview: previewText((data as any)?.token, 120),
+                  contentPreview: previewText((data as any)?.content, 120),
+                  reasoningPreview: previewText(
+                    (data as any)?.reasoning_content,
+                    120,
+                  ),
+                  prompt_progress: (data as any)?.prompt_progress,
+                  prompt_tokens_processed: (data as any)
+                    ?.prompt_tokens_processed,
+                  prompt_tokens_total: (data as any)?.prompt_tokens_total,
+                });
+              }
             }
 
             if (!modelStore.isStreaming) {
@@ -1461,6 +1515,9 @@ export const useChatSession = (
         input_tokens: tokenUsage.inputTokens ?? inputTokenEstimate,
         output_tokens: tokenUsage.outputTokens,
         total_tokens: tokenUsage.totalTokens,
+        promptProgressEventCount,
+        streamPayloadEventCount,
+        firstPromptProgressPayload,
         streamChunkCount,
         firstCallbackKeys,
         firstTokenPreview,
