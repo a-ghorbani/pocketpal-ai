@@ -1,96 +1,96 @@
 {
   "version": "1.0",
-  "commit": "37cc55b",
+  "commit": "b4d08b6",
   "device": "iPhone 13 Pro",
   "os_version": "26.3",
   "platform": "ios",
-  "timestamp": "2026-03-23T17:39:34.504Z",
+  "timestamp": "2026-03-23T21:49:14.885Z",
   "model": "qwen3-1.7b",
   "checkpoints": [
     {
       "label": "app_launch",
-      "timestamp": "2026-03-23T17:37:31Z",
+      "timestamp": "2026-03-23T21:46:34Z",
       "native": {
-        "resident_size": 183910400,
+        "resident_size": 184238080,
         "compressed": 0,
-        "phys_footprint": 95552576,
-        "internal": 96190464,
+        "phys_footprint": 96240704,
+        "internal": 96878592,
         "metal_allocated": 65536,
-        "available_memory": 3125672896
+        "available_memory": 3124984768
       }
     },
     {
       "label": "models_screen",
-      "timestamp": "2026-03-23T17:37:37Z",
+      "timestamp": "2026-03-23T21:46:40Z",
       "native": {
-        "resident_size": 188727296,
+        "resident_size": 189120512,
         "compressed": 0,
-        "phys_footprint": 96535616,
-        "internal": 97484800,
+        "phys_footprint": 95634496,
+        "internal": 96583680,
         "metal_allocated": 65536,
-        "available_memory": 3124689856
+        "available_memory": 3125590976
       }
     },
     {
       "label": "chat_screen",
-      "timestamp": "2026-03-23T17:37:43Z",
+      "timestamp": "2026-03-23T21:46:46Z",
       "native": {
-        "resident_size": 190709760,
+        "resident_size": 191004672,
         "compressed": 0,
-        "phys_footprint": 97584192,
-        "internal": 98369536,
+        "phys_footprint": 97682496,
+        "internal": 98467840,
         "metal_allocated": 65536,
-        "available_memory": 3123641280
+        "available_memory": 3123542976
       }
     },
     {
       "label": "model_loaded",
-      "timestamp": "2026-03-23T17:38:51Z",
+      "timestamp": "2026-03-23T21:48:28Z",
       "native": {
-        "resident_size": 1705541632,
-        "compressed": 62930944,
-        "phys_footprint": 439322936,
-        "internal": 376471552,
+        "resident_size": 1723891712,
+        "compressed": 44646400,
+        "phys_footprint": 425642272,
+        "internal": 381501440,
         "metal_allocated": 1827127296,
-        "available_memory": 2781902536
+        "available_memory": 2795583200
       }
     },
     {
       "label": "chat_active",
-      "timestamp": "2026-03-23T17:39:09Z",
+      "timestamp": "2026-03-23T21:48:50Z",
       "native": {
-        "resident_size": 1720909824,
-        "compressed": 50921472,
-        "phys_footprint": 421038416,
-        "internal": 371359744,
+        "resident_size": 1747107840,
+        "compressed": 34127872,
+        "phys_footprint": 420301112,
+        "internal": 387514368,
         "metal_allocated": 1827749888,
-        "available_memory": 2800187056
+        "available_memory": 2800924360
       }
     },
     {
       "label": "post_chat_idle",
-      "timestamp": "2026-03-23T17:39:21Z",
+      "timestamp": "2026-03-23T21:49:01Z",
       "native": {
-        "resident_size": 1722417152,
-        "compressed": 50495488,
-        "phys_footprint": 418842960,
-        "internal": 372457472,
+        "resident_size": 1748647936,
+        "compressed": 33931264,
+        "phys_footprint": 417499448,
+        "internal": 388022272,
         "metal_allocated": 1827127296,
-        "available_memory": 2802382512
+        "available_memory": 2803726024
       }
     },
     {
       "label": "model_unloaded",
-      "timestamp": "2026-03-23T17:39:31Z",
+      "timestamp": "2026-03-23T21:49:11Z",
       "native": {
-        "resident_size": 254066688,
-        "compressed": 38830080,
-        "phys_footprint": 148014336,
-        "internal": 116621312,
+        "resident_size": 280051712,
+        "compressed": 20692992,
+        "phys_footprint": 146621672,
+        "internal": 134397952,
         "metal_allocated": 393216,
-        "available_memory": 3073211136
+        "available_memory": 3074603800
       }
     }
   ],
-  "peak_memory_mb": 418.97
+  "peak_memory_mb": 2148.41
 }
