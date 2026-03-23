@@ -22,7 +22,7 @@ Since the majority of the users of this application are those who wish to gain a
 
 10. Real-time memory usage display has also been enabled on Android.
 
-11. Added compilation for **Apple IPA installers**.
+11. Added compilation for **Apple IPA installers**. No plans to adapt for iOS at present; only ensuring successful compilation. But after my testing, only some models exhibit anomalies, particularly the 0.8b models.
 
 - Split the single "Think" button into **three buttons**:
 - Whether to enable the UI-layer thinking box.
