@@ -54,6 +54,8 @@ The phenomenon you encountered—where the model stops generating when the conte
 
 17. Add deletion, branching, and editing features for conversations. Include numerous prompts such as model information, the number of input tokens, and output tokens per conversation.
 
+18. Preserve records of multiple generations, and record them into the context based on the actual displayed messages.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
   <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
