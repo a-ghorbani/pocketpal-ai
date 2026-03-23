@@ -30,17 +30,6 @@ export interface GPUInfo {
   gpuType: string;
 }
 
-export interface MemoryProfile {
-  /** iOS: phys_footprint via task_info. Bytes. */
-  phys_footprint?: number;
-  /** Android: PSS total via Debug.getPss(). Bytes. */
-  pss_total?: number;
-  /** Android only: native heap allocated. Bytes. */
-  native_heap_allocated?: number;
-  /** Available memory from OS. Bytes. */
-  available_memory: number;
-}
-
 export interface Spec extends TurboModule {
   getCPUInfo(): Promise<CPUInfo>;
   getGPUInfo(): Promise<GPUInfo>;
@@ -53,14 +42,8 @@ export interface Spec extends TurboModule {
    */
   getAvailableMemory(): Promise<number>;
   /**
-   * Get detailed memory profile with platform-specific metrics.
-   * - iOS: phys_footprint + available_memory
-   * - Android: pss_total + native_heap_allocated + available_memory
-   */
-  getMemoryProfile(): Promise<MemoryProfile>;
-  /**
    * Collect memory metrics and write a snapshot entry to disk.
-   * Appends to Documents/memory-snapshots.json (iOS) or filesDir/memory-snapshots.json (Android).
+   * Appends to Documents/memory-snapshots.json (iOS) or externalFilesDir/memory-snapshots.json (Android).
    */
   writeMemorySnapshot(label: string): Promise<{label: string; status: string}>;
 }

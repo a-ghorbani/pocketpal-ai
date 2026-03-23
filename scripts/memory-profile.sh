@@ -134,8 +134,10 @@ echo "--- Memory profile report written to: $REPORT_PATH ---"
 if [[ -n "$BASELINE" ]]; then
   echo ""
   echo "--- Comparing with baseline ---"
+  set +e
   npx tsx scripts/memory-compare.ts "$BASELINE" "$REPORT_PATH"
   COMPARE_EXIT=$?
+  set -e
 
   if [[ $COMPARE_EXIT -eq 0 ]]; then
     echo "Comparison: PASS"

@@ -215,30 +215,6 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  override fun getMemoryProfile(promise: Promise) {
-    try {
-      val profile = Arguments.createMap()
-
-      // PSS Total (Debug.getPss() returns KB)
-      val pssKb = Debug.getPss()
-      profile.putDouble("pss_total", pssKb * 1024.0)
-
-      // Native heap allocated (bytes)
-      profile.putDouble("native_heap_allocated", Debug.getNativeHeapAllocatedSize().toDouble())
-
-      // Available memory (same as getAvailableMemory)
-      val activityManager = reactApplicationContext
-          .getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-      val memInfo = ActivityManager.MemoryInfo()
-      activityManager.getMemoryInfo(memInfo)
-      profile.putDouble("available_memory", memInfo.availMem.toDouble())
-
-      promise.resolve(profile)
-    } catch (e: Exception) {
-      promise.reject("ERROR", e.message)
-    }
-  }
-
   override fun writeMemorySnapshot(label: String, promise: Promise) {
     try {
       // Collect memory metrics

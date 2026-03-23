@@ -74,6 +74,13 @@ export const TEST_MODELS: ModelTestConfig[] = [
     downloadTimeout: 600000, // 10 min - larger model
   },
   {
+    id: 'qwen3-0.6b',
+    searchQuery: 'bartowski Qwen_Qwen3-0.6B',
+    selectorText: 'Qwen_Qwen3-0.6B',
+    downloadFile: 'Qwen_Qwen3-0.6B-Q4_0.gguf',
+    prompts: [{input: 'Hi', description: 'Basic greeting'}],
+  },
+  {
     id: 'qwen3-1.7b',
     searchQuery: 'bartowski Qwen_Qwen3-1.7B',
     selectorText: 'Qwen_Qwen3-1.7B',

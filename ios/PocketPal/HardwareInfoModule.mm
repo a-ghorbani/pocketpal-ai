@@ -72,33 +72,6 @@ RCT_EXPORT_METHOD(getAvailableMemory:(RCTPromiseResolveBlock)resolve
   }
 }
 
-RCT_EXPORT_METHOD(getMemoryProfile:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-{
-  @try {
-    task_vm_info_data_t vmInfo;
-    mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
-    kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO,
-                                     (task_info_t)&vmInfo, &count);
-
-    uint64_t physFootprint = 0;
-    if (result == KERN_SUCCESS) {
-      physFootprint = vmInfo.phys_footprint;
-    }
-
-    uint64_t availableMemory = os_proc_available_memory();
-
-    NSDictionary *profile = @{
-      @"phys_footprint": @(physFootprint),
-      @"available_memory": @(availableMemory),
-    };
-
-    resolve(profile);
-  } @catch (NSException *exception) {
-    reject(@"error_getting_memory_profile", @"Could not retrieve memory profile", nil);
-  }
-}
-
 RCT_EXPORT_METHOD(writeMemorySnapshot:(NSString *)label
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
@@ -114,8 +87,10 @@ RCT_EXPORT_METHOD(writeMemorySnapshot:(NSString *)label
     uint64_t compressedMem = (result == KERN_SUCCESS) ? vmInfo.compressed : 0;
     uint64_t availableMemory = os_proc_available_memory();
 
-    // Metal GPU memory (model weights offloaded to GPU)
-    id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
+    // Metal GPU memory — use cached device to read the app's actual allocations
+    static id<MTLDevice> metalDevice = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{ metalDevice = MTLCreateSystemDefaultDevice(); });
     uint64_t metalAllocated = metalDevice ? (uint64_t)metalDevice.currentAllocatedSize : 0;
 
     NSDictionary *snapshot = @{

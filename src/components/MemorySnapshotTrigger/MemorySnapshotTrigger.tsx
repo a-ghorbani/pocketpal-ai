@@ -25,9 +25,6 @@ export const MemorySnapshotTrigger: React.FC = () => {
   const [resultData, setResultData] = useState('');
 
   const handleChangeText = useCallback((text: string) => {
-    // Update result with received text for debugging
-    setResultData(prev => (prev ? `${prev}|${text}` : text));
-
     const processCommand = async () => {
       try {
         if (text === CLEAR_CMD) {
