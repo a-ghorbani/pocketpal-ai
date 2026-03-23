@@ -132,6 +132,7 @@ class ModelStore {
   inferencing: boolean = false;
   isStreaming: boolean = false;
   promptProcessingProgress: number | null = null;
+  private lastPromptTokensPerMs: number | null = null;
 
   // Track active completion promise for safe context release
   // This prevents race condition where context is freed while completion is still running
@@ -1429,6 +1430,7 @@ class ModelStore {
     runInAction(() => {
       this.isContextLoading = true;
       this.loadingModel = model;
+      this.lastPromptTokensPerMs = null;
     });
 
     try {
@@ -1800,6 +1802,7 @@ class ModelStore {
       runInAction(() => {
         this.context = undefined;
         this.activeContextSettings = undefined;
+        this.lastPromptTokensPerMs = null;
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
@@ -2502,6 +2505,39 @@ class ModelStore {
 
   setPromptProcessingProgress(value: number | null) {
     this.promptProcessingProgress = value;
+  }
+
+  resetPromptProcessingPrediction() {
+    this.lastPromptTokensPerMs = null;
+  }
+
+  updatePromptProcessingPrediction(promptTokens?: number, promptMs?: number) {
+    if (
+      typeof promptTokens !== 'number' ||
+      typeof promptMs !== 'number' ||
+      !Number.isFinite(promptTokens) ||
+      !Number.isFinite(promptMs) ||
+      promptTokens <= 0 ||
+      promptMs <= 0
+    ) {
+      return;
+    }
+
+    this.lastPromptTokensPerMs = promptTokens / promptMs;
+  }
+
+  getEstimatedPromptDurationMs(promptTokens?: number): number | null {
+    if (
+      typeof promptTokens !== 'number' ||
+      !Number.isFinite(promptTokens) ||
+      promptTokens <= 0 ||
+      !this.lastPromptTokensPerMs ||
+      this.lastPromptTokensPerMs <= 0
+    ) {
+      return null;
+    }
+
+    return Math.max(1, Math.round(promptTokens / this.lastPromptTokensPerMs));
   }
 
   /**

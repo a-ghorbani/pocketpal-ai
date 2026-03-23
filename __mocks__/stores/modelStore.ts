@@ -159,6 +159,10 @@ class MockModelStore {
     this.promptProcessingProgress = value;
   };
 
+  resetPromptProcessingPrediction = jest.fn();
+  updatePromptProcessingPrediction = jest.fn();
+  getEstimatedPromptDurationMs = jest.fn(() => null);
+
   // Safe context release methods
   registerCompletionPromise = jest.fn();
   clearCompletionPromise = jest.fn();

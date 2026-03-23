@@ -176,16 +176,26 @@ describe('useChatSession', () => {
     expect(modelStore.inferencing).toBe(false);
   });
 
-  it('should track real prompt processing progress and clear it on first token', async () => {
+  it('should use the previous prompt sample to predict progress and clear it on first token', async () => {
+    jest.useFakeTimers();
+    modelStore.getEstimatedPromptDurationMs = jest.fn(() => 1000) as any;
+    modelStore.updatePromptProcessingPrediction = jest.fn() as any;
+
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
         .mockImplementation(async (_params, onToken) => {
-          onToken?.({prompt_progress: 35});
-          expect(modelStore.promptProcessingProgress).toBe(35);
+          act(() => {
+            jest.advanceTimersByTime(240);
+          });
+          expect(modelStore.promptProcessingProgress).toBeGreaterThan(0);
           onToken?.({token: 'A', content: 'A'});
           expect(modelStore.promptProcessingProgress).toBeNull();
-          return {text: 'A', timings: {total: 100}, usage: {}};
+          return {
+            text: 'A',
+            timings: {total: 100, prompt_n: 200, prompt_ms: 500},
+            usage: {},
+          };
         });
     }
 

@@ -1182,7 +1182,7 @@ export const useChatSession = (
     await addMessage(textMessage);
     modelStore.setInferencing(true);
     modelStore.setIsStreaming(false);
-    modelStore.setPromptProcessingProgress(0);
+    modelStore.setPromptProcessingProgress(null);
     chatSessionStore.setIsGenerating(true);
 
     // Keep screen awake during completion
@@ -1231,6 +1231,7 @@ export const useChatSession = (
 
     let completionSettled = false;
     let cancelNativeCallHeartbeats: () => void = () => undefined;
+    let cancelEstimatedPromptProgress: () => void = () => undefined;
 
     try {
       // Track time to first token
@@ -1250,6 +1251,8 @@ export const useChatSession = (
         prompt_tokens_total: unknown;
         keys: string[];
       } | null = null;
+      const estimatedPromptDurationMs =
+        modelStore.getEstimatedPromptDurationMs(inputTokenEstimate);
 
       // State machine for real-time <think> tag parsing when RF is off.
       // When RF is on, llama.rn natively splits reasoning_content/content.
@@ -1271,6 +1274,27 @@ export const useChatSession = (
           inferencing: modelStore.inferencing,
         }),
       );
+
+      if (estimatedPromptDurationMs !== null) {
+        const estimateStartTime = Date.now();
+        const updateEstimatedPromptProgress = () => {
+          const elapsedMs = Date.now() - estimateStartTime;
+          const nextProgress = Math.max(
+            1,
+            Math.min(
+              95,
+              Math.round((elapsedMs / estimatedPromptDurationMs) * 100),
+            ),
+          );
+          modelStore.setPromptProcessingProgress(nextProgress);
+        };
+
+        updateEstimatedPromptProgress();
+        const intervalId = setInterval(updateEstimatedPromptProgress, 120);
+        cancelEstimatedPromptProgress = () => {
+          clearInterval(intervalId);
+        };
+      }
 
       // Create the completion promise and register it with modelStore
       // This enables safe context release by waiting for the promise to finish
@@ -1355,6 +1379,7 @@ export const useChatSession = (
             }
 
             if (!modelStore.isStreaming) {
+              cancelEstimatedPromptProgress();
               modelStore.setPromptProcessingProgress(null);
               modelStore.setIsStreaming(true);
             }
@@ -1498,9 +1523,14 @@ export const useChatSession = (
       const result = await completionPromise;
       completionSettled = true;
       cancelNativeCallHeartbeats();
+      cancelEstimatedPromptProgress();
 
       // Clear the promise after completion finishes
       modelStore.clearCompletionPromise();
+      modelStore.updatePromptProcessingPrediction(
+        (result as any)?.timings?.prompt_n ?? inputTokenEstimate,
+        (result as any)?.timings?.prompt_ms,
+      );
 
       // 类2: 引擎输出 — 完成结果与性能数据
       const tokenUsage = extractTokenUsage(
@@ -1584,6 +1614,7 @@ export const useChatSession = (
     } catch (error) {
       completionSettled = true;
       cancelNativeCallHeartbeats();
+      cancelEstimatedPromptProgress();
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
       console.error('Completion error:', error);

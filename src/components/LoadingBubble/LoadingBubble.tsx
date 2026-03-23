@@ -19,7 +19,7 @@ export const LoadingBubble: React.FC<LoadingBubbleProps> = ({
   const progressValue =
     typeof progress === 'number'
       ? Math.max(0, Math.min(100, Math.round(progress)))
-      : 0;
+      : null;
 
   return (
     <View
@@ -29,7 +29,9 @@ export const LoadingBubble: React.FC<LoadingBubbleProps> = ({
       ]}>
       <CircularActivityIndicator color={theme.colors.primary} size={16} />
       <Text style={[styles.text, {color: theme.colors.onSurfaceVariant}]}>
-        {label}... {progressValue}%
+        {label}
+        ...
+        {progressValue !== null ? ` ${progressValue}%` : ''}
       </Text>
     </View>
   );
