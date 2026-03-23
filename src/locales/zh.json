@@ -885,7 +885,9 @@
     },
     "chatView": {
       "menuItems": {
+        "branch": "从这里分支",
         "copy": "复制",
+        "delete": "删除",
         "regenerate": "重新生成",
         "regenerateWith": "重新生成（重选模型）",
         "edit": "编辑",

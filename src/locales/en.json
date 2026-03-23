@@ -889,7 +889,9 @@
     },
     "chatView": {
       "menuItems": {
+        "branch": "Branch from Here",
         "copy": "Copy",
+        "delete": "Delete",
         "regenerate": "Regenerate",
         "regenerateWith": "Regenerate with",
         "edit": "Edit",

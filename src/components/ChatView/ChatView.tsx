@@ -76,9 +76,11 @@ import {ChatNavigationBar, UserMessageNode} from '../ChatNavigationBar';
 import {
   AlertIcon,
   CopyIcon,
+  DuplicateIcon,
   GridIcon,
   PencilLineIcon,
   RefreshIcon,
+  TrashIcon,
 } from '../../assets/icons';
 
 type MenuItem = {
@@ -998,14 +1000,52 @@ export const ChatView = observer(
     // ============ MESSAGE INPUT HANDLERS ============
     const wrappedOnSendPress = React.useCallback(
       async (message: MessageType.PartialText) => {
+        const activeEditingMessage =
+          chatSessionStore.activeSessionId && chatSessionStore.editingMessageId
+            ? chatSessionStore.sessions
+                .find(s => s.id === chatSessionStore.activeSessionId)
+                ?.messages.find(
+                  msg => msg.id === chatSessionStore.editingMessageId,
+                )
+            : null;
+
         if (chatSessionStore.isEditMode) {
-          await chatSessionStore.commitEdit();
+          if (
+            activeEditingMessage &&
+            activeEditingMessage.type === 'text' &&
+            activeEditingMessage.author.id !== user.id
+          ) {
+            await chatSessionStore.removeMessagesFromId(
+              activeEditingMessage.id,
+              false,
+            );
+            await chatSessionStore.updateMessage(
+              activeEditingMessage.id,
+              chatSessionStore.activeSessionId || '',
+              {
+                text: message.text,
+                metadata:
+                  message.imageUris !== undefined
+                    ? {
+                        imageUris: message.imageUris,
+                      }
+                    : undefined,
+              },
+            );
+            chatSessionStore.exitEditMode();
+            setInputText('');
+            setInputImages([]);
+            Keyboard.dismiss();
+            return;
+          } else {
+            await chatSessionStore.commitEdit();
+          }
         }
         onSendPress(message);
         setInputText('');
         Keyboard.dismiss();
       },
-      [onSendPress],
+      [onSendPress, user.id],
     );
 
     const activeSession = chatSessionStore.sessions.find(
@@ -1131,14 +1171,20 @@ export const ChatView = observer(
       chatSessionStore.exitEditMode();
     }, []);
 
-    const {handleCopy, handleEdit, handleTryAgain, handleTryAgainWith} =
-      useMessageActions({
-        user,
-        messages,
-        handleSendPress: wrappedOnSendPress,
-        setInputText,
-        setInputImages,
-      });
+    const {
+      handleBranch,
+      handleCopy,
+      handleDelete,
+      handleEdit,
+      handleTryAgain,
+      handleTryAgainWith,
+    } = useMessageActions({
+      user,
+      messages,
+      handleSendPress: wrappedOnSendPress,
+      setInputText,
+      setInputImages,
+    });
 
     // ============ AUTO-SCROLL ON NEW USER MESSAGE ============
     // Scroll to bottom when user sends a new message
@@ -1263,7 +1309,9 @@ export const ChatView = observer(
 
     // ============ CONTEXT MENU CONFIGURATION ============
     const {
+      branch: branchLabel,
       copy: copyLabel,
+      delete: deleteLabel,
       regenerate: regenerateLabel,
       regenerateWith: regenerateWithLabel,
       edit: editLabel,
@@ -1287,6 +1335,33 @@ export const ChatView = observer(
             handleMenuDismiss();
           },
           icon: () => <CopyIcon stroke={theme.colors.primary} />,
+          disabled: false,
+        },
+        {
+          label: branchLabel,
+          onPress: async () => {
+            await handleBranch(selectedMessage);
+            handleMenuDismiss();
+          },
+          icon: () => <DuplicateIcon stroke={theme.colors.primary} />,
+          disabled: false,
+        },
+        {
+          label: editLabel,
+          onPress: () => {
+            handleEdit(selectedMessage);
+            handleMenuDismiss();
+          },
+          icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
+          disabled: false,
+        },
+        {
+          label: deleteLabel,
+          onPress: async () => {
+            await handleDelete(selectedMessage);
+            handleMenuDismiss();
+          },
+          icon: () => <TrashIcon stroke={theme.colors.primary} />,
           disabled: false,
         },
       ];
@@ -1317,18 +1392,6 @@ export const ChatView = observer(
         });
       }
 
-      if (isAuthor) {
-        baseItems.push({
-          label: editLabel,
-          onPress: () => {
-            handleEdit(selectedMessage);
-            handleMenuDismiss();
-          },
-          icon: () => <PencilLineIcon stroke={theme.colors.primary} />,
-          disabled: !hasActiveModel,
-        });
-      }
-
       baseItems.push({
         label: reportContentLabel,
         onPress: () => {
@@ -1343,14 +1406,18 @@ export const ChatView = observer(
     }, [
       selectedMessage,
       user.id,
+      handleBranch,
       handleCopy,
+      handleDelete,
       handleTryAgain,
       handleTryAgainWith,
       handleEdit,
       handleMenuDismiss,
       size.width,
       theme.colors.primary,
+      branchLabel,
       copyLabel,
+      deleteLabel,
       regenerateLabel,
       regenerateWithLabel,
       editLabel,

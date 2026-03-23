@@ -81,7 +81,7 @@ describe('useMessageActions', () => {
     expect(mockSetInputText).toHaveBeenCalledWith('Edit this message');
   });
 
-  it('does not enter edit mode for assistant message', () => {
+  it('enters edit mode for assistant message', () => {
     const {result} = renderHook(() =>
       useMessageActions({
         user,
@@ -101,8 +101,47 @@ describe('useMessageActions', () => {
       result.current.handleEdit(assistantMessage);
     });
 
-    expect(chatSessionStore.enterEditMode).not.toHaveBeenCalled();
-    expect(mockSetInputText).not.toHaveBeenCalled();
+    expect(chatSessionStore.enterEditMode).toHaveBeenCalled();
+    expect(mockSetInputText).toHaveBeenCalled();
+  });
+
+  it('deletes message and clears edit input state', async () => {
+    const {result} = renderHook(() =>
+      useMessageActions({
+        user,
+        messages,
+        handleSendPress: mockHandleSendPress,
+        setInputText: mockSetInputText,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleDelete(messages[0] as any);
+    });
+
+    expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+      '1',
+      true,
+    );
+    expect(mockSetInputText).toHaveBeenCalledWith('');
+    expect(chatSessionStore.exitEditMode).toHaveBeenCalled();
+  });
+
+  it('creates a branch from the selected message', async () => {
+    const {result} = renderHook(() =>
+      useMessageActions({
+        user,
+        messages,
+        handleSendPress: mockHandleSendPress,
+        setInputText: mockSetInputText,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleBranch(messages[0] as any);
+    });
+
+    expect(chatSessionStore.branchSessionFromMessage).toHaveBeenCalledWith('1');
   });
 
   describe('handleTryAgain', () => {
