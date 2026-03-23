@@ -97,29 +97,28 @@ export async function readSnapshots(): Promise<MemorySnapshot[]> {
     }
     return JSON.parse(data);
   } else {
-    // iOS: read file directly from filesystem
-    // Simulator: use simctl to get container path
-    try {
+    // iOS: determine device type from UDID env var
+    // Simulator UDIDs are UUID format (8-4-4-4-12 hex), real device UDIDs are not
+    const udid = process.env.E2E_DEVICE_UDID || '';
+    const isSimulator = !udid ||
+      /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(udid);
+
+    if (isSimulator) {
+      // Simulator: read directly from filesystem via simctl
       const container = execSync(
         `xcrun simctl get_app_container booted ${IOS_BUNDLE_ID} data`,
         {encoding: 'utf8', timeout: 5000},
       ).trim();
-      const filePath = path.join(
-        container,
-        'Documents',
-        SNAPSHOTS_FILENAME,
-      );
+      const filePath = path.join(container, 'Documents', SNAPSHOTS_FILENAME);
       const data = fs.readFileSync(filePath, 'utf8');
       return JSON.parse(data);
-    } catch {
-      // Real device: use ios-deploy
+    } else {
+      // Real device: use ios-deploy to download from app container
       const tmpDir = fs.mkdtempSync(
         path.join(os.tmpdir(), 'memory-profile-'),
       );
-      const udid = process.env.E2E_DEVICE_UDID || '';
-      const udidFlag = udid ? `--id ${udid}` : '';
       execSync(
-        `ios-deploy ${udidFlag} --bundle_id ${IOS_BUNDLE_ID} --download=/Documents/${SNAPSHOTS_FILENAME} --to ${tmpDir}`,
+        `ios-deploy --id ${udid} --bundle_id ${IOS_BUNDLE_ID} --download=/Documents/${SNAPSHOTS_FILENAME} --to ${tmpDir}`,
         {timeout: 15000},
       );
       const localPath = path.join(tmpDir, 'Documents', SNAPSHOTS_FILENAME);

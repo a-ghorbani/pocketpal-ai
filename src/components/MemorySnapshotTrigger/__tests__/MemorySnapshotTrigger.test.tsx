@@ -96,7 +96,7 @@ describe('MemorySnapshotTrigger', () => {
     expect(container.props.style).toEqual(
       expect.objectContaining({
         position: 'absolute',
-        opacity: 0.01,
+        backgroundColor: 'transparent',
       }),
     );
   });

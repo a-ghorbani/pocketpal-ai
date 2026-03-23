@@ -109,13 +109,24 @@ RCT_EXPORT_METHOD(writeMemorySnapshot:(NSString *)label
     kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO,
                                      (task_info_t)&vmInfo, &count);
     uint64_t physFootprint = (result == KERN_SUCCESS) ? vmInfo.phys_footprint : 0;
+    uint64_t residentSize = (result == KERN_SUCCESS) ? vmInfo.resident_size : 0;
+    uint64_t internalMem = (result == KERN_SUCCESS) ? vmInfo.internal : 0;
+    uint64_t compressedMem = (result == KERN_SUCCESS) ? vmInfo.compressed : 0;
     uint64_t availableMemory = os_proc_available_memory();
+
+    // Metal GPU memory (model weights offloaded to GPU)
+    id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
+    uint64_t metalAllocated = metalDevice ? (uint64_t)metalDevice.currentAllocatedSize : 0;
 
     NSDictionary *snapshot = @{
       @"label": label,
       @"timestamp": [[NSISO8601DateFormatter new] stringFromDate:[NSDate date]],
       @"native": @{
         @"phys_footprint": @(physFootprint),
+        @"resident_size": @(residentSize),
+        @"internal": @(internalMem),
+        @"compressed": @(compressedMem),
+        @"metal_allocated": @(metalAllocated),
         @"available_memory": @(availableMemory),
       },
     };
