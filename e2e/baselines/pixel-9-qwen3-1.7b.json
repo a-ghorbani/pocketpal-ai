@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "commit": "b4d08b6",
+  "device": "Pixel 9",
+  "os_version": "16",
+  "platform": "android",
+  "timestamp": "2026-03-23T21:53:21.142Z",
+  "model": "qwen3-1.7b",
+  "checkpoints": [
+    {
+      "label": "app_launch",
+      "timestamp": "2026-03-23T21:49:56.567098Z",
+      "native": {
+        "pss_total": 236522496,
+        "native_heap_allocated": 44511696,
+        "available_memory": 3278454784
+      }
+    },
+    {
+      "label": "models_screen",
+      "timestamp": "2026-03-23T21:50:04.925497Z",
+      "native": {
+        "pss_total": 239464448,
+        "native_heap_allocated": 46318640,
+        "available_memory": 3315200000
+      }
+    },
+    {
+      "label": "chat_screen",
+      "timestamp": "2026-03-23T21:50:12.988048Z",
+      "native": {
+        "pss_total": 227397632,
+        "native_heap_allocated": 47867680,
+        "available_memory": 3392479232
+      }
+    },
+    {
+      "label": "model_loaded",
+      "timestamp": "2026-03-23T21:52:22.252109Z",
+      "native": {
+        "pss_total": 1816752128,
+        "native_heap_allocated": 1983716320,
+        "available_memory": 1993605120
+      }
+    },
+    {
+      "label": "chat_active",
+      "timestamp": "2026-03-23T21:52:53.892989Z",
+      "native": {
+        "pss_total": 1897592832,
+        "native_heap_allocated": 2018686160,
+        "available_memory": 1906978816
+      }
+    },
+    {
+      "label": "post_chat_idle",
+      "timestamp": "2026-03-23T21:53:06.446409Z",
+      "native": {
+        "pss_total": 1898588160,
+        "native_heap_allocated": 2018863680,
+        "available_memory": 1908191232
+      }
+    },
+    {
+      "label": "model_unloaded",
+      "timestamp": "2026-03-23T21:53:16.443141Z",
+      "native": {
+        "pss_total": 362261504,
+        "native_heap_allocated": 87174144,
+        "available_memory": 3432857600
+      }
+    }
+  ],
+  "peak_memory_mb": 1810.63
+}
