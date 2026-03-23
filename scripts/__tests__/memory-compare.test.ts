@@ -162,4 +162,63 @@ describe('compareReports', () => {
     expect(delta!.delta_mb).toBeCloseTo(-200, 0);
     expect(delta!.delta_pct).toBeCloseTo(-20, 0);
   });
+
+  it('includes metal_allocated in iOS total when present', () => {
+    const MB = 1024 * 1024;
+    const makeIosReport = (phys: number, metal: number): MemoryReport => ({
+      ...makeReport(),
+      checkpoints: [
+        {
+          label: 'model_loaded',
+          timestamp: new Date().toISOString(),
+          native: {
+            phys_footprint: phys * MB,
+            metal_allocated: metal * MB,
+            available_memory: 3e9,
+          },
+        },
+      ],
+      peak_memory_mb: phys + metal,
+    });
+
+    const baseline = makeIosReport(400, 1700); // total 2100
+    const current = makeIosReport(410, 1900); // total 2310, +210 MB, +10%
+
+    const result = compareReports(baseline, current);
+
+    const delta = result.deltas[0];
+    expect(delta.metric).toBe('phys+metal');
+    expect(delta.baseline_mb).toBeCloseTo(2100, 0);
+    expect(delta.current_mb).toBeCloseTo(2310, 0);
+    expect(delta.delta_mb).toBeCloseTo(210, 0);
+    expect(delta.delta_pct).toBeCloseTo(10, 0);
+  });
+
+  it('flags regression when metal causes total to exceed thresholds', () => {
+    const MB = 1024 * 1024;
+    const makeIosReport = (phys: number, metal: number): MemoryReport => ({
+      ...makeReport(),
+      checkpoints: [
+        {
+          label: 'model_loaded',
+          timestamp: new Date().toISOString(),
+          native: {
+            phys_footprint: phys * MB,
+            metal_allocated: metal * MB,
+            available_memory: 3e9,
+          },
+        },
+      ],
+      peak_memory_mb: phys + metal,
+    });
+
+    const baseline = makeIosReport(400, 1700); // total 2100
+    const current = makeIosReport(400, 2100); // total 2500, +400 MB, +19%
+
+    const result = compareReports(baseline, current);
+
+    expect(result.pass).toBe(false);
+    expect(result.regressions).toHaveLength(1);
+    expect(result.regressions[0].delta_mb).toBeCloseTo(400, 0);
+  });
 });

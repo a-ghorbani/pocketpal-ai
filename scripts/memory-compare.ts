@@ -73,11 +73,22 @@ export interface CompareOptions {
 const DEFAULT_PCT = 10;
 const DEFAULT_MB = 200;
 
-function getPrimaryMemoryBytes(native: Record<string, number>): number {
-  return native.phys_footprint ?? native.pss_total ?? 0;
+/**
+ * Get the total memory for comparison.
+ * iOS: phys_footprint + metal_allocated (Metal is the dominant cost for LLMs)
+ * Android: pss_total (includes everything)
+ */
+function getTotalMemoryBytes(native: Record<string, number>): number {
+  if (native.phys_footprint !== undefined) {
+    return native.phys_footprint + (native.metal_allocated ?? 0);
+  }
+  return native.pss_total ?? 0;
 }
 
-function getPrimaryMetricName(native: Record<string, number>): string {
+function getMetricName(native: Record<string, number>): string {
+  if (native.phys_footprint !== undefined && native.metal_allocated) {
+    return 'phys+metal';
+  }
   return native.phys_footprint !== undefined ? 'phys_footprint' : 'pss_total';
 }
 
@@ -103,9 +114,9 @@ export function compareReports(
       continue;
     }
 
-    const metric = getPrimaryMetricName(checkpoint.native);
-    const currentBytes = getPrimaryMemoryBytes(checkpoint.native);
-    const baselineBytes = getPrimaryMemoryBytes(baselineCheckpoint.native);
+    const metric = getMetricName(checkpoint.native);
+    const currentBytes = getTotalMemoryBytes(checkpoint.native);
+    const baselineBytes = getTotalMemoryBytes(baselineCheckpoint.native);
     const currentMb = currentBytes / (1024 * 1024);
     const baselineMb = baselineBytes / (1024 * 1024);
     const deltaMb = currentMb - baselineMb;

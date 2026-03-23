@@ -102,11 +102,12 @@ function buildReport(
   const deviceInfo = getDeviceInfo();
   const commit = getCommitHash();
 
-  // Calculate peak memory
+  // Calculate peak memory (iOS: phys + metal, Android: pss)
   let peakBytes = 0;
   for (const snap of snapshots) {
-    const memBytes =
-      snap.native.phys_footprint ?? snap.native.pss_total ?? 0;
+    const memBytes = snap.native.phys_footprint !== undefined
+      ? snap.native.phys_footprint + (snap.native.metal_allocated ?? 0)
+      : snap.native.pss_total ?? 0;
     if (memBytes > peakBytes) {
       peakBytes = memBytes;
     }
