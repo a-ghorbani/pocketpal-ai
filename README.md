@@ -50,11 +50,11 @@ The phenomenon you encountered—where the model stops generating when the conte
   
 15. Added the number of tokens for input and output to the debug information in each response, and added the percentage of used context next to the send button.
 
-16. Time spent processing the prompt, with a real progress bar instead of a frontend animation.
+16. Time spent processing the prompt, with a real progress bar instead of a frontend animation. Since the official interface is available but actually doesn't return values, it was changed to predict the speed of the next generation based on the processing speed of the previous prompt within the model loading cycle.
 
 17. Add deletion, branching, and editing features for conversations. Include numerous prompts such as model information, the number of input tokens, and output tokens per conversation.
 
-18. Preserve records of multiple generations, and record them into the context based on the actual displayed messages.
+18. Preserve records of multiple generations, and record them into the context based on the actual displayed messages. (还没做呢)
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
