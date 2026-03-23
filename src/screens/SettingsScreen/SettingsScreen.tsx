@@ -82,7 +82,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showKeyCacheMenu, setShowKeyCacheMenu] = useState(false);
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
-  const [showMmapMenu, setShowMmapMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
@@ -97,10 +96,6 @@ export const SettingsScreen: React.FC = observer(() => {
     x: 0.0,
     y: 0.0,
   });
-  const [mmapAnchor, setMmapAnchor] = useState<{x: number; y: number}>({
-    x: 0.0,
-    y: 0.0,
-  });
   const [deviceOptions, setDeviceOptions] = useState<DeviceOption[]>([]);
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
@@ -108,8 +103,6 @@ export const SettingsScreen: React.FC = observer(() => {
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
-  const mmapButtonRef = useRef<View>(null);
-
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
       modelStore.setNContext(value);
@@ -172,7 +165,6 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
     setShowLanguageMenu(false);
-    setShowMmapMenu(false);
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -201,31 +193,12 @@ export const SettingsScreen: React.FC = observer(() => {
     currentBackend,
   );
 
-  const mmapOptions = [
-    {label: l10n.settings.useMmapTrue, value: 'true' as const},
-    {label: l10n.settings.useMmapFalse, value: 'false' as const},
-    ...(Platform.OS === 'android'
-      ? [{label: l10n.settings.useMmapSmart, value: 'smart' as const}]
-      : []),
-  ];
-
   const getCacheTypeLabel = (
     value: CacheType | string,
     isValueCache = false,
   ) => {
     const options = isValueCache ? cacheTypeVOptions : cacheTypeKOptions;
     return options.find(option => option.value === value)?.label || value;
-  };
-
-  const getMmapLabel = (value: 'true' | 'false' | 'smart') => {
-    return mmapOptions.find(option => option.value === value)?.label || '';
-  };
-
-  const handleMmapPress = () => {
-    mmapButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setMmapAnchor({x: pageX, y: pageY + height});
-      setShowMmapMenu(true);
-    });
   };
 
   const getCurrentDeviceId = (): string => {
@@ -791,43 +764,45 @@ export const SettingsScreen: React.FC = observer(() => {
                       {l10n.settings.useMmapDescription}
                     </Text>
                   </View>
-                  <View style={styles.menuContainer}>
-                    <Button
-                      ref={mmapButtonRef}
-                      mode="outlined"
-                      onPress={handleMmapPress}
-                      style={styles.menuButton}
-                      contentStyle={styles.buttonContent}
-                      icon={({size, color}) => (
-                        <Icon source="chevron-down" size={size} color={color} />
-                      )}>
-                      {getMmapLabel(modelStore.contextInitParams.use_mmap)}
-                    </Button>
-                    <Menu
-                      visible={showMmapMenu}
-                      onDismiss={() => setShowMmapMenu(false)}
-                      anchor={mmapAnchor}
-                      selectable>
-                      {mmapOptions.map(option => (
-                        <Menu.Item
-                          key={option.value}
-                          style={styles.menu}
-                          label={option.label}
-                          selected={
-                            option.value ===
-                            modelStore.contextInitParams.use_mmap
-                          }
-                          onPress={() => {
-                            modelStore.setUseMmap(option.value);
-                            setShowMmapMenu(false);
-                          }}
-                        />
-                      ))}
-                    </Menu>
-                  </View>
+                  <Switch
+                    testID="use-mmap-switch"
+                    value={
+                      modelStore.contextInitParams.use_mmap !== 'false' &&
+                      modelStore.contextInitParams.use_mmap !== 'smart'
+                    }
+                    onValueChange={value =>
+                      modelStore.setUseMmap(value ? 'true' : 'false')
+                    }
+                  />
                 </View>
               </View>
               <Divider />
+
+              {/* Enable Weight Repacking (Android only) */}
+              {Platform.OS === 'android' && (
+                <View style={styles.settingItemContainer}>
+                  <View style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.weightRepacking}
+                      </Text>
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.weightRepackingDescription}
+                      </Text>
+                    </View>
+                    <Switch
+                      testID="weight-repacking-switch"
+                      value={
+                        !(modelStore.contextInitParams.no_extra_bufts ?? false)
+                      }
+                      onValueChange={value =>
+                        modelStore.setNoExtraBufts(!value)
+                      }
+                    />
+                  </View>
+                </View>
+              )}
+              {Platform.OS === 'android' && <Divider />}
 
               <Text variant="labelSmall" style={styles.textDescription}>
                 {l10n.settings.modelReloadNotice}

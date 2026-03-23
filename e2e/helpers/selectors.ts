@@ -41,10 +41,11 @@ export const byText = (text: string): string => {
 /**
  * Create selector targeting only static text elements (excludes buttons).
  * Useful when a text appears both in a hidden drawer button and a visible nav title.
+ * On Android, also matches View elements (React Navigation renders header titles as Views).
  */
 export const byStaticText = (text: string): string => {
   if (isAndroid()) {
-    return `//android.widget.TextView[@text="${text}"]`;
+    return `//*[self::android.widget.TextView or self::android.view.View][@text="${text}"]`;
   }
   return `-ios class chain:**/XCUIElementTypeStaticText[\`label == "${text}"\`]`;
 };
