@@ -196,6 +196,7 @@ function main(): void {
   const args = process.argv.slice(2);
   let budgetCeilingMb: number | undefined;
   let regressionPct: number | undefined;
+  let outputPath: string | undefined;
 
   // Parse flags
   const positionalArgs: string[] = [];
@@ -206,9 +207,12 @@ function main(): void {
     } else if (args[i] === '--regression-pct' && i + 1 < args.length) {
       regressionPct = Number(args[i + 1]);
       i++;
+    } else if (args[i] === '--output' && i + 1 < args.length) {
+      outputPath = args[i + 1];
+      i++;
     } else if (args[i] === '--help' || args[i] === '-h') {
       console.error(
-        'Usage: memory-compare.ts [--budget-mb N] [--regression-pct N] <baseline.json> <current.json>',
+        'Usage: memory-compare.ts [--budget-mb N] [--regression-pct N] [--output path] <baseline.json> <current.json>',
       );
       process.exit(0);
     } else {
@@ -249,8 +253,15 @@ function main(): void {
     regressionPct,
   });
 
-  // Structured output to stdout
-  console.log(JSON.stringify(result, null, 2));
+  // Structured output
+  const resultJson = JSON.stringify(result, null, 2);
+  console.log(resultJson);
+
+  // Save to file if --output specified, or auto-save next to current report
+  const savePath =
+    outputPath || currentPath.replace(/\.json$/, '-comparison.json');
+  fs.writeFileSync(savePath, resultJson);
+  console.error(`\nComparison saved to: ${savePath}`);
 
   // Human-readable summary to stderr
   if (result.pass) {
