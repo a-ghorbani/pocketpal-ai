@@ -14,7 +14,7 @@ import * as path from 'path';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {SettingsPage} from '../../pages/SettingsPage';
-import {byText, byStaticText} from '../../helpers/selectors';
+import {byStaticText} from '../../helpers/selectors';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
@@ -131,9 +131,10 @@ describe('Language Switching', () => {
 
       // After language change, screen re-renders and scrolls to top.
       // Assert the navigation header title changed.
-      // On iOS, use byStaticText to avoid matching hidden drawer buttons.
-      // On Android, the nav header title is a View (not TextView), so use byText.
-      const titleElement = browser.$(byText(expected.screenTitle));
+      // Use byStaticText to target text elements only (excludes buttons).
+      // On iOS this avoids matching hidden drawer buttons.
+      // On Android this matches both TextView and View (React Navigation header).
+      const titleElement = browser.$(byStaticText(expected.screenTitle));
       await titleElement.waitForDisplayed({timeout: 5000});
       console.log(`  Screen title: "${expected.screenTitle}" - OK`);
 
