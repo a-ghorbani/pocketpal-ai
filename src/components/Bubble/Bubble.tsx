@@ -53,6 +53,13 @@ export const Bubble = ({
       ? `, ${timings.time_to_first_token_ms}ms TTFT`
       : '';
 
+  // Add prompt processing speed if available
+  const promptSpeedString =
+    timings?.prompt_per_second !== undefined &&
+    timings?.prompt_per_second !== null
+      ? `, ${timings.prompt_per_second.toFixed(2)} t/s pp`
+      : '';
+
   const tokenCountsString =
     timings?.input_token_count !== undefined ||
     timings?.output_token_count !== undefined
@@ -62,7 +69,7 @@ export const Bubble = ({
       : '';
 
   const fullTimingsString =
-    timingsString + timeToFirstTokenString + tokenCountsString;
+    timingsString + promptSpeedString + timeToFirstTokenString + tokenCountsString;
   const truncationString = truncation
     ? `Context truncated: history ${truncation.history_retained_percent}%, input ${truncation.input_retained_percent}%, prompt ${truncation.prompt_retained_percent}%`
     : '';

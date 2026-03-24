@@ -2,9 +2,28 @@
 
 ## Local Verification Checklist
 
-Before waiting for GitHub Actions to fail, always run these checks locally after each code change.
+Before waiting for GitHub Actions to fail, run the Android preflight locally from the repository root:
 
-### Windows commands
+```bash
+cmd /c yarn.cmd preflight:android
+```
+
+This script is defined in the root `package.json`. It is repository-local, not a global machine command.
+
+Current coverage:
+
+```bash
+cmd /c yarn.cmd l10n:validate
+cmd /c yarn.cmd lint
+cmd /c yarn.cmd typecheck
+cmd /c yarn.cmd test --coverage
+```
+
+## Targeted Validation During Development
+
+Use the full preflight before starting a long Android release build.
+
+For faster local iteration on a specific change, run targeted checks:
 
 ```bash
 cmd /c yarn.cmd typecheck
@@ -12,21 +31,13 @@ cmd /c npx.cmd jest --runInBand --coverage=false --runTestsByPath <test-file>
 cmd /c npx.cmd eslint <changed-file-1> <changed-file-2>
 ```
 
-### Recommended workflow
-
-```bash
-cmd /c yarn.cmd typecheck
-cmd /c npx.cmd jest --runInBand --coverage=false --runTestsByPath src/components/ChatView/__tests__/ChatView.test.tsx
-cmd /c npx.cmd eslint src/components/ChatView/ChatView.tsx src/components/ChatView/__tests__/ChatView.test.tsx
-```
-
-### Notes
+Recommended Windows notes:
 
 - Use `cmd /c ...cmd` to avoid PowerShell execution-policy problems with `.ps1` shims.
 - Use `--runInBand` because restricted Windows environments may fail with `spawn EPERM`.
 - Use `--coverage=false` when validating a single test file, otherwise unrelated global coverage thresholds may fail the run.
 
-### Dependency setup
+## Dependency Setup
 
 If local tools are missing, install dependencies first:
 
@@ -36,86 +47,103 @@ cmd /c yarn.cmd install --ignore-scripts
 
 On this Windows machine, plain `yarn install` may fail because the project `postinstall` runs `bash ./scripts/postinstall.sh`, and `bash` is not always available.
 
-## 编译/typecheck 前必读
+## Build and Test Lessons
 
-### 1. 不要从 node_modules 内部路径导入
+### 1. Do not import from package-internal `src/` paths
 
-**错误做法：**
+Wrong:
 
 ```ts
 import MathView from 'react-native-math-view/src/fallback';
 ```
 
-**原因：** 直接从 `node_modules/xxx/src/` 路径导入时，TypeScript 把它当作项目源码全量类型检查，绕过了 `exclude: ["node_modules"]` 保护。即使 `skipLibCheck: true` 也无效（它只跳过 `.d.ts`，不跳过 `.ts` 源文件）。结果是库里的所有类型错误都暴露出来。
+Why this fails:
 
-**正确做法：** 只用包名导入（`from 'react-native-math-view'`），或者把需要的逻辑复制到项目自己的文件里。
+- Importing from `node_modules/<pkg>/src/...` can pull third-party source files into TypeScript checking.
+- That bypasses the intended protection of `exclude: ["node_modules"]`.
+- `skipLibCheck: true` only skips `.d.ts` files, not arbitrary `.ts` source files.
 
----
+Correct approach:
 
-### 2. react-native-math-view 在新架构(Fabric)下高度不生效
+- Import from the package entrypoint, for example `react-native-math-view`.
+- If necessary, copy the needed logic into project-owned code instead of deep-importing package internals.
 
-**问题：** RN 0.82+ 开启了 `newArchEnabled=true`（Fabric），但 `react-native-math-view` 是旧架构组件。它依赖 `SVGShadowNode.YogaMeasureFunction` 来报告每个公式的自然高度，这个机制在 Fabric 兼容层下不工作，所有公式都退化到 `minHeight: 35`，高度全部一样。
+### 2. `react-native-math-view` height behavior under Fabric
 
-**解决方案：** 不用库的原生视图，改用 `MathjaxFactory`（JS 层计算 SVG + size）+ `react-native-svg` 的 `SvgFromXml`（Fabric 兼容）直接渲染，把 MathJax 计算出的 `size.width/height` 显式传入。参见 `src/components/MarkdownView/MathRenderers.tsx`。
+Issue:
 
----
+- On newer React Native versions with the new architecture enabled, `react-native-math-view` does not report formula height correctly.
+- The old native measurement path is not reliable in this setup.
 
-### 3. react-native-math-view/android/build.gradle 的 jcenter() 兼容问题
+Current project approach:
 
-**问题：** Gradle 9.0 移除了 `jcenter()`，react-native-math-view 的 `build.gradle` 里有 `jcenter()` 调用，导致 `assembleRelease` 失败。
+- Render math through `MathjaxFactory` and `SvgFromXml`.
+- Use explicit `size.width` / `size.height` from MathJax output.
 
-**解决方案：** 在 `patches/react-native-math-view+3.9.5.patch` 里删除所有 `jcenter()` 行。
+Reference:
 
----
+- `src/components/MarkdownView/MathRenderers.tsx`
 
-### 4. react-native-math-view/SVGShadowNode.java 的 UIManagerModuleListener 兼容问题
+### 3. `react-native-math-view` Android Gradle compatibility
 
-**问题：** 新版 React Native 移除了 `UIManagerModuleListener`，但 `SVGShadowNode.java` import 了它（虽然从未使用），导致 `compileReleaseJavaWithJavac` 失败。
+Issue:
 
-**解决方案：** 在 `patches/react-native-math-view+3.9.5.patch` 里删除这行无用的 import。
+- Older versions of the library reference `jcenter()`, which breaks on newer Gradle setups.
 
----
+Current fix:
 
-### 5. 改动 react-native-math-view 用法后必须同步更新 Jest mock
+- The project patch removes `jcenter()` from the library Gradle file.
 
-**位置：** `__mocks__/external/react-native-math-view.js`
+Reference:
 
-**原因：** mock 只 export 了 `default`（MathView 组件）。改用 `MathjaxFactory` 后，Jest 测试里 `MathjaxFactory` 是 undefined，导致 34 个测试套件崩溃。
+- `patches/react-native-math-view+3.9.5.patch`
 
-**规则：** 每次新增从某个库导入的 named export，先检查 `__mocks__/external/` 目录里有没有对应的 mock 文件，有的话同步加上对应的 mock 实现。
+### 4. `UIManagerModuleListener` compatibility issue
 
----
+Issue:
 
-### 6. 写 mock/JS 文件时注意 prettier 格式规则
+- Newer React Native versions removed `UIManagerModuleListener`.
+- `react-native-math-view` still imported it in `SVGShadowNode.java`, which breaks Java compilation.
 
-**常见错误：**
+Current fix:
 
-- 箭头函数单参数要去掉括号：`math =>` 而非 `(math) =>`
-- 超长字符串要换行（prettier 默认行宽 80）
+- The project patch removes the unused import.
 
-**规则：** 改完 `.js` / `.ts` 文件后用 `yarn lint --fix` 或手动对照规则检查，别让 prettier 错误进 CI。
+Reference:
 
----
+- `patches/react-native-math-view+3.9.5.patch`
 
-### 7. prettier 对函数参数格式有严格要求
+### 5. When library imports change, update Jest mocks at the same time
 
-**规则：** 短参数列表必须写在一行，不能拆多行。Prettier 会强制合并为单行。
+Example:
 
-```ts
-// ❌ 会被 prettier 报错
-function Foo({math, inline}: {math: string; inline?: boolean});
+- When switching from a default `MathView` import to named exports such as `MathjaxFactory`, tests can fail if mocks still expose only the old API surface.
 
-// ✅ 正确
-function Foo({math, inline}: {math: string; inline?: boolean});
-```
+Rule:
 
----
+- Whenever you add a new named import from an external library, check the corresponding mock under `__mocks__/external/` or `__mocks__/stores/`.
+- Update the mock in the same change.
 
-### 每次改完代码后务必在本地运行
+References:
 
-```bash
-yarn typecheck   # 类型检查
-yarn lint        # prettier + eslint
-```
+- `__mocks__/external/react-native-math-view.js`
+- `__mocks__/stores/chatSessionStore.ts`
 
-再提交，避免 CI 才发现错误。
+### 6. Prettier and lint failures are release blockers in CI
+
+Common causes:
+
+- Inline formatting that Prettier rewrites.
+- Mock files with arrow-function formatting inconsistent with project rules.
+- Small formatting drift in `.js`, `.ts`, or `.tsx` files.
+
+Rule:
+
+- If CI failures are in the first stage, assume `lint`, `typecheck`, or `test --coverage` first.
+- Run `cmd /c yarn.cmd preflight:android` before kicking off long release builds.
+
+## Recommendation
+
+Use `cmd /c yarn.cmd preflight:android` as the default local gate before Android release builds.
+
+Use targeted `typecheck` / `jest --runInBand --coverage=false --runTestsByPath ...` / `eslint <files...>` only for quick iteration while developing a smaller change.

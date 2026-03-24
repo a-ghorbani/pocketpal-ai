@@ -580,6 +580,13 @@ export function scheduleEngineOutputHeartbeats(
   getPayload: () => CompletionProbePayload,
   intervalsMs: number[] = [250, 1000, 3000, 8000],
 ) {
+  if (
+    process.env.NODE_ENV === 'test' ||
+    process.env.JEST_WORKER_ID !== undefined
+  ) {
+    return () => undefined;
+  }
+
   if (!debugStore.logEngineOutput) {
     return () => undefined;
   }

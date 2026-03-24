@@ -19,6 +19,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "l10n:validate": "node scripts/validate-l10n.js",
+    "preflight:android": "cmd /c yarn.cmd l10n:validate && cmd /c yarn.cmd lint && cmd /c yarn.cmd typecheck && cmd /c yarn.cmd test --coverage",
     "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "format": "prettier --write \"**/*.{js,ts,tsx,json,md}\"",
     "start": "react-native start",
