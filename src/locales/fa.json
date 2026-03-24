@@ -84,7 +84,7 @@
     "useMmapTrue": "فعال",
     "useMmapFalse": "غیرفعال",
     "useMmapTrueDescription": "همیشه از نگاشت حافظه برای بارگذاری سریع‌تر استفاده شود",
-    "useMmapFalseDescription": "هرگز از نگاشت حافظه استفاده نشود (بارگذاری کندتر اما ممکن است مصرف حافظه کمتر شود)",
+    "useMmapFalseDescription": "غیرفعال‌سازی توصیه می‌شود وقتی بازآرایی وزن‌ها فعال است تا از دو برابر شدن مصرف حافظه جلوگیری شود",
     "modelLoadingSettings": "تنظیمات بارگذاری مدل",
     "autoOffloadLoad": "تخلیه/بارگذاری خودکار",
     "autoOffloadLoadDescription": "تخلیه مدل وقتی برنامه در پس‌زمینه است.",
@@ -119,7 +119,42 @@
     "clearCachesConfirmMessage": "تمام داده‌های کش‌شده جلسات پاک می‌شود ({{fileCount}} فایل، {{size}}). میانبرها ممکن است در اولین استفاده بعد از پاک‌سازی کندتر باشند. این کار روی پَل‌ها یا تاریخچه چت تأثیری ندارد.",
     "clearCachesSuccess": "{{count}} فایل کش با موفقیت پاک شد.",
     "clearCachesError": "پاک کردن کش ناموفق بود. لطفاً دوباره تلاش کنید.",
-    "noCachesToClear": "کشی برای پاک کردن وجود ندارد."
+    "noCachesToClear": "کشی برای پاک کردن وجود ندارد.",
+    "weightRepacking": "فعال‌سازی بازآرایی وزن‌ها",
+    "weightRepackingDescription": "پردازش سریع‌تر پرامپت با حداقل سربار حافظه هنگامی که نگاشت حافظه غیرفعال است. تولید توکن تحت تأثیر قرار نمی‌گیرد.",
+    "serverName": "نام سرور",
+    "serverUrl": "آدرس سرور",
+    "serverUrlPlaceholder": "مثلاً http://192.168.1.100:1234",
+    "apiKey": "کلید API",
+    "apiKeyPlaceholder": "اختیاری - برای OpenAI/Groq لازم است",
+    "apiKeyDescription": "به صورت امن در دستگاه ذخیره می‌شود.",
+    "remoteModel": "ریموت",
+    "remotePrivacyNotice": "پیام‌های ارسالی به سرورهای ریموت از دستگاه شما خارج می‌شوند. فقط به سرورهای مورد اعتماد متصل شوید.",
+    "remoteIndicator": "ریموت",
+    "serverUrlRequired": "آدرس سرور الزامی است",
+    "serverUrlInvalid": "فرمت آدرس نامعتبر است",
+    "serverUrlHttpWarning": "iOS برای سرورهای غیرمحلی به HTTPS نیاز دارد. از https:// یا آدرس شبکه محلی استفاده کنید.",
+    "addRemoteModel": "افزودن مدل ریموت",
+    "yourServers": "سرورهای شما",
+    "orConnectNewServer": "یا اتصال به سرور جدید",
+    "selectModel": "انتخاب مدل",
+    "addModel": "افزودن مدل",
+    "connected": "متصل",
+    "connectionFailed": "اتصال ناموفق: {{error}}",
+    "connecting": "در حال اتصال...",
+    "noModelsAvailable": "هیچ مدلی در این سرور موجود نیست.",
+    "alreadyAdded": "قبلاً اضافه شده",
+    "connectedServers": "سرورهای متصل",
+    "modelsCount": "{{count}} مدل",
+    "serverDetails": "جزئیات سرور",
+    "modelsUsingServer": "مدل‌هایی که از این سرور استفاده می‌کنند:",
+    "saveChanges": "ذخیره تغییرات",
+    "removeServer": "حذف سرور",
+    "removeServerMessage": "حذف {{serverName}} و {{count}} مدل آن؟",
+    "removeRemoteModel": "حذف {{modelName}} ({{serverName}})؟",
+    "retryConnection": "تلاش مجدد",
+    "enterUrlManually": "ورود دستی آدرس",
+    "manageServers": "مدیریت سرورها"
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -865,6 +900,11 @@
       "importPals": "وارد کردن پَل‌ها",
       "importSuccess": "{{count}} پَل با موفقیت وارد شد.",
       "importError": "وارد کردن پَل‌ها انجام نشد. لطفاً فرمت فایل را بررسی کنید."
+    },
+    "bubble": {
+      "msPerToken": "{{value}}ms/توکن",
+      "tokensPerSec": "{{value}} توکن/ثانیه",
+      "ttft": "{{value}}ms TTFT"
     }
   },
   "palsScreen": {
@@ -944,7 +984,8 @@
       "failedToLoadDetails": "بارگذاری جزئیات پَل با مشکل مواجه شد",
       "failedToDownload": "دانلود پَل با مشکل مواجه شد",
       "premiumPalMessage": "این یک پَل ویژه است.\n• اگر قبلاً با حساب Palshub خود آن را فعال کرده‌اید، کافی است وارد شوید تا به جزئیات کامل دسترسی پیدا کنید.\n• هنوز فعال نکرده‌اید؟ برای اطلاعات بیشتر به برنامه palshub.ai مراجعه کنید.",
-      "notAvailable": "ندارد"
+      "notAvailable": "ندارد",
+      "buyOnPalshub": "خرید در Palshub"
     }
   },
   "validation": {
