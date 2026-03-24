@@ -83,11 +83,8 @@
     "useMmapDescription": "استفاده از فایل‌های نگاشت‌شده به حافظه برای بارگذاری سریع‌تر مدل",
     "useMmapTrue": "فعال",
     "useMmapFalse": "غیرفعال",
-    "useMmapSmart": "هوشمند",
     "useMmapTrueDescription": "همیشه از نگاشت حافظه برای بارگذاری سریع‌تر استفاده شود",
     "useMmapFalseDescription": "هرگز از نگاشت حافظه استفاده نشود (بارگذاری کندتر اما ممکن است مصرف حافظه کمتر شود)",
-    "useMmapSmartDescription": "انتخاب خودکار بر اساس نوع مدل (فقط Android)",
-    "useMmapRecommended": "پیشنهادی برای عملکرد بهتر - نگاشت حافظه با قفل صفحات. ترکیب بارگذاری سریع با عملکرد پایدار",
     "modelLoadingSettings": "تنظیمات بارگذاری مدل",
     "autoOffloadLoad": "تخلیه/بارگذاری خودکار",
     "autoOffloadLoadDescription": "تخلیه مدل وقتی برنامه در پس‌زمینه است.",
@@ -454,9 +451,6 @@
   "components": {
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "ارسال رسانه"
-    },
-    "bubble": {
-      "timingsString": "{{predictedMs}}ms/توکن، {{predictedPerSecond}} توکن/ثانیه"
     },
     "exportUtils": {
       "fileSaved": "فایل ذخیره شد",

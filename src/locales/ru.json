@@ -222,9 +222,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Отправить медиа"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}мс/токен, {{predictedPerSecond}} токенов/сек"
-    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Нет доступных моделей",
       "noModelsDescription": "Загрузите модель, чтобы начать общение с PocketPal",
@@ -991,11 +988,8 @@
     "useMmapDescription": "Использовать файлы, отображаемые в память, для более быстрой загрузки модели",
     "useMmapTrue": "Включено",
     "useMmapFalse": "Отключено",
-    "useMmapSmart": "Авто",
     "useMmapTrueDescription": "Всегда использовать отображение в память для быстрой загрузки",
     "useMmapFalseDescription": "Никогда не использовать отображение в память (загрузка медленнее, но может снизить потребление памяти)",
-    "useMmapSmartDescription": "Выбирать автоматически в зависимости от типа модели (только Android)",
-    "useMmapRecommended": "Рекомендуется для производительности - отображение в память с блокировкой страниц. Совмещает быструю загрузку и стабильную работу",
     "exportOptions": "Параметры экспорта",
     "exportLegacyChats": "Экспорт старых чатов",
     "exportLegacyChatsDescription": "Используйте, если миграция не удалась или нужно восстановить старые сессии чата.",
@@ -1113,7 +1107,8 @@
       "failedToLoadDetails": "Не удалось загрузить сведения о Pal",
       "failedToDownload": "Не удалось загрузить Pal",
       "premiumPalMessage": "Это Премиум Pal.\n• Если вы уже разблокировали его с помощью своей учетной записи Palshub, просто войдите в систему, чтобы получить полную информацию.\n• Ещё не разблокировали? Посетите приложение palshub.ai, чтобы узнать больше.",
-      "notAvailable": "Н/Д"
+      "notAvailable": "Н/Д",
+      "buyOnPalshub": "Купить на Palshub"
     }
   },
   "camera": {
