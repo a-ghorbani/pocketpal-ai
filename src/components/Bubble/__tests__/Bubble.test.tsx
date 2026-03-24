@@ -156,4 +156,143 @@ describe('Bubble', () => {
       getByText('Context truncated: history 40%, input 75%, prompt 90%'),
     ).toBeTruthy();
   });
+
+  it('does not render the bottom bar when there are no timings and no versions', () => {
+    const plainMessage = {
+      ...mockMessage,
+      metadata: {
+        copyable: false,
+      },
+    };
+
+    const {queryByTestId} = renderBubble(plainMessage);
+
+    expect(queryByTestId('message-timing')).toBeNull();
+  });
+
+  it('navigates to previous and next versions', () => {
+    const onVersionChange = jest.fn();
+    const versionedMessage = {
+      ...mockMessage,
+      metadata: {
+        ...mockMessage.metadata,
+        versions: [
+          {text: 'v1', createdAt: 1},
+          {text: 'v2', createdAt: 2},
+        ],
+      },
+    };
+
+    const {getByText} = render(
+      <Bubble
+        child={<Text testID="child">Child content</Text>}
+        message={versionedMessage}
+        nextMessageInGroup={false}
+        onVersionChange={onVersionChange}
+      />,
+    );
+
+    fireEvent.press(getByText('chevron-left'));
+    expect(onVersionChange).toHaveBeenCalledWith(1);
+
+    onVersionChange.mockClear();
+
+    const activeVersionMessage = {
+      ...versionedMessage,
+      metadata: {
+        ...versionedMessage.metadata,
+        activeVersionIndex: 0,
+      },
+    };
+
+    const {getByText: getByTextActive} = render(
+      <Bubble
+        child={<Text testID="child">Child content</Text>}
+        message={activeVersionMessage}
+        nextMessageInGroup={false}
+        onVersionChange={onVersionChange}
+      />,
+    );
+
+    fireEvent.press(getByTextActive('chevron-right'));
+    expect(onVersionChange).toHaveBeenCalledWith(1);
+  });
+
+  it('returns to the latest version when advancing from the final saved version', () => {
+    const onVersionChange = jest.fn();
+    const messageAtLastSavedVersion = {
+      ...mockMessage,
+      metadata: {
+        ...mockMessage.metadata,
+        versions: [
+          {text: 'v1', createdAt: 1},
+          {text: 'v2', createdAt: 2},
+        ],
+        activeVersionIndex: 1,
+      },
+    };
+
+    const {getByText} = render(
+      <Bubble
+        child={<Text testID="child">Child content</Text>}
+        message={messageAtLastSavedVersion}
+        nextMessageInGroup={false}
+        onVersionChange={onVersionChange}
+      />,
+    );
+
+    fireEvent.press(getByText('chevron-right'));
+    expect(onVersionChange).toHaveBeenCalledWith(undefined);
+  });
+
+  it('does not change version when there is no version history', () => {
+    const onVersionChange = jest.fn();
+    const plainMessage = {
+      ...mockMessage,
+      metadata: {
+        ...mockMessage.metadata,
+        versions: [],
+      },
+    };
+
+    const {queryByText} = render(
+      <Bubble
+        child={<Text testID="child">Child content</Text>}
+        message={plainMessage}
+        nextMessageInGroup={false}
+        onVersionChange={onVersionChange}
+      />,
+    );
+
+    expect(queryByText('chevron-left')).toBeNull();
+    expect(queryByText('chevron-right')).toBeNull();
+    expect(onVersionChange).not.toHaveBeenCalled();
+  });
+
+  it('does not go past the first saved version', () => {
+    const onVersionChange = jest.fn();
+    const firstSavedVersionMessage = {
+      ...mockMessage,
+      metadata: {
+        ...mockMessage.metadata,
+        versions: [
+          {text: 'v1', createdAt: 1},
+          {text: 'v2', createdAt: 2},
+        ],
+        activeVersionIndex: 0,
+      },
+    };
+
+    const {getByText} = render(
+      <Bubble
+        child={<Text testID="child">Child content</Text>}
+        message={firstSavedVersionMessage}
+        nextMessageInGroup={false}
+        onVersionChange={onVersionChange}
+      />,
+    );
+
+    fireEvent.press(getByText('chevron-left'));
+    expect(onVersionChange).not.toHaveBeenCalled();
+  });
 });
