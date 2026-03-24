@@ -1102,6 +1102,9 @@ const prepareCompletion = async ({
   // Use store method to ensure message is added to both database AND MobX observable store
   await chatSessionStore.addMessageToCurrentSession(emptyMessage);
 
+  // Attach any pending version history from a preceding regenerate action
+  chatSessionStore.applyPendingVersionsToMessage(emptyMessage.id);
+
   const messageInfo = {
     createdAt,
     id: emptyMessage.id, // This is now set by addMessageToCurrentSession

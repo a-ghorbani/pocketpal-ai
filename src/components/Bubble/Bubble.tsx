@@ -25,11 +25,13 @@ export const Bubble = ({
   message,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   nextMessageInGroup,
+  onVersionChange,
   scale = new Animated.Value(1),
 }: {
   child: ReactNode;
   message: MessageType.Any;
   nextMessageInGroup: boolean;
+  onVersionChange?: (newIndex: number | undefined) => void;
   scale?: Animated.Value;
 }) => {
   const theme = useTheme();
@@ -65,6 +67,43 @@ export const Bubble = ({
     ? `Context truncated: history ${truncation.history_retained_percent}%, input ${truncation.input_retained_percent}%, prompt ${truncation.prompt_retained_percent}%`
     : '';
 
+  // Version history
+  const versions = message.metadata?.versions as
+    | Array<{text: string; createdAt: number}>
+    | undefined;
+  const activeVersionIndex = message.metadata?.activeVersionIndex as
+    | number
+    | undefined;
+  const hasVersions = versions && versions.length > 0;
+  const totalVersions = hasVersions ? versions.length + 1 : 1;
+  const currentVersionDisplay =
+    activeVersionIndex !== undefined ? activeVersionIndex + 1 : totalVersions;
+
+  const isPrevDisabled = activeVersionIndex === 0;
+  const isNextDisabled = activeVersionIndex === undefined;
+
+  const handlePrev = () => {
+    if (!hasVersions) {
+      return;
+    }
+    if (activeVersionIndex === undefined) {
+      onVersionChange?.(versions.length - 1);
+    } else if (activeVersionIndex > 0) {
+      onVersionChange?.(activeVersionIndex - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (!hasVersions || activeVersionIndex === undefined) {
+      return;
+    }
+    if (activeVersionIndex < versions.length - 1) {
+      onVersionChange?.(activeVersionIndex + 1);
+    } else {
+      onVersionChange?.(undefined);
+    }
+  };
+
   const {contentContainer, dateHeaderContainer, dateHeader, iconContainer} =
     styles({
       currentUserIsAuthor,
@@ -80,6 +119,8 @@ export const Bubble = ({
     }
   };
 
+  const showBottomBar = timings || hasVersions;
+
   return (
     <Animated.View
       testID={currentUserIsAuthor ? 'user-message' : 'ai-message'}
@@ -90,8 +131,46 @@ export const Bubble = ({
         },
       ]}>
       {child}
-      {timings && (
+      {showBottomBar && (
         <View style={dateHeaderContainer} testID="message-timing">
+          {hasVersions && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginRight: 4,
+              }}>
+              <TouchableOpacity
+                onPress={handlePrev}
+                disabled={isPrevDisabled}
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 4}}>
+                <Icon
+                  name="chevron-left"
+                  style={[
+                    iconContainer,
+                    isPrevDisabled && {opacity: 0.3},
+                    {marginRight: 0},
+                  ]}
+                />
+              </TouchableOpacity>
+              <Text style={[dateHeader, {marginHorizontal: 2}]}>
+                {currentVersionDisplay}/{totalVersions}
+              </Text>
+              <TouchableOpacity
+                onPress={handleNext}
+                disabled={isNextDisabled}
+                hitSlop={{top: 8, bottom: 8, left: 4, right: 8}}>
+                <Icon
+                  name="chevron-right"
+                  style={[
+                    iconContainer,
+                    isNextDisabled && {opacity: 0.3},
+                    {marginRight: 0},
+                  ]}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
           {copyable && (
             <TouchableOpacity onPress={copyToClipboard}>
               <Icon name="content-copy" style={iconContainer} />

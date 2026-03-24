@@ -94,6 +94,21 @@ export const useMessageActions = ({
           | undefined;
 
         if (previousMessage && previousMessage.text) {
+          // Save the current AI response (and any prior versions) so the next
+          // AI message can restore them as version history.
+          const existingVersions =
+            (message.metadata?.versions as
+              | Array<{text: string; createdAt: number}>
+              | undefined) ?? [];
+          const allVersions = [
+            ...existingVersions,
+            {
+              text: message.text,
+              createdAt: message.createdAt ?? Date.now(),
+            },
+          ];
+          chatSessionStore.setPendingVersionsForNextAIMessage(allVersions);
+
           const messageText = previousMessage.text;
           const relatedImages = previousMessage.imageUris;
           await chatSessionStore.removeMessagesFromId(previousMessage.id, true);

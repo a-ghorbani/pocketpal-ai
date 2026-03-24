@@ -43,8 +43,9 @@ export const styles = ({
       paddingBottom: 12,
       marginTop: -8,
       marginLeft: 20,
-      flexDirection: 'row', // Added to align items horizontally
-      alignItems: 'center', // Align items vertically centered
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
     },
     dateHeader: {
       //textAlign: 'right',

@@ -24,25 +24,6 @@ import {user, assistant} from '../../utils/chat';
 
 import {VideoPalScreen} from './VideoPalScreen';
 
-const renderBubble = ({
-  child,
-  message,
-  nextMessageInGroup,
-  scale,
-}: {
-  child: ReactNode;
-  message: MessageType.Any;
-  nextMessageInGroup: boolean;
-  scale?: any;
-}) => (
-  <Bubble
-    child={child}
-    message={message}
-    nextMessageInGroup={nextMessageInGroup}
-    scale={scale}
-  />
-);
-
 export const ChatScreen: React.FC = observer(() => {
   const currentMessageInfo = useRef<{
     createdAt: number;
@@ -92,6 +73,43 @@ export const ChatScreen: React.FC = observer(() => {
     setIsErrorReportVisible(false);
     setErrorToReport(null);
   }, []);
+
+  const handleVersionChange = React.useCallback(
+    (message: MessageType.Any, newIndex: number | undefined) => {
+      if (message.type !== 'text' || !chatSessionStore.activeSessionId) {
+        return;
+      }
+      chatSessionStore.updateMessage(
+        message.id,
+        chatSessionStore.activeSessionId,
+        {metadata: {activeVersionIndex: newIndex}},
+      );
+    },
+    [],
+  );
+
+  const renderBubble = React.useCallback(
+    ({
+      child,
+      message,
+      nextMessageInGroup,
+      scale,
+    }: {
+      child: ReactNode;
+      message: MessageType.Any;
+      nextMessageInGroup: boolean;
+      scale?: any;
+    }) => (
+      <Bubble
+        child={child}
+        message={message}
+        nextMessageInGroup={nextMessageInGroup}
+        scale={scale}
+        onVersionChange={newIndex => handleVersionChange(message, newIndex)}
+      />
+    ),
+    [handleVersionChange],
+  );
 
   // Check if multimodal is enabled
   const [multimodalEnabled, setMultimodalEnabled] = React.useState(false);

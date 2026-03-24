@@ -64,6 +64,11 @@ class ChatSessionStore {
   // Selection mode state
   isSelectionMode: boolean = false;
   selectedSessionIds: Set<string> = new Set();
+  // Pending versions to attach to the next AI message created (for regenerate flow)
+  pendingVersionsForNextAIMessage: Array<{
+    text: string;
+    createdAt: number;
+  }> = [];
 
   constructor() {
     makeAutoObservable(this);
@@ -350,15 +355,39 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
+        let messages = session.messages;
         if (this.isEditMode && this.editingMessageId) {
           const messageIndex = session.messages.findIndex(
             msg => msg.id === this.editingMessageId,
           );
           if (messageIndex >= 0) {
-            return session.messages.slice(messageIndex + 1);
+            messages = session.messages.slice(messageIndex + 1);
           }
         }
-        return session.messages;
+        // Apply active version text override for messages with version history
+        return messages.map(msg => {
+          if (msg.type !== 'text') {
+            return msg;
+          }
+          const textMsg = msg as MessageType.Text;
+          const versions = textMsg.metadata?.versions as
+            | Array<{text: string; createdAt: number}>
+            | undefined;
+          const activeVersionIndex = textMsg.metadata?.activeVersionIndex as
+            | number
+            | undefined;
+          if (
+            versions &&
+            versions.length > 0 &&
+            activeVersionIndex !== undefined
+          ) {
+            const v = versions[activeVersionIndex];
+            if (v) {
+              return {...textMsg, text: v.text};
+            }
+          }
+          return msg;
+        });
       }
     }
     return [];
@@ -646,6 +675,48 @@ class ChatSessionStore {
         });
       }
     }
+  }
+
+  setPendingVersionsForNextAIMessage(
+    versions: Array<{text: string; createdAt: number}>,
+  ): void {
+    runInAction(() => {
+      this.pendingVersionsForNextAIMessage = versions;
+    });
+  }
+
+  applyPendingVersionsToMessage(messageId: string): void {
+    if (this.pendingVersionsForNextAIMessage.length === 0) {
+      return;
+    }
+
+    const session = this.sessions.find(s => s.id === this.activeSessionId);
+    if (!session) {
+      return;
+    }
+
+    const message = session.messages.find(msg => msg.id === messageId);
+    if (!message || message.type !== 'text') {
+      return;
+    }
+
+    const versions = [...this.pendingVersionsForNextAIMessage];
+
+    runInAction(() => {
+      (message as MessageType.Text).metadata = {
+        ...(message as MessageType.Text).metadata,
+        versions,
+      };
+      this.pendingVersionsForNextAIMessage = [];
+    });
+
+    chatSessionRepository
+      .updateMessage(messageId, {
+        metadata: (message as MessageType.Text).metadata,
+      })
+      .catch(err =>
+        console.error('Failed to persist pending versions to DB:', err),
+      );
   }
 
   get groupedSessions(): SessionGroup {
