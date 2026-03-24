@@ -33,8 +33,8 @@
     "gallery": "Galerie"
   },
   "settings": {
-    "modelInitializationSettings": "Einstellungen Modelinitialisierung",
-    "metal": "Metall",
+    "modelInitializationSettings": "Einstellungen Modellinitialisierung",
+    "metal": "Metal",
     "metalDescription": "Apples hardwarebeschleunigte API.",
     "metalRequiresNewerIOS": "Metal-Beschleunigung benötigt iOS 18 oder höher. Bitte aktualisieren Sie ihr Gerät, um dieses Feature nutzen zu können.",
     "openCL": "OpenCL (Experimentell)",
@@ -62,20 +62,20 @@
     "cpuThreads": "CPU Threads",
     "cpuThreadsDescription": "Benutze {{threads}} von {{maxThreads}} verfügbaren Threads",
     "imageMaxTokens": "Max Tokens Bilder",
-    "imageMaxTokensDescription": "Maximale Tokens zur Bilderzeugung: {{tokens}}{{effectiveTokens}} (lower = faster, less detail)",
-    "flashAttention": "Flash Aufmerksamkeit",
-    "flashAttentionDescription": "Flash Aufmerksamkeit für schnellere Verarbeitung einschalten",
-    "flashAttentionIOSDescription": "Speichereffiziente Aufmerksamkeit (bei Metal automatisch aktiviert)",
+    "imageMaxTokensDescription": "Maximale Tokens zur Bilderzeugung: {{tokens}}{{effectiveTokens}} (niedriger = schneller, weniger Detail)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionDescription": "Flash Attention für schnellere Verarbeitung einschalten",
+    "flashAttentionIOSDescription": "Speichereffiziente Attention (bei Metal automatisch aktiviert)",
     "flashAttentionAndroidDescription": "Muss für OpenCL speichern/laden deaktiviert sein",
     "flashAttentionAuto": "Auto",
     "flashAttentionOn": "An",
     "flashAttentionOff": "Aus",
     "keyCacheType": "Key Cache Typ",
     "keyCacheTypeDescription": "Cachetyp für Key Berechnung auswählen",
-    "keyCacheTypeDisabledDescription": "Flash Aufmerksamkeit aktivieren um Cachetyp zu ändern",
+    "keyCacheTypeDisabledDescription": "Flash Attention aktivieren um Cachetyp zu ändern",
     "valueCacheType": "Cachetyp Wert",
     "valueCacheTypeDescription": "Wählen Sie den Cache-Typ für die Wertberechnung aus",
-    "valueCacheTypeDisabledDescription": "Flash Aufmerksamkeit aktivieren um Cache-Typ zu ändern",
+    "valueCacheTypeDisabledDescription": "Flash Attention aktivieren um Cache-Typ zu ändern",
     "memorySettings": "Speichereinstellungen",
     "useMlock": "Benutze Memory Lock",
     "useMlockDescription": "System zwingen, Modell im RAM zu behalten, anstatt es auszulagern oder zu komprimieren",
@@ -126,7 +126,7 @@
     "multimodalWarning": "Dieses Gerät verfügt möglicherweise nicht über ausreichende Ressourcen für multimodale Modelle.",
     "memoryTight": "Speicher knapp",
     "lowMemory": "Speicher niedrig",
-    "memoryDetailMessage": "Dieses Modell benötigt ~{}needed}}, aber nur ~{{available}} sind ungefähr nutzbar. Schätzungen verbessern sich beim nutzen der App.",
+    "memoryDetailMessage": "Dieses Modell benötigt ~{{needed}}, aber nur ~{{available}} sind ungefähr nutzbar. Schätzungen verbessern sich beim nutzen der App.",
     "estimatedMemory": "Geschätzter Speicher: ~{{size}}",
     "alerts": {
       "memoryWarningTitle": "Speicherwarnung",
@@ -235,7 +235,7 @@
         "alreadyDownloadedTitle": "Modell schon heruntergeladen",
         "alreadyDownloadedMessage": "Das Modell wurde schon heruntergeladen.",
         "deleteTitle": "Modell löschen",
-        "deleteMessage": "Sicher, dass dieses heruntergeladene Modell gelöscht wrden soll?"
+        "deleteMessage": "Sicher, dass dieses heruntergeladene Modell gelöscht weden soll?"
       },
       "buttons": {
         "remove": "Entfernen"
@@ -249,7 +249,7 @@
           "message": "Die Modellgröße nähert sich oder übersteigt den Speicherplatz Ihres Gerätes. Dies kann zu unerwartetem Verhalten führen."
         },
         "legacy": {
-          "message": "Altes Quatisierungsformat - Modell läuft evtl. nicht.",
+          "message": "Altes Quantisierungsformat - Modell läuft evtl. nicht.",
           "shortMessage": "Alte Quantifizierung"
         },
         "multiple": "{{count}} Warnungen"
