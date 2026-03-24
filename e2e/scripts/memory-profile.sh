@@ -18,7 +18,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+E2E_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$E2E_DIR/.." && pwd)"
 
 # Defaults
 PLATFORM=""
@@ -112,7 +113,7 @@ if [[ -n "$MODEL" ]]; then
   export TEST_MODELS="$MODEL"
 fi
 
-cd e2e
+cd "$E2E_DIR"
 if [[ "$PLATFORM" == "ios" ]]; then
   npx wdio run wdio.ios.local.conf.ts $E2E_ARGS
 else
@@ -121,7 +122,7 @@ fi
 cd "$PROJECT_DIR"
 
 # Step 3: Compare with baseline (if provided)
-REPORT_PATH="e2e/debug-output/memory-profile.json"
+REPORT_PATH="$E2E_DIR/debug-output/memory-profile.json"
 
 if [[ ! -f "$REPORT_PATH" ]]; then
   echo "Error: Memory profile report not found at $REPORT_PATH"
@@ -135,7 +136,7 @@ if [[ -n "$BASELINE" ]]; then
   echo ""
   echo "--- Comparing with baseline ---"
   set +e
-  npx tsx scripts/memory-compare.ts "$BASELINE" "$REPORT_PATH"
+  npx tsx "$SCRIPT_DIR/memory-compare.ts" "$BASELINE" "$REPORT_PATH"
   COMPARE_EXIT=$?
   set -e
 

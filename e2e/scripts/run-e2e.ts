@@ -35,6 +35,7 @@
  *   npx ts-node scripts/run-e2e.ts --help
  */
 
+import {config} from 'dotenv';
 import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -120,6 +121,10 @@ const DEVICES_FILE = path.join(E2E_DIR, 'devices.json');
 const DEVICES_TEMPLATE = path.join(E2E_DIR, 'devices.template.json');
 const REPORTS_DIR = path.join(E2E_DIR, 'reports');
 const BASE_APPIUM_PORT = 4723;
+const ENV_FILE = path.join(E2E_DIR, '.env');
+
+// Load environment variables from e2e/.env (secrets, server URLs, etc.)
+config({path: ENV_FILE});
 
 // ---------------------------------------------------------------------------
 // CLI Parsing

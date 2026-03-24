@@ -97,6 +97,17 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       marginLeft: 4,
     },
+    serverLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 8,
+    },
+    serverLinkText: {
+      fontSize: 12,
+      color: theme.colors.primary,
+      marginLeft: 4,
+      textDecorationLine: 'underline',
+    },
     statusDot: {
       width: 8,
       height: 8,
