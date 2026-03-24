@@ -3,7 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const {createCoverageMap} = require('istanbul-lib-coverage');
 
-const COVERAGE_FILE = path.join(__dirname, '..', 'coverage', 'coverage-final.json');
+const COVERAGE_FILE = path.join(
+  __dirname,
+  '..',
+  'coverage',
+  'coverage-final.json',
+);
 const MIN_BRANCH_PCT = 61;
 
 function main() {
