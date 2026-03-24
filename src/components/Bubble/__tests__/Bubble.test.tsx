@@ -51,9 +51,8 @@ describe('Bubble', () => {
   it('renders correctly with all props', () => {
     const {getByText, getByTestId} = renderBubble(mockMessage);
     expect(getByTestId('child')).toBeTruthy();
-    expect(
-      getByText('10ms/token, 100.00 tokens/sec, in 42 tok, out 128 tok'),
-    ).toBeTruthy();
+    expect(getByText('in: 42t')).toBeTruthy();
+    expect(getByText('out: 128t 1.28s 100.00t/s 10ms/t')).toBeTruthy();
     expect(getByText('content-copy')).toBeTruthy();
   });
 
@@ -96,7 +95,7 @@ describe('Bubble', () => {
     const {getByText} = renderBubble(messageWithTimeToFirstToken);
 
     // Should display the time to first token in addition to the regular timing info
-    expect(getByText(/250ms TTF/)).toBeTruthy();
+    expect(getByText(/in:.*250ms/)).toBeTruthy();
   });
 
   it('does not display time to first token when null', () => {

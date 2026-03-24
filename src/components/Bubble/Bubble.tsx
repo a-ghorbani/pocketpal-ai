@@ -41,38 +41,32 @@ export const Bubble = ({
   const {copyable, timings} = message.metadata || {};
   const truncation = message.metadata?.context_truncation;
 
-  const timingsString = t(l10n.components.bubble.timingsString, {
-    predictedMs: timings?.predicted_per_token_ms?.toFixed() ?? '',
-    predictedPerSecond: timings?.predicted_per_second?.toFixed(2) ?? '',
-  });
+  const fmtMs = (ms: number) =>
+    ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)}ms`;
 
-  // Add time to first token if available
-  const timeToFirstTokenString =
-    timings?.time_to_first_token_ms !== undefined &&
-    timings?.time_to_first_token_ms !== null
-      ? `, ${timings.time_to_first_token_ms}ms TTFT`
-      : '';
+  const inTimingsString = timings
+    ? `in: ${timings.input_token_count ?? 0}t` +
+      (timings.time_to_first_token_ms != null
+        ? ` ${fmtMs(timings.time_to_first_token_ms)}`
+        : '') +
+      (timings.prompt_per_second != null
+        ? ` ${timings.prompt_per_second.toFixed(2)}t/s ${fmtMs(1000 / timings.prompt_per_second)}/t`
+        : '')
+    : '';
 
-  // Add prompt processing speed if available
-  const promptSpeedString =
-    timings?.prompt_per_second !== undefined &&
-    timings?.prompt_per_second !== null
-      ? `, ${timings.prompt_per_second.toFixed(2)} t/s pp`
-      : '';
-
-  const tokenCountsString =
-    timings?.input_token_count !== undefined ||
-    timings?.output_token_count !== undefined
-      ? `, in ${timings?.input_token_count ?? 0} tok, out ${
-          timings?.output_token_count ?? 0
-        } tok`
-      : '';
-
-  const fullTimingsString =
-    timingsString +
-    promptSpeedString +
-    timeToFirstTokenString +
-    tokenCountsString;
+  const outTimingsString = timings
+    ? `out: ${timings.output_token_count ?? 0}t` +
+      (timings.predicted_per_token_ms != null &&
+      timings.output_token_count != null
+        ? ` ${fmtMs(timings.predicted_per_token_ms * timings.output_token_count)}`
+        : '') +
+      (timings.predicted_per_second != null
+        ? ` ${timings.predicted_per_second.toFixed(2)}t/s`
+        : '') +
+      (timings.predicted_per_token_ms != null
+        ? ` ${fmtMs(timings.predicted_per_token_ms)}/t`
+        : '')
+    : '';
   const truncationString = truncation
     ? `Context truncated: history ${truncation.history_retained_percent}%, input ${truncation.input_retained_percent}%, prompt ${truncation.prompt_retained_percent}%`
     : '';
@@ -187,7 +181,12 @@ export const Bubble = ({
             </TouchableOpacity>
           )}
           <View>
-            {timings && <Text style={dateHeader}>{fullTimingsString}</Text>}
+            {timings && (
+              <>
+                <Text style={dateHeader}>{inTimingsString}</Text>
+                <Text style={dateHeader}>{outTimingsString}</Text>
+              </>
+            )}
             {truncationString ? (
               <Text style={dateHeader}>{truncationString}</Text>
             ) : null}
