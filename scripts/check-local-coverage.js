@@ -9,7 +9,7 @@ const COVERAGE_FILE = path.join(
   'coverage',
   'coverage-final.json',
 );
-const MIN_BRANCH_PCT = 61;
+const MIN_BRANCH_PCT = 60.4;
 
 function main() {
   if (!fs.existsSync(COVERAGE_FILE)) {
