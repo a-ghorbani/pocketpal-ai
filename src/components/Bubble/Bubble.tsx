@@ -11,9 +11,8 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 
-import {UserContext, L10nContext} from '../../utils';
+import {UserContext} from '../../utils';
 import {MessageType} from '../../utils/types';
-import {t} from '../../locales';
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -36,7 +35,6 @@ export const Bubble = ({
 }) => {
   const theme = useTheme();
   const user = useContext(UserContext);
-  const l10n = useContext(L10nContext);
   const currentUserIsAuthor = user?.id === message.author.id;
   const {copyable, timings} = message.metadata || {};
   const truncation = message.metadata?.context_truncation;
