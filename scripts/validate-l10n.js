@@ -2,8 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const LOCALES_DIR = path.join(__dirname, '../src/locales');
-const EN_PATH = path.join(LOCALES_DIR, 'en.json');
+const DEFAULT_LOCALES_DIR = path.join(__dirname, '../src/locales');
 
 function getKeys(obj, prefix = '') {
   const keys = [];
@@ -27,89 +26,102 @@ function getValueAtPath(obj, keyPath) {
   return keyPath.split('.').reduce((o, k) => o && o[k], obj);
 }
 
-let errors = 0;
+function validateL10n(options = {}) {
+  const localesDir = options.localesDir || DEFAULT_LOCALES_DIR;
+  const logger = options.logger || console;
+  const enPath = path.join(localesDir, 'en.json');
+  let errors = 0;
 
-// 1. Validate JSON parsing
-let en;
-try {
-  en = JSON.parse(fs.readFileSync(EN_PATH, 'utf-8'));
-  console.log('en.json: valid JSON');
-} catch (e) {
-  console.error('en.json: INVALID JSON:', e);
-  process.exit(1);
-}
-
-const enKeys = getKeys(en);
-console.log(`en.json: ${enKeys.length} keys`);
-
-// Read integrated languages from locales/index.ts languageRegistry.
-// Falls back to auto-discovery if index.ts is missing or unparseable.
-let langFiles;
-const indexPath = path.join(LOCALES_DIR, 'index.ts');
-if (fs.existsSync(indexPath)) {
-  const indexSrc = fs.readFileSync(indexPath, 'utf-8');
-  const registryMatch = indexSrc.match(
-    /const languageRegistry\s*=\s*\{([\s\S]*?)\}\s*(?:as const|;)/,
-  );
-  if (registryMatch) {
-    langFiles = [...registryMatch[1].matchAll(/^\s*(\w+)\s*:/gm)]
-      .map(m => m[1])
-      .filter(l => l !== 'en');
-  }
-}
-if (!langFiles) {
-  langFiles = fs
-    .readdirSync(LOCALES_DIR)
-    .filter(f => f.endsWith('.json') && f !== 'en.json')
-    .map(f => f.replace('.json', ''));
-}
-
-for (const lang of langFiles) {
-  const langPath = path.join(LOCALES_DIR, `${lang}.json`);
-  let langData;
-
+  let en;
   try {
-    langData = JSON.parse(fs.readFileSync(langPath, 'utf-8'));
-    console.log(`${lang}.json: valid JSON`);
+    en = JSON.parse(fs.readFileSync(enPath, 'utf-8'));
+    logger.log('en.json: valid JSON');
   } catch (e) {
-    console.error(`${lang}.json: INVALID JSON:`, e);
-    errors++;
-    continue;
+    logger.error('en.json: INVALID JSON:', e);
+    return 1;
   }
 
-  const langKeys = getKeys(langData);
+  const enKeys = getKeys(en);
+  logger.log(`en.json: ${enKeys.length} keys`);
 
-  // 2. Check missing keys (warnings, not errors - fallback handles them)
-  const missingKeys = enKeys.filter(k => !langKeys.includes(k));
-  if (missingKeys.length > 0) {
-    console.warn(
-      `${lang}.json: ${missingKeys.length} missing keys (will fall back to English)`,
+  let langFiles;
+  const indexPath = path.join(localesDir, 'index.ts');
+  if (fs.existsSync(indexPath)) {
+    const indexSrc = fs.readFileSync(indexPath, 'utf-8');
+    const registryMatch = indexSrc.match(
+      /const languageRegistry\s*=\s*\{([\s\S]*?)\}\s*(?:as const|;)/,
     );
+    if (registryMatch) {
+      langFiles = [...registryMatch[1].matchAll(/^\s*(\w+)\s*:/gm)]
+        .map(m => m[1])
+        .filter(l => l !== 'en');
+    }
+  }
+  if (!langFiles) {
+    langFiles = fs
+      .readdirSync(localesDir)
+      .filter(f => f.endsWith('.json') && f !== 'en.json')
+      .map(f => f.replace('.json', ''));
   }
 
-  // 3. Check placeholder consistency (errors - mismatched placeholders are bugs)
-  for (const key of langKeys) {
-    const enValue = getValueAtPath(en, key);
-    const langValue = getValueAtPath(langData, key);
+  for (const lang of langFiles) {
+    const langPath = path.join(localesDir, `${lang}.json`);
+    let langData;
 
-    if (typeof enValue === 'string' && typeof langValue === 'string') {
-      const enPlaceholders = getPlaceholders(enValue);
-      const langPlaceholders = getPlaceholders(langValue);
+    try {
+      langData = JSON.parse(fs.readFileSync(langPath, 'utf-8'));
+      logger.log(`${lang}.json: valid JSON`);
+    } catch (e) {
+      logger.error(`${lang}.json: INVALID JSON:`, e);
+      errors++;
+      continue;
+    }
 
-      if (JSON.stringify(enPlaceholders) !== JSON.stringify(langPlaceholders)) {
-        console.error(
-          `${lang}.json: placeholder mismatch at "${key}": ` +
-            `en has [${enPlaceholders.join(', ')}] but ${lang} has [${langPlaceholders.join(', ')}]`,
-        );
-        errors++;
+    const langKeys = getKeys(langData);
+    const missingKeys = enKeys.filter(k => !langKeys.includes(k));
+    if (missingKeys.length > 0) {
+      logger.warn(
+        `${lang}.json: ${missingKeys.length} missing keys (will fall back to English)`,
+      );
+    }
+
+    for (const key of langKeys) {
+      const enValue = getValueAtPath(en, key);
+      const langValue = getValueAtPath(langData, key);
+
+      if (typeof enValue === 'string' && typeof langValue === 'string') {
+        const enPlaceholders = getPlaceholders(enValue);
+        const langPlaceholders = getPlaceholders(langValue);
+
+        if (
+          JSON.stringify(enPlaceholders) !== JSON.stringify(langPlaceholders)
+        ) {
+          logger.error(
+            `${lang}.json: placeholder mismatch at "${key}": ` +
+              `en has [${enPlaceholders.join(', ')}] but ${lang} has [${langPlaceholders.join(', ')}]`,
+          );
+          errors++;
+        }
       }
     }
   }
+
+  if (errors > 0) {
+    logger.error(`\nValidation failed with ${errors} error(s)`);
+    return 1;
+  }
+
+  logger.log('\nAll l10n files valid');
+  return 0;
 }
 
-if (errors > 0) {
-  console.error(`\nValidation failed with ${errors} error(s)`);
-  process.exit(1);
-} else {
-  console.log('\nAll l10n files valid');
+if (require.main === module) {
+  process.exit(validateL10n());
 }
+
+module.exports = {
+  validateL10n,
+  getKeys,
+  getPlaceholders,
+  getValueAtPath,
+};

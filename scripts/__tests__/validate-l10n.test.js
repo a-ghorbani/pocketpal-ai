@@ -1,26 +1,38 @@
-const {execSync} = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
-const SCRIPT_PATH = path.join(__dirname, '..', 'validate-l10n.js');
+const {validateL10n} = require('../validate-l10n');
+
 const LOCALES_DIR = path.join(__dirname, '..', '..', 'src', 'locales');
+const TMP_ROOT = path.join(__dirname, '.tmp');
 
-/**
- * Run the validate-l10n.js script against a temporary locale directory.
- * This avoids modifying the real locale files (which would cause race conditions
- * when Jest runs tests in parallel).
- *
- * Creates a modified copy of the script that points to the temp directory,
- * copies the locale files there, applies any overrides, and runs.
- */
+function createLogger() {
+  const messages = [];
+
+  const push = (level, args) => {
+    const text = args
+      .map(arg => (arg instanceof Error ? arg.message : String(arg)))
+      .join(' ');
+    messages.push({level, text});
+  };
+
+  return {
+    logger: {
+      log: (...args) => push('log', args),
+      warn: (...args) => push('warn', args),
+      error: (...args) => push('error', args),
+    },
+    getOutput: () => messages.map(entry => entry.text).join('\n'),
+  };
+}
+
 function runWithLocales(overrides = {}) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'l10n-test-'));
+  fs.mkdirSync(TMP_ROOT, {recursive: true});
+  const tmpDir = fs.mkdtempSync(path.join(TMP_ROOT, 'l10n-test-'));
   const tmpLocalesDir = path.join(tmpDir, 'locales');
   fs.mkdirSync(tmpLocalesDir);
 
   try {
-    // Copy original locale files to temp dir
     for (const filename of [
       'en.json',
       'fa.json',
@@ -32,45 +44,20 @@ function runWithLocales(overrides = {}) {
       'ru.json',
       'zh.json',
     ]) {
-      const src = path.join(LOCALES_DIR, filename);
-      const dest = path.join(tmpLocalesDir, filename);
-      fs.copyFileSync(src, dest);
+      fs.copyFileSync(
+        path.join(LOCALES_DIR, filename),
+        path.join(tmpLocalesDir, filename),
+      );
     }
 
-    // Apply overrides
     for (const [filename, content] of Object.entries(overrides)) {
-      const dest = path.join(tmpLocalesDir, filename);
-      fs.writeFileSync(dest, content, 'utf-8');
+      fs.writeFileSync(path.join(tmpLocalesDir, filename), content, 'utf-8');
     }
 
-    // Create a modified copy of the script that points to the temp dir
-    let scriptContent = fs.readFileSync(SCRIPT_PATH, 'utf-8');
-    scriptContent = scriptContent.replace(
-      /const LOCALES_DIR = .+;/,
-      `const LOCALES_DIR = ${JSON.stringify(tmpLocalesDir)};`,
-    );
-    scriptContent = scriptContent.replace(
-      /const EN_PATH = .+;/,
-      `const EN_PATH = ${JSON.stringify(path.join(tmpLocalesDir, 'en.json'))};`,
-    );
-    const tmpScriptPath = path.join(tmpDir, 'validate-l10n.js');
-    fs.writeFileSync(tmpScriptPath, scriptContent, 'utf-8');
-
-    // Run the modified script
-    try {
-      const output = execSync(`node "${tmpScriptPath}" 2>&1`, {
-        encoding: 'utf-8',
-        timeout: 10000,
-      });
-      return {exitCode: 0, output};
-    } catch (e) {
-      return {
-        exitCode: e.status,
-        output: (e.stdout || '') + (e.stderr || ''),
-      };
-    }
+    const {logger, getOutput} = createLogger();
+    const exitCode = validateL10n({localesDir: tmpLocalesDir, logger});
+    return {exitCode, output: getOutput()};
   } finally {
-    // Clean up temp directory
     fs.rmSync(tmpDir, {recursive: true, force: true});
   }
 }
@@ -116,14 +103,11 @@ describe('validate-l10n.js', () => {
     const result = runWithLocales({
       'ja.json': JSON.stringify({common: {cancel: 'test'}}),
     });
-    // Missing keys are warnings, not errors -- script should still pass
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('missing keys');
   });
 
   it('fails on placeholder mismatch', () => {
-    // en.json has storage.lowStorage with {{modelSize}} and {{freeSpace}}
-    // Create ja.json with a wrong placeholder at that path
     const enData = JSON.parse(
       fs.readFileSync(path.join(LOCALES_DIR, 'en.json'), 'utf-8'),
     );
@@ -150,8 +134,6 @@ describe('validate-l10n.js', () => {
   });
 
   it('falls back to auto-discovery when index.ts is absent', () => {
-    // Without index.ts in the temp dir, the script falls back to
-    // filesystem scanning and picks up any .json file present.
     const enContent = fs.readFileSync(
       path.join(LOCALES_DIR, 'en.json'),
       'utf-8',
@@ -174,10 +156,7 @@ describe('validate-l10n.js', () => {
   });
 
   it('does not validate en.json as a non-en language file', () => {
-    // en.json should only appear as the base reference, not as a target
-    // The auto-discovery filters out en.json from the language list
     const result = runWithLocales();
-    // en.json should appear exactly once as the base, not as a validated language
     const enValidLines = result.output
       .split('\n')
       .filter(line => line.includes('en.json: valid JSON'));

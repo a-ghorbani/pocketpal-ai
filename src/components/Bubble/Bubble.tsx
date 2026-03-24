@@ -69,7 +69,10 @@ export const Bubble = ({
       : '';
 
   const fullTimingsString =
-    timingsString + promptSpeedString + timeToFirstTokenString + tokenCountsString;
+    timingsString +
+    promptSpeedString +
+    timeToFirstTokenString +
+    tokenCountsString;
   const truncationString = truncation
     ? `Context truncated: history ${truncation.history_retained_percent}%, input ${truncation.input_retained_percent}%, prompt ${truncation.prompt_retained_percent}%`
     : '';
