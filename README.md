@@ -2,6 +2,13 @@
 
 Since the majority of the users of this application are those who wish to gain a deeper understanding of large models, I place greater emphasis on learning and exploration. I try to provide more parameters for users to debug, with easy recovery from incorrect adjustments, while exposing as much of the pipeline as possible so users can clearly see the model’s inputs, outputs, and adjustment methods. Because the chain is fully controllable, when the model encounters issues, configurations can be adjusted directly instead of waiting for code-level changes, making experimentation more flexible.
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
+  <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
+  <img src="https://github.com/user-attachments/assets/9a808f3c-256e-419d-a455-2f337c04eb17" width="24%" />
+  <img src="https://github.com/user-attachments/assets/bb4a9ca2-ed13-4592-ae71-261d9aa4bad2" width="24%" />
+</p>
+
 1. Added the ability to directly import local VLM models, supporting both model imports and visual component imports for MM Projects.
 
 2. Fully exposed and made customizable the prompt template logic.
@@ -55,13 +62,6 @@ The phenomenon you encountered—where the model stops generating when the conte
 17. Add deletion, branching, and editing features for conversations. Include numerous prompts such as model information, the number of input tokens, and output tokens per conversation.
 
 18. Preserve records of multiple generations, and record them into the context based on the actual displayed messages.
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/4be53075-4dcb-424d-bedd-265ffd10715c" width="24%" />
-  <img src="https://github.com/user-attachments/assets/a1be9b04-b10d-4ade-a011-406effa547d9" width="24%" />
-  <img src="https://github.com/user-attachments/assets/9a808f3c-256e-419d-a455-2f337c04eb17" width="24%" />
-  <img src="https://github.com/user-attachments/assets/bb4a9ca2-ed13-4592-ae71-261d9aa4bad2" width="24%" />
-</p>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/9d62acaf-ef05-49b0-a9f2-99292fd4ae59" width="24%" />
