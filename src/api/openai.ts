@@ -337,17 +337,51 @@ export async function streamChatCompletion(
         clearTimeout(connectionTimer);
 
         if (xhr.status !== 200) {
-          settled = true;
-          cleanup();
-          if (xhr.status === 401) {
-            reject(new Error('Unauthorized: Invalid or missing API key'));
-          } else {
-            reject(new Error(`Server error: ${xhr.status} ${xhr.statusText}`));
-          }
-          xhr.abort();
+          // Don't reject yet — wait for onload to read the error body
+          clearTimeout(connectionTimer);
         } else {
           resetIdleTimer();
         }
+      }
+
+      // When the full response is available for non-200 status, read the error body
+      if (
+        xhr.readyState === XMLHttpRequest.DONE &&
+        xhr.status !== 200 &&
+        xhr.status !== 0
+      ) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+
+        let errorMessage = `Server error: ${xhr.status}`;
+        try {
+          const errorBody = JSON.parse(xhr.responseText);
+          const detail =
+            errorBody?.error?.message || errorBody?.error || xhr.responseText;
+          errorMessage = `Server error: ${xhr.status} — ${detail}`;
+          console.log(
+            '[OpenAI] Error:',
+            errorBody?.error?.message || errorBody?.error,
+          );
+        } catch {
+          if (xhr.responseText) {
+            errorMessage = `Server error: ${xhr.status} — ${xhr.responseText.substring(0, 200)}`;
+            console.log(
+              '[OpenAI] Error (raw):',
+              xhr.responseText.substring(0, 200),
+            );
+          }
+        }
+
+        if (xhr.status === 401) {
+          reject(new Error('Unauthorized: Invalid or missing API key'));
+        } else {
+          reject(new Error(errorMessage));
+        }
+        xhr.abort();
       }
     };
 
@@ -470,16 +504,25 @@ export async function streamChatCompletion(
       // by the timeout handler that triggered xhr.abort()
     };
 
-    xhr.send(
-      JSON.stringify({
-        model: params.model,
-        messages: params.messages,
-        temperature: params.temperature,
-        top_p: params.top_p,
-        max_tokens: params.max_tokens,
-        stop: params.stop,
-        stream: true,
-      }),
-    );
+    // Only include params with meaningful values — some providers (e.g. OpenAI
+    // with newer models) reject unsupported or empty params with 400 errors.
+    const requestBody: Record<string, any> = {
+      model: params.model,
+      messages: params.messages,
+      stream: true,
+    };
+    if (params.temperature != null) {
+      requestBody.temperature = params.temperature;
+    }
+    if (params.top_p != null) {
+      requestBody.top_p = params.top_p;
+    }
+    if (params.max_tokens != null) {
+      requestBody.max_completion_tokens = params.max_tokens;
+    }
+    if (params.stop && params.stop.length > 0) {
+      requestBody.stop = params.stop;
+    }
+    xhr.send(JSON.stringify(requestBody));
   });
 }

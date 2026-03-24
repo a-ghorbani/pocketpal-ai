@@ -311,6 +311,21 @@ class MockXHR {
     this.onreadystatechange?.();
   }
 
+  // Simulate a complete error response (headers + body + done)
+  simulateErrorResponse(
+    status: number,
+    body: string | object,
+    statusText = '',
+  ) {
+    this.readyState = 2;
+    this.status = status;
+    this.statusText = statusText;
+    this.responseText = typeof body === 'string' ? body : JSON.stringify(body);
+    this.onreadystatechange?.();
+    this.readyState = 4;
+    this.onreadystatechange?.();
+  }
+
   // Simulate receiving a chunk of SSE data
   simulateProgress(text: string) {
     this.responseText += text;
@@ -416,7 +431,7 @@ describe('streamChatCompletion', () => {
     expect(body.model).toBe('test-model');
     expect(body.temperature).toBe(0.7);
     expect(body.top_p).toBe(0.9);
-    expect(body.max_tokens).toBe(100);
+    expect(body.max_completion_tokens).toBe(100);
     expect(body.stop).toEqual(['</s>']);
     expect(body.stream).toBe(true);
 
@@ -566,7 +581,7 @@ describe('streamChatCompletion', () => {
     );
 
     const xhr = MockXHR.instances[0];
-    xhr.simulateHeaders(401, 'Unauthorized');
+    xhr.simulateErrorResponse(401, {error: {message: 'Invalid API key'}});
 
     await expect(resultPromise).rejects.toThrow(
       'Unauthorized: Invalid or missing API key',
@@ -585,17 +600,19 @@ describe('streamChatCompletion', () => {
     await expect(resultPromise).rejects.toThrow('Network error');
   });
 
-  it('rejects on server error response', async () => {
+  it('rejects on server error response with body', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
       'http://localhost:1234',
     );
 
     const xhr = MockXHR.instances[0];
-    xhr.simulateHeaders(500, 'Internal Server Error');
+    xhr.simulateErrorResponse(500, {
+      error: {message: 'Internal Server Error'},
+    });
 
     await expect(resultPromise).rejects.toThrow(
-      'Server error: 500 Internal Server Error',
+      'Server error: 500 — Internal Server Error',
     );
   });
 
