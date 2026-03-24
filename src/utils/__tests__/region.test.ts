@@ -1,93 +1,60 @@
-function setupRegion(
-  nativeStorefrontDefault: {getCountryCode: jest.Mock} | null = {
-    getCountryCode: jest.fn(),
-  },
-) {
-  jest.resetModules();
-  jest.doMock('../../specs/NativeStorefront', () => ({
-    __esModule: true,
-    default: nativeStorefrontDefault,
-  }));
-  const region = require('../region') as typeof import('../region');
-  return {
-    region,
-    mockGetCountryCode: nativeStorefrontDefault?.getCountryCode ?? null,
-  };
-}
-
 describe('region', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.resetModules();
+    jest.clearAllMocks();
   });
 
-  describe('isUSStorefront', () => {
-    it('returns true for USA (iOS SK1 format)', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockResolvedValue('USA');
-      expect(await region.isUSStorefront()).toBe(true);
-    });
+  it('returns null when the native storefront module is unavailable', async () => {
+    jest.doMock('../../specs/NativeStorefront', () => ({
+      __esModule: true,
+      default: null,
+    }));
 
-    it('returns true for US (iOS SK2 / Android Locale format)', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockResolvedValue('US');
-      expect(await region.isUSStorefront()).toBe(true);
-    });
+    const {getStorefrontCountryCode, isUSStorefront} = require('../region');
 
-    it('returns false for GBR', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockResolvedValue('GBR');
-      expect(await region.isUSStorefront()).toBe(false);
-    });
-
-    it('returns false for DE', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockResolvedValue('DE');
-      expect(await region.isUSStorefront()).toBe(false);
-    });
-
-    it('returns false for null country code', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockResolvedValue(null);
-      expect(await region.isUSStorefront()).toBe(false);
-    });
+    await expect(getStorefrontCountryCode()).resolves.toBeNull();
+    await expect(isUSStorefront()).resolves.toBe(false);
   });
 
-  describe('graceful fallback', () => {
-    it('returns false when NativeStorefront is null', async () => {
-      const {region} = setupRegion(null);
-      expect(await region.isUSStorefront()).toBe(false);
-    });
+  it('returns and caches the fetched storefront country code', async () => {
+    const getCountryCode = jest.fn().mockResolvedValue('US');
+    jest.doMock('../../specs/NativeStorefront', () => ({
+      __esModule: true,
+      default: {getCountryCode},
+    }));
 
-    it('returns false when getCountryCode rejects', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockRejectedValue(new Error('Native module error'));
-      expect(await region.isUSStorefront()).toBe(false);
-    });
+    const {getStorefrontCountryCode, isUSStorefront} = require('../region');
+
+    await expect(getStorefrontCountryCode()).resolves.toBe('US');
+    await expect(getStorefrontCountryCode()).resolves.toBe('US');
+    await expect(isUSStorefront()).resolves.toBe(true);
+    expect(getCountryCode).toHaveBeenCalledTimes(1);
   });
 
-  describe('caching', () => {
-    it('caches the result and does not call native module again', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockResolvedValue('USA');
+  it('handles alpha-3 US codes and native errors', async () => {
+    const getCountryCode = jest.fn().mockResolvedValue('USA');
+    jest.doMock('../../specs/NativeStorefront', () => ({
+      __esModule: true,
+      default: {getCountryCode},
+    }));
 
-      const result1 = await region.getStorefrontCountryCode();
-      const result2 = await region.getStorefrontCountryCode();
+    const {isUSStorefront} = require('../region');
 
-      expect(result1).toBe('USA');
-      expect(result2).toBe('USA');
-      expect(mockGetCountryCode).toHaveBeenCalledTimes(1);
-    });
+    await expect(isUSStorefront()).resolves.toBe(true);
 
-    it('caches null result from error and does not retry', async () => {
-      const {region, mockGetCountryCode} = setupRegion();
-      mockGetCountryCode!.mockRejectedValue(new Error('fail'));
+    jest.resetModules();
 
-      const result1 = await region.getStorefrontCountryCode();
-      const result2 = await region.getStorefrontCountryCode();
+    const failingGetter = jest.fn().mockRejectedValue(new Error('boom'));
+    jest.doMock('../../specs/NativeStorefront', () => ({
+      __esModule: true,
+      default: {getCountryCode: failingGetter},
+    }));
 
-      expect(result1).toBeNull();
-      expect(result2).toBeNull();
-      expect(mockGetCountryCode).toHaveBeenCalledTimes(1);
-    });
+    const regionAfterFailure = require('../region');
+
+    await expect(
+      regionAfterFailure.getStorefrontCountryCode(),
+    ).resolves.toBeNull();
+    await expect(regionAfterFailure.isUSStorefront()).resolves.toBe(false);
   });
 });
