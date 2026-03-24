@@ -95,7 +95,7 @@
     "darkMode": "Dunkler Modus",
     "displayMemoryUsage": "Speichernutzung anzeigen",
     "displayMemoryUsageDescription": "Speichernutzung im Chat anzeigen.",
-    "exportOptions": "Experteneinstellungen",
+    "exportOptions": "Export-Optionen",
     "exportLegacyChats": "Exportiere alte Chats",
     "exportLegacyChatsDescription": "Dies nutzen wenn Migration fehlgeschlagen ist oder alte Chats wiederhergestellt werden sollen.",
     "exportButton": "Export",
@@ -235,7 +235,7 @@
         "alreadyDownloadedTitle": "Modell schon heruntergeladen",
         "alreadyDownloadedMessage": "Das Modell wurde schon heruntergeladen.",
         "deleteTitle": "Modell löschen",
-        "deleteMessage": "Sicher, dass dieses heruntergeladene Modell gelöscht weden soll?"
+        "deleteMessage": "Sicher, dass dieses heruntergeladene Modell gelöscht werden soll?"
       },
       "buttons": {
         "remove": "Entfernen"
@@ -321,7 +321,7 @@
         "removeButton": "Modell entfernen",
         "expandDetailsButton": "Modell Details erweitern",
         "memoryWarningButton": "Zeige detaillierte Speicherwarnung",
-        "integrityWarningButton": "Detailierte Integritätswarnung zeigen",
+        "integrityWarningButton": "Detaillierte Integritätswarnung zeigen",
         "memoryWarningSnackbar": "Benachrichtigung Speicherwarnung"
       }
     },
