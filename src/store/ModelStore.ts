@@ -392,6 +392,15 @@ class ModelStore {
     });
   };
 
+  setNoExtraBufts = (no_extra_bufts: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        no_extra_bufts,
+      };
+    });
+  };
+
   /**
    * Get effective context initialization parameters with constraints applied
    * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
@@ -448,6 +457,7 @@ class ModelStore {
       n_parallel: this.contextInitParams.n_parallel ?? 1, // NEW (1 for blocking mode only)
       use_mlock: this.contextInitParams.use_mlock,
       use_mmap: effectiveUseMmap,
+      no_extra_bufts: this.contextInitParams.no_extra_bufts,
     };
 
     // Remove undefined values from the params object

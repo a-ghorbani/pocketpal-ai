@@ -83,11 +83,10 @@
     "useMmapDescription": "Use memory-mapped files for faster model loading",
     "useMmapTrue": "Enabled",
     "useMmapFalse": "Disabled",
-    "useMmapSmart": "Smart",
     "useMmapTrueDescription": "Always use memory mapping for faster loading",
-    "useMmapFalseDescription": "Never use memory mapping (slower loading but may reduce memory usage)",
-    "useMmapSmartDescription": "Automatically choose based on model type (Android only)",
-    "useMmapRecommended": "Recommended for performance - Memory-mapped with locked pages. Combines fast loading with consistent performance",
+    "useMmapFalseDescription": "Disabled is recommended when weight repacking is enabled to avoid doubling memory usage",
+    "weightRepacking": "Enable Weight Repacking",
+    "weightRepackingDescription": "Faster prompt processing with minimal memory overhead when memory mapping is disabled. Token generation is unaffected.",
     "modelLoadingSettings": "Model Loading Settings",
     "autoOffloadLoad": "Auto Offload/Load",
     "autoOffloadLoadDescription": "Offload model when app is in background.",
@@ -985,7 +984,8 @@
       "failedToLoadDetails": "Failed to load pal details",
       "failedToDownload": "Failed to download pal",
       "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "buyOnPalshub": "Buy on Palshub"
     }
   },
   "validation": {

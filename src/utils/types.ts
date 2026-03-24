@@ -530,6 +530,11 @@ export interface ContextInitParams
   /** Maximum number of tokens for image input (for dynamic resolution VLMs). Default: 512 */
   image_max_tokens?: number;
 
+  // v2.2+
+  /** Disable extra buffer types for weight repacking (CPU_REPACK). Android only.
+   * Reduces memory usage at the cost of slower prompt processing. Default: false */
+  no_extra_bufts?: boolean;
+
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */
   no_gpu_devices?: boolean;
