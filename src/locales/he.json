@@ -452,9 +452,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "שלח מדיה"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}מילישניות/טוקן, {{predictedPerSecond}} טוקנים/שניה"
-    },
     "exportUtils": {
       "fileSaved": "קובץ נשמר",
       "fileSavedMessage": "הקובץ נשמר בתיקיית ההורדות שלך בשם {{filename}}",

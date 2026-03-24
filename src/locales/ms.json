@@ -452,9 +452,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Hantar media"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}ms/token, {{predictedPerSecond}} token/saat"
-    },
     "exportUtils": {
       "fileSaved": "Fail Disimpan",
       "fileSavedMessage": "Fail telah disimpan ke folder Muat Turun anda sebagai {{filename}}",

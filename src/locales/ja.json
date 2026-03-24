@@ -452,9 +452,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "メディアを送信"
     },
-    "bubble": {
-      "timingsString": "トークンあたり{{predictedMs}}ms、1秒あたり{{predictedPerSecond}}トークン"
-    },
     "exportUtils": {
       "fileSaved": "ファイル保存完了",
       "fileSavedMessage": "ファイルはダウンロードフォルダに{{filename}}として保存されました",

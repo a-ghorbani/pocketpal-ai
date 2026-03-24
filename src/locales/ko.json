@@ -222,9 +222,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "미디어 첨부하기"
     },
-    "bubble": {
-      "timingsString": "토큰당 {{predictedMs}}ms, 초당 {{predictedPerSecond}}토큰"
-    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "사용 가능한 모델 없음",
       "noModelsDescription": "PocketPal과 채팅을 시작하려면 모델을 다운로드해 주세요",

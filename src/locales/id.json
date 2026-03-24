@@ -452,9 +452,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Kirim media"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}ms/token, {{predictedPerSecond}} token/detik"
-    },
     "exportUtils": {
       "fileSaved": "File Disimpan",
       "fileSavedMessage": "File telah disimpan ke folder Unduhan Anda sebagai {{filename}}",

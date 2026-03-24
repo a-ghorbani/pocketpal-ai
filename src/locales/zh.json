@@ -452,9 +452,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "发送媒体"
     },
-    "bubble": {
-      "timingsString": "每token{{predictedMs}}ms，每秒{{predictedPerSecond}}tokens"
-    },
     "exportUtils": {
       "fileSaved": "文件已保存",
       "fileSavedMessage": "文件已保存到你的下载文件夹，文件名为{{filename}}",

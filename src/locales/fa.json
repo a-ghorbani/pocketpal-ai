@@ -452,9 +452,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "ارسال رسانه"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}ms/توکن، {{predictedPerSecond}} توکن/ثانیه"
-    },
     "exportUtils": {
       "fileSaved": "فایل ذخیره شد",
       "fileSavedMessage": "فایل در پوشه دانلودها با نام {{filename}} ذخیره شد",

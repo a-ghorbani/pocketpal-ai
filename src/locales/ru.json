@@ -222,9 +222,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Отправить медиа"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}мс/токен, {{predictedPerSecond}} токенов/сек"
-    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Нет доступных моделей",
       "noModelsDescription": "Загрузите модель, чтобы начать общение с PocketPal",
