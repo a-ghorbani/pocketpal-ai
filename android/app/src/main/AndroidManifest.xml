@@ -29,6 +29,7 @@
       android:allowBackup="true"
       android:dataExtractionRules="@xml/backup_rules_12_plus"
       android:fullBackupContent="@xml/backup_rules_legacy"
+      android:networkSecurityConfig="@xml/network_security_config"
       android:theme="@style/AppTheme"
       android:supportsRtl="true">
       <activity
