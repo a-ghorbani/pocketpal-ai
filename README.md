@@ -144,3 +144,15 @@ Similarly, I don't know the real value and can't just write it in randomly.
 **下一步主要是增加更多的多模态输入输出，例如语音，生图，文件输入和MCP工具。多模态这方面，向mmn软件看齐**
 
 **还有是增加调用API的功能，或者是当API服务器(可以方便的在线本地模型对比，以后或许可以多模型聚合讨论)。**
+
+## 下一步的计划
+
+1.openai和claude的api server
+
+2.更多模态的输入支持 例如语音 视频 文件
+
+3.更多模态的输出支持 例如 图片生成 视频生成 语音输出
+
+4.内置rag知识库和联网搜索 支持预调用和工具调用
+
+6.支持MCP服务器
