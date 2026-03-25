@@ -147,7 +147,7 @@ Similarly, I don't know the real value and can't just write it in randomly.
 
 ## 下一步的计划
 
-1.支持完整的 openai和claude api server
+1.支持完整的 openai 和 claude api server
 
 2.更多模态的输入支持 例如语音 视频 文件
 
