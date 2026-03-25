@@ -95,9 +95,9 @@ export const useMessageActions = ({
         await handleTryAgain(message);
         return;
       }
-      const model = modelStore.models.find(m => m.id === modelId);
+      const model = modelStore.availableModels.find(m => m.id === modelId);
       if (model) {
-        await modelStore.initContext(model);
+        await modelStore.selectModel(model);
         await handleTryAgain(message);
       }
     },

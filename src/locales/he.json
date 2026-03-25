@@ -83,11 +83,8 @@
     "useMmapDescription": "השתמש בקבצים ממופים בזיכרון לטעינת מודלים מהירה יותר",
     "useMmapTrue": "מופעל",
     "useMmapFalse": "מושבת",
-    "useMmapSmart": "חכם",
     "useMmapTrueDescription": "השתמש תמיד במיפוי זיכרון לטעינה מהירה יותר",
     "useMmapFalseDescription": "לעולם אל תשתמש במיפוי זיכרון (טעינה איטית יותר אך עשוי להפחית את ניצול הזיכרון)",
-    "useMmapSmartDescription": "בחירה אוטומטית לפי סוג המודל (אנדרואיד בלבד)",
-    "useMmapRecommended": "מומלץ לביצועים - זיכרון ממופה עם דפים נעולים. משלב טעינה מהירה עם ביצועים עקביים",
     "modelLoadingSettings": "הגדרות טעינת מודל",
     "autoOffloadLoad": "טעינה/פריקה אוטומטית",
     "autoOffloadLoadDescription": "פריקת מודל כאשר האפליקציה נמצאת ברקע.",
@@ -182,7 +179,7 @@
       "reloadModelTitle": "טען מודל מחדש",
       "reloadModelMessage": "יש לטעון מחדש את המודל כדי להחיל את מודל שכבת ההתאמה החדש. האם ברצונך לטעון מחדש כעת?",
       "reload": "טען מחדש",
-      "deleteProjectionTitle": "טען מודל שכבת התאמה",
+      "deleteProjectionTitle": "מחק מודל שכבת התאמה",
       "deleteProjectionMessage": "האם אתה בטוח שברצונך למחוק את מודל שכבת ההתאמה הזה?",
       "cannotDeleteTitle": "לא ניתן למחוק",
       "visionControls": {
@@ -454,9 +451,6 @@
   "components": {
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "שלח מדיה"
-    },
-    "bubble": {
-      "timingsString": "{{predictedMs}}מילישניות/טוקן, {{predictedPerSecond}} טוקנים/שניה"
     },
     "exportUtils": {
       "fileSaved": "קובץ נשמר",
@@ -827,8 +821,8 @@
       "exportCount": "ייצוא ({{count}})",
       "deleteCount": "מחיקה ({{count}})",
       "bulkDeleteTitle": "מחק סשני צ'אט",
-      "bulkDeleteMessage": "למחוק {{count}} מפגשי צ'אט? לא יהיה ניתן לבטל פעולה זו.",
-      "bulkDeleteError": "מחיקת מפגשי הצ'אט נכשלה. אנא נסה שוב.",
+      "bulkDeleteMessage": "למחוק {{count}} סשני צ'אט? לא יהיה ניתן לבטל פעולה זו.",
+      "bulkDeleteError": "מחיקת סשני הצ'אט נכשלה. אנא נסה שוב.",
       "exportError": "ייצוא סשן הצ'אט נכשל. אנא נסה שוב.",
       "bulkExportError": "ייצוא מפגשי הצ'אט נכשל. אנא נסה שוב.",
       "dateGroups": {
@@ -1028,7 +1022,8 @@
   "benchmark": {
     "title": "מבחן ביצועים",
     "modelSelector": {
-      "prompt": "בחר מודל"
+      "prompt": "בחר מודל",
+      "noModels": "לא הורדו מודלים"
     },
     "buttons": {
       "advancedSettings": "הגדרות מתקדמות",

@@ -14,7 +14,8 @@
   "benchmark": {
     "title": "벤치마크",
     "modelSelector": {
-      "prompt": "모델 선택하기"
+      "prompt": "모델 선택하기",
+      "noModels": "다운로드된 모델 없음"
     },
     "buttons": {
       "advancedSettings": "고급 설정",
@@ -220,9 +221,6 @@
   "components": {
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "미디어 첨부하기"
-    },
-    "bubble": {
-      "timingsString": "토큰당 {{predictedMs}}ms, 초당 {{predictedPerSecond}}토큰"
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "사용 가능한 모델 없음",
@@ -990,11 +988,8 @@
     "useMmapDescription": "모델을 더 빠르게 불러오기 위해 메모리 맵 파일(mmap)을 사용합니다.",
     "useMmapTrue": "활성화됨",
     "useMmapFalse": "비활성화됨",
-    "useMmapSmart": "지능형",
     "useMmapTrueDescription": "빠른 로딩을 위해 항상 메모리 매핑을 사용합니다.",
     "useMmapFalseDescription": "메모리 매핑을 사용하지 않습니다. (로딩은 느려지지만 메모리 사용량은 줄어듭니다.)",
-    "useMmapSmartDescription": "모델 유형에 따라 자동 선택 (Android 전용)",
-    "useMmapRecommended": "성능 향상을 위한 추천: 페이지 고정(Locked pages) 방식의 메모리 맵을 사용합니다. 빠른 로딩 속도와 안정적인 성능을 결합합니다.",
     "exportOptions": "내보내기 옵션",
     "exportLegacyChats": "이전 채팅 내보내기",
     "exportLegacyChatsDescription": "마이그레이션에 실패했거나 이전 채팅 세션을 복구해야 하는 경우 이 기능을 사용하세요.",
@@ -1112,7 +1107,8 @@
       "failedToLoadDetails": "Pal 세부정보 로드에 실패함",
       "failedToDownload": "Pal 다운로드 실패",
       "premiumPalMessage": "이 Pal은 프리미엄입니다.\n• 이미 Palshub 계정으로 잠금을 해제하셨다면, 간단히 로그인하여 접근할 수 있습니다.\n• 아직 잠금 해제하지 않으셨나요? palshub.ai 앱을 방문하여 자세히 알아보세요.",
-      "notAvailable": "비어있음"
+      "notAvailable": "비어있음",
+      "buyOnPalshub": "Palshub에서 구매하기"
     }
   },
   "video": {

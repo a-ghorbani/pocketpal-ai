@@ -81,6 +81,14 @@ export const TEST_MODELS: ModelTestConfig[] = [
     prompts: [{input: 'Hi', description: 'Basic greeting'}],
   },
   {
+    id: 'qwen3-1.7b',
+    searchQuery: 'bartowski Qwen_Qwen3-1.7B',
+    selectorText: 'Qwen_Qwen3-1.7B',
+    downloadFile: 'Qwen_Qwen3-1.7B-Q4_K_M.gguf',
+    downloadTimeout: 600000,
+    prompts: [{input: 'Hi', description: 'Basic greeting'}],
+  },
+  {
     id: 'gemma-3n-e2b',
     searchQuery: 'bartowski google_gemma-3n-E2B-it',
     selectorText: 'google_gemma-3n-E2B-it',

@@ -1,6 +1,6 @@
 {
   "name": "PocketPal",
-  "version": "1.11.19-0",
+  "version": "1.12.2",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -48,7 +48,7 @@
     "chat-formatter": "^0.3.4",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
-    "llama.rn": "0.11.3",
+    "llama.rn": "0.11.5",
     "marked": "^16.4.0",
     "mobx": "^6.15.0",
     "mobx-persist-store": "^1.1.8",
