@@ -155,4 +155,4 @@ Similarly, I don't know the real value and can't just write it in randomly.
 
 4.内置rag知识库和联网搜索 支持预调用和工具调用
 
-6.支持MCP服务器
+5.支持MCP服务器
