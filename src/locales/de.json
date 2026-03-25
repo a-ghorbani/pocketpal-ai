@@ -1,0 +1,377 @@
+{
+  "common": {
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "dismiss": "Schließen",
+    "rename": "Umbenennen",
+    "reset": "Zurücksetzen",
+    "save": "Speichern",
+    "update": "Aktualisieren",
+    "error": "Fehler",
+    "export": "Export",
+    "networkError": "Netzwerkfehler. Bitte erneut versuchen.",
+    "downloadETA": "ETA",
+    "calculating": "berechne...",
+    "second": "Sek.",
+    "seconds": "Sek",
+    "year": "Jahr",
+    "years": "Jahre",
+    "month": "Monat",
+    "months": "Monate",
+    "week": "Woche",
+    "weeks": "Wochen",
+    "day": "Tag",
+    "days": "Tage",
+    "hour": "Stunde",
+    "hours": "Stunden",
+    "minute": "Min",
+    "minutes": "Min",
+    "justNow": "Gerade eben",
+    "ok": "OK",
+    "close": "Schließen",
+    "clear": "Alles löschen",
+    "gallery": "Galerie"
+  },
+  "settings": {
+    "modelInitializationSettings": "Einstellungen Modellinitialisierung",
+    "metal": "Metal",
+    "metalDescription": "Apples hardwarebeschleunigte API.",
+    "metalRequiresNewerIOS": "Metal-Beschleunigung benötigt iOS 18 oder höher. Bitte aktualisieren Sie ihr Gerät, um dieses Feature nutzen zu können.",
+    "openCL": "OpenCL (Experimentell)",
+    "openCLDescription": "GPU-Beschleunigung für Adreno-GPUs. Schnellere Verarbeitung von Prompts, aber die Generierung ist evtl. nicht andauernd schneller.",
+    "openCLNotAvailable": "OpenCL auf diesem Gerät nicht verfügbar. Benötigt eine Adreno GPU mit i8mm und dotprod CPU-Funktionen.",
+    "openCLMissingCPUFeatures": "OpenCL benötigt i8mm und dotprod CPU-Funktionen, welche auf diesem Gerät nicht verfügbar sind.",
+    "openCLQuantizationNote": "Hinweis: Reine Q4_0-quantisierte Modelle erzielen die besten Ergebnisse mit OpenCL.",
+    "openCLDocsLink": "Weitere Infos in der llama.cpp OpenCL Dokumentation.",
+    "layersOnGPU": "Ebenen auf GPU: {{gpuLayers}}",
+    "deviceSelection": "Auswahl Gerät",
+    "deviceSelectionIOS": "Gerät (Metal)",
+    "deviceSelectionIOSDescription": "Wähle Metal GPU oder Nur-CPU Modus",
+    "deviceSelectionAndroidDescription": "Wähle Recheneinheit (CPU, GPU oder Hexagon NPU)",
+    "cpuOnlyNoAccelerators": "Nur CPU - keine Hardwarebeschleunigung erkannt",
+    "contextSize": "Kontextgröße",
+    "contextSizePlaceholder": "Kontextgröße eingeben (min {{minContextSize}})",
+    "invalidContextSizeError": "Bitte eine gültige Zahl eingeben (minimum {{minContextSize}})",
+    "modelReloadNotice": "Modell muss neu geladen werden um Änderungen anwenden zu können.",
+    "advancedSettings": "Erweiterte Einstellungen",
+    "batchSize": "Batchgröße",
+    "batchSizeDescription": "Batchgröße: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "effektiv",
+    "physicalBatchSize": "Physikalische Batchgröße",
+    "physicalBatchSizeDescription": "Physikalische Batchgröße: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "CPU Threads",
+    "cpuThreadsDescription": "Benutze {{threads}} von {{maxThreads}} verfügbaren Threads",
+    "imageMaxTokens": "Max Tokens Bilder",
+    "imageMaxTokensDescription": "Maximale Tokens zur Bilderzeugung: {{tokens}}{{effectiveTokens}} (niedriger = schneller, weniger Detail)",
+    "flashAttention": "Flash Attention",
+    "flashAttentionDescription": "Flash Attention für schnellere Verarbeitung einschalten",
+    "flashAttentionIOSDescription": "Speichereffiziente Attention (bei Metal automatisch aktiviert)",
+    "flashAttentionAndroidDescription": "Muss für OpenCL speichern/laden deaktiviert sein",
+    "flashAttentionAuto": "Auto",
+    "flashAttentionOn": "An",
+    "flashAttentionOff": "Aus",
+    "keyCacheType": "Key Cache Typ",
+    "keyCacheTypeDescription": "Cachetyp für Key Berechnung auswählen",
+    "keyCacheTypeDisabledDescription": "Flash Attention aktivieren um Cachetyp zu ändern",
+    "valueCacheType": "Cachetyp Wert",
+    "valueCacheTypeDescription": "Wählen Sie den Cache-Typ für die Wertberechnung aus",
+    "valueCacheTypeDisabledDescription": "Flash Attention aktivieren um Cache-Typ zu ändern",
+    "memorySettings": "Speichereinstellungen",
+    "useMlock": "Benutze Memory Lock",
+    "useMlockDescription": "System zwingen, Modell im RAM zu behalten, anstatt es auszulagern oder zu komprimieren",
+    "useMmap": "Speicher Mapping",
+    "useMmapDescription": "Nutze speicherabgebildete Dateien um Model schneller zu laden",
+    "useMmapTrue": "Aktiviert",
+    "useMmapFalse": "Deaktiviert",
+    "useMmapTrueDescription": "Immer Speicher-Mapping für schnelleres laden nutzen",
+    "useMmapFalseDescription": "Nie Speicher-Mapping nutzen (langsameres laden aber reduziert Speichernutzung)",
+    "modelLoadingSettings": "Einstellungen Modell laden",
+    "autoOffloadLoad": "Automatisch auslagern/laden",
+    "autoOffloadLoadDescription": "Modell auslagern wenn App im Hintergrund.",
+    "autoNavigateToChat": "Automatisch zum Chat",
+    "autoNavigateToChatDescription": "Zum Chat wenn Laden startet.",
+    "appSettings": "Einstellungen App",
+    "language": "Sprache",
+    "darkMode": "Dunkler Modus",
+    "displayMemoryUsage": "Speichernutzung anzeigen",
+    "displayMemoryUsageDescription": "Speichernutzung im Chat anzeigen.",
+    "exportOptions": "Export-Optionen",
+    "exportLegacyChats": "Exportiere alte Chats",
+    "exportLegacyChatsDescription": "Dies nutzen wenn Migration fehlgeschlagen ist oder alte Chats wiederhergestellt werden sollen.",
+    "exportButton": "Export",
+    "importChats": "Importiere Chats",
+    "importChatsDescription": "Importiere Chats aus einer (exportierten) JSON Datei.",
+    "importButton": "Import",
+    "importSuccess": "{{count}} Chats erfolgreich importiert.",
+    "importError": "Import von Chats fehlgeschlagen. Bitte Dateiformat überprüfen.",
+    "apiSettingsTitle": "Einstellungen API",
+    "huggingFaceTokenLabel": "Hugging Face Token",
+    "tokenIsSetDescription": "Token gesetzt. Nötig um geschützte Modelle zu nutzen.",
+    "setTokenDescription": "Token einfügen um geschützte Modelle zu nutzen.",
+    "setTokenButton": "Token einfügen",
+    "useHfTokenLabel": "HF Token nutzen",
+    "useHfTokenDescription": "Aktivieren, um Token für API-Abfragen zu verwenden. Deaktivieren, wenn Token Authentifizierungsprobleme verursacht.",
+    "cacheStorageTitle": "Cache & Speicher",
+    "clearPalCaches": "Verknüpfungscache löschen",
+    "clearPalCachesDescription": "Daten im Cache löschen um Verknüpfungen zu beschleunigen. Beeinflusst weder Deine Pals noch den Chat Verlauf.",
+    "clearCachesButton": "Caches löschen",
+    "clearCachesConfirmTitle": "Verknüpfungscaches löschen?",
+    "clearCachesConfirmMessage": "Dies löscht alle zwischengespeicherten Daten ({{fileCount}} Dateien, {{size}}). Verknüpfungen laden nach dem Löschen evtl. zunächst langsamer. Beeinflusst weder Deine Pals noch den Chatverlauf.",
+    "clearCachesSuccess": "{{count}} Dateien im Cache erfolgreich gelöscht.",
+    "clearCachesError": "Cache löschen fehlgeschlagen. Bitte erneut versuchen.",
+    "noCachesToClear": "Keine Caches zum Löschen vorhanden."
+  },
+  "memory": {
+    "shortWarning": "Speicherwarnung",
+    "multimodalWarning": "Dieses Gerät verfügt möglicherweise nicht über ausreichende Ressourcen für multimodale Modelle.",
+    "memoryTight": "Speicher knapp",
+    "lowMemory": "Speicher niedrig",
+    "memoryDetailMessage": "Dieses Modell benötigt ~{{needed}}, aber nur ~{{available}} sind ungefähr nutzbar. Schätzungen verbessern sich beim nutzen der App.",
+    "estimatedMemory": "Geschätzter Speicher: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "Speicherwarnung",
+      "memoryWarningMessage": "Dieses Modell könnte den verfügbaren Speicher überschreiten, was zu Instabilität führen kann. Trotzdem laden?",
+      "multimodalWarningTitle": "Geräteleistung Warnung",
+      "multimodalWarningMessage": "Dieses Gerät verfügt evtl. nicht über ausreichende Ressourcen für multimodale Modelle. Das Laden kann zu Instabilität führen. Trotzdem fortfahren?",
+      "combinedWarningTitle": "Leistungswarnung",
+      "combinedWarningMessage": "Dieses Modell übersteigt evtl. den verfügbaren Speicher. Auch verfügt dies Gerät evtl. nicht über ausreichende Ressourcen für multimodale Modelle. Dies kann zu Instabilität führen. Trotzdem fortfahren?",
+      "cancel": "Abbrechen",
+      "continue": "Weiter"
+    }
+  },
+  "storage": {
+    "checkFailed": "Speicher prüfen fehlgeschlagen",
+    "lowStorage": "Speicher niedrig! Modell {{modelSize}} > {{freeSpace}} frei"
+  },
+  "generation": {
+    "modelNotInitialized": "Modell Kontext nicht initialisiert",
+    "failedToGenerate": "Ausgabe konnte nicht generiert werden"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "Datei schon vorhanden",
+      "fileAlreadyExistsMessage": "Eine Datei gleichen Namens existiert schon. Was möchten Sie tun?",
+      "replace": "Ersetzen",
+      "keepBoth": "Beide behalten"
+    },
+    "labels": {
+      "localModel": "Lokal",
+      "hfModel": "HF",
+      "unknownGroup": "Unbekannt",
+      "availableToUse": "Startklar",
+      "availableToDownload": "Download verfügbar",
+      "useAddButtonForMore": "Nutze + Taste um weitere Modelle zu finden"
+    },
+    "vision": "Bilderfassung",
+    "mmproj": "Projector",
+    "multimodal": {
+      "settings": "Einstellungen Multimodal",
+      "projectionModels": "Projection Modelle",
+      "noCompatibleModels": "Keine kompatiblen Projection Modelle gefunden",
+      "noProjectionModels": "Keine Projection Modelle vorhanden",
+      "selected": "Ausgewählt",
+      "select": "Auswählen",
+      "download": "Download",
+      "projectionNeededTitle": "Projection Modell benötigt",
+      "projectionNeededMessage": "Dieses Modell benötigt ein Projection Modell für multimodale Funktionen.",
+      "projectionMissingWarning": "Projection Modell fehlt",
+      "projectionMissingShort": "Fehlende Projection",
+      "reloadModelTitle": "Modell neu laden",
+      "reloadModelMessage": "Das Modell muss neu geladen werden, um das neue Projection Modell anzuwenden. Jetzt neu laden?",
+      "reload": "Neu laden",
+      "deleteProjectionTitle": "Lösche Projection Modell",
+      "deleteProjectionMessage": "Sicher dass das Projection Modell gelöscht werden soll?",
+      "cannotDeleteTitle": "Löschen nicht möglich",
+      "visionControls": {
+        "enableVision": "Bildverarbeitung einschalten",
+        "disableVision": "Bildverarbeitung ausschalten",
+        "visionEnabled": "Bildverarbeitung an",
+        "visionDisabled": "Bildverarbeitung aus",
+        "textOnlyMode": "Nur Text",
+        "visionMode": "Bildverarbeitung an",
+        "downloadWithVision": "Mit Bildverarbeitung downloaden",
+        "downloadTextOnly": "Nur Text downloaden",
+        "visionToggleDescription": "Bildverarbeitung einschalten",
+        "projectionModelSize": "+{{size}} Projection Modell",
+        "visionModeDescription": "Bilder und Text verarbeiten",
+        "textOnlyModeDescription": "Nur Text verarbeiten",
+        "includesVisionCapability": "Beinhaltet Bildverarbeitung",
+        "requiresProjectionModel": "Zuerst kompatibles Projection Modell downloaden"
+      },
+      "cannotDeleteActive": "Dieses Projection Modell ist momentan aktiv.",
+      "cannotDeleteInUse": "Dieses Projection Modell wird von heruntergeladenen LLM-Modellen genutzt:",
+      "dependentModels": "Abhängige Modelle:",
+      "visionWillBeDisabled": "Bildverarbeitung wird für diese Modelle deaktiviert."
+    },
+    "buttons": {
+      "addFromHuggingFace": "Von Hugging Face hinzufügen",
+      "addLocalModel": "Lokales Modell hinzufügen",
+      "reset": "Zurücksetzen"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Hugging Face Modelle",
+      "menuTitleDownloaded": "Heruntergeladene Modelle",
+      "menuTitleGrouped": "Nach Modelltyp gruppieren",
+      "menuTitleReset": "Modellliste zurücksetzen"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Zurücksetzen ausführen",
+      "confirmReset": "Zurücksetzen bestätigen"
+    },
+    "chatTemplate": {
+      "label": "Grundlegende Chatvorlage:"
+    },
+    "details": {
+      "title": "Vorhandene GGUF Dateien"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "Entfernen nicht möglich",
+        "modelPreset": "Dieses Modell ist vorhanden.",
+        "downloadedFirst": "Dieses Modell ist heruntergeladen. Bitte Datei zuerst löschen.",
+        "removeTitle": "Modell entfernen",
+        "removeMessage": "Sicher, dass dieses Modell von der Liste gelöscht werden soll?",
+        "removeError": "Modell entfernen fehlgeschlagen.",
+        "alreadyDownloadedTitle": "Modell schon heruntergeladen",
+        "alreadyDownloadedMessage": "Das Modell wurde schon heruntergeladen.",
+        "deleteTitle": "Modell löschen",
+        "deleteMessage": "Sicher, dass dieses heruntergeladene Modell gelöscht werden soll?"
+      },
+      "buttons": {
+        "remove": "Entfernen"
+      },
+      "warnings": {
+        "storage": {
+          "message": "Nicht genügend Speicherplatz vorhanden.",
+          "shortMessage": "Niedriger Speicherplatz"
+        },
+        "memory": {
+          "message": "Die Modellgröße nähert sich oder übersteigt den Speicherplatz Ihres Gerätes. Dies kann zu unerwartetem Verhalten führen."
+        },
+        "legacy": {
+          "message": "Altes Quantisierungsformat - Modell läuft evtl. nicht.",
+          "shortMessage": "Alte Quantifizierung"
+        },
+        "multiple": "{{count}} Warnungen"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "search": {
+      "noResults": "Keine Modelle gefunden",
+      "loadingMore": "Mehr laden...",
+      "searchPlaceholder": "Suche Hugging Face Modelle",
+      "modelUpdatedLong": "Vor {{time}} geupdated",
+      "modelUpdatedShort": "vor {{time}}",
+      "modelUpdatedJustNowLong": "Soeben geupdated",
+      "modelUpdatedJustNowShort": "Soeben",
+      "errorOccurred": "Modell laden fehlgeschlagen. Bitte erneut versuchen.",
+      "filters": {
+        "author": "Autor",
+        "authorPlaceholder": "Filtern nach Autor...",
+        "sortBy": "Sortieren nach",
+        "clearFilters": "Filter löschen",
+        "showFilters": "Filter anzeigen",
+        "hideFilters": "Filter verstecken",
+        "sortRelevance": "Relevanz",
+        "sortDownloads": "Downloads",
+        "sortRecent": "Kürzlich aktualisiert",
+        "sortLikes": "Am beliebtesten"
+      }
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "Modell löschen",
+        "deleteMessage": "Sicher, dieses heruntergeladene Modell zu löschen?",
+        "removeTitle": "Modell entfernen",
+        "removeMessage": "Sicher, dieses Modell von der Liste zu entfernen?"
+      },
+      "buttons": {
+        "settings": "Einstellungen",
+        "download": "Download",
+        "remove": "Entfernen",
+        "load": "Laden",
+        "offload": "Entladen"
+      },
+      "labels": {
+        "skills": "Fähigkeiten: ",
+        "vision": "Bildverarbeitung",
+        "capabilities": "Fähigkeiten.",
+        "modelName": "Modellname",
+        "contextLength": "Kontextlänge",
+        "architecture": "Architektur",
+        "author": "Autor",
+        "requiresProjectionModel": "Benötigt Projection Modell",
+        "downloadProjectionModel": "Projection Modell herunterladen",
+        "viewModelCardOnHuggingFace": "Model Card auf Hugging Face anschauen"
+      },
+      "accessibility": {
+        "expandDetails": "Details erweitern",
+        "collapseDetails": "Details minimieren",
+        "memoryWarning": "Speicherwarnung",
+        "integrityWarning": "Integrität Warnung",
+        "downloadProgress": "Fortschritt Download",
+        "loadingIndicator": "Laden",
+        "loadButton": "Modell laden",
+        "offloadButton": "Modell entladen",
+        "downloadButton": "Modell herunterladen",
+        "settingsButton": "Einstellungen Modell",
+        "deleteButton": "Modell löschen",
+        "removeButton": "Modell entfernen",
+        "expandDetailsButton": "Modell Details erweitern",
+        "memoryWarningButton": "Zeige detaillierte Speicherwarnung",
+        "integrityWarningButton": "Detaillierte Integritätswarnung zeigen",
+        "memoryWarningSnackbar": "Benachrichtigung Speicherwarnung"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "Vorlage:",
+        "editButton": "Bearbeiten",
+        "dialogTitle": "Bearbeite Chatvorlage",
+        "note1": "Hinweis: Änderung der Vorlage kann BOS, EOS und Systemprompt verändern.",
+        "note2": "Benutzt Nunjucks. Leer lassen um Vorlage des Modells zu nutzen.",
+        "placeholder": "Chatvorlage hier eingeben...",
+        "closeButton": "Schließen"
+      },
+      "stopWords": {
+        "label": "STOP WÖRTER",
+        "placeholder": "Neues Stopwort hinzufügen"
+      },
+      "tokenSettings": {
+        "bos": "BOS",
+        "eos": "EOS",
+        "addGenerationPrompt": "Generation Prompt hinzufügen",
+        "bosTokenPlaceholder": "BOS Token",
+        "eosTokenPlaceholder": "EOS Token",
+        "systemPrompt": "System Prompt"
+      }
+    },
+    "modelDescription": {
+      "size": "Größe: ",
+      "parameters": "Parameter: ",
+      "separator": " | ",
+      "notAvailable": "N/A"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "Fragenbeantwortung",
+      "summarization": "Zusammenfassung",
+      "reasoning": "Reasoning",
+      "roleplay": "Rollenspiel",
+      "instructions": "Instruktionen befolgen",
+      "code": "Code erstellen",
+      "math": "Mathematische Lösung",
+      "multilingual": "Multilingual",
+      "rewriting": "Umschreiben",
+      "creativity": "Kreatives schreiben",
+      "vision": "Bildverarbeitung"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "KI-Denk-/Schlussfolgerungen in den an das Modell gesendeten Kontext einbeziehen. Durch Deaktivieren dieser Option kann Kontextspeicherplatz gespart werden. Dies kann die Leistung beeinträchtigen.",
+    "jinja": "Jinja-Vorlagen für die Chatformatierung aktivieren. Wenn aktiviert, wird die Jinja-basierte Chatvorlagenverarbeitung für eine bessere Kompatibilität mit modernen Modellen verwendet.",
+    "grammar": "Bestimmte Grammatikregeln durchsetzen, um sicherzustellen, dass der generierte Text einer bestimmten Struktur oder Format folgt",
+    "stop": "Spezifische Phrasen definieren, welche die Texterstellung beenden"
+  }
+}

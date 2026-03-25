@@ -8,6 +8,7 @@ import {
   Model,
   ModelFile,
   ModelOrigin,
+  ServerConfig,
 } from '../../src/utils/types';
 import {CompletionParams} from '../../src/utils/completionTypes';
 
@@ -281,6 +282,30 @@ export const hfModel2 = createModel({
   origin: ModelOrigin.HF,
   hfModel: mockHFModel2,
   hfModelFile: mockHFModel2.siblings[0],
+});
+
+export const testServer: ServerConfig = {
+  id: 'server1',
+  name: 'Test LM Studio',
+  url: 'http://192.168.1.100:1234',
+};
+
+export const remoteModel: Model = createModel({
+  id: 'server1/gpt-3.5-turbo',
+  name: 'gpt-3.5-turbo',
+  author: 'Test LM Studio',
+  origin: ModelOrigin.REMOTE,
+  isDownloaded: true,
+  isLocal: false,
+  size: 0,
+  params: 0,
+  downloadUrl: '',
+  hfUrl: '',
+  progress: 0,
+  filename: '',
+  serverId: 'server1',
+  serverName: 'Test LM Studio',
+  remoteModelId: 'gpt-3.5-turbo',
 });
 
 export const modelsList: Model[] = [

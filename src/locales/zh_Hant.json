@@ -200,9 +200,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "發送媒體"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}} 毫秒/個詞元, {{predictedPerSecond}} 個詞元/秒"
-    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "無可用模型",
       "noModelsDescription": "下載模型後即可開始使用 PocketPal 進行聊天",

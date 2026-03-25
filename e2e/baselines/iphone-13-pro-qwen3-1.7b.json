@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "commit": "b4d08b6",
+  "device": "iPhone 13 Pro",
+  "os_version": "26.3",
+  "platform": "ios",
+  "timestamp": "2026-03-23T21:49:14.885Z",
+  "model": "qwen3-1.7b",
+  "checkpoints": [
+    {
+      "label": "app_launch",
+      "timestamp": "2026-03-23T21:46:34Z",
+      "native": {
+        "resident_size": 184238080,
+        "compressed": 0,
+        "phys_footprint": 96240704,
+        "internal": 96878592,
+        "metal_allocated": 65536,
+        "available_memory": 3124984768
+      }
+    },
+    {
+      "label": "models_screen",
+      "timestamp": "2026-03-23T21:46:40Z",
+      "native": {
+        "resident_size": 189120512,
+        "compressed": 0,
+        "phys_footprint": 95634496,
+        "internal": 96583680,
+        "metal_allocated": 65536,
+        "available_memory": 3125590976
+      }
+    },
+    {
+      "label": "chat_screen",
+      "timestamp": "2026-03-23T21:46:46Z",
+      "native": {
+        "resident_size": 191004672,
+        "compressed": 0,
+        "phys_footprint": 97682496,
+        "internal": 98467840,
+        "metal_allocated": 65536,
+        "available_memory": 3123542976
+      }
+    },
+    {
+      "label": "model_loaded",
+      "timestamp": "2026-03-23T21:48:28Z",
+      "native": {
+        "resident_size": 1723891712,
+        "compressed": 44646400,
+        "phys_footprint": 425642272,
+        "internal": 381501440,
+        "metal_allocated": 1827127296,
+        "available_memory": 2795583200
+      }
+    },
+    {
+      "label": "chat_active",
+      "timestamp": "2026-03-23T21:48:50Z",
+      "native": {
+        "resident_size": 1747107840,
+        "compressed": 34127872,
+        "phys_footprint": 420301112,
+        "internal": 387514368,
+        "metal_allocated": 1827749888,
+        "available_memory": 2800924360
+      }
+    },
+    {
+      "label": "post_chat_idle",
+      "timestamp": "2026-03-23T21:49:01Z",
+      "native": {
+        "resident_size": 1748647936,
+        "compressed": 33931264,
+        "phys_footprint": 417499448,
+        "internal": 388022272,
+        "metal_allocated": 1827127296,
+        "available_memory": 2803726024
+      }
+    },
+    {
+      "label": "model_unloaded",
+      "timestamp": "2026-03-23T21:49:11Z",
+      "native": {
+        "resident_size": 280051712,
+        "compressed": 20692992,
+        "phys_footprint": 146621672,
+        "internal": 134397952,
+        "metal_allocated": 393216,
+        "available_memory": 3074603800
+      }
+    }
+  ],
+  "peak_memory_mb": 2148.41
+}
