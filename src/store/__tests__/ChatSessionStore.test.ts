@@ -142,6 +142,28 @@ describe('chatSessionStore', () => {
       // Session should still be in the store if deletion failed
       expect(chatSessionStore.sessions.length).toBe(1);
     });
+
+    it('cleans up draft for deleted session', async () => {
+      const mockSessionId = 'session1';
+      chatSessionStore.sessions = [
+        {
+          id: mockSessionId,
+          title: 'Session 1',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.saveDraft(mockSessionId, 'unsent text');
+      (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.deleteSession(mockSessionId);
+
+      expect(chatSessionStore.sessionDrafts.has(mockSessionId)).toBe(false);
+    });
   });
 
   describe('addMessageToCurrentSession', () => {
@@ -1896,6 +1918,25 @@ describe('chatSessionStore', () => {
 
         expect(chatSessionRepository.deleteSessions).toHaveBeenCalledWith([]);
         expect(chatSessionStore.sessions.length).toBe(3);
+      });
+
+      it('cleans up drafts for all deleted sessions while preserving others', async () => {
+        chatSessionStore.saveDraft('session1', 'draft A');
+        chatSessionStore.saveDraft('session2', 'draft B');
+        chatSessionStore.saveDraft('session3', 'draft C');
+
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session3');
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+        expect(chatSessionStore.sessionDrafts.has('session3')).toBe(false);
+        // Draft for non-deleted session is preserved
+        expect(chatSessionStore.getDraft('session2')).toBe('draft B');
       });
     });
 
