@@ -6,7 +6,7 @@
  */
 
 import {BasePage, ChainableElement} from './BasePage';
-import {Selectors} from '../helpers/selectors';
+import {Selectors, byPartialText} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
 
@@ -67,6 +67,16 @@ export class DrawerPage extends BasePage {
     await this.waitForOpen();
     await this.tap(Selectors.drawer.modelsTab);
     // Wait a moment for drawer animation then verify it closed
+    await browser.pause(300);
+    await this.waitForClose();
+  }
+
+  /**
+   * Tap a chat session in the sidebar by matching its title text
+   */
+  async tapSession(titleFragment: string): Promise<void> {
+    await this.waitForOpen();
+    await this.tap(byPartialText(titleFragment));
     await browser.pause(300);
     await this.waitForClose();
   }

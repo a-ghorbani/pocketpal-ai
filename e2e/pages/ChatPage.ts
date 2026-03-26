@@ -63,6 +63,32 @@ export class ChatPage extends BasePage {
   }
 
   /**
+   * Type text into the chat input without sending
+   */
+  async typeInInput(text: string): Promise<void> {
+    await this.typeText(Selectors.chat.input, text);
+  }
+
+  /**
+   * Tap the send button (use when input already has text)
+   */
+  async tapSendButton(): Promise<void> {
+    await this.tap(Selectors.chat.sendButton);
+  }
+
+  /**
+   * Get the current text in the chat input field
+   */
+  async getInputText(): Promise<string> {
+    const element = await this.waitForElement(Selectors.chat.input);
+    // iOS: getAttribute('value') returns null for empty inputs, Android: getText()
+    if ((browser as any).isAndroid) {
+      return (await element.getText()) || '';
+    }
+    return (await element.getAttribute('value')) || '';
+  }
+
+  /**
    * Reset/clear the current chat to start a new session
    */
   async resetChat(): Promise<void> {
