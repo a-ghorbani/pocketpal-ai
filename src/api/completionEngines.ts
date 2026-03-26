@@ -31,15 +31,9 @@ export class LocalCompletionEngine implements CompletionEngine {
           }
         : undefined,
     );
-    // llama.rn includes the stopping word in the output — strip it
-    const strip = (s?: string) =>
-      s && result.stopping_word && s.endsWith(result.stopping_word)
-        ? s.slice(0, -result.stopping_word.length)
-        : s;
-
     return {
-      text: strip(result.text) ?? result.text,
-      content: strip(result.content) ?? result.content,
+      text: result.text,
+      content: result.content,
       reasoning_content: result.reasoning_content,
       timings: result.timings,
       tokens_predicted: result.tokens_predicted,
