@@ -214,6 +214,8 @@ export const ChatView = observer(
     // ============ COMPONENT STATE ============
     // Input state
     const [inputText, setInputText] = React.useState('');
+    const inputTextRef = React.useRef(inputText);
+    inputTextRef.current = inputText;
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
     const [_selectedModel, setSelectedModel] = React.useState<string | null>(
@@ -262,7 +264,7 @@ export const ChatView = observer(
     React.useEffect(() => {
       // Save draft for the session we're leaving
       if (prevSessionId && prevSessionId !== chatSessionStore.activeSessionId) {
-        chatSessionStore.saveDraft(prevSessionId, inputText);
+        chatSessionStore.saveDraft(prevSessionId, inputTextRef.current);
       }
 
       // Restore draft for the session we're entering
@@ -273,7 +275,7 @@ export const ChatView = observer(
       } else {
         setInputText('');
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
 
     // ============ ACTIVE PAL MODEL INITIALIZATION ============
