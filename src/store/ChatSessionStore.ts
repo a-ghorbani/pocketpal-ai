@@ -215,6 +215,7 @@ class ChatSessionStore {
 
       runInAction(() => {
         this.sessions = this.sessions.filter(session => session.id !== id);
+        this.sessionDrafts.delete(id);
       });
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -889,6 +890,7 @@ class ChatSessionStore {
 
       // Update local state and exit selection mode
       runInAction(() => {
+        idsToDelete.forEach(deletedId => this.sessionDrafts.delete(deletedId));
         this.sessions = this.sessions.filter(
           session => !idsToDelete.includes(session.id),
         );
