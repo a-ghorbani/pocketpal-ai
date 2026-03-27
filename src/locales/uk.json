@@ -206,7 +206,7 @@
       "noProjectionModels": "Моделей прогнозування немає",
       "selected": "Вибрано",
       "select": "Вибрати",
-      "download": "Завантаження",
+      "download": "Завантаженнях",
       "projectionNeededTitle": "Потрібна модель прогнозування",
       "projectionNeededMessage": "Ця модель потребує моделі прогнозування для забезпечення мультимодальних можливостей.",
       "projectionMissingWarning": "Відсутня модель прогнозування",
@@ -310,7 +310,7 @@
         "showFilters": "Показати фільтри",
         "hideFilters": "Сховати фільтри",
         "sortRelevance": "Актуальність",
-        "sortDownloads": "Завантаження",
+        "sortDownloads": "Завантажень",
         "sortRecent": "Нещодавно оновлено",
         "sortLikes": "Найпопулярніші"
       }
@@ -326,7 +326,7 @@
         "settings": "Налаштування",
         "download": "Завантаженням",
         "remove": "Вилучити",
-        "load": "Завантажити",
+        "load": "Завантажитися",
         "offload": "Розвантаження"
       },
       "labels": {
@@ -347,8 +347,8 @@
         "memoryWarning": "Попередження про стан пам'яті",
         "integrityWarning": "Попередження щодо цілісності",
         "downloadProgress": "Хід завантаження",
-        "loadingIndicator": "Завантажень",
-        "loadButton": "Завантажити модель",
+        "loadingIndicator": "Завантаження",
+        "loadButton": "Завантажити моделю",
         "offloadButton": "Модель розвантаження",
         "downloadButton": "Завантажити Модель",
         "settingsButton": "Налаштування моделі",
@@ -393,7 +393,7 @@
       "questionAnswering": "Відповіді на запитання",
       "summarization": "Підсумок",
       "reasoning": "Аргументація",
-      "roleplay": "Рольова гра",
+      "roleplay": "Рольова-гра",
       "instructions": "Інструкція нижче",
       "code": "Генерація коду",
       "math": "Розв'язування математичних задач",
@@ -446,12 +446,12 @@
     "versionCopiedDescription": "Інформація про версію скопійована в буфер обміну"
   },
   "feedback": {
-    "title": "Надіслати відгук",
+    "title": "Надіслати Відгук",
     "description": "Ваша думка для нас важлива! Розкажіть нам, як PocketPal AI допомагає вам і що ми можемо зробити, щоб зробити його ще кориснішим.",
     "shareThoughtsButton": "Поділіться своїми думками",
     "useCase": {
       "label": "Для чого ви використовуєте PocketPal AI?",
-      "placeholder": "наприклад, узагальнення, рольові ігри тощо"
+      "placeholder": "наприклад, узагальнення, рольові ігри тощо."
     },
     "featureRequests": {
       "label": "Прохання про додавання функції",
@@ -518,7 +518,7 @@
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Моделей немає",
       "noModelsDescription": "Завантажте модель, щоб почати спілкуватися з PocketPal",
-      "noModelsButton": "Завантажити модель",
+      "noModelsButton": "Завантажити Моделю",
       "activateModelTitle": "Активуйте модель, щоб розпочати роботу",
       "activateModelDescription": "Виберіть модель і завантажте її. Після завантаження натисніть «Завантажити» поруч із моделлю та почніть спілкуватися.",
       "activateModelButton": "Вибрати модель",
@@ -568,7 +568,79 @@
     "modelErrorReportSheet": {
       "title": "Повідомити про проблему із завантаженням моделі",
       "privacyNote": "Допоможіть нам удосконалити PocketPal, надавши детальну інформацію про цю помилку. Нижче ви можете переглянути, які дані будуть передані — ви можете скасувати вибір тих пунктів, які не бажаєте надавати.",
-      "errorMessage": "Error message"
+      "errorMessage": "Error message",
+      "modelInfo": "Інформація про модель",
+      "modelName": "Ім'я",
+      "modelSource": "Джерело",
+      "modelSize": "Розмір",
+      "contextParams": "Параметри контексту",
+      "deviceInfo": "Інформація про пристрій",
+      "deviceModel": "Пристрій",
+      "osVersion": "ОС",
+      "memoryInfo": "Пам'ять",
+      "cpuArchitecture": "Процесор",
+      "isEmulator": "Емулятор",
+      "additionalInfoLabel": "Додатковий контекст (за бажанням)",
+      "additionalInfoPlaceholder": "Будь-які додаткові подробиці, які можуть допомогти нам розібратися в ситуації...",
+      "submit": "Надіслати звіт",
+      "success": {
+        "title": "Звіт подано",
+        "message": "Дякуємо за допомогу в удосконаленні PocketPal. Ваше повідомлення допоможе нам вирішити цю проблему."
+      },
+      "error": {
+        "title": "Повідомлення не вдалося надіслати",
+        "message": "Не вдалося надіслати звіт. Спробуйте ще раз пізніше."
+      }
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "Недопустимі значення",
+      "invalidNumericValuesMessage": "Номер повинен бути дійсним",
+      "pleaseCorrect": "Будь ласка, виправте наступне:",
+      "ok": "Гаразд",
+      "saveChanges": "Зберегти зміни",
+      "saveAsPreset": "Зберегти як пресет",
+      "title_session": "Налаштування генерації чату (сесія)",
+      "title_preset": "Налаштування генерації чату (пресет)",
+      "resetToSystemDefaults": "Відновити заводські налаштування",
+      "resetToPreset": "Скинути до заводських налаштувань",
+      "applytoPresetAlert": {
+        "title": "Успіх",
+        "message": "Ці налаштування будуть застосовані до всіх майбутніх сеансів"
+      },
+      "palSettings": "Налаштування Pal",
+      "settingsSource": "Джерело налаштувань"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "Налаштування генеранції — {{palName}}",
+      "invalidValues": "Недопустимі значення",
+      "invalidNumericValuesMessage": "Номер повинен бути дійсним",
+      "pleaseCorrect": "Будь ласка, виправте наступне:",
+      "ok": "Гаразд",
+      "error": "Помилка",
+      "failedToSave": "Не вдалося зберегти налаштування друзів",
+      "resetToGlobal": "Скинути до загальних налаштувань за замовчуванням",
+      "resetToSystem": "Відновити заводські налаштування",
+      "clearPalSettings": "Очистити налаштування Pal",
+      "customSettingsFor": "Налаштування для {{palName}}",
+      "inheritedSettingsFor": "Універсальні налаштування для {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "Чат"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "Файл"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "Модель",
+      "palsTab": "Палички",
+      "noPal": "Немає палички",
+      "disablePal": "Вимкнути активного паличках",
+      "noDescription": "Опис відсутній",
+      "assistantType": "Асистент",
+      "roleplayType": "Рольова гра",
+      "videoType": "Відео",
+      "confirmationTitle": "Підтвердження",
+      "modelSwitchMessage": "Цей pal має іншу модель за замовчуванням ({{modelName}}). Чи хочете ви перейти на модель за замовчуванням цього pal?"
     }
   }
 }
