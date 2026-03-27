@@ -640,7 +640,238 @@
       "roleplayType": "Рольова гра",
       "videoType": "Відео",
       "confirmationTitle": "Підтвердження",
-      "modelSwitchMessage": "Цей pal має іншу модель за замовчуванням ({{modelName}}). Чи хочете ви перейти на модель за замовчуванням цього pal?"
+      "modelSwitchMessage": "Цей pal має іншу модель за замовчуванням ({{modelName}}). Чи хочете ви перейти на модель за замовчуванням цього pal?",
+      "keepButton": "Зберігати",
+      "switchButton": "Перемикач"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "Завантаження не вдалося",
+      "downloadFailedMessage": "Не вдалося завантажити модель: {{message}}",
+      "unauthorizedTitle": "Помилка автентифікації",
+      "unauthorizedMessage": "Ваш токен Hugging Face, схоже, є недійсним або термін його дії закінчився. Будь ласка, оновіть токен у налаштуваннях.",
+      "forbiddenTitle": "Доступ заборонено",
+      "forbiddenMessage": "У вас немає дозволу на доступ до цієї моделі. Переконайтеся, що:",
+      "forbiddenSteps": [
+        "Ваш токен має право на «читання»",
+        "Ви подали запит на доступ до цієї моделі, і вам його надали",
+        "Власник моделі схвалив ваш запит на доступ"
+      ],
+      "getTokenTitle": "Отримати токен Hugging Face",
+      "getTokenMessage": "Для завантаження цієї моделі потрібен токен Hugging Face.",
+      "getTokenSteps": [
+        "Перейдіть на сайт huggingface.co та увійдіть у систему",
+        "Перейдіть до розділу «Налаштування» > «Токени доступу»",
+        "Створити новий токен із правом доступу «читати»",
+        "Скопіюйте токен і вставте його в поле для токена"
+      ],
+      "tokenDisabledTitle": "Токен вимкнено",
+      "tokenDisabledMessage": "У вас є набір токенів Hugging Face, але наразі він вимкнений. Для завантаження цієї моделі потрібен токен. Увімкніть свій токен, щоб продовжити.",
+      "enableAndRetry": "Увімкнути та спробувати ще раз",
+      "goToSettings": "Перейти до налаштувань",
+      "tryAgain": "Спробувати ще Рфаз",
+      "viewOnHuggingFace": "Переглянути модель на HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "Видалити чат",
+      "deleteChatMessage": "Ви впевнені, що хочете видалити цей чат?",
+      "generationSettings": "Налаштування покоління",
+      "model": "Модель",
+      "duplicateChatHistory": "Дублікат історії чату",
+      "makeChatTemporary": "Зробити чат тимчасовим",
+      "export": "Експорт/Імпорт",
+      "exportCurrentSession": "Експортувати поточну сесію",
+      "exportAllSessions": "Експортувати всі сесії",
+      "exportChatSession": "Експортувати сеанс чату",
+      "importSessions": "Імпортувати сесії"
+    },
+    "hfTokenSheet": {
+      "title": "Токен Hugging Face",
+      "description": "Необхідно для доступу до закритих моделей",
+      "inputLabel": "Особистий токен доступу",
+      "inputPlaceholder": "Вставте свій токен тут",
+      "save": "Зберегти токен",
+      "saved": "Токен успішно збережено",
+      "reset": "Скинути токен",
+      "resetSuccess": "Токен успішно вилучено",
+      "instructions": "Як отримати токен:",
+      "instructionsSteps": [
+        "Перейдіть на сайт huggingface.co та увійдіть у систему",
+        "Перейдіть до розділу «Налаштування» > «Токени доступу»",
+        "Створити новий токен із правом доступу «читати»",
+        "Скопіюйте токен і вставте його нижче"
+      ],
+      "getTokenLink": "Отримати токен на сайті huggingface.co ↗",
+      "error": {
+        "saving": "Помилка під час збереження токена",
+        "missing": "Потрібен токен Hugging Face",
+        "invalid": "Недійсний або прострочений токен",
+        "gatedModelAccess": "Доступ до цієї закритої моделі було відхилено"
+      },
+      "gatedModelIndicator": "Потрібен токен",
+      "tokenRequired": "Для цієї моделі потрібен токен доступу до Hugging Face",
+      "searchErrorHint": "Ваш токен API Hugging Face є недійсним або термін його дії закінчився. Щоб продовжити пошук, видаліть цей токен або вимкніть аутентифікацію за допомогою токена в налаштуваннях.",
+      "disableAndRetry": "Вимкнути токен і спробувати ще раз"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "Налаштування Моделі",
+      "saveChanges": "Зберегти зміни"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Моделі Hugging Face",
+      "menuTitleDownloaded": "Завантажені моделі",
+      "menuTitleGrouped": "Групувати за типом моделі",
+      "menuTitleReset": "Оновити список моделей"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Продовжити скидання",
+      "confirmReset": "Підтвердити скидання"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Редагувати Pal",
+        "newPal": "Новий Pal",
+        "newVideoPal": "Новий відео Pal"
+      },
+      "description": "Опис",
+      "descriptionPlaceholder": "Введіть короткий опис свого друга",
+      "parameters": "Параметри",
+      "generationSettings": "Налаштування генеранції",
+      "configureGenerationSettings": "Налаштувати параметри генерації",
+      "validation": {
+        "nameRequired": "Ім'я вводити обов'язково",
+        "generatingPromptRequired": "При використанні підказки ШІ необхідно ввести підказку",
+        "promptModelRequired": "При використанні підказки ШІ необхідна модель генерації підказок"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "Створити помічника Pal",
+        "edit": "Редагувати помічника Pal"
+      },
+      "palName": "Ім'я Pal",
+      "palNamePlaceholder": "Ім'я",
+      "defaultModel": "Модель за замовчуванням",
+      "defaultModelPlaceholder": "Виберіть модель",
+      "validation": {
+        "generatingPromptRequired": "Необхідно ввести підказку",
+        "promptModelRequired": "Потрібна модель генерації підказок"
+      },
+      "create": "Створити"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "Ви ще не завантажили жодної моделі. Будь ласка, спочатку завантажте модель.",
+      "downloadAModel": "Завантажити модель",
+      "defaultModelNotDownloaded": "Цей друг рекомендує конкретну модель, яку потрібно завантажити, або ви можете вибрати іншу модель.",
+      "modelNotDownloadedShort": "Модель не завантажено",
+      "recommendedModel": "Рекомендована модель",
+      "cancelDownload": "Скасувати завантаження",
+      "download": "Завантажити"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "Створити друга для рольової pal",
+        "edit": "Редагувати рольову груPal"
+      },
+      "palName": "Ім'я Pal",
+      "palNamePlaceholder": "Ім'я",
+      "defaultModel": "Модель за замовчуванням",
+      "defaultModelPlaceholder": "Виберіть модель",
+      "descriptionSection": "Опис",
+      "world": "Світ",
+      "worldPlaceholder": "Фантастика",
+      "location": "Місцезнаходження",
+      "locationPlaceholder": "Зачарований ліс",
+      "locationSublabel": "Де відбувається дія цієї історії?",
+      "aiRole": "Роль штучного інтелекту",
+      "aiRolePlaceholder": "Ельдара, пустотлива лісова фея",
+      "aiRoleSublabel": "Визначити роль персонажа",
+      "userRole": "Роль користувача",
+      "userRolePlaceholder": "Сер Еландор, хоробрий лицар",
+      "userRoleSublabel": "Хто ти?",
+      "situation": "Ситуація",
+      "situationPlaceholder": "Рятувальна операція, розгадка таємниці",
+      "toneStyle": "Тон/Стиль",
+      "toneStylePlaceholder": "Серйозний",
+      "validation": {
+        "promptModelRequired": "Потрібна модель генерації підказок"
+      },
+      "create": "Створити"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Створити Lookie Pal",
+        "edit": "Редагувати Lookie Pal"
+      },
+      "palName": "Ім'я Pal",
+      "palNamePlaceholder": "Введіть ім'я для свого Lookie Pal",
+      "visionModel": "Модель бачення",
+      "visionModelPlaceholder": "Виберіть модель зору",
+      "requiredModelsSection": "Необхідні моделі",
+      "captureInterval": "Інтервал зйомки",
+      "captureIntervalHelper": "Інтервал між автоматичними знімками в мілісекундах",
+      "create": "Створити"
+    },
+    "sendButton": {
+      "accessibilityLabel": "Надіслати"
+    },
+    "systemPromptSection": {
+      "sectionTitle": "Системне повідомлення",
+      "useAIPrompt": "Використовувати штучний інтелект для створення системного запиту",
+      "modelSelector": {
+        "label": "Виберіть модель для генерації*",
+        "sublabel": "Рекомендовано: Llama 3.2 3B або Qwen3 4B Instruct 2507.",
+        "placeholder": "Виберіть модель"
+      },
+      "generatingPrompt": {
+        "label": "Мета та контекст",
+        "placeholder": "Опишіть роль, призначення або сценарій використання цього на..."
+      },
+      "buttons": {
+        "loadingModel": "Завантаження моделі...",
+        "stopGenerating": "Припинити генерування",
+        "generatePrompt": "Створити системне повідомлення",
+        "resetParameters": "Скинути параметри",
+        "resetTemplate": "Скинути шаблон"
+      },
+      "systemPrompt": {
+        "label": "Системне повідомлення",
+        "sublabel": "Не соромтеся редагувати та експериментувати, щоб знайти оптимальний запит для вашого сценарію",
+        "placeholder": "Ви — чудова помічниця"
+      },
+      "warnings": {
+        "promptChanged": "Системний запит було змінено вручну"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "Чат",
+        "models": "Моднль",
+        "pals": "Палички",
+        "benchmark": "Бенчмарк",
+        "settings": "Налаштування",
+        "appInfo": "Інформація про додаток",
+        "testCompletion": "Завершення тесту"
+      },
+      "deleteChatTitle": "Видалити чат",
+      "deleteChatMessage": "Ви впевнені, що хочете видалити цей чат?",
+      "select": "Вибрати",
+      "nSelected": "Вибрано {{count}}",
+      "selectAll": "Вибрати все",
+      "deselectAll": "Скасувати вибір усіх",
+      "exportCount": "Експортувати ({{count}})",
+      "deleteCount": "Видалити ({{count}})",
+      "bulkDeleteTitle": "Видалити історії чатів",
+      "bulkDeleteMessage": "Видалити {{count}} сеансів чату? Цю дію неможливо скасувати.",
+      "bulkDeleteError": "Не вдалося видалити сесії чату. Спробуйте ще раз.",
+      "exportError": "Не вдалося експортувати сеанс чату. Спробуйте ще раз.",
+      "bulkExportError": "Не вдалося експортувати сеанси чату. Спробуйте ще раз.",
+      "dateGroups": {
+        "today": "Сьогодні",
+        "yesterday": "Вчора",
+        "thisWeek": "Цього тижня",
+        "lastWeek": "Минулого тижня",
+        "twoWeeksAgo": "2 тижні тому"
+      }
     }
   }
 }
