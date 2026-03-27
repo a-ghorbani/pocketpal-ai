@@ -22,5 +22,23 @@
 	-->
 	<key>com.apple.developer.siri</key>
 	<true/>
+
+	<!--
+		Increased Memory Limit: Required for loading large language models
+
+		This entitlement raises the per-process jetsam threshold, allowing the app
+		to use more memory before iOS terminates it.
+	-->
+	<key>com.apple.developer.kernel.increased-memory-limit</key>
+	<true/>
+
+	<!--
+		Extended Virtual Addressing: Required for memory-mapping large model files
+
+		Allows the app to address a larger virtual memory range, enabling mmap of
+		large GGUF model files without running into virtual address limits.
+	-->
+	<key>com.apple.developer.kernel.extended-virtual-addressing</key>
+	<true/>
 </dict>
 </plist>
