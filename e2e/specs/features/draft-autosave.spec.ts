@@ -5,7 +5,7 @@
  * and restored when returning. Validates:
  * - Draft text persists across session switches
  * - Draft is cleared after sending a message
- * - New chat (no session) starts with empty input
+ * - Draft text in new chat persists across session switches
  *
  * Usage:
  *   yarn e2e:ios --spec draft-autosave --skip-build
@@ -138,16 +138,33 @@ describe('Draft Autosave', () => {
     expect(inputAfterSend).toBe('');
   });
 
-  it('should start with empty input on new chat', async () => {
-    // Type something in Session B
-    await chatPage.typeInInput('temporary text');
-
+  it('should preserve draft text in new chat state', async () => {
     // Reset to new chat
     await chatPage.resetChat();
 
-    // New chat should have empty input (no session = no draft)
-    const inputInNewChat = await chatPage.getInputText();
-    console.log(`Input in new chat: "${inputInNewChat}"`);
-    expect(inputInNewChat).toBe('');
+    // Type draft in new chat (no session yet)
+    const newChatDraft = 'new chat draft text';
+    await chatPage.typeInInput(newChatDraft);
+
+    // Verify the input actually has our text (React state synced)
+    const typed = await chatPage.getInputText();
+    console.log(`Verified typed in new chat: "${typed}"`);
+    expect(typed).toBe(newChatDraft);
+
+    // Small pause to ensure React state is fully committed
+    await browser.pause(500);
+
+    // Switch to an existing session
+    await chatPage.openDrawer();
+    await drawerPage.tapSession('DraftTestAlpha');
+    console.log('Switched to Session A');
+
+    // Switch back to new chat via reset
+    await chatPage.resetChat();
+
+    // Verify new chat draft is restored
+    const restoredText = await chatPage.getInputText();
+    console.log(`Restored in new chat: "${restoredText}"`);
+    expect(restoredText).toBe(newChatDraft);
   });
 });

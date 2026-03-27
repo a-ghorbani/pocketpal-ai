@@ -262,19 +262,18 @@ export const ChatView = observer(
     // Save draft on session switch, restore draft for new session
     const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
     React.useEffect(() => {
+      const NEW_CHAT_DRAFT_KEY = '__new_chat__';
+      const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
+      const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+
       // Save draft for the session we're leaving
-      if (prevSessionId && prevSessionId !== chatSessionStore.activeSessionId) {
-        chatSessionStore.saveDraft(prevSessionId, inputTextRef.current);
+      if (prevKey !== newKey) {
+        chatSessionStore.saveDraft(prevKey, inputTextRef.current);
       }
 
       // Restore draft for the session we're entering
-      const newSessionId = chatSessionStore.activeSessionId;
-      if (newSessionId) {
-        const draft = chatSessionStore.getDraft(newSessionId);
-        setInputText(draft);
-      } else {
-        setInputText('');
-      }
+      const draft = chatSessionStore.getDraft(newKey);
+      setInputText(draft);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
     }, [chatSessionStore.activeSessionId]);
 
