@@ -33,6 +33,11 @@ export const mockChatSessionStore = {
   newChatCompletionSettings: mockDefaultCompletionSettings,
   isMigrating: false,
   migrationComplete: true,
+  // Draft autosave
+  sessionDrafts: new Map<string, string>(),
+  saveDraft: jest.fn(),
+  getDraft: jest.fn().mockReturnValue(''),
+  clearDraft: jest.fn(),
   // Selection mode state
   isSelectionMode: false,
   selectedSessionIds: new Set<string>(),
