@@ -81,10 +81,17 @@ export class ChatPage extends BasePage {
    */
   async getInputText(): Promise<string> {
     const element = await this.waitForElement(Selectors.chat.input);
-    // iOS: getAttribute('value') returns null for empty inputs, Android: getText()
     if ((browser as any).isAndroid) {
-      return (await element.getText()) || '';
+      // Android: getText() returns placeholder text when input is empty,
+      // so use getAttribute('text') which returns actual value only
+      const text = (await element.getAttribute('text')) || '';
+      // Filter out placeholder if getAttribute('text') also returns it
+      if (text === 'Type your message here') {
+        return '';
+      }
+      return text;
     }
+    // iOS: getAttribute('value') returns null for empty inputs
     return (await element.getAttribute('value')) || '';
   }
 
