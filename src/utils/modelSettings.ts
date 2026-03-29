@@ -14,7 +14,7 @@ export const isLegacyQuantization = (filename: string): boolean => {
 };
 
 export type ValidationRule =
-  | {type: 'numeric'; min: number; max: number; required?: boolean}
+  | {type: 'numeric'; min?: number; max?: number; required?: boolean}
   | {type: 'array'; required?: boolean}
   | {type: 'boolean'; required?: boolean};
 
@@ -32,7 +32,7 @@ export const COMPLETION_PARAMS_METADATA: Partial<
     defaultValue: defaultCompletionParams.n_threads,
   },
   n_predict: {
-    validation: {type: 'numeric', min: 1, max: 4096, required: true},
+    validation: {type: 'numeric', min: 1, required: true},
     defaultValue: defaultCompletionParams.n_predict,
   },
   temperature: {
@@ -127,35 +127,45 @@ export const validateNumericField = (
     return {isValid: true};
   }
 
-  const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
-
-  if (
-    rule.required &&
-    (value === undefined || value === null || value === '')
-  ) {
-    return {
-      isValid: false,
-      errorMessage: 'This field is required',
-    };
-  }
-
-  if (isNaN(numValue)) {
-    return {
-      isValid: !rule.required,
-      errorMessage: rule.required ? 'Please enter a valid number' : undefined,
-    };
+  if (value === undefined || value === null || value === '') {
+    return rule.required
+      ? {
+          isValid: false,
+          errorMessage: 'This field is required',
+        }
+      : {isValid: true};
   }
 
   if (typeof value === 'string' && !/^-?\d*\.?\d*$/.test(value)) {
     return {isValid: false, errorMessage: 'Please enter a valid number'};
   }
 
-  const isValid = numValue >= rule.min && numValue <= rule.max;
+  const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
+
+  if (Number.isNaN(numValue)) {
+    return {isValid: false, errorMessage: 'Please enter a valid number'};
+  }
+
+  const isBelowMin = rule.min !== undefined && numValue < rule.min;
+  const isAboveMax = rule.max !== undefined && numValue > rule.max;
+  const isValid = !isBelowMin && !isAboveMax;
+
+  let errorMessage: string | undefined;
+  if (!isValid) {
+    if (rule.min !== undefined && rule.max !== undefined) {
+      errorMessage = `Value must be between ${rule.min} and ${rule.max}`;
+    } else if (rule.min !== undefined) {
+      errorMessage = `Value must be at least ${rule.min}`;
+    } else if (rule.max !== undefined) {
+      errorMessage = `Value must be at most ${rule.max}`;
+    } else {
+      errorMessage = 'Please enter a valid number';
+    }
+  }
+
   return {
     isValid,
-    errorMessage: isValid
-      ? undefined
-      : `Value must be between ${rule.min} and ${rule.max}`,
+    errorMessage,
   };
 };
 
@@ -168,14 +178,18 @@ export const validateCompletionSettings = (
   const errors: Record<string, string> = {};
 
   Object.entries(COMPLETION_PARAMS_METADATA).forEach(([key, metadata]) => {
-    if (
-      key in settings &&
-      metadata &&
-      !validateNumericField(settings[key], metadata.validation)
-    ) {
+    if (key in settings && metadata) {
+      const validationResult = validateNumericField(
+        settings[key],
+        metadata.validation,
+      );
       const rule = metadata.validation;
-      if (rule.type === 'numeric') {
-        errors[key] = `Value must be between ${rule.min} and ${rule.max}`;
+      if (
+        rule.type === 'numeric' &&
+        !validationResult.isValid &&
+        validationResult.errorMessage
+      ) {
+        errors[key] = validationResult.errorMessage;
       }
     }
   });

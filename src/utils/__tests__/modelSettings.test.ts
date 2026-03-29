@@ -85,6 +85,34 @@ describe('modelSettings', () => {
         'Please enter a valid number',
       );
     });
+
+    it('supports rules with only a minimum bound', () => {
+      const minOnlyRule = {
+        type: 'numeric' as const,
+        min: 1,
+        required: true,
+      };
+
+      expect(validateNumericField(8192, minOnlyRule).isValid).toBe(true);
+      expect(validateNumericField(0, minOnlyRule)).toEqual({
+        isValid: false,
+        errorMessage: 'Value must be at least 1',
+      });
+    });
+
+    it('supports rules with only a maximum bound', () => {
+      const maxOnlyRule = {
+        type: 'numeric' as const,
+        max: 10,
+        required: true,
+      };
+
+      expect(validateNumericField(5, maxOnlyRule).isValid).toBe(true);
+      expect(validateNumericField(11, maxOnlyRule)).toEqual({
+        isValid: false,
+        errorMessage: 'Value must be at most 10',
+      });
+    });
   });
 
   describe('validateCompletionSettings', () => {
@@ -123,7 +151,11 @@ describe('modelSettings', () => {
 
     it('has valid validation rules', () => {
       Object.values(COMPLETION_PARAMS_METADATA).forEach(metadata => {
-        if (metadata.validation.type === 'numeric') {
+        if (
+          metadata.validation.type === 'numeric' &&
+          metadata.validation.min !== undefined &&
+          metadata.validation.max !== undefined
+        ) {
           expect(metadata.validation.min).toBeLessThanOrEqual(
             metadata.validation.max,
           );
