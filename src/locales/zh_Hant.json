@@ -53,7 +53,7 @@
       },
       "shareResults": {
         "title": "分享基準測試結果",
-        "sharedDataTitle": "共享資料包含:",
+        "sharedDataTitle": "共享資料包含：",
         "deviceAndModelInfo": "• 裝置規格與模型資訊",
         "performanceMetrics": "• 測量值",
         "dontShowAgain": "不要再顯示此訊息"
@@ -79,7 +79,8 @@
         "gpuLayers": "GPU 層數: {{layers}}",
         "flashAttentionEnabled": "已啟用 Flash Attention",
         "flashAttentionDisabled": "已停用 Flash Attention",
-        "cacheTypes": "緩存類型: {{cacheK}} / {{cacheV}}"
+        "cacheTypes": "緩存類型: {{cacheK}} / {{cacheV}}",
+        "device": "設備：{{device}}"
       },
       "results": {
         "promptProcessing": "提示處理",
@@ -121,7 +122,13 @@
         "cpuModel": "CPU 型號",
         "chipset": "晶片組",
         "instructions": "指令集",
-        "version": "版本"
+        "version": "版本",
+        "gpuType": "GPU 型號",
+        "gpuRenderer": "渲染器",
+        "gpuVendor": "製造商",
+        "metalSupport": "Metal 支援",
+        "openclSupport": "OpenCL 支援",
+        "openclRequirement": "需要 i8mm 和 dotprod"
       },
       "instructions": {
         "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
@@ -166,7 +173,14 @@
     "minute": "分鐘",
     "minutes": "分鐘",
     "justNow": "剛剛",
-    "calculating": "計算中…"
+    "calculating": "計算中…",
+    "update": "更新",
+    "error": "錯誤",
+    "export": "匯出",
+    "ok": "確定",
+    "close": "關閉",
+    "clear": "全部清除",
+    "gallery": "圖庫"
   },
   "completionParams": {
     "grammar": "如何在生成文字本時強制執行特定語法規則（快速指南）",
@@ -305,7 +319,7 @@
       },
       "generatingPrompt": {
         "label": "生成提示",
-        "placeholder": "輸入生成提示"
+        "placeholder": "請描述這個 Pals 的角色、目的或使用情境…"
       }
     },
     "chatPalModelPickerSheet": {
@@ -433,7 +447,22 @@
     "failedToGenerate": "生成輸出失敗"
   },
   "memory": {
-    "shortWarning": "記憶體警告"
+    "shortWarning": "記憶體警告",
+    "multimodalWarning": "此設備可能沒有足夠的資源來運行多模態模型。",
+    "memoryTight": "記憶體吃緊",
+    "lowMemory": "低記憶體",
+    "memoryDetailMessage": "這個模型需要大約 {{needed}}，但目前估計可用的只有大約 {{available}}。 隨著您使用應用程式，估算值會更精確。",
+    "estimatedMemory": "預估記憶體：大約 {{size}}",
+    "alerts": {
+      "memoryWarningTitle": "記憶體警告",
+      "memoryWarningMessage": "這個模型可能會超過可用記憶體，可能導致不穩定。是否繼續載入？",
+      "multimodalWarningTitle": "設備效能警告",
+      "multimodalWarningMessage": "此設備可能沒有足夠的資源來運行多模態模型。載入可能會導致不穩定。是否繼續？",
+      "combinedWarningTitle": "效能警告",
+      "combinedWarningMessage": "這個模型可能會超過可用記憶體，而且此設備可能沒有足夠的資源來運行多模態模型。載入可能會導致不穩定。是否繼續？",
+      "cancel": "取消",
+      "continue": "繼續"
+    }
   },
   "models": {
     "fileManagement": {
@@ -568,6 +597,38 @@
       "multilingual": "多種語言",
       "rewriting": "重新撰寫",
       "creativity": "創意寫作"
+    },
+    "vision": "視覺",
+    "mmproj": "投影機",
+    "multimodal": {
+      "settings": "多模態設定",
+      "projectionModels": "投影模型",
+      "noCompatibleModels": "未找到相容的投影模型",
+      "noProjectionModels": "沒有可用的投影模型",
+      "selected": "已選取",
+      "select": "選擇",
+      "download": "下載",
+      "projectionNeededTitle": "需要投影模型",
+      "projectionNeededMessage": "這個模型需要一個投影模型來支援多模態功能。",
+      "projectionMissingWarning": "缺少投影模型",
+      "projectionMissingShort": "缺少投影",
+      "reloadModelTitle": "重新載入模型",
+      "reloadModelMessage": "為了套用新的投影模型，需要重新載入模型。您現在要重新載入嗎？",
+      "reload": "重新載入",
+      "deleteProjectionTitle": "刪除投影模型",
+      "deleteProjectionMessage": "您確定要刪除這個投影模型嗎？",
+      "cannotDeleteTitle": "無法刪除",
+      "visionControls": {
+        "enableVision": "啟用視覺功能",
+        "disableVision": "停用視覺功能",
+        "visionEnabled": "視覺已啟用",
+        "visionDisabled": "視覺已禁用",
+        "textOnlyMode": "僅限文字",
+        "visionMode": "視覺已啟用",
+        "downloadWithVision": "視覺下載",
+        "downloadTextOnly": "僅限文字下載",
+        "visionToggleDescription": "啟用圖片處理功能"
+      }
     }
   },
   "screenTitles": {
@@ -584,7 +645,7 @@
     "metal": "Metal",
     "metalDescription": "蘋果的硬體加速 API。",
     "metalRequiresNewerIOS": "Metal 加速需要 iOS 18 或更高版本。請升級您的裝置以使用此功能。",
-    "layersOnGPU": "GPU 上的層數: {{gpuLayers}}",
+    "layersOnGPU": "GPU 上層數：{{gpuLayers}}",
     "contextSize": "上下文大小",
     "contextSizePlaceholder": "輸入上下文大小 (至少 {{minContextSize}})",
     "invalidContextSizeError": "請輸入有效數字 (至少{{minContextSize}})",
@@ -614,7 +675,94 @@
     "language": "語言",
     "darkMode": "深色模式",
     "displayMemoryUsage": "顯示記憶體使用量",
-    "displayMemoryUsageDescription": "在聊天頁面顯示記憶體使用量。"
+    "displayMemoryUsageDescription": "在聊天頁面顯示記憶體使用量。",
+    "openCL": "OpenCL（實驗性）",
+    "deviceSelection": "設備選擇",
+    "deviceSelectionIOS": "設備（Metal）",
+    "deviceSelectionIOSDescription": "選擇 Metal GPU 或僅使用 CPU 模式",
+    "openCLDescription": "針對 Adreno GPU 的加速功能。能加快提示處理速度，但生成過程不一定總是更快。",
+    "openCLNotAvailable": "此設備上沒有啟用 OpenCL。需要具有 i8mm 和 dotprod CPU 功能的 Adreno GPU。",
+    "openCLMissingCPUFeatures": "OpenCL 需要 i8mm 和 dotprod CPU 功能，而此設備上沒有這些功能。",
+    "openCLQuantizationNote": "注意：使用純量化的 Q4_0 模型時，效果最佳的為啟用 OpenCL。",
+    "openCLDocsLink": "請參閱 llama.cpp 的 OpenCL 文件以了解詳細資訊。",
+    "deviceSelectionAndroidDescription": "選擇運算設備（CPU、GPU 或 Hexagon NPU）",
+    "cpuOnlyNoAccelerators": "僅限 CPU – 未偵測到任何加速硬體",
+    "imageMaxTokens": "圖片最大 Token 數量",
+    "imageMaxTokensDescription": "圖片處理的最大 Token 數量：{{tokens}}{{effectiveTokens}}（數值越小，速度越快，細節越少）",
+    "flashAttentionIOSDescription": "採用省記憶體注意力機制（在 Metal 上自動啟用）",
+    "flashAttentionAndroidDescription": "必須停用才能進行 OpenCL 狀態儲存/載入",
+    "flashAttentionAuto": "自動",
+    "flashAttentionOn": "開",
+    "flashAttentionOff": "關",
+    "memorySettings": "記憶體設定",
+    "useMlock": "使用記憶體鎖定",
+    "useMlockDescription": "強制系統將模型保存在 RAM 中，而不是進行交換或壓縮",
+    "useMmap": "記憶體映射",
+    "useMmapDescription": "使用記憶體映射檔案以加快模型載入速度",
+    "useMmapTrue": "已啟用",
+    "useMmapFalse": "已停用",
+    "useMmapTrueDescription": "總是使用記憶體映射以加快載入速度",
+    "useMmapFalseDescription": "當權重重新包裝啟用時，建議停用此功能以避免記憶體使用量加倍",
+    "weightRepacking": "啟用權重重新包裝",
+    "weightRepackingDescription": "在停用記憶體映射時，權重重新包裝可以加快提示處理速度，且不會增加額外的記憶體負擔。",
+    "exportOptions": "匯出選項",
+    "exportLegacyChats": "匯出舊版聊天記錄",
+    "exportLegacyChatsDescription": "如果遷移失敗或您需要恢復舊的聊天會話，請使用此選項。",
+    "exportButton": "匯出",
+    "importChats": "匯入聊天會話",
+    "importChatsDescription": "從（匯出的）JSON 檔案中匯入聊天會話。",
+    "importButton": "匯入",
+    "importSuccess": "成功匯入了 {{count}} 個聊天會話。",
+    "importError": "匯入聊天會話失敗。請檢查檔案格式。",
+    "apiSettingsTitle": "API 設定",
+    "huggingFaceTokenLabel": "Hugging Face Token",
+    "tokenIsSetDescription": "已設定 Token。用來存取受限制的模型是必需的。",
+    "setTokenDescription": "設定一個 Token 以從 Hugging Face 存取受限制的模型。",
+    "setTokenButton": "設定 Token",
+    "useHfTokenLabel": "使用 Hugging Face Token",
+    "useHfTokenDescription": "啟用以使用 Token 進行 API 請求。如果 Token 導致身份驗證問題，請停用。",
+    "cacheStorageTitle": "快取與儲存",
+    "clearPalCaches": "清除捷徑快取",
+    "clearPalCachesDescription": "清除用來加速捷徑的快取數據。這不會影響您的 Pals 或聊天記錄。",
+    "clearCachesButton": "清除快取",
+    "clearCachesConfirmTitle": "要清除捷徑快取嗎？",
+    "clearCachesConfirmMessage": "這將清除所有快取會話資料（{{fileCount}} 個檔案，大小為 {{size}}）。清除後第一次使用捷徑可能會變慢。這不會影響您的 Pals 或聊天記錄。",
+    "clearCachesSuccess": "成功清除 {{count}} 個快取檔案。",
+    "clearCachesError": "清除快取失敗。請再試一次。",
+    "noCachesToClear": "沒有需要清除的快取。",
+    "serverName": "伺服器名稱",
+    "serverUrl": "伺服器網址",
+    "serverUrlPlaceholder": "例如：http://192.168.1.100:1234",
+    "apiKey": "API 金鑰",
+    "apiKeyPlaceholder": "可選 – 對於 OpenAI/Groq 是必需的",
+    "apiKeyDescription": "安全地儲存在設備上。",
+    "remoteModel": "遠端",
+    "remotePrivacyNotice": "發送到遠端伺服器的訊息會離開您的設備。僅連接您信任的伺服器。",
+    "remoteIndicator": "遠端",
+    "serverUrlRequired": "需要提供伺服器網址",
+    "serverUrlInvalid": "無效的網址格式",
+    "serverUrlHttpWarning": "iOS 需要使用 HTTPS 才能連接非本機伺服器。請使用 https:// 或本機網路地址。",
+    "addRemoteModel": "新增遠端模型",
+    "yourServers": "您的伺服器",
+    "orConnectNewServer": "或者連接新的伺服器",
+    "selectModel": "選擇模型",
+    "addModel": "新增模型",
+    "connected": "已連接",
+    "connectionFailed": "連接失敗：{{error}}",
+    "connecting": "正在連線…",
+    "noModelsAvailable": "此伺服器上沒有可用模型。",
+    "alreadyAdded": "已新增",
+    "connectedServers": "已連接的伺服器",
+    "modelsCount": "{{count}} 個模型",
+    "serverDetails": "伺服器資訊",
+    "modelsUsingServer": "使用此伺服器的模型：",
+    "saveChanges": "儲存變更",
+    "removeServer": "移除伺服器",
+    "removeServerMessage": "要移除 {{serverName}} 以及其 {{count}} 個模型嗎？",
+    "removeRemoteModel": "移除 {{modelName}}（{{serverName}}）？",
+    "retryConnection": "重試",
+    "enterUrlManually": "手動輸入網址",
+    "manageServers": "管理伺服器"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
@@ -629,5 +777,28 @@
     "userRoleRequired": "使用者角色為必填",
     "situationRequired": "情境為必填",
     "toneStyleRequired": "語氣／風格為必填"
+  },
+  "errors": {
+    "serverError": "伺服器錯誤：API 伺服器問題",
+    "hfNetworkTimeout": "網路逾時：向 Hugging Face 發出的請求完成時間過長",
+    "networkTimeout": "網路逾時：請求完成時間過長",
+    "hfNetworkError": "網路錯誤：無法連接到 Hugging Face API",
+    "networkError": "網路錯誤：無法連接到 API",
+    "downloadSetupFailedTitle": "下載設定失敗",
+    "downloadSetupFailedMessage": "準備模型下載失敗：{{message}}",
+    "cameraErrorTitle": "攝影機錯誤",
+    "cameraErrorMessage": "拍照失敗",
+    "galleryErrorTitle": "圖庫錯誤",
+    "galleryErrorMessage": "選擇圖片失敗",
+    "unexpectedError": "發生了意外錯誤",
+    "hfAuthenticationError": "Hugging Face 驗證錯誤：Token 遺失或無效",
+    "hfAuthenticationErrorSearch": "Hugging Face 驗證錯誤：Token 無效",
+    "authenticationError": "驗證錯誤：Token 遺失或無效",
+    "hfAuthorizationError": "抱歉，Hugging Face 授權錯誤：沒有存取此資源的權限",
+    "authorizationError": "授權錯誤：沒有存取此資源的權限",
+    "hfServerError": "Hugging Face 伺服器錯誤：API 伺服器問題"
+  },
+  "simulator": {
+    "cameraNotAvailable": "模擬器中沒有相機可用。請使用實體設備。"
   }
 }
