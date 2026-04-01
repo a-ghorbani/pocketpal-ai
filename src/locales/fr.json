@@ -263,7 +263,7 @@
     "screenTitle": "Infos sur l'application",
     "description": "Une application qui apporte des modèles de langage directement sur votre téléphone. Repose sur llama.cpp et llama.rn.",
     "supportProject": "Soutenir le projet",
-    "supportProjectDescription": "Si vous appréciez PocketPal AI, merci de soutenir le projet en :",
+    "supportProjectDescription": "Si vous appréciez AisodChat, merci de soutenir le projet en :",
     "githubButton": "Ajouter une étoile sur GitHub",
     "orText": "ou",
     "orBy": "ou en",
@@ -273,10 +273,10 @@
   },
   "feedback": {
     "title": "Envoyer un feedback",
-    "description": "Votre avis compte ! Dites-nous comment PocketPal AI vous aide et ce que nous pourrions faire pour le rendre encore plus utile.",
+    "description": "Votre avis compte ! Dites-nous comment AisodChat vous aide et ce que nous pourrions faire pour le rendre encore plus utile.",
     "shareThoughtsButton": "Partagez vos impressions",
     "useCase": {
-      "label": "Pour quoi utilisez-vous PocketPal AI ?",
+      "label": "Pour quoi utilisez-vous AisodChat ?",
       "placeholder": "ex. résumé, jeu de rôle, etc."
     },
     "featureRequests": {
@@ -288,7 +288,7 @@
       "placeholder": "Partagez toute autre idée que vous pourriez avoir."
     },
     "usageFrequency": {
-      "label": "À quelle fréquence utilisez-vous PocketPal AI ? (Optionnel)",
+      "label": "À quelle fréquence utilisez-vous AisodChat ? (Optionnel)",
       "options": {
         "daily": "Quotidiennement",
         "weekly": "Hebdomadairement",
@@ -338,7 +338,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Aucun modèle disponible",
-      "noModelsDescription": "Téléchargez un modèle pour commencer à discuter avec PocketPal",
+      "noModelsDescription": "Téléchargez un modèle pour commencer à discuter avec AisodChat",
       "noModelsButton": "Télécharger un modèle",
       "activateModelTitle": "Activez un modèle pour commencer",
       "activateModelDescription": "Sélectionnez le modèle et téléchargez-le. Après le téléchargement, appuyez sur Charger à côté du modèle et commencez à discuter.",

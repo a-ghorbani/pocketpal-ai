@@ -402,7 +402,7 @@
     "screenTitle": "关于",
     "description": "直接将语言模型完全本地部署在你手机上的APP，建立在llama.cpp和llama.rn的基础上！",
     "supportProject": "支持项目",
-    "supportProjectDescription": "如果你喜欢使用PocketPal AI，请考虑通过以下方式支持项目：",
+    "supportProjectDescription": "如果你喜欢使用AisodChat，请考虑通过以下方式支持项目：",
     "githubButton": "在GitHub上点个Star~",
     "orText": "或",
     "orBy": "或通过",
@@ -412,10 +412,10 @@
   },
   "feedback": {
     "title": "发送反馈",
-    "description": "你的声音很重要！告诉我们PocketPal AI如何帮助你以及我们可以做什么来使其更有用",
+    "description": "你的声音很重要！告诉我们AisodChat如何帮助你以及我们可以做什么来使其更有用",
     "shareThoughtsButton": "分享你的想法",
     "useCase": {
-      "label": "你如何使用PocketPal AI？",
+      "label": "你如何使用AisodChat？",
       "placeholder": "例如：摘要、角色扮演等"
     },
     "featureRequests": {
@@ -427,7 +427,7 @@
       "placeholder": "如果你有其他想法，请随时分享"
     },
     "usageFrequency": {
-      "label": "你多久使用一次PocketPal AI？（可选）",
+      "label": "你多久使用一次AisodChat？（可选）",
       "options": {
         "daily": "每天",
         "weekly": "每周",
@@ -477,9 +477,9 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "没有可用的模型",
-      "noModelsDescription": "需要下载一个模型，才能与PocketPal开始聊天",
+      "noModelsDescription": "需要下载一个模型，才能与AisodChat开始聊天",
       "noModelsButton": "下载模型",
-      "activateModelTitle": "在你和PocketPal开始聊天前，请先激活模型~",
+      "activateModelTitle": "在你和AisodChat开始聊天前，请先激活模型~",
       "activateModelDescription": "选择并加载一个模型以开始聊天",
       "activateModelButton": "选择模型",
       "loading": "加载中..."
@@ -527,7 +527,7 @@
     },
     "modelErrorReportSheet": {
       "title": "报告模型加载问题",
-      "privacyNote": "通过分享此错误的详细信息帮助我们改进PocketPal。请查看下方将要分享的内容 - 您可以取消选择不想包含的项目。",
+      "privacyNote": "通过分享此错误的详细信息帮助我们改进AisodChat。请查看下方将要分享的内容 - 您可以取消选择不想包含的项目。",
       "errorMessage": "错误消息",
       "modelInfo": "模型信息",
       "modelName": "名称",
@@ -545,7 +545,7 @@
       "submit": "提交报告",
       "success": {
         "title": "报告已提交",
-        "message": "感谢您帮助我们改进PocketPal。您的报告将帮助我们修复此问题。"
+        "message": "感谢您帮助我们改进AisodChat。您的报告将帮助我们修复此问题。"
       },
       "error": {
         "title": "报告失败",
@@ -959,7 +959,7 @@
   },
   "camera": {
     "permissionTitle": "需要摄像头权限",
-    "permissionMessage": "PocketPal需要访问摄像头来分析图像",
+    "permissionMessage": "AisodChat需要访问摄像头来分析图像",
     "requestingPermission": "请求摄像头权限...",
     "noDevice": "未找到摄像头设备",
     "errorTitle": "摄像头错误",
@@ -973,7 +973,7 @@
   },
   "video": {
     "permissionTitle": "需要摄像头权限",
-    "permissionMessage": "PocketPal需要访问摄像头来分析视频",
+    "permissionMessage": "AisodChat需要访问摄像头来分析视频",
     "requestingPermission": "请求摄像头权限...",
     "noDevice": "未找到摄像头设备",
     "errorTitle": "摄像头错误",

@@ -402,7 +402,7 @@
     "screenTitle": "アプリ情報",
     "description": "言語モデルをスマートフォンで直接利用できるアプリです、llama.cppとllama.rnをベースに開発されています",
     "supportProject": "プロジェクトを応援する",
-    "supportProjectDescription": "PocketPal AIをご利用いただき楽しんでいただけているなら、以下の方法でプロジェクトを応援いただけると幸いです：",
+    "supportProjectDescription": "AisodChatをご利用いただき楽しんでいただけているなら、以下の方法でプロジェクトを応援いただけると幸いです：",
     "githubButton": "GitHubでスターをつける",
     "orText": "または",
     "orBy": "または",
@@ -412,10 +412,10 @@
   },
   "feedback": {
     "title": "フィードバックを送信",
-    "description": "ご意見をお聞かせください！PocketPal AIの使い心地やより便利にするためのアイデアをお寄せください",
+    "description": "ご意見をお聞かせください！AisodChatの使い心地やより便利にするためのアイデアをお寄せください",
     "shareThoughtsButton": "ご意見を共有する",
     "useCase": {
-      "label": "PocketPal AIをどのように使っていますか？",
+      "label": "AisodChatをどのように使っていますか？",
       "placeholder": "例：要約、ロールプレイなど"
     },
     "featureRequests": {
@@ -477,7 +477,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "利用可能なモデルがありません",
-      "noModelsDescription": "PocketPalとチャットを始めるにはモデルをダウンロードしてください",
+      "noModelsDescription": "AisodChatとチャットを始めるにはモデルをダウンロードしてください",
       "noModelsButton": "モデルをダウンロード",
       "activateModelTitle": "開始するにはモデルを有効化してください",
       "activateModelDescription": "モデルを選択してダウンロードしてください、ダウンロード後、モデルの横にある読み込みをタップしてチャットを開始します",
@@ -527,7 +527,7 @@
     },
     "modelErrorReportSheet": {
       "title": "モデル読み込みエラーを報告",
-      "privacyNote": "このエラーの詳細を共有してPocketPalの改善にご協力ください。以下の共有内容を確認し、含めたくない項目は選択解除できます。",
+      "privacyNote": "このエラーの詳細を共有してAisodChatの改善にご協力ください。以下の共有内容を確認し、含めたくない項目は選択解除できます。",
       "errorMessage": "エラーメッセージ",
       "modelInfo": "モデル情報",
       "modelName": "名前",
@@ -545,7 +545,7 @@
       "submit": "報告を送信",
       "success": {
         "title": "報告が送信されました",
-        "message": "PocketPalの改善にご協力いただきありがとうございます。この問題の修正に役立てます。"
+        "message": "AisodChatの改善にご協力いただきありがとうございます。この問題の修正に役立てます。"
       },
       "error": {
         "title": "報告に失敗しました",
@@ -959,7 +959,7 @@
   },
   "camera": {
     "permissionTitle": "カメラ許可が必要",
-    "permissionMessage": "PocketPalが画像を分析するにはカメラへのアクセスが必要です",
+    "permissionMessage": "AisodChatが画像を分析するにはカメラへのアクセスが必要です",
     "requestingPermission": "カメラの許可をリクエスト中...",
     "noDevice": "カメラデバイスが見つかりません",
     "errorTitle": "カメラエラー",
@@ -973,7 +973,7 @@
   },
   "video": {
     "permissionTitle": "カメラ許可が必要",
-    "permissionMessage": "PocketPalが動画を分析するにはカメラへのアクセスが必要です",
+    "permissionMessage": "AisodChatが動画を分析するにはカメラへのアクセスが必要です",
     "requestingPermission": "カメラの許可をリクエスト中...",
     "noDevice": "カメラデバイスが見つかりません",
     "errorTitle": "カメラエラー",

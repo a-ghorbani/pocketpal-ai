@@ -402,7 +402,7 @@
     "screenTitle": "Maklumat Aplikasi",
     "description": "Aplikasi yang membawa model bahasa terus ke telefon anda. Dibina di atas llama.cpp dan llama.rn.",
     "supportProject": "Sokong Projek Ini",
-    "supportProjectDescription": "Jika anda menikmati menggunakan PocketPal AI, pertimbangkan untuk menyokong projek ini dengan:",
+    "supportProjectDescription": "Jika anda menikmati menggunakan AisodChat, pertimbangkan untuk menyokong projek ini dengan:",
     "githubButton": "Beri Bintang di GitHub",
     "orText": "atau",
     "orBy": "atau dengan",
@@ -412,10 +412,10 @@
   },
   "feedback": {
     "title": "Hantar Maklum Balas",
-    "description": "Suara anda penting! Ceritakan bagaimana PocketPal AI membantu anda dan apa yang boleh kami lakukan untuk menjadikannya lebih berguna.",
+    "description": "Suara anda penting! Ceritakan bagaimana AisodChat membantu anda dan apa yang boleh kami lakukan untuk menjadikannya lebih berguna.",
     "shareThoughtsButton": "Kongsi pemikiran anda",
     "useCase": {
-      "label": "Untuk apa anda menggunakan PocketPal AI?",
+      "label": "Untuk apa anda menggunakan AisodChat?",
       "placeholder": "cth., meringkaskan, main peranan, dll."
     },
     "featureRequests": {
@@ -427,7 +427,7 @@
       "placeholder": "Kongsi pemikiran lain yang anda ada."
     },
     "usageFrequency": {
-      "label": "Seberapa kerap anda menggunakan PocketPal AI? (Pilihan)",
+      "label": "Seberapa kerap anda menggunakan AisodChat? (Pilihan)",
       "options": {
         "daily": "Setiap hari",
         "weekly": "Mingguan",
@@ -477,7 +477,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Tiada Model Tersedia",
-      "noModelsDescription": "Muat turun model untuk mula bersembang dengan PocketPal",
+      "noModelsDescription": "Muat turun model untuk mula bersembang dengan AisodChat",
       "noModelsButton": "Muat Turun Model",
       "activateModelTitle": "Dayakan Model untuk Memulakan",
       "activateModelDescription": "Pilih model dan muat turun. Selepas dimuat turun, ketik Muat di sebelah model dan mula bersembang.",
@@ -527,7 +527,7 @@
     },
     "modelErrorReportSheet": {
       "title": "Laporkan Masalah Pemuatan Model",
-      "privacyNote": "Bantu kami memperbaiki PocketPal dengan berkongsi butiran tentang ralat ini. Semak di bawah apa yang akan dikongsi – anda boleh membatalkan mana-mana item yang tidak mahu disertakan.",
+      "privacyNote": "Bantu kami memperbaiki AisodChat dengan berkongsi butiran tentang ralat ini. Semak di bawah apa yang akan dikongsi – anda boleh membatalkan mana-mana item yang tidak mahu disertakan.",
       "errorMessage": "Mesej ralat",
       "modelInfo": "Maklumat Model",
       "modelName": "Nama",
@@ -545,7 +545,7 @@
       "submit": "Hantar Laporan",
       "success": {
         "title": "Laporan Dihantar",
-        "message": "Terima kasih kerana membantu kami memperbaiki PocketPal. Laporan anda akan membantu kami membetulkan masalah ini."
+        "message": "Terima kasih kerana membantu kami memperbaiki AisodChat. Laporan anda akan membantu kami membetulkan masalah ini."
       },
       "error": {
         "title": "Gagal Menghantar Laporan",
@@ -959,7 +959,7 @@
   },
   "camera": {
     "permissionTitle": "Kebenaran Kamera Diperlukan",
-    "permissionMessage": "PocketPal memerlukan capaian kamera untuk menganalisis imej",
+    "permissionMessage": "AisodChat memerlukan capaian kamera untuk menganalisis imej",
     "requestingPermission": "Memohon kebenaran kamera...",
     "noDevice": "Tiada peranti kamera ditemui",
     "errorTitle": "Ralat Kamera",
@@ -973,7 +973,7 @@
   },
   "video": {
     "permissionTitle": "Kebenaran Kamera Diperlukan",
-    "permissionMessage": "PocketPal memerlukan capaian kamera untuk analisis video",
+    "permissionMessage": "AisodChat memerlukan capaian kamera untuk analisis video",
     "requestingPermission": "Memohon kebenaran kamera...",
     "noDevice": "Tiada peranti kamera ditemui",
     "errorTitle": "Ralat Kamera",

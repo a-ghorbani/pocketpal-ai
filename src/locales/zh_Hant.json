@@ -3,7 +3,7 @@
     "screenTitle": "應用程式資訊",
     "description": "一個能把語言模型直接帶到你手機上的應用程式，基於 llama.cpp 與 llama.rn 構建。",
     "supportProject": "支援此專案",
-    "supportProjectDescription": "如果您喜歡使用 PocketPal AI, 請考慮透過以下方式支援此專案:",
+    "supportProjectDescription": "如果您喜歡使用 AisodChat, 請考慮透過以下方式支援此專案:",
     "githubButton": "GitHub 上打星狀",
     "orText": "或",
     "orBy": "或通過",
@@ -202,7 +202,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "無可用模型",
-      "noModelsDescription": "下載模型後即可開始使用 PocketPal 進行聊天",
+      "noModelsDescription": "下載模型後即可開始使用 AisodChat 進行聊天",
       "noModelsButton": "下載模型",
       "activateModelTitle": "啟動模型以開始",
       "activateModelDescription": "請先選擇模型並下載。下載完成後，點擊模型右側的「載入」按鈕即可開始對話。",
@@ -392,10 +392,10 @@
   },
   "feedback": {
     "title": "送出反饋",
-    "description": "您的聲音很重要！告訴我們 PocketPal AI 如何幫助您，以及我們可以做什麼讓它更有用。",
+    "description": "您的聲音很重要！告訴我們 AisodChat 如何幫助您，以及我們可以做什麼讓它更有用。",
     "shareThoughtsButton": "分享您的想法",
     "useCase": {
-      "label": "您正在使用 PocketPal AI 做什麼?",
+      "label": "您正在使用 AisodChat 做什麼?",
       "placeholder": "例如: 摘要、角色扮演等。"
     },
     "featureRequests": {
@@ -407,7 +407,7 @@
       "placeholder": "分享您可能有的其他想法。"
     },
     "usageFrequency": {
-      "label": "您多久使用一次 PocketPal AI? (可選)",
+      "label": "您多久使用一次 AisodChat? (可選)",
       "options": {
         "daily": "每日",
         "weekly": "每週",

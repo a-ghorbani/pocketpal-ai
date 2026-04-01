@@ -3,7 +3,7 @@
     "screenTitle": "앱 정보",
     "description": "대규모 언어 모델(LLM)을 모바일 기기에서 직접 구동하는 앱입니다. llama.cpp 및 llama.rn 라이브러리를 기반으로 구축되었습니다.",
     "supportProject": "프로젝트 지원하기",
-    "supportProjectDescription": "PocketPal AI가 마음에 드신다면, 다음 방법으로 프로젝트를 지원해 주세요:",
+    "supportProjectDescription": "AisodChat가 마음에 드신다면, 다음 방법으로 프로젝트를 지원해 주세요:",
     "githubButton": "GitHub Star 주기",
     "orText": "또는",
     "orBy": "또는",
@@ -224,7 +224,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "사용 가능한 모델 없음",
-      "noModelsDescription": "PocketPal과 채팅을 시작하려면 모델을 다운로드해 주세요",
+      "noModelsDescription": "AisodChat과 채팅을 시작하려면 모델을 다운로드해 주세요",
       "noModelsButton": "모델 다운로드",
       "activateModelTitle": "시작하려면 모델을 활성화하세요",
       "loading": "로딩 중...",
@@ -496,7 +496,7 @@
     },
     "modelErrorReportSheet": {
       "title": "모델 로드 문제 신고",
-      "privacyNote": "오류 상세 내용을 공유하여 PocketPal의 성능 개선을 도와주세요. 공유되는 항목을 아래에서 확인하고, 포함하고 싶지 않은 항목은 선택 해제할 수 있습니다.",
+      "privacyNote": "오류 상세 내용을 공유하여 AisodChat의 성능 개선을 도와주세요. 공유되는 항목을 아래에서 확인하고, 포함하고 싶지 않은 항목은 선택 해제할 수 있습니다.",
       "errorMessage": "오류 메시지",
       "modelInfo": "모델 정보",
       "modelName": "이름",
@@ -514,7 +514,7 @@
       "submit": "리포트 제출",
       "success": {
         "title": "리포트 제출됨",
-        "message": "PocketPal의 개선을 도와주셔서 감사합니다. 보내주신 리포트는 문제를 해결하는 데 큰 도움이 됩니다."
+        "message": "AisodChat의 개선을 도와주셔서 감사합니다. 보내주신 리포트는 문제를 해결하는 데 큰 도움이 됩니다."
       },
       "error": {
         "title": "리포트 제출 실패",
@@ -639,10 +639,10 @@
   },
   "feedback": {
     "title": "피드백 보내기",
-    "description": "여러분의 소중한 의견을 들려주세요! PocketPal AI가 어떻게 도움이 되고 있는지, 그리고 더 유용한 앱이 되려면 무엇을 개선하면 좋을지 알려주세요.",
+    "description": "여러분의 소중한 의견을 들려주세요! AisodChat가 어떻게 도움이 되고 있는지, 그리고 더 유용한 앱이 되려면 무엇을 개선하면 좋을지 알려주세요.",
     "shareThoughtsButton": "의견 공유하기",
     "useCase": {
-      "label": "PocketPal AI를 어떤 용도로 사용하시나요?",
+      "label": "AisodChat를 어떤 용도로 사용하시나요?",
       "placeholder": "예: 요약, 역할극 등"
     },
     "featureRequests": {
@@ -654,7 +654,7 @@
       "label": "일반 피드백"
     },
     "usageFrequency": {
-      "label": "PocketPal AI를 얼마나 자주 사용하시나요? (선택 사항)",
+      "label": "AisodChat를 얼마나 자주 사용하시나요? (선택 사항)",
       "options": {
         "daily": "매일",
         "weekly": "매주",
@@ -1115,7 +1115,7 @@
     "captureInterval": "촬영 간격",
     "captureIntervalUnit": "ms",
     "permissionTitle": "카메라 권한 필요",
-    "permissionMessage": "PocketPal은 비디오 분석을 위해 카메라 접근 권한이 필요합니다.",
+    "permissionMessage": "AisodChat은 비디오 분석을 위해 카메라 접근 권한이 필요합니다.",
     "requestingPermission": "카메라 권한 요청 중...",
     "noDevice": "카메라 기기를 찾을 수 없습니다",
     "errorTitle": "카메라 오류",
@@ -1139,7 +1139,7 @@
   },
   "camera": {
     "permissionTitle": "카메라 권한 필요",
-    "permissionMessage": "PocketPal은 이미지를 분석하기 위해 카메라 접근 권한이 필요합니다.",
+    "permissionMessage": "AisodChat은 이미지를 분석하기 위해 카메라 접근 권한이 필요합니다.",
     "requestingPermission": "카메라 권한 요청 중...",
     "noDevice": "카메라 기기를 찾을 수 없습니다",
     "errorTitle": "카메라 오류",

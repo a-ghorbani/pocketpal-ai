@@ -437,7 +437,7 @@
     "screenTitle": "درباره برنامه",
     "description": "برنامه‌ای که مدل‌های زبانی را مستقیماً به گوشی شما می‌آورد. بر پایه llama.cpp و llama.rn ساخته شده.",
     "supportProject": "حمایت از پروژه",
-    "supportProjectDescription": "اگر از استفاده PocketPal AI لذت می‌برید، لطفاً حمایت از پروژه را در نظر بگیرید:",
+    "supportProjectDescription": "اگر از استفاده AisodChat لذت می‌برید، لطفاً حمایت از پروژه را در نظر بگیرید:",
     "githubButton": "ستاره در GitHub",
     "orText": "یا",
     "orBy": "یا با",
@@ -447,10 +447,10 @@
   },
   "feedback": {
     "title": "ارسال بازخورد",
-    "description": "نظر شما مهم است! به ما بگویید PocketPal AI چطور به شما کمک می‌کند و چه کاری می‌توانیم انجام دهیم تا مفیدتر شود.",
+    "description": "نظر شما مهم است! به ما بگویید AisodChat چطور به شما کمک می‌کند و چه کاری می‌توانیم انجام دهیم تا مفیدتر شود.",
     "shareThoughtsButton": "نظرات خود را به اشتراک بگذارید",
     "useCase": {
-      "label": "PocketPal AI را برای چه کاری استفاده می‌کنید؟",
+      "label": "AisodChat را برای چه کاری استفاده می‌کنید؟",
       "placeholder": "مثلاً خلاصه‌سازی، ایفای نقش و غیره"
     },
     "featureRequests": {
@@ -462,7 +462,7 @@
       "placeholder": "هر نظر دیگری دارید با ما به اشتراک بگذارید."
     },
     "usageFrequency": {
-      "label": "چقدر از PocketPal AI استفاده می‌کنید؟ (اختیاری)",
+      "label": "چقدر از AisodChat استفاده می‌کنید؟ (اختیاری)",
       "options": {
         "daily": "روزانه",
         "weekly": "هفتگی",
@@ -512,7 +512,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "مدلی موجود نیست",
-      "noModelsDescription": "یک مدل دانلود کنید تا گفتگو با PocketPal را شروع کنید",
+      "noModelsDescription": "یک مدل دانلود کنید تا گفتگو با AisodChat را شروع کنید",
       "noModelsButton": "دانلود مدل",
       "activateModelTitle": "برای شروع یک مدل را فعال کنید",
       "activateModelDescription": "مدل را انتخاب و دانلود کنید. بعد از دانلود، روی بارگذاری کنار مدل بزنید و گفتگو را شروع کنید.",
@@ -562,7 +562,7 @@
     },
     "modelErrorReportSheet": {
       "title": "گزارش مشکل بارگذاری مدل",
-      "privacyNote": "با اشتراک‌گذاری جزئیات این خطا به بهبود PocketPal کمک کنید. موارد زیر را بررسی کنید — می‌توانید هر موردی که نمی‌خواهید ارسال شود را غیرفعال کنید.",
+      "privacyNote": "با اشتراک‌گذاری جزئیات این خطا به بهبود AisodChat کمک کنید. موارد زیر را بررسی کنید — می‌توانید هر موردی که نمی‌خواهید ارسال شود را غیرفعال کنید.",
       "errorMessage": "پیام خطا",
       "modelInfo": "اطلاعات مدل",
       "modelName": "نام",
@@ -580,7 +580,7 @@
       "submit": "ارسال گزارش",
       "success": {
         "title": "گزارش ارسال شد",
-        "message": "ممنون که به بهبود PocketPal کمک می‌کنید. گزارش شما به رفع این مشکل کمک خواهد کرد."
+        "message": "ممنون که به بهبود AisodChat کمک می‌کنید. گزارش شما به رفع این مشکل کمک خواهد کرد."
       },
       "error": {
         "title": "ارسال گزارش ناموفق بود",
@@ -1000,7 +1000,7 @@
   },
   "camera": {
     "permissionTitle": "دسترسی به دوربین لازم است",
-    "permissionMessage": "PocketPal برای تحلیل تصاویر به دسترسی دوربین نیاز دارد",
+    "permissionMessage": "AisodChat برای تحلیل تصاویر به دسترسی دوربین نیاز دارد",
     "requestingPermission": "درخواست دسترسی به دوربین...",
     "noDevice": "دوربینی یافت نشد",
     "errorTitle": "خطای دوربین",
@@ -1014,7 +1014,7 @@
   },
   "video": {
     "permissionTitle": "دسترسی به دوربین لازم است",
-    "permissionMessage": "PocketPal برای تحلیل ویدیو به دسترسی دوربین نیاز دارد",
+    "permissionMessage": "AisodChat برای تحلیل ویدیو به دسترسی دوربین نیاز دارد",
     "requestingPermission": "درخواست دسترسی به دوربین...",
     "noDevice": "دوربینی یافت نشد",
     "errorTitle": "خطای دوربین",

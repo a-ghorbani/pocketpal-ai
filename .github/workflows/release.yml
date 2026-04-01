@@ -78,57 +78,58 @@ jobs:
 
       # Step 8: Set up Android Keystore
       - name: Set up Android Keystore
-        working-directory: android
+        working-directory: android/app
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > app/pocketpal-release-key.keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > pocketpal-release-key.keystore
 
-      # Step 9: Authenticate to Google Cloud
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          create_credentials_file: true
+      # Step 9: Create google-services.json
+      - name: Create google-services.json
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > android/app/google-services.json
+          else
+            cat > android/app/google-services.json << 'EOL'
+            {
+              "project_info": {
+                "project_number": "000000000000",
+                "project_id": "dummy-project-for-ci",
+                "storage_bucket": "dummy-project-for-ci.appspot.com"
+              },
+              "client": [{
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": { "package_name": "com.pocketpalai" }
+                },
+                "api_key": [{"current_key": "dummy-api-key-for-ci-builds"}]
+              }]
+            }
+            EOL
+          fi
 
-      # Add this step before the Android build
+      # Step 10: Create .env file
       - name: Create .env file
         run: |
           cat > .env << 'EOL'
           FIREBASE_FUNCTIONS_URL=${{ vars.FIREBASE_FUNCTIONS_URL }}
-
-          # PalsHub/Supabase Configuration
           SUPABASE_URL=${{ vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           PALSHUB_API_BASE_URL=${{ vars.PALSHUB_API_BASE_URL }}
-
-          # App Configuration
-          APP_URL=pocketpal://app
-
-          # Feature Flags (true/false)
+          APP_URL=aisodchat://app
           ENABLE_PALSHUB_INTEGRATION=true
           ENABLE_AUTHENTICATION=true
           ENABLE_OFFLINE_MODE=true
-
-          # Google Sign-In Configuration
           GOOGLE_IOS_CLIENT_ID=${{ vars.GOOGLE_IOS_CLIENT_ID }}
           GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
           EOL
 
-      # Step 10: Build and upload Android app to Alpha track (includes building APK and Bundle)
-      - name: Build and upload Android app
+      # Step 11: Build Android APK
+      - name: Build Android APK
         working-directory: android
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APP_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          APP_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           GRADLE_USER_HOME: ${{ runner.temp }}/.gradle
-          #  GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }} # This is not supported by fastlane, we need to replace it with PLAY_STORE_JSON_KEY in the future.
-          PLAY_STORE_JSON_KEY: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          echo "$PLAY_STORE_JSON_KEY" > play-store-key.json
-          bundle exec fastlane release_android_alpha
+        run: ./gradlew assembleRelease
 
       # Step 11: Create GitHub Release with APK
       - name: Create GitHub Release

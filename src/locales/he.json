@@ -402,7 +402,7 @@
     "screenTitle": "מידע על האפליקציה",
     "description": "אפליקציה שמביאה מודלי שפה ישירות לטלפון שלך. מבוססת על התשתית של llama.cpp ו-llama.rn.",
     "supportProject": "תמוך בפרוייקט",
-    "supportProjectDescription": "אם אתם נהנים מהשימוש ב-PocketPal AI, אנא שקלו לתמוך בפרויקט באמצעות:",
+    "supportProjectDescription": "אם אתם נהנים מהשימוש ב-AisodChat, אנא שקלו לתמוך בפרויקט באמצעות:",
     "githubButton": "ככב אותנו ב-GitHub",
     "orText": "או",
     "orBy": "או על ידי",
@@ -412,10 +412,10 @@
   },
   "feedback": {
     "title": "שלח משוב",
-    "description": "הקול שלכם חשוב! ספרו לנו איך PocketPal AI עוזר לכם ומה אנחנו יכולים לעשות כדי להפוך אותו לשימושי עוד יותר.",
+    "description": "הקול שלכם חשוב! ספרו לנו איך AisodChat עוזר לכם ומה אנחנו יכולים לעשות כדי להפוך אותו לשימושי עוד יותר.",
     "shareThoughtsButton": "שתף את מחשבותיך",
     "useCase": {
-      "label": "עבור אילו שימושים אתם נעזרים ב-PocketPal AI?",
+      "label": "עבור אילו שימושים אתם נעזרים ב-AisodChat?",
       "placeholder": "למשל: סיכום טקסטים, משחקי תפקידים וכו'."
     },
     "featureRequests": {
@@ -427,7 +427,7 @@
       "placeholder": "שתף בכל מחשבה נוספת שעשויה להיות לך."
     },
     "usageFrequency": {
-      "label": "באיזו תדירות אתה משתמש ב-PocketPal AI? (אופציונלי)",
+      "label": "באיזו תדירות אתה משתמש ב-AisodChat? (אופציונלי)",
       "options": {
         "daily": "יומי",
         "weekly": "שבועי",
@@ -477,7 +477,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "אין מודלים זמינים",
-      "noModelsDescription": "הורד מודל כדי להתחיל לשוחח בצ'אט עם PocketPal",
+      "noModelsDescription": "הורד מודל כדי להתחיל לשוחח בצ'אט עם AisodChat",
       "noModelsButton": "הורד מודל",
       "activateModelTitle": "הפעל מודל כדי להתחיל",
       "activateModelDescription": "בחר את המודל והורד אותו. לאחר ההורדה, הקש על \"טען\" ליד המודל והתחל לשוחח בצ'אט.",
@@ -527,7 +527,7 @@
     },
     "modelErrorReportSheet": {
       "title": "דיווח בעיית טעינת מודל",
-      "privacyNote": "עזור לנו לשפר את PocketPal על ידי שיתוף פרטים על שגיאה זו. סקור למטה מה ישותף - תוכל לבטל את הסימון של כל פריט שאתה מעדיף לא לכלול.",
+      "privacyNote": "עזור לנו לשפר את AisodChat על ידי שיתוף פרטים על שגיאה זו. סקור למטה מה ישותף - תוכל לבטל את הסימון של כל פריט שאתה מעדיף לא לכלול.",
       "errorMessage": "הודעת שגיאה",
       "modelInfo": "מידע על המודל",
       "modelName": "שם",
@@ -545,7 +545,7 @@
       "submit": "שלח דיווח",
       "success": {
         "title": "דיווח נשלח",
-        "message": "תודה שעזרת לנו לשפר את PocketPal. הדיווח שלך יעזור לנו לתקן את הבעיה הזו."
+        "message": "תודה שעזרת לנו לשפר את AisodChat. הדיווח שלך יעזור לנו לתקן את הבעיה הזו."
       },
       "error": {
         "title": "דיווח נכשל",
@@ -959,7 +959,7 @@
   },
   "camera": {
     "permissionTitle": "נדרשת הרשאת מצלמה",
-    "permissionMessage": "PocketPal זקוק לגישה למצלמה כדי לנתח תמונות",
+    "permissionMessage": "AisodChat זקוק לגישה למצלמה כדי לנתח תמונות",
     "requestingPermission": "מבקש הרשאת מצלמה...",
     "noDevice": "לא נמצאה מצלמה במכשיר",
     "errorTitle": "שגיאת מצלמה",
@@ -973,7 +973,7 @@
   },
   "video": {
     "permissionTitle": "נדרשת הרשאת מצלמה",
-    "permissionMessage": "PocketPal זקוק לגישה למצלמה לצורך ניתוח וידאו",
+    "permissionMessage": "AisodChat זקוק לגישה למצלמה לצורך ניתוח וידאו",
     "requestingPermission": "מבקש הרשאת מצלמה...",
     "noDevice": "לא נמצאה מצלמה במכשיר",
     "errorTitle": "שגיאת מצלמה",
