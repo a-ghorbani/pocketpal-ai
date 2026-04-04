@@ -62,7 +62,7 @@ import {
   getRecommendedThreadCount,
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
-import {supportsThinking} from '../utils/thinkingCapabilityDetection';
+import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -2398,10 +2398,16 @@ class ModelStore {
 
       // Only check if supportsThinking is not already explicitly set
       if (storeModel.supportsThinking === undefined) {
-        const thinkingSupported = await supportsThinking(storeModel, ctx);
+        const result = await detectThinkingCapability(ctx);
 
         runInAction(() => {
-          storeModel.supportsThinking = thinkingSupported;
+          storeModel.supportsThinking = result.supported;
+          if (result.thinkingStartTag) {
+            storeModel.thinkingStartTag = result.thinkingStartTag;
+          }
+          if (result.thinkingEndTag) {
+            storeModel.thinkingEndTag = result.thinkingEndTag;
+          }
         });
       }
     } catch (error) {

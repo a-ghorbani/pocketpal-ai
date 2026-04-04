@@ -391,6 +391,8 @@ export interface Model {
 
   // Thinking capabilities
   supportsThinking?: boolean; // Whether this model supports thinking/reasoning mode
+  thinkingStartTag?: string; // Thinking start tag from getFormattedChat (e.g., '<think>')
+  thinkingEndTag?: string; // Thinking end tag from getFormattedChat (e.g., '</think>')
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;
