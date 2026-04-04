@@ -12,6 +12,16 @@ const createMockContext = (getFormattedChatResult: any) => {
 };
 
 describe('detectThinkingCapability', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
   it('should detect thinking support when thinking_start_tag is present', async () => {
     const ctx = createMockContext({
       type: 'jinja',
@@ -96,5 +106,60 @@ describe('detectThinkingCapability', () => {
       thinkingStartTag: '<start_of_thought>',
       thinkingEndTag: '<end_of_thought>',
     });
+  });
+
+  it('should log a warning when getFormattedChat throws', async () => {
+    const error = new Error('Template not supported');
+    const ctx = {
+      getFormattedChat: jest.fn().mockRejectedValue(error),
+    } as unknown as LlamaContext;
+
+    await detectThinkingCapability(ctx);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Thinking capability detection failed:',
+      error,
+    );
+  });
+
+  it('should return false when thinking_start_tag is null', async () => {
+    const ctx = createMockContext({
+      type: 'jinja',
+      prompt: '...',
+      has_media: false,
+      thinking_start_tag: null,
+      thinking_end_tag: null,
+    });
+
+    const result = await detectThinkingCapability(ctx);
+    expect(result).toEqual({supported: false});
+  });
+
+  it('should handle thinking_start_tag present but thinking_end_tag absent', async () => {
+    const ctx = createMockContext({
+      type: 'jinja',
+      prompt: '...',
+      has_media: false,
+      thinking_start_tag: '<think>',
+    });
+
+    const result = await detectThinkingCapability(ctx);
+    expect(result).toEqual({
+      supported: true,
+      thinkingStartTag: '<think>',
+      thinkingEndTag: undefined,
+    });
+  });
+
+  it('should only call getFormattedChat once per invocation', async () => {
+    const ctx = createMockContext({
+      type: 'jinja',
+      prompt: '...',
+      has_media: false,
+    });
+
+    await detectThinkingCapability(ctx);
+
+    expect(ctx.getFormattedChat).toHaveBeenCalledTimes(1);
   });
 });
