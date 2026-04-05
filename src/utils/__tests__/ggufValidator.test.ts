@@ -42,4 +42,27 @@ describe('validateGGUFHeader', () => {
     expect(result.valid).toBe(false);
     expect(result.error).toContain('ENOENT');
   });
+
+  it('handles non-Error thrown value gracefully', async () => {
+    mockRead.mockRejectedValue('unexpected string error');
+    const result = await validateGGUFHeader('/path/missing.gguf');
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('unexpected string error');
+  });
+
+  it('rejects empty file (empty base64)', async () => {
+    mockRead.mockResolvedValue('');
+    const result = await validateGGUFHeader('/path/empty.gguf');
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('too small');
+  });
+
+  it('rejects file with partial GGUF magic (only first 2 bytes match)', async () => {
+    // First two bytes match GGUF magic, last two don't
+    const partialMagic = bytesToBase64([0x47, 0x47, 0x00, 0x00]);
+    mockRead.mockResolvedValue(partialMagic);
+    const result = await validateGGUFHeader('/path/partial.gguf');
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('magic');
+  });
 });
