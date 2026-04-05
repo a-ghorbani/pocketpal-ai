@@ -396,6 +396,8 @@ export interface Model {
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;
+  /** Set to true when GGUF header validation fails — prevents retry loops on startup */
+  ggufUnsupported?: boolean;
 
   defaultChatTemplate: ChatTemplateConfig;
   chatTemplate: ChatTemplateConfig;
