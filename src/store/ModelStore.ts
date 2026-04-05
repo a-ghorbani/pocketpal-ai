@@ -73,6 +73,8 @@ import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
 
+import {validateGGUFHeader} from '../utils/ggufValidator';
+
 /**
  * Factory function to create a Model object for a remote model from an OpenAI-compatible server.
  * Fills all required Model fields with sensible defaults.
@@ -1186,6 +1188,17 @@ class ModelStore {
         return;
       }
 
+      const headerCheck = await validateGGUFHeader(filePath);
+      if (!headerCheck.valid) {
+        console.warn(
+          `[ModelStore] Unsupported GGUF file for ${model.name}: ${headerCheck.error}`,
+        );
+        runInAction(() => {
+          model.ggufUnsupported = true;
+        });
+        return;
+      }
+
       const modelInfo = await loadLlamaModelInfo(filePath);
       if (!modelInfo || typeof modelInfo !== 'object') {
         console.warn('[ModelStore] Invalid model info returned');
@@ -1285,6 +1298,7 @@ class ModelStore {
       m =>
         m.isDownloaded &&
         !m.ggufMetadata &&
+        !m.ggufUnsupported &&
         m.modelType !== ModelType.PROJECTION,
     );
 
