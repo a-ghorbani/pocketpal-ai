@@ -1,6 +1,7 @@
 import {Platform} from 'react-native';
 import {isRepackableQuantization, resolveUseMmap} from '../memorySettings';
 import {loadLlamaModelInfo} from 'llama.rn';
+import * as RNFS from '@dr.pogodin/react-native-fs';
 
 // Mock Platform
 jest.mock('react-native', () => ({
@@ -12,10 +13,16 @@ jest.mock('react-native', () => ({
 const mockLoadLlamaModelInfo = loadLlamaModelInfo as jest.MockedFunction<
   typeof loadLlamaModelInfo
 >;
+const mockRNFSRead = RNFS.read as jest.MockedFunction<typeof RNFS.read>;
+
+// Valid GGUF magic bytes as base64
+const VALID_GGUF_HEADER = btoa(String.fromCharCode(0x47, 0x47, 0x55, 0x46));
 
 describe('memorySettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: GGUF header validation passes
+    mockRNFSRead.mockResolvedValue(VALID_GGUF_HEADER);
   });
 
   describe('isRepackableQuantization', () => {
@@ -71,6 +78,14 @@ describe('memorySettings', () => {
 
       const result = await isRepackableQuantization('/path/to/model.gguf');
       expect(result).toBe(true);
+    });
+
+    it('should return false when GGUF header is invalid (unsupported file)', async () => {
+      mockRNFSRead.mockResolvedValue(btoa('\x00\x00\x00\x00'));
+
+      const result = await isRepackableQuantization('/path/to/bad.gguf');
+      expect(result).toBe(false);
+      expect(mockLoadLlamaModelInfo).not.toHaveBeenCalled();
     });
   });
 

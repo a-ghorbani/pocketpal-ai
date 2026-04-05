@@ -1,9 +1,18 @@
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
-import {LlamaContext} from 'llama.rn';
+import {LlamaContext, loadLlamaModelInfo} from 'llama.rn';
 import {Alert} from 'react-native';
 
 import {defaultModels} from '../defaultModels';
+
+// Mock the ggufValidator module
+jest.mock('../../utils/ggufValidator', () => ({
+  validateGGUFHeader: jest.fn(),
+}));
+import {validateGGUFHeader} from '../../utils/ggufValidator';
+const mockValidateGGUFHeader = validateGGUFHeader as jest.MockedFunction<
+  typeof validateGGUFHeader
+>;
 
 import {downloadManager} from '../../services/downloads';
 
@@ -3089,6 +3098,83 @@ describe('ModelStore', () => {
       const remoteModels = modelStore.remoteModels;
 
       expect(remoteModels[0].id).toBe('srv-1/llama-7b');
+    });
+  });
+
+  describe('fetchAndPersistGGUFMetadata', () => {
+    it('sets ggufUnsupported and skips native call when header is invalid', async () => {
+      const model = {
+        ...basicModel,
+        isDownloaded: true,
+        origin: ModelOrigin.PRESET,
+        ggufMetadata: undefined,
+        ggufUnsupported: undefined,
+      };
+      modelStore.models = [model as any];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      mockValidateGGUFHeader.mockResolvedValue({
+        valid: false,
+        error: 'Invalid GGUF magic bytes',
+      });
+
+      await modelStore.fetchAndPersistGGUFMetadata(model as any);
+
+      expect(model.ggufUnsupported).toBe(true);
+      expect(loadLlamaModelInfo).not.toHaveBeenCalled();
+    });
+
+    it('calls loadLlamaModelInfo when header is valid', async () => {
+      const model = {
+        ...basicModel,
+        isDownloaded: true,
+        origin: ModelOrigin.PRESET,
+        ggufMetadata: undefined,
+        ggufUnsupported: undefined,
+      };
+      modelStore.models = [model as any];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      mockValidateGGUFHeader.mockResolvedValue({valid: true});
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
+        'general.architecture': 'llama',
+        'llama.block_count': 32,
+        'llama.embedding_length': 2048,
+        'llama.attention.head_count': 32,
+      });
+
+      await modelStore.fetchAndPersistGGUFMetadata(model as any);
+
+      expect(loadLlamaModelInfo).toHaveBeenCalled();
+      expect(model.ggufUnsupported).not.toBe(true);
+    });
+  });
+
+  describe('loadMissingGGUFMetadata', () => {
+    it('excludes models with ggufUnsupported flag', async () => {
+      const unsupportedModel = {
+        ...basicModel,
+        id: 'unsupported',
+        name: 'unsupported-model',
+        isDownloaded: true,
+        origin: ModelOrigin.PRESET,
+        ggufMetadata: undefined,
+        ggufUnsupported: true,
+        modelType: undefined,
+      };
+      modelStore.models = [unsupportedModel as any];
+
+      // If the unsupported model is NOT excluded, validateGGUFHeader would be called.
+      // Set it up so we can verify it was NOT called for the unsupported model.
+      mockValidateGGUFHeader.mockResolvedValue({valid: true});
+
+      (modelStore as any).loadMissingGGUFMetadata();
+
+      // Give the async IIFE a tick to start processing
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // validateGGUFHeader should not be called because the only model is flagged
+      expect(mockValidateGGUFHeader).not.toHaveBeenCalled();
     });
   });
 });

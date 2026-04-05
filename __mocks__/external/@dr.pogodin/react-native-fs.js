@@ -55,6 +55,7 @@ export const __setDocumentDirectoryPath = path => {
   });
 };
 export const copyFile = jest.fn().mockResolvedValue(true);
+export const read = jest.fn().mockResolvedValue('');
 
 // Expose method to reset state for tests
 export const __resetMockState = () => {
@@ -73,6 +74,7 @@ const RNFS = {
   downloadFile,
   DocumentDirectoryPath,
   copyFile,
+  read,
   __resetMockState,
   __setDocumentDirectoryPath,
 };
