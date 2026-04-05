@@ -1,6 +1,8 @@
 import {Platform} from 'react-native';
 import {loadLlamaModelInfo} from 'llama.rn';
 
+import {validateGGUFHeader} from './ggufValidator';
+
 /**
  * Quantization types that are repackable and should use use_mmap=false
  */
@@ -22,6 +24,15 @@ export async function isRepackableQuantization(
   modelPath: string,
 ): Promise<boolean> {
   try {
+    // Validate GGUF header before calling native function to prevent C++ crash
+    const headerCheck = await validateGGUFHeader(modelPath);
+    if (!headerCheck.valid) {
+      console.warn(
+        `Skipping repackable check for unsupported GGUF: ${headerCheck.error}`,
+      );
+      return false;
+    }
+
     const modelInfo = await loadLlamaModelInfo(modelPath);
 
     // Check if model info is valid and contains file_type
