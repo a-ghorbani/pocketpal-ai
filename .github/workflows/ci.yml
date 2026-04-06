@@ -318,6 +318,10 @@ jobs:
           </plist>
           EOL
 
+      - name: Set llama.rn source build flags
+        if: needs.detect-changes.outputs.llama_from_source == 'true'
+        run: echo "RNLLAMA_BUILD_FROM_SOURCE=1" >> "$GITHUB_ENV"
+
       - name: Install CocoaPods dependencies
         run: |
           cd ios
