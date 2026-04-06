@@ -30,7 +30,7 @@ if echo "$VERSION_OR_REF" | grep -qE '^[0-9]+\.[0-9]+'; then
     fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
   "
   # Comment out rnllamaBuildFromSource
-  sed -i'' -e 's/^rnllamaBuildFromSource=true/# rnllamaBuildFromSource=true/' "$GRADLE_PROPS"
+  sed -i '' 's/^rnllamaBuildFromSource=true/# rnllamaBuildFromSource=true/' "$GRADLE_PROPS"
   echo "Disabled rnllamaBuildFromSource in gradle.properties"
   echo ""
   echo "Next steps:"
@@ -46,7 +46,7 @@ elif echo "$VERSION_OR_REF" | grep -q '/'; then
     fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
   "
   # Uncomment rnllamaBuildFromSource
-  sed -i'' -e 's/^# rnllamaBuildFromSource=true/rnllamaBuildFromSource=true/' "$GRADLE_PROPS"
+  sed -i '' 's/^# rnllamaBuildFromSource=true/rnllamaBuildFromSource=true/' "$GRADLE_PROPS"
   echo "Enabled rnllamaBuildFromSource in gradle.properties"
   echo ""
   echo "Next steps:"
@@ -62,7 +62,7 @@ else
     fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
   "
   # Uncomment rnllamaBuildFromSource
-  sed -i'' -e 's/^# rnllamaBuildFromSource=true/rnllamaBuildFromSource=true/' "$GRADLE_PROPS"
+  sed -i '' 's/^# rnllamaBuildFromSource=true/rnllamaBuildFromSource=true/' "$GRADLE_PROPS"
   echo "Enabled rnllamaBuildFromSource in gradle.properties"
   echo ""
   echo "Next steps:"

@@ -79,6 +79,36 @@ target 'PocketPal' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # When building llama.rn from source, the prebuilt xcframework is absent
+    # so headers like <rnllama/rn-llama.h> are not available via the framework
+    # module. Add the llama-rn cpp directory (with a rnllama symlink) to the
+    # app target header search paths so LlamaContextWrapper.mm can resolve them.
+    if ENV["RNLLAMA_BUILD_FROM_SOURCE"] == "1"
+      llama_pod = installer.pod_targets.find { |t| t.name == 'llama-rn' }
+      if llama_pod
+        cpp_dir = llama_pod.sandbox.pod_dir(llama_pod.pod_name) + 'cpp'
+        symlink = cpp_dir + 'rnllama'
+        unless symlink.exist?
+          File.symlink('.', symlink)
+          puts "Created rnllama -> . symlink in #{cpp_dir}"
+        end
+
+        common_dir = cpp_dir + 'common'
+        app_project = Xcodeproj::Project.open(installer.sandbox.root.parent + 'PocketPal.xcodeproj')
+        app_project.targets.each do |target|
+          next unless target.name == 'PocketPal'
+          target.build_configurations.each do |bc|
+            hsp = bc.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
+            unless hsp.include?(cpp_dir.to_s)
+              bc.build_settings['HEADER_SEARCH_PATHS'] = "#{hsp} \"#{cpp_dir}\" \"#{common_dir}\""
+            end
+          end
+        end
+        app_project.save
+        puts "Added llama.rn cpp headers to PocketPal target"
+      end
+    end
   end
 
 
