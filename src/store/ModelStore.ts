@@ -2176,7 +2176,6 @@ class ModelStore {
 
       // Clear GGUF metadata to force re-fetch with correct number types
       model.ggufMetadata = undefined;
-
     });
 
     const hfModels = this.models.filter(
@@ -2196,7 +2195,6 @@ class ModelStore {
 
       // Clear GGUF metadata to force re-fetch with correct number types
       model.ggufMetadata = undefined;
-
     });
 
     runInAction(() => {
