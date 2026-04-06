@@ -99,10 +99,10 @@ target 'PocketPal' do
         app_project.targets.each do |target|
           next unless target.name == 'PocketPal'
           target.build_configurations.each do |bc|
-            hsp = bc.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
-            unless hsp.include?(cpp_dir.to_s)
-              bc.build_settings['HEADER_SEARCH_PATHS'] = "#{hsp} \"#{cpp_dir}\" \"#{common_dir}\""
-            end
+            hsp = Array(bc.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)'])
+            hsp << cpp_dir.to_s unless hsp.include?(cpp_dir.to_s)
+            hsp << common_dir.to_s unless hsp.include?(common_dir.to_s)
+            bc.build_settings['HEADER_SEARCH_PATHS'] = hsp
           end
         end
         app_project.save
