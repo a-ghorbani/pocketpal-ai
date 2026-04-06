@@ -396,7 +396,6 @@ export interface Model {
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;
-  ggufMetadataFailed?: boolean;
 
   defaultChatTemplate: ChatTemplateConfig;
   chatTemplate: ChatTemplateConfig;

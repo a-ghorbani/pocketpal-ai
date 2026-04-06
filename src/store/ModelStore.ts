@@ -229,7 +229,6 @@ class ModelStore {
           runInAction(() => {
             model.progress = 100;
             model.isDownloaded = true;
-            model.ggufMetadataFailed = false;
           });
 
           // Fetch and persist GGUF metadata after download completes
@@ -1274,9 +1273,6 @@ class ModelStore {
       });
     } catch (error) {
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
-      runInAction(() => {
-        model.ggufMetadataFailed = true;
-      });
     }
   };
 
@@ -1289,7 +1285,6 @@ class ModelStore {
       m =>
         m.isDownloaded &&
         !m.ggufMetadata &&
-        !m.ggufMetadataFailed &&
         m.modelType !== ModelType.PROJECTION,
     );
 
@@ -2181,7 +2176,7 @@ class ModelStore {
 
       // Clear GGUF metadata to force re-fetch with correct number types
       model.ggufMetadata = undefined;
-      model.ggufMetadataFailed = false;
+
     });
 
     const hfModels = this.models.filter(
@@ -2201,7 +2196,7 @@ class ModelStore {
 
       // Clear GGUF metadata to force re-fetch with correct number types
       model.ggufMetadata = undefined;
-      model.ggufMetadataFailed = false;
+
     });
 
     runInAction(() => {

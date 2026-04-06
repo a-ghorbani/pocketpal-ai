@@ -3092,212 +3092,72 @@ describe('ModelStore', () => {
     });
   });
 
-  describe('ggufMetadataFailed flag', () => {
+  describe('fetchAndPersistGGUFMetadata error handling', () => {
     const {loadLlamaModelInfo} = require('llama.rn');
 
     beforeEach(() => {
       (loadLlamaModelInfo as jest.Mock).mockReset();
     });
 
-    describe('fetchAndPersistGGUFMetadata', () => {
-      it('should set ggufMetadataFailed=true when loadLlamaModelInfo throws', async () => {
-        const model = {
-          ...defaultModels[0],
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: undefined,
-        };
-        modelStore.models = [model];
+    it('should not crash when loadLlamaModelInfo rejects', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
 
-        (RNFS.exists as jest.Mock).mockResolvedValue(true);
-        (loadLlamaModelInfo as jest.Mock).mockRejectedValue(
-          new Error('std::runtime_error'),
-        );
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockRejectedValue(
+        new Error('std::runtime_error'),
+      );
 
-        await modelStore.fetchAndPersistGGUFMetadata(model);
+      // Should not throw — error is caught internally
+      await modelStore.fetchAndPersistGGUFMetadata(model);
 
-        expect(model.ggufMetadataFailed).toBe(true);
-        expect(model.ggufMetadata).toBeUndefined();
-      });
-
-      it('should return early without setting ggufMetadata when loadLlamaModelInfo returns null', async () => {
-        const model = {
-          ...defaultModels[0],
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: undefined,
-        };
-        modelStore.models = [model];
-
-        (RNFS.exists as jest.Mock).mockResolvedValue(true);
-        (loadLlamaModelInfo as jest.Mock).mockResolvedValue(null);
-
-        await modelStore.fetchAndPersistGGUFMetadata(model);
-
-        // null is invalid but does not throw, so catch block is not reached
-        // The function returns early without setting ggufMetadata or ggufMetadataFailed
-        expect(model.ggufMetadata).toBeUndefined();
-        expect(model.ggufMetadataFailed).toBeUndefined();
-      });
-
-      it('should not set ggufMetadataFailed on success', async () => {
-        const model = {
-          ...defaultModels[0],
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: undefined,
-        };
-        modelStore.models = [model];
-
-        (RNFS.exists as jest.Mock).mockResolvedValue(true);
-        (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
-          'general.architecture': 'llama',
-          'llama.block_count': 32,
-          'llama.embedding_length': 4096,
-          'llama.attention.head_count': 32,
-          'llama.attention.head_count_kv': 8,
-          'llama.vocab_size': 32000,
-        });
-
-        await modelStore.fetchAndPersistGGUFMetadata(model);
-
-        expect(model.ggufMetadataFailed).toBeUndefined();
-        expect(model.ggufMetadata).toBeDefined();
-        const metadata = model.ggufMetadata as unknown as GGUFMetadata;
-        expect(metadata.architecture).toBe('llama');
-        expect(metadata.n_layers).toBe(32);
-      });
+      expect(model.ggufMetadata).toBeUndefined();
     });
 
-    describe('loadMissingGGUFMetadata', () => {
-      it('should skip models with ggufMetadataFailed=true', async () => {
-        const failedModel = {
-          ...defaultModels[0],
-          id: 'failed-model',
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: true,
-          modelType: ModelType.LLM,
-        };
-        const normalModel = {
-          ...(defaultModels[1] || defaultModels[0]),
-          id: 'normal-model',
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: undefined,
-          modelType: ModelType.LLM,
-        };
-        modelStore.models = [failedModel, normalModel];
+    it('should handle null response gracefully', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
 
-        (RNFS.exists as jest.Mock).mockResolvedValue(true);
-        (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
-          'general.architecture': 'llama',
-          'llama.block_count': 32,
-          'llama.embedding_length': 4096,
-          'llama.attention.head_count': 32,
-          'llama.attention.head_count_kv': 8,
-        });
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue(null);
 
-        const originalFetch = modelStore.fetchAndPersistGGUFMetadata;
-        const fetchedModels: any[] = [];
-        modelStore.fetchAndPersistGGUFMetadata = jest.fn(async model => {
-          fetchedModels.push(model);
-          return originalFetch.call(modelStore, model);
-        });
+      await modelStore.fetchAndPersistGGUFMetadata(model);
 
-        (modelStore as any).loadMissingGGUFMetadata();
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Should only have been called for normalModel, not failedModel
-        expect(fetchedModels).toHaveLength(1);
-        expect(fetchedModels[0].id).toBe('normal-model');
-
-        modelStore.fetchAndPersistGGUFMetadata = originalFetch;
-      });
-
-      it('should include models with ggufMetadataFailed=false or undefined', async () => {
-        const clearedModel = {
-          ...defaultModels[0],
-          id: 'cleared-model',
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: false,
-          modelType: ModelType.LLM,
-        };
-        const newModel = {
-          ...(defaultModels[1] || defaultModels[0]),
-          id: 'new-model',
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: undefined,
-          modelType: ModelType.LLM,
-        };
-        modelStore.models = [clearedModel, newModel];
-
-        (RNFS.exists as jest.Mock).mockResolvedValue(true);
-        (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
-          'general.architecture': 'llama',
-          'llama.block_count': 32,
-          'llama.embedding_length': 4096,
-          'llama.attention.head_count': 32,
-          'llama.attention.head_count_kv': 8,
-        });
-
-        const originalFetch = modelStore.fetchAndPersistGGUFMetadata;
-        const fetchedModels: any[] = [];
-        modelStore.fetchAndPersistGGUFMetadata = jest.fn(async model => {
-          fetchedModels.push(model);
-          return originalFetch.call(modelStore, model);
-        });
-
-        (modelStore as any).loadMissingGGUFMetadata();
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Both models should be processed
-        expect(fetchedModels).toHaveLength(2);
-        expect(fetchedModels.map((m: any) => m.id)).toEqual(
-          expect.arrayContaining(['cleared-model', 'new-model']),
-        );
-
-        modelStore.fetchAndPersistGGUFMetadata = originalFetch;
-      });
+      expect(model.ggufMetadata).toBeUndefined();
     });
 
-    describe('download onComplete clears ggufMetadataFailed', () => {
-      it('should clear ggufMetadataFailed when re-download completes successfully', async () => {
-        // Simulate a model that previously failed metadata fetch
-        const model = {
-          ...defaultModels[0],
-          id: 'redownload-model',
-          isDownloaded: true,
-          ggufMetadata: undefined,
-          ggufMetadataFailed: true,
-          modelType: ModelType.LLM,
-        };
-        modelStore.models = [model];
+    it('should populate ggufMetadata on success', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
 
-        // Verify the flag is true before clearing
-        expect(model.ggufMetadataFailed).toBe(true);
-
-        // Simulate what onComplete does: clear the flag, then fetch metadata
-        runInAction(() => {
-          model.ggufMetadataFailed = false;
-        });
-
-        (RNFS.exists as jest.Mock).mockResolvedValue(true);
-        (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
-          'general.architecture': 'llama',
-          'llama.block_count': 32,
-          'llama.embedding_length': 4096,
-          'llama.attention.head_count': 32,
-        });
-
-        await modelStore.fetchAndPersistGGUFMetadata(model);
-
-        // Flag stays false (cleared by onComplete), metadata is now populated
-        expect(model.ggufMetadataFailed).toBeFalsy();
-        expect(model.ggufMetadata).toBeDefined();
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
+        'general.architecture': 'llama',
+        'llama.block_count': 32,
+        'llama.embedding_length': 4096,
+        'llama.attention.head_count': 32,
+        'llama.attention.head_count_kv': 8,
+        'llama.vocab_size': 32000,
       });
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeDefined();
+      const metadata = model.ggufMetadata as unknown as GGUFMetadata;
+      expect(metadata.architecture).toBe('llama');
+      expect(metadata.n_layers).toBe(32);
     });
   });
 });
