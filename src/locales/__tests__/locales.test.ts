@@ -216,9 +216,13 @@ describe('exports', () => {
     expect(languageDisplayNames.ru).toBe(
       '\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)',
     );
-    expect(languageDisplayNames.uk).toBe('\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430 (UK)');
+    expect(languageDisplayNames.uk).toBe(
+      '\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430 (UK)',
+    );
     expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
-    expect(languageDisplayNames.zh_Hant).toBe('\u7E41\u9AD4\u4E2D\u6587 (ZH_HANT)');
+    expect(languageDisplayNames.zh_Hant).toBe(
+      '\u7E41\u9AD4\u4E2D\u6587 (ZH_HANT)',
+    );
   });
 
   it('languageDisplayNames has exactly the same keys as supportedLanguages', () => {
