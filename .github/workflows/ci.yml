@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       translation_only: ${{ steps.check.outputs.translation_only }}
+      llama_from_source: ${{ steps.check-llama.outputs.llama_from_source }}
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -49,6 +50,17 @@ jobs:
 
           echo "translation_only=$TRANSLATION_ONLY" >> "$GITHUB_OUTPUT"
           echo "Translation only: $TRANSLATION_ONLY"
+
+      - name: Check if llama.rn needs source build
+        id: check-llama
+        run: |
+          if grep '"llama.rn"' package.json | grep -q '#'; then
+            echo "llama_from_source=true" >> "$GITHUB_OUTPUT"
+            echo "llama.rn points to git ref - source build required"
+          else
+            echo "llama_from_source=false" >> "$GITHUB_OUTPUT"
+            echo "llama.rn is npm version - using prebuilts"
+          fi
 
   # Job for linting, type checking, unit testing
   build-and-test:
