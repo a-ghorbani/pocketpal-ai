@@ -61,14 +61,22 @@ const LANGUAGE_ASSERTIONS: Record<
     screenTitle: 'Настройки',
     firstCardTitle: 'Настройки инициализации модели',
   },
+  uk: {
+    screenTitle: 'Налаштування',
+    firstCardTitle: 'Налаштування ініціалізації моделі',
+  },
   zh: {
     screenTitle: '设置',
     firstCardTitle: '模型初始化设置',
   },
+  zh_Hant: {
+    screenTitle: '設定',
+    firstCardTitle: '模型初始化設定',
+  },
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh', 'en'];
+const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;
