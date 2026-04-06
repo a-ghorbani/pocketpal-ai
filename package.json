@@ -48,7 +48,7 @@
     "chat-formatter": "^0.3.4",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
-    "llama.rn": "0.12.0-rc.3",
+    "llama.rn": "mybigday/llama.rn#0ee4fe686aacb534cd2759ee09ca382a4cf41624",
     "marked": "^16.4.0",
     "mobx": "^6.15.0",
     "mobx-persist-store": "^1.1.8",

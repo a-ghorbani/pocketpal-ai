@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       translation_only: ${{ steps.check.outputs.translation_only }}
+      llama_from_source: ${{ steps.check-llama.outputs.llama_from_source }}
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -49,6 +50,17 @@ jobs:
 
           echo "translation_only=$TRANSLATION_ONLY" >> "$GITHUB_OUTPUT"
           echo "Translation only: $TRANSLATION_ONLY"
+
+      - name: Check if llama.rn needs source build
+        id: check-llama
+        run: |
+          if grep '"llama.rn"' package.json | grep -q '#'; then
+            echo "llama_from_source=true" >> "$GITHUB_OUTPUT"
+            echo "llama.rn points to git ref - source build required"
+          else
+            echo "llama_from_source=false" >> "$GITHUB_OUTPUT"
+            echo "llama.rn is npm version - using prebuilts"
+          fi
 
   # Job for linting, type checking, unit testing
   build-and-test:
@@ -192,6 +204,23 @@ jobs:
             -keypass dummy-ci-password \
             -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
 
+      - name: Set llama.rn source build flags
+        if: needs.detect-changes.outputs.llama_from_source == 'true'
+        run: |
+          sed -i 's/# rnllamaBuildFromSource=true/rnllamaBuildFromSource=true/' android/gradle.properties
+          echo "Enabled rnllamaBuildFromSource in gradle.properties"
+          grep rnllamaBuildFromSource android/gradle.properties
+
+      - name: Cache Android NDK build
+        if: needs.detect-changes.outputs.llama_from_source == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/llama.rn/android/.cxx
+          key: ${{ runner.os }}-android-cxx-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-android-cxx-
+
       - name: Build Android Release
         working-directory: android
         env:
@@ -305,6 +334,10 @@ jobs:
           </dict>
           </plist>
           EOL
+
+      - name: Set llama.rn source build flags
+        if: needs.detect-changes.outputs.llama_from_source == 'true'
+        run: echo "RNLLAMA_BUILD_FROM_SOURCE=1" >> "$GITHUB_ENV"
 
       - name: Install CocoaPods dependencies
         run: |
