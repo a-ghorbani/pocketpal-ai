@@ -516,6 +516,11 @@
 				CURRENT_PROJECT_VERSION = 135;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				ENABLE_BITCODE = NO;
+				HEADER_SEARCH_PATHS = (
+					"[\"$(inherited)\",",
+					"\"\\\"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp\\\"\"] \"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp\"",
+					"\"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp/common\"",
+				);
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -554,6 +559,11 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 135;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
+				HEADER_SEARCH_PATHS = (
+					"[\"$(inherited)\",",
+					"\"\\\"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp\\\"\"] \"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp\"",
+					"\"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp/common\"",
+				);
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -932,6 +942,11 @@
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 135;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
+				HEADER_SEARCH_PATHS = (
+					"[\"$(inherited)\",",
+					"\"\\\"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp\\\"\"] \"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp\"",
+					"\"/Users/aghorbani/codes/pocketpal-dev-team/worktrees/TASK-20260406-0901/node_modules/llama.rn/cpp/common\"",
+				);
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
