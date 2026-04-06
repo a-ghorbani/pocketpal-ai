@@ -204,6 +204,23 @@ jobs:
             -keypass dummy-ci-password \
             -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
 
+      - name: Set llama.rn source build flags
+        if: needs.detect-changes.outputs.llama_from_source == 'true'
+        run: |
+          sed -i 's/# rnllamaBuildFromSource=true/rnllamaBuildFromSource=true/' android/gradle.properties
+          echo "Enabled rnllamaBuildFromSource in gradle.properties"
+          grep rnllamaBuildFromSource android/gradle.properties
+
+      - name: Cache Android NDK build
+        if: needs.detect-changes.outputs.llama_from_source == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/llama.rn/android/.cxx
+          key: ${{ runner.os }}-android-cxx-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-android-cxx-
+
       - name: Build Android Release
         working-directory: android
         env:
