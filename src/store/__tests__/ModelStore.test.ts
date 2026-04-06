@@ -7,7 +7,7 @@ import {defaultModels} from '../defaultModels';
 
 import {downloadManager} from '../../services/downloads';
 
-import {ModelOrigin, ModelType} from '../../utils/types';
+import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
 import {
   basicModel,
   mockLlamaContextParams,
@@ -3089,6 +3089,75 @@ describe('ModelStore', () => {
       const remoteModels = modelStore.remoteModels;
 
       expect(remoteModels[0].id).toBe('srv-1/llama-7b');
+    });
+  });
+
+  describe('fetchAndPersistGGUFMetadata error handling', () => {
+    const {loadLlamaModelInfo} = require('llama.rn');
+
+    beforeEach(() => {
+      (loadLlamaModelInfo as jest.Mock).mockReset();
+    });
+
+    it('should not crash when loadLlamaModelInfo rejects', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockRejectedValue(
+        new Error('std::runtime_error'),
+      );
+
+      // Should not throw — error is caught internally
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeUndefined();
+    });
+
+    it('should handle null response gracefully', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue(null);
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeUndefined();
+    });
+
+    it('should populate ggufMetadata on success', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
+        'general.architecture': 'llama',
+        'llama.block_count': 32,
+        'llama.embedding_length': 4096,
+        'llama.attention.head_count': 32,
+        'llama.attention.head_count_kv': 8,
+        'llama.vocab_size': 32000,
+      });
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeDefined();
+      const metadata = model.ggufMetadata as unknown as GGUFMetadata;
+      expect(metadata.architecture).toBe('llama');
+      expect(metadata.n_layers).toBe(32);
     });
   });
 });
