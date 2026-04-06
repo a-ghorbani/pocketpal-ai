@@ -29,6 +29,16 @@ else
     echo "OpenCL ICD Loader already present."
 fi
 
+# Build JS output if llama.rn was installed from a git ref (lib/ is .gitignored
+# in the llama.rn repo, so git installs lack the compiled JS that npm includes).
+if [ -d "$LLAMA_RN_DIR" ] && [ ! -d "$LLAMA_RN_DIR/lib" ]; then
+    echo "llama.rn installed from git ref (lib/ missing). Building JS output..."
+    (cd "$LLAMA_RN_DIR" && npx react-native-builder-bob build)
+    echo "llama.rn JS output built successfully."
+else
+    echo "llama.rn lib/ already present (npm install or previously built)."
+fi
+
 # Build OpenCL stubs if building from source and stubs are missing
 if [ -f "$LLAMA_RN_DIR/scripts/build-opencl.sh" ] && [ ! -d "$LLAMA_RN_DIR/bin/arm64-v8a" ]; then
     echo "Building OpenCL stubs for llama.rn source build..."
