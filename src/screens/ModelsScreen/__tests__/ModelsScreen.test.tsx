@@ -336,10 +336,7 @@ describe('ModelsScreen', () => {
     });
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        expect.any(String),
-        'Disk full',
-      );
+      expect(alertSpy).toHaveBeenCalledWith(expect.any(String), 'Disk full');
     });
   });
 

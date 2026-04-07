@@ -2093,7 +2093,9 @@ class ModelStore {
 
   removeModelByFullPath = (fullPath: string) => {
     const index = this.models.findIndex(
-      m => (m.isLocal || m.origin === ModelOrigin.LOCAL) && m.fullPath === fullPath,
+      m =>
+        (m.isLocal || m.origin === ModelOrigin.LOCAL) &&
+        m.fullPath === fullPath,
     );
     if (index !== -1) {
       this.models.splice(index, 1);
