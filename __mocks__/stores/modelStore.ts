@@ -27,6 +27,7 @@ class MockModelStore {
 
   refreshDownloadStatuses: jest.Mock;
   addLocalModel: jest.Mock;
+  removeModelByFullPath: jest.Mock;
   setNContext: jest.Mock;
   updateUseAutoRelease: jest.Mock;
   setNoGpuDevices: jest.Mock;
@@ -68,6 +69,7 @@ class MockModelStore {
       engine: observable.ref,
       refreshDownloadStatuses: false,
       addLocalModel: false,
+      removeModelByFullPath: false,
       setNContext: false,
       updateUseAutoRelease: false,
 
@@ -107,6 +109,7 @@ class MockModelStore {
     });
     this.refreshDownloadStatuses = jest.fn();
     this.addLocalModel = jest.fn();
+    this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();
     this.updateUseAutoRelease = jest.fn();
     this.setNoGpuDevices = jest.fn();

@@ -2091,6 +2091,15 @@ class ModelStore {
     return modelToReturn;
   };
 
+  removeModelByFullPath = (fullPath: string) => {
+    const index = this.models.findIndex(
+      m => (m.isLocal || m.origin === ModelOrigin.LOCAL) && m.fullPath === fullPath,
+    );
+    if (index !== -1) {
+      this.models.splice(index, 1);
+    }
+  };
+
   addLocalModel = async (localFilePath: string) => {
     const filename = localFilePath.split('/').pop(); // Extract filename from path
     if (!filename) {
