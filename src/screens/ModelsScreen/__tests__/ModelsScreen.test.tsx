@@ -340,6 +340,58 @@ describe('ModelsScreen', () => {
     });
   });
 
+  it('prevents double-tap by ignoring second add while copy is in progress', async () => {
+    // First call: copy never resolves so isCopyingModel stays true
+    (RNFS.copyFile as jest.Mock).mockImplementation(
+      () => new Promise<void>(() => {}),
+    );
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+      if (path.includes('models/local')) {
+        return false;
+      }
+      return true;
+    });
+    (pick as jest.Mock).mockResolvedValue([
+      {uri: '/mock/file/path', name: 'mockModelFile.bin'},
+    ]);
+
+    const {getByTestId} = render(<ModelsScreen />);
+
+    // Open FAB and press local to start the first copy
+    const fabGroup = getByTestId('fab-group');
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    // Verify first copy started
+    await waitFor(() => {
+      expect(pick).toHaveBeenCalledTimes(1);
+    });
+
+    // Reset pick mock to detect if it gets called again
+    (pick as jest.Mock).mockClear();
+
+    // Try to press local FAB again while copy is in progress
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    // pick should NOT have been called again — the early return guard blocks it
+    expect(pick).not.toHaveBeenCalled();
+  });
+
   // Add tests for model filtering and grouping
   describe('Model filtering and grouping', () => {
     beforeEach(() => {
