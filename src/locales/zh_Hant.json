@@ -766,10 +766,10 @@
           "message": "舊版量化格式 - 模型可能無法執行。",
           "shortMessage": "舊版量化"
         },
-        "multiple": "{count} 個警告"
+        "multiple": "{{count}} 個警告"
       },
       "labels": {
-        "downloadSpeed": "{speed}"
+        "downloadSpeed": "{{speed}}"
       }
     },
     "search": {
