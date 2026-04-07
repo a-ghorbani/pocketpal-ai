@@ -151,7 +151,7 @@
     "saveChanges": "Зберегти зміни",
     "removeServer": "Вилучити сервер",
     "removeServerMessage": "Вилучити {{serverName}} та його {{count}} моделей?",
-    "removeRemoteModel": "Вилучити{modelName}} ({{serverName}})?",
+    "removeRemoteModel": "Вилучити {{modelName}} ({{serverName}})?",
     "retryConnection": "Спробувати ще раз",
     "enterUrlManually": "Введіть URL-адресу вручну",
     "manageServers": "Управління серверами"
