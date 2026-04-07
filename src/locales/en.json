@@ -187,7 +187,9 @@
       "fileAlreadyExists": "File already exists",
       "fileAlreadyExistsMessage": "A file with this name already exists. What would you like to do?",
       "replace": "Replace",
-      "keepBoth": "Keep Both"
+      "keepBoth": "Keep Both",
+      "copyingModel": "Copying model file...",
+      "copyFailed": "Failed to copy model file"
     },
     "labels": {
       "localModel": "Local",
