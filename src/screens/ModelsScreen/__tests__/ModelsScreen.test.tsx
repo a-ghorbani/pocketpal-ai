@@ -164,6 +164,9 @@ describe('ModelsScreen', () => {
       expect(RNFS.unlink).toHaveBeenCalledWith(
         '/path/to/documents/models/local/mockModelFile.bin',
       );
+      expect(modelStore.removeModelByFullPath).toHaveBeenCalledWith(
+        '/path/to/documents/models/local/mockModelFile.bin',
+      );
       expect(RNFS.copyFile).toHaveBeenCalled();
       expect(modelStore.addLocalModel).toHaveBeenCalled();
     });
@@ -259,6 +262,83 @@ describe('ModelsScreen', () => {
       );
       expect(modelStore.addLocalModel).toHaveBeenCalledWith(
         `/path/to/documents/models/local/mockModelFile_${counter}.bin`,
+      );
+    });
+  });
+
+  it('shows a copying snackbar while file is being copied', async () => {
+    let resolveCopy!: () => void;
+    (RNFS.copyFile as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          resolveCopy = resolve;
+        }),
+    );
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+      if (path.includes('models/local')) {
+        return false;
+      }
+      return true;
+    });
+    (pick as jest.Mock).mockResolvedValue([
+      {uri: '/mock/file/path', name: 'mockModelFile.bin'},
+    ]);
+
+    const {getByTestId} = render(<ModelsScreen />);
+
+    // Open FAB, press local
+    const fabGroup = getByTestId('fab-group');
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    // Snackbar should be visible while copy is pending
+    await waitFor(() => {
+      expect(getByTestId('copy-model-snackbar')).toBeTruthy();
+    });
+
+    // Resolve the copy
+    await act(async () => {
+      resolveCopy();
+    });
+  });
+
+  it('shows an error alert when copy fails', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    (RNFS.copyFile as jest.Mock).mockRejectedValue(new Error('Disk full'));
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+      if (path.includes('models/local')) {
+        return false;
+      }
+      return true;
+    });
+    (pick as jest.Mock).mockResolvedValue([
+      {uri: '/mock/file/path', name: 'mockModelFile.bin'},
+    ]);
+
+    const {getByTestId} = render(<ModelsScreen />);
+
+    const fabGroup = getByTestId('fab-group');
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        'Disk full',
       );
     });
   });
