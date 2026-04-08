@@ -57,6 +57,7 @@ class ChatSessionRepository {
     initialMessages = [],
     completionSettings = defaultCompletionSettings,
     activePalId,
+    settingsSource,
   ) {
     return {
       id: 'mock-session-id',
@@ -105,6 +106,10 @@ class ChatSessionRepository {
   }
 
   async setSessionActivePal(sessionId, palId) {
+    return; // Mock: do nothing
+  }
+
+  async setSessionSettingsSource(sessionId, settingsSource) {
     return; // Mock: do nothing
   }
 
