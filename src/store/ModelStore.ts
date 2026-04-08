@@ -2108,14 +2108,23 @@ class ModelStore {
       throw new Error('Invalid local file path');
     }
 
+    // Read file size from disk
+    let fileSize = 0;
+    try {
+      const stat = await RNFS.stat(localFilePath);
+      fileSize = Number(stat.size) || 0;
+    } catch (e) {
+      console.warn('[ModelStore] Failed to read file size:', e);
+    }
+
     const defaultSettings = getLocalModelDefaultSettings();
 
     const model: Model = {
       id: uuidv4(), // Generate a unique ID
       author: '',
       name: filename,
-      size: 0, // Placeholder for UI to ignore
-      params: 0, // Placeholder for UI to ignore
+      size: fileSize,
+      params: 0, // Will be updated after GGUF metadata read
       isDownloaded: true,
       downloadUrl: '',
       hfUrl: '',
@@ -2136,6 +2145,9 @@ class ModelStore {
       this.models.push(model);
       this.refreshDownloadStatuses();
     });
+
+    // Read GGUF metadata for accurate memory estimation (same as HF download flow)
+    await this.fetchAndPersistGGUFMetadata(model);
   };
 
   updateModelChatTemplate = (
