@@ -107,15 +107,21 @@ export const ChatScreen: React.FC = observer(() => {
 
   const thinkingSupported = modelStore.activeModel?.supportsThinking ?? false;
 
-  const thinkingEnabled = (() => {
-    const currentSession = chatSessionStore.sessions.find(
-      s => s.id === chatSessionStore.activeSessionId,
-    );
-    const settings =
-      currentSession?.completionSettings ??
-      chatSessionStore.newChatCompletionSettings;
-    return settings.enable_thinking ?? true;
-  })();
+  const [thinkingEnabled, setThinkingEnabled] = useState(true);
+  const activeSession = chatSessionStore.sessions.find(
+    s => s.id === chatSessionStore.activeSessionId,
+  );
+  React.useEffect(() => {
+    chatSessionStore.getCurrentCompletionSettings().then(settings => {
+      setThinkingEnabled(settings.enable_thinking ?? true);
+    });
+  }, [
+    chatSessionStore.activeSessionId,
+    activeSession?.settingsSource,
+    activeSession?.completionSettings,
+    chatSessionStore.newChatCompletionSettings,
+    activePalId,
+  ]);
 
   // Show loading bubble only during the thinking phase (inferencing but not streaming)
   const isThinking = modelStore.inferencing && !modelStore.isStreaming;
@@ -126,9 +132,11 @@ export const ChatScreen: React.FC = observer(() => {
     );
 
     if (currentSession) {
-      // Update session-specific settings
+      // Use resolved settings so pal overrides (temperature, etc.) are preserved
+      const resolvedSettings =
+        await chatSessionStore.getCurrentCompletionSettings();
       const updatedSettings = {
-        ...currentSession.completionSettings,
+        ...resolvedSettings,
         enable_thinking: enabled,
       };
       await chatSessionStore.updateSessionCompletionSettings(updatedSettings);

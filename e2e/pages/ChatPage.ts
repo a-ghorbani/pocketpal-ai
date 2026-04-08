@@ -6,7 +6,12 @@
  */
 
 import {BasePage, ChainableElement} from './BasePage';
-import {Selectors, byText} from '../helpers/selectors';
+import {
+  Selectors,
+  byText,
+  byAccessibilityLabel,
+  byPartialText,
+} from '../helpers/selectors';
 import {Gestures} from '../helpers/gestures';
 
 declare const browser: WebdriverIO.Browser;
@@ -200,6 +205,72 @@ export class ChatPage extends BasePage {
     await input.clearValue();
     await input.setValue(value);
     await this.dismissKeyboard();
+  }
+
+  /**
+   * Get the temperature value displayed in the generation settings sheet.
+   * Must be called when the generation settings sheet is open.
+   */
+  async getTemperatureValue(): Promise<string> {
+    await Gestures.scrollInSheetToElement(
+      Selectors.generationSettings.temperatureInput,
+      3,
+    );
+    const input = browser.$(Selectors.generationSettings.temperatureInput);
+    await input.waitForDisplayed({timeout: 5000});
+    if ((browser as any).isAndroid) {
+      return (await input.getAttribute('text')) || '';
+    }
+    return (await input.getAttribute('value')) || '';
+  }
+
+  /**
+   * Close the generation settings sheet by tapping outside or using back gesture
+   */
+  async closeGenerationSettings(): Promise<void> {
+    // Swipe down to dismiss the bottom sheet
+    await Gestures.swipe({
+      startXPercent: 0.5,
+      startYPercent: 0.3,
+      endXPercent: 0.5,
+      endYPercent: 0.9,
+      duration: 300,
+    });
+    await browser.pause(500);
+  }
+
+  /**
+   * Open the pal/model picker sheet by tapping the pal selector button.
+   */
+  async openPalPicker(): Promise<void> {
+    const palBtn = browser.$(byAccessibilityLabel('Select Pal'));
+    await palBtn.waitForDisplayed({timeout: 5000});
+    await palBtn.click();
+    await browser.pause(500);
+  }
+
+  /**
+   * Select a pal by name from the pal picker sheet (must be open).
+   * Swipes left to reach the Pals tab since the picker defaults to Models.
+   */
+  async selectPal(palName: string): Promise<void> {
+    // The picker shows Models tab by default.
+    // Swipe right to reach the Pals tab (Pals is to the left of Models).
+    await Gestures.swipe({
+      startXPercent: 0.2,
+      startYPercent: 0.7,
+      endXPercent: 0.8,
+      endYPercent: 0.7,
+      duration: 300,
+    });
+    await browser.pause(500);
+
+    // Now find and tap the pal using partial text match
+    // (Pressable may combine child text labels into one accessibility element)
+    const palItem = browser.$(byPartialText(palName));
+    await palItem.waitForDisplayed({timeout: 5000});
+    await palItem.click();
+    await browser.pause(500);
   }
 
   /**
