@@ -850,25 +850,31 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   )}
 
                   {/* Context Length */}
-                  {model.hfModel?.specs?.gguf?.context_length && (
+                  {(model.hfModel?.specs?.gguf?.context_length ||
+                    model.ggufMetadata?.context_length) && (
                     <View style={styles.technicalDetailCard}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.contextLength}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
-                        {model.hfModel.specs.gguf.context_length.toLocaleString()}
+                        {(
+                          model.hfModel?.specs?.gguf?.context_length ||
+                          model.ggufMetadata?.context_length
+                        )?.toLocaleString()}
                       </Text>
                     </View>
                   )}
 
                   {/* Architecture */}
-                  {model.hfModel?.specs?.gguf?.architecture && (
+                  {(model.hfModel?.specs?.gguf?.architecture ||
+                    model.ggufMetadata?.architecture) && (
                     <View style={styles.technicalDetailCard}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.architecture}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
-                        {model.hfModel.specs.gguf.architecture}
+                        {model.hfModel?.specs?.gguf?.architecture ||
+                          model.ggufMetadata?.architecture}
                       </Text>
                     </View>
                   )}

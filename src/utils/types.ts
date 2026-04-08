@@ -358,6 +358,7 @@ export interface GGUFMetadata {
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
+  context_length?: number; // Native context length from GGUF
 }
 
 export interface Model {

@@ -1256,6 +1256,9 @@ class ModelStore {
       // SWA (Sliding Window Attention) - optional
       const sliding_window = getArchValue('attention.sliding_window');
 
+      // Context length from GGUF
+      const context_length = getArchValue('context_length');
+
       const metadata = {
         architecture,
         n_layers,
@@ -1266,10 +1269,18 @@ class ModelStore {
         n_embd_head_k,
         n_embd_head_v,
         sliding_window,
+        context_length,
       };
+
+      // Read parameter count from GGUF if available
+      const paramCount = (modelInfo as any)['general.parameter_count'];
 
       runInAction(() => {
         model.ggufMetadata = metadata;
+        // Backfill params from GGUF when not set (e.g. local models)
+        if (!model.params && paramCount) {
+          model.params = Number(paramCount) || 0;
+        }
       });
     } catch (error) {
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
