@@ -751,7 +751,9 @@
       "fileAlreadyExists": "Файл уже существует",
       "fileAlreadyExistsMessage": "Файл с таким именем уже существует. Что вы хотите сделать?",
       "replace": "Заменить",
-      "keepBoth": "Сохранить оба"
+      "keepBoth": "Сохранить оба",
+      "copyingModel": "Копирование файла модели...",
+      "copyFailed": "Ошибка копирования файла модели"
     },
     "labels": {
       "localModel": "Локальная",
