@@ -112,9 +112,15 @@ export const ChatScreen: React.FC = observer(() => {
     s => s.id === chatSessionStore.activeSessionId,
   );
   React.useEffect(() => {
+    let cancelled = false;
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
-      setThinkingEnabled(settings.enable_thinking ?? true);
+      if (!cancelled) {
+        setThinkingEnabled(settings.enable_thinking ?? true);
+      }
     });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     chatSessionStore.activeSessionId,

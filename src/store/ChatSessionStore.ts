@@ -343,11 +343,13 @@ class ChatSessionStore {
         });
       }
     } else {
-      // Resolve settings including pal overrides so the session snapshot
-      // matches what the model actually receives
+      // Resolve settings using the selected settings source so the
+      // session snapshot matches what the model actually receives
+      const palIdForSettings =
+        this.newChatSettingsSource === 'pal' ? this.newChatPalId : undefined;
       const settings = await this.resolveCompletionSettings(
         undefined,
-        this.newChatPalId,
+        palIdForSettings,
       );
       await this.createNewSession(NEW_SESSION_TITLE, [message], settings);
     }
