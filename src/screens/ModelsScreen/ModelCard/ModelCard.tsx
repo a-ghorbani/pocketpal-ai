@@ -20,7 +20,6 @@ import {
   IconButton,
   Text,
   TouchableRipple,
-  ActivityIndicator,
   Snackbar,
   Switch,
   HelperText,
@@ -545,7 +544,9 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       ) {
         return (
           <Button
+            testID="loading-indicator"
             disabled={true}
+            loading={true}
             style={[
               styles.primaryActionButton,
               {
@@ -554,12 +555,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               },
             ]}
             textColor={theme.colors.btnPrimaryText}>
-            <ActivityIndicator
-              testID="loading-indicator"
-              animating={true}
-              color={theme.colors.btnPrimaryText}
-              size="small"
-            />
+            {''}
           </Button>
         );
       }
@@ -854,25 +850,31 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   )}
 
                   {/* Context Length */}
-                  {model.hfModel?.specs?.gguf?.context_length && (
+                  {(model.hfModel?.specs?.gguf?.context_length ||
+                    model.ggufMetadata?.context_length) && (
                     <View style={styles.technicalDetailCard}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.contextLength}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
-                        {model.hfModel.specs.gguf.context_length.toLocaleString()}
+                        {(
+                          model.hfModel?.specs?.gguf?.context_length ||
+                          model.ggufMetadata?.context_length
+                        )?.toLocaleString()}
                       </Text>
                     </View>
                   )}
 
                   {/* Architecture */}
-                  {model.hfModel?.specs?.gguf?.architecture && (
+                  {(model.hfModel?.specs?.gguf?.architecture ||
+                    model.ggufMetadata?.architecture) && (
                     <View style={styles.technicalDetailCard}>
                       <Text style={styles.technicalDetailLabel}>
                         {l10n.models.modelCard.labels.architecture}
                       </Text>
                       <Text style={styles.technicalDetailValue}>
-                        {model.hfModel.specs.gguf.architecture}
+                        {model.hfModel?.specs?.gguf?.architecture ||
+                          model.ggufMetadata?.architecture}
                       </Text>
                     </View>
                   )}

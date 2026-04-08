@@ -31,6 +31,7 @@ import {
   getMmprojFiles,
   filterProjectionModels,
   inferRepoFromModelId,
+  parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -1256,6 +1257,9 @@ class ModelStore {
       // SWA (Sliding Window Attention) - optional
       const sliding_window = getArchValue('attention.sliding_window');
 
+      // Context length from GGUF
+      const context_length = getArchValue('context_length');
+
       const metadata = {
         architecture,
         n_layers,
@@ -1266,10 +1270,18 @@ class ModelStore {
         n_embd_head_k,
         n_embd_head_v,
         sliding_window,
+        context_length,
       };
+
+      const paramCount = parseSizeLabel(
+        (modelInfo as any)['general.size_label'],
+      );
 
       runInAction(() => {
         model.ggufMetadata = metadata;
+        if (!model.params && paramCount) {
+          model.params = paramCount;
+        }
       });
     } catch (error) {
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
@@ -2091,10 +2103,30 @@ class ModelStore {
     return modelToReturn;
   };
 
+  removeModelByFullPath = (fullPath: string) => {
+    const index = this.models.findIndex(
+      m =>
+        (m.isLocal || m.origin === ModelOrigin.LOCAL) &&
+        m.fullPath === fullPath,
+    );
+    if (index !== -1) {
+      this.models.splice(index, 1);
+    }
+  };
+
   addLocalModel = async (localFilePath: string) => {
     const filename = localFilePath.split('/').pop(); // Extract filename from path
     if (!filename) {
       throw new Error('Invalid local file path');
+    }
+
+    // Read file size from disk
+    let fileSize = 0;
+    try {
+      const stat = await RNFS.stat(localFilePath);
+      fileSize = Number(stat.size) || 0;
+    } catch (e) {
+      console.warn('[ModelStore] Failed to read file size:', e);
     }
 
     const defaultSettings = getLocalModelDefaultSettings();
@@ -2103,8 +2135,8 @@ class ModelStore {
       id: uuidv4(), // Generate a unique ID
       author: '',
       name: filename,
-      size: 0, // Placeholder for UI to ignore
-      params: 0, // Placeholder for UI to ignore
+      size: fileSize,
+      params: 0, // Will be updated after GGUF metadata read
       isDownloaded: true,
       downloadUrl: '',
       hfUrl: '',
@@ -2125,6 +2157,14 @@ class ModelStore {
       this.models.push(model);
       this.refreshDownloadStatuses();
     });
+
+    // Get the MobX observable version — the plain `model` object was wrapped
+    // in a proxy when pushed into the observable array. We must pass the proxy
+    // so that mutations inside fetchAndPersistGGUFMetadata trigger reactivity.
+    const observableModel = this.models.find(m => m.id === model.id);
+    if (observableModel) {
+      await this.fetchAndPersistGGUFMetadata(observableModel);
+    }
   };
 
   updateModelChatTemplate = (
