@@ -103,6 +103,9 @@ function convertJsonSchemaToPocketPal(
       case 'select':
         pocketPalType = 'select';
         break;
+      case 'combobox':
+        pocketPalType = 'combobox';
+        break;
       case 'text':
       default:
         pocketPalType = 'text';
@@ -119,7 +122,10 @@ function convertJsonSchemaToPocketPal(
     };
 
     // Add options for select fields
-    if (pocketPalType === 'select' && Array.isArray(definition.options)) {
+    if (
+      (pocketPalType === 'select' || pocketPalType === 'combobox') &&
+      Array.isArray(definition.options)
+    ) {
       paramDef.options = definition.options;
     }
 
@@ -145,7 +151,8 @@ function extractDefaultParametersFromSchema(
     // Set appropriate default based on type
     switch (definition.type) {
       case 'select':
-        // For select, use schema default or empty string (single-select)
+      case 'combobox':
+        // For select/combobox, use schema default or empty string (single-select)
         defaults[key] =
           definition.default !== undefined ? definition.default : '';
         break;

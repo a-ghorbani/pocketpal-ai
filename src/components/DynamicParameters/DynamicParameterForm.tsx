@@ -8,6 +8,7 @@ import {createStyles} from './styles';
 import {DynamicTextField} from './DynamicTextField';
 import {DynamicOptionField} from './DynamicOptionField';
 import {DynamicDateTimeTagField} from './DynamicDateTimeTagField';
+import {DynamicComboboxField} from './DynamicComboboxField';
 
 interface DynamicParameterFormProps {
   schema: ParameterDefinition[];
@@ -37,6 +38,9 @@ export const DynamicParameterForm: React.FC<DynamicParameterFormProps> = ({
 
       case 'select':
         return <DynamicOptionField key={parameter.key} {...commonProps} />;
+
+      case 'combobox':
+        return <DynamicComboboxField key={parameter.key} {...commonProps} />;
 
       case 'datetime_tag':
         return <DynamicDateTimeTagField key={parameter.key} {...commonProps} />;
