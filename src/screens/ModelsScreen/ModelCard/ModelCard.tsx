@@ -20,7 +20,6 @@ import {
   IconButton,
   Text,
   TouchableRipple,
-  ActivityIndicator,
   Snackbar,
   Switch,
   HelperText,
@@ -545,7 +544,9 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       ) {
         return (
           <Button
+            testID="loading-indicator"
             disabled={true}
+            loading={true}
             style={[
               styles.primaryActionButton,
               {
@@ -554,12 +555,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               },
             ]}
             textColor={theme.colors.btnPrimaryText}>
-            <ActivityIndicator
-              testID="loading-indicator"
-              animating={true}
-              color={theme.colors.btnPrimaryText}
-              size="small"
-            />
+            {''}
           </Button>
         );
       }
