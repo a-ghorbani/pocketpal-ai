@@ -99,6 +99,26 @@ describe('DynamicParameterForm', () => {
     expect(getByTestId('dynamic-option-testSelect')).toBeTruthy();
   });
 
+  it('should render combobox field for combobox type', () => {
+    const schema: ParameterDefinition[] = [
+      {
+        key: 'testCombobox',
+        type: 'combobox',
+        label: 'Test Combobox',
+        required: false,
+        options: ['Option A', 'Option B'],
+      },
+    ];
+
+    const {getByTestId} = render(
+      <TestWrapper>
+        <DynamicParameterForm schema={schema} />
+      </TestWrapper>,
+    );
+
+    expect(getByTestId('dynamic-combobox-testCombobox')).toBeTruthy();
+  });
+
   it('should render datetime field for datetime_tag type', () => {
     const schema: ParameterDefinition[] = [
       {
