@@ -2157,8 +2157,13 @@ class ModelStore {
       this.refreshDownloadStatuses();
     });
 
-    // Read GGUF metadata for accurate memory estimation (same as HF download flow)
-    await this.fetchAndPersistGGUFMetadata(model);
+    // Get the MobX observable version — the plain `model` object was wrapped
+    // in a proxy when pushed into the observable array. We must pass the proxy
+    // so that mutations inside fetchAndPersistGGUFMetadata trigger reactivity.
+    const observableModel = this.models.find(m => m.id === model.id);
+    if (observableModel) {
+      await this.fetchAndPersistGGUFMetadata(observableModel);
+    }
   };
 
   updateModelChatTemplate = (
