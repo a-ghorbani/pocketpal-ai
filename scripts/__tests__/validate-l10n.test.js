@@ -30,7 +30,9 @@ function runWithLocales(overrides = {}) {
       'ko.json',
       'ms.json',
       'ru.json',
+      'uk.json',
       'zh.json',
+      'zh_Hant.json',
     ]) {
       const src = path.join(LOCALES_DIR, filename);
       const dest = path.join(tmpLocalesDir, filename);
@@ -87,7 +89,9 @@ describe('validate-l10n.js', () => {
     expect(result.output).toContain('ko.json: valid JSON');
     expect(result.output).toContain('ms.json: valid JSON');
     expect(result.output).toContain('ru.json: valid JSON');
+    expect(result.output).toContain('uk.json: valid JSON');
     expect(result.output).toContain('zh.json: valid JSON');
+    expect(result.output).toContain('zh_Hant.json: valid JSON');
     expect(result.output).toContain('All l10n files valid');
   });
 
