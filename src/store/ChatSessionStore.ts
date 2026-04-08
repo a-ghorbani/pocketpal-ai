@@ -179,8 +179,7 @@ class ChatSessionStore {
           messages,
           completionSettings,
           activePalId: session.activePalId,
-          settingsSource:
-            (session.settingsSource as 'pal' | 'custom') || 'pal',
+          settingsSource: (session.settingsSource as 'pal' | 'custom') || 'pal',
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
       }

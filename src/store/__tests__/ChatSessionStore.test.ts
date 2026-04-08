@@ -24,6 +24,7 @@ jest.spyOn(chatSessionRepository, 'updateSessionCompletionSettings');
 jest.spyOn(chatSessionRepository, 'getGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'saveGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'setSessionActivePal');
+jest.spyOn(chatSessionRepository, 'setSessionSettingsSource');
 
 describe('chatSessionStore', () => {
   const mockMessage = {
@@ -426,6 +427,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         defaultCompletionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith(
         mockNewSession.id,
@@ -489,6 +491,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         originalSession.completionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions.length).toBe(2);
       expect(chatSessionStore.sessions[1].completionSettings.temperature).toBe(
@@ -626,6 +629,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         originalSession.completionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions.length).toBe(2);
       expect(chatSessionStore.sessions[1].title).toBe(
@@ -759,12 +763,18 @@ describe('chatSessionStore', () => {
       (
         chatSessionRepository.updateSessionCompletionSettings as jest.Mock
       ).mockResolvedValue(undefined);
+      (
+        chatSessionRepository.setSessionSettingsSource as jest.Mock
+      ).mockResolvedValue(undefined);
 
       await chatSessionStore.updateSessionCompletionSettings(newSettings);
 
       expect(
         chatSessionRepository.updateSessionCompletionSettings,
       ).toHaveBeenCalledWith(session.id, newSettings);
+      expect(
+        chatSessionRepository.setSessionSettingsSource,
+      ).toHaveBeenCalledWith(session.id, 'custom');
       expect(chatSessionStore.sessions[0].completionSettings).toEqual(
         newSettings,
       );
@@ -847,6 +857,7 @@ describe('chatSessionStore', () => {
         [],
         customSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions[0].completionSettings).toEqual(
         customSettings,

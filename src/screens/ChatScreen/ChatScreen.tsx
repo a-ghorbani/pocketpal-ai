@@ -115,6 +115,7 @@ export const ChatScreen: React.FC = observer(() => {
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
       setThinkingEnabled(settings.enable_thinking ?? true);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     chatSessionStore.activeSessionId,
     activeSession?.settingsSource,
