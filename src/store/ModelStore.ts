@@ -31,6 +31,7 @@ import {
   getMmprojFiles,
   filterProjectionModels,
   inferRepoFromModelId,
+  parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -1272,14 +1273,14 @@ class ModelStore {
         context_length,
       };
 
-      // Read parameter count from GGUF if available
-      const paramCount = (modelInfo as any)['general.parameter_count'];
+      const paramCount = parseSizeLabel(
+        (modelInfo as any)['general.size_label'],
+      );
 
       runInAction(() => {
         model.ggufMetadata = metadata;
-        // Backfill params from GGUF when not set (e.g. local models)
         if (!model.params && paramCount) {
-          model.params = Number(paramCount) || 0;
+          model.params = paramCount;
         }
       });
     } catch (error) {
