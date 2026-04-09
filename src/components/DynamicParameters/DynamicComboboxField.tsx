@@ -23,26 +23,39 @@ const ComboboxInput: React.FC<{
   error?: string;
 }> = ({parameter, value, onChange, disabled, error}) => {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   const options = parameter.options || [];
-  const filteredOptions = value
-    ? options.filter(opt => opt.toLowerCase().includes(value.toLowerCase()))
+  const displayValue = isSearching ? searchText : value || '';
+  const filteredOptions = isSearching && searchText
+    ? options.filter(opt => opt.toLowerCase().includes(searchText.toLowerCase()))
     : options;
 
   return (
     <Menu
       visible={menuVisible && filteredOptions.length > 0}
-      onDismiss={() => setMenuVisible(false)}
+      onDismiss={() => {
+        setMenuVisible(false);
+        setIsSearching(false);
+        setSearchText('');
+      }}
       selectable
       anchor={
         <TextInput
           testID={`dynamic-combobox-input-${parameter.key}`}
-          value={value || ''}
+          value={displayValue}
           onChangeText={text => {
+            setSearchText(text);
+            setIsSearching(true);
             onChange(text);
             setMenuVisible(true);
           }}
-          onFocus={() => setMenuVisible(true)}
+          onFocus={() => {
+            setIsSearching(false);
+            setSearchText('');
+            setMenuVisible(true);
+          }}
           error={!!error}
           placeholder={parameter.placeholder}
           helperText={error}
@@ -51,7 +64,17 @@ const ComboboxInput: React.FC<{
           right={
             <PaperTextInput.Icon
               icon={menuVisible ? 'chevron-up' : 'chevron-down'}
-              onPress={() => setMenuVisible(v => !v)}
+              onPress={() => {
+                if (menuVisible) {
+                  setMenuVisible(false);
+                  setIsSearching(false);
+                  setSearchText('');
+                } else {
+                  setIsSearching(false);
+                  setSearchText('');
+                  setMenuVisible(true);
+                }
+              }}
             />
           }
         />
@@ -63,6 +86,8 @@ const ComboboxInput: React.FC<{
           onPress={() => {
             onChange(option);
             setMenuVisible(false);
+            setIsSearching(false);
+            setSearchText('');
           }}
           selected={option === value}
           testID={`dynamic-combobox-option-${parameter.key}-${option}`}
