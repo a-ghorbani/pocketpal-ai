@@ -111,9 +111,7 @@ describe('DynamicComboboxField', () => {
     fireEvent(input, 'focus');
 
     // Select an option
-    const option = getByTestId(
-      'dynamic-combobox-option-testCombobox-French',
-    );
+    const option = getByTestId('dynamic-combobox-option-testCombobox-French');
     fireEvent.press(option);
 
     expect(input.props.value).toBe('French');
