@@ -34,6 +34,7 @@ const ComboboxInput: React.FC<{
           opt.toLowerCase().includes(searchText.toLowerCase()),
         )
       : options;
+  const isMenuOpen = menuVisible && filteredOptions.length > 0;
 
   const resetSearch = () => {
     setIsSearching(false);
@@ -47,7 +48,7 @@ const ComboboxInput: React.FC<{
 
   return (
     <Menu
-      visible={menuVisible && filteredOptions.length > 0}
+      visible={isMenuOpen}
       onDismiss={closeMenu}
       anchorPosition="bottom"
       selectable
@@ -56,12 +57,18 @@ const ComboboxInput: React.FC<{
           testID={`dynamic-combobox-input-${parameter.key}`}
           value={displayValue}
           onChangeText={text => {
+            if (disabled) {
+              return;
+            }
             setSearchText(text);
             setIsSearching(true);
             onChange(text);
             setMenuVisible(true);
           }}
           onFocus={() => {
+            if (disabled) {
+              return;
+            }
             resetSearch();
             setMenuVisible(true);
           }}
@@ -72,8 +79,12 @@ const ComboboxInput: React.FC<{
           returnKeyType="default"
           right={
             <PaperTextInput.Icon
-              icon={menuVisible ? 'chevron-up' : 'chevron-down'}
+              icon={isMenuOpen ? 'chevron-up' : 'chevron-down'}
+              disabled={disabled}
               onPress={() => {
+                if (disabled) {
+                  return;
+                }
                 if (menuVisible) {
                   closeMenu();
                 } else {

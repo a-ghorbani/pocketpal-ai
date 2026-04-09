@@ -121,7 +121,7 @@ function convertJsonSchemaToPocketPal(
       description: definition.description,
     };
 
-    // Add options for select fields
+    // Add options for select and combobox fields
     if (
       (pocketPalType === 'select' || pocketPalType === 'combobox') &&
       Array.isArray(definition.options)
