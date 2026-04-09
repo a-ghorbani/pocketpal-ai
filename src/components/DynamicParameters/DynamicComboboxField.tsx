@@ -40,6 +40,7 @@ const ComboboxInput: React.FC<{
         setIsSearching(false);
         setSearchText('');
       }}
+      anchorPosition="bottom"
       selectable
       anchor={
         <TextInput
