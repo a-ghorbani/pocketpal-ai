@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {View} from 'react-native';
-import {Text} from 'react-native-paper';
+import {Text, TextInput as PaperTextInput} from 'react-native-paper';
 import {Controller, useFormContext} from 'react-hook-form';
 
 import type {ParameterDefinition} from '../../types/pal';
@@ -48,6 +48,12 @@ const ComboboxInput: React.FC<{
           helperText={error}
           editable={!disabled}
           returnKeyType="default"
+          right={
+            <PaperTextInput.Icon
+              icon={menuVisible ? 'chevron-up' : 'chevron-down'}
+              onPress={() => setMenuVisible(v => !v)}
+            />
+          }
         />
       }>
       {filteredOptions.map(option => (
