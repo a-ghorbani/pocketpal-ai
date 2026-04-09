@@ -187,7 +187,9 @@
       "fileAlreadyExists": "Файл уже існує",
       "fileAlreadyExistsMessage": "Файл із такою назвою вже існує. Що ви хочете зробити?",
       "replace": "Замінити",
-      "keepBoth": "Збережіть обидва"
+      "keepBoth": "Збережіть обидва",
+      "copyingModel": "Копіювання файлу моделі...",
+      "copyFailed": "Не вдалося скопіювати файл моделі"
     },
     "labels": {
       "localModel": "Локальний",
