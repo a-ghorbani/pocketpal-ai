@@ -28,18 +28,27 @@ const ComboboxInput: React.FC<{
 
   const options = parameter.options || [];
   const displayValue = isSearching ? searchText : value || '';
-  const filteredOptions = isSearching && searchText
-    ? options.filter(opt => opt.toLowerCase().includes(searchText.toLowerCase()))
-    : options;
+  const filteredOptions =
+    isSearching && searchText
+      ? options.filter(opt =>
+          opt.toLowerCase().includes(searchText.toLowerCase()),
+        )
+      : options;
+
+  const resetSearch = () => {
+    setIsSearching(false);
+    setSearchText('');
+  };
+
+  const closeMenu = () => {
+    setMenuVisible(false);
+    resetSearch();
+  };
 
   return (
     <Menu
       visible={menuVisible && filteredOptions.length > 0}
-      onDismiss={() => {
-        setMenuVisible(false);
-        setIsSearching(false);
-        setSearchText('');
-      }}
+      onDismiss={closeMenu}
       anchorPosition="bottom"
       selectable
       anchor={
@@ -53,8 +62,7 @@ const ComboboxInput: React.FC<{
             setMenuVisible(true);
           }}
           onFocus={() => {
-            setIsSearching(false);
-            setSearchText('');
+            resetSearch();
             setMenuVisible(true);
           }}
           error={!!error}
@@ -67,12 +75,9 @@ const ComboboxInput: React.FC<{
               icon={menuVisible ? 'chevron-up' : 'chevron-down'}
               onPress={() => {
                 if (menuVisible) {
-                  setMenuVisible(false);
-                  setIsSearching(false);
-                  setSearchText('');
+                  closeMenu();
                 } else {
-                  setIsSearching(false);
-                  setSearchText('');
+                  resetSearch();
                   setMenuVisible(true);
                 }
               }}
@@ -86,9 +91,7 @@ const ComboboxInput: React.FC<{
           label={option}
           onPress={() => {
             onChange(option);
-            setMenuVisible(false);
-            setIsSearching(false);
-            setSearchText('');
+            closeMenu();
           }}
           selected={option === value}
           testID={`dynamic-combobox-option-${parameter.key}-${option}`}
