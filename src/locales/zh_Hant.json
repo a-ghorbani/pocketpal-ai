@@ -707,7 +707,9 @@
       "fileAlreadyExists": "檔案已存在",
       "fileAlreadyExistsMessage": "同名檔案已存在。您想要怎麼做？",
       "replace": "替換",
-      "keepBoth": "保留兩者"
+      "keepBoth": "保留兩者",
+      "copyingModel": "正在複製模型檔案...",
+      "copyFailed": "複製模型檔案失敗"
     },
     "labels": {
       "localModel": "本機",
