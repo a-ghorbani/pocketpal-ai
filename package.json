@@ -30,6 +30,7 @@
     "@flyerhq/react-native-link-preview": "^1.6.0",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
+    "@mhpdev/react-native-speech": "github:a-ghorbani/react-native-speech#3ae0094b094d7c3d4e17378e53199813384e88f9",
     "@nozbe/watermelondb": "^0.28.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-clipboard/clipboard": "^1.16.3",
