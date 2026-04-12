@@ -68,7 +68,9 @@ const App = observer(() => {
   // Initialize TTS store (memory gate + AppState/session listeners).
   // Fire-and-forget: `init()` is idempotent and swallows its own errors.
   React.useEffect(() => {
-    void ttsStore.init();
+    ttsStore.init().catch(() => {
+      // init() swallows its own errors; catch to satisfy no-floating-promises.
+    });
   }, []);
 
   return (

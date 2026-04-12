@@ -198,7 +198,9 @@ export class TTSStore {
       return;
     }
     this.lastSpokenMessageId = messageId;
-    void this.play(messageId, text);
+    this.play(messageId, text).catch(() => {
+      // play() already logs and recovers; swallow to satisfy no-floating-promises.
+    });
   }
 }
 
