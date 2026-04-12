@@ -6,7 +6,13 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
-import {chatSessionStore, modelStore, palStore, uiStore} from '../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../store';
 
 import {MessageType, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
@@ -364,6 +370,13 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+
+      // Fire TTS auto-speak after the final completionResult is written.
+      // Store enforces auto-speak / voice / idempotency gating internally.
+      ttsStore.onAssistantMessageComplete(
+        currentMessageInfo.current.id,
+        result.text,
+      );
     } catch (error) {
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
