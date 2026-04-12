@@ -13,7 +13,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 
-import {uiStore} from './src/store';
+import {ttsStore, uiStore} from './src/store';
 import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
@@ -63,6 +63,12 @@ const App = observer(() => {
   // Initialize locale with the current language
   React.useEffect(() => {
     initLocale(uiStore.language);
+  }, []);
+
+  // Initialize TTS store (memory gate + AppState/session listeners).
+  // Fire-and-forget: `init()` is idempotent and swallows its own errors.
+  React.useEffect(() => {
+    void ttsStore.init();
   }, []);
 
   return (
