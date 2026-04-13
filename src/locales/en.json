@@ -1215,5 +1215,20 @@
   },
   "simulator": {
     "cameraNotAvailable": "Camera not available in simulator. Please use a physical device."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Voice & Speech",
+    "voiceRowTitle": "Voice",
+    "notSet": "Not set",
+    "previewButton": "Preview",
+    "setupSheetTitle": "Voice setup",
+    "supertonicSectionTitle": "Natural voices",
+    "supertonicSectionDescription": "Natural on-device neural voices.",
+    "supertonicInstallCta": "Install to use — coming in next update",
+    "systemSectionTitle": "System voices · robotic, for accessibility",
+    "toggleAutoSpeakLabel": "Toggle auto-speak",
+    "openSettingsLabel": "TTS settings",
+    "playMessageLabel": "Play message",
+    "stopMessageLabel": "Stop message"
   }
 }
