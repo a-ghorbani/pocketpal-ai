@@ -45,7 +45,8 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore} from '../../store';
+import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
+import {TTS_PREVIEW_SAMPLE, getEngine} from '../../services/tts';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -277,6 +278,43 @@ export const SettingsScreen: React.FC = observer(() => {
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
+          {/* Voice & Speech (TTS) — gated on memory availability */}
+          {ttsStore.isTTSAvailable && (
+            <Card
+              elevation={0}
+              style={styles.card}
+              testID="settings-voice-speech-card">
+              <Card.Title title={l10n.voiceAndSpeech.sectionTitle} />
+              <Card.Content>
+                <List.Item
+                  testID="settings-voice-row"
+                  title={l10n.voiceAndSpeech.voiceRowTitle}
+                  description={
+                    ttsStore.currentVoice?.name ?? l10n.voiceAndSpeech.notSet
+                  }
+                  onPress={() => ttsStore.openSetupSheet()}
+                />
+                <Button
+                  mode="outlined"
+                  testID="settings-voice-preview-button"
+                  disabled={ttsStore.currentVoice == null}
+                  onPress={() => {
+                    const voice = ttsStore.currentVoice;
+                    if (!voice) {
+                      return;
+                    }
+                    getEngine(voice.engine)
+                      .play(TTS_PREVIEW_SAMPLE, voice)
+                      .catch(() => {
+                        /* engine logs internally */
+                      });
+                  }}>
+                  {l10n.voiceAndSpeech.previewButton}
+                </Button>
+              </Card.Content>
+            </Card>
+          )}
+
           {/* Model Initialization Settings */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.modelInitializationSettings} />
