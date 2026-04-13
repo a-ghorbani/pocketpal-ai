@@ -140,9 +140,62 @@ export const CompletionSettings: React.FC<Props> = ({
     );
   };
 
+  const isUnlimited = settings.n_predict === -1;
+
+  const renderNPredictField = () => {
+    const metadata = COMPLETION_PARAMS_METADATA.n_predict;
+    const value = settings.n_predict?.toString() ?? '';
+    const validation = metadata
+      ? validateNumericField(value, metadata.validation)
+      : {isValid: true};
+
+    return (
+      <View style={styles.settingItem}>
+        <View style={styles.switchHeader}>
+          <Text variant="labelSmall" style={styles.settingLabel}>
+            N PREDICT
+          </Text>
+          <Switch
+            value={isUnlimited}
+            onValueChange={
+              disabled
+                ? () => {}
+                : checked => onChange('n_predict', checked ? -1 : 1024)
+            }
+            disabled={disabled}
+            testID="n_predict-unlimited-toggle"
+          />
+        </View>
+        <Text style={styles.description}>
+          {l10n.completionParams.n_predict}
+        </Text>
+        {isUnlimited ? (
+          <Text
+            variant="bodyMedium"
+            style={styles.unlimitedLabel}
+            testID="n_predict-unlimited-label">
+            {l10n.completionParams.n_predict_unlimited ?? 'Unlimited'}
+          </Text>
+        ) : (
+          <TextInput
+            value={value}
+            onChangeText={
+              disabled ? () => {} : _value => onChange('n_predict', _value)
+            }
+            keyboardType="numeric"
+            error={!validation.isValid}
+            helperText={validation.errorMessage}
+            editable={!disabled}
+            testID="n_predict-input"
+          />
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container} testID="completion-settings">
-      {renderIntegerInput({name: 'n_predict'})}
+      {renderNPredictField()}
       {renderSwitch('include_thinking_in_context')}
       {renderSlider({name: 'temperature'})}
       {renderSlider({name: 'top_k', step: 1})}

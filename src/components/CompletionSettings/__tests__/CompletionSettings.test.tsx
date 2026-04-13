@@ -108,6 +108,54 @@ describe('CompletionSettings', () => {
     expect(mockOnChange).toHaveBeenCalledWith('n_predict', '1024');
   });
 
+  it('shows unlimited toggle on when n_predict is -1', () => {
+    const {getByTestId, queryByTestId} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, n_predict: -1}}
+        onChange={jest.fn()}
+      />,
+    );
+
+    const toggle = getByTestId('n_predict-unlimited-toggle');
+    expect(toggle.props.value).toBe(true);
+    expect(getByTestId('n_predict-unlimited-label')).toBeTruthy();
+    expect(queryByTestId('n_predict-input')).toBeNull();
+  });
+
+  it('shows text input when unlimited toggle is off', () => {
+    const {getByTestId, queryByTestId} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, n_predict: 500}}
+        onChange={jest.fn()}
+      />,
+    );
+
+    const toggle = getByTestId('n_predict-unlimited-toggle');
+    expect(toggle.props.value).toBe(false);
+    expect(getByTestId('n_predict-input')).toBeTruthy();
+    expect(queryByTestId('n_predict-unlimited-label')).toBeNull();
+  });
+
+  it('toggles n_predict between -1 and 1024', () => {
+    const mockOnChange = jest.fn();
+    const {getByTestId} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, n_predict: 500}}
+        onChange={mockOnChange}
+      />,
+    );
+
+    // Toggle on → should set to -1
+    const toggle = getByTestId('n_predict-unlimited-toggle');
+    fireEvent(toggle, 'valueChange', true);
+    expect(mockOnChange).toHaveBeenCalledWith('n_predict', -1);
+
+    // Toggle off → should set to 1024
+    mockOnChange.mockClear();
+    fireEvent(toggle, 'valueChange', false);
+    expect(mockOnChange).toHaveBeenCalledWith('n_predict', 1024);
+  });
+
   it('handles chip selection', () => {
     const mockOnChange = jest.fn();
     const {getByText} = render(

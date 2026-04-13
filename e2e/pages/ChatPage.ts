@@ -8,6 +8,7 @@
 import {BasePage, ChainableElement} from './BasePage';
 import {
   Selectors,
+  byTestId,
   byText,
   byAccessibilityLabel,
   byPartialText,
@@ -271,6 +272,30 @@ export class ChatPage extends BasePage {
     await palItem.waitForDisplayed({timeout: 5000});
     await palItem.click();
     await browser.pause(500);
+  }
+
+  /**
+   * Set n_predict in the generation settings sheet (must be open).
+   * The n_predict input is the first field, so no scrolling needed.
+   */
+  async setNPredict(value: string): Promise<void> {
+    const input = browser.$(byTestId('n_predict-input'));
+    await input.waitForDisplayed({timeout: 5000});
+    await input.clearValue();
+    await input.setValue(value);
+    await this.dismissKeyboard();
+  }
+
+  /**
+   * Get the n_predict value from the generation settings sheet (must be open).
+   */
+  async getNPredictValue(): Promise<string> {
+    const input = browser.$(byTestId('n_predict-input'));
+    await input.waitForDisplayed({timeout: 5000});
+    if ((browser as any).isAndroid) {
+      return (await input.getAttribute('text')) || '';
+    }
+    return (await input.getAttribute('value')) || '';
   }
 
   /**
