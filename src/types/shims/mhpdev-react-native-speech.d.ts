@@ -27,6 +27,24 @@ declare module '@mhpdev/react-native-speech' {
   }
 
   /**
+   * Supertonic v2 language codes. The fork's internal type still declares
+   * `'en'` only; PocketPal's shim widens it for type-safe calls. v2 covers
+   * EN/KO/ES/PT/FR with a single shared bundle.
+   */
+  export type SupertonicLanguage = 'en' | 'ko' | 'es' | 'pt' | 'fr';
+
+  /**
+   * Options accepted by the fork's `Speech.speak` in v2. `language` was
+   * introduced alongside the v2 bundle; `speed` and `inferenceSteps` exist
+   * for Supertonic fine-tuning.
+   */
+  export interface SpeakOptions {
+    speed?: number;
+    inferenceSteps?: number;
+    language?: SupertonicLanguage;
+  }
+
+  /**
    * Engine identifier enum — mirrors `@mhpdev/react-native-speech/src/types/Engine.ts`.
    * Exported as a value (used both as a TS type and at runtime for
    * `Speech.initialize({engine: TTSEngine.SUPERTONIC})`).
@@ -62,7 +80,11 @@ declare module '@mhpdev/react-native-speech' {
 
   export default class Speech {
     static initialize(config: InitializeConfig): Promise<void>;
-    static speak(text: string, voiceId?: string): Promise<void>;
+    static speak(
+      text: string,
+      voiceId?: string,
+      options?: SpeakOptions,
+    ): Promise<void>;
     static stop(): Promise<void>;
     static release(): Promise<void>;
     static getAvailableVoices(language?: string): Promise<VoiceProps[]>;

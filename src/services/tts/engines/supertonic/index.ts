@@ -1,7 +1,10 @@
 import {Platform} from 'react-native';
 
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import Speech, {TTSEngine} from '@mhpdev/react-native-speech';
+import Speech, {
+  TTSEngine,
+  type SupertonicLanguage,
+} from '@mhpdev/react-native-speech';
 
 import {
   SUPERTONIC_MODEL_BASE_URL,
@@ -15,6 +18,13 @@ import type {Engine, StreamingHandle, Voice} from '../../types';
 import {SUPERTONIC_VOICES} from './voices';
 
 export type SupertonicProgressCallback = (progress: number) => void;
+
+/**
+ * Default synthesis language when callers don't specify one. v1.2 ships
+ * without a UI selector; EN is the safe default and preserves behavior for
+ * pre-v2 callers. Language-picker UX lands in follow-up `v1b-tts-language`.
+ */
+const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'en';
 
 /**
  * Supertonic neural TTS engine.
@@ -221,12 +231,18 @@ export class SupertonicEngine implements Engine {
     this.initialized = true;
   }
 
-  async play(text: string, voice: Voice): Promise<void> {
+  async play(
+    text: string,
+    voice: Voice,
+    language?: SupertonicLanguage,
+  ): Promise<void> {
     if (!(await this.isInstalled())) {
       throw new Error('Supertonic model is not installed');
     }
     await this.ensureInitialized();
-    await Speech.speak(text, voice.id);
+    await Speech.speak(text, voice.id, {
+      language: language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+    });
   }
 
   /**
@@ -235,7 +251,8 @@ export class SupertonicEngine implements Engine {
    * fork's Supertonic engine supports chunked synthesis via repeated
    * `speak` calls; `onFinish` events chain the queue.
    */
-  playStreaming(voice: Voice): StreamingHandle {
+  playStreaming(voice: Voice, language?: SupertonicLanguage): StreamingHandle {
+    const resolvedLanguage = language ?? DEFAULT_SUPERTONIC_LANGUAGE;
     let buffer = '';
     const queue: string[] = [];
     let speaking = false;
@@ -265,7 +282,7 @@ export class SupertonicEngine implements Engine {
       speaking = true;
       try {
         await this.ensureInitialized();
-        await Speech.speak(next, voice.id);
+        await Speech.speak(next, voice.id, {language: resolvedLanguage});
       } catch (err) {
         console.warn('[SupertonicEngine] streaming speak failed:', err);
         speaking = false;

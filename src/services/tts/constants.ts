@@ -14,15 +14,19 @@ export const SUPERTONIC_MODEL_SUBDIR = 'tts/supertonic';
 export const TTS_PARENT_SUBDIR = 'tts';
 
 /**
- * HuggingFace base URL for the v1 (English-only) Supertonic model.
+ * HuggingFace base URL for the Supertonic v2 (multilingual) model.
  *
- * Traced from the upstream fork example app
- * (`@mhpdev/react-native-speech/example/src/utils/SupertonicModelManager.ts`)
- * at pinned SHA `3ae0094b094d7c3d4e17378e53199813384e88f9`. v2 (multilingual)
- * is deferred — v1.2 ships v1 only.
+ * v2 preserves the v1 5-file manifest, filenames, voice catalog, and total
+ * size (~265 MB, OnnxSlim-optimized) while adding KO/ES/PT/FR alongside EN.
+ * The fork auto-detects v1 vs v2 by inspecting `unicode_indexer.json`, so no
+ * PocketPal-side version flag is needed.
+ *
+ * URL traced from the upstream fork example app at pinned SHA
+ * `3ae0094b094d7c3d4e17378e53199813384e88f9`
+ * (`@mhpdev/react-native-speech/example/src/utils/SupertonicModelManager.ts`).
  */
 export const SUPERTONIC_MODEL_BASE_URL =
-  'https://huggingface.co/Supertone/supertonic/resolve/main';
+  'https://huggingface.co/Supertone/supertonic-2/resolve/main';
 
 /**
  * Voice-style embeddings base URL — recorded in the local
@@ -32,9 +36,9 @@ export const SUPERTONIC_MODEL_BASE_URL =
 export const SUPERTONIC_VOICES_BASE_URL = `${SUPERTONIC_MODEL_BASE_URL}/voice_styles`;
 
 /**
- * The five network-downloaded files that make up the Supertonic v1 pipeline.
- * A sixth file (`voices-manifest.json`) is synthesized locally after
- * download.
+ * The five network-downloaded files that make up the Supertonic pipeline.
+ * v2 preserves the v1 filenames; a sixth file (`voices-manifest.json`) is
+ * synthesized locally after download.
  */
 export const SUPERTONIC_MODEL_FILES = [
   {name: 'duration_predictor.onnx', urlPath: 'onnx/duration_predictor.onnx'},
@@ -47,5 +51,5 @@ export const SUPERTONIC_MODEL_FILES = [
 /** Name of the voices manifest generated locally after model download. */
 export const SUPERTONIC_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 
-/** Estimated total size of the v1 model bundle (~265 MB). */
+/** Estimated total size of the Supertonic model bundle (~265 MB; v2 preserves v1's size). */
 export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 265 * 1024 * 1024;
