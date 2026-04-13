@@ -58,9 +58,7 @@ describe('SupertonicSection (v1.2 live)', () => {
   it('renders Install CTA when not_installed', () => {
     const {getByTestId, getByText} = renderSection();
     expect(getByTestId('tts-supertonic-install-cta')).toBeTruthy();
-    expect(
-      getByText(l10n.en.voiceAndSpeech.supertonicInstallCta),
-    ).toBeTruthy();
+    expect(getByText(l10n.en.voiceAndSpeech.supertonicInstallCta)).toBeTruthy();
     expect(getByTestId('tts-supertonic-install-button')).toBeTruthy();
   });
 

@@ -80,9 +80,7 @@ export const SupertonicSection: React.FC = observer(() => {
   const renderCard = () => {
     if (state === 'not_installed') {
       return (
-        <View
-          style={styles.installCard}
-          testID="tts-supertonic-install-cta">
+        <View style={styles.installCard} testID="tts-supertonic-install-cta">
           <View style={styles.installCardBody}>
             <Text style={styles.installCardTitle}>
               {l10n.voiceAndSpeech.supertonicInstallCta}

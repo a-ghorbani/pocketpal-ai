@@ -183,7 +183,9 @@ describe('SupertonicEngine (v1.2 real)', () => {
 
     it('is a safe no-op when the directory does not exist', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
-      await expect(new SupertonicEngine().deleteModel()).resolves.toBeUndefined();
+      await expect(
+        new SupertonicEngine().deleteModel(),
+      ).resolves.toBeUndefined();
       expect(RNFS.unlink).not.toHaveBeenCalled();
     });
   });

@@ -127,10 +127,7 @@ export class SupertonicEngine implements Engine {
           progressInterval: 500,
           progress: res => {
             const contentLength = res.contentLength || 1;
-            perFileProgress[i] = Math.min(
-              1,
-              res.bytesWritten / contentLength,
-            );
+            perFileProgress[i] = Math.min(1, res.bytesWritten / contentLength);
             reportOverall();
           },
         }).promise;
@@ -284,7 +281,9 @@ export class SupertonicEngine implements Engine {
       if (dead) {
         return;
       }
-      void speakNext();
+      speakNext().catch(() => {
+        // speakNext logs internally and routes errors to finalizeReject.
+      });
     });
 
     const drainBuffer = () => {
@@ -309,7 +308,9 @@ export class SupertonicEngine implements Engine {
         buffer += chunk;
         drainBuffer();
         if (!speaking) {
-          void speakNext();
+          speakNext().catch(() => {
+            // speakNext logs internally and routes errors to finalizeReject.
+          });
         }
       },
       finalize: async () => {
@@ -324,7 +325,9 @@ export class SupertonicEngine implements Engine {
           queue.push(tail);
         }
         if (!speaking) {
-          void speakNext();
+          speakNext().catch(() => {
+            // speakNext logs internally and routes errors to finalizeReject.
+          });
         }
         if (queue.length === 0 && !speaking) {
           subscription.remove();
