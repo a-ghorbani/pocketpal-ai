@@ -34,7 +34,7 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
 
-import {SendButton, StopButton, Menu} from '..';
+import {SendButton, StopButton, Menu, VoiceChip} from '..';
 
 export interface ChatInputTopLevelProps {
   /** Whether the AI is currently streaming tokens */
@@ -462,6 +462,9 @@ export const ChatInput = observer(
           <View style={styles.controlBar}>
             {/* Left Controls */}
             <View style={styles.leftControls}>
+              {/* Voice chip (TTS) — renders null on low-memory devices */}
+              <VoiceChip />
+
               {/* Plus Button for Image Upload (only for regular chat) */}
               {showImageUpload && !isVideoCapable && (
                 <Menu
