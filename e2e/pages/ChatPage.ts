@@ -8,6 +8,7 @@
 import {BasePage, ChainableElement} from './BasePage';
 import {
   Selectors,
+  byTestId,
   byText,
   byAccessibilityLabel,
   byPartialText,
@@ -271,6 +272,31 @@ export class ChatPage extends BasePage {
     await palItem.waitForDisplayed({timeout: 5000});
     await palItem.click();
     await browser.pause(500);
+  }
+
+  /**
+   * Set n_predict in the generation settings sheet (must be open).
+   * If value is '-1', taps "Unlimited" segment.
+   * Otherwise, taps "Custom" segment and types the value.
+   */
+  async setNPredict(value: string): Promise<void> {
+    if (value === '-1') {
+      const unlimitedBtn = browser.$(byText('Unlimited'));
+      await unlimitedBtn.waitForDisplayed({timeout: 5000});
+      await unlimitedBtn.click();
+      await browser.pause(300);
+    } else {
+      const customBtn = browser.$(byText('Custom'));
+      await customBtn.waitForDisplayed({timeout: 5000});
+      await customBtn.click();
+      await browser.pause(300);
+
+      const input = browser.$(byTestId('n_predict-input'));
+      await input.waitForDisplayed({timeout: 5000});
+      await input.clearValue();
+      await input.setValue(value);
+      await this.dismissKeyboard();
+    }
   }
 
   /**

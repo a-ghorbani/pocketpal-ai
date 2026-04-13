@@ -85,6 +85,76 @@ describe('modelSettings', () => {
         'Please enter a valid number',
       );
     });
+
+    describe('optional bounds', () => {
+      const minOnlyRule = {
+        type: 'numeric' as const,
+        min: -1,
+        required: true,
+      };
+      const maxOnlyRule = {
+        type: 'numeric' as const,
+        max: 100,
+        required: true,
+      };
+      const noBoundsRule = {
+        type: 'numeric' as const,
+        required: true,
+      };
+
+      it('validates with no max (open-ended) - any value at or above min is valid', () => {
+        expect(validateNumericField(0, minOnlyRule).isValid).toBe(true);
+        expect(validateNumericField(100000, minOnlyRule).isValid).toBe(true);
+        expect(validateNumericField(-1, minOnlyRule).isValid).toBe(true);
+        expect(validateNumericField(999999, minOnlyRule).isValid).toBe(true);
+      });
+
+      it('returns "Value must be at least {min}" for below-min when no max', () => {
+        const result = validateNumericField(-2, minOnlyRule);
+        expect(result.isValid).toBe(false);
+        expect(result.errorMessage).toBe('Value must be at least -1');
+      });
+
+      it('validates with no min (open-ended) - any value at or below max is valid', () => {
+        expect(validateNumericField(100, maxOnlyRule).isValid).toBe(true);
+        expect(validateNumericField(0, maxOnlyRule).isValid).toBe(true);
+        expect(validateNumericField(-9999, maxOnlyRule).isValid).toBe(true);
+      });
+
+      it('returns "Value must be at most {max}" for above-max when no min', () => {
+        const result = validateNumericField(101, maxOnlyRule);
+        expect(result.isValid).toBe(false);
+        expect(result.errorMessage).toBe('Value must be at most 100');
+      });
+
+      it('validates with no bounds - any numeric value is valid', () => {
+        expect(validateNumericField(-9999, noBoundsRule).isValid).toBe(true);
+        expect(validateNumericField(0, noBoundsRule).isValid).toBe(true);
+        expect(validateNumericField(9999, noBoundsRule).isValid).toBe(true);
+      });
+
+      it('allows -1 for n_predict rule (unlimited generation)', () => {
+        const nPredictRule = COMPLETION_PARAMS_METADATA.n_predict!.validation;
+        expect(validateNumericField(-1, nPredictRule).isValid).toBe(true);
+      });
+
+      it('rejects -2 for n_predict rule (below min -1)', () => {
+        const nPredictRule = COMPLETION_PARAMS_METADATA.n_predict!.validation;
+        const result = validateNumericField(-2, nPredictRule);
+        expect(result.isValid).toBe(false);
+        expect(result.errorMessage).toBe('Value must be at least -1');
+      });
+
+      it('allows 0 for n_predict rule (no generation)', () => {
+        const nPredictRule = COMPLETION_PARAMS_METADATA.n_predict!.validation;
+        expect(validateNumericField(0, nPredictRule).isValid).toBe(true);
+      });
+
+      it('allows large values for n_predict rule (no upper cap)', () => {
+        const nPredictRule = COMPLETION_PARAMS_METADATA.n_predict!.validation;
+        expect(validateNumericField(100000, nPredictRule).isValid).toBe(true);
+      });
+    });
   });
 
   describe('validateCompletionSettings', () => {
@@ -110,6 +180,51 @@ describe('modelSettings', () => {
       expect(result.isValid).toBe(true);
       expect(result.errors).toEqual({});
     });
+
+    it('correctly detects invalid values (bug fix: was silently passing)', () => {
+      const invalidSettings = {
+        temperature: 999, // max is 2
+      };
+
+      const result = validateCompletionSettings(invalidSettings);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.temperature).toBe('Value must be between 0 and 2');
+    });
+
+    it('returns errors for multiple out-of-range values', () => {
+      const invalidSettings = {
+        temperature: -1, // min is 0
+        top_k: 0, // min is 1
+        top_p: 2, // max is 1
+      };
+
+      const result = validateCompletionSettings(invalidSettings);
+      expect(result.isValid).toBe(false);
+      expect(Object.keys(result.errors)).toHaveLength(3);
+      expect(result.errors.temperature).toBeDefined();
+      expect(result.errors.top_k).toBeDefined();
+      expect(result.errors.top_p).toBeDefined();
+    });
+
+    it('validates n_predict=-1 as valid (unlimited)', () => {
+      const settings = {
+        n_predict: -1,
+      };
+
+      const result = validateCompletionSettings(settings);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
+    });
+
+    it('detects n_predict=-2 as invalid', () => {
+      const settings = {
+        n_predict: -2,
+      };
+
+      const result = validateCompletionSettings(settings);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.n_predict).toBe('Value must be at least -1');
+    });
   });
 
   describe('COMPLETION_PARAMS_METADATA', () => {
@@ -121,12 +236,27 @@ describe('modelSettings', () => {
       });
     });
 
+    it('has n_predict metadata with min=-1 and no max', () => {
+      const nPredictMetadata = COMPLETION_PARAMS_METADATA.n_predict!;
+      expect(nPredictMetadata.validation.type).toBe('numeric');
+      if (nPredictMetadata.validation.type === 'numeric') {
+        expect(nPredictMetadata.validation.min).toBe(-1);
+        expect(nPredictMetadata.validation.max).toBeUndefined();
+        expect(nPredictMetadata.validation.required).toBe(true);
+      }
+    });
+
     it('has valid validation rules', () => {
       Object.values(COMPLETION_PARAMS_METADATA).forEach(metadata => {
         if (metadata.validation.type === 'numeric') {
-          expect(metadata.validation.min).toBeLessThanOrEqual(
-            metadata.validation.max,
-          );
+          if (
+            metadata.validation.min !== undefined &&
+            metadata.validation.max !== undefined
+          ) {
+            expect(metadata.validation.min).toBeLessThanOrEqual(
+              metadata.validation.max,
+            );
+          }
         }
       });
     });
