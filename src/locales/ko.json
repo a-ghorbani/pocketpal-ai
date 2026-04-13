@@ -707,7 +707,9 @@
       "fileAlreadyExists": "이미 존재하는 파일입니다",
       "fileAlreadyExistsMessage": "이름이 같은 파일이 이미 있습니다. 수행할 작업을 선택해 주세요.",
       "replace": "덮어쓰기",
-      "keepBoth": "둘 다 유지"
+      "keepBoth": "둘 다 유지",
+      "copyFailed": "모델 파일 복사 실패",
+      "copyingModel": "모델 파일 복사 중..."
     },
     "labels": {
       "localModel": "로컬",
