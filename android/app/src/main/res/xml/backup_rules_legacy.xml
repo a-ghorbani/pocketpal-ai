@@ -7,4 +7,6 @@
     <include domain="root" path="pocketpalai.db" requireFlags="clientSideEncryption"/>
     <include domain="root" path="pocketpalai.db-wal" requireFlags="clientSideEncryption"/>
     <include domain="root" path="pocketpalai.db-shm" requireFlags="clientSideEncryption"/>
+    <!-- Neural TTS model files (Supertonic, ~265 MB) must never be backed up. -->
+    <exclude domain="file" path="tts/"/>
 </full-backup-content>
