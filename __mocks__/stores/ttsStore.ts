@@ -11,6 +11,11 @@ class MockTTSStore {
   isSetupSheetOpen = false;
   lastSpokenMessageId: string | null = null;
 
+  supertonicDownloadState: 'not_installed' | 'downloading' | 'ready' | 'error' =
+    'not_installed';
+  supertonicDownloadProgress = 0;
+  supertonicDownloadError: string | null = null;
+
   init: jest.Mock;
   play: jest.Mock;
   stop: jest.Mock;
@@ -21,6 +26,9 @@ class MockTTSStore {
   onAssistantMessageStart: jest.Mock;
   onAssistantMessageChunk: jest.Mock;
   onAssistantMessageComplete: jest.Mock;
+  downloadSupertonic: jest.Mock;
+  retryDownload: jest.Mock;
+  deleteSupertonic: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -34,6 +42,9 @@ class MockTTSStore {
       onAssistantMessageStart: false,
       onAssistantMessageChunk: false,
       onAssistantMessageComplete: false,
+      downloadSupertonic: false,
+      retryDownload: false,
+      deleteSupertonic: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
     this.play = jest.fn().mockResolvedValue(undefined);
@@ -45,6 +56,9 @@ class MockTTSStore {
     this.onAssistantMessageStart = jest.fn();
     this.onAssistantMessageChunk = jest.fn();
     this.onAssistantMessageComplete = jest.fn();
+    this.downloadSupertonic = jest.fn().mockResolvedValue(undefined);
+    this.retryDownload = jest.fn().mockResolvedValue(undefined);
+    this.deleteSupertonic = jest.fn().mockResolvedValue(undefined);
   }
 }
 

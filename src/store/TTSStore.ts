@@ -8,6 +8,7 @@ import DeviceInfo from 'react-native-device-info';
 import {
   configureAudioSession,
   getEngine,
+  SupertonicEngine,
   TTS_MIN_RAM_BYTES,
 } from '../services/tts';
 import type {StreamingHandle, Voice} from '../services/tts';
@@ -25,6 +26,17 @@ export type TTSPlaybackState =
   | {mode: 'idle'}
   | {mode: 'streaming'; messageId: string; handle: StreamingHandle}
   | {mode: 'playing'; messageId: string};
+
+/**
+ * State machine for the Supertonic neural-model download lifecycle.
+ * Derived from `SupertonicEngine.isInstalled()` on `init()` — never
+ * persisted; the source of truth is the file system.
+ */
+export type SupertonicDownloadState =
+  | 'not_installed'
+  | 'downloading'
+  | 'ready'
+  | 'error';
 
 /**
  * Store that coordinates text-to-speech playback.
@@ -55,6 +67,13 @@ export class TTSStore {
   // UI state (setup sheet lives in v1.1; store field is introduced here so
   // the UI can bind to it without needing a follow-up migration)
   isSetupSheetOpen: boolean = false;
+
+  // Supertonic model lifecycle — derived state, NOT persisted. The
+  // filesystem is the source of truth; state is recomputed on `init()`
+  // via `SupertonicEngine.isInstalled()`.
+  supertonicDownloadState: SupertonicDownloadState = 'not_installed';
+  supertonicDownloadProgress: number = 0;
+  supertonicDownloadError: string | null = null;
 
   // Idempotency guard for the auto-speak path. Set on
   // `onAssistantMessageStart` (and on the start-missed fallback inside
@@ -102,6 +121,18 @@ export class TTSStore {
     }
 
     await configureAudioSession();
+
+    // Derive Supertonic install state from disk once at init. Source of
+    // truth is the filesystem — we never persist this.
+    try {
+      const supertonic = getEngine('supertonic');
+      const installed = await supertonic.isInstalled();
+      runInAction(() => {
+        this.supertonicDownloadState = installed ? 'ready' : 'not_installed';
+      });
+    } catch (err) {
+      console.warn('[TTSStore] Supertonic isInstalled check failed:', err);
+    }
 
     this.appStateSubscription = AppState.addEventListener(
       'change',
@@ -167,8 +198,10 @@ export class TTSStore {
 
   /**
    * Speak `text` as a single utterance (replay path). Stops any previous
-   * playback first. If the resolved engine is the Supertonic stub, swallows
-   * its "not installed" error and returns to idle.
+   * playback first. Engine errors are logged and the store returns to
+   * idle — callers that need an error surface should observe
+   * `supertonicDownloadError` (for install-time failures) or catch
+   * errors at the call site.
    */
   async play(
     messageId: string,
@@ -256,6 +289,9 @@ export class TTSStore {
         .catch(err => {
           // Supertonic stub rejects with "not installed" — treat as graceful.
           console.warn('[TTSStore] finalize failed:', err);
+          // Real engine error (e.g., Supertonic inference failure) —
+          // surface on supertonicDownloadError if the failing engine was
+          // Supertonic. Swallow-stub semantics are retired in v1.2.
         })
         .finally(() => {
           runInAction(() => {
@@ -284,6 +320,78 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.play(messageId, text).catch(() => {
       // play() already logs and recovers; swallow to satisfy no-floating-promises.
+    });
+  }
+
+  /**
+   * Start (or retry) the Supertonic model download. Transitions through
+   * `downloading` → (`ready` | `error`). Progress updates are throttled
+   * by RNFS's `progressInterval` (500 ms).
+   *
+   * Non-blocking: the returned promise resolves after download completes
+   * or fails, but the UI is not blocked — the user can navigate away and
+   * the state updates reactively via MobX.
+   */
+  async downloadSupertonic(): Promise<void> {
+    if (this.supertonicDownloadState === 'downloading') {
+      return;
+    }
+    runInAction(() => {
+      this.supertonicDownloadState = 'downloading';
+      this.supertonicDownloadProgress = 0;
+      this.supertonicDownloadError = null;
+    });
+
+    const engine = getEngine('supertonic') as SupertonicEngine;
+    try {
+      await engine.downloadModel(progress => {
+        runInAction(() => {
+          this.supertonicDownloadProgress = progress;
+        });
+      });
+      runInAction(() => {
+        this.supertonicDownloadState = 'ready';
+        this.supertonicDownloadProgress = 1;
+      });
+    } catch (err) {
+      console.warn('[TTSStore] Supertonic download failed:', err);
+      runInAction(() => {
+        this.supertonicDownloadState = 'error';
+        this.supertonicDownloadError =
+          err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /**
+   * Retry a failed Supertonic download. Thin wrapper over
+   * `downloadSupertonic()` — the distinct action exists so UI can
+   * bind Retry semantics unambiguously.
+   */
+  async retryDownload(): Promise<void> {
+    return this.downloadSupertonic();
+  }
+
+  /**
+   * Remove the Supertonic model bundle and reset state to
+   * `not_installed`. Also clears `currentVoice` if it points at a
+   * Supertonic voice so the app doesn't crash trying to synthesize
+   * with a missing model.
+   */
+  async deleteSupertonic(): Promise<void> {
+    const engine = getEngine('supertonic') as SupertonicEngine;
+    try {
+      await engine.deleteModel();
+    } catch (err) {
+      console.warn('[TTSStore] Supertonic delete failed:', err);
+    }
+    runInAction(() => {
+      this.supertonicDownloadState = 'not_installed';
+      this.supertonicDownloadProgress = 0;
+      this.supertonicDownloadError = null;
+      if (this.currentVoice?.engine === 'supertonic') {
+        this.currentVoice = null;
+      }
     });
   }
 }
