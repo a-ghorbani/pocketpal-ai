@@ -39,8 +39,10 @@ export const __resetFinishListeners = () => {
 };
 
 const Speech = {
+  initialize: jest.fn().mockResolvedValue(undefined),
   speak: jest.fn().mockResolvedValue(undefined),
   stop: jest.fn().mockResolvedValue(undefined),
+  release: jest.fn().mockResolvedValue(undefined),
   getAvailableVoices: jest.fn().mockResolvedValue([
     {
       identifier: 'com.apple.voice.Sarah',
@@ -53,3 +55,12 @@ const Speech = {
 };
 
 export default Speech;
+
+/** Mirror of the fork's `TTSEngine` enum — minimum surface used by tests. */
+export enum TTSEngine {
+  OS_NATIVE = 'os-native',
+  KOKORO = 'kokoro',
+  SUPERTONIC = 'supertonic',
+  POCKET = 'pocket',
+  KITTEN = 'kitten',
+}

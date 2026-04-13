@@ -26,9 +26,45 @@ declare module '@mhpdev/react-native-speech' {
     utteranceId?: string;
   }
 
+  /**
+   * Engine identifier enum — mirrors `@mhpdev/react-native-speech/src/types/Engine.ts`.
+   * Exported as a value (used both as a TS type and at runtime for
+   * `Speech.initialize({engine: TTSEngine.SUPERTONIC})`).
+   */
+  export enum TTSEngine {
+    OS_NATIVE = 'os-native',
+    KOKORO = 'kokoro',
+    SUPERTONIC = 'supertonic',
+    POCKET = 'pocket',
+    KITTEN = 'kitten',
+  }
+
+  export interface SupertonicInitializeConfig {
+    engine: TTSEngine.SUPERTONIC;
+    durationPredictorPath: string;
+    textEncoderPath: string;
+    vectorEstimatorPath: string;
+    vocoderPath: string;
+    unicodeIndexerPath: string;
+    voicesPath: string;
+    silentMode?: 'obey' | 'ignore';
+    ducking?: boolean;
+    maxChunkSize?: number;
+  }
+
+  export interface OSNativeInitializeConfig {
+    engine: TTSEngine.OS_NATIVE;
+  }
+
+  export type InitializeConfig =
+    | SupertonicInitializeConfig
+    | OSNativeInitializeConfig;
+
   export default class Speech {
+    static initialize(config: InitializeConfig): Promise<void>;
     static speak(text: string, voiceId?: string): Promise<void>;
     static stop(): Promise<void>;
+    static release(): Promise<void>;
     static getAvailableVoices(language?: string): Promise<VoiceProps[]>;
     /**
      * Fires when the current utterance finishes playing. Used by
