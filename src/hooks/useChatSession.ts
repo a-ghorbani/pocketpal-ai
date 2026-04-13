@@ -297,17 +297,23 @@ export const useChatSession = (
             // content seen; chunk with the new substring beyond what we've
             // already forwarded.
             const streamContent = data.content ?? '';
-            if (!ttsStarted && (data.token || streamContent)) {
-              ttsStarted = true;
-              ttsStore.onAssistantMessageStart(currentMessageInfo.current.id);
-            }
-            if (streamContent.length > prevSpokenContent.length) {
-              const delta = streamContent.slice(prevSpokenContent.length);
-              prevSpokenContent = streamContent;
-              ttsStore.onAssistantMessageChunk(
-                currentMessageInfo.current.id,
-                delta,
-              );
+            // TTS hooks are wrapped defensively — a failure in the UI
+            // path must never kill the completion stream.
+            try {
+              if (!ttsStarted && (data.token || streamContent)) {
+                ttsStarted = true;
+                ttsStore.onAssistantMessageStart(currentMessageInfo.current.id);
+              }
+              if (streamContent.length > prevSpokenContent.length) {
+                const delta = streamContent.slice(prevSpokenContent.length);
+                prevSpokenContent = streamContent;
+                ttsStore.onAssistantMessageChunk(
+                  currentMessageInfo.current.id,
+                  delta,
+                );
+              }
+            } catch (ttsErr) {
+              console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
             }
 
             if (!modelStore.isStreaming) {
@@ -397,10 +403,15 @@ export const useChatSession = (
 
       // Fire TTS auto-speak after the final completionResult is written.
       // Store enforces auto-speak / voice / idempotency gating internally.
-      ttsStore.onAssistantMessageComplete(
-        currentMessageInfo.current.id,
-        result.text,
-      );
+      // Wrapped defensively — UI-path errors must not bubble.
+      try {
+        ttsStore.onAssistantMessageComplete(
+          currentMessageInfo.current.id,
+          result.text,
+        );
+      } catch (ttsErr) {
+        console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
+      }
     } catch (error) {
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
