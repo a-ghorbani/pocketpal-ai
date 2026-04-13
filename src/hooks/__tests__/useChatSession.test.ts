@@ -12,7 +12,7 @@ import {
 
 import {useChatSession} from '../useChatSession';
 
-import {chatSessionStore, modelStore, palStore} from '../../store';
+import {chatSessionStore, modelStore, palStore, ttsStore} from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
@@ -405,5 +405,63 @@ describe('useChatSession', () => {
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+
+  describe('TTS onAssistantMessageComplete wiring', () => {
+    it('fires ttsStore.onAssistantMessageComplete exactly once after completion, not during streaming', async () => {
+      const finalText = 'the-final-text';
+
+      // Completion mock: invoke onData once (streaming chunk), then resolve
+      // with the final text. The callback under test should only fire once,
+      // with the final text, after the completionResult updateMessage call.
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'partial'});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledTimes(1);
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
+        expect.any(String),
+        finalText,
+      );
+    });
+
+    it('does NOT fire onAssistantMessageComplete on error paths', async () => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(new Error('boom'));
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    });
   });
 });
