@@ -29,6 +29,41 @@ export const createStyles = (theme: Theme) =>
     installPlaceholderText: {
       color: theme.colors.onSurfaceVariant,
     },
+    installCard: {
+      padding: 12,
+      marginBottom: 12,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceContainerLow,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    installCardBody: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    installCardTitle: {
+      color: theme.colors.onSurface,
+      fontWeight: '600',
+    },
+    installCardSubtitle: {
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 2,
+      fontSize: 12,
+    },
+    installCardProgressFill: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      bottom: 0,
+      backgroundColor: theme.colors.primaryContainer,
+      opacity: 0.5,
+    },
+    installCardError: {
+      backgroundColor: theme.colors.errorContainer,
+    },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
