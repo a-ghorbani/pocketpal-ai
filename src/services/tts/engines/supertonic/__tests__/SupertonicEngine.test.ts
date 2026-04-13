@@ -215,11 +215,24 @@ describe('SupertonicEngine (v1.2 real)', () => {
           voicesPath: expect.stringMatching(/voices-manifest\.json$/),
         }),
       );
-      expect(Speech.speak).toHaveBeenCalledWith('hello', anyVoice.id);
+      expect(Speech.speak).toHaveBeenCalledWith('hello', anyVoice.id, {
+        language: 'en',
+      });
 
       // Second play() reuses the initialized engine.
       await engine.play('again', anyVoice);
       expect(Speech.initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it('forwards the language argument to Speech.speak when provided', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+
+      const engine = new SupertonicEngine();
+      await engine.play('안녕하세요', anyVoice, 'ko');
+
+      expect(Speech.speak).toHaveBeenCalledWith('안녕하세요', anyVoice.id, {
+        language: 'ko',
+      });
     });
   });
 
