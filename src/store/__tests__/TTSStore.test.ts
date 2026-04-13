@@ -29,6 +29,41 @@ const mockSupertonicPlay = jest
 const mockSupertonicStop = jest.fn().mockResolvedValue(undefined);
 const mockConfigureAudioSession = jest.fn().mockResolvedValue(undefined);
 
+// Per-streaming-session handle factories — we build a fresh spy-backed
+// handle for each `playStreaming()` call and expose the most recent one
+// on `lastSystemHandle` / `lastSupertonicHandle` so tests can assert.
+type MockHandle = {
+  appendText: jest.Mock;
+  finalize: jest.Mock;
+  cancel: jest.Mock;
+};
+let lastSystemHandle: MockHandle | null = null;
+let lastSupertonicHandle: MockHandle | null = null;
+
+const mockSystemPlayStreaming = jest.fn(() => {
+  const handle: MockHandle = {
+    appendText: jest.fn(),
+    finalize: jest.fn().mockResolvedValue(undefined),
+    cancel: jest.fn().mockResolvedValue(undefined),
+  };
+  lastSystemHandle = handle;
+  return handle;
+});
+
+const mockSupertonicPlayStreaming = jest.fn(() => {
+  const handle: MockHandle = {
+    appendText: jest.fn(),
+    finalize: jest
+      .fn()
+      .mockRejectedValue(
+        new Error('Supertonic not installed (enabled in v1.2)'),
+      ),
+    cancel: jest.fn().mockResolvedValue(undefined),
+  };
+  lastSupertonicHandle = handle;
+  return handle;
+});
+
 jest.mock('../../services/tts', () => {
   const actual = jest.requireActual('../../services/tts');
   return {
@@ -41,6 +76,7 @@ jest.mock('../../services/tts', () => {
           isInstalled: jest.fn().mockResolvedValue(true),
           getVoices: jest.fn().mockResolvedValue([]),
           play: mockSystemPlay,
+          playStreaming: mockSystemPlayStreaming,
           stop: mockSystemStop,
         };
       }
@@ -49,6 +85,7 @@ jest.mock('../../services/tts', () => {
         isInstalled: jest.fn().mockResolvedValue(false),
         getVoices: jest.fn().mockResolvedValue([]),
         play: mockSupertonicPlay,
+        playStreaming: mockSupertonicPlayStreaming,
         stop: mockSupertonicStop,
       };
     },
@@ -76,11 +113,14 @@ const SUPERTONIC_VOICE: Voice = {
 };
 
 const GIB = 1024 * 1024 * 1024;
+const flush = () => new Promise(r => setImmediate(r));
 
 describe('TTSStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     appStateHandlers.length = 0;
+    lastSystemHandle = null;
+    lastSupertonicHandle = null;
   });
 
   describe('memory gate', () => {
@@ -121,14 +161,14 @@ describe('TTSStore', () => {
     });
   });
 
-  describe('play() state machine', () => {
-    const makeStore = async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
-      const store = new TTSStore();
-      await store.init();
-      return store;
-    };
+  const makeStore = async () => {
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+    const store = new TTSStore();
+    await store.init();
+    return store;
+  };
 
+  describe('play() state machine', () => {
     it('resolves engine via currentVoice and invokes engine.play()', async () => {
       const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
@@ -136,8 +176,10 @@ describe('TTSStore', () => {
       await store.play('msg-1', 'hello');
 
       expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
-      expect(store.playbackState).toBe('playing');
-      expect(store.currentMessageId).toBe('msg-1');
+      expect(store.playbackState).toEqual({
+        mode: 'playing',
+        messageId: 'msg-1',
+      });
     });
 
     it('stops previous utterance before starting a new one (play(B) while A playing)', async () => {
@@ -150,11 +192,12 @@ describe('TTSStore', () => {
 
       await store.play('msg-B', 'second');
 
-      // stop() was called before the new play
       expect(mockSystemStop).toHaveBeenCalledTimes(1);
       expect(mockSystemPlay).toHaveBeenCalledWith('second', SYSTEM_VOICE);
-      expect(store.currentMessageId).toBe('msg-B');
-      expect(store.playbackState).toBe('playing');
+      expect(store.playbackState).toEqual({
+        mode: 'playing',
+        messageId: 'msg-B',
+      });
     });
 
     it('no-ops when isTTSAvailable is false', async () => {
@@ -166,7 +209,7 @@ describe('TTSStore', () => {
       await store.play('msg-1', 'hello');
 
       expect(mockSystemPlay).not.toHaveBeenCalled();
-      expect(store.playbackState).toBe('idle');
+      expect(store.playbackState.mode).toBe('idle');
     });
 
     it('no-ops when currentVoice is null and no override', async () => {
@@ -175,7 +218,7 @@ describe('TTSStore', () => {
       await store.play('msg-1', 'hello');
 
       expect(mockSystemPlay).not.toHaveBeenCalled();
-      expect(store.playbackState).toBe('idle');
+      expect(store.playbackState.mode).toBe('idle');
     });
 
     it('swallows Supertonic stub "not installed" error and returns to idle', async () => {
@@ -185,8 +228,7 @@ describe('TTSStore', () => {
       await expect(store.play('msg-1', 'hello')).resolves.toBeUndefined();
 
       expect(mockSupertonicPlay).toHaveBeenCalled();
-      expect(store.playbackState).toBe('idle');
-      expect(store.currentMessageId).toBeNull();
+      expect(store.playbackState.mode).toBe('idle');
     });
 
     it('uses voiceOverride when provided', async () => {
@@ -201,120 +243,169 @@ describe('TTSStore', () => {
 
   describe('stop()', () => {
     it('resets state to idle and stops engine when a voice is set', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
-      const store = new TTSStore();
-      await store.init();
+      const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
       await store.play('msg-1', 'hello');
 
       await store.stop();
 
-      expect(store.playbackState).toBe('idle');
-      expect(store.currentMessageId).toBeNull();
+      expect(store.playbackState.mode).toBe('idle');
       expect(mockSystemStop).toHaveBeenCalled();
     });
   });
 
-  describe('onAssistantMessageComplete()', () => {
+  describe('streaming callbacks', () => {
     const setupEligible = async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
-      const store = new TTSStore();
-      await store.init();
+      const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
       store.setAutoSpeak(true);
       return store;
     };
 
-    it('plays when autoSpeakEnabled=true and a voice is selected', async () => {
+    it('onAssistantMessageStart opens a streaming handle when gating passes', async () => {
       const store = await setupEligible();
 
-      store.onAssistantMessageComplete('msg-1', 'hello world');
-      // play() is async/fire-and-forget; flush microtasks
-      await new Promise(r => setImmediate(r));
+      store.onAssistantMessageStart('msg-1');
 
-      expect(mockSystemPlay).toHaveBeenCalledWith('hello world', SYSTEM_VOICE);
+      expect(mockSystemPlayStreaming).toHaveBeenCalledWith(SYSTEM_VOICE);
+      expect(store.playbackState.mode).toBe('streaming');
+      if (store.playbackState.mode === 'streaming') {
+        expect(store.playbackState.messageId).toBe('msg-1');
+      }
       expect(store.lastSpokenMessageId).toBe('msg-1');
     });
 
-    it('does NOT play when autoSpeakEnabled=false', async () => {
+    it('onAssistantMessageStart guard: same messageId twice → only one handle opened', async () => {
+      const store = await setupEligible();
+
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageStart('msg-1');
+
+      expect(mockSystemPlayStreaming).toHaveBeenCalledTimes(1);
+    });
+
+    it('onAssistantMessageStart no-ops when autoSpeakEnabled=false', async () => {
       const store = await setupEligible();
       store.setAutoSpeak(false);
 
-      store.onAssistantMessageComplete('msg-1', 'hello');
-      await new Promise(r => setImmediate(r));
+      store.onAssistantMessageStart('msg-1');
 
-      expect(mockSystemPlay).not.toHaveBeenCalled();
+      expect(mockSystemPlayStreaming).not.toHaveBeenCalled();
     });
 
-    it('does NOT play when currentVoice is null', async () => {
+    it('onAssistantMessageStart no-ops when currentVoice is null', async () => {
       const store = await setupEligible();
       store.setCurrentVoice(null);
 
-      store.onAssistantMessageComplete('msg-1', 'hello');
-      await new Promise(r => setImmediate(r));
+      store.onAssistantMessageStart('msg-1');
 
-      expect(mockSystemPlay).not.toHaveBeenCalled();
+      expect(mockSystemPlayStreaming).not.toHaveBeenCalled();
     });
 
-    it('does NOT play when isTTSAvailable is false', async () => {
+    it('onAssistantMessageStart no-ops when isTTSAvailable=false', async () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
       const store = new TTSStore();
       await store.init();
       store.setCurrentVoice(SYSTEM_VOICE);
       store.setAutoSpeak(true);
 
+      store.onAssistantMessageStart('msg-1');
+
+      expect(mockSystemPlayStreaming).not.toHaveBeenCalled();
+    });
+
+    it('onAssistantMessageChunk forwards deltas to the active handle', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageChunk('msg-1', 'hello ');
+      store.onAssistantMessageChunk('msg-1', 'world.');
+
+      expect(lastSystemHandle!.appendText).toHaveBeenNthCalledWith(1, 'hello ');
+      expect(lastSystemHandle!.appendText).toHaveBeenNthCalledWith(2, 'world.');
+    });
+
+    it('onAssistantMessageChunk ignores chunks for a different messageId', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageChunk('msg-2', 'stale');
+
+      expect(lastSystemHandle!.appendText).not.toHaveBeenCalled();
+    });
+
+    it('onAssistantMessageComplete calls handle.finalize() when a streaming session exists', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageComplete('msg-1', 'final text');
+      await flush();
+
+      expect(lastSystemHandle!.finalize).toHaveBeenCalledTimes(1);
+      // engine.play() is NOT called — finalize is the streaming flush path.
+      expect(mockSystemPlay).not.toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
+    });
+
+    it('fallback: onAssistantMessageComplete without a prior start calls engine.play()', async () => {
+      const store = await setupEligible();
+
+      store.onAssistantMessageComplete('msg-solo', 'hello world');
+      await flush();
+
+      expect(mockSystemPlayStreaming).not.toHaveBeenCalled();
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello world', SYSTEM_VOICE);
+      expect(store.lastSpokenMessageId).toBe('msg-solo');
+    });
+
+    it('fallback path respects the lastSpokenMessageId guard', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+      // Complete via finalize path.
       store.onAssistantMessageComplete('msg-1', 'hello');
-      await new Promise(r => setImmediate(r));
+      await flush();
+
+      mockSystemPlay.mockClear();
+      // Second complete for the same id — should no-op.
+      store.onAssistantMessageComplete('msg-1', 'hello');
+      await flush();
 
       expect(mockSystemPlay).not.toHaveBeenCalled();
     });
 
-    it('plays only once when invoked twice with the same messageId (lastSpokenMessageId guard)', async () => {
-      const store = await setupEligible();
+    it('Supertonic streaming finalize rejection is caught and state resets to idle', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setAutoSpeak(true);
+
+      store.onAssistantMessageStart('msg-1');
+      expect(mockSupertonicPlayStreaming).toHaveBeenCalled();
 
       store.onAssistantMessageComplete('msg-1', 'hello');
-      await new Promise(r => setImmediate(r));
-      store.onAssistantMessageComplete('msg-1', 'hello');
-      await new Promise(r => setImmediate(r));
+      await flush();
 
-      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
-    });
-
-    it('plays again for a different messageId', async () => {
-      const store = await setupEligible();
-
-      store.onAssistantMessageComplete('msg-1', 'hello');
-      await new Promise(r => setImmediate(r));
-      store.onAssistantMessageComplete('msg-2', 'world');
-      await new Promise(r => setImmediate(r));
-
-      expect(mockSystemPlay).toHaveBeenCalledTimes(2);
+      expect(lastSupertonicHandle!.finalize).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
     });
   });
 
   describe('AppState → background stops playback', () => {
-    it('calls stop when AppState transitions to background', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
-      const store = new TTSStore();
-      await store.init();
+    it('cancels streaming handle when AppState transitions to background', async () => {
+      const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
-      await store.play('msg-1', 'hello');
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
 
-      expect(appStateHandlers.length).toBeGreaterThan(0);
       const handler = appStateHandlers[appStateHandlers.length - 1];
-      mockSystemStop.mockClear();
-
       handler('background');
-      await new Promise(r => setImmediate(r));
+      await flush();
 
-      expect(mockSystemStop).toHaveBeenCalled();
-      expect(store.playbackState).toBe('idle');
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
     });
 
     it('does NOT stop on active/foreground transitions', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
-      const store = new TTSStore();
-      await store.init();
+      const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
       await store.play('msg-1', 'hello');
 
@@ -322,28 +413,24 @@ describe('TTSStore', () => {
       mockSystemStop.mockClear();
 
       handler('active');
-      await new Promise(r => setImmediate(r));
+      await flush();
 
       expect(mockSystemStop).not.toHaveBeenCalled();
     });
   });
 
   describe('chat session change stops playback', () => {
-    it('stops when chatSessionStore.activeSessionId changes', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
-      const store = new TTSStore();
-      await store.init();
+    it('cancels streaming handle when chatSessionStore.activeSessionId changes', async () => {
+      const store = await makeStore();
       store.setCurrentVoice(SYSTEM_VOICE);
-      await store.play('msg-1', 'hello');
+      store.setAutoSpeak(true);
+      store.onAssistantMessageStart('msg-1');
 
-      mockSystemStop.mockClear();
-
-      // Mutate the active session id; the MobX reaction inside init() should fire
       (chatSessionStore as any).activeSessionId = 'session-new-id';
-      await new Promise(r => setImmediate(r));
+      await flush();
 
-      expect(mockSystemStop).toHaveBeenCalled();
-      expect(store.playbackState).toBe('idle');
+      expect(lastSystemHandle!.cancel).toHaveBeenCalled();
+      expect(store.playbackState.mode).toBe('idle');
     });
   });
 

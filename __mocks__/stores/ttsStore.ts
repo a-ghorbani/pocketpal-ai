@@ -2,8 +2,10 @@ import {makeAutoObservable} from 'mobx';
 
 class MockTTSStore {
   isTTSAvailable = false;
-  playbackState: 'idle' | 'loading' | 'playing' = 'idle';
-  currentMessageId: string | null = null;
+  playbackState: {mode: 'idle'} | {mode: 'streaming'; messageId: string} | {
+    mode: 'playing';
+    messageId: string;
+  } = {mode: 'idle'};
   autoSpeakEnabled = false;
   currentVoice: null = null;
   isSetupSheetOpen = false;
@@ -16,6 +18,8 @@ class MockTTSStore {
   setCurrentVoice: jest.Mock;
   openSetupSheet: jest.Mock;
   closeSetupSheet: jest.Mock;
+  onAssistantMessageStart: jest.Mock;
+  onAssistantMessageChunk: jest.Mock;
   onAssistantMessageComplete: jest.Mock;
 
   constructor() {
@@ -27,6 +31,8 @@ class MockTTSStore {
       setCurrentVoice: false,
       openSetupSheet: false,
       closeSetupSheet: false,
+      onAssistantMessageStart: false,
+      onAssistantMessageChunk: false,
       onAssistantMessageComplete: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
@@ -36,6 +42,8 @@ class MockTTSStore {
     this.setCurrentVoice = jest.fn();
     this.openSetupSheet = jest.fn();
     this.closeSetupSheet = jest.fn();
+    this.onAssistantMessageStart = jest.fn();
+    this.onAssistantMessageChunk = jest.fn();
     this.onAssistantMessageComplete = jest.fn();
   }
 }
