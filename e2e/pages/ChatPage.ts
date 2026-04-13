@@ -276,26 +276,27 @@ export class ChatPage extends BasePage {
 
   /**
    * Set n_predict in the generation settings sheet (must be open).
-   * The n_predict input is the first field, so no scrolling needed.
+   * If value is '-1', taps "Unlimited" segment.
+   * Otherwise, taps "Custom" segment and types the value.
    */
   async setNPredict(value: string): Promise<void> {
-    const input = browser.$(byTestId('n_predict-input'));
-    await input.waitForDisplayed({timeout: 5000});
-    await input.clearValue();
-    await input.setValue(value);
-    await this.dismissKeyboard();
-  }
+    if (value === '-1') {
+      const unlimitedBtn = browser.$(byText('Unlimited'));
+      await unlimitedBtn.waitForDisplayed({timeout: 5000});
+      await unlimitedBtn.click();
+      await browser.pause(300);
+    } else {
+      const customBtn = browser.$(byText('Custom'));
+      await customBtn.waitForDisplayed({timeout: 5000});
+      await customBtn.click();
+      await browser.pause(300);
 
-  /**
-   * Get the n_predict value from the generation settings sheet (must be open).
-   */
-  async getNPredictValue(): Promise<string> {
-    const input = browser.$(byTestId('n_predict-input'));
-    await input.waitForDisplayed({timeout: 5000});
-    if ((browser as any).isAndroid) {
-      return (await input.getAttribute('text')) || '';
+      const input = browser.$(byTestId('n_predict-input'));
+      await input.waitForDisplayed({timeout: 5000});
+      await input.clearValue();
+      await input.setValue(value);
+      await this.dismissKeyboard();
     }
-    return (await input.getAttribute('value')) || '';
   }
 
   /**

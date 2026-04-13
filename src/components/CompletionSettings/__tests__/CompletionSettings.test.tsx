@@ -108,7 +108,7 @@ describe('CompletionSettings', () => {
     expect(mockOnChange).toHaveBeenCalledWith('n_predict', '1024');
   });
 
-  it('shows unlimited toggle on when n_predict is -1', () => {
+  it('hides text input when n_predict is -1 (unlimited)', () => {
     const {getByTestId, queryByTestId} = render(
       <CompletionSettings
         settings={{...mockCompletionParams, n_predict: -1}}
@@ -116,43 +116,40 @@ describe('CompletionSettings', () => {
       />,
     );
 
-    const toggle = getByTestId('n_predict-unlimited-toggle');
-    expect(toggle.props.value).toBe(true);
-    expect(getByTestId('n_predict-unlimited-label')).toBeTruthy();
+    expect(getByTestId('n_predict-unlimited-btn')).toBeTruthy();
+    expect(getByTestId('n_predict-custom-btn')).toBeTruthy();
     expect(queryByTestId('n_predict-input')).toBeNull();
   });
 
-  it('shows text input when unlimited toggle is off', () => {
-    const {getByTestId, queryByTestId} = render(
+  it('shows text input when n_predict is a custom value', () => {
+    const {getByTestId} = render(
       <CompletionSettings
         settings={{...mockCompletionParams, n_predict: 500}}
         onChange={jest.fn()}
       />,
     );
 
-    const toggle = getByTestId('n_predict-unlimited-toggle');
-    expect(toggle.props.value).toBe(false);
+    expect(getByTestId('n_predict-unlimited-btn')).toBeTruthy();
+    expect(getByTestId('n_predict-custom-btn')).toBeTruthy();
     expect(getByTestId('n_predict-input')).toBeTruthy();
-    expect(queryByTestId('n_predict-unlimited-label')).toBeNull();
   });
 
-  it('toggles n_predict between -1 and 1024', () => {
+  it('switches n_predict between unlimited and custom via segmented buttons', () => {
     const mockOnChange = jest.fn();
-    const {getByTestId} = render(
+    const {getByText} = render(
       <CompletionSettings
         settings={{...mockCompletionParams, n_predict: 500}}
         onChange={mockOnChange}
       />,
     );
 
-    // Toggle on → should set to -1
-    const toggle = getByTestId('n_predict-unlimited-toggle');
-    fireEvent(toggle, 'valueChange', true);
+    // Select Unlimited → should set to -1
+    fireEvent.press(getByText('Unlimited'));
     expect(mockOnChange).toHaveBeenCalledWith('n_predict', -1);
 
-    // Toggle off → should set to 1024
+    // Select Custom → should set to 1024
     mockOnChange.mockClear();
-    fireEvent(toggle, 'valueChange', false);
+    fireEvent.press(getByText('Custom'));
     expect(mockOnChange).toHaveBeenCalledWith('n_predict', 1024);
   });
 

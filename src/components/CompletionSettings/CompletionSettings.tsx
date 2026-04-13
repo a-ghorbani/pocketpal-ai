@@ -151,32 +151,36 @@ export const CompletionSettings: React.FC<Props> = ({
 
     return (
       <View style={styles.settingItem}>
-        <View style={styles.switchHeader}>
-          <Text variant="labelSmall" style={styles.settingLabel}>
-            N PREDICT
-          </Text>
-          <Switch
-            value={isUnlimited}
-            onValueChange={
-              disabled
-                ? () => {}
-                : checked => onChange('n_predict', checked ? -1 : 1024)
-            }
-            disabled={disabled}
-            testID="n_predict-unlimited-toggle"
-          />
-        </View>
+        <Text variant="labelSmall" style={styles.settingLabel}>
+          N PREDICT
+        </Text>
         <Text style={styles.description}>
           {l10n.completionParams.n_predict}
         </Text>
-        {isUnlimited ? (
-          <Text
-            variant="bodyMedium"
-            style={styles.unlimitedLabel}
-            testID="n_predict-unlimited-label">
-            {l10n.completionParams.n_predict_unlimited ?? 'Unlimited'}
-          </Text>
-        ) : (
+        <SegmentedButtons
+          value={isUnlimited ? 'unlimited' : 'custom'}
+          onValueChange={
+            disabled
+              ? () => {}
+              : selected =>
+                  onChange('n_predict', selected === 'unlimited' ? -1 : 1024)
+          }
+          density="high"
+          buttons={[
+            {
+              value: 'unlimited',
+              label: 'Unlimited',
+              testID: 'n_predict-unlimited-btn',
+            },
+            {
+              value: 'custom',
+              label: 'Custom',
+              testID: 'n_predict-custom-btn',
+            },
+          ]}
+          style={styles.segmentedButtons}
+        />
+        {!isUnlimited && (
           <TextInput
             value={value}
             onChangeText={

@@ -72,8 +72,4 @@ export const createStyles = (theme: Theme) =>
       marginTop: 2,
       marginBottom: 8,
     },
-    unlimitedLabel: {
-      color: theme.colors.textSecondary,
-      fontStyle: 'italic',
-    },
   });
