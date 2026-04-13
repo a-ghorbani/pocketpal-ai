@@ -10,7 +10,8 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore} from '../../../store';
+import {modelStore, uiStore, ttsStore} from '../../../store';
+import {runInAction} from 'mobx';
 
 jest.useFakeTimers();
 
@@ -254,6 +255,85 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('Voice & Speech (TTS) section', () => {
+    afterEach(() => {
+      runInAction(() => {
+        ttsStore.isTTSAvailable = false;
+        ttsStore.currentVoice = null;
+      });
+    });
+
+    it('hides the Voice & Speech card on low-memory devices (isTTSAvailable=false)', () => {
+      runInAction(() => {
+        ttsStore.isTTSAvailable = false;
+      });
+      const {queryByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(queryByTestId('settings-voice-speech-card')).toBeNull();
+      expect(queryByTestId('settings-voice-row')).toBeNull();
+      expect(queryByTestId('settings-voice-preview-button')).toBeNull();
+    });
+
+    it('renders Voice row with "Not set" subtitle when no voice chosen', () => {
+      runInAction(() => {
+        ttsStore.isTTSAvailable = true;
+        ttsStore.currentVoice = null;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(getByTestId('settings-voice-speech-card')).toBeTruthy();
+      expect(getByTestId('settings-voice-row')).toBeTruthy();
+      expect(getByText('Not set')).toBeTruthy();
+    });
+
+    it('tapping Voice row opens the setup sheet', () => {
+      runInAction(() => {
+        ttsStore.isTTSAvailable = true;
+        ttsStore.currentVoice = null;
+      });
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      fireEvent.press(getByTestId('settings-voice-row'));
+      expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+    });
+
+    it('Preview button is disabled when no voice chosen', () => {
+      runInAction(() => {
+        ttsStore.isTTSAvailable = true;
+        ttsStore.currentVoice = null;
+      });
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      const btn = getByTestId('settings-voice-preview-button');
+      expect(btn.props.accessibilityState?.disabled).toBe(true);
+    });
+
+    it('Preview button becomes enabled when currentVoice is set', () => {
+      runInAction(() => {
+        ttsStore.isTTSAvailable = true;
+        ttsStore.currentVoice = {
+          id: 'v1',
+          name: 'Alex',
+          engine: 'system',
+        } as any;
+      });
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      const btn = getByTestId('settings-voice-preview-button');
+      expect(btn.props.accessibilityState?.disabled).toBeFalsy();
     });
   });
 });

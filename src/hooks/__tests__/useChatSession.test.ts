@@ -487,6 +487,90 @@ describe('useChatSession', () => {
       );
     });
 
+    it('a throwing onAssistantMessageStart/Chunk does NOT kill the completion stream', async () => {
+      const finalText = 'All good, final text.';
+
+      (ttsStore.onAssistantMessageStart as jest.Mock).mockImplementationOnce(
+        () => {
+          throw new Error('tts start boom');
+        },
+      );
+      (ttsStore.onAssistantMessageChunk as jest.Mock).mockImplementation(() => {
+        throw new Error('tts chunk boom');
+      });
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'tok', content: 'All good, '});
+              onData({token: 'tok', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      // No throw expected — try/catch wraps the TTS hooks.
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // Stream completed normally despite the TTS exceptions.
+      expect(modelStore.context?.completion).toHaveBeenCalled();
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
+        expect.any(String),
+        finalText,
+      );
+    });
+
+    it('a throwing onAssistantMessageComplete does NOT bubble out of handleSendPress', async () => {
+      const finalText = 'done';
+
+      (ttsStore.onAssistantMessageComplete as jest.Mock).mockImplementationOnce(
+        () => {
+          throw new Error('tts complete boom');
+        },
+      );
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'tok', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await expect(
+        act(async () => {
+          await result.current.handleSendPress(textMessage);
+        }),
+      ).resolves.not.toThrow();
+    });
+
     it('does NOT fire onAssistantMessageComplete on error paths', async () => {
       if (modelStore.context) {
         modelStore.context.completion = jest

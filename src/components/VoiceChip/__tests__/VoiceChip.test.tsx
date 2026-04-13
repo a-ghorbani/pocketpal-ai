@@ -121,4 +121,44 @@ describe('VoiceChip', () => {
     });
     expect(queryByTestId('voicechip-label')).toBeNull();
   });
+
+  describe('responsive truncation: breakpoint boundaries', () => {
+    beforeEach(() => {
+      runInAction(() => {
+        ttsStore.currentVoice = systemVoice as any;
+      });
+    });
+
+    it('width == FULL_WIDTH (110) renders full name (inclusive edge)', () => {
+      const {getByTestId} = renderChip();
+      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
+        nativeEvent: {layout: {width: 110, height: 44, x: 0, y: 0}},
+      });
+      expect(getByTestId('voicechip-label').props.children).toBe('Alexandra');
+    });
+
+    it('width 109 (just below FULL_WIDTH) drops to 3-char prefix', () => {
+      const {getByTestId} = renderChip();
+      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
+        nativeEvent: {layout: {width: 109, height: 44, x: 0, y: 0}},
+      });
+      expect(getByTestId('voicechip-label').props.children).toBe('Ale');
+    });
+
+    it('width == SHORT_WIDTH (72) still renders 3-char prefix (inclusive edge)', () => {
+      const {getByTestId} = renderChip();
+      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
+        nativeEvent: {layout: {width: 72, height: 44, x: 0, y: 0}},
+      });
+      expect(getByTestId('voicechip-label').props.children).toBe('Ale');
+    });
+
+    it('width 71 (just below SHORT_WIDTH) drops to icon-only', () => {
+      const {getByTestId, queryByTestId} = renderChip();
+      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
+        nativeEvent: {layout: {width: 71, height: 44, x: 0, y: 0}},
+      });
+      expect(queryByTestId('voicechip-label')).toBeNull();
+    });
+  });
 });
