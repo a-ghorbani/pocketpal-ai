@@ -29,6 +29,7 @@ import {
   HeaderLeft,
   AppWithMigration,
   MemorySnapshotTrigger,
+  TTSSetupSheet,
 } from './src/components';
 import {
   ChatScreen,
@@ -158,6 +159,7 @@ const App = observer(() => {
                       />
                     )}
                   </Drawer.Navigator>
+                  <TTSSetupSheet />
                 </BottomSheetModalProvider>
               </NavigationContainer>
             </L10nContext.Provider>
