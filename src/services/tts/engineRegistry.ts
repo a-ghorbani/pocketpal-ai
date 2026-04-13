@@ -1,5 +1,5 @@
-import {SupertonicEngine} from './SupertonicEngine';
-import {SystemEngine} from './SystemEngine';
+import {SupertonicEngine} from './engines/supertonic';
+import {SystemEngine} from './engines/system';
 import type {Engine, EngineId} from './types';
 
 const systemEngine = new SystemEngine();

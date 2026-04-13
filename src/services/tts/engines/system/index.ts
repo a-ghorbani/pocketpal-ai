@@ -1,6 +1,7 @@
 import Speech from '@mhpdev/react-native-speech';
 
-import type {Engine, Voice} from './types';
+import type {Engine, Voice} from '../../types';
+import {getSystemVoices} from './voices';
 
 /**
  * Thin wrapper around the OS native TTS path exposed by
@@ -13,14 +14,8 @@ export class SystemEngine implements Engine {
     return true;
   }
 
-  async getVoices(): Promise<Voice[]> {
-    const voices = await Speech.getAvailableVoices();
-    return voices.map(v => ({
-      id: v.identifier,
-      name: v.name ?? v.identifier,
-      engine: 'system',
-      language: v.language,
-    }));
+  getVoices(): Promise<Voice[]> {
+    return getSystemVoices();
   }
 
   async play(text: string, voice: Voice): Promise<void> {

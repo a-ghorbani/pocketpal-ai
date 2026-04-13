@@ -1,5 +1,5 @@
-import type {Engine, Voice} from './types';
-import {SUPERTONIC_VOICES} from './constants';
+import type {Engine, Voice} from '../../types';
+import {SUPERTONIC_VOICES} from './voices';
 
 /**
  * Supertonic engine — STUB for v1.0.

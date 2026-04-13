@@ -1,6 +1,6 @@
 import {getAllEngines, getEngine} from '../engineRegistry';
-import {SupertonicEngine} from '../SupertonicEngine';
-import {SystemEngine} from '../SystemEngine';
+import {SupertonicEngine} from '../engines/supertonic';
+import {SystemEngine} from '../engines/system';
 
 describe('engineRegistry', () => {
   it('returns the System engine for id "system"', () => {

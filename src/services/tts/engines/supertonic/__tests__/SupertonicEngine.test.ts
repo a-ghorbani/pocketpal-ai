@@ -1,5 +1,5 @@
-import {SUPERTONIC_VOICES} from '../constants';
-import {SupertonicEngine} from '../SupertonicEngine';
+import {SupertonicEngine} from '..';
+import {SUPERTONIC_VOICES} from '../voices';
 
 describe('SupertonicEngine (v1.0 stub)', () => {
   const engine = new SupertonicEngine();
