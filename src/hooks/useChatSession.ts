@@ -275,6 +275,13 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
+      // TTS streaming: notify the store on first token so it can open a
+      // StreamingHandle, then feed each delta via onAssistantMessageChunk.
+      // `content` in the streaming data is cumulative, so we diff against
+      // what we've already pushed.
+      let ttsStarted = false;
+      let prevSpokenContent = '';
+
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
       const completionPromise = engine.completion(
@@ -284,6 +291,23 @@ export const useChatSession = (
             // Capture time to first token on the first token received
             if (timeToFirstToken === null && (data.token || data.content)) {
               timeToFirstToken = Date.now() - completionStartTime;
+            }
+
+            // Fire TTS streaming hooks. Start once per message on first
+            // content seen; chunk with the new substring beyond what we've
+            // already forwarded.
+            const streamContent = data.content ?? '';
+            if (!ttsStarted && (data.token || streamContent)) {
+              ttsStarted = true;
+              ttsStore.onAssistantMessageStart(currentMessageInfo.current.id);
+            }
+            if (streamContent.length > prevSpokenContent.length) {
+              const delta = streamContent.slice(prevSpokenContent.length);
+              prevSpokenContent = streamContent;
+              ttsStore.onAssistantMessageChunk(
+                currentMessageInfo.current.id,
+                delta,
+              );
             }
 
             if (!modelStore.isStreaming) {

@@ -407,19 +407,60 @@ describe('useChatSession', () => {
     expect(systemMessage.content).toBe('You are a helpful assistant.');
   });
 
-  describe('TTS onAssistantMessageComplete wiring', () => {
-    it('fires ttsStore.onAssistantMessageComplete exactly once after completion, not during streaming', async () => {
-      const finalText = 'the-final-text';
+  describe('TTS streaming wiring', () => {
+    it('fires onAssistantMessageStart on first token and onAssistantMessageChunk per delta', async () => {
+      const finalText = 'Hello world.';
 
-      // Completion mock: invoke onData once (streaming chunk), then resolve
-      // with the final text. The callback under test should only fire once,
-      // with the final text, after the completionResult updateMessage call.
       if (modelStore.context) {
         modelStore.context.completion = jest
           .fn()
           .mockImplementation(async (_params, onData) => {
             if (onData) {
-              onData({token: 'partial'});
+              // First chunk — should trigger start + first chunk
+              onData({token: 'tok', content: 'Hello '});
+              // Second chunk — cumulative content; delta is "world."
+              onData({token: 'tok', content: 'Hello world.'});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageStart).toHaveBeenCalledTimes(1);
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        'Hello ',
+      );
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        'world.',
+      );
+    });
+
+    it('fires ttsStore.onAssistantMessageComplete exactly once after completion', async () => {
+      const finalText = 'the-final-text';
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'partial', content: finalText});
             }
             return {
               timings: {total: 100},
