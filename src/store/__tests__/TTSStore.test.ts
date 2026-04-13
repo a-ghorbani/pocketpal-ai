@@ -25,8 +25,11 @@ const mockSystemPlay = jest.fn().mockResolvedValue(undefined);
 const mockSystemStop = jest.fn().mockResolvedValue(undefined);
 const mockSupertonicPlay = jest
   .fn()
-  .mockRejectedValue(new Error('Supertonic not installed (enabled in v1.2)'));
+  .mockRejectedValue(new Error('Supertonic model is not installed'));
 const mockSupertonicStop = jest.fn().mockResolvedValue(undefined);
+const mockSupertonicIsInstalled = jest.fn().mockResolvedValue(false);
+const mockSupertonicDownloadModel = jest.fn().mockResolvedValue(undefined);
+const mockSupertonicDeleteModel = jest.fn().mockResolvedValue(undefined);
 const mockConfigureAudioSession = jest.fn().mockResolvedValue(undefined);
 
 // Per-streaming-session handle factories — we build a fresh spy-backed
@@ -82,11 +85,13 @@ jest.mock('../../services/tts', () => {
       }
       return {
         id: 'supertonic',
-        isInstalled: jest.fn().mockResolvedValue(false),
+        isInstalled: mockSupertonicIsInstalled,
         getVoices: jest.fn().mockResolvedValue([]),
         play: mockSupertonicPlay,
         playStreaming: mockSupertonicPlayStreaming,
         stop: mockSupertonicStop,
+        downloadModel: mockSupertonicDownloadModel,
+        deleteModel: mockSupertonicDeleteModel,
       };
     },
   };
@@ -221,7 +226,7 @@ describe('TTSStore', () => {
       expect(store.playbackState.mode).toBe('idle');
     });
 
-    it('swallows Supertonic stub "not installed" error and returns to idle', async () => {
+    it('surfaces Supertonic play failure via playbackState reset (no hang)', async () => {
       const store = await makeStore();
       store.setCurrentVoice(SUPERTONIC_VOICE);
 
@@ -458,6 +463,95 @@ describe('TTSStore', () => {
       expect(store.isSetupSheetOpen).toBe(true);
       store.closeSetupSheet();
       expect(store.isSetupSheetOpen).toBe(false);
+    });
+  });
+
+  describe('Supertonic download state machine', () => {
+    it('init() derives state=ready when engine reports installed', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      mockSupertonicIsInstalled.mockResolvedValueOnce(true);
+
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.supertonicDownloadState).toBe('ready');
+    });
+
+    it('init() derives state=not_installed when engine reports not installed', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      mockSupertonicIsInstalled.mockResolvedValueOnce(false);
+
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.supertonicDownloadState).toBe('not_installed');
+    });
+
+    it('downloadSupertonic: not_installed → downloading → ready on success', async () => {
+      const store = await makeStore();
+      mockSupertonicDownloadModel.mockImplementationOnce(
+        async (onProgress?: (p: number) => void) => {
+          onProgress?.(0.25);
+          onProgress?.(0.75);
+        },
+      );
+
+      const promise = store.downloadSupertonic();
+      expect(store.supertonicDownloadState).toBe('downloading');
+      await promise;
+      expect(store.supertonicDownloadState).toBe('ready');
+      expect(store.supertonicDownloadProgress).toBe(1);
+      expect(store.supertonicDownloadError).toBeNull();
+    });
+
+    it('downloadSupertonic: transitions to error on failure; retryDownload recovers', async () => {
+      const store = await makeStore();
+      mockSupertonicDownloadModel
+        .mockRejectedValueOnce(new Error('network down'))
+        .mockResolvedValueOnce(undefined);
+
+      await store.downloadSupertonic();
+      expect(store.supertonicDownloadState).toBe('error');
+      expect(store.supertonicDownloadError).toBe('network down');
+
+      await store.retryDownload();
+      expect(store.supertonicDownloadState).toBe('ready');
+      expect(store.supertonicDownloadError).toBeNull();
+    });
+
+    it('downloadSupertonic: second concurrent call while downloading is ignored', async () => {
+      const store = await makeStore();
+      let resolve!: () => void;
+      mockSupertonicDownloadModel.mockImplementationOnce(
+        () => new Promise<void>(r => (resolve = r)),
+      );
+
+      const first = store.downloadSupertonic();
+      await store.downloadSupertonic();
+      expect(mockSupertonicDownloadModel).toHaveBeenCalledTimes(1);
+
+      resolve();
+      await first;
+    });
+
+    it('deleteSupertonic: delegates to engine, resets state, and clears Supertonic currentVoice', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+
+      await store.deleteSupertonic();
+
+      expect(mockSupertonicDeleteModel).toHaveBeenCalledTimes(1);
+      expect(store.supertonicDownloadState).toBe('not_installed');
+      expect(store.currentVoice).toBeNull();
+    });
+
+    it('deleteSupertonic: preserves a non-Supertonic currentVoice', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+
+      await store.deleteSupertonic();
+
+      expect(store.currentVoice).toEqual(SYSTEM_VOICE);
     });
   });
 });
