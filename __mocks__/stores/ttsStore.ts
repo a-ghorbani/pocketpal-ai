@@ -2,10 +2,10 @@ import {makeAutoObservable} from 'mobx';
 
 class MockTTSStore {
   isTTSAvailable = false;
-  playbackState: {mode: 'idle'} | {mode: 'streaming'; messageId: string} | {
-    mode: 'playing';
-    messageId: string;
-  } = {mode: 'idle'};
+  playbackState:
+    | {mode: 'idle'}
+    | {mode: 'streaming'; messageId: string}
+    | {mode: 'playing'; messageId: string} = {mode: 'idle'};
   autoSpeakEnabled = false;
   currentVoice: null = null;
   isSetupSheetOpen = false;
