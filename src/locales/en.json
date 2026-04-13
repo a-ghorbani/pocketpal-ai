@@ -410,7 +410,7 @@
     "jinja": "Enable Jinja templating for chat formatting. When enabled, uses Jinja-based chat template processing for better compatibility with modern models.",
     "grammar": "Enforce specific grammar rules to ensure the generated text follows a particular structure or format",
     "stop": "Define specific phrases that will stop text generation",
-    "n_predict": "Set how long the generated response should be (in tokens)",
+    "n_predict": "Maximum number of tokens to generate. Use -1 for no limit (generate until end of response). 0 means no generation.",
     "n_probs": "Show probability scores for alternative words.",
     "top_k": "Control creativity by limiting word choices to the K most likely options. Lower values make responses more focused",
     "top_p": "Balance creativity and coherence. Higher values (near 1.0) allow more creative but potentially less focused responses",

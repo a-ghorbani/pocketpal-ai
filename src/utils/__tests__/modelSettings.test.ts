@@ -124,9 +124,14 @@ describe('modelSettings', () => {
     it('has valid validation rules', () => {
       Object.values(COMPLETION_PARAMS_METADATA).forEach(metadata => {
         if (metadata.validation.type === 'numeric') {
-          expect(metadata.validation.min).toBeLessThanOrEqual(
-            metadata.validation.max,
-          );
+          if (
+            metadata.validation.min !== undefined &&
+            metadata.validation.max !== undefined
+          ) {
+            expect(metadata.validation.min).toBeLessThanOrEqual(
+              metadata.validation.max,
+            );
+          }
         }
       });
     });
