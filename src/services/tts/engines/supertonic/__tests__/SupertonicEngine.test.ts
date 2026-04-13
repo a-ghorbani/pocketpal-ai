@@ -36,4 +36,27 @@ describe('SupertonicEngine (v1.0 stub)', () => {
   it('getModelPath() throws "not implemented in v1.0"', () => {
     expect(() => engine.getModelPath()).toThrow(/not implemented/i);
   });
+
+  describe('playStreaming stub', () => {
+    it('appendText silently accepts and finalize rejects with "not installed"', async () => {
+      const handle = engine.playStreaming(anyVoice);
+      expect(() => handle.appendText('hello ')).not.toThrow();
+      expect(() => handle.appendText('world.')).not.toThrow();
+      await expect(handle.finalize()).rejects.toThrow(
+        /not installed \(enabled in v1\.2\)/i,
+      );
+    });
+
+    it('cancel() is a safe no-op even before finalize', async () => {
+      const handle = engine.playStreaming(anyVoice);
+      handle.appendText('discarded');
+      await expect(handle.cancel()).resolves.toBeUndefined();
+    });
+
+    it('finalize after cancel is a no-op (idempotent)', async () => {
+      const handle = engine.playStreaming(anyVoice);
+      await handle.cancel();
+      await expect(handle.finalize()).resolves.toBeUndefined();
+    });
+  });
 });

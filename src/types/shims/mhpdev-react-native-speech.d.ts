@@ -14,9 +14,27 @@ declare module '@mhpdev/react-native-speech' {
     identifier: string;
   }
 
+  export interface SpeechEventSubscription {
+    remove(): void;
+  }
+
+  export interface SpeechEventEmitter<T> {
+    (listener: (event: T) => void): SpeechEventSubscription;
+  }
+
+  export interface FinishEvent {
+    utteranceId?: string;
+  }
+
   export default class Speech {
     static speak(text: string, voiceId?: string): Promise<void>;
     static stop(): Promise<void>;
     static getAvailableVoices(language?: string): Promise<VoiceProps[]>;
+    /**
+     * Fires when the current utterance finishes playing. Used by
+     * `SystemEngine.playStreaming` to chain sentence-level utterances so
+     * long LLM responses start speaking before synthesis completes.
+     */
+    static onFinish: SpeechEventEmitter<FinishEvent>;
   }
 }

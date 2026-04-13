@@ -1,4 +1,4 @@
-import type {Engine, Voice} from '../../types';
+import type {Engine, StreamingHandle, Voice} from '../../types';
 import {SUPERTONIC_VOICES} from './voices';
 
 /**
@@ -22,6 +22,27 @@ export class SupertonicEngine implements Engine {
 
   async play(_text: string, _voice: Voice): Promise<void> {
     throw new Error('Supertonic not installed (enabled in v1.2)');
+  }
+
+  playStreaming(_voice: Voice): StreamingHandle {
+    // v1.0 stub: silently accumulate chunks; reject on finalize with the
+    // same "not installed" contract as `play()`. The store catches this and
+    // resets to idle, matching R1 swallow-the-stub-error semantics.
+    let dead = false;
+    return {
+      appendText(_chunk: string) {
+        // silent no-op
+      },
+      async finalize() {
+        if (dead) {
+          return;
+        }
+        throw new Error('Supertonic not installed (enabled in v1.2)');
+      },
+      async cancel() {
+        dead = true;
+      },
+    };
   }
 
   async stop(): Promise<void> {
