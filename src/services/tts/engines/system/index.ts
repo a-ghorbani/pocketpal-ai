@@ -1,4 +1,4 @@
-import Speech from '@mhpdev/react-native-speech';
+import Speech from '@pocketpalai/react-native-speech';
 
 import type {Engine, StreamingHandle, Voice} from '../../types';
 import {getSystemVoices} from './voices';
@@ -127,7 +127,7 @@ const createSystemStreamingHandle = (voice: Voice): StreamingHandle => {
 
 /**
  * Thin wrapper around the OS native TTS path exposed by
- * `@mhpdev/react-native-speech`. Always available on iOS 13+ / Android 8+.
+ * `@pocketpalai/react-native-speech`. Always available on iOS 13+ / Android 8+.
  */
 export class SystemEngine implements Engine {
   readonly id = 'system' as const;

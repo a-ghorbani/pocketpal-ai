@@ -3,7 +3,7 @@ import {Platform} from 'react-native';
 /**
  * Configure the iOS audio session for TTS playback.
  *
- * The underlying `@mhpdev/react-native-speech` package sets this internally
+ * The underlying `@pocketpalai/react-native-speech` package sets this internally
  * when it synthesizes, but we call it early so the first utterance doesn't
  * get truncated while the session warms up. No-op on Android (not needed).
  */

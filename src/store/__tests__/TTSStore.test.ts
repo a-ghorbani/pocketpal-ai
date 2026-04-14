@@ -20,7 +20,7 @@ jest
   .mockImplementation(mockAddEventListener as any);
 
 // Mock the TTS service — we want to observe engine calls without invoking the
-// real SystemEngine (which imports @mhpdev/react-native-speech).
+// real SystemEngine (which imports @pocketpalai/react-native-speech).
 const mockSystemPlay = jest.fn().mockResolvedValue(undefined);
 const mockSystemStop = jest.fn().mockResolvedValue(undefined);
 const mockSupertonicPlay = jest

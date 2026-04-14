@@ -1,4 +1,4 @@
-import Speech from '@mhpdev/react-native-speech';
+import Speech from '@pocketpalai/react-native-speech';
 
 import {SystemEngine} from '..';
 import type {Voice} from '../../../types';
@@ -8,7 +8,7 @@ import {
   __emitFinish,
   __finishListenerCount,
   __resetFinishListeners,
-} from '../../../../../../__mocks__/external/@mhpdev/react-native-speech';
+} from '../../../../../../__mocks__/external/@pocketpalai/react-native-speech';
 
 const VOICE: Voice = {
   id: 'com.apple.voice.Sarah',

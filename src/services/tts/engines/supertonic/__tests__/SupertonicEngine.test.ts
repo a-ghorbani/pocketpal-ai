@@ -2,13 +2,13 @@
  * Tests for the v1.2 real SupertonicEngine.
  *
  * Mocks `@dr.pogodin/react-native-fs` via `__mocks__/external/...` and
- * `@mhpdev/react-native-speech` via `moduleNameMapper`. Platform.OS is
+ * `@pocketpalai/react-native-speech` via `moduleNameMapper`. Platform.OS is
  * overridden per-test via `jest.doMock` / `Object.defineProperty`.
  */
 
 import {Platform} from 'react-native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import Speech, {TTSEngine} from '@mhpdev/react-native-speech';
+import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
 import {SupertonicEngine} from '..';
 import {

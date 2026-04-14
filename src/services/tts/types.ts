@@ -1,7 +1,7 @@
 /**
  * TTS service types.
  *
- * Voices and engines are abstracted over `@mhpdev/react-native-speech` so the
+ * Voices and engines are abstracted over `@pocketpalai/react-native-speech` so the
  * rest of the app doesn't touch that package directly.
  */
 

@@ -23,7 +23,7 @@ export const TTS_PARENT_SUBDIR = 'tts';
  *
  * URL traced from the upstream fork example app at pinned SHA
  * `3ae0094b094d7c3d4e17378e53199813384e88f9`
- * (`@mhpdev/react-native-speech/example/src/utils/SupertonicModelManager.ts`).
+ * (`@pocketpalai/react-native-speech/example/src/utils/SupertonicModelManager.ts`).
  */
 export const SUPERTONIC_MODEL_BASE_URL =
   'https://huggingface.co/Supertone/supertonic-2/resolve/main';

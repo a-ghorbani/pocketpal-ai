@@ -1,5 +1,5 @@
 /**
- * Jest mock for `@mhpdev/react-native-speech`.
+ * Jest mock for `@pocketpalai/react-native-speech`.
  *
  * The real package ships untranspiled source + TurboModule bindings, neither
  * of which Jest can load. We expose the subset that `SystemEngine` uses,

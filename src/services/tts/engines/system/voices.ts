@@ -1,4 +1,4 @@
-import Speech from '@mhpdev/react-native-speech';
+import Speech from '@pocketpalai/react-native-speech';
 
 import type {Voice} from '../../types';
 
