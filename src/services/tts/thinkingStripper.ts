@@ -98,10 +98,30 @@ export class ThinkingStripper {
     return this.nonEmptyThink;
   }
 
+  /**
+   * Record an out-of-band reasoning delta (Case A: `enable_thinking` ON,
+   * where llama.rn streams reasoning into `data.reasoning_content` separate
+   * from `data.content`). Non-whitespace reasoning flips the placeholder
+   * flag so callers emit the spoken cue during the otherwise-silent gap.
+   */
+  noteReasoning(delta: string): void {
+    if (delta && delta.trim().length > 0) {
+      this.nonEmptyThink = true;
+    }
+  }
+
   // Also useful for the non-streaming replay case.
-  static stripFinal(text: string): {text: string; hadNonEmptyThink: boolean} {
+  static stripFinal(
+    text: string,
+    opts?: {hadReasoning?: boolean},
+  ): {text: string; hadNonEmptyThink: boolean} {
     const s = new ThinkingStripper();
     const out = s.feed(text) + s.flush();
+    if (opts?.hadReasoning) {
+      // Force-flip: caller has out-of-band evidence that reasoning occurred
+      // (e.g., message metadata from Case A) even if `text` itself is clean.
+      s.noteReasoning('x');
+    }
     return {text: out, hadNonEmptyThink: s.hadNonEmptyThink()};
   }
 }

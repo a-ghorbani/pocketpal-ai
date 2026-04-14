@@ -1,7 +1,4 @@
-import {
-  ThinkingStripper,
-  pickThinkingPlaceholder,
-} from '../thinkingStripper';
+import {ThinkingStripper, pickThinkingPlaceholder} from '../thinkingStripper';
 
 describe('ThinkingStripper', () => {
   describe('feed() + flush()', () => {
@@ -56,8 +53,7 @@ describe('ThinkingStripper', () => {
 
     it('multiple think blocks are all stripped', () => {
       const s = new ThinkingStripper();
-      const out =
-        s.feed('<think>a</think>x<think>b</think>y') + s.flush();
+      const out = s.feed('<think>a</think>x<think>b</think>y') + s.flush();
       expect(out).toBe('xy');
       expect(s.hadNonEmptyThink()).toBe(true);
     });
@@ -90,6 +86,56 @@ describe('ThinkingStripper', () => {
         text: 'Hi',
         hadNonEmptyThink: true,
       });
+    });
+
+    it('hadReasoning=true flips hadNonEmptyThink on clean text', () => {
+      expect(ThinkingStripper.stripFinal('Hi', {hadReasoning: true})).toEqual({
+        text: 'Hi',
+        hadNonEmptyThink: true,
+      });
+    });
+
+    it('hadReasoning=false leaves clean text unflagged', () => {
+      expect(ThinkingStripper.stripFinal('Hi', {hadReasoning: false})).toEqual({
+        text: 'Hi',
+        hadNonEmptyThink: false,
+      });
+    });
+
+    it('hadReasoning=false still picks up content-side <think> markup', () => {
+      expect(
+        ThinkingStripper.stripFinal('<think>hmm</think>Hi', {
+          hadReasoning: false,
+        }),
+      ).toEqual({text: 'Hi', hadNonEmptyThink: true});
+    });
+  });
+
+  describe('noteReasoning()', () => {
+    it('empty string does not flip hadNonEmptyThink', () => {
+      const s = new ThinkingStripper();
+      s.noteReasoning('');
+      expect(s.hadNonEmptyThink()).toBe(false);
+    });
+
+    it('whitespace-only does not flip hadNonEmptyThink', () => {
+      const s = new ThinkingStripper();
+      s.noteReasoning('   \n  ');
+      expect(s.hadNonEmptyThink()).toBe(false);
+    });
+
+    it('non-empty reasoning flips hadNonEmptyThink', () => {
+      const s = new ThinkingStripper();
+      s.noteReasoning('x');
+      expect(s.hadNonEmptyThink()).toBe(true);
+    });
+
+    it('clean content feed + noteReasoning still flips flag', () => {
+      const s = new ThinkingStripper();
+      const out = s.feed('Hello world') + s.flush();
+      s.noteReasoning('deliberating');
+      expect(out).toBe('Hello world');
+      expect(s.hadNonEmptyThink()).toBe(true);
     });
   });
 
