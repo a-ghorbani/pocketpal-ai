@@ -12,6 +12,10 @@ import {
   TTS_MIN_RAM_BYTES,
 } from '../services/tts';
 import type {StreamingHandle, Voice} from '../services/tts';
+import {
+  ThinkingStripper,
+  pickThinkingPlaceholder,
+} from '../services/tts/thinkingStripper';
 import {chatSessionStore} from './ChatSessionStore';
 
 /**
@@ -82,6 +86,12 @@ export class TTSStore {
 
   private appStateSubscription: {remove: () => void} | null = null;
   private sessionReactionDispose: (() => void) | null = null;
+
+  // Per-streaming-session state for stripping `<think>…</think>` markup
+  // when `enable_thinking` is OFF. Reset in `onAssistantMessageStart` and
+  // cleared in any path that returns playbackState to idle.
+  private streamStripper: ThinkingStripper | null = null;
+  private streamPlaceholderEmitted: boolean = false;
 
   constructor() {
     makeAutoObservable(this, {}, {autoBind: true});
@@ -179,6 +189,8 @@ export class TTSStore {
     runInAction(() => {
       this.playbackState = {mode: 'idle'};
     });
+    this.streamStripper = null;
+    this.streamPlaceholderEmitted = false;
     if (state.mode === 'streaming') {
       try {
         await state.handle.cancel();
@@ -218,12 +230,22 @@ export class TTSStore {
 
     await this.stop();
 
+    // Strip any `<think>…</think>` markup from the replay text. When
+    // `enable_thinking` is OFF some models emit the tags literally into
+    // content; we don't want TTS reading them aloud. A non-empty thinking
+    // body earns a short spoken placeholder so the pause isn't silent.
+    const {text: cleanText, hadNonEmptyThink} =
+      ThinkingStripper.stripFinal(text);
+    const spokenText = hadNonEmptyThink
+      ? `${pickThinkingPlaceholder()} ${cleanText}`
+      : cleanText;
+
     runInAction(() => {
       this.playbackState = {mode: 'playing', messageId};
     });
 
     try {
-      await getEngine(voice.engine).play(text, voice);
+      await getEngine(voice.engine).play(spokenText, voice);
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
       runInAction(() => {
@@ -258,6 +280,8 @@ export class TTSStore {
     }
 
     this.lastSpokenMessageId = messageId;
+    this.streamStripper = new ThinkingStripper();
+    this.streamPlaceholderEmitted = false;
     const handle = getEngine(voice.engine).playStreaming(voice);
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
@@ -273,7 +297,34 @@ export class TTSStore {
     if (state.mode !== 'streaming' || state.messageId !== messageId) {
       return;
     }
-    state.handle.appendText(chunkText);
+    const stripper = this.streamStripper;
+    if (stripper == null) {
+      // Defensive: stripper should always exist while streaming. If not,
+      // forward the raw chunk rather than swallowing content.
+      state.handle.appendText(chunkText);
+      return;
+    }
+    const cleaned = stripper.feed(chunkText);
+    if (
+      stripper.hadNonEmptyThink() &&
+      !this.streamPlaceholderEmitted &&
+      cleaned.length === 0
+    ) {
+      // Thinking observed but no content to speak yet — emit placeholder
+      // so the user hears something during the silence.
+      state.handle.appendText(`${pickThinkingPlaceholder()} `);
+      this.streamPlaceholderEmitted = true;
+      return;
+    }
+    if (cleaned.length > 0) {
+      if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
+        // Edge case: thinking block and post-think content arrived in the
+        // same cleaned output — emit placeholder before the real text.
+        state.handle.appendText(`${pickThinkingPlaceholder()} `);
+        this.streamPlaceholderEmitted = true;
+      }
+      state.handle.appendText(cleaned);
+    }
   }
 
   /**
@@ -284,6 +335,19 @@ export class TTSStore {
   onAssistantMessageComplete(messageId: string, text: string) {
     const state = this.playbackState;
     if (state.mode === 'streaming' && state.messageId === messageId) {
+      // Flush any buffered tail from the stripper before finalizing. Handles
+      // e.g. a trailing partial tag prefix or plain text held back.
+      const stripper = this.streamStripper;
+      if (stripper != null) {
+        const leftover = stripper.flush();
+        if (leftover.length > 0) {
+          if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
+            state.handle.appendText(`${pickThinkingPlaceholder()} `);
+            this.streamPlaceholderEmitted = true;
+          }
+          state.handle.appendText(leftover);
+        }
+      }
       state.handle
         .finalize()
         .catch(err => {
@@ -302,6 +366,8 @@ export class TTSStore {
               this.playbackState = {mode: 'idle'};
             }
           });
+          this.streamStripper = null;
+          this.streamPlaceholderEmitted = false;
         });
       return;
     }

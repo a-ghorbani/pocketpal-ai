@@ -394,6 +394,106 @@ describe('TTSStore', () => {
     });
   });
 
+  describe('thinking-tag stripping', () => {
+    const setupEligible = async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setAutoSpeak(true);
+      return store;
+    };
+
+    it('streaming: strips non-empty <think>…</think> and emits placeholder once before content', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageChunk('msg-1', '<think>hmm</think>Hello');
+
+      const calls = lastSystemHandle!.appendText.mock.calls.map(c => c[0]);
+      // Expect: placeholder prefix (ending in space) then "Hello", no tags.
+      expect(calls.join('')).toMatch(/Hello$/);
+      expect(calls.join('')).not.toContain('<think>');
+      expect(calls.join('')).not.toContain('</think>');
+      expect(calls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('streaming: empty <think></think> does NOT emit a placeholder', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageChunk('msg-1', '<think></think>Hello');
+
+      const calls = lastSystemHandle!.appendText.mock.calls.map(c => c[0]);
+      expect(calls.join('')).toBe('Hello');
+    });
+
+    it('streaming: tags split across chunks are handled; placeholder emitted once', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageChunk('msg-1', '<th');
+      store.onAssistantMessageChunk('msg-1', 'ink>hm');
+      store.onAssistantMessageChunk('msg-1', 'm</thi');
+      store.onAssistantMessageChunk('msg-1', 'nk>Hi');
+
+      const joined = lastSystemHandle!.appendText.mock.calls
+        .map(c => c[0])
+        .join('');
+      expect(joined).not.toContain('<');
+      expect(joined).toMatch(/Hi$/);
+      // Placeholder appears exactly once — trailing space is the separator.
+      // We check by counting appendText calls that end with ' ' and precede 'Hi'.
+      expect(joined.length).toBeGreaterThan('Hi'.length);
+    });
+
+    it('replay fallback: onAssistantMessageComplete strips tags and prepends placeholder', async () => {
+      const store = await setupEligible();
+
+      store.onAssistantMessageComplete('msg-solo', '<think>hmm</think>Hi');
+      await flush();
+
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+      const [spokenText, voice] = mockSystemPlay.mock.calls[0];
+      expect(voice).toEqual(SYSTEM_VOICE);
+      expect(spokenText).not.toContain('<think>');
+      expect(spokenText).toMatch(/Hi$/);
+      // Placeholder prefix + space + Hi
+      expect(spokenText.length).toBeGreaterThan('Hi'.length);
+    });
+
+    it('replay fallback: plain text is passed through unchanged', async () => {
+      const store = await setupEligible();
+
+      store.onAssistantMessageComplete('msg-solo', 'Hi');
+      await flush();
+
+      expect(mockSystemPlay).toHaveBeenCalledWith('Hi', SYSTEM_VOICE);
+    });
+
+    it('replay fallback: empty <think></think> is stripped without placeholder', async () => {
+      const store = await setupEligible();
+
+      store.onAssistantMessageComplete('msg-solo', '<think></think>Hi');
+      await flush();
+
+      expect(mockSystemPlay).toHaveBeenCalledWith('Hi', SYSTEM_VOICE);
+    });
+
+    it('stop() clears stripper state so a new stream starts fresh', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', '<think>a');
+      await store.stop();
+
+      // New stream, empty think block — no placeholder should be emitted.
+      store.onAssistantMessageStart('msg-2');
+      store.onAssistantMessageChunk('msg-2', '<think></think>Hi');
+      const joined = lastSystemHandle!.appendText.mock.calls
+        .map(c => c[0])
+        .join('');
+      expect(joined).toBe('Hi');
+    });
+  });
+
   describe('AppState → background stops playback', () => {
     it('cancels streaming handle when AppState transitions to background', async () => {
       const store = await makeStore();
