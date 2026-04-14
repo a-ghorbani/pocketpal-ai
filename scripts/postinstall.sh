@@ -14,16 +14,16 @@ else
     echo "OpenCL headers already present."
 fi
 
-# Build @mhpdev/react-native-speech from its pinned GitHub source.
+# Build @pocketpalai/react-native-speech from its pinned GitHub source.
 #
 # The fork (installed via `github:a-ghorbani/react-native-speech#<sha>`) ships
 # untranspiled source (`"source": "./src/index.tsx"`) and a `package.json`
 # `main` pointing at `./lib/module/index.js` — which Metro cannot resolve in
 # release bundles because the GitHub install skips `prepare`. Build `lib/`
 # locally using react-native-builder-bob so Metro can find the entry.
-SPEECH_PKG="node_modules/@mhpdev/react-native-speech"
+SPEECH_PKG="node_modules/@pocketpalai/react-native-speech"
 if [ -d "$SPEECH_PKG" ] && [ ! -d "$SPEECH_PKG/lib/module" ]; then
-    echo "Building @mhpdev/react-native-speech from source..."
+    echo "Building @pocketpalai/react-native-speech from source..."
     (
         cd "$SPEECH_PKG"
         if [ ! -d "node_modules/react-native-builder-bob" ]; then
@@ -35,5 +35,5 @@ if [ -d "$SPEECH_PKG" ] && [ ! -d "$SPEECH_PKG/lib/module" ]; then
     )
     echo "  done."
 else
-    echo "@mhpdev/react-native-speech lib already present (or package not installed)."
+    echo "@pocketpalai/react-native-speech lib already present (or package not installed)."
 fi

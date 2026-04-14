@@ -2075,12 +2075,6 @@
   resolved "https://registry.yarnpkg.com/@jsamr/react-native-li/-/react-native-li-2.3.1.tgz#12a5b5f6e3971cec77b96bee58104eed0ae9314a"
   integrity sha512-Qbo4NEj48SQ4k8FZJHFE2fgZDKTWaUGmVxcIQh3msg5JezLdTMMHuRRDYctfdHI6L0FZGObmEv3haWbIvmol8w==
 
-"@mhpdev/react-native-speech@github:a-ghorbani/react-native-speech#46065193b48ed4d35b5acf1affbe80d9b75f7096":
-  version "1.3.0"
-  resolved "https://codeload.github.com/a-ghorbani/react-native-speech/tar.gz/46065193b48ed4d35b5acf1affbe80d9b75f7096"
-  dependencies:
-    phonemize "^1.1.0"
-
 "@native-html/css-processor@1.11.0":
   version "1.11.0"
   resolved "https://registry.yarnpkg.com/@native-html/css-processor/-/css-processor-1.11.0.tgz#27d02e5123b0849f4986d44060ba3f235a15f552"
@@ -2158,6 +2152,12 @@
   version "0.2.9"
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
+
+"@pocketpalai/react-native-speech@github:a-ghorbani/react-native-speech#16cc347b980e9d6e26d072358bf7811227928e36":
+  version "2.0.0"
+  resolved "https://codeload.github.com/a-ghorbani/react-native-speech/tar.gz/16cc347b980e9d6e26d072358bf7811227928e36"
+  dependencies:
+    phonemize "^1.1.0"
 
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
@@ -7217,6 +7217,18 @@ onetime@^5.1.0, onetime@^5.1.2:
   integrity sha512-kbpaSSGJTWdAY5KPVeMOKXSrPtr8C8C7wodJbcsd51jRnmD+GZu8Y0VoU6Dm5Z4vWr0Ig/1NKuWRKf7j5aaYSg==
   dependencies:
     mimic-fn "^2.1.0"
+
+onnxruntime-common@1.24.3:
+  version "1.24.3"
+  resolved "https://registry.yarnpkg.com/onnxruntime-common/-/onnxruntime-common-1.24.3.tgz#fb93319a2d041fc9fe2a209167ba6ef2f1a47fee"
+  integrity sha512-GeuPZO6U/LBJXvwdaqHbuUmoXiEdeCjWi/EG7Y1HNnDwJYuk6WUbNXpF6luSUY8yASul3cmUlLGrCCL1ZgVXqA==
+
+onnxruntime-react-native@^1.23.2:
+  version "1.24.3"
+  resolved "https://registry.yarnpkg.com/onnxruntime-react-native/-/onnxruntime-react-native-1.24.3.tgz#732890f94dcbea8b52b86c1ee8be49f4fc4445a3"
+  integrity sha512-vMxFcnO1YDtT6auv719Zk0Zj/EXujqeEzSjTe5W7A915qaRrM4pRfXlI4ye/ExOwcTan7NYVZ/wpLX+YBU2aWQ==
+  dependencies:
+    onnxruntime-common "1.24.3"
 
 open@^6.2.0:
   version "6.4.0"
