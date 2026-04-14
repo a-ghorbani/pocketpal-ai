@@ -112,7 +112,11 @@ describe('TTS setup end-to-end', () => {
     act(() => {
       fireEvent.press(getByTestId2('playbutton-msg-e2e'));
     });
-    expect(ttsStore.play).toHaveBeenCalledWith('msg-e2e', 'Hello there friend');
+    expect(ttsStore.play).toHaveBeenCalledWith(
+      'msg-e2e',
+      'Hello there friend',
+      {hadReasoning: false},
+    );
   });
 
   it('Supertonic section is ordered first in the full TTSSetupSheet composition', () => {
