@@ -38,127 +38,75 @@ describe('VoiceChip', () => {
       ttsStore.isTTSAvailable = false;
     });
     const {queryByTestId} = renderChip();
-    expect(queryByTestId('voicechip-gear-only')).toBeNull();
-    expect(queryByTestId('voicechip-split')).toBeNull();
+    expect(queryByTestId('voicechip')).toBeNull();
   });
 
-  it('pre-setup: renders gear-only (no toggle half, no divider)', () => {
-    const {getByTestId, queryByTestId} = renderChip();
-    expect(getByTestId('voicechip-gear-only')).toBeTruthy();
-    expect(queryByTestId('voicechip-split')).toBeNull();
-    expect(queryByTestId('voicechip-divider')).toBeNull();
-  });
-
-  it('pre-setup: tapping gear opens setup sheet', () => {
+  it('renders both halves (speaker + secondary) regardless of setup state', () => {
     const {getByTestId} = renderChip();
-    fireEvent.press(getByTestId('voicechip-gear-only'));
-    expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+    expect(getByTestId('voicechip-speaker')).toBeTruthy();
+    expect(getByTestId('voicechip-secondary')).toBeTruthy();
   });
 
-  it('voice-chosen: renders both halves with divider', () => {
-    runInAction(() => {
-      ttsStore.currentVoice = systemVoice as any;
-    });
+  it('pre-setup: speaker tap opens setup sheet (no voice to toggle)', () => {
     const {getByTestId} = renderChip();
-    expect(getByTestId('voicechip-toggle')).toBeTruthy();
-    expect(getByTestId('voicechip-divider')).toBeTruthy();
-    expect(getByTestId('voicechip-gear')).toBeTruthy();
-  });
-
-  it('voice-chosen: left half tap toggles autoSpeakEnabled', () => {
-    runInAction(() => {
-      ttsStore.currentVoice = systemVoice as any;
-    });
-    const {getByTestId} = renderChip();
-    fireEvent.press(getByTestId('voicechip-toggle'));
-    expect(ttsStore.setAutoSpeak).toHaveBeenCalledWith(true);
-    expect(ttsStore.openSetupSheet).not.toHaveBeenCalled();
-  });
-
-  it('voice-chosen: right half tap opens setup sheet, does not toggle', () => {
-    runInAction(() => {
-      ttsStore.currentVoice = systemVoice as any;
-    });
-    const {getByTestId} = renderChip();
-    fireEvent.press(getByTestId('voicechip-gear'));
+    fireEvent.press(getByTestId('voicechip-speaker'));
     expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
     expect(ttsStore.setAutoSpeak).not.toHaveBeenCalled();
   });
 
-  it('responsive truncation: full name at wide width', () => {
+  it('pre-setup: secondary tap opens setup sheet', () => {
+    const {getByTestId} = renderChip();
+    fireEvent.press(getByTestId('voicechip-secondary'));
+    expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+  });
+
+  it('voice-chosen: speaker tap toggles autoSpeakEnabled', () => {
     runInAction(() => {
-      ttsStore.currentVoice = systemVoice as any;
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = false;
     });
     const {getByTestId} = renderChip();
-    const toggle = getByTestId('voicechip-toggle');
-    // Simulate a wide layout.
-    fireEvent(toggle, 'layout', {
-      nativeEvent: {layout: {width: 200, height: 44, x: 0, y: 0}},
-    });
-    expect(getByTestId('voicechip-label').props.children).toBe('Alexandra');
+    fireEvent.press(getByTestId('voicechip-speaker'));
+    expect(ttsStore.setAutoSpeak).toHaveBeenCalledWith(true);
+    expect(ttsStore.openSetupSheet).not.toHaveBeenCalled();
   });
 
-  it('responsive truncation: 3-char prefix at medium width', () => {
+  it('voice-chosen: speaker tap while ON toggles autoSpeakEnabled off', () => {
     runInAction(() => {
-      ttsStore.currentVoice = systemVoice as any;
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = true;
     });
     const {getByTestId} = renderChip();
-    const toggle = getByTestId('voicechip-toggle');
-    fireEvent(toggle, 'layout', {
-      nativeEvent: {layout: {width: 80, height: 44, x: 0, y: 0}},
-    });
-    expect(getByTestId('voicechip-label').props.children).toBe('Ale');
+    fireEvent.press(getByTestId('voicechip-speaker'));
+    expect(ttsStore.setAutoSpeak).toHaveBeenCalledWith(false);
   });
 
-  it('responsive truncation: icon-only at narrow width', () => {
+  it('voice-chosen: secondary tap opens setup sheet, does not toggle', () => {
     runInAction(() => {
-      ttsStore.currentVoice = systemVoice as any;
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = false;
     });
-    const {getByTestId, queryByTestId} = renderChip();
-    const toggle = getByTestId('voicechip-toggle');
-    fireEvent(toggle, 'layout', {
-      nativeEvent: {layout: {width: 50, height: 44, x: 0, y: 0}},
-    });
-    expect(queryByTestId('voicechip-label')).toBeNull();
+    const {getByTestId} = renderChip();
+    fireEvent.press(getByTestId('voicechip-secondary'));
+    expect(ttsStore.openSetupSheet).toHaveBeenCalledTimes(1);
+    expect(ttsStore.setAutoSpeak).not.toHaveBeenCalled();
   });
 
-  describe('responsive truncation: breakpoint boundaries', () => {
-    beforeEach(() => {
-      runInAction(() => {
-        ttsStore.currentVoice = systemVoice as any;
-      });
+  it('speaker accessibilityState reflects autoSpeakEnabled post-setup', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = systemVoice;
+      ttsStore.autoSpeakEnabled = true;
     });
+    const {getByTestId} = renderChip();
+    const speaker = getByTestId('voicechip-speaker');
+    expect(speaker.props.accessibilityState).toEqual({selected: true});
+  });
 
-    it('width == FULL_WIDTH (110) renders full name (inclusive edge)', () => {
-      const {getByTestId} = renderChip();
-      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
-        nativeEvent: {layout: {width: 110, height: 44, x: 0, y: 0}},
-      });
-      expect(getByTestId('voicechip-label').props.children).toBe('Alexandra');
-    });
-
-    it('width 109 (just below FULL_WIDTH) drops to 3-char prefix', () => {
-      const {getByTestId} = renderChip();
-      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
-        nativeEvent: {layout: {width: 109, height: 44, x: 0, y: 0}},
-      });
-      expect(getByTestId('voicechip-label').props.children).toBe('Ale');
-    });
-
-    it('width == SHORT_WIDTH (72) still renders 3-char prefix (inclusive edge)', () => {
-      const {getByTestId} = renderChip();
-      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
-        nativeEvent: {layout: {width: 72, height: 44, x: 0, y: 0}},
-      });
-      expect(getByTestId('voicechip-label').props.children).toBe('Ale');
-    });
-
-    it('width 71 (just below SHORT_WIDTH) drops to icon-only', () => {
-      const {getByTestId, queryByTestId} = renderChip();
-      fireEvent(getByTestId('voicechip-toggle'), 'layout', {
-        nativeEvent: {layout: {width: 71, height: 44, x: 0, y: 0}},
-      });
-      expect(queryByTestId('voicechip-label')).toBeNull();
-    });
+  it('pre-setup speaker accessibilityState has no selected flag', () => {
+    const {getByTestId} = renderChip();
+    const speaker = getByTestId('voicechip-speaker');
+    // Pressable synthesizes an accessibilityState object; the selected key
+    // should be undefined pre-setup since the component doesn't pass it.
+    expect(speaker.props.accessibilityState?.selected).toBeUndefined();
   });
 });

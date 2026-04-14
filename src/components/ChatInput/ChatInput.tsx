@@ -462,9 +462,6 @@ export const ChatInput = observer(
           <View style={styles.controlBar}>
             {/* Left Controls */}
             <View style={styles.leftControls}>
-              {/* Voice chip (TTS) — renders null on low-memory devices */}
-              <VoiceChip />
-
               {/* Plus Button for Image Upload (only for regular chat) */}
               {showImageUpload && !isVideoCapable && (
                 <Menu
@@ -620,11 +617,15 @@ export const ChatInput = observer(
                   </Text>
                 </TouchableOpacity>
               ) : (
-                isSendButtonVisible && (
-                  <View style={{opacity: sendButtonOpacity}}>
-                    <SendButton color={onSurfaceColor} onPress={handleSend} />
-                  </View>
-                )
+                <>
+                  {/* Voice chip (TTS) — renders null on low-memory devices */}
+                  <VoiceChip />
+                  {isSendButtonVisible && (
+                    <View style={{opacity: sendButtonOpacity}}>
+                      <SendButton color={onSurfaceColor} onPress={handleSend} />
+                    </View>
+                  )}
+                </>
               )}
             </View>
           </View>

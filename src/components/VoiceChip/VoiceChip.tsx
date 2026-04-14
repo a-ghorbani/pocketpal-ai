@@ -1,12 +1,12 @@
-import React, {useContext, useMemo, useState} from 'react';
-import {LayoutChangeEvent, Pressable, View} from 'react-native';
-import {Text} from 'react-native-paper';
+import React, {useContext} from 'react';
+import {Pressable, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {
+  ChevronDownIcon,
   SettingsIcon,
   VolumeOffIcon,
   VolumeOnIcon,
@@ -15,21 +15,10 @@ import {
 
 import {createStyles} from './styles';
 
-// Responsive truncation: below FULL_WIDTH show first 3 chars; below
-// SHORT_WIDTH show icon only. Kept simple — no onLayout-driven
-// multi-step measure loop.
-const FULL_WIDTH = 110;
-const SHORT_WIDTH = 72;
-
-const truncateName = (name: string, width: number): string | null => {
-  if (width >= FULL_WIDTH) {
-    return name;
-  }
-  if (width >= SHORT_WIDTH) {
-    return name.slice(0, 3);
-  }
-  return null;
-};
+// Flip this to compare variants on device.
+// 'gear'     → small ⚙ as secondary (opens setup sheet)
+// 'chevron'  → small ▾ as secondary (opens setup sheet, reads as "more options")
+const SECONDARY_VARIANT: 'gear' | 'chevron' = 'chevron';
 
 const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
   if (isPlaying) {
@@ -39,20 +28,17 @@ const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
 };
 
 /**
- * Input-bar split chip. Two visual forms:
- *  - Pre-setup (`currentVoice == null`): single gear circle.
- *  - Voice-chosen: split with left half (toggle auto-speak + voice name)
- *    and right half (gear → setup sheet), separated by 1px divider.
+ * Compact voice control. Two halves in one pill, sized with hierarchy:
+ *  - Primary (≥44pt) speaker — toggles auto-speak
+ *  - Secondary (28pt) — opens setup sheet (gear or chevron variant)
  *
- * Visual states on the left half: OFF, ON-idle, ON-playing. Voice name
- * truncates as the chip narrows: full → 3 chars → icon only.
+ * First-use (no voice yet): both halves collapse to "open setup sheet" so
+ * the user never hits a dead state. Hidden entirely on low-memory devices.
  */
 export const VoiceChip: React.FC = observer(() => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
-
-  const [leftWidth, setLeftWidth] = useState<number>(FULL_WIDTH);
 
   const isAvailable = ttsStore.isTTSAvailable;
   const currentVoice = ttsStore.currentVoice;
@@ -61,81 +47,60 @@ export const VoiceChip: React.FC = observer(() => {
   const isPlaying =
     playbackState.mode === 'playing' || playbackState.mode === 'streaming';
 
-  const handleOpenSettings = () => {
-    ttsStore.openSetupSheet();
-  };
-
-  const handleToggleAutoSpeak = () => {
-    ttsStore.setAutoSpeak(!autoSpeakEnabled);
-  };
-
-  const onLeftLayout = (e: LayoutChangeEvent) => {
-    setLeftWidth(e.nativeEvent.layout.width);
-  };
-
-  const label = useMemo(() => {
-    if (!currentVoice) {
-      return null;
-    }
-    return truncateName(currentVoice.name, leftWidth);
-  }, [currentVoice, leftWidth]);
-
   if (!isAvailable) {
     return null;
   }
 
-  if (!currentVoice) {
-    return (
-      <Pressable
-        style={styles.gearOnly}
-        onPress={handleOpenSettings}
-        accessibilityRole="button"
-        accessibilityLabel={l10n.voiceAndSpeech.openSettingsLabel}
-        testID="voicechip-gear-only">
-        <SettingsIcon
-          width={20}
-          height={20}
-          stroke={theme.colors.onSurfaceVariant}
-        />
-      </Pressable>
-    );
-  }
+  const hasVoice = currentVoice != null;
+
+  const handleSpeakerPress = () => {
+    // Pre-setup: speaker tap opens setup sheet (no voice to toggle).
+    // Post-setup: toggles auto-speak.
+    if (!hasVoice) {
+      ttsStore.openSetupSheet();
+      return;
+    }
+    ttsStore.setAutoSpeak(!autoSpeakEnabled);
+  };
+
+  const handleSecondaryPress = () => {
+    ttsStore.openSetupSheet();
+  };
 
   const SpeakerIcon = pickSpeakerIcon(autoSpeakEnabled, isPlaying);
-  const iconColor = autoSpeakEnabled
-    ? theme.colors.primary
-    : theme.colors.onSurfaceVariant;
+  const speakerColor =
+    hasVoice && autoSpeakEnabled
+      ? theme.colors.primary
+      : theme.colors.onSurfaceVariant;
+
+  const SecondaryIcon =
+    SECONDARY_VARIANT === 'chevron' ? ChevronDownIcon : SettingsIcon;
+  const secondarySize = SECONDARY_VARIANT === 'chevron' ? 16 : 14;
 
   return (
-    <View style={styles.split} testID="voicechip-split">
+    <View style={styles.container} testID="voicechip">
       <Pressable
-        style={[styles.half, styles.leftHalf]}
-        onPress={handleToggleAutoSpeak}
-        onLayout={onLeftLayout}
+        style={styles.speakerHalf}
+        onPress={handleSpeakerPress}
         accessibilityRole="button"
-        accessibilityLabel={l10n.voiceAndSpeech.toggleAutoSpeakLabel}
-        accessibilityState={{selected: autoSpeakEnabled}}
-        testID="voicechip-toggle">
-        <SpeakerIcon width={20} height={20} stroke={iconColor} />
-        {label !== null && (
-          <Text
-            numberOfLines={1}
-            style={styles.voiceLabel}
-            testID="voicechip-label">
-            {label}
-          </Text>
-        )}
+        accessibilityLabel={
+          hasVoice
+            ? l10n.voiceAndSpeech.toggleAutoSpeakLabel
+            : l10n.voiceAndSpeech.openSettingsLabel
+        }
+        accessibilityState={hasVoice ? {selected: autoSpeakEnabled} : undefined}
+        testID="voicechip-speaker">
+        <SpeakerIcon width={20} height={20} stroke={speakerColor} />
       </Pressable>
-      <View style={styles.divider} testID="voicechip-divider" />
       <Pressable
-        style={[styles.half, styles.rightHalf]}
-        onPress={handleOpenSettings}
+        style={styles.secondaryHalf}
+        onPress={handleSecondaryPress}
         accessibilityRole="button"
         accessibilityLabel={l10n.voiceAndSpeech.openSettingsLabel}
-        testID="voicechip-gear">
-        <SettingsIcon
-          width={20}
-          height={20}
+        testID="voicechip-secondary">
+        <SecondaryIcon
+          width={secondarySize}
+          height={secondarySize}
           stroke={theme.colors.onSurfaceVariant}
         />
       </Pressable>

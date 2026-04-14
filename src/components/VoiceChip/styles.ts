@@ -2,48 +2,32 @@ import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
-// Minimum tap target per Apple/Material (≥44pt).
+// Primary (speaker) hit target ≥44pt. Secondary (gear/chevron) can be
+// smaller — it's a subordinate option on the same compact control.
 const MIN_TAP = 44;
+const SECONDARY_TAP = 28;
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    gearOnly: {
+    // Compound pill: speaker + small secondary, grouped as one unit near send.
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: MIN_TAP,
+      paddingRight: 4,
+      borderRadius: MIN_TAP / 2,
+    },
+    speakerHalf: {
       width: MIN_TAP,
       height: MIN_TAP,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: MIN_TAP / 2,
-      backgroundColor: theme.colors.surfaceContainerLow,
     },
-    split: {
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      height: MIN_TAP,
-      borderRadius: MIN_TAP / 2,
-      backgroundColor: theme.colors.surfaceContainerLow,
-      overflow: 'hidden',
-    },
-    half: {
-      minWidth: MIN_TAP,
-      height: MIN_TAP,
-      paddingHorizontal: 10,
-      flexDirection: 'row',
+    secondaryHalf: {
+      width: SECONDARY_TAP,
+      height: SECONDARY_TAP,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    leftHalf: {
-      maxWidth: 200,
-    },
-    rightHalf: {
-      width: MIN_TAP,
-    },
-    divider: {
-      width: 1,
-      backgroundColor: theme.colors.onSurfaceVariant,
-      opacity: 0.25,
-    },
-    voiceLabel: {
-      marginLeft: 6,
-      color: theme.colors.onSurface,
+      marginLeft: -4,
     },
   });
