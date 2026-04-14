@@ -218,12 +218,12 @@ export class TTSStore {
   async play(
     messageId: string,
     text: string,
-    voiceOverride?: Voice,
+    opts?: {hadReasoning?: boolean; voiceOverride?: Voice},
   ): Promise<void> {
     if (!this.isTTSAvailable) {
       return;
     }
-    const voice = voiceOverride ?? this.currentVoice;
+    const voice = opts?.voiceOverride ?? this.currentVoice;
     if (!voice) {
       return;
     }
@@ -234,8 +234,13 @@ export class TTSStore {
     // `enable_thinking` is OFF some models emit the tags literally into
     // content; we don't want TTS reading them aloud. A non-empty thinking
     // body earns a short spoken placeholder so the pause isn't silent.
-    const {text: cleanText, hadNonEmptyThink} =
-      ThinkingStripper.stripFinal(text);
+    // `hadReasoning` covers Case A (enable_thinking ON) where the reasoning
+    // arrived on a separate channel (`message.metadata.completionResult
+    // .reasoning_content`) and the content itself is already clean.
+    const {text: cleanText, hadNonEmptyThink} = ThinkingStripper.stripFinal(
+      text,
+      {hadReasoning: opts?.hadReasoning},
+    );
     const spokenText = hadNonEmptyThink
       ? `${pickThinkingPlaceholder()} ${cleanText}`
       : cleanText;
@@ -292,7 +297,11 @@ export class TTSStore {
    * Delta chunk from the LLM stream. Only forwarded if a streaming session
    * for this `messageId` is currently active.
    */
-  onAssistantMessageChunk(messageId: string, chunkText: string) {
+  onAssistantMessageChunk(
+    messageId: string,
+    chunkText: string,
+    reasoningDelta?: string,
+  ) {
     const state = this.playbackState;
     if (state.mode !== 'streaming' || state.messageId !== messageId) {
       return;
@@ -303,6 +312,12 @@ export class TTSStore {
       // forward the raw chunk rather than swallowing content.
       state.handle.appendText(chunkText);
       return;
+    }
+    // Case A: enable_thinking ON, reasoning arrives on a separate channel.
+    // Record it so the placeholder can fire during the silent gap before
+    // content starts.
+    if (reasoningDelta) {
+      stripper.noteReasoning(reasoningDelta);
     }
     const cleaned = stripper.feed(chunkText);
     if (
@@ -332,7 +347,11 @@ export class TTSStore {
    * flush remaining buffer via `finalize()`. Otherwise, if gating passes,
    * fall back to a full-text `play()`.
    */
-  onAssistantMessageComplete(messageId: string, text: string) {
+  onAssistantMessageComplete(
+    messageId: string,
+    text: string,
+    opts?: {hadReasoning?: boolean},
+  ) {
     const state = this.playbackState;
     if (state.mode === 'streaming' && state.messageId === messageId) {
       // Flush any buffered tail from the stripper before finalizing. Handles
@@ -384,7 +403,7 @@ export class TTSStore {
       return;
     }
     this.lastSpokenMessageId = messageId;
-    this.play(messageId, text).catch(() => {
+    this.play(messageId, text, {hadReasoning: opts?.hadReasoning}).catch(() => {
       // play() already logs and recovers; swallow to satisfy no-floating-promises.
     });
   }

@@ -281,6 +281,11 @@ export const useChatSession = (
       // what we've already pushed.
       let ttsStarted = false;
       let prevSpokenContent = '';
+      // Case A (enable_thinking ON): reasoning is streamed on a separate
+      // channel. We diff it against the previous cumulative reasoning and
+      // forward the delta so TTS can emit the thinking placeholder during
+      // the silent gap before real content starts.
+      let prevSpokenReasoning = '';
 
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
@@ -297,19 +302,32 @@ export const useChatSession = (
             // content seen; chunk with the new substring beyond what we've
             // already forwarded.
             const streamContent = data.content ?? '';
+            const streamReasoning = data.reasoning_content ?? '';
             // TTS hooks are wrapped defensively — a failure in the UI
             // path must never kill the completion stream.
             try {
-              if (!ttsStarted && (data.token || streamContent)) {
+              if (
+                !ttsStarted &&
+                (data.token || streamContent || streamReasoning)
+              ) {
                 ttsStarted = true;
                 ttsStore.onAssistantMessageStart(currentMessageInfo.current.id);
               }
-              if (streamContent.length > prevSpokenContent.length) {
-                const delta = streamContent.slice(prevSpokenContent.length);
+              const contentDelta =
+                streamContent.length > prevSpokenContent.length
+                  ? streamContent.slice(prevSpokenContent.length)
+                  : '';
+              const reasoningDelta =
+                streamReasoning.length > prevSpokenReasoning.length
+                  ? streamReasoning.slice(prevSpokenReasoning.length)
+                  : '';
+              if (contentDelta || reasoningDelta) {
                 prevSpokenContent = streamContent;
+                prevSpokenReasoning = streamReasoning;
                 ttsStore.onAssistantMessageChunk(
                   currentMessageInfo.current.id,
-                  delta,
+                  contentDelta,
+                  reasoningDelta || undefined,
                 );
               }
             } catch (ttsErr) {
@@ -408,6 +426,9 @@ export const useChatSession = (
         ttsStore.onAssistantMessageComplete(
           currentMessageInfo.current.id,
           result.text,
+          {
+            hadReasoning: !!result.reasoning_content?.trim(),
+          },
         );
       } catch (ttsErr) {
         console.warn('[useChatSession] TTS complete hook failed:', ttsErr);

@@ -240,7 +240,7 @@ describe('TTSStore', () => {
       const store = await makeStore();
       store.setCurrentVoice(null);
 
-      await store.play('msg-1', 'hello', SYSTEM_VOICE);
+      await store.play('msg-1', 'hello', {voiceOverride: SYSTEM_VOICE});
 
       expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
     });
@@ -476,6 +476,75 @@ describe('TTSStore', () => {
       await flush();
 
       expect(mockSystemPlay).toHaveBeenCalledWith('Hi', SYSTEM_VOICE);
+    });
+
+    it('Case A: reasoning deltas flip placeholder once before content arrives', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      // Several reasoning chunks, content still empty — model is thinking.
+      store.onAssistantMessageChunk('msg-1', '', 'let ');
+      store.onAssistantMessageChunk('msg-1', '', 'me ');
+      store.onAssistantMessageChunk('msg-1', '', 'think');
+      // First real content chunk lands.
+      store.onAssistantMessageChunk('msg-1', 'Hello', '');
+
+      const calls = lastSystemHandle!.appendText.mock.calls.map(c => c[0]);
+      const joined = calls.join('');
+      // Placeholder prefix (ends with space) + Hello.
+      expect(joined).toMatch(/Hello$/);
+      expect(joined.length).toBeGreaterThan('Hello'.length);
+      // Placeholder emitted exactly once: count appendText calls that ended
+      // with a space before any content arrived.
+      const placeholderCalls = calls.filter(c => c.endsWith(' ') && c !== '');
+      expect(placeholderCalls.length).toBe(1);
+    });
+
+    it('Case A: whitespace-only reasoning does NOT emit a placeholder', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+
+      store.onAssistantMessageChunk('msg-1', '', '   ');
+      store.onAssistantMessageChunk('msg-1', 'Hi', '');
+
+      const joined = lastSystemHandle!.appendText.mock.calls
+        .map(c => c[0])
+        .join('');
+      expect(joined).toBe('Hi');
+    });
+
+    it('Case A: stop() mid-reasoning clears stripper state (no stale placeholder)', async () => {
+      const store = await setupEligible();
+      store.onAssistantMessageStart('msg-1');
+      store.onAssistantMessageChunk('msg-1', '', 'thinking hard');
+      await store.stop();
+
+      // New stream, no reasoning — should not emit placeholder.
+      store.onAssistantMessageStart('msg-2');
+      store.onAssistantMessageChunk('msg-2', 'Hi', '');
+      const joined = lastSystemHandle!.appendText.mock.calls
+        .map(c => c[0])
+        .join('');
+      expect(joined).toBe('Hi');
+    });
+
+    it('replay fallback: hadReasoning hint prepends placeholder on clean text', async () => {
+      const store = await setupEligible();
+
+      await store.play('msg-solo', 'Hello world', {hadReasoning: true});
+
+      expect(mockSystemPlay).toHaveBeenCalledTimes(1);
+      const [spokenText] = mockSystemPlay.mock.calls[0];
+      expect(spokenText).toMatch(/Hello world$/);
+      expect(spokenText.length).toBeGreaterThan('Hello world'.length);
+    });
+
+    it('replay fallback: hadReasoning=false leaves clean text unchanged', async () => {
+      const store = await setupEligible();
+
+      await store.play('msg-solo', 'Hello world', {hadReasoning: false});
+
+      expect(mockSystemPlay).toHaveBeenCalledWith('Hello world', SYSTEM_VOICE);
     });
 
     it('stop() clears stripper state so a new stream starts fresh', async () => {

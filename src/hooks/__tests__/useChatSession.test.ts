@@ -444,11 +444,79 @@ describe('useChatSession', () => {
         1,
         expect.any(String),
         'Hello ',
+        undefined,
       );
       expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
         2,
         expect.any(String),
         'world.',
+        undefined,
+      );
+    });
+
+    it('Case A: forwards reasoning_content deltas and hadReasoning on complete', async () => {
+      const finalText = 'Final answer.';
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              // Reasoning-only chunks (model thinking).
+              onData({token: 'tok', content: '', reasoning_content: 'Let me '});
+              onData({
+                token: 'tok',
+                content: '',
+                reasoning_content: 'Let me think.',
+              });
+              // Real content begins.
+              onData({
+                token: 'tok',
+                content: 'Final answer.',
+                reasoning_content: 'Let me think.',
+              });
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: 'Let me think.',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // Reasoning deltas arrive as the 3rd arg with empty content delta.
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        '',
+        'Let me ',
+      );
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        '',
+        'think.',
+      );
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        3,
+        expect.any(String),
+        'Final answer.',
+        undefined,
+      );
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
+        expect.any(String),
+        finalText,
+        {hadReasoning: true},
       );
     });
 
@@ -484,6 +552,7 @@ describe('useChatSession', () => {
       expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
         expect.any(String),
         finalText,
+        {hadReasoning: false},
       );
     });
 
@@ -531,6 +600,7 @@ describe('useChatSession', () => {
       expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
         expect.any(String),
         finalText,
+        {hadReasoning: false},
       );
     });
 
