@@ -83,7 +83,13 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
       });
       return;
     }
-    ttsStore.play(message.id, message.text).catch(() => {
+    // Case A cue: if the message was produced with enable_thinking ON,
+    // the content is already clean but reasoning was streamed on a
+    // separate channel. Hint the store so it prepends the spoken
+    // thinking placeholder on replay.
+    const hadReasoning =
+      !!message.metadata?.completionResult?.reasoning_content?.trim();
+    ttsStore.play(message.id, message.text, {hadReasoning}).catch(() => {
       /* logged inside store */
     });
   };

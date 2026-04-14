@@ -90,8 +90,58 @@ describe('PlayButton', () => {
     });
     const {getByTestId} = renderButton(makeAssistantMsg());
     fireEvent.press(getByTestId('playbutton-msg-1'));
-    expect(ttsStore.play).toHaveBeenCalledWith('msg-1', 'Hello there friend');
+    expect(ttsStore.play).toHaveBeenCalledWith('msg-1', 'Hello there friend', {
+      hadReasoning: false,
+    });
     expect(ttsStore.stop).not.toHaveBeenCalled();
+  });
+
+  it('passes hadReasoning=true when message metadata has reasoning_content', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = {
+        id: 'v1',
+        name: 'Alex',
+        engine: 'system',
+      } as any;
+    });
+    const {getByTestId} = renderButton(
+      makeAssistantMsg({
+        metadata: {
+          completionResult: {
+            content: 'Hello there friend',
+            reasoning_content: 'deliberating...',
+          },
+        },
+      }),
+    );
+    fireEvent.press(getByTestId('playbutton-msg-1'));
+    expect(ttsStore.play).toHaveBeenCalledWith('msg-1', 'Hello there friend', {
+      hadReasoning: true,
+    });
+  });
+
+  it('passes hadReasoning=false when reasoning_content is whitespace-only', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = {
+        id: 'v1',
+        name: 'Alex',
+        engine: 'system',
+      } as any;
+    });
+    const {getByTestId} = renderButton(
+      makeAssistantMsg({
+        metadata: {
+          completionResult: {
+            content: 'Hello there friend',
+            reasoning_content: '   \n  ',
+          },
+        },
+      }),
+    );
+    fireEvent.press(getByTestId('playbutton-msg-1'));
+    expect(ttsStore.play).toHaveBeenCalledWith('msg-1', 'Hello there friend', {
+      hadReasoning: false,
+    });
   });
 
   it('calls stop when tapped while this message is playing', () => {
