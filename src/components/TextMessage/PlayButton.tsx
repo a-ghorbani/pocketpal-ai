@@ -1,12 +1,12 @@
 import React, {useContext} from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import {Icon} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import {modelStore, ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {assistant} from '../../utils/chat';
+import {StopIcon, VolumeOnIcon} from '../../assets/icons';
 import type {MessageType} from '../../utils/types';
 
 const MIN_TAP = 44;
@@ -100,11 +100,19 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
             : l10n.voiceAndSpeech.playMessageLabel
         }
         testID={`playbutton-${message.id}`}>
-        <Icon
-          source={isThisPlaying ? 'stop' : 'volume-high'}
-          size={20}
-          color={theme.colors.onSurfaceVariant}
-        />
+        {isThisPlaying ? (
+          <StopIcon
+            width={20}
+            height={20}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        ) : (
+          <VolumeOnIcon
+            width={20}
+            height={20}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        )}
       </Pressable>
     </View>
   );

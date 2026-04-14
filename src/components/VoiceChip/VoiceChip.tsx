@@ -1,11 +1,17 @@
 import React, {useContext, useMemo, useState} from 'react';
 import {LayoutChangeEvent, Pressable, View} from 'react-native';
-import {Icon, Text} from 'react-native-paper';
+import {Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
+import {
+  SettingsIcon,
+  VolumeOffIcon,
+  VolumeOnIcon,
+  WavesIcon,
+} from '../../assets/icons';
 
 import {createStyles} from './styles';
 
@@ -25,16 +31,11 @@ const truncateName = (name: string, width: number): string | null => {
   return null;
 };
 
-type SpeakerIconName = 'volume-off' | 'volume-high' | 'waveform';
-
-const pickSpeakerIcon = (
-  autoSpeakEnabled: boolean,
-  isPlaying: boolean,
-): SpeakerIconName => {
+const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
   if (isPlaying) {
-    return 'waveform';
+    return WavesIcon;
   }
-  return autoSpeakEnabled ? 'volume-high' : 'volume-off';
+  return autoSpeakEnabled ? VolumeOnIcon : VolumeOffIcon;
 };
 
 /**
@@ -91,12 +92,16 @@ export const VoiceChip: React.FC = observer(() => {
         accessibilityRole="button"
         accessibilityLabel={l10n.voiceAndSpeech.openSettingsLabel}
         testID="voicechip-gear-only">
-        <Icon source="cog" size={20} color={theme.colors.onSurfaceVariant} />
+        <SettingsIcon
+          width={20}
+          height={20}
+          stroke={theme.colors.onSurfaceVariant}
+        />
       </Pressable>
     );
   }
 
-  const iconName = pickSpeakerIcon(autoSpeakEnabled, isPlaying);
+  const SpeakerIcon = pickSpeakerIcon(autoSpeakEnabled, isPlaying);
   const iconColor = autoSpeakEnabled
     ? theme.colors.primary
     : theme.colors.onSurfaceVariant;
@@ -111,7 +116,7 @@ export const VoiceChip: React.FC = observer(() => {
         accessibilityLabel={l10n.voiceAndSpeech.toggleAutoSpeakLabel}
         accessibilityState={{selected: autoSpeakEnabled}}
         testID="voicechip-toggle">
-        <Icon source={iconName} size={20} color={iconColor} />
+        <SpeakerIcon width={20} height={20} stroke={iconColor} />
         {label !== null && (
           <Text
             numberOfLines={1}
@@ -128,7 +133,11 @@ export const VoiceChip: React.FC = observer(() => {
         accessibilityRole="button"
         accessibilityLabel={l10n.voiceAndSpeech.openSettingsLabel}
         testID="voicechip-gear">
-        <Icon source="cog" size={20} color={theme.colors.onSurfaceVariant} />
+        <SettingsIcon
+          width={20}
+          height={20}
+          stroke={theme.colors.onSurfaceVariant}
+        />
       </Pressable>
     </View>
   );

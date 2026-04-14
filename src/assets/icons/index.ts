@@ -53,5 +53,8 @@ export {default as UploadIcon} from './upload.svg';
 export {default as UserIcon} from './user.svg';
 export {default as UserCircleIcon} from './user-circle.svg';
 export {default as VideoRecorderIcon} from './video-recorder.svg';
+export {default as VolumeOffIcon} from './volume-off.svg';
+export {default as VolumeOnIcon} from './volume-on.svg';
+export {default as WavesIcon} from './waves.svg';
 export {default as WifiOffIcon} from './wifi-off.svg';
 export {default as XIcon} from './x.svg';
