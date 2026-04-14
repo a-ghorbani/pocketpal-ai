@@ -38,7 +38,7 @@ const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
 export const VoiceChip: React.FC = observer(() => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
-  const styles = createStyles(theme);
+  const styles = createStyles();
 
   const isAvailable = ttsStore.isTTSAvailable;
   const currentVoice = ttsStore.currentVoice;

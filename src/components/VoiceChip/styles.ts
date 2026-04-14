@@ -1,13 +1,11 @@
 import {StyleSheet} from 'react-native';
 
-import {Theme} from '../../utils/types';
-
 // Primary (speaker) hit target ≥44pt. Secondary (gear/chevron) can be
 // smaller — it's a subordinate option on the same compact control.
 const MIN_TAP = 44;
 const SECONDARY_TAP = 28;
 
-export const createStyles = (theme: Theme) =>
+export const createStyles = () =>
   StyleSheet.create({
     // Compound pill: speaker + small secondary, grouped as one unit near send.
     container: {
