@@ -1,5 +1,7 @@
 import {makeAutoObservable} from 'mobx';
 
+type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
+
 class MockTTSStore {
   isTTSAvailable = false;
   playbackState:
@@ -7,20 +9,29 @@ class MockTTSStore {
     | {mode: 'streaming'; messageId: string}
     | {mode: 'playing'; messageId: string} = {mode: 'idle'};
   autoSpeakEnabled = false;
-  currentVoice: null = null;
+  currentVoice: any = null;
   isSetupSheetOpen = false;
   lastSpokenMessageId: string | null = null;
 
-  supertonicDownloadState: 'not_installed' | 'downloading' | 'ready' | 'error' =
-    'not_installed';
+  supertonicDownloadState: DownloadState = 'not_installed';
   supertonicDownloadProgress = 0;
   supertonicDownloadError: string | null = null;
+  supertonicSteps: 1 | 2 | 3 | 5 | 10 = 3;
+
+  kokoroDownloadState: DownloadState = 'not_installed';
+  kokoroDownloadProgress = 0;
+  kokoroDownloadError: string | null = null;
+
+  kittenDownloadState: DownloadState = 'not_installed';
+  kittenDownloadProgress = 0;
+  kittenDownloadError: string | null = null;
 
   init: jest.Mock;
   play: jest.Mock;
   stop: jest.Mock;
   setAutoSpeak: jest.Mock;
   setCurrentVoice: jest.Mock;
+  setSupertonicSteps: jest.Mock;
   openSetupSheet: jest.Mock;
   closeSetupSheet: jest.Mock;
   onAssistantMessageStart: jest.Mock;
@@ -29,6 +40,12 @@ class MockTTSStore {
   downloadSupertonic: jest.Mock;
   retryDownload: jest.Mock;
   deleteSupertonic: jest.Mock;
+  downloadKokoro: jest.Mock;
+  retryKokoroDownload: jest.Mock;
+  deleteKokoro: jest.Mock;
+  downloadKitten: jest.Mock;
+  retryKittenDownload: jest.Mock;
+  deleteKitten: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -37,6 +54,7 @@ class MockTTSStore {
       stop: false,
       setAutoSpeak: false,
       setCurrentVoice: false,
+      setSupertonicSteps: false,
       openSetupSheet: false,
       closeSetupSheet: false,
       onAssistantMessageStart: false,
@@ -45,12 +63,19 @@ class MockTTSStore {
       downloadSupertonic: false,
       retryDownload: false,
       deleteSupertonic: false,
+      downloadKokoro: false,
+      retryKokoroDownload: false,
+      deleteKokoro: false,
+      downloadKitten: false,
+      retryKittenDownload: false,
+      deleteKitten: false,
     });
     this.init = jest.fn().mockResolvedValue(undefined);
     this.play = jest.fn().mockResolvedValue(undefined);
     this.stop = jest.fn().mockResolvedValue(undefined);
     this.setAutoSpeak = jest.fn();
     this.setCurrentVoice = jest.fn();
+    this.setSupertonicSteps = jest.fn();
     this.openSetupSheet = jest.fn();
     this.closeSetupSheet = jest.fn();
     this.onAssistantMessageStart = jest.fn();
@@ -59,6 +84,12 @@ class MockTTSStore {
     this.downloadSupertonic = jest.fn().mockResolvedValue(undefined);
     this.retryDownload = jest.fn().mockResolvedValue(undefined);
     this.deleteSupertonic = jest.fn().mockResolvedValue(undefined);
+    this.downloadKokoro = jest.fn().mockResolvedValue(undefined);
+    this.retryKokoroDownload = jest.fn().mockResolvedValue(undefined);
+    this.deleteKokoro = jest.fn().mockResolvedValue(undefined);
+    this.downloadKitten = jest.fn().mockResolvedValue(undefined);
+    this.retryKittenDownload = jest.fn().mockResolvedValue(undefined);
+    this.deleteKitten = jest.fn().mockResolvedValue(undefined);
   }
 }
 
