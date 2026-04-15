@@ -14,7 +14,12 @@ import {
   SUPERTONIC_VOICES_MANIFEST_FILENAME,
   TTS_PARENT_SUBDIR,
 } from '../../constants';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import type {
+  Engine,
+  StreamingHandle,
+  SupertonicSteps,
+  Voice,
+} from '../../types';
 import {SUPERTONIC_VOICES} from './voices';
 
 export type SupertonicProgressCallback = (progress: number) => void;
@@ -227,6 +232,7 @@ export class SupertonicEngine implements Engine {
       silentMode: 'obey',
       ducking: true,
       maxChunkSize: 200,
+      executionProviders: 'cpu',
     });
     this.initialized = true;
   }
@@ -234,14 +240,15 @@ export class SupertonicEngine implements Engine {
   async play(
     text: string,
     voice: Voice,
-    language?: SupertonicLanguage,
+    opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
   ): Promise<void> {
     if (!(await this.isInstalled())) {
       throw new Error('Supertonic model is not installed');
     }
     await this.ensureInitialized();
     await Speech.speak(text, voice.id, {
-      language: language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+      language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+      ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
     });
   }
 
@@ -251,8 +258,12 @@ export class SupertonicEngine implements Engine {
    * fork's Supertonic engine supports chunked synthesis via repeated
    * `speak` calls; `onFinish` events chain the queue.
    */
-  playStreaming(voice: Voice, language?: SupertonicLanguage): StreamingHandle {
-    const resolvedLanguage = language ?? DEFAULT_SUPERTONIC_LANGUAGE;
+  playStreaming(
+    voice: Voice,
+    opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
+  ): StreamingHandle {
+    const resolvedLanguage = opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE;
+    const resolvedSteps = opts?.inferenceSteps;
     let buffer = '';
     const queue: string[] = [];
     let speaking = false;
@@ -282,7 +293,10 @@ export class SupertonicEngine implements Engine {
       speaking = true;
       try {
         await this.ensureInitialized();
-        await Speech.speak(next, voice.id, {language: resolvedLanguage});
+        await Speech.speak(next, voice.id, {
+          language: resolvedLanguage,
+          ...(resolvedSteps ? {inferenceSteps: resolvedSteps} : {}),
+        });
       } catch (err) {
         console.warn('[SupertonicEngine] streaming speak failed:', err);
         speaking = false;

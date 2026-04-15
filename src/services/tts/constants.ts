@@ -10,6 +10,12 @@ export const TTS_MIN_RAM_BYTES = 6 * 1024 * 1024 * 1024;
 /** Subdirectory (relative to app documents dir) used for Supertonic model files. */
 export const SUPERTONIC_MODEL_SUBDIR = 'tts/supertonic';
 
+/** Subdirectory for Kokoro model files. */
+export const KOKORO_MODEL_SUBDIR = 'tts/kokoro';
+
+/** Subdirectory for Kitten model files. */
+export const KITTEN_MODEL_SUBDIR = 'tts/kitten';
+
 /** Parent `tts/` directory (iOS backup exclusion applied here during mkdir). */
 export const TTS_PARENT_SUBDIR = 'tts';
 
@@ -53,3 +59,66 @@ export const SUPERTONIC_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 
 /** Estimated total size of the Supertonic model bundle (~265 MB; v2 preserves v1's size). */
 export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 265 * 1024 * 1024;
+
+// ---------------------------------------------------------------------------
+// Kokoro (Q8 variant)
+// ---------------------------------------------------------------------------
+
+/**
+ * HuggingFace base URL for Kokoro 82M v1.0 ONNX community port.
+ * Q8 variant is the smallest high-quality option (~86 MB).
+ */
+export const KOKORO_MODEL_BASE_URL =
+  'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main';
+
+/** Base URL for the Kokoro per-voice `.bin` embedding files. */
+export const KOKORO_VOICES_BASE_URL = `${KOKORO_MODEL_BASE_URL}/voices`;
+
+/**
+ * Core Kokoro files — downloaded all-or-nothing (Phase 1). Without these
+ * the engine cannot initialize.
+ */
+export const KOKORO_MODEL_FILES = [
+  {name: 'model.onnx', urlPath: 'onnx/model_q8f16.onnx'},
+  {name: 'tokenizer.json', urlPath: 'tokenizer.json'},
+] as const;
+
+/**
+ * IPA dictionary for the MIT `phonemize` JS phonemizer (required by the
+ * default `phonemizerType: 'js'` path in Kokoro/Kitten).
+ *
+ * Hosted alongside the Kitten nano model on palshub; reused here for
+ * Kokoro so both engines share a single dict download origin.
+ */
+export const TTS_DICT_URL =
+  'https://huggingface.co/palshub/kitten-tts-nano-0.8-fp32/resolve/main/en-us.bin';
+
+/** Local filename for the IPA dict (saved inside each engine's model dir). */
+export const TTS_DICT_FILENAME = 'en-us.bin';
+
+/** Name of the Kokoro voices manifest generated locally after download. */
+export const KOKORO_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
+
+/** Estimated total size of the Kokoro Q8 model bundle (~90 MB including voices). */
+export const KOKORO_MODEL_ESTIMATED_BYTES = 90 * 1024 * 1024;
+
+// ---------------------------------------------------------------------------
+// Kitten (nano-fp32 variant)
+// ---------------------------------------------------------------------------
+
+/** HuggingFace base URL for the Kitten nano-fp32 model. */
+export const KITTEN_MODEL_BASE_URL =
+  'https://huggingface.co/palshub/kitten-tts-nano-0.8-fp32/resolve/main';
+
+/**
+ * Kitten files: the ONNX model (saved locally as `kitten.onnx`) and the
+ * voices manifest JSON. The IPA dict is downloaded separately via
+ * `TTS_DICT_URL` into the same directory.
+ */
+export const KITTEN_MODEL_FILES = [
+  {name: 'kitten.onnx', urlPath: 'kitten_tts_nano_v0_8.onnx'},
+  {name: 'voices-manifest.json', urlPath: 'voices-manifest.json'},
+] as const;
+
+/** Estimated total size of the Kitten model bundle (~57 MB + dict). */
+export const KITTEN_MODEL_ESTIMATED_BYTES = 57 * 1024 * 1024;
