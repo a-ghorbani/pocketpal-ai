@@ -177,7 +177,8 @@ export class KokoroEngine implements Engine {
         onProgress(
           Math.min(
             1,
-            voicePhaseBase + (voicesDone / KOKORO_VOICES.length) * voicePhaseWeight,
+            voicePhaseBase +
+              (voicesDone / KOKORO_VOICES.length) * voicePhaseWeight,
           ),
         );
       }

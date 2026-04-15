@@ -8,10 +8,12 @@ import DeviceInfo from 'react-native-device-info';
 import {
   configureAudioSession,
   getEngine,
+  KittenEngine,
+  KokoroEngine,
   SupertonicEngine,
   TTS_MIN_RAM_BYTES,
 } from '../services/tts';
-import type {StreamingHandle, Voice} from '../services/tts';
+import type {StreamingHandle, SupertonicSteps, Voice} from '../services/tts';
 import {
   ThinkingStripper,
   pickThinkingPlaceholder,
@@ -32,15 +34,23 @@ export type TTSPlaybackState =
   | {mode: 'playing'; messageId: string};
 
 /**
- * State machine for the Supertonic neural-model download lifecycle.
- * Derived from `SupertonicEngine.isInstalled()` on `init()` — never
+ * State machine for a neural-engine model download lifecycle.
+ * Derived from the engine's `isInstalled()` on `init()` — never
  * persisted; the source of truth is the file system.
  */
-export type SupertonicDownloadState =
+export type NeuralDownloadState =
   | 'not_installed'
   | 'downloading'
   | 'ready'
   | 'error';
+
+/** Alias preserved for external consumers that imported the v1.2 name. */
+export type SupertonicDownloadState = NeuralDownloadState;
+
+/** Neural engine ids managed by the store's download state machines. */
+export type NeuralEngineId = 'supertonic' | 'kokoro' | 'kitten';
+
+const DEFAULT_SUPERTONIC_STEPS: SupertonicSteps = 5;
 
 /**
  * Store that coordinates text-to-speech playback.
@@ -67,29 +77,35 @@ export class TTSStore {
   // Persisted user preferences
   autoSpeakEnabled: boolean = false;
   currentVoice: Voice | null = null;
+  /**
+   * Supertonic diffusion-step count. Persisted so a user's quality
+   * preference survives restart. Missing values default to 5 on first load.
+   */
+  supertonicSteps: SupertonicSteps = DEFAULT_SUPERTONIC_STEPS;
 
-  // UI state (setup sheet lives in v1.1; store field is introduced here so
-  // the UI can bind to it without needing a follow-up migration)
+  // UI state
   isSetupSheetOpen: boolean = false;
 
-  // Supertonic model lifecycle — derived state, NOT persisted. The
-  // filesystem is the source of truth; state is recomputed on `init()`
-  // via `SupertonicEngine.isInstalled()`.
-  supertonicDownloadState: SupertonicDownloadState = 'not_installed';
+  // Per-engine model lifecycle — derived state, NOT persisted.
+  supertonicDownloadState: NeuralDownloadState = 'not_installed';
   supertonicDownloadProgress: number = 0;
   supertonicDownloadError: string | null = null;
 
-  // Idempotency guard for the auto-speak path. Set on
-  // `onAssistantMessageStart` (and on the start-missed fallback inside
-  // `onAssistantMessageComplete`) so the same message never plays twice.
+  kokoroDownloadState: NeuralDownloadState = 'not_installed';
+  kokoroDownloadProgress: number = 0;
+  kokoroDownloadError: string | null = null;
+
+  kittenDownloadState: NeuralDownloadState = 'not_installed';
+  kittenDownloadProgress: number = 0;
+  kittenDownloadError: string | null = null;
+
+  // Idempotency guard for the auto-speak path.
   lastSpokenMessageId: string | null = null;
 
   private appStateSubscription: {remove: () => void} | null = null;
   private sessionReactionDispose: (() => void) | null = null;
 
-  // Per-streaming-session state for stripping `<think>…</think>` markup
-  // when `enable_thinking` is OFF. Reset in `onAssistantMessageStart` and
-  // cleared in any path that returns playbackState to idle.
+  // Per-streaming-session state for stripping `<think>…</think>` markup.
   private streamStripper: ThinkingStripper | null = null;
   private streamPlaceholderEmitted: boolean = false;
 
@@ -97,15 +113,14 @@ export class TTSStore {
     makeAutoObservable(this, {}, {autoBind: true});
     makePersistable(this, {
       name: 'TTSStore',
-      properties: ['autoSpeakEnabled', 'currentVoice'],
+      properties: ['autoSpeakEnabled', 'currentVoice', 'supertonicSteps'],
       storage: AsyncStorage,
     });
   }
 
   /**
    * Initialize the store. Idempotent — safe to call multiple times; only the
-   * first call does work. Reads total memory, wires listeners when eligible,
-   * otherwise leaves the store inert.
+   * first call does work.
    */
   async init(): Promise<void> {
     if (this.initialized) {
@@ -132,17 +147,23 @@ export class TTSStore {
 
     await configureAudioSession();
 
-    // Derive Supertonic install state from disk once at init. Source of
-    // truth is the filesystem — we never persist this.
-    try {
-      const supertonic = getEngine('supertonic');
-      const installed = await supertonic.isInstalled();
-      runInAction(() => {
-        this.supertonicDownloadState = installed ? 'ready' : 'not_installed';
-      });
-    } catch (err) {
-      console.warn('[TTSStore] Supertonic isInstalled check failed:', err);
-    }
+    // Derive each neural engine's install state from disk in parallel.
+    const neuralIds: NeuralEngineId[] = ['supertonic', 'kokoro', 'kitten'];
+    const results = await Promise.all(
+      neuralIds.map(async id => {
+        try {
+          return {id, installed: await getEngine(id).isInstalled()};
+        } catch (err) {
+          console.warn(`[TTSStore] ${id} isInstalled check failed:`, err);
+          return {id, installed: false};
+        }
+      }),
+    );
+    runInAction(() => {
+      for (const {id, installed} of results) {
+        this.setDownloadState(id, installed ? 'ready' : 'not_installed');
+      }
+    });
 
     this.appStateSubscription = AppState.addEventListener(
       'change',
@@ -171,6 +192,10 @@ export class TTSStore {
     this.currentVoice = v;
   }
 
+  setSupertonicSteps(steps: SupertonicSteps) {
+    this.supertonicSteps = steps;
+  }
+
   openSetupSheet() {
     this.isSetupSheetOpen = true;
   }
@@ -179,9 +204,50 @@ export class TTSStore {
     this.isSetupSheetOpen = false;
   }
 
+  // --- Per-engine state helpers ----------------------------------------
+
+  private setDownloadState(id: NeuralEngineId, state: NeuralDownloadState) {
+    if (id === 'supertonic') {
+      this.supertonicDownloadState = state;
+    } else if (id === 'kokoro') {
+      this.kokoroDownloadState = state;
+    } else {
+      this.kittenDownloadState = state;
+    }
+  }
+
+  private setDownloadProgress(id: NeuralEngineId, progress: number) {
+    if (id === 'supertonic') {
+      this.supertonicDownloadProgress = progress;
+    } else if (id === 'kokoro') {
+      this.kokoroDownloadProgress = progress;
+    } else {
+      this.kittenDownloadProgress = progress;
+    }
+  }
+
+  private setDownloadError(id: NeuralEngineId, error: string | null) {
+    if (id === 'supertonic') {
+      this.supertonicDownloadError = error;
+    } else if (id === 'kokoro') {
+      this.kokoroDownloadError = error;
+    } else {
+      this.kittenDownloadError = error;
+    }
+  }
+
+  private getDownloadState(id: NeuralEngineId): NeuralDownloadState {
+    if (id === 'supertonic') {
+      return this.supertonicDownloadState;
+    }
+    if (id === 'kokoro') {
+      return this.kokoroDownloadState;
+    }
+    return this.kittenDownloadState;
+  }
+
   /**
-   * Stop any in-flight playback and reset state to idle. Tolerates the
-   * absence of a current voice / engine (no-op).
+   * Stop any in-flight playback and reset state to idle.
    */
   async stop(): Promise<void> {
     const state = this.playbackState;
@@ -209,11 +275,7 @@ export class TTSStore {
   }
 
   /**
-   * Speak `text` as a single utterance (replay path). Stops any previous
-   * playback first. Engine errors are logged and the store returns to
-   * idle — callers that need an error surface should observe
-   * `supertonicDownloadError` (for install-time failures) or catch
-   * errors at the call site.
+   * Speak `text` as a single utterance (replay path).
    */
   async play(
     messageId: string,
@@ -230,13 +292,6 @@ export class TTSStore {
 
     await this.stop();
 
-    // Strip any `<think>…</think>` markup from the replay text. When
-    // `enable_thinking` is OFF some models emit the tags literally into
-    // content; we don't want TTS reading them aloud. A non-empty thinking
-    // body earns a short spoken placeholder so the pause isn't silent.
-    // `hadReasoning` covers Case A (enable_thinking ON) where the reasoning
-    // arrived on a separate channel (`message.metadata.completionResult
-    // .reasoning_content`) and the content itself is already clean.
     const {text: cleanText, hadNonEmptyThink} = ThinkingStripper.stripFinal(
       text,
       {hadReasoning: opts?.hadReasoning},
@@ -250,7 +305,14 @@ export class TTSStore {
     });
 
     try {
-      await getEngine(voice.engine).play(spokenText, voice);
+      const engine = getEngine(voice.engine);
+      if (voice.engine === 'supertonic') {
+        await (engine as SupertonicEngine).play(spokenText, voice, {
+          inferenceSteps: this.supertonicSteps,
+        });
+      } else {
+        await engine.play(spokenText, voice);
+      }
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
       runInAction(() => {
@@ -259,11 +321,7 @@ export class TTSStore {
     }
   }
 
-  /**
-   * First token / message creation. Opens a streaming session. Gated on
-   * feature availability, auto-speak toggle, voice selected, and the
-   * idempotency guard (`lastSpokenMessageId`).
-   */
+  /** First token / message creation. Opens a streaming session. */
   onAssistantMessageStart(messageId: string) {
     if (
       !this.isTTSAvailable ||
@@ -274,9 +332,6 @@ export class TTSStore {
       return;
     }
     const voice = this.currentVoice;
-    // Cancel any currently-active handle before opening a new one. We
-    // intentionally do not `await` — start is sync from the caller's POV;
-    // the previous session's teardown runs in the background.
     const prev = this.playbackState;
     if (prev.mode === 'streaming') {
       prev.handle.cancel().catch(err => {
@@ -287,16 +342,19 @@ export class TTSStore {
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
-    const handle = getEngine(voice.engine).playStreaming(voice);
+    const engine = getEngine(voice.engine);
+    const handle =
+      voice.engine === 'supertonic'
+        ? (engine as SupertonicEngine).playStreaming(voice, {
+            inferenceSteps: this.supertonicSteps,
+          })
+        : engine.playStreaming(voice);
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
   }
 
-  /**
-   * Delta chunk from the LLM stream. Only forwarded if a streaming session
-   * for this `messageId` is currently active.
-   */
+  /** Delta chunk from the LLM stream. */
   onAssistantMessageChunk(
     messageId: string,
     chunkText: string,
@@ -308,14 +366,9 @@ export class TTSStore {
     }
     const stripper = this.streamStripper;
     if (stripper == null) {
-      // Defensive: stripper should always exist while streaming. If not,
-      // forward the raw chunk rather than swallowing content.
       state.handle.appendText(chunkText);
       return;
     }
-    // Case A: enable_thinking ON, reasoning arrives on a separate channel.
-    // Record it so the placeholder can fire during the silent gap before
-    // content starts.
     if (reasoningDelta) {
       stripper.noteReasoning(reasoningDelta);
     }
@@ -325,16 +378,12 @@ export class TTSStore {
       !this.streamPlaceholderEmitted &&
       cleaned.length === 0
     ) {
-      // Thinking observed but no content to speak yet — emit placeholder
-      // so the user hears something during the silence.
       state.handle.appendText(`${pickThinkingPlaceholder()} `);
       this.streamPlaceholderEmitted = true;
       return;
     }
     if (cleaned.length > 0) {
       if (stripper.hadNonEmptyThink() && !this.streamPlaceholderEmitted) {
-        // Edge case: thinking block and post-think content arrived in the
-        // same cleaned output — emit placeholder before the real text.
         state.handle.appendText(`${pickThinkingPlaceholder()} `);
         this.streamPlaceholderEmitted = true;
       }
@@ -342,11 +391,7 @@ export class TTSStore {
     }
   }
 
-  /**
-   * Final completion. If a streaming handle exists for this `messageId`,
-   * flush remaining buffer via `finalize()`. Otherwise, if gating passes,
-   * fall back to a full-text `play()`.
-   */
+  /** Final completion — flushes streaming or falls back to replay. */
   onAssistantMessageComplete(
     messageId: string,
     text: string,
@@ -354,8 +399,6 @@ export class TTSStore {
   ) {
     const state = this.playbackState;
     if (state.mode === 'streaming' && state.messageId === messageId) {
-      // Flush any buffered tail from the stripper before finalizing. Handles
-      // e.g. a trailing partial tag prefix or plain text held back.
       const stripper = this.streamStripper;
       if (stripper != null) {
         const leftover = stripper.flush();
@@ -370,11 +413,7 @@ export class TTSStore {
       state.handle
         .finalize()
         .catch(err => {
-          // Supertonic stub rejects with "not installed" — treat as graceful.
           console.warn('[TTSStore] finalize failed:', err);
-          // Real engine error (e.g., Supertonic inference failure) —
-          // surface on supertonicDownloadError if the failing engine was
-          // Supertonic. Swallow-stub semantics are retired in v1.2.
         })
         .finally(() => {
           runInAction(() => {
@@ -391,9 +430,6 @@ export class TTSStore {
       return;
     }
 
-    // Fallback: no streaming session was opened for this message (e.g.,
-    // user picked a voice mid-message). Honor gating and play the whole
-    // text via the replay path.
     if (
       !this.isTTSAvailable ||
       !this.autoSpeakEnabled ||
@@ -408,76 +444,99 @@ export class TTSStore {
     });
   }
 
-  /**
-   * Start (or retry) the Supertonic model download. Transitions through
-   * `downloading` → (`ready` | `error`). Progress updates are throttled
-   * by RNFS's `progressInterval` (500 ms).
-   *
-   * Non-blocking: the returned promise resolves after download completes
-   * or fails, but the UI is not blocked — the user can navigate away and
-   * the state updates reactively via MobX.
-   */
-  async downloadSupertonic(): Promise<void> {
-    if (this.supertonicDownloadState === 'downloading') {
+  // --- Per-engine download actions --------------------------------------
+
+  private async downloadNeuralEngine(id: NeuralEngineId): Promise<void> {
+    if (this.getDownloadState(id) === 'downloading') {
       return;
     }
     runInAction(() => {
-      this.supertonicDownloadState = 'downloading';
-      this.supertonicDownloadProgress = 0;
-      this.supertonicDownloadError = null;
+      this.setDownloadState(id, 'downloading');
+      this.setDownloadProgress(id, 0);
+      this.setDownloadError(id, null);
     });
 
-    const engine = getEngine('supertonic') as SupertonicEngine;
+    const engine = getEngine(id) as
+      | SupertonicEngine
+      | KokoroEngine
+      | KittenEngine;
     try {
       await engine.downloadModel(progress => {
         runInAction(() => {
-          this.supertonicDownloadProgress = progress;
+          this.setDownloadProgress(id, progress);
         });
       });
       runInAction(() => {
-        this.supertonicDownloadState = 'ready';
-        this.supertonicDownloadProgress = 1;
+        this.setDownloadState(id, 'ready');
+        this.setDownloadProgress(id, 1);
       });
     } catch (err) {
-      console.warn('[TTSStore] Supertonic download failed:', err);
+      console.warn(`[TTSStore] ${id} download failed:`, err);
       runInAction(() => {
-        this.supertonicDownloadState = 'error';
-        this.supertonicDownloadError =
-          err instanceof Error ? err.message : String(err);
+        this.setDownloadState(id, 'error');
+        this.setDownloadError(
+          id,
+          err instanceof Error ? err.message : String(err),
+        );
       });
     }
   }
 
-  /**
-   * Retry a failed Supertonic download. Thin wrapper over
-   * `downloadSupertonic()` — the distinct action exists so UI can
-   * bind Retry semantics unambiguously.
-   */
-  async retryDownload(): Promise<void> {
-    return this.downloadSupertonic();
-  }
-
-  /**
-   * Remove the Supertonic model bundle and reset state to
-   * `not_installed`. Also clears `currentVoice` if it points at a
-   * Supertonic voice so the app doesn't crash trying to synthesize
-   * with a missing model.
-   */
-  async deleteSupertonic(): Promise<void> {
-    const engine = getEngine('supertonic') as SupertonicEngine;
+  private async deleteNeuralEngine(id: NeuralEngineId): Promise<void> {
+    const engine = getEngine(id) as
+      | SupertonicEngine
+      | KokoroEngine
+      | KittenEngine;
     try {
       await engine.deleteModel();
     } catch (err) {
-      console.warn('[TTSStore] Supertonic delete failed:', err);
+      console.warn(`[TTSStore] ${id} delete failed:`, err);
     }
     runInAction(() => {
-      this.supertonicDownloadState = 'not_installed';
-      this.supertonicDownloadProgress = 0;
-      this.supertonicDownloadError = null;
-      if (this.currentVoice?.engine === 'supertonic') {
+      this.setDownloadState(id, 'not_installed');
+      this.setDownloadProgress(id, 0);
+      this.setDownloadError(id, null);
+      if (this.currentVoice?.engine === id) {
         this.currentVoice = null;
       }
     });
+  }
+
+  async downloadSupertonic(): Promise<void> {
+    return this.downloadNeuralEngine('supertonic');
+  }
+
+  async downloadKokoro(): Promise<void> {
+    return this.downloadNeuralEngine('kokoro');
+  }
+
+  async downloadKitten(): Promise<void> {
+    return this.downloadNeuralEngine('kitten');
+  }
+
+  /** Retry a failed Supertonic download (preserved for API compat). */
+  async retryDownload(): Promise<void> {
+    return this.downloadNeuralEngine('supertonic');
+  }
+
+  async retryKokoroDownload(): Promise<void> {
+    return this.downloadNeuralEngine('kokoro');
+  }
+
+  async retryKittenDownload(): Promise<void> {
+    return this.downloadNeuralEngine('kitten');
+  }
+
+  async deleteSupertonic(): Promise<void> {
+    return this.deleteNeuralEngine('supertonic');
+  }
+
+  async deleteKokoro(): Promise<void> {
+    return this.deleteNeuralEngine('kokoro');
+  }
+
+  async deleteKitten(): Promise<void> {
+    return this.deleteNeuralEngine('kitten');
   }
 }
 
