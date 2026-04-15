@@ -1,4 +1,6 @@
 import {getAllEngines, getEngine} from '../engineRegistry';
+import {KittenEngine} from '../engines/kitten';
+import {KokoroEngine} from '../engines/kokoro';
 import {SupertonicEngine} from '../engines/supertonic';
 import {SystemEngine} from '../engines/system';
 
@@ -15,10 +17,31 @@ describe('engineRegistry', () => {
     expect(engine.id).toBe('supertonic');
   });
 
-  it('getAllEngines returns both engines with correct ids', () => {
+  it('returns the Kokoro engine for id "kokoro"', () => {
+    const engine = getEngine('kokoro');
+    expect(engine).toBeInstanceOf(KokoroEngine);
+    expect(engine.id).toBe('kokoro');
+  });
+
+  it('returns the Kitten engine for id "kitten"', () => {
+    const engine = getEngine('kitten');
+    expect(engine).toBeInstanceOf(KittenEngine);
+    expect(engine.id).toBe('kitten');
+  });
+
+  it('getAllEngines returns the four engines in setup-sheet order: kitten, kokoro, supertonic, system', () => {
     const all = getAllEngines();
-    expect(all).toHaveLength(2);
-    const ids = all.map(e => e.id).sort();
-    expect(ids).toEqual(['supertonic', 'system']);
+    expect(all).toHaveLength(4);
+    expect(all.map(e => e.id)).toEqual([
+      'kitten',
+      'kokoro',
+      'supertonic',
+      'system',
+    ]);
+  });
+
+  it('returns stable singleton instances across calls', () => {
+    expect(getEngine('kokoro')).toBe(getEngine('kokoro'));
+    expect(getEngine('kitten')).toBe(getEngine('kitten'));
   });
 });
