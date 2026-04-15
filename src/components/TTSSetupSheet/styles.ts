@@ -20,15 +20,6 @@ export const createStyles = (theme: Theme) =>
       marginBottom: 12,
       color: theme.colors.onSurfaceVariant,
     },
-    installPlaceholder: {
-      padding: 12,
-      marginBottom: 12,
-      borderRadius: 8,
-      backgroundColor: theme.colors.surfaceContainerLow,
-    },
-    installPlaceholderText: {
-      color: theme.colors.onSurfaceVariant,
-    },
     installCard: {
       padding: 12,
       marginBottom: 12,
@@ -98,5 +89,166 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       marginBottom: 6,
       fontSize: 12,
+    },
+    heroRow: {
+      padding: 16,
+      marginBottom: 12,
+      borderRadius: 12,
+      backgroundColor: theme.colors.surfaceContainerLow,
+    },
+    heroRowBody: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    heroRowMain: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    heroRowName: {
+      color: theme.colors.onSurface,
+      fontSize: 20,
+      fontWeight: '700',
+    },
+    heroRowNameMuted: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 20,
+      fontWeight: '600',
+    },
+    heroChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 6,
+    },
+    chip: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      marginRight: 6,
+      marginTop: 4,
+      backgroundColor: theme.colors.surfaceContainer,
+    },
+    chipText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    primaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      minHeight: 52,
+    },
+    primaryRowLabelBlock: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    primaryRowLabel: {
+      color: theme.colors.onSurface,
+      fontSize: 16,
+    },
+    primaryRowDescription: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    primaryRowValue: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 14,
+      marginRight: 6,
+    },
+    groupHeader: {
+      marginTop: 16,
+      marginBottom: 4,
+      paddingHorizontal: 4,
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    voiceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+      minHeight: 48,
+    },
+    voiceRowLabelBlock: {
+      flex: 1,
+      paddingRight: 8,
+    },
+    voiceRowName: {
+      color: theme.colors.onSurface,
+      fontSize: 15,
+    },
+    voiceRowNameSelected: {
+      fontWeight: 'bold',
+    },
+    voiceRowSubline: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 2,
+    },
+    voiceRowEngineChipText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+    },
+    voiceRowCheck: {
+      marginLeft: 8,
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+    inlineInstallCta: {
+      marginTop: 4,
+      marginBottom: 8,
+      marginHorizontal: 4,
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceContainerLow,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    inlineInstallCtaText: {
+      color: theme.colors.onSurface,
+      fontSize: 13,
+      marginBottom: 8,
+    },
+    inlineInstallCtaActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    secondaryHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+      marginBottom: 8,
+    },
+    secondaryHeaderTitle: {
+      marginLeft: 4,
+      color: theme.colors.onSurface,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    engineRowWrap: {
+      marginBottom: 16,
+    },
+    engineRowHeader: {
+      color: theme.colors.onSurface,
+      fontWeight: '600',
+      fontSize: 15,
+      marginBottom: 2,
+    },
+    engineRowSubline: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      marginBottom: 8,
+    },
+    deleteButton: {
+      alignSelf: 'flex-start',
+      marginTop: 4,
     },
   });

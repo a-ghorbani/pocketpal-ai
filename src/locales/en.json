@@ -1251,6 +1251,27 @@
     "toggleAutoSpeakLabel": "Toggle auto-speak",
     "openSettingsLabel": "TTS settings",
     "playMessageLabel": "Play message",
-    "stopMessageLabel": "Stop message"
+    "stopMessageLabel": "Stop message",
+    "browseVoicesRowLabel": "Browse voices",
+    "browseVoicesTitle": "Browse voices",
+    "manageEnginesRowLabel": "Manage engines",
+    "manageEnginesTitle": "Manage engines",
+    "autoSpeakLabel": "Auto-speak responses",
+    "autoSpeakDescription": "Read new replies aloud as they arrive.",
+    "characterWarm": "Warm",
+    "characterClear": "Clear",
+    "characterDeep": "Deep",
+    "characterBright": "Bright",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "System",
+    "installToUseCta": "Install {{engine}} to use {{voice}}.",
+    "installNow": "Install",
+    "installing": "Installing…",
+    "engineReady": "Installed",
+    "deleteButton": "Delete",
+    "systemAlwaysAvailable": "System voices · always available",
+    "backButton": "Back"
   }
 }

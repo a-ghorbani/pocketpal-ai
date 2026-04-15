@@ -1,93 +1,156 @@
 import React from 'react';
+import {BackHandler} from 'react-native';
 import {runInAction} from 'mobx';
 
-import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
+import {act, fireEvent, render} from '../../../../jest/test-utils';
 
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
 import {ttsStore} from '../../../store';
 
-import {SupertonicSection} from '../SupertonicSection';
-import {SystemSection} from '../SystemSection';
 import {TTSSetupSheet} from '../TTSSetupSheet';
 
-const renderWithL10n = (ui: React.ReactElement) =>
-  render(<L10nContext.Provider value={l10n.en}>{ui}</L10nContext.Provider>, {
-    withBottomSheetProvider: true,
-    withSafeArea: true,
-  });
+const renderSheet = () =>
+  render(
+    <L10nContext.Provider value={l10n.en}>
+      <TTSSetupSheet />
+    </L10nContext.Provider>,
+    {withBottomSheetProvider: true, withSafeArea: true},
+  );
 
-describe('TTSSetupSheet', () => {
+describe('TTSSetupSheet (voice-led)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
       ttsStore.isSetupSheetOpen = true;
       ttsStore.currentVoice = null;
+      ttsStore.supertonicDownloadState = 'not_installed';
+      ttsStore.kokoroDownloadState = 'not_installed';
+      ttsStore.kittenDownloadState = 'not_installed';
     });
   });
 
-  it('renders the Supertonic section before the System section', () => {
-    // Section ordering is verified by rendering them together and
-    // checking document order.
-    const {getByTestId, getAllByTestId} = renderWithL10n(
-      <>
-        <SupertonicSection />
-        <SystemSection visible={true} />
-      </>,
-    );
-    const sup = getByTestId('tts-supertonic-section');
-    const sys = getByTestId('tts-system-section');
-    const roots = getAllByTestId(/tts-(supertonic|system)-section/);
-    expect(roots[0]).toBe(sup);
-    expect(roots[1]).toBe(sys);
-  });
-
-  it('Supertonic rows are disabled / non-interactive', () => {
-    const {getByTestId} = renderWithL10n(<SupertonicSection />);
-    // Sample a few voices from the 10-voice catalog and verify the row
-    // carries the disabled accessibility state and the preview button is
-    // disabled.
-    for (const voiceId of ['F1', 'M1', 'M5']) {
-      const row = getByTestId(`tts-supertonic-voice-${voiceId}`);
-      expect(row.props.accessibilityState?.disabled).toBe(true);
-      const button = getByTestId(`tts-supertonic-preview-${voiceId}`);
-      // Paper's Button forwards disabled state on its root.
-      expect(button.props.accessibilityState?.disabled).toBe(true);
-    }
-  });
-
-  it('Supertonic renders the install placeholder copy', () => {
-    const {getByTestId, getByText} = renderWithL10n(<SupertonicSection />);
-    expect(getByTestId('tts-supertonic-install-cta')).toBeTruthy();
-    expect(getByText(l10n.en.voiceAndSpeech.supertonicInstallCta)).toBeTruthy();
-  });
-
-  it('System section uses the honest "robotic, for accessibility" label', () => {
-    const {getByText} = renderWithL10n(<SystemSection visible={true} />);
-    expect(getByText(l10n.en.voiceAndSpeech.systemSectionTitle)).toBeTruthy();
-  });
-
-  it('tapping a System voice row sets currentVoice and closes sheet', async () => {
-    const {getByTestId} = renderWithL10n(<SystemSection visible={true} />);
-    await waitFor(() =>
-      expect(
-        getByTestId('tts-system-voice-com.apple.voice.Sarah'),
-      ).toBeTruthy(),
-    );
-    fireEvent.press(getByTestId('tts-system-voice-com.apple.voice.Sarah'));
-    expect(ttsStore.setCurrentVoice).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'com.apple.voice.Sarah',
-        engine: 'system',
-      }),
-    );
-    expect(ttsStore.closeSetupSheet).toHaveBeenCalledTimes(1);
-  });
-
-  it('TTSSetupSheet mounts without throwing when open', () => {
-    // Smoke test for the top-level sheet composition (bottom-sheet
-    // internals are mocked by default).
-    const {getByTestId} = renderWithL10n(<TTSSetupSheet />);
+  it('primary view renders hero + Browse + AutoSpeak + Manage (no install CTAs)', () => {
+    const {getByTestId, queryByTestId} = renderSheet();
     expect(getByTestId('tts-setup-sheet')).toBeTruthy();
+    expect(getByTestId('tts-hero-row')).toBeTruthy();
+    expect(getByTestId('tts-browse-row')).toBeTruthy();
+    expect(getByTestId('tts-auto-speak-row')).toBeTruthy();
+    expect(getByTestId('tts-manage-row')).toBeTruthy();
+    // No section install CTAs on primary
+    expect(queryByTestId('tts-kitten-install-cta')).toBeNull();
+    expect(queryByTestId('tts-kokoro-install-cta')).toBeNull();
+    expect(queryByTestId('tts-supertonic-install-cta')).toBeNull();
+  });
+
+  it('Supertonic quality row hidden when current voice is not Supertonic', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = {
+        id: 'af_heart',
+        name: 'Heart',
+        engine: 'kokoro',
+      };
+      ttsStore.kokoroDownloadState = 'ready';
+    });
+    const {queryByTestId} = renderSheet();
+    expect(queryByTestId('tts-supertonic-steps-row')).toBeNull();
+  });
+
+  it('Supertonic quality row visible iff current voice is Supertonic and engine is ready', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = {
+        id: 'F1',
+        name: 'Sarah',
+        engine: 'supertonic',
+      };
+      ttsStore.supertonicDownloadState = 'ready';
+    });
+    const {getByTestId} = renderSheet();
+    expect(getByTestId('tts-supertonic-steps-row')).toBeTruthy();
+  });
+
+  it('tapping Browse row switches to VoicePickerView', () => {
+    const {getByTestId, queryByTestId} = renderSheet();
+    fireEvent.press(getByTestId('tts-browse-row'));
+    expect(getByTestId('tts-voice-picker')).toBeTruthy();
+    expect(queryByTestId('tts-hero-row')).toBeNull();
+  });
+
+  it('tapping Manage row switches to ManageEnginesView', () => {
+    const {getByTestId, queryByTestId} = renderSheet();
+    fireEvent.press(getByTestId('tts-manage-row'));
+    expect(getByTestId('tts-manage-engines')).toBeTruthy();
+    expect(queryByTestId('tts-hero-row')).toBeNull();
+  });
+
+  it('view resets to primary after closeSetupSheet + re-open', () => {
+    const {getByTestId, queryByTestId, rerender} = renderSheet();
+    fireEvent.press(getByTestId('tts-browse-row'));
+    expect(getByTestId('tts-voice-picker')).toBeTruthy();
+
+    act(() => {
+      runInAction(() => {
+        ttsStore.isSetupSheetOpen = false;
+      });
+    });
+    rerender(
+      <L10nContext.Provider value={l10n.en}>
+        <TTSSetupSheet />
+      </L10nContext.Provider>,
+    );
+    act(() => {
+      runInAction(() => {
+        ttsStore.isSetupSheetOpen = true;
+      });
+    });
+    rerender(
+      <L10nContext.Provider value={l10n.en}>
+        <TTSSetupSheet />
+      </L10nContext.Provider>,
+    );
+
+    expect(getByTestId('tts-hero-row')).toBeTruthy();
+    expect(queryByTestId('tts-voice-picker')).toBeNull();
+  });
+
+  describe('Android BackHandler', () => {
+    let addSpy: jest.SpyInstance;
+    const handlers: Array<() => boolean> = [];
+
+    beforeEach(() => {
+      handlers.length = 0;
+      addSpy = jest
+        .spyOn(BackHandler, 'addEventListener')
+        .mockImplementation((_ev, cb) => {
+          handlers.push(cb as () => boolean);
+          return {remove: jest.fn()};
+        });
+    });
+
+    afterEach(() => {
+      addSpy.mockRestore();
+    });
+
+    it('view === secondary + hardware back → pops to primary, sheet stays open', () => {
+      const {getByTestId} = renderSheet();
+      fireEvent.press(getByTestId('tts-browse-row'));
+      expect(handlers.length).toBeGreaterThan(0);
+      let consumed = false;
+      act(() => {
+        consumed = handlers[handlers.length - 1]();
+      });
+      expect(consumed).toBe(true);
+      // Sheet stays open; we did not call closeSetupSheet.
+      expect(ttsStore.closeSetupSheet).not.toHaveBeenCalled();
+      // Next render: we're back on primary.
+      expect(getByTestId('tts-hero-row')).toBeTruthy();
+    });
+
+    it('view === primary + back → no handler registered (default close runs)', () => {
+      renderSheet();
+      // On primary, we should not have subscribed at all — addEventListener
+      // is only called when view is secondary.
+      expect(addSpy).not.toHaveBeenCalled();
+    });
   });
 });
