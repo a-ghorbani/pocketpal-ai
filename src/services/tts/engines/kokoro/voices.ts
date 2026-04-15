@@ -11,6 +11,9 @@ import type {Voice} from '../../types';
  * v1b scope: surface English voices only in the picker (filter at the UI
  * layer by `language === 'en'`). Language switching is deferred to the
  * v1b-TTS-language follow-up.
+ *
+ * `character` is a catalog-level default used by the voice-led picker to
+ * group voices across engines (warm / clear / deep / bright).
  */
 export const KOKORO_VOICES: Voice[] = [
   // American English — female
@@ -20,6 +23,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'af_bella',
@@ -27,6 +31,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'af_nicole',
@@ -34,6 +39,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'af_sarah',
@@ -41,14 +47,23 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'warm',
   },
-  {id: 'af_sky', name: 'Sky', engine: 'kokoro', language: 'en', gender: 'f'},
+  {
+    id: 'af_sky',
+    name: 'Sky',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'f',
+    character: 'clear',
+  },
   {
     id: 'af_alloy',
     name: 'Alloy',
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'clear',
   },
   {
     id: 'af_aoede',
@@ -56,6 +71,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'clear',
   },
   {
     id: 'af_jessica',
@@ -63,43 +79,104 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'clear',
   },
-  {id: 'af_kore', name: 'Kore', engine: 'kokoro', language: 'en', gender: 'f'},
-  {id: 'af_nova', name: 'Nova', engine: 'kokoro', language: 'en', gender: 'f'},
+  {
+    id: 'af_kore',
+    name: 'Kore',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'f',
+    character: 'clear',
+  },
+  {
+    id: 'af_nova',
+    name: 'Nova',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'f',
+    character: 'clear',
+  },
   {
     id: 'af_river',
     name: 'River',
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
+    character: 'clear',
   },
   // American English — male
-  {id: 'am_adam', name: 'Adam', engine: 'kokoro', language: 'en', gender: 'm'},
-  {id: 'am_echo', name: 'Echo', engine: 'kokoro', language: 'en', gender: 'm'},
-  {id: 'am_eric', name: 'Eric', engine: 'kokoro', language: 'en', gender: 'm'},
+  {
+    id: 'am_adam',
+    name: 'Adam',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'm',
+    character: 'deep',
+  },
+  {
+    id: 'am_echo',
+    name: 'Echo',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'm',
+    character: 'bright',
+  },
+  {
+    id: 'am_eric',
+    name: 'Eric',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'm',
+    character: 'bright',
+  },
   {
     id: 'am_fenrir',
     name: 'Fenrir',
     engine: 'kokoro',
     language: 'en',
     gender: 'm',
+    character: 'deep',
   },
-  {id: 'am_liam', name: 'Liam', engine: 'kokoro', language: 'en', gender: 'm'},
+  {
+    id: 'am_liam',
+    name: 'Liam',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'm',
+    character: 'bright',
+  },
   {
     id: 'am_michael',
     name: 'Michael',
     engine: 'kokoro',
     language: 'en',
     gender: 'm',
+    character: 'deep',
   },
-  {id: 'am_onyx', name: 'Onyx', engine: 'kokoro', language: 'en', gender: 'm'},
-  {id: 'am_puck', name: 'Puck', engine: 'kokoro', language: 'en', gender: 'm'},
+  {
+    id: 'am_onyx',
+    name: 'Onyx',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'm',
+    character: 'deep',
+  },
+  {
+    id: 'am_puck',
+    name: 'Puck',
+    engine: 'kokoro',
+    language: 'en',
+    gender: 'm',
+    character: 'bright',
+  },
   {
     id: 'am_santa',
     name: 'Santa',
     engine: 'kokoro',
     language: 'en',
     gender: 'm',
+    character: 'bright',
   },
   // British English — female
   {
@@ -108,6 +185,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'bf_emma',
@@ -115,6 +193,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'f',
+    character: 'clear',
   },
   {
     id: 'bf_isabella',
@@ -122,6 +201,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'bf_lily',
@@ -129,6 +209,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'f',
+    character: 'clear',
   },
   // British English — male
   {
@@ -137,6 +218,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'm',
+    character: 'deep',
   },
   {
     id: 'bm_fable',
@@ -144,6 +226,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'm',
+    character: 'bright',
   },
   {
     id: 'bm_george',
@@ -151,6 +234,7 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'm',
+    character: 'deep',
   },
   {
     id: 'bm_lewis',
@@ -158,5 +242,6 @@ export const KOKORO_VOICES: Voice[] = [
     engine: 'kokoro',
     language: 'en-GB',
     gender: 'm',
+    character: 'deep',
   },
 ];

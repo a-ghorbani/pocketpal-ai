@@ -15,5 +15,6 @@ export const getSystemVoices = async (): Promise<Voice[]> => {
     name: v.name ?? v.identifier,
     engine: 'system',
     language: v.language,
+    character: 'clear',
   }));
 };

@@ -6,6 +6,9 @@ import type {Voice} from '../../types';
  * IDs match the internal NPZ keys used by the fork's `KITTEN_BUILTIN_VOICES`
  * so the engine can look up embeddings directly. Display names are the
  * human-friendly aliases (Bella, Jasper, …).
+ *
+ * `character` is a catalog-level default used by the voice-led picker to
+ * group voices across engines (warm / clear / deep / bright).
  */
 export const KITTEN_VOICES: Voice[] = [
   {
@@ -14,6 +17,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'expr-voice-3-f',
@@ -21,6 +25,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'f',
+    character: 'clear',
   },
   {
     id: 'expr-voice-4-f',
@@ -28,6 +33,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'f',
+    character: 'warm',
   },
   {
     id: 'expr-voice-5-f',
@@ -35,6 +41,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'f',
+    character: 'bright',
   },
   {
     id: 'expr-voice-2-m',
@@ -42,6 +49,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'm',
+    character: 'deep',
   },
   {
     id: 'expr-voice-3-m',
@@ -49,6 +57,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'm',
+    character: 'deep',
   },
   {
     id: 'expr-voice-4-m',
@@ -56,6 +65,7 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'm',
+    character: 'clear',
   },
   {
     id: 'expr-voice-5-m',
@@ -63,5 +73,6 @@ export const KITTEN_VOICES: Voice[] = [
     engine: 'kitten',
     language: 'en',
     gender: 'm',
+    character: 'bright',
   },
 ];
