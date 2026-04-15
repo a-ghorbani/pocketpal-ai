@@ -90,4 +90,13 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       fontStyle: 'italic',
     },
+    stepsRow: {
+      marginTop: 12,
+      paddingVertical: 8,
+    },
+    stepsLabel: {
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: 6,
+      fontSize: 12,
+    },
   });

@@ -7,6 +7,8 @@ import {L10nContext} from '../../utils';
 import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
+import {KittenSection} from './KittenSection';
+import {KokoroSection} from './KokoroSection';
 import {SupertonicSection} from './SupertonicSection';
 import {SystemSection} from './SystemSection';
 
@@ -15,8 +17,7 @@ import {SystemSection} from './SystemSection';
  * reachable from anywhere (per-message play button, input-bar chip,
  * settings screen). Visibility is driven by `ttsStore.isSetupSheetOpen`.
  *
- * Section order (intentional): Supertonic FIRST, System SECOND. v1.1
- * ships Supertonic as a disabled placeholder; v1.2 enables it.
+ * Section order (intentional): Kitten, Kokoro, Supertonic, System.
  */
 export const TTSSetupSheet: React.FC = observer(() => {
   const theme = useTheme();
@@ -34,6 +35,8 @@ export const TTSSetupSheet: React.FC = observer(() => {
       <Sheet.ScrollView
         contentContainerStyle={styles.container}
         testID="tts-setup-sheet">
+        <KittenSection />
+        <KokoroSection />
         <SupertonicSection />
         <SystemSection visible={isVisible} />
       </Sheet.ScrollView>

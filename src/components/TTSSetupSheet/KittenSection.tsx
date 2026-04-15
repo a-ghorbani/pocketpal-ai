@@ -1,68 +1,47 @@
 import React, {useContext} from 'react';
 import {View} from 'react-native';
-import {
-  Button,
-  SegmentedButtons,
-  Text,
-  TouchableRipple,
-} from 'react-native-paper';
+import {Button, Text, TouchableRipple} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
-import {
-  SUPERTONIC_VOICES,
-  TTS_PREVIEW_SAMPLE,
-  getEngine,
-} from '../../services/tts';
-import type {SupertonicSteps, Voice} from '../../services/tts';
+import {KITTEN_VOICES, TTS_PREVIEW_SAMPLE, getEngine} from '../../services/tts';
+import type {Voice} from '../../services/tts';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
 
 import {createStyles} from './styles';
 
-const STEPS_OPTIONS: {value: string; label: string}[] = [
-  {value: '1', label: '1'},
-  {value: '2', label: '2'},
-  {value: '3', label: '3'},
-  {value: '5', label: '5'},
-  {value: '10', label: '10'},
-];
-
 /**
- * Supertonic voices section of the TTS setup sheet.
- *
- * State-driven UI per `ttsStore.supertonicDownloadState`:
- * - `not_installed` — Install CTA card, voice rows visually disabled
- * - `downloading`   — color-fill progress card, rows still disabled
- * - `ready`         — no card, rows enabled & selectable, Preview works
- * - `error`         — error card with Retry button, rows disabled
- *
- * Pre-install Preview buttons are non-functional (bundled clips are
- * deferred to a v1b follow-up story per the v1.2 scope).
+ * Kitten voices section of the TTS setup sheet. Mirrors the
+ * Supertonic/Kokoro section state machine:
+ * - `not_installed` — Install CTA card, voice rows disabled
+ * - `downloading`   — color-fill progress card
+ * - `ready`         — rows enabled & selectable, Preview works
+ * - `error`         — error card with Retry button
  */
-export const SupertonicSection: React.FC = observer(() => {
+export const KittenSection: React.FC = observer(() => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
 
-  const state = ttsStore.supertonicDownloadState;
-  const progress = ttsStore.supertonicDownloadProgress;
+  const state = ttsStore.kittenDownloadState;
+  const progress = ttsStore.kittenDownloadProgress;
   const isReady = state === 'ready';
 
   const selectedId =
-    ttsStore.currentVoice?.engine === 'supertonic'
+    ttsStore.currentVoice?.engine === 'kitten'
       ? ttsStore.currentVoice.id
       : null;
 
   const handleInstall = () => {
-    ttsStore.downloadSupertonic().catch(err => {
-      console.warn('[SupertonicSection] download failed:', err);
+    ttsStore.downloadKitten().catch(err => {
+      console.warn('[KittenSection] download failed:', err);
     });
   };
 
   const handleRetry = () => {
-    ttsStore.retryDownload().catch(err => {
-      console.warn('[SupertonicSection] retry failed:', err);
+    ttsStore.retryKittenDownload().catch(err => {
+      console.warn('[KittenSection] retry failed:', err);
     });
   };
 
@@ -73,7 +52,7 @@ export const SupertonicSection: React.FC = observer(() => {
     ttsStore.setCurrentVoice({
       id: voice.id,
       name: voice.name,
-      engine: 'supertonic',
+      engine: 'kitten',
       language: voice.language,
     });
     ttsStore.closeSetupSheet();
@@ -83,31 +62,31 @@ export const SupertonicSection: React.FC = observer(() => {
     if (!isReady) {
       return;
     }
-    getEngine('supertonic')
+    getEngine('kitten')
       .play(TTS_PREVIEW_SAMPLE, voice)
       .catch(err => {
-        console.warn('[SupertonicSection] preview failed:', err);
+        console.warn('[KittenSection] preview failed:', err);
       });
   };
 
   const renderCard = () => {
     if (state === 'not_installed') {
       return (
-        <View style={styles.installCard} testID="tts-supertonic-install-cta">
+        <View style={styles.installCard} testID="tts-kitten-install-cta">
           <View style={styles.installCardBody}>
             <Text style={styles.installCardTitle}>
-              {l10n.voiceAndSpeech.supertonicInstallCta}
+              {l10n.voiceAndSpeech.kittenInstallCta}
             </Text>
             <Text style={styles.installCardSubtitle}>
-              {l10n.voiceAndSpeech.supertonicInstallDescription}
+              {l10n.voiceAndSpeech.kittenInstallDescription}
             </Text>
           </View>
           <Button
             mode="contained"
             compact
             onPress={handleInstall}
-            testID="tts-supertonic-install-button">
-            {l10n.voiceAndSpeech.supertonicInstallButton}
+            testID="tts-kitten-install-button">
+            {l10n.voiceAndSpeech.kittenInstallButton}
           </Button>
         </View>
       );
@@ -115,16 +94,14 @@ export const SupertonicSection: React.FC = observer(() => {
     if (state === 'downloading') {
       const pct = Math.max(0, Math.min(1, progress));
       return (
-        <View
-          style={styles.installCard}
-          testID="tts-supertonic-downloading-card">
+        <View style={styles.installCard} testID="tts-kitten-downloading-card">
           <View
             style={[styles.installCardProgressFill, {width: `${pct * 100}%`}]}
-            testID="tts-supertonic-downloading-fill"
+            testID="tts-kitten-downloading-fill"
           />
           <View style={styles.installCardBody}>
             <Text style={styles.installCardTitle}>
-              {l10n.voiceAndSpeech.supertonicDownloadingLabel}
+              {l10n.voiceAndSpeech.kittenDownloadingLabel}
             </Text>
             <Text style={styles.installCardSubtitle}>
               {Math.round(pct * 100)}%
@@ -137,14 +114,14 @@ export const SupertonicSection: React.FC = observer(() => {
       return (
         <View
           style={[styles.installCard, styles.installCardError]}
-          testID="tts-supertonic-error-card">
+          testID="tts-kitten-error-card">
           <View style={styles.installCardBody}>
             <Text style={styles.installCardTitle}>
-              {l10n.voiceAndSpeech.supertonicDownloadError}
+              {l10n.voiceAndSpeech.kittenDownloadError}
             </Text>
-            {ttsStore.supertonicDownloadError ? (
+            {ttsStore.kittenDownloadError ? (
               <Text style={styles.installCardSubtitle}>
-                {ttsStore.supertonicDownloadError}
+                {ttsStore.kittenDownloadError}
               </Text>
             ) : null}
           </View>
@@ -152,26 +129,25 @@ export const SupertonicSection: React.FC = observer(() => {
             mode="contained"
             compact
             onPress={handleRetry}
-            testID="tts-supertonic-retry-button">
-            {l10n.voiceAndSpeech.supertonicRetryButton}
+            testID="tts-kitten-retry-button">
+            {l10n.voiceAndSpeech.kittenRetryButton}
           </Button>
         </View>
       );
     }
-    // state === 'ready' → no card
     return null;
   };
 
   return (
-    <View style={styles.section} testID="tts-supertonic-section">
+    <View style={styles.section} testID="tts-kitten-section">
       <Text variant="titleMedium" style={styles.sectionHeader}>
-        {l10n.voiceAndSpeech.supertonicSectionTitle}
+        {l10n.voiceAndSpeech.kittenSectionTitle}
       </Text>
       <Text variant="bodyMedium" style={styles.sectionDescription}>
-        {l10n.voiceAndSpeech.supertonicSectionDescription}
+        {l10n.voiceAndSpeech.kittenSectionDescription}
       </Text>
       {renderCard()}
-      {SUPERTONIC_VOICES.map(voice => {
+      {KITTEN_VOICES.map(voice => {
         const isSelected = voice.id === selectedId;
         const rowContent = (
           <View style={[styles.row, !isReady && styles.rowDisabled]}>
@@ -187,7 +163,7 @@ export const SupertonicSection: React.FC = observer(() => {
               compact
               disabled={!isReady}
               style={styles.previewButton}
-              testID={`tts-supertonic-preview-${voice.id}`}
+              testID={`tts-kitten-preview-${voice.id}`}
               onPress={() => handlePreview(voice)}>
               {l10n.voiceAndSpeech.previewButton}
             </Button>
@@ -197,33 +173,18 @@ export const SupertonicSection: React.FC = observer(() => {
           <TouchableRipple
             key={voice.id}
             onPress={() => handleSelect(voice)}
-            testID={`tts-supertonic-voice-${voice.id}`}>
+            testID={`tts-kitten-voice-${voice.id}`}>
             {rowContent}
           </TouchableRipple>
         ) : (
           <View
             key={voice.id}
-            testID={`tts-supertonic-voice-${voice.id}`}
+            testID={`tts-kitten-voice-${voice.id}`}
             accessibilityState={{disabled: true}}>
             {rowContent}
           </View>
         );
       })}
-      {isReady ? (
-        <View style={styles.stepsRow} testID="tts-supertonic-steps-row">
-          <Text style={styles.stepsLabel}>
-            {l10n.voiceAndSpeech.supertonicStepsLabel}
-          </Text>
-          <SegmentedButtons
-            value={String(ttsStore.supertonicSteps)}
-            onValueChange={value => {
-              const parsed = Number(value) as SupertonicSteps;
-              ttsStore.setSupertonicSteps(parsed);
-            }}
-            buttons={STEPS_OPTIONS}
-          />
-        </View>
-      ) : null}
     </View>
   );
 });
