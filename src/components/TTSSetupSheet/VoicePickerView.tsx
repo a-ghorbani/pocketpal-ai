@@ -244,7 +244,13 @@ export const VoicePickerView: React.FC = observer(() => {
     ttsStore.closeSetupSheet();
   };
 
-  const handlePreview = (voice: Voice) => {
+  const handlePreviewToggle = (voice: Voice) => {
+    if (ttsStore.isPreviewingVoice(voice)) {
+      ttsStore.stop().catch(err => {
+        console.warn('[VoicePickerView] stop failed:', err);
+      });
+      return;
+    }
     ttsStore.preview(voice).catch(err => {
       console.warn('[VoicePickerView] preview failed:', err);
     });
@@ -276,6 +282,7 @@ export const VoicePickerView: React.FC = observer(() => {
   const renderVoiceRow = (voice: Voice) => {
     const key = `${voice.engine}:${voice.id}`;
     const isSelected = key === selectedKey;
+    const isPreviewing = ttsStore.isPreviewingVoice(voice);
     const accent = getEngineAccent(voice.engine);
     return (
       <TouchableRipple
@@ -300,11 +307,15 @@ export const VoicePickerView: React.FC = observer(() => {
             </Text>
           </View>
           <IconButton
-            icon="play"
+            icon={isPreviewing ? 'stop' : 'play'}
             size={18}
             iconColor={accent}
-            onPress={() => handlePreview(voice)}
-            accessibilityLabel={l10n.voiceAndSpeech.previewButton}
+            onPress={() => handlePreviewToggle(voice)}
+            accessibilityLabel={
+              isPreviewing
+                ? l10n.voiceAndSpeech.stopPreviewButton
+                : l10n.voiceAndSpeech.previewButton
+            }
             testID={`tts-voice-preview-${voice.engine}-${voice.id}`}
             style={styles.voiceRowPreviewBtn}
           />

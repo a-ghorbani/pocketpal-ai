@@ -50,10 +50,18 @@ export const HeroRow: React.FC = observer(() => {
   const tint = getEngineTint(current.engine, 0.1);
   const border = getEngineTint(current.engine, 0.18);
 
-  const handlePreview = () => {
-    ttsStore.preview(current).catch(err => {
-      console.warn('[HeroRow] preview failed:', err);
-    });
+  const isPreviewing = ttsStore.isPreviewingVoice(current);
+
+  const handlePreviewToggle = () => {
+    if (isPreviewing) {
+      ttsStore.stop().catch(err => {
+        console.warn('[HeroRow] stop failed:', err);
+      });
+    } else {
+      ttsStore.preview(current).catch(err => {
+        console.warn('[HeroRow] preview failed:', err);
+      });
+    }
   };
 
   const showSupertonicQuality =
@@ -82,12 +90,16 @@ export const HeroRow: React.FC = observer(() => {
           <Text style={styles.heroSubtitle}>{subtitleParts.join('  ·  ')}</Text>
         </View>
         <IconButton
-          icon="play"
+          icon={isPreviewing ? 'stop' : 'play'}
           size={20}
           iconColor={accent}
           containerColor={theme.colors.surface}
-          onPress={handlePreview}
-          accessibilityLabel={l10n.voiceAndSpeech.previewButton}
+          onPress={handlePreviewToggle}
+          accessibilityLabel={
+            isPreviewing
+              ? l10n.voiceAndSpeech.stopPreviewButton
+              : l10n.voiceAndSpeech.previewButton
+          }
           testID="tts-hero-preview-button"
           style={styles.heroPreviewButton}
         />

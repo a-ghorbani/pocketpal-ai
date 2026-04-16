@@ -61,4 +61,21 @@ describe('HeroRow', () => {
       expect.objectContaining({id: 'af_heart', engine: 'kokoro'}),
     );
   });
+
+  it('button calls stop when a preview is already in flight', () => {
+    runInAction(() => {
+      ttsStore.currentVoice = {
+        id: 'af_heart',
+        name: 'Heart',
+        engine: 'kokoro',
+      };
+    });
+    (ttsStore.isPreviewingVoice as jest.Mock).mockReturnValue(true);
+
+    const {getByTestId} = renderHero();
+    fireEvent.press(getByTestId('tts-hero-preview-button'));
+
+    expect(ttsStore.stop).toHaveBeenCalled();
+    expect(ttsStore.preview).not.toHaveBeenCalled();
+  });
 });

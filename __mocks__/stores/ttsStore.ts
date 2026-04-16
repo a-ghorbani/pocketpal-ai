@@ -29,6 +29,7 @@ class MockTTSStore {
   init: jest.Mock;
   play: jest.Mock;
   preview: jest.Mock;
+  isPreviewingVoice: jest.Mock;
   stop: jest.Mock;
   setAutoSpeak: jest.Mock;
   setCurrentVoice: jest.Mock;
@@ -53,6 +54,7 @@ class MockTTSStore {
       init: false,
       play: false,
       preview: false,
+      isPreviewingVoice: false,
       stop: false,
       setAutoSpeak: false,
       setCurrentVoice: false,
@@ -75,6 +77,7 @@ class MockTTSStore {
     this.init = jest.fn().mockResolvedValue(undefined);
     this.play = jest.fn().mockResolvedValue(undefined);
     this.preview = jest.fn().mockResolvedValue(undefined);
+    this.isPreviewingVoice = jest.fn().mockReturnValue(false);
     this.stop = jest.fn().mockResolvedValue(undefined);
     this.setAutoSpeak = jest.fn();
     this.setCurrentVoice = jest.fn();

@@ -54,6 +54,9 @@ export type NeuralEngineId = 'supertonic' | 'kokoro' | 'kitten';
 
 const DEFAULT_SUPERTONIC_STEPS: SupertonicSteps = 5;
 
+const previewMessageId = (voice: Voice): string =>
+  `preview:${voice.engine}:${voice.id}`;
+
 /**
  * Store that coordinates text-to-speech playback.
  *
@@ -347,14 +350,18 @@ export class TTSStore {
    *
    * Skips the thinking-stripper entirely — preview text is fixed and
    * known clean.
+   *
+   * messageId is engine-qualified (`preview:<engine>:<voiceId>`) so two
+   * engines that share a voice id can't collide on the cleanup guard.
    */
   async preview(voice: Voice): Promise<void> {
     if (!this.isTTSAvailable) {
       return;
     }
+    const messageId = previewMessageId(voice);
     await this.stop();
     runInAction(() => {
-      this.playbackState = {mode: 'playing', messageId: `preview:${voice.id}`};
+      this.playbackState = {mode: 'playing', messageId};
     });
     try {
       const engine = getEngine(voice.engine);
@@ -371,12 +378,25 @@ export class TTSStore {
       runInAction(() => {
         if (
           this.playbackState.mode === 'playing' &&
-          this.playbackState.messageId === `preview:${voice.id}`
+          this.playbackState.messageId === messageId
         ) {
           this.playbackState = {mode: 'idle'};
         }
       });
     }
+  }
+
+  /**
+   * `true` when a preview for `voice` is currently in flight. Components
+   * use this to swap their play icon for stop while the engine loads
+   * and speaks (Kokoro warm-up is ~4s — without this the user has no
+   * feedback that their tap registered).
+   */
+  isPreviewingVoice(voice: Voice): boolean {
+    return (
+      this.playbackState.mode === 'playing' &&
+      this.playbackState.messageId === previewMessageId(voice)
+    );
   }
 
   /** First token / message creation. Opens a streaming session. */
