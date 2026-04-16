@@ -1,0 +1,354 @@
+import {Platform} from 'react-native';
+
+import * as RNFS from '@dr.pogodin/react-native-fs';
+import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
+
+import {
+  KOKORO_MODEL_BASE_URL,
+  KOKORO_MODEL_FILES,
+  KOKORO_MODEL_SUBDIR,
+  KOKORO_VOICES_BASE_URL,
+  KOKORO_VOICES_MANIFEST_FILENAME,
+  TTS_DICT_FILENAME,
+  TTS_DICT_URL,
+  TTS_PARENT_SUBDIR,
+} from '../../constants';
+import {ttsRuntime} from '../../runtime';
+import type {Engine, StreamingHandle, Voice} from '../../types';
+import {KOKORO_VOICES} from './voices';
+
+export type KokoroProgressCallback = (progress: number) => void;
+
+/**
+ * Kokoro neural TTS engine (82M Q8 ONNX port).
+ *
+ * Installation is two-phase:
+ *   1. Core files (`model.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
+ *      any failure cleans up the whole `tts/kokoro/` dir.
+ *   2. Per-voice `.bin` embedding files — best-effort; partial success is
+ *      accepted (engine usable with whichever voices did land). The voices
+ *      manifest is (re)written at the end to point at the full voice
+ *      catalog.
+ *
+ * CPU-only execution is forced (`executionProviders: 'cpu'`) across all
+ * three neural engines for consistent battery/thermal behavior and easier
+ * QA.
+ */
+export class KokoroEngine implements Engine {
+  readonly id = 'kokoro' as const;
+
+  private getParentDir(): string {
+    const root =
+      Platform.OS === 'ios'
+        ? `${RNFS.LibraryDirectoryPath}/Application Support`
+        : RNFS.DocumentDirectoryPath;
+    return `${root}/${TTS_PARENT_SUBDIR}`;
+  }
+
+  getModelPath(): string {
+    const root =
+      Platform.OS === 'ios'
+        ? `${RNFS.LibraryDirectoryPath}/Application Support`
+        : RNFS.DocumentDirectoryPath;
+    return `${root}/${KOKORO_MODEL_SUBDIR}`;
+  }
+
+  private getFilePath(filename: string): string {
+    return `${this.getModelPath()}/${filename}`;
+  }
+
+  async isInstalled(): Promise<boolean> {
+    try {
+      for (const file of KOKORO_MODEL_FILES) {
+        if (!(await RNFS.exists(this.getFilePath(file.name)))) {
+          return false;
+        }
+      }
+      if (!(await RNFS.exists(this.getFilePath(TTS_DICT_FILENAME)))) {
+        return false;
+      }
+      return RNFS.exists(this.getFilePath(KOKORO_VOICES_MANIFEST_FILENAME));
+    } catch (err) {
+      console.warn('[KokoroEngine] isInstalled check failed:', err);
+      return false;
+    }
+  }
+
+  async getVoices(): Promise<Voice[]> {
+    return KOKORO_VOICES;
+  }
+
+  async downloadModel(onProgress?: KokoroProgressCallback): Promise<void> {
+    const parentDir = this.getParentDir();
+    const modelDir = this.getModelPath();
+    const voicesDir = `${modelDir}/voices`;
+
+    await RNFS.mkdir(parentDir, {NSURLIsExcludedFromBackupKey: true});
+    await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
+    await RNFS.mkdir(voicesDir, {NSURLIsExcludedFromBackupKey: true});
+
+    // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
+    const corePhaseWeight = 0.6;
+    const coreFiles = [
+      ...KOKORO_MODEL_FILES,
+      {name: TTS_DICT_FILENAME, url: TTS_DICT_URL},
+    ];
+    const corePerFile = new Array(coreFiles.length).fill(0);
+    const reportCore = () => {
+      if (!onProgress) {
+        return;
+      }
+      const sum = corePerFile.reduce((a, b) => a + b, 0);
+      onProgress(Math.min(1, (sum / coreFiles.length) * corePhaseWeight));
+    };
+
+    try {
+      for (let i = 0; i < coreFiles.length; i++) {
+        const file = coreFiles[i]!;
+        const target = this.getFilePath(file.name);
+        const fromUrl =
+          'url' in file ? file.url : `${KOKORO_MODEL_BASE_URL}/${file.urlPath}`;
+        const result = await RNFS.downloadFile({
+          fromUrl,
+          toFile: target,
+          background: false,
+          discretionary: false,
+          cacheable: false,
+          progressInterval: 500,
+          progress: res => {
+            const contentLength = res.contentLength || 1;
+            corePerFile[i] = Math.min(1, res.bytesWritten / contentLength);
+            reportCore();
+          },
+        }).promise;
+
+        if (result.statusCode !== 200) {
+          throw new Error(
+            `Failed to download ${file.name}: HTTP ${result.statusCode}`,
+          );
+        }
+        corePerFile[i] = 1;
+        reportCore();
+      }
+    } catch (err) {
+      try {
+        if (await RNFS.exists(modelDir)) {
+          await RNFS.unlink(modelDir);
+        }
+      } catch (cleanupErr) {
+        console.warn(
+          '[KokoroEngine] partial-download cleanup failed:',
+          cleanupErr,
+        );
+      }
+      throw err;
+    }
+
+    // Phase 2: per-voice `.bin` embedding files — best-effort; partial OK.
+    const voicePhaseBase = corePhaseWeight;
+    const voicePhaseWeight = 1 - corePhaseWeight;
+    let voicesDone = 0;
+    for (const voice of KOKORO_VOICES) {
+      const target = `${voicesDir}/${voice.id}.bin`;
+      try {
+        const result = await RNFS.downloadFile({
+          fromUrl: `${KOKORO_VOICES_BASE_URL}/${voice.id}.bin`,
+          toFile: target,
+          background: false,
+          discretionary: false,
+          cacheable: false,
+          progressInterval: 1000,
+        }).promise;
+        if (result.statusCode !== 200) {
+          console.warn(
+            `[KokoroEngine] voice ${voice.id} download failed: HTTP ${result.statusCode}`,
+          );
+        }
+      } catch (voiceErr) {
+        console.warn(
+          `[KokoroEngine] voice ${voice.id} download failed:`,
+          voiceErr,
+        );
+      }
+      voicesDone++;
+      if (onProgress) {
+        onProgress(
+          Math.min(
+            1,
+            voicePhaseBase +
+              (voicesDone / KOKORO_VOICES.length) * voicePhaseWeight,
+          ),
+        );
+      }
+    }
+
+    // Write voices manifest pointing at the voices/ directory.
+    const manifest = {
+      baseUrl: KOKORO_VOICES_BASE_URL,
+      voices: KOKORO_VOICES.map(v => v.id),
+    };
+    await RNFS.writeFile(
+      this.getFilePath(KOKORO_VOICES_MANIFEST_FILENAME),
+      JSON.stringify(manifest, null, 2),
+    );
+
+    if (onProgress) {
+      onProgress(1);
+    }
+  }
+
+  async deleteModel(): Promise<void> {
+    try {
+      if (await RNFS.exists(this.getModelPath())) {
+        await RNFS.unlink(this.getModelPath());
+      }
+    } catch (err) {
+      console.warn('[KokoroEngine] deleteModel failed:', err);
+    }
+  }
+
+  async loadInto(): Promise<void> {
+    const modelDir = this.getModelPath();
+    await Speech.initialize({
+      engine: TTSEngine.KOKORO,
+      modelPath: `file://${modelDir}/model.onnx`,
+      tokenizerPath: `file://${modelDir}/tokenizer.json`,
+      voicesPath: `file://${modelDir}/${KOKORO_VOICES_MANIFEST_FILENAME}`,
+      dictPath: `file://${modelDir}/${TTS_DICT_FILENAME}`,
+      executionProviders: 'cpu',
+      maxChunkSize: 200,
+      silentMode: 'obey',
+      ducking: true,
+    });
+  }
+
+  async play(text: string, voice: Voice): Promise<void> {
+    if (!(await this.isInstalled())) {
+      throw new Error('Kokoro model is not installed');
+    }
+    await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
+  }
+
+  playStreaming(voice: Voice): StreamingHandle {
+    let buffer = '';
+    const queue: string[] = [];
+    let speaking = false;
+    let dead = false;
+    let finalized = false;
+    let finalizeResolve: (() => void) | null = null;
+    let finalizeReject: ((err: Error) => void) | null = null;
+
+    const SENTENCE_END = /^[\s\S]*?[.!?。！？](?=\s|$)/;
+
+    const speakNext = async () => {
+      if (dead) {
+        return;
+      }
+      const next = queue.shift();
+      if (next === undefined) {
+        speaking = false;
+        if (finalized && finalizeResolve) {
+          finalizeResolve();
+          finalizeResolve = null;
+        }
+        return;
+      }
+      speaking = true;
+      try {
+        await ttsRuntime.acquire(this, () => Speech.speak(next, voice.id));
+      } catch (err) {
+        console.warn('[KokoroEngine] streaming speak failed:', err);
+        speaking = false;
+        if (finalizeReject) {
+          finalizeReject(err instanceof Error ? err : new Error(String(err)));
+          finalizeReject = null;
+          finalizeResolve = null;
+        }
+      }
+    };
+
+    const subscription = Speech.onFinish(() => {
+      if (dead) {
+        return;
+      }
+      speakNext().catch(() => {
+        // speakNext logs internally.
+      });
+    });
+
+    const drainBuffer = () => {
+      while (true) {
+        const match = buffer.match(SENTENCE_END);
+        if (!match) {
+          break;
+        }
+        const sentence = match[0].trim();
+        buffer = buffer.slice(match[0].length);
+        if (sentence.length > 0) {
+          queue.push(sentence);
+        }
+      }
+    };
+
+    return {
+      appendText: (chunk: string) => {
+        if (dead || finalized) {
+          return;
+        }
+        buffer += chunk;
+        drainBuffer();
+        if (!speaking) {
+          speakNext().catch(() => {});
+        }
+      },
+      finalize: async () => {
+        if (dead || finalized) {
+          return;
+        }
+        finalized = true;
+        drainBuffer();
+        const tail = buffer.trim();
+        buffer = '';
+        if (tail.length > 0) {
+          queue.push(tail);
+        }
+        if (!speaking) {
+          speakNext().catch(() => {});
+        }
+        if (queue.length === 0 && !speaking) {
+          subscription.remove();
+          return;
+        }
+        await new Promise<void>((resolve, reject) => {
+          finalizeResolve = () => {
+            subscription.remove();
+            resolve();
+          };
+          finalizeReject = err => {
+            subscription.remove();
+            reject(err);
+          };
+        });
+      },
+      cancel: async () => {
+        if (dead) {
+          return;
+        }
+        dead = true;
+        queue.length = 0;
+        buffer = '';
+        subscription.remove();
+        if (finalizeResolve) {
+          finalizeResolve();
+          finalizeResolve = null;
+          finalizeReject = null;
+        }
+        await ttsRuntime.stop();
+      },
+    };
+  }
+
+  async stop(): Promise<void> {
+    await ttsRuntime.stop();
+  }
+}

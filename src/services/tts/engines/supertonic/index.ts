@@ -14,7 +14,13 @@ import {
   SUPERTONIC_VOICES_MANIFEST_FILENAME,
   TTS_PARENT_SUBDIR,
 } from '../../constants';
-import type {Engine, StreamingHandle, Voice} from '../../types';
+import {ttsRuntime} from '../../runtime';
+import type {
+  Engine,
+  StreamingHandle,
+  SupertonicSteps,
+  Voice,
+} from '../../types';
 import {SUPERTONIC_VOICES} from './voices';
 
 export type SupertonicProgressCallback = (progress: number) => void;
@@ -45,9 +51,6 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'en';
  */
 export class SupertonicEngine implements Engine {
   readonly id = 'supertonic' as const;
-
-  private initializationPromise: Promise<void> | null = null;
-  private initialized = false;
 
   /** Root directory: parent of the Supertonic model directory. Used for the iOS backup-exclusion mkdir. */
   private getParentDir(): string {
@@ -190,31 +193,9 @@ export class SupertonicEngine implements Engine {
     } catch (err) {
       console.warn('[SupertonicEngine] deleteModel failed:', err);
     }
-    this.initialized = false;
-    this.initializationPromise = null;
   }
 
-  /**
-   * Lazy engine initialization — called on first `play` / `playStreaming`.
-   * Idempotent: the `initializationPromise` guard coalesces concurrent
-   * play requests onto a single init call.
-   */
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    if (!this.initializationPromise) {
-      this.initializationPromise = this.doInitialize();
-    }
-    try {
-      await this.initializationPromise;
-    } catch (err) {
-      this.initializationPromise = null;
-      throw err;
-    }
-  }
-
-  private async doInitialize(): Promise<void> {
+  async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.SUPERTONIC,
@@ -227,22 +208,24 @@ export class SupertonicEngine implements Engine {
       silentMode: 'obey',
       ducking: true,
       maxChunkSize: 200,
+      executionProviders: 'cpu',
     });
-    this.initialized = true;
   }
 
   async play(
     text: string,
     voice: Voice,
-    language?: SupertonicLanguage,
+    opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
   ): Promise<void> {
     if (!(await this.isInstalled())) {
       throw new Error('Supertonic model is not installed');
     }
-    await this.ensureInitialized();
-    await Speech.speak(text, voice.id, {
-      language: language ?? DEFAULT_SUPERTONIC_LANGUAGE,
-    });
+    await ttsRuntime.acquire(this, () =>
+      Speech.speak(text, voice.id, {
+        language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+        ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
+      }),
+    );
   }
 
   /**
@@ -251,8 +234,12 @@ export class SupertonicEngine implements Engine {
    * fork's Supertonic engine supports chunked synthesis via repeated
    * `speak` calls; `onFinish` events chain the queue.
    */
-  playStreaming(voice: Voice, language?: SupertonicLanguage): StreamingHandle {
-    const resolvedLanguage = language ?? DEFAULT_SUPERTONIC_LANGUAGE;
+  playStreaming(
+    voice: Voice,
+    opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
+  ): StreamingHandle {
+    const resolvedLanguage = opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE;
+    const resolvedSteps = opts?.inferenceSteps;
     let buffer = '';
     const queue: string[] = [];
     let speaking = false;
@@ -281,8 +268,12 @@ export class SupertonicEngine implements Engine {
       }
       speaking = true;
       try {
-        await this.ensureInitialized();
-        await Speech.speak(next, voice.id, {language: resolvedLanguage});
+        await ttsRuntime.acquire(this, () =>
+          Speech.speak(next, voice.id, {
+            language: resolvedLanguage,
+            ...(resolvedSteps ? {inferenceSteps: resolvedSteps} : {}),
+          }),
+        );
       } catch (err) {
         console.warn('[SupertonicEngine] streaming speak failed:', err);
         speaking = false;
@@ -374,20 +365,12 @@ export class SupertonicEngine implements Engine {
           finalizeResolve = null;
           finalizeReject = null;
         }
-        try {
-          await Speech.stop();
-        } catch (err) {
-          console.warn('[SupertonicEngine] stop failed:', err);
-        }
+        await ttsRuntime.stop();
       },
     };
   }
 
   async stop(): Promise<void> {
-    try {
-      await Speech.stop();
-    } catch (err) {
-      console.warn('[SupertonicEngine] stop failed:', err);
-    }
+    await ttsRuntime.stop();
   }
 }

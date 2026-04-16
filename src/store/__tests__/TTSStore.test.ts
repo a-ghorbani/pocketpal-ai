@@ -30,6 +30,16 @@ const mockSupertonicStop = jest.fn().mockResolvedValue(undefined);
 const mockSupertonicIsInstalled = jest.fn().mockResolvedValue(false);
 const mockSupertonicDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockSupertonicDeleteModel = jest.fn().mockResolvedValue(undefined);
+const mockKokoroIsInstalled = jest.fn().mockResolvedValue(false);
+const mockKokoroDownloadModel = jest.fn().mockResolvedValue(undefined);
+const mockKokoroDeleteModel = jest.fn().mockResolvedValue(undefined);
+const mockKokoroPlay = jest.fn().mockResolvedValue(undefined);
+const mockKokoroStop = jest.fn().mockResolvedValue(undefined);
+const mockKittenIsInstalled = jest.fn().mockResolvedValue(false);
+const mockKittenDownloadModel = jest.fn().mockResolvedValue(undefined);
+const mockKittenDeleteModel = jest.fn().mockResolvedValue(undefined);
+const mockKittenPlay = jest.fn().mockResolvedValue(undefined);
+const mockKittenStop = jest.fn().mockResolvedValue(undefined);
 const mockConfigureAudioSession = jest.fn().mockResolvedValue(undefined);
 
 // Per-streaming-session handle factories — we build a fresh spy-backed
@@ -72,7 +82,7 @@ jest.mock('../../services/tts', () => {
   return {
     ...actual,
     configureAudioSession: () => mockConfigureAudioSession(),
-    getEngine: (id: 'system' | 'supertonic') => {
+    getEngine: (id: 'system' | 'supertonic' | 'kokoro' | 'kitten') => {
       if (id === 'system') {
         return {
           id: 'system',
@@ -81,6 +91,38 @@ jest.mock('../../services/tts', () => {
           play: mockSystemPlay,
           playStreaming: mockSystemPlayStreaming,
           stop: mockSystemStop,
+        };
+      }
+      if (id === 'kokoro') {
+        return {
+          id: 'kokoro',
+          isInstalled: mockKokoroIsInstalled,
+          getVoices: jest.fn().mockResolvedValue([]),
+          play: mockKokoroPlay,
+          playStreaming: jest.fn(() => ({
+            appendText: jest.fn(),
+            finalize: jest.fn().mockResolvedValue(undefined),
+            cancel: jest.fn().mockResolvedValue(undefined),
+          })),
+          stop: mockKokoroStop,
+          downloadModel: mockKokoroDownloadModel,
+          deleteModel: mockKokoroDeleteModel,
+        };
+      }
+      if (id === 'kitten') {
+        return {
+          id: 'kitten',
+          isInstalled: mockKittenIsInstalled,
+          getVoices: jest.fn().mockResolvedValue([]),
+          play: mockKittenPlay,
+          playStreaming: jest.fn(() => ({
+            appendText: jest.fn(),
+            finalize: jest.fn().mockResolvedValue(undefined),
+            cancel: jest.fn().mockResolvedValue(undefined),
+          })),
+          stop: mockKittenStop,
+          downloadModel: mockKittenDownloadModel,
+          deleteModel: mockKittenDeleteModel,
         };
       }
       return {
@@ -721,6 +763,278 @@ describe('TTSStore', () => {
       await store.deleteSupertonic();
 
       expect(store.currentVoice).toEqual(SYSTEM_VOICE);
+    });
+  });
+
+  describe('init() neural-engine derivation runs all three engines in parallel', () => {
+    it('queries supertonic, kokoro, and kitten install state independently', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      mockSupertonicIsInstalled.mockResolvedValueOnce(true);
+      mockKokoroIsInstalled.mockResolvedValueOnce(false);
+      mockKittenIsInstalled.mockResolvedValueOnce(true);
+
+      const store = new TTSStore();
+      await store.init();
+
+      expect(mockSupertonicIsInstalled).toHaveBeenCalledTimes(1);
+      expect(mockKokoroIsInstalled).toHaveBeenCalledTimes(1);
+      expect(mockKittenIsInstalled).toHaveBeenCalledTimes(1);
+
+      expect(store.supertonicDownloadState).toBe('ready');
+      expect(store.kokoroDownloadState).toBe('not_installed');
+      expect(store.kittenDownloadState).toBe('ready');
+    });
+
+    it('isInstalled rejection on one engine is caught and treated as not_installed', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      mockSupertonicIsInstalled.mockResolvedValueOnce(true);
+      mockKokoroIsInstalled.mockRejectedValueOnce(new Error('disk error'));
+      mockKittenIsInstalled.mockResolvedValueOnce(true);
+
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.supertonicDownloadState).toBe('ready');
+      expect(store.kokoroDownloadState).toBe('not_installed');
+      expect(store.kittenDownloadState).toBe('ready');
+    });
+  });
+
+  describe('Kokoro download state machine', () => {
+    it('downloadKokoro: not_installed → downloading → ready on success', async () => {
+      const store = await makeStore();
+      mockKokoroDownloadModel.mockImplementationOnce(
+        async (onProgress?: (p: number) => void) => {
+          onProgress?.(0.4);
+          onProgress?.(0.9);
+        },
+      );
+
+      const promise = store.downloadKokoro();
+      expect(store.kokoroDownloadState).toBe('downloading');
+      await promise;
+      expect(store.kokoroDownloadState).toBe('ready');
+      expect(store.kokoroDownloadProgress).toBe(1);
+      expect(store.kokoroDownloadError).toBeNull();
+    });
+
+    it('downloadKokoro: error path; retryKokoroDownload recovers', async () => {
+      const store = await makeStore();
+      mockKokoroDownloadModel
+        .mockRejectedValueOnce(new Error('voice fetch failed'))
+        .mockResolvedValueOnce(undefined);
+
+      await store.downloadKokoro();
+      expect(store.kokoroDownloadState).toBe('error');
+      expect(store.kokoroDownloadError).toBe('voice fetch failed');
+
+      await store.retryKokoroDownload();
+      expect(store.kokoroDownloadState).toBe('ready');
+      expect(store.kokoroDownloadError).toBeNull();
+    });
+
+    it('downloadKokoro: concurrent call while downloading is ignored', async () => {
+      const store = await makeStore();
+      let resolve!: () => void;
+      mockKokoroDownloadModel.mockImplementationOnce(
+        () => new Promise<void>(r => (resolve = r)),
+      );
+
+      const first = store.downloadKokoro();
+      await store.downloadKokoro();
+      expect(mockKokoroDownloadModel).toHaveBeenCalledTimes(1);
+
+      resolve();
+      await first;
+    });
+
+    it('deleteKokoro: clears Kokoro currentVoice but preserves a System voice', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice({
+        id: 'af_bella',
+        name: 'Bella',
+        engine: 'kokoro',
+        language: 'en',
+      });
+
+      await store.deleteKokoro();
+
+      expect(mockKokoroDeleteModel).toHaveBeenCalledTimes(1);
+      expect(store.kokoroDownloadState).toBe('not_installed');
+      expect(store.currentVoice).toBeNull();
+    });
+
+    it('deleteKokoro: preserves a non-Kokoro currentVoice', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+
+      await store.deleteKokoro();
+
+      expect(store.currentVoice).toEqual(SYSTEM_VOICE);
+    });
+  });
+
+  describe('Kitten download state machine', () => {
+    it('downloadKitten: not_installed → downloading → ready on success', async () => {
+      const store = await makeStore();
+      mockKittenDownloadModel.mockImplementationOnce(
+        async (onProgress?: (p: number) => void) => {
+          onProgress?.(0.5);
+        },
+      );
+
+      const promise = store.downloadKitten();
+      expect(store.kittenDownloadState).toBe('downloading');
+      await promise;
+      expect(store.kittenDownloadState).toBe('ready');
+      expect(store.kittenDownloadProgress).toBe(1);
+    });
+
+    it('downloadKitten: error path; retryKittenDownload recovers', async () => {
+      const store = await makeStore();
+      mockKittenDownloadModel
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce(undefined);
+
+      await store.downloadKitten();
+      expect(store.kittenDownloadState).toBe('error');
+      expect(store.kittenDownloadError).toBe('boom');
+
+      await store.retryKittenDownload();
+      expect(store.kittenDownloadState).toBe('ready');
+      expect(store.kittenDownloadError).toBeNull();
+    });
+
+    it('deleteKitten: clears Kitten currentVoice and resets state', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice({
+        id: 'expr-voice-2-f',
+        name: 'F2',
+        engine: 'kitten',
+        language: 'en',
+      });
+
+      await store.deleteKitten();
+
+      expect(mockKittenDeleteModel).toHaveBeenCalledTimes(1);
+      expect(store.kittenDownloadState).toBe('not_installed');
+      expect(store.currentVoice).toBeNull();
+    });
+  });
+
+  describe('supertonicSteps', () => {
+    it('defaults to 5', () => {
+      const store = new TTSStore();
+      expect(store.supertonicSteps).toBe(5);
+    });
+
+    it('setSupertonicSteps updates the observable', () => {
+      const store = new TTSStore();
+      store.setSupertonicSteps(10);
+      expect(store.supertonicSteps).toBe(10);
+      store.setSupertonicSteps(3);
+      expect(store.supertonicSteps).toBe(3);
+    });
+
+    it('play() forwards supertonicSteps as inferenceSteps to Supertonic engine', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setSupertonicSteps(3);
+      // Override default reject with a resolve so we exercise the call path.
+      mockSupertonicPlay.mockResolvedValueOnce(undefined);
+
+      await store.play('msg-1', 'hello');
+
+      expect(mockSupertonicPlay).toHaveBeenCalledWith(
+        'hello',
+        SUPERTONIC_VOICE,
+        {inferenceSteps: 3},
+      );
+    });
+
+    it('play() with non-Supertonic voice does NOT pass inferenceSteps', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setSupertonicSteps(3);
+
+      await store.play('msg-1', 'hello');
+
+      // System engine.play() takes only (text, voice) — no opts.
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
+    });
+
+    it('streaming: opens Supertonic playStreaming with inferenceSteps from store', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setAutoSpeak(true);
+      store.setSupertonicSteps(10);
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(mockSupertonicPlayStreaming).toHaveBeenCalledWith(
+        SUPERTONIC_VOICE,
+        {inferenceSteps: 10},
+      );
+    });
+  });
+
+  describe('preview() and isPreviewingVoice()', () => {
+    it('flips isPreviewingVoice true while play() is in flight, false after', async () => {
+      const store = await makeStore();
+      let resolvePlay: () => void = () => {};
+      mockSystemPlay.mockImplementationOnce(
+        () => new Promise<void>(r => (resolvePlay = r)),
+      );
+
+      const previewPromise = store.preview(SYSTEM_VOICE);
+      await flush();
+
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(true);
+      // A different voice never matches the in-flight preview.
+      expect(store.isPreviewingVoice(SUPERTONIC_VOICE)).toBe(false);
+
+      resolvePlay();
+      await previewPromise;
+
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(false);
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('messageId is engine-qualified — same voice id on different engines does not collide', async () => {
+      const store = await makeStore();
+      const supertonicVoice: Voice = {
+        id: 'F1',
+        name: 'Sarah',
+        engine: 'supertonic',
+      };
+      const systemVoiceWithSameId: Voice = {
+        id: 'F1',
+        name: 'Other',
+        engine: 'system',
+      };
+
+      // Hold supertonic preview in flight.
+      let resolveSupertonic: () => void = () => {};
+      mockSupertonicPlay.mockImplementationOnce(
+        () => new Promise<void>(r => (resolveSupertonic = r)),
+      );
+      const p = store.preview(supertonicVoice);
+      await flush();
+
+      expect(store.isPreviewingVoice(supertonicVoice)).toBe(true);
+      // Same voice id but different engine — must NOT match.
+      expect(store.isPreviewingVoice(systemVoiceWithSameId)).toBe(false);
+
+      resolveSupertonic();
+      await p;
+    });
+
+    it('does nothing when isTTSAvailable is false', async () => {
+      const store = new TTSStore();
+      // Skip init — leaves isTTSAvailable at the default false.
+      await store.preview(SYSTEM_VOICE);
+      expect(mockSystemPlay).not.toHaveBeenCalled();
+      expect(store.playbackState).toEqual({mode: 'idle'});
     });
   });
 });

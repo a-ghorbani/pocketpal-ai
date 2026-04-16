@@ -228,10 +228,10 @@ describe('SupertonicEngine (v1.2 real)', () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
 
       const engine = new SupertonicEngine();
-      await engine.play('안녕하세요', anyVoice, 'ko');
+      await engine.play('hello', anyVoice, {language: 'en'});
 
-      expect(Speech.speak).toHaveBeenCalledWith('안녕하세요', anyVoice.id, {
-        language: 'ko',
+      expect(Speech.speak).toHaveBeenCalledWith('hello', anyVoice.id, {
+        language: 'en',
       });
     });
   });

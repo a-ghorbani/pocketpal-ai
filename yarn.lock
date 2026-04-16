@@ -2153,9 +2153,10 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
-"@pocketpalai/react-native-speech@github:a-ghorbani/react-native-speech#16cc347b980e9d6e26d072358bf7811227928e36":
+"@pocketpalai/react-native-speech@^2.0.0":
   version "2.0.0"
-  resolved "https://codeload.github.com/a-ghorbani/react-native-speech/tar.gz/16cc347b980e9d6e26d072358bf7811227928e36"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.0.0.tgz#59c0d6b19e7ed51716eca3c8bad9858b15891cfa"
+  integrity sha512-FE8T7VQ30tm+sTVKjLW6sINO5OOPipoKP2Ilz281XeKDfzT2kZX7cEOPBNCNBPB+9Xbjf1+GFcmV1OFuGo8NBA==
   dependencies:
     phonemize "^1.1.0"
 
