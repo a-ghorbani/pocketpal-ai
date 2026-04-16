@@ -15,7 +15,6 @@ jest.mock('../../../services/tts', () => {
   const play = jest.fn().mockResolvedValue(undefined);
   return {
     ...actual,
-    __kokoroPlay: play,
     getEngine: (id: string) => ({
       id,
       play,
@@ -27,10 +26,10 @@ jest.mock('../../../services/tts', () => {
   };
 });
 
-const renderHero = (onOpenBrowse = jest.fn()) =>
+const renderHero = () =>
   render(
     <L10nContext.Provider value={l10n.en}>
-      <HeroRow onOpenBrowse={onOpenBrowse} />
+      <HeroRow />
     </L10nContext.Provider>,
   );
 
@@ -42,13 +41,13 @@ describe('HeroRow', () => {
     });
   });
 
-  it('shows notSet when currentVoice is null', () => {
-    const {getByTestId, queryByTestId} = renderHero();
-    expect(getByTestId('tts-hero-voice-not-set')).toBeTruthy();
+  it('renders nothing when currentVoice is null', () => {
+    const {queryByTestId} = renderHero();
+    expect(queryByTestId('tts-hero-row')).toBeNull();
     expect(queryByTestId('tts-hero-preview-button')).toBeNull();
   });
 
-  it('renders voice name, engine chip, and preview button when current', () => {
+  it('renders voice name and preview button when a voice is current', () => {
     runInAction(() => {
       ttsStore.currentVoice = {
         id: 'af_heart',
@@ -56,22 +55,9 @@ describe('HeroRow', () => {
         engine: 'kokoro',
       };
     });
-    const {getByTestId, getByText} = renderHero();
+    const {getByTestId} = renderHero();
     expect(getByTestId('tts-hero-voice-name').props.children).toBe('Heart');
-    expect(getByText(l10n.en.voiceAndSpeech.engineChipKokoro)).toBeTruthy();
     expect(getByTestId('tts-hero-preview-button')).toBeTruthy();
-  });
-
-  it('renders catalog-derived character chip (Heart → Warm)', () => {
-    runInAction(() => {
-      ttsStore.currentVoice = {
-        id: 'af_heart',
-        name: 'Heart',
-        engine: 'kokoro',
-      };
-    });
-    const {getByText} = renderHero();
-    expect(getByText(l10n.en.voiceAndSpeech.characterWarm)).toBeTruthy();
   });
 
   it('preview button calls engine.play with TTS_PREVIEW_SAMPLE', () => {
@@ -88,12 +74,5 @@ describe('HeroRow', () => {
       TTS_PREVIEW_SAMPLE,
       expect.objectContaining({id: 'af_heart', engine: 'kokoro'}),
     );
-  });
-
-  it('tapping the hero row body invokes onOpenBrowse', () => {
-    const onOpen = jest.fn();
-    const {getByTestId} = renderHero(onOpen);
-    fireEvent.press(getByTestId('tts-hero-row'));
-    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

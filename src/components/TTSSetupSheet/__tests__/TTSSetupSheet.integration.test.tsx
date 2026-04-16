@@ -13,11 +13,11 @@ import {PlayButton} from '../../TextMessage/PlayButton';
 import {TTSSetupSheet} from '../TTSSetupSheet';
 
 /**
- * End-to-end flow: PlayButton → TTSStore → voice-led setup sheet. With
- * no voice selected, tapping the PlayButton opens the sheet on the
- * primary view; picking a voice from Browse selects it and closes.
+ * End-to-end flow: PlayButton → TTSStore → unified voices sheet.
+ * No voice selected → tap PlayButton opens the sheet on the voices view;
+ * picking a ready voice selects it and closes.
  */
-describe('TTS setup end-to-end', () => {
+describe('TTS setup end-to-end (single-view)', () => {
   const makeAssistantMsg = (): MessageType.DerivedText =>
     ({
       id: 'msg-e2e',
@@ -61,32 +61,9 @@ describe('TTS setup end-to-end', () => {
     expect(ttsStore.isSetupSheetOpen).toBe(true);
   });
 
-  it('navigating primary → Browse → Manage → back returns to primary', () => {
+  it('picking a ready voice from an expanded engine group selects it and closes the sheet', () => {
     runInAction(() => {
       ttsStore.isSetupSheetOpen = true;
-    });
-    const {getByTestId} = render(
-      <L10nContext.Provider value={l10n.en}>
-        <TTSSetupSheet />
-      </L10nContext.Provider>,
-      {withBottomSheetProvider: true, withSafeArea: true},
-    );
-
-    expect(getByTestId('tts-hero-row')).toBeTruthy();
-    fireEvent.press(getByTestId('tts-browse-row'));
-    expect(getByTestId('tts-voice-picker')).toBeTruthy();
-    fireEvent.press(getByTestId('tts-voice-picker-header-back'));
-    expect(getByTestId('tts-hero-row')).toBeTruthy();
-    fireEvent.press(getByTestId('tts-manage-row'));
-    expect(getByTestId('tts-manage-engines')).toBeTruthy();
-    fireEvent.press(getByTestId('tts-manage-engines-header-back'));
-    expect(getByTestId('tts-hero-row')).toBeTruthy();
-  });
-
-  it('picking a ready voice in Browse sets currentVoice and closes the sheet', async () => {
-    runInAction(() => {
-      ttsStore.isSetupSheetOpen = true;
-      // Make Kitten ready so at least some neural voices are selectable.
       ttsStore.kittenDownloadState = 'ready';
     });
 
@@ -109,10 +86,8 @@ describe('TTS setup end-to-end', () => {
     );
 
     act(() => {
-      fireEvent.press(getByTestId('tts-browse-row'));
+      fireEvent.press(getByTestId('tts-engine-group-toggle-kitten'));
     });
-
-    // Bella (kitten, warm) is a ready voice we can safely target.
     act(() => {
       fireEvent.press(getByTestId('tts-voice-row-kitten-expr-voice-2-f'));
     });
