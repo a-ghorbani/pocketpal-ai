@@ -53,6 +53,29 @@ class TTSRuntime {
     });
   }
 
+  /**
+   * Stop any in-flight native playback. Serialized with `acquire` so a
+   * subsequent `acquire()` queued on the same mutex runs AFTER the stop
+   * completes — this is the only reason to prefer this over calling
+   * `Speech.stop()` directly. Without serialization, a fire-and-forget
+   * stop can cancel a newly-started utterance that was ordered later in
+   * JS but reached native first.
+   *
+   * No-op when no engine is active.
+   */
+  async stop(): Promise<void> {
+    await this.serialize(async () => {
+      if (this.activeEngineId === null) {
+        return;
+      }
+      try {
+        await Speech.stop();
+      } catch (err) {
+        console.warn('[ttsRuntime] stop failed:', err);
+      }
+    });
+  }
+
   /** Read-only view of which engine is currently loaded. Test/diagnostic use. */
   getActiveEngineId(): EngineId | null {
     return this.activeEngineId;

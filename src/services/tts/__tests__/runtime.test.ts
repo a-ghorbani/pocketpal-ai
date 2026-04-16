@@ -17,6 +17,7 @@ const makeEngine = (id: EngineId): Engine => {
 };
 
 const releaseMock = (Speech.release as jest.Mock) ?? jest.fn();
+const stopMock = (Speech.stop as jest.Mock) ?? jest.fn();
 
 describe('ttsRuntime', () => {
   beforeEach(() => {
@@ -119,5 +120,81 @@ describe('ttsRuntime', () => {
     // Next acquire on kokoro should re-load.
     await ttsRuntime.acquire(kokoro, async () => undefined);
     expect(kokoro.loadInto).toHaveBeenCalledTimes(2);
+  });
+
+  describe('stop()', () => {
+    it('is a no-op when no engine is active', async () => {
+      await ttsRuntime.stop();
+      expect(stopMock).not.toHaveBeenCalled();
+    });
+
+    it('calls Speech.stop when an engine is active', async () => {
+      const kokoro = makeEngine('kokoro');
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+
+      await ttsRuntime.stop();
+
+      expect(stopMock).toHaveBeenCalledTimes(1);
+      // Stop must NOT release — the engine stays loaded so the next play
+      // starts immediately without paying re-init cost.
+      expect(ttsRuntime.getActiveEngineId()).toBe('kokoro');
+    });
+
+    it('serializes a stop ordered before a new acquire on the same engine', async () => {
+      // This is the B2 fix: when JS issues stop() then immediately starts
+      // a new utterance, the FIFO mutex guarantees the native stop
+      // completes before the new speak begins.
+      const kokoro = makeEngine('kokoro');
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+
+      const order: string[] = [];
+      stopMock.mockImplementationOnce(async () => {
+        order.push('native:stop');
+      });
+      const work = jest.fn().mockImplementation(async () => {
+        order.push('native:speak');
+      });
+
+      const stopPromise = ttsRuntime.stop();
+      const speakPromise = ttsRuntime.acquire(kokoro, work);
+
+      await Promise.all([stopPromise, speakPromise]);
+
+      expect(order).toEqual(['native:stop', 'native:speak']);
+    });
+  });
+
+  describe('rejection chain health', () => {
+    it('keeps the chain alive when loadInto rejects', async () => {
+      const broken = makeEngine('kokoro');
+      (broken.loadInto as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+
+      await expect(
+        ttsRuntime.acquire(broken, async () => 'ok'),
+      ).rejects.toThrow('boom');
+      // activeEngineId stays null — the failed load did not become active.
+      expect(ttsRuntime.getActiveEngineId()).toBeNull();
+
+      // The next acquire must still work.
+      const kitten = makeEngine('kitten');
+      const out = await ttsRuntime.acquire(kitten, async () => 'second');
+      expect(out).toBe('second');
+      expect(ttsRuntime.getActiveEngineId()).toBe('kitten');
+    });
+
+    it('keeps the chain alive when the work fn rejects', async () => {
+      const kokoro = makeEngine('kokoro');
+      await expect(
+        ttsRuntime.acquire(kokoro, async () => {
+          throw new Error('work-failed');
+        }),
+      ).rejects.toThrow('work-failed');
+      // The engine is still loaded — only the work failed.
+      expect(ttsRuntime.getActiveEngineId()).toBe('kokoro');
+
+      // Next acquire on the same engine must still succeed without re-init.
+      await ttsRuntime.acquire(kokoro, async () => undefined);
+      expect(kokoro.loadInto).toHaveBeenCalledTimes(1);
+    });
   });
 });

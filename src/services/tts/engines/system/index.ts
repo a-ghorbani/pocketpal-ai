@@ -122,11 +122,7 @@ const createSystemStreamingHandle = (
         finalizeResolve();
         finalizeResolve = null;
       }
-      try {
-        await Speech.stop();
-      } catch (err) {
-        console.warn('[SystemEngine] stop failed:', err);
-      }
+      await ttsRuntime.stop();
     },
   };
 };
@@ -166,6 +162,6 @@ export class SystemEngine implements Engine {
   }
 
   async stop(): Promise<void> {
-    await Speech.stop();
+    await ttsRuntime.stop();
   }
 }

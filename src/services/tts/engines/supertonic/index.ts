@@ -365,20 +365,12 @@ export class SupertonicEngine implements Engine {
           finalizeResolve = null;
           finalizeReject = null;
         }
-        try {
-          await Speech.stop();
-        } catch (err) {
-          console.warn('[SupertonicEngine] stop failed:', err);
-        }
+        await ttsRuntime.stop();
       },
     };
   }
 
   async stop(): Promise<void> {
-    try {
-      await Speech.stop();
-    } catch (err) {
-      console.warn('[SupertonicEngine] stop failed:', err);
-    }
+    await ttsRuntime.stop();
   }
 }

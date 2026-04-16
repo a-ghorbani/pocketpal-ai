@@ -541,6 +541,13 @@ export class TTSStore {
   }
 
   private async deleteNeuralEngine(id: NeuralEngineId): Promise<void> {
+    // Defensive: refuse to delete while a download is writing into the
+    // same directory. The UI never offers delete in this state, but the
+    // store API is public — guard anyway. Mirrors `downloadNeuralEngine`'s
+    // own early-return on duplicate downloads.
+    if (this.getDownloadState(id) === 'downloading') {
+      return;
+    }
     const engine = getEngine(id) as
       | SupertonicEngine
       | KokoroEngine
