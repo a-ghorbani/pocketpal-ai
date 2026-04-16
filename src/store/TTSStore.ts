@@ -472,12 +472,10 @@ export class TTSStore {
       });
     } catch (err) {
       console.warn(`[TTSStore] ${id} download failed:`, err);
+      const message = err instanceof Error ? err.message : String(err);
       runInAction(() => {
         this.setDownloadState(id, 'error');
-        this.setDownloadError(
-          id,
-          err instanceof Error ? err.message : String(err),
-        );
+        this.setDownloadError(id, message);
       });
     }
   }
