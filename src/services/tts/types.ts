@@ -26,12 +26,6 @@ export interface Voice {
   language?: string;
   /** Optional gender hint for UI grouping. */
   gender?: 'f' | 'm';
-  /**
-   * Optional perceptual character tag used by the voice-led picker to group
-   * voices across engines. Catalog-level default only — future curation can
-   * override per voice without schema change.
-   */
-  character?: 'warm' | 'clear' | 'deep' | 'bright';
 }
 
 export interface SpeakOptions {
