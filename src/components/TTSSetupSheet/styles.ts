@@ -106,7 +106,7 @@ export const createStyles = (theme: Theme) =>
       fontWeight: '700',
       letterSpacing: 0.8,
       textTransform: 'uppercase',
-      marginBottom: 6,
+      marginBottom: 8,
     },
     voicesEmptyHint: {
       color: theme.colors.onSurfaceVariant,
@@ -165,6 +165,21 @@ export const createStyles = (theme: Theme) =>
       marginTop: 2,
       textTransform: 'uppercase',
     },
+    engineGroupTier: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginTop: 2,
+    },
+    engineGroupSpecs: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '500',
+      fontVariant: ['tabular-nums'],
+      letterSpacing: 0.2,
+      marginTop: 1,
+    },
     engineGroupDeleteBtn: {
       margin: 0,
     },
@@ -210,6 +225,12 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12.5,
       fontStyle: 'italic',
       paddingVertical: 8,
+    },
+    engineGroupTagline: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      lineHeight: 18,
+      marginBottom: 12,
     },
     heroRowBody: {
       flexDirection: 'row',
@@ -302,22 +323,18 @@ export const createStyles = (theme: Theme) =>
     voiceRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 4,
-      minHeight: 56,
-    },
-    voiceRowSelectedBar: {
-      width: 3,
-      alignSelf: 'stretch',
-      borderRadius: 2,
-      marginRight: 10,
-    },
-    voiceRowAvatarWrap: {
-      marginRight: 12,
+      paddingVertical: 4,
+      paddingLeft: 4,
+      paddingRight: 4,
+      minHeight: 48,
     },
     voiceRowLabelBlock: {
       flex: 1,
+      paddingLeft: 8,
       paddingRight: 8,
+    },
+    voiceRowPreviewBtn: {
+      margin: 0,
     },
     voiceRowName: {
       color: theme.colors.onSurface,

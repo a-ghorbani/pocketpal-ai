@@ -8,7 +8,13 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {Button, IconButton, Text, TouchableRipple} from 'react-native-paper';
+import {
+  Button,
+  IconButton,
+  RadioButton,
+  Text,
+  TouchableRipple,
+} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {ChevronRightIcon} from '../../assets/icons';
@@ -39,7 +45,7 @@ import {createStyles} from './styles';
 import {EngineLogo} from './EngineLogo';
 import {ENGINE_META} from './engineMeta';
 import {HeroRow} from './HeroRow';
-import {VoiceAvatar, getEngineAccent} from './VoiceAvatar';
+import {getEngineAccent} from './VoiceAvatar';
 
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
@@ -238,19 +244,13 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
         onPress={() => handleSelect(voice)}
         testID={`tts-voice-row-${voice.engine}-${voice.id}`}>
         <View style={styles.voiceRow}>
-          <View
-            style={[
-              styles.voiceRowSelectedBar,
-              {backgroundColor: isSelected ? accent : 'transparent'},
-            ]}
+          <RadioButton.Android
+            value={key}
+            status={isSelected ? 'checked' : 'unchecked'}
+            onPress={() => handleSelect(voice)}
+            uncheckedColor={theme.colors.outline}
+            color={accent}
           />
-          <View style={styles.voiceRowAvatarWrap}>
-            <VoiceAvatar
-              voice={voice}
-              size={34}
-              ringColor={isSelected ? accent : undefined}
-            />
-          </View>
           <View style={styles.voiceRowLabelBlock}>
             <Text
               style={[
@@ -260,15 +260,15 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
               {voice.name}
             </Text>
           </View>
-          <Button
-            mode="text"
-            compact
-            style={styles.previewButton}
-            textColor={accent}
+          <IconButton
+            icon="play"
+            size={18}
+            iconColor={accent}
+            onPress={() => handlePreview(voice)}
+            accessibilityLabel={l10n.voiceAndSpeech.previewButton}
             testID={`tts-voice-preview-${voice.engine}-${voice.id}`}
-            onPress={() => handlePreview(voice)}>
-            {l10n.voiceAndSpeech.previewButton}
-          </Button>
+            style={styles.voiceRowPreviewBtn}
+          />
         </View>
       </TouchableRipple>
     );
@@ -323,6 +323,7 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
     }
     return (
       <View style={styles.engineGroupBody}>
+        <Text style={styles.engineGroupTagline}>{meta.tagline}</Text>
         <Button
           mode="contained"
           onPress={handleInstall}
@@ -347,16 +348,21 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
     const ready = isEngineReady(engineId);
     const isActive = ttsStore.currentVoice?.engine === engineId && ready;
 
-    const subtitleParts: string[] = [];
+    // Two-line subtitle: tier (bold) on top; specs (regular) below.
+    // Specs include disk MB AND peak RAM — RAM is the true device-fit
+    // signal, especially on lower-end devices where Supertonic's ~430 MB
+    // working set matters more than its 265 MB on disk.
+    // RAM rounds to nearest 50 MB and is prefixed with "~" — exact
+    // numbers ("235 MB" vs "228 MB") are noise.
+    const ramRounded = Math.round(meta.ramMb / 50) * 50;
+    let tierLabel: string | null = null;
+    let specsLabel: string;
     if (isNeural) {
-      subtitleParts.push(`${meta.voices} voices`);
-      subtitleParts.push(`${meta.sizeMb} MB`);
-      subtitleParts.push(meta.tier);
+      tierLabel = meta.tier;
+      specsLabel = `${meta.voices} voices  ·  ${meta.sizeMb} MB  ·  ~${ramRounded} MB RAM`;
     } else {
-      subtitleParts.push('Always available');
-      if (voices.length) {
-        subtitleParts.push(`${voices.length} voices`);
-      }
+      tierLabel = 'always available';
+      specsLabel = voices.length ? `${voices.length} voices` : '';
     }
 
     const ringProgress =
@@ -390,9 +396,14 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
             />
             <View style={styles.engineGroupHeaderText}>
               <Text style={styles.engineGroupTitle}>{meta.title}</Text>
-              <Text style={styles.engineGroupSubtitle}>
-                {subtitleParts.join('  ·  ')}
-              </Text>
+              {tierLabel ? (
+                <Text style={[styles.engineGroupTier, {color: meta.accent}]}>
+                  {tierLabel}
+                </Text>
+              ) : null}
+              {specsLabel ? (
+                <Text style={styles.engineGroupSpecs}>{specsLabel}</Text>
+              ) : null}
             </View>
             {isNeural && state === 'ready' && isExpanded ? (
               <IconButton
