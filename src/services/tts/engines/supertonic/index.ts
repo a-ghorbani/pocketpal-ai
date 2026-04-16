@@ -14,6 +14,7 @@ import {
   SUPERTONIC_VOICES_MANIFEST_FILENAME,
   TTS_PARENT_SUBDIR,
 } from '../../constants';
+import {ttsRuntime} from '../../runtime';
 import type {
   Engine,
   StreamingHandle,
@@ -50,9 +51,6 @@ const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'en';
  */
 export class SupertonicEngine implements Engine {
   readonly id = 'supertonic' as const;
-
-  private initializationPromise: Promise<void> | null = null;
-  private initialized = false;
 
   /** Root directory: parent of the Supertonic model directory. Used for the iOS backup-exclusion mkdir. */
   private getParentDir(): string {
@@ -195,31 +193,9 @@ export class SupertonicEngine implements Engine {
     } catch (err) {
       console.warn('[SupertonicEngine] deleteModel failed:', err);
     }
-    this.initialized = false;
-    this.initializationPromise = null;
   }
 
-  /**
-   * Lazy engine initialization — called on first `play` / `playStreaming`.
-   * Idempotent: the `initializationPromise` guard coalesces concurrent
-   * play requests onto a single init call.
-   */
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    if (!this.initializationPromise) {
-      this.initializationPromise = this.doInitialize();
-    }
-    try {
-      await this.initializationPromise;
-    } catch (err) {
-      this.initializationPromise = null;
-      throw err;
-    }
-  }
-
-  private async doInitialize(): Promise<void> {
+  async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.SUPERTONIC,
@@ -234,7 +210,6 @@ export class SupertonicEngine implements Engine {
       maxChunkSize: 200,
       executionProviders: 'cpu',
     });
-    this.initialized = true;
   }
 
   async play(
@@ -245,11 +220,12 @@ export class SupertonicEngine implements Engine {
     if (!(await this.isInstalled())) {
       throw new Error('Supertonic model is not installed');
     }
-    await this.ensureInitialized();
-    await Speech.speak(text, voice.id, {
-      language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
-      ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
-    });
+    await ttsRuntime.acquire(this, () =>
+      Speech.speak(text, voice.id, {
+        language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+        ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
+      }),
+    );
   }
 
   /**
@@ -292,11 +268,12 @@ export class SupertonicEngine implements Engine {
       }
       speaking = true;
       try {
-        await this.ensureInitialized();
-        await Speech.speak(next, voice.id, {
-          language: resolvedLanguage,
-          ...(resolvedSteps ? {inferenceSteps: resolvedSteps} : {}),
-        });
+        await ttsRuntime.acquire(this, () =>
+          Speech.speak(next, voice.id, {
+            language: resolvedLanguage,
+            ...(resolvedSteps ? {inferenceSteps: resolvedSteps} : {}),
+          }),
+        );
       } catch (err) {
         console.warn('[SupertonicEngine] streaming speak failed:', err);
         speaking = false;

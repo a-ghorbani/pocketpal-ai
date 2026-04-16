@@ -1,5 +1,6 @@
-import Speech from '@pocketpalai/react-native-speech';
+import Speech, {TTSEngine} from '@pocketpalai/react-native-speech';
 
+import {ttsRuntime} from '../../runtime';
 import type {Engine, StreamingHandle, Voice} from '../../types';
 import {getSystemVoices} from './voices';
 
@@ -19,7 +20,10 @@ const SENTENCE_END = /^[\s\S]*?[.!?。！？](?=\s|$)/;
  * next queued sentence. This keeps latency to first speech close to "time
  * to first sentence" rather than "time to full response".
  */
-const createSystemStreamingHandle = (voice: Voice): StreamingHandle => {
+const createSystemStreamingHandle = (
+  engine: Engine,
+  voice: Voice,
+): StreamingHandle => {
   let buffer = '';
   const queue: string[] = [];
   let speaking = false;
@@ -41,9 +45,11 @@ const createSystemStreamingHandle = (voice: Voice): StreamingHandle => {
       return;
     }
     speaking = true;
-    Speech.speak(next, voice.id).catch(err => {
-      console.warn('[SystemEngine] speak failed:', err);
-    });
+    ttsRuntime
+      .acquire(engine, () => Speech.speak(next, voice.id))
+      .catch(err => {
+        console.warn('[SystemEngine] speak failed:', err);
+      });
   };
 
   const subscription = Speech.onFinish(() => {
@@ -140,12 +146,23 @@ export class SystemEngine implements Engine {
     return getSystemVoices();
   }
 
+  /**
+   * The fork still requires `Speech.initialize({engine: OS_NATIVE})` when
+   * switching from a neural engine — needed so playback routes through the
+   * OS native path instead of staying on the previously-active neural
+   * engine. The runtime calls this whenever System becomes the active
+   * engine; switching back to a neural engine triggers its own loadInto.
+   */
+  async loadInto(): Promise<void> {
+    await Speech.initialize({engine: TTSEngine.OS_NATIVE});
+  }
+
   async play(text: string, voice: Voice): Promise<void> {
-    await Speech.speak(text, voice.id);
+    await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
   playStreaming(voice: Voice): StreamingHandle {
-    return createSystemStreamingHandle(voice);
+    return createSystemStreamingHandle(this, voice);
   }
 
   async stop(): Promise<void> {
