@@ -91,15 +91,133 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12,
     },
     heroRow: {
-      padding: 16,
-      marginBottom: 12,
-      borderRadius: 12,
+      padding: 14,
+      marginBottom: 14,
+      borderRadius: 18,
       backgroundColor: theme.colors.surfaceContainerLow,
+    },
+    heroQualityBlock: {
+      marginTop: 14,
+      paddingHorizontal: 2,
+    },
+    heroQualityLabel: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginBottom: 6,
+    },
+    voicesEmptyHint: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      lineHeight: 18,
+      marginBottom: 16,
+      paddingHorizontal: 4,
+    },
+    voicesFooterLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+      paddingHorizontal: 4,
+      marginTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.outlineVariant,
+    },
+    voicesFooterLinkLabel: {
+      color: theme.colors.onSurface,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    engineGroup: {
+      marginBottom: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      backgroundColor: theme.colors.surface,
+      overflow: 'hidden',
+    },
+    engineGroupGradientFill: {
+      borderRadius: 18,
+    },
+    engineGroupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    engineGroupHeaderText: {
+      flex: 1,
+      paddingHorizontal: 12,
+    },
+    engineGroupTitle: {
+      color: theme.colors.onSurface,
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: -0.2,
+    },
+    engineGroupSubtitle: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 0.4,
+      marginTop: 2,
+      textTransform: 'uppercase',
+    },
+    engineGroupDeleteBtn: {
+      margin: 0,
+    },
+    engineGroupChevron: {
+      width: 22,
+      height: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 4,
+    },
+    engineGroupChevronExpanded: {
+      transform: [{rotate: '90deg'}],
+    },
+    engineGroupBody: {
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+      paddingTop: 4,
+    },
+    engineGroupCta: {
+      borderRadius: 12,
+    },
+    engineGroupCtaLabel: {
+      fontSize: 14,
+      fontWeight: '700',
+      letterSpacing: 0.1,
+    },
+    engineGroupProgressText: {
+      color: theme.colors.onSurface,
+      fontSize: 13,
+      fontWeight: '600',
+      fontVariant: ['tabular-nums'],
+      letterSpacing: 0.2,
+      paddingVertical: 8,
+    },
+    engineGroupErrorText: {
+      color: theme.colors.error,
+      fontSize: 12.5,
+      lineHeight: 17,
+      marginBottom: 10,
+    },
+    engineGroupEmpty: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      fontStyle: 'italic',
+      paddingVertical: 8,
     },
     heroRowBody: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+    },
+    heroAvatarWrap: {
+      marginRight: 14,
     },
     heroRowMain: {
       flex: 1,
@@ -107,13 +225,25 @@ export const createStyles = (theme: Theme) =>
     },
     heroRowName: {
       color: theme.colors.onSurface,
-      fontSize: 20,
+      fontSize: 26,
       fontWeight: '700',
+      letterSpacing: -0.3,
     },
     heroRowNameMuted: {
       color: theme.colors.onSurfaceVariant,
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '600',
+    },
+    heroSubtitle: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+    },
+    heroPreviewButton: {
+      margin: 0,
     },
     heroChipsRow: {
       flexDirection: 'row',
@@ -172,9 +302,18 @@ export const createStyles = (theme: Theme) =>
     voiceRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 12,
+      paddingVertical: 10,
       paddingHorizontal: 4,
-      minHeight: 48,
+      minHeight: 56,
+    },
+    voiceRowSelectedBar: {
+      width: 3,
+      alignSelf: 'stretch',
+      borderRadius: 2,
+      marginRight: 10,
+    },
+    voiceRowAvatarWrap: {
+      marginRight: 12,
     },
     voiceRowLabelBlock: {
       flex: 1,
@@ -182,10 +321,11 @@ export const createStyles = (theme: Theme) =>
     },
     voiceRowName: {
       color: theme.colors.onSurface,
-      fontSize: 15,
+      fontSize: 16,
+      fontWeight: '500',
     },
     voiceRowNameSelected: {
-      fontWeight: 'bold',
+      fontWeight: '700',
     },
     voiceRowSubline: {
       flexDirection: 'row',
@@ -195,6 +335,10 @@ export const createStyles = (theme: Theme) =>
     voiceRowEngineChipText: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 11,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginTop: 2,
     },
     voiceRowCheck: {
       marginLeft: 8,
@@ -250,5 +394,125 @@ export const createStyles = (theme: Theme) =>
     deleteButton: {
       alignSelf: 'flex-start',
       marginTop: 4,
+    },
+    engineCardWrap: {
+      marginBottom: 12,
+    },
+    engineCard: {
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      backgroundColor: theme.colors.surface,
+      overflow: 'hidden',
+    },
+    engineCardGradientFill: {
+      borderRadius: 20,
+    },
+    engineCardHead: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    engineCardHeadText: {
+      flex: 1,
+      paddingLeft: 14,
+      paddingRight: 8,
+      paddingTop: 2,
+    },
+    engineCardStatusWrap: {
+      alignItems: 'flex-end',
+      flexShrink: 0,
+      maxWidth: 96,
+      paddingTop: 4,
+    },
+    engineCardTitle: {
+      color: theme.colors.onSurface,
+      fontSize: 19,
+      fontWeight: '700',
+      letterSpacing: -0.2,
+    },
+    engineCardTagline: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      marginTop: 2,
+      lineHeight: 17,
+    },
+    engineCardSpecs: {
+      marginTop: 16,
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      borderRadius: 12,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+    },
+    engineCardSpecCell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 4,
+    },
+    engineCardSpecValue: {
+      color: theme.colors.onSurface,
+      fontSize: 16,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
+      letterSpacing: -0.2,
+    },
+    engineCardSpecUnit: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 9.5,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      marginTop: 2,
+    },
+    engineCardSpecDivider: {
+      width: 1,
+      backgroundColor: theme.colors.outlineVariant,
+      opacity: 0.6,
+      marginVertical: 4,
+    },
+    engineCardActionRow: {
+      marginTop: 14,
+    },
+    engineCardCta: {
+      borderRadius: 12,
+    },
+    engineCardCtaLabel: {
+      fontSize: 14,
+      fontWeight: '700',
+      letterSpacing: 0.1,
+    },
+    engineCardProgressBlock: {
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    engineCardProgressText: {
+      color: theme.colors.onSurface,
+      fontSize: 13,
+      fontWeight: '600',
+      fontVariant: ['tabular-nums'],
+      letterSpacing: 0.2,
+    },
+    engineCardReadyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingLeft: 4,
+    },
+    engineCardReadyLabel: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+    },
+    engineCardErrorText: {
+      color: theme.colors.error,
+      fontSize: 12.5,
+      marginTop: 14,
+      lineHeight: 17,
     },
   });

@@ -1,7 +1,24 @@
 import React, {useContext, useEffect, useMemo, useState} from 'react';
-import {View} from 'react-native';
-import {Button, Text, TouchableRipple} from 'react-native-paper';
+import {
+  Alert,
+  LayoutAnimation,
+  Platform,
+  StyleSheet,
+  UIManager,
+  View,
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import {Button, IconButton, Text, TouchableRipple} from 'react-native-paper';
 import {observer} from 'mobx-react';
+
+import {ChevronRightIcon} from '../../assets/icons';
+
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 import {Sheet} from '../Sheet';
 import {useTheme} from '../../hooks';
@@ -16,33 +33,21 @@ import {
 import type {EngineId, Voice} from '../../services/tts';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
-import {l10n as allL10n, t} from '../../locales';
 
+import {AutoSpeakRow} from './AutoSpeakRow';
 import {createStyles} from './styles';
-import {SecondaryHeader} from './SecondaryHeader';
+import {EngineLogo} from './EngineLogo';
+import {ENGINE_META} from './engineMeta';
+import {HeroRow} from './HeroRow';
+import {VoiceAvatar, getEngineAccent} from './VoiceAvatar';
 
-type Character = 'warm' | 'clear' | 'deep' | 'bright';
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
-const GROUP_ORDER: Character[] = ['warm', 'clear', 'deep', 'bright'];
-
-const characterL10nKey = {
-  warm: 'characterWarm',
-  clear: 'characterClear',
-  deep: 'characterDeep',
-  bright: 'characterBright',
-} as const;
-
-const engineChipKey = {
-  kitten: 'engineChipKitten',
-  kokoro: 'engineChipKokoro',
-  supertonic: 'engineChipSupertonic',
-  system: 'engineChipSystem',
-} as const satisfies Record<EngineId, string>;
+const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic', 'system'];
 
 type NeuralEngineId = Exclude<EngineId, 'system'>;
 
-const neuralStateFor = (engineId: NeuralEngineId) => {
+const neuralStateFor = (engineId: NeuralEngineId): DownloadState => {
   switch (engineId) {
     case 'kitten':
       return ttsStore.kittenDownloadState;
@@ -50,6 +55,28 @@ const neuralStateFor = (engineId: NeuralEngineId) => {
       return ttsStore.kokoroDownloadState;
     case 'supertonic':
       return ttsStore.supertonicDownloadState;
+  }
+};
+
+const neuralProgressFor = (engineId: NeuralEngineId): number => {
+  switch (engineId) {
+    case 'kitten':
+      return ttsStore.kittenDownloadProgress;
+    case 'kokoro':
+      return ttsStore.kokoroDownloadProgress;
+    case 'supertonic':
+      return ttsStore.supertonicDownloadProgress;
+  }
+};
+
+const neuralErrorFor = (engineId: NeuralEngineId): string | null => {
+  switch (engineId) {
+    case 'kitten':
+      return ttsStore.kittenDownloadError;
+    case 'kokoro':
+      return ttsStore.kokoroDownloadError;
+    case 'supertonic':
+      return ttsStore.supertonicDownloadError;
   }
 };
 
@@ -64,6 +91,28 @@ const triggerDownload = (engineId: NeuralEngineId) => {
   }
 };
 
+const triggerRetry = (engineId: NeuralEngineId) => {
+  switch (engineId) {
+    case 'kitten':
+      return ttsStore.retryKittenDownload();
+    case 'kokoro':
+      return ttsStore.retryKokoroDownload();
+    case 'supertonic':
+      return ttsStore.retryDownload();
+  }
+};
+
+const triggerDelete = (engineId: NeuralEngineId) => {
+  switch (engineId) {
+    case 'kitten':
+      return ttsStore.deleteKitten();
+    case 'kokoro':
+      return ttsStore.deleteKokoro();
+    case 'supertonic':
+      return ttsStore.deleteSupertonic();
+  }
+};
+
 const isEngineReady = (engineId: EngineId): boolean => {
   if (engineId === 'system') {
     return true;
@@ -71,196 +120,137 @@ const isEngineReady = (engineId: EngineId): boolean => {
   return neuralStateFor(engineId) === 'ready';
 };
 
+const VOICES_BY_ENGINE: Record<EngineId, Voice[]> = {
+  kitten: KITTEN_VOICES,
+  kokoro: KOKORO_VOICES,
+  supertonic: SUPERTONIC_VOICES,
+  system: [], // populated async via SystemEngine
+};
+
 interface VoicePickerViewProps {
-  onBack: () => void;
+  /** Optional — back affordance for legacy embeds; main view doesn't need it. */
+  onBack?: () => void;
 }
 
 /**
- * Secondary in-sheet view: every voice from every engine grouped by
- * perceptual character (Warm / Clear / Deep / Bright). Voices whose
- * engine is not installed render dimmed; tapping a dimmed voice opens an
- * inline install CTA, and the row becomes selectable the moment its
- * engine flips to `ready`.
+ * Unified voices view — single screen for the entire TTS sheet.
+ *
+ * Voices grouped by ENGINE (was: character). Each engine group is a
+ * self-contained mini engine card: header with logo + spec subtitle +
+ * status, body that adapts by state (install card / progress / error /
+ * voice rows). No separate Manage Engines view — this IS manage.
  */
-export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(
-  ({onBack}) => {
-    const theme = useTheme();
-    const l10n = useContext(L10nContext);
-    const styles = createStyles(theme);
+export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
+  const theme = useTheme();
+  const l10n = useContext(L10nContext);
+  const styles = createStyles(theme);
 
-    const [systemVoices, setSystemVoices] = useState<Voice[]>([]);
-    const [pendingInstall, setPendingInstall] = useState<{
-      engine: NeuralEngineId;
-      voice: Voice;
-    } | null>(null);
+  const [systemVoices, setSystemVoices] = useState<Voice[]>([]);
+  const [expanded, setExpanded] = useState<Set<EngineId>>(() => {
+    const active = ttsStore.currentVoice?.engine;
+    return new Set(active ? [active] : []);
+  });
 
-    // Snapshot of install flows the user has kicked off from this view. We
-    // keep them "remembered" so once the engine flips to ready we can
-    // auto-select the voice the user was trying to install — matching the
-    // flow in the ready-voice tap branch below.
-    const [installInFlight, setInstallInFlight] = useState<Record<
-      NeuralEngineId,
-      Voice | undefined
-    > | null>(null);
-
-    useEffect(() => {
-      let cancelled = false;
-      const engine = new SystemEngine();
-      engine
-        .getVoices()
-        .then(v => {
-          if (!cancelled) {
-            setSystemVoices(v);
-          }
-        })
-        .catch(err => {
-          console.warn('[VoicePickerView] system getVoices failed:', err);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []);
-
-    const allVoices = useMemo<Voice[]>(
-      () => [
-        ...KITTEN_VOICES,
-        ...KOKORO_VOICES.filter(v => v.language?.startsWith('en') ?? false),
-        ...SUPERTONIC_VOICES,
-        ...systemVoices,
-      ],
-      [systemVoices],
+  const toggleExpanded = (engineId: EngineId) => {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(
+        220,
+        LayoutAnimation.Types.easeInEaseOut,
+        LayoutAnimation.Properties.opacity,
+      ),
     );
-
-    // Snapshot MobX observables into plain locals so they're valid
-    // effect deps. The `observer` wrapper already re-renders the
-    // component when they change — we just need to react to each flip.
-    const kittenState = ttsStore.kittenDownloadState;
-    const kokoroState = ttsStore.kokoroDownloadState;
-    const supertonicState = ttsStore.supertonicDownloadState;
-
-    // Watch for an in-flight install finishing; auto-select the voice and
-    // close the sheet (same outcome as tapping a ready row).
-    useEffect(() => {
-      if (!installInFlight) {
-        return;
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(engineId)) {
+        next.delete(engineId);
+      } else {
+        next.add(engineId);
       }
-      const stateByEngine: Record<NeuralEngineId, DownloadState> = {
-        kitten: kittenState,
-        kokoro: kokoroState,
-        supertonic: supertonicState,
-      };
-      (Object.keys(installInFlight) as NeuralEngineId[]).forEach(engineId => {
-        const voice = installInFlight[engineId];
-        if (voice && stateByEngine[engineId] === 'ready') {
-          ttsStore.setCurrentVoice({
-            id: voice.id,
-            name: voice.name,
-            engine: voice.engine,
-            language: voice.language,
-          });
-          ttsStore.closeSetupSheet();
-          setInstallInFlight(prev => {
-            if (!prev) {
-              return prev;
-            }
-            const next = {...prev};
-            next[engineId] = undefined;
-            return next;
-          });
-          setPendingInstall(null);
-        }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const sys = getEngine('system') as SystemEngine;
+    sys
+      .getVoices()
+      .then(vs => setSystemVoices(vs))
+      .catch(err => {
+        console.warn('[VoicePickerView] system voices failed:', err);
       });
-    }, [installInFlight, kittenState, kokoroState, supertonicState]);
+  }, []);
 
-    const grouped = useMemo(() => {
-      const map: Record<Character, Voice[]> = {
-        warm: [],
-        clear: [],
-        deep: [],
-        bright: [],
-      };
-      allVoices.forEach(v => {
-        const key = (v.character ?? 'clear') as Character;
-        map[key].push(v);
+  const voicesByEngine = useMemo(() => {
+    return {
+      ...VOICES_BY_ENGINE,
+      system: systemVoices,
+    };
+  }, [systemVoices]);
+
+  const selectedKey = ttsStore.currentVoice
+    ? `${ttsStore.currentVoice.engine}:${ttsStore.currentVoice.id}`
+    : null;
+
+  const handleSelect = (voice: Voice) => {
+    ttsStore.setCurrentVoice({
+      id: voice.id,
+      name: voice.name,
+      engine: voice.engine,
+      language: voice.language,
+    });
+    ttsStore.closeSetupSheet();
+  };
+
+  const handlePreview = (voice: Voice) => {
+    getEngine(voice.engine)
+      .play(TTS_PREVIEW_SAMPLE, voice)
+      .catch(err => {
+        console.warn('[VoicePickerView] preview failed:', err);
       });
-      const compare = (a: Voice, b: Voice) => {
-        // Female first, then system voices after neural voices within the
-        // 'clear' bucket (OS voices are default-bucketed there and should
-        // not lead), then by display name.
-        const ag = a.gender === 'f' ? 0 : a.gender === 'm' ? 1 : 2;
-        const bg = b.gender === 'f' ? 0 : b.gender === 'm' ? 1 : 2;
-        if (ag !== bg) {
-          return ag - bg;
-        }
-        const aSys = a.engine === 'system' ? 1 : 0;
-        const bSys = b.engine === 'system' ? 1 : 0;
-        if (aSys !== bSys) {
-          return aSys - bSys;
-        }
-        return a.name.localeCompare(b.name);
-      };
-      GROUP_ORDER.forEach(k => map[k].sort(compare));
-      return map;
-    }, [allVoices]);
+  };
 
-    const selectedKey = ttsStore.currentVoice
-      ? `${ttsStore.currentVoice.engine}:${ttsStore.currentVoice.id}`
-      : null;
+  const handleDelete = (engineId: NeuralEngineId) => {
+    Alert.alert(
+      `Remove ${ENGINE_META[engineId].title}?`,
+      `Frees ~${ENGINE_META[engineId].sizeMb} MB on this device.`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            triggerDelete(engineId).catch(err => {
+              console.warn(`[VoicePickerView] delete ${engineId} failed:`, err);
+            });
+          },
+        },
+      ],
+    );
+  };
 
-    const handleSelectReady = (voice: Voice) => {
-      ttsStore.setCurrentVoice({
-        id: voice.id,
-        name: voice.name,
-        engine: voice.engine,
-        language: voice.language,
-      });
-      ttsStore.closeSetupSheet();
-    };
-
-    const handlePreview = (voice: Voice) => {
-      getEngine(voice.engine)
-        .play(TTS_PREVIEW_SAMPLE, voice)
-        .catch(err => {
-          console.warn('[VoicePickerView] preview failed:', err);
-        });
-    };
-
-    const handleDimmedTap = (voice: Voice) => {
-      if (voice.engine === 'system') {
-        return;
-      }
-      setPendingInstall({engine: voice.engine, voice});
-    };
-
-    const handleInstallNow = () => {
-      if (!pendingInstall) {
-        return;
-      }
-      const {engine, voice} = pendingInstall;
-      setInstallInFlight(prev => ({
-        kitten: prev?.kitten,
-        kokoro: prev?.kokoro,
-        supertonic: prev?.supertonic,
-        [engine]: voice,
-      }));
-      triggerDownload(engine).catch(err => {
-        console.warn(`[VoicePickerView] install ${engine} failed:`, err);
-      });
-    };
-
-    const renderVoiceRow = (voice: Voice) => {
-      const key = `${voice.engine}:${voice.id}`;
-      const isSelected = key === selectedKey;
-      const ready = isEngineReady(voice.engine);
-      const rowTestId = `tts-voice-row-${voice.engine}-${voice.id}`;
-      const showPendingCta =
-        !ready &&
-        pendingInstall &&
-        pendingInstall.engine === voice.engine &&
-        pendingInstall.voice.id === voice.id;
-
-      const rowBody = (
-        <View style={[styles.voiceRow, !ready && styles.rowDisabled]}>
+  const renderVoiceRow = (voice: Voice) => {
+    const key = `${voice.engine}:${voice.id}`;
+    const isSelected = key === selectedKey;
+    const accent = getEngineAccent(voice.engine);
+    return (
+      <TouchableRipple
+        key={key}
+        onPress={() => handleSelect(voice)}
+        testID={`tts-voice-row-${voice.engine}-${voice.id}`}>
+        <View style={styles.voiceRow}>
+          <View
+            style={[
+              styles.voiceRowSelectedBar,
+              {backgroundColor: isSelected ? accent : 'transparent'},
+            ]}
+          />
+          <View style={styles.voiceRowAvatarWrap}>
+            <VoiceAvatar
+              voice={voice}
+              size={34}
+              ringColor={isSelected ? accent : undefined}
+            />
+          </View>
           <View style={styles.voiceRowLabelBlock}>
             <Text
               style={[
@@ -269,134 +259,194 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(
               ]}>
               {voice.name}
             </Text>
-            <View style={styles.voiceRowSubline}>
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>
-                  {l10n.voiceAndSpeech[engineChipKey[voice.engine]]}
-                </Text>
-              </View>
-            </View>
           </View>
-          {ready ? (
-            <Button
-              mode="text"
-              compact
-              style={styles.previewButton}
-              testID={`tts-voice-preview-${voice.engine}-${voice.id}`}
-              onPress={() => handlePreview(voice)}>
-              {l10n.voiceAndSpeech.previewButton}
-            </Button>
-          ) : null}
-          {isSelected ? <Text style={styles.voiceRowCheck}>✓</Text> : null}
+          <Button
+            mode="text"
+            compact
+            style={styles.previewButton}
+            textColor={accent}
+            testID={`tts-voice-preview-${voice.engine}-${voice.id}`}
+            onPress={() => handlePreview(voice)}>
+            {l10n.voiceAndSpeech.previewButton}
+          </Button>
         </View>
-      );
+      </TouchableRipple>
+    );
+  };
 
-      return (
-        <View key={key}>
-          {ready ? (
-            <TouchableRipple
-              onPress={() => handleSelectReady(voice)}
-              testID={rowTestId}>
-              {rowBody}
-            </TouchableRipple>
-          ) : (
-            <TouchableRipple
-              onPress={() => handleDimmedTap(voice)}
-              testID={rowTestId}
-              accessibilityState={{disabled: false}}>
-              {rowBody}
-            </TouchableRipple>
-          )}
-          {showPendingCta ? renderInlineInstall(voice) : null}
-        </View>
-      );
-    };
+  const renderInstallCard = (engineId: NeuralEngineId) => {
+    const meta = ENGINE_META[engineId];
+    const state = neuralStateFor(engineId);
+    const progress = neuralProgressFor(engineId);
+    const error = neuralErrorFor(engineId);
 
-    const renderInlineInstall = (voice: Voice) => {
-      if (voice.engine === 'system') {
-        return null;
-      }
-      const state = neuralStateFor(voice.engine);
-      const engineLabel =
-        allL10n.en.voiceAndSpeech[engineChipKey[voice.engine]];
-      const ctaText = t(l10n.voiceAndSpeech.installToUseCta, {
-        engine: engineLabel,
-        voice: voice.name,
+    const handleInstall = () => {
+      triggerDownload(engineId).catch(err => {
+        console.warn(`[VoicePickerView] install ${engineId} failed:`, err);
       });
-      if (state === 'downloading') {
-        return (
-          <View
-            style={styles.inlineInstallCta}
-            testID={`tts-install-cta-${voice.engine}`}>
-            <Text style={styles.inlineInstallCtaText}>
-              {l10n.voiceAndSpeech.installing}
-            </Text>
-          </View>
-        );
-      }
-      if (state === 'error') {
-        return (
-          <View
-            style={[styles.inlineInstallCta, styles.installCardError]}
-            testID={`tts-install-cta-${voice.engine}`}>
-            <Text style={styles.inlineInstallCtaText}>{ctaText}</Text>
-            <View style={styles.inlineInstallCtaActions}>
-              <Button
-                mode="contained"
-                compact
-                onPress={handleInstallNow}
-                testID={`tts-install-now-${voice.engine}`}>
-                {l10n.voiceAndSpeech.installNow}
-              </Button>
-            </View>
-          </View>
-        );
-      }
-      // not_installed
+    };
+    const handleRetry = () => {
+      triggerRetry(engineId).catch(err => {
+        console.warn(`[VoicePickerView] retry ${engineId} failed:`, err);
+      });
+    };
+
+    if (state === 'downloading') {
+      const pct = Math.round(Math.max(0, Math.min(1, progress)) * 100);
+      const mbDone = Math.round((pct / 100) * meta.sizeMb);
       return (
-        <View
-          style={styles.inlineInstallCta}
-          testID={`tts-install-cta-${voice.engine}`}>
-          <Text style={styles.inlineInstallCtaText}>{ctaText}</Text>
-          <View style={styles.inlineInstallCtaActions}>
-            <Button
-              mode="contained"
-              compact
-              onPress={handleInstallNow}
-              testID={`tts-install-now-${voice.engine}`}>
-              {l10n.voiceAndSpeech.installNow}
-            </Button>
-          </View>
+        <View style={styles.engineGroupBody}>
+          <Text style={styles.engineGroupProgressText}>
+            {`Downloading…  ${pct}%  ·  ${mbDone} / ${meta.sizeMb} MB`}
+          </Text>
         </View>
       );
-    };
+    }
+    if (state === 'error') {
+      return (
+        <View style={styles.engineGroupBody}>
+          {error ? (
+            <Text style={styles.engineGroupErrorText}>{error}</Text>
+          ) : null}
+          <Button
+            mode="contained"
+            onPress={handleRetry}
+            buttonColor={meta.accent}
+            textColor="#FFFFFF"
+            style={styles.engineGroupCta}
+            labelStyle={styles.engineGroupCtaLabel}
+            testID={`tts-${engineId}-retry-button`}>
+            Try again
+          </Button>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.engineGroupBody}>
+        <Button
+          mode="contained"
+          onPress={handleInstall}
+          buttonColor={meta.accent}
+          textColor="#FFFFFF"
+          style={styles.engineGroupCta}
+          labelStyle={styles.engineGroupCtaLabel}
+          testID={`tts-${engineId}-install-button`}>
+          {`Install · ${meta.sizeMb} MB`}
+        </Button>
+      </View>
+    );
+  };
+
+  const renderEngineGroup = (engineId: EngineId) => {
+    const meta = ENGINE_META[engineId];
+    const voices = voicesByEngine[engineId];
+    const isNeural = engineId !== 'system';
+    const state: DownloadState = isNeural
+      ? neuralStateFor(engineId as NeuralEngineId)
+      : 'ready';
+    const ready = isEngineReady(engineId);
+    const isActive = ttsStore.currentVoice?.engine === engineId && ready;
+
+    const subtitleParts: string[] = [];
+    if (isNeural) {
+      subtitleParts.push(`${meta.voices} voices`);
+      subtitleParts.push(`${meta.sizeMb} MB`);
+      subtitleParts.push(meta.tier);
+    } else {
+      subtitleParts.push('Always available');
+      if (voices.length) {
+        subtitleParts.push(`${voices.length} voices`);
+      }
+    }
+
+    const ringProgress =
+      isNeural && state === 'downloading'
+        ? neuralProgressFor(engineId as NeuralEngineId)
+        : null;
+
+    const isExpanded = expanded.has(engineId);
 
     return (
-      <Sheet.ScrollView
-        contentContainerStyle={styles.container}
-        testID="tts-voice-picker">
-        <SecondaryHeader
-          title={l10n.voiceAndSpeech.browseVoicesTitle}
-          onBack={onBack}
-          testID="tts-voice-picker-header"
+      <View
+        key={engineId}
+        style={styles.engineGroup}
+        testID={`tts-engine-group-${engineId}`}>
+        <LinearGradient
+          colors={[meta.gradientFrom, meta.gradientTo]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={[StyleSheet.absoluteFill, styles.engineGroupGradientFill]}
         />
-        {GROUP_ORDER.map(character => {
-          const voices = grouped[character];
-          if (voices.length === 0) {
-            return null;
-          }
-          return (
-            <View key={character}>
-              <Text
-                style={styles.groupHeader}
-                testID={`tts-voice-group-${character}`}>
-                {l10n.voiceAndSpeech[characterL10nKey[character]]}
+        <TouchableRipple
+          onPress={() => toggleExpanded(engineId)}
+          testID={`tts-engine-group-toggle-${engineId}`}>
+          <View style={styles.engineGroupHeader}>
+            <EngineLogo
+              engineId={engineId}
+              size={36}
+              progress={ringProgress}
+              ringColor={meta.accent}
+              haloColor={isActive ? meta.accent : undefined}
+            />
+            <View style={styles.engineGroupHeaderText}>
+              <Text style={styles.engineGroupTitle}>{meta.title}</Text>
+              <Text style={styles.engineGroupSubtitle}>
+                {subtitleParts.join('  ·  ')}
               </Text>
-              {voices.map(renderVoiceRow)}
             </View>
-          );
-        })}
-      </Sheet.ScrollView>
+            {isNeural && state === 'ready' && isExpanded ? (
+              <IconButton
+                icon="trash-can-outline"
+                size={18}
+                iconColor={theme.colors.onSurfaceVariant}
+                onPress={() => handleDelete(engineId as NeuralEngineId)}
+                testID={`tts-${engineId}-delete-button`}
+                style={styles.engineGroupDeleteBtn}
+              />
+            ) : null}
+            <View
+              style={[
+                styles.engineGroupChevron,
+                isExpanded && styles.engineGroupChevronExpanded,
+              ]}>
+              <ChevronRightIcon stroke={theme.colors.onSurfaceVariant} />
+            </View>
+          </View>
+        </TouchableRipple>
+        {isExpanded ? (
+          ready ? (
+            voices.length > 0 ? (
+              voices.map(renderVoiceRow)
+            ) : (
+              <View style={styles.engineGroupBody}>
+                <Text style={styles.engineGroupEmpty}>No voices found.</Text>
+              </View>
+            )
+          ) : (
+            renderInstallCard(engineId as NeuralEngineId)
+          )
+        ) : null}
+      </View>
     );
-  },
-);
+  };
+
+  const hasCurrentVoice = ttsStore.currentVoice != null;
+
+  return (
+    <Sheet.ScrollView
+      contentContainerStyle={styles.container}
+      testID="tts-voice-picker">
+      {hasCurrentVoice ? (
+        <>
+          <HeroRow />
+          <AutoSpeakRow />
+        </>
+      ) : (
+        <Text style={styles.voicesEmptyHint}>
+          {l10n.voiceAndSpeech.voicesEmptyHint}
+        </Text>
+      )}
+      {ENGINE_ORDER.map(renderEngineGroup)}
+    </Sheet.ScrollView>
+  );
+});
