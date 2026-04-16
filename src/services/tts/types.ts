@@ -10,9 +10,10 @@ export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'system';
 /**
  * Discrete set of diffusion-step counts exposed in the Supertonic UI.
  * The fork supports `1|2|3|4|5|10|20|50`; PocketPal exposes
- * `1|2|3|5|10` (see story Step 7 rationale).
+ * `1|2|3|5|10|20`. We skip 4 (perceptually too close to 3/5) and 50
+ * (latency budget too high for interactive use).
  */
-export type SupertonicSteps = 1 | 2 | 3 | 5 | 10;
+export type SupertonicSteps = 1 | 2 | 3 | 5 | 10 | 20;
 
 export interface Voice {
   /** Stable identifier used to look up the voice on the underlying engine. */

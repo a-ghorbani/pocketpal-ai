@@ -19,13 +19,15 @@ const engineChipKey = {
   system: 'engineChipSystem',
 } as const satisfies Record<EngineId, string>;
 
-const STEPS_OPTIONS: {value: string; label: string}[] = [
-  {value: '1', label: '1'},
-  {value: '2', label: '2'},
-  {value: '3', label: '3'},
-  {value: '5', label: '5'},
-  {value: '10', label: '10'},
-];
+// `showSelectedCheck=false` + per-button `minWidth:0` lets the row shrink
+// to fit small screens. Without these RNP forces ~60pt per button, which
+// overflows on iPhone SE width with 6 cells.
+const STEPS_BUTTONS = [1, 2, 3, 5, 10, 20].map(v => ({
+  value: String(v),
+  label: String(v),
+  style: {minWidth: 0},
+  labelStyle: {marginHorizontal: 0, marginVertical: 4},
+}));
 
 /**
  * Compact "current voice" strip used as the header of the unified Voices
@@ -99,12 +101,24 @@ export const HeroRow: React.FC = observer(() => {
             {l10n.voiceAndSpeech.supertonicStepsLabel}
           </Text>
           <SegmentedButtons
+            density="high"
             value={String(ttsStore.supertonicSteps)}
-            onValueChange={value => {
-              const parsed = Number(value) as SupertonicSteps;
-              ttsStore.setSupertonicSteps(parsed);
+            onValueChange={value =>
+              ttsStore.setSupertonicSteps(Number(value) as SupertonicSteps)
+            }
+            // Tint the selected pill with the engine accent so the control
+            // matches the Supertonic brand instead of RNP's default
+            // secondaryContainer color.
+            theme={{
+              colors: {
+                secondaryContainer: accent,
+                onSecondaryContainer: '#FFFFFF',
+              },
             }}
-            buttons={STEPS_OPTIONS}
+            buttons={STEPS_BUTTONS.map(b => ({
+              ...b,
+              showSelectedCheck: false,
+            }))}
           />
         </View>
       ) : null}
