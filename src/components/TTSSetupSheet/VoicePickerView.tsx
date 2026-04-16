@@ -33,7 +33,6 @@ import {
   KOKORO_VOICES,
   SUPERTONIC_VOICES,
   SystemEngine,
-  TTS_PREVIEW_SAMPLE,
   getEngine,
 } from '../../services/tts';
 import type {EngineId, Voice} from '../../services/tts';
@@ -208,11 +207,9 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
   };
 
   const handlePreview = (voice: Voice) => {
-    getEngine(voice.engine)
-      .play(TTS_PREVIEW_SAMPLE, voice)
-      .catch(err => {
-        console.warn('[VoicePickerView] preview failed:', err);
-      });
+    ttsStore.preview(voice).catch(err => {
+      console.warn('[VoicePickerView] preview failed:', err);
+    });
   };
 
   const handleDelete = (engineId: NeuralEngineId) => {

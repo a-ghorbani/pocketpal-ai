@@ -4,7 +4,6 @@ import {IconButton, SegmentedButtons, Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
-import {TTS_PREVIEW_SAMPLE, getEngine} from '../../services/tts';
 import type {EngineId, SupertonicSteps} from '../../services/tts';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
@@ -51,11 +50,9 @@ export const HeroRow: React.FC = observer(() => {
   const border = getEngineTint(current.engine, 0.18);
 
   const handlePreview = () => {
-    getEngine(current.engine)
-      .play(TTS_PREVIEW_SAMPLE, current)
-      .catch(err => {
-        console.warn('[HeroRow] preview failed:', err);
-      });
+    ttsStore.preview(current).catch(err => {
+      console.warn('[HeroRow] preview failed:', err);
+    });
   };
 
   const showSupertonicQuality =

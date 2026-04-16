@@ -6,25 +6,12 @@ import {fireEvent, render} from '../../../../jest/test-utils';
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
 import {ttsStore} from '../../../store';
-import {getEngine, TTS_PREVIEW_SAMPLE} from '../../../services/tts';
 
 import {HeroRow} from '../HeroRow';
 
-jest.mock('../../../services/tts', () => {
-  const actual = jest.requireActual('../../../services/tts');
-  const play = jest.fn().mockResolvedValue(undefined);
-  return {
-    ...actual,
-    getEngine: (id: string) => ({
-      id,
-      play,
-      isInstalled: jest.fn().mockResolvedValue(true),
-      getVoices: jest.fn().mockResolvedValue([]),
-      playStreaming: jest.fn(),
-      stop: jest.fn().mockResolvedValue(undefined),
-    }),
-  };
-});
+// HeroRow now routes preview through ttsStore.preview (which is the
+// store-level coordinator). The store is globally mocked via the
+// __mocks__/stores/ttsStore module — no engine mock needed here.
 
 const renderHero = () =>
   render(
@@ -60,7 +47,7 @@ describe('HeroRow', () => {
     expect(getByTestId('tts-hero-preview-button')).toBeTruthy();
   });
 
-  it('preview button calls engine.play with TTS_PREVIEW_SAMPLE', () => {
+  it('preview button routes through ttsStore.preview', () => {
     runInAction(() => {
       ttsStore.currentVoice = {
         id: 'af_heart',
@@ -70,8 +57,7 @@ describe('HeroRow', () => {
     });
     const {getByTestId} = renderHero();
     fireEvent.press(getByTestId('tts-hero-preview-button'));
-    expect(getEngine('kokoro').play).toHaveBeenCalledWith(
-      TTS_PREVIEW_SAMPLE,
+    expect(ttsStore.preview).toHaveBeenCalledWith(
       expect.objectContaining({id: 'af_heart', engine: 'kokoro'}),
     );
   });
