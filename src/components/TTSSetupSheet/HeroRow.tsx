@@ -69,10 +69,7 @@ export const HeroRow: React.FC = observer(() => {
 
   return (
     <View
-      style={[
-        styles.heroRow,
-        {backgroundColor: tint, borderColor: border, borderWidth: 1},
-      ]}
+      style={[styles.heroRow, {backgroundColor: tint, borderColor: border}]}
       testID="tts-hero-row">
       <View style={styles.heroRowBody}>
         <View style={styles.heroAvatarWrap}>
