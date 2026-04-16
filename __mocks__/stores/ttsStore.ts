@@ -28,6 +28,7 @@ class MockTTSStore {
 
   init: jest.Mock;
   play: jest.Mock;
+  preview: jest.Mock;
   stop: jest.Mock;
   setAutoSpeak: jest.Mock;
   setCurrentVoice: jest.Mock;
@@ -51,6 +52,7 @@ class MockTTSStore {
     makeAutoObservable(this, {
       init: false,
       play: false,
+      preview: false,
       stop: false,
       setAutoSpeak: false,
       setCurrentVoice: false,
@@ -72,6 +74,7 @@ class MockTTSStore {
     });
     this.init = jest.fn().mockResolvedValue(undefined);
     this.play = jest.fn().mockResolvedValue(undefined);
+    this.preview = jest.fn().mockResolvedValue(undefined);
     this.stop = jest.fn().mockResolvedValue(undefined);
     this.setAutoSpeak = jest.fn();
     this.setCurrentVoice = jest.fn();
