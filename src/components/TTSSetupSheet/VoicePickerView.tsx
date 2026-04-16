@@ -45,12 +45,55 @@ import {EngineLogo} from './EngineLogo';
 import {ENGINE_META} from './engineMeta';
 import {HeroRow} from './HeroRow';
 import {getEngineAccent} from './VoiceAvatar';
+import {l10n as locales, t} from '../../locales';
 
+type L10n = (typeof locales)['en'];
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
 const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic', 'system'];
 
 type NeuralEngineId = Exclude<EngineId, 'system'>;
+
+const engineTitle = (engineId: EngineId, l: L10n): string => {
+  switch (engineId) {
+    case 'kitten':
+      return l.voiceAndSpeech.engineChipKitten;
+    case 'kokoro':
+      return l.voiceAndSpeech.engineChipKokoro;
+    case 'supertonic':
+      return l.voiceAndSpeech.engineChipSupertonic;
+    case 'system':
+      return Platform.OS === 'ios'
+        ? l.voiceAndSpeech.engineSystemTitleIos
+        : l.voiceAndSpeech.engineSystemTitleAndroid;
+  }
+};
+
+const engineTagline = (engineId: EngineId, l: L10n): string => {
+  switch (engineId) {
+    case 'kitten':
+      return l.voiceAndSpeech.engineKittenTagline;
+    case 'kokoro':
+      return l.voiceAndSpeech.engineKokoroTagline;
+    case 'supertonic':
+      return l.voiceAndSpeech.engineSupertonicTagline;
+    case 'system':
+      return l.voiceAndSpeech.engineSystemTagline;
+  }
+};
+
+const engineTierLabel = (engineId: EngineId, l: L10n): string => {
+  switch (engineId) {
+    case 'kitten':
+      return l.voiceAndSpeech.engineTierLightest;
+    case 'kokoro':
+      return l.voiceAndSpeech.engineTierBestQuality;
+    case 'supertonic':
+      return l.voiceAndSpeech.engineTierFastestStart;
+    case 'system':
+      return l.voiceAndSpeech.engineSystemTier;
+  }
+};
 
 const neuralStateFor = (engineId: NeuralEngineId): DownloadState => {
   switch (engineId) {
@@ -132,20 +175,15 @@ const VOICES_BY_ENGINE: Record<EngineId, Voice[]> = {
   system: [], // populated async via SystemEngine
 };
 
-interface VoicePickerViewProps {
-  /** Optional — back affordance for legacy embeds; main view doesn't need it. */
-  onBack?: () => void;
-}
-
 /**
  * Unified voices view — single screen for the entire TTS sheet.
  *
- * Voices grouped by ENGINE (was: character). Each engine group is a
- * self-contained mini engine card: header with logo + spec subtitle +
- * status, body that adapts by state (install card / progress / error /
- * voice rows). No separate Manage Engines view — this IS manage.
+ * Voices grouped by ENGINE. Each engine group is a self-contained
+ * mini engine card: header with logo + spec subtitle + status, body
+ * that adapts by state (install card / progress / error / voice rows).
+ * No separate Manage Engines view — this IS manage.
  */
-export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
+export const VoicePickerView: React.FC = observer(() => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
@@ -214,12 +252,16 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
 
   const handleDelete = (engineId: NeuralEngineId) => {
     Alert.alert(
-      `Remove ${ENGINE_META[engineId].title}?`,
-      `Frees ~${ENGINE_META[engineId].sizeMb} MB on this device.`,
+      t(l10n.voiceAndSpeech.engineRemoveTitle, {
+        engineTitle: engineTitle(engineId, l10n),
+      }),
+      t(l10n.voiceAndSpeech.engineRemoveBody, {
+        sizeMb: ENGINE_META[engineId].sizeMb,
+      }),
       [
-        {text: 'Cancel', style: 'cancel'},
+        {text: l10n.voiceAndSpeech.engineRemoveCancel, style: 'cancel'},
         {
-          text: 'Remove',
+          text: l10n.voiceAndSpeech.engineRemoveConfirm,
           style: 'destructive',
           onPress: () => {
             triggerDelete(engineId).catch(err => {
@@ -294,7 +336,11 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
       return (
         <View style={styles.engineGroupBody}>
           <Text style={styles.engineGroupProgressText}>
-            {`Downloading…  ${pct}%  ·  ${mbDone} / ${meta.sizeMb} MB`}
+            {t(l10n.voiceAndSpeech.engineDownloadingLabel, {
+              pct,
+              mbDone,
+              sizeMb: meta.sizeMb,
+            })}
           </Text>
         </View>
       );
@@ -313,14 +359,16 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
             style={styles.engineGroupCta}
             labelStyle={styles.engineGroupCtaLabel}
             testID={`tts-${engineId}-retry-button`}>
-            Try again
+            {l10n.voiceAndSpeech.engineRetryCta}
           </Button>
         </View>
       );
     }
     return (
       <View style={styles.engineGroupBody}>
-        <Text style={styles.engineGroupTagline}>{meta.tagline}</Text>
+        <Text style={styles.engineGroupTagline}>
+          {engineTagline(engineId, l10n)}
+        </Text>
         <Button
           mode="contained"
           onPress={handleInstall}
@@ -329,7 +377,7 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
           style={styles.engineGroupCta}
           labelStyle={styles.engineGroupCtaLabel}
           testID={`tts-${engineId}-install-button`}>
-          {`Install · ${meta.sizeMb} MB`}
+          {t(l10n.voiceAndSpeech.engineInstallCta, {sizeMb: meta.sizeMb})}
         </Button>
       </View>
     );
@@ -349,18 +397,19 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
     // Specs include disk MB AND peak RAM — RAM is the true device-fit
     // signal, especially on lower-end devices where Supertonic's ~430 MB
     // working set matters more than its 265 MB on disk.
-    // RAM rounds to nearest 50 MB and is prefixed with "~" — exact
-    // numbers ("235 MB" vs "228 MB") are noise.
+    // RAM rounds to nearest 50 MB — exact numbers ("235 MB" vs "228 MB")
+    // are noise; the "~" prefix is in the localized template.
     const ramRounded = Math.round(meta.ramMb / 50) * 50;
-    let tierLabel: string | null = null;
-    let specsLabel: string;
-    if (isNeural) {
-      tierLabel = meta.tier;
-      specsLabel = `${meta.voices} voices  ·  ${meta.sizeMb} MB  ·  ~${ramRounded} MB RAM`;
-    } else {
-      tierLabel = 'always available';
-      specsLabel = voices.length ? `${voices.length} voices` : '';
-    }
+    const tierLabel = engineTierLabel(engineId, l10n);
+    const specsLabel = isNeural
+      ? t(l10n.voiceAndSpeech.engineSpecsLine, {
+          voices: meta.voices,
+          sizeMb: meta.sizeMb,
+          ramMb: ramRounded,
+        })
+      : voices.length
+        ? t(l10n.voiceAndSpeech.engineSystemSpecsLine, {voices: voices.length})
+        : '';
 
     const ringProgress =
       isNeural && state === 'downloading'
@@ -392,7 +441,9 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
               haloColor={isActive ? meta.accent : undefined}
             />
             <View style={styles.engineGroupHeaderText}>
-              <Text style={styles.engineGroupTitle}>{meta.title}</Text>
+              <Text style={styles.engineGroupTitle}>
+                {engineTitle(engineId, l10n)}
+              </Text>
               {tierLabel ? (
                 <Text style={[styles.engineGroupTier, {color: meta.accent}]}>
                   {tierLabel}
@@ -427,7 +478,9 @@ export const VoicePickerView: React.FC<VoicePickerViewProps> = observer(() => {
               voices.map(renderVoiceRow)
             ) : (
               <View style={styles.engineGroupBody}>
-                <Text style={styles.engineGroupEmpty}>No voices found.</Text>
+                <Text style={styles.engineGroupEmpty}>
+                  {l10n.voiceAndSpeech.voicesEmptyState}
+                </Text>
               </View>
             )
           ) : (

@@ -4,6 +4,7 @@ import {IconButton, SegmentedButtons, Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
+import {t} from '../../locales';
 import type {EngineId, SupertonicSteps} from '../../services/tts';
 import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
@@ -61,7 +62,9 @@ export const HeroRow: React.FC = observer(() => {
 
   const subtitleParts = [
     l10n.voiceAndSpeech[engineChipKey[current.engine]],
-    showSupertonicQuality ? `${ttsStore.supertonicSteps} steps` : null,
+    showSupertonicQuality
+      ? t(l10n.voiceAndSpeech.stepsCount, {steps: ttsStore.supertonicSteps})
+      : null,
   ].filter(Boolean);
 
   return (
