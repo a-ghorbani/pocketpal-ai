@@ -1,9 +1,36 @@
-import {StyleSheet} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
+    engineLogoCenter: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    engineLogoHalo: {
+      position: 'absolute',
+      left: -4,
+      top: -4,
+      opacity: 0.35,
+    },
+    engineLogoSurface: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    engineLogoSystemBadge: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: Platform.OS === 'ios' ? '#F1F2F5' : '#E8F0E8',
+    },
+    engineLogoSystemBadgeDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: Platform.OS === 'ios' ? '#1A1A1A' : '#3DDC84',
+    },
     container: {
       padding: 16,
       paddingBottom: 32,
