@@ -11,6 +11,7 @@ import {
   TTS_DICT_URL,
   TTS_PARENT_SUBDIR,
 } from '../../constants';
+import {ttsRuntime} from '../../runtime';
 import type {Engine, StreamingHandle, Voice} from '../../types';
 import {KITTEN_VOICES} from './voices';
 
@@ -27,9 +28,6 @@ export type KittenProgressCallback = (progress: number) => void;
  */
 export class KittenEngine implements Engine {
   readonly id = 'kitten' as const;
-
-  private initializationPromise: Promise<void> | null = null;
-  private initialized = false;
 
   private getParentDir(): string {
     const root =
@@ -145,26 +143,9 @@ export class KittenEngine implements Engine {
     } catch (err) {
       console.warn('[KittenEngine] deleteModel failed:', err);
     }
-    this.initialized = false;
-    this.initializationPromise = null;
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    if (!this.initializationPromise) {
-      this.initializationPromise = this.doInitialize();
-    }
-    try {
-      await this.initializationPromise;
-    } catch (err) {
-      this.initializationPromise = null;
-      throw err;
-    }
-  }
-
-  private async doInitialize(): Promise<void> {
+  async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.KITTEN,
@@ -176,15 +157,13 @@ export class KittenEngine implements Engine {
       silentMode: 'obey',
       ducking: true,
     });
-    this.initialized = true;
   }
 
   async play(text: string, voice: Voice): Promise<void> {
     if (!(await this.isInstalled())) {
       throw new Error('Kitten model is not installed');
     }
-    await this.ensureInitialized();
-    await Speech.speak(text, voice.id);
+    await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
   playStreaming(voice: Voice): StreamingHandle {
@@ -213,8 +192,7 @@ export class KittenEngine implements Engine {
       }
       speaking = true;
       try {
-        await this.ensureInitialized();
-        await Speech.speak(next, voice.id);
+        await ttsRuntime.acquire(this, () => Speech.speak(next, voice.id));
       } catch (err) {
         console.warn('[KittenEngine] streaming speak failed:', err);
         speaking = false;
@@ -300,20 +278,12 @@ export class KittenEngine implements Engine {
           finalizeResolve = null;
           finalizeReject = null;
         }
-        try {
-          await Speech.stop();
-        } catch (err) {
-          console.warn('[KittenEngine] stop failed:', err);
-        }
+        await ttsRuntime.stop();
       },
     };
   }
 
   async stop(): Promise<void> {
-    try {
-      await Speech.stop();
-    } catch (err) {
-      console.warn('[KittenEngine] stop failed:', err);
-    }
+    await ttsRuntime.stop();
   }
 }

@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
@@ -8,95 +8,236 @@ export const createStyles = (theme: Theme) =>
       padding: 16,
       paddingBottom: 32,
     },
-    section: {
-      marginBottom: 24,
+
+    // Engine logo (used by EngineLogo)
+    engineLogoCenter: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    sectionHeader: {
-      fontWeight: 'bold',
-      marginBottom: 4,
+    engineLogoHalo: {
+      position: 'absolute',
+      left: -4,
+      top: -4,
+      opacity: 0.35,
+    },
+    engineLogoSurface: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    engineLogoSystemBadge: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: Platform.OS === 'ios' ? '#F1F2F5' : '#E8F0E8',
+    },
+    engineLogoSystemBadgeDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: Platform.OS === 'ios' ? '#1A1A1A' : '#3DDC84',
+    },
+
+    // Engine groups (used by VoicePickerView)
+    engineGroup: {
+      marginBottom: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      backgroundColor: theme.colors.surface,
+      overflow: 'hidden',
+    },
+    engineGroupGradientFill: {
+      borderRadius: 18,
+    },
+    engineGroupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    engineGroupHeaderText: {
+      flex: 1,
+      paddingHorizontal: 12,
+    },
+    engineGroupTitle: {
       color: theme.colors.onSurface,
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: -0.2,
     },
-    sectionDescription: {
-      marginBottom: 12,
+    engineGroupTier: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginTop: 2,
+    },
+    engineGroupSpecs: {
       color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '500',
+      fontVariant: ['tabular-nums'],
+      letterSpacing: 0.2,
+      marginTop: 1,
     },
-    installPlaceholder: {
-      padding: 12,
+    engineGroupDeleteBtn: {
+      margin: 0,
+    },
+    engineGroupChevron: {
+      width: 22,
+      height: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 4,
+    },
+    engineGroupChevronExpanded: {
+      transform: [{rotate: '90deg'}],
+    },
+    engineGroupBody: {
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+      paddingTop: 4,
+    },
+    engineGroupCta: {
+      borderRadius: 12,
+    },
+    engineGroupCtaLabel: {
+      fontSize: 14,
+      fontWeight: '700',
+      letterSpacing: 0.1,
+    },
+    engineGroupProgressText: {
+      color: theme.colors.onSurface,
+      fontSize: 13,
+      fontWeight: '600',
+      fontVariant: ['tabular-nums'],
+      letterSpacing: 0.2,
+      paddingVertical: 8,
+    },
+    engineGroupErrorText: {
+      color: theme.colors.error,
+      fontSize: 12.5,
+      lineHeight: 17,
+      marginBottom: 10,
+    },
+    engineGroupEmpty: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      fontStyle: 'italic',
+      paddingVertical: 8,
+    },
+    engineGroupTagline: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      lineHeight: 18,
       marginBottom: 12,
-      borderRadius: 8,
+    },
+
+    // Hero row (used by HeroRow)
+    heroRow: {
+      padding: 14,
+      marginBottom: 14,
+      borderRadius: 18,
+      borderWidth: 1,
       backgroundColor: theme.colors.surfaceContainerLow,
     },
-    installPlaceholderText: {
-      color: theme.colors.onSurfaceVariant,
-    },
-    installCard: {
-      padding: 12,
-      marginBottom: 12,
-      borderRadius: 8,
-      backgroundColor: theme.colors.surfaceContainerLow,
+    heroRowBody: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      overflow: 'hidden',
-      position: 'relative',
     },
-    installCardBody: {
+    heroAvatarWrap: {
+      marginRight: 14,
+    },
+    heroRowMain: {
       flex: 1,
       paddingRight: 12,
     },
-    installCardTitle: {
+    heroRowName: {
       color: theme.colors.onSurface,
-      fontWeight: '600',
+      fontSize: 26,
+      fontWeight: '700',
+      letterSpacing: -0.3,
     },
-    installCardSubtitle: {
+    heroSubtitle: {
       color: theme.colors.onSurfaceVariant,
-      marginTop: 2,
       fontSize: 12,
+      fontWeight: '600',
+      marginTop: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
     },
-    installCardProgressFill: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      bottom: 0,
-      backgroundColor: theme.colors.primaryContainer,
-      opacity: 0.5,
+    heroPreviewButton: {
+      margin: 0,
     },
-    installCardError: {
-      backgroundColor: theme.colors.errorContainer,
+    heroQualityBlock: {
+      marginTop: 14,
+      paddingHorizontal: 2,
     },
-    row: {
+    heroQualityLabel: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginBottom: 8,
+    },
+
+    // Voice rows (used by VoicePickerView)
+    voiceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 4,
+      paddingLeft: 4,
+      paddingRight: 4,
+      minHeight: 48,
+    },
+    voiceRowLabelBlock: {
+      flex: 1,
+      paddingLeft: 8,
+      paddingRight: 8,
+    },
+    voiceRowPreviewBtn: {
+      margin: 0,
+    },
+    voiceRowName: {
+      color: theme.colors.onSurface,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    voiceRowNameSelected: {
+      fontWeight: '700',
+    },
+
+    voicesEmptyHint: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12.5,
+      lineHeight: 18,
+      marginBottom: 16,
+      paddingHorizontal: 4,
+    },
+
+    // Primary settings rows (used by AutoSpeakRow)
+    primaryRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 12,
+      paddingVertical: 14,
       paddingHorizontal: 4,
-      minHeight: 44,
+      minHeight: 52,
     },
-    rowDisabled: {
-      opacity: 0.45,
-    },
-    rowVoiceName: {
+    primaryRowLabelBlock: {
       flex: 1,
+      paddingRight: 12,
+    },
+    primaryRowLabel: {
       color: theme.colors.onSurface,
+      fontSize: 16,
     },
-    rowVoiceNameSelected: {
-      fontWeight: 'bold',
-    },
-    previewButton: {
-      marginLeft: 8,
-    },
-    emptyText: {
-      padding: 12,
+    primaryRowDescription: {
       color: theme.colors.onSurfaceVariant,
-      fontStyle: 'italic',
-    },
-    stepsRow: {
-      marginTop: 12,
-      paddingVertical: 8,
-    },
-    stepsLabel: {
-      color: theme.colors.onSurfaceVariant,
-      marginBottom: 6,
       fontSize: 12,
+      marginTop: 2,
     },
   });

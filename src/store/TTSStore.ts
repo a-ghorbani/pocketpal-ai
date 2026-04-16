@@ -12,6 +12,8 @@ import {
   KokoroEngine,
   SupertonicEngine,
   TTS_MIN_RAM_BYTES,
+  TTS_PREVIEW_SAMPLE,
+  ttsRuntime,
 } from '../services/tts';
 import type {StreamingHandle, SupertonicSteps, Voice} from '../services/tts';
 import {
@@ -51,6 +53,9 @@ export type SupertonicDownloadState = NeuralDownloadState;
 export type NeuralEngineId = 'supertonic' | 'kokoro' | 'kitten';
 
 const DEFAULT_SUPERTONIC_STEPS: SupertonicSteps = 5;
+
+const previewMessageId = (voice: Voice): string =>
+  `preview:${voice.engine}:${voice.id}`;
 
 /**
  * Store that coordinates text-to-speech playback.
@@ -180,12 +185,29 @@ export class TTSStore {
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
     if (nextAppState === 'background' || nextAppState === 'inactive') {
-      this.stop();
+      // Stop in-flight audio AND release the active engine's native
+      // resources (200-450 MB depending on engine). Re-init is lazy on
+      // the next play after foreground.
+      this.stop()
+        .then(() => ttsRuntime.release())
+        .catch(err => {
+          console.warn('[TTSStore] background release failed:', err);
+        });
     }
   };
 
   setAutoSpeak(on: boolean) {
     this.autoSpeakEnabled = on;
+    if (!on) {
+      // Turning auto-speak off frees the active neural engine's RAM
+      // proactively — the user has signaled they don't want passive
+      // playback. Re-init is lazy on the next preview / message replay.
+      this.stop()
+        .then(() => ttsRuntime.release())
+        .catch(err => {
+          console.warn('[TTSStore] release on auto-speak off failed:', err);
+        });
+    }
   }
 
   setCurrentVoice(v: Voice | null) {
@@ -321,8 +343,64 @@ export class TTSStore {
     }
   }
 
+  /**
+   * Audition path — speak `TTS_PREVIEW_SAMPLE` with `voice` and route
+   * through the store so it interacts cleanly with any in-flight stream
+   * or replay (no overlapping audio, no engine-swap races).
+   *
+   * Skips the thinking-stripper entirely — preview text is fixed and
+   * known clean.
+   *
+   * messageId is engine-qualified (`preview:<engine>:<voiceId>`) so two
+   * engines that share a voice id can't collide on the cleanup guard.
+   */
+  async preview(voice: Voice): Promise<void> {
+    if (!this.isTTSAvailable) {
+      return;
+    }
+    const messageId = previewMessageId(voice);
+    await this.stop();
+    runInAction(() => {
+      this.playbackState = {mode: 'playing', messageId};
+    });
+    try {
+      const engine = getEngine(voice.engine);
+      if (voice.engine === 'supertonic') {
+        await (engine as SupertonicEngine).play(TTS_PREVIEW_SAMPLE, voice, {
+          inferenceSteps: this.supertonicSteps,
+        });
+      } else {
+        await engine.play(TTS_PREVIEW_SAMPLE, voice);
+      }
+    } catch (err) {
+      console.warn('[TTSStore] preview failed:', err);
+    } finally {
+      runInAction(() => {
+        if (
+          this.playbackState.mode === 'playing' &&
+          this.playbackState.messageId === messageId
+        ) {
+          this.playbackState = {mode: 'idle'};
+        }
+      });
+    }
+  }
+
+  /**
+   * `true` when a preview for `voice` is currently in flight. Components
+   * use this to swap their play icon for stop while the engine loads
+   * and speaks (Kokoro warm-up is ~4s — without this the user has no
+   * feedback that their tap registered).
+   */
+  isPreviewingVoice(voice: Voice): boolean {
+    return (
+      this.playbackState.mode === 'playing' &&
+      this.playbackState.messageId === previewMessageId(voice)
+    );
+  }
+
   /** First token / message creation. Opens a streaming session. */
-  onAssistantMessageStart(messageId: string) {
+  onAssistantMessageStart(messageId: string): void {
     if (
       !this.isTTSAvailable ||
       !this.autoSpeakEnabled ||
@@ -331,14 +409,16 @@ export class TTSStore {
     ) {
       return;
     }
-    const voice = this.currentVoice;
-    const prev = this.playbackState;
-    if (prev.mode === 'streaming') {
-      prev.handle.cancel().catch(err => {
-        console.warn('[TTSStore] prior streaming cancel failed:', err);
-      });
-    }
+    // Stop ANY prior playback (streaming OR preview/replay) before we
+    // open a new streaming session — guarantees no overlapping audio.
+    // `stop()` flips state to idle synchronously and fires the native
+    // stop in the background; the new session's first speakNext will
+    // serialize behind the old `Speech.stop()` via `ttsRuntime`.
+    this.stop().catch(err => {
+      console.warn('[TTSStore] stop before new stream failed:', err);
+    });
 
+    const voice = this.currentVoice;
     this.lastSpokenMessageId = messageId;
     this.streamStripper = new ThinkingStripper();
     this.streamPlaceholderEmitted = false;
@@ -472,21 +552,34 @@ export class TTSStore {
       });
     } catch (err) {
       console.warn(`[TTSStore] ${id} download failed:`, err);
+      const message = err instanceof Error ? err.message : String(err);
       runInAction(() => {
         this.setDownloadState(id, 'error');
-        this.setDownloadError(
-          id,
-          err instanceof Error ? err.message : String(err),
-        );
+        this.setDownloadError(id, message);
       });
     }
   }
 
   private async deleteNeuralEngine(id: NeuralEngineId): Promise<void> {
+    // Defensive: refuse to delete while a download is writing into the
+    // same directory. The UI never offers delete in this state, but the
+    // store API is public — guard anyway. Mirrors `downloadNeuralEngine`'s
+    // own early-return on duplicate downloads.
+    if (this.getDownloadState(id) === 'downloading') {
+      return;
+    }
     const engine = getEngine(id) as
       | SupertonicEngine
       | KokoroEngine
       | KittenEngine;
+    // If this engine is currently active, stop in-flight audio AND
+    // release the native resources BEFORE unlinking files. Skipping
+    // either step risks a native crash from the engine touching files
+    // that have just been removed under it.
+    if (ttsRuntime.getActiveEngineId() === id) {
+      await this.stop();
+      await ttsRuntime.release();
+    }
     try {
       await engine.deleteModel();
     } catch (err) {

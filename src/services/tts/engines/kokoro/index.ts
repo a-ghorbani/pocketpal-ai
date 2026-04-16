@@ -13,6 +13,7 @@ import {
   TTS_DICT_URL,
   TTS_PARENT_SUBDIR,
 } from '../../constants';
+import {ttsRuntime} from '../../runtime';
 import type {Engine, StreamingHandle, Voice} from '../../types';
 import {KOKORO_VOICES} from './voices';
 
@@ -35,9 +36,6 @@ export type KokoroProgressCallback = (progress: number) => void;
  */
 export class KokoroEngine implements Engine {
   readonly id = 'kokoro' as const;
-
-  private initializationPromise: Promise<void> | null = null;
-  private initialized = false;
 
   private getParentDir(): string {
     const root =
@@ -207,26 +205,9 @@ export class KokoroEngine implements Engine {
     } catch (err) {
       console.warn('[KokoroEngine] deleteModel failed:', err);
     }
-    this.initialized = false;
-    this.initializationPromise = null;
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    if (!this.initializationPromise) {
-      this.initializationPromise = this.doInitialize();
-    }
-    try {
-      await this.initializationPromise;
-    } catch (err) {
-      this.initializationPromise = null;
-      throw err;
-    }
-  }
-
-  private async doInitialize(): Promise<void> {
+  async loadInto(): Promise<void> {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.KOKORO,
@@ -239,15 +220,13 @@ export class KokoroEngine implements Engine {
       silentMode: 'obey',
       ducking: true,
     });
-    this.initialized = true;
   }
 
   async play(text: string, voice: Voice): Promise<void> {
     if (!(await this.isInstalled())) {
       throw new Error('Kokoro model is not installed');
     }
-    await this.ensureInitialized();
-    await Speech.speak(text, voice.id);
+    await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
   playStreaming(voice: Voice): StreamingHandle {
@@ -276,8 +255,7 @@ export class KokoroEngine implements Engine {
       }
       speaking = true;
       try {
-        await this.ensureInitialized();
-        await Speech.speak(next, voice.id);
+        await ttsRuntime.acquire(this, () => Speech.speak(next, voice.id));
       } catch (err) {
         console.warn('[KokoroEngine] streaming speak failed:', err);
         speaking = false;
@@ -365,20 +343,12 @@ export class KokoroEngine implements Engine {
           finalizeResolve = null;
           finalizeReject = null;
         }
-        try {
-          await Speech.stop();
-        } catch (err) {
-          console.warn('[KokoroEngine] stop failed:', err);
-        }
+        await ttsRuntime.stop();
       },
     };
   }
 
   async stop(): Promise<void> {
-    try {
-      await Speech.stop();
-    } catch (err) {
-      console.warn('[KokoroEngine] stop failed:', err);
-    }
+    await ttsRuntime.stop();
   }
 }

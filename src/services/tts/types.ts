@@ -10,9 +10,10 @@ export type EngineId = 'kitten' | 'kokoro' | 'supertonic' | 'system';
 /**
  * Discrete set of diffusion-step counts exposed in the Supertonic UI.
  * The fork supports `1|2|3|4|5|10|20|50`; PocketPal exposes
- * `1|2|3|5|10` (see story Step 7 rationale).
+ * `1|2|3|5|10|20`. We skip 4 (perceptually too close to 3/5) and 50
+ * (latency budget too high for interactive use).
  */
-export type SupertonicSteps = 1 | 2 | 3 | 5 | 10;
+export type SupertonicSteps = 1 | 2 | 3 | 5 | 10 | 20;
 
 export interface Voice {
   /** Stable identifier used to look up the voice on the underlying engine. */
@@ -56,6 +57,15 @@ export interface Engine {
   isInstalled(): Promise<boolean>;
   /** List available voices for this engine. */
   getVoices(): Promise<Voice[]>;
+  /**
+   * Initialize the underlying native engine. Called by `ttsRuntime` when
+   * this engine becomes the active one. Idempotent at the runtime level
+   * (the runtime won't call it twice without a `release` in between).
+   *
+   * System engine implements as a no-op — OS-native TTS does not require
+   * setup.
+   */
+  loadInto(): Promise<void>;
   /**
    * Replay path — speak `text` in one call. Used by the v1.1 per-message
    * play button where the full text is available up-front.

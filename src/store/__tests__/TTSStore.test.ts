@@ -977,4 +977,64 @@ describe('TTSStore', () => {
       );
     });
   });
+
+  describe('preview() and isPreviewingVoice()', () => {
+    it('flips isPreviewingVoice true while play() is in flight, false after', async () => {
+      const store = await makeStore();
+      let resolvePlay: () => void = () => {};
+      mockSystemPlay.mockImplementationOnce(
+        () => new Promise<void>(r => (resolvePlay = r)),
+      );
+
+      const previewPromise = store.preview(SYSTEM_VOICE);
+      await flush();
+
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(true);
+      // A different voice never matches the in-flight preview.
+      expect(store.isPreviewingVoice(SUPERTONIC_VOICE)).toBe(false);
+
+      resolvePlay();
+      await previewPromise;
+
+      expect(store.isPreviewingVoice(SYSTEM_VOICE)).toBe(false);
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+
+    it('messageId is engine-qualified — same voice id on different engines does not collide', async () => {
+      const store = await makeStore();
+      const supertonicVoice: Voice = {
+        id: 'F1',
+        name: 'Sarah',
+        engine: 'supertonic',
+      };
+      const systemVoiceWithSameId: Voice = {
+        id: 'F1',
+        name: 'Other',
+        engine: 'system',
+      };
+
+      // Hold supertonic preview in flight.
+      let resolveSupertonic: () => void = () => {};
+      mockSupertonicPlay.mockImplementationOnce(
+        () => new Promise<void>(r => (resolveSupertonic = r)),
+      );
+      const p = store.preview(supertonicVoice);
+      await flush();
+
+      expect(store.isPreviewingVoice(supertonicVoice)).toBe(true);
+      // Same voice id but different engine — must NOT match.
+      expect(store.isPreviewingVoice(systemVoiceWithSameId)).toBe(false);
+
+      resolveSupertonic();
+      await p;
+    });
+
+    it('does nothing when isTTSAvailable is false', async () => {
+      const store = new TTSStore();
+      // Skip init — leaves isTTSAvailable at the default false.
+      await store.preview(SYSTEM_VOICE);
+      expect(mockSystemPlay).not.toHaveBeenCalled();
+      expect(store.playbackState).toEqual({mode: 'idle'});
+    });
+  });
 });

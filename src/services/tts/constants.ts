@@ -85,13 +85,12 @@ export const KOKORO_MODEL_FILES = [
 
 /**
  * IPA dictionary for the MIT `phonemize` JS phonemizer (required by the
- * default `phonemizerType: 'js'` path in Kokoro/Kitten).
- *
- * Hosted alongside the Kitten nano model on palshub; reused here for
- * Kokoro so both engines share a single dict download origin.
+ * default `phonemizerType: 'js'` path in Kokoro/Kitten). Built from
+ * en-us.tsv via `npm run build:dict` in the fork; hosted as a HF dataset
+ * so both engines share one download origin.
  */
 export const TTS_DICT_URL =
-  'https://huggingface.co/palshub/kitten-tts-nano-0.8-fp32/resolve/main/en-us.bin';
+  'https://huggingface.co/datasets/palshub/phonemizer-dicts/resolve/main/en-us.bin';
 
 /** Local filename for the IPA dict (saved inside each engine's model dir). */
 export const TTS_DICT_FILENAME = 'en-us.bin';
