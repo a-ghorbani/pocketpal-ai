@@ -50,7 +50,9 @@ import {l10n as locales, t} from '../../locales';
 type L10n = (typeof locales)['en'];
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
-const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic', 'system'];
+// System TTS hidden until language/accent/search filtering is built —
+// 180+ iOS / 470+ Android unfiltered voices is hostile UX.
+const ENGINE_ORDER: EngineId[] = ['kitten', 'kokoro', 'supertonic'];
 
 type NeuralEngineId = Exclude<EngineId, 'system'>;
 

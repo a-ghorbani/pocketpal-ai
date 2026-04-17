@@ -28,12 +28,12 @@ describe('VoicePickerView', () => {
     });
   });
 
-  it('renders one engine group per engine in fixed order', () => {
-    const {getByTestId} = renderView();
+  it('renders one engine group per neural engine (system hidden)', () => {
+    const {getByTestId, queryByTestId} = renderView();
     expect(getByTestId('tts-engine-group-kitten')).toBeTruthy();
     expect(getByTestId('tts-engine-group-kokoro')).toBeTruthy();
     expect(getByTestId('tts-engine-group-supertonic')).toBeTruthy();
-    expect(getByTestId('tts-engine-group-system')).toBeTruthy();
+    expect(queryByTestId('tts-engine-group-system')).toBeNull();
   });
 
   it('groups start collapsed when no current voice; tap expands', () => {

@@ -29,13 +29,13 @@ describe('TTSSetupSheet (voice-led, single view)', () => {
     });
   });
 
-  it('renders the unified voices view with all four engine groups', () => {
-    const {getByTestId} = renderSheet();
+  it('renders the unified voices view with neural engine groups (system hidden)', () => {
+    const {getByTestId, queryByTestId} = renderSheet();
     expect(getByTestId('tts-voice-picker')).toBeTruthy();
     expect(getByTestId('tts-engine-group-kitten')).toBeTruthy();
     expect(getByTestId('tts-engine-group-kokoro')).toBeTruthy();
     expect(getByTestId('tts-engine-group-supertonic')).toBeTruthy();
-    expect(getByTestId('tts-engine-group-system')).toBeTruthy();
+    expect(queryByTestId('tts-engine-group-system')).toBeNull();
   });
 
   it('shows hero strip + auto-speak when a voice is current', () => {
