@@ -16,7 +16,13 @@ import {
   SUPERTONIC_MODEL_FILES,
   SUPERTONIC_VOICES_MANIFEST_FILENAME,
 } from '../../../constants';
+import {ttsRuntime} from '../../../runtime';
 import {SUPERTONIC_VOICES} from '../voices';
+
+import {
+  __getCreatedStreams,
+  __resetCreatedStreams,
+} from '../../../../../../__mocks__/external/@pocketpalai/react-native-speech';
 
 const setPlatform = (os: 'ios' | 'android') => {
   Object.defineProperty(Platform, 'OS', {
@@ -31,6 +37,8 @@ describe('SupertonicEngine (v1.2 real)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (RNFS as any).__resetMockState?.();
+    __resetCreatedStreams();
+    ttsRuntime._resetForTests();
     setPlatform('ios');
     // By default mark as fresh install (no files exist yet).
     (RNFS.exists as jest.Mock).mockResolvedValue(false);
@@ -237,21 +245,50 @@ describe('SupertonicEngine (v1.2 real)', () => {
   });
 
   describe('playStreaming()', () => {
-    it('buffers and synthesizes at sentence boundaries', async () => {
+    const flush = async () => {
+      for (let i = 0; i < 5; i++) {
+        await new Promise(r => setImmediate(r));
+      }
+    };
+
+    it('creates a lib stream with targetChars=300 and default language', () => {
+      new SupertonicEngine().playStreaming(anyVoice);
+
+      expect(Speech.createSpeechStream).toHaveBeenCalledTimes(1);
+      expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+        anyVoice.id,
+        expect.objectContaining({targetChars: 300, language: 'en'}),
+      );
+    });
+
+    it('forwards language and inferenceSteps options', () => {
+      new SupertonicEngine().playStreaming(anyVoice, {
+        language: 'en',
+        inferenceSteps: 5,
+      });
+
+      expect(Speech.createSpeechStream).toHaveBeenCalledWith(
+        anyVoice.id,
+        expect.objectContaining({
+          targetChars: 300,
+          language: 'en',
+          inferenceSteps: 5,
+        }),
+      );
+    });
+
+    it('forwards appendText to the lib stream once the engine is acquired', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
-      const engine = new SupertonicEngine();
-      const handle = engine.playStreaming(anyVoice);
+      const handle = new SupertonicEngine().playStreaming(anyVoice);
 
       handle.appendText('Hello world. ');
       handle.appendText('How are you?');
-      await new Promise(r => setImmediate(r));
+      await flush();
 
-      // At least the first sentence was sent.
-      expect(Speech.speak).toHaveBeenCalled();
-      const firstArg = (Speech.speak as jest.Mock).mock.calls[0][0];
-      expect(firstArg).toMatch(/Hello world\./);
-
-      await handle.cancel();
+      const [stream] = __getCreatedStreams();
+      expect(stream!.append).toHaveBeenCalledTimes(2);
+      expect(stream!.append).toHaveBeenNthCalledWith(1, 'Hello world. ');
+      expect(stream!.append).toHaveBeenNthCalledWith(2, 'How are you?');
     });
 
     it('cancel() is safe before any append', async () => {

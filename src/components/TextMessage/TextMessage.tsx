@@ -20,7 +20,6 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
-import {PlayButton} from './PlayButton';
 
 import {MessageType} from '../../utils/types';
 import {
@@ -250,8 +249,6 @@ export const TextMessage = ({
               message.metadata?.partialCompletionResult?.reasoning_content
             }
           />
-
-          <PlayButton message={message} />
 
           {/*Platform.OS === 'ios' ? (
             <TextInput

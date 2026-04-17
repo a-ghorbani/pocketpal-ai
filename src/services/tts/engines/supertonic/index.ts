@@ -15,6 +15,7 @@ import {
   TTS_PARENT_SUBDIR,
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
+import {createEngineStreamingHandle} from '../../streamingHandle';
 import type {
   Engine,
   StreamingHandle,
@@ -228,149 +229,17 @@ export class SupertonicEngine implements Engine {
     );
   }
 
-  /**
-   * Streaming handle — buffers incoming chunks and flushes at sentence
-   * boundaries (matching the System engine's breakpoint strategy). The
-   * fork's Supertonic engine supports chunked synthesis via repeated
-   * `speak` calls; `onFinish` events chain the queue.
-   */
   playStreaming(
     voice: Voice,
     opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
   ): StreamingHandle {
-    const resolvedLanguage = opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE;
-    const resolvedSteps = opts?.inferenceSteps;
-    let buffer = '';
-    const queue: string[] = [];
-    let speaking = false;
-    let dead = false;
-    let finalized = false;
-    let finalizeResolve: (() => void) | null = null;
-    let finalizeReject: ((err: Error) => void) | null = null;
-
-    // Match the SystemEngine sentence terminator. Supertonic handles
-    // longer chunks more efficiently but we use the same boundary to
-    // keep time-to-first-speech low.
-    const SENTENCE_END = /^[\s\S]*?[.!?。！？](?=\s|$)/;
-
-    const speakNext = async () => {
-      if (dead) {
-        return;
-      }
-      const next = queue.shift();
-      if (next === undefined) {
-        speaking = false;
-        if (finalized && finalizeResolve) {
-          finalizeResolve();
-          finalizeResolve = null;
-        }
-        return;
-      }
-      speaking = true;
-      try {
-        await ttsRuntime.acquire(this, () =>
-          Speech.speak(next, voice.id, {
-            language: resolvedLanguage,
-            ...(resolvedSteps ? {inferenceSteps: resolvedSteps} : {}),
-          }),
-        );
-      } catch (err) {
-        console.warn('[SupertonicEngine] streaming speak failed:', err);
-        speaking = false;
-        if (finalizeReject) {
-          finalizeReject(err instanceof Error ? err : new Error(String(err)));
-          finalizeReject = null;
-          finalizeResolve = null;
-        }
-      }
-    };
-
-    const subscription = Speech.onFinish(() => {
-      if (dead) {
-        return;
-      }
-      speakNext().catch(() => {
-        // speakNext logs internally and routes errors to finalizeReject.
-      });
+    return createEngineStreamingHandle(this, voice.id, {
+      language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+      ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
     });
-
-    const drainBuffer = () => {
-      while (true) {
-        const match = buffer.match(SENTENCE_END);
-        if (!match) {
-          break;
-        }
-        const sentence = match[0].trim();
-        buffer = buffer.slice(match[0].length);
-        if (sentence.length > 0) {
-          queue.push(sentence);
-        }
-      }
-    };
-
-    return {
-      appendText: (chunk: string) => {
-        if (dead || finalized) {
-          return;
-        }
-        buffer += chunk;
-        drainBuffer();
-        if (!speaking) {
-          speakNext().catch(() => {
-            // speakNext logs internally and routes errors to finalizeReject.
-          });
-        }
-      },
-      finalize: async () => {
-        if (dead || finalized) {
-          return;
-        }
-        finalized = true;
-        drainBuffer();
-        const tail = buffer.trim();
-        buffer = '';
-        if (tail.length > 0) {
-          queue.push(tail);
-        }
-        if (!speaking) {
-          speakNext().catch(() => {
-            // speakNext logs internally and routes errors to finalizeReject.
-          });
-        }
-        if (queue.length === 0 && !speaking) {
-          subscription.remove();
-          return;
-        }
-        await new Promise<void>((resolve, reject) => {
-          finalizeResolve = () => {
-            subscription.remove();
-            resolve();
-          };
-          finalizeReject = err => {
-            subscription.remove();
-            reject(err);
-          };
-        });
-      },
-      cancel: async () => {
-        if (dead) {
-          return;
-        }
-        dead = true;
-        queue.length = 0;
-        buffer = '';
-        subscription.remove();
-        if (finalizeResolve) {
-          finalizeResolve();
-          finalizeResolve = null;
-          finalizeReject = null;
-        }
-        await ttsRuntime.stop();
-      },
-    };
   }
 
   async stop(): Promise<void> {
-    await ttsRuntime.stop();
+    await Speech.stop();
   }
 }

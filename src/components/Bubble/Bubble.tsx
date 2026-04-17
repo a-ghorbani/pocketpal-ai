@@ -10,8 +10,10 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
+import {PlayButton} from '../TextMessage/PlayButton';
 
 import {UserContext, L10nContext} from '../../utils';
+import {assistant} from '../../utils/chat';
 import {MessageType} from '../../utils/types';
 import {t} from '../../locales';
 
@@ -78,6 +80,10 @@ export const Bubble = ({
     }
   };
 
+  const isAssistantText =
+    message.author?.id === assistant.id && message.type === 'text';
+  const showFooter = timings || isAssistantText;
+
   return (
     <Animated.View
       testID={currentUserIsAuthor ? 'user-message' : 'ai-message'}
@@ -88,14 +94,15 @@ export const Bubble = ({
         },
       ]}>
       {child}
-      {timings && (
+      {showFooter && (
         <View style={dateHeaderContainer} testID="message-timing">
-          {copyable && (
+          {isAssistantText && <PlayButton message={message} />}
+          {timings && copyable && (
             <TouchableOpacity onPress={copyToClipboard}>
               <Icon name="content-copy" style={iconContainer} />
             </TouchableOpacity>
           )}
-          {fullTimingsString ? (
+          {timings && fullTimingsString ? (
             <Text style={dateHeader}>{fullTimingsString}</Text>
           ) : null}
         </View>

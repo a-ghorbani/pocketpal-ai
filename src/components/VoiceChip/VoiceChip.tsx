@@ -8,9 +8,9 @@ import {L10nContext} from '../../utils';
 import {
   ChevronDownIcon,
   SettingsIcon,
+  StopIcon,
   VolumeOffIcon,
   VolumeOnIcon,
-  WavesIcon,
 } from '../../assets/icons';
 
 import {createStyles} from './styles';
@@ -22,7 +22,7 @@ const SECONDARY_VARIANT: 'gear' | 'chevron' = 'chevron';
 
 const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
   if (isPlaying) {
-    return WavesIcon;
+    return StopIcon;
   }
   return autoSpeakEnabled ? VolumeOnIcon : VolumeOffIcon;
 };
@@ -54,10 +54,12 @@ export const VoiceChip: React.FC = observer(() => {
   const hasVoice = currentVoice != null;
 
   const handleSpeakerPress = () => {
-    // Pre-setup: speaker tap opens setup sheet (no voice to toggle).
-    // Post-setup: toggles auto-speak.
     if (!hasVoice) {
       ttsStore.openSetupSheet();
+      return;
+    }
+    if (isPlaying) {
+      ttsStore.stop().catch(() => {});
       return;
     }
     ttsStore.setAutoSpeak(!autoSpeakEnabled);

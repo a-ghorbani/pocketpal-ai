@@ -1,5 +1,5 @@
 import React, {useContext} from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {Pressable} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
@@ -8,17 +8,6 @@ import {L10nContext} from '../../utils';
 import {assistant} from '../../utils/chat';
 import {StopIcon, VolumeOnIcon} from '../../assets/icons';
 import type {MessageType} from '../../utils/types';
-
-const MIN_TAP = 44;
-
-const styles = StyleSheet.create({
-  container: {
-    width: MIN_TAP,
-    height: MIN_TAP,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 
 const countWords = (text: string): number => {
   const trimmed = text.trim();
@@ -29,25 +18,24 @@ const countWords = (text: string): number => {
 };
 
 interface PlayButtonProps {
-  message: MessageType.DerivedText;
+  message: MessageType.Any;
 }
 
 /**
- * Per-message replay button. Rendered only when:
- *  - `ttsStore.isTTSAvailable` is true (memory gate)
- *  - the message is from the assistant
- *  - the text has more than one word (skip single-word / emoji-only)
- *  - streaming has finished (i.e. `completionResult` metadata present
- *    OR model is not currently streaming)
+ * Per-message replay button. Self-gates: returns null when TTS is
+ * unavailable, message is not assistant text, still streaming, etc.
  *
- * First tap with no voice chosen opens the setup sheet. With a voice
- * chosen, taps toggle between play and stop for this message.
+ * Designed to sit in the Bubble footer row alongside copy/timings.
  */
 export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
 
   if (!ttsStore.isTTSAvailable) {
+    return null;
+  }
+
+  if (message.type !== 'text') {
     return null;
   }
 
@@ -59,9 +47,6 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
     return null;
   }
 
-  // Streaming guard: hide until the final completion metadata lands. If
-  // that metadata is missing (older messages), fall back to the global
-  // streaming flag.
   const hasFinalResult = !!message.metadata?.completionResult;
   if (!hasFinalResult && modelStore.isStreaming) {
     return null;
@@ -78,48 +63,40 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
       return;
     }
     if (isThisPlaying) {
-      ttsStore.stop().catch(() => {
-        /* logged inside store */
-      });
+      ttsStore.stop().catch(() => {});
       return;
     }
-    // Case A cue: if the message was produced with enable_thinking ON,
-    // the content is already clean but reasoning was streamed on a
-    // separate channel. Hint the store so it prepends the spoken
-    // thinking placeholder on replay.
     const hadReasoning =
       !!message.metadata?.completionResult?.reasoning_content?.trim();
-    ttsStore.play(message.id, message.text, {hadReasoning}).catch(() => {
-      /* logged inside store */
-    });
+    ttsStore.play(message.id, message.text, {hadReasoning}).catch(() => {});
   };
 
+  const iconSize = 16;
+
   return (
-    <View style={styles.container}>
-      <Pressable
-        onPress={handlePress}
-        style={styles.container}
-        accessibilityRole="button"
-        accessibilityLabel={
-          isThisPlaying
-            ? l10n.voiceAndSpeech.stopMessageLabel
-            : l10n.voiceAndSpeech.playMessageLabel
-        }
-        testID={`playbutton-${message.id}`}>
-        {isThisPlaying ? (
-          <StopIcon
-            width={20}
-            height={20}
-            stroke={theme.colors.onSurfaceVariant}
-          />
-        ) : (
-          <VolumeOnIcon
-            width={20}
-            height={20}
-            stroke={theme.colors.onSurfaceVariant}
-          />
-        )}
-      </Pressable>
-    </View>
+    <Pressable
+      onPress={handlePress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={
+        isThisPlaying
+          ? l10n.voiceAndSpeech.stopMessageLabel
+          : l10n.voiceAndSpeech.playMessageLabel
+      }
+      testID={`playbutton-${message.id}`}>
+      {isThisPlaying ? (
+        <StopIcon
+          width={iconSize}
+          height={iconSize}
+          stroke={theme.colors.onSurfaceVariant}
+        />
+      ) : (
+        <VolumeOnIcon
+          width={iconSize}
+          height={iconSize}
+          stroke={theme.colors.onSurfaceVariant}
+        />
+      )}
+    </Pressable>
   );
 });

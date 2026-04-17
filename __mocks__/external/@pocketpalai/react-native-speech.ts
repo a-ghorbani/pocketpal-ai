@@ -2,9 +2,10 @@
  * Jest mock for `@pocketpalai/react-native-speech`.
  *
  * The real package ships untranspiled source + TurboModule bindings, neither
- * of which Jest can load. We expose the subset that `SystemEngine` uses,
- * including the `onFinish` event emitter used by `playStreaming` to chain
- * sentence-level utterances.
+ * of which Jest can load. We expose the subset PocketPal uses, including
+ * `createSpeechStream` (v2.1.0+) which returns a handle with
+ * `append/finalize/cancel`. Each stream is a jest-tracked object so tests
+ * can assert on the calls forwarded into it.
  */
 
 type FinishListener = (event: {utteranceId?: string}) => void;
@@ -38,6 +39,38 @@ export const __resetFinishListeners = () => {
   finishListeners.clear();
 };
 
+export interface MockSpeechStream {
+  voiceId?: string;
+  options?: Record<string, unknown>;
+  append: jest.Mock;
+  finalize: jest.Mock;
+  cancel: jest.Mock;
+}
+
+const createdStreams: MockSpeechStream[] = [];
+
+const createSpeechStream = jest.fn(
+  (voiceId?: string, options?: Record<string, unknown>): MockSpeechStream => {
+    const stream: MockSpeechStream = {
+      voiceId,
+      options,
+      append: jest.fn(),
+      finalize: jest.fn().mockResolvedValue(undefined),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    createdStreams.push(stream);
+    return stream;
+  },
+);
+
+/** Test helper: list of streams created since the last reset. */
+export const __getCreatedStreams = (): MockSpeechStream[] => createdStreams;
+
+/** Test helper: clear stream history between tests. */
+export const __resetCreatedStreams = () => {
+  createdStreams.length = 0;
+};
+
 const Speech = {
   initialize: jest.fn().mockResolvedValue(undefined),
   speak: jest.fn().mockResolvedValue(undefined),
@@ -51,6 +84,7 @@ const Speech = {
       quality: 0,
     },
   ]),
+  createSpeechStream,
   onFinish,
 };
 

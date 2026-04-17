@@ -12,6 +12,7 @@ import {
   TTS_PARENT_SUBDIR,
 } from '../../constants';
 import {ttsRuntime} from '../../runtime';
+import {createEngineStreamingHandle} from '../../streamingHandle';
 import type {Engine, StreamingHandle, Voice} from '../../types';
 import {KITTEN_VOICES} from './voices';
 
@@ -167,123 +168,10 @@ export class KittenEngine implements Engine {
   }
 
   playStreaming(voice: Voice): StreamingHandle {
-    let buffer = '';
-    const queue: string[] = [];
-    let speaking = false;
-    let dead = false;
-    let finalized = false;
-    let finalizeResolve: (() => void) | null = null;
-    let finalizeReject: ((err: Error) => void) | null = null;
-
-    const SENTENCE_END = /^[\s\S]*?[.!?。！？](?=\s|$)/;
-
-    const speakNext = async () => {
-      if (dead) {
-        return;
-      }
-      const next = queue.shift();
-      if (next === undefined) {
-        speaking = false;
-        if (finalized && finalizeResolve) {
-          finalizeResolve();
-          finalizeResolve = null;
-        }
-        return;
-      }
-      speaking = true;
-      try {
-        await ttsRuntime.acquire(this, () => Speech.speak(next, voice.id));
-      } catch (err) {
-        console.warn('[KittenEngine] streaming speak failed:', err);
-        speaking = false;
-        if (finalizeReject) {
-          finalizeReject(err instanceof Error ? err : new Error(String(err)));
-          finalizeReject = null;
-          finalizeResolve = null;
-        }
-      }
-    };
-
-    const subscription = Speech.onFinish(() => {
-      if (dead) {
-        return;
-      }
-      speakNext().catch(() => {});
-    });
-
-    const drainBuffer = () => {
-      while (true) {
-        const match = buffer.match(SENTENCE_END);
-        if (!match) {
-          break;
-        }
-        const sentence = match[0].trim();
-        buffer = buffer.slice(match[0].length);
-        if (sentence.length > 0) {
-          queue.push(sentence);
-        }
-      }
-    };
-
-    return {
-      appendText: (chunk: string) => {
-        if (dead || finalized) {
-          return;
-        }
-        buffer += chunk;
-        drainBuffer();
-        if (!speaking) {
-          speakNext().catch(() => {});
-        }
-      },
-      finalize: async () => {
-        if (dead || finalized) {
-          return;
-        }
-        finalized = true;
-        drainBuffer();
-        const tail = buffer.trim();
-        buffer = '';
-        if (tail.length > 0) {
-          queue.push(tail);
-        }
-        if (!speaking) {
-          speakNext().catch(() => {});
-        }
-        if (queue.length === 0 && !speaking) {
-          subscription.remove();
-          return;
-        }
-        await new Promise<void>((resolve, reject) => {
-          finalizeResolve = () => {
-            subscription.remove();
-            resolve();
-          };
-          finalizeReject = err => {
-            subscription.remove();
-            reject(err);
-          };
-        });
-      },
-      cancel: async () => {
-        if (dead) {
-          return;
-        }
-        dead = true;
-        queue.length = 0;
-        buffer = '';
-        subscription.remove();
-        if (finalizeResolve) {
-          finalizeResolve();
-          finalizeResolve = null;
-          finalizeReject = null;
-        }
-        await ttsRuntime.stop();
-      },
-    };
+    return createEngineStreamingHandle(this, voice.id);
   }
 
   async stop(): Promise<void> {
-    await ttsRuntime.stop();
+    await Speech.stop();
   }
 }

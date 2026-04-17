@@ -3140,7 +3140,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNSpeech (2.0.0):
+  - RNSpeech (2.2.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3812,7 +3812,7 @@ SPEC CHECKSUMS:
   RNReanimated: 8f0185df21f0dea34ee8c9611ba88c17a290ed9a
   RNScreens: d6413aeb1878cdafd3c721e2c5218faf5d5d3b13
   RNShare: 81b8cfb58b1460c4a197d5379934bdf70980c124
-  RNSpeech: 1a90c6d3e9251c0c88bd134b886626c72836ddfb
+  RNSpeech: c3070d1626bad3163f1ee4190e65929be73c4f61
   RNSVG: 82979f324e1cbf99f558a04e66f574a568ed54c0
   RNVectorIcons: e355dd0998d6b9020e560922a66614eb9636501b
   RNWorklets: ab618bf7d1c7fd2cb793b9f0f39c3e29274b3ebf
