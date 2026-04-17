@@ -337,8 +337,14 @@ export class TTSStore {
       }
     } catch (err) {
       console.warn('[TTSStore] play failed:', err);
+    } finally {
       runInAction(() => {
-        this.playbackState = {mode: 'idle'};
+        if (
+          this.playbackState.mode === 'playing' &&
+          this.playbackState.messageId === messageId
+        ) {
+          this.playbackState = {mode: 'idle'};
+        }
       });
     }
   }

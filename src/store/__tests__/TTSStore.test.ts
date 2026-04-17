@@ -223,10 +223,8 @@ describe('TTSStore', () => {
       await store.play('msg-1', 'hello');
 
       expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
-      expect(store.playbackState).toEqual({
-        mode: 'playing',
-        messageId: 'msg-1',
-      });
+      // After play resolves, state resets to idle.
+      expect(store.playbackState).toEqual({mode: 'idle'});
     });
 
     it('stops previous utterance before starting a new one (play(B) while A playing)', async () => {
@@ -241,10 +239,8 @@ describe('TTSStore', () => {
 
       expect(mockSystemStop).toHaveBeenCalledTimes(1);
       expect(mockSystemPlay).toHaveBeenCalledWith('second', SYSTEM_VOICE);
-      expect(store.playbackState).toEqual({
-        mode: 'playing',
-        messageId: 'msg-B',
-      });
+      // After play resolves, state resets to idle.
+      expect(store.playbackState).toEqual({mode: 'idle'});
     });
 
     it('no-ops when isTTSAvailable is false', async () => {
