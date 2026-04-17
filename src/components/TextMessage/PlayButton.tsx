@@ -58,12 +58,12 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
     playbackState.messageId === message.id;
 
   const handlePress = () => {
-    if (ttsStore.currentVoice == null) {
-      ttsStore.openSetupSheet();
-      return;
-    }
     if (isThisPlaying) {
       ttsStore.stop().catch(() => {});
+      return;
+    }
+    if (ttsStore.currentVoice == null) {
+      ttsStore.openSetupSheet();
       return;
     }
     const hadReasoning =

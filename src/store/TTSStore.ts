@@ -548,9 +548,15 @@ export class TTSStore {
           this.setDownloadProgress(id, progress);
         });
       });
+      // Auto-select the first voice when no voice is set yet — so play
+      // and auto-speak work immediately after the first engine install.
+      const voices = await engine.getVoices();
       runInAction(() => {
         this.setDownloadState(id, 'ready');
         this.setDownloadProgress(id, 1);
+        if (this.currentVoice == null && voices.length > 0) {
+          this.currentVoice = voices[0]!;
+        }
       });
     } catch (err) {
       console.warn(`[TTSStore] ${id} download failed:`, err);
