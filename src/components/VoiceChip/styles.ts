@@ -1,31 +1,41 @@
 import {StyleSheet} from 'react-native';
 
-// Primary (speaker) hit target ≥44pt. Secondary (gear/chevron) can be
-// smaller — it's a subordinate option on the same compact control.
-const MIN_TAP = 44;
-const SECONDARY_TAP = 28;
+import {Theme} from '../../utils/types';
 
-export const createStyles = () =>
+// Split-pill: speaker half (toggle auto-speak / stop playback) + hairline
+// divider + chevron half (open setup sheet). Collapses to a dimmed icon-only
+// state when auto-speak is OFF so it doesn't compete visually with send.
+export const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    // Compound pill: speaker + small secondary, grouped as one unit near send.
-    container: {
+    pillContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      height: MIN_TAP,
-      paddingRight: 4,
-      borderRadius: MIN_TAP / 2,
+      height: 32,
+      borderRadius: 16,
+      overflow: 'hidden',
     },
-    speakerHalf: {
-      width: MIN_TAP,
-      height: MIN_TAP,
+    pillSpeakerHalf: {
+      width: 38,
+      height: 32,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    secondaryHalf: {
-      width: SECONDARY_TAP,
-      height: SECONDARY_TAP,
+    pillRightSide: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 32,
+      overflow: 'hidden',
+    },
+    pillDivider: {
+      width: 1,
+      height: 18,
+      backgroundColor: theme.colors.outline,
+      opacity: 0.35,
+    },
+    pillSecondaryHalf: {
+      width: 26,
+      height: 32,
       alignItems: 'center',
       justifyContent: 'center',
-      marginLeft: -4,
     },
   });

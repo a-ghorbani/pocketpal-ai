@@ -125,7 +125,9 @@ export class SupertonicEngine implements Engine {
         return;
       }
       const sum = corePerFile.reduce((a, b) => a + b, 0);
-      onProgress(Math.min(1, (sum / SUPERTONIC_MODEL_FILES.length) * corePhaseWeight));
+      onProgress(
+        Math.min(1, (sum / SUPERTONIC_MODEL_FILES.length) * corePhaseWeight),
+      );
     };
 
     try {

@@ -1,5 +1,5 @@
-import React, {useContext} from 'react';
-import {Pressable, View} from 'react-native';
+import React, {useContext, useEffect, useRef} from 'react';
+import {Animated, Pressable, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
@@ -7,38 +7,34 @@ import {ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {
   ChevronDownIcon,
-  SettingsIcon,
   StopIcon,
-  VolumeOffIcon,
   VolumeOnIcon,
+  VolumeMinIcon,
 } from '../../assets/icons';
 
 import {createStyles} from './styles';
 
-// Flip this to compare variants on device.
-// 'gear'     → small ⚙ as secondary (opens setup sheet)
-// 'chevron'  → small ▾ as secondary (opens setup sheet, reads as "more options")
-const SECONDARY_VARIANT: 'gear' | 'chevron' = 'chevron';
+const EXPAND_DURATION_MS = 220;
+// Collapsed width = speaker half only; expanded adds divider (1) + chevron (26).
+const RIGHT_SIDE_WIDTH = 27;
 
 const pickSpeakerIcon = (autoSpeakEnabled: boolean, isPlaying: boolean) => {
   if (isPlaying) {
     return StopIcon;
   }
-  return autoSpeakEnabled ? VolumeOnIcon : VolumeOffIcon;
+  return autoSpeakEnabled ? VolumeOnIcon : VolumeMinIcon;
 };
 
 /**
- * Compact voice control. Two halves in one pill, sized with hierarchy:
- *  - Primary (≥44pt) speaker — toggles auto-speak
- *  - Secondary (28pt) — opens setup sheet (gear or chevron variant)
- *
- * First-use (no voice yet): both halves collapse to "open setup sheet" so
- * the user never hits a dead state. Hidden entirely on low-memory devices.
+ * Compact voice control. Collapses to a dimmed speaker icon when auto-speak
+ * is OFF (quietly present, doesn't compete with send). Expands to a full
+ * split-pill — speaker + divider + chevron — when active, playing, or when
+ * setup is still needed. Hidden entirely when TTS is unavailable.
  */
 export const VoiceChip: React.FC = observer(() => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
-  const styles = createStyles();
+  const styles = createStyles(theme);
 
   const isAvailable = ttsStore.isTTSAvailable;
   const currentVoice = ttsStore.currentVoice;
@@ -47,11 +43,24 @@ export const VoiceChip: React.FC = observer(() => {
   const isPlaying =
     playbackState.mode === 'playing' || playbackState.mode === 'streaming';
 
+  const hasVoice = currentVoice != null;
+  // Expand when the user needs the whole control: active, playing, or
+  // hasn't picked a voice yet (chevron is the only way into setup).
+  const shouldExpand = !hasVoice || autoSpeakEnabled || isPlaying;
+
+  const progress = useRef(new Animated.Value(shouldExpand ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: shouldExpand ? 1 : 0,
+      duration: EXPAND_DURATION_MS,
+      useNativeDriver: false,
+    }).start();
+  }, [shouldExpand, progress]);
+
   if (!isAvailable) {
     return null;
   }
-
-  const hasVoice = currentVoice != null;
 
   const handleSpeakerPress = () => {
     if (!hasVoice) {
@@ -69,20 +78,36 @@ export const VoiceChip: React.FC = observer(() => {
     ttsStore.openSetupSheet();
   };
 
-  const SpeakerIcon = pickSpeakerIcon(autoSpeakEnabled, isPlaying);
-  const speakerColor =
-    hasVoice && autoSpeakEnabled
-      ? theme.colors.primary
-      : theme.colors.onSurfaceVariant;
+  const CurrentSpeakerIcon = pickSpeakerIcon(autoSpeakEnabled, isPlaying);
+  const speakerIconColor = isPlaying
+    ? theme.colors.primary
+    : theme.colors.onSurfaceVariant;
 
-  const SecondaryIcon =
-    SECONDARY_VARIANT === 'chevron' ? ChevronDownIcon : SettingsIcon;
-  const secondarySize = SECONDARY_VARIANT === 'chevron' ? 16 : 14;
+  const containerAnimStyle = {
+    backgroundColor: progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(0,0,0,0)', theme.colors.surfaceVariant],
+    }),
+  };
+  // Icon goes from 50% (dimmed / "off") to 100% (live) as the pill opens.
+  const iconOpacity = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 1],
+  });
+  const rightSideStyle = {
+    width: progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, RIGHT_SIDE_WIDTH],
+    }),
+    opacity: progress,
+  };
 
   return (
-    <View style={styles.container} testID="voicechip">
+    <Animated.View
+      style={[styles.pillContainer, containerAnimStyle]}
+      testID="voicechip">
       <Pressable
-        style={styles.speakerHalf}
+        style={styles.pillSpeakerHalf}
         onPress={handleSpeakerPress}
         accessibilityRole="button"
         accessibilityLabel={
@@ -92,20 +117,29 @@ export const VoiceChip: React.FC = observer(() => {
         }
         accessibilityState={hasVoice ? {selected: autoSpeakEnabled} : undefined}
         testID="voicechip-speaker">
-        <SpeakerIcon width={20} height={20} stroke={speakerColor} />
+        <Animated.View style={{opacity: iconOpacity}}>
+          <CurrentSpeakerIcon
+            width={18}
+            height={18}
+            stroke={speakerIconColor}
+          />
+        </Animated.View>
       </Pressable>
-      <Pressable
-        style={styles.secondaryHalf}
-        onPress={handleSecondaryPress}
-        accessibilityRole="button"
-        accessibilityLabel={l10n.voiceAndSpeech.openSettingsLabel}
-        testID="voicechip-secondary">
-        <SecondaryIcon
-          width={secondarySize}
-          height={secondarySize}
-          stroke={theme.colors.onSurfaceVariant}
-        />
-      </Pressable>
-    </View>
+      <Animated.View style={[styles.pillRightSide, rightSideStyle]}>
+        <View style={styles.pillDivider} />
+        <Pressable
+          style={styles.pillSecondaryHalf}
+          onPress={handleSecondaryPress}
+          accessibilityRole="button"
+          accessibilityLabel={l10n.voiceAndSpeech.openSettingsLabel}
+          testID="voicechip-secondary">
+          <ChevronDownIcon
+            width={14}
+            height={14}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        </Pressable>
+      </Animated.View>
+    </Animated.View>
   );
 });
