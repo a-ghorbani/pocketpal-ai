@@ -6,7 +6,7 @@ import {useTheme} from '../../hooks';
 import {modelStore, ttsStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {assistant} from '../../utils/chat';
-import {StopIcon, VolumeOnIcon} from '../../assets/icons';
+import {PlayIcon, StopIcon} from '../../assets/icons';
 import type {MessageType} from '../../utils/types';
 
 const countWords = (text: string): number => {
@@ -91,7 +91,7 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
           stroke={theme.colors.onSurfaceVariant}
         />
       ) : (
-        <VolumeOnIcon
+        <PlayIcon
           width={iconSize}
           height={iconSize}
           stroke={theme.colors.onSurfaceVariant}
