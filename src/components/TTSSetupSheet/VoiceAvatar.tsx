@@ -13,8 +13,8 @@ const ENGINE_STOPS: Record<EngineId, [string, string, string]> = {
 const hash = (s: string): number => {
   let h = 0;
   for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s.charCodeAt(i);
-    h |= 0;
+    h = (h << 5) - h + s.charCodeAt(i); // eslint-disable-line no-bitwise
+    h |= 0; // eslint-disable-line no-bitwise
   }
   return Math.abs(h);
 };
@@ -34,8 +34,8 @@ export const VoiceAvatar: React.FC<VoiceAvatarProps> = ({voice, size = 40}) => {
 
   const seed = hash(voice.id);
   const cx = 30 + (seed % 40);
-  const cy = 30 + ((seed >> 3) % 40);
-  const r = 70 + ((seed >> 6) % 20);
+  const cy = 30 + ((seed >> 3) % 40); // eslint-disable-line no-bitwise
+  const r = 70 + ((seed >> 6) % 20); // eslint-disable-line no-bitwise
 
   const gradId = `g-${voice.engine}-${voice.id}`;
 
