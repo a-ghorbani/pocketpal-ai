@@ -117,15 +117,15 @@ export class SupertonicEngine implements Engine {
     await RNFS.mkdir(parentDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
 
-    // Per-file progress is in bytes; weight each file equally by summing
-    // the fractional per-file progress and dividing by file count.
-    const perFileProgress = new Array(SUPERTONIC_MODEL_FILES.length).fill(0);
-    const reportOverall = () => {
+    // Phase 1: core ONNX model files — all-or-nothing.
+    const corePhaseWeight = 0.7;
+    const corePerFile = new Array(SUPERTONIC_MODEL_FILES.length).fill(0);
+    const reportCore = () => {
       if (!onProgress) {
         return;
       }
-      const sum = perFileProgress.reduce((a, b) => a + b, 0);
-      onProgress(Math.min(1, sum / SUPERTONIC_MODEL_FILES.length));
+      const sum = corePerFile.reduce((a, b) => a + b, 0);
+      onProgress(Math.min(1, (sum / SUPERTONIC_MODEL_FILES.length) * corePhaseWeight));
     };
 
     try {
@@ -141,8 +141,8 @@ export class SupertonicEngine implements Engine {
           progressInterval: 500,
           progress: res => {
             const contentLength = res.contentLength || 1;
-            perFileProgress[i] = Math.min(1, res.bytesWritten / contentLength);
-            reportOverall();
+            corePerFile[i] = Math.min(1, res.bytesWritten / contentLength);
+            reportCore();
           },
         }).promise;
 
@@ -151,14 +151,53 @@ export class SupertonicEngine implements Engine {
             `Failed to download ${file.name}: HTTP ${result.statusCode}`,
           );
         }
-        perFileProgress[i] = 1;
-        reportOverall();
+        corePerFile[i] = 1;
+        reportCore();
       }
 
-      // Synthesize the local voices manifest so the fork's `StyleLoader`
-      // can fetch per-voice style embeddings on first synthesis.
+      // Phase 2: per-voice style JSON files — best-effort; partial OK.
+      // Without these the StyleLoader would fetch them lazily on first
+      // play, causing a confusing delay after the user picks a voice.
+      const voicePhaseBase = corePhaseWeight;
+      const voicePhaseWeight = 1 - corePhaseWeight;
+      let voicesDone = 0;
+      for (const voice of SUPERTONIC_VOICES) {
+        const target = this.getFilePath(`${voice.id}.json`);
+        try {
+          const result = await RNFS.downloadFile({
+            fromUrl: `${SUPERTONIC_VOICES_BASE_URL}/${voice.id}.json`,
+            toFile: target,
+            background: false,
+            discretionary: false,
+            cacheable: false,
+            progressInterval: 1000,
+          }).promise;
+          if (result.statusCode !== 200) {
+            console.warn(
+              `[SupertonicEngine] voice ${voice.id} download failed: HTTP ${result.statusCode}`,
+            );
+          }
+        } catch (voiceErr) {
+          console.warn(
+            `[SupertonicEngine] voice ${voice.id} download failed:`,
+            voiceErr,
+          );
+        }
+        voicesDone++;
+        if (onProgress) {
+          onProgress(
+            Math.min(
+              1,
+              voicePhaseBase +
+                (voicesDone / SUPERTONIC_VOICES.length) * voicePhaseWeight,
+            ),
+          );
+        }
+      }
+
+      // Manifest WITHOUT baseUrl — StyleLoader resolves voices from the
+      // manifest directory (i.e. the model dir where we just saved them).
       const manifest = {
-        baseUrl: SUPERTONIC_VOICES_BASE_URL,
         voices: SUPERTONIC_VOICES.map(v => v.id),
       };
       await RNFS.writeFile(
@@ -170,8 +209,7 @@ export class SupertonicEngine implements Engine {
         onProgress(1);
       }
     } catch (err) {
-      // Partial cleanup — next retry starts from scratch. The fork
-      // example uses the same strategy.
+      // Partial cleanup — next retry starts from scratch.
       try {
         if (await RNFS.exists(modelDir)) {
           await RNFS.unlink(modelDir);

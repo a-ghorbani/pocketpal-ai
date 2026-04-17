@@ -98,13 +98,14 @@ describe('SupertonicEngine (v1.2 real)', () => {
       jobId: 1,
     });
 
-    it('downloads all 5 files and writes manifest on iOS', async () => {
+    it('downloads core files + voice styles and writes manifest on iOS', async () => {
       (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
 
       await new SupertonicEngine().downloadModel();
 
+      // 5 core ONNX files + 10 voice style JSON files
       expect(RNFS.downloadFile).toHaveBeenCalledTimes(
-        SUPERTONIC_MODEL_FILES.length,
+        SUPERTONIC_MODEL_FILES.length + SUPERTONIC_VOICES.length,
       );
       for (const file of SUPERTONIC_MODEL_FILES) {
         expect(RNFS.downloadFile).toHaveBeenCalledWith(
