@@ -230,8 +230,8 @@ export class KokoroEngine implements Engine {
     await ttsRuntime.acquire(this, () => Speech.speak(text, voice.id));
   }
 
-  playStreaming(voice: Voice): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id);
+  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
   }
 
   async stop(): Promise<void> {

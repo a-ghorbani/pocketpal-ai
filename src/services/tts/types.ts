@@ -75,8 +75,11 @@ export interface Engine {
    * Streaming path — returns a handle the store feeds tokens into as the
    * LLM generates them. Lets the first sentence start playing while the
    * tail of the response is still being synthesized.
+   *
+   * `waitFor` delays the first synthesis until the promise resolves,
+   * preventing a prior `Speech.stop()` from killing the new stream.
    */
-  playStreaming(voice: Voice): StreamingHandle;
+  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle;
   /** Stop any in-flight playback. Safe to call when idle. */
   stop(): Promise<void>;
 }

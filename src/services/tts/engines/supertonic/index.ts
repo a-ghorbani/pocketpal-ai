@@ -271,12 +271,18 @@ export class SupertonicEngine implements Engine {
 
   playStreaming(
     voice: Voice,
+    waitFor?: Promise<void>,
     opts?: {language?: SupertonicLanguage; inferenceSteps?: SupertonicSteps},
   ): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id, {
-      language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
-      ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
-    });
+    return createEngineStreamingHandle(
+      this,
+      voice.id,
+      {
+        language: opts?.language ?? DEFAULT_SUPERTONIC_LANGUAGE,
+        ...(opts?.inferenceSteps ? {inferenceSteps: opts.inferenceSteps} : {}),
+      },
+      waitFor,
+    );
   }
 
   async stop(): Promise<void> {

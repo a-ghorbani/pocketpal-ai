@@ -263,7 +263,7 @@ describe('SupertonicEngine (v1.2 real)', () => {
     });
 
     it('forwards language and inferenceSteps options', () => {
-      new SupertonicEngine().playStreaming(anyVoice, {
+      new SupertonicEngine().playStreaming(anyVoice, undefined, {
         language: 'en',
         inferenceSteps: 5,
       });

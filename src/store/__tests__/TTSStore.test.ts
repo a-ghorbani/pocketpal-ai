@@ -40,8 +40,6 @@ const mockKittenDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKittenDeleteModel = jest.fn().mockResolvedValue(undefined);
 const mockKittenPlay = jest.fn().mockResolvedValue(undefined);
 const mockKittenStop = jest.fn().mockResolvedValue(undefined);
-const mockConfigureAudioSession = jest.fn().mockResolvedValue(undefined);
-
 // Per-streaming-session handle factories — we build a fresh spy-backed
 // handle for each `playStreaming()` call and expose the most recent one
 // on `lastSystemHandle` / `lastSupertonicHandle` so tests can assert.
@@ -81,7 +79,6 @@ jest.mock('../../services/tts', () => {
   const actual = jest.requireActual('../../services/tts');
   return {
     ...actual,
-    configureAudioSession: () => mockConfigureAudioSession(),
     getEngine: (id: 'system' | 'supertonic' | 'kokoro' | 'kitten') => {
       if (id === 'system') {
         return {
@@ -171,25 +168,23 @@ describe('TTSStore', () => {
   });
 
   describe('memory gate', () => {
-    it('sets isTTSAvailable=false when total memory < 6 GiB and registers no listeners', async () => {
-      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(4 * GIB);
+    it('sets isTTSAvailable=false when total memory < 4 GiB and registers no listeners', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
 
       const store = new TTSStore();
       await store.init();
 
       expect(store.isTTSAvailable).toBe(false);
       expect(mockAddEventListener).not.toHaveBeenCalled();
-      expect(mockConfigureAudioSession).not.toHaveBeenCalled();
     });
 
-    it('sets isTTSAvailable=true when total memory >= 6 GiB and registers listeners', async () => {
+    it('sets isTTSAvailable=true when total memory >= 4 GiB and registers listeners', async () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(6 * GIB);
 
       const store = new TTSStore();
       await store.init();
 
       expect(store.isTTSAvailable).toBe(true);
-      expect(mockConfigureAudioSession).toHaveBeenCalledTimes(1);
       expect(mockAddEventListener).toHaveBeenCalledWith(
         'change',
         expect.any(Function),
@@ -310,7 +305,10 @@ describe('TTSStore', () => {
 
       store.onAssistantMessageStart('msg-1');
 
-      expect(mockSystemPlayStreaming).toHaveBeenCalledWith(SYSTEM_VOICE);
+      expect(mockSystemPlayStreaming).toHaveBeenCalledWith(
+        SYSTEM_VOICE,
+        expect.anything(),
+      );
       expect(store.playbackState.mode).toBe('streaming');
       if (store.playbackState.mode === 'streaming') {
         expect(store.playbackState.messageId).toBe('msg-1');
@@ -969,6 +967,7 @@ describe('TTSStore', () => {
 
       expect(mockSupertonicPlayStreaming).toHaveBeenCalledWith(
         SUPERTONIC_VOICE,
+        expect.anything(),
         {inferenceSteps: 10},
       );
     });

@@ -46,7 +46,6 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
-import {TTS_PREVIEW_SAMPLE, getEngine} from '../../services/tts';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -303,11 +302,9 @@ export const SettingsScreen: React.FC = observer(() => {
                     if (!voice) {
                       return;
                     }
-                    getEngine(voice.engine)
-                      .play(TTS_PREVIEW_SAMPLE, voice)
-                      .catch(() => {
-                        /* engine logs internally */
-                      });
+                    ttsStore.preview(voice).catch(() => {
+                      /* logged inside store */
+                    });
                   }}>
                   {l10n.voiceAndSpeech.previewButton}
                 </Button>

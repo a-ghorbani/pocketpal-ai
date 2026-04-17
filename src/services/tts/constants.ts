@@ -4,8 +4,8 @@
  */
 export const TTS_PREVIEW_SAMPLE = "Hello, I'm your AI assistant.";
 
-/** Minimum total RAM required to enable the TTS feature (6 GiB). */
-export const TTS_MIN_RAM_BYTES = 6 * 1024 * 1024 * 1024;
+/** Minimum total RAM required to enable the TTS feature (4 GiB). */
+export const TTS_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;
 
 /** Subdirectory (relative to app documents dir) used for Supertonic model files. */
 export const SUPERTONIC_MODEL_SUBDIR = 'tts/supertonic';

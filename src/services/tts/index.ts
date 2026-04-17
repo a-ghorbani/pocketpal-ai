@@ -12,4 +12,3 @@ export type {KittenProgressCallback} from './engines/kitten';
 export {KITTEN_VOICES} from './engines/kitten/voices';
 export {getEngine, getAllEngines} from './engineRegistry';
 export {ttsRuntime} from './runtime';
-export {configureAudioSession} from './audioSession';

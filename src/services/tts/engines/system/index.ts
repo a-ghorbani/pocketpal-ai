@@ -42,8 +42,8 @@ export class SystemEngine implements Engine {
    * handles the chaining — behavior is equivalent to the prior JS-side
    * `onFinish` loop and we inherit the library's CJK sentence handling.
    */
-  playStreaming(voice: Voice): StreamingHandle {
-    return createEngineStreamingHandle(this, voice.id);
+  playStreaming(voice: Voice, waitFor?: Promise<void>): StreamingHandle {
+    return createEngineStreamingHandle(this, voice.id, undefined, waitFor);
   }
 
   async stop(): Promise<void> {

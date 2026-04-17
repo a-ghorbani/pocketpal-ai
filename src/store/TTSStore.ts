@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
 
 import {
-  configureAudioSession,
   getEngine,
   KittenEngine,
   KokoroEngine,
@@ -149,8 +148,6 @@ export class TTSStore {
     if (!available) {
       return;
     }
-
-    await configureAudioSession();
 
     // Derive each neural engine's install state from disk in parallel.
     const neuralIds: NeuralEngineId[] = ['supertonic', 'kokoro', 'kitten'];
@@ -415,12 +412,11 @@ export class TTSStore {
     ) {
       return;
     }
-    // Stop ANY prior playback (streaming OR preview/replay) before we
-    // open a new streaming session — guarantees no overlapping audio.
-    // `stop()` flips state to idle synchronously and fires the native
-    // stop in the background; the new session's first speakNext will
-    // serialize behind the old `Speech.stop()` via `ttsRuntime`.
-    this.stop().catch(err => {
+    // Stop ANY prior playback before opening the new session. The stop
+    // promise is passed to the streaming handle so it waits for the old
+    // `Speech.stop()` to complete before starting synthesis — prevents
+    // the old stop flag from killing the new stream's first sentence.
+    const stopDone = this.stop().catch(err => {
       console.warn('[TTSStore] stop before new stream failed:', err);
     });
 
@@ -431,10 +427,10 @@ export class TTSStore {
     const engine = getEngine(voice.engine);
     const handle =
       voice.engine === 'supertonic'
-        ? (engine as SupertonicEngine).playStreaming(voice, {
+        ? (engine as SupertonicEngine).playStreaming(voice, stopDone, {
             inferenceSteps: this.supertonicSteps,
           })
-        : engine.playStreaming(voice);
+        : engine.playStreaming(voice, stopDone);
     runInAction(() => {
       this.playbackState = {mode: 'streaming', messageId, handle};
     });
