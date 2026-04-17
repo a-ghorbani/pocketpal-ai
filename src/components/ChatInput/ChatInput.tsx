@@ -591,6 +591,11 @@ export const ChatInput = observer(
                 </View>
               )}
 
+              {/* Voice chip (TTS) — always present so users can stop
+                  audio independently of text generation. Self-gates:
+                  returns null when TTS is unavailable. */}
+              <VoiceChip />
+
               {/* Send/Stop Button */}
               {isStopVisible ? (
                 <StopButton color={onSurfaceColor} onPress={onStopPress} />
@@ -617,15 +622,11 @@ export const ChatInput = observer(
                   </Text>
                 </TouchableOpacity>
               ) : (
-                <>
-                  {/* Voice chip (TTS) — renders null on low-memory devices */}
-                  <VoiceChip />
-                  {isSendButtonVisible && (
-                    <View style={{opacity: sendButtonOpacity}}>
-                      <SendButton color={onSurfaceColor} onPress={handleSend} />
-                    </View>
-                  )}
-                </>
+                isSendButtonVisible && (
+                  <View style={{opacity: sendButtonOpacity}}>
+                    <SendButton color={onSurfaceColor} onPress={handleSend} />
+                  </View>
+                )
               )}
             </View>
           </View>
