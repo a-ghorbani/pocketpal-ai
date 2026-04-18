@@ -445,7 +445,9 @@
     "orBy": "or by",
     "sponsorButton": "Become a Sponsor",
     "versionCopiedTitle": "Version copied",
-    "versionCopiedDescription": "Version information has been copied to clipboard"
+    "versionCopiedDescription": "Version information has been copied to clipboard",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
   },
   "feedback": {
     "title": "Send Feedback",
