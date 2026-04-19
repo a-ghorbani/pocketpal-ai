@@ -319,7 +319,7 @@ jobs:
           cd ios
           # List available simulators for debugging
           xcrun simctl list devices available
-          set -o pipefail && xcodebuild \
+          xcodebuild \
             -workspace PocketPal.xcworkspace \
             -scheme PocketPal \
             -configuration Release \
@@ -329,10 +329,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            2>&1 | tee ../ios-build.log | grep -E "error:|FAILED|fatal|PhaseScript" || true
+            2>&1 | tee ../ios-build.log
           EXIT_CODE=${PIPESTATUS[0]}
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "::group::Build failed — full error context"
+            echo "::error::iOS build failed (exit $EXIT_CODE)"
+            echo "::group::Error context"
             grep -B 5 -A 20 "error:" ../ios-build.log | tail -200 || tail -100 ../ios-build.log
             echo "::endgroup::"
             exit $EXIT_CODE
