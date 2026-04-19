@@ -1239,7 +1239,7 @@
     "engineChipSystem": "System",
     "stepsCount": "{{steps}} steps",
     "engineKittenTagline": "Smallest footprint. Reliable. Best on older devices.",
-    "engineKokoroTagline": "Highest quality. Slower to start.",
+    "engineKokoroTagline": "Highest quality. Slower to start. Some voices may not work on all devices.",
     "engineSupertonicTagline": "Fastest to start. Uses more RAM. May occasionally drop words.",
     "engineSystemTagline": "Built-in OS voices. Always available, zero install.",
     "engineSystemTitleIos": "iOS Voices",

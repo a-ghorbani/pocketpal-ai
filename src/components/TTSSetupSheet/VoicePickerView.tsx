@@ -475,6 +475,7 @@ export const VoicePickerView: React.FC = observer(() => {
           start={{x: 0, y: 0}}
           end={{x: 1, y: 1}}
           style={[StyleSheet.absoluteFill, styles.engineGroupGradientFill]}
+          pointerEvents="none"
         />
         <TouchableRipple
           onPress={() => toggleExpanded(engineId)}
