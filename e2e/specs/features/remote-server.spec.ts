@@ -9,7 +9,7 @@
  *   - The server must respond to GET /v1/models and POST /v1/chat/completions
  *
  * Environment variables:
- *   REMOTE_SERVER_URL     - Server URL (default: http://192.168.68.63:1234)
+ *   REMOTE_SERVER_URL     - Server URL (default: http://192.168.0.92:1234)
  *   REMOTE_SERVER_API_KEY - API key (optional)
  *   REMOTE_MODEL_HINT     - Partial model name to find in picker (optional)
  */
@@ -33,7 +33,7 @@ declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 const SERVER_CONFIG = {
-  url: process.env.REMOTE_SERVER_URL || 'http://192.168.68.63:1234',
+  url: process.env.REMOTE_SERVER_URL || 'http://192.168.0.92:1234',
   apiKey: process.env.REMOTE_SERVER_API_KEY || undefined,
 };
 

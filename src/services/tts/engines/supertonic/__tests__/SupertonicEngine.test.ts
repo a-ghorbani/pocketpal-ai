@@ -252,8 +252,9 @@ describe('SupertonicEngine (v1.2 real)', () => {
       }
     };
 
-    it('creates a lib stream with targetChars=300 and default language', () => {
+    it('creates a lib stream with targetChars=300 and default language', async () => {
       new SupertonicEngine().playStreaming(anyVoice);
+      await flush();
 
       expect(Speech.createSpeechStream).toHaveBeenCalledTimes(1);
       expect(Speech.createSpeechStream).toHaveBeenCalledWith(
@@ -262,11 +263,12 @@ describe('SupertonicEngine (v1.2 real)', () => {
       );
     });
 
-    it('forwards language and inferenceSteps options', () => {
+    it('forwards language and inferenceSteps options', async () => {
       new SupertonicEngine().playStreaming(anyVoice, undefined, {
         language: 'en',
         inferenceSteps: 5,
       });
+      await flush();
 
       expect(Speech.createSpeechStream).toHaveBeenCalledWith(
         anyVoice.id,

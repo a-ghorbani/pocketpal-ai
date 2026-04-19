@@ -111,11 +111,15 @@ export const VoiceChip: React.FC = observer(() => {
         onPress={handleSpeakerPress}
         accessibilityRole="button"
         accessibilityLabel={
-          hasVoice
-            ? l10n.voiceAndSpeech.toggleAutoSpeakLabel
-            : l10n.voiceAndSpeech.openSettingsLabel
+          isPlaying
+            ? l10n.voiceAndSpeech.stopMessageLabel
+            : hasVoice
+              ? l10n.voiceAndSpeech.toggleAutoSpeakLabel
+              : l10n.voiceAndSpeech.openSettingsLabel
         }
-        accessibilityState={hasVoice ? {selected: autoSpeakEnabled} : undefined}
+        accessibilityState={
+          hasVoice && !isPlaying ? {selected: autoSpeakEnabled} : undefined
+        }
         testID="voicechip-speaker">
         <Animated.View style={{opacity: iconOpacity}}>
           <CurrentSpeakerIcon

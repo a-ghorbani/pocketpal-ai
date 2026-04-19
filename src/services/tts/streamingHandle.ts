@@ -35,10 +35,11 @@ export function createEngineStreamingHandle(
   options?: Omit<SpeechStreamOptions, 'targetChars' | 'onError'>,
   waitFor?: Promise<void>,
 ): StreamingHandle {
-  const stream = Speech.createSpeechStream(voiceId, {
-    targetChars: STREAM_TARGET_CHARS,
-    ...options,
-  });
+  // The stream is created INSIDE `acquire` — after `loadInto()` has swapped
+  // `Speech.currentEngine` to `engine`. Creating it earlier would bind the
+  // stream's internal engine-factory to whichever engine was previously
+  // loaded, causing synthesis on the wrong engine.
+  let stream: ReturnType<typeof Speech.createSpeechStream> | null = null;
 
   let acquired = false;
   let dead = false;
@@ -48,18 +49,27 @@ export function createEngineStreamingHandle(
     .catch(() => {
       // Swallow stop errors — we still want to start the new stream.
     })
-    .then(() =>
-      ttsRuntime.acquire(engine, async () => {
-        acquired = true;
+    .then(() => {
+      // Short-circuit: if cancel() was called while waiting, skip the
+      // acquire entirely — avoids loading a 200+ MB engine for nothing.
+      if (dead) {
+        return;
+      }
+      return ttsRuntime.acquire(engine, async () => {
         if (dead) {
           return;
         }
+        stream = Speech.createSpeechStream(voiceId, {
+          targetChars: STREAM_TARGET_CHARS,
+          ...options,
+        });
+        acquired = true;
         for (const chunk of pending) {
           stream.append(chunk);
         }
         pending.length = 0;
-      }),
-    )
+      });
+    })
     .catch(err => {
       console.warn(`[${engine.id}] streaming acquire failed:`, err);
       throw err;
@@ -70,7 +80,7 @@ export function createEngineStreamingHandle(
       if (dead) {
         return;
       }
-      if (acquired) {
+      if (acquired && stream) {
         stream.append(chunk);
       } else {
         pending.push(chunk);
@@ -81,7 +91,7 @@ export function createEngineStreamingHandle(
         return;
       }
       await ready;
-      await stream.finalize();
+      await stream?.finalize();
     },
     async cancel() {
       if (dead) {
@@ -89,7 +99,9 @@ export function createEngineStreamingHandle(
       }
       dead = true;
       pending.length = 0;
-      await stream.cancel();
+      if (stream) {
+        await stream.cancel();
+      }
     },
   };
 }

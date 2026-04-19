@@ -441,6 +441,12 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
 
+      // Stop any in-flight TTS — the completion errored, so buffered
+      // audio should not keep playing.
+      ttsStore.stop().catch(ttsErr => {
+        console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
+      });
+
       // For remote models: preserve partial message if tokens were already streamed
       // Instead of deleting the message, keep what we have and show error toast
       if (currentMessageInfo.current) {
@@ -517,6 +523,12 @@ export const useChatSession = (
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);
+
+    // Stop any in-flight TTS so buffered audio doesn't keep playing
+    // after the user tapped Stop.
+    ttsStore.stop().catch(err => {
+      console.warn('[useChatSession] TTS stop on user-stop failed:', err);
+    });
 
     // Deactivate keep awake when stopping completion
     try {

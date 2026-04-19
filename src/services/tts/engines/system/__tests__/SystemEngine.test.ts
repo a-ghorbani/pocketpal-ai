@@ -31,8 +31,9 @@ describe('SystemEngine streaming', () => {
     ttsRuntime._resetForTests();
   });
 
-  it('playStreaming creates a lib stream with the voice id and targetChars=300', () => {
+  it('playStreaming creates a lib stream with the voice id and targetChars=300', async () => {
     new SystemEngine().playStreaming(VOICE);
+    await flush();
 
     expect(Speech.createSpeechStream).toHaveBeenCalledTimes(1);
     expect(Speech.createSpeechStream).toHaveBeenCalledWith(
@@ -65,18 +66,19 @@ describe('SystemEngine streaming', () => {
 
   it('finalize forwards to the lib stream', async () => {
     const handle = new SystemEngine().playStreaming(VOICE);
-    const [stream] = __getCreatedStreams();
 
     handle.appendText('Hi.');
     await handle.finalize();
 
+    const [stream] = __getCreatedStreams();
     expect(stream!.finalize).toHaveBeenCalledTimes(1);
   });
 
   it('cancel forwards to the lib stream and blocks further appends', async () => {
     const handle = new SystemEngine().playStreaming(VOICE);
-    const [stream] = __getCreatedStreams();
+    await flush();
 
+    const [stream] = __getCreatedStreams();
     await handle.cancel();
     expect(stream!.cancel).toHaveBeenCalledTimes(1);
 
@@ -87,14 +89,14 @@ describe('SystemEngine streaming', () => {
 
   it('cancel before acquire completes drops pending appends', async () => {
     const handle = new SystemEngine().playStreaming(VOICE);
-    const [stream] = __getCreatedStreams();
 
     handle.appendText('Buffered before engine is ready');
     await handle.cancel();
     await flush();
 
-    expect(stream!.cancel).toHaveBeenCalledTimes(1);
-    expect(stream!.append).not.toHaveBeenCalled();
+    // Stream was never created because cancel() fired before acquire
+    const streams = __getCreatedStreams();
+    expect(streams).toHaveLength(0);
   });
 
   it('cancel() is safe with no prior appends', async () => {

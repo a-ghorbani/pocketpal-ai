@@ -32,6 +32,9 @@ import {
   KITTEN_VOICES,
   KOKORO_VOICES,
   SUPERTONIC_VOICES,
+  SUPERTONIC_MODEL_ESTIMATED_BYTES,
+  KOKORO_MODEL_ESTIMATED_BYTES,
+  KITTEN_MODEL_ESTIMATED_BYTES,
   SystemEngine,
   getEngine,
 } from '../../services/tts';
@@ -161,6 +164,21 @@ const triggerDelete = (engineId: NeuralEngineId) => {
     case 'supertonic':
       return ttsStore.deleteSupertonic();
   }
+};
+
+const NEURAL_ESTIMATED_BYTES: Record<NeuralEngineId, number> = {
+  supertonic: SUPERTONIC_MODEL_ESTIMATED_BYTES,
+  kokoro: KOKORO_MODEL_ESTIMATED_BYTES,
+  kitten: KITTEN_MODEL_ESTIMATED_BYTES,
+};
+
+/** True when we know there isn't enough disk space (with 20% buffer). */
+const isLowDiskFor = (engineId: NeuralEngineId): boolean => {
+  const free = ttsStore.freeDiskBytes;
+  if (free == null) {
+    return false; // unknown — allow attempt
+  }
+  return free < NEURAL_ESTIMATED_BYTES[engineId] * 1.2;
 };
 
 const isEngineReady = (engineId: EngineId): boolean => {
@@ -377,14 +395,30 @@ export const VoicePickerView: React.FC = observer(() => {
         </View>
       );
     }
+
+    const lowDisk = isLowDiskFor(engineId);
+    const freeMb =
+      ttsStore.freeDiskBytes != null
+        ? Math.floor(ttsStore.freeDiskBytes / (1024 * 1024))
+        : null;
+
     return (
       <View style={styles.engineGroupBody}>
         <Text style={styles.engineGroupTagline}>
           {engineTagline(engineId, l10n)}
         </Text>
+        {lowDisk && freeMb != null ? (
+          <Text style={styles.engineGroupErrorText}>
+            {t(l10n.voiceAndSpeech.insufficientStorage, {
+              requiredMb: meta.sizeMb,
+              freeMb,
+            })}
+          </Text>
+        ) : null}
         <Button
           mode="contained"
           onPress={handleInstall}
+          disabled={lowDisk}
           buttonColor={meta.accent}
           textColor="#FFFFFF"
           style={styles.engineGroupCta}

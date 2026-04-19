@@ -12,6 +12,9 @@ import {
   SupertonicEngine,
   TTS_MIN_RAM_BYTES,
   TTS_PREVIEW_SAMPLE,
+  SUPERTONIC_MODEL_ESTIMATED_BYTES,
+  KOKORO_MODEL_ESTIMATED_BYTES,
+  KITTEN_MODEL_ESTIMATED_BYTES,
   ttsRuntime,
 } from '../services/tts';
 import type {StreamingHandle, SupertonicSteps, Voice} from '../services/tts';
@@ -59,7 +62,7 @@ const previewMessageId = (voice: Voice): string =>
 /**
  * Store that coordinates text-to-speech playback.
  *
- * Memory gate: if `DeviceInfo.getTotalMemory()` reports < 6 GiB once at init,
+ * Memory gate: if `DeviceInfo.getTotalMemory()` reports < 4 GiB once at init,
  * the store is inert (no listeners, no reactions) for the rest of the session.
  * The gate is deliberately never re-checked — RAM doesn't change at runtime.
  *
@@ -89,6 +92,8 @@ export class TTSStore {
 
   // UI state
   isSetupSheetOpen: boolean = false;
+  /** Free disk bytes, refreshed each time the setup sheet opens. */
+  freeDiskBytes: number | null = null;
 
   // Per-engine model lifecycle — derived state, NOT persisted.
   supertonicDownloadState: NeuralDownloadState = 'not_installed';
@@ -165,6 +170,17 @@ export class TTSStore {
       for (const {id, installed} of results) {
         this.setDownloadState(id, installed ? 'ready' : 'not_installed');
       }
+      // Reconcile persisted currentVoice: if the engine's model files
+      // were deleted (app restore, manual cleanup), clear the voice so
+      // play/stream paths don't crash trying to init a missing engine.
+      if (
+        this.currentVoice != null &&
+        this.currentVoice.engine !== 'system' &&
+        this.getDownloadState(this.currentVoice.engine as NeuralEngineId) !==
+          'ready'
+      ) {
+        this.currentVoice = null;
+      }
     });
 
     this.appStateSubscription = AppState.addEventListener(
@@ -181,10 +197,13 @@ export class TTSStore {
   }
 
   private handleAppStateChange = (nextAppState: AppStateStatus) => {
-    if (nextAppState === 'background' || nextAppState === 'inactive') {
+    if (nextAppState === 'background') {
       // Stop in-flight audio AND release the active engine's native
       // resources (200-450 MB depending on engine). Re-init is lazy on
       // the next play after foreground.
+      // Only react to 'background' — 'inactive' fires for transient
+      // interruptions (Control Center, incoming call sheet, notification
+      // tap) that shouldn't tear down a 200+ MB engine.
       this.stop()
         .then(() => ttsRuntime.release())
         .catch(err => {
@@ -217,6 +236,20 @@ export class TTSStore {
 
   openSetupSheet() {
     this.isSetupSheetOpen = true;
+    this.refreshFreeDisk();
+  }
+
+  /** Re-read free disk space. Called on sheet open so the UI can
+   *  disable Install buttons for engines that won't fit. */
+  async refreshFreeDisk() {
+    try {
+      const bytes = await DeviceInfo.getFreeDiskStorage('important');
+      runInAction(() => {
+        this.freeDiskBytes = bytes;
+      });
+    } catch (err) {
+      console.warn('[TTSStore] refreshFreeDisk failed:', err);
+    }
   }
 
   closeSetupSheet() {
@@ -504,10 +537,12 @@ export class TTSStore {
               this.playbackState.messageId === messageId
             ) {
               this.playbackState = {mode: 'idle'};
+              // Only reset stripper if this message still owns it —
+              // a new message may have already set its own stripper.
+              this.streamStripper = null;
+              this.streamPlaceholderEmitted = false;
             }
           });
-          this.streamStripper = null;
-          this.streamPlaceholderEmitted = false;
         });
       return;
     }
@@ -528,15 +563,43 @@ export class TTSStore {
 
   // --- Per-engine download actions --------------------------------------
 
+  private static readonly ENGINE_ESTIMATED_BYTES: Record<
+    NeuralEngineId,
+    number
+  > = {
+    supertonic: SUPERTONIC_MODEL_ESTIMATED_BYTES,
+    kokoro: KOKORO_MODEL_ESTIMATED_BYTES,
+    kitten: KITTEN_MODEL_ESTIMATED_BYTES,
+  };
+
   private async downloadNeuralEngine(id: NeuralEngineId): Promise<void> {
     if (this.getDownloadState(id) === 'downloading') {
       return;
     }
+    // Set downloading immediately so concurrent calls are blocked.
     runInAction(() => {
       this.setDownloadState(id, 'downloading');
       this.setDownloadProgress(id, 0);
       this.setDownloadError(id, null);
     });
+
+    // Safety-net disk-space check. The UI already disables the Install
+    // button when `freeDiskBytes` is too low, so this is a last resort
+    // guard for race conditions (space changed between sheet open and tap).
+    const estimatedBytes = TTSStore.ENGINE_ESTIMATED_BYTES[id];
+    const requiredBytes = Math.ceil(estimatedBytes * 1.2);
+    try {
+      const freeBytes = await DeviceInfo.getFreeDiskStorage('important');
+      if (freeBytes < requiredBytes) {
+        runInAction(() => {
+          this.setDownloadState(id, 'not_installed');
+          this.freeDiskBytes = freeBytes;
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn('[TTSStore] disk-space preflight failed:', err);
+    }
 
     const engine = getEngine(id) as
       | SupertonicEngine

@@ -197,9 +197,11 @@ export class SupertonicEngine implements Engine {
         }
       }
 
-      // Manifest WITHOUT baseUrl — StyleLoader resolves voices from the
-      // manifest directory (i.e. the model dir where we just saved them).
+      // Manifest WITH baseUrl — if any voice files failed to download
+      // (flaky network), the fork's StyleLoader can lazy-fetch them from
+      // this URL on first play. Matches Kokoro's pattern.
       const manifest = {
+        baseUrl: SUPERTONIC_VOICES_BASE_URL,
         voices: SUPERTONIC_VOICES.map(v => v.id),
       };
       await RNFS.writeFile(

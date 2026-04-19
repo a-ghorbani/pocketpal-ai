@@ -1257,6 +1257,7 @@
     "engineInstallCta": "Install · {{sizeMb}} MB",
     "engineDownloadingLabel": "Downloading…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
     "engineRetryCta": "Try again",
-    "voicesEmptyState": "No voices found."
+    "voicesEmptyState": "No voices found.",
+    "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   }
 }
