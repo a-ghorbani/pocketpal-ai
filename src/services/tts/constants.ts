@@ -61,12 +61,14 @@ export const SUPERTONIC_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 265 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
-// Kokoro (Q8 variant)
+// Kokoro (FP16 variant)
 // ---------------------------------------------------------------------------
 
 /**
  * HuggingFace base URL for Kokoro 82M v1.0 ONNX community port.
- * Q8 variant is the smallest high-quality option (~86 MB).
+ * FP16 variant — faster inference than Q8 and works reliably on Android
+ * (Q8 produces garbage on some Android ONNX Runtime builds). ~163 MB on
+ * disk, ~510 MB peak RAM.
  */
 export const KOKORO_MODEL_BASE_URL =
   'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main';
@@ -79,7 +81,7 @@ export const KOKORO_VOICES_BASE_URL = `${KOKORO_MODEL_BASE_URL}/voices`;
  * the engine cannot initialize.
  */
 export const KOKORO_MODEL_FILES = [
-  {name: 'model.onnx', urlPath: 'onnx/model_q8f16.onnx'},
+  {name: 'model.onnx', urlPath: 'onnx/model_fp16.onnx'},
   {name: 'tokenizer.json', urlPath: 'tokenizer.json'},
 ] as const;
 
@@ -98,8 +100,8 @@ export const TTS_DICT_FILENAME = 'en-us.bin';
 /** Name of the Kokoro voices manifest generated locally after download. */
 export const KOKORO_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 
-/** Estimated total size of the Kokoro Q8 model bundle (~90 MB including voices). */
-export const KOKORO_MODEL_ESTIMATED_BYTES = 90 * 1024 * 1024;
+/** Estimated total size of the Kokoro FP16 model bundle (~170 MB including voices). */
+export const KOKORO_MODEL_ESTIMATED_BYTES = 170 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Kitten (nano-fp32 variant)

@@ -35,8 +35,8 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
     gradientTo: 'rgba(242, 149, 71, 0.02)',
   },
   kokoro: {
-    sizeMb: 86,
-    ramMb: 304,
+    sizeMb: 170,
+    ramMb: 510,
     voices: 28,
     accent: '#6F5CD6',
     gradientFrom: 'rgba(111, 92, 214, 0.14)',
