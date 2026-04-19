@@ -312,9 +312,6 @@ jobs:
           pod install
           cd ..
 
-      - name: Install xcpretty
-        run: gem install xcpretty
-
       - name: Build iOS Release
         run: |
           cd ios
@@ -330,4 +327,4 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            | xcpretty
+            2>&1 | tee ../ios-build.log | tail -200
