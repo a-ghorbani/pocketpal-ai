@@ -210,6 +210,8 @@ jobs:
     runs-on: macos-15  # macOS 15 with Xcode 16
     needs: [build-and-test, detect-changes]
     if: needs.detect-changes.outputs.translation_only != 'true'
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
     steps:
       - name: Check out code
         uses: actions/checkout@v3
