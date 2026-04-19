@@ -1,7 +1,7 @@
 import type {Voice} from '../../types';
 
 /**
- * Kokoro 82M v1.0 voice catalog (28 voices).
+ * Kokoro 82M v1.0 voice catalog (22 voices).
  *
  * IDs follow the `<lang><gender>_<name>` convention used by the upstream
  * repo: `a` = American English, `b` = British English, `e` = Spanish,
@@ -50,13 +50,6 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'f',
   },
   {
-    id: 'af_alloy',
-    name: 'Alloy',
-    engine: 'kokoro',
-    language: 'en',
-    gender: 'f',
-  },
-  {
     id: 'af_aoede',
     name: 'Aoede',
     engine: 'kokoro',
@@ -73,13 +66,6 @@ export const KOKORO_VOICES: Voice[] = [
   {
     id: 'af_kore',
     name: 'Kore',
-    engine: 'kokoro',
-    language: 'en',
-    gender: 'f',
-  },
-  {
-    id: 'af_nova',
-    name: 'Nova',
     engine: 'kokoro',
     language: 'en',
     gender: 'f',
@@ -142,13 +128,6 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'm',
   },
   {
-    id: 'am_puck',
-    name: 'Puck',
-    engine: 'kokoro',
-    language: 'en',
-    gender: 'm',
-  },
-  {
     id: 'am_santa',
     name: 'Santa',
     engine: 'kokoro',
@@ -171,13 +150,6 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'f',
   },
   {
-    id: 'bf_isabella',
-    name: 'Isabella',
-    engine: 'kokoro',
-    language: 'en-GB',
-    gender: 'f',
-  },
-  {
     id: 'bf_lily',
     name: 'Lily',
     engine: 'kokoro',
@@ -185,20 +157,6 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'f',
   },
   // British English — male
-  {
-    id: 'bm_daniel',
-    name: 'Daniel',
-    engine: 'kokoro',
-    language: 'en-GB',
-    gender: 'm',
-  },
-  {
-    id: 'bm_fable',
-    name: 'Fable',
-    engine: 'kokoro',
-    language: 'en-GB',
-    gender: 'm',
-  },
   {
     id: 'bm_george',
     name: 'George',

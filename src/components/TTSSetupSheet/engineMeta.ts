@@ -37,7 +37,7 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
   kokoro: {
     sizeMb: 170,
     ramMb: 510,
-    voices: 28,
+    voices: 22,
     accent: '#6F5CD6',
     gradientFrom: 'rgba(111, 92, 214, 0.14)',
     gradientTo: 'rgba(111, 92, 214, 0.02)',

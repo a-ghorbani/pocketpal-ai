@@ -2,7 +2,8 @@
  * Sample text used for the voice preview button in Setup UI (v1.1).
  * Lives here so the service and future UI share a single string.
  */
-export const TTS_PREVIEW_SAMPLE = "Hello, I'm your AI assistant.";
+export const TTS_PREVIEW_SAMPLE =
+  "Oh, hello there! I've been waiting for you to test me. I sound pretty good!";
 
 /** Minimum total RAM required to enable the TTS feature (4 GiB). */
 export const TTS_MIN_RAM_BYTES = 4 * 1024 * 1024 * 1024;

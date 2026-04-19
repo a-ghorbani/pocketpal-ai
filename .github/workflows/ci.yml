@@ -327,4 +327,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            2>&1 | tee ../ios-build.log | tail -200
+            2>&1 | tee ../ios-build.log | grep -E "error:|FAILED|fatal|PhaseScript" || true
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::group::Build failed — full error context"
+            grep -B 5 -A 20 "error:" ../ios-build.log | tail -200 || tail -100 ../ios-build.log
+            echo "::endgroup::"
+            exit $EXIT_CODE
+          fi
