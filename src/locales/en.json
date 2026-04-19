@@ -1258,6 +1258,7 @@
     "engineDownloadingLabel": "Downloading…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
     "engineRetryCta": "Try again",
     "voicesEmptyState": "No voices found.",
+    "kokoroDeviceNote": "Some voices may not work on all devices.",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   }
 }

@@ -523,7 +523,16 @@ export const VoicePickerView: React.FC = observer(() => {
         {isExpanded ? (
           ready ? (
             voices.length > 0 ? (
-              voices.map(renderVoiceRow)
+              <>
+                {engineId === 'kokoro' ? (
+                  <View style={styles.engineGroupBody}>
+                    <Text style={styles.engineGroupHintText}>
+                      {l10n.voiceAndSpeech.kokoroDeviceNote}
+                    </Text>
+                  </View>
+                ) : null}
+                {voices.map(renderVoiceRow)}
+              </>
             ) : (
               <View style={styles.engineGroupBody}>
                 <Text style={styles.engineGroupEmpty}>

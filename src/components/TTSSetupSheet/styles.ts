@@ -121,6 +121,12 @@ export const createStyles = (theme: Theme) =>
       lineHeight: 17,
       marginBottom: 10,
     },
+    engineGroupHintText: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 12,
+      lineHeight: 16,
+      opacity: 0.7,
+    },
     engineGroupEmpty: {
       color: theme.colors.onSurfaceVariant,
       fontSize: 12.5,
