@@ -31,7 +31,7 @@
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@nozbe/watermelondb": "^0.28.0",
-    "@pocketpalai/react-native-speech": "2.2.1",
+    "@pocketpalai/react-native-speech": "2.2.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/slider": "^5.0.1",
