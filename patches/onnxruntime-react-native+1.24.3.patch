@@ -1,0 +1,24 @@
+diff --git a/node_modules/onnxruntime-react-native/android/CMakeLists.txt b/node_modules/onnxruntime-react-native/android/CMakeLists.txt
+index 2f814e8..db18147 100644
+--- a/node_modules/onnxruntime-react-native/android/CMakeLists.txt
++++ b/node_modules/onnxruntime-react-native/android/CMakeLists.txt
+@@ -87,6 +87,9 @@ set_target_properties(
+              CXX_EXTENSIONS OFF
+              POSITION_INDEPENDENT_CODE ON)
+ 
++# 16 KB page alignment for Android 15+ devices
++target_link_options(onnxruntimejsi PRIVATE "-Wl,-z,max-page-size=16384")
++
+ find_library(log-lib log)
+ 
+ target_link_libraries(
+diff --git a/node_modules/onnxruntime-react-native/android/build.gradle b/node_modules/onnxruntime-react-native/android/build.gradle
+index 41b4359..85c92d9 100644
+--- a/node_modules/onnxruntime-react-native/android/build.gradle
++++ b/node_modules/onnxruntime-react-native/android/build.gradle
+@@ -1,4 +1,5 @@
+ import java.nio.file.Paths
++import org.gradle.util.internal.VersionNumber
+ 
+ buildscript {
+   repositories {

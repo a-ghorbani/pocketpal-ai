@@ -48,8 +48,10 @@ export * from './StatusIcon';
 export * from './TextDivider';
 export * from './TextInput';
 export * from './TextMessage';
+export * from './TTSSetupSheet';
 export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
+export * from './VoiceChip';
 export * from './VisionDownloadSheet';
 
 export * from './PalHeaderRight';

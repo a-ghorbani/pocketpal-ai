@@ -210,6 +210,8 @@ jobs:
     runs-on: macos-15  # macOS 15 with Xcode 16
     needs: [build-and-test, detect-changes]
     if: needs.detect-changes.outputs.translation_only != 'true'
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -312,15 +314,12 @@ jobs:
           pod install
           cd ..
 
-      - name: Install xcpretty
-        run: gem install xcpretty
-
       - name: Build iOS Release
         run: |
           cd ios
           # List available simulators for debugging
           xcrun simctl list devices available
-          set -o pipefail && xcodebuild \
+          xcodebuild \
             -workspace PocketPal.xcworkspace \
             -scheme PocketPal \
             -configuration Release \
@@ -330,4 +329,12 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            | xcpretty
+            2>&1 | tee ../ios-build.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::iOS build failed (exit $EXIT_CODE)"
+            echo "::group::Error context"
+            grep -B 5 -A 20 "error:" ../ios-build.log | tail -200 || tail -100 ../ios-build.log
+            echo "::endgroup::"
+            exit $EXIT_CODE
+          fi

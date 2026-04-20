@@ -59,7 +59,7 @@ PODS:
   - hermes-engine (0.82.1):
     - hermes-engine/Pre-built (= 0.82.1)
   - hermes-engine/Pre-built (0.82.1)
-  - llama-rn (0.12.0-rc.8):
+  - llama-rn (0.12.0-rc.9):
     - boost
     - DoubleConversion
     - fast_float
@@ -72,6 +72,36 @@ PODS:
     - RCTTypeSafety
     - React
     - React-callinvoker
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - onnxruntime-c (1.24.3)
+  - onnxruntime-react-native (1.24.3):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - onnxruntime-c
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
     - React-debug
     - React-Fabric
@@ -1926,7 +1956,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-keyboard-controller (1.21.4):
+  - react-native-keyboard-controller (1.19.6):
     - boost
     - DoubleConversion
     - fast_float
@@ -1944,7 +1974,7 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-keyboard-controller/common (= 1.21.4)
+    - react-native-keyboard-controller/common (= 1.19.6)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1955,7 +1985,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-keyboard-controller/common (1.21.4):
+  - react-native-keyboard-controller/common (1.19.6):
     - boost
     - DoubleConversion
     - fast_float
@@ -3110,6 +3140,34 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNSpeech (2.2.2):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - RNSVG (15.14.0):
     - boost
     - DoubleConversion
@@ -3308,6 +3366,7 @@ DEPENDENCIES:
   - GRMustache.swift
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - llama-rn (from `../node_modules/llama.rn`)
+  - onnxruntime-react-native (from `../node_modules/onnxruntime-react-native`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
@@ -3397,6 +3456,7 @@ DEPENDENCIES:
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNShare (from `../node_modules/react-native-share`)
+  - "RNSpeech (from `../node_modules/@pocketpalai/react-native-speech`)"
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
@@ -3420,6 +3480,7 @@ SPEC REPOS:
     - GRMustache.swift
     - GTMAppAuth
     - GTMSessionFetcher
+    - onnxruntime-c
     - PromisesObjC
     - SocketRocket
 
@@ -3443,6 +3504,8 @@ EXTERNAL SOURCES:
     :tag: hermes-2025-09-01-RNv0.82.0-265ef62ff3eb7289d17e366664ac0da82303e101
   llama-rn:
     :path: "../node_modules/llama.rn"
+  onnxruntime-react-native:
+    :path: "../node_modules/onnxruntime-react-native"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -3619,6 +3682,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-screens"
   RNShare:
     :path: "../node_modules/react-native-share"
+  RNSpeech:
+    :path: "../node_modules/@pocketpalai/react-native-speech"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
@@ -3655,7 +3720,9 @@ SPEC CHECKSUMS:
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
-  llama-rn: 1786e2a130bdb5cc53dd681ac679020b48b814ce
+  llama-rn: 3abe0ea5bfd118e3cb7b0d70f01c6b206ce230bf
+  onnxruntime-c: 4a1a1a81da2087869dc9b6357f182952db2df29c
+  onnxruntime-react-native: 4451eff6b1aa60589186c6a8422d436fba6a9192
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
@@ -3694,7 +3761,7 @@ SPEC CHECKSUMS:
   react-native-document-picker: a0f219f1de355c2da4e4a7ce9de5f91e2d9df5a9
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-image-picker: 6051cfd030121b880a58f1cc0e5e33e9887804e4
-  react-native-keyboard-controller: 78f861c4dc73887b4cb7173a37e01f1634c9a58a
+  react-native-keyboard-controller: 44a1a840c0d2ede629af60d6fbf84fc69ee4cb10
   react-native-render-html: 5afc4751f1a98621b3009432ef84c47019dcb2bd
   react-native-safe-area-context: ee1e8e2a7abf737a8d4d9d1a5686a7f2e7466236
   react-native-slider: 6201419b3e3f7c6b7cf2068e0c01274fa86a1da5
@@ -3745,6 +3812,7 @@ SPEC CHECKSUMS:
   RNReanimated: 8f0185df21f0dea34ee8c9611ba88c17a290ed9a
   RNScreens: d6413aeb1878cdafd3c721e2c5218faf5d5d3b13
   RNShare: 81b8cfb58b1460c4a197d5379934bdf70980c124
+  RNSpeech: aa86fc1e5c1955b5d992f1d7f2ca99fbb4cd043c
   RNSVG: 82979f324e1cbf99f558a04e66f574a568ed54c0
   RNVectorIcons: e355dd0998d6b9020e560922a66614eb9636501b
   RNWorklets: ab618bf7d1c7fd2cb793b9f0f39c3e29274b3ebf

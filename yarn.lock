@@ -2153,6 +2153,13 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
+"@pocketpalai/react-native-speech@2.2.2":
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.2.2.tgz#b61ee6cff8f90773f4bb5c0630ac5dd4d5b01187"
+  integrity sha512-XiV4jBZFxa3EwRE2m7sz88KGXSu9toM+yCwZokgxW0JP6Mg7Y+Vfu5Oc3JZ0PoBB070zX6zVnMOaqH/dLl+dxw==
+  dependencies:
+    phonemize "^1.1.0"
+
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@protobufjs/aspromise/-/aspromise-1.1.2.tgz#9b8b0cc663d669a7d8f6f5d0893a14d348f30fbf"
@@ -6500,10 +6507,10 @@ lines-and-columns@^1.1.6:
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
 
-llama.rn@0.12.0-rc.8:
-  version "0.12.0-rc.8"
-  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.0-rc.8.tgz#4ddce5e367e096fd3786c7ea221738effc3f622d"
-  integrity sha512-IT7phq/jgj5JS6bKqmQSe0FBeOnClTd8Wgmn2fZSKImfiStqQdffwfhG2zT8SAxty4ChR44iO4eMymOfyw6wJA==
+llama.rn@0.12.0-rc.9:
+  version "0.12.0-rc.9"
+  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.0-rc.9.tgz#1f90a1a0bebc0c07ed39032cfa93ff4c6a69e571"
+  integrity sha512-6qmo0sOGs7mk7stAGPtQ13R002yV2sYWR5z0YmUNlBUWVeOVeSXfsG2CTAfbyEr6fjXhFNgZVPYEt0Hd7Yd27A==
 
 locate-path@^5.0.0:
   version "5.0.0"
@@ -7101,6 +7108,11 @@ nullthrows@^1.1.1:
   resolved "https://registry.yarnpkg.com/nullthrows/-/nullthrows-1.1.1.tgz#7818258843856ae971eae4208ad7d7eb19a431b1"
   integrity sha512-2vPPEi+Z7WqML2jZYddDIfy5Dqb0r2fze2zTxNNknZaFpVHU3mFB3R+DWeJWGVx0ecvttSGlJTI+WG+8Z4cDWw==
 
+number-to-words@^1.2.4:
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/number-to-words/-/number-to-words-1.2.4.tgz#e0f124de9628f8d86c4eeb89bac6c07699264501"
+  integrity sha512-/fYevVkXRcyBiZDg6yzZbm0RuaD6i0qRfn8yr+6D0KgBMOndFPxuW10qCHpzs50nN8qKuv78k8MuotZhcVX6Pw==
+
 nunjucks@^3.2.4:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/nunjucks/-/nunjucks-3.2.4.tgz#f0878eef528ce7b0aa35d67cc6898635fd74649e"
@@ -7206,6 +7218,18 @@ onetime@^5.1.0, onetime@^5.1.2:
   integrity sha512-kbpaSSGJTWdAY5KPVeMOKXSrPtr8C8C7wodJbcsd51jRnmD+GZu8Y0VoU6Dm5Z4vWr0Ig/1NKuWRKf7j5aaYSg==
   dependencies:
     mimic-fn "^2.1.0"
+
+onnxruntime-common@1.24.3:
+  version "1.24.3"
+  resolved "https://registry.yarnpkg.com/onnxruntime-common/-/onnxruntime-common-1.24.3.tgz#fb93319a2d041fc9fe2a209167ba6ef2f1a47fee"
+  integrity sha512-GeuPZO6U/LBJXvwdaqHbuUmoXiEdeCjWi/EG7Y1HNnDwJYuk6WUbNXpF6luSUY8yASul3cmUlLGrCCL1ZgVXqA==
+
+onnxruntime-react-native@^1.23.2:
+  version "1.24.3"
+  resolved "https://registry.yarnpkg.com/onnxruntime-react-native/-/onnxruntime-react-native-1.24.3.tgz#732890f94dcbea8b52b86c1ee8be49f4fc4445a3"
+  integrity sha512-vMxFcnO1YDtT6auv719Zk0Zj/EXujqeEzSjTe5W7A915qaRrM4pRfXlI4ye/ExOwcTan7NYVZ/wpLX+YBU2aWQ==
+  dependencies:
+    onnxruntime-common "1.24.3"
 
 open@^6.2.0:
   version "6.4.0"
@@ -7394,6 +7418,14 @@ path-type@^4.0.0:
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
 
+phonemize@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/phonemize/-/phonemize-1.1.0.tgz#f41ef1942ceb96f7d515c6d35833b3398bb9782f"
+  integrity sha512-1OrNagrRUg8pbFF4rMsyl7XJF9Hyh9FWl5GBuBUz+JOZEt9YHiPJ6yJUvevkBBHVahY8Mi/ZmiWT9+kVbODX2Q==
+  dependencies:
+    number-to-words "^1.2.4"
+    pinyin-pro "^3.26.0"
+
 picocolors@^1.0.0, picocolors@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/picocolors/-/picocolors-1.1.1.tgz#3d321af3eab939b083c8f929a1d12cda81c26b6b"
@@ -7408,6 +7440,11 @@ picomatch@^4.0.2, picomatch@^4.0.3:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/picomatch/-/picomatch-4.0.3.tgz#796c76136d1eead715db1e7bad785dedd695a042"
   integrity sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==
+
+pinyin-pro@^3.26.0:
+  version "3.28.1"
+  resolved "https://registry.yarnpkg.com/pinyin-pro/-/pinyin-pro-3.28.1.tgz#dbc54ee79ab2d3025722322712f2be5b65444707"
+  integrity sha512-oqz8ulwRgtUXRi0vbqEfGNly19zpyCxYrjhkk5TibGcgSW6eNwS5woajCXRwqURi8Ehc2yOFTiB4uNoZ+NJOnA==
 
 pirates@^4.0.4, pirates@^4.0.7:
   version "4.0.7"
@@ -7709,10 +7746,10 @@ react-native-is-edge-to-edge@^1.2.1:
   resolved "https://registry.yarnpkg.com/react-native-is-edge-to-edge/-/react-native-is-edge-to-edge-1.2.1.tgz#64e10851abd9d176cbf2b40562f751622bde3358"
   integrity sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==
 
-react-native-keyboard-controller@^1.21.3:
-  version "1.21.4"
-  resolved "https://registry.yarnpkg.com/react-native-keyboard-controller/-/react-native-keyboard-controller-1.21.4.tgz#9ea9687c4b1a7e9856d796abd867449713a83da5"
-  integrity sha512-j1bS2ZKo+ahexnhTYJ+GxXWeMHUylY7AM0h3i0y+XgxcCHW05DpJJQcSvMCmDtMrMhRUtalLZRDCGvuh/aUPZQ==
+react-native-keyboard-controller@1.19.6:
+  version "1.19.6"
+  resolved "https://registry.yarnpkg.com/react-native-keyboard-controller/-/react-native-keyboard-controller-1.19.6.tgz#af63d21807d80224897cc7895cba26ea2f9bb736"
+  integrity sha512-OnijLjtUVnWDZDkxtBCCja4kO7UPbpyX9K8lJXHH8spfTCrlvbPkVra5qaaqIPrv9SHWkWkComgh4LSgYUu62g==
   dependencies:
     react-native-is-edge-to-edge "^1.2.1"
 

@@ -6,7 +6,13 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
-import {chatSessionStore, modelStore, palStore, uiStore} from '../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../store';
 
 import {MessageType, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
@@ -269,6 +275,18 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
+      // TTS streaming: notify the store on first token so it can open a
+      // StreamingHandle, then feed each delta via onAssistantMessageChunk.
+      // `content` in the streaming data is cumulative, so we diff against
+      // what we've already pushed.
+      let ttsStarted = false;
+      let prevSpokenContent = '';
+      // Case A (enable_thinking ON): reasoning is streamed on a separate
+      // channel. We diff it against the previous cumulative reasoning and
+      // forward the delta so TTS can emit the thinking placeholder during
+      // the silent gap before real content starts.
+      let prevSpokenReasoning = '';
+
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
       const completionPromise = engine.completion(
@@ -278,6 +296,42 @@ export const useChatSession = (
             // Capture time to first token on the first token received
             if (timeToFirstToken === null && (data.token || data.content)) {
               timeToFirstToken = Date.now() - completionStartTime;
+            }
+
+            // Fire TTS streaming hooks. Start once per message on first
+            // content seen; chunk with the new substring beyond what we've
+            // already forwarded.
+            const streamContent = data.content ?? '';
+            const streamReasoning = data.reasoning_content ?? '';
+            // TTS hooks are wrapped defensively — a failure in the UI
+            // path must never kill the completion stream.
+            try {
+              if (
+                !ttsStarted &&
+                (data.token || streamContent || streamReasoning)
+              ) {
+                ttsStarted = true;
+                ttsStore.onAssistantMessageStart(currentMessageInfo.current.id);
+              }
+              const contentDelta =
+                streamContent.length > prevSpokenContent.length
+                  ? streamContent.slice(prevSpokenContent.length)
+                  : '';
+              const reasoningDelta =
+                streamReasoning.length > prevSpokenReasoning.length
+                  ? streamReasoning.slice(prevSpokenReasoning.length)
+                  : '';
+              if (contentDelta || reasoningDelta) {
+                prevSpokenContent = streamContent;
+                prevSpokenReasoning = streamReasoning;
+                ttsStore.onAssistantMessageChunk(
+                  currentMessageInfo.current.id,
+                  contentDelta,
+                  reasoningDelta || undefined,
+                );
+              }
+            } catch (ttsErr) {
+              console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
             }
 
             if (!modelStore.isStreaming) {
@@ -364,6 +418,21 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+
+      // Fire TTS auto-speak after the final completionResult is written.
+      // Store enforces auto-speak / voice / idempotency gating internally.
+      // Wrapped defensively — UI-path errors must not bubble.
+      try {
+        ttsStore.onAssistantMessageComplete(
+          currentMessageInfo.current.id,
+          result.text,
+          {
+            hadReasoning: !!result.reasoning_content?.trim(),
+          },
+        );
+      } catch (ttsErr) {
+        console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
+      }
     } catch (error) {
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
@@ -371,6 +440,12 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+
+      // Stop any in-flight TTS — the completion errored, so buffered
+      // audio should not keep playing.
+      ttsStore.stop().catch(ttsErr => {
+        console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
+      });
 
       // For remote models: preserve partial message if tokens were already streamed
       // Instead of deleting the message, keep what we have and show error toast
@@ -448,6 +523,12 @@ export const useChatSession = (
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);
+
+    // Stop any in-flight TTS so buffered audio doesn't keep playing
+    // after the user tapped Stop.
+    ttsStore.stop().catch(err => {
+      console.warn('[useChatSession] TTS stop on user-stop failed:', err);
+    });
 
     // Deactivate keep awake when stopping completion
     try {

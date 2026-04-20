@@ -32,6 +32,7 @@ const EXPECTED_SECTIONS = [
   'benchmark',
   'errors',
   'simulator',
+  'voiceAndSpeech',
 ];
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
@@ -59,7 +60,7 @@ describe('l10n object', () => {
   });
 
   it.each(ALL_LANGUAGES)(
-    'l10n.%s has all 19 expected top-level sections',
+    'l10n.%s has all 20 expected top-level sections',
     lang => {
       const sections = Object.keys(l10n[lang]);
       for (const section of EXPECTED_SECTIONS) {

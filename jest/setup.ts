@@ -49,6 +49,7 @@ import {benchmarkStore as mockBenchmarkStore} from '../__mocks__/stores/benchmar
 import {mockPalStore} from '../__mocks__/stores/palStore';
 import {deepLinkStore as mockDeepLinkStore} from '../__mocks__/stores/deepLinkStore';
 import {mockServerStore} from '../__mocks__/stores/serverStore';
+import {mockTTSStore} from '../__mocks__/stores/ttsStore';
 
 jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
@@ -102,6 +103,7 @@ jest.mock('../src/store', () => {
     palStore: mockPalStore,
     deepLinkStore: mockDeepLinkStore,
     serverStore: mockServerStore,
+    ttsStore: mockTTSStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
   };
 });
