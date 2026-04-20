@@ -67,7 +67,7 @@
     "react-native-haptic-feedback": "^2.3.3",
     "react-native-image-picker": "^8.2.1",
     "react-native-image-viewing": "^0.2.2",
-    "react-native-keyboard-controller": "^1.21.3",
+    "react-native-keyboard-controller": "1.19.6",
     "react-native-keychain": "^10.0.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-paper": "5.14.5",
