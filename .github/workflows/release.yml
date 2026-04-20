@@ -147,6 +147,8 @@ jobs:
   build_ios:
     runs-on: macos-15 # macOS 15 with Xcode 16
     needs: build_android
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
 
     steps:
       - name: Checkout code
