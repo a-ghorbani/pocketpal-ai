@@ -16,10 +16,16 @@ on:
           - preminor
           - prepatch
           - prerelease
+      ios_only:
+        description: "iOS only: skip version bump + Android, build TestFlight from current ref"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   # Job 1: Version Bumping and Android Build
   build_android:
+    if: ${{ !inputs.ios_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: 'write' # Allows workflow to checkout repository code
@@ -147,6 +153,7 @@ jobs:
   build_ios:
     runs-on: macos-15 # macOS 15 with Xcode 16
     needs: build_android
+    if: ${{ always() && (needs.build_android.result == 'success' || needs.build_android.result == 'skipped') }}
     env:
       NODE_OPTIONS: '--max-old-space-size=8192'
 
