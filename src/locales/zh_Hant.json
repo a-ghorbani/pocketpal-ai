@@ -9,7 +9,9 @@
     "orBy": "或通過",
     "sponsorButton": "成為贊助商",
     "versionCopiedTitle": "版本已複製",
-    "versionCopiedDescription": "版本資訊已複製至剪貼板"
+    "versionCopiedDescription": "版本資訊已複製至剪貼板",
+    "privacyPolicy": "隱私權政策",
+    "termsOfService": "服務條款"
   },
   "benchmark": {
     "title": "基準",
@@ -644,7 +646,7 @@
   },
   "feedback": {
     "title": "送出反饋",
-    "description": "您的聲音很重要！告訴我們 PocketPal AI 如何幫助您，以及我們可以做什麼讓它更有用。",
+    "description": "您的語音很重要！告訴我們 PocketPal AI 如何幫助您，以及我們可以做什麼讓它更有用。",
     "shareThoughtsButton": "分享您的想法",
     "useCase": {
       "label": "您正在使用 PocketPal AI 做什麼？",
@@ -1215,5 +1217,48 @@
       "rating": "最高評級",
       "popular": "最受歡迎"
     }
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "語音與說話功能",
+    "voiceRowTitle": "語音",
+    "notSet": "尚未設定",
+    "previewButton": "預覽",
+    "stopPreviewButton": "停止預覽",
+    "voicesTitle": "語音",
+    "voicesEmptyHint": "點擊任何語音進行安裝並使用。或者選擇系統內建語音——這些語音將隨時可用。",
+    "supertonicStepsLabel": "品質 (擴散步數)",
+    "toggleAutoSpeakLabel": "切換自動朗讀",
+    "openSettingsLabel": "TTS 設定",
+    "playMessageLabel": "播放訊息",
+    "stopMessageLabel": "停止訊息",
+    "autoSpeakLabel": "自動朗讀回應",
+    "autoSpeakDescription": "收到新回覆時，自動朗讀。",
+    "engineChipKitten": "小貓",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "系統",
+    "stepsCount": "{{steps}} 步",
+    "engineKittenTagline": "佔用最小。穩定可靠。最適合舊型裝置。",
+    "engineKokoroTagline": "最高品質。啟動較慢。部分語音可能無法在所有裝置上運作。",
+    "engineSupertonicTagline": "最快啟動。消耗更多記憶體 (RAM)。偶爾可能會漏字。",
+    "engineSystemTagline": "內建作業系統語音。隨時可用，無需安裝。",
+    "engineSystemTitleIos": "iOS 語音",
+    "engineSystemTitleAndroid": "Android 語音",
+    "engineSystemTier": "隨時可用",
+    "engineTierLightest": "最輕量化",
+    "engineTierBestQuality": "最佳品質",
+    "engineTierFastestStart": "最快啟動",
+    "engineSpecsLine": "{{voices}} 種語音  ·  {{sizeMb}} MB  ·  ~ 約 {{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} 種語音",
+    "engineRemoveTitle": "移除 {{engineTitle}}？",
+    "engineRemoveBody": "可釋放約 {{sizeMb}} MB 的裝置空間。",
+    "engineRemoveCancel": "取消",
+    "engineRemoveConfirm": "移除",
+    "engineInstallCta": "安裝 · {{sizeMb}} MB",
+    "engineDownloadingLabel": "下載中…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "再試一次",
+    "voicesEmptyState": "找不到任何語音。",
+    "kokoroDeviceNote": "部分語音可能無法在所有裝置上運作。",
+    "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此引擎（目前剩餘 {{freeMb}} MB）。"
   }
 }
