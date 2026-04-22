@@ -240,3 +240,24 @@ jobs:
           APP_STORE_CONNECT_USER_ID: ${{ secrets.APP_STORE_CONNECT_USER_ID }}
           GOOGLE_SERVICES_PLIST: ${{ secrets.GOOGLE_SERVICES_PLIST }}
         run: bundle exec fastlane release_ios_testflight
+
+      # Step 9: Extract iOS version info for dSYM artifact naming
+      - name: Extract iOS version info
+        id: version
+        if: always()
+        run: |
+          MARKETING_VERSION=$(cat .version | tr -d '[:space:]')
+          BUILD_NUMBER=$(grep -m1 'CURRENT_PROJECT_VERSION' ios/PocketPal.xcodeproj/project.pbxproj | awk -F'= ' '{print $2}' | tr -d ' ;')
+          echo "marketing_version=${MARKETING_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "build_number=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "Extracted: v${MARKETING_VERSION} build ${BUILD_NUMBER}"
+
+      # Step 10: Retain dSYM as a workflow artifact for crash symbolication (FOU-86)
+      - name: Upload iOS dSYM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-dsym-v${{ steps.version.outputs.marketing_version }}-build${{ steps.version.outputs.build_number }}
+          path: ios/build/PocketPal.app.dSYM.zip
+          retention-days: 90
+          if-no-files-found: warn
