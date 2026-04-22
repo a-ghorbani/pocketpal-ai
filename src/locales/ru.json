@@ -6,10 +6,12 @@
     "supportProjectDescription": "Если вам нравится PocketPal AI, поддержите разработчиков:",
     "githubButton": "Поставьте звезду на GitHub",
     "orText": "или",
-    "sponsorButton": "Стать спонсором",
+    "sponsorButton": "Станьте спонсором",
     "versionCopiedTitle": "Версия скопирована",
     "versionCopiedDescription": "Информация о версии скопирована в буфер обмена",
-    "orBy": "или через"
+    "orBy": "или через",
+    "privacyPolicy": "Конфиденциальность",
+    "termsOfService": "Соглашение"
   },
   "benchmark": {
     "title": "Бенчмарк",
@@ -191,7 +193,7 @@
   "completionParams": {
     "grammar": "Принудительное соблюдение грамматических правил, чтобы текст следовал строгой структуре или формату",
     "stop": "Определить фразы, при появлении которых генерация текста прекратится",
-    "n_predict": "Максимальное количество генерируемых токенов. Установите значение Без ограничений или Пользовательское и укажите значение.",
+    "n_predict": "Максимальное количество генерируемых токенов. Выберите 'Unlimited', чтобы снять ограничение, или 'Custom', чтобы указать лимит вручную.",
     "n_probs": "Показать вероятности для альтернативных вариантов слов.",
     "top_k": "Контроль креативности, ограничить выбор K наиболее вероятными словами. Низкие значения делают ответы более логичными",
     "top_p": "Баланс креативности и связности. Высокие значения (близкие к 1.0) делают ответы более разнообразными",
@@ -255,7 +257,7 @@
         "message": "Эти настройки будут применяться ко всем будущим сессиям"
       },
       "title_session": "Настройки генерации чата (Сессия)",
-      "resetToSystemDefaults": "Сброс к системным настройкам",
+      "resetToSystemDefaults": "Сброс к системным",
       "palSettings": "Настройки Pal",
       "settingsSource": "Источник настроек"
     },
@@ -530,7 +532,7 @@
       "error": "Ошибка",
       "failedToSave": "Не удалось сохранить настройки Pal",
       "resetToGlobal": "Сброс к глобальным настройкам",
-      "resetToSystem": "Сброс к системным настройкам",
+      "resetToSystem": "Сброс к системным",
       "clearPalSettings": "Очистить настройки Pal",
       "customSettingsFor": "Пользовательские настройки для {{palName}}",
       "inheritedSettingsFor": "Унаследованные настройки для {{palName}}"
@@ -1215,5 +1217,48 @@
   },
   "simulator": {
     "cameraNotAvailable": "Камера недоступна в симуляторе. Пожалуйста, используйте физическое устройство."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Голос и речь",
+    "voiceRowTitle": "Голос",
+    "notSet": "Не установлено",
+    "previewButton": "Предпросмотр",
+    "stopPreviewButton": "Остановить предпросмотр",
+    "voicesTitle": "Голоса",
+    "voicesEmptyHint": "Нажмите на любой голос, чтобы установить и использовать его. Или выберите системный голос - они доступны всегда.",
+    "supertonicStepsLabel": "Качество (шаги диффузии)",
+    "toggleAutoSpeakLabel": "Переключить автоозвучивание",
+    "openSettingsLabel": "Настройки TTS",
+    "playMessageLabel": "Воспроизвести сообщение",
+    "stopMessageLabel": "Остановить сообщение",
+    "autoSpeakLabel": "Автоозвучивание ответов",
+    "autoSpeakDescription": "Озвучивать новые ответы по мере их поступления.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "Система",
+    "stepsCount": "{{steps}} шаг(ов)",
+    "engineKittenTagline": "Минимум ресурсов. Надежно. Подходит для старых устройств.",
+    "engineKokoroTagline": "Высокое качество. Медленный запуск. Некоторые голоса могут быть недоступны на вашем устройстве.",
+    "engineSupertonicTagline": "Быстрый запуск. Использует больше ОЗУ. Возможны пропуски слов.",
+    "engineSystemTagline": "Системные голоса ОС. Всегда доступны, установка не требуется.",
+    "engineSystemTitleIos": "Голоса iOS",
+    "engineSystemTitleAndroid": "Голоса Android",
+    "engineSystemTier": "всегда доступны",
+    "engineTierLightest": "самые легкие",
+    "engineTierBestQuality": "макс. качество",
+    "engineTierFastestStart": "быстрый запуск",
+    "engineSpecsLine": "{{voices}} голосов · {{sizeMb}} МБ · ~{{ramMb}} МБ ОЗУ",
+    "engineSystemSpecsLine": "{{voices}} голосов",
+    "engineRemoveTitle": "Удалить {{engineTitle}}?",
+    "engineRemoveBody": "Освободит ~{{sizeMb}} МБ на этом устройстве.",
+    "engineRemoveCancel": "Отмена",
+    "engineRemoveConfirm": "Удалить",
+    "engineInstallCta": "Установить · {{sizeMb}} МБ",
+    "engineDownloadingLabel": "Загрузка… {{pct}}% · {{mbDone}} / {{sizeMb}} МБ",
+    "engineRetryCta": "Ещё раз",
+    "voicesEmptyState": "Голоса не найдены.",
+    "kokoroDeviceNote": "Некоторые голоса могут быть недоступны на вашем устройстве.",
+    "insufficientStorage": "Недостаточно места - освободите {{requiredMb}} МБ для установки этого движка (доступно {{freeMb}} МБ)."
   }
 }
