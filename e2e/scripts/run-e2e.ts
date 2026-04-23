@@ -140,7 +140,8 @@ USAGE:
 OPTIONS:
   --platform <platform>    Platform: 'ios', 'android', or 'both' (required)
   --spec <spec>            Test spec: 'quick-smoke', 'load-stress', 'diagnostic',
-                           'language', 'visual-capture', or 'all' (default: 'quick-smoke')
+                           'language', 'visual-capture', 'memory-profile',
+                           'benchmark-matrix', or 'all' (default: 'quick-smoke')
   --models <ids>           Comma-separated model IDs to test
   --each-model             Iterate spec once per model (isolated WDIO process each)
   --all-models             Include crash-repro models in the model pool
@@ -180,6 +181,12 @@ EXAMPLES:
 
   # Dry run to see what would execute
   yarn e2e --platform both --each-device --each-model --dry-run
+
+  # Benchmark matrix (Android only)
+  yarn e2e --platform android --spec benchmark-matrix --skip-build
+  BENCH_MODELS=qwen3-1.7b BENCH_QUANTS=q4_0 BENCH_BACKENDS=cpu \\
+    yarn e2e --platform android --spec benchmark-matrix --skip-build
+  MODELS_PRESEEDED=1 yarn e2e --platform android --spec benchmark-matrix --skip-build
 `);
 }
 

@@ -17,6 +17,7 @@ yarn install
 | `load-stress` | Download model, run multiple load/unload cycles with inference between each. Catches crash-on-reload bugs | ~5-10 min/device |
 | `thinking` | Loads Qwen3-0.6B (thinking model), verifies thinking toggle, thinking bubble appears, toggle off suppresses it | ~3-5 min/device |
 | `diagnostic` | Dumps Appium page source XML at each screen. For debugging selectors, not a real test | ~10s |
+| `benchmark-matrix` | Iterates {models} × {quants} × {backends} on Android, writes canonical JSON report per run. Measurement infrastructure, not an automated gate. | ~25-45 min |
 
 ## Local Testing
 
@@ -248,3 +249,142 @@ await ModelsPage.openHuggingFaceSearch();
 | 30 runs/month, 2 devices | ~$100/month |
 
 Pricing: $0.17 per device minute
+
+## Benchmark Matrix
+
+The `benchmark-matrix` spec is **measurement infrastructure**, not an automated gate. It iterates `{models} × {quants} × {backends}` on Android, drives the in-app Benchmark screen for each cell, and writes a canonical JSON report to `e2e/debug-output/benchmarks/benchmark-<device_slug>-<commit>.json`. The JSON is incremental: a mid-matrix crash preserves completed rows.
+
+v1 scope: Android only. iOS (Metal) and Hexagon NPU are explicit follow-ups. The matrix is 2 models × 8 quants × 2 backends = 32 runs at full scale; env-var filters reduce this.
+
+### Usage
+
+```bash
+# Full matrix on the currently connected Android device (~25-45 min)
+yarn e2e --platform android --spec benchmark-matrix --skip-build
+
+# Single cell (smoke)
+BENCH_MODELS=qwen3-1.7b BENCH_QUANTS=q4_0 BENCH_BACKENDS=cpu \
+  yarn e2e --platform android --spec benchmark-matrix --skip-build
+
+# Preseeded mode (see "Preseed workflow" below)
+MODELS_PRESEEDED=1 yarn e2e --platform android --spec benchmark-matrix --skip-build
+```
+
+### Environment variables
+
+| Var | Values | Description |
+|-----|--------|-------------|
+| `BENCH_MODELS` | comma-separated model ids (lowercase) | e.g. `qwen3-1.7b,gemma-3-1b` |
+| `BENCH_QUANTS` | comma-separated rung labels | e.g. `q4_0,q6_k`; full set: `iq1_s,q2_k,q3_k_m,q4_0,q4_k_m,q5_k_m,q6_k,q8_0` |
+| `BENCH_BACKENDS` | comma-separated tiers | `cpu`, `gpu` |
+| `MODELS_PRESEEDED` | `1` to enable | Skip downloads; use already-pushed GGUFs on device |
+| `E2E_DEVICE_SOC` | free-form string | Recorded in the JSON `soc` field; not used to drive tests |
+
+### JSON schema
+
+Top-level:
+```jsonc
+{
+  "version": "1.0",
+  "device": "SM-S948U",
+  "soc": "Snapdragon 8 Elite Gen 2",   // or null
+  "commit": "abc1234",
+  "llama_rn_version": "0.12.0-rc.8",
+  "platform": "android",
+  "os_version": "16",
+  "timestamp": "2026-04-21T…",
+  "preseeded": false,
+  "runs": [ /* BenchmarkRun[] */ ]
+}
+```
+
+Per-run (`BenchmarkRun`):
+```jsonc
+{
+  "model_id": "qwen3-1.7b",
+  "quant": "q4_0",                      // canonical lowercase rung label
+  "requested_backend": "cpu",           // "cpu" | "gpu"
+  "effective_backend": "cpu",           // see below
+  "pp_avg": 123.4,                      // tokens/s, nullable
+  "tg_avg": 18.2,                       // tokens/s, nullable
+  "wall_ms": 24571,
+  "peak_memory_mb": 812.3,              // nullable
+  "log_signals": {                      // structured — see helpers/logcat.ts
+    "opencl_init": true,
+    "opencl_device_name": "qualcomm Adreno (TM) …",
+    "adreno_gen": null,
+    "large_buffer_enabled": true,
+    "large_buffer_unsupported": false,
+    "offloaded_layers": 29,
+    "total_layers": 29,
+    "raw_matches": [ /* up to 20 matched logcat lines, debug only */ ]
+  },
+  "init_settings": { /* modelStore.contextInitParams snapshot */ },
+  "status": "ok",                       // "ok" | "skipped" | "failed"
+  "reason": "…",                        // set on skipped
+  "error": "…",                         // set on failed (first 500 chars)
+  "timestamp": "2026-04-21T…"
+}
+```
+
+### Interpreting `effective_backend`
+
+Derived from the structured `log_signals` payload, not regex on raw text:
+
+| Value | Meaning |
+|-------|---------|
+| `cpu` | No OpenCL init observed — pure CPU path. |
+| `opencl` | OpenCL initialised, all layers offloaded to GPU, no large-buffer regression. |
+| `cpu+opencl-partial` | OpenCL initialised but some layers ran on CPU, or `large_buffer_unsupported` triggered a fallback. |
+| `unknown` | OpenCL initialised but layer counts absent — investigate `log_signals.raw_matches`. |
+
+A row where `requested_backend=gpu` but `effective_backend=cpu` is the canonical "silent CPU fallback" we want to catch. The comparison script flags this as a regression even when `pp_avg` / `tg_avg` numbers look fine.
+
+### Preseed workflow (debug APK required)
+
+Preseeded mode skips all HuggingFace downloads and loads GGUFs that have already been pushed to the device's app-private storage. This is the fast path once you've downloaded each rung once.
+
+**Precondition: the app must be a debug build.** Release APK has no `android:debuggable` override, so `adb shell run-as com.pocketpalai` and `adb push` into `/data/data/com.pocketpalai/files/…` will not work. Build and install a debug APK first:
+
+```bash
+cd android && ./gradlew assembleDebug && cd ..
+adb install android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+On-device path (matches `ModelStore.getModelFullPath`):
+
+```
+/data/data/com.pocketpalai/files/models/hf/<author>/<repo>/<filename>.gguf
+```
+
+Push each GGUF once:
+
+```bash
+adb shell run-as com.pocketpalai mkdir -p \
+  files/models/hf/bartowski/Qwen_Qwen3-1.7B-GGUF
+
+# copy via /data/local/tmp to avoid run-as's stdin limitations:
+adb push Qwen_Qwen3-1.7B-Q4_0.gguf /data/local/tmp/
+adb shell run-as com.pocketpalai sh -c \
+  'cat /data/local/tmp/Qwen_Qwen3-1.7B-Q4_0.gguf > \
+   files/models/hf/bartowski/Qwen_Qwen3-1.7B-GGUF/Qwen_Qwen3-1.7B-Q4_0.gguf'
+```
+
+Then run with `MODELS_PRESEEDED=1`. The spec fails fast (before touching the matrix loop) with a per-file `adb push` template if anything is missing — no silent download fallback.
+
+### Comparing two reports
+
+```bash
+npx tsx e2e/scripts/benchmark-compare.ts \
+  path/to/baseline.json path/to/current.json
+```
+
+Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (override with `--pct N`). Also flags any `effective_backend` mismatch between baseline and current, independent of numeric deltas. Exit code: 0 pass, 1 regression, 2 error.
+
+### Known limitations (v1)
+
+- Android only. iOS Metal benchmarking is a follow-up.
+- Hexagon NPU tier excluded.
+- Preseed requires a debug APK (see above).
+- Static IQ1_S rung is substituted with IQ2_M for Qwen3 1.7B and Gemma 3 1B — neither is published at IQ1_S by bartowski or lmstudio-community. The canonical rung label in the JSON remains `iq1_s` so reports are comparable when IQ1_S eventually ships.
+- LFM2 1.2B slot 3 is deferred: no publisher has a complete 8-quant set.
