@@ -33,7 +33,7 @@
       "enabled": true,
       "deviceName": "emulator-5554",
       "platformVersion": "16",
-      "appPath": "../android/app/build/outputs/apk/release/app-release.apk"
+      "appPath": "../android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk"
     },
     {
       "id": "galaxy-s24-real",
@@ -44,7 +44,7 @@
       "deviceName": "Samsung Galaxy S24",
       "platformVersion": "14",
       "udid": "RXXXXXXXXXXXXXXX",
-      "appPath": "../android/app/build/outputs/apk/release/app-release.apk",
+      "appPath": "../android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk",
       "_note": "Get UDID via 'adb devices'. Ensure USB debugging is enabled."
     }
   ]

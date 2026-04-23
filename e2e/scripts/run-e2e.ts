@@ -512,11 +512,14 @@ function buildApps(
     }
   }
   if (platform === 'android' || platform === 'both') {
-    const cmd = 'cd android && ./gradlew assembleRelease';
+    // E2E runs must target the e2e flavor (com.pocketpalai.e2e) so the
+    // automation bridge is present. The prod flavor's APK has the
+    // bridge DCE-stripped and specs would silently fail.
+    const cmd = 'cd android && E2E_BUILD=true ./gradlew assembleE2eReleaseE2e';
     if (dryRun) {
       console.log(`[DRY RUN] Would run: ${cmd} (cwd: ${REPO_ROOT})`);
     } else {
-      console.log('Building Android release APK...');
+      console.log('Building Android E2E APK (e2e flavor, releaseE2e buildType)...');
       execSync(cmd, {stdio: 'inherit', cwd: REPO_ROOT});
     }
   }
@@ -943,7 +946,7 @@ function printDryRun(
     }
     if (args.platform === 'android' || args.platform === 'both') {
       console.log(
-        `  cd android && ./gradlew assembleRelease (cwd: ${REPO_ROOT})`,
+        `  cd android && E2E_BUILD=true ./gradlew assembleE2eReleaseE2e (cwd: ${REPO_ROOT})`,
       );
     }
   }

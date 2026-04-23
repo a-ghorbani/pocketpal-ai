@@ -11,9 +11,15 @@ platform :android do
       ENV["GOOGLE_SERVICES_JSON"]
     )
     
-    # Build APK for GitHub Release
+    # Build APK for GitHub Release.
+    # flavor: "prod" is MANDATORY — task: "assemble" is a gradle meta-task
+    # that, post-flavor, would build both prodRelease AND e2eRelease
+    # (variantFilter kills e2eRelease but the meta-task would still run
+    # through both flavors' dependency graphs). Pinning the flavor makes
+    # the invocation unambiguous and halves CI time.
     gradle(
       task: "assemble",
+      flavor: "prod",
       build_type: "Release",
       properties: {
         "android.injected.signing.store.file" => File.join(android_dir, "app/pocketpal-release-key.keystore"),
@@ -22,10 +28,11 @@ platform :android do
         "android.injected.signing.key.password" => ENV["KEY_PASSWORD"]
       }
     )
-    
-    # Build Bundle for Play Store
+
+    # Build Bundle for Play Store (same reasoning — pin to prod flavor).
     gradle(
       task: "bundle",
+      flavor: "prod",
       build_type: "Release",
       properties: {
         "android.injected.signing.store.file" => File.join(android_dir, "app/pocketpal-release-key.keystore"),
