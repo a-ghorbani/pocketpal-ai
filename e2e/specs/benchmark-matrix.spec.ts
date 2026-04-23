@@ -172,14 +172,18 @@ function buildAdbPushHint(
     lines.push(`  - ${f}`);
     lines.push(
       `      adb push ${f} /data/local/tmp/ && \\\n` +
-        `      adb shell run-as com.pocketpalai mkdir -p files/models/hf/${author}/${repo}-GGUF && \\\n` +
-        `      adb shell run-as com.pocketpalai sh -c 'cat /data/local/tmp/${f} > files/models/hf/${author}/${repo}-GGUF/${f}'`,
+        `      adb shell run-as com.pocketpalai.e2e mkdir -p files/models/hf/${author}/${repo}-GGUF && \\\n` +
+        `      adb shell run-as com.pocketpalai.e2e sh -c 'cat /data/local/tmp/${f} > files/models/hf/${author}/${repo}-GGUF/${f}'`,
     );
   }
   lines.push('');
-  lines.push('Preseed requires a DEBUG APK (release APK is non-debuggable).');
-  lines.push('  cd android && ./gradlew assembleDebug');
-  lines.push('  adb install android/app/build/outputs/apk/debug/app-debug.apk');
+  lines.push(
+    'Preseed requires the E2E-flavor APK (prod release APK is non-debuggable).',
+  );
+  lines.push('  yarn android:build:e2e');
+  lines.push(
+    '  adb install -r android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk',
+  );
   return lines.join('\n');
 }
 

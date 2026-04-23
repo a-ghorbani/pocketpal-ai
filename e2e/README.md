@@ -35,9 +35,22 @@ yarn ios:build:e2e
 # iOS real device (IPA, requires code signing)
 yarn ios:build:ipa
 
-# Android APK
-cd android && ./gradlew assembleRelease
+# Android E2E APK (required — prod APK has no automation bridge)
+yarn android:build:e2e
+# Installs as com.pocketpalai.e2e and coexists side-by-side with the
+# prod install (com.pocketpalai). E2E_BUILD=true is set automatically
+# so the automation bridge (src/__automation__/) ships in this APK.
 ```
+
+**Flavor note.** Since PR #702, Android has two productFlavors:
+`prod` (`com.pocketpalai`, ships to stores, automation bridge
+DCE-stripped) and `e2e` (`com.pocketpalai.e2e`, debuggable, automation
+bridge present). The buildType for E2E is `releaseE2e` — an
+`initWith release` derivative that inherits Hermes + the release
+optimizer toggle but flips `debuggable=true` for `adb run-as` preseed.
+All E2E infrastructure targets the e2e flavor; running specs against
+the prod flavor will silently fail because the automation bridge isn't
+there.
 
 ### Unified E2E Runner
 
@@ -110,7 +123,7 @@ Both `wdio.ios.local.conf.ts` and `wdio.android.local.conf.ts` accept these env 
 | `E2E_DEVICE_NAME` | `iPhone 17 Pro` | `emulator-5554` | Device/simulator name |
 | `E2E_PLATFORM_VERSION` | `26.0` | `16` | OS version |
 | `E2E_DEVICE_UDID` | _(none)_ | _(none)_ | Device UDID (required for real devices) |
-| `E2E_APP_PATH` | `../ios/build/.../PocketPal.app` | `../android/.../app-release.apk` | Path to built app |
+| `E2E_APP_PATH` | `../ios/build/.../PocketPal.app` | `../android/.../app-e2e-releaseE2e.apk` | Path to built app |
 | `E2E_APPIUM_PORT` | `4723` | `4723` | Appium server port |
 | `E2E_XCODE_ORG_ID` | _(none)_ | N/A | Apple Team ID (required for real iOS devices) |
 | `E2E_XCODE_SIGNING_ID` | `Apple Development` | N/A | Code signing identity for WDA |
@@ -340,32 +353,38 @@ Derived from the structured `log_signals` payload, not regex on raw text:
 
 A row where `requested_backend=gpu` but `effective_backend=cpu` is the canonical "silent CPU fallback" we want to catch. The comparison script flags this as a regression even when `pp_avg` / `tg_avg` numbers look fine.
 
-### Preseed workflow (debug APK required)
+### Preseed workflow (E2E flavor required)
 
 Preseeded mode skips all HuggingFace downloads and loads GGUFs that have already been pushed to the device's app-private storage. This is the fast path once you've downloaded each rung once.
 
-**Precondition: the app must be a debug build.** Release APK has no `android:debuggable` override, so `adb shell run-as com.pocketpalai` and `adb push` into `/data/data/com.pocketpalai/files/…` will not work. Build and install a debug APK first:
+**Precondition: the app must be the E2E flavor.** The prod `release`
+APK is non-debuggable, so `adb shell run-as com.pocketpalai` and
+`adb push` into `/data/data/com.pocketpalai/files/…` will not work.
+The `e2e` flavor + `releaseE2e` buildType is debuggable by design
+(same Hermes/release optimizer as prod, just with `debuggable=true`
+flipped on). Build and install it:
 
 ```bash
-cd android && ./gradlew assembleDebug && cd ..
-adb install android/app/build/outputs/apk/debug/app-debug.apk
+yarn android:build:e2e
+adb install -r android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk
 ```
 
-On-device path (matches `ModelStore.getModelFullPath`):
+On-device path (matches `ModelStore.getModelFullPath`, with the E2E
+flavor's applicationId):
 
 ```
-/data/data/com.pocketpalai/files/models/hf/<author>/<repo>/<filename>.gguf
+/data/data/com.pocketpalai.e2e/files/models/hf/<author>/<repo>/<filename>.gguf
 ```
 
 Push each GGUF once:
 
 ```bash
-adb shell run-as com.pocketpalai mkdir -p \
+adb shell run-as com.pocketpalai.e2e mkdir -p \
   files/models/hf/bartowski/Qwen_Qwen3-1.7B-GGUF
 
 # copy via /data/local/tmp to avoid run-as's stdin limitations:
 adb push Qwen_Qwen3-1.7B-Q4_0.gguf /data/local/tmp/
-adb shell run-as com.pocketpalai sh -c \
+adb shell run-as com.pocketpalai.e2e sh -c \
   'cat /data/local/tmp/Qwen_Qwen3-1.7B-Q4_0.gguf > \
    files/models/hf/bartowski/Qwen_Qwen3-1.7B-GGUF/Qwen_Qwen3-1.7B-Q4_0.gguf'
 ```
@@ -385,6 +404,6 @@ Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (over
 
 - Android only. iOS Metal benchmarking is a follow-up.
 - Hexagon NPU tier excluded.
-- Preseed requires a debug APK (see above).
+- Preseed requires the E2E-flavor APK (see above).
 - Static IQ1_S rung is substituted with IQ2_M for Qwen3 1.7B and Gemma 3 1B — neither is published at IQ1_S by bartowski or lmstudio-community. The canonical rung label in the JSON remains `iq1_s` so reports are comparable when IQ1_S eventually ships.
 - LFM2 1.2B slot 3 is deferred: no publisher has a complete 8-quant set.
