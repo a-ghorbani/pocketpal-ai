@@ -65,20 +65,14 @@ export const useDeepLinking = () => {
     async (params: DeepLinkParams) => {
       console.log('Handling deep link:', params);
 
-      // Handle memory profiling deep links (E2E only)
-      if (params.host === 'memory' && params.queryParams?.cmd) {
-        const {
-          takeMemorySnapshot,
-          clearMemorySnapshots,
-        } = require('../utils/memoryProfile');
-        const cmd = params.queryParams.cmd;
-        if (cmd.startsWith('snap::')) {
-          const label = cmd.slice(6) || 'unnamed';
-          await takeMemorySnapshot(label);
-        } else if (cmd === 'clear::snapshots') {
-          await clearMemorySnapshots();
+      // Automation-bridge dispatch (E2E-only). DCE-stripped in prod because
+      // __E2E__ inlines to false and the require() inside the gate is never
+      // reached. See src/__automation__/deepLink.ts.
+      if (__E2E__) {
+        const {dispatchAutomationDeepLink} = require('../__automation__');
+        if (await dispatchAutomationDeepLink(params)) {
+          return;
         }
-        return;
       }
 
       // Handle chat deep links
