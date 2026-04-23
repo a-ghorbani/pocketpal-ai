@@ -28,10 +28,9 @@ import {
   PalHeaderRight,
   HeaderLeft,
   AppWithMigration,
-  MemorySnapshotTrigger,
-  BenchmarkResultTrigger,
   TTSSetupSheet,
 } from './src/components';
+import {AutomationBridge} from './src/__automation__';
 import {
   ChatScreen,
   ModelsScreen,
@@ -77,8 +76,7 @@ const App = observer(() => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <MemorySnapshotTrigger />
-      <BenchmarkResultTrigger />
+      {__E2E__ ? <AutomationBridge /> : null}
       <SafeAreaProvider>
         <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
           <PaperProvider theme={theme}>

@@ -10,7 +10,7 @@ const LIST_MODELS = 'list::models';
 /**
  * Hidden component for E2E benchmark-matrix spec.
  *
- * Mirrors MemorySnapshotTrigger: a hidden View with a TextInput command sink
+ * Mirrors MemoryAdapter: a hidden View with a TextInput command sink
  * and a Text result sink exposed via accessibilityLabel. The spec drives
  * setValue() on the TextInput; the Text element's content-desc / text holds
  * the serialized response.
@@ -20,10 +20,10 @@ const LIST_MODELS = 'list::models';
  *   read::initSettings   -> JSON.stringify(modelStore.contextInitParams)
  *   list::models         -> JSON.stringify(<downloaded .gguf filenames>)
  *
- * Placed at bottom-left (MemorySnapshotTrigger uses bottom-right) so the two
+ * Placed at bottom-left (MemoryAdapter uses bottom-right) so the two
  * 44x44 triggers do not overlap in the accessibility tree.
  */
-export const BenchmarkResultTrigger: React.FC = () => {
+export const BenchmarkAdapter: React.FC = () => {
   const [resultData, setResultData] = useState('');
 
   const handleChangeText = useCallback((text: string) => {

@@ -2,7 +2,7 @@ import React from 'react';
 
 import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 
-import {BenchmarkResultTrigger} from '../BenchmarkResultTrigger';
+import {BenchmarkAdapter} from '../BenchmarkAdapter';
 
 import {benchmarkStore, modelStore} from '../../../store';
 
@@ -14,13 +14,13 @@ jest.mock('@dr.pogodin/react-native-fs', () => ({
 
 const RNFS = require('@dr.pogodin/react-native-fs');
 
-describe('BenchmarkResultTrigger', () => {
+describe('BenchmarkAdapter', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders the container and both testID elements', () => {
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     expect(getByTestId('benchmark-result-container')).toBeTruthy();
     expect(getByTestId('benchmark-result-label')).toBeTruthy();
@@ -28,7 +28,7 @@ describe('BenchmarkResultTrigger', () => {
   });
 
   it('read::latest writes JSON.stringify(latestResult) to accessibilityLabel', async () => {
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     fireEvent.changeText(getByTestId('benchmark-result-label'), 'read::latest');
 
@@ -44,7 +44,7 @@ describe('BenchmarkResultTrigger', () => {
     // Force latestResult to undefined/null for this test
     (benchmarkStore as any).latestResult = undefined;
 
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     fireEvent.changeText(getByTestId('benchmark-result-label'), 'read::latest');
 
@@ -58,7 +58,7 @@ describe('BenchmarkResultTrigger', () => {
   });
 
   it('read::initSettings writes JSON.stringify(contextInitParams)', async () => {
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     fireEvent.changeText(
       getByTestId('benchmark-result-label'),
@@ -100,7 +100,7 @@ describe('BenchmarkResultTrigger', () => {
         {name: 'README.md', isDirectory: () => false, isFile: () => true},
       ]);
 
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     fireEvent.changeText(getByTestId('benchmark-result-label'), 'list::models');
 
@@ -115,7 +115,7 @@ describe('BenchmarkResultTrigger', () => {
   it('list::models returns [] when the hf/ root does not exist', async () => {
     RNFS.exists.mockResolvedValueOnce(false);
 
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     fireEvent.changeText(getByTestId('benchmark-result-label'), 'list::models');
 
@@ -126,7 +126,7 @@ describe('BenchmarkResultTrigger', () => {
   });
 
   it('ignores text that is not a command', async () => {
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
 
     // Prime with a known state so we can detect any unintended mutation
     fireEvent.changeText(
@@ -150,7 +150,7 @@ describe('BenchmarkResultTrigger', () => {
   });
 
   it('is hidden: absolute position, 44x44, transparent background', () => {
-    const {getByTestId} = render(<BenchmarkResultTrigger />);
+    const {getByTestId} = render(<BenchmarkAdapter />);
     const container = getByTestId('benchmark-result-container');
 
     expect(container.props.style).toEqual(

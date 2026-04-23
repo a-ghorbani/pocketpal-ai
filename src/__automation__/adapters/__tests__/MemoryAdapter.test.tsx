@@ -2,7 +2,7 @@ import React from 'react';
 
 import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 
-import {MemorySnapshotTrigger} from '../MemorySnapshotTrigger';
+import {MemoryAdapter} from '../MemoryAdapter';
 
 import {
   takeMemorySnapshot,
@@ -16,13 +16,13 @@ jest.mock('../../../utils/memoryProfile', () => ({
   readMemorySnapshots: jest.fn().mockResolvedValue('[{"label":"test"}]'),
 }));
 
-describe('MemorySnapshotTrigger', () => {
+describe('MemoryAdapter', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders the container and inputs with correct testIDs', () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
 
     expect(getByTestId('memory-snapshot-container')).toBeTruthy();
     expect(getByTestId('memory-snapshot-label')).toBeTruthy();
@@ -30,7 +30,7 @@ describe('MemorySnapshotTrigger', () => {
   });
 
   it('takes snapshot when text starts with snap::', async () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
 
     fireEvent.changeText(
       getByTestId('memory-snapshot-label'),
@@ -43,7 +43,7 @@ describe('MemorySnapshotTrigger', () => {
   });
 
   it('uses "unnamed" when snap:: has no label', async () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
 
     fireEvent.changeText(getByTestId('memory-snapshot-label'), 'snap::');
 
@@ -53,7 +53,7 @@ describe('MemorySnapshotTrigger', () => {
   });
 
   it('clears snapshots on clear::snapshots', async () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
 
     fireEvent.changeText(
       getByTestId('memory-snapshot-label'),
@@ -67,7 +67,7 @@ describe('MemorySnapshotTrigger', () => {
   });
 
   it('reads snapshots on read::snapshots', async () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
 
     fireEvent.changeText(
       getByTestId('memory-snapshot-label'),
@@ -80,7 +80,7 @@ describe('MemorySnapshotTrigger', () => {
   });
 
   it('ignores text that is not a command', async () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
 
     fireEvent.changeText(getByTestId('memory-snapshot-label'), 'random text');
 
@@ -90,7 +90,7 @@ describe('MemorySnapshotTrigger', () => {
   });
 
   it('is hidden but remains in accessibility tree', () => {
-    const {getByTestId} = render(<MemorySnapshotTrigger />);
+    const {getByTestId} = render(<MemoryAdapter />);
     const container = getByTestId('memory-snapshot-container');
 
     expect(container.props.style).toEqual(

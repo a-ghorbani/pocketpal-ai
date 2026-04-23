@@ -1,5 +1,8 @@
 import React from 'react';
 
+import {MemoryAdapter} from './adapters/MemoryAdapter';
+import {BenchmarkAdapter} from './adapters/BenchmarkAdapter';
+
 /**
  * Single mount point for all E2E automation surfaces.
  *
@@ -17,7 +20,10 @@ export const AutomationBridge: React.FC = () => {
   if (!__E2E__) {
     return null;
   }
-  // Adapters are imported+rendered in a follow-up commit; stub returns
-  // null here so the folder scaffolding lands in its own commit.
-  return null;
+  return (
+    <>
+      <MemoryAdapter />
+      <BenchmarkAdapter />
+    </>
+  );
 };
