@@ -29,6 +29,7 @@ import {
   HeaderLeft,
   AppWithMigration,
   MemorySnapshotTrigger,
+  BenchmarkResultTrigger,
   TTSSetupSheet,
 } from './src/components';
 import {
@@ -77,6 +78,7 @@ const App = observer(() => {
   return (
     <GestureHandlerRootView style={styles.root}>
       <MemorySnapshotTrigger />
+      <BenchmarkResultTrigger />
       <SafeAreaProvider>
         <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
           <PaperProvider theme={theme}>

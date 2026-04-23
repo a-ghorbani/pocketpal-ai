@@ -58,5 +58,6 @@ export * from './PalHeaderRight';
 export * from './InputSlider';
 export * from './MemoryRequirement';
 export * from './MemorySnapshotTrigger';
+export * from './BenchmarkResultTrigger';
 export * from './RemoteModelSheet';
 export * from './ServerDetailsSheet';
