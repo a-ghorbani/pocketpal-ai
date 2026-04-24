@@ -42,39 +42,14 @@ yarn android:build:e2e
 # so the automation bridge (src/__automation__/) ships in this APK.
 ```
 
-**Flavor note.** Since PR #702, Android has two productFlavors:
-`prod` (`com.pocketpalai`, ships to stores, automation bridge
-DCE-stripped) and `e2e` (`com.pocketpalai.e2e`, debuggable, automation
-bridge present). The buildType for E2E is `releaseE2e` — an
-`initWith release` derivative that inherits Hermes + the release
-optimizer toggle but flips `debuggable=true` for `adb run-as` preseed.
-All E2E infrastructure targets the e2e flavor; running specs against
-the prod flavor will silently fail because the automation bridge isn't
-there.
+**Flavor.** E2E targets the `e2e` flavor (`com.pocketpalai.e2e`, debuggable),
+which ships the automation bridge. The `prod` flavor has no bridge — specs
+will silently fail there.
 
-**Firebase setup for the e2e flavor (one-time).** Building
-`assembleE2eReleaseE2e` requires `com.pocketpalai.e2e` to be registered
-as a second Android app in the same Firebase project as the prod app.
-Without this registration the google-services gradle plugin will fail
-the build. One-time steps:
-
-1. Firebase Console → ⚙️ Project settings → Your apps → **Add app** →
-   Android → package `com.pocketpalai.e2e`. Optionally add the debug
-   SHA-1 (the committed `android/app/debug.keystore` is the signer for
-   `releaseE2e`).
-2. Download the refreshed `google-services.json` — it now contains two
-   client entries, one per package. Place it at
-   `android/app/google-services.json` locally. This file is gitignored;
-   each dev machine / CI runner needs its own copy.
-3. In Google Cloud Console → APIs & Services → Credentials, restrict
-   the newly-auto-created Android key (for `com.pocketpalai.e2e`) to
-   the e2e package name + debug SHA-1, and to the same tight Firebase
-   API allow-list used for the prod key (Installations + App Check).
-
-Do NOT create a flavor-specific `android/app/src/e2e/google-services.json`
-— the single top-level file with two client entries covers both flavors
-automatically, and committing a flavor-specific duplicate is how we got
-the April 2026 secret leak.
+**Firebase.** `android/app/google-services.json` (gitignored) must contain
+client entries for both `com.pocketpalai` and `com.pocketpalai.e2e`. If the
+build fails with a google-services plugin error, the `.e2e` client entry is
+missing from your local copy.
 
 ### Unified E2E Runner
 
