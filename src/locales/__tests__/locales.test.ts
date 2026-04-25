@@ -32,6 +32,7 @@ const EXPECTED_SECTIONS = [
   'benchmark',
   'errors',
   'simulator',
+  'voiceAndSpeech',
 ];
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
@@ -43,7 +44,9 @@ const ALL_LANGUAGES: AvailableLanguage[] = [
   'ko',
   'ms',
   'ru',
+  'uk',
   'zh',
+  'zh_Hant',
 ];
 
 describe('l10n object', () => {
@@ -57,7 +60,7 @@ describe('l10n object', () => {
   });
 
   it.each(ALL_LANGUAGES)(
-    'l10n.%s has all 19 expected top-level sections',
+    'l10n.%s has all 20 expected top-level sections',
     lang => {
       const sections = Object.keys(l10n[lang]);
       for (const section of EXPECTED_SECTIONS) {
@@ -79,7 +82,9 @@ describe('l10n object', () => {
     'ko',
     'ms',
     'ru',
+    'uk',
     'zh',
+    'zh_Hant',
   ] as AvailableLanguage[])(
     'l10n.%s contains translations where they exist',
     lang => {
@@ -97,7 +102,9 @@ describe('l10n object', () => {
     'ko',
     'ms',
     'ru',
+    'uk',
     'zh',
+    'zh_Hant',
   ] as AvailableLanguage[])(
     'returns cached result on repeated access for %s',
     lang => {
@@ -144,7 +151,9 @@ describe('l10n object', () => {
     expect('ko' in l10n).toBe(true);
     expect('ms' in l10n).toBe(true);
     expect('ru' in l10n).toBe(true);
+    expect('uk' in l10n).toBe(true);
     expect('zh' in l10n).toBe(true);
+    expect('zh_Hant' in l10n).toBe(true);
     expect('xx' in l10n).toBe(false);
     expect('fr' in l10n).toBe(false);
   });
@@ -208,7 +217,13 @@ describe('exports', () => {
     expect(languageDisplayNames.ru).toBe(
       '\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)',
     );
+    expect(languageDisplayNames.uk).toBe(
+      '\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430 (UK)',
+    );
     expect(languageDisplayNames.zh).toBe('\u4E2D\u6587 (ZH)');
+    expect(languageDisplayNames.zh_Hant).toBe(
+      '\u7E41\u9AD4\u4E2D\u6587 (ZH_HANT)',
+    );
   });
 
   it('languageDisplayNames has exactly the same keys as supportedLanguages', () => {
@@ -245,7 +260,9 @@ describe('lazy loading', () => {
     'ko',
     'ms',
     'ru',
+    'uk',
     'zh',
+    'zh_Hant',
   ] as AvailableLanguage[])('accessing %s populates the cache', lang => {
     jest.isolateModules(() => {
       const freshModule = require('../index');
@@ -301,7 +318,9 @@ describe('type safety', () => {
       'ko',
       'ms',
       'ru',
+      'uk',
       'zh',
+      'zh_Hant',
     ];
     expect(Object.keys(l10n).sort()).toEqual(keys.sort());
 

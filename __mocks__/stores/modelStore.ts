@@ -1,4 +1,4 @@
-import {computed, makeAutoObservable} from 'mobx';
+import {computed, makeAutoObservable, observable} from 'mobx';
 
 import {modelsList} from '../../jest/fixtures/models';
 
@@ -6,6 +6,7 @@ import {downloadManager} from '../services/downloads';
 
 import {Model, ContextInitParams} from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
+import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
 
 class MockModelStore {
@@ -18,6 +19,7 @@ class MockModelStore {
   inferencing = false;
   isStreaming = false;
   context: LlamaContext | undefined = undefined;
+  engine: CompletionEngine | undefined = undefined;
 
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
@@ -25,6 +27,7 @@ class MockModelStore {
 
   refreshDownloadStatuses: jest.Mock;
   addLocalModel: jest.Mock;
+  removeModelByFullPath: jest.Mock;
   setNContext: jest.Mock;
   updateUseAutoRelease: jest.Mock;
   setNoGpuDevices: jest.Mock;
@@ -33,6 +36,8 @@ class MockModelStore {
   setNGPULayers: jest.Mock;
   resetModels: jest.Mock;
   initContext: jest.Mock;
+  selectModel: jest.Mock;
+  setRemoteModel: jest.Mock;
   lastUsedModelId: any;
   checkSpaceAndDownload: jest.Mock;
   getDownloadProgress: jest.Mock;
@@ -61,14 +66,18 @@ class MockModelStore {
 
   constructor() {
     makeAutoObservable(this, {
+      engine: observable.ref,
       refreshDownloadStatuses: false,
       addLocalModel: false,
+      removeModelByFullPath: false,
       setNContext: false,
       updateUseAutoRelease: false,
 
       setNGPULayers: false,
       resetModels: false,
       initContext: false,
+      selectModel: false,
+      setRemoteModel: false,
       checkSpaceAndDownload: false,
       getDownloadProgress: false,
       manualReleaseContext: false,
@@ -91,6 +100,7 @@ class MockModelStore {
       setNThreads: false,
       setNBatch: false,
       setNUBatch: false,
+      contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
       displayModels: computed,
@@ -99,6 +109,7 @@ class MockModelStore {
     });
     this.refreshDownloadStatuses = jest.fn();
     this.addLocalModel = jest.fn();
+    this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();
     this.updateUseAutoRelease = jest.fn();
     this.setNoGpuDevices = jest.fn();
@@ -107,6 +118,8 @@ class MockModelStore {
     this.setNGPULayers = jest.fn();
     this.resetModels = jest.fn();
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
+    this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
+    this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.checkSpaceAndDownload = jest.fn();
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
@@ -150,6 +163,13 @@ class MockModelStore {
   // Safe context release methods
   registerCompletionPromise = jest.fn();
   clearCompletionPromise = jest.fn();
+
+  get contextId(): string | undefined {
+    if (this.context) {
+      return String(this.context.id);
+    }
+    return undefined;
+  }
 
   get lastUsedModel(): Model | undefined {
     return this.lastUsedModelId

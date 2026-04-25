@@ -43,6 +43,8 @@ export const downloadFile = jest.fn();
 // Make DocumentDirectoryPath configurable for tests
 let documentDirectoryPath = '/path/to/documents';
 export const DocumentDirectoryPath = documentDirectoryPath;
+export const LibraryDirectoryPath = '/path/to/library';
+export const MainBundlePath = '/path/to/bundle';
 
 // Allow tests to override the path
 export const __setDocumentDirectoryPath = path => {
@@ -72,6 +74,8 @@ const RNFS = {
   writeFile,
   downloadFile,
   DocumentDirectoryPath,
+  LibraryDirectoryPath,
+  MainBundlePath,
   copyFile,
   __resetMockState,
   __setDocumentDirectoryPath,

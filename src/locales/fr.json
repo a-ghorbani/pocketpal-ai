@@ -313,9 +313,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Envoyer un média"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}ms par token, {{predictedPerSecond}} tokens par seconde"
-    },
     "exportUtils": {
       "fileSaved": "Fichier enregistré",
       "fileSavedMessage": "Le fichier a été enregistré dans votre dossier Téléchargements sous le nom {{filename}}",

@@ -38,10 +38,11 @@ platform :android do
     upload_to_play_store(
       track: "alpha",
       package_name: "com.pocketpalai",
-      skip_upload_metadata: true,
+      skip_upload_metadata: false,
       skip_upload_images: true,
       skip_upload_screenshots: true,
       skip_upload_apk: true,
+      metadata_path: File.join(android_dir, "..", "fastlane", "metadata", "android"),
       json_key: File.join(android_dir, "play-store-key.json")
     )
   end

@@ -236,6 +236,36 @@ export function bytesToGB(bytes: number): string {
   return gib.toFixed(2);
 }
 
+/**
+ * Parse a GGUF general.size_label (e.g. "1.7B", "8B", "350M") into a
+ * raw parameter count.  Returns 0 when the label is missing, empty, or
+ * does not match the expected format.
+ */
+export function parseSizeLabel(sizeLabel: string | undefined): number {
+  if (!sizeLabel) {
+    return 0;
+  }
+
+  const UNIT_MULTIPLIERS: Record<string, number> = {
+    B: 1_000_000_000,
+    M: 1_000_000,
+    K: 1_000,
+  };
+
+  const match = sizeLabel.match(/^([\d.]+)\s*([BMK])/i);
+  if (!match) {
+    return 0;
+  }
+
+  const value = parseFloat(match[1]);
+  if (isNaN(value) || value <= 0) {
+    return 0;
+  }
+
+  const unit = match[2].toUpperCase();
+  return Math.round(value * UNIT_MULTIPLIERS[unit]);
+}
+
 export const getModelSizeString = (
   model: Model,
   isActiveModel: boolean,

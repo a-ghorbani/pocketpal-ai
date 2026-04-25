@@ -197,7 +197,7 @@ describe('useMessageActions', () => {
         await result.current.handleTryAgainWith('model-1', messages[0]);
       });
 
-      expect(modelStore.initContext).not.toHaveBeenCalled();
+      expect(modelStore.selectModel).not.toHaveBeenCalled();
       expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalled();
       expect(mockHandleSendPress).toHaveBeenCalled();
     });
@@ -213,13 +213,15 @@ describe('useMessageActions', () => {
       );
 
       modelStore.activeModelId = 'model-1';
-      modelStore.models = [createModel({id: 'model-2', name: 'Model 2'})];
+      modelStore.models = [
+        createModel({id: 'model-2', name: 'Model 2', isDownloaded: true}),
+      ];
 
       await act(async () => {
         await result.current.handleTryAgainWith('model-2', messages[0]);
       });
 
-      expect(modelStore.initContext).toHaveBeenCalled();
+      expect(modelStore.selectModel).toHaveBeenCalled();
       expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalled();
       expect(mockHandleSendPress).toHaveBeenCalled();
     });

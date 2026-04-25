@@ -48,6 +48,8 @@ import {
 import {benchmarkStore as mockBenchmarkStore} from '../__mocks__/stores/benchmarkStore';
 import {mockPalStore} from '../__mocks__/stores/palStore';
 import {deepLinkStore as mockDeepLinkStore} from '../__mocks__/stores/deepLinkStore';
+import {mockServerStore} from '../__mocks__/stores/serverStore';
+import {mockTTSStore} from '../__mocks__/stores/ttsStore';
 
 jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
@@ -72,6 +74,9 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
     ),
     getChipset: jest.fn(() => Promise.resolve('Mock Chipset')),
     getAvailableMemory: jest.fn(() => Promise.resolve(3 * 1000 * 1000 * 1000)), // 3GB
+    writeMemorySnapshot: jest.fn((label: string) =>
+      Promise.resolve({label, status: 'written'}),
+    ),
   },
 }));
 
@@ -97,6 +102,8 @@ jest.mock('../src/store', () => {
     benchmarkStore: mockBenchmarkStore,
     palStore: mockPalStore,
     deepLinkStore: mockDeepLinkStore,
+    serverStore: mockServerStore,
+    ttsStore: mockTTSStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
   };
 });

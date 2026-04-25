@@ -214,6 +214,8 @@ export const ChatView = observer(
     // ============ COMPONENT STATE ============
     // Input state
     const [inputText, setInputText] = React.useState('');
+    const inputTextRef = React.useRef(inputText);
+    inputTextRef.current = inputText;
     const [inputImages, setInputImages] = React.useState<string[]>([]);
     const [isPickerVisible, setIsPickerVisible] = React.useState(false);
     const [_selectedModel, setSelectedModel] = React.useState<string | null>(
@@ -256,6 +258,25 @@ export const ChatView = observer(
       }
     }, [initialInputText, onInitialTextConsumed]);
 
+    // ============ DRAFT AUTOSAVE ============
+    // Save draft on session switch, restore draft for new session
+    const prevSessionId = usePrevious(chatSessionStore.activeSessionId);
+    React.useEffect(() => {
+      const NEW_CHAT_DRAFT_KEY = '__new_chat__';
+      const prevKey = prevSessionId ?? NEW_CHAT_DRAFT_KEY;
+      const newKey = chatSessionStore.activeSessionId ?? NEW_CHAT_DRAFT_KEY;
+
+      // Save draft for the session we're leaving
+      if (prevKey !== newKey) {
+        chatSessionStore.saveDraft(prevKey, inputTextRef.current);
+      }
+
+      // Restore draft for the session we're entering
+      const draft = chatSessionStore.getDraft(newKey);
+      setInputText(draft);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- MobX observer makes activeSessionId reactive
+    }, [chatSessionStore.activeSessionId]);
+
     // ============ ACTIVE PAL MODEL INITIALIZATION ============
     // Initialize model context when active pal changes
     React.useEffect(() => {
@@ -267,7 +288,7 @@ export const ChatView = observer(
 
           if (palDefaultModel) {
             // Initialize the model context
-            modelStore.initContext(palDefaultModel);
+            modelStore.selectModel(palDefaultModel);
           }
         }
       }
@@ -388,6 +409,9 @@ export const ChatView = observer(
         }
         onSendPress(message);
         setInputText('');
+        if (chatSessionStore.activeSessionId) {
+          chatSessionStore.clearDraft(chatSessionStore.activeSessionId);
+        }
         Keyboard.dismiss();
       },
       [onSendPress],

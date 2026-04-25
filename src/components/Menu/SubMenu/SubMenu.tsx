@@ -4,6 +4,7 @@ import {
   Menu as PaperMenu,
   MenuProps as PaperMenuProps,
 } from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {useTheme} from '../../../hooks';
 
@@ -20,6 +21,7 @@ export const SubMenu: React.FC<SubMenuProps> = ({
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
+  const statusBarHeight = useSafeAreaInsets().top;
 
   return (
     <PaperMenu
@@ -27,6 +29,7 @@ export const SubMenu: React.FC<SubMenuProps> = ({
       onDismiss={onDismiss}
       style={[styles.menu, style]}
       contentStyle={styles.content}
+      statusBarHeight={statusBarHeight}
       {...menuProps}>
       {children}
     </PaperMenu>
