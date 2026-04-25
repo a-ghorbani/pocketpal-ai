@@ -1062,7 +1062,9 @@
     "readyToChat": "Ready to chat? Load the last used model.",
     "pleaseLoadModel": "Load a model to chat.",
     "multimodalNotEnabled": "Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.",
-    "cannotSendWithoutModel": "Load a model first"
+    "cannotSendWithoutModel": "Load a model first",
+    "searchMessages": "Search messages...",
+    "noResults": "No results"
   },
   "benchmark": {
     "title": "Benchmark",

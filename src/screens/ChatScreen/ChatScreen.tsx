@@ -5,6 +5,7 @@ import {observer} from 'mobx-react';
 import {
   Bubble,
   ChatView,
+  ChatSearchBar,
   ErrorSnackbar,
   ModelErrorReportSheet,
 } from '../../components';
@@ -17,7 +18,7 @@ import {Pal} from '../../types/pal';
 import {modelStore, chatSessionStore, palStore, uiStore} from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
-import {L10nContext} from '../../utils';
+import {L10nContext, SearchQueryContext} from '../../utils';
 import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
@@ -162,38 +163,55 @@ export const ChatScreen: React.FC = observer(() => {
     return <VideoPalScreen activePal={activePal} />;
   }
 
+  // Compute messages and search match count
+  const messages =
+    chatSessionStore.isSearchMode && chatSessionStore.searchQuery.trim()
+      ? chatSessionStore.filteredSessionMessages
+      : chatSessionStore.currentSessionMessages;
+  const matchCount =
+    chatSessionStore.isSearchMode && chatSessionStore.searchQuery.trim()
+      ? chatSessionStore.filteredSessionMessages.length
+      : 0;
+
   // Otherwise, show the regular chat view
   return (
     <>
-      <ChatView
-        renderBubble={renderBubble}
-        messages={chatSessionStore.currentSessionMessages}
-        activePal={activePal}
-        onSendPress={handleSendPress}
-        onStopPress={handleStopPress}
-        onPalSettingsSelect={handleOpenPalSheet}
-        user={user}
-        isStopVisible={modelStore.inferencing}
-        isThinking={isThinking}
-        isStreaming={modelStore.isStreaming}
-        sendButtonVisibilityMode="always"
-        showImageUpload={true}
-        isVisionEnabled={multimodalEnabled}
-        initialInputText={pendingMessage || undefined}
-        onInitialTextConsumed={clearPendingMessage}
-        inputProps={{
-          showThinkingToggle: thinkingSupported,
-          isThinkingEnabled: thinkingEnabled,
-          onThinkingToggle: handleThinkingToggle,
-        }}
-        textInputProps={{
-          placeholder: !modelStore.engine
-            ? modelStore.isContextLoading
-              ? l10n.chat.loadingModel
-              : l10n.chat.modelNotLoaded
-            : l10n.chat.typeYourMessage,
-        }}
-      />
+      <SearchQueryContext.Provider value={chatSessionStore.searchQuery}>
+        <ChatView
+          renderBubble={renderBubble}
+          messages={messages}
+          customContent={
+            chatSessionStore.isSearchMode ? (
+              <ChatSearchBar matchCount={matchCount} />
+            ) : undefined
+          }
+          activePal={activePal}
+          onSendPress={handleSendPress}
+          onStopPress={handleStopPress}
+          onPalSettingsSelect={handleOpenPalSheet}
+          user={user}
+          isStopVisible={modelStore.inferencing}
+          isThinking={isThinking}
+          isStreaming={modelStore.isStreaming}
+          sendButtonVisibilityMode="always"
+          showImageUpload={true}
+          isVisionEnabled={multimodalEnabled}
+          initialInputText={pendingMessage || undefined}
+          onInitialTextConsumed={clearPendingMessage}
+          inputProps={{
+            showThinkingToggle: thinkingSupported,
+            isThinkingEnabled: thinkingEnabled,
+            onThinkingToggle: handleThinkingToggle,
+          }}
+          textInputProps={{
+            placeholder: !modelStore.engine
+              ? modelStore.isContextLoading
+                ? l10n.chat.loadingModel
+                : l10n.chat.modelNotLoaded
+              : l10n.chat.typeYourMessage,
+          }}
+        />
+      </SearchQueryContext.Provider>
       {uiStore.chatWarning && (
         <ErrorSnackbar
           error={uiStore.chatWarning}
