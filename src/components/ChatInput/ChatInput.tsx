@@ -71,6 +71,8 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** When provided, shows a temperature pill that opens the generation settings panel */
+  onGenSettingsPress?: () => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -88,6 +90,8 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** When provided, shows a temperature pill that opens the generation settings panel */
+  onGenSettingsPress?: () => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -122,6 +126,7 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    onGenSettingsPress,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -541,6 +546,31 @@ export const ChatInput = observer(
                   </Text>
                 )}
               </View>
+
+              {/* Temperature Pill */}
+              {onGenSettingsPress && !isCameraActive && hasActiveModel && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={onGenSettingsPress}
+                  accessibilityLabel="Open generation settings"
+                  accessibilityRole="button"
+                  testID="temperature-pill">
+                  <Text
+                    style={[
+                      styles.thinkingToggleText,
+                      {color: onSurfaceColorVariant},
+                    ]}>
+                    {`T: ${(
+                      chatSessionStore.sessions.find(
+                        s => s.id === chatSessionStore.activeSessionId,
+                      )?.completionSettings?.temperature ?? 0.7
+                    ).toFixed(1)}`}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {/* Thinking Toggle Button */}
               {showThinkingToggle && !isCameraActive && (

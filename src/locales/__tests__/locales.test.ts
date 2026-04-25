@@ -32,6 +32,7 @@ const EXPECTED_SECTIONS = [
   'benchmark',
   'errors',
   'simulator',
+  'quickGenSettings',
   'voiceAndSpeech',
 ];
 

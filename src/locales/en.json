@@ -1218,6 +1218,17 @@
   "simulator": {
     "cameraNotAvailable": "Camera not available in simulator. Please use a physical device."
   },
+  "quickGenSettings": {
+    "title": "Generation Settings",
+    "temperature": "Temperature",
+    "temperatureDesc": "Controls randomness. Lower = more focused, higher = more creative.",
+    "topP": "Top-p",
+    "topPDesc": "Nucleus sampling threshold. Lower values keep only the most likely tokens.",
+    "maxTokens": "Max tokens",
+    "maxTokensDesc": "Maximum number of tokens to generate per response.",
+    "resetDefaults": "Reset to defaults",
+    "apply": "Apply"
+  },
   "voiceAndSpeech": {
     "sectionTitle": "Voice & Speech",
     "voiceRowTitle": "Voice",
