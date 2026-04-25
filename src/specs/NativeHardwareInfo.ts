@@ -41,6 +41,11 @@ export interface Spec extends TurboModule {
    * @returns Promise<number> Available memory in bytes
    */
   getAvailableMemory(): Promise<number>;
+  /**
+   * Collect memory metrics and write a snapshot entry to disk.
+   * Appends to Documents/memory-snapshots.json (iOS) or externalFilesDir/memory-snapshots.json (Android).
+   */
+  writeMemorySnapshot(label: string): Promise<{label: string; status: string}>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('HardwareInfo');

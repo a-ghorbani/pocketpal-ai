@@ -118,5 +118,17 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 6: Add settings_source column to chat_sessions
+    {
+      toVersion: 6,
+      steps: [
+        addColumns({
+          table: 'chat_sessions',
+          columns: [
+            {name: 'settings_source', type: 'string', isOptional: true},
+          ],
+        }),
+      ],
+    },
   ],
 });

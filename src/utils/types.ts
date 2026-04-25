@@ -328,6 +328,14 @@ export enum ModelOrigin {
   PRESET = 'preset',
   LOCAL = 'local',
   HF = 'hf',
+  REMOTE = 'remote',
+}
+
+export interface ServerConfig {
+  id: string;
+  name: string;
+  url: string; // Base URL e.g. "http://192.168.1.100:1234"
+  lastConnected?: number; // Timestamp
 }
 
 export enum ModelType {
@@ -350,6 +358,7 @@ export interface GGUFMetadata {
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
+  context_length?: number; // Native context length from GGUF
 }
 
 export interface Model {
@@ -383,6 +392,8 @@ export interface Model {
 
   // Thinking capabilities
   supportsThinking?: boolean; // Whether this model supports thinking/reasoning mode
+  thinkingStartTag?: string; // Thinking start tag from getFormattedChat (e.g., '<think>')
+  thinkingEndTag?: string; // Thinking end tag from getFormattedChat (e.g., '</think>')
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;
@@ -396,6 +407,11 @@ export interface Model {
   hfModelFile?: ModelFile;
   hfModel?: HuggingFaceModel;
   hash?: string;
+
+  // Remote model fields (for models from OpenAI-compatible servers)
+  serverId?: string; // Reference to ServerConfig.id for remote models
+  serverName?: string; // Denormalized for display convenience
+  remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
 export type RootDrawerParamList = {
@@ -516,6 +532,11 @@ export interface ContextInitParams
   // v2.1+
   /** Maximum number of tokens for image input (for dynamic resolution VLMs). Default: 512 */
   image_max_tokens?: number;
+
+  // v2.2+
+  /** Disable extra buffer types for weight repacking (CPU_REPACK). Android only.
+   * Reduces memory usage at the cost of slower prompt processing. Default: false */
+  no_extra_bufts?: boolean;
 
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */

@@ -42,6 +42,14 @@ jest.mock('../../../store', () => ({
   uiStore: {
     colorScheme: 'light',
   },
+  ttsStore: {
+    isTTSAvailable: false,
+    currentVoice: null,
+    autoSpeakEnabled: false,
+    playbackState: {mode: 'idle'},
+    openSetupSheet: jest.fn(),
+    setAutoSpeak: jest.fn(),
+  },
 }));
 
 // Mock the icons

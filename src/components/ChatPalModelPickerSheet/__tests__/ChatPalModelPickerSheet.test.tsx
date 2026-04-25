@@ -28,6 +28,7 @@ jest.mock('../../../store', () => ({
     activeModel: {id: 'model1', name: 'Test Model 1'},
     activeModelId: 'model1',
     initContext: jest.fn(),
+    selectModel: jest.fn(),
     hasRequiredProjectionModel: jest.fn().mockReturnValue(true),
     getProjectionModelStatus: jest.fn().mockReturnValue({
       isAvailable: true,
@@ -245,7 +246,7 @@ describe('ChatPalModelPickerSheet', () => {
     await waitFor(() => {
       expect(defaultProps.onModelSelect).toHaveBeenCalledWith('model1');
       expect(defaultProps.onClose).toHaveBeenCalled();
-      expect(modelStore.initContext).toHaveBeenCalled();
+      expect(modelStore.selectModel).toHaveBeenCalled();
     });
   });
 

@@ -7,7 +7,7 @@ import 'react-native-get-random-values';
 import {observer} from 'mobx-react-lite';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick, types} from '@react-native-documents/picker';
-import {Portal} from 'react-native-paper';
+import {Portal, Snackbar} from 'react-native-paper';
 
 import {useTheme} from '../../hooks';
 
@@ -21,9 +21,11 @@ import {
   ErrorSnackbar,
   ModelSettingsSheet,
   ModelErrorReportSheet,
+  RemoteModelSheet,
+  ServerDetailsSheet,
 } from '../../components';
 
-import {uiStore, modelStore, hfStore, UIStore} from '../../store';
+import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
@@ -33,7 +35,7 @@ export const ModelsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [hfSearchVisible, setHFSearchVisible] = useState(false);
-  const [_, setTrigger] = useState<boolean>(false);
+  const [isCopyingModel, setIsCopyingModel] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | undefined>();
   const [settingsVisible, setSettingsVisible] = useState(false);
 
@@ -44,6 +46,12 @@ export const ModelsScreen: React.FC = observer(() => {
   // Model error report sheet state
   const [isErrorReportVisible, setIsErrorReportVisible] = useState(false);
   const [errorToReport, setErrorToReport] = useState<ErrorState | null>(null);
+
+  // Remote model / server details sheets
+  const [remoteModelSheetVisible, setRemoteModelSheetVisible] = useState(false);
+  const [serverDetailsSheetVisible, setServerDetailsSheetVisible] =
+    useState(false);
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
 
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -98,7 +106,6 @@ export const ModelsScreen: React.FC = observer(() => {
   const onRefresh = async () => {
     setRefreshing(true);
     await modelStore.refreshDownloadStatuses();
-    setTrigger(prev => !prev);
     setRefreshing(false);
   };
 
@@ -110,6 +117,30 @@ export const ModelsScreen: React.FC = observer(() => {
   const handleCloseSettings = () => {
     setSettingsVisible(false);
     setSelectedModel(undefined);
+  };
+
+  const handleAddRemoteModel = () => {
+    setRemoteModelSheetVisible(true);
+  };
+
+  const handleManageServers = () => {
+    const servers = serverStore.servers;
+    if (servers.length === 1) {
+      handleOpenServerDetails(servers[0].id);
+    } else if (servers.length > 1) {
+      Alert.alert(l10n.settings.manageServers, undefined, [
+        ...servers.map(server => ({
+          text: server.name,
+          onPress: () => handleOpenServerDetails(server.id),
+        })),
+        {text: l10n.common.cancel, style: 'cancel' as const},
+      ]);
+    }
+  };
+
+  const handleOpenServerDetails = (serverId: string) => {
+    setSelectedServerId(serverId);
+    setServerDetailsSheetVisible(true);
   };
 
   const handleDismissError = () => {
@@ -151,6 +182,10 @@ export const ModelsScreen: React.FC = observer(() => {
   };
 
   const handleAddLocalModel = async () => {
+    if (isCopyingModel) {
+      return;
+    }
+
     pick({
       type: Platform.OS === 'ios' ? 'public.data' : types.allFiles,
     })
@@ -196,6 +231,7 @@ export const ModelsScreen: React.FC = observer(() => {
             switch (choice) {
               case 'replace':
                 await RNFS.unlink(permanentPath);
+                modelStore.removeModelByFullPath(permanentPath);
                 break;
               case 'keep':
                 let counter = 1;
@@ -213,9 +249,18 @@ export const ModelsScreen: React.FC = observer(() => {
             }
           }
 
-          await RNFS.copyFile(file.uri, permanentPath);
-          await modelStore.addLocalModel(permanentPath);
-          setTrigger(prev => !prev);
+          try {
+            setIsCopyingModel(true);
+            await RNFS.copyFile(file.uri, permanentPath);
+            await modelStore.addLocalModel(permanentPath);
+          } catch (e) {
+            Alert.alert(
+              l10n.models.fileManagement.copyFailed,
+              e instanceof Error ? e.message : String(e),
+            );
+          } finally {
+            setIsCopyingModel(false);
+          }
         }
       })
       .catch(e => console.log('No file picked, error: ', e.message));
@@ -322,6 +367,7 @@ export const ModelsScreen: React.FC = observer(() => {
               model={subItem}
               activeModelId={activeModelId}
               onOpenSettings={() => handleOpenSettings(subItem)}
+              onOpenServerDetails={handleOpenServerDetails}
             />
           )}
         />
@@ -389,9 +435,19 @@ export const ModelsScreen: React.FC = observer(() => {
         visible={hfSearchVisible}
         onDismiss={() => setHFSearchVisible(false)}
       />
+      <Snackbar
+        testID="copy-model-snackbar"
+        visible={isCopyingModel}
+        onDismiss={() => {}}
+        duration={86400000}>
+        {l10n.models.fileManagement.copyingModel}
+      </Snackbar>
       <FABGroup
         onAddHFModel={() => setHFSearchVisible(true)}
         onAddLocalModel={handleAddLocalModel}
+        onAddRemoteModel={handleAddRemoteModel}
+        onManageServers={handleManageServers}
+        hasServers={serverStore.servers.length > 0}
       />
       <ModelSettingsSheet
         isVisible={settingsVisible}
@@ -402,6 +458,18 @@ export const ModelsScreen: React.FC = observer(() => {
         isVisible={isErrorReportVisible}
         onClose={handleCloseErrorReport}
         error={errorToReport}
+      />
+      <RemoteModelSheet
+        isVisible={remoteModelSheetVisible}
+        onDismiss={() => setRemoteModelSheetVisible(false)}
+      />
+      <ServerDetailsSheet
+        isVisible={serverDetailsSheetVisible}
+        onDismiss={() => {
+          setServerDetailsSheetVisible(false);
+          setSelectedServerId(null);
+        }}
+        serverId={selectedServerId}
       />
     </View>
   );

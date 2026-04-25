@@ -13,7 +13,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 
-import {uiStore} from './src/store';
+import {ttsStore, uiStore} from './src/store';
 import {useTheme} from './src/hooks';
 import {useDeepLinking} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
@@ -28,6 +28,8 @@ import {
   PalHeaderRight,
   HeaderLeft,
   AppWithMigration,
+  MemorySnapshotTrigger,
+  TTSSetupSheet,
 } from './src/components';
 import {
   ChatScreen,
@@ -64,8 +66,17 @@ const App = observer(() => {
     initLocale(uiStore.language);
   }, []);
 
+  // Initialize TTS store (memory gate + AppState/session listeners).
+  // Fire-and-forget: `init()` is idempotent and swallows its own errors.
+  React.useEffect(() => {
+    ttsStore.init().catch(() => {
+      // init() swallows its own errors; catch to satisfy no-floating-promises.
+    });
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
+      <MemorySnapshotTrigger />
       <SafeAreaProvider>
         <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
           <PaperProvider theme={theme}>
@@ -148,6 +159,7 @@ const App = observer(() => {
                       />
                     )}
                   </Drawer.Navigator>
+                  <TTSSetupSheet />
                 </BottomSheetModalProvider>
               </NavigationContainer>
             </L10nContext.Provider>

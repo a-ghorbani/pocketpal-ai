@@ -83,11 +83,8 @@
     "useMmapDescription": "השתמש בקבצים ממופים בזיכרון לטעינת מודלים מהירה יותר",
     "useMmapTrue": "מופעל",
     "useMmapFalse": "מושבת",
-    "useMmapSmart": "חכם",
     "useMmapTrueDescription": "השתמש תמיד במיפוי זיכרון לטעינה מהירה יותר",
-    "useMmapFalseDescription": "לעולם אל תשתמש במיפוי זיכרון (טעינה איטית יותר אך עשוי להפחית את ניצול הזיכרון)",
-    "useMmapSmartDescription": "בחירה אוטומטית לפי סוג המודל (אנדרואיד בלבד)",
-    "useMmapRecommended": "מומלץ לביצועים - זיכרון ממופה עם דפים נעולים. משלב טעינה מהירה עם ביצועים עקביים",
+    "useMmapFalseDescription": "מומלץ להשבית אפשרות זו כאשר 'אריזה מחדש של משקלים' (Weight Repacking) פעילה, כדי למנוע כפילות בצריכת הזיכרון",
     "modelLoadingSettings": "הגדרות טעינת מודל",
     "autoOffloadLoad": "טעינה/פריקה אוטומטית",
     "autoOffloadLoadDescription": "פריקת מודל כאשר האפליקציה נמצאת ברקע.",
@@ -122,7 +119,42 @@
     "clearCachesConfirmMessage": "פעולה זו תמחק את כל נתוני הסשנים המאוחסנים במטמון ({{fileCount}} קבצים, {{size}}). קיצורי דרך עשויים להיות איטיים יותר בשימוש הראשון לאחר הניקוי. פעולה זו לא תשפיע על ה-Pals שלך או על היסטוריית הצ'אט.",
     "clearCachesSuccess": "ניקוי של {{count}} קבצי מטמון בוצע בהצלחה.",
     "clearCachesError": "ניקוי המטמון נכשל. אנא נסה שוב.",
-    "noCachesToClear": "אין מטמון לניקוי."
+    "noCachesToClear": "אין מטמון לניקוי.",
+    "weightRepacking": "אפשר אריזה מחדש של משקלים",
+    "weightRepackingDescription": "עיבוד הנחיות מהיר יותר עם צריכת זיכרון מינימלית כאשר מיפוי זיכרון (Memory Mapping) מושבת. קצב יצירת הטוקנים אינו מושפע.",
+    "serverName": "שם השרת",
+    "serverUrl": "כתובת השרת",
+    "serverUrlPlaceholder": "לדוגמא, http://192.168.1.100:1234",
+    "apiKey": "מפתח API",
+    "apiKeyPlaceholder": "אופציונלי - נדרש עבור OpenAI/Groq",
+    "apiKeyDescription": "נשמר בצורה מאובטחת על המכשיר.",
+    "remoteModel": "מרוחק",
+    "remotePrivacyNotice": "הודעות הנשלחות לשרתים מרוחקים יוצאות מהמכשיר שלך. התחבר רק לשרתים שאתה סומך עליהם.",
+    "remoteIndicator": "מרוחק",
+    "serverUrlRequired": "חובה להזין כתובת שרת",
+    "serverUrlInvalid": "פורמט כתובת URL לא תקין",
+    "serverUrlHttpWarning": "מערכת iOS דורשת חיבור HTTPS עבור שרתים שאינם מקומיים. השתמש בכתובת המתחילה ב-https://‎ או בכתובת רשת מקומית.",
+    "addRemoteModel": "הוסף מודל מרוחק",
+    "yourServers": "השרתים שלך",
+    "orConnectNewServer": "או חבר שרת חדש",
+    "selectModel": "בחר מודל",
+    "addModel": "הוסף מודל",
+    "connected": "מחובר",
+    "connectionFailed": "חיבור נכשל: {{error}}",
+    "connecting": "מתחבר...",
+    "noModelsAvailable": "אין מודלים זמינים בשרת זה.",
+    "alreadyAdded": "כבר קיים ברשימה",
+    "connectedServers": "שרתים מחוברים",
+    "modelsCount": "{{count}} מודלים",
+    "serverDetails": "Server Details",
+    "modelsUsingServer": "מודלים המשתמשים בשרת זה:",
+    "saveChanges": "שמור שינויים",
+    "removeServer": "שרת מרוחק",
+    "removeServerMessage": "האם להסיר את {{serverName}} ואת {{count}} המודלים שלו?",
+    "removeRemoteModel": "להסיר את {{modelName}} ({{serverName}})?",
+    "retryConnection": "נסה שוב",
+    "enterUrlManually": "הזן כתובת (URL) ידנית",
+    "manageServers": "ניהול שרתים"
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -455,9 +487,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "שלח מדיה"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}מילישניות/טוקן, {{predictedPerSecond}} טוקנים/שניה"
-    },
     "exportUtils": {
       "fileSaved": "קובץ נשמר",
       "fileSavedMessage": "הקובץ נשמר בתיקיית ההורדות שלך בשם {{filename}}",
@@ -485,7 +514,7 @@
       "noModelsTitle": "אין מודלים זמינים",
       "noModelsDescription": "הורד מודל כדי להתחיל לשוחח בצ'אט עם PocketPal",
       "noModelsButton": "הורד מודל",
-      "activateModelTitle": "הפעל מודל כדי להתחיל",
+      "activateModelTitle": "טען מודל כדי להתחיל",
       "activateModelDescription": "בחר את המודל והורד אותו. לאחר ההורדה, הקש על \"טען\" ליד המודל והתחל לשוחח בצ'אט.",
       "activateModelButton": "בחר מודל",
       "loading": "טוען..."
@@ -871,6 +900,11 @@
       "importPals": "ייבוא Pals",
       "importSuccess": "ייבוא של {{count}} Pals בוצע בהצלחה.",
       "importError": "ייבוא ה-Pals נכשל. אנא בדוק את פורמט הקובץ."
+    },
+    "bubble": {
+      "msPerToken": "{{value}}מ.ש./טוקן",
+      "tokensPerSec": "{{value}} טוקנים/שנ'",
+      "ttft": "{{value}}מ.ש. TTFT"
     }
   },
   "palsScreen": {
@@ -950,7 +984,8 @@
       "failedToLoadDetails": "טעינת פרטי ה-Pal נכשלה",
       "failedToDownload": "הורדת Pal נכשלה",
       "premiumPalMessage": "זהו Pal פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלך, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "buyOnPalshub": "קנה ב-Palshub"
     }
   },
   "validation": {
@@ -1014,10 +1049,10 @@
   },
   "chat": {
     "conversationReset": "שיחה אופסה!",
-    "modelNotLoaded": "המודל לא נטען. אנא אתחל את המודל.",
+    "modelNotLoaded": "אין מודל טעון. אנא אתחל מודל.",
     "completionFailed": "השלמה נכשלה: ",
     "loadingModel": "טוען מודל...",
-    "typeYourMessage": "הקלד את הודעתך כאן",
+    "typeYourMessage": "הזן את הודעתך כאן",
     "load": "טעינה",
     "goToModels": "עבור למודלים",
     "readyToChat": "מוכן לשוחח? טען את המודל האחרון שהיה בשימוש.",

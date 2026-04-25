@@ -6,7 +6,13 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {randId} from '../utils';
 import {L10nContext} from '../utils';
-import {chatSessionStore, modelStore, palStore, uiStore} from '../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../store';
 
 import {MessageType, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
@@ -23,7 +29,7 @@ const prepareCompletion = async ({
   imageUris,
   message,
   systemMessages,
-  context,
+  contextId,
   assistant,
   conversationIdRef,
   isMultimodalEnabled,
@@ -33,7 +39,7 @@ const prepareCompletion = async ({
   imageUris: string[];
   message: MessageType.PartialText;
   systemMessages: Array<{role: 'system'; content: string}>;
-  context: any;
+  contextId: string;
   assistant: User;
   conversationIdRef: string;
   isMultimodalEnabled: boolean;
@@ -135,7 +141,7 @@ const prepareCompletion = async ({
     text: '',
     type: 'text',
     metadata: {
-      contextId: context.id,
+      contextId,
       conversationId: conversationIdRef,
       copyable: true,
       multimodal: hasImages, // Simple check based on presence of images
@@ -183,8 +189,15 @@ export const useChatSession = (
   };
 
   const handleSendPress = async (message: MessageType.PartialText) => {
-    const context = modelStore.context;
-    if (!context) {
+    // Guard on engine instead of context -- supports both local and remote models
+    const engine = modelStore.engine;
+    if (!engine) {
+      await addSystemMessage(l10n.chat.modelNotLoaded);
+      return;
+    }
+
+    const contextId = modelStore.contextId;
+    if (!contextId) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
       return;
     }
@@ -209,7 +222,7 @@ export const useChatSession = (
       type: 'text',
       imageUris: hasImages ? imageUris : undefined, // Include images directly in the text message
       metadata: {
-        contextId: context.id,
+        contextId,
         conversationId: conversationIdRef.current,
         copyable: true,
         multimodal: hasImages, // Mark as multimodal if it has images
@@ -247,7 +260,7 @@ export const useChatSession = (
       imageUris: imageUris || [],
       message,
       systemMessages,
-      context,
+      contextId,
       assistant,
       conversationIdRef: conversationIdRef.current,
       isMultimodalEnabled,
@@ -262,15 +275,63 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
-      // Create the completion promise and register it with modelStore
-      // This enables safe context release by waiting for the promise to finish
-      const completionPromise = context.completion(
+      // TTS streaming: notify the store on first token so it can open a
+      // StreamingHandle, then feed each delta via onAssistantMessageChunk.
+      // `content` in the streaming data is cumulative, so we diff against
+      // what we've already pushed.
+      let ttsStarted = false;
+      let prevSpokenContent = '';
+      // Case A (enable_thinking ON): reasoning is streamed on a separate
+      // channel. We diff it against the previous cumulative reasoning and
+      // forward the delta so TTS can emit the thinking placeholder during
+      // the silent gap before real content starts.
+      let prevSpokenReasoning = '';
+
+      // Create the completion promise using the engine interface
+      // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
+      const completionPromise = engine.completion(
         cleanCompletionParams,
         data => {
           if (currentMessageInfo.current) {
             // Capture time to first token on the first token received
             if (timeToFirstToken === null && (data.token || data.content)) {
               timeToFirstToken = Date.now() - completionStartTime;
+            }
+
+            // Fire TTS streaming hooks. Start once per message on first
+            // content seen; chunk with the new substring beyond what we've
+            // already forwarded.
+            const streamContent = data.content ?? '';
+            const streamReasoning = data.reasoning_content ?? '';
+            // TTS hooks are wrapped defensively — a failure in the UI
+            // path must never kill the completion stream.
+            try {
+              if (
+                !ttsStarted &&
+                (data.token || streamContent || streamReasoning)
+              ) {
+                ttsStarted = true;
+                ttsStore.onAssistantMessageStart(currentMessageInfo.current.id);
+              }
+              const contentDelta =
+                streamContent.length > prevSpokenContent.length
+                  ? streamContent.slice(prevSpokenContent.length)
+                  : '';
+              const reasoningDelta =
+                streamReasoning.length > prevSpokenReasoning.length
+                  ? streamReasoning.slice(prevSpokenReasoning.length)
+                  : '';
+              if (contentDelta || reasoningDelta) {
+                prevSpokenContent = streamContent;
+                prevSpokenReasoning = streamReasoning;
+                ttsStore.onAssistantMessageChunk(
+                  currentMessageInfo.current.id,
+                  contentDelta,
+                  reasoningDelta || undefined,
+                );
+              }
+            } catch (ttsErr) {
+              console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
             }
 
             if (!modelStore.isStreaming) {
@@ -309,8 +370,11 @@ export const useChatSession = (
         },
       );
 
-      // Register the promise so releaseContext can wait for it
-      modelStore.registerCompletionPromise(completionPromise);
+      // Only register completion promise for local models -- protects native context from being freed mid-completion
+      // For remote models, stopCompletion() via AbortController handles cleanup
+      if (modelStore.context) {
+        modelStore.registerCompletionPromise(completionPromise);
+      }
 
       // Await the completion
       const result = await completionPromise;
@@ -354,6 +418,21 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+
+      // Fire TTS auto-speak after the final completionResult is written.
+      // Store enforces auto-speak / voice / idempotency gating internally.
+      // Wrapped defensively — UI-path errors must not bubble.
+      try {
+        ttsStore.onAssistantMessageComplete(
+          currentMessageInfo.current.id,
+          result.text,
+          {
+            hadReasoning: !!result.reasoning_content?.trim(),
+          },
+        );
+      } catch (ttsErr) {
+        console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
+      }
     } catch (error) {
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
@@ -362,34 +441,61 @@ export const useChatSession = (
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
 
-      // Clean up the empty assistant message that was created before the error
+      // Stop any in-flight TTS — the completion errored, so buffered
+      // audio should not keep playing.
+      ttsStore.stop().catch(ttsErr => {
+        console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
+      });
+
+      // For remote models: preserve partial message if tokens were already streamed
+      // Instead of deleting the message, keep what we have and show error toast
       if (currentMessageInfo.current) {
-        try {
-          await chatSessionRepository.deleteMessage(
+        const session = chatSessionStore.sessions.find(
+          s => s.id === currentMessageInfo.current!.sessionId,
+        );
+        const currentMsg = session?.messages.find(
+          msg => msg.id === currentMessageInfo.current!.id,
+        );
+        const hasPartialContent =
+          currentMsg && 'text' in currentMsg && currentMsg.text;
+
+        if (hasPartialContent) {
+          // Partial content exists -- keep it and add error metadata
+          await chatSessionStore.updateMessage(
             currentMessageInfo.current.id,
+            currentMessageInfo.current.sessionId,
+            {
+              metadata: {
+                interrupted: true,
+                copyable: true,
+              },
+            },
           );
-          // Also remove from local state
-          const session = chatSessionStore.sessions.find(
-            s => s.id === currentMessageInfo.current!.sessionId,
-          );
-          if (session) {
-            runInAction(() => {
-              session.messages = session.messages.filter(
-                msg => msg.id !== currentMessageInfo.current!.id,
-              );
-            });
+        } else {
+          // No content was streamed -- clean up the empty assistant message
+          try {
+            await chatSessionRepository.deleteMessage(
+              currentMessageInfo.current.id,
+            );
+            // Also remove from local state
+            if (session) {
+              runInAction(() => {
+                session.messages = session.messages.filter(
+                  msg => msg.id !== currentMessageInfo.current!.id,
+                );
+              });
+            }
+          } catch (cleanupError) {
+            console.error(
+              'Failed to clean up empty message after error:',
+              cleanupError,
+            );
           }
-        } catch (cleanupError) {
-          console.error(
-            'Failed to clean up empty message after error:',
-            cleanupError,
-          );
         }
       }
 
       const errorMessage = (error as Error).message;
       if (errorMessage.includes('network')) {
-        // TODO: This can be removed. We don't use network for chat.
         await addSystemMessage(l10n.common.networkError);
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
@@ -410,13 +516,19 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    const context = modelStore.context;
-    if (modelStore.inferencing && context) {
-      context.stopCompletion();
+    // Use engine.stopCompletion() for both local and remote models
+    if (modelStore.inferencing && modelStore.engine) {
+      modelStore.engine.stopCompletion();
     }
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);
+
+    // Stop any in-flight TTS so buffered audio doesn't keep playing
+    // after the user tapped Stop.
+    ttsStore.stop().catch(err => {
+      console.warn('[useChatSession] TTS stop on user-stop failed:', err);
+    });
 
     // Deactivate keep awake when stopping completion
     try {

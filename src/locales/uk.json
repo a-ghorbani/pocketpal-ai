@@ -1,0 +1,1217 @@
+{
+  "common": {
+    "cancel": "Скасувати",
+    "delete": "Видалити",
+    "dismiss": "Відхилити",
+    "rename": "Перейменувати",
+    "reset": "Скинути",
+    "save": "Зберегти",
+    "update": "Оновлення",
+    "error": "Помилка",
+    "export": "Експорт",
+    "networkError": "Помилка мережі. Спробуйте ще раз.",
+    "downloadETA": "ETA",
+    "calculating": "розраховую...",
+    "second": "сек",
+    "seconds": "сек",
+    "year": "рік",
+    "years": "роки",
+    "month": "місяць",
+    "months": "місяців",
+    "week": "тиждень",
+    "weeks": "тижні",
+    "day": "день",
+    "days": "дні",
+    "hour": "година",
+    "hours": "годин",
+    "minute": "хв",
+    "minutes": "хв",
+    "justNow": "щойно",
+    "ok": "Добре",
+    "close": "Закрити",
+    "clear": "Очистити все",
+    "gallery": "Галерея"
+  },
+  "settings": {
+    "modelInitializationSettings": "Налаштування ініціалізації моделі",
+    "metal": "Metal",
+    "metalDescription": "API Apple з апаратним прискоренням.",
+    "metalRequiresNewerIOS": "Для роботи функції прискорення Metal необхідна версія iOS 18 або новіша. Щоб скористатися цією функцією, оновлюйте свій пристрій.",
+    "openCL": "OpenCL (Експериментальний)",
+    "openCLDescription": "Прискорення на базі графічних процесорів Adreno. Швидша обробка запитів, але генерація відповідей не завжди відбувається швидше.",
+    "openCLNotAvailable": "OpenCL недоступний на цьому пристрої. Потрібен графічний процесор Adreno з підтримкою i8mm та функцій dotprod для центрального процесора.",
+    "openCLMissingCPUFeatures": "OpenCL вимагає наявності функцій процесора i8mm та dotprod, які на цьому пристрої відсутні.",
+    "openCLQuantizationNote": "Примітка: Квантовані моделі Pure Q4_0 демонструють найкращі результати при використанні OpenCL.",
+    "openCLDocsLink": "Детальнішу інформацію див. у документації до файлу llama.cpp для OpenCL.",
+    "layersOnGPU": "Шари на графічному процесорі: {{gpuLayers}}",
+    "deviceSelection": "Вибір пристрою",
+    "deviceSelectionIOS": "Пристрій (Metal)",
+    "deviceSelectionIOSDescription": "Виберіть режим «Metal GPU» або «Тільки CPU»",
+    "deviceSelectionAndroidDescription": "Виберіть обчислювальний пристрій (CPU, GPU або Hexagon NPU)",
+    "cpuOnlyNoAccelerators": "Тільки процесор — апаратні прискорювачі не виявлено",
+    "contextSize": "Розмір контексту",
+    "contextSizePlaceholder": "Введіть розмір контексту (мін. {{minContextSize}})",
+    "invalidContextSizeError": "Введіть дійсний номер (мінімум {{minContextSize}})",
+    "modelReloadNotice": "Щоб зміни набули чинності, потрібно перезавантажити модель.",
+    "advancedSettings": "Розширені налаштування",
+    "batchSize": "Розмір партії",
+    "batchSizeDescription": "Розмір партії: {{batchSize}}{{effectiveBatch}}",
+    "effectiveLabel": "ефективний",
+    "physicalBatchSize": "Фізичний розмір партії",
+    "physicalBatchSizeDescription": "Фізичний розмір партії: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "cpuThreads": "Потоки процесора",
+    "cpuThreadsDescription": "Використовується {{threads}} з {{maxThreads}} доступних потоків",
+    "imageMaxTokens": "Максимальна кількість токенів",
+    "imageMaxTokensDescription": "Максимальна кількість токенів для обробки зображення: {{tokens}}{{effectiveTokens}} (чим менше — тим швидше, але з меншою деталізацією)",
+    "flashAttention": "Швидка Обробка",
+    "flashAttentionDescription": "Увімкніть функцію «Flash Attention» для прискорення обробки",
+    "flashAttentionIOSDescription": "Ефективне використання пам'яті при застосуванні механізму уваги (автоматично вмикається в Metal)",
+    "flashAttentionAndroidDescription": "Цю опцію необхідно вимкнути для збереження/завантаження стану OpenCL",
+    "flashAttentionAuto": "Авто",
+    "flashAttentionOn": "Увімк",
+    "flashAttentionOff": "Вимк",
+    "keyCacheType": "Тип кешу ключів",
+    "keyCacheTypeDescription": "Виберіть тип кешу для обчислення ключа",
+    "keyCacheTypeDisabledDescription": "Увімкніть функцію «Flash Attention», щоб змінити тип кешу",
+    "valueCacheType": "Тип кешу значень",
+    "valueCacheTypeDescription": "Виберіть тип кешу для обчислення значення",
+    "valueCacheTypeDisabledDescription": "Увімкніть функцію «Flash Attention», щоб змінити тип кешу",
+    "memorySettings": "Налаштування пам'яті",
+    "useMlock": "Увімкнути блокування пам'яті",
+    "useMlockDescription": "Змусити систему зберігати модель в оперативній пам'яті, а не переносити її на диск або стискати",
+    "useMmap": "Відображення пам'яті",
+    "useMmapDescription": "Використовуйте файли, відображені в пам'яті, для прискорення завантаження моделей",
+    "useMmapTrue": "Увімкнено",
+    "useMmapFalse": "Вимкнено",
+    "useMmapTrueDescription": "Завжди використовуйте відображення пам'яті для прискорення завантаження",
+    "useMmapFalseDescription": "Якщо увімкнено перепакування ваги, рекомендується вимкнути цю опцію, щоб уникнути подвоєння обсягу пам’яті",
+    "weightRepacking": "Увімкнути перерозподіл ваги",
+    "weightRepackingDescription": "Швидша обробка запитів із мінімальним навантаженням на пам'ять, коли функція відображення пам'яті вимкнена. Це не впливає на генерацію токенів.",
+    "modelLoadingSettings": "Налаштування завантаження моделі",
+    "autoOffloadLoad": "Автоматичне вивантаження/завантаження",
+    "autoOffloadLoadDescription": "Звільнити модель, коли додаток працює у фоновому режимі.",
+    "autoNavigateToChat": "Автоматично перейти до чату",
+    "autoNavigateToChatDescription": "Перейти до чату, коли почнеться завантаження.",
+    "appSettings": "Налаштування програми",
+    "language": "Мова",
+    "darkMode": "Темний режим",
+    "displayMemoryUsage": "Відобразити використання пам'яті",
+    "displayMemoryUsageDescription": "Відображати використання пам'яті на сторінці чату.",
+    "exportOptions": "Параметри експорту",
+    "exportLegacyChats": "Експортувати старі чати",
+    "exportLegacyChatsDescription": "Скористайтеся цією функцією, якщо міграція не вдалася або вам потрібно відновити старі сесії чату.",
+    "exportButton": "Експорт",
+    "importChats": "Імпортувати сесії чату",
+    "importChatsDescription": "Імпортувати сесії чату з (експортованого) файлу JSON.",
+    "importButton": "Імпорт",
+    "importSuccess": "Успішно імпортовано {{count}} сеансів чату.",
+    "importError": "Не вдалося імпортувати сесії чату. Перевірте формат файлу.",
+    "apiSettingsTitle": "Налаштування API",
+    "huggingFaceTokenLabel": "Токен Hugging Face",
+    "tokenIsSetDescription": "Токен встановлено. Необхідний для доступу до моделей із обмеженим доступом.",
+    "setTokenDescription": "Встановіть токен для доступу до моделей з обмеженим доступом від Hugging Face.",
+    "setTokenButton": "Встановити токен",
+    "useHfTokenLabel": "Використовуйте токен HF",
+    "useHfTokenDescription": "Увімкнути використання токена для запитів до API. Вимкнути, якщо токен спричиняє проблеми з автентифікацією.",
+    "cacheStorageTitle": "Кеш і пам'ять",
+    "clearPalCaches": "Очистити кеш ярликів",
+    "clearPalCachesDescription": "Очищає кешовані дані, які використовуються для прискорення роботи ярликів. Це не вплине на ваших друзів або історію чату.",
+    "clearCachesButton": "Очистити кеш",
+    "clearCachesConfirmTitle": "Очистити кеш ярликів?",
+    "clearCachesConfirmMessage": "Це призведе до очищення всіх кешованих даних сеансу ({{fileCount}} файлів, {{size}}). Після очищення при першому використанні ярлики можуть працювати повільніше. Це не вплине на ваших друзів у Pals та історію чату.",
+    "clearCachesSuccess": "Успішно очищено {{count}} файлів кешу.",
+    "clearCachesError": "Не вдалося очистити кеш. Спробуйте ще раз.",
+    "noCachesToClear": "Немає кешів для очищення.",
+    "serverName": "Ім'я сервера",
+    "serverUrl": "URL-адреса сервера",
+    "serverUrlPlaceholder": "наприклад, http://192.168.1.100:1234",
+    "apiKey": "Ключ API",
+    "apiKeyPlaceholder": "Необов'язково — потрібно для OpenAI/Groq",
+    "apiKeyDescription": "Надійно зберігається на пристрої.",
+    "remoteModel": "Дистанційний",
+    "remotePrivacyNotice": "Повідомлення, що надсилаються на віддалені сервери, залишають ваш пристрій. Підключайтеся лише до тих серверів, яким ви довіряєте.",
+    "remoteIndicator": "Дистанційний",
+    "serverUrlRequired": "Необхідно вказати URL-адресу сервера",
+    "serverUrlInvalid": "Неправильний формат URL-адреси",
+    "serverUrlHttpWarning": "iOS вимагає використання протоколу HTTPS для віддалених серверів. Використовуйте адресу https:// або адресу в локальній мережі.",
+    "addRemoteModel": "Додати віддалену модель",
+    "yourServers": "Ваші сервери",
+    "orConnectNewServer": "або підключити новий сервер",
+    "selectModel": "Вибрати модель",
+    "addModel": "Додати модель",
+    "connected": "Підключено",
+    "connectionFailed": "Помилка підключення: {{error}}",
+    "connecting": "Підключення...",
+    "noModelsAvailable": "На цьому сервері немає доступних моделей.",
+    "alreadyAdded": "Вже додано",
+    "connectedServers": "Підключені сервери",
+    "modelsCount": "{{count}} моделей",
+    "serverDetails": "Інформація про сервер",
+    "modelsUsingServer": "Моделі, що використовують цей сервер:",
+    "saveChanges": "Зберегти зміни",
+    "removeServer": "Вилучити сервер",
+    "removeServerMessage": "Вилучити {{serverName}} та його {{count}} моделей?",
+    "removeRemoteModel": "Вилучити {{modelName}} ({{serverName}})?",
+    "retryConnection": "Спробувати ще раз",
+    "enterUrlManually": "Введіть URL-адресу вручну",
+    "manageServers": "Управління серверами"
+  },
+  "memory": {
+    "shortWarning": "Попередження про пам'ять",
+    "multimodalWarning": "Цей пристрій може не мати достатніх ресурсів для роботи з мультимодальними моделями.",
+    "memoryTight": "Не вистачає пам'яті",
+    "lowMemory": "Недостатньо пам'яті",
+    "memoryDetailMessage": "Ця модель потребує ~{{needed}}, але лише ~{{available}} вважається придатною для використання. Точність оцінок покращується в міру використання програми.",
+    "estimatedMemory": "Орієнтовний обсяг пам'яті: ~{{size}}",
+    "alerts": {
+      "memoryWarningTitle": "Попередження про пам'ять",
+      "memoryWarningMessage": "Ця модель може перевищити обсяг доступної пам'яті, що може призвести до нестабільної роботи. Продовжити завантаження?",
+      "multimodalWarningTitle": "Попередження щодо продуктивності пристрою",
+      "multimodalWarningMessage": "Цей пристрій може не мати достатніх ресурсів для роботи з мультимодальними моделями. Завантаження може призвести до нестабільної роботи. Все одно продовжити?",
+      "combinedWarningTitle": "Попередження щодо продуктивності",
+      "combinedWarningMessage": "Ця модель може перевищити обсяг доступної пам’яті, а цей пристрій може не мати достатніх ресурсів для роботи з мультимодальними моделями. Завантаження може спричинити нестабільність роботи. Все одно продовжити?",
+      "cancel": "Скасувати",
+      "continue": "Продовжити"
+    }
+  },
+  "storage": {
+    "checkFailed": "Не вдалося перевірити сховище",
+    "lowStorage": "Залишок місця на диску низький! Модель {{modelSize}} > {{freeSpace}} вільного місця"
+  },
+  "generation": {
+    "modelNotInitialized": "Контекст моделі не ініціалізовано",
+    "failedToGenerate": "Не вдалося створити вихідні дані"
+  },
+  "models": {
+    "fileManagement": {
+      "fileAlreadyExists": "Файл уже існує",
+      "fileAlreadyExistsMessage": "Файл із такою назвою вже існує. Що ви хочете зробити?",
+      "replace": "Замінити",
+      "keepBoth": "Збережіть обидва"
+    },
+    "labels": {
+      "localModel": "Локальний",
+      "unknownGroup": "Невідомо",
+      "hfModel": "HF",
+      "availableToUse": "Готовий до використання",
+      "availableToDownload": "Доступно для завантаження",
+      "useAddButtonForMore": "Натисніть кнопку «+», щоб переглянути інші моделі"
+    },
+    "vision": "Бачення",
+    "mmproj": "Проектор",
+    "multimodal": {
+      "settings": "Мультимодальні середовища",
+      "projectionModels": "Моделі прогнозування",
+      "noCompatibleModels": "Не знайдено сумісних моделей проекції",
+      "noProjectionModels": "Моделей прогнозування немає",
+      "selected": "Вибрано",
+      "select": "Вибрати",
+      "download": "Завантаженнях",
+      "projectionNeededTitle": "Потрібна модель прогнозування",
+      "projectionNeededMessage": "Ця модель потребує моделі прогнозування для забезпечення мультимодальних можливостей.",
+      "projectionMissingWarning": "Відсутня модель прогнозування",
+      "projectionMissingShort": "Відсутня проекція",
+      "reloadModelTitle": "Оновити модель",
+      "reloadModelMessage": "Щоб застосувати нову модель проекції, модель потрібно перезавантажити. Чи хочете ви перезавантажити її зараз?",
+      "reload": "Оновити",
+      "deleteProjectionTitle": "Видалити модель проекції",
+      "deleteProjectionMessage": "Ви впевнені, що хочете видалити цю модель проекції?",
+      "cannotDeleteTitle": "Неможливо видалити",
+      "visionControls": {
+        "enableVision": "Увімкнути функції розпізнавання зображень",
+        "disableVision": "Вимкнути функції зору",
+        "visionEnabled": "Бачення увімкнено",
+        "visionDisabled": "Бачення вимкнено",
+        "textOnlyMode": "Тільки текст",
+        "visionMode": "Підтримка функції Vision",
+        "downloadWithVision": "Завантажити з баченням",
+        "downloadTextOnly": "Завантажити лише текст",
+        "visionToggleDescription": "Увімкнути функції обробки зображень",
+        "projectionModelSize": "+{{size}} модель проекції",
+        "visionModeDescription": "Обробка зображень і тексту",
+        "textOnlyModeDescription": "Обробити лише текст",
+        "includesVisionCapability": "Включає функцію розпізнавання зображень",
+        "requiresProjectionModel": "Спочатку завантажте сумісну модель проекції"
+      },
+      "cannotDeleteActive": "Ця модель прогнозування наразі діє.",
+      "cannotDeleteInUse": "Ця модель прогнозування використовується завантаженими моделями LLM:",
+      "dependentModels": "Залежні моделі:",
+      "visionWillBeDisabled": "У цих моделях функції системи Vision будуть вимкнені."
+    },
+    "buttons": {
+      "addFromHuggingFace": "Додати з Hugging Face",
+      "addLocalModel": "Додати локальну модель",
+      "reset": "Скинути"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Моделі Hugging Face",
+      "menuTitleDownloaded": "Завантажені моделі",
+      "menuTitleGrouped": "Групувати за типом моделі",
+      "menuTitleReset": "Оновити список моделей"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Продовжити скидання",
+      "confirmReset": "Підтвердити скидання"
+    },
+    "chatTemplate": {
+      "label": "Базовий шаблон чату:"
+    },
+    "details": {
+      "title": "Доступні файли GGUF"
+    },
+    "modelFile": {
+      "alerts": {
+        "cannotRemoveTitle": "Неможливо вилучити",
+        "modelPreset": "Модель вже налаштована.",
+        "downloadedFirst": "Модель завантажено. Будь ласка, спочатку видаліть файл.",
+        "removeTitle": "Видалити модель",
+        "removeMessage": "Ви впевнені, що хочете видалити цю модель зі списку?",
+        "removeError": "Не вдалося видалити модель.",
+        "alreadyDownloadedTitle": "Модель вже завантажено",
+        "alreadyDownloadedMessage": "Модель уже завантажено.",
+        "deleteTitle": "Видалити Модель",
+        "deleteMessage": "Ви впевнені, що хочете видалити цю завантажену модель?"
+      },
+      "buttons": {
+        "remove": "Вилучити"
+      },
+      "warnings": {
+        "storage": {
+          "message": "Недостатньо вільного місця на диску.",
+          "shortMessage": "Низька пам'яті"
+        },
+        "memory": {
+          "message": "Розмір моделі наближається до загального обсягу пам'яті вашого пристрою або перевищує його. Це може спричинити непередбачувану поведінку."
+        },
+        "legacy": {
+          "message": "Застарілий формат квантування — модель може не працювати.",
+          "shortMessage": "Квантування за старою схемою"
+        },
+        "multiple": "{{count}} Попереджень"
+      },
+      "labels": {
+        "downloadSpeed": "{{speed}}"
+      }
+    },
+    "search": {
+      "noResults": "Моделей не знайдено",
+      "loadingMore": "Завантажується...",
+      "searchPlaceholder": "Пошук моделей Hugging Face",
+      "modelUpdatedLong": "Оновлено {{time}} тому",
+      "modelUpdatedShort": "{{time}} тому",
+      "modelUpdatedJustNowLong": "Щойно оновлено",
+      "modelUpdatedJustNowShort": "щойно",
+      "errorOccurred": "Не вдалося завантажити моделі. Спробуйте ще раз.",
+      "filters": {
+        "author": "Автор",
+        "authorPlaceholder": "Відфільтрувати за автором...",
+        "sortBy": "Сортувати за",
+        "clearFilters": "Очистити фільтри",
+        "showFilters": "Показати фільтри",
+        "hideFilters": "Сховати фільтри",
+        "sortRelevance": "Актуальність",
+        "sortDownloads": "Завантажень",
+        "sortRecent": "Нещодавно оновлено",
+        "sortLikes": "Найпопулярніша"
+      }
+    },
+    "modelCard": {
+      "alerts": {
+        "deleteTitle": "Видалити Модель",
+        "deleteMessage": "Ви впевнені, що хочете видалити цю завантажену модель?",
+        "removeTitle": "Вилучити Модель",
+        "removeMessage": "Ви впевнені, що хочете вилучити цю модель зі списку?"
+      },
+      "buttons": {
+        "settings": "Налаштування",
+        "download": "Завантаженням",
+        "remove": "Вилучити",
+        "load": "Завантажитися",
+        "offload": "Розвантаження"
+      },
+      "labels": {
+        "skills": "Навички: ",
+        "vision": "Бачення",
+        "capabilities": "можливості.",
+        "modelName": "Назва моделі",
+        "contextLength": "Довжина контексту",
+        "architecture": "Архітектура",
+        "author": "Автор",
+        "requiresProjectionModel": "Потрібна модель проекції",
+        "downloadProjectionModel": "Завантажити модель прогнозування",
+        "viewModelCardOnHuggingFace": "Переглянути картку моделі на Hugging Face"
+      },
+      "accessibility": {
+        "expandDetails": "Розгорнути детальну інформацію",
+        "collapseDetails": "Сховати деталі",
+        "memoryWarning": "Попередження про стан пам'яті",
+        "integrityWarning": "Попередження щодо цілісності",
+        "downloadProgress": "Хід завантаження",
+        "loadingIndicator": "Завантаження",
+        "loadButton": "Завантажити моделю",
+        "offloadButton": "Модель розвантаження",
+        "downloadButton": "Завантажити Модель",
+        "settingsButton": "Налаштування моделі",
+        "deleteButton": "Видалити моделя",
+        "removeButton": "Вилучити Моделя",
+        "expandDetailsButton": "Розгорнути детальну інформацію про модель",
+        "memoryWarningButton": "Показати деталі попередження про пам'ять",
+        "integrityWarningButton": "Показати деталі попередження про цілісність",
+        "memoryWarningSnackbar": "Повідомлення про попередження щодо пам'яті"
+      }
+    },
+    "modelSettings": {
+      "template": {
+        "label": "Шаблон:",
+        "editButton": "Редагувати",
+        "dialogTitle": "Редагувати шаблон чату",
+        "note1": "Примітка: Зміна шаблону може вплинути на BOS, EOS та системні підказки.",
+        "note2": "Використовує Nunjucks. Залиште поле порожнім, щоб використовувати шаблон моделі.",
+        "placeholder": "Введіть тут свій шаблон чату...",
+        "closeButton": "Закрити"
+      },
+      "stopWords": {
+        "label": "СТОП-СЛОВА",
+        "placeholder": "Додати нове слово-стоп"
+      },
+      "tokenSettings": {
+        "addGenerationPrompt": "Додати підказку щодо покоління",
+        "bos": "BOS",
+        "eos": "EOS",
+        "bosTokenPlaceholder": "Токен BOS",
+        "eosTokenPlaceholder": "Токен EOS",
+        "systemPrompt": "Системне повідомлення"
+      }
+    },
+    "modelDescription": {
+      "size": "Розмір: ",
+      "parameters": "Параметри: ",
+      "separator": " | ",
+      "notAvailable": "Н/Д"
+    },
+    "modelCapabilities": {
+      "questionAnswering": "Відповіді на запитання",
+      "summarization": "Підсумок",
+      "reasoning": "Аргументація",
+      "roleplay": "Рольова-гра",
+      "instructions": "Інструкція нижче",
+      "code": "Генерація коду",
+      "math": "Розв'язування математичних задач",
+      "multilingual": "Багатомовний",
+      "rewriting": "Переписання",
+      "creativity": "Творче письмо",
+      "vision": "Бачення"
+    }
+  },
+  "completionParams": {
+    "include_thinking_in_context": "Включіть фрагменти міркувань/роздумів ШІ у контекст, що надсилається до моделі. Вимкнення цієї опції дозволяє заощадити місце для контексту. Це може вплинути на продуктивність.",
+    "jinja": "Увімкнути використання шаблонів Jinja для форматування чату. Якщо ця опція увімкнена, обробка шаблонів чату здійснюється на основі Jinja для кращої сумісності з сучасними моделями.",
+    "grammar": "Застосовувати певні граматичні правила, щоб гарантувати, що згенерований текст відповідає певній структурі або формату",
+    "stop": "Визначте конкретні фрази, які зупинять генерацію тексту",
+    "n_predict": "Вкажіть, якою за довжиною має бути згенерована відповідь (у токенах)",
+    "n_probs": "Показати оцінки ймовірності для альтернативних слів.",
+    "top_k": "Керуйте творчістю, обмежуючи вибір слів до К найімовірніших варіантів. Чим менше це число, тим більш цілеспрямованими стають відповіді",
+    "top_p": "Знайдіть баланс між креативністю та логічністю. Більш високі значення (близькі до 1,0) дають змогу отримати більш креативні, але, можливо, менш цілеспрямовані відповіді",
+    "min_p": "Мінімальна ймовірність, за якої токен буде взято до уваги. Відфільтруйте малоймовірні слова, щоб зменшити кількість безглуздих або нерелевантних відповідей",
+    "temperature": "Творчість проти передбачуваності. Більш високі значення роблять відповіді більш творчими, але менш цілеспрямованими",
+    "penalty_last_n": "На скільки назад слід перевіряти наявність повторень. Більші значення допомагають уникнути повторень у довгостроковій перспективі",
+    "penalty_repeat": "Не заохочуйте повторення слів. Більш високі значення сприяють використанню більш різноманітної лексики у відповідях",
+    "penalty_freq": "Штрафуйте за надмірне вживання слів. Більш високі бали стимулюють використання більш широкого словникового запасу",
+    "penalty_present": "Зменште кількість повторень тем та ідей. Більш високі оцінки сприяють більшій різноманітності контенту",
+    "mirostat": "Увімкніть розширене керування креативністю відповідей. Встановіть значення 1 або 2 (більш плавне) для інтелектуального регулювання випадковості та узгодженості в режимі реального часу.",
+    "mirostat_tau": "Встановіть бажаний рівень креативності для Mirostat. Більш високі значення забезпечують більш різноманітні та оригінальні відповіді, тоді як нижчі значення гарантують більш цілеспрямовані результати.",
+    "mirostat_eta": "Як швидко Mirostat коригує параметри творчості. Більші значення означають швидше коригування",
+    "dry_multiplier": "Переваги функції DRY (Don't Repeat Yourself). Більш високі значення ефективно запобігають повторенням",
+    "dry_base": "Базовий штраф за повторення в режимі DRY. Більші значення забезпечують більш агресивне запобігання повторенням",
+    "dry_allowed_length": "Скільки разів можна повторити слово, перш ніж спрацює штраф за надмірне повторення (DRY)",
+    "dry_penalty_last_n": "На скільки далеко назад слід шукати повторення в режимі DRY",
+    "dry_sequence_breakers": "Символи, що скидають налаштування перевірки повторень у режимі DRY",
+    "ignore_eos": "Продовжуйте генерувати, навіть якщо модель хоче зупинитися. Корисно для отримання більш розгорнутих відповідей",
+    "logit_bias": "Впливати на ймовірність появи певних слів у відповіді",
+    "seed": "Встановити початкове значення генератора випадкових чисел. Корисно для отримання відтворюваних результатів",
+    "xtc_probability": "Встановіть ймовірність видалення токенів за допомогою XTC-семплера. Значення 0 означає вимкнення",
+    "xtc_threshold": "Встановити мінімальний поріг ймовірності для вилучення токенів за допомогою XTC-самплера. (значення > 0,5 вимикає XTC)",
+    "typical_p": "Увімкнути вибірку, типову для даної місцевості, із параметром p. Значення 1,0 означає вимкнення"
+  },
+  "about": {
+    "screenTitle": "Інформація про додаток",
+    "description": "Додаток, що дозволяє використовувати мовні моделі безпосередньо на вашому телефоні. Створено на базі llama.cpp та llama.rn.",
+    "supportProject": "Підтримайте проект",
+    "supportProjectDescription": "Якщо вам подобається користуватися PocketPal AI, будь ласка, розгляньте можливість підтримати проект таким чином:",
+    "githubButton": "Позначити зірочкою на GitHub",
+    "orText": "або",
+    "orBy": "або за допомогою",
+    "sponsorButton": "Станьте спонсором",
+    "versionCopiedTitle": "Скопійовано версію",
+    "versionCopiedDescription": "Інформація про версію скопійована в буфер обміну"
+  },
+  "feedback": {
+    "title": "Надіслати Відгук",
+    "description": "Ваша думка для нас важлива! Розкажіть нам, як PocketPal AI допомагає вам і що ми можемо зробити, щоб зробити його ще кориснішим.",
+    "shareThoughtsButton": "Поділіться своїми думками",
+    "useCase": {
+      "label": "Для чого ви використовуєте PocketPal AI?",
+      "placeholder": "наприклад, узагальнення, рольові ігри тощо."
+    },
+    "featureRequests": {
+      "label": "Прохання про додавання функції",
+      "placeholder": "Які функції ви хотіли б бачити?"
+    },
+    "generalFeedback": {
+      "label": "Загальні відгуки",
+      "placeholder": "Поділіться своїми думками."
+    },
+    "usageFrequency": {
+      "label": "Як часто ви користуєтеся PocketPal AI? (Необов’язково)",
+      "options": {
+        "daily": "Щодня",
+        "weekly": "Щотижня",
+        "monthly": "Щомісяця",
+        "rarely": "Рідко"
+      }
+    },
+    "email": {
+      "label": "Електронна адреса для зв’язку (не обов’язково)",
+      "placeholder": "Ваша електронна адреса"
+    },
+    "submit": "Надіслати відгук",
+    "validation": {
+      "required": "Будь ласка, залиште хоча б якийсь відгук"
+    },
+    "success": "Дякуємо за ваш відгук!",
+    "error": {
+      "general": "Сталася помилка під час надсилання відгуку. Спробуйте ще раз."
+    }
+  },
+  "components": {
+    "attachmentButton": {
+      "attachmentButtonAccessibilityLabel": "Надіслати медіафайли"
+    },
+    "bubble": {
+      "msPerToken": "{{value}} мс/токен",
+      "tokensPerSec": "{{value}} токенів/сек",
+      "ttft": "{{value}} мс TTFT"
+    },
+    "exportUtils": {
+      "fileSaved": "Файл збережено",
+      "fileSavedMessage": "Файл збережено у папці «Завантаження» під назвою {{filename}}",
+      "share": "Поділитися",
+      "ok": "Гаразд",
+      "shareError": "Поділитися з Помилкою",
+      "shareErrorMessage": "Не вдалося надіслати файл. Спробуйте ще раз.",
+      "saveError": "Помилка під час збереження у папці «Завантаження»",
+      "saveOptions": "Зберегти налаштування",
+      "saveOptionsMessage": "Неможливо зберегти файл безпосередньо в папці «Завантаження». Чи хочете ви замість цього поділитися цим файлом?",
+      "cancel": "Скасувати",
+      "shareContentErrorMessage": "Не вдалося поділитися вмістом. Спробуйте ще раз.",
+      "exportError": "Помилка експорту",
+      "exportErrorMessage": "Сталася помилка під час експорту файлу. Спробуйте ще раз.",
+      "permissionRequired": "Потрібен дозвіл на збереження",
+      "permissionMessage": "Нам потрібен дозвіл, щоб зберегти ваш експорт у папці «Завантаження».",
+      "permissionDenied": "Доступ Заборонено",
+      "permissionDeniedMessage": "Без дозволу на збереження функція експорту буде вимкнена.",
+      "continue": "Продовжити"
+    },
+    "thinkingBubble": {
+      "reasoning": "Аргументація"
+    },
+    "chatEmptyPlaceholder": {
+      "noModelsTitle": "Моделей немає",
+      "noModelsDescription": "Завантажте модель, щоб почати спілкуватися з PocketPal",
+      "noModelsButton": "Завантажити Моделю",
+      "activateModelTitle": "Активуйте модель, щоб розпочати роботу",
+      "activateModelDescription": "Виберіть модель і завантажте її. Після завантаження натисніть «Завантажити» поруч із моделлю та почніть спілкуватися.",
+      "activateModelButton": "Вибрати модель",
+      "loading": "Завантаження..."
+    },
+    "chatInput": {
+      "inputPlaceholder": "Повідомлення",
+      "thinkingToggle": {
+        "enableThinking": "Увімкнути режим мислення",
+        "disableThinking": "Вимкнути режим мислення",
+        "thinkingEnabled": "Увімкнено режим мислення",
+        "thinkingDisabled": "Режим мислення вимкнено",
+        "thinkText": "Мислення"
+      }
+    },
+    "contentReportSheet": {
+      "title": "Зміст звіту",
+      "privacyNote": "Ми не надсилаємо зміст повідомлень чи деталі розмов. Будь ласка, опишіть конкретну проблему, з якою ви зіткнулися.",
+      "categoryLabel": "Категорія звіту",
+      "selectCategory": "Виберіть категорію",
+      "categories": {
+        "hate": "Мова ворожнечі",
+        "sexual": "Сексуальний контент",
+        "selfHarm": "Самоушкодження",
+        "violence": "Насильство",
+        "other": "Інше"
+      },
+      "descriptionLabel": "Опис",
+      "descriptionPlaceholder": "Будь ласка, опишіть проблему, пов’язану з цим матеріалом...",
+      "includeModelInfo": "Вказати інформацію про модель",
+      "includeModelInfoDescription": "Вкажіть назву моделі та ідентифікатор, щоб допомогти нам провести розслідування",
+      "noActiveModelNote": "Наразі жодна модель не активна",
+      "submit": "Надіслати звіт",
+      "validation": {
+        "title": "Відсутня інформація",
+        "message": "Будь ласка, виберіть категорію та вкажіть опис."
+      },
+      "success": {
+        "title": "Звіт подано",
+        "message": "Дякуємо за ваше повідомлення. Ми розглянемо його та вживемо відповідних заходів."
+      },
+      "error": {
+        "title": "Повідомлення не вдалося надіслати",
+        "message": "Не вдалося надіслати звіт. Спробуйте ще раз."
+      }
+    },
+    "modelErrorReportSheet": {
+      "title": "Повідомити про проблему із завантаженням моделі",
+      "privacyNote": "Допоможіть нам удосконалити PocketPal, надавши детальну інформацію про цю помилку. Нижче ви можете переглянути, які дані будуть передані — ви можете скасувати вибір тих пунктів, які не бажаєте надавати.",
+      "errorMessage": "Error message",
+      "modelInfo": "Інформація про модель",
+      "modelName": "Ім'я",
+      "modelSource": "Джерело",
+      "modelSize": "Розмір",
+      "contextParams": "Параметри контексту",
+      "deviceInfo": "Інформація про пристрій",
+      "deviceModel": "Пристрій",
+      "osVersion": "ОС",
+      "memoryInfo": "Пам'ять",
+      "cpuArchitecture": "Процесор",
+      "isEmulator": "Емулятор",
+      "additionalInfoLabel": "Додатковий контекст (за бажанням)",
+      "additionalInfoPlaceholder": "Будь-які додаткові подробиці, які можуть допомогти нам розібратися в ситуації...",
+      "submit": "Надіслати звіт",
+      "success": {
+        "title": "Звіт подано",
+        "message": "Дякуємо за допомогу в удосконаленні PocketPal. Ваше повідомлення допоможе нам вирішити цю проблему."
+      },
+      "error": {
+        "title": "Повідомлення не вдалося надіслати",
+        "message": "Не вдалося надіслати звіт. Спробуйте ще раз пізніше."
+      }
+    },
+    "chatGenerationSettingsSheet": {
+      "invalidValues": "Недопустимі значення",
+      "invalidNumericValuesMessage": "Номер повинен бути дійсним",
+      "pleaseCorrect": "Будь ласка, виправте наступне:",
+      "ok": "Гаразд",
+      "saveChanges": "Зберегти зміни",
+      "saveAsPreset": "Зберегти як пресет",
+      "title_session": "Налаштування генерації чату (сесія)",
+      "title_preset": "Налаштування генерації чату (пресет)",
+      "resetToSystemDefaults": "Відновити заводські налаштування",
+      "resetToPreset": "Скинути до заводських налаштувань",
+      "applytoPresetAlert": {
+        "title": "Успіх",
+        "message": "Ці налаштування будуть застосовані до всіх майбутніх сеансів"
+      },
+      "palSettings": "Налаштування Pal",
+      "settingsSource": "Джерело налаштувань"
+    },
+    "palGenerationSettingsSheet": {
+      "title": "Налаштування генеранції — {{palName}}",
+      "invalidValues": "Недопустимі значення",
+      "invalidNumericValuesMessage": "Номер повинен бути дійсним",
+      "pleaseCorrect": "Будь ласка, виправте наступне:",
+      "ok": "Гаразд",
+      "error": "Помилка",
+      "failedToSave": "Не вдалося зберегти налаштування друзів",
+      "resetToGlobal": "Скинути до загальних налаштувань за замовчуванням",
+      "resetToSystem": "Відновити заводські налаштування",
+      "clearPalSettings": "Очистити налаштування Pal",
+      "customSettingsFor": "Налаштування для {{palName}}",
+      "inheritedSettingsFor": "Універсальні налаштування для {{palName}}"
+    },
+    "chatHeaderTitle": {
+      "defaultTitle": "Чат"
+    },
+    "fileMessage": {
+      "fileButtonAccessibilityLabel": "Файл"
+    },
+    "chatPalModelPickerSheet": {
+      "modelsTab": "Моделі",
+      "palsTab": "Палички",
+      "noPal": "Немає палички",
+      "disablePal": "Вимкнути активного паличках",
+      "noDescription": "Опис відсутній",
+      "assistantType": "Асистент",
+      "roleplayType": "Рольова гра",
+      "videoType": "Відео",
+      "confirmationTitle": "Підтвердження",
+      "modelSwitchMessage": "Цей pal має іншу модель за замовчуванням ({{modelName}}). Чи хочете ви перейти на модель за замовчуванням цього pal?",
+      "keepButton": "Зберігати",
+      "switchButton": "Перемикач"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "Завантаження не вдалося",
+      "downloadFailedMessage": "Не вдалося завантажити модель: {{message}}",
+      "unauthorizedTitle": "Помилка автентифікації",
+      "unauthorizedMessage": "Ваш токен Hugging Face, схоже, є недійсним або термін його дії закінчився. Будь ласка, оновіть токен у налаштуваннях.",
+      "forbiddenTitle": "Доступ заборонено",
+      "forbiddenMessage": "У вас немає дозволу на доступ до цієї моделі. Переконайтеся, що:",
+      "forbiddenSteps": [
+        "Ваш токен має право на «читання»",
+        "Ви подали запит на доступ до цієї моделі, і вам його надали",
+        "Власник моделі схвалив ваш запит на доступ"
+      ],
+      "getTokenTitle": "Отримати токен Hugging Face",
+      "getTokenMessage": "Для завантаження цієї моделі потрібен токен Hugging Face.",
+      "getTokenSteps": [
+        "Перейдіть на сайт huggingface.co та увійдіть у систему",
+        "Перейдіть до розділу «Налаштування» > «Токени доступу»",
+        "Створити новий токен із правом доступу «читати»",
+        "Скопіюйте токен і вставте його в поле для токена"
+      ],
+      "tokenDisabledTitle": "Токен вимкнено",
+      "tokenDisabledMessage": "У вас є набір токенів Hugging Face, але наразі він вимкнений. Для завантаження цієї моделі потрібен токен. Увімкніть свій токен, щоб продовжити.",
+      "enableAndRetry": "Увімкнути та спробувати ще раз",
+      "goToSettings": "Перейти до налаштувань",
+      "tryAgain": "Спробувати ще Рфаз",
+      "viewOnHuggingFace": "Переглянути модель на HF ↗"
+    },
+    "headerRight": {
+      "deleteChatTitle": "Видалити чат",
+      "deleteChatMessage": "Ви впевнені, що хочете видалити цей чат?",
+      "generationSettings": "Налаштування покоління",
+      "model": "Модель",
+      "duplicateChatHistory": "Дублікат історії чату",
+      "makeChatTemporary": "Зробити чат тимчасовим",
+      "export": "Експорт/Імпорт",
+      "exportCurrentSession": "Експортувати поточну сесію",
+      "exportAllSessions": "Експортувати всі сесії",
+      "exportChatSession": "Експортувати сеанс чату",
+      "importSessions": "Імпортувати сесії"
+    },
+    "hfTokenSheet": {
+      "title": "Токен Hugging Face",
+      "description": "Необхідно для доступу до закритих моделей",
+      "inputLabel": "Особистий токен доступу",
+      "inputPlaceholder": "Вставте свій токен тут",
+      "save": "Зберегти токен",
+      "saved": "Токен успішно збережено",
+      "reset": "Скинути токен",
+      "resetSuccess": "Токен успішно вилучено",
+      "instructions": "Як отримати токен:",
+      "instructionsSteps": [
+        "Перейдіть на сайт huggingface.co та увійдіть у систему",
+        "Перейдіть до розділу «Налаштування» > «Токени доступу»",
+        "Створити новий токен із правом доступу «читати»",
+        "Скопіюйте токен і вставте його нижче"
+      ],
+      "getTokenLink": "Отримати токен на сайті huggingface.co ↗",
+      "error": {
+        "saving": "Помилка під час збереження токена",
+        "missing": "Потрібен токен Hugging Face",
+        "invalid": "Недійсний або прострочений токен",
+        "gatedModelAccess": "Доступ до цієї закритої моделі було відхилено"
+      },
+      "gatedModelIndicator": "Потрібен токен",
+      "tokenRequired": "Для цієї моделі потрібен токен доступу до Hugging Face",
+      "searchErrorHint": "Ваш токен API Hugging Face є недійсним або термін його дії закінчився. Щоб продовжити пошук, видаліть цей токен або вимкніть аутентифікацію за допомогою токена в налаштуваннях.",
+      "disableAndRetry": "Вимкнути токен і спробувати ще раз"
+    },
+    "modelSettingsSheet": {
+      "modelSettings": "Налаштування Моделі",
+      "saveChanges": "Зберегти зміни"
+    },
+    "modelsHeaderRight": {
+      "menuTitleHf": "Моделі Hugging Face",
+      "menuTitleDownloaded": "Завантажені моделі",
+      "menuTitleGrouped": "Групувати за типом моделі",
+      "menuTitleReset": "Оновити список моделей"
+    },
+    "modelsResetDialog": {
+      "proceedWithReset": "Продовжити скидання",
+      "confirmReset": "Підтвердити скидання"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "Редагувати Pal",
+        "newPal": "Новий Pal",
+        "newVideoPal": "Новий відео Pal"
+      },
+      "description": "Опис",
+      "descriptionPlaceholder": "Введіть короткий опис свого друга",
+      "parameters": "Параметри",
+      "generationSettings": "Налаштування генеранції",
+      "configureGenerationSettings": "Налаштувати параметри генерації",
+      "validation": {
+        "nameRequired": "Ім'я вводити обов'язково",
+        "generatingPromptRequired": "При використанні підказки ШІ необхідно ввести підказку",
+        "promptModelRequired": "При використанні підказки ШІ необхідна модель генерації підказок"
+      }
+    },
+    "assistantPalSheet": {
+      "title": {
+        "create": "Створити помічника Pal",
+        "edit": "Редагувати помічника Pal"
+      },
+      "palName": "Ім'я Pal",
+      "palNamePlaceholder": "Ім'я",
+      "defaultModel": "Модель за замовчуванням",
+      "defaultModelPlaceholder": "Виберіть модель",
+      "validation": {
+        "generatingPromptRequired": "Необхідно ввести підказку",
+        "promptModelRequired": "Потрібна модель генерації підказок"
+      },
+      "create": "Створити"
+    },
+    "modelNotAvailable": {
+      "noModelsDownloaded": "Ви ще не завантажили жодної моделі. Будь ласка, спочатку завантажте модель.",
+      "downloadAModel": "Завантажити модель",
+      "defaultModelNotDownloaded": "Цей друг рекомендує конкретну модель, яку потрібно завантажити, або ви можете вибрати іншу модель.",
+      "modelNotDownloadedShort": "Модель не завантажено",
+      "recommendedModel": "Рекомендована модель",
+      "cancelDownload": "Скасувати завантаження",
+      "download": "Завантажити"
+    },
+    "roleplayPalSheet": {
+      "title": {
+        "create": "Створити друга для рольової pal",
+        "edit": "Редагувати рольову груPal"
+      },
+      "palName": "Ім'я Pal",
+      "palNamePlaceholder": "Ім'я",
+      "defaultModel": "Модель за замовчуванням",
+      "defaultModelPlaceholder": "Виберіть модель",
+      "descriptionSection": "Опис",
+      "world": "Світ",
+      "worldPlaceholder": "Фантастика",
+      "location": "Місцезнаходження",
+      "locationPlaceholder": "Зачарований ліс",
+      "locationSublabel": "Де відбувається дія цієї історії?",
+      "aiRole": "Роль штучного інтелекту",
+      "aiRolePlaceholder": "Ельдара, пустотлива лісова фея",
+      "aiRoleSublabel": "Визначити роль персонажа",
+      "userRole": "Роль користувача",
+      "userRolePlaceholder": "Сер Еландор, хоробрий лицар",
+      "userRoleSublabel": "Хто ти?",
+      "situation": "Ситуація",
+      "situationPlaceholder": "Рятувальна операція, розгадка таємниці",
+      "toneStyle": "Тон/Стиль",
+      "toneStylePlaceholder": "Серйозний",
+      "validation": {
+        "promptModelRequired": "Потрібна модель генерації підказок"
+      },
+      "create": "Створити"
+    },
+    "lookiePalSheet": {
+      "title": {
+        "create": "Створити Lookie Pal",
+        "edit": "Редагувати Lookie Pal"
+      },
+      "palName": "Ім'я Pal",
+      "palNamePlaceholder": "Введіть ім'я для свого Lookie Pal",
+      "visionModel": "Модель бачення",
+      "visionModelPlaceholder": "Виберіть модель зору",
+      "requiredModelsSection": "Необхідні моделі",
+      "captureInterval": "Інтервал зйомки",
+      "captureIntervalHelper": "Інтервал між автоматичними знімками в мілісекундах",
+      "create": "Створити"
+    },
+    "sendButton": {
+      "accessibilityLabel": "Надіслати"
+    },
+    "systemPromptSection": {
+      "sectionTitle": "Системне повідомлення",
+      "useAIPrompt": "Використовувати штучний інтелект для створення системного запиту",
+      "modelSelector": {
+        "label": "Виберіть модель для генерації*",
+        "sublabel": "Рекомендовано: Llama 3.2 3B або Qwen3 4B Instruct 2507.",
+        "placeholder": "Виберіть модель"
+      },
+      "generatingPrompt": {
+        "label": "Мета та контекст",
+        "placeholder": "Опишіть роль, призначення або сценарій використання цього на..."
+      },
+      "buttons": {
+        "loadingModel": "Завантаження Моделі...",
+        "stopGenerating": "Припинити генерування",
+        "generatePrompt": "Створити системне повідомлення",
+        "resetParameters": "Скинути параметри",
+        "resetTemplate": "Скинути шаблон"
+      },
+      "systemPrompt": {
+        "label": "Системне повідомлення",
+        "sublabel": "Не соромтеся редагувати та експериментувати, щоб знайти оптимальний запит для вашого сценарію",
+        "placeholder": "Ви — чудова помічниця"
+      },
+      "warnings": {
+        "promptChanged": "Системний запит було змінено вручну"
+      }
+    },
+    "sidebarContent": {
+      "menuItems": {
+        "chat": "Чат",
+        "models": "Моднль",
+        "pals": "Палички",
+        "benchmark": "Бенчмарк",
+        "settings": "Налаштування",
+        "appInfo": "Інформація про додаток",
+        "testCompletion": "Завершення тесту"
+      },
+      "deleteChatTitle": "Видалити чат",
+      "deleteChatMessage": "Ви впевнені, що хочете видалити цей чат?",
+      "select": "Вибрати",
+      "nSelected": "Вибрано {{count}}",
+      "selectAll": "Вибрати все",
+      "deselectAll": "Скасувати вибір усіх",
+      "exportCount": "Експортувати ({{count}})",
+      "deleteCount": "Видалити ({{count}})",
+      "bulkDeleteTitle": "Видалити історії чатів",
+      "bulkDeleteMessage": "Видалити {{count}} сеансів чату? Цю дію неможливо скасувати.",
+      "bulkDeleteError": "Не вдалося видалити сесії чату. Спробуйте ще раз.",
+      "exportError": "Не вдалося експортувати сеанс чату. Спробуйте ще раз.",
+      "bulkExportError": "Не вдалося експортувати сеанси чату. Спробуйте ще раз.",
+      "dateGroups": {
+        "today": "Сьогодні",
+        "yesterday": "Вчора",
+        "thisWeek": "Цього тижня",
+        "lastWeek": "Минулого тижня",
+        "twoWeeksAgo": "2 тижні тому",
+        "threeWeeksAgo": "3 тижні тому",
+        "fourWeeksAgo": "4 тижні тому",
+        "lastMonth": "Минулого місяця",
+        "older": "Старші"
+      }
+    },
+    "usageStats": {
+      "tooltip": {
+        "title": "Використання пам'яті",
+        "used": "Використано: ",
+        "total": "Разом: ",
+        "usage": "Спосіб застосування: "
+      },
+      "byteSizes": [
+        "Байти",
+        "КБ",
+        "МБ",
+        "ГБ"
+      ]
+    },
+    "chatView": {
+      "menuItems": {
+        "copy": "Копіювати",
+        "regenerate": "Перегенерувати",
+        "regenerateWith": "Перегенерувати з",
+        "edit": "Редагувати",
+        "reportContent": "Зміст звіту"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "Експортувати всіх pal",
+      "importPals": "Імпортувати pals",
+      "importSuccess": "Успішно імпортовано {{count}} pal.",
+      "importError": "Не вдалося імпортувати контакти. Перевірте формат файлу."
+    }
+  },
+  "palsScreen": {
+    "sectionTitles": {
+      "myPalsLocal": "Мої Pal (місцеві)",
+      "myLibrary": "Моя бібліотека (palshub.ai)",
+      "discoverPals": "Відкрийте для себе Pals (palshub.ai)"
+    },
+    "systemPrompt": "Системне повідомлення",
+    "videoAnalysis": "Аналіз відео",
+    "videoAnalysisDescription": "Це відео-помічник на базі штучного інтелекту, який надає коментарі в режимі реального часу до відеопотоків з камери вашого пристрою.",
+    "captureInterval": "Інтервал зйомки",
+    "captureIntervalUnit": "мс",
+    "world": "Світ",
+    "toneStyle": "Тон/Стиль",
+    "aiRole": "Роль штучного інтелекту",
+    "userRole": "Мій роль",
+    "prompt": "Підказка",
+    "assistant": "Асистент",
+    "roleplay": "Рольова гра",
+    "video": "Відео",
+    "deletePal": "Видалити Pal",
+    "deletePalMessage": "Ти впевнений, що хочеш видалити цього pal?",
+    "missingModel": "Відсутня модель",
+    "missingModelMessage": "Стандартна модель «{{modelName}}» для цього палетки недоступна. Завантажте її у вікні редагування або виберіть іншу модель.",
+    "search": "Пошук",
+    "profile": "Профіль",
+    "signIn": "Увійти",
+    "addPal": "Додати Pal",
+    "signInToAccessLibrary": "Увійдіть, щоб отримати доступ до своєї бібліотеки на сайті palshub.ai",
+    "signOut": "Вийти",
+    "signOutConfirmation": "Ви впевнені, що хочете вийти з системи?",
+    "signOutError": "Вихід не вдався. Спробуйте ще раз.",
+    "account": "Обліковий запис",
+    "signInToPalsHub": "Увійти в PalsHub",
+    "signInDescription": "Отримуйте доступ до своєї бібліотеки, створюйте приватні списки друзів та синхронізуйте дані між пристроями",
+    "searchAllPals": "Переглянути всіх Pal...",
+    "deletePalConfirmation": "Ви впевнені, що хочете видалити «{{palName}}»?",
+    "filters": {
+      "all": "Всі",
+      "myPals": "Мій Pals",
+      "local": "Локальний",
+      "video": "Відео",
+      "free": "Безкоштовно",
+      "premium": "Преміум"
+    },
+    "labels": {
+      "free": "Безкоштовно",
+      "premium": "Преміум",
+      "private": "Приватне",
+      "download": "Завантажити",
+      "getFree": "Отримати Безкоштовно"
+    },
+    "premiumPalDescription": "Преміум-користувач із спільноти palshub.ai",
+    "premiumInfoText": "Завітайте на сайт palshub.ai, щоб знайти нових друзів",
+    "sortOptions": {
+      "newest": "Новійша",
+      "oldest": "Старіша",
+      "rating": "Найкращі за оцінками",
+      "popular": "Найпопулярніші"
+    },
+    "palDetailSheet": {
+      "by": "від",
+      "unknown": "Невідомо",
+      "rating": "Оцінка",
+      "reviews": "Відгуки",
+      "created": "Створено",
+      "description": "Опис",
+      "noDescriptionAvailable": "Опис відсутній.",
+      "categories": "Категорії",
+      "tags": "Теги",
+      "systemPrompt": "Системне повідомлення",
+      "downloaded": "Завантажено",
+      "success": "Успіх",
+      "palAddedToCollection": "Pal додано до вашої колекції!",
+      "error": "Помилка",
+      "failedToLoadDetails": "Не вдалося завантажити інформацію про Pal",
+      "failedToDownload": "Не вдалося завантажити pal",
+      "premiumPalMessage": "Це Преміум-Pal.\n• Якщо ви вже розблокували його за допомогою свого облікового запису Palshub, просто увійдіть, щоб переглянути повну інформацію.\n• Ще не розблокували? Зайдіть у додаток palshub.ai, щоб дізнатися більше.",
+      "notAvailable": "Н/Д",
+      "buyOnPalshub": "Купити на Palshub"
+    }
+  },
+  "validation": {
+    "nameRequired": "Ім'я вводити обов'язково",
+    "systemPromptRequired": "Потрібно ввести системний запит",
+    "worldRequired": "Потрібно вказати «Світ»",
+    "locationRequired": "Потрібно вказати місцезнаходження",
+    "aiRoleRequired": "Роль штучного інтелекту є необхідною",
+    "userRoleRequired": "Необхідно вказати роль користувача",
+    "situationRequired": "Необхідно вказати ситуацію",
+    "toneStyleRequired": "Необхідно вказати тон/стиль"
+  },
+  "camera": {
+    "permissionTitle": "Потрібен доступ до камери",
+    "permissionMessage": "PocketPal потребує доступу до камери для аналізу зображень",
+    "requestingPermission": "Запит на дозвіл на використання камери...",
+    "noDevice": "Камера не знайдено",
+    "errorTitle": "Помилка камери",
+    "errorMessage": "Під час зйомки фотографії сталася помилка",
+    "flip": "Перевернути",
+    "analyzing": "Аналізується зображення...",
+    "startCamera": "Запустити камеру",
+    "stopCamera": "Зупинити камеру",
+    "promptPlaceholder": "Що ви хочете дізнатися про це зображення?",
+    "takePhoto": "Камера"
+  },
+  "video": {
+    "permissionTitle": "Потрібен доступ до камери",
+    "permissionMessage": "PocketPal потребує доступу до камери для аналізу відео",
+    "requestingPermission": "Запит на дозвіл на використання камери...",
+    "noDevice": "Камера не знайдено",
+    "errorTitle": "Помилка камери",
+    "errorMessage": "Сталася помилка з камерою",
+    "flip": "Перевернути",
+    "analyzing": "Аналізується відео...",
+    "startCamera": "Запустити камеру",
+    "stopCamera": "Зупинити камеру",
+    "promptPlaceholder": "Що ви хочете дізнатися про це відео?",
+    "captureInterval": "Інтервал зйомки",
+    "captureIntervalUnit": "мс",
+    "liveCommentary": "Пряма трансляція",
+    "emptyPlaceholder": {
+      "title": "Ласкаво просимо до Lookie",
+      "subtitle": "Приватний аналіз відео в режимі реального часу безпосередньо на пристрої",
+      "experimentalNotice": "Це експериментальна функція. Точність залежить від обраної моделі, швидкість — від технічних характеристик вашого пристрою, а деякі моделі можуть не працювати.",
+      "howToUse": "Спосіб застосування:",
+      "step1": "• Відредагуйте підказку (за бажанням), щоб скерувати аналіз",
+      "step2": "• Натисніть кнопку камери, щоб розпочати аналіз відео в режимі реального часу",
+      "step3": "• Налаштувати частоту створення знімків, коли камера увімкнена",
+      "step4": "• Перейдіть до іншого друга, щоб вести звичайний текстовий чат"
+    }
+  },
+  "screenTitles": {
+    "chat": "Чпт",
+    "models": "Модплі",
+    "pals": "Pals (експериментальний)",
+    "benchmark": "Бенчмарк",
+    "settings": "Налаштування",
+    "appInfo": "Про додаток",
+    "testCompletion": "Завершення тесту"
+  },
+  "chat": {
+    "conversationReset": "Розмова перезапущена!",
+    "modelNotLoaded": "Модель не завантажено. Будь ласка, ініціалізуйте модель.",
+    "completionFailed": "Помилка під час виконання: ",
+    "loadingModel": "Завантаження моделі...",
+    "typeYourMessage": "Напишіть своє повідомлення тут",
+    "load": "'Завантажити",
+    "goToModels": "Перейти до моделей",
+    "readyToChat": "Готові поспілкуватися? Завантажте останню використану модель.",
+    "pleaseLoadModel": "Завантажте модель для чату.",
+    "multimodalNotEnabled": "Для цієї моделі функція «Мультимодальність» не увімкнена. Зображення будуть відображатися, але штучний інтелект їх не оброблятиме.",
+    "cannotSendWithoutModel": "Спочатку завантажте модель"
+  },
+  "benchmark": {
+    "title": "Бенчмарк",
+    "modelSelector": {
+      "prompt": "Вибрати модель",
+      "noModels": "Моделі не завантажено"
+    },
+    "buttons": {
+      "advancedSettings": "Додаткові налаштування",
+      "startTest": "Почати тест",
+      "runningTest": "Виконується тест...",
+      "clearAll": "Очистити все",
+      "done": "Готово",
+      "cancel": "Скасувати",
+      "delete": "Видалити",
+      "share": "Поділитися",
+      "sharing": "Поділюся...",
+      "viewRawData": "Переглянути вихідні дані",
+      "hideRawData": "Приховати вихідні дані"
+    },
+    "messages": {
+      "pleaseSelectModel": "Спочатку виберіть і ініціалізуйте модель",
+      "testWarning": "Примітка: Тест для більших моделей може тривати до 2–5 хвилин, і його неможливо перервати після запуску.",
+      "keepScreenOpen": "Будь ласка, не закривайте це вікно.",
+      "initializingModel": "Ініціалізація моделі...",
+      "modelMaxValue": "(макс: {{maxValue}})"
+    },
+    "dialogs": {
+      "advancedSettings": {
+        "title": "Розширені налаштування",
+        "testProfile": "Профіль тестування",
+        "customParameters": "Настроювані параметри",
+        "description": "Налаштуйте параметри тесту для конкретних сценаріїв тестування."
+      },
+      "deleteResult": {
+        "title": "Видалити результат",
+        "message": "Ви впевнені, що хочете видалити цей результат тесту?"
+      },
+      "clearAllResults": {
+        "title": "Очистити всі результати",
+        "message": "Ви впевнені, що хочете видалити всі результати тестів?"
+      },
+      "shareResults": {
+        "title": "Поділитися результатами тестування",
+        "sharedDataTitle": "До спільних даних належать:",
+        "deviceAndModelInfo": "• Технічні характеристики пристрою та інформація про модель",
+        "performanceMetrics": "• Показники ефективності",
+        "dontShowAgain": "Не показувати це повідомлення знову"
+      }
+    },
+    "sections": {
+      "testResults": "Результати тестування"
+    },
+    "benchmarkResultCard": {
+      "modelMeta": {
+        "params": "параметр"
+      },
+      "config": {
+        "title": "Конфігурація тесту",
+        "format": "PP: {{pp}} • TG: {{tg}} • PL: {{pl}} • Rер: {{nr}}"
+      },
+      "modelSettings": {
+        "title": "Налаштування Моделі",
+        "context": "Контекст: {{context}}",
+        "batch": "Партія: {{batch}}",
+        "ubatch": "U Batch: {{ubatch}}",
+        "cpuThreads": "Потоки процесора: {{threads}}",
+        "gpuLayers": "Шари графічного процесора: {{layers}}",
+        "device": "Пристрій: {{device}}",
+        "flashAttentionEnabled": "Флеш-реклама увімкнено",
+        "flashAttentionDisabled": "Флеш-сповіщення вимкнено",
+        "cacheTypes": "Типи кешів: {{cacheK}}/{{cacheV}}"
+      },
+      "results": {
+        "promptProcessing": "Швидке опрацювання",
+        "tokenGeneration": "Генерація токенів",
+        "totalTime": "Загальний час",
+        "peakMemory": "Peak MemoryМаксимальний обсяг пам'яті",
+        "tokensPerSecond": "т/с"
+      },
+      "actions": {
+        "deleteButton": " ",
+        "submittedText": "✓ Поділитися",
+        "leaderboardLink": "Рейтинг AI-телефонів ↗",
+        "cannotShare": "Неможливо поділитися",
+        "cannotShareTooltip": "Результати локальної моделі не можна поширювати",
+        "submitButton": "Відправити до рейтингу",
+        "viewLeaderboard": "Переглянути рейтинг ↗"
+      },
+      "errors": {
+        "networkRetry": "Перевірте з'єднання та спробуйте ще раз",
+        "appCheckRetry": "Повторити відправку",
+        "serverRetry": "Спробуйте пізніше",
+        "genericRetry": "Спробувати ще раз",
+        "failedToSubmit": "Не вдалося надіслати результати тесту"
+      }
+    },
+    "deviceInfoCard": {
+      "title": "Інформація про пристрій",
+      "deviceSummary": "{{brand}} {{model}} • {{systemName}} {{systemVersion}}",
+      "coreSummary": "{{cores}} ядро • {{memory}}",
+      "sections": {
+        "basicInfo": "Основна інформація",
+        "cpuDetails": "Деталі процесора",
+        "gpuDetails": "Деталі графічного процесора",
+        "hexagonDetails": "'Hexagon DSP",
+        "appInfo": "Інформація про додаток"
+      },
+      "fields": {
+        "architecture": "Архітектура",
+        "totalMemory": "Загальний обсяг пам'яті",
+        "deviceId": "Ідентифікатор пристрою",
+        "cpuCores": "Ядра процесора",
+        "cpuModel": "Модель процесора",
+        "chipset": "Мікросхем",
+        "instructions": "Інструкції",
+        "version": "Версія",
+        "gpuType": "Тип графічного процесора",
+        "gpuRenderer": "Рендеринг",
+        "gpuVendor": "Постачальник",
+        "metalSupport": "Підтримка Metal",
+        "openclSupport": "Підтримка OpenCL",
+        "openclRequirement": "Потрібні i8mm та dotprod"
+      },
+      "instructions": {
+        "yes": "✓",
+        "no": "✗",
+        "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, `SVE: {{sve}}, I8MM: {{i8mm}}"
+      },
+      "versionFormat": "{{version}} ({{buildNumber}})"
+    }
+  },
+  "errors": {
+    "unexpectedError": "Сталася несподівана помилка",
+    "hfAuthenticationError": "Помилка автентифікації Hugging Face: токен відсутній або недійсний",
+    "hfAuthenticationErrorSearch": "Помилка автентифікації Hugging Face: Недійсний токен",
+    "authenticationError": "Помилка автентифікації: токен відсутній або недійсний",
+    "hfAuthorizationError": "Помилка авторизації Hugging Face: Немає дозволу на доступ до цього ресурсу",
+    "authorizationError": "Помилка авторизації: відсутні права доступу до цього ресурсу",
+    "hfServerError": "Помилка сервера Hugging Face: проблема з сервером API",
+    "serverError": "Помилка сервера: проблема з сервером API",
+    "hfNetworkTimeout": "Тайм-аут мережі: виконання запиту до Hugging Face зайняло занадто багато часу",
+    "networkTimeout": "Час очікування мережі: виконання запиту зайняло занадто багато часу",
+    "hfNetworkError": "Помилка мережі: Не вдалося підключитися до API Hugging Face",
+    "networkError": "Помилка мережі: Не вдалося підключитися до API",
+    "downloadSetupFailedTitle": "Помилка під час завантаження інсталяційного файлу",
+    "downloadSetupFailedMessage": "Не вдалося підготувати модель для завантаження: {{message}}",
+    "cameraErrorTitle": "Помилка камери",
+    "cameraErrorMessage": "Не вдалося зробити фото",
+    "galleryErrorTitle": "Помилка галереї",
+    "galleryErrorMessage": "Не вдалося вибрати зображення"
+  },
+  "simulator": {
+    "cameraNotAvailable": "Камера недоступна в симуляторі. Будь ласка, скористайтеся фізичним пристроєм."
+  }
+}

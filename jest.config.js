@@ -79,5 +79,7 @@ module.exports = {
     '@env': '<rootDir>/__mocks__/external/@env.js',
     '@gorhom/bottom-sheet':
       '<rootDir>/__mocks__/external/@gorhom/bottom-sheet.js',
+    '@pocketpalai/react-native-speech':
+      '<rootDir>/__mocks__/external/@pocketpalai/react-native-speech.ts',
   },
 };

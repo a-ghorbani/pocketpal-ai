@@ -3,8 +3,8 @@
     "screenTitle": "應用程式資訊",
     "description": "一個能把語言模型直接帶到你手機上的應用程式，基於 llama.cpp 與 llama.rn 構建。",
     "supportProject": "支援此專案",
-    "supportProjectDescription": "如果您喜歡使用 PocketPal AI, 請考慮透過以下方式支援此專案:",
-    "githubButton": "GitHub 上打星狀",
+    "supportProjectDescription": "如果您喜歡使用 PocketPal AI，請考慮透過以下方式支援此專案：",
+    "githubButton": "在 GitHub 上點讚",
     "orText": "或",
     "orBy": "或通過",
     "sponsorButton": "成為贊助商",
@@ -14,7 +14,8 @@
   "benchmark": {
     "title": "基準",
     "modelSelector": {
-      "prompt": "選擇模型"
+      "prompt": "選擇模型",
+      "noModels": "尚未下載任何模型"
     },
     "buttons": {
       "advancedSettings": "進階設定",
@@ -31,10 +32,10 @@
     },
     "messages": {
       "pleaseSelectModel": "請先選擇並初始化模型",
-      "testWarning": "注意: 測試對於較大的模型可能需要 2–5 分鐘, 且一旦啟動後無法中斷。",
+      "testWarning": "注意：測試對於較大的模型可能需要 2–5 分鐘，且一旦啟動後無法中斷。",
       "keepScreenOpen": "請保持此畫面開啟。",
       "initializingModel": "正在初始化模型…",
-      "modelMaxValue": "(最大值: {{maxValue}})"
+      "modelMaxValue": "(最大值：{{maxValue}})"
     },
     "dialogs": {
       "advancedSettings": {
@@ -45,15 +46,15 @@
       },
       "clearAllResults": {
         "title": "清除所有結果",
-        "message": "您確定要刪除所有基準測試結果嗎?"
+        "message": "您確定要刪除所有基準測試結果嗎？"
       },
       "deleteResult": {
         "title": "刪除結果",
-        "message": "您確定要刪除此基準測試結果嗎?"
+        "message": "您確定要刪除此基準測試結果嗎？"
       },
       "shareResults": {
         "title": "分享基準測試結果",
-        "sharedDataTitle": "共享資料包含:",
+        "sharedDataTitle": "共享資料包含：",
         "deviceAndModelInfo": "• 裝置規格與模型資訊",
         "performanceMetrics": "• 測量值",
         "dontShowAgain": "不要再顯示此訊息"
@@ -72,17 +73,18 @@
       },
       "modelSettings": {
         "title": "模型設定",
-        "context": "上下文: {{context}}",
-        "batch": "批次: {{batch}}",
-        "ubatch": "U 批次: {{ubatch}}",
-        "cpuThreads": "CPU 執行緒: {{threads}}",
-        "gpuLayers": "GPU 層數: {{layers}}",
+        "context": "上下文：{{context}}",
+        "batch": "批次：{{batch}}",
+        "ubatch": "U 批次：{{ubatch}}",
+        "cpuThreads": "CPU 執行緒：{{threads}}",
+        "gpuLayers": "GPU 層數：{{layers}}",
         "flashAttentionEnabled": "已啟用 Flash Attention",
         "flashAttentionDisabled": "已停用 Flash Attention",
-        "cacheTypes": "緩存類型: {{cacheK}} / {{cacheV}}"
+        "cacheTypes": "快取類型：{{cacheK}} / {{cacheV}}",
+        "device": "設備：{{device}}"
       },
       "results": {
-        "promptProcessing": "提示處理",
+        "promptProcessing": "提示詞處理",
         "tokenGeneration": "詞元生成",
         "totalTime": "總耗時",
         "peakMemory": "峰值記憶體",
@@ -94,7 +96,8 @@
         "cannotShare": "無法共享",
         "cannotShareTooltip": "本地模型結果無法共享",
         "submitButton": "提交至排行榜",
-        "viewLeaderboard": "查看排行榜 ↗"
+        "viewLeaderboard": "查看排行榜 ↗",
+        "deleteButton": " "
       },
       "errors": {
         "networkRetry": "檢查連線並重試",
@@ -111,7 +114,9 @@
       "sections": {
         "basicInfo": "基本資訊",
         "cpuDetails": "CPU 詳情",
-        "appInfo": "應用程式資訊"
+        "appInfo": "應用程式資訊",
+        "gpuDetails": "GPU 詳情",
+        "hexagonDetails": "Hexagon DSP"
       },
       "fields": {
         "architecture": "架構",
@@ -121,7 +126,13 @@
         "cpuModel": "CPU 型號",
         "chipset": "晶片組",
         "instructions": "指令集",
-        "version": "版本"
+        "version": "版本",
+        "gpuType": "GPU 型號",
+        "gpuRenderer": "渲染器",
+        "gpuVendor": "製造商",
+        "metalSupport": "Metal 支援",
+        "openclSupport": "OpenCL 支援",
+        "openclRequirement": "需要 i8mm 和 dotprod"
       },
       "instructions": {
         "format": "FP16: {{fp16}}, DotProd: {{dotProd}}, SVE: {{sve}}, I8MM: {{i8mm}}",
@@ -132,15 +143,17 @@
     }
   },
   "chat": {
-    "conversationReset": "對話已重置!",
+    "conversationReset": "對話已重置！",
     "modelNotLoaded": "模型尚未載入。請先初始化模型。",
-    "completionFailed": "完成失敗: ",
+    "completionFailed": "完成失敗： ",
     "loadingModel": "正在載入模型…",
     "typeYourMessage": "在此輸入您的訊息",
     "load": "載入",
     "goToModels": "前往模型",
-    "readyToChat": "準備聊天? 載入上一次使用的模型。",
-    "pleaseLoadModel": "載入模型以聊天。"
+    "readyToChat": "準備聊天？載入上一次使用的模型。",
+    "pleaseLoadModel": "載入模型以聊天。",
+    "multimodalNotEnabled": "此模型未啟用多模態功能。圖片將會顯示，但不會被 AI 處理。",
+    "cannotSendWithoutModel": "請先載入模型"
   },
   "common": {
     "cancel": "取消",
@@ -149,7 +162,7 @@
     "rename": "重新命名",
     "reset": "重置",
     "save": "儲存",
-    "networkError": "網路錯誤, 請重試。",
+    "networkError": "網路錯誤，請重試。",
     "downloadETA": "估計完成時間",
     "second": "秒",
     "seconds": "秒",
@@ -166,7 +179,14 @@
     "minute": "分鐘",
     "minutes": "分鐘",
     "justNow": "剛剛",
-    "calculating": "計算中…"
+    "calculating": "計算中…",
+    "update": "更新",
+    "error": "錯誤",
+    "export": "匯出",
+    "ok": "確定",
+    "close": "關閉",
+    "clear": "全部清除",
+    "gallery": "圖庫"
   },
   "completionParams": {
     "grammar": "如何在生成文字本時強制執行特定語法規則（快速指南）",
@@ -175,33 +195,32 @@
     "n_probs": "顯示替代詞彙的機率分數。",
     "top_k": "透過將可選單詞限制為最可能的前 K 個, 來控制創造性。較低的值會使回覆更聚焦",
     "top_p": "平衡創造力與連貫性。較高的值 (接近1.0) 允許更具創意但可能不那麼聚焦的回覆",
-    "min_p": "一個詞元被考慮的最小機率。過濾掉不太可能出現的單詞, 以減少無意義或脫離上下文的回應",
-    "temperature": "控制創造力與可預測性。數值越高, 回覆越有創意, 但針對性越差",
+    "min_p": "設定詞元的最低機率，以過濾掉不太可能出現的詞語，從而減少無意義或與上下文不符的回應",
+    "temperature": "控制創造力與可預測性。數值越高，回覆越有創意，但針對性越差",
     "penalty_last_n": "檢查重複時的回溯距離。較大的值能有效防止長期重複",
     "penalty_repeat": "抑制單詞重複。較高的值會讓回覆使用更為多樣化的語言",
     "penalty_freq": "懲罰過度使用的單詞。較高的值鼓勵使用更廣泛的詞彙",
     "penalty_present": "減少主題和概念的重複。較高的值會鼓勵產出更具多樣性的內容",
     "mirostat": "啟用進階控制功能, 以調節回覆的創造力。將值設為 1 或 2 (較平滑) 即可在即時進行隨機性與連貫性的智能調整。",
     "mirostat_tau": "設定 Mirostat 的目標創造力等級。較高的值可產生更為多樣化、富有想像力的回覆, 較低的值則能確保輸出更加聚焦。",
-    "mirostat_eta": "Mirostat 的創造力調整速度。數值越高, 表示調整越快",
-    "dry_multiplier": "DRY (不要重複自己) 功能的強度。數值越高, 越能嚴格防止重複",
-    "dry_base": "DRY 模式下的基礎重複懲罰。數值越高, 防止重複的力度就越大",
-    "dry_allowed_length": "在 DRY 懲罰生效前, 允許重複多少個單詞",
+    "mirostat_eta": "Mirostat 的創造力調整速度。數值越高，表示調整越快",
+    "dry_multiplier": "DRY (不要重複自己) 功能的強度。數值越高，越能嚴格防止重複",
+    "dry_base": "DRY 模式下的基礎重複懲罰。數值越高，防止重複的力度就越大",
+    "dry_allowed_length": "在 DRY 懲罰生效前，允許重複多少個單詞",
     "dry_penalty_last_n": "DRY 模式下檢查重複的回溯範圍是多少",
     "dry_sequence_breakers": "在 DRY 模式下重置重複檢查器的符號",
     "ignore_eos": "即使模型想停止，也繼續生成。這對於強制產生更長回覆很有用",
     "typical_p": "使用參數 p 啟用本機典型抽樣，p=1.0 是停用",
     "logit_bias": "影響特定單詞在回覆中出現的可能性",
     "seed": "設置隨機數生成器種子。對於可重現結果非常有用",
-    "xtc_probability": "設定 XTC 抽樣器刪除詞元令牌的機會, 0 為關閉",
-    "xtc_threshold": "設定 XTC 刪除詞元所需的最低機率。(超過 0.5 表示停用 XTC)"
+    "xtc_probability": "設定透過 XTC 採樣器移除詞元的機率。 0 表示已停用",
+    "xtc_threshold": "設定 XTC 刪除詞元所需的最低機率。(超過 0.5 表示停用 XTC)",
+    "include_thinking_in_context": "在傳送給模型的情境中包含 AI 思考/推理部分。停用此功能可以節省情境空間。這可能會影響效能。",
+    "jinja": "啟用聊天格式化用的 Jinja 範本。啟用時，使用基於 Jinja 的聊天範本處理，以提高與現代模型相容性。"
   },
   "components": {
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "發送媒體"
-    },
-    "bubble": {
-      "timingsString": "{{predictedMs}} 毫秒/個詞元, {{predictedPerSecond}} 個詞元/秒"
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "無可用模型",
@@ -213,23 +232,32 @@
       "loading": "正在載入..."
     },
     "chatInput": {
-      "inputPlaceholder": "訊息"
+      "inputPlaceholder": "訊息",
+      "thinkingToggle": {
+        "enableThinking": "啟用思考模式",
+        "disableThinking": "停用思考模式",
+        "thinkingEnabled": "思考模式已啟用",
+        "thinkingDisabled": "思考模式已停用",
+        "thinkText": "思考"
+      }
     },
     "chatGenerationSettingsSheet": {
-      "invalidValues": "無效的數值",
-      "invalidNumericValuesMessage": "必須是有效的數值",
-      "pleaseCorrect": "請糾正以下內容:",
+      "invalidValues": "無效值",
+      "invalidNumericValuesMessage": "必須是有效數字",
+      "pleaseCorrect": "請糾正以下內容：",
       "ok": "確定",
       "saveChanges": "儲存更改",
-      "saveAsPreset": "另存為預設",
-      "title_session": "聊天生成設定 (會話)",
-      "title_preset": "聊天生成設定 (預設)",
-      "resetToSystemDefaults": "恢復為系統預設值",
-      "resetToPreset": "恢復為預設",
+      "saveAsPreset": "儲存為預設",
+      "title_session": "聊天生成設定（會話）",
+      "title_preset": "聊天生成設定（預設）",
+      "resetToSystemDefaults": "重設為系統預設",
+      "resetToPreset": "重設為預設",
       "applytoPresetAlert": {
         "title": "成功",
         "message": "這些設定將應用於所有未來會話"
-      }
+      },
+      "palSettings": "Pal 設定",
+      "settingsSource": "設定來源"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face 模型",
@@ -249,9 +277,9 @@
         "GB"
       ],
       "tooltip": {
-        "usage": "使用率: ",
-        "total": "總計: ",
-        "used": "已使用: ",
+        "usage": "使用率： ",
+        "total": "總計： ",
+        "used": "已使用： ",
         "title": "記憶體使用量"
       }
     },
@@ -273,7 +301,7 @@
         "yesterday": "昨天",
         "today": "今天"
       },
-      "deleteChatMessage": "您確定要刪除此聊天嗎?",
+      "deleteChatMessage": "您確定要刪除此聊天嗎？",
       "deleteChatTitle": "刪除聊天",
       "menuItems": {
         "testCompletion": "測試完成",
@@ -283,32 +311,45 @@
         "pals": "Pal",
         "models": "模型",
         "chat": "聊天"
-      }
+      },
+      "select": "選擇",
+      "nSelected": "已選取 {{count}}",
+      "selectAll": "全選",
+      "deselectAll": "取消選擇所有",
+      "exportCount": "匯出 ({{count}})",
+      "deleteCount": "刪除 ({{count}})",
+      "bulkDeleteTitle": "刪除聊天會話",
+      "bulkDeleteMessage": "刪除 {{count}} 個聊天會話？此操作無法復原。",
+      "bulkDeleteError": "刪除聊天會話失敗。請再試一次。",
+      "exportError": "匯出聊天會話失敗。請再試一次。",
+      "bulkExportError": "匯出聊天會話失敗。請再試一次。"
     },
     "systemPromptSection": {
       "warnings": {
-        "promptChanged": "系統提示已手動更改"
+        "promptChanged": "系統提示詞已手動更改"
       },
       "systemPrompt": {
-        "placeholder": "您是一位樂於協助的助手",
-        "label": "系統提示",
-        "sublabel": "隨意編輯與實驗, 找到最符合您情境的最佳提示"
+        "placeholder": "你是一個實用的助手",
+        "label": "系統提示詞",
+        "sublabel": "請隨意編輯和嘗試，以找到最適合您情境的提示詞"
       },
       "buttons": {
-        "generatePrompt": "生成系統提示",
+        "generatePrompt": "生成系統提示詞",
         "stopGenerating": "停止生成",
-        "loadingModel": "正在載入模型..."
+        "loadingModel": "正在載入模型...",
+        "resetParameters": "重設參數",
+        "resetTemplate": "重設範本"
       },
-      "sectionTitle": "系統提示",
-      "useAIPrompt": "使用 AI 生成系統提示",
+      "sectionTitle": "系統提示詞",
+      "useAIPrompt": "使用 AI 生成系統提示詞",
       "modelSelector": {
         "label": "選擇生成模型*",
-        "sublabel": "推薦: Llama 3.2 3B 或 Qwen2.5 3B。",
+        "sublabel": "推薦：Llama 3.2 3B 或 Qwen2.5 3B。",
         "placeholder": "選擇模型"
       },
       "generatingPrompt": {
-        "label": "生成提示",
-        "placeholder": "輸入生成提示"
+        "label": "目的與情境",
+        "placeholder": "請描述這個 Pal 的角色、目的或情境…"
       }
     },
     "chatPalModelPickerSheet": {
@@ -320,18 +361,23 @@
       "assistantType": "助手",
       "roleplayType": "角色扮演",
       "confirmationTitle": "確認",
-      "modelSwitchMessage": "此 pal 的預設模型不同 ({{modelName}})。您是否想切換到 Pal 的預設模型?",
+      "modelSwitchMessage": "此 pal 的預設模型不同 ({{modelName}})。您是否想切換到 Pal 的預設模型？",
       "keepButton": "保持",
-      "switchButton": "切換"
+      "switchButton": "切換",
+      "videoType": "影片"
     },
     "headerRight": {
       "deleteChatTitle": "刪除聊天",
-      "deleteChatMessage": "您確定要刪除此聊天嗎?",
+      "deleteChatMessage": "您確定要刪除此聊天嗎？",
       "generationSettings": "生成設定",
       "model": "模型",
       "duplicateChatHistory": "重複聊天紀錄",
       "makeChatTemporary": "把聊天暫存",
-      "exportChatSession": "匯出聊天會話"
+      "exportChatSession": "匯出聊天會話",
+      "export": "匯出 / 匯入",
+      "exportCurrentSession": "匯出目前會話",
+      "exportAllSessions": "匯出所有會話",
+      "importSessions": "匯入會話"
     },
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
@@ -339,16 +385,16 @@
     },
     "assistantPalSheet": {
       "title": {
-        "create": "建立助手 Pal",
-        "edit": "編輯助手 Pal"
+        "create": "新建助理 Pal",
+        "edit": "編輯助理 Pal"
       },
       "palName": "Pal 名稱",
       "palNamePlaceholder": "名稱",
       "defaultModel": "預設模型",
       "defaultModelPlaceholder": "選擇模型",
       "validation": {
-        "generatingPromptRequired": "需要生成提示",
-        "promptModelRequired": "必須指定提示生成模型"
+        "generatingPromptRequired": "需要生成提示詞",
+        "promptModelRequired": "必須指定提示詞生成模型"
       },
       "create": "新建"
     },
@@ -357,11 +403,13 @@
       "downloadAModel": "下載模型",
       "defaultModelNotDownloaded": "預設模型尚未下載。請先下載。",
       "cancelDownload": "取消下載",
-      "download": "下載"
+      "download": "下載",
+      "modelNotDownloadedShort": "模型未下載",
+      "recommendedModel": "推薦模型"
     },
     "roleplayPalSheet": {
       "title": {
-        "create": "建立角色扮演 Pal",
+        "create": "新建角色扮演 Pal",
         "edit": "編輯角色扮演 Pal"
       },
       "palName": "Pal 名稱",
@@ -373,24 +421,225 @@
       "worldPlaceholder": "幻想",
       "location": "位置",
       "locationPlaceholder": "魔法森林",
-      "locationSublabel": "這個故事的背景是什麼?",
+      "locationSublabel": "這個故事的背景是什麼？",
       "aiRole": "AI 的角色",
-      "aiRolePlaceholder": "埃爾達拉, 森林中的調皮小精靈",
+      "aiRolePlaceholder": "埃爾達拉，森林中的調皮小精靈",
       "aiRoleSublabel": "為角色設定職責",
       "userRole": "使用者角色",
-      "userRolePlaceholder": "伊蘭多爵士, 一位勇敢的騎士",
-      "userRoleSublabel": "你是誰?",
+      "userRolePlaceholder": "伊蘭多爵士，一位勇敢的騎士",
+      "userRoleSublabel": "你是誰？",
       "situation": "情況",
-      "situationPlaceholder": "拯救行動, 破解謎案",
+      "situationPlaceholder": "拯救行動，破解謎案",
       "toneStyle": "語氣 / 文風",
       "toneStylePlaceholder": "嚴肅",
       "validation": {
-        "promptModelRequired": "需要提示生成模型"
+        "promptModelRequired": "需要提示詞生成模型"
       },
       "create": "新建"
     },
     "sendButton": {
       "accessibilityLabel": "發送"
+    },
+    "exportUtils": {
+      "ok": "確定",
+      "cancel": "取消",
+      "saveOptions": "儲存選項",
+      "fileSaved": "檔案已儲存",
+      "fileSavedMessage": "此檔案已儲存到您的下載資料夾，檔案名稱為 {{filename}}",
+      "share": "分享",
+      "shareError": "分享錯誤",
+      "shareErrorMessage": "無法分享該檔案。請再試一次。",
+      "saveError": "儲存至下載資料夾時發生錯誤",
+      "saveOptionsMessage": "無法直接儲存至下載資料夾。您想分享該檔案嗎？",
+      "shareContentErrorMessage": "無法分享內容。請再試一次。",
+      "exportError": "匯出錯誤",
+      "exportErrorMessage": "匯出檔案時發生錯誤。請再試一次。",
+      "permissionRequired": "需要儲存權限",
+      "permissionMessage": "我們需要儲存到下載資料夾的授權。",
+      "permissionDenied": "授權被拒絕",
+      "permissionDeniedMessage": "沒有儲存權限，匯出功能將會被停用。",
+      "continue": "繼續"
+    },
+    "modelErrorReportSheet": {
+      "memoryInfo": "記憶體",
+      "cpuArchitecture": "CPU",
+      "modelSource": "來源",
+      "modelName": "名稱",
+      "modelInfo": "模型資訊",
+      "modelSize": "大小",
+      "errorMessage": "錯誤訊息",
+      "title": "報告模型載入問題",
+      "privacyNote": "請分享有關此錯誤的細節，以幫助我們改進 PocketPal。以下列出將會分享的內容 - 您可以選擇不包含任何您不希望包含的項目。",
+      "contextParams": "上下文參數",
+      "deviceInfo": "裝置資訊",
+      "deviceModel": "裝置",
+      "osVersion": "OS",
+      "isEmulator": "模擬器",
+      "additionalInfoLabel": "額外上下文（可選）",
+      "additionalInfoPlaceholder": "任何可能幫助我們理解問題的額外細節...",
+      "submit": "提交報告",
+      "success": {
+        "title": "報告已提交",
+        "message": "感謝您協助我們改進 PocketPal。您的報告將有助於我們解決此問題。"
+      },
+      "error": {
+        "title": "報告失敗",
+        "message": "傳送報告失敗。請稍後再試。"
+      }
+    },
+    "palGenerationSettingsSheet": {
+      "ok": "確定",
+      "error": "錯誤",
+      "clearPalSettings": "清除 Pal 設定",
+      "title": "生成設定 - {{palName}}",
+      "invalidValues": "無效值",
+      "invalidNumericValuesMessage": "必須是有效數字",
+      "pleaseCorrect": "請更正以下內容：",
+      "failedToSave": "儲存 pal 設定失敗",
+      "resetToGlobal": "還原為一般預設值",
+      "resetToSystem": "還原為系統預設值",
+      "customSettingsFor": "{{palName}} 的自訂設定",
+      "inheritedSettingsFor": "{{palName}} 的繼承設定"
+    },
+    "downloadErrorDialog": {
+      "downloadFailedTitle": "無法下載",
+      "downloadFailedMessage": "無法下載模型：{{message}}",
+      "unauthorizedTitle": "驗證失敗",
+      "unauthorizedMessage": "您的 Hugging Face Token 看起來無效或已過期。請在設定中更新您的 Token。",
+      "forbiddenTitle": "無權限存取",
+      "forbiddenMessage": "您沒有權限存取此模型。請確保：",
+      "forbiddenSteps": [
+        "您的 token 具有「讀取」權限",
+        "您請求並獲得了訪問此模型的權限",
+        "模型所有者已批准您的存取請求"
+      ],
+      "getTokenTitle": "取得 Hugging Face Token",
+      "getTokenMessage": "下載此模型需要一個 Hugging Face token。",
+      "getTokenSteps": [
+        "前往 huggingface.co 並登入",
+        "前往設定 > 存取 Token",
+        "新建一個具有「讀取」權限的新 token",
+        "複製詞元並將其貼到詞元欄位中"
+      ],
+      "tokenDisabledTitle": "詞元已停用",
+      "tokenDisabledMessage": "您設定了 Hugging Face token，但目前已停用。此模型需要一個 token 才能下載。請啟用您的 token 以繼續。",
+      "enableAndRetry": "啟用並重試",
+      "goToSettings": "前往設定",
+      "tryAgain": "再試一次",
+      "viewOnHuggingFace": "在 HF 上查看模型 ↗"
+    },
+    "hfTokenSheet": {
+      "save": "儲存 Token",
+      "reset": "重設 Token",
+      "title": "Hugging Face Token",
+      "description": "需要存取受保護模型的權限",
+      "inputLabel": "個人存取 Token",
+      "inputPlaceholder": "在此貼上您的 token",
+      "saved": "Token 已成功儲存",
+      "resetSuccess": "Token 已成功移除",
+      "instructions": "如何取得 token：",
+      "instructionsSteps": [
+        "前往 huggingface.co 並登入",
+        "前往設定 > 存取 Token",
+        "新建一個具有「讀取」權限的新 token",
+        "複製詞元並將其貼到下方"
+      ],
+      "getTokenLink": "從 huggingface.co 取得 token ↗",
+      "error": {
+        "saving": "儲存 token 時發生錯誤",
+        "missing": "需要 Hugging Face token",
+        "invalid": "無效或已過期的 token",
+        "gatedModelAccess": "無法存取此受保護模型"
+      },
+      "gatedModelIndicator": "需要 Token",
+      "tokenRequired": "此模型需要一個 Hugging Face 存取 token",
+      "searchErrorHint": "您的 Hugging Face API token 無效或已過期。若要繼續搜尋，請移除 token 或在設定中停用 token 驗證。",
+      "disableAndRetry": "停用 Token 並重試"
+    },
+    "palSheet": {
+      "title": {
+        "edit": "編輯 Pal",
+        "newPal": "新建 Pal",
+        "newVideoPal": "新建影片 Pal"
+      },
+      "description": "描述",
+      "descriptionPlaceholder": "輸入您 Pal 的簡短描述",
+      "parameters": "參數",
+      "generationSettings": "生成設定",
+      "configureGenerationSettings": "配置生成設定",
+      "validation": {
+        "nameRequired": "名稱是必要的",
+        "generatingPromptRequired": "使用 AI 提示詞時需要生成提示詞",
+        "promptModelRequired": "使用 AI 提示詞時需要提示詞生成模型"
+      }
+    },
+    "chatView": {
+      "menuItems": {
+        "edit": "編輯",
+        "copy": "複製",
+        "regenerate": "重新生成",
+        "regenerateWith": "使用...重新生成",
+        "reportContent": "報告內容"
+      }
+    },
+    "lookiePalSheet": {
+      "palName": "Pal 名稱",
+      "visionModel": "視覺模型",
+      "visionModelPlaceholder": "選擇視覺模型",
+      "title": {
+        "create": "新建 Lookie Pal",
+        "edit": "編輯 Lookie Pal"
+      },
+      "palNamePlaceholder": "輸入您 Lookie Pal 的名稱",
+      "requiredModelsSection": "所需模型",
+      "captureInterval": "捕捉間隔",
+      "captureIntervalHelper": "自動捕捉之間的時間（毫秒）",
+      "create": "新建"
+    },
+    "bubble": {
+      "msPerToken": "{{value}}毫秒/詞元",
+      "tokensPerSec": "{{value}} 詞元/秒",
+      "ttft": "{{value}}毫秒 TTFT"
+    },
+    "thinkingBubble": {
+      "reasoning": "推理"
+    },
+    "contentReportSheet": {
+      "title": "檢舉內容",
+      "privacyNote": "我們不會傳送任何訊息內容或對話細節。請描述您遇到的具體問題。",
+      "categoryLabel": "檢舉類別",
+      "selectCategory": "選擇一個類別",
+      "categories": {
+        "hate": "仇恨言論",
+        "sexual": "色情內容",
+        "selfHarm": "自殘",
+        "violence": "暴力",
+        "other": "其他"
+      },
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "請描述此內容的問題...",
+      "includeModelInfo": "包含模型資訊",
+      "includeModelInfoDescription": "包含模型名稱和識別碼，以便我們協助調查",
+      "noActiveModelNote": "目前沒有啟用模型",
+      "submit": "提交報告",
+      "validation": {
+        "title": "缺少資訊",
+        "message": "請選擇一個類別並提供描述。"
+      },
+      "success": {
+        "title": "報告已提交",
+        "message": "感謝您的報告。我們將審核並採取適當行動。"
+      },
+      "error": {
+        "title": "報告失敗",
+        "message": "傳送報告失敗。請再試一次。"
+      }
+    },
+    "palHeaderRight": {
+      "exportAllPals": "匯出所有 Pal",
+      "importPals": "匯入 pal",
+      "importSuccess": "已成功匯入 {{count}} 個 pal。",
+      "importError": "匯入 pal 失敗。請檢查檔案格式。"
     }
   },
   "feedback": {
@@ -398,8 +647,8 @@
     "description": "您的聲音很重要！告訴我們 PocketPal AI 如何幫助您，以及我們可以做什麼讓它更有用。",
     "shareThoughtsButton": "分享您的想法",
     "useCase": {
-      "label": "您正在使用 PocketPal AI 做什麼?",
-      "placeholder": "例如: 摘要、角色扮演等。"
+      "label": "您正在使用 PocketPal AI 做什麼？",
+      "placeholder": "例如：摘要、角色扮演等。"
     },
     "featureRequests": {
       "label": "功能需求",
@@ -410,7 +659,7 @@
       "placeholder": "分享您可能有的其他想法。"
     },
     "usageFrequency": {
-      "label": "您多久使用一次 PocketPal AI? (可選)",
+      "label": "您多久使用一次 PocketPal AI？（可選）",
       "options": {
         "daily": "每日",
         "weekly": "每週",
@@ -419,14 +668,14 @@
       }
     },
     "email": {
-      "label": "聯絡電子郵件 (可選)",
+      "label": "聯絡電子郵件（可選）",
       "placeholder": "您的電子郵件地址"
     },
     "submit": "提交回饋",
     "validation": {
       "required": "請至少提供一些回饋"
     },
-    "success": "感謝您的回饋!",
+    "success": "感謝您的回饋！",
     "error": {
       "general": "發送回饋時出錯。請重試。"
     }
@@ -436,12 +685,27 @@
     "failedToGenerate": "生成輸出失敗"
   },
   "memory": {
-    "shortWarning": "記憶體警告"
+    "shortWarning": "記憶體警告",
+    "multimodalWarning": "此設備可能沒有足夠的資源來運行多模態模型。",
+    "memoryTight": "記憶體吃緊",
+    "lowMemory": "低記憶體",
+    "memoryDetailMessage": "這個模型需要大約 {{needed}}，但目前估計可用的只有大約 {{available}}。 隨著您使用應用程式，估算值會更精確。",
+    "estimatedMemory": "預估記憶體：大約 {{size}}",
+    "alerts": {
+      "memoryWarningTitle": "記憶體警告",
+      "memoryWarningMessage": "這個模型可能會超過可用記憶體，可能導致不穩定。是否繼續載入？",
+      "multimodalWarningTitle": "設備效能警告",
+      "multimodalWarningMessage": "此設備可能沒有足夠的資源來運行多模態模型。載入可能會導致不穩定。是否繼續？",
+      "combinedWarningTitle": "效能警告",
+      "combinedWarningMessage": "這個模型可能會超過可用記憶體，而且此設備可能沒有足夠的資源來運行多模態模型。載入可能會導致不穩定。是否繼續？",
+      "cancel": "取消",
+      "continue": "繼續"
+    }
   },
   "models": {
     "fileManagement": {
       "fileAlreadyExists": "檔案已存在",
-      "fileAlreadyExistsMessage": "同名檔案已存在。您想要怎麼做?",
+      "fileAlreadyExistsMessage": "同名檔案已存在。您想要怎麼做？",
       "replace": "替換",
       "keepBoth": "保留兩者"
     },
@@ -465,11 +729,11 @@
       "menuTitleReset": "重置模型列表"
     },
     "modelsResetDialog": {
-      "proceedWithReset": "繼續重置",
+      "proceedWithReset": "執行重置",
       "confirmReset": "確認重置"
     },
     "chatTemplate": {
-      "label": "基礎聊天模板:"
+      "label": "基本聊天範本："
     },
     "details": {
       "title": "可用的 GGUF 檔案"
@@ -480,7 +744,7 @@
         "modelPreset": "模型已預設。",
         "cannotRemoveTitle": "無法移除",
         "downloadedFirst": "模型已下載。請先刪除該檔案。",
-        "removeMessage": "您確定要從列表中移除此模型嗎?",
+        "removeMessage": "您確定要從列表中移除此模型嗎？",
         "removeError": "無法移除模型。",
         "alreadyDownloadedTitle": "模型已下載",
         "alreadyDownloadedMessage": "該模型已經下載。",
@@ -492,7 +756,7 @@
       },
       "warnings": {
         "storage": {
-          "message": "儲存空間不足, 無法使用。",
+          "message": "儲存空間不足，無法使用。",
           "shortMessage": "儲存空間不足"
         },
         "memory": {
@@ -502,23 +766,40 @@
           "message": "舊版量化格式 - 模型可能無法執行。",
           "shortMessage": "舊版量化"
         },
-        "multiple": "{count} 個警告"
+        "multiple": "{{count}} 個警告"
       },
       "labels": {
-        "downloadSpeed": "{speed}"
+        "downloadSpeed": "{{speed}}"
       }
     },
     "search": {
       "noResults": "未找到模型",
       "loadingMore": "正在載入更多…",
-      "searchPlaceholder": "搜尋 Hugging Face 模型"
+      "searchPlaceholder": "搜尋 Hugging Face 模型",
+      "modelUpdatedLong": "更新於 {{time}} 之前",
+      "modelUpdatedShort": "{{time}} 之前",
+      "modelUpdatedJustNowLong": "剛剛更新",
+      "modelUpdatedJustNowShort": "剛剛",
+      "errorOccurred": "無法載入模型。請再試一次。",
+      "filters": {
+        "author": "作者",
+        "authorPlaceholder": "按作者篩選...",
+        "sortBy": "按...排序",
+        "clearFilters": "清除過濾器",
+        "showFilters": "顯示過濾器",
+        "hideFilters": "隱藏過濾器",
+        "sortRelevance": "相關性",
+        "sortDownloads": "下載",
+        "sortRecent": "最近更新",
+        "sortLikes": "最受歡迎"
+      }
     },
     "modelCard": {
       "alerts": {
         "deleteTitle": "刪除模型",
-        "deleteMessage": "您確定要刪除已下載的模型嗎?",
+        "deleteMessage": "您確定要刪除已下載的模型嗎？",
         "removeTitle": "移除模型",
-        "removeMessage": "您確定要從列表中移除此模型嗎?"
+        "removeMessage": "您確定要從列表中移除此模型嗎？"
       },
       "buttons": {
         "settings": "設定",
@@ -528,35 +809,62 @@
         "offload": "卸載"
       },
       "labels": {
-        "skills": "技能: "
+        "skills": "技能： ",
+        "vision": "視覺",
+        "capabilities": "能力。",
+        "modelName": "模型名稱",
+        "contextLength": "上下文長度",
+        "architecture": "架構",
+        "author": "作者",
+        "requiresProjectionModel": "需要投影模型",
+        "downloadProjectionModel": "下載投影模型",
+        "viewModelCardOnHuggingFace": "在 Hugging Face 觀看模型卡"
+      },
+      "accessibility": {
+        "loadingIndicator": "正在載入",
+        "loadButton": "載入模型",
+        "settingsButton": "摸型設定",
+        "deleteButton": "刪除模型",
+        "removeButton": "移除摸型",
+        "downloadButton": "下載摸型",
+        "expandDetails": "展開細節",
+        "collapseDetails": "收起細節",
+        "memoryWarning": "記憶體警告",
+        "integrityWarning": "完整性警告",
+        "downloadProgress": "下載進度",
+        "offloadButton": "卸載模型",
+        "expandDetailsButton": "展開模型細節",
+        "memoryWarningButton": "顯示記憶體警告細節",
+        "integrityWarningButton": "顯示完整性警告細節",
+        "memoryWarningSnackbar": "記憶體警告通知"
       }
     },
     "modelSettings": {
       "template": {
-        "label": "範本:",
+        "label": "範本：",
         "editButton": "編輯",
         "dialogTitle": "編輯聊天範本",
-        "note1": "注意: 更改範本可能會改變 BOS、EOS 及系統提示。",
+        "note1": "注意: 更改範本可能會改變 BOS、EOS 及系統提示詞。",
         "note2": "使用 Nunjucks。留空則使用模型的範本。",
         "placeholder": "請在此輸入您的聊天範本...",
         "closeButton": "關閉"
       },
       "stopWords": {
         "label": "停止詞",
-        "placeholder": "新增停止詞"
+        "placeholder": "新增停用詞"
       },
       "tokenSettings": {
         "bos": "BOS",
         "eos": "EOS",
-        "addGenerationPrompt": "新增生成提示",
+        "addGenerationPrompt": "新增生成提示詞",
         "bosTokenPlaceholder": "BOS 詞元",
         "eosTokenPlaceholder": "EOS 詞元",
-        "systemPrompt": "系統提示"
+        "systemPrompt": "系統提示詞"
       }
     },
     "modelDescription": {
-      "size": "大小: ",
-      "parameters": "參數: ",
+      "size": "大小： ",
+      "parameters": "參數： ",
       "separator": " | ",
       "notAvailable": "不適用"
     },
@@ -570,7 +878,49 @@
       "math": "數學求解",
       "multilingual": "多種語言",
       "rewriting": "重新撰寫",
-      "creativity": "創意寫作"
+      "creativity": "創意寫作",
+      "vision": "視覺"
+    },
+    "vision": "視覺",
+    "mmproj": "投影機",
+    "multimodal": {
+      "settings": "多模態設定",
+      "projectionModels": "投影模型",
+      "noCompatibleModels": "未找到相容的投影模型",
+      "noProjectionModels": "沒有可用的投影模型",
+      "selected": "已選取",
+      "select": "選擇",
+      "download": "下載",
+      "projectionNeededTitle": "需要投影模型",
+      "projectionNeededMessage": "這個模型需要一個投影模型來支援多模態功能。",
+      "projectionMissingWarning": "缺少投影模型",
+      "projectionMissingShort": "缺少投影",
+      "reloadModelTitle": "重新載入模型",
+      "reloadModelMessage": "為了套用新的投影模型，需要重新載入模型。您現在要重新載入嗎？",
+      "reload": "重新載入",
+      "deleteProjectionTitle": "刪除投影模型",
+      "deleteProjectionMessage": "您確定要刪除這個投影模型嗎？",
+      "cannotDeleteTitle": "無法刪除",
+      "visionControls": {
+        "enableVision": "啟用視覺功能",
+        "disableVision": "停用視覺功能",
+        "visionEnabled": "視覺已啟用",
+        "visionDisabled": "視覺已停用",
+        "textOnlyMode": "僅限文字",
+        "visionMode": "視覺已啟用",
+        "downloadWithVision": "視覺下載",
+        "downloadTextOnly": "僅限文字下載",
+        "visionToggleDescription": "啟用圖片處理功能",
+        "projectionModelSize": "+{{size}} 投影模型",
+        "visionModeDescription": "處理圖像與文字",
+        "textOnlyModeDescription": "僅處理文字",
+        "includesVisionCapability": "包含視覺能力",
+        "requiresProjectionModel": "先下載相容的投影模型"
+      },
+      "cannotDeleteActive": "此投影模型目前正在啟用。",
+      "cannotDeleteInUse": "此投影模型用於下載的 LLM 模型：",
+      "dependentModels": "依賴模型：",
+      "visionWillBeDisabled": "這些模型的視覺能力將被停用。"
     }
   },
   "screenTitles": {
@@ -587,37 +937,124 @@
     "metal": "Metal",
     "metalDescription": "蘋果的硬體加速 API。",
     "metalRequiresNewerIOS": "Metal 加速需要 iOS 18 或更高版本。請升級您的裝置以使用此功能。",
-    "layersOnGPU": "GPU 上的層數: {{gpuLayers}}",
+    "layersOnGPU": "GPU 上層數：{{gpuLayers}}",
     "contextSize": "上下文大小",
     "contextSizePlaceholder": "輸入上下文大小 (至少 {{minContextSize}})",
-    "invalidContextSizeError": "請輸入有效數字 (至少{{minContextSize}})",
+    "invalidContextSizeError": "請輸入有效數字 (至少 {{minContextSize}})",
     "modelReloadNotice": "需要重新載入模型以使更改生效。",
     "advancedSettings": "進階設定",
     "batchSize": "批次大小",
-    "batchSizeDescription": "批次大小: {{batchSize}}{{effectiveBatch}}",
+    "batchSizeDescription": "批次大小：{{batchSize}}{{effectiveBatch}}",
     "effectiveLabel": "有效",
     "physicalBatchSize": "實體批次大小",
-    "physicalBatchSizeDescription": "實體批次大小: {{physicalBatchSize}}{{effectivePhysicalBatch}}",
+    "physicalBatchSizeDescription": "實體批次大小：{{physicalBatchSize}}{{effectivePhysicalBatch}}",
     "cpuThreads": "CPU 執行緒",
     "cpuThreadsDescription": "使用 {{threads}} 個可用線程中的 {{maxThreads}}",
-    "flashAttention": "Flash Attention (閃電注意力)",
+    "flashAttention": "Flash Attention（閃電注意）",
     "flashAttentionDescription": "啟用 Flash Attention 以加速處理",
-    "keyCacheType": "鍵緩存類型",
-    "keyCacheTypeDescription": "選擇鍵計算所使用的緩存類型",
-    "valueCacheTypeDisabledDescription": "啟用 Flash Attention 以更改緩存類型",
-    "valueCacheType": "值緩存類型",
-    "keyCacheTypeDisabledDescription": "啟用 Flash Attention 以更改緩存類型",
-    "valueCacheTypeDescription": "選擇值計算所使用的緩存類型",
+    "keyCacheType": "鍵快取類型",
+    "keyCacheTypeDescription": "選擇鍵計算所使用的快取類型",
+    "valueCacheTypeDisabledDescription": "啟用 Flash Attention 以更改快取類型",
+    "valueCacheType": "值快取類型",
+    "keyCacheTypeDisabledDescription": "啟用 Flash Attention 以更改快取類型",
+    "valueCacheTypeDescription": "選擇值計算所使用的快取類型",
     "modelLoadingSettings": "模型載入設定",
     "autoOffloadLoad": "自動卸載 / 載入",
     "autoOffloadLoadDescription": "應用程式進入背景時卸載模型。",
     "autoNavigateToChat": "自動導向聊天",
     "autoNavigateToChatDescription": "開始載入即跳轉到聊天。",
     "appSettings": "應用程式設定",
-    "language": "語言",
+    "language": "語系",
     "darkMode": "深色模式",
     "displayMemoryUsage": "顯示記憶體使用量",
-    "displayMemoryUsageDescription": "在聊天頁面顯示記憶體使用量。"
+    "displayMemoryUsageDescription": "在聊天頁面顯示記憶體使用量。",
+    "openCL": "OpenCL（實驗性）",
+    "deviceSelection": "設備選擇",
+    "deviceSelectionIOS": "設備（Metal）",
+    "deviceSelectionIOSDescription": "選擇 Metal GPU 或僅使用 CPU 模式",
+    "openCLDescription": "針對 Adreno GPU 的加速功能。能加快提示詞處理速度，但生成過程不一定總是更快。",
+    "openCLNotAvailable": "此設備上沒有啟用 OpenCL。需要具有 i8mm 和 dotprod CPU 功能的 Adreno GPU。",
+    "openCLMissingCPUFeatures": "OpenCL 需要 i8mm 和 dotprod CPU 功能，而此設備上沒有這些功能。",
+    "openCLQuantizationNote": "注意：使用純量化的 Q4_0 模型時，效果最佳的為啟用 OpenCL。",
+    "openCLDocsLink": "請參閱 llama.cpp 的 OpenCL 文件以了解詳細資訊。",
+    "deviceSelectionAndroidDescription": "選擇運算設備（CPU、GPU 或 Hexagon NPU）",
+    "cpuOnlyNoAccelerators": "僅限 CPU – 未偵測到任何加速硬體",
+    "imageMaxTokens": "圖片最大詞元數",
+    "imageMaxTokensDescription": "圖片處理的最大詞元數：{{tokens}}{{effectiveTokens}}（數值越小，速度越快，細節越少）",
+    "flashAttentionIOSDescription": "採用省記憶體注意力機制（在 Metal 上自動啟用）",
+    "flashAttentionAndroidDescription": "必須停用才能進行 OpenCL 狀態儲存/載入",
+    "flashAttentionAuto": "自動",
+    "flashAttentionOn": "開",
+    "flashAttentionOff": "關",
+    "memorySettings": "記憶體設定",
+    "useMlock": "使用記憶體鎖定",
+    "useMlockDescription": "強制系統將模型保存在 RAM 中，而不是進行交換或壓縮",
+    "useMmap": "記憶體映射",
+    "useMmapDescription": "使用記憶體映射檔案以加快模型載入速度",
+    "useMmapTrue": "已啟用",
+    "useMmapFalse": "已停用",
+    "useMmapTrueDescription": "總是使用記憶體映射以加快載入速度",
+    "useMmapFalseDescription": "當權重重新包裝啟用時，建議停用此功能以避免記憶體使用量加倍",
+    "weightRepacking": "啟用權重重新包裝",
+    "weightRepackingDescription": "當停用記憶體映射時，提示詞處理速度更快且記憶體使用量更低。 詞元生成不受影響。",
+    "exportOptions": "匯出選項",
+    "exportLegacyChats": "匯出舊版聊天記錄",
+    "exportLegacyChatsDescription": "如果遷移失敗或您需要恢復舊的聊天會話，請使用此選項。",
+    "exportButton": "匯出",
+    "importChats": "匯入聊天會話",
+    "importChatsDescription": "從（匯出的）JSON 檔案中匯入聊天會話。",
+    "importButton": "匯入",
+    "importSuccess": "成功匯入了 {{count}} 個聊天會話。",
+    "importError": "匯入聊天會話失敗。請檢查檔案格式。",
+    "apiSettingsTitle": "API 設定",
+    "huggingFaceTokenLabel": "Hugging Face Token",
+    "tokenIsSetDescription": "已設定 Token。此 Token 是存取受限模型所必需的。",
+    "setTokenDescription": "請設定一個 Token 以存取來自 Hugging Face 的受限模型。",
+    "setTokenButton": "設定 Token",
+    "useHfTokenLabel": "使用 HF Token",
+    "useHfTokenDescription": "請啟用此 Token 以用於 API 請求。如果該 Token 引發了身份驗證問題，則應停用它。",
+    "cacheStorageTitle": "快取與儲存",
+    "clearPalCaches": "清除捷徑快取",
+    "clearPalCachesDescription": "清除用來加速捷徑的快取資料。這不會影響您的 Pal 或聊天記錄。",
+    "clearCachesButton": "清除快取",
+    "clearCachesConfirmTitle": "要清除捷徑快取嗎？",
+    "clearCachesConfirmMessage": "這將清除所有快取會話資料（{{fileCount}} 個檔案，大小為 {{size}}）。清除後第一次使用捷徑可能會變慢。這不會影響您的 Pal 或聊天記錄。",
+    "clearCachesSuccess": "成功清除 {{count}} 個快取檔案。",
+    "clearCachesError": "清除快取失敗。請再試一次。",
+    "noCachesToClear": "沒有需要清除的快取。",
+    "serverName": "伺服器名稱",
+    "serverUrl": "伺服器網址",
+    "serverUrlPlaceholder": "例如：http://192.168.1.100:1234",
+    "apiKey": "API 金鑰",
+    "apiKeyPlaceholder": "可選 – 對於 OpenAI/Groq 是必需的",
+    "apiKeyDescription": "安全地儲存在設備上。",
+    "remoteModel": "遠端",
+    "remotePrivacyNotice": "發送到遠端伺服器的訊息會離開您的設備。僅連接您信任的伺服器。",
+    "remoteIndicator": "遠端",
+    "serverUrlRequired": "需要提供伺服器網址",
+    "serverUrlInvalid": "無效的網址格式",
+    "serverUrlHttpWarning": "iOS 需要使用 HTTPS 才能連接非本機伺服器。請使用 https:// 或本機網路地址。",
+    "addRemoteModel": "新增遠端模型",
+    "yourServers": "您的伺服器",
+    "orConnectNewServer": "或者連接新的伺服器",
+    "selectModel": "選擇模型",
+    "addModel": "新增模型",
+    "connected": "已連接",
+    "connectionFailed": "連接失敗：{{error}}",
+    "connecting": "正在連線…",
+    "noModelsAvailable": "此伺服器上沒有可用模型。",
+    "alreadyAdded": "已新增",
+    "connectedServers": "已連接的伺服器",
+    "modelsCount": "{{count}} 個模型",
+    "serverDetails": "伺服器資訊",
+    "modelsUsingServer": "使用此伺服器的模型：",
+    "saveChanges": "儲存變更",
+    "removeServer": "移除伺服器",
+    "removeServerMessage": "要移除 {{serverName}} 以及其 {{count}} 個模型嗎？",
+    "removeRemoteModel": "移除 {{modelName}} ({{serverName}})？",
+    "retryConnection": "重試",
+    "enterUrlManually": "手動輸入網址",
+    "manageServers": "管理伺服器"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
@@ -632,5 +1069,149 @@
     "userRoleRequired": "使用者角色為必填",
     "situationRequired": "情境為必填",
     "toneStyleRequired": "語氣／風格為必填"
+  },
+  "errors": {
+    "serverError": "伺服器錯誤：API 伺服器問題",
+    "hfNetworkTimeout": "網路逾時：向 Hugging Face 發出的請求完成時間過長",
+    "networkTimeout": "網路逾時：請求完成時間過長",
+    "hfNetworkError": "網路錯誤：無法連接到 Hugging Face API",
+    "networkError": "網路錯誤：無法連接到 API",
+    "downloadSetupFailedTitle": "下載設定失敗",
+    "downloadSetupFailedMessage": "準備模型下載失敗：{{message}}",
+    "cameraErrorTitle": "相機錯誤",
+    "cameraErrorMessage": "拍照失敗",
+    "galleryErrorTitle": "圖庫錯誤",
+    "galleryErrorMessage": "選擇圖片失敗",
+    "unexpectedError": "發生了意外錯誤",
+    "hfAuthenticationError": "Hugging Face 驗證錯誤：Token 遺失或無效",
+    "hfAuthenticationErrorSearch": "Hugging Face 驗證錯誤：token 無效",
+    "authenticationError": "驗證錯誤：Token 遺失或無效",
+    "hfAuthorizationError": "抱歉，Hugging Face 授權錯誤：沒有存取此資源的權限",
+    "authorizationError": "授權錯誤：沒有存取此資源的權限",
+    "hfServerError": "Hugging Face 伺服器錯誤：API 伺服器問題"
+  },
+  "simulator": {
+    "cameraNotAvailable": "模擬器中沒有相機可用。請使用實體設備。"
+  },
+  "video": {
+    "startCamera": "啟動相機",
+    "stopCamera": "停止相機",
+    "errorTitle": "相機錯誤",
+    "permissionTitle": "需要相機權限",
+    "permissionMessage": "PocketPal 需要使用相機，以便進行影片分析",
+    "requestingPermission": "請求相機權限中...",
+    "noDevice": "未偵測到相機裝置",
+    "errorMessage": "相機發生錯誤",
+    "flip": "翻轉",
+    "analyzing": "正在分析影片...",
+    "promptPlaceholder": "你想知道這部影片的什麼內容？",
+    "captureInterval": "捕捉間隔",
+    "captureIntervalUnit": "毫秒",
+    "liveCommentary": "即時解說",
+    "emptyPlaceholder": {
+      "title": "歡迎來到 Lookie",
+      "subtitle": "私密本地即時影片分析",
+      "experimentalNotice": "這是一個實驗性功能。準確度取決於所選模型，速度取決於您的設備規格，並且某些模型可能無法正常運作。",
+      "howToUse": "如何使用：",
+      "step1": "• 可選：編輯提示詞以引導分析",
+      "step2": "• 點擊相機按鈕開始即時影片分析",
+      "step3": "• 調整相機運作時的快照頻率",
+      "step4": "• 切換到其他 pal 以進行正常文字聊天"
+    }
+  },
+  "camera": {
+    "takePhoto": "相機",
+    "errorTitle": "相機錯誤",
+    "startCamera": "啟動相機",
+    "stopCamera": "停止相機",
+    "permissionTitle": "需要相機權限",
+    "permissionMessage": "PocketPal 需要存取相機，以分析影像",
+    "requestingPermission": "請求相機權限中...",
+    "noDevice": "未偵測到相機裝置",
+    "errorMessage": "拍攝照片時發生錯誤",
+    "flip": "翻轉",
+    "analyzing": "正在分析影像...",
+    "promptPlaceholder": "你想知道這張圖片的什麼內容？"
+  },
+  "palsScreen": {
+    "palDetailSheet": {
+      "downloaded": "已下載",
+      "success": "成功",
+      "error": "錯誤",
+      "by": "由",
+      "unknown": "未知",
+      "rating": "評級",
+      "reviews": "評論",
+      "created": "新建",
+      "description": "描述",
+      "noDescriptionAvailable": "暫無描述。",
+      "categories": "類別",
+      "tags": "標籤",
+      "systemPrompt": "系統提示詞",
+      "palAddedToCollection": "Pal 已新增至您的收藏！",
+      "failedToLoadDetails": "載入 pal 詳情失敗",
+      "failedToDownload": "下載 pal 失敗",
+      "premiumPalMessage": "這是高級 Pal。\n• 如果您已使用您的 Palshub 帳戶解鎖它，只需登入即可存取完整詳細資訊。\n• 還未解鎖？請前往 palshub.ai 應用程式了解更多。",
+      "notAvailable": "不適用",
+      "buyOnPalshub": "在 Palshub 上購買"
+    },
+    "filters": {
+      "myPals": "我的 Pal",
+      "all": "全部",
+      "video": "影片",
+      "local": "本地",
+      "free": "免費",
+      "premium": "高級"
+    },
+    "video": "影片",
+    "addPal": "新增 Pal",
+    "systemPrompt": "系統提示詞",
+    "deletePal": "刪除 Pal",
+    "sectionTitles": {
+      "myPalsLocal": "我的 Pal（本地）",
+      "myLibrary": "我的資料庫（palshub.ai）",
+      "discoverPals": "探索 Pal（palshub.ai）"
+    },
+    "videoAnalysis": "影片分析",
+    "videoAnalysisDescription": "這是一個基於影片的 AI 助理，可從您裝置相機的影片流中提供即時評論。",
+    "captureInterval": "捕捉間隔",
+    "captureIntervalUnit": "毫秒",
+    "world": "世界",
+    "toneStyle": "語氣 / 風格",
+    "aiRole": "AI 的角色",
+    "userRole": "我的角色",
+    "prompt": "提示詞",
+    "assistant": "助理",
+    "roleplay": "角色扮演",
+    "deletePalMessage": "您確定要刪除此 pal 嗎？",
+    "missingModel": "缺少模型",
+    "missingModelMessage": "此 pal 的預設模型 \"{{modelName}}\" 無法使用。請在編輯表單中下載它或選擇不同的模型。",
+    "search": "搜尋",
+    "profile": "個人資料",
+    "signIn": "登入",
+    "signInToAccessLibrary": "登入以從 palshub.ai 存取您的資料庫",
+    "signOut": "登出",
+    "signOutConfirmation": "您確定要登出嗎？",
+    "signOutError": "登出失敗。請再試一次。",
+    "account": "帳戶",
+    "signInToPalsHub": "登入 PalsHub",
+    "signInDescription": "存取您的資料庫、建立私人 Pal 並在裝置間同步",
+    "searchAllPals": "搜尋所有 Pal...",
+    "deletePalConfirmation": "您確定要刪除 \"{{palName}}\" 嗎？",
+    "labels": {
+      "free": "免費",
+      "premium": "高級",
+      "private": "私人",
+      "download": "下載",
+      "getFree": "獲得免費版本"
+    },
+    "premiumPalDescription": "來自 palshub.ai 社群的高級 pal",
+    "premiumInfoText": "前往 palshub.ai 探索更多 pal",
+    "sortOptions": {
+      "newest": "最新",
+      "oldest": "最舊的",
+      "rating": "最高評級",
+      "popular": "最受歡迎"
+    }
   }
 }

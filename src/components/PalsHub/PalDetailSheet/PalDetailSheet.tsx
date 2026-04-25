@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useContext} from 'react';
-import {View, Image, Alert} from 'react-native';
+import {View, Image, Alert, Linking} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {Text, Button, Surface, Divider} from 'react-native-paper';
@@ -22,6 +22,7 @@ import type {PalsHubPal} from '../../../types/palshub';
 import {
   getPalDisplayLabel,
   getPalActionText,
+  getPalBuyUrl,
   shouldShowPalContent,
   getPremiumInfoText,
 } from '../../../utils/palshub-display';
@@ -319,12 +320,24 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
               </>
             )}
 
-          {/* Show informational text for premium pals */}
-          {palLabel.type === 'premium' && !displayPal.is_owned && (
-            <View style={styles.infoTextContainer}>
-              <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
-            </View>
-          )}
+          {/* Show buy button (US) or informational text (non-US) for premium pals */}
+          {palLabel.type === 'premium' &&
+            !displayPal.is_owned &&
+            (palStore.isUSRegion ? (
+              <Button
+                testID="buy-button"
+                mode="contained"
+                onPress={() =>
+                  Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {})
+                }
+                style={styles.primaryButton}>
+                {l10n.palsScreen.palDetailSheet.buyOnPalshub}
+              </Button>
+            ) : (
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
+              </View>
+            ))}
         </Sheet.Actions>
       </Sheet>
     );
