@@ -248,6 +248,7 @@ class ChatSessionRepository {
     initialMessages: MessageType.Any[] = [],
     completionSettings: CompletionParams = defaultCompletionSettings,
     activePalId?: string,
+    settingsSource?: 'pal' | 'custom',
   ): Promise<ChatSession> {
     let newSession: any;
 
@@ -260,6 +261,9 @@ class ChatSessionRepository {
           record.date = new Date().toISOString();
           if (activePalId) {
             record.activePalId = activePalId;
+          }
+          if (settingsSource) {
+            record.settingsSource = settingsSource;
           }
         });
 
@@ -631,6 +635,27 @@ class ChatSessionRepository {
     await database.write(async () => {
       await session.update((record: any) => {
         record.activePalId = palId || null;
+      });
+    });
+  }
+
+  // Set settings source for a session
+  async setSessionSettingsSource(
+    sessionId: string,
+    settingsSource: 'pal' | 'custom',
+  ): Promise<void> {
+    const session = await database.collections
+      .get('chat_sessions')
+      .find(sessionId)
+      .catch(() => null);
+
+    if (!session) {
+      return;
+    }
+
+    await database.write(async () => {
+      await session.update((record: any) => {
+        record.settingsSource = settingsSource;
       });
     });
   }

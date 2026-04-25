@@ -138,4 +138,20 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
     secondaryButtons: {
       flexDirection: 'row',
     },
+    legalRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.default * 1.5,
+      gap: theme.spacing.default / 2,
+    },
+    legalLink: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+    },
+    legalSeparator: {
+      ...theme.fonts.bodySmall,
+      color: theme.colors.onSurfaceVariant,
+      opacity: 0.5,
+    },
   });

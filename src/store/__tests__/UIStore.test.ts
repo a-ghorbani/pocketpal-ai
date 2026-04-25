@@ -105,7 +105,9 @@ describe('UIStore', () => {
         'ko',
         'ms',
         'ru',
+        'uk',
         'zh',
+        'zh_Hant',
       ]);
     });
   });

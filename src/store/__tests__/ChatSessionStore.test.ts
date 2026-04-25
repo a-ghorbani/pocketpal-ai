@@ -25,6 +25,7 @@ jest.spyOn(chatSessionRepository, 'getGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'saveGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'setSessionActivePal');
 jest.spyOn(chatSessionRepository, 'toggleSessionPinned');
+jest.spyOn(chatSessionRepository, 'setSessionSettingsSource');
 
 describe('chatSessionStore', () => {
   const mockMessage = {
@@ -142,6 +143,28 @@ describe('chatSessionStore', () => {
       );
       // Session should still be in the store if deletion failed
       expect(chatSessionStore.sessions.length).toBe(1);
+    });
+
+    it('cleans up draft for deleted session', async () => {
+      const mockSessionId = 'session1';
+      chatSessionStore.sessions = [
+        {
+          id: mockSessionId,
+          title: 'Session 1',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.saveDraft(mockSessionId, 'unsent text');
+      (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.deleteSession(mockSessionId);
+
+      expect(chatSessionStore.sessionDrafts.has(mockSessionId)).toBe(false);
     });
   });
 
@@ -405,6 +428,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         defaultCompletionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith(
         mockNewSession.id,
@@ -468,6 +492,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         originalSession.completionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions.length).toBe(2);
       expect(chatSessionStore.sessions[1].completionSettings.temperature).toBe(
@@ -605,6 +630,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         originalSession.completionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions.length).toBe(2);
       expect(chatSessionStore.sessions[1].title).toBe(
@@ -738,12 +764,18 @@ describe('chatSessionStore', () => {
       (
         chatSessionRepository.updateSessionCompletionSettings as jest.Mock
       ).mockResolvedValue(undefined);
+      (
+        chatSessionRepository.setSessionSettingsSource as jest.Mock
+      ).mockResolvedValue(undefined);
 
       await chatSessionStore.updateSessionCompletionSettings(newSettings);
 
       expect(
         chatSessionRepository.updateSessionCompletionSettings,
       ).toHaveBeenCalledWith(session.id, newSettings);
+      expect(
+        chatSessionRepository.setSessionSettingsSource,
+      ).toHaveBeenCalledWith(session.id, 'custom');
       expect(chatSessionStore.sessions[0].completionSettings).toEqual(
         newSettings,
       );
@@ -826,6 +858,7 @@ describe('chatSessionStore', () => {
         [],
         customSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions[0].completionSettings).toEqual(
         customSettings,
@@ -1898,6 +1931,25 @@ describe('chatSessionStore', () => {
         expect(chatSessionRepository.deleteSessions).toHaveBeenCalledWith([]);
         expect(chatSessionStore.sessions.length).toBe(3);
       });
+
+      it('cleans up drafts for all deleted sessions while preserving others', async () => {
+        chatSessionStore.saveDraft('session1', 'draft A');
+        chatSessionStore.saveDraft('session2', 'draft B');
+        chatSessionStore.saveDraft('session3', 'draft C');
+
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session3');
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+        expect(chatSessionStore.sessionDrafts.has('session3')).toBe(false);
+        // Draft for non-deleted session is preserved
+        expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+      });
     });
 
     describe('bulkExportSessions', () => {
@@ -2152,6 +2204,46 @@ describe('chatSessionStore', () => {
       expect(chatSessionRepository.toggleSessionPinned).toHaveBeenCalledWith(
         'nonexistent',
       );
+    });
+  });
+
+  describe('Draft autosave', () => {
+    it('saves and retrieves a draft', () => {
+      chatSessionStore.saveDraft('session1', 'Hello world');
+      expect(chatSessionStore.getDraft('session1')).toBe('Hello world');
+    });
+
+    it('returns empty string for non-existent draft', () => {
+      expect(chatSessionStore.getDraft('no-such-session')).toBe('');
+    });
+
+    it('clears a draft', () => {
+      chatSessionStore.saveDraft('session1', 'draft text');
+      chatSessionStore.clearDraft('session1');
+      expect(chatSessionStore.getDraft('session1')).toBe('');
+    });
+
+    it('does not store empty/whitespace-only drafts', () => {
+      chatSessionStore.saveDraft('session1', '   ');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+    });
+
+    it('removes draft when saving empty text', () => {
+      chatSessionStore.saveDraft('session1', 'some text');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(true);
+      chatSessionStore.saveDraft('session1', '');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+    });
+
+    it('handles multiple session drafts independently', () => {
+      chatSessionStore.saveDraft('session1', 'draft A');
+      chatSessionStore.saveDraft('session2', 'draft B');
+      expect(chatSessionStore.getDraft('session1')).toBe('draft A');
+      expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+
+      chatSessionStore.clearDraft('session1');
+      expect(chatSessionStore.getDraft('session1')).toBe('');
+      expect(chatSessionStore.getDraft('session2')).toBe('draft B');
     });
   });
 });

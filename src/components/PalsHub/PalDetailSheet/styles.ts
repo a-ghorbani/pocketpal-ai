@@ -171,6 +171,7 @@ export const createStyles = (theme: Theme) =>
       marginTop: 8,
     },
     primaryButton: {
+      flex: 1,
       marginBottom: 12,
     },
     errorContainer: {

@@ -7,4 +7,6 @@
     <include domain="root" path="pocketpalai.db" requireFlags="clientSideEncryption"/>
     <include domain="root" path="pocketpalai.db-wal" requireFlags="clientSideEncryption"/>
     <include domain="root" path="pocketpalai.db-shm" requireFlags="clientSideEncryption"/>
+    <!-- Neural TTS files (tts/) are not included in legacy backup by default
+         (legacy scheme is include-only), so no exclude is needed here. -->
 </full-backup-content>

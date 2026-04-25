@@ -14,7 +14,8 @@
   "benchmark": {
     "title": "벤치마크",
     "modelSelector": {
-      "prompt": "모델 선택하기"
+      "prompt": "모델 선택하기",
+      "noModels": "다운로드된 모델 없음"
     },
     "buttons": {
       "advancedSettings": "고급 설정",
@@ -220,9 +221,6 @@
   "components": {
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "미디어 첨부하기"
-    },
-    "bubble": {
-      "timingsString": "토큰당 {{predictedMs}}ms, 초당 {{predictedPerSecond}}토큰"
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "사용 가능한 모델 없음",
@@ -637,6 +635,11 @@
       "importPals": "Pal 가져오기",
       "importSuccess": "{{count}}개의 Pal을 성공적으로 가져왔습니다.",
       "importError": "Pal을 가져오지 못했습니다. 파일 형식을 확인해 주세요."
+    },
+    "bubble": {
+      "msPerToken": "{{value}}ms/토큰",
+      "tokensPerSec": "{{value}} 토큰/초",
+      "ttft": "{{value}}ms TTFT"
     }
   },
   "feedback": {
@@ -990,11 +993,8 @@
     "useMmapDescription": "모델을 더 빠르게 불러오기 위해 메모리 맵 파일(mmap)을 사용합니다.",
     "useMmapTrue": "활성화됨",
     "useMmapFalse": "비활성화됨",
-    "useMmapSmart": "지능형",
     "useMmapTrueDescription": "빠른 로딩을 위해 항상 메모리 매핑을 사용합니다.",
-    "useMmapFalseDescription": "메모리 매핑을 사용하지 않습니다. (로딩은 느려지지만 메모리 사용량은 줄어듭니다.)",
-    "useMmapSmartDescription": "모델 유형에 따라 자동 선택 (Android 전용)",
-    "useMmapRecommended": "성능 향상을 위한 추천: 페이지 고정(Locked pages) 방식의 메모리 맵을 사용합니다. 빠른 로딩 속도와 안정적인 성능을 결합합니다.",
+    "useMmapFalseDescription": "메모리 사용량이 두 배로 늘어나는 것을 방지하기 위해, 가중치 리패킹 활성화 시 이 기능은 비활성화를 권장합니다.",
     "exportOptions": "내보내기 옵션",
     "exportLegacyChats": "이전 채팅 내보내기",
     "exportLegacyChatsDescription": "마이그레이션에 실패했거나 이전 채팅 세션을 복구해야 하는 경우 이 기능을 사용하세요.",
@@ -1019,7 +1019,42 @@
     "clearCachesConfirmMessage": "모든 캐시된 세션 데이터({{fileCount}}개 파일, {{size}})를 삭제합니다. 삭제 후 처음 실행할 때 단축어가 느려질 수 있습니다. Pals 또는 채팅 기록에는 영향을 주지 않습니다.",
     "clearCachesSuccess": "캐시 파일 {{count}}개를 성공적으로 삭제했습니다.",
     "clearCachesError": "캐시를 삭제하지 못했습니다. 다시 시도해 주세요.",
-    "noCachesToClear": "삭제할 캐시가 없습니다."
+    "noCachesToClear": "삭제할 캐시가 없습니다.",
+    "weightRepacking": "가중치 리패킹 활성화",
+    "weightRepackingDescription": "메모리 매핑을 비활성화할 경우, 메모리 오버헤드를 최소화하면서 더 빠른 프롬프트 처리가 가능합니다. 토큰 생성 속도에는 영향을 주지 않습니다.",
+    "serverName": "서버 이름",
+    "serverUrl": "서버 URL",
+    "serverUrlPlaceholder": "예시: http://192.168.1.100:1234",
+    "apiKey": "API 키",
+    "apiKeyPlaceholder": "선택 사항 - OpenAI/Groq 사용 시 필수",
+    "apiKeyDescription": "기기에 안전하게 보관됩니다.",
+    "remoteModel": "원격",
+    "remotePrivacyNotice": "원격 서버로 보낸 메시지는 기기 외부로 전송됩니다. 반드시 신뢰할 수 있는 서버에만 연결하십시오.",
+    "remoteIndicator": "원격",
+    "serverUrlRequired": "서버 URL을 입력해 주세요",
+    "serverUrlInvalid": "유효하지 않은 URL 형식",
+    "serverUrlHttpWarning": "iOS 정책에 따라 외부 서버 연결 시 HTTPS가 필수입니다. https:// 주소 또는 로컬 네트워크 주소를 사용해 주십시오.",
+    "addRemoteModel": "원격 모델 추가",
+    "yourServers": "나의 서버",
+    "orConnectNewServer": "또는 새로운 서버에 연결하기",
+    "selectModel": "모델 선택",
+    "addModel": "모델 추가",
+    "connected": "연결됨",
+    "connectionFailed": "연결 실패: {{error}}",
+    "connecting": "연결 중...",
+    "noModelsAvailable": "이 서버에서 사용할 수 있는 모델이 없습니다.",
+    "alreadyAdded": "이미 추가됨",
+    "connectedServers": "연결된 서버",
+    "modelsCount": "{{count}}개의 모델",
+    "serverDetails": "서버 정보",
+    "modelsUsingServer": "이 서버를 사용하는 모델:",
+    "saveChanges": "변경 사항 저장",
+    "removeServer": "서버 제거",
+    "removeServerMessage": "{{serverName}} 및 해당 서버의 모델 {{count}}개를 삭제하시겠습니까?",
+    "removeRemoteModel": "{{modelName}} ({{serverName}}) 모델을 삭제하시겠습니까?",
+    "retryConnection": "재시도",
+    "enterUrlManually": "URL 수동 입력",
+    "manageServers": "서버 관리"
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
@@ -1112,7 +1147,8 @@
       "failedToLoadDetails": "Pal 세부정보 로드에 실패함",
       "failedToDownload": "Pal 다운로드 실패",
       "premiumPalMessage": "이 Pal은 프리미엄입니다.\n• 이미 Palshub 계정으로 잠금을 해제하셨다면, 간단히 로그인하여 접근할 수 있습니다.\n• 아직 잠금 해제하지 않으셨나요? palshub.ai 앱을 방문하여 자세히 알아보세요.",
-      "notAvailable": "비어있음"
+      "notAvailable": "비어있음",
+      "buyOnPalshub": "Palshub에서 구매하기"
     }
   },
   "video": {

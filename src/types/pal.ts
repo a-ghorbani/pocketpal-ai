@@ -1,13 +1,13 @@
 import type {Model} from '../utils/types';
 
-export type ParameterType = 'text' | 'select' | 'datetime_tag';
+export type ParameterType = 'text' | 'select' | 'combobox' | 'datetime_tag';
 
 export interface ParameterDefinition {
   key: string;
   type: ParameterType;
   label: string;
   required: boolean;
-  options?: string[]; // for select
+  options?: string[]; // for select and combobox
   placeholder?: string;
   description?: string;
 }

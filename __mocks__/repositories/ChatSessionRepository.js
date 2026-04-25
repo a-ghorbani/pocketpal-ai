@@ -57,6 +57,7 @@ class ChatSessionRepository {
     initialMessages = [],
     completionSettings = defaultCompletionSettings,
     activePalId,
+    settingsSource,
   ) {
     return {
       id: 'mock-session-id',
@@ -110,6 +111,10 @@ class ChatSessionRepository {
 
   async toggleSessionPinned(sessionId) {
     return true; // Mock: return new pinned state
+  }
+
+  async setSessionSettingsSource(sessionId, settingsSource) {
+    return; // Mock: do nothing
   }
 
   // Update session completion settings

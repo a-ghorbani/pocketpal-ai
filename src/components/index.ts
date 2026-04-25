@@ -48,10 +48,15 @@ export * from './StatusIcon';
 export * from './TextDivider';
 export * from './TextInput';
 export * from './TextMessage';
+export * from './TTSSetupSheet';
 export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
+export * from './VoiceChip';
 export * from './VisionDownloadSheet';
 
 export * from './PalHeaderRight';
 export * from './InputSlider';
 export * from './MemoryRequirement';
+export * from './MemorySnapshotTrigger';
+export * from './RemoteModelSheet';
+export * from './ServerDetailsSheet';

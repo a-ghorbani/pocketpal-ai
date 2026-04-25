@@ -63,6 +63,8 @@ class ChatSessionStore {
   // Migration status
   isMigrating: boolean = false;
   migrationComplete: boolean = false;
+  // Draft autosave: ephemeral map of sessionId → unsent input text
+  sessionDrafts: Map<string, string> = new Map();
   // Selection mode state
   isSelectionMode: boolean = false;
   selectedSessionIds: Set<string> = new Set();
@@ -180,7 +182,7 @@ class ChatSessionStore {
           completionSettings,
           activePalId: session.activePalId,
           pinned: session.pinned || false,
-          settingsSource: 'pal', // Default to pal settings for existing sessions
+          settingsSource: (session.settingsSource as 'pal' | 'custom') || 'pal',
           messagesLoaded: false, // Mark as not loaded for lazy loading
         });
       }
@@ -216,6 +218,7 @@ class ChatSessionStore {
 
       runInAction(() => {
         this.sessions = this.sessions.filter(session => session.id !== id);
+        this.sessionDrafts.delete(id);
       });
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -343,8 +346,14 @@ class ChatSessionStore {
         });
       }
     } else {
-      // Always use the global settings for new sessions
-      const settings = {...this.newChatCompletionSettings};
+      // Resolve settings using the selected settings source so the
+      // session snapshot matches what the model actually receives
+      const palIdForSettings =
+        this.newChatSettingsSource === 'pal' ? this.newChatPalId : undefined;
+      const settings = await this.resolveCompletionSettings(
+        undefined,
+        palIdForSettings,
+      );
       await this.createNewSession(NEW_SESSION_TITLE, [message], settings);
     }
   }
@@ -391,6 +400,7 @@ class ChatSessionStore {
         initialMessages,
         completionSettings,
         this.newChatPalId,
+        this.newChatSettingsSource,
       );
 
       // Get the full session data
@@ -585,6 +595,10 @@ class ChatSessionStore {
             this.activeSessionId,
             settings,
           );
+          await chatSessionRepository.setSessionSettingsSource(
+            this.activeSessionId,
+            'custom',
+          );
 
           // Update local state directly - no need to reload from database
           runInAction(() => {
@@ -602,6 +616,10 @@ class ChatSessionStore {
     if (this.activeSessionId) {
       const session = this.sessions.find(s => s.id === this.activeSessionId);
       if (session) {
+        await chatSessionRepository.setSessionSettingsSource(
+          this.activeSessionId,
+          source,
+        );
         runInAction(() => {
           session.settingsSource = source;
         });
@@ -902,6 +920,7 @@ class ChatSessionStore {
 
       // Update local state and exit selection mode
       runInAction(() => {
+        idsToDelete.forEach(deletedId => this.sessionDrafts.delete(deletedId));
         this.sessions = this.sessions.filter(
           session => !idsToDelete.includes(session.id),
         );
@@ -925,6 +944,23 @@ class ChatSessionStore {
       console.error('Failed to bulk export sessions:', error);
       throw error;
     }
+  }
+
+  // Draft autosave methods (ephemeral, not persisted to DB)
+  saveDraft(sessionId: string, text: string) {
+    if (text.trim()) {
+      this.sessionDrafts.set(sessionId, text);
+    } else {
+      this.sessionDrafts.delete(sessionId);
+    }
+  }
+
+  getDraft(sessionId: string): string {
+    return this.sessionDrafts.get(sessionId) || '';
+  }
+
+  clearDraft(sessionId: string) {
+    this.sessionDrafts.delete(sessionId);
   }
 
   async setActivePal(palId: string | undefined): Promise<void> {
