@@ -130,5 +130,15 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 7: Add pinned column to chat_sessions
+    {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'chat_sessions',
+          columns: [{name: 'pinned', type: 'boolean'}],
+        }),
+      ],
+    },
   ],
 });

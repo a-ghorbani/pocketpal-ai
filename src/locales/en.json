@@ -869,7 +869,10 @@
       "bulkDeleteError": "Failed to delete chat sessions. Please try again.",
       "exportError": "Failed to export chat session. Please try again.",
       "bulkExportError": "Failed to export chat sessions. Please try again.",
+      "pin": "Pin",
+      "unpin": "Unpin",
       "dateGroups": {
+        "pinned": "Pinned",
         "today": "Today",
         "yesterday": "Yesterday",
         "thisWeek": "This week",
