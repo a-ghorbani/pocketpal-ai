@@ -2,6 +2,11 @@ import type {Model} from '../utils/types';
 
 export type ParameterType = 'text' | 'select' | 'combobox' | 'datetime_tag';
 
+export interface TalentRef {
+  name: string;
+  necessity: 'required' | 'optional';
+}
+
 export interface ParameterDefinition {
   key: string;
   type: ParameterType;
@@ -101,6 +106,34 @@ export interface Pal {
   // ============================================================================
   /** Local completion settings (temperature, top_p, max_tokens, etc.) */
   completionSettings?: Record<string, any>;
+
+  // ============================================================================
+  // PACT (Pal Action & Capability Treaty)
+  // ============================================================================
+  /**
+   * Declares this Pal's talents. Each entry names a TalentEngine registered
+   * in `TalentRegistry` and whether it is required or optional.
+   */
+  pact?: {
+    talents: TalentRef[];
+  };
+
+  // ============================================================================
+  // GREETING (UI scaffolding only)
+  // ============================================================================
+  /**
+   * Optional greeting shown in a non-persisted bubble at the top of an empty
+   * chat session. NOT stored as a real message and NOT sent to the model.
+   */
+  greeting?: {
+    text: string;
+    /**
+     * Optional ChatGPT-style example prompts shown as tappable chips above
+     * the chat input while the session is empty. Tapping a chip auto-sends
+     * the prompt. Hidden once the session has any messages.
+     */
+    suggestedPrompts?: string[];
+  };
 
   // ============================================================================
   // SOURCE TRACKING

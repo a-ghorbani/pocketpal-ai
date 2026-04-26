@@ -4873,6 +4873,11 @@ exponential-backoff@^3.1.1:
   resolved "https://registry.yarnpkg.com/exponential-backoff/-/exponential-backoff-3.1.3.tgz#51cf92c1c0493c766053f9d3abee4434c244d2f6"
   integrity sha512-ZgEeZXj30q+I0EN+CbSSpIyPaJ5HVQD18Z1m+u1FXbAeT94mr1zw50q4q6jiiC447Nl/YTcIYSAftiGqetwXCA==
 
+expr-eval@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/expr-eval/-/expr-eval-2.0.2.tgz#fa6f044a7b0c93fde830954eb9c5b0f7fbc7e201"
+  integrity sha512-4EMSHGOPSwAfBiibw3ndnP0AvjDWLsMvGOvWEZ2F96IGk0bIVdjQisOHxReSkE13mHcfbuCiXw+G4y0zv6N8Eg==
+
 fast-base64-decode@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/fast-base64-decode/-/fast-base64-decode-1.0.0.tgz#b434a0dd7d92b12b43f26819300d2dafb83ee418"
@@ -5533,7 +5538,7 @@ internal-slot@^1.1.0:
     hasown "^2.0.2"
     side-channel "^1.1.0"
 
-invariant@^2.2.4:
+invariant@2.2.4, invariant@^2.2.4:
   version "2.2.4"
   resolved "https://registry.yarnpkg.com/invariant/-/invariant-2.2.4.tgz#610f3c92c9359ce1db616e538008d23ff35158e6"
   integrity sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==
@@ -6500,10 +6505,10 @@ lines-and-columns@^1.1.6:
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
 
-llama.rn@0.12.0-rc.5:
-  version "0.12.0-rc.5"
-  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.0-rc.5.tgz#6054fc4cd44ed86aafee22cdb6c3649588f8e029"
-  integrity sha512-92UDVtroH4hMWekgGyjxtAM4/K5NizO4kEPnhGOloXpuH67H5GWH3sZsT617afJwVwyvLTX8WtoY/M1Ke9wjNw==
+llama.rn@0.12.0-rc.8:
+  version "0.12.0-rc.8"
+  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.0-rc.8.tgz#4ddce5e367e096fd3786c7ea221738effc3f622d"
+  integrity sha512-IT7phq/jgj5JS6bKqmQSe0FBeOnClTd8Wgmn2fZSKImfiStqQdffwfhG2zT8SAxty4ChR44iO4eMymOfyw6wJA==
 
 locate-path@^5.0.0:
   version "5.0.0"
@@ -7829,6 +7834,14 @@ react-native-vision-camera@^4.7.2:
   version "4.7.2"
   resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-4.7.2.tgz#e4bd8f3d893a3f5fa9d8224ce28b8ef00d171bc1"
   integrity sha512-C+5PvlSunN6I4aYplSask+v3jfhgduZumIVw6H6lG+Afpf8boIcG3uFSsSfVgj+hxI7fx6qM6bsciEhzgxEUYg==
+
+react-native-webview@^13.16.1:
+  version "13.16.1"
+  resolved "https://registry.yarnpkg.com/react-native-webview/-/react-native-webview-13.16.1.tgz#d5a6483fcb823eac704bd2a3d82c263771c6ede3"
+  integrity sha512-If0eHhoEdOYDcHsX+xBFwHMbWBGK1BvGDQDQdVkwtSIXiq1uiqjkpWVP2uQ1as94J0CzvFE9PUNDuhiX0Z6ubw==
+  dependencies:
+    escape-string-regexp "^4.0.0"
+    invariant "2.2.4"
 
 react-native-worklets@^0.6.0:
   version "0.6.1"

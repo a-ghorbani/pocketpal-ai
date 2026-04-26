@@ -51,6 +51,22 @@ export class UIStore {
   // Warning state for chat-related warnings (like multimodal warnings)
   chatWarning: ErrorState | null = null;
 
+  // Models for which the tool-compatibility banner has already been shown.
+  // Persisted so each model warns at most once per device.
+  toolCompatWarnedModels: string[] = [];
+
+  hasWarnedToolCompat(modelId: string): boolean {
+    return this.toolCompatWarnedModels.includes(modelId);
+  }
+
+  markToolCompatWarned(modelId: string) {
+    runInAction(() => {
+      if (!this.toolCompatWarnedModels.includes(modelId)) {
+        this.toolCompatWarnedModels.push(modelId);
+      }
+    });
+  }
+
   showError(message: string) {
     // TODO: Implement error display logic (e.g., toast, alert, etc.)
     console.error(message);
@@ -79,6 +95,7 @@ export class UIStore {
         'displayMemUsage',
         'benchmarkShareDialog',
         '_language',
+        'toolCompatWarnedModels',
       ],
       storage: AsyncStorage,
     });

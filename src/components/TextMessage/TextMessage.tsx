@@ -20,6 +20,7 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
+import {TalentSurface} from '../TalentSurface';
 
 import {MessageType} from '../../utils/types';
 import {
@@ -269,6 +270,8 @@ export const TextMessage = ({
           )*/}
         </View>
       )}
+
+      <TalentSurface metadata={message.metadata} />
 
       {/* Image preview modal */}
       {renderImagePreview()}

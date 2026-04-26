@@ -20,14 +20,19 @@ export function convertToChatMessages(
   messages: MessageType.Any[],
   isMultimodalEnabled: boolean = true,
 ): ChatMessage[] {
-  return messages
+  const groups: ChatMessage[][] = messages
     .filter(message => {
       // Filter out non-text messages
       if (message.type !== 'text') return false;
 
-      // Filter out messages with null, undefined, or empty text
-      const text = (message as MessageType.Text).text;
-      return text !== undefined && text !== null && text.trim() !== '';
+      const textMessage = message as MessageType.Text;
+      const text = textMessage.text;
+      const hasText = text !== undefined && text !== null && text.trim() !== '';
+      // Keep assistant messages that carry talentCalls metadata even if their
+      // text payload is empty — the model still needs to see them on iteration.
+      const tc = textMessage.metadata?.talentCalls as unknown[] | undefined;
+      const hasTalentCalls = Array.isArray(tc) && tc.length > 0;
+      return hasText || hasTalentCalls;
     })
     .map(message => {
       const textMessage = message as MessageType.Text;
@@ -44,6 +49,46 @@ export function convertToChatMessages(
           ? textMessage.metadata?.completionResult?.reasoning_content ||
             textMessage.metadata?.partialCompletionResult?.reasoning_content
           : undefined;
+
+      // Tool-call branch (strictly additive — only taken when this assistant
+      // message carries `metadata.talentCalls`). Emits an assistant message with
+      // tool_calls attached, followed by one tool-role message per result.
+      // Order within the group is [assistant-with-tool_calls, tool_a, tool_b]
+      // (assistant first, tools in invocation order). The outer `.reverse()`
+      // below only reverses the OUTER groups, not the inner arrays, so this
+      // inner order is preserved as-is in the final output — which matches
+      // the OpenAI chat spec: assistant-with-tool_calls must PRECEDE its
+      // role:'tool' responses so tool_call_id back-refs resolve.
+      const toolCalls = textMessage.metadata?.talentCalls as
+        | Array<{
+            id?: string;
+            type?: string;
+            function?: {name?: string; arguments?: string};
+          }>
+        | undefined;
+      const toolResults = textMessage.metadata?.toolMessages as
+        | Array<{tool_call_id: string; content: string}>
+        | undefined;
+      if (
+        role === 'assistant' &&
+        Array.isArray(toolCalls) &&
+        toolCalls.length > 0
+      ) {
+        const assistantMsg: ChatMessage = {
+          role: 'assistant',
+          content: messageText,
+          tool_calls: toolCalls as ChatMessage['tool_calls'],
+        };
+        if (reasoningContent) {
+          assistantMsg.reasoning_content = reasoningContent;
+        }
+        const toolMsgs: ChatMessage[] = (toolResults ?? []).map(tr => ({
+          role: 'tool',
+          tool_call_id: tr.tool_call_id,
+          content: tr.content,
+        }));
+        return [assistantMsg, ...toolMsgs];
+      }
 
       // Check if this message has images (multimodal) and if multimodal is enabled
       if (
@@ -71,7 +116,7 @@ export function convertToChatMessages(
           })),
         );
 
-        const chatMessage: any = {
+        const chatMessage: ChatMessage = {
           role,
           content: contentArray,
         };
@@ -81,10 +126,10 @@ export function convertToChatMessages(
           chatMessage.reasoning_content = reasoningContent;
         }
 
-        return chatMessage as ChatMessage;
+        return [chatMessage];
       } else {
         // Text-only message (backward compatibility)
-        const chatMessage: any = {
+        const chatMessage: ChatMessage = {
           role,
           content: messageText,
         };
@@ -94,10 +139,10 @@ export function convertToChatMessages(
           chatMessage.reasoning_content = reasoningContent;
         }
 
-        return chatMessage as ChatMessage;
+        return [chatMessage];
       }
-    })
-    .reverse();
+    });
+  return groups.reverse().flat();
 }
 
 /**

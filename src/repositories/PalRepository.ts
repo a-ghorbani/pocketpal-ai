@@ -183,6 +183,8 @@ class PalRepository {
               palData.rawPalshubGenerationSettings;
             record.generationSettings =
               LocalPal.safeStringify(generationSettings);
+            record.pact = LocalPal.safeStringify(palData.pact);
+            record.greeting = LocalPal.safeStringify(palData.greeting);
           });
       });
 
@@ -286,6 +288,12 @@ class PalRepository {
               updates.completionSettings ||
                 updates.rawPalshubGenerationSettings,
             );
+          }
+          if (updates.pact !== undefined) {
+            record.pact = LocalPal.safeStringify(updates.pact);
+          }
+          if (updates.greeting !== undefined) {
+            record.greeting = LocalPal.safeStringify(updates.greeting);
           }
         });
       });

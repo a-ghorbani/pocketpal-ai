@@ -17,6 +17,8 @@ import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {talentRegistry} from '../services/talents';
+import type {TalentResult} from '../services/talents/types';
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -288,6 +290,24 @@ export const useChatSession = (
             // llama.rn already separates these for us when enable_thinking is true
             const {content = '', reasoning_content: reasoningContent} = data;
 
+            // If the streaming chunk carries tool_calls, we know the model is
+            // assembling a tool call — flag the message with pending talent
+            // names so TalentSurface can show per-talent pending skeletons.
+            if (data.tool_calls && data.tool_calls.length > 0) {
+              const names = data.tool_calls
+                .map((tc: any) => tc.function?.name)
+                .filter(Boolean);
+              chatSessionStore.updateMessageStreaming(
+                currentMessageInfo.current.id,
+                currentMessageInfo.current.sessionId,
+                {
+                  metadata: {
+                    pendingTalentNames: names.length > 0 ? names : ['unknown'],
+                  },
+                },
+              );
+            }
+
             // Update message with the separated content
             if (content || reasoningContent) {
               // Build the update object
@@ -340,6 +360,85 @@ export const useChatSession = (
         console.log('result', result);
       }
 
+      // Talent dispatch (PACT: render_html, calculate, datetime, etc.)
+      // Pal opts in via pact.talents. Engines are name-keyed in the
+      // global registry — no Pal-id coupling.
+      const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
+      // llama.rn sometimes returns tool_calls with id: null. Strict Jinja
+      // templates reject `tool_call_id: null` in the next-turn tool response,
+      // so we backfill a stable synthetic id before storing or echoing it.
+      const rawToolCalls = result.tool_calls ?? [];
+      const toolCallIdSeed = Date.now();
+      const toolCalls = rawToolCalls.map((tc, i) => ({
+        ...tc,
+        id: tc.id || `call_${toolCallIdSeed}_${i}`,
+      }));
+      const toolMessages: Array<{tool_call_id: string; content: string}> = [];
+      const talentResultsMap: Record<string, TalentResult> = {};
+
+      for (const tc of toolCalls) {
+        const fnName = tc.function?.name;
+        const callId = tc.id;
+        if (!fnName || !palTalents.includes(fnName)) {
+          const summary = fnName
+            ? `Talent "${fnName}" is not enabled for this Pal`
+            : 'Unknown talent (no function name)';
+          toolMessages.push({tool_call_id: callId, content: summary});
+          talentResultsMap[callId] = {
+            type: 'error',
+            summary,
+            errorMessage: summary,
+          };
+          continue;
+        }
+        const handler = talentRegistry.get(fnName);
+        if (!handler) {
+          const summary = `Talent "${fnName}" is not available on this device`;
+          toolMessages.push({tool_call_id: callId, content: summary});
+          talentResultsMap[callId] = {
+            type: 'error',
+            summary,
+            errorMessage: summary,
+          };
+          continue;
+        }
+
+        let parsedArgs: Record<string, any>;
+        try {
+          parsedArgs =
+            typeof tc.function?.arguments === 'string'
+              ? JSON.parse(tc.function.arguments)
+              : (tc.function?.arguments ?? {});
+        } catch {
+          const summary = `Error: invalid JSON arguments for ${fnName}`;
+          toolMessages.push({tool_call_id: callId, content: summary});
+          talentResultsMap[callId] = {
+            type: 'error',
+            summary,
+            errorMessage: summary,
+          };
+          continue;
+        }
+
+        try {
+          const toolResult = await handler.execute(parsedArgs);
+          toolMessages.push({
+            tool_call_id: callId,
+            content: toolResult.summary,
+          });
+          talentResultsMap[callId] = toolResult;
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          const summary = `Error executing ${fnName}: ${errMsg}`;
+          toolMessages.push({tool_call_id: callId, content: summary});
+          talentResultsMap[callId] = {
+            type: 'error',
+            summary,
+            errorMessage: errMsg,
+          };
+        }
+      }
+
       // Update final completion metadata
       await chatSessionStore.updateMessage(
         currentMessageInfo.current.id,
@@ -358,6 +457,11 @@ export const useChatSession = (
               reasoning_content: result.reasoning_content,
               content: result.text,
             },
+            ...(toolCalls.length > 0 ? {talentCalls: toolCalls} : {}),
+            ...(toolMessages.length > 0 ? {toolMessages} : {}),
+            ...(Object.keys(talentResultsMap).length > 0
+              ? {talentResults: talentResultsMap}
+              : {}),
           },
         },
       );

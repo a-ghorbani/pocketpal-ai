@@ -28,6 +28,7 @@ import {palRepository} from '../repositories/PalRepository';
 import {hfAsModel} from '../utils';
 import {isUSStorefront} from '../utils/region';
 import {palsHubService} from '../services';
+import {registerDefaultTalents} from '../services/talents';
 import {defaultModels} from './defaultModels';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
@@ -86,6 +87,9 @@ class PalStore {
 
       // Initialize Lookie pal after database is loaded
       await this.initializeLookiePal();
+
+      // Register talent engines (idempotent)
+      registerDefaultTalents();
 
       // Check storefront region for buy button gating
       this.checkRegion();

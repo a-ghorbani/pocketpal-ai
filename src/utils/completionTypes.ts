@@ -1,5 +1,8 @@
 import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 
+export type {ToolCall} from 'llama.rn';
+import type {ToolCall} from 'llama.rn';
+
 // Alias allows flexibility to switch API providers later
 // We should move towards OpenAI Compatible API Params
 export type ApiCompletionParams = LlamaRNCompletionParams;
@@ -65,17 +68,20 @@ export interface CompletionStreamData {
   token?: string;
   content?: string;
   reasoning_content?: string;
+  tool_calls?: ToolCall[];
+  accumulated_text?: string;
 }
 
 /**
  * Completion result shape for CompletionEngine.
  * Mirrors NativeCompletionResult from llama.rn, excluding local-only fields
- * (chat_format, tokens_cached, completion_probabilities, tool_calls).
+ * (chat_format, tokens_cached, completion_probabilities).
  */
 export interface CompletionResult {
   text: string;
   content: string;
   reasoning_content?: string;
+  tool_calls?: ToolCall[];
   timings?: {
     predicted_per_second?: number;
     predicted_ms?: number;

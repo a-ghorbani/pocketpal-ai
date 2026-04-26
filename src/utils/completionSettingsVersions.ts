@@ -14,7 +14,7 @@ import {CompletionParams} from './completionTypes';
 
 // Current version of the completion settings schema
 // Increment this when adding new settings or changing existing ones
-export const CURRENT_COMPLETION_SETTINGS_VERSION = 3;
+export const CURRENT_COMPLETION_SETTINGS_VERSION = 4;
 
 /**
  * Default completion parameters used throughout the app
@@ -26,7 +26,7 @@ export const defaultCompletionParams: CompletionParams = {
 
   // llama.rn API properties
   prompt: '',
-  n_predict: 1024, // The maximum number of tokens to predict when generating text.
+  n_predict: -1, // The maximum number of tokens to predict when generating text. -1 = unlimited (until EOS).
   temperature: 0.7, // The randomness of the generated text.
   top_k: 40, // Limit the next token selection to the K most probable tokens.
   top_p: 0.95, // Limit the next token selection to a subset of tokens with a cumulative probability above a threshold P.
@@ -84,12 +84,16 @@ export function migrateCompletionSettings(settings: any): any {
     migratedSettings.version = 3;
   }
 
+  if (migratedSettings.version < 4) {
+    // Migration to version 4: Change n_predict default to -1 (unlimited)
+    // Only migrate if user still has the old default; preserve intentional custom values
+    if (migratedSettings.n_predict === 1024) {
+      migratedSettings.n_predict = defaultCompletionParams.n_predict;
+    }
+    migratedSettings.version = 4;
+  }
+
   // Add future migrations here as needed
-  // if (migratedSettings.version < 4) {
-  //   // Migration to version 4
-  //   migratedSettings.new_field = defaultCompletionParams.new_field;
-  //   migratedSettings.version = 4;
-  // }
 
   return migratedSettings;
 }
