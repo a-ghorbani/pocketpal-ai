@@ -133,6 +133,40 @@ export const ChatScreen: React.FC = observer(() => {
   // Show loading bubble only during the thinking phase (inferencing but not streaming)
   const isThinking = modelStore.inferencing && !modelStore.isStreaming;
 
+  // Tool-compatibility one-time banner: when the active Pal declares tools but
+  // the loaded model's jinja template lacks `toolUseCaps`, surface an inline
+  // warning. Persisted per model id so the warning fires at most once.
+  React.useEffect(() => {
+    const palDeclaresTools =
+      activePal?.pact?.talents !== undefined &&
+      activePal.pact.talents.length > 0;
+    if (!palDeclaresTools) {
+      return;
+    }
+    const model = (modelStore.context as any)?.model;
+    const modelId = modelStore.activeModelId;
+    if (!model || !modelId) {
+      return;
+    }
+    const hasToolUseCaps = !!model.chatTemplates?.jinja?.toolUseCaps;
+    if (hasToolUseCaps) {
+      return;
+    }
+    if (uiStore.hasWarnedToolCompat(modelId)) {
+      return;
+    }
+    uiStore.setChatWarning({
+      code: 'unknown',
+      message: l10n.chat.toolCompatWarning,
+      context: 'chat',
+      recoverable: true,
+      severity: 'warning',
+      metadata: {modelId},
+    });
+    uiStore.markToolCompatWarned(modelId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePalId, modelStore.activeModelId, modelStore.context]);
+
   const handleThinkingToggle = async (enabled: boolean) => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,

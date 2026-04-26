@@ -1,6 +1,11 @@
 import {Model} from '@nozbe/watermelondb';
 import {field, readonly, date} from '@nozbe/watermelondb/decorators';
-import type {Pal, PalCapabilities, ParameterDefinition} from '../../types/pal';
+import type {
+  Pal,
+  PalCapabilities,
+  ParameterDefinition,
+  TalentRef,
+} from '../../types/pal';
 import type {Model as LlamaModel} from '../../utils/types';
 import {CompletionParams} from '../../utils/completionTypes';
 
@@ -32,6 +37,8 @@ export default class LocalPal extends Model {
   @field('price_cents') priceCents?: number;
   @field('is_owned') isOwned?: boolean;
   @field('generation_settings') generationSettings?: string; // JSON stringified
+  @field('pact') pact?: string; // JSON stringified { talents: TalentRef[] }
+  @field('greeting') greeting?: string; // JSON stringified { text }
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
@@ -110,6 +117,22 @@ export default class LocalPal extends Model {
     }
   }
 
+  get pactObject(): {talents: TalentRef[]} | undefined {
+    try {
+      return this.pact ? JSON.parse(this.pact) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  get greetingObject(): {text: string} | undefined {
+    try {
+      return this.greeting ? JSON.parse(this.greeting) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   get generationSettingsObject(): Record<string, unknown> | undefined {
     try {
       return this.generationSettings
@@ -179,6 +202,8 @@ export default class LocalPal extends Model {
       is_owned: this.isOwned,
       rawPalshubGenerationSettings: this.generationSettingsObject,
       completionSettings: this.completionSettingsObject,
+      pact: this.pactObject,
+      greeting: this.greetingObject,
       created_at: this.createdAt.toISOString(),
       updated_at: this.updatedAt.toISOString(),
     };

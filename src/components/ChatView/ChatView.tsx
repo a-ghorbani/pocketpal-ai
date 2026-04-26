@@ -9,6 +9,7 @@ import {
   View,
   TouchableOpacity,
   Keyboard,
+  Text,
 } from 'react-native';
 
 import dayjs from 'dayjs';
@@ -62,6 +63,8 @@ import {
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
+  GreetingBubble,
+  SuggestedPromptsRow,
 } from '..';
 import {
   AlertIcon,
@@ -313,6 +316,16 @@ export const ChatView = observer(
         {translateY: keyboard.height.value - keyboardOffsetBottom.value},
       ],
       paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
+    }));
+
+    // Suggested-prompts overlay shares the input's keyboard translation but
+    // must NOT inherit paddingBottom (which the input uses to clear the
+    // home indicator). Applying it here would create a large empty gap
+    // between the chips and the input when the keyboard is closed.
+    const suggestedPromptsAnimatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
+      ],
     }));
 
     // Monitor keyboard height changes and animate the offset value
@@ -763,10 +776,15 @@ export const ChatView = observer(
       }
 
       return (
-        <ChatEmptyPlaceholder
-          bottomComponentHeight={bottomComponentHeight}
-          onSelectModel={() => setIsPickerVisible(true)}
-        />
+        <>
+          {activePal?.greeting?.text && modelStore.activeModelId ? (
+            <GreetingBubble text={activePal.greeting.text} />
+          ) : null}
+          <ChatEmptyPlaceholder
+            bottomComponentHeight={bottomComponentHeight}
+            onSelectModel={() => setIsPickerVisible(true)}
+          />
+        </>
       );
     }, [bottomComponentHeight, setIsPickerVisible, activePal]);
 
@@ -926,6 +944,29 @@ export const ChatView = observer(
       ? activePal.color?.[1]
       : theme.colors.surface;
 
+    // Soft cap: warn the user before the 5th HTML preview in this session.
+    // Memory pressure on budget Android becomes a hazard above 5 WebViews;
+    // we surface the banner non-blockingly at >=4 so they can start a new chat.
+    const htmlPreviewCount = React.useMemo(
+      () =>
+        messages.reduce((acc, m) => {
+          const meta = (m as MessageType.Text).metadata;
+          const results = meta?.talentResults as
+            | Record<string, any>
+            | undefined;
+          if (results) {
+            return (
+              acc +
+              Object.values(results).filter((r: any) => r.type === 'html')
+                .length
+            );
+          }
+          return acc;
+        }, 0),
+      [messages],
+    );
+    const showSoftCapWarning = htmlPreviewCount >= 4;
+
     // ============ COMPONENT RENDER ============
     return (
       <UserContext.Provider value={user}>
@@ -950,6 +991,13 @@ export const ChatView = observer(
                 inputContainerAnimatedStyle,
                 {backgroundColor: inputBackgroundColor},
               ]}>
+              {showSoftCapWarning ? (
+                <View testID="soft-cap-warning" style={styles.softCapBanner}>
+                  <Text style={styles.softCapBannerText}>
+                    {l10n.chat.softCapWarning}
+                  </Text>
+                </View>
+              ) : null}
               <ChatInput
                 {...{
                   ...unwrap(inputProps),
@@ -978,6 +1026,30 @@ export const ChatView = observer(
                 }}
               />
             </Reanimated.View>
+
+            {/* Suggested prompts — float above the input container, share
+                its keyboard-tracking transform so they rise together but
+                render as a sibling (no shared background / rounded top). */}
+            {messages.length === 0 &&
+            !isStreaming &&
+            modelStore.activeModelId !== undefined &&
+            activePal?.greeting?.suggestedPrompts &&
+            activePal.greeting.suggestedPrompts.length > 0 ? (
+              <Reanimated.View
+                pointerEvents="box-none"
+                style={[
+                  styles.suggestedPromptsOverlay,
+                  suggestedPromptsAnimatedStyle,
+                  {bottom: chatInputHeight.height},
+                ]}>
+                <SuggestedPromptsRow
+                  prompts={activePal.greeting.suggestedPrompts}
+                  onSelect={prompt =>
+                    wrappedOnSendPress({type: 'text', text: prompt})
+                  }
+                />
+              </Reanimated.View>
+            ) : null}
 
             {/* Pal/Model picker sheet */}
             {/* Conditionally render the sheet to avoid keyboard issues.

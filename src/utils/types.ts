@@ -314,7 +314,7 @@ export interface ChatTemplateConfig extends TemplateConfig {
 }
 
 export type ChatMessage = {
-  role: 'system' | 'assistant' | 'user';
+  role: 'system' | 'assistant' | 'user' | 'tool';
   content:
     | string
     | Array<{
@@ -322,6 +322,9 @@ export type ChatMessage = {
         text?: string;
         image_url?: {url: string};
       }>;
+  reasoning_content?: string;
+  tool_calls?: Array<import('llama.rn').ToolCall>;
+  tool_call_id?: string;
 };
 
 export enum ModelOrigin {
