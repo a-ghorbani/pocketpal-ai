@@ -849,7 +849,7 @@
     "sidebarContent": {
       "menuItems": {
         "chat": "Чат",
-        "models": "Моднль",
+        "models": "Моделі",
         "pals": "Палички",
         "benchmark": "Бенчмарк",
         "settings": "Налаштування",
@@ -1044,7 +1044,7 @@
   },
   "screenTitles": {
     "chat": "Чпт",
-    "models": "Модплі",
+    "models": "Моделі",
     "pals": "Pals (експериментальний)",
     "benchmark": "Бенчмарк",
     "settings": "Налаштування",
