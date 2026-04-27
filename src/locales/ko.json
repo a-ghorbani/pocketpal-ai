@@ -1252,6 +1252,13 @@
     "engineSystemSpecsLine": "{{voices}}개의 음성",
     "engineRemoveTitle": "{{engineTitle}}을(를) 제거하시겠습니까?",
     "engineRemoveCancel": "취소",
-    "engineRemoveConfirm": "제거"
+    "engineRemoveConfirm": "제거",
+    "engineInstallCta": "설치 · {{sizeMb}} MB",
+    "engineDownloadingLabel": "다운로드 중…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "다시 시도하기",
+    "voicesEmptyState": "음성 없음.",
+    "kokoroDeviceNote": "일부 음성은 모든 기기에서 작동하지 않을 수 있습니다.",
+    "insufficientStorage": "저장 공간 부족 — 이 엔진 설치에 필요한 {{requiredMb}}MB를 확보하세요. ({{freeMb}} MB available).",
+    "engineRemoveBody": "저장 공간 {{sizeMb}} MB 확보 가능"
   }
 }
