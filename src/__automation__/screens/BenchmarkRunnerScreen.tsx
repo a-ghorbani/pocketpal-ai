@@ -258,7 +258,15 @@ export async function runMatrix(
           model_id: model.hfModelId,
           siblings: [{rfilename: variant.filename} as any],
         } as any;
-        const modelFile = {rfilename: variant.filename} as any;
+        // url is REQUIRED — hfAsModel reads modelFile.url into model.downloadUrl,
+        // and ModelStore.checkSpaceAndDownload early-returns when !downloadUrl,
+        // silently never starting the download. Construct the canonical HF
+        // resolve URL inline; if the bench-config ever needs a different host
+        // (private repo, mirror, etc.) we'd take it from the variant instead.
+        const modelFile = {
+          rfilename: variant.filename,
+          url: `https://huggingface.co/${model.hfModelId}/resolve/main/${variant.filename}`,
+        } as any;
         await modelStore.downloadHFModel(hfModel, modelFile);
         // 30 minutes is generous: the largest matrix file (~2GB Q8_0
         // qwen3-1.7b) over wifi takes well under that.
