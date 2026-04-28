@@ -68,11 +68,14 @@ export function startCapture(udid?: string): LogcatCapture {
     // Some devices reject -c without root; non-fatal.
   }
 
+  // -v threadtime emits "MM-DD HH:MM:SS.mmm  PID  TID L tag: msg" which lets
+  // benchmark-matrix.spec.ts slice the captured log per cell by start/end
+  // timestamps from the report rows.
   const proc: ChildProcess = spawn('adb', [
     ...baseArgs,
     'logcat',
     '-v',
-    'brief',
+    'threadtime',
   ]);
 
   const lines: string[] = [];

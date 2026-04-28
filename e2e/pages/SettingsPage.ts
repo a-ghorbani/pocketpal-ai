@@ -43,27 +43,6 @@ export class SettingsPage extends BasePage {
   }
 
   /**
-   * Select the device tier via the SegmentedButton on the Settings screen.
-   *
-   * Important: this intentionally only taps the SegmentedButton and does NOT
-   * drive the GPU-layers slider. `handleDeviceSelect` at SettingsScreen.tsx
-   * (236-249) only mutates `modelStore.devices`; `n_gpu_layers` stays at its
-   * default (99) regardless of tier. That's moot for CPU (llama.rn routes
-   * every layer to CPU when `devices=['CPU']`) and correct for GPU.
-   *
-   * Only 'cpu' and 'gpu' are supported by the benchmark-matrix spec; Hexagon
-   * is excluded from v1 per the story.
-   */
-  async setDeviceTier(tier: 'cpu' | 'gpu'): Promise<void> {
-    // GPU/Hexagon options are appended asynchronously after llama.rn's
-    // getBackendDevicesInfo() resolves — first-call native backend init can
-    // take 5–15s on newer Adreno drivers (kernel JIT not yet OS-cached).
-    // 30s timeout covers that without being so long a real bug hides.
-    await this.tap(Selectors.settings.deviceOption(tier), 30000);
-    await browser.pause(500);
-  }
-
-  /**
    * Scroll down to the language selector button.
    * The language selector is in the "App Settings" card, which is the 4th card
    * on the Settings screen. Needs multiple swipes to reach.
