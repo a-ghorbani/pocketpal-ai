@@ -211,13 +211,10 @@ jobs:
           }
           MARKERS=(
             'AUTOMATION_BRIDGE'
-            'read::latest'
-            'read::initSettings'
-            'list::models'
             'memory-snapshot-label'
             'memory-snapshot-result'
-            'benchmark-result-label'
-            'benchmark-result-value'
+            'BENCH_RUN_MATRIX'
+            'bench-runner-screen-status'
           )
           FAIL=0
           for m in "${MARKERS[@]}"; do
