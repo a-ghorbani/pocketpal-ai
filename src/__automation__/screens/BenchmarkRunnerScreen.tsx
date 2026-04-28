@@ -28,6 +28,10 @@ type Status = string; // 'idle' | 'downloading:<f>' | 'running:<i/n>:<...>' | 'c
 interface BenchVariant {
   quant: string;
   filename: string;
+  /** Optional GGUF size in bytes. Bypasses the pre-flight space check when
+   * absent (set to 1). Provide it from bench-config to honour the real
+   * disk-space gate; the implementer can fetch it from HF's API if needed. */
+  size?: number;
 }
 
 interface BenchModelEntry {
@@ -263,14 +267,37 @@ export async function runMatrix(
         // silently never starting the download. Construct the canonical HF
         // resolve URL inline; if the bench-config ever needs a different host
         // (private repo, mirror, etc.) we'd take it from the variant instead.
+        // size is REQUIRED — hasEnoughSpace returns false for size <= 0
+        // (malformed model), and DownloadManager.startDownload then throws
+        // "Not enough storage space". The variant.size from bench-config
+        // wins; otherwise fall back to 1 to bypass the pre-check (the actual
+        // download will fail late if the device is genuinely full).
         const modelFile = {
           rfilename: variant.filename,
+          size: variant.size ?? 1,
           url: `https://huggingface.co/${model.hfModelId}/resolve/main/${variant.filename}`,
         } as any;
         await modelStore.downloadHFModel(hfModel, modelFile);
-        // 30 minutes is generous: the largest matrix file (~2GB Q8_0
-        // qwen3-1.7b) over wifi takes well under that.
-        resolvedModel = await waitForDownload(variant.filename, 30 * 60 * 1000);
+        // Status updates with download progress: poll modelStore.models for
+        // the entry and surface percentage. The DownloadManager updates
+        // model.progress as bytes arrive; we read it on each poll tick.
+        const progressFilename = variant.filename;
+        const downloadDeadline = Date.now() + 30 * 60 * 1000;
+        while (Date.now() < downloadDeadline) {
+          const entry = modelStore.models.find(
+            (m: Model) => m.filename === progressFilename,
+          );
+          if (entry?.isDownloaded) {
+            resolvedModel = entry;
+            break;
+          }
+          const pct = entry?.progress ?? 0;
+          setStatus(`downloading:${progressFilename} ${Math.round(pct)}%`);
+          await new Promise(r => setTimeout(r, 500));
+        }
+        if (!resolvedModel) {
+          throw new Error(`download-timeout:${progressFilename}`);
+        }
         setStatus(`running:${tag}`);
       }
 
