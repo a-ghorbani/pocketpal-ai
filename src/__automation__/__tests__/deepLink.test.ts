@@ -97,4 +97,44 @@ describe('dispatchAutomationDeepLink', () => {
     expect(takeMemorySnapshot).not.toHaveBeenCalled();
     expect(clearMemorySnapshots).not.toHaveBeenCalled();
   });
+
+  describe('bench host', () => {
+    it('navigates to BenchmarkRunner for pocketpal://e2e/benchmark', async () => {
+      const navigate = jest.fn();
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({
+          url: 'pocketpal://e2e/benchmark',
+          host: 'e2e',
+        }),
+        {navigate},
+      );
+
+      expect(handled).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('BenchmarkRunner');
+    });
+
+    it('returns true even when no navigation is supplied (cold-launch path handles nav itself)', async () => {
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({
+          url: 'pocketpal://e2e/benchmark',
+          host: 'e2e',
+        }),
+      );
+      expect(handled).toBe(true);
+    });
+
+    it('returns false when host=e2e but the URL does not include /benchmark', async () => {
+      const navigate = jest.fn();
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({
+          url: 'pocketpal://e2e/other',
+          host: 'e2e',
+        }),
+        {navigate},
+      );
+
+      expect(handled).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+  });
 });

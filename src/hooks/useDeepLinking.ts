@@ -6,7 +6,7 @@
  */
 
 import {useEffect, useCallback} from 'react';
-import {Alert} from 'react-native';
+import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
 import {chatSessionStore, palStore, deepLinkStore} from '../store';
@@ -70,7 +70,7 @@ export const useDeepLinking = () => {
       // reached. See src/__automation__/deepLink.ts.
       if (__E2E__) {
         const {dispatchAutomationDeepLink} = require('../__automation__');
-        if (await dispatchAutomationDeepLink(params)) {
+        if (await dispatchAutomationDeepLink(params, navigation)) {
           return;
         }
       }
@@ -84,8 +84,31 @@ export const useDeepLinking = () => {
         }
       }
     },
-    [handleChatDeepLink],
+    [handleChatDeepLink, navigation],
   );
+
+  // E2E-only Android cold-launch routing for the BenchmarkRunnerScreen.
+  // RN's stock Linking.getInitialURL() reads the launching intent's data URI
+  // on Android, so no native code (no MainActivity onNewIntent override) is
+  // required. We only support cold-launch — warm-state URL events are
+  // explicitly out of scope (the E2E spec runs with fullReset:true).
+  // The whole effect is gated by __E2E__; in prod, the entire body is
+  // unreachable and DCE-stripped by Hermes.
+  useEffect(() => {
+    if (!__E2E__) {
+      return;
+    }
+    Linking.getInitialURL()
+      .then(url => {
+        if (url?.startsWith('pocketpal://e2e/benchmark')) {
+          (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER);
+        }
+      })
+      .catch(() => {
+        // getInitialURL rejects on some surfaces; no-op for E2E. The activity
+        // is already running, so the test driver can fall back to manual nav.
+      });
+  }, [navigation]);
 
   useEffect(() => {
     // Initialize deep link service
