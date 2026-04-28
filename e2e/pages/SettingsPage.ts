@@ -55,8 +55,11 @@ export class SettingsPage extends BasePage {
    * is excluded from v1 per the story.
    */
   async setDeviceTier(tier: 'cpu' | 'gpu'): Promise<void> {
-    await this.tap(Selectors.settings.deviceOption(tier));
-    // Brief pause for MobX state propagation into modelStore.devices.
+    // GPU/Hexagon options are appended asynchronously after llama.rn's
+    // getBackendDevicesInfo() resolves — first-call native backend init can
+    // take 5–15s on newer Adreno drivers (kernel JIT not yet OS-cached).
+    // 30s timeout covers that without being so long a real bug hides.
+    await this.tap(Selectors.settings.deviceOption(tier), 30000);
     await browser.pause(500);
   }
 
