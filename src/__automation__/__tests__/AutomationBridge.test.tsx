@@ -20,8 +20,8 @@ describe('AutomationBridge', () => {
     (global as any).__E2E__ = true;
     const {toJSON} = render(<AutomationBridge />);
     // Structural assertion only — adapter behavior is covered by
-    // MemoryAdapter.test.tsx and BenchmarkAdapter.test.tsx. Re-testing
-    // testID presence here would duplicate those suites.
+    // MemoryAdapter.test.tsx. Re-testing testID presence here would
+    // duplicate that suite.
     expect(toJSON()).not.toBeNull();
   });
 });
