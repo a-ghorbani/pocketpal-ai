@@ -149,7 +149,7 @@
     "serverDetails": "Server Details",
     "modelsUsingServer": "מודלים המשתמשים בשרת זה:",
     "saveChanges": "שמור שינויים",
-    "removeServer": "שרת מרוחק",
+    "removeServer": "הסר שרת",
     "removeServerMessage": "האם להסיר את {{serverName}} ואת {{count}} המודלים שלו?",
     "removeRemoteModel": "להסיר את {{modelName}} ({{serverName}})?",
     "retryConnection": "נסה שוב",
@@ -187,7 +187,9 @@
       "fileAlreadyExists": "הקובץ כבר קיים",
       "fileAlreadyExistsMessage": "קובץ בשם זה כבר קיים. מה תרצה לעשות?",
       "replace": "החלף",
-      "keepBoth": "שמור את שניהם"
+      "keepBoth": "שמור את שניהם",
+      "copyFailed": "העתקת קובץ מודל נכשלה",
+      "copyingModel": "מעתיק קובץ מודל..."
     },
     "labels": {
       "localModel": "מקומי",
@@ -443,7 +445,8 @@
     "orBy": "או על ידי",
     "sponsorButton": "הפוך לספונסר",
     "versionCopiedTitle": "הגרסה הועתקה",
-    "versionCopiedDescription": "פרטי הגרסה הועתקו ללוח"
+    "versionCopiedDescription": "פרטי הגרסה הועתקו ללוח",
+    "privacyPolicy": "מדיניות הפרטיות"
   },
   "feedback": {
     "title": "שלח משוב",
