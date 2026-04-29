@@ -140,7 +140,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: android/app/build/outputs/apk/release/app-release.apk
+          files: android/app/build/outputs/apk/prod/release/app-prod-release.apk
           tag_name: "v${{ env.VERSION }}"
           name: "Release v${{ env.VERSION }}"
           draft: false

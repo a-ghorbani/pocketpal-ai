@@ -11,7 +11,7 @@ import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
 import {Selectors} from './selectors';
-import {TIMEOUTS, ModelTestConfig} from '../fixtures/models';
+import {TIMEOUTS, ModelTestConfig, ModelQuantVariant} from '../fixtures/models';
 
 declare const browser: WebdriverIO.Browser;
 
@@ -98,6 +98,64 @@ export async function downloadAndLoadModel(
   await chatPage.waitForReady();
 
   console.log(`Model loaded successfully: ${model.id}`);
+}
+
+/**
+ * Download-and-load a SPECIFIC quant variant of a model.
+ *
+ * Same flow as `downloadAndLoadModel` but uses `variant.downloadFile`
+ * instead of `model.downloadFile`. Used by the benchmark-matrix spec to
+ * iterate across quant rungs without duplicating every other model config.
+ *
+ * @param model   - Matrix-eligible model config (must have `quants`).
+ * @param variant - One entry from `model.quants`.
+ */
+export async function downloadAndLoadModelVariant(
+  model: ModelTestConfig,
+  variant: ModelQuantVariant,
+): Promise<void> {
+  const chatPage = new ChatPage();
+  const drawerPage = new DrawerPage();
+  const modelsPage = new ModelsPage();
+  const hfSearchSheet = new HFSearchSheet();
+  const modelDetailsSheet = new ModelDetailsSheet();
+
+  await chatPage.openDrawer();
+  await drawerPage.waitForOpen();
+  await drawerPage.navigateToModels();
+  await modelsPage.waitForReady();
+
+  await modelsPage.openHuggingFaceSearch();
+  await hfSearchSheet.waitForReady();
+
+  await hfSearchSheet.search(model.searchQuery);
+  await hfSearchSheet.selectModel(model.selectorText);
+  await modelDetailsSheet.waitForReady();
+
+  await modelDetailsSheet.scrollToFile(variant.downloadFile);
+  await modelDetailsSheet.tapDownloadForFile(variant.downloadFile);
+
+  await modelDetailsSheet.close();
+  await hfSearchSheet.close();
+  await modelsPage.waitForReady();
+
+  const downloadTimeout = model.downloadTimeout ?? TIMEOUTS.download;
+  const containerSelector = Selectors.modelCard.cardContainer(
+    variant.downloadFile,
+  );
+  const modelCardContainer = browser.$(containerSelector);
+  await modelCardContainer.waitForDisplayed({timeout: downloadTimeout});
+
+  const loadBtn = modelCardContainer.$(Selectors.modelCard.loadButtonElement);
+  await loadBtn.waitForDisplayed({timeout: 10000});
+  await loadBtn.click();
+
+  await dismissPerformanceWarningIfPresent();
+  await chatPage.waitForReady();
+
+  console.log(
+    `Model variant loaded: ${model.id} / ${variant.quant} (${variant.downloadFile})`,
+  );
 }
 
 /**

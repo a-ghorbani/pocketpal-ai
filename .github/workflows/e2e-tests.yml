@@ -97,19 +97,19 @@ jobs:
             -keypass dummy-ci-password \
             -dname "CN=CI Build, OU=CI, O=PocketPal, L=CI, S=CI, C=US"
 
-      - name: Build Android Release APK
+      - name: Build Android E2E APK
         env:
           APP_RELEASE_STORE_PASSWORD: dummy-ci-password
           APP_RELEASE_KEY_PASSWORD: dummy-ci-password
         run: |
           cd android
-          ./gradlew assembleRelease
+          E2E_BUILD=true ./gradlew assembleE2eReleaseE2e
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk
 
   build-ios:
     if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both' }}
@@ -258,7 +258,7 @@ jobs:
           AWS_DEVICE_POOL_ARN_ANDROID: ${{ vars.AWS_DEVICE_POOL_ARN_ANDROID }}
         run: |
           cd e2e
-          yarn test:aws --platform android --app ../app/app-release.apk
+          yarn test:aws --platform android --app ../app/app-e2e-releaseE2e.apk
 
       - name: Upload test artifacts
         if: always()

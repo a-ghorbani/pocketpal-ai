@@ -197,13 +197,46 @@ jobs:
         env:
           APP_RELEASE_STORE_PASSWORD: dummy-ci-password
           APP_RELEASE_KEY_PASSWORD: dummy-ci-password
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleProdRelease
+
+      - name: Verify prod APK has no automation-bridge code (DCE sanity check)
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/prod/release/app-prod-release.apk
+          echo "Checking bundle inside $APK for E2E markers..."
+          WORK=$(mktemp -d)
+          unzip -p "$APK" assets/index.android.bundle > "$WORK/bundle" || {
+            echo "FAIL: could not extract assets/index.android.bundle from APK"
+            exit 1
+          }
+          MARKERS=(
+            'AUTOMATION_BRIDGE'
+            'memory-snapshot-label'
+            'memory-snapshot-result'
+            'BENCH_RUN_MATRIX'
+            'bench-runner-screen-status'
+          )
+          FAIL=0
+          for m in "${MARKERS[@]}"; do
+            if grep -q -F "$m" "$WORK/bundle"; then
+              echo "FAIL: prod bundle contains automation marker: $m"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -ne 0 ]; then
+            echo ""
+            echo "The automation bridge was not DCE-stripped from the prod build."
+            echo "Check that __E2E__ is being replaced at build time by babel-plugin-transform-define."
+            echo "See src/__automation__/README.md for the DCE contract."
+            exit 1
+          fi
+          echo "OK: prod bundle contains zero automation markers."
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/prod/release/app-prod-release.apk
 
   # Job for iOS build
   build-ios:

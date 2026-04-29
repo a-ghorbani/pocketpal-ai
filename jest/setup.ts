@@ -3,6 +3,12 @@ import mockClipboard from '@react-native-clipboard/clipboard/jest/clipboard-mock
 
 import 'react-native-gesture-handler/jestSetup';
 
+// __E2E__ is a build-time constant in prod/e2e builds (see babel.config.js),
+// but in Jest the transform-define plugin is disabled so it stays a runtime
+// global. Default to true so adapter tests render their components; tests
+// that assert the DCE gate override with `(global as any).__E2E__ = false`.
+(global as any).__E2E__ = true;
+
 jest.mock('react-native-haptic-feedback');
 
 jest.mock('react-native-keyboard-controller', () => {

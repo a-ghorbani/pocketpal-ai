@@ -341,6 +341,27 @@ export const Selectors = {
     },
     languageOption: (lang: string): string =>
       byTestId(`language-option-${lang}`),
+    /**
+     * Device-tier SegmentedButton option. `tier` is the option id rendered
+     * by SettingsScreen (`cpu`, `gpu`, `hexagon`); matches the testID at
+     * src/screens/SettingsScreen/SettingsScreen.tsx:317.
+     */
+    deviceOption: (tier: 'cpu' | 'gpu' | 'hexagon'): string =>
+      byTestId(`device-option-${tier}`),
+  },
+
+  // BenchmarkResultTrigger — hidden E2E trigger for the benchmark-matrix spec.
+  // Testids mirror MemorySnapshotTrigger's set.
+  benchmarkResult: {
+    get container(): string {
+      return byTestId('benchmark-result-container');
+    },
+    get label(): string {
+      return byTestId('benchmark-result-label');
+    },
+    get value(): string {
+      return byTestId('benchmark-result-value');
+    },
   },
 
   // Common dialogs and sheets

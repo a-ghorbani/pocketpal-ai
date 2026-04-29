@@ -12,6 +12,19 @@ export interface PromptTestCase {
   description?: string;
 }
 
+/**
+ * Quant variant for the benchmark-matrix spec.
+ * Extends a base ModelTestConfig with per-quant filename + size.
+ */
+export interface ModelQuantVariant {
+  /** Lowercase canonical quant label, e.g. 'q4_0', 'iq2_m' */
+  quant: string;
+  /** Exact GGUF filename on HF (case-sensitive) */
+  downloadFile: string;
+  /** Optional: rough on-disk size in MB, for download-time pre-flight */
+  size_mb?: number;
+}
+
 export interface ModelTestConfig {
   /** Unique identifier for reporting (e.g., 'smollm2-135m') */
   id: string;
@@ -29,6 +42,11 @@ export interface ModelTestConfig {
   inferenceTimeout?: number;
   /** Whether this is a vision/multimodal model */
   isVision?: boolean;
+  /**
+   * Optional quant variants used by benchmark-matrix spec only.
+   * Other specs continue to use `downloadFile`.
+   */
+  quants?: ModelQuantVariant[];
 }
 
 /**
@@ -178,3 +196,7 @@ export function getModelsToTest(includeAllModels = false): ModelTestConfig[] {
 
   return filtered;
 }
+
+// Benchmark-matrix fixtures live in ./benchmark-models.ts (model × quant ×
+// backend tiered matrix used only by the benchmark-matrix spec). Kept
+// separate so this file stays focused on the general E2E test fixtures.

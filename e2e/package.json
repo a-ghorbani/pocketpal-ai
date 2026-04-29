@@ -9,6 +9,7 @@
     "e2e:models:ios": "npx ts-node scripts/run-e2e.ts --platform ios --each-model",
     "e2e:models:android": "npx ts-node scripts/run-e2e.ts --platform android --each-model",
     "e2e:aws": "npx ts-node scripts/run-aws-device-farm.ts",
+    "build:bench-config": "npx ts-node scripts/build-bench-config.ts",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "yarn@1.22.22",

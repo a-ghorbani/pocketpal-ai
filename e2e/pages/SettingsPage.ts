@@ -6,6 +6,8 @@
  */
 
 import {BasePage} from './BasePage';
+import {ChatPage} from './ChatPage';
+import {DrawerPage} from './DrawerPage';
 import {
   Selectors,
   byTestId,
@@ -24,6 +26,20 @@ export class SettingsPage extends BasePage {
    */
   async waitForReady(timeout = 10000): Promise<void> {
     await this.waitForElement(byTestId('context-size-input'), timeout);
+  }
+
+  /**
+   * Open drawer from Chat and navigate to the Settings screen.
+   */
+  async navigateTo(): Promise<void> {
+    const chatPage = new ChatPage();
+    const drawerPage = new DrawerPage();
+    await chatPage.openDrawer();
+    await drawerPage.waitForOpen();
+    await this.tap(Selectors.drawer.settingsTab);
+    await browser.pause(300);
+    await drawerPage.waitForClose();
+    await this.waitForReady();
   }
 
   /**

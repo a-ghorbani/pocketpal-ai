@@ -21,7 +21,7 @@ const READ_CMD = 'read::snapshots';
  *
  * Uses opacity 0.01 to stay in Android's accessibility tree.
  */
-export const MemorySnapshotTrigger: React.FC = () => {
+export const MemoryAdapter: React.FC = () => {
   const [resultData, setResultData] = useState('');
 
   const handleChangeText = useCallback((text: string) => {

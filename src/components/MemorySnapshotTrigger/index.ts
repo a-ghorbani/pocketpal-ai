@@ -1,1 +1,0 @@
-export {MemorySnapshotTrigger} from './MemorySnapshotTrigger';

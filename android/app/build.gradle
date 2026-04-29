@@ -134,6 +134,51 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+        releaseE2e {
+            // E2E buildType: inherits 95% of release (Hermes, minify toggle,
+            // proguard rules), then overrides:
+            //   1. debuggable=true so `adb shell run-as com.pocketpalai.e2e`
+            //      works for the benchmark-matrix preseed workflow.
+            //   2. Debug signing — E2E builds are never shipped to stores.
+            //   3. matchingFallbacks so dependencies resolve to their release
+            //      variant (they don't publish a releaseE2e variant).
+            initWith release
+            debuggable true
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
+    }
+
+    flavorDimensions "distribution"
+    productFlavors {
+        prod {
+            dimension "distribution"
+            // applicationId stays as defaultConfig: com.pocketpalai
+        }
+        e2e {
+            dimension "distribution"
+            applicationIdSuffix ".e2e"
+            // Effective applicationId: com.pocketpalai.e2e
+            // Separate sandbox; installs side-by-side with prod.
+        }
+    }
+
+    // Keep the variant matrix narrow: only prodDebug, prodRelease,
+    // e2eDebug, and e2eReleaseE2e are valid combinations.
+    //   - e2e + release  → unsigned E2E APK nobody asked for; drop it
+    //   - prod + releaseE2e → debuggable prod APK that would ship via the
+    //     prod applicationId; drop it
+    // Without this filter, a bare `./gradlew assembleRelease` or
+    // `assembleReleaseE2e` would build extra, confusing variants.
+    variantFilter { variant ->
+        def flavors = variant.flavors*.name
+        def buildType = variant.buildType.name
+        if (flavors.contains('e2e') && buildType == 'release') {
+            setIgnore(true)
+        }
+        if (flavors.contains('prod') && buildType == 'releaseE2e') {
+            setIgnore(true)
+        }
     }
 }
 

@@ -70,8 +70,8 @@ package-lock.json
 /coverage
 .env
 
-# Firebase config files
-android/app/google-services.json
+# Firebase config files (prod + all flavor-specific overrides)
+android/app/**/google-services.json
 ios/GoogleService-Info.plist
 
 # Environment files
