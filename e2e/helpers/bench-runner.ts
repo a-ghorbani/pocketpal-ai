@@ -12,7 +12,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {execSync} from 'child_process';
 
-import {getBenchmarkMatrix} from '../fixtures/models';
+import {getBenchmarkMatrix} from '../fixtures/benchmark-models';
 
 declare const driver: WebdriverIO.Browser;
 

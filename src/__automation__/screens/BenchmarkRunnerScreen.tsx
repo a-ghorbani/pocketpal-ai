@@ -113,28 +113,6 @@ async function trackPeakMemory(): Promise<{
 }
 
 /**
- * Wait until the model file appears as downloaded in modelStore. Polls for
- * up to `timeoutMs`. Returns the Model instance once `isDownloaded` flips
- * true, or throws on timeout.
- */
-async function waitForDownload(
-  filename: string,
-  timeoutMs: number,
-): Promise<Model> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const m = modelStore.models.find(
-      (mm: Model) => mm.filename === filename && mm.isDownloaded,
-    );
-    if (m) {
-      return m;
-    }
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  throw new Error(`download-timeout:${filename}`);
-}
-
-/**
  * Run the matrix. Pure-async, takes setStatus as a parameter so that unit
  * tests can drive the state machine without a real React tree.
  *

@@ -16,7 +16,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {getBenchmarkMatrix} from '../fixtures/models';
+import {getBenchmarkMatrix} from '../fixtures/benchmark-models';
 import {
   startCapture,
   deriveLogSignals,
