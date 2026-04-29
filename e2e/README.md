@@ -19,6 +19,43 @@ yarn install
 | `diagnostic` | Dumps Appium page source XML at each screen. For debugging selectors, not a real test | ~10s |
 | `benchmark-matrix` | Iterates {models} × {quants} × {backends} on Android, writes canonical JSON report per run. Measurement infrastructure, not an automated gate. | ~25-45 min |
 
+## Benchmark Matrix (Android)
+
+Drives the in-app **BenchmarkRunnerScreen** via deep link (`pocketpal://e2e/benchmark`) — no WDIO required for ad-hoc runs. Three tiers gated by `BENCH_TIER`:
+
+| Tier | Models × quants × backends | Cells | Runtime | When |
+|------|----------------------------|------:|---------|------|
+| `smoke` (default) | 3 × 3 × 2 | 18 | ~10–15 min | Regression gate |
+| `focused` | 6 × 6 × 2 | ~60 | ~30–45 min | Investigation |
+| `full` | 11 × 8 × 2 | ~165 | ~3 hr/device | Default-tier recalibration |
+
+Model + quant rosters live in [`fixtures/benchmark-models.ts`](fixtures/benchmark-models.ts) (single source: `BENCHMARK_FULL_MODELS`; smaller tiers derived as id filters).
+
+**One-shot run** (assumes E2E-flavor APK is already installed on the device):
+
+```bash
+# 1. Generate config + adb push to device
+BENCH_TIER=smoke yarn build:bench-config --push           # default device
+BENCH_TIER=full  yarn build:bench-config --push <udid>    # specific device
+
+# 2. Cold-launch the runner via deep link
+adb shell am start -a android.intent.action.VIEW \
+  -d 'pocketpal://e2e/benchmark' -p com.pocketpalai.e2e
+
+# 3. Tap "Run benchmark matrix" on the screen (or via adb input tap)
+# 4. Wait for `bench-runner-screen-status` content-desc == "complete"
+# 5. Pull the report
+adb pull /sdcard/Android/data/com.pocketpalai.e2e/files/benchmark-report-*.json
+```
+
+Filters narrow the chosen tier (cannot widen it):
+
+```bash
+BENCH_TIER=full BENCH_MODELS=qwen3.5-2b BENCH_QUANTS=q4_0,q6_k yarn build:bench-config
+```
+
+Heavy models (Phi-3.5, Phi-4-mini, Gemma-4-E2B) are last in the `full` tier; if the OS ANR-kills the app on a heavy CPU bench, partial-row data from earlier cells survives in the JSON report.
+
 ## Local Testing
 
 ### Prerequisites
@@ -206,11 +243,14 @@ e2e/
 │   ├── gestures.ts               # Swipe/scroll gestures (W3C Actions)
 │   └── model-actions.ts          # Reusable download/load/inference helpers
 ├── fixtures/
-│   ├── models.ts                 # Test model configurations + timeouts
+│   ├── models.ts                 # General-purpose E2E fixtures (quick-smoke, language, …)
+│   ├── benchmark-models.ts       # Benchmark matrix tiers (smoke/focused/full)
 │   └── test-image.jpg            # For vision model tests
 ├── scripts/
 │   ├── run-e2e.ts                # Unified E2E test runner (models, devices, specs)
-│   └── run-aws-device-farm.ts    # AWS Device Farm orchestration
+│   ├── run-aws-device-farm.ts    # AWS Device Farm orchestration
+│   ├── build-bench-config.ts     # Generate benchmark bench-config.json from a tier
+│   └── benchmark-compare.ts      # Diff two benchmark reports (>15% regression)
 ├── devices.template.json         # Device inventory template (copy to devices.json)
 ├── wdio.shared.conf.ts           # Shared WDIO configuration
 ├── wdio.ios.local.conf.ts        # Local iOS (env-var-driven)
