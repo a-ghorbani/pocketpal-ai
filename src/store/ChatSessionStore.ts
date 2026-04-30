@@ -7,6 +7,7 @@ import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {palStore} from './PalStore';
+import {deriveToolSchemas} from '../services/talents';
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
@@ -996,6 +997,18 @@ class ChatSessionStore {
           ...resolvedSettings,
           ...palSettings,
         };
+      }
+
+      // Inject tool schemas from pact.talents (PACT → completionSettings.tools)
+      const talentNames = pal?.pact?.talents?.map(t => t.name);
+      if (talentNames && talentNames.length > 0) {
+        const tools = deriveToolSchemas(talentNames);
+        if (tools.length > 0) {
+          resolvedSettings = {
+            ...resolvedSettings,
+            tools,
+          };
+        }
       }
     }
 

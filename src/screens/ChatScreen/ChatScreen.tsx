@@ -148,7 +148,9 @@ export const ChatScreen: React.FC = observer(() => {
     if (!model || !modelId) {
       return;
     }
-    const hasToolUseCaps = !!model.chatTemplates?.jinja?.toolUseCaps;
+    const hasToolUseCaps =
+      !!model.chatTemplates?.jinja?.toolUse ||
+      !!model.chatTemplates?.jinja?.toolUseCaps;
     if (hasToolUseCaps) {
       return;
     }
