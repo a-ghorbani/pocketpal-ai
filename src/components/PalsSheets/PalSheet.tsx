@@ -20,6 +20,7 @@ import {createStyles} from './styles';
 import {FormField} from './FormField';
 import type {PalFormData} from './types';
 import {ColorSection} from './ColorSection';
+import {TalentSection} from './TalentSection';
 import {ModelSelector} from './ModelSelector';
 import {SectionDivider} from './SectionDivider';
 import {ModelNotAvailable} from './ModelNotAvailable';
@@ -29,7 +30,7 @@ import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
 
 import {palStore} from '../../store';
 
-import type {Pal} from '../../types/pal';
+import type {Pal, TalentRef} from '../../types/pal';
 
 import {L10nContext} from '../../utils';
 
@@ -53,6 +54,7 @@ const INITIAL_STATE: PalFormData = {
   promptGenerationModel: undefined,
   generatingPrompt: '',
   completionSettings: undefined,
+  talents: [],
 };
 
 export const PalSheet: React.FC<PalSheetProps> = observer(
@@ -100,6 +102,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         promptGenerationModel: z.any().optional(),
         generatingPrompt: z.string().nullable().optional(),
         completionSettings: z.record(z.string(), z.any()).optional(),
+        talents: z.array(z.string()).optional(),
       });
 
       // Add dynamic parameter validation
@@ -154,6 +157,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         promptGenerationModel: pal.promptGenerationModel,
         generatingPrompt: pal.generatingPrompt || '',
         completionSettings: pal.completionSettings,
+        talents: pal.pact?.talents?.map(t => t.name) ?? [],
         ...pal.parameters, // Spread dynamic parameters
       };
       setCurrentCompletionSettings(pal.completionSettings);
@@ -173,6 +177,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         promptGenerationModel: pal.promptGenerationModel,
         generatingPrompt: pal.generatingPrompt || '',
         completionSettings: pal.completionSettings,
+        talents: pal.pact?.talents?.map(t => t.name) ?? [],
         ...pal.parameters, // Spread dynamic parameters
       };
       methods.reset(formData);
@@ -232,6 +237,20 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         const systemPrompt = data.systemPrompt;
         const originalSystemPrompt = data.originalSystemPrompt;
 
+        // Build pact from selected talents
+        // Always pass pact explicitly — using `undefined` would skip the
+        // update in PalRepository (it checks `if (updates.pact !== undefined)`)
+        const selectedTalents = data.talents ?? [];
+        const pact =
+          selectedTalents.length > 0
+            ? {
+                talents: selectedTalents.map(name => ({
+                  name,
+                  necessity: 'required' as const,
+                })),
+              }
+            : {talents: [] as TalentRef[]};
+
         // Create pal data
         // For updates, if we don't set values, it will preserve the original pal's values
         const palData: Partial<Pal> = {
@@ -252,6 +271,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           capabilities: pal.capabilities || {},
           // Include (local) completion settings if they exist
           completionSettings: data.completionSettings,
+          pact,
         };
 
         if (isEditing) {
@@ -376,6 +396,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                 />
 
                 <ColorSection />
+
+                <TalentSection />
 
                 {/* Generation Settings Section - only for existing local pals */}
                 {pal.id && (
