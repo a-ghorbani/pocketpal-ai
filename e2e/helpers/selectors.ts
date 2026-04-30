@@ -343,6 +343,30 @@ export const Selectors = {
       byTestId(`language-option-${lang}`),
   },
 
+  // Pals screen
+  palsScreen: {
+    get addButton(): string {
+      return byTestId('bottom-action-add');
+    },
+  },
+
+  // Pal sheet (create/edit pal)
+  palSheet: {
+    get nameInput(): string {
+      return byTestId('form-field-name');
+    },
+    get systemPromptInput(): string {
+      return byTestId('form-field-systemPrompt');
+    },
+    get submitButton(): string {
+      return byTestId('submit-button');
+    },
+    get talentSection(): string {
+      return byTestId('talent-section');
+    },
+    talentSwitch: (name: string): string => byTestId(`talent-switch-${name}`),
+  },
+
   // Common dialogs and sheets
   common: {
     get sheetHandle(): string {
