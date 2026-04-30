@@ -113,6 +113,22 @@ describe('deriveLogSignals', () => {
     expect(signals.large_buffer_enabled).toBe(false);
   });
 
+  it('parses llama.rn 0.12.x "using device GPUOpenCL" format (POCO live capture)', () => {
+    const lines = [
+      'llama_model_load_from_file_impl: using device GPUOpenCL (QUALCOMM Adreno(TM) 840) (unknown id) - 0 MiB free',
+      'llama_model_loader: loaded meta data with 45 key-value pairs',
+      'load_tensors: offloaded 25/25 layers to GPU',
+    ];
+    const signals = deriveLogSignals(lines);
+    expect(signals.opencl_init).toBe(true);
+    expect(signals.opencl_device_name).toBe('QUALCOMM Adreno(TM) 840');
+    // Generation derived from device-number pattern when no adreno_gen: line
+    // is logged (8XX → A8X).
+    expect(signals.adreno_gen).toBe('A8X');
+    expect(signals.offloaded_layers).toBe(25);
+    expect(signals.total_layers).toBe(25);
+  });
+
   it('parses partial-offload layer counts', () => {
     const signals = deriveLogSignals(PARTIAL_OFFLOAD_LINES);
     expect(signals.opencl_init).toBe(true);
@@ -136,15 +152,15 @@ describe('deriveLogSignals', () => {
     expect(signals.opencl_device_name).toBe('Adreno (TM) 830');
   });
 
-  it('caps raw_matches at 20 lines (debug-only, not primary data)', () => {
+  it('caps raw_matches at 200 lines (debug-only, not primary data)', () => {
     const lines: string[] = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 250; i++) {
       lines.push(`I/lm_ggml_opencl: synthetic line ${i}`);
     }
     const signals = deriveLogSignals(lines);
-    expect(signals.raw_matches).toHaveLength(20);
+    expect(signals.raw_matches).toHaveLength(200);
     expect(signals.raw_matches[0]).toContain('synthetic line 0');
-    expect(signals.raw_matches[19]).toContain('synthetic line 19');
+    expect(signals.raw_matches[199]).toContain('synthetic line 199');
   });
 
   it('tolerates malformed / unrelated lines interleaved with good data', () => {

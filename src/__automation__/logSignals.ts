@@ -18,10 +18,11 @@
  * Broad filter applied to every native log line. Matches anything from
  * llama.rn's ggml-opencl backend, the generic ggml_backend_ log tags, and
  * the load-tensor / model-load statements that tell us how many layers
- * ended up on GPU.
+ * ended up on GPU. Patterns calibrated against llama.rn 0.12.x native-log
+ * output (verified live on POCO Adreno 840).
  */
 export const BENCH_LOG_RE =
-  /(lm_ggml_opencl|ggml_backend_|Adreno large buffer|offloaded \d+\/\d+ layers|load_tensors:|llama_model_load|ggml_cl|adreno_gen)/;
+  /(ggml_opencl|using device GPUOpenCL|ggml_backend_|Adreno large buffer|offloaded \d+\/\d+ layers|load_tensors:|llama_model_load|ggml_cl|adreno_gen)/;
 
 export interface LogSignals {
   opencl_init: boolean;
@@ -41,7 +42,10 @@ export type EffectiveBackend =
   | 'cpu+opencl-partial'
   | 'unknown';
 
-const RAW_MATCHES_CAP = 20;
+// Larger than strictly necessary on purpose — when a cell goes wrong we
+// want context, and the parser's structured output is what regression
+// tooling actually consumes (raw_matches is debug-only).
+const RAW_MATCHES_CAP = 200;
 
 export function emptyLogSignals(): LogSignals {
   return {
@@ -63,7 +67,19 @@ export function emptyLogSignals(): LogSignals {
 export function deriveLogSignals(lines: string[]): LogSignals {
   const signals = emptyLogSignals();
 
-  const deviceRe = /lm_ggml_opencl: device\s+(.+?)(?:,|\s*$)/;
+  // Calibrated against llama.rn 0.12.x output. Examples:
+  //   "llama_model_load_from_file_impl: using device GPUOpenCL (QUALCOMM Adreno(TM) 840) ..."
+  //   "load_tensors: offloaded 25/25 layers to GPU"
+  //   "lm_ggml_opencl: Adreno large buffer enabled"   (when env var set + supported)
+  //   "Adreno large buffer requested but not supported by driver"  (regression case)
+  // The device-name segment can itself contain parentheses (e.g.
+  // "QUALCOMM Adreno(TM) 840"), so we anchor on the trailing ") (" separator
+  // before the "(unknown id)" suffix instead of `[^)]+`.
+  const usingDeviceRe = /using device GPUOpenCL\s*\((.+?)\)\s+\(/;
+  // Legacy pattern (`lm_ggml_opencl: device <name>`) kept as a fallback in
+  // case llama.rn rolls back the log format.
+  const legacyDeviceRe = /lm_ggml_opencl: device\s+(.+?)(?:,|\s*$)/;
+  const adrenoModelRe = /Adreno\s*\(TM\)\s*(\d+)/i;
   const adrenoRe = /adreno_gen:\s*(.+?)$/;
   const offloadedRe = /offloaded (\d+)\/(\d+) layers to GPU/;
   const lbUnsupportedRe =
@@ -74,21 +90,37 @@ export function deriveLogSignals(lines: string[]): LogSignals {
       signals.raw_matches.push(line);
     }
 
-    if (/lm_ggml_opencl: Initializing/.test(line)) {
+    // Two valid markers for "OpenCL backend actually came up":
+    //   1. legacy "lm_ggml_opencl: Initializing" (pre-0.12)
+    //   2. "using device GPUOpenCL" (current llama.rn 0.12.x; this is the
+    //      only one the listener saw on POCO during smoke verification).
+    if (
+      /lm_ggml_opencl: Initializing/.test(line) ||
+      /using device GPUOpenCL/.test(line)
+    ) {
       signals.opencl_init = true;
     }
 
     if (!signals.opencl_device_name) {
-      const m = deviceRe.exec(line);
+      const m = usingDeviceRe.exec(line) ?? legacyDeviceRe.exec(line);
       if (m) {
         signals.opencl_device_name = m[1].trim();
       }
     }
 
+    // Adreno generation: prefer explicit `adreno_gen:` line if present,
+    // otherwise fall back to model number from the device-name line
+    // (Adreno 8XX → A8X, Adreno 7XX → A7X, etc.).
     if (!signals.adreno_gen) {
       const m = adrenoRe.exec(line);
       if (m) {
         signals.adreno_gen = m[1].trim();
+      } else {
+        const dm = adrenoModelRe.exec(line);
+        if (dm) {
+          const hundreds = dm[1].charAt(0);
+          signals.adreno_gen = `A${hundreds}X`;
+        }
       }
     }
 
