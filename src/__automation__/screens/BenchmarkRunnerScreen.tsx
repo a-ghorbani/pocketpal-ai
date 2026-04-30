@@ -1,11 +1,19 @@
 import React, {useCallback, useRef, useState} from 'react';
 import {Button, ScrollView, StyleSheet, Text, View} from 'react-native';
 import RNDeviceInfo from 'react-native-device-info';
+import {addNativeLogListener, toggleNativeLog} from 'llama.rn';
 import {observer} from 'mobx-react';
 
 import {modelStore} from '../../store';
 import {getDeviceOptions} from '../../utils/deviceSelection';
 import type {Model} from '../../utils/types';
+import {
+  BENCH_LOG_RE,
+  deriveEffectiveBackend,
+  deriveLogSignals,
+  emptyLogSignals,
+  type LogSignals,
+} from '../logSignals';
 
 // Top-level require keeps RNFS access DCE-friendly (matches MemoryAdapter
 // pattern from TASK-20260423-2331 Step 0). The whole module is gated
@@ -55,7 +63,7 @@ interface BenchmarkRunRow {
   tg_avg: number | null;
   wall_ms: number;
   peak_memory_mb: number | null;
-  log_signals: Record<string, unknown>;
+  log_signals: LogSignals;
   init_settings: Record<string, unknown>;
   status: 'ok' | 'skipped' | 'failed';
   reason?: string;
@@ -75,19 +83,6 @@ const DEFAULT_BENCH = {pp: 512, tg: 128, pl: 1, nr: 3};
 const TRUNCATE_ERROR = 200; // status string error length
 const TRUNCATE_ROW_ERROR = 500; // row.error length
 const PEAK_POLL_MS = 1000;
-
-function emptyLogSignals(): Record<string, unknown> {
-  return {
-    opencl_init: false,
-    opencl_device_name: null,
-    adreno_gen: null,
-    large_buffer_enabled: false,
-    large_buffer_unsupported: false,
-    offloaded_layers: null,
-    total_layers: null,
-    raw_matches: [],
-  };
-}
 
 async function loadConfig(): Promise<BenchConfig> {
   const exists = await RNFS.exists(CONFIG_PATH);
@@ -161,6 +156,11 @@ export async function runMatrix(
     }
   }
 
+  // Native log capture is global state in llama.rn — flip it on once for the
+  // whole matrix and toggle off at the end. Per-cell scoping is done by
+  // attaching a fresh listener around each init+bench window.
+  await toggleNativeLog(true).catch(() => undefined);
+
   const startTimestamp = new Date().toISOString();
   const safeStamp = startTimestamp.replace(/[:.]/g, '-');
   const path = reportPath(safeStamp);
@@ -190,6 +190,12 @@ export async function runMatrix(
       requested_backend: backend,
       timestamp: new Date().toISOString(),
     };
+
+    // Per-cell log buffer + listener handle. Declared outside the try so the
+    // catch path can still surface partial signals (and detach the listener)
+    // when a cell throws mid-init.
+    const logBuffer: string[] = [];
+    let logSub: {remove: () => void} | null = null;
 
     try {
       // 1. GPU pre-check: cell fails fast if backend=gpu but no GPU option.
@@ -284,6 +290,15 @@ export async function runMatrix(
         backend === 'cpu' ? ['CPU'] : (adrenoDevices as string[]);
       modelStore.setDevices(cellDevices);
 
+      // 3a. Attach native-log listener so the cell's load output (the same
+      // lines that show up in `adb logcat`) lands in `logBuffer`. The
+      // BENCH_LOG_RE pre-filter keeps the buffer bounded for long runs.
+      logSub = addNativeLogListener((_level, text) => {
+        if (BENCH_LOG_RE.test(text)) {
+          logBuffer.push(text);
+        }
+      });
+
       // 4. Init context (mutex-serialized inside ModelStore).
       await modelStore.initContext(resolvedModel);
 
@@ -330,11 +345,17 @@ export async function runMatrix(
         // cell's initContext will tear down the stale context anyway.
       }
 
+      // Stop capture and derive backend evidence from the cell's load output.
+      logSub?.remove();
+      logSub = null;
+      const logSignals = deriveLogSignals(logBuffer);
+      const effectiveBackend = deriveEffectiveBackend(logSignals);
+
       const wall = Date.now() - tStart;
       const peakBytes = peakMemory ? (peakMemory as {used: number}).used : null;
       const row: BenchmarkRunRow = {
         ...rowBase,
-        effective_backend: 'unknown', // spec fills from logcat slice
+        effective_backend: effectiveBackend,
         pp_avg: speedPp ?? null,
         tg_avg: speedTg ?? null,
         wall_ms: wall,
@@ -342,7 +363,7 @@ export async function runMatrix(
           typeof peakBytes === 'number'
             ? Math.round((peakBytes / (1024 * 1024)) * 100) / 100
             : null,
-        log_signals: emptyLogSignals(),
+        log_signals: logSignals,
         init_settings: initSettings,
         status: 'ok',
       };
@@ -354,17 +375,22 @@ export async function runMatrix(
         cells: report.runs.length,
       });
     } catch (e) {
+      // Detach listener if the cell threw between attach and release.
+      logSub?.remove();
+      // Salvage whatever load lines we captured before the throw — useful
+      // for debugging "why did this cell fail" without re-running.
+      const partialSignals = deriveLogSignals(logBuffer);
       const msg = (e as Error).message ?? 'unknown';
       const short = msg.slice(0, TRUNCATE_ERROR);
       const long = msg.slice(0, TRUNCATE_ROW_ERROR);
       const row: BenchmarkRunRow = {
         ...rowBase,
-        effective_backend: 'unknown',
+        effective_backend: deriveEffectiveBackend(partialSignals),
         pp_avg: null,
         tg_avg: null,
         wall_ms: Date.now() - tStart,
         peak_memory_mb: null,
-        log_signals: emptyLogSignals(),
+        log_signals: partialSignals,
         init_settings: {},
         status: 'failed',
         error: long,
@@ -380,6 +406,7 @@ export async function runMatrix(
     }
   }
 
+  await toggleNativeLog(false).catch(() => undefined);
   setStatus('complete');
 }
 

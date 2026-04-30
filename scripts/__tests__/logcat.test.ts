@@ -1,20 +1,18 @@
 /**
- * Unit tests for the pure functions in `e2e/helpers/logcat.ts`:
- *   - deriveLogSignals(lines): parses logcat lines into a structured payload.
+ * Unit tests for the pure functions in `src/__automation__/logSignals.ts`:
+ *   - deriveLogSignals(lines): parses native log lines into a structured payload.
  *   - deriveEffectiveBackend(signals): maps the payload to a 4-state enum.
  *
- * The logcat module lives under `e2e/` (which jest.config.js ignores for test
- * discovery), but the pure functions are plain TypeScript and safe to import.
- * Co-located with `memory-compare.test.ts` for the same reason.
- *
- * Fixtures are modelled on real logcat excerpts from llama.rn's
- * `cpp/ggml-opencl/ggml-opencl.cpp` init/load paths.
+ * Fixtures are modelled on real native-log / logcat excerpts from llama.rn's
+ * `cpp/ggml-opencl/ggml-opencl.cpp` init/load paths. The same parser is used
+ * on-device by BenchmarkRunnerScreen (via addNativeLogListener) and by the
+ * legacy WDIO spec (via `e2e/helpers/logcat.ts`).
  */
 
 import {
   deriveEffectiveBackend,
   deriveLogSignals,
-} from '../../e2e/helpers/logcat';
+} from '../../src/__automation__/logSignals';
 
 // -----------------------------------------------------------------------------
 // Fixture builders

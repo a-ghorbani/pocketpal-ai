@@ -25,6 +25,9 @@ jest.mock('../../../utils/deviceSelection', () => ({
 
 const {getDeviceOptions} = require('../../../utils/deviceSelection');
 
+// Re-grab the llama.rn mocks so tests can drive the native log stream.
+const {addNativeLogListener, toggleNativeLog} = require('llama.rn');
+
 import {
   BenchmarkRunnerScreen,
   runMatrix,
@@ -196,6 +199,11 @@ describe('BenchmarkRunnerScreen', () => {
       };
       (modelStore.initContext as jest.Mock).mockResolvedValue(undefined);
       (modelStore.setDevices as jest.Mock).mockClear();
+      // Default native-log mock: no lines emitted, no-op remove.
+      (addNativeLogListener as jest.Mock).mockReset();
+      (addNativeLogListener as jest.Mock).mockReturnValue({remove: jest.fn()});
+      (toggleNativeLog as jest.Mock).mockReset();
+      (toggleNativeLog as jest.Mock).mockResolvedValue(undefined);
     });
 
     it('runs a single GPU cell to completion and writes a report row', async () => {
@@ -247,6 +255,64 @@ describe('BenchmarkRunnerScreen', () => {
       expect(setStatus.mock.calls[setStatus.mock.calls.length - 1][0]).toBe(
         'complete',
       );
+    });
+
+    it('derives effective_backend=opencl from native-log listener output', async () => {
+      // Stub the listener so it synchronously emits a canonical full-offload
+      // GPU log sequence the moment runMatrix attaches.
+      const remove = jest.fn();
+      (addNativeLogListener as jest.Mock).mockImplementation(
+        (cb: (level: string, text: string) => void) => {
+          cb('I', 'lm_ggml_opencl: Initializing OpenCL backend');
+          cb('I', 'lm_ggml_opencl: device Adreno (TM) 840v2');
+          cb('I', 'lm_ggml_opencl: Adreno large buffer enabled');
+          cb('I', 'load_tensors: offloaded 28/28 layers to GPU');
+          return {remove};
+        },
+      );
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(toggleNativeLog).toHaveBeenCalledWith(true);
+      expect(toggleNativeLog).toHaveBeenCalledWith(false);
+      expect(remove).toHaveBeenCalled();
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0]).toMatchObject({
+        status: 'ok',
+        effective_backend: 'opencl',
+      });
+      expect(json.runs[0].log_signals).toMatchObject({
+        opencl_init: true,
+        opencl_device_name: 'Adreno (TM) 840v2',
+        large_buffer_enabled: true,
+        offloaded_layers: 28,
+        total_layers: 28,
+      });
+    });
+
+    it('listener is detached when a cell throws after attach', async () => {
+      const remove = jest.fn();
+      (addNativeLogListener as jest.Mock).mockImplementation(
+        (cb: (level: string, text: string) => void) => {
+          cb('I', 'lm_ggml_opencl: Initializing OpenCL backend');
+          return {remove};
+        },
+      );
+      (modelStore.initContext as jest.Mock).mockRejectedValueOnce(
+        new Error('init exploded'),
+      );
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(remove).toHaveBeenCalled();
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      // Partial signals salvaged from pre-throw lines: opencl_init=true but
+      // no offloaded layer count -> effective_backend = 'unknown'.
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        effective_backend: 'unknown',
+      });
+      expect(json.runs[0].log_signals.opencl_init).toBe(true);
     });
 
     it('per-cell throw sets row status:failed and continues to next cell', async () => {

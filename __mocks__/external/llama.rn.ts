@@ -50,6 +50,12 @@ export const loadLlamaModelInfo = jest.fn();
 
 export const initLlama = jest.fn();
 
+export const toggleNativeLog = jest.fn().mockResolvedValue(undefined);
+
+export const addNativeLogListener = jest.fn().mockReturnValue({
+  remove: jest.fn(),
+});
+
 export const BuildInfo = {
   number: '1.0.0',
   commit: 'a123456',
@@ -58,6 +64,8 @@ export const BuildInfo = {
 export default {
   LlamaContext,
   initLlama,
+  toggleNativeLog,
+  addNativeLogListener,
   CompletionParams: jest.fn(),
   loadLlamaModelInfo,
 };
