@@ -70,7 +70,7 @@ export const PalHeaderRight = observer(() => {
             icon={() => <DotsVerticalIcon fill={theme.colors.primary} />}
             style={styles.menuBtn}
             onPress={openMenu}
-            testID="menu-button"
+            testID="pal-menu-button"
           />
         }>
         <Menu.Item
