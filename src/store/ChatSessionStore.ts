@@ -1017,8 +1017,15 @@ class ChatSessionStore {
       const session = this.sessions.find(s => s.id === sessionId);
 
       if (session?.settingsSource === 'custom') {
-        // User explicitly chose custom settings - use session settings
+        // User explicitly chose custom settings - use session settings.
+        // Preserve PACT-derived tools — custom settings control generation
+        // params (temperature, etc.) but pact.talents is the source of truth
+        // for tool availability.
+        const pactTools = resolvedSettings.tools;
         resolvedSettings = session.completionSettings;
+        if (pactTools) {
+          resolvedSettings = {...resolvedSettings, tools: pactTools};
+        }
       }
     }
 
