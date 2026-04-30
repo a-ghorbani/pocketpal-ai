@@ -11,7 +11,7 @@ describe('Talent extensibility (engine-side)', () => {
       return {
         type: 'function',
         function: {
-          name: 'echo',
+          name: 'test_echo',
           description: 'Echo test',
           parameters: {type: 'object', properties: {}},
         },

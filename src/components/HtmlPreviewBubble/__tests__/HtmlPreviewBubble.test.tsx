@@ -22,7 +22,7 @@ describe('HtmlPreviewBubble', () => {
     expect(getByText('Preview')).toBeTruthy();
   });
 
-  it('wraps html inside a full document with CSP meta tag and keeps JS disabled', () => {
+  it('wraps html inside a full document with CSP meta tag and JS enabled', () => {
     const {getByTestId} = render(
       <HtmlPreviewBubble html={html} title="CSP Test" />,
     );

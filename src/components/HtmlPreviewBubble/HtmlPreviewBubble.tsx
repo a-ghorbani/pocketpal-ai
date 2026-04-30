@@ -67,11 +67,15 @@ function wrapDocument(html: string): string {
         match => `${match}\n${HEAD_INJECTION}`,
       );
     }
-    // Full doc without explicit <head>: inject one right after <html ...>
-    return trimmed.replace(
-      /<html[^>]*>/i,
-      match => `${match}\n<head>${HEAD_INJECTION}</head>`,
-    );
+    if (/<html[^>]*>/i.test(trimmed)) {
+      // Full doc without explicit <head>: inject one right after <html ...>
+      return trimmed.replace(
+        /<html[^>]*>/i,
+        match => `${match}\n<head>${HEAD_INJECTION}</head>`,
+      );
+    }
+    // Malformed full doc (e.g. <!doctype html><body>...) — no <html> or <head>
+    // to inject into. Fall through to fragment wrapping to ensure CSP.
   }
 
   return `<!DOCTYPE html>
