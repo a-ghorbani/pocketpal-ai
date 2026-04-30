@@ -378,15 +378,15 @@ Per-run (`BenchmarkRun`):
   "tg_avg": 18.2,                       // tokens/s, nullable
   "wall_ms": 24571,
   "peak_memory_mb": 812.3,              // nullable
-  "log_signals": {                      // structured — see helpers/logcat.ts
+  "log_signals": {                      // structured — see src/__automation__/logSignals.ts
     "opencl_init": true,
-    "opencl_device_name": "qualcomm Adreno (TM) …",
-    "adreno_gen": null,
+    "opencl_device_name": "QUALCOMM Adreno(TM) 840",
+    "adreno_gen": "A8X",
     "large_buffer_enabled": true,
     "large_buffer_unsupported": false,
     "offloaded_layers": 29,
     "total_layers": 29,
-    "raw_matches": [ /* up to 20 matched logcat lines, debug only */ ]
+    "raw_matches": [ /* up to 200 matched native-log lines, debug only */ ]
   },
   "init_settings": { /* modelStore.contextInitParams snapshot */ },
   "status": "ok",                       // "ok" | "skipped" | "failed"

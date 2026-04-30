@@ -9,9 +9,6 @@
  *
  * Pure functions only — no Node, no React Native imports — so this module
  * is safe to import from both the screen (Hermes) and unit tests (Jest).
- *
- * The duplicate copy in `e2e/helpers/logcat.ts` is kept for the WDIO spec
- * path; consolidate when that path is deleted.
  */
 
 /**

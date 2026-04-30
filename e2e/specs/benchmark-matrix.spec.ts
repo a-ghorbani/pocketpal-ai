@@ -17,11 +17,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {getBenchmarkMatrix} from '../fixtures/benchmark-models';
-import {
-  startCapture,
-  deriveLogSignals,
-  deriveEffectiveBackend,
-} from '../helpers/logcat';
 import {byTestId} from '../helpers/selectors';
 import {OUTPUT_DIR} from '../wdio.shared.conf';
 import {
@@ -30,7 +25,6 @@ import {
   getLlamaRnVersion,
   pullLatestReport,
   pushConfig,
-  sliceLogcat,
 } from '../helpers/bench-runner';
 
 declare const driver: WebdriverIO.Browser;
@@ -66,7 +60,6 @@ describe('Benchmark Matrix', () => {
     const runBtn = await driver.$(byTestId('bench-run-button'));
     await runBtn.waitForDisplayed({timeout: 30_000});
 
-    const capture = startCapture(udid);
     await runBtn.click();
 
     const status = await driver.$(byTestId('bench-runner-screen-status'));
@@ -82,7 +75,6 @@ describe('Benchmark Matrix', () => {
         break;
       }
     }
-    const lines = capture.stop();
     if (!terminal) {
       throw new Error(`No terminal state within ${MAX_WAIT_MS / 60_000} min`);
     }
@@ -90,8 +82,10 @@ describe('Benchmark Matrix', () => {
     const localFile = pullLatestReport(outDir, udid);
     const report = JSON.parse(fs.readFileSync(localFile, 'utf8'));
 
-    // The screen writes only the version/platform/timestamp/preseeded/runs
-    // fields; the spec fills the device/soc/commit/llama_rn/os fields.
+    // The screen writes the per-cell payload (incl. log_signals and
+    // effective_backend, derived in-process via addNativeLogListener); the
+    // spec fills the top-level device/soc/commit/llama_rn/os fields the
+    // screen has no clean way to know.
     const caps = (driver.capabilities || {}) as Record<string, any>;
     report.device = caps.deviceModel || process.env.E2E_DEVICE_NAME || 'unknown';
     report.soc = process.env.E2E_DEVICE_SOC || null;
@@ -99,12 +93,6 @@ describe('Benchmark Matrix', () => {
       caps.platformVersion || process.env.E2E_PLATFORM_VERSION || 'unknown';
     report.commit = getCommitHash();
     report.llama_rn_version = getLlamaRnVersion();
-
-    for (const row of report.runs) {
-      const slice = sliceLogcat(lines, row.timestamp, row.wall_ms ?? 0);
-      row.log_signals = deriveLogSignals(slice);
-      row.effective_backend = deriveEffectiveBackend(row.log_signals);
-    }
     fs.writeFileSync(localFile, JSON.stringify(report, null, 2));
 
     if (terminal !== 'complete') throw new Error(`Matrix ended: ${terminal}`);

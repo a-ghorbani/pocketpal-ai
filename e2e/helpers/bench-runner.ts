@@ -72,37 +72,6 @@ export function pullLatestReport(outDir: string, udid?: string): string {
   return localFile;
 }
 
-/**
- * Slice -v threadtime lines (MM-DD HH:MM:SS.mmm ...) by the cell window.
- * Lines without a parsable timestamp pass through (multi-line continuations).
- */
-export function sliceLogcat(
-  lines: string[],
-  iso: string,
-  wallMs: number,
-): string[] {
-  const start = new Date(iso).getTime();
-  const end = start + wallMs;
-  const yr = new Date(iso).getFullYear();
-  const re = /^(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\.(\d{3})/;
-  return lines.filter(l => {
-    const m = re.exec(l);
-    if (!m) {
-      return true;
-    }
-    const ts = Date.UTC(
-      yr,
-      +m[1] - 1,
-      +m[2],
-      +m[3],
-      +m[4],
-      +m[5],
-      +m[6],
-    );
-    return ts >= start - 5000 && ts <= end + 5000;
-  });
-}
-
 export function getCommitHash(): string {
   try {
     return execSync('git rev-parse --short HEAD', {

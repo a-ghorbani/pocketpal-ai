@@ -3,10 +3,9 @@
  *   - deriveLogSignals(lines): parses native log lines into a structured payload.
  *   - deriveEffectiveBackend(signals): maps the payload to a 4-state enum.
  *
- * Fixtures are modelled on real native-log / logcat excerpts from llama.rn's
- * `cpp/ggml-opencl/ggml-opencl.cpp` init/load paths. The same parser is used
- * on-device by BenchmarkRunnerScreen (via addNativeLogListener) and by the
- * legacy WDIO spec (via `e2e/helpers/logcat.ts`).
+ * Fixtures are modelled on real native-log excerpts from llama.rn's
+ * `cpp/ggml-opencl/ggml-opencl.cpp` init/load paths. BenchmarkRunnerScreen
+ * captures the same lines in-process via addNativeLogListener.
  */
 
 import {
