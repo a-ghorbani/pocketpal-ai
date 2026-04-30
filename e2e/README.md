@@ -56,6 +56,23 @@ BENCH_TIER=full BENCH_MODELS=qwen3.5-2b BENCH_QUANTS=q4_0,q6_k yarn build:bench-
 
 Heavy models (Phi-3.5, Phi-4-mini, Gemma-4-E2B) are last in the `full` tier; if the OS ANR-kills the app on a heavy CPU bench, partial-row data from earlier cells survives in the JSON report.
 
+### Baselines (`baselines/benchmark/<device>.json`)
+
+Committed reference data the [`benchmark-compare.ts`](scripts/benchmark-compare.ts) regression checker runs against. One file per device class. Refresh by re-running the `full` tier on that device, then merging the captured reports:
+
+```bash
+npx ts-node scripts/merge-bench-reports.ts \
+  --input '/path/to/benchmark-report-*.json' \
+  --out baselines/benchmark/<device-slug>.json \
+  --device 'POCO X9 Pro Myron' \
+  --soc 'Snapdragon 8 Elite Gen 5 / Adreno 840' \
+  --commit "$(git rev-parse --short HEAD)" \
+  --llama-rn-version "$(node -p 'require(\"../package.json\").dependencies[\"llama.rn\"]')" \
+  --drop-models lfm2-1.2b
+```
+
+The merger dedupes across multiple raw reports (latest run per `model_id × quant × backend` wins), drops stale model ids, sorts deterministically, and strips the debug-only `log_signals.raw_matches` so baseline diffs stay focused on perf deltas. Memory-profile baselines live in the sibling [`baselines/memory/`](baselines/memory/) directory.
+
 ## Local Testing
 
 ### Prerequisites
