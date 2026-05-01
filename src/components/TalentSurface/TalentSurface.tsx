@@ -1,8 +1,9 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import {Text, View} from 'react-native';
 
 import {talentUIRegistry} from '../../services/talents/TalentUIRegistry';
 import type {TalentResult} from '../../services/talents/types';
+import {L10nContext} from '../../utils';
 
 import {styles} from './styles';
 
@@ -21,6 +22,8 @@ interface TalentSurfaceProps {
  *    yet (early streaming), show talent-specific or generic pending skeleton.
  */
 export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
+  const l10n = useContext(L10nContext);
+
   if (!metadata) {
     return null;
   }
@@ -92,7 +95,7 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
     // Generic fallback
     return (
       <View testID="talent-call-pending" style={styles.pendingContainer}>
-        <Text style={styles.pendingText}>Generating preview…</Text>
+        <Text style={styles.pendingText}>{l10n.chat.generatingPreviewPending}</Text>
       </View>
     );
   }

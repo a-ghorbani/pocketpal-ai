@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useContext, useMemo, useState} from 'react';
 import {Modal, Pressable, ScrollView, Text, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {WebView} from 'react-native-webview';
@@ -7,6 +7,7 @@ import CodeHighlighter from 'react-native-code-highlighter';
 import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import {useTheme} from '../../hooks';
+import {L10nContext} from '../../utils';
 
 import {createStyles} from './styles';
 
@@ -96,6 +97,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
   title,
 }) => {
   const theme = useTheme();
+  const l10n = useContext(L10nContext);
   const [fullscreen, setFullscreen] = useState(false);
   const [showCode, setShowCode] = useState(false);
 
@@ -112,7 +114,8 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
   );
 
   const wrappedHtml = useMemo(() => wrapDocument(html), [html]);
-  const displayTitle = title && title.length > 0 ? title : 'Preview';
+  const displayTitle =
+    title && title.length > 0 ? title : l10n.htmlPreview.defaultTitle;
 
   return (
     <View testID="html-preview-bubble">
@@ -125,7 +128,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
             onPress={() => setShowCode(s => !s)}
             accessibilityRole="button"
             accessibilityLabel={
-              showCode ? 'Show rendered preview' : 'Show HTML code'
+              showCode ? l10n.htmlPreview.showPreview : l10n.htmlPreview.showCode
             }
             testID="html-preview-toggle-code"
             hitSlop={8}
@@ -139,7 +142,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
           <Pressable
             onPress={() => setFullscreen(true)}
             accessibilityRole="button"
-            accessibilityLabel={`Open fullscreen: ${displayTitle}`}
+            accessibilityLabel={l10n.htmlPreview.openFullscreen.replace('{{title}}', displayTitle)}
             testID="html-preview-bubble-collapsed"
             hitSlop={8}
             style={styles.headerButton}>
@@ -197,7 +200,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                 onPress={() => setShowCode(s => !s)}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  showCode ? 'Show rendered preview' : 'Show HTML code'
+                  showCode ? l10n.htmlPreview.showPreview : l10n.htmlPreview.showCode
                 }
                 testID="html-preview-modal-toggle-code"
                 hitSlop={8}
@@ -211,7 +214,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
               <Pressable
                 onPress={() => setFullscreen(false)}
                 accessibilityRole="button"
-                accessibilityLabel="Close preview"
+                accessibilityLabel={l10n.htmlPreview.closePreview}
                 testID="html-preview-modal-close"
                 hitSlop={8}
                 style={styles.modalHeaderButton}>
