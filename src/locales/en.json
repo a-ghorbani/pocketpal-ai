@@ -1069,7 +1069,15 @@
     "cannotSendWithoutModel": "Load a model first",
     "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
     "softCapWarning": "Start a new chat for best performance.",
-    "generatingPreview": "Generating preview… ({{tokens}} tokens)"
+    "generatingPreview": "Generating preview… ({{tokens}} tokens)",
+    "generatingPreviewPending": "Generating preview…"
+  },
+  "htmlPreview": {
+    "defaultTitle": "Preview",
+    "showPreview": "Show rendered preview",
+    "showCode": "Show HTML code",
+    "closePreview": "Close preview",
+    "openFullscreen": "Open fullscreen: {{title}}"
   },
   "benchmark": {
     "title": "Benchmark",
