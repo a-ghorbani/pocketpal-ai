@@ -16,6 +16,11 @@ import {chatSessionStore, modelStore, palStore} from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
+import {
+  talentRegistry,
+  registerDefaultTalents,
+  resetRegisteredFlag,
+} from '../../services/talents';
 
 const mockAssistant = {
   id: 'h3o3lc5xj',
@@ -405,5 +410,214 @@ describe('useChatSession', () => {
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+});
+
+describe('useChatSession — multi-turn talent dispatch', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    talentRegistry.reset();
+    resetRegisteredFlag();
+    registerDefaultTalents();
+
+    chatSessionStore.sessions = sessionFixtures as any;
+    chatSessionStore.activeSessionId = 'session-1';
+    (chatSessionStore as any).isGenerating = false;
+    modelStore.models = modelsList as any;
+    modelStore.activeModelId = undefined;
+    modelStore.context = new LlamaContext(mockLlamaContextParams);
+    modelStore.engine = {
+      completion: jest.fn((params, onData) => {
+        return modelStore.context!.completion(params, onData);
+      }),
+      stopCompletion: jest.fn(async () => {
+        await modelStore.context?.stopCompletion();
+      }),
+    };
+  });
+
+  afterAll(() => {
+    talentRegistry.reset();
+    resetRegisteredFlag();
+  });
+
+  const setupPalWithTalents = (talentNames: string[]) => {
+    const mockPal = {
+      id: 'talent-pal',
+      type: 'local' as const,
+      name: 'Talent Pal',
+      systemPrompt: 'You are helpful.',
+      pact: {
+        talents: talentNames.map(name => ({
+          name,
+          necessity: 'required' as const,
+        })),
+      },
+      parameters: {},
+      parameterSchema: [],
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      source: 'local' as const,
+    };
+    palStore.pals = [mockPal];
+    const mockSession = {
+      id: 'talent-session',
+      activePalId: 'talent-pal',
+      title: 'Talent Session',
+      date: new Date().toISOString().split('T')[0],
+      messages: [],
+      completionSettings: mockDefaultCompletionParams,
+      settingsSource: 'pal' as const,
+    };
+    chatSessionStore.sessions = [mockSession];
+    chatSessionStore.activeSessionId = 'talent-session';
+  };
+
+  it('triggers follow-up completion when calculate talent is called', async () => {
+    setupPalWithTalents(['calculate']);
+
+    let callCount = 0;
+    const mockCompletion = jest.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          text: '',
+          tool_calls: [
+            {
+              id: 'call_1',
+              type: 'function',
+              function: {name: 'calculate', arguments: '{"expression":"2+3"}'},
+            },
+          ],
+          timings: {total: 100},
+          usage: {},
+        });
+      }
+      return Promise.resolve({
+        text: 'The answer is 5.',
+        timings: {total: 50},
+        usage: {},
+      });
+    });
+    modelStore.engine = {
+      completion: mockCompletion,
+      stopCompletion: jest.fn(),
+    };
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    // engine.completion should have been called twice (initial + follow-up)
+    expect(mockCompletion).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT trigger follow-up for render_html (self-rendering)', async () => {
+    setupPalWithTalents(['render_html']);
+
+    const mockCompletion = jest.fn().mockResolvedValue({
+      text: '',
+      tool_calls: [
+        {
+          id: 'call_1',
+          type: 'function',
+          function: {
+            name: 'render_html',
+            arguments: '{"html":"<p>Hello</p>","title":"Test"}',
+          },
+        },
+      ],
+      timings: {total: 100},
+      usage: {},
+    });
+    modelStore.engine = {
+      completion: mockCompletion,
+      stopCompletion: jest.fn(),
+    };
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    // Only one completion call — no follow-up
+    expect(mockCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  it('respects max iterations guard (MAX_TOOL_TURNS = 5)', async () => {
+    setupPalWithTalents(['calculate']);
+
+    const mockCompletion = jest.fn().mockImplementation(() => {
+      return Promise.resolve({
+        text: '',
+        tool_calls: [
+          {
+            id: `call_${Date.now()}_${Math.random()}`,
+            type: 'function',
+            function: {name: 'calculate', arguments: '{"expression":"1+1"}'},
+          },
+        ],
+        timings: {total: 10},
+        usage: {},
+      });
+    });
+    modelStore.engine = {
+      completion: mockCompletion,
+      stopCompletion: jest.fn(),
+    };
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    // 1 initial + 5 follow-ups = 6 total
+    expect(mockCompletion).toHaveBeenCalledTimes(6);
+  });
+
+  it('does not start follow-up when user stopped generation', async () => {
+    setupPalWithTalents(['calculate']);
+
+    const mockCompletion = jest.fn().mockImplementation(() => {
+      // Simulate user pressing stop after tool execution
+      chatSessionStore.setIsGenerating(false);
+      return Promise.resolve({
+        text: '',
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{"expression":"2+3"}'},
+          },
+        ],
+        timings: {total: 100},
+        usage: {},
+      });
+    });
+    modelStore.engine = {
+      completion: mockCompletion,
+      stopCompletion: jest.fn(),
+    };
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    // Only 1 call — follow-up skipped because isGenerating was set to false
+    expect(mockCompletion).toHaveBeenCalledTimes(1);
   });
 });

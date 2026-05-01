@@ -153,7 +153,7 @@ const prepareCompletion = async ({
     sessionId: chatSessionStore.activeSessionId!,
   };
 
-  return {cleanCompletionParams, messageInfo};
+  return {cleanCompletionParams, sessionCompletionSettings, messageInfo};
 };
 
 export const useChatSession = (
@@ -252,17 +252,18 @@ export const useChatSession = (
     });
 
     // Prepare completion parameters and create message record
-    const {cleanCompletionParams, messageInfo} = await prepareCompletion({
-      imageUris: imageUris || [],
-      message,
-      systemMessages,
-      contextId,
-      assistant,
-      conversationIdRef: conversationIdRef.current,
-      isMultimodalEnabled,
-      l10n,
-      currentMessages,
-    });
+    const {cleanCompletionParams, sessionCompletionSettings, messageInfo} =
+      await prepareCompletion({
+        imageUris: imageUris || [],
+        message,
+        systemMessages,
+        contextId,
+        assistant,
+        conversationIdRef: conversationIdRef.current,
+        isMultimodalEnabled,
+        l10n,
+        currentMessages,
+      });
 
     currentMessageInfo.current = messageInfo;
 
@@ -271,69 +272,128 @@ export const useChatSession = (
       const completionStartTime = Date.now();
       let timeToFirstToken: number | null = null;
 
+      // Streaming callback shared by initial and follow-up completions.
+      // Streams content/reasoning into the current assistant message and
+      // flags pending talent names when tool_calls arrive.
+      const createStreamCallback =
+        (
+          msgInfo: React.MutableRefObject<{
+            id: string;
+            sessionId: string;
+          } | null>,
+        ) =>
+        (data: any) => {
+          if (!msgInfo.current) {
+            return;
+          }
+
+          // Capture time to first token on the first token received
+          if (timeToFirstToken === null && (data.token || data.content)) {
+            timeToFirstToken = Date.now() - completionStartTime;
+          }
+
+          if (!modelStore.isStreaming) {
+            modelStore.setIsStreaming(true);
+          }
+
+          const {content = '', reasoning_content: reasoningContent} = data;
+
+          if (data.tool_calls && data.tool_calls.length > 0) {
+            const names = data.tool_calls
+              .map((tc: any) => tc.function?.name)
+              .filter(Boolean);
+            chatSessionStore.updateMessageStreaming(
+              msgInfo.current.id,
+              msgInfo.current.sessionId,
+              {
+                metadata: {
+                  pendingTalentNames: names.length > 0 ? names : ['unknown'],
+                },
+              },
+            );
+          }
+
+          if (content || reasoningContent) {
+            const update: any = {
+              metadata: {
+                partialCompletionResult: {
+                  reasoning_content: reasoningContent,
+                  content: content.replace(/^\s+/, ''),
+                },
+              },
+            };
+            if (content) {
+              update.text = content.replace(/^\s+/, '');
+            }
+            chatSessionStore.updateMessageStreaming(
+              msgInfo.current.id,
+              msgInfo.current.sessionId,
+              update,
+            );
+          }
+        };
+
+      // Execute talent engines for a set of tool calls.
+      // Returns tool response messages and a result map keyed by call id.
+      const executeTalentCalls = async (
+        calls: Array<{id: string; function?: {name?: string; arguments?: any}}>,
+        allowedTalents: string[],
+      ) => {
+        const msgs: Array<{tool_call_id: string; content: string}> = [];
+        const results: Record<string, TalentResult> = {};
+
+        for (const tc of calls) {
+          const fnName = tc.function?.name;
+          const callId = tc.id;
+          if (!fnName || !allowedTalents.includes(fnName)) {
+            const summary = fnName
+              ? `Talent "${fnName}" is not enabled for this Pal`
+              : 'Unknown talent (no function name)';
+            msgs.push({tool_call_id: callId, content: summary});
+            results[callId] = {type: 'error', summary, errorMessage: summary};
+            continue;
+          }
+          const handler = talentRegistry.get(fnName);
+          if (!handler) {
+            const summary = `Talent "${fnName}" is not available on this device`;
+            msgs.push({tool_call_id: callId, content: summary});
+            results[callId] = {type: 'error', summary, errorMessage: summary};
+            continue;
+          }
+
+          let parsedArgs: Record<string, any>;
+          try {
+            parsedArgs =
+              typeof tc.function?.arguments === 'string'
+                ? JSON.parse(tc.function.arguments)
+                : (tc.function?.arguments ?? {});
+          } catch {
+            const summary = `Error: invalid JSON arguments for ${fnName}`;
+            msgs.push({tool_call_id: callId, content: summary});
+            results[callId] = {type: 'error', summary, errorMessage: summary};
+            continue;
+          }
+
+          try {
+            const toolResult = await handler.execute(parsedArgs);
+            msgs.push({tool_call_id: callId, content: toolResult.summary});
+            results[callId] = toolResult;
+          } catch (e) {
+            const errMsg = e instanceof Error ? e.message : String(e);
+            const summary = `Error executing ${fnName}: ${errMsg}`;
+            msgs.push({tool_call_id: callId, content: summary});
+            results[callId] = {type: 'error', summary, errorMessage: errMsg};
+          }
+        }
+
+        return {toolMessages: msgs, talentResultsMap: results};
+      };
+
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
       const completionPromise = engine.completion(
         cleanCompletionParams,
-        data => {
-          if (currentMessageInfo.current) {
-            // Capture time to first token on the first token received
-            if (timeToFirstToken === null && (data.token || data.content)) {
-              timeToFirstToken = Date.now() - completionStartTime;
-            }
-
-            if (!modelStore.isStreaming) {
-              modelStore.setIsStreaming(true);
-            }
-
-            // Use content and reasoning_content from the streaming data
-            // llama.rn already separates these for us when enable_thinking is true
-            const {content = '', reasoning_content: reasoningContent} = data;
-
-            // If the streaming chunk carries tool_calls, we know the model is
-            // assembling a tool call — flag the message with pending talent
-            // names so TalentSurface can show per-talent pending skeletons.
-            if (data.tool_calls && data.tool_calls.length > 0) {
-              const names = data.tool_calls
-                .map((tc: any) => tc.function?.name)
-                .filter(Boolean);
-              chatSessionStore.updateMessageStreaming(
-                currentMessageInfo.current.id,
-                currentMessageInfo.current.sessionId,
-                {
-                  metadata: {
-                    pendingTalentNames: names.length > 0 ? names : ['unknown'],
-                  },
-                },
-              );
-            }
-
-            // Update message with the separated content
-            if (content || reasoningContent) {
-              // Build the update object
-              const update: any = {
-                metadata: {
-                  partialCompletionResult: {
-                    reasoning_content: reasoningContent,
-                    content: content.replace(/^\s+/, ''),
-                  },
-                },
-              };
-
-              // Only update text if we have actual content
-              if (content) {
-                update.text = content.replace(/^\s+/, '');
-              }
-
-              // Use the store's streaming update method which properly triggers reactivity
-              chatSessionStore.updateMessageStreaming(
-                currentMessageInfo.current.id,
-                currentMessageInfo.current.sessionId,
-                update,
-              );
-            }
-          }
-        },
+        createStreamCallback(currentMessageInfo),
       );
 
       // Only register completion promise for local models -- protects native context from being freed mid-completion
@@ -343,7 +403,7 @@ export const useChatSession = (
       }
 
       // Await the completion
-      const result = await completionPromise;
+      let result = await completionPromise;
 
       // Clear the promise after completion finishes
       modelStore.clearCompletionPromise();
@@ -367,76 +427,112 @@ export const useChatSession = (
       // llama.rn sometimes returns tool_calls with id: null. Strict Jinja
       // templates reject `tool_call_id: null` in the next-turn tool response,
       // so we backfill a stable synthetic id before storing or echoing it.
-      const rawToolCalls = result.tool_calls ?? [];
-      const toolCallIdSeed = Date.now();
-      const toolCalls = rawToolCalls.map((tc, i) => ({
-        ...tc,
-        id: tc.id || `call_${toolCallIdSeed}_${i}`,
-      }));
-      const toolMessages: Array<{tool_call_id: string; content: string}> = [];
-      const talentResultsMap: Record<string, TalentResult> = {};
+      const normalizeToolCallIds = (
+        rawCalls: any[],
+      ): Array<{id: string; function?: {name?: string; arguments?: any}}> => {
+        const seed = Date.now();
+        return rawCalls.map((tc, i) => ({
+          ...tc,
+          id: tc.id || `call_${seed}_${i}`,
+        }));
+      };
 
-      for (const tc of toolCalls) {
-        const fnName = tc.function?.name;
-        const callId = tc.id;
-        if (!fnName || !palTalents.includes(fnName)) {
-          const summary = fnName
-            ? `Talent "${fnName}" is not enabled for this Pal`
-            : 'Unknown talent (no function name)';
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: summary,
-          };
-          continue;
-        }
-        const handler = talentRegistry.get(fnName);
-        if (!handler) {
-          const summary = `Talent "${fnName}" is not available on this device`;
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: summary,
-          };
-          continue;
+      let currentToolCalls = normalizeToolCallIds(result.tool_calls ?? []);
+      let {
+        toolMessages: currentToolMessages,
+        talentResultsMap: currentTalentResults,
+      } = await executeTalentCalls(currentToolCalls, palTalents);
+
+      // --- Follow-up completion loop for text-result talents ---
+      // Some talents (calculate, datetime) need the model to see the tool
+      // result and produce a natural-language answer. Visual talents
+      // (render_html) are self-rendering and skip this.
+      const MAX_TOOL_TURNS = 5;
+      let turnCount = 0;
+
+      while (turnCount < MAX_TOOL_TURNS) {
+        const needsFollowUp = currentToolCalls.some(tc => {
+          const eng = talentRegistry.get(tc.function?.name ?? '');
+          return eng?.requiresModelResponse === true;
+        });
+
+        if (!needsFollowUp || currentToolMessages.length === 0) {
+          break;
         }
 
-        let parsedArgs: Record<string, any>;
-        try {
-          parsedArgs =
-            typeof tc.function?.arguments === 'string'
-              ? JSON.parse(tc.function.arguments)
-              : (tc.function?.arguments ?? {});
-        } catch {
-          const summary = `Error: invalid JSON arguments for ${fnName}`;
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: summary,
-          };
-          continue;
+        // Bail if user pressed stop between tool execution and follow-up
+        if (!chatSessionStore.isGenerating) {
+          break;
         }
 
-        try {
-          const toolResult = await handler.execute(parsedArgs);
-          toolMessages.push({
-            tool_call_id: callId,
-            content: toolResult.summary,
-          });
-          talentResultsMap[callId] = toolResult;
-        } catch (e) {
-          const errMsg = e instanceof Error ? e.message : String(e);
-          const summary = `Error executing ${fnName}: ${errMsg}`;
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: errMsg,
-          };
+        turnCount++;
+
+        // Persist tool-call metadata so convertToChatMessages can
+        // reconstruct [assistant-with-tool_calls, tool_response] history
+        await chatSessionStore.updateMessage(
+          currentMessageInfo.current.id,
+          currentMessageInfo.current.sessionId,
+          {
+            metadata: {
+              talentCalls: currentToolCalls,
+              toolMessages: currentToolMessages,
+              talentResults: currentTalentResults,
+            },
+          },
+        );
+
+        // Rebuild messages from the full conversation (now includes tool-call turn)
+        const updatedMessages = toJS(chatSessionStore.currentSessionMessages);
+        let followUpChatMessages = convertToChatMessages(
+          updatedMessages.filter(msg => msg.type !== 'image'),
+          isMultimodalEnabled,
+        );
+
+        const includeThinking =
+          (sessionCompletionSettings as CompletionParams)
+            ?.include_thinking_in_context !== false;
+        if (!includeThinking) {
+          followUpChatMessages = followUpChatMessages.map(msg =>
+            msg.role === 'assistant' && typeof msg.content === 'string'
+              ? {...msg, content: removeThinkingParts(msg.content)}
+              : msg,
+          );
         }
+
+        const followUpParams = {
+          ...cleanCompletionParams,
+          messages: [...systemMessages, ...followUpChatMessages],
+        };
+
+        // Register follow-up so the stop button works
+        // Follow-up text intentionally overwrites first-turn text. Tool-calling
+        // models rarely emit meaningful content alongside tool_calls, and the
+        // follow-up response IS the user-facing answer.
+        const followUpPromise = engine.completion(
+          followUpParams,
+          createStreamCallback(currentMessageInfo),
+        );
+        if (modelStore.context) {
+          modelStore.registerCompletionPromise(followUpPromise);
+        }
+
+        const followUpResult = await followUpPromise;
+        modelStore.clearCompletionPromise();
+
+        const followUpRawCalls = followUpResult.tool_calls ?? [];
+        if (followUpRawCalls.length === 0) {
+          // No more tool calls — use follow-up as the final result
+          result = followUpResult;
+          break;
+        }
+
+        // Model chained more tool calls — execute and loop
+        result = followUpResult;
+        currentToolCalls = normalizeToolCallIds(followUpRawCalls);
+        ({
+          toolMessages: currentToolMessages,
+          talentResultsMap: currentTalentResults,
+        } = await executeTalentCalls(currentToolCalls, palTalents));
       }
 
       // Update final completion metadata
@@ -457,10 +553,14 @@ export const useChatSession = (
               reasoning_content: result.reasoning_content,
               content: result.text,
             },
-            ...(toolCalls.length > 0 ? {talentCalls: toolCalls} : {}),
-            ...(toolMessages.length > 0 ? {toolMessages} : {}),
-            ...(Object.keys(talentResultsMap).length > 0
-              ? {talentResults: talentResultsMap}
+            ...(currentToolCalls.length > 0
+              ? {talentCalls: currentToolCalls}
+              : {}),
+            ...(currentToolMessages.length > 0
+              ? {toolMessages: currentToolMessages}
+              : {}),
+            ...(Object.keys(currentTalentResults).length > 0
+              ? {talentResults: currentTalentResults}
               : {}),
           },
         },

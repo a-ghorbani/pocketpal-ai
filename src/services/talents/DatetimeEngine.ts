@@ -9,6 +9,7 @@ dayjs.extend(timezone);
 
 export class DatetimeEngine implements TalentEngine {
   readonly name = 'datetime';
+  readonly requiresModelResponse = true;
 
   async execute(args: Record<string, any>): Promise<TalentResult> {
     const action = typeof args.action === 'string' ? args.action : 'now';

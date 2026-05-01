@@ -25,6 +25,9 @@ export interface ToolDefinition {
 
 export interface TalentEngine {
   readonly name: string;
+  /** If true, tool result is sent back to model for follow-up completion.
+      If false/undefined, result is rendered directly (e.g. HTML preview). */
+  readonly requiresModelResponse?: boolean;
   execute(args: Record<string, any>): Promise<TalentResult>;
   toToolDefinition(): ToolDefinition;
 }

@@ -4,6 +4,7 @@ import {TalentEngine, TalentResult, ToolDefinition} from './types';
 
 export class CalculateEngine implements TalentEngine {
   readonly name = 'calculate';
+  readonly requiresModelResponse = true;
   private parser = new Parser();
 
   async execute(args: Record<string, any>): Promise<TalentResult> {

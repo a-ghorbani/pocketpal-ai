@@ -7,6 +7,10 @@ describe('RenderHtmlEngine', () => {
     expect(engine.name).toBe('render_html');
   });
 
+  it('does not require model response (self-rendering)', () => {
+    expect((engine as any).requiresModelResponse).toBeFalsy();
+  });
+
   it('returns an html TalentResult when given html and title', async () => {
     const result = await engine.execute({
       html: '<p>hi</p>',

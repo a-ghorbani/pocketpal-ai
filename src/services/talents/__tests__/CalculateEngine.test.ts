@@ -7,6 +7,10 @@ describe('CalculateEngine', () => {
     expect(engine.name).toBe('calculate');
   });
 
+  it('has requiresModelResponse = true', () => {
+    expect(engine.requiresModelResponse).toBe(true);
+  });
+
   it('evaluates basic arithmetic', async () => {
     const result = await engine.execute({expression: '2 + 3'});
     expect(result.type).toBe('text');

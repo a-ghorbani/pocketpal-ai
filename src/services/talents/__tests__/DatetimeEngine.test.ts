@@ -7,6 +7,10 @@ describe('DatetimeEngine', () => {
     expect(engine.name).toBe('datetime');
   });
 
+  it('has requiresModelResponse = true', () => {
+    expect(engine.requiresModelResponse).toBe(true);
+  });
+
   describe('action=now', () => {
     it('returns an ISO string for default action', async () => {
       const result = await engine.execute({action: 'now'});
