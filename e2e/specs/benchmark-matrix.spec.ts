@@ -97,6 +97,24 @@ describe('Benchmark Matrix', () => {
 
     if (terminal !== 'complete') throw new Error(`Matrix ended: ${terminal}`);
     if (!report.runs.length) throw new Error('Matrix produced zero rows');
+    // Per-row pass gate (round-1 B2). The screen catches per-cell failures,
+    // appends a status:'failed' row, then sets terminal='complete', so a
+    // matrix where every cell threw still reports `complete` with a full
+    // run list. This guard fails the spec when any cell did not complete
+    // cleanly, surfacing the failed-cell key + truncated error.
+    const failed = report.runs.filter((r: any) => r.status !== 'ok');
+    if (failed.length > 0) {
+      const summary = failed
+        .map(
+          (r: any) =>
+            `${r.model_id}::${r.quant}::${r.requested_backend}: ` +
+            String(r.error ?? r.reason ?? 'unknown').slice(0, 120),
+        )
+        .join('; ');
+      throw new Error(
+        `Matrix completed but ${failed.length}/${report.runs.length} cells failed: ${summary}`,
+      );
+    }
     console.log(`Matrix complete: ${report.runs.length} rows in ${localFile}`);
   });
 });
