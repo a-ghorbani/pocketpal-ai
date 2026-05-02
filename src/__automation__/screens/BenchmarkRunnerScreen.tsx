@@ -76,6 +76,7 @@ interface BenchmarkReport {
   platform: 'android';
   timestamp: string;
   preseeded: boolean;
+  bench: {pp: number; tg: number; pl: number; nr: number};
   runs: BenchmarkRunRow[];
 }
 
@@ -169,6 +170,7 @@ export async function runMatrix(
     platform: 'android',
     timestamp: startTimestamp,
     preseeded: true, // pessimistic — flips false on first downloading: transition
+    bench,
     runs: [],
   };
 
@@ -192,10 +194,14 @@ export async function runMatrix(
     };
 
     // Per-cell log buffer + listener handle. Declared outside the try so the
-    // catch path can still surface partial signals (and detach the listener)
-    // when a cell throws mid-init.
+    // catch path can still surface partial signals (and the finally can
+    // detach the listener) when a cell throws mid-init.
     const logBuffer: string[] = [];
     let logSub: {remove: () => void} | null = null;
+    // Tracks whether modelStore.initContext resolved for this cell. The
+    // finally block uses this to call releaseContext exactly once per
+    // initialized cell, regardless of whether bench() then threw.
+    let contextInitialized = false;
 
     try {
       // 1. GPU pre-check: cell fails fast if backend=gpu but no GPU option.
@@ -301,6 +307,7 @@ export async function runMatrix(
 
       // 4. Init context (mutex-serialized inside ModelStore).
       await modelStore.initContext(resolvedModel);
+      contextInitialized = true;
 
       // 5. Snapshot init settings AFTER initContext (they may have been
       // touched by initContext's quant-aware tweaks).
@@ -337,17 +344,20 @@ export async function runMatrix(
         clearInterval(memInterval);
       }
 
-      // 7. Release context for the next cell.
-      try {
-        await (modelStore as any).releaseContext?.();
-      } catch {
-        // releaseContext throwing should not abort the matrix; the next
-        // cell's initContext will tear down the stale context anyway.
+      // Invariant: status:'ok' rows must always carry non-null pp_avg and
+      // tg_avg. If ctx.bench() resolves with either metric undefined (e.g.
+      // partial native failure), force the catch path so the row is recorded
+      // as 'failed' with an explanatory error string. Without this, the
+      // success-row builder below would write status:'ok' pp_avg:null which
+      // makes regressions invisible to the compare script.
+      if (speedPp == null || speedTg == null) {
+        throw new Error(
+          `bench returned null metric(s): speedPp=${speedPp}, speedTg=${speedTg}`,
+        );
       }
 
-      // Stop capture and derive backend evidence from the cell's load output.
-      logSub?.remove();
-      logSub = null;
+      // Derive backend evidence from the cell's load output. The log
+      // listener is detached in the finally block (sole detach site).
       const logSignals = deriveLogSignals(logBuffer);
       const effectiveBackend = deriveEffectiveBackend(logSignals);
 
@@ -356,8 +366,8 @@ export async function runMatrix(
       const row: BenchmarkRunRow = {
         ...rowBase,
         effective_backend: effectiveBackend,
-        pp_avg: speedPp ?? null,
-        tg_avg: speedTg ?? null,
+        pp_avg: speedPp,
+        tg_avg: speedTg,
         wall_ms: wall,
         peak_memory_mb:
           typeof peakBytes === 'number'
@@ -375,10 +385,9 @@ export async function runMatrix(
         cells: report.runs.length,
       });
     } catch (e) {
-      // Detach listener if the cell threw between attach and release.
-      logSub?.remove();
       // Salvage whatever load lines we captured before the throw — useful
-      // for debugging "why did this cell fail" without re-running.
+      // for debugging "why did this cell fail" without re-running. The log
+      // listener is detached in the finally block (sole detach site).
       const partialSignals = deriveLogSignals(logBuffer);
       const msg = (e as Error).message ?? 'unknown';
       const short = msg.slice(0, TRUNCATE_ERROR);
@@ -403,6 +412,22 @@ export async function runMatrix(
       }
       setStatus(`error:${short}`);
       // continue to the next cell — per-cell error containment.
+    } finally {
+      // Sole release site: cells that finished initContext (success path or
+      // any throw afterwards) release exactly once. Cells that threw before
+      // initContext resolved (e.g. download-timeout, GPU pre-check) skip
+      // release because there is no context to release.
+      if (contextInitialized) {
+        try {
+          await (modelStore as any).releaseContext?.();
+        } catch {
+          // releaseContext throwing should not abort the matrix; the next
+          // cell's initContext will tear down the stale context anyway.
+        }
+      }
+      // Sole listener-detach site. Idempotent: no-op when null.
+      logSub?.remove();
+      logSub = null;
     }
   }
 

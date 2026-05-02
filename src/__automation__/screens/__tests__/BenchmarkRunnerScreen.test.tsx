@@ -358,5 +358,107 @@ describe('BenchmarkRunnerScreen', () => {
         'complete',
       );
     });
+
+    // -------------------------------------------------------------------------
+    // C3: per-cell context release in `finally`.
+    // -------------------------------------------------------------------------
+
+    it('releases context when bench rejects after a successful initContext', async () => {
+      // initContext resolves (so contextInitialized becomes true), then
+      // ctx.bench rejects — the `finally` must call releaseContext exactly
+      // once and the row must land as failed.
+      (modelStore as any).context = {
+        bench: jest.fn().mockRejectedValue(new Error('bench exploded')),
+      };
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect((modelStore as any).releaseContext).toHaveBeenCalledTimes(1);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(1);
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        error: expect.stringContaining('bench exploded'),
+      });
+    });
+
+    it('does NOT call releaseContext when initContext itself rejects', async () => {
+      // No init, no release. The pre-init throw skips release because there
+      // is no context to release.
+      (modelStore.initContext as jest.Mock).mockRejectedValueOnce(
+        new Error('init exploded'),
+      );
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect((modelStore as any).releaseContext).not.toHaveBeenCalled();
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        error: expect.stringContaining('init exploded'),
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // C1(a) screen-side invariant: status:'ok' rows always have non-null
+    // pp_avg AND tg_avg. If ctx.bench resolves with either metric undefined,
+    // the row must end up as status:'failed' (catch path).
+    // -------------------------------------------------------------------------
+
+    it('forces status:failed when bench() resolves with speedPp undefined', async () => {
+      (modelStore as any).context = {
+        bench: jest.fn().mockResolvedValue({speedPp: undefined, speedTg: 4.5}),
+      };
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(1);
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        pp_avg: null,
+        tg_avg: null,
+        error: expect.stringContaining('bench returned null metric'),
+      });
+      // Release still happens because initContext succeeded.
+      expect((modelStore as any).releaseContext).toHaveBeenCalledTimes(1);
+    });
+
+    it('forces status:failed when bench() resolves with speedTg undefined', async () => {
+      (modelStore as any).context = {
+        bench: jest.fn().mockResolvedValue({speedPp: 12.5, speedTg: undefined}),
+      };
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        pp_avg: null,
+        tg_avg: null,
+        error: expect.stringContaining('bench returned null metric'),
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // C2 persist: report JSON must include the resolved bench block at the
+    // top level, copied from config.bench (NOT the DEFAULT_BENCH fallback).
+    // -------------------------------------------------------------------------
+
+    it('persists config.bench at the top level of the report (not DEFAULT_BENCH)', async () => {
+      // Use a non-default bench block so a missing copy would surface as
+      // DEFAULT_BENCH and fail the assertion.
+      const customConfig: BenchConfig = {
+        ...VALID_CONFIG,
+        bench: {pp: 777, tg: 88, pl: 2, nr: 5},
+      };
+      await runMatrix(customConfig, setStatus, setLastCell);
+      // The shell write at runMatrix start is the first write call; bench is
+      // there too. Assert on the most recent write to be robust to either.
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.bench).toEqual({pp: 777, tg: 88, pl: 2, nr: 5});
+    });
   });
 });
