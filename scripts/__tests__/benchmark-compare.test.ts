@@ -55,6 +55,25 @@ function makeReport(
   };
 }
 
+// Suppress the WARN line `compareReports` emits when one or both sides omit
+// `bench` — every test in this file uses the legacy fixture (no bench field)
+// except the protocol-mismatch suite below, which sets it explicitly.
+const originalConsoleError = console.error;
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('protocol comparison disabled')
+    ) {
+      return;
+    }
+    originalConsoleError(...args);
+  });
+});
+afterAll(() => {
+  (console.error as jest.Mock).mockRestore?.();
+});
+
 describe('compareReports (benchmark-compare)', () => {
   // ---------------------------------------------------------------------------
   // Happy path
@@ -169,8 +188,10 @@ describe('compareReports (benchmark-compare)', () => {
     );
   });
 
-  it('treats null pp/tg values as un-comparable (no delta, no flag)', () => {
-    // A failed/skipped run typically has pp_avg=null, tg_avg=null.
+  it('flags status regression when current row is failed (null metrics, ok->failed)', () => {
+    // A failed run typically has pp_avg=null, tg_avg=null. The numeric
+    // deltas remain null (un-comparable), but the status flip from `ok` to
+    // `failed` MUST be flagged so a regression is not silenced.
     const baseline = makeReport([makeRun({pp_avg: 300, tg_avg: 24})]);
     const current = makeReport([
       makeRun({pp_avg: null, tg_avg: null, status: 'failed'}),
@@ -180,13 +201,16 @@ describe('compareReports (benchmark-compare)', () => {
 
     expect(result.rows[0].delta_pp_pct).toBeNull();
     expect(result.rows[0].delta_tg_pct).toBeNull();
-    // No numeric-regression flag because both deltas are null. Effective
-    // backend ('opencl' == 'opencl') also matches. So no flag.
+    // No numeric-regression flag because both deltas are null...
     expect(
       result.rows[0].flags.filter(
         f => f.startsWith('pp_regression') || f.startsWith('tg_regression'),
       ),
     ).toHaveLength(0);
+    // ...but the status flip is the regression signal.
+    expect(result.rows[0].flagged).toBe(true);
+    expect(result.rows[0].flags).toContain('status_regression(failed)');
+    expect(result.pass).toBe(false);
   });
 
   it('treats zero baseline as un-comparable (avoids division by zero)', () => {
@@ -258,7 +282,10 @@ describe('compareReports (benchmark-compare)', () => {
   // Row-level set semantics
   // ---------------------------------------------------------------------------
 
-  it('surfaces rows missing in current under missing_in_current', () => {
+  it('surfaces rows missing in current under missing_in_current AND fails the comparison (B3)', () => {
+    // A truncated current report (missing rows the baseline has) is a
+    // regression-class failure: the comparison cannot prove no regression
+    // for rows the current run did not exercise. `pass` must be false.
     const baseline = makeReport([
       makeRun({quant: 'q4_0'}),
       makeRun({quant: 'q5_k_m', pp_avg: 280, tg_avg: 22}),
@@ -270,6 +297,19 @@ describe('compareReports (benchmark-compare)', () => {
     expect(result.missing_in_current).toEqual(['qwen3-1.7b::q5_k_m::gpu']);
     expect(result.missing_in_baseline).toEqual([]);
     expect(result.rows).toHaveLength(1);
+    expect(result.pass).toBe(false);
+  });
+
+  it('surfaces rows missing in current AND passes when intersecting rows are clean and no rows are missing (control)', () => {
+    // Sanity: make sure the missing-row gate does not over-fire when the
+    // report is fully covered. Both sides have q4_0 only.
+    const baseline = makeReport([makeRun({quant: 'q4_0'})]);
+    const current = makeReport([makeRun({quant: 'q4_0'})]);
+
+    const result = compareReports(baseline, current);
+
+    expect(result.missing_in_current).toEqual([]);
+    expect(result.pass).toBe(true);
   });
 
   it('surfaces new rows under missing_in_baseline', () => {
@@ -325,5 +365,118 @@ describe('compareReports (benchmark-compare)', () => {
     const current = makeReport([makeRun({pp_avg: 289.88, tg_avg: 24})]);
     const result = compareReports(baseline, current);
     expect(result.rows[0].delta_pp_pct).toBe(-3.37);
+  });
+
+  // ---------------------------------------------------------------------------
+  // C1 defense-in-depth: null-metric regression flags. The screen-side
+  // invariant (status:'ok' rows always carry non-null pp/tg) is the primary
+  // guard; these flags fire only if that invariant ever regresses.
+  // ---------------------------------------------------------------------------
+
+  it('flags pp_null_regression when both rows claim ok but current pp_avg is null', () => {
+    const baseline = makeReport([
+      makeRun({status: 'ok', pp_avg: 200, tg_avg: 20}),
+    ]);
+    const current = makeReport([
+      makeRun({status: 'ok', pp_avg: null, tg_avg: 20}),
+    ]);
+
+    const result = compareReports(baseline, current);
+
+    expect(result.rows[0].flagged).toBe(true);
+    expect(result.rows[0].flags).toContain('pp_null_regression');
+    expect(result.rows[0].flags).not.toContain('tg_null_regression');
+    expect(result.pass).toBe(false);
+  });
+
+  it('flags tg_null_regression when both rows claim ok but current tg_avg is null', () => {
+    const baseline = makeReport([
+      makeRun({status: 'ok', pp_avg: 200, tg_avg: 20}),
+    ]);
+    const current = makeReport([
+      makeRun({status: 'ok', pp_avg: 200, tg_avg: null}),
+    ]);
+
+    const result = compareReports(baseline, current);
+
+    expect(result.rows[0].flagged).toBe(true);
+    expect(result.rows[0].flags).toContain('tg_null_regression');
+    expect(result.rows[0].flags).not.toContain('pp_null_regression');
+    expect(result.pass).toBe(false);
+  });
+
+  // ---------------------------------------------------------------------------
+  // C2: bench protocol mismatch (pp/tg/pl/nr drift between baseline and
+  // current). When detected, `pass` is false and the CLI exits 2.
+  // ---------------------------------------------------------------------------
+
+  it('passes when both reports have matching bench params', () => {
+    const bench = {pp: 512, tg: 128, pl: 1, nr: 3};
+    const baseline = makeReport([makeRun()], {bench});
+    const current = makeReport([makeRun()], {bench});
+
+    const result = compareReports(baseline, current);
+
+    expect(result.pass).toBe(true);
+    expect(result.bench_protocol_mismatch).toBeUndefined();
+  });
+
+  it('flags bench_protocol_mismatch when nr differs (1 vs 3)', () => {
+    const baseline = makeReport([makeRun()], {
+      bench: {pp: 512, tg: 128, pl: 1, nr: 1},
+    });
+    const current = makeReport([makeRun()], {
+      bench: {pp: 512, tg: 128, pl: 1, nr: 3},
+    });
+
+    const result = compareReports(baseline, current);
+
+    expect(result.pass).toBe(false);
+    expect(result.bench_protocol_mismatch).toEqual({
+      baseline: {pp: 512, tg: 128, pl: 1, nr: 1},
+      current: {pp: 512, tg: 128, pl: 1, nr: 3},
+    });
+  });
+
+  it('flags bench_protocol_mismatch when pp differs', () => {
+    const baseline = makeReport([makeRun()], {
+      bench: {pp: 256, tg: 128, pl: 1, nr: 3},
+    });
+    const current = makeReport([makeRun()], {
+      bench: {pp: 512, tg: 128, pl: 1, nr: 3},
+    });
+
+    const result = compareReports(baseline, current);
+
+    expect(result.pass).toBe(false);
+    expect(result.bench_protocol_mismatch?.baseline.pp).toBe(256);
+    expect(result.bench_protocol_mismatch?.current.pp).toBe(512);
+  });
+
+  it('gracefully degrades (no mismatch, pass=true) when baseline.bench is undefined', () => {
+    // The committed POCO baseline pre-dates the unification; it has no
+    // `bench` field. The compare script must keep loading it (with a
+    // stderr warning) rather than failing closed.
+    const baseline = makeReport([makeRun()]); // no bench
+    const current = makeReport([makeRun()], {
+      bench: {pp: 512, tg: 128, pl: 1, nr: 3},
+    });
+
+    const result = compareReports(baseline, current);
+
+    expect(result.bench_protocol_mismatch).toBeUndefined();
+    expect(result.pass).toBe(true);
+  });
+
+  it('gracefully degrades when current.bench is undefined', () => {
+    const baseline = makeReport([makeRun()], {
+      bench: {pp: 512, tg: 128, pl: 1, nr: 3},
+    });
+    const current = makeReport([makeRun()]); // no bench
+
+    const result = compareReports(baseline, current);
+
+    expect(result.bench_protocol_mismatch).toBeUndefined();
+    expect(result.pass).toBe(true);
   });
 });

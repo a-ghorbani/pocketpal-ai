@@ -18,8 +18,8 @@
  *
  * Exit codes:
  *   0 = pass (no regressions)
- *   1 = regression detected
- *   2 = error (bad input, missing files, etc.)
+ *   1 = regression detected (numeric, status, or missing rows)
+ *   2 = error (bad input, missing files, bench protocol mismatch)
  */
 
 import * as fs from 'fs';
@@ -40,6 +40,13 @@ export interface BenchmarkRunReport {
   error?: string;
 }
 
+export interface BenchParams {
+  pp: number;
+  tg: number;
+  pl: number;
+  nr: number;
+}
+
 export interface BenchmarkMatrixReport {
   version: string;
   device: string;
@@ -50,6 +57,11 @@ export interface BenchmarkMatrixReport {
   os_version: string;
   timestamp: string;
   preseeded?: boolean;
+  // Optional so legacy reports (POCO baseline pre-unification) still load.
+  // The compare script's protocol-mismatch check requires both sides to
+  // carry this field; if either is missing the check is skipped with a
+  // stderr warning.
+  bench?: BenchParams;
   runs: BenchmarkRunReport[];
 }
 
@@ -80,6 +92,11 @@ export interface ComparisonResult {
   rows: RowDelta[];
   missing_in_current: string[]; // keys present in baseline but not current
   missing_in_baseline: string[]; // keys present in current but not baseline
+  // Set only when both reports carry a `bench` block AND any of pp/tg/pl/nr
+  // differs. Absent when both match, when either side omits `bench`, or when
+  // no comparison was attempted. CLI exits 2 (input/protocol error) on this,
+  // distinct from regression exit 1.
+  bench_protocol_mismatch?: {baseline: BenchParams; current: BenchParams};
 }
 
 export interface CompareOptions {
@@ -105,6 +122,31 @@ export function compareReports(
 ): ComparisonResult {
   const pct = options?.pct ?? DEFAULT_PCT;
 
+  // Bench-protocol mismatch detection. Both sides must carry the `bench`
+  // field for the check to fire. Missing field on either side disables the
+  // check (with a stderr warning) so legacy reports (e.g. the POCO baseline
+  // captured at nr:1 before the CLI/spec unified on nr:3) keep loading.
+  const baseB = baseline.bench;
+  const curB = current.bench;
+  let benchMismatch:
+    | {baseline: BenchParams; current: BenchParams}
+    | undefined;
+  if (baseB && curB) {
+    if (
+      baseB.pp !== curB.pp ||
+      baseB.tg !== curB.tg ||
+      baseB.pl !== curB.pl ||
+      baseB.nr !== curB.nr
+    ) {
+      benchMismatch = {baseline: baseB, current: curB};
+    }
+  } else {
+    // eslint-disable-next-line no-console
+    console.error(
+      'WARN: one or both reports omit `bench` params; protocol comparison disabled.',
+    );
+  }
+
   const baseMap = new Map(baseline.runs.map(r => [rowKey(r), r]));
   const curMap = new Map(current.runs.map(r => [rowKey(r), r]));
 
@@ -129,6 +171,33 @@ export function compareReports(
     }
     if (deltaTg !== null && deltaTg < -pct) {
       flags.push(`tg_regression(${deltaTg.toFixed(1)}%)`);
+    }
+    // Status-regression: an `ok` baseline row turning into anything else is
+    // a regression even when numeric deltas are null (which is exactly what
+    // a `failed` row writes for pp_avg / tg_avg). Without this, a row
+    // flipping `ok pp_avg:200` -> `failed pp_avg:null` produces no flag.
+    if (baseRow.status === 'ok' && curRow.status !== 'ok') {
+      flags.push(`status_regression(${curRow.status})`);
+    }
+    // Defense-in-depth for the screen-side invariant (status:'ok' rows
+    // always carry non-null pp_avg/tg_avg). If the screen contract ever
+    // regresses again — both sides claim `ok` but current pp/tg is null —
+    // surface it as a regression rather than a silent un-comparable null.
+    if (
+      baseRow.status === 'ok' &&
+      curRow.status === 'ok' &&
+      baseRow.pp_avg !== null &&
+      curRow.pp_avg === null
+    ) {
+      flags.push('pp_null_regression');
+    }
+    if (
+      baseRow.status === 'ok' &&
+      curRow.status === 'ok' &&
+      baseRow.tg_avg !== null &&
+      curRow.tg_avg === null
+    ) {
+      flags.push('tg_null_regression');
     }
     // Effective-backend mismatch is its own flag, independent of deltas.
     if (baseRow.effective_backend !== curRow.effective_backend) {
@@ -162,7 +231,10 @@ export function compareReports(
   }
 
   return {
-    pass: rows.every(r => !r.flagged),
+    pass:
+      !benchMismatch &&
+      rows.every(r => !r.flagged) &&
+      missing_in_current.length === 0,
     threshold_pct: pct,
     baseline_commit: baseline.commit,
     current_commit: current.commit,
@@ -171,6 +243,7 @@ export function compareReports(
     rows,
     missing_in_current,
     missing_in_baseline,
+    bench_protocol_mismatch: benchMismatch,
   };
 }
 
@@ -265,12 +338,32 @@ function main(): void {
 
   console.error(`\nSaved to: ${path.resolve(savePath)}`);
 
+  // Protocol mismatch is an input/protocol error (exit 2), not a runtime
+  // regression — the comparison itself is invalid until the baseline is
+  // recaptured at the same nr/pp/tg/pl. Print before the row table so the
+  // operator notices before scrolling.
+  if (result.bench_protocol_mismatch) {
+    console.error(
+      `\nFAIL: bench protocol mismatch — baseline ${JSON.stringify(
+        result.bench_protocol_mismatch.baseline,
+      )} vs current ${JSON.stringify(result.bench_protocol_mismatch.current)}`,
+    );
+    process.exit(2);
+  }
+
   if (result.pass) {
     console.error('\nPASS');
     process.exit(0);
   }
   const flagged = result.rows.filter(r => r.flagged);
-  console.error(`\nFAIL: ${flagged.length} flagged row(s)`);
+  const missingCount = result.missing_in_current.length;
+  if (missingCount > 0) {
+    console.error(
+      `\nFAIL: ${flagged.length} flagged row(s), ${missingCount} missing row(s) in current report`,
+    );
+  } else {
+    console.error(`\nFAIL: ${flagged.length} flagged row(s)`);
+  }
   for (const r of flagged) {
     console.error(`  ${r.key}: ${r.flags.join(', ')}`);
   }
