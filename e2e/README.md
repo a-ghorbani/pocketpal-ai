@@ -454,7 +454,14 @@ npx tsx e2e/scripts/benchmark-compare.ts \
   path/to/baseline.json path/to/current.json
 ```
 
-Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (override with `--pct N`). Also flags any `effective_backend` mismatch between baseline and current, independent of numeric deltas. Exit code: 0 pass, 1 regression, 2 error.
+Flags rows where either `pp_avg` or `tg_avg` delta exceeds `|delta%| > 15` (override with `--pct N`). Additional flags, all independent of numeric deltas:
+
+- `effective_backend:<base>-><cur>` — silent backend fallback (e.g. requested GPU but ran on CPU).
+- `status_regression(<status>)` — baseline row was `ok`, current row flipped to `failed`/`skipped`.
+- `pp_null_regression` / `tg_null_regression` — both rows claim `status:'ok'` but the current numeric metric is `null` while the baseline was numeric (catches partial native failures the screen didn't reject as failed).
+- Top-level `bench_protocol_mismatch` — the persisted `bench` block (`pp`/`tg`/`pl`/`nr`) differs between reports. Comparison is skipped (`pass:false`) and the CLI exits 2 because pp/tg numbers are not comparable across protocols. Reports that omit the `bench` block (e.g. legacy baselines pre-v1.1) skip the check with a stderr warning.
+
+`pass` is `true` only when no row is flagged AND `missing_in_current` is empty AND no `bench_protocol_mismatch`. Exit codes: 0 pass, 1 regression, 2 input/protocol error.
 
 ### Known limitations (v1)
 
