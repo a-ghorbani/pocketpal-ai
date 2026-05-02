@@ -294,6 +294,24 @@ export const useChatSession = (
             return;
           }
 
+          // === DIAGNOSTIC LOGGING — remove after debugging ===
+          if (__DEV__) {
+            const {content: c, reasoning_content: rc, tool_calls: tc, accumulated_text: at, token: tk} = data;
+            console.log('[stream-diag]', JSON.stringify({
+              token: tk?.substring(0, 40),
+              content: c ? `${String(c).substring(0, 40)}...(len=${String(c).length})` : c,
+              reasoning_content: rc ? `${String(rc).substring(0, 40)}...` : rc,
+              tool_calls: tc ? JSON.stringify(tc).substring(0, 100) : undefined,
+              accumulated_text: at ? `${String(at).substring(0, 80)}...(len=${String(at).length})` : at,
+              triggerMarkers,
+              markerFound,
+              isGeneratingToolCall: chatSessionStore.isGeneratingToolCall,
+              isStreaming: modelStore.isStreaming,
+              inferencing: modelStore.inferencing,
+            }));
+          }
+          // === END DIAGNOSTIC ===
+
           // Capture time to first token on the first token received
           if (timeToFirstToken === null && (data.token || data.content)) {
             timeToFirstToken = Date.now() - completionStartTime;
@@ -319,16 +337,25 @@ export const useChatSession = (
             ) {
               markerFound = true;
               chatSessionStore.setIsGeneratingToolCall(true);
+              if (__DEV__) {
+                console.log('[stream-diag] >>> MARKER FOUND, isGeneratingToolCall=true');
+              }
             }
           } else if (hasToolCalls && chatSessionStore.isGeneratingToolCall) {
             // tool_calls arrived (name parsed) — clear the flag
             chatSessionStore.setIsGeneratingToolCall(false);
+            if (__DEV__) {
+              console.log('[stream-diag] >>> tool_calls arrived, isGeneratingToolCall=false');
+            }
           }
 
           if (hasToolCalls) {
             const names = data.tool_calls
               .map((tc: any) => tc.function?.name)
               .filter(Boolean);
+            if (__DEV__) {
+              console.log('[stream-diag] >>> pendingTalentNames update:', names);
+            }
             chatSessionStore.updateMessageStreaming(
               msgInfo.current.id,
               msgInfo.current.sessionId,
@@ -449,6 +476,15 @@ export const useChatSession = (
           }
         }
       }
+
+      // === DIAGNOSTIC LOGGING — remove after debugging ===
+      if (__DEV__) {
+        console.log('[trigger-diag] context exists:', !!modelStore.context);
+        console.log('[trigger-diag] tools count:', tools?.length ?? 0);
+        console.log('[trigger-diag] triggerMarkers:', triggerMarkers);
+        console.log('[trigger-diag] cacheKey:', triggerCacheRef.current?.key);
+      }
+      // === END DIAGNOSTIC ===
 
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
