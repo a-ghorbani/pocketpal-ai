@@ -176,16 +176,14 @@ describe('TalentSurface (PACT cleanup edge cases)', () => {
     expect(getByText('Generating preview…')).toBeTruthy();
   });
 
-  it('pendingTalentNames with unknown talent shows generic skeleton', () => {
+  it('pendingTalentNames with unknown talent renders nothing (thinking bubble covers it)', () => {
     const metadata = {
       pendingTalentNames: ['future_talent'],
     };
-    const {getByTestId, getByText} = render(
-      <TalentSurface metadata={metadata} />,
-    );
-    // Generic fallback because 'future_talent' has no registered UI
-    expect(getByTestId('talent-call-pending')).toBeTruthy();
-    expect(getByText('Generating preview…')).toBeTruthy();
+    const {queryByTestId} = render(<TalentSurface metadata={metadata} />);
+    // No registered UI for 'future_talent' and no generic fallback.
+    // Talents without custom pending UI rely on the thinking bubble.
+    expect(queryByTestId('talent-call-pending')).toBeNull();
   });
 
   it('pendingTalentNames with custom UI uses that UI renderPending', () => {

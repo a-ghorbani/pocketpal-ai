@@ -140,18 +140,16 @@ describe('TalentSurface', () => {
     expect(queryByTestId('talent-call-pending')).toBeNull();
   });
 
-  it('renders generic pending skeleton when talentCalls is empty and pendingTalentNames has unknown talent', () => {
+  it('renders nothing when talentCalls is empty and pendingTalentNames has unknown talent', () => {
     const metadata = {
       talentCalls: [],
       pendingTalentNames: ['unknown'],
     };
-    const {queryByTestId, getByText} = render(
-      <TalentSurface metadata={metadata} />,
-    );
+    const {queryByTestId} = render(<TalentSurface metadata={metadata} />);
     // Empty talentCalls falls through to pendingTalentNames phase;
-    // 'unknown' has no registered UI, so generic fallback renders.
-    expect(queryByTestId('talent-call-pending')).toBeTruthy();
-    expect(getByText('Generating preview…')).toBeTruthy();
+    // 'unknown' has no registered UI and no generic fallback — returns null.
+    // Talents without custom pending UI rely on the thinking bubble.
+    expect(queryByTestId('talent-call-pending')).toBeNull();
   });
 
   it('renders nothing when talentCalls reference an unknown talent name', () => {

@@ -1,11 +1,7 @@
-import React, {useContext} from 'react';
-import {Text, View} from 'react-native';
+import React from 'react';
 
 import {talentUIRegistry} from '../../services/talents/TalentUIRegistry';
 import type {TalentResult} from '../../services/talents/types';
-import {L10nContext} from '../../utils';
-
-import {styles} from './styles';
 
 interface TalentSurfaceProps {
   metadata?: Record<string, any>;
@@ -19,15 +15,11 @@ interface TalentSurfaceProps {
  * 1. **Result phase** — if `talentCalls` is present, iterate all calls, look up
  *    results by call ID (`tc.id`) and UI renderers by talent name.
  * 2. **Pending phase** — if `pendingTalentNames` has entries but no talentCalls
- *    yet (early streaming), show talent-specific or generic pending skeleton.
+ *    yet (early streaming), show talent-specific pending UI for talents with
+ *    a registered `renderPending`. Others rely on the thinking bubble.
  */
 export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
-  const l10n = useContext(L10nContext);
-
   if (!metadata) {
-    if (__DEV__) {
-      console.log('[TalentSurface-diag] no metadata, returning null');
-    }
     return null;
   }
 
@@ -40,15 +32,6 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
   const pendingTalentNames = metadata.pendingTalentNames as
     | string[]
     | undefined;
-
-  if (__DEV__) {
-    console.log('[TalentSurface-diag]', {
-      hasTalentCalls: !!(talentCalls && talentCalls.length > 0),
-      talentCallsCount: talentCalls?.length ?? 0,
-      hasTalentResults: !!talentResults,
-      pendingTalentNames,
-    });
-  }
 
   // Result phase: iterate all talent calls
   if (talentCalls && talentCalls.length > 0) {
@@ -80,26 +63,20 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
     }
 
     if (rendered.length > 0) {
-      if (__DEV__) {
-        console.log('[TalentSurface-diag] RESULT PHASE: rendering', rendered.length, 'items');
-      }
       return <>{rendered}</>;
-    }
-    if (__DEV__) {
-      console.log('[TalentSurface-diag] RESULT PHASE: talentCalls present but nothing rendered');
     }
     return null;
   }
 
-  // Pending phase: no talentCalls yet (early streaming)
+  // Pending phase: no talentCalls yet (early streaming).
+  // Only show pending UI for talents that have a registered renderPending
+  // (e.g., render_html shows "Generating Preview..."). Talents without
+  // custom pending UI (calculate, datetime) rely on the thinking bubble.
   if (pendingTalentNames && pendingTalentNames.length > 0) {
     const specific = pendingTalentNames
       .map((name, idx) => {
         const ui = talentUIRegistry.get(name);
         if (ui?.renderPending) {
-          if (__DEV__) {
-            console.log('[TalentSurface-diag] PENDING PHASE: talent-specific pending for', name);
-          }
           return (
             <React.Fragment key={pendingTalentNames[idx]}>
               {ui.renderPending()}
@@ -112,20 +89,7 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
     if (specific.length > 0) {
       return <>{specific}</>;
     }
-
-    // Generic fallback
-    if (__DEV__) {
-      console.log('[TalentSurface-diag] PENDING PHASE: generic fallback');
-    }
-    return (
-      <View testID="talent-call-pending" style={styles.pendingContainer}>
-        <Text style={styles.pendingText}>{l10n.chat.generatingPreviewPending}</Text>
-      </View>
-    );
   }
 
-  if (__DEV__) {
-    console.log('[TalentSurface-diag] nothing to render, returning null');
-  }
   return null;
 };

@@ -294,24 +294,6 @@ export const useChatSession = (
             return;
           }
 
-          // === DIAGNOSTIC LOGGING — remove after debugging ===
-          if (__DEV__) {
-            const {content: c, reasoning_content: rc, tool_calls: tc, accumulated_text: at, token: tk} = data;
-            console.log('[stream-diag]', JSON.stringify({
-              token: tk?.substring(0, 40),
-              content: c ? `${String(c).substring(0, 40)}...(len=${String(c).length})` : c,
-              reasoning_content: rc ? `${String(rc).substring(0, 40)}...` : rc,
-              tool_calls: tc ? JSON.stringify(tc).substring(0, 100) : undefined,
-              accumulated_text: at ? `${String(at).substring(0, 80)}...(len=${String(at).length})` : at,
-              triggerMarkers,
-              markerFound,
-              isGeneratingToolCall: chatSessionStore.isGeneratingToolCall,
-              isStreaming: modelStore.isStreaming,
-              inferencing: modelStore.inferencing,
-            }));
-          }
-          // === END DIAGNOSTIC ===
-
           // Capture time to first token on the first token received
           if (timeToFirstToken === null && (data.token || data.content)) {
             timeToFirstToken = Date.now() - completionStartTime;
@@ -328,61 +310,67 @@ export const useChatSession = (
           // accumulated_text. Uses the same markers llama.rn discovers
           // from the chat template (e.g., "<tool_call>" for Qwen,
           // "<function=" for Llama). Short-circuits after first detection.
-          if (triggerMarkers.length && !markerFound && !hasToolCalls) {
-            if (
-              data.accumulated_text &&
-              triggerMarkers.some((m: string) =>
-                data.accumulated_text.includes(m),
-              )
-            ) {
-              markerFound = true;
-              chatSessionStore.setIsGeneratingToolCall(true);
-              if (__DEV__) {
-                console.log('[stream-diag] >>> MARKER FOUND, isGeneratingToolCall=true');
-              }
-            }
-          } else if (hasToolCalls && chatSessionStore.isGeneratingToolCall) {
-            // tool_calls arrived (name parsed) — clear the flag
-            chatSessionStore.setIsGeneratingToolCall(false);
-            if (__DEV__) {
-              console.log('[stream-diag] >>> tool_calls arrived, isGeneratingToolCall=false');
-            }
+          if (
+            triggerMarkers.length &&
+            !markerFound &&
+            !hasToolCalls &&
+            data.accumulated_text &&
+            triggerMarkers.some((m: string) =>
+              data.accumulated_text.includes(m),
+            )
+          ) {
+            markerFound = true;
+            chatSessionStore.setIsGeneratingToolCall(true);
           }
+
+          // Clear when visible output arrives: tool_calls parsed, or
+          // text/reasoning starts streaming (follow-up completion for
+          // text-result talents like calculate/datetime).
+          if (
+            chatSessionStore.isGeneratingToolCall &&
+            (hasToolCalls || content || reasoningContent)
+          ) {
+            chatSessionStore.setIsGeneratingToolCall(false);
+          }
+
+          // Build a single streaming update. The throttle uses a single
+          // slot — two separate updateMessageStreaming calls would race
+          // and the second overwrites the first. Combine everything into
+          // one call so pendingTalentNames and content are never lost.
+          const metadataUpdate: Record<string, any> = {};
+          const messageUpdate: Record<string, any> = {};
 
           if (hasToolCalls) {
             const names = data.tool_calls
               .map((tc: any) => tc.function?.name)
               .filter(Boolean);
-            if (__DEV__) {
-              console.log('[stream-diag] >>> pendingTalentNames update:', names);
+            metadataUpdate.pendingTalentNames =
+              names.length > 0 ? names : ['unknown'];
+          }
+
+          if (content || reasoningContent) {
+            metadataUpdate.partialCompletionResult = {
+              reasoning_content: reasoningContent,
+              content: content.replace(/^\s+/, ''),
+            };
+            if (content) {
+              messageUpdate.text = content.replace(/^\s+/, '');
             }
+          }
+
+          if (
+            Object.keys(metadataUpdate).length > 0 ||
+            Object.keys(messageUpdate).length > 0
+          ) {
             chatSessionStore.updateMessageStreaming(
               msgInfo.current.id,
               msgInfo.current.sessionId,
               {
-                metadata: {
-                  pendingTalentNames: names.length > 0 ? names : ['unknown'],
-                },
+                ...messageUpdate,
+                ...(Object.keys(metadataUpdate).length > 0
+                  ? {metadata: metadataUpdate}
+                  : {}),
               },
-            );
-          }
-
-          if (content || reasoningContent) {
-            const update: any = {
-              metadata: {
-                partialCompletionResult: {
-                  reasoning_content: reasoningContent,
-                  content: content.replace(/^\s+/, ''),
-                },
-              },
-            };
-            if (content) {
-              update.text = content.replace(/^\s+/, '');
-            }
-            chatSessionStore.updateMessageStreaming(
-              msgInfo.current.id,
-              msgInfo.current.sessionId,
-              update,
             );
           }
         };
@@ -476,15 +464,6 @@ export const useChatSession = (
           }
         }
       }
-
-      // === DIAGNOSTIC LOGGING — remove after debugging ===
-      if (__DEV__) {
-        console.log('[trigger-diag] context exists:', !!modelStore.context);
-        console.log('[trigger-diag] tools count:', tools?.length ?? 0);
-        console.log('[trigger-diag] triggerMarkers:', triggerMarkers);
-        console.log('[trigger-diag] cacheKey:', triggerCacheRef.current?.key);
-      }
-      // === END DIAGNOSTIC ===
 
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
@@ -600,6 +579,10 @@ export const useChatSession = (
           ...cleanCompletionParams,
           messages: [...systemMessages, ...followUpChatMessages],
         };
+
+        // Show thinking bubble during follow-up — there's a gap between
+        // starting the completion and the first visible token.
+        chatSessionStore.setIsGeneratingToolCall(true);
 
         // Register follow-up so the stop button works
         // Follow-up text intentionally overwrites first-turn text. Tool-calling

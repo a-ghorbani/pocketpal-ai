@@ -137,14 +137,6 @@ export const ChatScreen: React.FC = observer(() => {
     modelStore.inferencing &&
     (!modelStore.isStreaming || chatSessionStore.isGeneratingToolCall);
 
-  if (__DEV__ && modelStore.inferencing) {
-    console.log('[ChatScreen-diag] isThinking:', isThinking, {
-      inferencing: modelStore.inferencing,
-      isStreaming: modelStore.isStreaming,
-      isGeneratingToolCall: chatSessionStore.isGeneratingToolCall,
-    });
-  }
-
   // Tool-compatibility one-time banner: when the active Pal declares tools but
   // the loaded model's jinja template lacks `toolUseCaps`, surface an inline
   // warning. Persisted per model id so the warning fires at most once.
