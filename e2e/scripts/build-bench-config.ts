@@ -21,8 +21,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {execSync} from 'child_process';
+import {execFileSync} from 'child_process';
 
+import {buildConfig as buildSharedConfig} from '../helpers/bench-runner';
 import {getBenchmarkMatrix} from '../fixtures/benchmark-models';
 
 const REMOTE_PACKAGE = 'com.pocketpalai.e2e';
@@ -77,28 +78,14 @@ Tiers:
   process.exit(code);
 }
 
-function buildScreenConfig() {
+// The CLI script delegates to the canonical builder in helpers/bench-runner.ts
+// (single source of truth for the BenchConfig JSON shape) and re-attaches the
+// CLI-only `tier` field. Previously, this script duplicated the models/quants
+// derivation AND emitted a different `nr` (1 vs the helper's 3); see round-1
+// review C2.
+export function buildScreenConfig() {
   const matrix = getBenchmarkMatrix();
-  return {
-    tier: matrix.tier,
-    models: matrix.models.map(m => {
-      // Same convention used by helpers/bench-runner.ts: searchQuery's first
-      // token is the publisher, selectorText is the repo basename, repo has
-      // a -GGUF suffix.
-      const publisher = m.searchQuery.trim().split(/\s+/)[0];
-      const hfModelId = `${publisher}/${m.selectorText}-GGUF`;
-      return {
-        id: m.id,
-        hfModelId,
-        quants: matrix.quants
-          .map(q => m.quants?.find(v => v.quant === q))
-          .filter((v): v is NonNullable<typeof v> => Boolean(v))
-          .map(v => ({quant: v.quant, filename: v.downloadFile})),
-      };
-    }),
-    backends: matrix.backends,
-    bench: {pp: 512, tg: 128, pl: 1, nr: 1},
-  };
+  return {tier: matrix.tier, ...buildSharedConfig(matrix)};
 }
 
 function summarize(cfg: ReturnType<typeof buildScreenConfig>) {
@@ -129,13 +116,19 @@ function main() {
   console.error(`wrote ${args.out}`);
 
   if (args.push) {
-    const udidArg = args.udid ? `-s ${args.udid}` : '';
-    execSync(`adb ${udidArg} shell mkdir -p ${REMOTE_DIR}`, {stdio: 'inherit'});
-    execSync(`adb ${udidArg} push ${args.out} ${REMOTE_PATH}`, {
+    // argv-style invocation: udid and args.out land in their own slots so
+    // shell metacharacters cannot inject commands (round-1 C5).
+    const adbPrefix = args.udid ? ['-s', args.udid] : [];
+    execFileSync('adb', [...adbPrefix, 'shell', 'mkdir', '-p', REMOTE_DIR], {
+      stdio: 'inherit',
+    });
+    execFileSync('adb', [...adbPrefix, 'push', args.out, REMOTE_PATH], {
       stdio: 'inherit',
     });
     console.error(`pushed to ${REMOTE_PATH}${args.udid ? ` on ${args.udid}` : ''}`);
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
