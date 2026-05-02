@@ -130,8 +130,12 @@ export const ChatScreen: React.FC = observer(() => {
     activePalId,
   ]);
 
-  // Show loading bubble only during the thinking phase (inferencing but not streaming)
-  const isThinking = modelStore.inferencing && !modelStore.isStreaming;
+  // Show loading bubble during the thinking phase (inferencing but not streaming)
+  // AND during tool-call generation (tokens flow but the model is building
+  // tool-call JSON that isn't visible to the user yet).
+  const isThinking =
+    modelStore.inferencing &&
+    (!modelStore.isStreaming || chatSessionStore.isGeneratingToolCall);
 
   // Tool-compatibility one-time banner: when the active Pal declares tools but
   // the loaded model's jinja template lacks `toolUseCaps`, surface an inline

@@ -621,3 +621,232 @@ describe('useChatSession — multi-turn talent dispatch', () => {
     expect(mockCompletion).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useChatSession — tool-call generation detection', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    talentRegistry.reset();
+    resetRegisteredFlag();
+    registerDefaultTalents();
+
+    chatSessionStore.sessions = sessionFixtures as any;
+    chatSessionStore.activeSessionId = 'session-1';
+    (chatSessionStore as any).isGenerating = false;
+    (chatSessionStore as any).isGeneratingToolCall = false;
+    modelStore.models = modelsList as any;
+    modelStore.activeModelId = undefined;
+    modelStore.context = new LlamaContext(mockLlamaContextParams);
+    // Mock getFormattedChat to return a trigger marker
+    modelStore.context.getFormattedChat = jest.fn().mockResolvedValue({
+      type: 'jinja',
+      prompt: 'test',
+      grammar_triggers: [{type: 0, value: '<tool_call>', token: 0}],
+    });
+    modelStore.engine = {
+      completion: jest.fn((params, onData) => {
+        return modelStore.context!.completion(params, onData);
+      }),
+      stopCompletion: jest.fn(),
+    };
+  });
+
+  afterAll(() => {
+    talentRegistry.reset();
+    resetRegisteredFlag();
+  });
+
+  const setupPalWithTalents = (talentNames: string[]) => {
+    const mockPal = {
+      id: 'trigger-pal',
+      type: 'local' as const,
+      name: 'Trigger Pal',
+      systemPrompt: 'You are helpful.',
+      pact: {
+        talents: talentNames.map(name => ({
+          name,
+          necessity: 'required' as const,
+        })),
+      },
+      parameters: {},
+      parameterSchema: [],
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      source: 'local' as const,
+    };
+    palStore.pals = [mockPal];
+    const mockSession = {
+      id: 'trigger-session',
+      activePalId: 'trigger-pal',
+      title: 'Trigger Session',
+      date: new Date().toISOString().split('T')[0],
+      messages: [],
+      completionSettings: mockDefaultCompletionParams,
+      settingsSource: 'pal' as const,
+    };
+    chatSessionStore.sessions = [mockSession];
+    chatSessionStore.activeSessionId = 'trigger-session';
+  };
+
+  it('sets isGeneratingToolCall when trigger marker appears in accumulated_text', async () => {
+    setupPalWithTalents(['render_html']);
+
+    const mockCompletion = jest.fn().mockImplementation((_params, onData) => {
+      // Simulate tool-call tokens: marker in accumulated_text, no tool_calls yet
+      onData({
+        token: '<tool_call>',
+        accumulated_text: '<tool_call>',
+      });
+      expect(chatSessionStore.setIsGeneratingToolCall).toHaveBeenCalledWith(
+        true,
+      );
+
+      // Simulate tool_calls arriving (name parsed)
+      onData({
+        token: '}',
+        accumulated_text: '<tool_call>{"name":"render_html","arguments":{}}',
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: {name: 'render_html', arguments: '{}'},
+          },
+        ],
+      });
+      expect(chatSessionStore.setIsGeneratingToolCall).toHaveBeenCalledWith(
+        false,
+      );
+
+      return Promise.resolve({
+        text: '',
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: {name: 'render_html', arguments: '{"html":"<p/>"}'},
+          },
+        ],
+        timings: {total: 100},
+        usage: {},
+      });
+    });
+    modelStore.engine = {completion: mockCompletion, stopCompletion: jest.fn()};
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+  });
+
+  it('does NOT set isGeneratingToolCall during normal text streaming', async () => {
+    setupPalWithTalents(['render_html']);
+
+    const mockCompletion = jest.fn().mockImplementation((_params, onData) => {
+      // Normal text streaming — no trigger marker in accumulated_text
+      onData({
+        token: 'Hello',
+        content: 'Hello',
+        accumulated_text: 'Hello',
+      });
+      onData({
+        token: ' world',
+        content: 'Hello world',
+        accumulated_text: 'Hello world',
+      });
+
+      return Promise.resolve({
+        text: 'Hello world',
+        timings: {total: 100},
+        usage: {},
+      });
+    });
+    modelStore.engine = {completion: mockCompletion, stopCompletion: jest.fn()};
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(chatSessionStore.setIsGeneratingToolCall).not.toHaveBeenCalledWith(
+      true,
+    );
+  });
+
+  it('detects trigger marker mid-stream (text then tool call)', async () => {
+    setupPalWithTalents(['render_html']);
+
+    const mockCompletion = jest.fn().mockImplementation((_params, onData) => {
+      // Text phase — no marker yet
+      onData({
+        token: 'Let me help',
+        content: 'Let me help',
+        accumulated_text: 'Let me help',
+      });
+
+      // Tool-call phase — marker appears in accumulated_text
+      onData({
+        token: '<tool_call>',
+        content: 'Let me help',
+        accumulated_text: 'Let me help\n<tool_call>',
+      });
+      expect(chatSessionStore.setIsGeneratingToolCall).toHaveBeenCalledWith(
+        true,
+      );
+
+      return Promise.resolve({
+        text: 'Let me help',
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: {name: 'render_html', arguments: '{"html":"<p/>"}'},
+          },
+        ],
+        timings: {total: 100},
+        usage: {},
+      });
+    });
+    modelStore.engine = {completion: mockCompletion, stopCompletion: jest.fn()};
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+  });
+
+  it('clears isGeneratingToolCall on error (truncated tool call)', async () => {
+    setupPalWithTalents(['render_html']);
+
+    const mockCompletion = jest.fn().mockImplementation((_params, onData) => {
+      // Marker emitted but model errors before name parses
+      onData({
+        token: '<tool_call>',
+        accumulated_text: '<tool_call>',
+      });
+      // tool_calls never arrives — error instead
+      return Promise.reject(new Error('Model truncated'));
+    });
+    modelStore.engine = {completion: mockCompletion, stopCompletion: jest.fn()};
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    // Flag must be cleared by the error cleanup path
+    expect(chatSessionStore.setIsGeneratingToolCall).toHaveBeenLastCalledWith(
+      false,
+    );
+  });
+});

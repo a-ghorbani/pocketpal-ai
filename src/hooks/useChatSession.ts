@@ -19,6 +19,7 @@ import {
 } from '../utils/completionTypes';
 import {talentRegistry} from '../services/talents';
 import type {TalentResult} from '../services/talents/types';
+import type {JinjaFormattedChatResult} from 'llama.rn';
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -167,6 +168,7 @@ export const useChatSession = (
 ) => {
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
+  const triggerCacheRef = useRef<{key: string; markers: string[]} | null>(null);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -273,16 +275,21 @@ export const useChatSession = (
       let timeToFirstToken: number | null = null;
 
       // Streaming callback shared by initial and follow-up completions.
-      // Streams content/reasoning into the current assistant message and
-      // flags pending talent names when tool_calls arrive.
-      const createStreamCallback =
-        (
-          msgInfo: React.MutableRefObject<{
-            id: string;
-            sessionId: string;
-          } | null>,
-        ) =>
-        (data: any) => {
+      // Streams content/reasoning into the current assistant message,
+      // flags pending talent names when tool_calls arrive, and detects
+      // tool-call generation via trigger markers in accumulated_text.
+      const createStreamCallback = (
+        msgInfo: React.MutableRefObject<{
+          id: string;
+          sessionId: string;
+        } | null>,
+        triggerMarkers: string[],
+      ) => {
+        // Short-circuit: once a trigger marker is found, stop scanning
+        // accumulated_text on subsequent tokens.
+        let markerFound = false;
+
+        return (data: any) => {
           if (!msgInfo.current) {
             return;
           }
@@ -297,8 +304,28 @@ export const useChatSession = (
           }
 
           const {content = '', reasoning_content: reasoningContent} = data;
+          const hasToolCalls = data.tool_calls && data.tool_calls.length > 0;
 
-          if (data.tool_calls && data.tool_calls.length > 0) {
+          // Detect tool-call generation via trigger markers in
+          // accumulated_text. Uses the same markers llama.rn discovers
+          // from the chat template (e.g., "<tool_call>" for Qwen,
+          // "<function=" for Llama). Short-circuits after first detection.
+          if (triggerMarkers.length && !markerFound && !hasToolCalls) {
+            if (
+              data.accumulated_text &&
+              triggerMarkers.some((m: string) =>
+                data.accumulated_text.includes(m),
+              )
+            ) {
+              markerFound = true;
+              chatSessionStore.setIsGeneratingToolCall(true);
+            }
+          } else if (hasToolCalls && chatSessionStore.isGeneratingToolCall) {
+            // tool_calls arrived (name parsed) — clear the flag
+            chatSessionStore.setIsGeneratingToolCall(false);
+          }
+
+          if (hasToolCalls) {
             const names = data.tool_calls
               .map((tc: any) => tc.function?.name)
               .filter(Boolean);
@@ -332,6 +359,7 @@ export const useChatSession = (
             );
           }
         };
+      };
 
       // Execute talent engines for a set of tool calls.
       // Returns tool response messages and a result map keyed by call id.
@@ -389,11 +417,44 @@ export const useChatSession = (
         return {toolMessages: msgs, talentResultsMap: results};
       };
 
+      // Extract tool-call trigger markers for early detection.
+      // Local models only — remote models emit tool_calls via SSE directly.
+      let triggerMarkers: string[] = [];
+      const tools = cleanCompletionParams.tools as any[] | undefined;
+      if (modelStore.context && tools?.length) {
+        const toolNames = tools
+          .map((t: any) => t.function?.name)
+          .filter(Boolean)
+          .sort()
+          .join(',');
+        const cacheKey = `${modelStore.contextId}:${toolNames}`;
+        if (triggerCacheRef.current?.key === cacheKey) {
+          triggerMarkers = triggerCacheRef.current.markers;
+        } else {
+          try {
+            const formatted = (await modelStore.context.getFormattedChat(
+              cleanCompletionParams.messages ?? [],
+              undefined,
+              {tools, jinja: true},
+            )) as JinjaFormattedChatResult;
+            triggerMarkers = (formatted.grammar_triggers ?? [])
+              .map(t => t.value)
+              .filter(Boolean);
+            triggerCacheRef.current = {key: cacheKey, markers: triggerMarkers};
+          } catch (e) {
+            // Non-fatal — detection just won't work for this completion
+            if (__DEV__) {
+              console.warn('Failed to extract tool-call trigger markers:', e);
+            }
+          }
+        }
+      }
+
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
       const completionPromise = engine.completion(
         cleanCompletionParams,
-        createStreamCallback(currentMessageInfo),
+        createStreamCallback(currentMessageInfo, triggerMarkers),
       );
 
       // Only register completion promise for local models -- protects native context from being freed mid-completion
@@ -510,7 +571,7 @@ export const useChatSession = (
         // follow-up response IS the user-facing answer.
         const followUpPromise = engine.completion(
           followUpParams,
-          createStreamCallback(currentMessageInfo),
+          createStreamCallback(currentMessageInfo, triggerMarkers),
         );
         if (modelStore.context) {
           modelStore.registerCompletionPromise(followUpPromise);
@@ -568,6 +629,7 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setIsGeneratingToolCall(false);
     } catch (error) {
       // Clear the promise on error too
       modelStore.clearCompletionPromise();
@@ -575,6 +637,7 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setIsGeneratingToolCall(false);
 
       // For remote models: preserve partial message if tokens were already streamed
       // Instead of deleting the message, keep what we have and show error toast
@@ -652,6 +715,7 @@ export const useChatSession = (
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);
+    chatSessionStore.setIsGeneratingToolCall(false);
 
     // Deactivate keep awake when stopping completion
     try {

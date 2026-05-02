@@ -54,6 +54,7 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
+  isGeneratingToolCall: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
   newChatSettingsSource: 'pal' | 'custom' = 'pal';
@@ -141,6 +142,10 @@ class ChatSessionStore {
 
   setIsGenerating(value: boolean) {
     this.isGenerating = value;
+  }
+
+  setIsGeneratingToolCall(value: boolean) {
+    this.isGeneratingToolCall = value;
   }
 
   async loadSessionList(): Promise<void> {
