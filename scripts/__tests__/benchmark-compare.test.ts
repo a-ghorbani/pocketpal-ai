@@ -210,7 +210,31 @@ describe('compareReports (benchmark-compare)', () => {
     // ...but the status flip is the regression signal.
     expect(result.rows[0].flagged).toBe(true);
     expect(result.rows[0].flags).toContain('status_regression(failed)');
+    // Mutual exclusivity invariant: status_regression and *_null_regression
+    // never both fire on the same row. The null-regression flags are gated
+    // on `curRow.status === 'ok'`, which cannot coexist with a status flip.
+    expect(result.rows[0].flags).not.toContain('pp_null_regression');
+    expect(result.rows[0].flags).not.toContain('tg_null_regression');
     expect(result.pass).toBe(false);
+  });
+
+  it('does NOT flag when baseline failed and current ok (a previously-broken cell now works)', () => {
+    // The inverse of an `ok->failed` flip: if baseline was already broken
+    // (status:'failed' with null metrics) and the current run recovers
+    // (status:'ok' with valid metrics), the row has improved and must NOT
+    // be flagged. status_regression is one-way.
+    const baseline = makeReport([
+      makeRun({status: 'failed', pp_avg: null, tg_avg: null}),
+    ]);
+    const current = makeReport([
+      makeRun({status: 'ok', pp_avg: 300, tg_avg: 24}),
+    ]);
+
+    const result = compareReports(baseline, current);
+
+    expect(result.rows[0].flagged).toBe(false);
+    expect(result.rows[0].flags).toHaveLength(0);
+    expect(result.pass).toBe(true);
   });
 
   it('treats zero baseline as un-comparable (avoids division by zero)', () => {

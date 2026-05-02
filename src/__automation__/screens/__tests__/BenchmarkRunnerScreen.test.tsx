@@ -302,7 +302,9 @@ describe('BenchmarkRunnerScreen', () => {
         new Error('init exploded'),
       );
       await runMatrix(VALID_CONFIG, setStatus, setLastCell);
-      expect(remove).toHaveBeenCalled();
+      // finally is the sole detach site: exactly one remove() per cell, no
+      // duplicate from the now-deleted catch-path detach (round-1 C3).
+      expect(remove).toHaveBeenCalledTimes(1);
       const lastWrite =
         RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
       const json = JSON.parse(lastWrite[1]);
@@ -313,6 +315,22 @@ describe('BenchmarkRunnerScreen', () => {
         effective_backend: 'unknown',
       });
       expect(json.runs[0].log_signals.opencl_init).toBe(true);
+    });
+
+    it('listener is detached exactly once on the success path (no duplicate from finally)', async () => {
+      // Sole-detach-site invariant: when a cell completes cleanly the finally
+      // block is the ONLY detach site. The success-path detach at the
+      // pre-fix call site was deleted; the catch-path detach was deleted.
+      // If a future refactor reintroduces either, this assertion fires.
+      const remove = jest.fn();
+      (addNativeLogListener as jest.Mock).mockImplementation(
+        (cb: (level: string, text: string) => void) => {
+          cb('I', 'load_tensors: offloaded 28/28 layers to GPU');
+          return {remove};
+        },
+      );
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      expect(remove).toHaveBeenCalledTimes(1);
     });
 
     it('per-cell throw sets row status:failed and continues to next cell', async () => {
