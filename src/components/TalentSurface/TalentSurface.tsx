@@ -25,6 +25,9 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
   const l10n = useContext(L10nContext);
 
   if (!metadata) {
+    if (__DEV__) {
+      console.log('[TalentSurface-diag] no metadata, returning null');
+    }
     return null;
   }
 
@@ -37,6 +40,15 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
   const pendingTalentNames = metadata.pendingTalentNames as
     | string[]
     | undefined;
+
+  if (__DEV__) {
+    console.log('[TalentSurface-diag]', {
+      hasTalentCalls: !!(talentCalls && talentCalls.length > 0),
+      talentCallsCount: talentCalls?.length ?? 0,
+      hasTalentResults: !!talentResults,
+      pendingTalentNames,
+    });
+  }
 
   // Result phase: iterate all talent calls
   if (talentCalls && talentCalls.length > 0) {
@@ -68,7 +80,13 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
     }
 
     if (rendered.length > 0) {
+      if (__DEV__) {
+        console.log('[TalentSurface-diag] RESULT PHASE: rendering', rendered.length, 'items');
+      }
       return <>{rendered}</>;
+    }
+    if (__DEV__) {
+      console.log('[TalentSurface-diag] RESULT PHASE: talentCalls present but nothing rendered');
     }
     return null;
   }
@@ -79,6 +97,9 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
       .map((name, idx) => {
         const ui = talentUIRegistry.get(name);
         if (ui?.renderPending) {
+          if (__DEV__) {
+            console.log('[TalentSurface-diag] PENDING PHASE: talent-specific pending for', name);
+          }
           return (
             <React.Fragment key={pendingTalentNames[idx]}>
               {ui.renderPending()}
@@ -93,6 +114,9 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
     }
 
     // Generic fallback
+    if (__DEV__) {
+      console.log('[TalentSurface-diag] PENDING PHASE: generic fallback');
+    }
     return (
       <View testID="talent-call-pending" style={styles.pendingContainer}>
         <Text style={styles.pendingText}>{l10n.chat.generatingPreviewPending}</Text>
@@ -100,5 +124,8 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({metadata}) => {
     );
   }
 
+  if (__DEV__) {
+    console.log('[TalentSurface-diag] nothing to render, returning null');
+  }
   return null;
 };
