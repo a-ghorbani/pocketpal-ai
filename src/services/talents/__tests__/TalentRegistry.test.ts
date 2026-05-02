@@ -1,6 +1,7 @@
 import {TalentRegistry} from '../TalentRegistry';
 import {RenderHtmlEngine} from '../RenderHtmlEngine';
 import {
+  deriveToolSchemas,
   registerDefaultTalents,
   resetRegisteredFlag,
   talentRegistry,
@@ -67,6 +68,43 @@ describe('TalentRegistry', () => {
       expect(talentRegistry.has('render_html')).toBe(true);
       expect(talentRegistry.has('calculate')).toBe(true);
       expect(talentRegistry.has('datetime')).toBe(true);
+    });
+  });
+
+  describe('deriveToolSchemas', () => {
+    beforeEach(() => {
+      talentRegistry.reset();
+      resetRegisteredFlag();
+    });
+
+    it('returns only requested talent schemas when talentNames provided', () => {
+      const schemas = deriveToolSchemas(['render_html']);
+      expect(schemas).toHaveLength(1);
+      expect(schemas[0].function.name).toBe('render_html');
+    });
+
+    it('returns multiple requested talents', () => {
+      const schemas = deriveToolSchemas(['calculate', 'datetime']);
+      expect(schemas).toHaveLength(2);
+      const names = schemas.map(s => s.function.name);
+      expect(names).toContain('calculate');
+      expect(names).toContain('datetime');
+    });
+
+    it('returns empty array when no talent names match', () => {
+      const schemas = deriveToolSchemas(['nonexistent_talent']);
+      expect(schemas).toHaveLength(0);
+    });
+
+    it('returns all schemas when talentNames is undefined', () => {
+      const schemas = deriveToolSchemas();
+      expect(schemas).toHaveLength(3);
+    });
+
+    it('ignores unknown names and returns only matched ones', () => {
+      const schemas = deriveToolSchemas(['render_html', 'nonexistent']);
+      expect(schemas).toHaveLength(1);
+      expect(schemas[0].function.name).toBe('render_html');
     });
   });
 });

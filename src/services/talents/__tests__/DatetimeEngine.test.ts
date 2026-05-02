@@ -224,4 +224,32 @@ describe('DatetimeEngine', () => {
       expect(result.summary).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
   });
+
+  describe('timezone-preserving format', () => {
+    it('uses tz-preserving format when timezone set but no format given', async () => {
+      const result = await engine.execute({
+        action: 'now',
+        timezone: 'America/New_York',
+      });
+      expect(result.type).toBe('text');
+      expect(result.summary).toMatch(/[+-]\d{2}:\d{2}$/);
+      expect(result.summary).not.toMatch(/Z$/);
+    });
+
+    it('uses toISOString when no timezone and no format given', async () => {
+      const result = await engine.execute({action: 'now'});
+      expect(result.type).toBe('text');
+      expect(result.summary).toMatch(/Z$/);
+    });
+
+    it('uses custom format when format is provided regardless of timezone', async () => {
+      const result = await engine.execute({
+        action: 'now',
+        timezone: 'Europe/London',
+        format: 'HH:mm',
+      });
+      expect(result.type).toBe('text');
+      expect(result.summary).toMatch(/^\d{2}:\d{2}$/);
+    });
+  });
 });
