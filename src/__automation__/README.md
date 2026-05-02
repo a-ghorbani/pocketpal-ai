@@ -30,6 +30,28 @@ Two independent guardrails enforce the contract:
    `BENCH_RUN_MATRIX`, `bench-runner-screen-status`) appear. The ground
    truth for DCE.
 
+> **Note on the static-import question.** Some readers worry that `App.tsx`
+> statically importing from `./src/__automation__/index.ts` (e.g. for
+> `<AutomationBridge />` and the deep-link Drawer screen) leaks the entire
+> automation module graph into the prod bundle, since ES imports enter the
+> Metro graph regardless of whether the JSX render sites are reachable.
+>
+> The DCE contract here does NOT rest on import-site purity. It rests on the
+> **bundle-grep gate** in `.github/workflows/ci.yml` (the
+> `Verify prod APK has no automation-bridge code` step at lines 202-233).
+> That step extracts `assets/index.android.bundle` from the prod APK and
+> fails the build if any of the registered marker strings
+> (`AUTOMATION_BRIDGE`, `memory-snapshot-label`, `memory-snapshot-result`,
+> `BENCH_RUN_MATRIX`, `bench-runner-screen-status`) appear. Hermes'
+> constant-folding + tree-shaking on `__E2E__ === false` is what actually
+> removes the code; the grep is the empirical contract that proves it for
+> every prod build.
+>
+> When adding a new automation surface, register a new marker (a literal
+> string referenced from inside the runtime code, never just JSDoc — Hermes
+> can DCE pure-comment literals) and add it to the markers list in `ci.yml`.
+> Then trust the gate, not the import site.
+
 ## Adding a new adapter
 
 1. Create `src/__automation__/adapters/FooAdapter.tsx` — a functional
