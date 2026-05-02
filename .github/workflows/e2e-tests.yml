@@ -54,17 +54,30 @@ jobs:
               "project_id": "dummy-project-for-ci",
               "storage_bucket": "dummy-project-for-ci.appspot.com"
             },
-            "client": [{
-              "client_info": {
-                "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
-                "android_client_info": {
-                  "package_name": "com.pocketpalai"
-                }
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.pocketpalai"
+                  }
+                },
+                "api_key": [{
+                  "current_key": "dummy-api-key-for-ci-builds"
+                }]
               },
-              "api_key": [{
-                "current_key": "dummy-api-key-for-ci-builds"
-              }]
-            }]
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:1111111111111111",
+                  "android_client_info": {
+                    "package_name": "com.pocketpalai.e2e"
+                  }
+                },
+                "api_key": [{
+                  "current_key": "dummy-api-key-for-ci-builds"
+                }]
+              }
+            ]
           }
           EOL
 
