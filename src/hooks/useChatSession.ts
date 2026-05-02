@@ -292,13 +292,22 @@ export const useChatSession = (
             timeToFirstToken = Date.now() - completionStartTime;
           }
 
+          const {content = '', reasoning_content: reasoningContent} = data;
+          const hasToolCalls =
+            data.tool_calls && data.tool_calls.length > 0;
+
+          // Only flip isStreaming when there's user-visible output (text,
+          // reasoning, or tool_calls that trigger the pending UI). During
+          // tool-call generation the model emits tokens that build JSON but
+          // have no content/tool_calls yet — keeping isStreaming false
+          // preserves the thinking bubble until something visible appears.
           if (!modelStore.isStreaming) {
-            modelStore.setIsStreaming(true);
+            if (content || reasoningContent || hasToolCalls) {
+              modelStore.setIsStreaming(true);
+            }
           }
 
-          const {content = '', reasoning_content: reasoningContent} = data;
-
-          if (data.tool_calls && data.tool_calls.length > 0) {
+          if (hasToolCalls) {
             const names = data.tool_calls
               .map((tc: any) => tc.function?.name)
               .filter(Boolean);
