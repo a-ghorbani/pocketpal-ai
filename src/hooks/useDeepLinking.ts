@@ -113,9 +113,18 @@ export const useDeepLinking = () => {
         // getInitialURL rejects on some surfaces; warm-state listener still
         // covers WDIO's deepLink command.
       });
-    const sub = Linking.addEventListener('url', ({url}) => routeIfBench(url));
+    // Defensive: addEventListener is at the RN native bridge edge. If it
+    // ever throws synchronously the cold-launch path above already ran, so
+    // we contain the error and skip the cleanup return rather than tearing
+    // down the rest of the hook's lifecycle.
+    let sub: {remove: () => void} | null = null;
+    try {
+      sub = Linking.addEventListener('url', ({url}) => routeIfBench(url));
+    } catch {
+      sub = null;
+    }
     return () => {
-      sub.remove();
+      sub?.remove();
     };
   }, [navigation]);
 

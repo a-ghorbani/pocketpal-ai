@@ -187,4 +187,20 @@ describe('useDeepLinking — cold-launch routing', () => {
     expect(addEventListenerSpy).not.toHaveBeenCalled();
     addEventListenerSpy.mockRestore();
   });
+
+  it('contains a synchronous addEventListener throw without breaking the hook lifecycle', async () => {
+    getInitialURLSpy.mockResolvedValue(null);
+    const addEventListenerSpy = jest
+      .spyOn(Linking, 'addEventListener')
+      .mockImplementation(() => {
+        throw new Error('native-bridge-blew-up');
+      });
+
+    // The hook must still mount and unmount without surfacing the throw.
+    const {unmount} = renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    expect(() => unmount()).not.toThrow();
+
+    addEventListenerSpy.mockRestore();
+  });
 });
