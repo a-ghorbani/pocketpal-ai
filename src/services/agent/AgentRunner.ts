@@ -278,7 +278,6 @@ export async function* runAgent(
 
       // Bridge engine streaming callback into the iterator.
       const queue = new EventQueue<AgentEvent>();
-      let lastSeenToolCallSet: string | null = null;
       const turnParams: ApiCompletionParams = {...initialParams, messages};
 
       // Track engine failure separately so we can fully await the
@@ -296,18 +295,6 @@ export async function* runAgent(
             (delta.toolCalls && delta.toolCalls.length > 0)
           ) {
             queue.push({type: 'token', delta});
-          }
-          // Emit tool_call_started exactly once per call, on first
-          // sighting. The set key uses ids in stable order so partial
-          // streaming updates don't double-fire.
-          if (delta.toolCalls && delta.toolCalls.length > 0) {
-            const setKey = delta.toolCalls
-              .map(tc => tc.id || tc.function?.name || '')
-              .sort()
-              .join('|');
-            if (setKey !== lastSeenToolCallSet) {
-              lastSeenToolCallSet = setKey;
-            }
           }
         })
         .then(result => {
