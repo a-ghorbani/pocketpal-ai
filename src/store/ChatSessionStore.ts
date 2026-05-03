@@ -13,10 +13,9 @@ import {AgentUiState, initialAgentUiState} from '../services/agent';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
- * Wide enough to cover both legacy `Text` updates (existing timings,
- * copyable, partialCompletionResult — though the latter is being deleted
- * in step 3) and the new `AssistantTurn` updates which carry top-level
- * `steps` plus arbitrary metadata fields (interrupted, copyable, etc.).
+ * Covers both `Text` updates (timings, copyable) and `AssistantTurn`
+ * updates which carry top-level `steps` plus arbitrary metadata fields
+ * (interrupted, copyable, etc.).
  */
 type MessageUpdate =
   | Partial<MessageType.Text>
