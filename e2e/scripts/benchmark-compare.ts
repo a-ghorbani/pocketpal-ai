@@ -141,9 +141,10 @@ export function compareReports(
       benchMismatch = {baseline: baseB, current: curB};
     }
   } else {
+    const missingFrom = !baseB && !curB ? 'both' : !baseB ? 'baseline' : 'current';
     // eslint-disable-next-line no-console
     console.error(
-      'WARN: one or both reports omit `bench` params; protocol comparison disabled.',
+      `WARN: ${missingFrom} report missing \`bench\` params; protocol comparison disabled.`,
     );
   }
 

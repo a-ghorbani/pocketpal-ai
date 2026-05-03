@@ -372,6 +372,12 @@ describe('BenchmarkRunnerScreen', () => {
       expect(json.runs[0].status).toBe('failed');
       expect(json.runs[0].error).toContain('first cell boom');
       expect(json.runs[1].status).toBe('ok');
+      // Cell 1's initContext rejected, so contextInitialized stayed false and
+      // releaseContext is skipped. Cell 2's initContext resolved, so the
+      // finally releases exactly once. A future flag-misorder regression
+      // (e.g. setting contextInitialized before await initContext) would
+      // produce 2 here and trip this assertion.
+      expect((modelStore as any).releaseContext).toHaveBeenCalledTimes(1);
       expect(setStatus.mock.calls[setStatus.mock.calls.length - 1][0]).toBe(
         'complete',
       );
