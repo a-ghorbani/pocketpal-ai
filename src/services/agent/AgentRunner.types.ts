@@ -50,6 +50,32 @@ export type AgentEvent =
   | {type: 'run_failed'; error: Error};
 
 /**
+ * UX-state derived from `AgentEvent`s by `agentStateReducer`. Lives on
+ * `chatSessionStore.agentUiState`. Renderers compute "is this message
+ * the active run?" once at ChatView level — see Active-vs-persisted
+ * predicate in the story — and pass it down as `isActiveRun: boolean`.
+ */
+export interface AgentUiState {
+  status:
+    | 'idle'
+    | 'preparing'
+    | 'streaming_text'
+    | 'generating_tool_call'
+    | 'executing_tool'
+    | 'streaming_followup'
+    | 'done'
+    | 'failed';
+  pendingTalentNames: string[];
+  hitMaxTurns: boolean;
+}
+
+export const initialAgentUiState: AgentUiState = {
+  status: 'idle',
+  pendingTalentNames: [],
+  hitMaxTurns: false,
+};
+
+/**
  * Inputs to `runAgent`. The runner has no React/MobX/store imports —
  * the talent registry is injected via `talentLookup` and the message id
  * (already created by the hook before calling) is passed in.
