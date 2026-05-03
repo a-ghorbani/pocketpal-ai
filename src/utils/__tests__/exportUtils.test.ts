@@ -199,6 +199,61 @@ describe('exportUtils', () => {
         'Write failed',
       );
     });
+
+    it('exports AssistantTurn rows with derivedText (joined step.content) — story Hook test #5', async () => {
+      const turnSessionData = {
+        session: {
+          id: 'session-2',
+          title: 'Turn Session',
+          date: '2024-01-01T00:00:00Z',
+        },
+        messages: [
+          {
+            id: 'msg-turn',
+            author: 'assistant',
+            text: '', // empty by design for assistant_turn
+            type: 'assistant_turn',
+            metadata: JSON.stringify({
+              copyable: true,
+              steps: [
+                {content: 'Let me check'},
+                {content: 'The answer is 42'},
+              ],
+            }),
+            createdAt: 1704067200000,
+            // Real WatermelonDB Message.toMessageObject lifts metadata.steps
+            // to top-level — we mirror that here.
+            toMessageObject: () => ({
+              id: 'msg-turn',
+              type: 'assistant_turn',
+              author: {id: 'assistant'},
+              createdAt: 1704067200000,
+              steps: [
+                {content: 'Let me check'},
+                {content: 'The answer is 42'},
+              ],
+              metadata: {copyable: true},
+            }),
+          },
+        ],
+        completionSettings: null,
+      };
+      chatSessionRepository.getSessionById = jest
+        .fn()
+        .mockResolvedValue(turnSessionData as any);
+
+      await exportChatSession('session-2');
+
+      expect(RNFS.writeFile).toHaveBeenCalled();
+      const writtenJson = (RNFS.writeFile as jest.Mock).mock.calls[0][1];
+      const parsed = JSON.parse(writtenJson);
+      expect(parsed.messages).toHaveLength(1);
+      expect(parsed.messages[0].type).toBe('assistant_turn');
+      // derivedText joins step.content with two newlines.
+      expect(parsed.messages[0].text).toBe(
+        'Let me check\n\nThe answer is 42',
+      );
+    });
   });
 
   describe('exportAllChatSessions', () => {
