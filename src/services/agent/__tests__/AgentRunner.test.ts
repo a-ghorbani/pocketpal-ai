@@ -538,6 +538,204 @@ describe('runAgent', () => {
     expect(events[events.length - 1].type).toBe('run_finished');
   });
 
+  it('#11 triggerMarkers contains marker, content matches → marker_seen fires exactly once', async () => {
+    // The model streams a marker but never produces a parsed tool_call —
+    // the runner must still emit marker_seen so the UI can flip its
+    // status copy at marker time.
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'preamble <tool_call> trailing'}],
+          result: {
+            text: 'preamble <tool_call> trailing',
+            content: 'preamble <tool_call> trailing',
+          },
+        },
+      ],
+    });
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: ['<tool_call>'],
+      }),
+    );
+    const markerSeen = events.filter(e => e.type === 'marker_seen');
+    expect(markerSeen).toHaveLength(1);
+    expect((markerSeen[0] as any).marker).toBe('<tool_call>');
+  });
+
+  it('#19 marker straddles two stream chunks → token,token,marker_seen in order', async () => {
+    // Chunk 1 ends with a partial marker prefix; chunk 2 completes it.
+    // The runner must enqueue the token event for each chunk in order
+    // and only emit marker_seen AFTER the second token (the one whose
+    // content completed the substring).
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'foo<tool_'}, {content: 'call>bar'}],
+          result: {
+            text: 'foo<tool_call>bar',
+            content: 'foo<tool_call>bar',
+          },
+        },
+      ],
+    });
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        messageId: 'msg',
+        triggerMarkers: ['<tool_call>'],
+      }),
+    );
+
+    // Filter to only the in-step events (drop run_started/step_started/
+    // step_finished/run_finished framing) so the explicit ordering
+    // assertion focuses on the streaming bridge's emission sequence.
+    const streamEvents = events.filter(
+      e => e.type === 'token' || e.type === 'marker_seen',
+    );
+    expect(streamEvents).toHaveLength(3);
+    expect(streamEvents[0].type).toBe('token');
+    expect((streamEvents[0] as any).delta.content).toBe('foo<tool_');
+    expect(streamEvents[1].type).toBe('token');
+    expect((streamEvents[1] as any).delta.content).toBe('call>bar');
+    expect(streamEvents[2].type).toBe('marker_seen');
+    expect((streamEvents[2] as any).marker).toBe('<tool_call>');
+
+    // Exactly one marker_seen for the whole step.
+    expect(events.filter(e => e.type === 'marker_seen')).toHaveLength(1);
+  });
+
+  it('#20 triggerMarkers: [] → no marker_seen events; tool flow still correct via tool_call_started', async () => {
+    // Empty triggerMarkers disables marker scanning entirely. The
+    // runner must skip the scan and still emit tool_call_started/
+    // tool_call_finished as normal when the engine returns parsed
+    // tool_calls.
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'preamble <tool_call> trailing'}],
+          result: {
+            text: 'preamble <tool_call> trailing',
+            content: 'preamble <tool_call> trailing',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{"expr":"1+1"}'},
+              },
+            ],
+          },
+        },
+        {
+          tokens: [{content: 'final'}],
+          result: {text: 'final', content: 'final'},
+        },
+      ],
+    });
+    const calculate = makeTalent('calculate', () => ({
+      type: 'text',
+      summary: '2',
+    }));
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate'],
+        talentLookup: () => calculate,
+        messageId: 'msg',
+        triggerMarkers: [],
+      }),
+    );
+    expect(events.filter(e => e.type === 'marker_seen')).toHaveLength(0);
+    // tool_call_started fired (the UX path that drives status flip in
+    // the absence of marker scanning).
+    expect(events.filter(e => e.type === 'tool_call_started')).toHaveLength(1);
+    expect(events.filter(e => e.type === 'tool_call_finished')).toHaveLength(1);
+  });
+
+  it('#21 multi-step run with markers in step 0 and step 1 → exactly two marker_seen, each after its step token', async () => {
+    // Step 0: model emits marker, parsed tool_calls arrive →
+    // tool executes, follow-up step starts.
+    // Step 1: model emits marker again in the follow-up content.
+    // Per-step reset semantics: each iteration declares a fresh
+    // markerSeenThisStep flag, so both steps independently fire
+    // marker_seen exactly once.
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'thinking <tool_call> calling'}],
+          result: {
+            text: 'thinking <tool_call> calling',
+            content: 'thinking <tool_call> calling',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{"expr":"1+1"}'},
+              },
+            ],
+          },
+        },
+        {
+          tokens: [{content: 'follow-up <tool_call> again'}],
+          result: {
+            text: 'follow-up <tool_call> again',
+            content: 'follow-up <tool_call> again',
+          },
+        },
+      ],
+    });
+    const calculate = makeTalent('calculate', () => ({
+      type: 'text',
+      summary: '2',
+    }));
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate'],
+        talentLookup: () => calculate,
+        messageId: 'msg',
+        triggerMarkers: ['<tool_call>'],
+      }),
+    );
+    const markerSeen = events.filter(e => e.type === 'marker_seen');
+    expect(markerSeen).toHaveLength(2);
+
+    // Verify each marker_seen comes AFTER a token within its own
+    // step_started/step_finished window. We slice the event sequence
+    // by step boundaries and check the ordering inside each.
+    const stepStartedIdx = events
+      .map((e, i) => ({e, i}))
+      .filter(({e}) => e.type === 'step_started')
+      .map(({i}) => i);
+    const stepFinishedIdx = events
+      .map((e, i) => ({e, i}))
+      .filter(({e}) => e.type === 'step_finished')
+      .map(({i}) => i);
+    expect(stepStartedIdx).toHaveLength(2);
+    expect(stepFinishedIdx).toHaveLength(2);
+
+    for (let s = 0; s < 2; s += 1) {
+      const slice = events.slice(stepStartedIdx[s], stepFinishedIdx[s] + 1);
+      const tokens = slice.filter(e => e.type === 'token');
+      const markers = slice.filter(e => e.type === 'marker_seen');
+      expect(markers).toHaveLength(1);
+      expect(tokens.length).toBeGreaterThanOrEqual(1);
+      const tokenIdx = slice.findIndex(e => e.type === 'token');
+      const markerIdx = slice.findIndex(e => e.type === 'marker_seen');
+      expect(tokenIdx).toBeLessThan(markerIdx);
+    }
+  });
+
   it('#13 tool_calls with id=null → outcomes carry deterministic synthetic ids', async () => {
     const engine = makeScriptedEngine({
       scripts: [
@@ -643,6 +841,11 @@ describe('runAgent', () => {
       /[\\/]node_modules[\\/]mobx-react-lite[\\/]/,
       /[\\/]node_modules[\\/]react-native[\\/]/,
       /[\\/]src[\\/]store[\\/]/,
+      // The runner must NOT import the trigger-marker cache module —
+      // it consumes `triggerMarkers` only as a `string[]` value
+      // injected through `AgentRunOptions`. Locks the architectural
+      // invariant in CI rather than relying on a one-time grep.
+      /[\\/]services[\\/]agent[\\/]triggerMarkers/,
     ];
     const reachable = Array.from(visited);
     for (const re of forbidden) {
