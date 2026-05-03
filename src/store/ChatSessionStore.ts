@@ -6,6 +6,7 @@ import {AgentStep, AgentToolOutcome, MessageType} from '../utils/types';
 import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
+import {derivedText} from '../utils/chat';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
@@ -347,29 +348,23 @@ class ChatSessionStore {
       return;
     }
     // `updateSessionTitle` reads the LAST message of the session, which
-    // is the most recently added one. For greeting-bubble flows, single
-    // assistant replies, or any session whose latest message is an
-    // assistant_turn, the gate must accept it — otherwise the title
-    // silently stays "New Session".
+    // is the most recently added one. The gate accepts both `text` and
+    // `assistant_turn` rows so sessions whose latest message is an
+    // assistant_turn (greeting bubbles, single-reply sessions, sessions
+    // where the assistant has just replied) get titled correctly.
     const message = session.messages[session.messages.length - 1];
-    let titleSource: string | null = null;
-    if (message.type === 'text') {
-      titleSource = message.text;
-    } else if (message.type === 'assistant_turn') {
-      // Inline derivation; refactored to `derivedText` in step 3.
-      titleSource = ((message as MessageType.AssistantTurn).steps ?? [])
-        .map(s => s.content)
-        .filter((c): c is string => !!c && c.length > 0)
-        .join('\n\n');
+    if (message.type !== 'text' && message.type !== 'assistant_turn') {
+      return;
     }
+    const titleSource = derivedText(message);
     if (!titleSource) {
       return;
     }
     runInAction(() => {
       session.title =
-        titleSource!.length > TITLE_LIMIT
-          ? `${titleSource!.substring(0, TITLE_LIMIT)}...`
-          : titleSource!;
+        titleSource.length > TITLE_LIMIT
+          ? `${titleSource.substring(0, TITLE_LIMIT)}...`
+          : titleSource;
     });
 
     await chatSessionRepository.updateSessionTitle(session.id, session.title);
