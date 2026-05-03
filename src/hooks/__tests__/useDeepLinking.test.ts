@@ -129,14 +129,17 @@ describe('useDeepLinking — cold-launch routing', () => {
     // Cold launch returns null — this app start was a regular launch.
     getInitialURLSpy.mockResolvedValue(null);
 
-    // Capture the listener callback so we can fire it ourselves.
-    let urlHandler: ((evt: {url: string}) => void) | null = null;
+    // Capture the listener callback so we can fire it ourselves. Holder
+    // object dodges TS's narrowing of a `let` to `null`.
+    const captured: {handler: ((evt: {url: string}) => void) | null} = {
+      handler: null,
+    };
     const removeSpy = jest.fn();
     const addEventListenerSpy = jest
       .spyOn(Linking, 'addEventListener')
-      .mockImplementation((event, cb) => {
+      .mockImplementation((event: string, cb: any) => {
         if (event === 'url') {
-          urlHandler = cb as typeof urlHandler;
+          captured.handler = cb;
         }
         return {remove: removeSpy} as any;
       });
@@ -149,7 +152,8 @@ describe('useDeepLinking — cold-launch routing', () => {
     expect(mockNavigate).not.toHaveBeenCalled(); // no cold-launch URL
 
     // Simulate WDIO firing `mobile: deepLink` after the app started.
-    urlHandler?.({url: 'pocketpal://e2e/benchmark'});
+    expect(captured.handler).not.toBeNull();
+    captured.handler!({url: 'pocketpal://e2e/benchmark'});
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER);
 
     addEventListenerSpy.mockRestore();
