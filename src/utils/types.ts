@@ -8,11 +8,56 @@ import {CompletionParams} from './completionTypes';
 import {PreviewData} from '@flyerhq/react-native-link-preview';
 import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
 import {SkillKey} from '.';
+import type {TalentResult} from '../services/talents/types';
+
+/**
+ * One model-emitted tool call within an `AgentStep`. The `arguments` field
+ * is `string` on the wire (what the OpenAI/llama.rn API expects) but
+ * llama.rn may return a parsed object on output, so we accept both shapes
+ * in memory and serialize back to string at the wire boundary in
+ * `convertToChatMessages`.
+ */
+export interface AgentToolCall {
+  id: string;
+  type?: 'function';
+  function: {name: string; arguments: string | Record<string, unknown>};
+}
+
+/**
+ * The execution outcome of a single tool call. `responseContent` is what
+ * gets fed back to the model as the `{role: 'tool', content}` payload on
+ * the next iteration.
+ */
+export interface AgentToolOutcome {
+  callId: string;
+  toolName: string;
+  result: TalentResult;
+  responseContent: string;
+}
+
+/**
+ * One model invocation within an `AssistantTurn`. A single-step no-tool
+ * turn is the degenerate case `{content: '...'}`; a multi-step turn (e.g.
+ * preamble → tool call → final answer) carries multiple steps.
+ */
+export interface AgentStep {
+  /** Visible text emitted during this turn (preamble / final answer). */
+  content?: string;
+  /** Reasoning / thinking content, if the model emitted any. */
+  reasoningContent?: string;
+  /** Model-emitted tool calls in this turn. */
+  toolCalls?: AgentToolCall[];
+  /** Execution outcomes for the calls, in invocation order. */
+  toolOutcomes?: AgentToolOutcome[];
+  /** True while this step is still streaming. Cleared on step_finished. */
+  partial?: boolean;
+}
 
 export namespace MessageType {
-  export type Any = Custom | File | Image | Text | Unsupported;
+  export type Any = AssistantTurn | Custom | File | Image | Text | Unsupported;
 
   export type DerivedMessage =
+    | DerivedAssistantTurn
     | DerivedCustom
     | DerivedFile
     | DerivedImage
@@ -33,7 +78,13 @@ export namespace MessageType {
     metadata?: Record<string, any>;
     roomId?: string;
     status?: 'delivered' | 'error' | 'seen' | 'sending' | 'sent';
-    type: 'custom' | 'file' | 'image' | 'text' | 'unsupported';
+    type:
+      | 'assistant_turn'
+      | 'custom'
+      | 'file'
+      | 'image'
+      | 'text'
+      | 'unsupported';
     updatedAt?: number;
   }
 
@@ -43,6 +94,12 @@ export namespace MessageType {
     offset: number;
     showName: boolean;
     showStatus: boolean;
+  }
+
+  export interface DerivedAssistantTurn
+    extends DerivedMessageProps,
+      AssistantTurn {
+    type: AssistantTurn['type'];
   }
 
   export interface DerivedCustom extends DerivedMessageProps, Custom {
@@ -111,6 +168,19 @@ export namespace MessageType {
 
   export interface Text extends Base, PartialText {
     type: 'text';
+  }
+
+  /**
+   * One assistant reply represented as an ordered list of `AgentStep`s.
+   * Single-step no-tool turns are the degenerate case `steps: [{content}]`.
+   * `steps` is the in-memory top-level field; on disk it is JSON-serialized
+   * into `metadata.steps` (lift handled by `Message.toMessageObject()` and
+   * `ChatSessionRepository`). Consumers MUST read `steps` and never
+   * `metadata.steps`.
+   */
+  export interface AssistantTurn extends Base {
+    type: 'assistant_turn';
+    steps: AgentStep[];
   }
 
   export interface Unsupported extends Base {
