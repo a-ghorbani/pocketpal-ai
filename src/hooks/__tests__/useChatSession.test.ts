@@ -12,7 +12,13 @@ import {
 
 import {useChatSession} from '../useChatSession';
 
-import {chatSessionStore, modelStore, palStore, ttsStore} from '../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
@@ -304,13 +310,44 @@ describe('useChatSession', () => {
     );
   });
 
-  // NOTE: The legacy "saves completionResult with reasoning_content"
-  // test was removed as part of TASK-20260502-2115. The new pipeline
-  // emits AgentEvent.token deltas with reasoningContent and the
-  // applyEventToStore/agentStateReducer pair persists per-step
-  // step.reasoningContent — replacement coverage lives at the runner
-  // (see src/services/agent/__tests__/AgentRunner.test.ts in step 9)
-  // and reducer level. The metadata.completionResult bag is gone.
+  // ---------- Step 10 (TASK-20260502-2115): trim ----------
+  //
+  // Tests that duplicated AgentRunner-level coverage were dropped:
+  //
+  //   - "should save completionResult with reasoning_content after
+  //     completion" (deleted in step 8 commit ad6d8b6) — replaced by
+  //     runner reasoning_content tests in
+  //     src/services/agent/__tests__/AgentRunner.test.ts and per-step
+  //     reasoningContent assertions in chat.test.ts.
+  //
+  // Tests that exercise hook-specific surface — error rollback, stop
+  // semantics, message persistence calls, multimodal warning, and
+  // system-prompt construction — are kept above and below.
+
+  it('emits multimodal warning when user sends an image but multimodal is disabled', async () => {
+    // modelStore.isMultimodalEnabled is mocked to return false by default
+    // (see __mocks__/stores/modelStore.ts). The hook should call
+    // uiStore.setChatWarning with the multimodal-not-enabled message.
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockResolvedValue({text: 'ok', content: 'ok', timings: {}});
+    }
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress({
+        text: 'look at this',
+        type: 'text',
+        imageUris: ['file:///photo.jpg'],
+      });
+    });
+    expect(uiStore.setChatWarning).toHaveBeenCalled();
+    const arg = (uiStore.setChatWarning as jest.Mock).mock.calls[0][0];
+    // The warning carries the multimodalNotEnabled message text.
+    expect(JSON.stringify(arg)).toContain(l10n.en.chat.multimodalNotEnabled);
+  });
 
   it('should use system prompt as-is when pal has no parameters', async () => {
     // Create a mock pal without parameters
