@@ -45,9 +45,9 @@ export function derivedText(message: MessageType.Any): string {
  * runner stores arguments as either string or parsed object depending
  * on what llama.rn returned; this normalizes both cases.
  */
-function toWireToolCall(call: AgentToolCall): NonNullable<
-  ChatMessage['tool_calls']
->[number] {
+function toWireToolCall(
+  call: AgentToolCall,
+): NonNullable<ChatMessage['tool_calls']>[number] {
   const argsValue = call.function?.arguments;
   const argsString =
     typeof argsValue === 'string' ? argsValue : JSON.stringify(argsValue ?? {});

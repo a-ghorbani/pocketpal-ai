@@ -281,6 +281,12 @@ export async function* runAgent(
       let lastSeenToolCallSet: string | null = null;
       const turnParams: ApiCompletionParams = {...initialParams, messages};
 
+      // Track engine failure separately so we can fully await the
+      // promise (no unhandled rejection) before yielding the
+      // run_failed event. The .then/.catch chain returns a fully-
+      // settled promise — never rejects — by capturing the error in
+      // `engineError` for surface above.
+      let engineError: Error | null = null;
       const completionPromise = engine
         .completion(turnParams, data => {
           const delta = projectStreamChunk(data);
@@ -307,36 +313,29 @@ export async function* runAgent(
         .then(result => {
           lastResult = result;
           queue.finish();
-          return result;
         })
-        .catch(err => {
-          queue.push({type: 'run_failed', error: err as Error});
+        .catch((err: unknown) => {
+          engineError = err instanceof Error ? err : new Error(String(err));
           queue.finish();
-          throw err;
         });
 
       // Drain the queue until the engine completes. The queue closes
-      // when `completionPromise` resolves (success or failure paths
-      // both call `queue.finish()`).
+      // when `completionPromise` resolves (success or failure both
+      // call `queue.finish()`); the promise itself never rejects.
       while (true) {
         const next = await queue.next();
         if (next.done) {
           break;
         }
         yield next.value;
-        if (next.value.type === 'run_failed') {
-          // The thrown error from `completionPromise` will surface
-          // below; bail out of the inner loop now.
-          break;
-        }
       }
 
-      // Surface any rejection from the engine (also re-runs the
-      // catch-block below for the run_failed event already yielded).
-      try {
-        await completionPromise;
-      } catch (err) {
-        // Already yielded run_failed above; don't yield it twice.
+      // Wait for the promise to settle (it can only fulfill at this
+      // point; the .catch above swallows rejection into engineError).
+      await completionPromise;
+
+      if (engineError) {
+        yield {type: 'run_failed', error: engineError};
         return;
       }
 
@@ -358,7 +357,11 @@ export async function* runAgent(
       const outcomes: AgentToolOutcome[] = [];
       for (const call of calls) {
         yield {type: 'tool_call_started', call};
-        const outcome = await executeOne(call, allowedTalentNames, talentLookup);
+        const outcome = await executeOne(
+          call,
+          allowedTalentNames,
+          talentLookup,
+        );
         outcomes.push(outcome);
         yield {type: 'tool_call_finished', outcome};
       }
@@ -390,10 +393,12 @@ export async function* runAgent(
       // useful fields.
       steps: [],
       hitMaxTurns: turn >= maxTurns,
-      finalResult: lastResult ?? ({
-        text: '',
-        content: '',
-      } as CompletionResult),
+      finalResult:
+        lastResult ??
+        ({
+          text: '',
+          content: '',
+        } as CompletionResult),
     };
     yield {type: 'run_finished', result};
   } catch (error) {

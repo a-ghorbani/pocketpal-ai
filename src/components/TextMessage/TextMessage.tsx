@@ -74,7 +74,7 @@ export const TextMessage = ({
   // authoritative source. For legacy `Text` messages, fall back to
   // `message.text`. Same fallback for `reasoningContent`.
   const visibleText: string = step
-    ? step.content ?? ''
+    ? (step.content ?? '')
     : 'text' in message
       ? message.text
       : '';

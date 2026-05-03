@@ -15,12 +15,23 @@ import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
 import {activateKeepAwake, deactivateKeepAwake} from '../utils/keepAwake';
 import {
   toApiCompletionParams,
+  ApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
 import {talentRegistry} from '../services/talents';
-import type {TalentResult} from '../services/talents/types';
+import {
+  agentStateReducer,
+  createTriggerMarkerCache,
+  initialAgentUiState,
+  runAgent,
+  type AgentEvent,
+  type AgentUiState,
+} from '../services/agent';
 
-// Helper function to prepare completion parameters using OpenAI-compatible messages API
+// Helper function to prepare completion parameters using OpenAI-compatible
+// messages API. Creates the empty `assistant_turn` row up-front so the
+// active-vs-persisted predicate sees the right "last message" before the
+// run flips to `preparing`.
 const prepareCompletion = async ({
   imageUris,
   message,
@@ -49,11 +60,11 @@ const prepareCompletion = async ({
   // Check if we have images and if multimodal is enabled
   const hasImages = imageUris && imageUris.length > 0;
 
-  // Create user message content - use array format only for multimodal, string for text-only
+  // Create user message content - use array format only for multimodal,
+  // string for text-only.
   let userMessageContent: any;
 
   if (hasImages && isMultimodalEnabled) {
-    // Multimodal: use array format with text and images
     userMessageContent = [
       {
         type: 'text',
@@ -61,14 +72,12 @@ const prepareCompletion = async ({
       },
       ...imageUris.map(path => ({
         type: 'image_url',
-        image_url: {url: path}, // llama.rn handles file:// prefix removal
+        image_url: {url: path},
       })),
     ];
   } else {
-    // Text-only: use simple string format
     userMessageContent = message.text;
 
-    // Show warning if user tried to send images but multimodal is not enabled
     if (hasImages && !isMultimodalEnabled) {
       uiStore.setChatWarning(
         createMultimodalWarning(l10n.chat.multimodalNotEnabled),
@@ -76,18 +85,20 @@ const prepareCompletion = async ({
     }
   }
 
-  // Convert chat session messages to llama.rn format
+  // Convert chat session messages to llama.rn format. Filtering
+  // image-typed messages happens here (multimodal user messages carry
+  // their images via imageUris on the Text row, not a separate Image
+  // message). AssistantTurn rows pass through to convertToChatMessages,
+  // which expands each step into assistant + tool API messages.
   let chatMessages = convertToChatMessages(
     currentMessages.filter(msg => msg.type !== 'image'),
     isMultimodalEnabled,
   );
 
-  // Check if we should include thinking parts in the context
+  // Strip thinking parts from assistant context if the user opted out.
   const includeThinkingInContext =
     (sessionCompletionSettings as CompletionParams)
       ?.include_thinking_in_context !== false;
-
-  // If the user has disabled including thinking parts, remove them from assistant messages
   if (!includeThinkingInContext) {
     chatMessages = chatMessages.map(msg => {
       if (msg.role === 'assistant' && typeof msg.content === 'string') {
@@ -100,7 +111,6 @@ const prepareCompletion = async ({
     });
   }
 
-  // Create the messages array for llama.rn - same format for all cases
   const messages = [
     ...systemMessages,
     ...chatMessages,
@@ -110,51 +120,164 @@ const prepareCompletion = async ({
     },
   ];
 
-  // Create completion params with app-specific properties
   const completionParamsWithAppProps = {
     ...sessionCompletionSettings,
     messages,
     stop: stopWords,
   };
 
-  // Strip app-specific properties before passing to llama.rn
   const cleanCompletionParams = toApiCompletionParams(
     completionParamsWithAppProps as CompletionParams,
   );
 
-  // If enable_thinking is true, set reasoning_format to 'auto'
-  // This returns the reasoning content in a separate field (reasoning_content)
   if (cleanCompletionParams.enable_thinking) {
     cleanCompletionParams.reasoning_format = 'auto';
   }
 
-  // Create empty assistant message in both database and store
+  // Create the empty AssistantTurn row in the store. Done BEFORE the
+  // run flips agentUiState.status to `preparing` so the active-vs-
+  // persisted predicate (last message AND status in active set) sees
+  // a coherent state from the very first frame — see story step 8.
   const createdAt = Date.now();
-  const emptyMessage: MessageType.Text = {
+  const emptyTurn: MessageType.AssistantTurn = {
     author: assistant,
-    createdAt: createdAt,
-    id: '', // Will be set by addMessageToCurrentSession
-    text: '',
-    type: 'text',
+    createdAt,
+    id: '', // populated by addMessageToCurrentSession
+    type: 'assistant_turn',
+    steps: [],
     metadata: {
       contextId,
       conversationId: conversationIdRef,
       copyable: true,
-      multimodal: hasImages, // Simple check based on presence of images
+      multimodal: hasImages,
     },
   };
 
-  // Use store method to ensure message is added to both database AND MobX observable store
-  await chatSessionStore.addMessageToCurrentSession(emptyMessage);
+  await chatSessionStore.addMessageToCurrentSession(emptyTurn);
 
   const messageInfo = {
     createdAt,
-    id: emptyMessage.id, // This is now set by addMessageToCurrentSession
+    id: emptyTurn.id, // set by addMessageToCurrentSession
     sessionId: chatSessionStore.activeSessionId!,
   };
 
   return {cleanCompletionParams, messageInfo};
 };
+
+/**
+ * Map a single AgentEvent into the corresponding store mutation(s).
+ * Kept under ~80 lines and free of business logic — every event maps
+ * to a known action surface on `chatSessionStore`. This is the ONLY
+ * place inside the run lifecycle that writes to the store.
+ *
+ * The reducer (`agentStateReducer`) updates `agentUiState`; everything
+ * else (per-step content, tool outcomes, finalization) goes through
+ * the dedicated step-actions added in step 2.
+ */
+async function applyEventToStore(
+  event: AgentEvent,
+  ctx: {
+    messageId: string;
+    sessionId: string;
+    completionStartTime: number;
+    timeToFirstTokenMs: {value: number | null};
+    hasImages: boolean;
+    isMultimodalEnabled: boolean;
+  },
+): Promise<void> {
+  switch (event.type) {
+    case 'run_started':
+      // Status flip happens in the reducer; the empty AssistantTurn
+      // already exists (created in prepareCompletion). Nothing else to
+      // persist here — the message was added before the run started.
+      return;
+    case 'step_started':
+      await chatSessionStore.pushAgentStep(ctx.messageId, ctx.sessionId, {
+        partial: true,
+      });
+      return;
+    case 'token': {
+      // Capture time-to-first-token on the first content/reasoning token.
+      if (
+        ctx.timeToFirstTokenMs.value === null &&
+        (event.delta.content || event.delta.reasoningContent)
+      ) {
+        ctx.timeToFirstTokenMs.value = Date.now() - ctx.completionStartTime;
+      }
+      if (!modelStore.isStreaming) {
+        modelStore.setIsStreaming(true);
+      }
+      // Per-token writes go through the throttled streaming path so
+      // they coalesce. Only forward fields that were actually present
+      // in this delta to avoid clobbering existing content with empty.
+      const partial: Partial<MessageType.AssistantTurn['steps'][number]> = {};
+      if (event.delta.content) {
+        partial.content = event.delta.content.replace(/^\s+/, '');
+      }
+      if (event.delta.reasoningContent) {
+        partial.reasoningContent = event.delta.reasoningContent;
+      }
+      if (event.delta.toolCalls) {
+        partial.toolCalls = event.delta.toolCalls;
+      }
+      if (Object.keys(partial).length > 0) {
+        chatSessionStore.updateActiveStepStreaming(
+          ctx.messageId,
+          ctx.sessionId,
+          partial,
+        );
+      }
+      return;
+    }
+    case 'marker_seen':
+      // Reducer handles status flip; no per-step persistence needed.
+      return;
+    case 'tool_call_started':
+      // Reducer handles status flip; the call payload is already on
+      // the active step from the preceding `token` event with toolCalls.
+      return;
+    case 'tool_call_finished':
+      await chatSessionStore.appendToolOutcome(
+        ctx.messageId,
+        ctx.sessionId,
+        event.outcome,
+      );
+      return;
+    case 'step_finished':
+      await chatSessionStore.finalizeActiveStep(ctx.messageId, ctx.sessionId);
+      return;
+    case 'run_finished': {
+      // Final timings + observability for hit-max-turns. Kept here
+      // (not in the runner) because timings are an observability
+      // concern of the hook, not the runner.
+      const finalResult = event.result.finalResult;
+      await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
+        metadata: {
+          timings: {
+            ...(finalResult.timings ?? {}),
+            time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
+          },
+          copyable: true,
+          multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
+          ...(event.result.hitMaxTurns ? {hitMaxTurns: true} : {}),
+        },
+      });
+      if (event.result.hitMaxTurns) {
+        console.warn(
+          '[useChatSession] agent run hit maxTurns; surfacing last available content',
+        );
+      }
+      return;
+    }
+    case 'run_failed':
+      // Failure handled by the surrounding try/catch in the hook.
+      return;
+    default: {
+      const _exhaustive: never = event;
+      return _exhaustive;
+    }
+  }
+}
 
 export const useChatSession = (
   currentMessageInfo: React.MutableRefObject<{
@@ -167,6 +290,17 @@ export const useChatSession = (
 ) => {
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
+  // Trigger-marker cache lifetime is scoped to the hook (useRef). No
+  // module-level mutable state — see triggerMarkers.ts contract.
+  // The cache is held for future use by the runner's marker_seen
+  // detection (when llama.rn surfaces grammar_triggers per turn);
+  // creating it eagerly keeps the lifetime contract intact even
+  // before that wire-up lands.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const triggerCacheRef = useRef(createTriggerMarkerCache());
+  // AbortController for the active run. Replaced per run; signal is
+  // forwarded to runAgent for stop-mid-tool semantics.
+  const abortRef = useRef<AbortController | null>(null);
 
   const addMessage = async (message: MessageType.Any) => {
     await chatSessionStore.addMessageToCurrentSession(message);
@@ -185,7 +319,6 @@ export const useChatSession = (
   };
 
   const handleSendPress = async (message: MessageType.PartialText) => {
-    // Guard on engine instead of context -- supports both local and remote models
     const engine = modelStore.engine;
     if (!engine) {
       await addSystemMessage(l10n.chat.modelNotLoaded);
@@ -198,30 +331,25 @@ export const useChatSession = (
       return;
     }
 
-    // Extract imageUris from the message object
     const imageUris = message.imageUris;
-    // Check if we have images in the current message
-    const hasImages = imageUris && imageUris.length > 0;
+    const hasImages = !!(imageUris && imageUris.length > 0);
 
     const isMultimodalEnabled = await modelStore.isMultimodalEnabled();
 
-    // Get the current session messages BEFORE adding the new user message
-    // Use toJS to get a snapshot and avoid MobX reactivity issues
     const currentMessages = toJS(chatSessionStore.currentSessionMessages);
 
-    // Create the user message with embedded images
     const textMessage: MessageType.Text = {
       author: user,
       createdAt: Date.now(),
-      id: '', // Will be set by the database
+      id: '',
       text: message.text,
       type: 'text',
-      imageUris: hasImages ? imageUris : undefined, // Include images directly in the text message
+      imageUris: hasImages ? imageUris : undefined,
       metadata: {
         contextId,
         conversationId: conversationIdRef.current,
         copyable: true,
-        multimodal: hasImages, // Mark as multimodal if it has images
+        multimodal: hasImages,
       },
     };
     await addMessage(textMessage);
@@ -229,19 +357,15 @@ export const useChatSession = (
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(true);
 
-    // Keep screen awake during completion
     try {
       activateKeepAwake();
     } catch (error) {
       console.error('Failed to activate keep awake during chat:', error);
-      // Continue with chat even if keep awake fails
     }
 
     const activeSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
-
-    // Resolve system messages using utility function
     const pal = activeSession?.activePalId
       ? palStore.pals.find(p => p.id === activeSession.activePalId)
       : null;
@@ -251,7 +375,6 @@ export const useChatSession = (
       model: modelStore.activeModel,
     });
 
-    // Prepare completion parameters and create message record
     const {cleanCompletionParams, messageInfo} = await prepareCompletion({
       imageUris: imageUris || [],
       message,
@@ -266,218 +389,62 @@ export const useChatSession = (
 
     currentMessageInfo.current = messageInfo;
 
+    // Allowed talent names for this Pal. The runner rejects any
+    // tool call whose function.name isn't in this list.
+    const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
+
+    abortRef.current = new AbortController();
+    const completionStartTime = Date.now();
+    const timeToFirstTokenMs: {value: number | null} = {value: null};
+    let uiState: AgentUiState = initialAgentUiState;
+
     try {
-      // Track time to first token
-      const completionStartTime = Date.now();
-      let timeToFirstToken: number | null = null;
+      const events = runAgent({
+        engine,
+        initialParams: cleanCompletionParams as ApiCompletionParams,
+        allowedTalentNames: palTalents,
+        talentLookup: name => talentRegistry.get(name),
+        messageId: messageInfo.id,
+        signal: abortRef.current.signal,
+      });
 
-      // Create the completion promise using the engine interface
-      // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
-      const completionPromise = engine.completion(
-        cleanCompletionParams,
-        data => {
-          if (currentMessageInfo.current) {
-            // Capture time to first token on the first token received
-            if (timeToFirstToken === null && (data.token || data.content)) {
-              timeToFirstToken = Date.now() - completionStartTime;
-            }
+      for await (const event of events) {
+        // Drive the reducer first so renderers see the new status as
+        // soon as the per-step persistence write lands.
+        uiState = agentStateReducer(uiState, event);
+        chatSessionStore.setAgentUiState(uiState);
 
-            if (!modelStore.isStreaming) {
-              modelStore.setIsStreaming(true);
-            }
-
-            // Use content and reasoning_content from the streaming data
-            // llama.rn already separates these for us when enable_thinking is true
-            const {content = '', reasoning_content: reasoningContent} = data;
-
-            // If the streaming chunk carries tool_calls, we know the model is
-            // assembling a tool call — flag the message with pending talent
-            // names so TalentSurface can show per-talent pending skeletons.
-            if (data.tool_calls && data.tool_calls.length > 0) {
-              const names = data.tool_calls
-                .map((tc: any) => tc.function?.name)
-                .filter(Boolean);
-              chatSessionStore.updateMessageStreaming(
-                currentMessageInfo.current.id,
-                currentMessageInfo.current.sessionId,
-                {
-                  metadata: {
-                    pendingTalentNames: names.length > 0 ? names : ['unknown'],
-                  },
-                },
-              );
-            }
-
-            // Update message with the separated content
-            if (content || reasoningContent) {
-              // Build the update object
-              const update: any = {
-                metadata: {
-                  partialCompletionResult: {
-                    reasoning_content: reasoningContent,
-                    content: content.replace(/^\s+/, ''),
-                  },
-                },
-              };
-
-              // Only update text if we have actual content
-              if (content) {
-                update.text = content.replace(/^\s+/, '');
-              }
-
-              // Use the store's streaming update method which properly triggers reactivity
-              chatSessionStore.updateMessageStreaming(
-                currentMessageInfo.current.id,
-                currentMessageInfo.current.sessionId,
-                update,
-              );
-            }
-          }
-        },
-      );
-
-      // Only register completion promise for local models -- protects native context from being freed mid-completion
-      // For remote models, stopCompletion() via AbortController handles cleanup
-      if (modelStore.context) {
-        modelStore.registerCompletionPromise(completionPromise);
-      }
-
-      // Await the completion
-      const result = await completionPromise;
-
-      // Clear the promise after completion finishes
-      modelStore.clearCompletionPromise();
-
-      // Log completion result with time to first token for debugging
-      if (__DEV__) {
-        console.log('Completion result:', {
-          ...result.timings,
-          time_to_first_token_ms: timeToFirstToken,
-          reasoning_content: result.reasoning_content,
-          content: result.content,
-          text: result.text,
+        await applyEventToStore(event, {
+          messageId: messageInfo.id,
+          sessionId: messageInfo.sessionId,
+          completionStartTime,
+          timeToFirstTokenMs,
+          hasImages,
+          isMultimodalEnabled,
         });
-        console.log('result', result);
-      }
 
-      // Talent dispatch (PACT: render_html, calculate, datetime, etc.)
-      // Pal opts in via pact.talents. Engines are name-keyed in the
-      // global registry — no Pal-id coupling.
-      const palTalents = (pal?.pact?.talents ?? []).map(t => t.name);
-      // llama.rn sometimes returns tool_calls with id: null. Strict Jinja
-      // templates reject `tool_call_id: null` in the next-turn tool response,
-      // so we backfill a stable synthetic id before storing or echoing it.
-      const rawToolCalls = result.tool_calls ?? [];
-      const toolCallIdSeed = Date.now();
-      const toolCalls = rawToolCalls.map((tc, i) => ({
-        ...tc,
-        id: tc.id || `call_${toolCallIdSeed}_${i}`,
-      }));
-      const toolMessages: Array<{tool_call_id: string; content: string}> = [];
-      const talentResultsMap: Record<string, TalentResult> = {};
-
-      for (const tc of toolCalls) {
-        const fnName = tc.function?.name;
-        const callId = tc.id;
-        if (!fnName || !palTalents.includes(fnName)) {
-          const summary = fnName
-            ? `Talent "${fnName}" is not enabled for this Pal`
-            : 'Unknown talent (no function name)';
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: summary,
-          };
-          continue;
-        }
-        const handler = talentRegistry.get(fnName);
-        if (!handler) {
-          const summary = `Talent "${fnName}" is not available on this device`;
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: summary,
-          };
-          continue;
-        }
-
-        let parsedArgs: Record<string, any>;
-        try {
-          parsedArgs =
-            typeof tc.function?.arguments === 'string'
-              ? JSON.parse(tc.function.arguments)
-              : (tc.function?.arguments ?? {});
-        } catch {
-          const summary = `Error: invalid JSON arguments for ${fnName}`;
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: summary,
-          };
-          continue;
-        }
-
-        try {
-          const toolResult = await handler.execute(parsedArgs);
-          toolMessages.push({
-            tool_call_id: callId,
-            content: toolResult.summary,
-          });
-          talentResultsMap[callId] = toolResult;
-        } catch (e) {
-          const errMsg = e instanceof Error ? e.message : String(e);
-          const summary = `Error executing ${fnName}: ${errMsg}`;
-          toolMessages.push({tool_call_id: callId, content: summary});
-          talentResultsMap[callId] = {
-            type: 'error',
-            summary,
-            errorMessage: errMsg,
-          };
+        if (event.type === 'run_failed') {
+          throw event.error;
         }
       }
 
-      // Update final completion metadata
-      await chatSessionStore.updateMessage(
-        currentMessageInfo.current.id,
-        currentMessageInfo.current.sessionId,
-        {
-          metadata: {
-            timings: {
-              ...result.timings,
-              time_to_first_token_ms: timeToFirstToken,
-            },
-            copyable: true,
-            // Add multimodal flag if this was a multimodal completion
-            multimodal: hasImages && isMultimodalEnabled,
-            // Save the final completion result with reasoning_content
-            completionResult: {
-              reasoning_content: result.reasoning_content,
-              content: result.text,
-            },
-            ...(toolCalls.length > 0 ? {talentCalls: toolCalls} : {}),
-            ...(toolMessages.length > 0 ? {toolMessages} : {}),
-            ...(Object.keys(talentResultsMap).length > 0
-              ? {talentResults: talentResultsMap}
-              : {}),
-          },
-        },
-      );
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
     } catch (error) {
-      // Clear the promise on error too
-      modelStore.clearCompletionPromise();
       console.error('Completion error:', error);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+      // Reset agentUiState back to idle so renderers don't get
+      // stuck in a failed state across the next user message.
+      chatSessionStore.setAgentUiState(initialAgentUiState);
 
-      // For remote models: preserve partial message if tokens were already streamed
-      // Instead of deleting the message, keep what we have and show error toast
+      // Error rollback path. The empty/in-flight AssistantTurn row
+      // already exists; preserve any partial steps and tag with
+      // {interrupted, copyable}. The store widening from step 2
+      // ensures this metadata write does not silently no-op on
+      // assistant_turn rows and does not clobber metadata.steps.
       if (currentMessageInfo.current) {
         const session = chatSessionStore.sessions.find(
           s => s.id === currentMessageInfo.current!.sessionId,
@@ -485,11 +452,18 @@ export const useChatSession = (
         const currentMsg = session?.messages.find(
           msg => msg.id === currentMessageInfo.current!.id,
         );
-        const hasPartialContent =
-          currentMsg && 'text' in currentMsg && currentMsg.text;
+
+        const hasAnyStepContent =
+          currentMsg?.type === 'assistant_turn' &&
+          ((currentMsg as MessageType.AssistantTurn).steps ?? []).some(
+            s => (s.content?.length ?? 0) > 0 || (s.toolCalls?.length ?? 0) > 0,
+          );
+        const hasLegacyText =
+          currentMsg?.type === 'text' &&
+          !!(currentMsg as MessageType.Text).text;
+        const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
         if (hasPartialContent) {
-          // Partial content exists -- keep it and add error metadata
           await chatSessionStore.updateMessage(
             currentMessageInfo.current.id,
             currentMessageInfo.current.sessionId,
@@ -501,12 +475,10 @@ export const useChatSession = (
             },
           );
         } else {
-          // No content was streamed -- clean up the empty assistant message
           try {
             await chatSessionRepository.deleteMessage(
               currentMessageInfo.current.id,
             );
-            // Also remove from local state
             if (session) {
               runInAction(() => {
                 session.messages = session.messages.filter(
@@ -530,7 +502,6 @@ export const useChatSession = (
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
     } finally {
-      // Always try to deactivate keep awake in finally block
       try {
         deactivateKeepAwake();
       } catch (error) {
@@ -545,7 +516,10 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // Use engine.stopCompletion() for both local and remote models
+    // Signal the runner first so the abort fires at the next turn
+    // boundary; engine.stopCompletion() then halts the in-flight
+    // engine call (terminating the current step's streaming).
+    abortRef.current?.abort();
     if (modelStore.inferencing && modelStore.engine) {
       modelStore.engine.stopCompletion();
     }
@@ -553,7 +527,6 @@ export const useChatSession = (
     modelStore.setIsStreaming(false);
     chatSessionStore.setIsGenerating(false);
 
-    // Deactivate keep awake when stopping completion
     try {
       deactivateKeepAwake();
     } catch (error) {
@@ -568,7 +541,6 @@ export const useChatSession = (
     handleSendPress,
     handleResetConversation,
     handleStopPress,
-    // Add a method to check if multimodal is enabled
     isMultimodalEnabled: async () => await modelStore.isMultimodalEnabled(),
   };
 };
