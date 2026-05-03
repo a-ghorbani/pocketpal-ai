@@ -288,7 +288,10 @@ export const Message = React.memo(
           const wrapped = oneOf(
             renderBubble,
             <View
-              style={[contentContainer, !isFirstBlock && turnBlockStyles.blockSpacer]}
+              style={[
+                contentContainer,
+                !isFirstBlock && turnBlockStyles.blockSpacer,
+              ]}
               testID="ContentContainer">
               {child}
             </View>,

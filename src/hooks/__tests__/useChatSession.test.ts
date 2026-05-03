@@ -304,51 +304,13 @@ describe('useChatSession', () => {
     );
   });
 
-  it('should save completionResult with reasoning_content after completion', async () => {
-    const mockReasoningContent = 'Let me think step by step...';
-    const mockContent = 'The answer is 42.';
-
-    if (modelStore.context) {
-      modelStore.context.completion = jest
-        .fn()
-        .mockImplementation((_params, onData) => {
-          // Simulate streaming with reasoning content
-          onData({
-            token: 'tok',
-            content: mockContent,
-            reasoning_content: mockReasoningContent,
-          });
-          return Promise.resolve({
-            text: mockContent,
-            reasoning_content: mockReasoningContent,
-            timings: {total: 100},
-            usage: {},
-          });
-        });
-    }
-
-    const {result} = renderHook(() =>
-      useChatSession({current: null}, textMessage.author, mockAssistant),
-    );
-
-    await act(async () => {
-      await result.current.handleSendPress(textMessage);
-    });
-
-    // Verify the final updateMessage call includes completionResult
-    expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.objectContaining({
-        metadata: expect.objectContaining({
-          completionResult: {
-            reasoning_content: mockReasoningContent,
-            content: mockContent,
-          },
-        }),
-      }),
-    );
-  });
+  // NOTE: The legacy "saves completionResult with reasoning_content"
+  // test was removed as part of TASK-20260502-2115. The new pipeline
+  // emits AgentEvent.token deltas with reasoningContent and the
+  // applyEventToStore/agentStateReducer pair persists per-step
+  // step.reasoningContent — replacement coverage lives at the runner
+  // (see src/services/agent/__tests__/AgentRunner.test.ts in step 9)
+  // and reducer level. The metadata.completionResult bag is gone.
 
   it('should use system prompt as-is when pal has no parameters', async () => {
     // Create a mock pal without parameters
