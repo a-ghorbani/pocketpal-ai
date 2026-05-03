@@ -215,10 +215,7 @@ describe('exportUtils', () => {
             type: 'assistant_turn',
             metadata: JSON.stringify({
               copyable: true,
-              steps: [
-                {content: 'Let me check'},
-                {content: 'The answer is 42'},
-              ],
+              steps: [{content: 'Let me check'}, {content: 'The answer is 42'}],
             }),
             createdAt: 1704067200000,
             // Real WatermelonDB Message.toMessageObject lifts metadata.steps
@@ -228,10 +225,7 @@ describe('exportUtils', () => {
               type: 'assistant_turn',
               author: {id: 'assistant'},
               createdAt: 1704067200000,
-              steps: [
-                {content: 'Let me check'},
-                {content: 'The answer is 42'},
-              ],
+              steps: [{content: 'Let me check'}, {content: 'The answer is 42'}],
               metadata: {copyable: true},
             }),
           },
@@ -250,9 +244,7 @@ describe('exportUtils', () => {
       expect(parsed.messages).toHaveLength(1);
       expect(parsed.messages[0].type).toBe('assistant_turn');
       // derivedText joins step.content with two newlines.
-      expect(parsed.messages[0].text).toBe(
-        'Let me check\n\nThe answer is 42',
-      );
+      expect(parsed.messages[0].text).toBe('Let me check\n\nThe answer is 42');
     });
   });
 

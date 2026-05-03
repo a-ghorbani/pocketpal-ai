@@ -110,11 +110,7 @@ describe('ChatView — AssistantTurn integration', () => {
 
     const messages = [turn1, turn2, turn3, turn4];
     const {getByTestId} = render(
-      <ChatView
-        messages={messages}
-        onSendPress={jest.fn()}
-        user={user}
-      />,
+      <ChatView messages={messages} onSendPress={jest.fn()} user={user} />,
       {withNavigation: true, withBottomSheetProvider: true},
     );
     // Soft cap fires at >= 4 — banner is visible.
@@ -161,11 +157,7 @@ describe('ChatView — AssistantTurn integration', () => {
       ),
     ];
     const {queryByTestId} = render(
-      <ChatView
-        messages={messages}
-        onSendPress={jest.fn()}
-        user={user}
-      />,
+      <ChatView messages={messages} onSendPress={jest.fn()} user={user} />,
       {withNavigation: true, withBottomSheetProvider: true},
     );
     expect(queryByTestId('soft-cap-warning')).toBeNull();
@@ -194,11 +186,7 @@ describe('ChatView — AssistantTurn integration', () => {
       ),
     );
     const {queryByTestId} = render(
-      <ChatView
-        messages={messages}
-        onSendPress={jest.fn()}
-        user={user}
-      />,
+      <ChatView messages={messages} onSendPress={jest.fn()} user={user} />,
       {withNavigation: true, withBottomSheetProvider: true},
     );
     expect(queryByTestId('soft-cap-warning')).toBeNull();
@@ -229,18 +217,17 @@ describe('ChatView — AssistantTurn integration', () => {
     // node whose subtree contains the assistant turn's text content
     // (so we don't accidentally trigger the user message's pressable).
     const longPressables = UNSAFE_root.findAll(
-      (n: any) =>
-        n.props && typeof n.props.onLongPress === 'function',
+      (n: any) => n.props && typeof n.props.onLongPress === 'function',
     );
     // Find the one whose subtree contains 'hi assistant'.
     const target = longPressables.find((node: any) => {
       const findText = (n: any): boolean => {
         if (!n) return false;
-        if (typeof n.children === 'string') return n.children.includes('hi assistant');
+        if (typeof n.children === 'string')
+          return n.children.includes('hi assistant');
         if (typeof n.props?.children === 'string')
           return n.props.children.includes('hi assistant');
-        if (Array.isArray(n.children))
-          return n.children.some(findText);
+        if (Array.isArray(n.children)) return n.children.some(findText);
         if (n.children) return findText(n.children);
         return false;
       };

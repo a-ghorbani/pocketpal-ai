@@ -127,9 +127,7 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
     it('#6 appends outcome onto the active (last) step of an assistant_turn', async () => {
       const initialStep: AgentStep = {
         content: 'thinking',
-        toolCalls: [
-          {id: 'c0', function: {name: 'calculate', arguments: '{}'}},
-        ],
+        toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
       };
       const turn = makeAssistantTurn([{content: 'preamble'}, initialStep]);
       chatSessionStore.sessions = [
@@ -290,9 +288,8 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
         content: 'a',
       });
       expect(
-        (
-          chatSessionStore.sessions[0].messages[0] as MessageType.AssistantTurn
-        ).steps[0].content,
+        (chatSessionStore.sessions[0].messages[0] as MessageType.AssistantTurn)
+          .steps[0].content,
       ).toBe('a');
 
       // Subsequent calls within the throttle window: coalesce into the
@@ -401,9 +398,7 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
 
   describe('updateSessionTitle on assistant_turn-ending sessions (#9)', () => {
     it('derives title from derivedText(message), not empty, when last message is assistant_turn', async () => {
-      const turn = makeAssistantTurn([
-        {content: 'Hello there, friend'},
-      ]);
+      const turn = makeAssistantTurn([{content: 'Hello there, friend'}]);
       const session = {
         id: 'session1',
         title: 'New Session',
@@ -442,7 +437,11 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
 
     it('skips when steps yield no derived text', async () => {
       const turn = makeAssistantTurn([
-        {toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}]},
+        {
+          toolCalls: [
+            {id: 'c0', function: {name: 'calculate', arguments: '{}'}},
+          ],
+        },
       ]);
       const session = {
         id: 'session1',

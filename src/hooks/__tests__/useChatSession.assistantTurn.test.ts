@@ -172,11 +172,11 @@ describe('useChatSession — AssistantTurn integration', () => {
     // empty steps[] array; we want the test to verify the rollback path
     // when the runner errors — addMessageToCurrentSession is mocked to
     // inject the seeded id.
-    (chatSessionStore.addMessageToCurrentSession as jest.Mock).mockImplementation(
-      async (msg: any) => {
-        msg.id = turnId;
-      },
-    );
+    (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mockImplementation(async (msg: any) => {
+      msg.id = turnId;
+    });
 
     await act(async () => {
       await result.current.handleSendPress(textMessage);
@@ -187,8 +187,8 @@ describe('useChatSession — AssistantTurn integration', () => {
     // turn instead. Either branch is acceptable; this test exercises
     // the FIRST branch by ensuring there is partial step content
     // present at rollback time.
-    const updateMessageCalls = (chatSessionStore.updateMessage as jest.Mock).mock
-      .calls;
+    const updateMessageCalls = (chatSessionStore.updateMessage as jest.Mock)
+      .mock.calls;
     const interruptedCall = updateMessageCalls.find(
       c => c[2]?.metadata?.interrupted === true,
     );
@@ -213,8 +213,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     // path finds it. Restore at end so other tests are not affected.
     const fakeTalent: TalentEngine = {
       name: 'calculate',
-      execute: async () =>
-        ({type: 'text', summary: '4'}) as TalentResult,
+      execute: async () => ({type: 'text', summary: '4'}) as TalentResult,
       toToolDefinition: () => ({
         type: 'function',
         function: {name: 'calculate', description: '', parameters: {}},
@@ -251,25 +250,23 @@ describe('useChatSession — AssistantTurn integration', () => {
 
     let turnIndex = 0;
     if (modelStore.context) {
-      modelStore.context.completion = jest
-        .fn()
-        .mockImplementation(async () => {
-          turnIndex += 1;
-          if (turnIndex === 1) {
-            return {
-              text: '',
-              content: '',
-              tool_calls: [
-                {
-                  id: 'c0',
-                  type: 'function',
-                  function: {name: 'calculate', arguments: '{"e":"2+2"}'},
-                },
-              ],
-            };
-          }
-          return {text: '4', content: '4'};
-        });
+      modelStore.context.completion = jest.fn().mockImplementation(async () => {
+        turnIndex += 1;
+        if (turnIndex === 1) {
+          return {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{"e":"2+2"}'},
+              },
+            ],
+          };
+        }
+        return {text: '4', content: '4'};
+      });
     }
 
     const {result} = renderHook(() =>
@@ -282,9 +279,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     // appendToolOutcome fired with the calculate outcome.
     const calls = (chatSessionStore.appendToolOutcome as jest.Mock).mock.calls;
     expect(calls.length).toBeGreaterThanOrEqual(1);
-    const outcomeCall = calls.find(
-      c => c[2]?.toolName === 'calculate',
-    );
+    const outcomeCall = calls.find(c => c[2]?.toolName === 'calculate');
     expect(outcomeCall).toBeDefined();
     expect(outcomeCall![2].responseContent).toBe('4');
 

@@ -6,7 +6,12 @@ import {
   user,
   assistant,
 } from '../chat';
-import {AgentStep, ChatMessage, ChatTemplateConfig, MessageType} from '../types';
+import {
+  AgentStep,
+  ChatMessage,
+  ChatTemplateConfig,
+  MessageType,
+} from '../types';
 import {createModel} from '../../../jest/fixtures/models';
 
 const conversationWSystem: ChatMessage[] = [
@@ -275,7 +280,10 @@ describe('convertToChatMessages — AssistantTurn', () => {
       {
         content: 'Let me calculate',
         toolCalls: [
-          {id: 'c0', function: {name: 'calculate', arguments: '{"expr":"2+2"}'}},
+          {
+            id: 'c0',
+            function: {name: 'calculate', arguments: '{"expr":"2+2"}'},
+          },
         ],
         toolOutcomes: [
           {
@@ -310,9 +318,7 @@ describe('convertToChatMessages — AssistantTurn', () => {
     const turn = makeAssistantTurn([
       {
         content: '',
-        toolCalls: [
-          {id: 'c0', function: {name: 'datetime', arguments: '{}'}},
-        ],
+        toolCalls: [{id: 'c0', function: {name: 'datetime', arguments: '{}'}}],
       },
     ]);
     const result = convertToChatMessages([turn]);
@@ -354,9 +360,7 @@ describe('convertToChatMessages — AssistantTurn', () => {
     const turn = makeAssistantTurn([
       {
         content: '',
-        toolCalls: [
-          {id: 'c0', function: {name: 'calculate', arguments: '{}'}},
-        ],
+        toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
         toolOutcomes: [
           {
             callId: 'c0',
@@ -375,7 +379,11 @@ describe('convertToChatMessages — AssistantTurn', () => {
         role: 'assistant',
         content: '',
         tool_calls: [
-          {id: 'c0', type: 'function', function: {name: 'calculate', arguments: '{}'}},
+          {
+            id: 'c0',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{}'},
+          },
         ],
       },
       {role: 'tool', tool_call_id: 'c0', content: '7'},
@@ -456,7 +464,13 @@ describe('convertToChatMessages — AssistantTurn', () => {
     const result = convertToChatMessages([turn]);
     // Roles in order: assistant(A,calls)+tool(c0)+assistant(B,calls)+tool(c1)+assistant(C)
     const roles = result.map(m => m.role);
-    expect(roles).toEqual(['assistant', 'tool', 'assistant', 'tool', 'assistant']);
+    expect(roles).toEqual([
+      'assistant',
+      'tool',
+      'assistant',
+      'tool',
+      'assistant',
+    ]);
     expect((result[0] as any).tool_calls?.[0].id).toBe('c0');
     expect((result[1] as any).tool_call_id).toBe('c0');
     expect((result[2] as any).tool_calls?.[0].id).toBe('c1');
@@ -512,9 +526,29 @@ describe('derivedText', () => {
   });
 
   it('Image / File / Unsupported messages return ""', () => {
-    expect(derivedText({id: '1', type: 'image', author: user, uri: 'x', name: 'x', size: 0} as any)).toBe('');
-    expect(derivedText({id: '1', type: 'file', author: user, uri: 'x', name: 'x', size: 0} as any)).toBe('');
-    expect(derivedText({id: '1', type: 'unsupported', author: user} as any)).toBe('');
+    expect(
+      derivedText({
+        id: '1',
+        type: 'image',
+        author: user,
+        uri: 'x',
+        name: 'x',
+        size: 0,
+      } as any),
+    ).toBe('');
+    expect(
+      derivedText({
+        id: '1',
+        type: 'file',
+        author: user,
+        uri: 'x',
+        name: 'x',
+        size: 0,
+      } as any),
+    ).toBe('');
+    expect(
+      derivedText({id: '1', type: 'unsupported', author: user} as any),
+    ).toBe('');
   });
 });
 

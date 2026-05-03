@@ -250,10 +250,7 @@ describe('useMessageActions', () => {
       type: 'assistant_turn' as const,
       author: {id: assistantId},
       createdAt: 2,
-      steps: [
-        {content: 'Let me calculate that'},
-        {content: 'The answer is 4'},
-      ],
+      steps: [{content: 'Let me calculate that'}, {content: 'The answer is 4'}],
     };
 
     it('#1 handleCopy(legacy Text) → clipboard contains message.text (regression guard)', () => {
