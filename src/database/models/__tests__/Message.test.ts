@@ -38,9 +38,7 @@ describe('Message.toMessageObject', () => {
       {content: 'Let me calculate'},
       {
         content: 'The answer is 42',
-        toolCalls: [
-          {id: 'c0', function: {name: 'calculate', arguments: '{}'}},
-        ],
+        toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
       },
     ];
     const msg = makeMessage({

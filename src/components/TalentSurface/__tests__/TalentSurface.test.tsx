@@ -82,9 +82,7 @@ describe('TalentSurface', () => {
     const step: AgentStep = {
       toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
     };
-    const {getByTestId} = render(
-      <TalentSurface step={step} isActiveRun />,
-    );
+    const {getByTestId} = render(<TalentSurface step={step} isActiveRun />);
     expect(getByTestId('active-pending')).toBeTruthy();
   });
 
@@ -129,7 +127,11 @@ describe('TalentSurface', () => {
 
   it('renders nothing for non-active run with empty pendingTalentNames (legacy persisted no-tool path)', () => {
     const {queryByTestId} = render(
-      <TalentSurface step={undefined} isActiveRun={false} pendingTalentNames={['x']} />,
+      <TalentSurface
+        step={undefined}
+        isActiveRun={false}
+        pendingTalentNames={['x']}
+      />,
     );
     expect(queryByTestId('talent-call-pending')).toBeNull();
   });

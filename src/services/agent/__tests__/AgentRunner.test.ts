@@ -59,9 +59,7 @@ function makeTalent(
 
 const baseParams: ApiCompletionParams = {messages: []} as any;
 
-async function collect(
-  iter: AsyncIterable<AgentEvent>,
-): Promise<AgentEvent[]> {
+async function collect(iter: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const out: AgentEvent[] = [];
   for await (const e of iter) {
     out.push(e);
@@ -197,7 +195,11 @@ describe('runAgent', () => {
     const finished = events[events.length - 1];
     expect(finished.type).toBe('run_finished');
     expect(
-      events.find(e => e.type === 'tool_call_finished' && e.outcome.toolName === 'render_html'),
+      events.find(
+        e =>
+          e.type === 'tool_call_finished' &&
+          e.outcome.toolName === 'render_html',
+      ),
     ).toBeTruthy();
   });
 

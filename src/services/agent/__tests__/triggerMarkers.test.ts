@@ -99,16 +99,8 @@ describe('createTriggerMarkerCache', () => {
   it('order of tool names does not affect cache key (sorted internally)', async () => {
     const cache = createTriggerMarkerCache();
     const fc = jest.fn(makeFormattedChat([{value: 'M'}]));
-    await cache.getMarkers(
-      'ctx',
-      [tool('calculate'), tool('datetime')],
-      fc,
-    );
-    await cache.getMarkers(
-      'ctx',
-      [tool('datetime'), tool('calculate')],
-      fc,
-    );
+    await cache.getMarkers('ctx', [tool('calculate'), tool('datetime')], fc);
+    await cache.getMarkers('ctx', [tool('datetime'), tool('calculate')], fc);
     // Same key — second call hits cache.
     expect(fc).toHaveBeenCalledTimes(1);
   });

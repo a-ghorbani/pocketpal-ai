@@ -14,7 +14,10 @@ let mockTextMessageCalls: Array<{step?: AgentStep; messageId: string}> = [];
 jest.mock('../../TextMessage/TextMessage', () => {
   return {
     TextMessage: jest.fn((props: any) => {
-      mockTextMessageCalls.push({step: props.step, messageId: props.message?.id});
+      mockTextMessageCalls.push({
+        step: props.step,
+        messageId: props.message?.id,
+      });
       return <></>;
     }),
   };
@@ -196,11 +199,7 @@ describe('Message — AssistantTurn renderer', () => {
 
   it('#13 avatar renders once per AssistantTurn (showAvatar=true, showUserAvatars=true)', () => {
     const message = makeDerivedTurn(
-      [
-        {content: 'A'},
-        {content: 'B'},
-        {content: 'C'},
-      ],
+      [{content: 'A'}, {content: 'B'}, {content: 'C'}],
       {author: {id: 'assistant-id', firstName: 'Pal'}},
     );
     const {queryAllByTestId, UNSAFE_root} = render(
