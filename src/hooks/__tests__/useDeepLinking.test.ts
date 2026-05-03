@@ -124,4 +124,60 @@ describe('useDeepLinking — cold-launch routing', () => {
 
     expect(mockNavigate).not.toHaveBeenCalled();
   });
+
+  it('navigates on warm-state url events (WDIO deepLink path)', async () => {
+    // Cold launch returns null — this app start was a regular launch.
+    getInitialURLSpy.mockResolvedValue(null);
+
+    // Capture the listener callback so we can fire it ourselves.
+    let urlHandler: ((evt: {url: string}) => void) | null = null;
+    const removeSpy = jest.fn();
+    const addEventListenerSpy = jest
+      .spyOn(Linking, 'addEventListener')
+      .mockImplementation((event, cb) => {
+        if (event === 'url') {
+          urlHandler = cb as typeof urlHandler;
+        }
+        return {remove: removeSpy} as any;
+      });
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(addEventListenerSpy).toHaveBeenCalledWith('url', expect.any(Function));
+    expect(mockNavigate).not.toHaveBeenCalled(); // no cold-launch URL
+
+    // Simulate WDIO firing `mobile: deepLink` after the app started.
+    urlHandler?.({url: 'pocketpal://e2e/benchmark'});
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER);
+
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('removes the warm-state url listener on unmount', async () => {
+    getInitialURLSpy.mockResolvedValue(null);
+    const removeSpy = jest.fn();
+    const addEventListenerSpy = jest
+      .spyOn(Linking, 'addEventListener')
+      .mockImplementation(() => ({remove: removeSpy}) as any);
+
+    const {unmount} = renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    unmount();
+
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('does NOT register the warm-state listener when __E2E__=false', async () => {
+    (global as any).__E2E__ = false;
+    const addEventListenerSpy = jest.spyOn(Linking, 'addEventListener');
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+
+    expect(addEventListenerSpy).not.toHaveBeenCalled();
+    addEventListenerSpy.mockRestore();
+  });
 });

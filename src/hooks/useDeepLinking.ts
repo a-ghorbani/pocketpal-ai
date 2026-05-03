@@ -87,27 +87,36 @@ export const useDeepLinking = () => {
     [handleChatDeepLink, navigation],
   );
 
-  // E2E-only Android cold-launch routing for the BenchmarkRunnerScreen.
-  // RN's stock Linking.getInitialURL() reads the launching intent's data URI
-  // on Android, so no native code (no MainActivity onNewIntent override) is
-  // required. We only support cold-launch — warm-state URL events are
-  // explicitly out of scope (the E2E spec runs with fullReset:true).
-  // The whole effect is gated by __E2E__; in prod, the entire body is
-  // unreachable and DCE-stripped by Hermes.
+  // E2E-only routing for the BenchmarkRunnerScreen. Two paths:
+  //   1. Cold launch — Linking.getInitialURL() reads the launching intent's
+  //      data URI; no MainActivity onNewIntent override needed.
+  //   2. Warm launch — WDIO's `mobile: deepLink` driver command delivers the
+  //      URL after the app has already started (fullReset re-installs the
+  //      APK but the activity is launched before the test sends the deep
+  //      link), so Android routes it as a warm 'url' event. Without the
+  //      addEventListener path, the spec's `bench-run-button` wait would
+  //      hang because the runner screen never mounts.
+  // The whole effect is gated by __E2E__; in prod, the body is unreachable
+  // and DCE-stripped by Hermes.
   useEffect(() => {
     if (!__E2E__) {
       return;
     }
+    const routeIfBench = (url: string | null) => {
+      if (url?.startsWith('pocketpal://e2e/benchmark')) {
+        (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER);
+      }
+    };
     Linking.getInitialURL()
-      .then(url => {
-        if (url?.startsWith('pocketpal://e2e/benchmark')) {
-          (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER);
-        }
-      })
+      .then(routeIfBench)
       .catch(() => {
-        // getInitialURL rejects on some surfaces; no-op for E2E. The activity
-        // is already running, so the test driver can fall back to manual nav.
+        // getInitialURL rejects on some surfaces; warm-state listener still
+        // covers WDIO's deepLink command.
       });
+    const sub = Linking.addEventListener('url', ({url}) => routeIfBench(url));
+    return () => {
+      sub.remove();
+    };
   }, [navigation]);
 
   useEffect(() => {
