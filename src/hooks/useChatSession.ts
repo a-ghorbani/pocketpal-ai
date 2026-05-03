@@ -1,6 +1,7 @@
 import React, {useRef} from 'react';
 
 import {toJS, runInAction} from 'mobx';
+import type {JinjaFormattedChatResult} from 'llama.rn';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
@@ -19,6 +20,7 @@ import {
   CompletionParams,
 } from '../utils/completionTypes';
 import {talentRegistry} from '../services/talents';
+import type {ToolDefinition} from '../services/talents/types';
 import {
   agentStateReducer,
   createTriggerMarkerCache,
@@ -292,11 +294,9 @@ export const useChatSession = (
   const conversationIdRef = useRef<string>(randId());
   // Trigger-marker cache lifetime is scoped to the hook (useRef). No
   // module-level mutable state — see triggerMarkers.ts contract.
-  // The cache is held for future use by the runner's marker_seen
-  // detection (when llama.rn surfaces grammar_triggers per turn);
-  // creating it eagerly keeps the lifetime contract intact even
-  // before that wire-up lands.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Resolved before each runAgent call; the resulting string[] is
+  // passed into AgentRunOptions.triggerMarkers so the runner has no
+  // direct dependency on the cache, modelStore, or getFormattedChat.
   const triggerCacheRef = useRef(createTriggerMarkerCache());
   // AbortController for the active run. Replaced per run; signal is
   // forwarded to runAgent for stop-mid-tool semantics.
@@ -398,12 +398,39 @@ export const useChatSession = (
     const timeToFirstTokenMs: {value: number | null} = {value: null};
     let uiState: AgentUiState = initialAgentUiState;
 
+    // Precompute trigger markers via the per-hook cache. We use the
+    // CLOSURE form of `getFormattedChat` (NOT `.bind(...)`) because the
+    // method is multi-arg and requires `params: {tools, jinja: true}`
+    // to populate `grammar_triggers`. A bare bind would call the
+    // method with no arguments and silently return empty markers,
+    // defeating marker detection. Failure is non-fatal: we fall back
+    // to `[]` and let `tool_call_started` drive the UX flip (one beat
+    // later) instead of `marker_seen`.
+    const tools =
+      (cleanCompletionParams.tools as ToolDefinition[] | undefined) ?? [];
+    let triggerMarkers: string[] = [];
+    try {
+      triggerMarkers = await triggerCacheRef.current.getMarkers(
+        String(modelStore.context!.id),
+        tools,
+        () =>
+          modelStore.context!.getFormattedChat(
+            cleanCompletionParams.messages ?? [],
+            undefined,
+            {tools: cleanCompletionParams.tools, jinja: true},
+          ) as Promise<JinjaFormattedChatResult>,
+      );
+    } catch (e) {
+      console.warn('[chat] trigger marker compute failed; falling back', e);
+    }
+
     try {
       const events = runAgent({
         engine,
         initialParams: cleanCompletionParams as ApiCompletionParams,
         allowedTalentNames: palTalents,
         talentLookup: name => talentRegistry.get(name),
+        triggerMarkers,
         messageId: messageInfo.id,
         signal: abortRef.current.signal,
       });
