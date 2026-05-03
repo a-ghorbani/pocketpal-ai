@@ -86,6 +86,7 @@ describe('runAgent', () => {
         allowedTalentNames: [],
         talentLookup: () => undefined,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const types = events.map(e => e.type);
@@ -139,6 +140,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['calculate'],
         talentLookup: name => (name === 'calculate' ? calculate : undefined),
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const stepStarts = events.filter(e => e.type === 'step_started');
@@ -190,6 +192,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['render_html'],
         talentLookup: () => renderHtml,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const finished = events[events.length - 1];
@@ -261,6 +264,7 @@ describe('runAgent', () => {
               ? calculate
               : undefined,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     expect(events.filter(e => e.type === 'step_started')).toHaveLength(3);
@@ -298,6 +302,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['datetime'],
         talentLookup: () => datetime,
         messageId: 'msg',
+        triggerMarkers: [],
         maxTurns: 3,
       }),
     );
@@ -343,6 +348,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['calculate'],
         talentLookup: () => calculate,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const tcf = events.find(e => e.type === 'tool_call_finished') as Extract<
@@ -385,6 +391,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['mystery'],
         talentLookup: () => undefined,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const tcf = events.find(e => e.type === 'tool_call_finished') as Extract<
@@ -427,6 +434,7 @@ describe('runAgent', () => {
         talentLookup: () =>
           makeTalent('evil', () => ({type: 'text', summary: 'pwn'})),
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const tcf = events.find(e => e.type === 'tool_call_finished') as Extract<
@@ -477,6 +485,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['broken'],
         talentLookup: () => broken,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const tcf = events.find(e => e.type === 'tool_call_finished') as Extract<
@@ -519,6 +528,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['datetime'],
         talentLookup: () => datetime,
         messageId: 'msg',
+        triggerMarkers: [],
         signal: controller.signal,
       }),
     );
@@ -567,6 +577,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['calculate'],
         talentLookup: () => calculate,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const finished = events.filter(e => e.type === 'tool_call_finished');
@@ -591,6 +602,7 @@ describe('runAgent', () => {
         allowedTalentNames: [],
         talentLookup: () => undefined,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const last = events[events.length - 1];
@@ -681,6 +693,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['slow'],
         talentLookup: () => slow,
         messageId: 'msg',
+        triggerMarkers: [],
         signal: controller.signal,
       }),
     );
@@ -712,6 +725,7 @@ describe('runAgent', () => {
         allowedTalentNames: [],
         talentLookup: () => undefined,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const tokenEvents = events.filter(e => e.type === 'token');
@@ -742,6 +756,7 @@ describe('runAgent', () => {
       allowedTalentNames: [],
       talentLookup: () => undefined,
       messageId: 'msg',
+      triggerMarkers: [],
     })) {
       out.push(e);
       // Slow the consumer — let other microtasks run between pulls.
@@ -777,6 +792,7 @@ describe('runAgent', () => {
         allowedTalentNames: [],
         talentLookup: () => undefined,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const tokens = events.filter(e => e.type === 'token');
@@ -823,6 +839,7 @@ describe('runAgent', () => {
         allowedTalentNames: ['calculate'],
         talentLookup: () => calculate,
         messageId: 'msg',
+        triggerMarkers: [],
       }),
     );
     const startedIdx = events

@@ -250,6 +250,7 @@ export async function* runAgent(
     initialParams,
     allowedTalentNames,
     talentLookup,
+    triggerMarkers,
     messageId,
     maxTurns = DEFAULT_MAX_TURNS,
     signal,
@@ -276,6 +277,15 @@ export async function* runAgent(
 
       yield {type: 'step_started', turn, isFollowUp: turn > 0};
 
+      // Per-iteration locals for marker detection. Declared INSIDE the
+      // while body so each turn gets a fresh value automatically — no
+      // function-scope state, no manual reset. A multi-step run with a
+      // marker in step 0 and another in step 1 yields exactly two
+      // `marker_seen` events because each iteration redeclares these
+      // (verified by Test #21).
+      let accumulatedText = '';
+      let markerSeenThisStep = false;
+
       // Bridge engine streaming callback into the iterator.
       const queue = new EventQueue<AgentEvent>();
       const turnParams: ApiCompletionParams = {...initialParams, messages};
@@ -294,7 +304,24 @@ export async function* runAgent(
             delta.reasoningContent ||
             (delta.toolCalls && delta.toolCalls.length > 0)
           ) {
+            // Order matters: enqueue the `token` event BEFORE the
+            // `marker_seen` event. Consumers see the token arrive
+            // normally, then transition on the marker. Test #19 asserts
+            // this explicit sequence for a marker that straddles two
+            // chunks.
             queue.push({type: 'token', delta});
+            if (delta.content) {
+              accumulatedText += delta.content;
+              if (!markerSeenThisStep && triggerMarkers.length > 0) {
+                const matched = triggerMarkers.find(m =>
+                  accumulatedText.includes(m),
+                );
+                if (matched) {
+                  queue.push({type: 'marker_seen', marker: matched});
+                  markerSeenThisStep = true;
+                }
+              }
+            }
           }
         })
         .then(result => {

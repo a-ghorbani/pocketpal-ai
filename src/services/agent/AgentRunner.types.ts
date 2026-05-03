@@ -87,6 +87,14 @@ export interface AgentRunOptions {
    * talent the model invents are rejected with an error. */
   allowedTalentNames: string[];
   talentLookup: (name: string) => TalentEngine | undefined;
+  /** Plain-text trigger markers (extracted from llama.rn
+   * `grammar_triggers`) the streaming bridge scans for in
+   * accumulated content. Precomputed by the hook before each
+   * `runAgent` invocation — the runner never imports the cache or
+   * `getFormattedChat`. Pass `[]` to disable marker detection;
+   * `tool_call_started` still drives the UX status flip in that
+   * case (one beat later). */
+  triggerMarkers: string[];
   /** Pre-created message id for this run. The runner uses it only for
    * `run_started`; it does NOT touch any store. */
   messageId: string;
