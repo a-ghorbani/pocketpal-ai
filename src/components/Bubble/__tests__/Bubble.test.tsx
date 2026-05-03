@@ -189,4 +189,90 @@ describe('Bubble', () => {
 
     expect(queryByTestId('message-timing')).toBeNull();
   });
+
+  // ---------- Story Test Requirements (Renderer) #9 ----------
+
+  describe('AssistantTurn copy via derivedText', () => {
+    it('copies joined step.content for a multi-step AssistantTurn', () => {
+      const turnMessage = {
+        author: {id: 'assistant'},
+        createdAt: 0,
+        id: 'turn-1',
+        type: 'assistant_turn',
+        steps: [
+          {content: 'Let me calculate that'},
+          {
+            toolCalls: [
+              {id: 'c0', function: {name: 'calculate', arguments: '{}'}},
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c0',
+                toolName: 'calculate',
+                result: {type: 'text', summary: '42'},
+                responseContent: '42',
+              },
+            ],
+          },
+          {content: 'The answer is 42'},
+        ],
+        metadata: {
+          copyable: true,
+          timings: {
+            predicted_per_token_ms: 10,
+            predicted_per_second: 100,
+          },
+        },
+      };
+      const {getByText} = renderBubble(turnMessage);
+      fireEvent.press(getByText('content-copy'));
+      expect(
+        require('@react-native-clipboard/clipboard').setString,
+      ).toHaveBeenCalledWith('Let me calculate that\n\nThe answer is 42');
+    });
+
+    it('copies single step.content for a single-step AssistantTurn', () => {
+      const turnMessage = {
+        author: {id: 'assistant'},
+        createdAt: 0,
+        id: 'turn-2',
+        type: 'assistant_turn',
+        steps: [{content: 'Hello there'}],
+        metadata: {
+          copyable: true,
+          timings: {predicted_per_second: 50},
+        },
+      };
+      const {getByText} = renderBubble(turnMessage);
+      fireEvent.press(getByText('content-copy'));
+      expect(
+        require('@react-native-clipboard/clipboard').setString,
+      ).toHaveBeenCalledWith('Hello there');
+    });
+
+    it('does not crash for tool-only AssistantTurn (derivedText returns "")', () => {
+      const turnMessage = {
+        author: {id: 'assistant'},
+        createdAt: 0,
+        id: 'turn-3',
+        type: 'assistant_turn',
+        steps: [
+          {
+            toolCalls: [
+              {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+            ],
+          },
+        ],
+        metadata: {
+          copyable: true,
+          timings: {},
+        },
+      };
+      const {getByText} = renderBubble(turnMessage);
+      fireEvent.press(getByText('content-copy'));
+      expect(
+        require('@react-native-clipboard/clipboard').setString,
+      ).toHaveBeenCalledWith('');
+    });
+  });
 });
