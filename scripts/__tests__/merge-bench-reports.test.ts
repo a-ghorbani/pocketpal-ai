@@ -133,4 +133,43 @@ describe('mergeReports', () => {
     const {latestTimestamp} = mergeReports(reports, new Set());
     expect(latestTimestamp).toBe('2026-04-29T10:00:00Z');
   });
+
+  // ---------------------------------------------------------------------------
+  // bench-block reconciliation: refreshed baselines must carry the protocol
+  // params so benchmark-compare's mismatch gate stays armed for future runs.
+  // ---------------------------------------------------------------------------
+
+  it('preserves the bench block when all input reports agree', () => {
+    const bench = {pp: 512, tg: 128, pl: 1, nr: 3};
+    const reports = [
+      {bench, runs: [makeRow({})]},
+      {bench, runs: [makeRow({pp_avg: 200})]},
+    ];
+    const {bench: outBench} = mergeReports(reports, new Set());
+    expect(outBench).toEqual(bench);
+  });
+
+  it('returns bench=null when no input report carries a bench block (legacy)', () => {
+    const reports = [{runs: [makeRow({})]}, {runs: [makeRow({pp_avg: 200})]}];
+    const {bench: outBench} = mergeReports(reports, new Set());
+    expect(outBench).toBeNull();
+  });
+
+  it('preserves bench from the one input that has it (legacy + new mix)', () => {
+    const bench = {pp: 512, tg: 128, pl: 1, nr: 3};
+    const reports = [
+      {runs: [makeRow({})]}, // legacy, no bench
+      {bench, runs: [makeRow({pp_avg: 200})]},
+    ];
+    const {bench: outBench} = mergeReports(reports, new Set());
+    expect(outBench).toEqual(bench);
+  });
+
+  it('throws when input reports have inconsistent bench params (cannot merge across protocols)', () => {
+    const reports = [
+      {bench: {pp: 512, tg: 128, pl: 1, nr: 1}, runs: [makeRow({})]},
+      {bench: {pp: 512, tg: 128, pl: 1, nr: 3}, runs: [makeRow({pp_avg: 200})]},
+    ];
+    expect(() => mergeReports(reports, new Set())).toThrow(/inconsistent bench/);
+  });
 });

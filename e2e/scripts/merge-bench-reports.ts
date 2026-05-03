@@ -64,6 +64,13 @@ interface RunRow {
   timestamp: string;
 }
 
+interface BenchParams {
+  pp: number;
+  tg: number;
+  pl: number;
+  nr: number;
+}
+
 interface RawReport {
   version?: string;
   device?: string | null;
@@ -74,6 +81,7 @@ interface RawReport {
   os_version?: string | null;
   timestamp?: string;
   preseeded?: boolean;
+  bench?: BenchParams;
   runs: RunRow[];
 }
 
@@ -183,10 +191,43 @@ function stripRawMatches(r: RunRow): RunRow {
   return {...r, log_signals: {...ls, raw_matches: []}};
 }
 
+function benchKey(b: BenchParams): string {
+  return `pp=${b.pp},tg=${b.tg},pl=${b.pl},nr=${b.nr}`;
+}
+
+/**
+ * Merged baselines must carry a single `bench` block matching the protocol
+ * the benchmark-compare script will check against future reports. Inputs
+ * with disagreeing bench params cannot be merged into one baseline because
+ * pp/tg numbers are not comparable across protocols.
+ *
+ * Returns null if no input report has a `bench` block (legacy / pre-v1.1).
+ * Throws if two input reports have different bench params.
+ */
+function reconcileBench(reports: RawReport[]): BenchParams | null {
+  let resolved: BenchParams | null = null;
+  let resolvedKey: string | null = null;
+  for (const rep of reports) {
+    if (!rep.bench) {
+      continue;
+    }
+    const key = benchKey(rep.bench);
+    if (resolvedKey === null) {
+      resolved = rep.bench;
+      resolvedKey = key;
+    } else if (key !== resolvedKey) {
+      throw new Error(
+        `inconsistent bench params across input reports: ${resolvedKey} vs ${key}`,
+      );
+    }
+  }
+  return resolved;
+}
+
 export function mergeReports(
   reports: RawReport[],
   drop: Set<string>,
-): {runs: RunRow[]; latestTimestamp: string | null} {
+): {runs: RunRow[]; latestTimestamp: string | null; bench: BenchParams | null} {
   const byKey = new Map<string, RunRow>();
   let latestTimestamp: string | null = null;
   for (const rep of reports) {
@@ -207,6 +248,7 @@ export function mergeReports(
   return {
     runs: Array.from(byKey.values()).map(stripRawMatches).sort(compareRuns),
     latestTimestamp,
+    bench: reconcileBench(reports),
   };
 }
 
@@ -236,7 +278,7 @@ function main() {
     JSON.parse(fs.readFileSync(f, 'utf8')),
   );
   const drop = new Set(args.dropModels);
-  const {runs, latestTimestamp} = mergeReports(reports, drop);
+  const {runs, latestTimestamp, bench} = mergeReports(reports, drop);
 
   const baseline: BaselineReport = {
     version: pickFirst<string>(reports, 'version') ?? '1.0',
@@ -252,6 +294,11 @@ function main() {
       args.osVersion ?? pickFirst<string>(reports, 'os_version') ?? null,
     timestamp: latestTimestamp ?? new Date().toISOString(),
     preseeded: false,
+    // Only set `bench` when at least one input report carried it. Omitting
+    // the field on legacy merges keeps downstream graceful-degrade paths
+    // (benchmark-compare warns and skips the protocol-mismatch gate when
+    // either side lacks `bench`).
+    ...(bench ? {bench} : {}),
     runs,
     generated_by: 'merge-bench-reports',
     source_files: files.map(f => path.basename(f)),
@@ -264,6 +311,13 @@ function main() {
   console.error(`  device: ${baseline.device}`);
   console.error(`  commit: ${baseline.commit}`);
   console.error(`  llama_rn_version: ${baseline.llama_rn_version}`);
+  if (bench) {
+    console.error(`  bench: ${benchKey(bench)}`);
+  } else {
+    console.error(
+      '  bench: (omitted — no input report carried bench params; legacy merge)',
+    );
+  }
   if (drop.size > 0) {
     console.error(`  dropped model_ids: ${[...drop].join(', ')}`);
   }
