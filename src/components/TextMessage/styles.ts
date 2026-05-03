@@ -8,7 +8,7 @@ export const styles = ({
   theme,
   user,
 }: {
-  message: MessageType.Text;
+  message: MessageType.Text | MessageType.AssistantTurn;
   theme: Theme;
   user?: User;
 }) =>

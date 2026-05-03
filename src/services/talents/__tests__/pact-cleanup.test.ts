@@ -306,14 +306,16 @@ describe('PACT cleanup: vocabulary audit (old field names eliminated)', () => {
     expect(hits).toEqual([]);
   });
 
-  it('toolMessages is used for wire payload (not talentResults)', () => {
-    // chat.ts should reference toolMessages for the wire format
+  it('chat.ts wire conversion reads step.toolOutcomes (post-AssistantTurn refactor)', () => {
+    // Post TASK-20260502-2115: convertToChatMessages reads step.toolOutcomes
+    // and emits one role:'tool' message per outcome. The old metadata-bag
+    // shape (toolMessages / talentResults / talentCalls) is gone from
+    // chat.ts entirely.
     const chatPath = path.resolve(srcDir, 'utils/chat.ts');
     const content = fs.readFileSync(chatPath, 'utf8');
-    expect(content).toContain('toolMessages');
-    // The wire payload read should NOT use talentResults
-    expect(content).not.toMatch(
-      /metadata\?\.talentResults\s+as\s*\n?\s*\|?\s*Array/,
-    );
+    expect(content).toContain('step.toolOutcomes');
+    expect(content).not.toContain('metadata.toolMessages');
+    expect(content).not.toContain('metadata.talentResults');
+    expect(content).not.toContain('metadata.talentCalls');
   });
 });

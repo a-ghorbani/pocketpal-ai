@@ -94,7 +94,33 @@ export const mockChatSessionStore = {
   },
   setDateGroupNames: jest.fn(),
   initialize: jest.fn().mockResolvedValue(undefined),
+  // Agent UI state and per-step actions (added with AssistantTurn refactor)
+  agentUiState: {
+    status: 'idle' as
+      | 'idle'
+      | 'preparing'
+      | 'streaming_text'
+      | 'generating_tool_call'
+      | 'executing_tool'
+      | 'streaming_followup'
+      | 'done'
+      | 'failed',
+    pendingTalentNames: [] as string[],
+    hitMaxTurns: false,
+  },
+  setAgentUiState: jest.fn(),
+  pushAgentStep: jest.fn().mockResolvedValue(undefined),
+  updateActiveStepStreaming: jest.fn(),
+  appendToolOutcome: jest.fn().mockResolvedValue(undefined),
+  finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
 };
+
+Object.defineProperty(mockChatSessionStore, 'isGeneratingToolCall', {
+  get: jest.fn(
+    () => mockChatSessionStore.agentUiState.status === 'generating_tool_call',
+  ),
+  configurable: true,
+});
 
 Object.defineProperty(mockChatSessionStore, 'currentSessionMessages', {
   get: jest.fn(() => []),
