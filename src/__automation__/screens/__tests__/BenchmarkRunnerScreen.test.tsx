@@ -478,5 +478,77 @@ describe('BenchmarkRunnerScreen', () => {
       const json = JSON.parse(lastWrite[1]);
       expect(json.bench).toEqual({pp: 777, tg: 88, pl: 2, nr: 5});
     });
+
+    // -------------------------------------------------------------------------
+    // Per-cell failure status: must be `cell-failed:` (non-terminal for the
+    // spec) not `error:` (terminal). The spec breaks polling on `error:`, so
+    // a per-cell failure marked as `error:` would make it pull a partial
+    // report mid-run.
+    // -------------------------------------------------------------------------
+
+    it('uses cell-failed: status (not error:) for per-cell failures so the matrix continues', async () => {
+      (modelStore as any).context = {
+        bench: jest.fn().mockRejectedValue(new Error('bench-blew-up')),
+      };
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const statusCalls = setStatus.mock.calls.map(c => c[0]);
+      // Status that surfaces the per-cell failure must NOT start with 'error:'.
+      const failureStatus = statusCalls.find(
+        (s: string) => s.includes('bench-blew-up'),
+      );
+      expect(failureStatus).toBeDefined();
+      expect(failureStatus.startsWith('error:')).toBe(false);
+      expect(failureStatus.startsWith('cell-failed:')).toBe(true);
+      // Final status is still 'complete' (loop terminates normally).
+      expect(statusCalls[statusCalls.length - 1]).toBe('complete');
+    });
+
+    // -------------------------------------------------------------------------
+    // Outer try/finally: toggleNativeLog(false) must run even when something
+    // throws between toggleNativeLog(true) and the end of the loop. Without
+    // this, a fatal error leaves native logging on for the rest of the
+    // session.
+    // -------------------------------------------------------------------------
+
+    it('disables native logging in finally even when the loop body throws', async () => {
+      // Make the report-shell write throw, simulating a fatal early failure.
+      RNFS.writeFile.mockRejectedValueOnce(new Error('shell-write-failed'));
+      await expect(
+        runMatrix(VALID_CONFIG, setStatus, setLastCell),
+      ).rejects.toThrow('shell-write-failed');
+      expect(toggleNativeLog).toHaveBeenCalledWith(true);
+      expect(toggleNativeLog).toHaveBeenCalledWith(false);
+    });
+
+    // -------------------------------------------------------------------------
+    // Download-error fast-fail: a download failure must surface within one
+    // poll tick (~500 ms), not after the 30-min deadline.
+    // -------------------------------------------------------------------------
+
+    it('fails the cell fast when modelStore.downloadError fires during polling', async () => {
+      // Empty models list at start so the screen takes the download branch.
+      (modelStore as any).models = [] as any;
+      (modelStore as any).downloadError = null;
+      (modelStore as any).clearDownloadError = jest.fn(() => {
+        (modelStore as any).downloadError = null;
+      });
+      (modelStore as any).downloadHFModel = jest.fn(async () => {
+        // Simulate the DownloadManager onError handler firing immediately.
+        (modelStore as any).downloadError = {
+          message: 'connection-reset',
+          metadata: {modelId: 'qwen3-1.7b-q4_0'},
+        };
+      });
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(1);
+      expect(json.runs[0].status).toBe('failed');
+      expect(json.runs[0].error).toContain('download-failed');
+      expect(json.runs[0].error).toContain('connection-reset');
+      // Verify the previous-error slot was cleared before the download started.
+      expect((modelStore as any).clearDownloadError).toHaveBeenCalled();
+    });
   });
 });

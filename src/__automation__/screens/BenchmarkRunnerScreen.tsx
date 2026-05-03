@@ -158,281 +158,308 @@ export async function runMatrix(
   }
 
   // Native log capture is global state in llama.rn — flip it on once for the
-  // whole matrix and toggle off at the end. Per-cell scoping is done by
-  // attaching a fresh listener around each init+bench window.
+  // whole matrix and toggle off in the outer finally so an unexpected throw
+  // anywhere in the loop body doesn't leave native logging on for the rest
+  // of the app session. Per-cell scoping is done by attaching a fresh
+  // listener around each init+bench window.
   await toggleNativeLog(true).catch(() => undefined);
-
-  const startTimestamp = new Date().toISOString();
-  const safeStamp = startTimestamp.replace(/[:.]/g, '-');
-  const path = reportPath(safeStamp);
-  const report: BenchmarkReport = {
-    version: '1.0',
-    platform: 'android',
-    timestamp: startTimestamp,
-    preseeded: true, // pessimistic — flips false on first downloading: transition
-    bench,
-    runs: [],
-  };
-
-  // Write the shell up front so even an early crash leaves a JSON file.
-  await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
-
-  for (let i = 0; i < cells.length; i++) {
-    const {model, variant, backend} = cells[i];
-    const tStart = Date.now();
-    const tag = `${i + 1}/${cells.length}:${model.id}/${variant.quant}/${backend}`;
-    setStatus(`running:${tag}`);
-
-    const rowBase: Pick<
-      BenchmarkRunRow,
-      'model_id' | 'quant' | 'requested_backend' | 'timestamp'
-    > = {
-      model_id: model.id,
-      quant: variant.quant,
-      requested_backend: backend,
-      timestamp: new Date().toISOString(),
+  try {
+    const startTimestamp = new Date().toISOString();
+    const safeStamp = startTimestamp.replace(/[:.]/g, '-');
+    const path = reportPath(safeStamp);
+    const report: BenchmarkReport = {
+      version: '1.0',
+      platform: 'android',
+      timestamp: startTimestamp,
+      preseeded: true, // pessimistic — flips false on first downloading: transition
+      bench,
+      runs: [],
     };
 
-    // Per-cell log buffer + listener handle. Declared outside the try so the
-    // catch path can still surface partial signals (and the finally can
-    // detach the listener) when a cell throws mid-init.
-    const logBuffer: string[] = [];
-    let logSub: {remove: () => void} | null = null;
-    // Tracks whether modelStore.initContext resolved for this cell. The
-    // finally block uses this to call releaseContext exactly once per
-    // initialized cell, regardless of whether bench() then threw.
-    let contextInitialized = false;
+    // Write the shell up front so even an early crash leaves a JSON file.
+    await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
 
-    try {
-      // 1. GPU pre-check: cell fails fast if backend=gpu but no GPU option.
-      if (backend === 'gpu' && !adrenoDevices) {
+    for (let i = 0; i < cells.length; i++) {
+      const {model, variant, backend} = cells[i];
+      const tStart = Date.now();
+      const tag = `${i + 1}/${cells.length}:${model.id}/${variant.quant}/${backend}`;
+      setStatus(`running:${tag}`);
+
+      const rowBase: Pick<
+        BenchmarkRunRow,
+        'model_id' | 'quant' | 'requested_backend' | 'timestamp'
+      > = {
+        model_id: model.id,
+        quant: variant.quant,
+        requested_backend: backend,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Per-cell log buffer + listener handle. Declared outside the try so the
+      // catch path can still surface partial signals (and the finally can
+      // detach the listener) when a cell throws mid-init.
+      const logBuffer: string[] = [];
+      let logSub: {remove: () => void} | null = null;
+      // Tracks whether modelStore.initContext resolved for this cell. The
+      // finally block uses this to call releaseContext exactly once per
+      // initialized cell, regardless of whether bench() then threw.
+      let contextInitialized = false;
+
+      try {
+        // 1. GPU pre-check: cell fails fast if backend=gpu but no GPU option.
+        if (backend === 'gpu' && !adrenoDevices) {
+          const row: BenchmarkRunRow = {
+            ...rowBase,
+            effective_backend: 'unknown',
+            pp_avg: null,
+            tg_avg: null,
+            wall_ms: Date.now() - tStart,
+            peak_memory_mb: null,
+            log_signals: emptyLogSignals(),
+            init_settings: {},
+            status: 'failed',
+            error: 'GPU device not available',
+          };
+          report.runs.push(row);
+          await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+          continue;
+        }
+
+        // 2. Resolve / download the model file.
+        let resolvedModel = modelStore.models.find(
+          (mm: Model) => mm.filename === variant.filename && mm.isDownloaded,
+        );
+        if (!resolvedModel) {
+          report.preseeded = false;
+          setStatus(`downloading:${variant.filename}`);
+          // Strategy: rely on the existing app download path. The screen
+          // pushes a minimal HuggingFaceModel + ModelFile descriptor into
+          // modelStore, kicks off the download via downloadHFModel, and
+          // polls modelStore.models for isDownloaded=true.
+          const hfModel = {
+            _id: model.hfModelId,
+            id: model.hfModelId,
+            author: model.hfModelId.split('/')[0] ?? 'unknown',
+            gated: false,
+            inference: '',
+            lastModified: '',
+            likes: 0,
+            trendingScore: 0,
+            private: false,
+            sha: '',
+            downloads: 0,
+            tags: [],
+            library_name: '',
+            createdAt: '',
+            model_id: model.hfModelId,
+            siblings: [{rfilename: variant.filename} as any],
+          } as any;
+          // url is REQUIRED — hfAsModel reads modelFile.url into model.downloadUrl,
+          // and ModelStore.checkSpaceAndDownload early-returns when !downloadUrl,
+          // silently never starting the download. Construct the canonical HF
+          // resolve URL inline; if the bench-config ever needs a different host
+          // (private repo, mirror, etc.) we'd take it from the variant instead.
+          // size is REQUIRED — hasEnoughSpace returns false for size <= 0
+          // (malformed model), and DownloadManager.startDownload then throws
+          // "Not enough storage space". The variant.size from bench-config
+          // wins; otherwise fall back to 1 to bypass the pre-check (the actual
+          // download will fail late if the device is genuinely full).
+          const modelFile = {
+            rfilename: variant.filename,
+            size: variant.size ?? 1,
+            url: `https://huggingface.co/${model.hfModelId}/resolve/main/${variant.filename}`,
+          } as any;
+          // Clear stale download error so we only observe failures from THIS
+          // cell's download. The matrix is serial so one error slot is enough.
+          modelStore.clearDownloadError?.();
+          await modelStore.downloadHFModel(hfModel, modelFile);
+          // Status updates with download progress: poll modelStore.models for
+          // the entry and surface percentage. The DownloadManager updates
+          // model.progress as bytes arrive; we read it on each poll tick.
+          // We also watch modelStore.downloadError so a failed download fails
+          // the cell within ~500 ms instead of burning the full 30-min deadline.
+          const progressFilename = variant.filename;
+          const downloadDeadline = Date.now() + 30 * 60 * 1000;
+          while (Date.now() < downloadDeadline) {
+            const entry = modelStore.models.find(
+              (m: Model) => m.filename === progressFilename,
+            );
+            if (entry?.isDownloaded) {
+              resolvedModel = entry;
+              break;
+            }
+            const dlErr = (modelStore as any).downloadError;
+            if (dlErr) {
+              const reason =
+                dlErr?.message ??
+                dlErr?.error?.message ??
+                JSON.stringify(dlErr).slice(0, TRUNCATE_ERROR);
+              throw new Error(`download-failed:${progressFilename}:${reason}`);
+            }
+            const pct = entry?.progress ?? 0;
+            setStatus(`downloading:${progressFilename} ${Math.round(pct)}%`);
+            await new Promise(r => setTimeout(r, 500));
+          }
+          if (!resolvedModel) {
+            throw new Error(`download-timeout:${progressFilename}`);
+          }
+          setStatus(`running:${tag}`);
+        }
+
+        // 3. Programmatic tier switch.
+        const cellDevices: string[] =
+          backend === 'cpu' ? ['CPU'] : (adrenoDevices as string[]);
+        modelStore.setDevices(cellDevices);
+
+        // 3a. Attach native-log listener so the cell's load output (the same
+        // lines that show up in `adb logcat`) lands in `logBuffer`. The
+        // BENCH_LOG_RE pre-filter keeps the buffer bounded for long runs.
+        logSub = addNativeLogListener((_level, text) => {
+          if (BENCH_LOG_RE.test(text)) {
+            logBuffer.push(text);
+          }
+        });
+
+        // 4. Init context (mutex-serialized inside ModelStore).
+        await modelStore.initContext(resolvedModel);
+        contextInitialized = true;
+
+        // 5. Snapshot init settings AFTER initContext (they may have been
+        // touched by initContext's quant-aware tweaks).
+        const initSettings = JSON.parse(
+          JSON.stringify(modelStore.contextInitParams),
+        );
+
+        // 6. Peak memory tracking.
+        let peakMemory: {
+          total: number;
+          used: number;
+          percentage: number;
+        } | null = null;
+        const memInterval = setInterval(async () => {
+          const cur = await trackPeakMemory();
+          if (cur && (!peakMemory || cur.percentage > peakMemory.percentage)) {
+            peakMemory = cur;
+          }
+        }, PEAK_POLL_MS);
+
+        let speedPp: number | undefined;
+        let speedTg: number | undefined;
+        try {
+          const ctx = modelStore.context;
+          if (!ctx) {
+            throw new Error('context-not-initialized');
+          }
+          const benchResult = await ctx.bench(
+            bench.pp,
+            bench.tg,
+            bench.pl,
+            bench.nr,
+          );
+          speedPp = benchResult.speedPp;
+          speedTg = benchResult.speedTg;
+        } finally {
+          clearInterval(memInterval);
+        }
+
+        // Invariant: status:'ok' rows must always carry non-null pp_avg and
+        // tg_avg. If ctx.bench() resolves with either metric undefined (e.g.
+        // partial native failure), force the catch path so the row is recorded
+        // as 'failed' with an explanatory error string. Without this, the
+        // success-row builder below would write status:'ok' pp_avg:null which
+        // makes regressions invisible to the compare script.
+        if (speedPp == null || speedTg == null) {
+          throw new Error(
+            `bench returned null metric(s): speedPp=${speedPp}, speedTg=${speedTg}`,
+          );
+        }
+
+        // Derive backend evidence from the cell's load output. The log
+        // listener is detached in the finally block (sole detach site).
+        const logSignals = deriveLogSignals(logBuffer);
+        const effectiveBackend = deriveEffectiveBackend(logSignals);
+
+        const wall = Date.now() - tStart;
+        const peakBytes = peakMemory
+          ? (peakMemory as {used: number}).used
+          : null;
         const row: BenchmarkRunRow = {
           ...rowBase,
-          effective_backend: 'unknown',
+          effective_backend: effectiveBackend,
+          pp_avg: speedPp,
+          tg_avg: speedTg,
+          wall_ms: wall,
+          peak_memory_mb:
+            typeof peakBytes === 'number'
+              ? Math.round((peakBytes / (1024 * 1024)) * 100) / 100
+              : null,
+          log_signals: logSignals,
+          init_settings: initSettings,
+          status: 'ok',
+        };
+        report.runs.push(row);
+        await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+        setLastCell({
+          pp: speedPp,
+          tg: speedTg,
+          cells: report.runs.length,
+        });
+      } catch (e) {
+        // Salvage whatever load lines we captured before the throw — useful
+        // for debugging "why did this cell fail" without re-running. The log
+        // listener is detached in the finally block (sole detach site).
+        const partialSignals = deriveLogSignals(logBuffer);
+        const msg = (e as Error).message ?? 'unknown';
+        const short = msg.slice(0, TRUNCATE_ERROR);
+        const long = msg.slice(0, TRUNCATE_ROW_ERROR);
+        const row: BenchmarkRunRow = {
+          ...rowBase,
+          effective_backend: deriveEffectiveBackend(partialSignals),
           pp_avg: null,
           tg_avg: null,
           wall_ms: Date.now() - tStart,
           peak_memory_mb: null,
-          log_signals: emptyLogSignals(),
+          log_signals: partialSignals,
           init_settings: {},
           status: 'failed',
-          error: 'GPU device not available',
+          error: long,
         };
         report.runs.push(row);
-        await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
-        continue;
-      }
-
-      // 2. Resolve / download the model file.
-      let resolvedModel = modelStore.models.find(
-        (mm: Model) => mm.filename === variant.filename && mm.isDownloaded,
-      );
-      if (!resolvedModel) {
-        report.preseeded = false;
-        setStatus(`downloading:${variant.filename}`);
-        // Strategy: rely on the existing app download path. The screen
-        // pushes a minimal HuggingFaceModel + ModelFile descriptor into
-        // modelStore, kicks off the download via downloadHFModel, and
-        // polls modelStore.models for isDownloaded=true.
-        const hfModel = {
-          _id: model.hfModelId,
-          id: model.hfModelId,
-          author: model.hfModelId.split('/')[0] ?? 'unknown',
-          gated: false,
-          inference: '',
-          lastModified: '',
-          likes: 0,
-          trendingScore: 0,
-          private: false,
-          sha: '',
-          downloads: 0,
-          tags: [],
-          library_name: '',
-          createdAt: '',
-          model_id: model.hfModelId,
-          siblings: [{rfilename: variant.filename} as any],
-        } as any;
-        // url is REQUIRED — hfAsModel reads modelFile.url into model.downloadUrl,
-        // and ModelStore.checkSpaceAndDownload early-returns when !downloadUrl,
-        // silently never starting the download. Construct the canonical HF
-        // resolve URL inline; if the bench-config ever needs a different host
-        // (private repo, mirror, etc.) we'd take it from the variant instead.
-        // size is REQUIRED — hasEnoughSpace returns false for size <= 0
-        // (malformed model), and DownloadManager.startDownload then throws
-        // "Not enough storage space". The variant.size from bench-config
-        // wins; otherwise fall back to 1 to bypass the pre-check (the actual
-        // download will fail late if the device is genuinely full).
-        const modelFile = {
-          rfilename: variant.filename,
-          size: variant.size ?? 1,
-          url: `https://huggingface.co/${model.hfModelId}/resolve/main/${variant.filename}`,
-        } as any;
-        await modelStore.downloadHFModel(hfModel, modelFile);
-        // Status updates with download progress: poll modelStore.models for
-        // the entry and surface percentage. The DownloadManager updates
-        // model.progress as bytes arrive; we read it on each poll tick.
-        const progressFilename = variant.filename;
-        const downloadDeadline = Date.now() + 30 * 60 * 1000;
-        while (Date.now() < downloadDeadline) {
-          const entry = modelStore.models.find(
-            (m: Model) => m.filename === progressFilename,
-          );
-          if (entry?.isDownloaded) {
-            resolvedModel = entry;
-            break;
-          }
-          const pct = entry?.progress ?? 0;
-          setStatus(`downloading:${progressFilename} ${Math.round(pct)}%`);
-          await new Promise(r => setTimeout(r, 500));
-        }
-        if (!resolvedModel) {
-          throw new Error(`download-timeout:${progressFilename}`);
-        }
-        setStatus(`running:${tag}`);
-      }
-
-      // 3. Programmatic tier switch.
-      const cellDevices: string[] =
-        backend === 'cpu' ? ['CPU'] : (adrenoDevices as string[]);
-      modelStore.setDevices(cellDevices);
-
-      // 3a. Attach native-log listener so the cell's load output (the same
-      // lines that show up in `adb logcat`) lands in `logBuffer`. The
-      // BENCH_LOG_RE pre-filter keeps the buffer bounded for long runs.
-      logSub = addNativeLogListener((_level, text) => {
-        if (BENCH_LOG_RE.test(text)) {
-          logBuffer.push(text);
-        }
-      });
-
-      // 4. Init context (mutex-serialized inside ModelStore).
-      await modelStore.initContext(resolvedModel);
-      contextInitialized = true;
-
-      // 5. Snapshot init settings AFTER initContext (they may have been
-      // touched by initContext's quant-aware tweaks).
-      const initSettings = JSON.parse(
-        JSON.stringify(modelStore.contextInitParams),
-      );
-
-      // 6. Peak memory tracking.
-      let peakMemory: {total: number; used: number; percentage: number} | null =
-        null;
-      const memInterval = setInterval(async () => {
-        const cur = await trackPeakMemory();
-        if (cur && (!peakMemory || cur.percentage > peakMemory.percentage)) {
-          peakMemory = cur;
-        }
-      }, PEAK_POLL_MS);
-
-      let speedPp: number | undefined;
-      let speedTg: number | undefined;
-      try {
-        const ctx = modelStore.context;
-        if (!ctx) {
-          throw new Error('context-not-initialized');
-        }
-        const benchResult = await ctx.bench(
-          bench.pp,
-          bench.tg,
-          bench.pl,
-          bench.nr,
-        );
-        speedPp = benchResult.speedPp;
-        speedTg = benchResult.speedTg;
-      } finally {
-        clearInterval(memInterval);
-      }
-
-      // Invariant: status:'ok' rows must always carry non-null pp_avg and
-      // tg_avg. If ctx.bench() resolves with either metric undefined (e.g.
-      // partial native failure), force the catch path so the row is recorded
-      // as 'failed' with an explanatory error string. Without this, the
-      // success-row builder below would write status:'ok' pp_avg:null which
-      // makes regressions invisible to the compare script.
-      if (speedPp == null || speedTg == null) {
-        throw new Error(
-          `bench returned null metric(s): speedPp=${speedPp}, speedTg=${speedTg}`,
-        );
-      }
-
-      // Derive backend evidence from the cell's load output. The log
-      // listener is detached in the finally block (sole detach site).
-      const logSignals = deriveLogSignals(logBuffer);
-      const effectiveBackend = deriveEffectiveBackend(logSignals);
-
-      const wall = Date.now() - tStart;
-      const peakBytes = peakMemory ? (peakMemory as {used: number}).used : null;
-      const row: BenchmarkRunRow = {
-        ...rowBase,
-        effective_backend: effectiveBackend,
-        pp_avg: speedPp,
-        tg_avg: speedTg,
-        wall_ms: wall,
-        peak_memory_mb:
-          typeof peakBytes === 'number'
-            ? Math.round((peakBytes / (1024 * 1024)) * 100) / 100
-            : null,
-        log_signals: logSignals,
-        init_settings: initSettings,
-        status: 'ok',
-      };
-      report.runs.push(row);
-      await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
-      setLastCell({
-        pp: speedPp,
-        tg: speedTg,
-        cells: report.runs.length,
-      });
-    } catch (e) {
-      // Salvage whatever load lines we captured before the throw — useful
-      // for debugging "why did this cell fail" without re-running. The log
-      // listener is detached in the finally block (sole detach site).
-      const partialSignals = deriveLogSignals(logBuffer);
-      const msg = (e as Error).message ?? 'unknown';
-      const short = msg.slice(0, TRUNCATE_ERROR);
-      const long = msg.slice(0, TRUNCATE_ROW_ERROR);
-      const row: BenchmarkRunRow = {
-        ...rowBase,
-        effective_backend: deriveEffectiveBackend(partialSignals),
-        pp_avg: null,
-        tg_avg: null,
-        wall_ms: Date.now() - tStart,
-        peak_memory_mb: null,
-        log_signals: partialSignals,
-        init_settings: {},
-        status: 'failed',
-        error: long,
-      };
-      report.runs.push(row);
-      try {
-        await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
-      } catch {
-        // best-effort
-      }
-      setStatus(`error:${short}`);
-      // continue to the next cell — per-cell error containment.
-    } finally {
-      // Sole release site: cells that finished initContext (success path or
-      // any throw afterwards) release exactly once. Cells that threw before
-      // initContext resolved (e.g. download-timeout, GPU pre-check) skip
-      // release because there is no context to release.
-      if (contextInitialized) {
         try {
-          await (modelStore as any).releaseContext?.();
+          await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
         } catch {
-          // releaseContext throwing should not abort the matrix; the next
-          // cell's initContext will tear down the stale context anyway.
+          // best-effort
         }
+        // Per-cell failure: use a non-terminal status so the WDIO spec keeps
+        // polling until the loop ends with `complete`. `error:` is reserved
+        // for fatal runner failures (caught by onRun's outer try/catch).
+        // Without this distinction, a single cell failure would make the spec
+        // pull a partial report mid-run while the screen is still iterating.
+        setStatus(`cell-failed:${i + 1}/${cells.length}:${short}`);
+        // continue to the next cell — per-cell error containment.
+      } finally {
+        // Sole release site: cells that finished initContext (success path or
+        // any throw afterwards) release exactly once. Cells that threw before
+        // initContext resolved (e.g. download-timeout, GPU pre-check) skip
+        // release because there is no context to release.
+        if (contextInitialized) {
+          try {
+            await (modelStore as any).releaseContext?.();
+          } catch {
+            // releaseContext throwing should not abort the matrix; the next
+            // cell's initContext will tear down the stale context anyway.
+          }
+        }
+        // Sole listener-detach site. Idempotent: no-op when null.
+        logSub?.remove();
+        logSub = null;
       }
-      // Sole listener-detach site. Idempotent: no-op when null.
-      logSub?.remove();
-      logSub = null;
     }
-  }
 
-  await toggleNativeLog(false).catch(() => undefined);
-  setStatus('complete');
+    setStatus('complete');
+  } finally {
+    await toggleNativeLog(false).catch(() => undefined);
+  }
 }
 
 interface BenchmarkRunnerScreenProps {
