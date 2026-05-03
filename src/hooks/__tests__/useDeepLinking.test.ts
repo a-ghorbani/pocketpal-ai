@@ -148,7 +148,10 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(addEventListenerSpy).toHaveBeenCalledWith('url', expect.any(Function));
+    expect(addEventListenerSpy).toHaveBeenCalledWith(
+      'url',
+      expect.any(Function),
+    );
     expect(mockNavigate).not.toHaveBeenCalled(); // no cold-launch URL
 
     // Simulate WDIO firing `mobile: deepLink` after the app started.

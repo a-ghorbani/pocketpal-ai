@@ -170,6 +170,8 @@ describe('mergeReports', () => {
       {bench: {pp: 512, tg: 128, pl: 1, nr: 1}, runs: [makeRow({})]},
       {bench: {pp: 512, tg: 128, pl: 1, nr: 3}, runs: [makeRow({pp_avg: 200})]},
     ];
-    expect(() => mergeReports(reports, new Set())).toThrow(/inconsistent bench/);
+    expect(() => mergeReports(reports, new Set())).toThrow(
+      /inconsistent bench/,
+    );
   });
 });

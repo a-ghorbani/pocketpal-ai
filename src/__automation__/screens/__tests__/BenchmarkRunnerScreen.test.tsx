@@ -493,8 +493,8 @@ describe('BenchmarkRunnerScreen', () => {
       await runMatrix(VALID_CONFIG, setStatus, setLastCell);
       const statusCalls = setStatus.mock.calls.map(c => c[0]);
       // Status that surfaces the per-cell failure must NOT start with 'error:'.
-      const failureStatus = statusCalls.find(
-        (s: string) => s.includes('bench-blew-up'),
+      const failureStatus = statusCalls.find((s: string) =>
+        s.includes('bench-blew-up'),
       );
       expect(failureStatus).toBeDefined();
       expect(failureStatus.startsWith('error:')).toBe(false);
