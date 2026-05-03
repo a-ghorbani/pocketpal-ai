@@ -10,7 +10,7 @@ import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
 import {chatSessionStore, palStore, deepLinkStore} from '../store';
-import {ROUTES} from '../utils/navigationConstants';
+import {ROUTES, isBenchmarkRunnerUrl} from '../utils/navigationConstants';
 
 /**
  * Hook for handling deep link navigation
@@ -103,7 +103,7 @@ export const useDeepLinking = () => {
       return;
     }
     const routeIfBench = (url: string | null) => {
-      if (url?.startsWith('pocketpal://e2e/benchmark')) {
+      if (isBenchmarkRunnerUrl(url)) {
         (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER);
       }
     };

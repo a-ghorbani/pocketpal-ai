@@ -10,6 +10,7 @@
  *                                doesn't deliver the URL via DeepLinkService)
  */
 import type {DeepLinkParams} from '../services/DeepLinkService';
+import {ROUTES, isBenchmarkRunnerUrl} from '../utils/navigationConstants';
 
 interface NavigationLike {
   navigate: (route: string) => void;
@@ -34,10 +35,11 @@ export async function dispatchAutomationDeepLink(
     }
     return true;
   }
-  // pocketpal://e2e/benchmark — bench host. The path '/benchmark' is in
-  // params.url (not queryParams), so we string-match against the raw URL.
-  if (params.host === 'e2e' && params.url.includes('/benchmark')) {
-    navigation?.navigate('BenchmarkRunner');
+  // pocketpal://e2e/benchmark — bench host. Match against the raw URL via
+  // the shared helper so both deep-link sites (this dispatcher and the
+  // useDeepLinking cold/warm-launch effect) accept the exact same shape.
+  if (isBenchmarkRunnerUrl(params.url)) {
+    navigation?.navigate(ROUTES.BENCHMARK_RUNNER);
     return true;
   }
   return false;
