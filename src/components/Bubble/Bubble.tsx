@@ -12,6 +12,7 @@ import {useTheme} from '../../hooks';
 import {styles} from './styles';
 
 import {UserContext, L10nContext} from '../../utils';
+import {derivedText} from '../../utils/chat';
 import {MessageType} from '../../utils/types';
 import {t} from '../../locales';
 
@@ -72,10 +73,11 @@ export const Bubble = ({
     });
 
   const copyToClipboard = () => {
-    if (message.type === 'text') {
-      ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-      Clipboard.setString(message.text.trim());
+    if (message.type !== 'text' && message.type !== 'assistant_turn') {
+      return;
     }
+    ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+    Clipboard.setString(derivedText(message).trim());
   };
 
   return (

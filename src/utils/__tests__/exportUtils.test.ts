@@ -147,6 +147,15 @@ describe('exportUtils', () => {
           type: 'text',
           metadata: '{"test": true}',
           createdAt: 1704067200000,
+          // Mimic the WatermelonDB Message model surface used by exportUtils.
+          toMessageObject: () => ({
+            id: 'msg-1',
+            type: 'text',
+            text: 'Hello',
+            author: {id: 'user'},
+            createdAt: 1704067200000,
+            metadata: {test: true},
+          }),
         },
       ],
       completionSettings: {
@@ -286,6 +295,15 @@ describe('exportUtils', () => {
           type: 'text',
           metadata: '{"test": true}',
           createdAt: 1704067200000,
+          // Mimic the WatermelonDB Message model surface used by exportUtils.
+          toMessageObject: () => ({
+            id: 'msg-1',
+            type: 'text',
+            text: 'Hello',
+            author: {id: 'user'},
+            createdAt: 1704067200000,
+            metadata: {test: true},
+          }),
         },
       ],
       completionSettings: {

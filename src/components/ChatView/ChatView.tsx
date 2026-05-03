@@ -542,7 +542,7 @@ export const ChatView = observer(
 
     const handleMessageLongPress = React.useCallback(
       (message: MessageType.Any, event: any) => {
-        if (message.type !== 'text') {
+        if (message.type !== 'text' && message.type !== 'assistant_turn') {
           externalOnMessageLongPress?.(message);
           return;
         }
@@ -576,7 +576,11 @@ export const ChatView = observer(
     } = l10n.components.chatView.menuItems;
 
     const menuItems = React.useMemo((): MenuItem[] => {
-      if (!selectedMessage || selectedMessage.type !== 'text') {
+      if (
+        !selectedMessage ||
+        (selectedMessage.type !== 'text' &&
+          selectedMessage.type !== 'assistant_turn')
+      ) {
         return [];
       }
 
@@ -704,6 +708,23 @@ export const ChatView = observer(
       [],
     );
 
+    // Active-vs-persisted predicate (single source of truth). A message
+    // is "active" if it is the LAST (newest) message in the input
+    // `messages` list AND the agent's UI status is in the actively-
+    // running set. Computed once here and passed down via props so
+    // individual blocks within an AssistantTurn don't re-derive it.
+    const newestMessageId = messages.length > 0 ? messages[0].id : null;
+    const agentStatus = chatSessionStore.agentUiState.status;
+    const isAgentActive =
+      agentStatus === 'preparing' ||
+      agentStatus === 'streaming_text' ||
+      agentStatus === 'generating_tool_call' ||
+      agentStatus === 'executing_tool' ||
+      agentStatus === 'streaming_followup';
+    const activeRunPendingTalentNames =
+      chatSessionStore.agentUiState.pendingTalentNames;
+    const isGeneratingToolCall = agentStatus === 'generating_tool_call';
+
     // Render individual message
     const renderMessage = React.useCallback(
       ({item: message}: {item: MessageType.DerivedAny; index: number}) => {
@@ -721,11 +742,23 @@ export const ChatView = observer(
         const showName = message.type !== 'dateHeader' && message.showName;
         const showStatus = message.type !== 'dateHeader' && message.showStatus;
 
+        const isActiveRun =
+          isAgentActive &&
+          message.type !== 'dateHeader' &&
+          message.id === newestMessageId;
+
         return (
           <View>
             <Message
               {...{
                 enableAnimation,
+                isActiveRun,
+                activeRunPendingTalentNames: isActiveRun
+                  ? activeRunPendingTalentNames
+                  : undefined,
+                isGeneratingToolCall: isActiveRun
+                  ? isGeneratingToolCall
+                  : false,
                 message,
                 messageWidth,
                 onMessageLongPress: handleMessageLongPress,
@@ -761,6 +794,10 @@ export const ChatView = observer(
         size.width,
         usePreviewData,
         user.id,
+        isAgentActive,
+        newestMessageId,
+        activeRunPendingTalentNames,
+        isGeneratingToolCall,
       ],
     );
 
@@ -946,22 +983,25 @@ export const ChatView = observer(
 
     // Soft cap: warn the user before the 5th HTML preview in this session.
     // Memory pressure on budget Android becomes a hazard above 5 WebViews;
-    // we surface the banner non-blockingly at >=4 so they can start a new chat.
+    // we surface the banner non-blockingly at >=4 so they can start a new
+    // chat. Counts html-result outcomes across all steps of every
+    // AssistantTurn row in the visible message list.
     const htmlPreviewCount = React.useMemo(
       () =>
         messages.reduce((acc, m) => {
-          const meta = (m as MessageType.Text).metadata;
-          const results = meta?.talentResults as
-            | Record<string, any>
-            | undefined;
-          if (results) {
-            return (
-              acc +
-              Object.values(results).filter((r: any) => r.type === 'html')
-                .length
-            );
+          if (m.type !== 'assistant_turn') {
+            return acc;
           }
-          return acc;
+          const turn = m as MessageType.AssistantTurn;
+          let count = 0;
+          for (const step of turn.steps ?? []) {
+            for (const outcome of step.toolOutcomes ?? []) {
+              if (outcome.result.type === 'html') {
+                count += 1;
+              }
+            }
+          }
+          return acc + count;
         }, 0),
       [messages],
     );
