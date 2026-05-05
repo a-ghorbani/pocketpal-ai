@@ -1070,7 +1070,9 @@
     "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
     "softCapWarning": "Start a new chat for best performance.",
     "generatingPreview": "Generating preview… ({{tokens}} tokens)",
-    "generatingPreviewPending": "Generating preview…"
+    "generatingPreviewPending": "Generating preview…",
+    "toolUsedChip": "used {{name}}",
+    "toolErrorBlock": "{{name}} failed"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

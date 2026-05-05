@@ -53,6 +53,8 @@ export * from './TextDivider';
 export * from './TextInput';
 export * from './TalentSurface';
 export * from './TextMessage';
+export * from './ToolErrorBlock';
+export * from './ToolUsedChip';
 export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
 export * from './VisionDownloadSheet';
