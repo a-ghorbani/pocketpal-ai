@@ -115,12 +115,18 @@ describe('agentStateReducer', () => {
     expect(next.status).toBe('prefill');
   });
 
-  it('#6b step_started with isFollowUp=false → streaming_text', () => {
+  it('#6b step_started with isFollowUp=false → prefill (initial step also waits for first token; WHAT §3)', () => {
+    // Both initial and follow-up step_started events keep status at
+    // `prefill`. The transition to `streaming_text` happens on the
+    // first content/reasoning token via `case 'token'`. This is what
+    // makes the PendingIndicator visible during the gap between
+    // run_started and the first token (especially for slow first-token
+    // models or cold context).
     const next = agentStateReducer(
       {...initialAgentUiState, status: 'prefill'},
       {type: 'step_started', turn: 0, isFollowUp: false},
     );
-    expect(next.status).toBe('streaming_text');
+    expect(next.status).toBe('prefill');
   });
 
   it('#7 run_finished hitMaxTurns=true → done, hitMaxTurns=true', () => {
@@ -282,8 +288,8 @@ describe('agentStateReducer', () => {
     const statuses = states.map(x => x.status);
     // Scenario I phase walk:
     //   run_started        → prefill
-    //   step_started(0)    → streaming_text
-    //   token(content)     → streaming_text (already streaming)
+    //   step_started(0)    → prefill (initial dead zone covered)
+    //   token(content)     → streaming_text (first content token flips)
     //   token(toolCalls)   → generating_tool_call
     //   tool_call_started  → executing_tool
     //   tool_call_finished → executing_tool
@@ -294,7 +300,7 @@ describe('agentStateReducer', () => {
     //   run_finished       → done
     expect(statuses).toEqual([
       'prefill',
-      'streaming_text',
+      'prefill',
       'streaming_text',
       'generating_tool_call',
       'executing_tool',

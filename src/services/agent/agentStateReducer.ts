@@ -31,17 +31,24 @@ export function agentStateReducer(
         hitMaxTurns: false,
       };
     case 'step_started':
-      // Follow-up steps route through `prefill` so the indicator (D4,
-      // owned by ChatView) covers the dead zone between the tool
-      // finishing and the first follow-up token. The first content/
-      // reasoning `token` for the follow-up flips status back to
-      // `streaming_text` via the regular path. Initial steps (turn 0)
-      // were already in `prefill` from `run_started`; flipping to
-      // `streaming_text` here on the !isFollowUp branch is the
-      // conventional "first step is opening for tokens" transition.
+      // Both initial and follow-up steps route through `prefill` so the
+      // indicator (D4, owned by ChatView) covers the dead zone between
+      // step setup and the first content/reasoning token. The first
+      // such token flips status to `streaming_text` via the regular
+      // `case 'token'` path below (the prefill→streaming_text rule).
+      //
+      // For initial steps, `prefill` was already set by `run_started`,
+      // but explicitly setting it here keeps the rule uniform across
+      // both branches and prevents the indicator from disappearing in
+      // the brief window between run_started and the first token.
+      //
+      // For follow-up steps, this transitions out of `executing_tool`
+      // (where the previous step left us) into `prefill` until the
+      // follow-up's first token lands. The `isFollowUp` flag remains on
+      // the event for any per-step UI that needs it.
       return {
         ...state,
-        status: event.isFollowUp ? 'prefill' : 'streaming_text',
+        status: 'prefill',
         pendingTalentNames: [],
       };
     case 'token': {
