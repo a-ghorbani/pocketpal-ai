@@ -654,6 +654,79 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
+    it('multi-tool partial completion (WHAT §9e): step₀ has two calls, first ok + second error → both rendered in array order via TalentSurface, ONE footer', () => {
+      // WHAT §9e: one talent block (A) followed by one error block
+      // (B), in array order (I2). Both surface simultaneously after
+      // step_finished — verified here at the Message-renderer level
+      // by asserting TalentSurface receives both calls + outcomes
+      // in the right order. The per-block dispatch (talent UI vs
+      // error block) is verified by TalentSurface.test.tsx:#3,#5.
+      const message = makeDerivedTurn(
+        [
+          {
+            content: 'Trying both tools:',
+            toolCalls: [
+              {
+                id: 'c1',
+                function: {name: 'render_html', arguments: '{}'},
+              },
+              {
+                id: 'c2',
+                function: {name: 'render_html', arguments: '{}'},
+              },
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c1',
+                toolName: 'render_html',
+                result: {type: 'html', html: '<p>ok</p>', summary: 'ok'},
+                responseContent: 'ok',
+              },
+              {
+                callId: 'c2',
+                toolName: 'render_html',
+                result: {
+                  type: 'error',
+                  summary: 'failed',
+                  errorMessage: 'invalid markup',
+                },
+                responseContent: 'failed',
+              },
+            ],
+          },
+          {content: 'One worked, one did not.'},
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId, queryAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      // Two text blocks (preamble + apology), one TalentSurface for
+      // step₀.
+      expect(mockTextMessageCalls).toHaveLength(2);
+      expect(queryAllByTestId('talent-surface')).toHaveLength(1);
+      // Both calls reach TalentSurface in array order (I2). The
+      // surface-level dispatch is tested in TalentSurface.test.tsx
+      // — here we verify the renderer doesn't drop calls or
+      // shuffle order.
+      const calls = mockTalentSurfaceCalls[0].step?.toolCalls;
+      const outcomes = mockTalentSurfaceCalls[0].step?.toolOutcomes;
+      expect(calls?.[0].id).toBe('c1');
+      expect(calls?.[1].id).toBe('c2');
+      expect(outcomes?.[0].result.type).toBe('html');
+      expect(outcomes?.[1].result.type).toBe('error');
+      // ONE footer (I1).
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
     it('I1 multi-step turn renders exactly ONE AssistantTurnFooter (regression guard)', () => {
       const message = makeDerivedTurn(
         [
