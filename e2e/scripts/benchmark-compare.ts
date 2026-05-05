@@ -28,8 +28,14 @@ import * as path from 'path';
 export interface BenchmarkRunReport {
   model_id: string;
   quant: string;
-  requested_backend: 'cpu' | 'gpu';
-  effective_backend: 'cpu' | 'opencl' | 'cpu+opencl-partial' | 'unknown';
+  requested_backend: 'cpu' | 'gpu' | 'hexagon';
+  effective_backend:
+    | 'cpu'
+    | 'opencl'
+    | 'cpu+opencl-partial'
+    | 'hexagon'
+    | 'cpu+hexagon-partial'
+    | 'unknown';
   pp_avg: number | null;
   tg_avg: number | null;
   wall_ms: number;
@@ -38,6 +44,13 @@ export interface BenchmarkRunReport {
   timestamp: string;
   reason?: string;
   error?: string;
+  /** v1.1 row identity (WHAT 4g.1). Optional in the type so the script
+   * stays tolerant of bare legacy v1.0 input passed directly without
+   * routing through the merger; rowKey falls back to 'app-default'. */
+  settings_fingerprint?: string;
+  /** v1.1 row identity (WHAT 4g.1). Optional for the same reason as
+   * settings_fingerprint above. */
+  settings_overrides?: Record<string, unknown>;
 }
 
 export interface BenchParams {
@@ -69,7 +82,10 @@ export interface RowDelta {
   key: string;
   model_id: string;
   quant: string;
-  requested_backend: 'cpu' | 'gpu';
+  requested_backend: 'cpu' | 'gpu' | 'hexagon';
+  /** v1.1 fingerprint surfaced in the printed table between quant and
+   * requested_backend. Optional for legacy v1.0 row deltas. */
+  settings_fingerprint?: string;
   baseline_pp: number | null;
   current_pp: number | null;
   baseline_tg: number | null;
@@ -106,7 +122,13 @@ export interface CompareOptions {
 const DEFAULT_PCT = 15;
 
 function rowKey(r: BenchmarkRunReport): string {
-  return `${r.model_id}::${r.quant}::${r.requested_backend}`;
+  // WHAT 4g.1: 4-tuple including settings_fingerprint. Defensive
+  // '?? "app-default"' so a bare legacy v1.0 baseline passed directly
+  // (bypassing the merger) does not crash the script — it falls back
+  // to the legacy 3-tuple semantic.
+  return `${r.model_id}::${r.quant}::${r.requested_backend}::${
+    r.settings_fingerprint ?? 'app-default'
+  }`;
 }
 
 function pctDelta(base: number | null, cur: number | null): number | null {
@@ -212,6 +234,9 @@ export function compareReports(
       model_id: baseRow.model_id,
       quant: baseRow.quant,
       requested_backend: baseRow.requested_backend,
+      // Surface fingerprint so the operator can tell which sweep cell
+      // is being reported in the table.
+      settings_fingerprint: baseRow.settings_fingerprint,
       baseline_pp: baseRow.pp_avg,
       current_pp: curRow.pp_avg,
       baseline_tg: baseRow.tg_avg,
@@ -305,22 +330,29 @@ function main(): void {
   );
   console.error(`Threshold: |delta%| > ${result.threshold_pct}% on pp OR tg\n`);
 
+  // Hexagon's `requested_backend` ('hexagon') and `effective_backend`
+  // arms ('hexagon', 'cpu+hexagon-partial') are wider than the OpenCL
+  // ones, so widen `req` and `eff` columns. Fingerprint column added
+  // between `quant` and `req` (WHAT 4g.1, Step 10 surface).
   const header =
-    `${'model'.padEnd(14)} ${'quant'.padEnd(8)} ${'req'.padEnd(4)} ` +
+    `${'model'.padEnd(14)} ${'quant'.padEnd(8)} ${'fp'.padEnd(20)} ${'req'.padEnd(7)} ` +
     `${'base_pp'.padStart(8)} ${'cur_pp'.padStart(8)} ${'d_pp%'.padStart(8)} ` +
     `${'base_tg'.padStart(8)} ${'cur_tg'.padStart(8)} ${'d_tg%'.padStart(8)} ` +
-    `${'base_eff'.padEnd(19)} ${'cur_eff'.padEnd(19)}`;
+    `${'base_eff'.padEnd(20)} ${'cur_eff'.padEnd(20)}`;
   console.error(header);
   console.error('-'.repeat(header.length));
   for (const r of result.rows) {
     const fmt = (n: number | null, width: number) =>
       (n === null ? 'n/a' : n.toFixed(1)).padStart(width);
     const flag = r.flagged ? '  <<' : '';
+    // Truncate fingerprint to 20 chars for the table; full string
+    // remains in the saved JSON.
+    const fp = (r.settings_fingerprint ?? 'app-default').slice(0, 20);
     console.error(
-      `${r.model_id.padEnd(14)} ${r.quant.padEnd(8)} ${r.requested_backend.padEnd(4)} ` +
+      `${r.model_id.padEnd(14)} ${r.quant.padEnd(8)} ${fp.padEnd(20)} ${r.requested_backend.padEnd(7)} ` +
         `${fmt(r.baseline_pp, 8)} ${fmt(r.current_pp, 8)} ${fmt(r.delta_pp_pct, 8)} ` +
         `${fmt(r.baseline_tg, 8)} ${fmt(r.current_tg, 8)} ${fmt(r.delta_tg_pct, 8)} ` +
-        `${r.baseline_effective.padEnd(19)} ${r.current_effective.padEnd(19)}${flag}`,
+        `${r.baseline_effective.padEnd(20)} ${r.current_effective.padEnd(20)}${flag}`,
     );
   }
 
