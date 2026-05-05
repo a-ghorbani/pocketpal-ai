@@ -33,6 +33,31 @@ const reportPath = (timestamp: string) =>
 
 type Status = string; // 'idle' | 'downloading:<f>' | 'running:<i/n>:<...>' | 'complete' | 'error:<msg>'
 
+/** Closed enum for the requested-backend axis. Hexagon (Qualcomm NPU) is a
+ * third backend value, distinct from cpu/gpu, and gated by the same
+ * fail-fast pattern as `gpu` — if the device has no Hexagon, hexagon cells
+ * fail and the matrix continues. (WHAT §1a, §8 D1.) */
+export type Backend = 'cpu' | 'gpu' | 'hexagon';
+
+/** Closed enum of fingerprint-eligible knobs. Adding a knob is a
+ * fingerprint-version bump (WHAT §4d.1 — fixed contract). */
+export type SettingsKnob =
+  | 'cache_type_k'
+  | 'cache_type_v'
+  | 'flash_attn_type'
+  | 'no_extra_bufts'
+  | 'use_mmap'
+  | 'n_threads';
+
+/** Value domain for sweep axes. The actual per-knob domain is enforced at
+ * config-build time (WHAT §4b.4); values reach the screen pre-validated. */
+export type SettingsValue = string | number | boolean;
+
+export interface SettingsAxis {
+  name: SettingsKnob;
+  values: SettingsValue[];
+}
+
 interface BenchVariant {
   quant: string;
   filename: string;
@@ -50,21 +75,46 @@ interface BenchModelEntry {
 
 export interface BenchConfig {
   models: BenchModelEntry[];
-  backends: Array<'cpu' | 'gpu'>;
+  backends: Backend[];
   bench?: {pp: number; tg: number; pl: number; nr: number};
+  /** Sweep axes for per-cell context-init overrides. Optional/absent means
+   * "no sweep" — the matrix produces one cell per (model, variant, backend)
+   * with empty overrides and the reserved `app-default` fingerprint
+   * (WHAT §1a, §2, §4d D7). */
+  settings_axes?: SettingsAxis[];
 }
+
+/** Effective backend after parsing native-log signals. Mirrors the
+ * OpenCL pair with hexagon arms (WHAT §1c, §8 D2). */
+export type EffectiveBackend =
+  | 'cpu'
+  | 'opencl'
+  | 'cpu+opencl-partial'
+  | 'hexagon'
+  | 'cpu+hexagon-partial'
+  | 'unknown';
 
 interface BenchmarkRunRow {
   model_id: string;
   quant: string;
-  requested_backend: 'cpu' | 'gpu';
-  effective_backend: 'cpu' | 'opencl' | 'cpu+opencl-partial' | 'unknown';
+  requested_backend: Backend;
+  effective_backend: EffectiveBackend;
   pp_avg: number | null;
   tg_avg: number | null;
   wall_ms: number;
   peak_memory_mb: number | null;
   log_signals: LogSignals;
   init_settings: Record<string, unknown>;
+  /** What the cell asked for. Always present (possibly `{}`) — single
+   * writer is `runMatrix` (WHAT §4h I1, §5). */
+  settings_overrides: Partial<Record<SettingsKnob, SettingsValue>>;
+  /** Canonical fingerprint identifying the cell's settings configuration.
+   * Pure function of `init_settings` (success / post-init failure path) or
+   * the matrix-level pre-run snapshot overlaid with overrides (pre-init
+   * failure path, prefixed `req:`). The reserved literal `app-default` is
+   * minted only when no `settings_axes` was passed in config and the cell
+   * has empty overrides (WHAT §4d, §4h I2/I3, §9c). */
+  settings_fingerprint: string;
   status: 'ok' | 'skipped' | 'failed';
   reason?: string;
   error?: string;
@@ -72,11 +122,14 @@ interface BenchmarkRunRow {
 }
 
 interface BenchmarkReport {
-  version: '1.0';
+  version: '1.1';
   platform: 'android';
   timestamp: string;
   preseeded: boolean;
   bench: {pp: number; tg: number; pl: number; nr: number};
+  /** Echo of `config.settings_axes` when the run had axes. Omitted when the
+   * config had none (WHAT §1e, §9a — empty array MUST NOT be emitted). */
+  settings_axes_used?: SettingsAxis[];
   runs: BenchmarkRunRow[];
 }
 
@@ -147,7 +200,7 @@ export async function runMatrix(
   const cells: Array<{
     model: BenchModelEntry;
     variant: BenchVariant;
-    backend: 'cpu' | 'gpu';
+    backend: Backend;
   }> = [];
   for (const m of config.models) {
     for (const v of m.quants) {
@@ -168,7 +221,7 @@ export async function runMatrix(
     const safeStamp = startTimestamp.replace(/[:.]/g, '-');
     const path = reportPath(safeStamp);
     const report: BenchmarkReport = {
-      version: '1.0',
+      version: '1.1',
       platform: 'android',
       timestamp: startTimestamp,
       preseeded: true, // pessimistic — flips false on first downloading: transition
@@ -217,6 +270,8 @@ export async function runMatrix(
             peak_memory_mb: null,
             log_signals: emptyLogSignals(),
             init_settings: {},
+            settings_overrides: {},
+            settings_fingerprint: 'app-default',
             status: 'failed',
             error: 'GPU device not available',
           };
@@ -395,6 +450,8 @@ export async function runMatrix(
               : null,
           log_signals: logSignals,
           init_settings: initSettings,
+          settings_overrides: {},
+          settings_fingerprint: 'app-default',
           status: 'ok',
         };
         report.runs.push(row);
@@ -421,6 +478,8 @@ export async function runMatrix(
           peak_memory_mb: null,
           log_signals: partialSignals,
           init_settings: {},
+          settings_overrides: {},
+          settings_fingerprint: 'app-default',
           status: 'failed',
           error: long,
         };
