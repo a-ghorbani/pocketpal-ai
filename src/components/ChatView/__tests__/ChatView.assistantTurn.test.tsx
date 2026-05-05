@@ -321,4 +321,49 @@ describe('ChatView — Scenario I (dead-zone phase walk via PendingIndicator)', 
       }
     },
   );
+
+  it('PendingIndicator no-flicker: streaming_text → re-render after rapid token bursts keeps indicator hidden', () => {
+    // Wiring test. The reducer-level test (agentStateReducer.test.ts
+    // PendingIndicator no-flicker invariant) proves the predicate
+    // stays stable; this test proves ChatView wires the predicate
+    // to the indicator correctly. We simulate the user-perceived
+    // worst case: status starts in streaming_text (we already
+    // crossed prefill → streaming_text on the first token), then
+    // re-renders happen on every subsequent token. The indicator
+    // must stay hidden across all re-renders.
+    runInAction(() => {
+      chatSessionStore.agentUiState = {
+        status: 'streaming_text',
+        pendingTalentNames: [],
+        hitMaxTurns: false,
+      };
+    });
+    const turn = makeAssistantTurn([{content: 'h'}], 't1', 1);
+    const {queryByTestId, rerender} = render(
+      <ChatView messages={[turn]} onSendPress={jest.fn()} user={user} />,
+      {withNavigation: true, withBottomSheetProvider: true},
+    );
+    expect(queryByTestId('pending-indicator')).toBeNull();
+
+    // 10 simulated re-renders, each representing a token landing.
+    // The status remains streaming_text the whole time (no flips
+    // back to prefill — that's the reducer-level guarantee). Each
+    // re-render passes a new turn message reference (content
+    // grows), forcing React to re-evaluate the header component.
+    let content = 'h';
+    for (let i = 0; i < 10; i++) {
+      content += 'x';
+      const updatedTurn = makeAssistantTurn([{content}], 't1', 1);
+      rerender(
+        <ChatView
+          messages={[updatedTurn]}
+          onSendPress={jest.fn()}
+          user={user}
+        />,
+      );
+      // Indicator MUST remain hidden across every frame — no
+      // flicker is observable.
+      expect(queryByTestId('pending-indicator')).toBeNull();
+    }
+  });
 });

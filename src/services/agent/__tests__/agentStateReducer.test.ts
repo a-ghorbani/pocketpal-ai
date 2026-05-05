@@ -306,4 +306,115 @@ describe('agentStateReducer', () => {
       'done',
     ]);
   });
+
+  // ---------- WHAT §3 / D4 / I4 — PendingIndicator no-flicker
+  //   The active-set predicate (`isPending`) at ChatView is:
+  //   status ∈ { prefill, generating_tool_call, executing_tool }
+  //   It must stay stable through a fast streaming sequence — i.e.
+  //   once status flips to `streaming_text`, no token event flips it
+  //   back. Otherwise the indicator would visibly flicker on/off
+  //   between tokens (one of the user-visible problems intent #2
+  //   was meant to fix). ----------
+
+  describe('PendingIndicator no-flicker invariant (WHAT §3 / D4 / I4)', () => {
+    const isPending = (s: AgentUiState) =>
+      s.status === 'prefill' ||
+      s.status === 'generating_tool_call' ||
+      s.status === 'executing_tool';
+
+    it('rapid token sequence (50 short content deltas) keeps isPending=false throughout streaming', () => {
+      // Walk through prefill → streaming_text → … 50 short token
+      // deltas representing fast character-by-character streaming.
+      // Once we leave prefill on the first content token, isPending
+      // must stay false until the run finishes.
+      let s = initialAgentUiState;
+      s = agentStateReducer(s, {type: 'run_started', messageId: 'm1'});
+      s = agentStateReducer(s, {
+        type: 'step_started',
+        turn: 0,
+        isFollowUp: false,
+      });
+      // First content token → flip prefill → streaming_text.
+      s = agentStateReducer(s, {type: 'token', delta: {content: 'H'}});
+      expect(s.status).toBe('streaming_text');
+      expect(isPending(s)).toBe(false);
+
+      const transitions: boolean[] = [];
+      // Simulate a fast burst of 50 token events. Each token only
+      // carries a single character (worst-case fragmentation).
+      for (let i = 0; i < 50; i++) {
+        s = agentStateReducer(s, {
+          type: 'token',
+          delta: {content: String.fromCharCode(33 + (i % 90))},
+        });
+        transitions.push(isPending(s));
+      }
+      // No flicker: every frame is non-pending.
+      expect(transitions.every(p => p === false)).toBe(true);
+      // Sanity — status never left streaming_text.
+      expect(s.status).toBe('streaming_text');
+    });
+
+    it('mixed reasoningContent + content tokens never flip isPending back to true mid-stream', () => {
+      // Some models interleave reasoning and content tokens. Both
+      // are "visible deltas" per the reducer; neither should flip
+      // status back to prefill once we've started streaming.
+      let s = initialAgentUiState;
+      s = agentStateReducer(s, {type: 'run_started', messageId: 'm1'});
+      s = agentStateReducer(s, {
+        type: 'step_started',
+        turn: 0,
+        isFollowUp: false,
+      });
+      // First reasoning token still flips prefill → streaming_text
+      // (the predicate `hasVisibleDelta` includes reasoningContent).
+      s = agentStateReducer(s, {
+        type: 'token',
+        delta: {reasoningContent: 'Let me think…'},
+      });
+      expect(s.status).toBe('streaming_text');
+
+      const events: AgentEvent[] = [
+        {type: 'token', delta: {reasoningContent: ' more'}},
+        {type: 'token', delta: {content: 'Hello'}},
+        {type: 'token', delta: {content: ', '}},
+        {type: 'token', delta: {reasoningContent: ' actually'}},
+        {type: 'token', delta: {content: 'world'}},
+      ];
+      const transitions: string[] = [];
+      for (const e of events) {
+        s = agentStateReducer(s, e);
+        transitions.push(s.status);
+      }
+      // Every transition stays in streaming_text; predicate stays
+      // false throughout.
+      expect(transitions.every(t => t === 'streaming_text')).toBe(true);
+    });
+
+    it('empty / whitespace-only token deltas do NOT toggle the predicate (idempotent on no-visible-delta)', () => {
+      // The reducer's `hasVisibleDelta` check requires content or
+      // reasoningContent length > 0. Empty deltas (e.g. partial
+      // chunks the engine emits between visible tokens) must be
+      // no-ops. If they leaked through and reset status, the
+      // indicator would briefly reappear between tokens — flicker.
+      let s = initialAgentUiState;
+      s = agentStateReducer(s, {type: 'run_started', messageId: 'm1'});
+      s = agentStateReducer(s, {
+        type: 'step_started',
+        turn: 0,
+        isFollowUp: false,
+      });
+      s = agentStateReducer(s, {type: 'token', delta: {content: 'hello'}});
+      expect(s.status).toBe('streaming_text');
+
+      // A no-op token (empty delta) must not change status.
+      const before = s;
+      const after = agentStateReducer(s, {
+        type: 'token',
+        delta: {content: ''},
+      });
+      expect(after).toEqual(before);
+      expect(isPending(after)).toBe(false);
+    });
+  });
 });
