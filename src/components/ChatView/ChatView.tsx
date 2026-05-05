@@ -57,7 +57,7 @@ import {
   ChatInputAdditionalProps,
   ChatInputTopLevelProps,
   Menu,
-  LoadingBubble,
+  PendingIndicator,
   ChatPalModelPickerSheet,
   ChatHeader,
   ChatEmptyPlaceholder,
@@ -128,10 +128,13 @@ export interface ChatProps extends ChatTopLevelProps {
    * When true, indicates that there are no more pages to load and
    * pagination will not be triggered. */
   isLastPage?: boolean;
-  /** Indicates if the AI is currently streaming tokens */
+  /** Indicates if the AI is currently streaming tokens. Used by the
+   * FlatList's `maintainVisibleContentPosition` to keep the latest
+   * tokens in view while the stream lands. The legacy `isThinking`
+   * prop has been retired — pending UX is now derived inside
+   * ChatView from `chatSessionStore.agentUiState.status` (WHAT §4d
+   * / D4 / I4). */
   isStreaming?: boolean;
-  /** Indicates if the AI is currently thinking (processing but not yet streaming) */
-  isThinking?: boolean;
   messages: MessageType.Any[];
   /** Used for pagination (infinite scroll). Called when user scrolls
    * to the very end of the list (minus `onEndReachedThreshold`).
@@ -176,7 +179,6 @@ export const ChatView = observer(
     isLastPage,
     isStopVisible,
     isStreaming = false,
-    isThinking = false,
     messages,
     onEndReached,
     onMessageLongPress: externalOnMessageLongPress,
@@ -720,6 +722,15 @@ export const ChatView = observer(
       agentStatus === 'streaming_text' ||
       agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool';
+    // PendingIndicator visibility (WHAT §3 table, §7 derivation,
+    // I4). The indicator covers every dead zone: prefill (initial
+    // and follow-up), generating_tool_call, executing_tool. Hidden
+    // in streaming_text and done so it doesn't compete with the
+    // visible token stream / final footer.
+    const isPending =
+      agentStatus === 'prefill' ||
+      agentStatus === 'generating_tool_call' ||
+      agentStatus === 'executing_tool';
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;
     const isGeneratingToolCall = agentStatus === 'generating_tool_call';
@@ -860,15 +871,19 @@ export const ChatView = observer(
       };
     });
 
-    // Render header (loading bubble and keyboard spacer)
+    // Render header (pending indicator + keyboard spacer). The
+    // FlatList is `inverted={true}`, so the ListHeaderComponent
+    // renders at the bottom of the visible list — i.e. BELOW the
+    // latest turn, satisfying I4 ("PendingIndicator lives below the
+    // latest turn during dead zones, never inside one").
     const renderListHeaderComponent = React.useCallback(
       () => (
         <>
-          {isThinking && <LoadingBubble />}
+          {isPending && <PendingIndicator />}
           {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),
-      [isThinking, chatMessages.length, headerStyle],
+      [isPending, chatMessages.length, headerStyle],
     );
 
     // Render complete chat list with scroll-to-bottom button
