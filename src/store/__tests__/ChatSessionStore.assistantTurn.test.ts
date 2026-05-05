@@ -121,6 +121,70 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       await chatSessionStore.pushAgentStep('m1', 'session1', {partial: true});
       expect(chatSessionRepository.updateMessage).not.toHaveBeenCalled();
     });
+
+    it('flushes any pending streaming update onto the OLD lastIdx before adding the new step (regression: stale throttle leaked step-0 content into step-1)', async () => {
+      // Simulates: final token for step 0 schedules a throttled write,
+      // step_finished + tool events run synchronously, step_started(1)
+      // pushes a new step. Without the flush, the timer fires later
+      // and applies step 0's pending content to step 1 (which is now
+      // lastIdx) — producing the duplicate-text-after-preview regression.
+      jest.useFakeTimers();
+      const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(2_000_000);
+      try {
+        // Force the throttle to schedule a setTimeout (rather than
+        // applying inline) by setting lastStreamingUpdateTime to "just
+        // now" — so the first updateActiveStepStreaming call goes
+        // through the timer path.
+        (chatSessionStore as any).lastStreamingUpdateTime = 2_000_000;
+        (chatSessionStore as any).pendingStreamingUpdate = null;
+        if ((chatSessionStore as any).streamingThrottleTimer) {
+          clearTimeout((chatSessionStore as any).streamingThrottleTimer);
+          (chatSessionStore as any).streamingThrottleTimer = null;
+        }
+
+        const turn = makeAssistantTurn([
+          {content: "I'll generate the page", partial: true},
+        ]);
+        chatSessionStore.sessions = [
+          {
+            id: 'session1',
+            title: '',
+            date: '',
+            messages: [turn],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal',
+          },
+        ];
+        chatSessionStore.activeSessionId = 'session1';
+
+        // Schedule a pending streaming update for step 0.
+        chatSessionStore.updateActiveStepStreaming(turn.id, 'session1', {
+          content: "I'll generate the page",
+        });
+        expect((chatSessionStore as any).pendingStreamingUpdate).not.toBeNull();
+        expect((chatSessionStore as any).streamingThrottleTimer).not.toBeNull();
+
+        // Now push step 1 BEFORE the throttle fires. The flush must
+        // drain the pending write onto step 0 first.
+        await chatSessionStore.pushAgentStep(turn.id, 'session1', {
+          partial: true,
+        });
+
+        const updated = chatSessionStore.sessions[0]
+          .messages[0] as MessageType.AssistantTurn;
+        expect(updated.steps).toHaveLength(2);
+        // Step 0 keeps its content (flushed onto the right step).
+        expect(updated.steps[0].content).toBe("I'll generate the page");
+        // Step 1 is empty (NOT polluted with step 0's content).
+        expect(updated.steps[1].content).toBeUndefined();
+        // Pending slot drained.
+        expect((chatSessionStore as any).pendingStreamingUpdate).toBeNull();
+        expect((chatSessionStore as any).streamingThrottleTimer).toBeNull();
+      } finally {
+        dateNowSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
   });
 
   describe('appendToolOutcome', () => {

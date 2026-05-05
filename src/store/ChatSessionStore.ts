@@ -548,6 +548,31 @@ class ChatSessionStore {
     }, remainingTime);
   }
 
+  /**
+   * Drain the throttled streaming slot synchronously. Call before any
+   * structural change to `turn.steps` (e.g. pushAgentStep or
+   * finalizeActiveStep) so a pending update scheduled for the previous
+   * `lastIdx` lands on the step it was intended for, not on a freshly
+   * pushed step that happens to be `lastIdx` when the timer fires.
+   *
+   * Without this, the regression sequence is: final `token` for step 0
+   * schedules the throttle (fires in 150ms) → step_finished + tool_call
+   * events run synchronously → step_started(1) pushes step 1 → throttle
+   * timer fires → applies step 0's pending content to step 1, briefly
+   * showing step 0's text duplicated under the talent block until the
+   * follow-up step's first real token replaces it.
+   */
+  private flushStreamingUpdate(): void {
+    if (this.streamingThrottleTimer) {
+      clearTimeout(this.streamingThrottleTimer);
+      this.streamingThrottleTimer = null;
+    }
+    if (this.pendingStreamingUpdate) {
+      this.applyStreamingUpdate();
+      this.lastStreamingUpdateTime = Date.now();
+    }
+  }
+
   // Update message during streaming - no database write, triggers reactivity
   // Throttled to avoid excessive re-renders. Accepts either a Text-shaped
   // partial (legacy path) or an AssistantTurn-shaped partial (new
@@ -723,6 +748,11 @@ class ChatSessionStore {
     sessionId: string,
     step: AgentStep,
   ): Promise<void> {
+    // Drain any pending throttled update onto the CURRENT lastIdx
+    // before structurally extending the array. Otherwise a pending
+    // step-0 write would land on the freshly pushed step-1 when the
+    // timer fires.
+    this.flushStreamingUpdate();
     const targetSessionId = sessionId || this.activeSessionId;
     if (!targetSessionId) {
       return;
@@ -857,6 +887,12 @@ class ChatSessionStore {
    * whole `steps` array wholesale.
    */
   async finalizeActiveStep(id: string, sessionId: string): Promise<void> {
+    // Drain any pending throttled update first so the final partial
+    // content for this step lands BEFORE we mark it `partial: false`
+    // and replace the array. Otherwise a late-firing timer could
+    // either (a) write to a stale array reference or (b) write to
+    // whatever step happens to be lastIdx after this finalize completes.
+    this.flushStreamingUpdate();
     const targetSessionId = sessionId || this.activeSessionId;
     if (!targetSessionId) {
       return;
