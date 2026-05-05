@@ -22,7 +22,36 @@
  * deciding which tiers (if any) it joins.
  */
 
+import {CacheType} from '../../src/utils/types';
+
 import {ModelTestConfig} from './models';
+
+/**
+ * Closed enum for sweep-eligible context-init knobs. Mirrors
+ * `SettingsKnob` in BenchmarkRunnerScreen.tsx — keeping the two declarations
+ * aligned by hand is easier than threading a cross-package import.
+ *
+ * Adding a knob here is a fingerprint-version bump per WHAT 4d.1.
+ */
+export type BenchSettingsKnob =
+  | 'cache_type_k'
+  | 'cache_type_v'
+  | 'flash_attn_type'
+  | 'no_extra_bufts'
+  | 'use_mmap'
+  | 'n_threads';
+
+/**
+ * Value domain for a sweep axis after env-var validation. Each knob has a
+ * different concrete domain (string enum vs boolean vs integer); see
+ * `parseSettingsAxes` for per-knob validation.
+ */
+export type BenchSettingsValue = string | number | boolean;
+
+export interface BenchSettingsAxis {
+  name: BenchSettingsKnob;
+  values: BenchSettingsValue[];
+}
 
 /**
  * Canonical quant rung labels used by the benchmark-matrix spec.
@@ -44,7 +73,7 @@ export const BENCHMARK_MATRIX_QUANTS = [
 ] as const;
 
 export type BenchmarkMatrixQuant = (typeof BENCHMARK_MATRIX_QUANTS)[number];
-export type BenchmarkMatrixBackend = 'cpu' | 'gpu';
+export type BenchmarkMatrixBackend = 'cpu' | 'gpu' | 'hexagon';
 export type BenchmarkTier = 'smoke' | 'focused' | 'full';
 
 /**
@@ -321,12 +350,128 @@ export const BENCHMARK_TIERS: Record<BenchmarkTier, TierSpec> = {
 };
 
 /**
+ * Validate and coerce a single env-var value list per knob domain.
+ * Throws with a descriptive message on any invalid value — the CLI's
+ * outer `main()` catches and exits non-zero (WHAT 9e: invalid env-var
+ * value rejected at config-build time).
+ */
+function parseSettingsAxisValues(
+  knob: BenchSettingsKnob,
+  raw: string,
+): BenchSettingsValue[] {
+  const tokens = raw
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (tokens.length === 0) {
+    throw new Error(`BENCH_${knob.toUpperCase()} produced an empty value list`);
+  }
+  switch (knob) {
+    case 'cache_type_k':
+    case 'cache_type_v': {
+      const valid = new Set<string>(Object.values(CacheType));
+      for (const t of tokens) {
+        if (!valid.has(t)) {
+          throw new Error(
+            `BENCH_${knob.toUpperCase()}=${t} is not a valid CacheType (expected one of ${[
+              ...valid,
+            ].join(',')})`,
+          );
+        }
+      }
+      return tokens;
+    }
+    case 'flash_attn_type': {
+      const valid = new Set(['auto', 'on', 'off']);
+      for (const t of tokens) {
+        if (!valid.has(t)) {
+          throw new Error(
+            `BENCH_FLASH_ATTN_TYPE=${t} is not valid (expected auto|on|off)`,
+          );
+        }
+      }
+      return tokens;
+    }
+    case 'no_extra_bufts': {
+      return tokens.map(t => {
+        if (t !== 'true' && t !== 'false') {
+          throw new Error(
+            `BENCH_NO_EXTRA_BUFTS=${t} is not valid (expected true|false)`,
+          );
+        }
+        return t === 'true';
+      });
+    }
+    case 'use_mmap': {
+      const valid = new Set(['true', 'false', 'smart']);
+      for (const t of tokens) {
+        if (!valid.has(t)) {
+          throw new Error(
+            `BENCH_USE_MMAP=${t} is not valid (expected true|false|smart)`,
+          );
+        }
+      }
+      return tokens;
+    }
+    case 'n_threads': {
+      return tokens.map(t => {
+        const n = Number(t);
+        if (!Number.isInteger(n) || n <= 0) {
+          throw new Error(
+            `BENCH_N_THREADS=${t} is not valid (expected a positive integer)`,
+          );
+        }
+        return n;
+      });
+    }
+  }
+}
+
+/**
+ * Build the sweep-axes list from env vars in the fixed order WHAT 4b.3
+ * mandates: cache_type_k, cache_type_v, flash_attn_type, no_extra_bufts,
+ * use_mmap, n_threads. Within each axis, values keep their env-var order.
+ *
+ * Empty/absent env vars produce no axis; an empty result means "no
+ * sweep" — downstream (`buildConfig`) emits no `settings_axes` field, so
+ * the runner falls into the `app-default` path (WHAT 9a).
+ */
+export function parseSettingsAxes(env: NodeJS.ProcessEnv): BenchSettingsAxis[] {
+  // Fixed declaration order (WHAT D5) — produces stable cell order across
+  // runs.
+  const order: Array<{name: BenchSettingsKnob; envKey: string}> = [
+    {name: 'cache_type_k', envKey: 'BENCH_CACHE_TYPE_K'},
+    {name: 'cache_type_v', envKey: 'BENCH_CACHE_TYPE_V'},
+    {name: 'flash_attn_type', envKey: 'BENCH_FLASH_ATTN_TYPE'},
+    {name: 'no_extra_bufts', envKey: 'BENCH_NO_EXTRA_BUFTS'},
+    {name: 'use_mmap', envKey: 'BENCH_USE_MMAP'},
+    {name: 'n_threads', envKey: 'BENCH_N_THREADS'},
+  ];
+  const axes: BenchSettingsAxis[] = [];
+  for (const {name, envKey} of order) {
+    const raw = env[envKey];
+    if (raw && raw.trim()) {
+      axes.push({name, values: parseSettingsAxisValues(name, raw)});
+    }
+  }
+  return axes;
+}
+
+/**
  * Resolve the matrix from env vars.
  *
- *   BENCH_TIER=smoke|focused|full   default 'smoke'
- *   BENCH_MODELS=id1,id2            comma-separated model ids (further filter)
- *   BENCH_QUANTS=q4_0,q6_k          comma-separated quant rungs (further filter)
- *   BENCH_BACKENDS=cpu,gpu          comma-separated backends (default both)
+ *   BENCH_TIER=smoke|focused|full     default 'smoke'
+ *   BENCH_MODELS=id1,id2              comma-separated model ids (further filter)
+ *   BENCH_QUANTS=q4_0,q6_k            comma-separated quant rungs (further filter)
+ *   BENCH_BACKENDS=cpu,gpu,hexagon    comma-separated backends (default cpu+gpu)
+ *
+ *   Sweep axes (any subset; absent => single-cell app-default path):
+ *     BENCH_CACHE_TYPE_K=f16,q8_0
+ *     BENCH_CACHE_TYPE_V=f16,q8_0
+ *     BENCH_FLASH_ATTN_TYPE=auto,on,off
+ *     BENCH_NO_EXTRA_BUFTS=true,false
+ *     BENCH_USE_MMAP=true,false,smart
+ *     BENCH_N_THREADS=4,6,8
  *
  * Filters narrow the tier — they cannot widen it. To widen, pick a higher
  * tier (e.g. BENCH_TIER=full BENCH_MODELS=phi-4-mini).
@@ -336,6 +481,7 @@ export function getBenchmarkMatrix(): {
   models: ModelTestConfig[];
   quants: BenchmarkMatrixQuant[];
   backends: BenchmarkMatrixBackend[];
+  settings_axes: BenchSettingsAxis[];
 } {
   const parseCsv = (raw?: string): string[] | undefined =>
     raw
@@ -367,10 +513,15 @@ export function getBenchmarkMatrix(): {
       : [...tierSpec.quants]
   ) as BenchmarkMatrixQuant[];
 
-  const allBackends: BenchmarkMatrixBackend[] = ['cpu', 'gpu'];
+  // Default still cpu+gpu — Hexagon is opt-in via BENCH_BACKENDS=hexagon
+  // (WHAT 4b.2). Devices without Hexagon will fail-fast per WHAT 4a.7.
+  const allBackends: BenchmarkMatrixBackend[] = ['cpu', 'gpu', 'hexagon'];
+  const defaultBackends: BenchmarkMatrixBackend[] = ['cpu', 'gpu'];
   const backends = backendFilter
     ? allBackends.filter(b => backendFilter.includes(b))
-    : allBackends;
+    : defaultBackends;
 
-  return {tier, models, quants, backends};
+  const settings_axes = parseSettingsAxes(process.env);
+
+  return {tier, models, quants, backends, settings_axes};
 }
