@@ -250,3 +250,64 @@ describe('ChatView — Copy menu item label is present in l10n', () => {
     expect(l10n.en.components.chatView.menuItems.copy).toBeTruthy();
   });
 });
+
+// ---------- Canonical scenario H + I ----------
+
+describe('ChatView — Scenario H (abort with partial content)', () => {
+  it('H — interrupted turn with copyable but no timings: AssistantTurnFooter shows copy alone, no timing', () => {
+    const turn: MessageType.AssistantTurn = {
+      id: 't1',
+      type: 'assistant_turn',
+      author,
+      createdAt: 1,
+      steps: [{content: 'I was about to say...', partial: true}],
+      metadata: {interrupted: true, copyable: true},
+    };
+    const {getByTestId, queryByTestId} = render(
+      <ChatView messages={[turn]} onSendPress={jest.fn()} user={user} />,
+      {withNavigation: true, withBottomSheetProvider: true},
+    );
+    expect(getByTestId('assistant-turn-footer')).toBeTruthy();
+    // Copy renders (copyable=true).
+    expect(getByTestId('footer-copy')).toBeTruthy();
+    // No timing line — `metadata.timings` is absent (D1 / Scenario H).
+    expect(queryByTestId('footer-timing')).toBeNull();
+  });
+});
+
+describe('ChatView — Scenario I (dead-zone phase walk via PendingIndicator)', () => {
+  // The PendingIndicator (D4 / I4) is owned by ChatView and gated on
+  // `chatSessionStore.agentUiState.status`. The §3 table says it
+  // appears in every status EXCEPT streaming_text and done. Drive
+  // the status across that table and assert testID presence /
+  // absence per phase.
+  const phases: Array<{label: string; status: any; visible: boolean}> = [
+    {label: 'idle (no run)', status: 'idle', visible: false},
+    {label: 'phase 2 / 7: prefill', status: 'prefill', visible: true},
+    {label: 'phase 3 / 8: streaming_text', status: 'streaming_text', visible: false},
+    {label: 'phase 4: generating_tool_call', status: 'generating_tool_call', visible: true},
+    {label: 'phase 5: executing_tool', status: 'executing_tool', visible: true},
+    {label: 'phase 9: done', status: 'done', visible: false},
+    {label: 'failed', status: 'failed', visible: false},
+  ];
+
+  it.each(phases)('$label → indicator visible=$visible', ({status, visible}) => {
+    runInAction(() => {
+      chatSessionStore.agentUiState = {
+        status,
+        pendingTalentNames: [],
+        hitMaxTurns: false,
+      };
+    });
+    const turn = makeAssistantTurn([{content: 'hi'}], 't1', 1);
+    const {queryByTestId} = render(
+      <ChatView messages={[turn]} onSendPress={jest.fn()} user={user} />,
+      {withNavigation: true, withBottomSheetProvider: true},
+    );
+    if (visible) {
+      expect(queryByTestId('pending-indicator')).toBeTruthy();
+    } else {
+      expect(queryByTestId('pending-indicator')).toBeNull();
+    }
+  });
+});

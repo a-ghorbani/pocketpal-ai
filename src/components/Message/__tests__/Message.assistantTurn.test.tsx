@@ -7,6 +7,17 @@ import {defaultDerivedMessageProps} from '../../../../jest/fixtures';
 import {Message} from '../Message';
 import {MessageType, AgentStep} from '../../../utils/types';
 
+// Replace the icon component used by AssistantTurnFooter so tests
+// can render it without pulling in native icon assets.
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const {Text: PaperText} = require('react-native-paper');
+  return props => <PaperText>{props.name}</PaperText>;
+});
+
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  setString: jest.fn(),
+}));
+
 // Stub TextMessage so renderer tests focus on per-block layout, not
 // internal markdown machinery. The stub records the step prop it was
 // rendered with so we can assert "right step → right block".
@@ -340,5 +351,346 @@ describe('Message — AssistantTurn renderer', () => {
     );
     expect(mockTextMessageCalls).toHaveLength(0);
     expect(mockTalentSurfaceCalls).toHaveLength(0);
+  });
+
+  // ---------- Canonical scenarios from WHAT §6 ----------
+
+  describe('canonical scenarios', () => {
+    it('A — text only: single TextMessage block, no TalentSurface, ONE footer', () => {
+      const message = makeDerivedTurn(
+        [{content: 'Hi! How can I help?'}],
+        {
+          metadata: {
+            timings: {predicted_per_token_ms: 32, predicted_per_second: 30},
+            copyable: true,
+          },
+        },
+      );
+      const {getAllByTestId, queryByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      expect(mockTextMessageCalls).toHaveLength(1);
+      expect(queryByTestId('talent-surface')).toBeNull();
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('B — datetime tool (no UI registered): TextMessage + TalentSurface (chip path) + TextMessage + ONE footer', () => {
+      const message = makeDerivedTurn(
+        [
+          {
+            content: 'Let me check.',
+            toolCalls: [
+              {id: 'c0', function: {name: 'datetime', arguments: '{}'}},
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c0',
+                toolName: 'datetime',
+                result: {type: 'text', summary: '8:28 AM'},
+                responseContent: '8:28 AM',
+              },
+            ],
+          },
+          {content: "It's 8:28 AM."},
+        ],
+        {
+          metadata: {
+            timings: {predicted_per_second: 30},
+            copyable: true,
+          },
+        },
+      );
+      const {getAllByTestId, queryAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      // Two text blocks (preamble + follow-up)
+      expect(mockTextMessageCalls).toHaveLength(2);
+      // One TalentSurface invocation for the tool call
+      expect(queryAllByTestId('talent-surface')).toHaveLength(1);
+      expect(mockTalentSurfaceCalls[0].step?.toolCalls?.[0].function.name).toBe(
+        'datetime',
+      );
+      // ONE footer (regression guard for duplicate-footer bug — I1)
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('C — render_html with preamble and follow-up: 2 text blocks + 1 talent block + ONE footer', () => {
+      const message = makeDerivedTurn(
+        [
+          {
+            content: "Sure, here's a preview.",
+            toolCalls: [
+              {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c0',
+                toolName: 'render_html',
+                result: {
+                  type: 'html',
+                  html: '<p>preview</p>',
+                  summary: 'preview',
+                },
+                responseContent: 'preview',
+              },
+            ],
+          },
+          {content: 'Hope this looks right.'},
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId, queryAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      expect(mockTextMessageCalls).toHaveLength(2);
+      expect(queryAllByTestId('talent-surface')).toHaveLength(1);
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('D — render_html with no preamble: HtmlPreview block + TextMessage + ONE footer (no empty leading bubble)', () => {
+      const message = makeDerivedTurn(
+        [
+          {
+            content: '',
+            toolCalls: [
+              {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c0',
+                toolName: 'render_html',
+                result: {
+                  type: 'html',
+                  html: '<p>x</p>',
+                  summary: 'x',
+                },
+                responseContent: 'x',
+              },
+            ],
+          },
+          {content: 'There you go.'},
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      // No empty leading TextMessage — the per-step skip rule §4a
+      // collapses zero-block steps. Step 0's content is empty, so
+      // only the talent block fires; step 1 supplies the only
+      // TextMessage.
+      expect(mockTextMessageCalls).toHaveLength(1);
+      expect(mockTextMessageCalls[0].step?.content).toBe('There you go.');
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('E — tool failed: TextMessage(preamble) + TalentSurface (error path) + TextMessage(apology) + ONE footer', () => {
+      const message = makeDerivedTurn(
+        [
+          {
+            content: 'Trying...',
+            toolCalls: [
+              {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c0',
+                toolName: 'render_html',
+                result: {
+                  type: 'error',
+                  summary: 'failed',
+                  errorMessage: 'invalid markup',
+                },
+                responseContent: 'failed',
+              },
+            ],
+          },
+          {content: "Sorry, couldn't do that."},
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      expect(mockTextMessageCalls).toHaveLength(2);
+      expect(mockTalentSurfaceCalls).toHaveLength(1);
+      expect(
+        mockTalentSurfaceCalls[0].step?.toolOutcomes?.[0].result.type,
+      ).toBe('error');
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('F — reasoning + content: separate reasoning block + content block + ONE footer (D3)', () => {
+      const message = makeDerivedTurn(
+        [
+          {
+            reasoningContent: 'Let me think…',
+            content: 'The answer is 42.',
+          },
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      // Two TextMessage invocations: one for reasoning-only, one for
+      // content-only. Order: reasoning first, then content (D3).
+      expect(mockTextMessageCalls).toHaveLength(2);
+      expect(mockTextMessageCalls[0].step?.reasoningContent).toBe(
+        'Let me think…',
+      );
+      expect(mockTextMessageCalls[0].step?.content).toBeUndefined();
+      expect(mockTextMessageCalls[1].step?.content).toBe('The answer is 42.');
+      expect(mockTextMessageCalls[1].step?.reasoningContent).toBeUndefined();
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('G — multi-tool in one step: 1 preamble TextMessage + 1 TalentSurface (with both calls) + ONE footer', () => {
+      const message = makeDerivedTurn(
+        [
+          {
+            content: 'Here are two:',
+            toolCalls: [
+              {
+                id: 'c1',
+                function: {name: 'render_html', arguments: '{}'},
+              },
+              {
+                id: 'c2',
+                function: {name: 'render_html', arguments: '{}'},
+              },
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c1',
+                toolName: 'render_html',
+                result: {
+                  type: 'html',
+                  html: '<p>1</p>',
+                  summary: '1',
+                },
+                responseContent: '1',
+              },
+              {
+                callId: 'c2',
+                toolName: 'render_html',
+                result: {
+                  type: 'html',
+                  html: '<p>2</p>',
+                  summary: '2',
+                },
+                responseContent: '2',
+              },
+            ],
+          },
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId, queryAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      expect(mockTextMessageCalls).toHaveLength(1);
+      // Single TalentSurface invocation per step; the surface itself
+      // renders both calls in array order (verified by
+      // TalentSurface.test.tsx — block order matches array order
+      // [I2]).
+      expect(queryAllByTestId('talent-surface')).toHaveLength(1);
+      const calls = mockTalentSurfaceCalls[0].step?.toolCalls;
+      expect(calls?.[0].id).toBe('c1');
+      expect(calls?.[1].id).toBe('c2');
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
+
+    it('I1 multi-step turn renders exactly ONE AssistantTurnFooter (regression guard)', () => {
+      const message = makeDerivedTurn(
+        [
+          {content: 'A'},
+          {
+            toolCalls: [
+              {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+            ],
+            toolOutcomes: [
+              {
+                callId: 'c0',
+                toolName: 'render_html',
+                result: {type: 'html', html: '<p>x</p>', summary: 'x'},
+                responseContent: 'x',
+              },
+            ],
+          },
+          {content: 'B'},
+          {content: 'C'},
+        ],
+        {metadata: {timings: {predicted_per_second: 30}, copyable: true}},
+      );
+      const {getAllByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
+    });
   });
 });
