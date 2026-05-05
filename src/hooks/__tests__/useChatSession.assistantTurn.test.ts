@@ -287,6 +287,111 @@ describe('useChatSession — AssistantTurn integration', () => {
     (talentRegistry as any).engines.delete('calculate');
   });
 
+  it('#hookTest2 tool turn: appendToolCall lands ids that match the upcoming appendToolOutcome callId by construction (per-frame id-match invariant)', async () => {
+    // WHAT §5 cleanup #1 regression guard. The runner attaches its
+    // normalized toolCalls to step_finished; the hook calls
+    // appendToolCall with that list before appendToolOutcome fires
+    // for each call. Per WHAT §6 canonical scenarios, the invariant
+    // is: at every render frame, step.toolCalls[i].id === outcome.callId
+    // (vacuously true while outcomes lag the calls; strictly enforced
+    // as soon as both are present). This test verifies the invariant
+    // by intercepting both writers and checking the call-order
+    // produces matching ids.
+    const fakeTalent: TalentEngine = {
+      name: 'calculate',
+      execute: async () => ({type: 'text', summary: '4'}) as TalentResult,
+      toToolDefinition: () => ({
+        type: 'function',
+        function: {name: 'calculate', description: '', parameters: {}},
+      }),
+    };
+    talentRegistry.register(fakeTalent);
+    palStore.pals = [
+      {
+        id: 'pal-1',
+        type: 'local',
+        name: 'Calc Pal',
+        systemPrompt: '',
+        parameters: {},
+        parameterSchema: [],
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        source: 'local',
+        pact: {talents: [{name: 'calculate', necessity: 'optional'}]},
+      } as any,
+    ];
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [],
+        completionSettings: {},
+        settingsSource: 'pal',
+        activePalId: 'pal-1',
+      } as any,
+    ];
+    chatSessionStore.activeSessionId = 'session-1';
+
+    let turnIndex = 0;
+    if (modelStore.context) {
+      modelStore.context.completion = jest.fn().mockImplementation(async () => {
+        turnIndex += 1;
+        if (turnIndex === 1) {
+          return {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                // Empty id from llama.rn — the runner reconciles via
+                // normalizeToolCallIds. The hook MUST receive the
+                // normalized id, not this raw one.
+                id: '',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{"e":"2+2"}'},
+              },
+            ],
+          };
+        }
+        return {text: '4', content: '4'};
+      });
+    }
+
+    const appendToolCallSpy = chatSessionStore.appendToolCall as jest.Mock;
+    const appendToolOutcomeSpy =
+      chatSessionStore.appendToolOutcome as jest.Mock;
+
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    expect(appendToolCallSpy).toHaveBeenCalled();
+    expect(appendToolOutcomeSpy).toHaveBeenCalled();
+
+    // For every appendToolCall invocation, every call.id MUST match a
+    // subsequently-appended outcome.callId (within the same step).
+    // The invariant: step.toolCalls[i].id === outcome.callId by
+    // construction.
+    const callsArgs = appendToolCallSpy.mock.calls;
+    const outcomeArgs = appendToolOutcomeSpy.mock.calls;
+    const calledIds = callsArgs.flatMap(c =>
+      (c[2] as Array<{id: string}>).map(x => x.id),
+    );
+    const outcomeCallIds = outcomeArgs.map(c => (c[2] as {callId: string}).callId);
+    // No empty ids emitted — runner normalized them.
+    expect(calledIds.every(id => id.length > 0)).toBe(true);
+    // Every outcome's callId must appear in the appendToolCall set.
+    for (const cid of outcomeCallIds) {
+      expect(calledIds).toContain(cid);
+    }
+
+    // Cleanup
+    (talentRegistry as any).engines.delete('calculate');
+  });
+
   it('handleStopPress aborts the in-flight runner before stopCompletion fires', async () => {
     let resolveCompletion: (v: any) => void;
     const completionPromise = new Promise(resolve => {

@@ -248,6 +248,17 @@ async function applyEventToStore(
       );
       return;
     case 'step_finished':
+      // WHAT §5 cleanup #1: land step.toolCalls AFTER step_finished
+      // with the runner's authoritative normalized ids, so they match
+      // the outcomes' callIds by construction. Skipped for text-only
+      // and final-of-chain steps (no payload attached).
+      if (event.toolCalls && event.toolCalls.length > 0) {
+        await chatSessionStore.appendToolCall(
+          ctx.messageId,
+          ctx.sessionId,
+          event.toolCalls,
+        );
+      }
       await chatSessionStore.finalizeActiveStep(ctx.messageId, ctx.sessionId);
       return;
     case 'run_finished': {

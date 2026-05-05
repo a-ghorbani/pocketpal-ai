@@ -353,20 +353,27 @@ export async function* runAgent(
         return;
       }
 
-      yield {type: 'step_finished', turn};
-
+      // Compute normalized tool calls BEFORE the step_finished yield
+      // so the event payload can carry them. The hook's appendToolCall
+      // writer (WHAT §5 cleanup #1) lands them on step.toolCalls with
+      // ids that match the upcoming outcomes by construction.
       const finishedResult = lastResult;
+      const rawToolCalls = finishedResult?.tool_calls ?? [];
+      const calls =
+        rawToolCalls.length === 0
+          ? undefined
+          : normalizeToolCallIds(rawToolCalls, callIdSeed + turn);
+
+      yield {type: 'step_finished', turn, toolCalls: calls};
+
       if (!finishedResult) {
         break;
       }
 
-      const rawToolCalls = finishedResult.tool_calls ?? [];
-      if (rawToolCalls.length === 0) {
+      if (!calls || calls.length === 0) {
         // No tools requested — final answer landed.
         break;
       }
-
-      const calls = normalizeToolCallIds(rawToolCalls, callIdSeed + turn);
 
       const outcomes: AgentToolOutcome[] = [];
       for (const call of calls) {

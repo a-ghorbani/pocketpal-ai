@@ -98,11 +98,10 @@ export const mockChatSessionStore = {
   agentUiState: {
     status: 'idle' as
       | 'idle'
-      | 'preparing'
+      | 'prefill'
       | 'streaming_text'
       | 'generating_tool_call'
       | 'executing_tool'
-      | 'streaming_followup'
       | 'done'
       | 'failed',
     pendingTalentNames: [] as string[],
@@ -111,6 +110,7 @@ export const mockChatSessionStore = {
   setAgentUiState: jest.fn(),
   pushAgentStep: jest.fn().mockResolvedValue(undefined),
   updateActiveStepStreaming: jest.fn(),
+  appendToolCall: jest.fn().mockResolvedValue(undefined),
   appendToolOutcome: jest.fn().mockResolvedValue(undefined),
   finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
 };

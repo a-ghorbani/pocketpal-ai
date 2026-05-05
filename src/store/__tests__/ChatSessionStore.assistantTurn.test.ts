@@ -186,6 +186,121 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
     });
   });
 
+  describe('appendToolCall', () => {
+    it('writes step.toolCalls with ids that match outcomes appended afterwards', async () => {
+      const turn = makeAssistantTurn([
+        {content: 'preamble'},
+        {content: 'thinking', partial: true},
+      ]);
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: 'Session',
+          date: '',
+          messages: [turn],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+
+      // Runner-normalized calls (synthetic ids reconciled).
+      const calls = [
+        {
+          id: 'call_seed_0',
+          type: 'function' as const,
+          function: {name: 'calculate', arguments: '{}'},
+        },
+      ];
+      await chatSessionStore.appendToolCall(turn.id, 'session1', calls);
+
+      // Outcome arrives with the same id (runner uses the same
+      // normalized id for both events).
+      const outcome: AgentToolOutcome = {
+        callId: 'call_seed_0',
+        toolName: 'calculate',
+        result: {type: 'text', summary: '42'},
+        responseContent: '42',
+      };
+      await chatSessionStore.appendToolOutcome(turn.id, 'session1', outcome);
+
+      const updated = chatSessionStore.sessions[0]
+        .messages[0] as MessageType.AssistantTurn;
+      // Earlier step untouched.
+      expect(updated.steps[0]).toEqual({content: 'preamble'});
+      // Last step has both toolCalls and the outcome with matching id.
+      const lastStep = updated.steps[1];
+      expect(lastStep.toolCalls).toEqual(calls);
+      expect(lastStep.toolOutcomes).toEqual([outcome]);
+      // Single-writer invariant: ids match by construction.
+      expect(lastStep.toolCalls?.[0].id).toBe(lastStep.toolOutcomes?.[0].callId);
+    });
+
+    it('replaces (does not merge) the active step toolCalls', async () => {
+      // Even if a stale toolCalls array somehow exists on the active
+      // step, appendToolCall replaces it wholesale with the runner's
+      // authoritative list.
+      const stale = [
+        {
+          id: 'stale',
+          type: 'function' as const,
+          function: {name: 'old', arguments: '{}'},
+        },
+      ];
+      const turn = makeAssistantTurn([
+        {content: 'thinking', partial: true, toolCalls: stale},
+      ]);
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: '',
+          date: '',
+          messages: [turn],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+
+      const fresh = [
+        {
+          id: 'call_fresh_0',
+          type: 'function' as const,
+          function: {name: 'calculate', arguments: '{}'},
+        },
+      ];
+      await chatSessionStore.appendToolCall(turn.id, 'session1', fresh);
+
+      const updated = chatSessionStore.sessions[0]
+        .messages[0] as MessageType.AssistantTurn;
+      expect(updated.steps[0].toolCalls).toEqual(fresh);
+    });
+
+    it('returns silently when there are no steps yet', async () => {
+      const turn = makeAssistantTurn([]);
+      chatSessionStore.sessions = [
+        {
+          id: 'session1',
+          title: '',
+          date: '',
+          messages: [turn],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.activeSessionId = 'session1';
+
+      await chatSessionStore.appendToolCall(turn.id, 'session1', [
+        {
+          id: 'c0',
+          type: 'function',
+          function: {name: 'calculate', arguments: '{}'},
+        },
+      ]);
+      expect(chatSessionRepository.updateMessage).not.toHaveBeenCalled();
+    });
+  });
+
   describe('finalizeActiveStep', () => {
     it('marks the last step as partial=false and persists wholesale', async () => {
       const turn = makeAssistantTurn([

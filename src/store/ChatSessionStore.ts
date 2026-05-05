@@ -2,7 +2,12 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {format, isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {AgentStep, AgentToolOutcome, MessageType} from '../utils/types';
+import {
+  AgentStep,
+  AgentToolCall,
+  AgentToolOutcome,
+  MessageType,
+} from '../utils/types';
 import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
@@ -744,6 +749,59 @@ class ChatSessionStore {
       await chatSessionRepository.updateMessage(id, {steps: nextSteps});
     } catch (error) {
       console.error('Failed to persist pushAgentStep:', error);
+    }
+  }
+
+  /**
+   * Replace the active (last) step's `toolCalls` array with the
+   * runner's authoritative normalized list. Called from the hook
+   * exactly once per step, on `step_finished`, with ids that match
+   * the upcoming `appendToolOutcome` callIds by construction (the
+   * runner reconciles ids via `normalizeToolCallIds` and attaches
+   * them to the `step_finished` event payload).
+   *
+   * Single-writer rule per WHAT §5 cleanup #1 — the streaming
+   * partial in `applyEventToStore` no longer carries `toolCalls`
+   * as of Step 3, so this is the ONLY writer for `step.toolCalls`
+   * after that change.
+   */
+  async appendToolCall(
+    id: string,
+    sessionId: string,
+    calls: AgentToolCall[],
+  ): Promise<void> {
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+    const index = session.messages.findIndex(msg => msg.id === id);
+    if (index < 0) {
+      return;
+    }
+    const message = session.messages[index];
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    if (!turn.steps || turn.steps.length === 0) {
+      return;
+    }
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      const lastIdx = turn.steps.length - 1;
+      const last = turn.steps[lastIdx];
+      const nextLast: AgentStep = {...last, toolCalls: calls};
+      nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist appendToolCall:', error);
     }
   }
 
