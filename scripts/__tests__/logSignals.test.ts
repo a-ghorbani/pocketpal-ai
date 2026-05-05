@@ -78,6 +78,8 @@ describe('deriveLogSignals', () => {
       adreno_gen: null,
       large_buffer_enabled: false,
       large_buffer_unsupported: false,
+      hexagon_init: false,
+      hexagon_device_name: null,
       offloaded_layers: null,
       total_layers: null,
       raw_matches: [],
@@ -257,5 +259,99 @@ describe('deriveEffectiveBackend', () => {
     ]);
     expect(signals.opencl_init).toBe(false);
     expect(deriveEffectiveBackend(signals)).toBe('cpu');
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Hexagon parses + effective-backend arms (WHAT 1d, 6.D, 8 D2)
+// -----------------------------------------------------------------------------
+
+/**
+ * Canonical Hexagon init + full-offload happy path. Three load-bearing
+ * lines (literals verified against llama.rn 0.12.0-rc.9):
+ *   - registry-allocation marker (sets hexagon_init=true)
+ *   - new session: HTP0 (sets hexagon_device_name)
+ *   - offloaded N/M layers to GPU (backend-agnostic counter — same line
+ *     used for OpenCL; partial-vs-full classification reuses the existing
+ *     offload regex).
+ */
+const HEXAGON_FULL_OFFLOAD_LINES = [
+  'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
+  'ggml-hex: Hexagon Arch version v75',
+  'ggml-hex: new session: HTP0 : default',
+  'load_tensors: offloaded 28/28 layers to GPU',
+];
+
+const HEXAGON_PARTIAL_OFFLOAD_LINES = [
+  'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
+  'ggml-hex: new session: HTP0 : default',
+  'load_tensors: offloaded 22/28 layers to GPU',
+];
+
+describe('deriveLogSignals (Hexagon)', () => {
+  it('parses the Hexagon happy-path init with full offload', () => {
+    const signals = deriveLogSignals(HEXAGON_FULL_OFFLOAD_LINES);
+    expect(signals.hexagon_init).toBe(true);
+    expect(signals.hexagon_device_name).toBe('HTP0');
+    expect(signals.offloaded_layers).toBe(28);
+    expect(signals.total_layers).toBe(28);
+    // Hexagon path must NOT set opencl_init by mistake.
+    expect(signals.opencl_init).toBe(false);
+    expect(signals.opencl_device_name).toBeNull();
+  });
+
+  it('captures only the FIRST HTP device when multiple sessions are logged', () => {
+    // ndev=2 (fused) emits two `new session:` lines in sequence; the
+    // structured field keeps the first to mirror opencl_device_name's
+    // first-match-wins semantic. raw_matches still contains both lines.
+    const signals = deriveLogSignals([
+      'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 2',
+      'ggml-hex: new session: HTP0 : default',
+      'ggml-hex: new session: HTP1 : default',
+    ]);
+    expect(signals.hexagon_init).toBe(true);
+    expect(signals.hexagon_device_name).toBe('HTP0');
+  });
+
+  it('returns hexagon_init=false on OpenCL-only output (no cross-contamination)', () => {
+    const signals = deriveLogSignals(GPU_FULL_OFFLOAD_LINES);
+    expect(signals.hexagon_init).toBe(false);
+    expect(signals.hexagon_device_name).toBeNull();
+  });
+});
+
+describe('deriveEffectiveBackend (Hexagon)', () => {
+  it('returns "hexagon" on full Hexagon offload', () => {
+    expect(
+      deriveEffectiveBackend(deriveLogSignals(HEXAGON_FULL_OFFLOAD_LINES)),
+    ).toBe('hexagon');
+  });
+
+  it('returns "cpu+hexagon-partial" when offloaded < total under hexagon_init', () => {
+    expect(
+      deriveEffectiveBackend(deriveLogSignals(HEXAGON_PARTIAL_OFFLOAD_LINES)),
+    ).toBe('cpu+hexagon-partial');
+  });
+
+  it('returns "unknown" when hexagon_init seen but no layer counts (init aborted before offload line)', () => {
+    // Symmetric with the OpenCL path's `unknown` fallback (WHAT 8 D2).
+    const signals = deriveLogSignals([
+      'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
+      'ggml-hex: new session: HTP0 : default',
+    ]);
+    expect(deriveEffectiveBackend(signals)).toBe('unknown');
+  });
+
+  it('hexagon arm takes precedence over opencl when both init lines coincide (defense)', () => {
+    // Hypothetical — by construction one device set is dispatched per
+    // cell — but the precedence rule is part of the contract (WHAT 8 D2).
+    const signals = deriveLogSignals([
+      'I/lm_ggml_opencl: Initializing OpenCL backend',
+      'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
+      'load_tensors: offloaded 28/28 layers to GPU',
+    ]);
+    expect(signals.opencl_init).toBe(true);
+    expect(signals.hexagon_init).toBe(true);
+    expect(deriveEffectiveBackend(signals)).toBe('hexagon');
   });
 });
