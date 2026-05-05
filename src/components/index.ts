@@ -31,6 +31,7 @@ export * from './ImageMessage';
 export * from './KeyboardAccessoryView';
 export * from './LoadingBubble';
 export * from './MarkdownView';
+export * from './PendingIndicator';
 export * from './Menu';
 export * from './Message';
 export * from './ModelsHeaderRight';
