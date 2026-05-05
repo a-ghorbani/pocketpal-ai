@@ -8,6 +8,7 @@ import {useTheme} from '../../hooks';
 
 import styles from './styles';
 import {
+  AssistantTurnFooter,
   Avatar,
   StatusIcon,
   FileMessage,
@@ -347,11 +348,31 @@ export const Message = React.memo(
     // The single Pressable + Avatar + StatusIcon wrapping is preserved
     // so long-press routing stays turn-level (selectedMessage holds the
     // turn id) and avatar shows once per turn.
+    //
+    // Per WHAT §4b / D9 / I1: ONE AssistantTurnFooter per assistant
+    // row, attached HERE in the outer JSX (not inside renderMessage())
+    // so:
+    //   - AssistantTurn rows render N step blocks then one footer
+    //     (regardless of step count — fixes the duplicate-footer bug
+    //     by construction).
+    //   - Legacy assistant Text rows still get exactly one footer
+    //     (chrome moves out of Bubble, into here).
+    //   - User-authored Text rows render no footer (no behaviour
+    //     change for the user side).
+    const showAssistantFooter =
+      !currentUserIsAuthor &&
+      (message.type === 'assistant_turn' || message.type === 'text');
     const innerContent =
       message.type === 'assistant_turn' ? (
-        <View>{renderAssistantTurn()}</View>
+        <View>
+          {renderAssistantTurn()}
+          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+        </View>
       ) : (
-        renderBubbleContainer()
+        <>
+          {renderBubbleContainer()}
+          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+        </>
       );
 
     return (
