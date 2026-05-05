@@ -601,7 +601,11 @@ export async function runMatrix(
             log_signals: emptyLogSignals(),
             init_settings: {},
             settings_overrides: overrides,
-            settings_fingerprint: 'app-default', // patched in Step 7/8
+            settings_fingerprint: buildFailureFingerprint(
+              preRunSnapshot,
+              overrides,
+              hadAxesInConfig,
+            ),
             status: 'failed',
             error: 'GPU device not available',
           };
@@ -623,7 +627,11 @@ export async function runMatrix(
             log_signals: emptyLogSignals(),
             init_settings: {},
             settings_overrides: overrides,
-            settings_fingerprint: 'app-default', // patched in Step 7/8
+            settings_fingerprint: buildFailureFingerprint(
+              preRunSnapshot,
+              overrides,
+              hadAxesInConfig,
+            ),
             status: 'failed',
             error: 'Hexagon device not available',
           };
@@ -753,7 +761,7 @@ export async function runMatrix(
         const initSettings = JSON.parse(
           JSON.stringify(modelStore.contextInitParams),
         );
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
         postInitSnapshot = initSettings;
 
         // 6. Peak memory tracking.
@@ -822,7 +830,11 @@ export async function runMatrix(
           log_signals: logSignals,
           init_settings: initSettings,
           settings_overrides: overrides,
-          settings_fingerprint: 'app-default', // patched in Step 7/8
+          settings_fingerprint: buildSuccessFingerprint(
+            initSettings,
+            hadAxesInConfig,
+            Object.keys(overrides).length === 0,
+          ),
           status: 'ok',
         };
         report.runs.push(row);
@@ -840,6 +852,23 @@ export async function runMatrix(
         const msg = (e as Error).message ?? 'unknown';
         const short = msg.slice(0, TRUNCATE_ERROR);
         const long = msg.slice(0, TRUNCATE_ROW_ERROR);
+        // Fingerprint provenance per WHAT 9c/9d, I3:
+        //   - postInitSnapshot null (pre-init failure)  -> req:-prefixed
+        //     fingerprint built from pre-run snapshot + requested overrides.
+        //   - postInitSnapshot non-null (post-init throw) -> standard
+        //     fingerprint from the post-init snapshot, NO 'req:' prefix.
+        const fingerprint =
+          postInitSnapshot !== null
+            ? buildSuccessFingerprint(
+                postInitSnapshot,
+                hadAxesInConfig,
+                Object.keys(overrides).length === 0,
+              )
+            : buildFailureFingerprint(
+                preRunSnapshot,
+                overrides,
+                hadAxesInConfig,
+              );
         const row: BenchmarkRunRow = {
           ...rowBase,
           effective_backend: deriveEffectiveBackend(partialSignals),
@@ -848,9 +877,9 @@ export async function runMatrix(
           wall_ms: Date.now() - tStart,
           peak_memory_mb: null,
           log_signals: partialSignals,
-          init_settings: {},
+          init_settings: postInitSnapshot ?? {},
           settings_overrides: overrides,
-          settings_fingerprint: 'app-default', // patched in Step 7/8
+          settings_fingerprint: fingerprint,
           status: 'failed',
           error: long,
         };

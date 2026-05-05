@@ -785,6 +785,134 @@ describe('BenchmarkRunnerScreen', () => {
       );
       expect(runningCall).toBeDefined();
     });
+
+    // -------------------------------------------------------------------------
+    // Row writer: fingerprint wiring (WHAT 4a.4-5, 4i, 4h I1/I2/I3)
+    // -------------------------------------------------------------------------
+
+    it('success row carries app-default fingerprint when no axes (WHAT 6.A)', async () => {
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0].settings_fingerprint).toBe('app-default');
+      expect(json.runs[0].settings_overrides).toEqual({});
+    });
+
+    it('success rows carry distinct canonical fingerprints when axis is set', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['f16', 'q8_0']}],
+      };
+      // Drive the post-init snapshot to reflect the cell's override —
+      // the mock setCacheTypeK is a jest.fn() that does NOT mutate
+      // contextInitParams, so we simulate the engine's effect by
+      // capturing the most recent setCacheTypeK arg and patching
+      // contextInitParams via mockImplementation.
+      (modelStore.setCacheTypeK as jest.Mock).mockImplementation(
+        (v: string) => {
+          (modelStore as any).contextInitParams = {
+            ...(modelStore as any).contextInitParams,
+            cache_type_k: v,
+          };
+        },
+      );
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(2);
+      // Both rows are status:'ok' so they take the success-fingerprint
+      // path — derived from post-init snapshot.
+      expect(json.runs[0].settings_fingerprint).toContain('cache_type_k=f16');
+      expect(json.runs[1].settings_fingerprint).toContain('cache_type_k=q8_0');
+      expect(json.runs[0].settings_fingerprint).not.toBe(
+        json.runs[1].settings_fingerprint,
+      );
+      // Neither is the app-default literal (axes were present).
+      expect(json.runs[0].settings_fingerprint).not.toBe('app-default');
+    });
+
+    it('pre-init failure row carries req:-prefixed fingerprint when sweep axes are set (WHAT 9c, I3)', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      // Force initContext to reject so postInitSnapshot stays null.
+      (modelStore.initContext as jest.Mock).mockRejectedValueOnce(
+        new Error('init exploded'),
+      );
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0].status).toBe('failed');
+      expect(json.runs[0].settings_fingerprint.startsWith('req:')).toBe(true);
+      expect(json.runs[0].settings_fingerprint).toContain('cache_type_k=q8_0');
+    });
+
+    it('post-init failure row carries standard (non-req:) fingerprint (WHAT 9d)', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      // initContext succeeds; bench() throws.
+      (modelStore.setCacheTypeK as jest.Mock).mockImplementation(
+        (v: string) => {
+          (modelStore as any).contextInitParams = {
+            ...(modelStore as any).contextInitParams,
+            cache_type_k: v,
+          };
+        },
+      );
+      (modelStore as any).context = {
+        bench: jest.fn().mockRejectedValue(new Error('bench-blew-up')),
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0].status).toBe('failed');
+      // No 'req:' prefix — the post-init snapshot was available.
+      expect(json.runs[0].settings_fingerprint.startsWith('req:')).toBe(false);
+      expect(json.runs[0].settings_fingerprint).toContain('cache_type_k=q8_0');
+    });
+
+    it('pre-init failure of an app-default cell still buckets as "app-default" (WHAT 6.C)', async () => {
+      // No axes in config; initContext rejects -> we must NOT emit a
+      // 'req:'-prefixed fingerprint, because the cell would no longer
+      // dedupe with its app-default peers.
+      (modelStore.initContext as jest.Mock).mockRejectedValueOnce(
+        new Error('init exploded'),
+      );
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0].status).toBe('failed');
+      expect(json.runs[0].settings_fingerprint).toBe('app-default');
+    });
+
+    it('GPU pre-check failure row uses req:-prefixed fingerprint when axes are set', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      // No GPU option -> GPU pre-check fails fast.
+      getDeviceOptions.mockResolvedValueOnce([
+        {id: 'cpu', label: 'CPU', devices: ['CPU']},
+      ]);
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        error: 'GPU device not available',
+      });
+      // Sweep axes are active; pre-init failure -> req: fingerprint.
+      expect(json.runs[0].settings_fingerprint.startsWith('req:')).toBe(true);
+    });
   });
 
   // ---------------------------------------------------------------------------
