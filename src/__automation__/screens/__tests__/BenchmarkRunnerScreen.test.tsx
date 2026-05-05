@@ -690,6 +690,53 @@ describe('BenchmarkRunnerScreen', () => {
       expect(tCalls[tCalls.length - 1][0]).toBe(6);
     });
 
+    it('mid-cell throw still restores ALL pre-run snapshot values for ALL three cells (I5 — gap-fill)', async () => {
+      // I5 says the matrix-level pre-run snapshot is the fixed point for
+      // restoration, regardless of which cell threw. The earlier tests
+      // exercised:
+      //   - clean success path (all cells OK)
+      //   - an outer-thrown shell write before any cell ran
+      // This gap-fill exercises the in-flight case: 3 cells, the SECOND
+      // throws inside the loop body. The OUTER finally must still restore
+      // the matrix-level pre-run snapshot — covering keys touched by cells
+      // that completed BEFORE the throw, the throwing cell, AND any cells
+      // that ran after. Per WHAT §4h I5: "On matrix end (any path),
+      // restoreSettingsSnapshot runs."
+      (modelStore as any).contextInitParams = {
+        ...((modelStore as any).contextInitParams ?? {}),
+        cache_type_k: 'f16',
+        n_threads: 6,
+        use_mmap: 'smart',
+      };
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        // Three cells via a single axis with three values; cell 2 throws.
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0', 'q5_0', 'f16']}],
+      };
+      // Make initContext for cell 2 (q5_0) reject; cells 1 + 3 succeed.
+      (modelStore.initContext as jest.Mock)
+        .mockResolvedValueOnce(undefined) // cell 1
+        .mockRejectedValueOnce(new Error('cell-2-init-boom'))
+        .mockResolvedValueOnce(undefined); // cell 3
+      await runMatrix(cfg, setStatus, setLastCell);
+      // All three cells ran (per I7 + per-cell containment).
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(3);
+      expect(json.runs[1].status).toBe('failed');
+      // Restoration in the outer finally must call EACH snapshot setter at
+      // least once with the pre-run value — covering all three knobs, not
+      // just the one being swept. The mid-cell throw is irrelevant: the
+      // outer finally restores the full matrix-level snapshot.
+      const cacheCalls = (modelStore.setCacheTypeK as jest.Mock).mock.calls;
+      expect(cacheCalls[cacheCalls.length - 1][0]).toBe('f16');
+      const tCalls = (modelStore.setNThreads as jest.Mock).mock.calls;
+      expect(tCalls[tCalls.length - 1][0]).toBe(6);
+      const mmapCalls = (modelStore.setUseMmap as jest.Mock).mock.calls;
+      expect(mmapCalls[mmapCalls.length - 1][0]).toBe('smart');
+    });
+
     // -------------------------------------------------------------------------
     // Hexagon path (WHAT 4a.7, 4h I7, 6.C)
     // -------------------------------------------------------------------------
@@ -876,6 +923,53 @@ describe('BenchmarkRunnerScreen', () => {
       // No 'req:' prefix — the post-init snapshot was available.
       expect(json.runs[0].settings_fingerprint.startsWith('req:')).toBe(false);
       expect(json.runs[0].settings_fingerprint).toContain('cache_type_k=q8_0');
+    });
+
+    it('post-init failure row preserves the captured snapshot in init_settings (WHAT 9d — gap-fill)', async () => {
+      // WHAT 9d explicitly says: "Snapshot is available; post-init
+      // fingerprint is derivable. ... the runner MUST hoist the post-init
+      // snapshot capture into a local variable BEFORE the bench step."
+      // The implementer's catch path writes `init_settings: postInitSnapshot
+      // ?? {}` — the prior tests assert the fingerprint provenance and the
+      // listener-detach contract, but no test pins down that init_settings
+      // CARRIES the captured snapshot (vs. falling back to the pre-fix
+      // empty `{}`). If a future refactor reverts to `init_settings: {}`
+      // on the catch path, this assertion fires.
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      // initContext succeeds and the engine effect lands cache_type_k='q8_0'
+      // into contextInitParams; bench() then throws so the catch path runs.
+      (modelStore.setCacheTypeK as jest.Mock).mockImplementation(
+        (v: string) => {
+          (modelStore as any).contextInitParams = {
+            ...(modelStore as any).contextInitParams,
+            cache_type_k: v,
+          };
+        },
+      );
+      (modelStore as any).context = {
+        bench: jest.fn().mockRejectedValue(new Error('bench-blew-up')),
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs[0].status).toBe('failed');
+      // The captured snapshot must survive into the failure row's
+      // init_settings — not be zeroed to `{}`. The post-init snapshot
+      // reflects the cell's applied override, so cache_type_k=q8_0 must
+      // be visible to operators reading the report.
+      expect(json.runs[0].init_settings).not.toEqual({});
+      expect(json.runs[0].init_settings).toMatchObject({
+        cache_type_k: 'q8_0',
+      });
+      // Effective_backend on a post-init throw is whatever the partial log
+      // signals derived; sanity-check the row still surfaces the bench
+      // error message so a regression that swallowed the post-init
+      // snapshot AND the error would not pass this test.
+      expect(json.runs[0].error).toContain('bench-blew-up');
     });
 
     it('pre-init failure of an app-default cell still buckets as "app-default" (WHAT 6.C)', async () => {
@@ -1120,6 +1214,38 @@ describe('BenchmarkRunnerScreen', () => {
       expect(fpSmart).not.toEqual(fpTrue);
       expect(fpSmart).toContain('use_mmap=smart');
       expect(fpTrue).toContain('use_mmap=true');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mock-store sanity (gap-fill — direct check that the centralised mock
+  // exposes the setters the runner depends on as jest.fn()s. This guards
+  // against silent regressions if `__mocks__/stores/modelStore.ts` is
+  // regenerated without the v1.1 sweep setters; without it, the only
+  // signal is failures in the apply-order tests above, which would point
+  // at the runner instead of the mock.)
+  // ---------------------------------------------------------------------------
+
+  describe('mock modelStore sanity (sweep setters wired)', () => {
+    it.each([
+      ['setCacheTypeK'],
+      ['setCacheTypeV'],
+      ['setFlashAttnType'],
+      ['setNoExtraBufts'],
+      ['setUseMmap'],
+      ['setNThreads'],
+    ] as const)('exposes %s as a callable jest.fn()', name => {
+      const setter = (modelStore as any)[name];
+      expect(setter).toBeDefined();
+      // jest.fn() instances expose a .mock object — that is the sanity
+      // signal here (not jest.isMockFunction, which the mock module loads
+      // from its own jest context).
+      expect(setter).toEqual(expect.any(Function));
+      expect(setter.mock).toBeDefined();
+      // Calling the setter is a no-op in the mock; the assertion is that
+      // it does not throw and a subsequent inspection sees the call.
+      setter('arbitrary-test-value');
+      expect(setter).toHaveBeenCalledWith('arbitrary-test-value');
     });
   });
 });
