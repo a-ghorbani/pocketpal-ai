@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "device": "POCO X7 Pro (Klee)",
   "soc": "Mediatek Dimensity 8400 / Mali-G720",
   "commit": "9634617",
@@ -55,7 +55,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -79,7 +81,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -121,7 +125,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -145,7 +151,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -187,7 +195,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -211,7 +221,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -253,7 +265,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -277,7 +291,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -319,7 +335,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -343,7 +361,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -385,7 +405,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -409,7 +431,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -451,7 +475,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -475,7 +501,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -517,7 +545,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -541,7 +571,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -583,7 +615,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -607,7 +641,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -649,7 +685,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -673,7 +711,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -715,7 +755,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -739,7 +781,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -781,7 +825,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -805,7 +851,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -847,7 +895,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -871,7 +921,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -913,7 +965,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -937,7 +991,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -979,7 +1035,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1003,7 +1061,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1045,7 +1105,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1069,7 +1131,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1111,7 +1175,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1135,7 +1201,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1177,7 +1245,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1201,7 +1271,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1243,7 +1315,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1267,7 +1341,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1309,7 +1385,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1333,7 +1411,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1375,7 +1455,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1399,7 +1481,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1441,7 +1525,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-4-e2b",
@@ -1465,7 +1551,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1507,7 +1595,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1531,7 +1621,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1573,7 +1665,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1597,7 +1691,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1639,7 +1735,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1663,7 +1761,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1705,7 +1805,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1729,7 +1831,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1771,7 +1875,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1795,7 +1901,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1837,7 +1945,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1861,7 +1971,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1903,7 +2015,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1927,7 +2041,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1969,7 +2085,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1993,7 +2111,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2035,7 +2155,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2059,7 +2181,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2101,7 +2225,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2125,7 +2251,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2167,7 +2295,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2191,7 +2321,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2233,7 +2365,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2257,7 +2391,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2281,7 +2417,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "download-timeout:Phi-3.5-mini-instruct-Q8_0.gguf"
+      "error": "download-timeout:Phi-3.5-mini-instruct-Q8_0.gguf",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2305,7 +2443,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2347,7 +2487,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2371,7 +2513,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2413,7 +2557,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2437,7 +2583,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2479,7 +2627,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2503,7 +2653,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2545,7 +2697,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2569,7 +2723,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2611,7 +2767,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2635,7 +2793,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2677,7 +2837,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2701,7 +2863,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2743,7 +2907,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2767,7 +2933,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2809,7 +2977,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2851,7 +3021,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2875,7 +3047,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2917,7 +3091,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2941,7 +3117,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2983,7 +3161,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3007,7 +3187,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3049,7 +3231,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3073,7 +3257,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3115,7 +3301,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3139,7 +3327,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3181,7 +3371,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3205,7 +3397,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3247,7 +3441,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3271,7 +3467,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3313,7 +3511,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3337,7 +3537,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3379,7 +3581,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3403,7 +3607,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3445,7 +3651,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3469,7 +3677,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3511,7 +3721,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3535,7 +3747,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3577,7 +3791,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3601,7 +3817,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3643,7 +3861,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3667,7 +3887,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3709,7 +3931,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3733,7 +3957,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3775,7 +4001,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3799,7 +4027,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3841,7 +4071,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3865,7 +4097,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3907,7 +4141,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3931,7 +4167,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3973,7 +4211,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3997,7 +4237,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4039,7 +4281,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4063,7 +4307,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4105,7 +4351,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4129,7 +4377,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4171,7 +4421,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4195,7 +4447,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4237,7 +4491,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4261,7 +4517,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4303,7 +4561,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4327,7 +4587,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4369,7 +4631,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4393,7 +4657,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4435,7 +4701,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4459,7 +4727,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4501,7 +4771,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4525,7 +4797,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4567,7 +4841,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4591,7 +4867,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4633,7 +4911,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4657,7 +4937,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4699,7 +4981,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4723,7 +5007,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4765,7 +5051,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4789,7 +5077,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4831,7 +5121,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4855,7 +5147,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4897,7 +5191,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4921,7 +5217,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -4963,7 +5261,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -4987,7 +5287,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5029,7 +5331,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5053,7 +5357,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5095,7 +5401,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5119,7 +5427,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5161,7 +5471,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5185,7 +5497,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5227,7 +5541,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5251,7 +5567,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5293,7 +5611,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5317,7 +5637,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5359,7 +5681,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5383,7 +5707,9 @@
       },
       "init_settings": {},
       "status": "failed",
-      "error": "GPU device not available"
+      "error": "GPU device not available",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     }
   ],
   "generated_by": "merge-bench-reports",

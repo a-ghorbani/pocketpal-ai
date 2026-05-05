@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "device": "Samsung Galaxy S23",
   "soc": "Qualcomm Snapdragon 8 Gen 2 / Adreno 740",
   "commit": "698a7c7",
@@ -55,7 +55,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -97,7 +99,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -139,7 +143,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -181,7 +187,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -223,7 +231,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -265,7 +275,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -307,7 +319,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -349,7 +363,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -391,7 +407,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -433,7 +451,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -475,7 +495,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -517,7 +539,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -559,7 +583,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -601,7 +627,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -643,7 +671,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "deepseek-r1-distill-qwen-1.5b",
@@ -685,7 +715,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -727,7 +759,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -769,7 +803,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -811,7 +847,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -853,7 +891,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -895,7 +935,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -937,7 +979,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -979,7 +1023,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1021,7 +1067,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1063,7 +1111,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1105,7 +1155,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1147,7 +1199,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1189,7 +1243,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1231,7 +1287,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1273,7 +1331,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1315,7 +1375,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "gemma-3-1b",
@@ -1357,7 +1419,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1399,7 +1463,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1441,7 +1507,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1483,7 +1551,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1525,7 +1595,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1567,7 +1639,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1609,7 +1683,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1651,7 +1727,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1693,7 +1771,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1735,7 +1815,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "lfm2.5-1.2b-instruct",
@@ -1777,7 +1859,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1819,7 +1903,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1861,7 +1947,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1903,7 +1991,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1945,7 +2035,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -1987,7 +2079,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2029,7 +2123,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2071,7 +2167,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2113,7 +2211,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-3.5-mini",
@@ -2155,7 +2255,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2197,7 +2299,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2239,7 +2343,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2281,7 +2387,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2323,7 +2431,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2365,7 +2475,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2407,7 +2519,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2449,7 +2563,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "phi-4-mini",
@@ -2491,7 +2607,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2533,7 +2651,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2575,7 +2695,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2617,7 +2739,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2659,7 +2783,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2701,7 +2827,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2743,7 +2871,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2785,7 +2915,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2827,7 +2959,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2869,7 +3003,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2911,7 +3047,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2953,7 +3091,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -2995,7 +3135,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3037,7 +3179,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3079,7 +3223,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3121,7 +3267,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen2.5-1.5b",
@@ -3163,7 +3311,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3205,7 +3355,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3247,7 +3399,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3289,7 +3443,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3331,7 +3487,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3373,7 +3531,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3415,7 +3575,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3457,7 +3619,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3499,7 +3663,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3541,7 +3707,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3583,7 +3751,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3625,7 +3795,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3667,7 +3839,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3709,7 +3883,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3751,7 +3927,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3793,7 +3971,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3-1.7b",
@@ -3835,7 +4015,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3877,7 +4059,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3919,7 +4103,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -3961,7 +4147,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4003,7 +4191,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4045,7 +4235,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4087,7 +4279,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4129,7 +4323,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4171,7 +4367,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4213,7 +4411,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4255,7 +4455,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4297,7 +4499,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4339,7 +4543,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4381,7 +4587,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4423,7 +4631,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4465,7 +4675,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-0.8b",
@@ -4507,7 +4719,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4549,7 +4763,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4591,7 +4807,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4633,7 +4851,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4675,7 +4895,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4717,7 +4939,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4759,7 +4983,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4801,7 +5027,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4843,7 +5071,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4885,7 +5115,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4927,7 +5159,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -4969,7 +5203,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -5011,7 +5247,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -5053,7 +5291,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -5095,7 +5335,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "qwen3.5-2b",
@@ -5137,7 +5379,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5179,7 +5423,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5221,7 +5467,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5263,7 +5511,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5305,7 +5555,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5347,7 +5599,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5389,7 +5643,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5431,7 +5687,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5473,7 +5731,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5515,7 +5775,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5557,7 +5819,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5599,7 +5863,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5641,7 +5907,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5683,7 +5951,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     },
     {
       "model_id": "smollm2-1.7b",
@@ -5725,7 +5995,9 @@
         "image_max_tokens": 512,
         "no_extra_bufts": false
       },
-      "status": "ok"
+      "status": "ok",
+      "settings_fingerprint": "app-default",
+      "settings_overrides": {}
     }
   ],
   "generated_by": "merge-bench-reports",
