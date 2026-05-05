@@ -75,6 +75,15 @@ describe('useChatSession — AssistantTurn integration', () => {
 
     // The hook adds the user message AND the empty assistant turn.
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalled();
+    // The empty assistant turn is added WITHOUT metadata.copyable so the
+    // turn footer's copy button stays hidden during streaming. copyable
+    // is set later at run_finished (asserted below) or at the abort
+    // catch path (covered by #3 / hookTest5). Per WHAT D1 / I1.
+    const addAssistantCall = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls.find(args => args[0]?.type === 'assistant_turn');
+    expect(addAssistantCall).toBeDefined();
+    expect(addAssistantCall![0].metadata.copyable).toBeUndefined();
     // pushAgentStep called for each step_started — one in this happy path.
     expect(chatSessionStore.pushAgentStep).toHaveBeenCalled();
     // Per-token writes go through updateActiveStepStreaming.

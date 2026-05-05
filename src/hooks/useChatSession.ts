@@ -150,7 +150,11 @@ const prepareCompletion = async ({
     metadata: {
       contextId,
       conversationId: conversationIdRef,
-      copyable: true,
+      // copyable is intentionally absent here — see WHAT D1/I1: the
+      // turn footer's copy button renders iff metadata.copyable is set,
+      // and at this point the turn has nothing worth copying yet.
+      // copyable is set later: at run_finished (success/maxTurns) or
+      // at the abort catch path with partial content.
       multimodal: hasImages,
     },
   };
