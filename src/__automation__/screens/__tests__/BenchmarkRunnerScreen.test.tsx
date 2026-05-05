@@ -711,7 +711,9 @@ describe('BenchmarkRunnerScreen', () => {
       const cfg: BenchConfig = {
         ...VALID_CONFIG,
         // Three cells via a single axis with three values; cell 2 throws.
-        settings_axes: [{name: 'cache_type_k', values: ['q8_0', 'q5_0', 'f16']}],
+        settings_axes: [
+          {name: 'cache_type_k', values: ['q8_0', 'q5_0', 'f16']},
+        ],
       };
       // Make initContext for cell 2 (q5_0) reject; cells 1 + 3 succeed.
       (modelStore.initContext as jest.Mock)
