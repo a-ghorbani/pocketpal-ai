@@ -260,10 +260,11 @@ describe('Message — AssistantTurn renderer', () => {
     // already implicit; we just confirm the renderer threads `step` only.)
   });
 
-  it('#4 active run with empty pendingTalentNames + isGeneratingToolCall=true → renders generic pending UI', () => {
-    // Active run shape: a single step with toolCalls already parsed
-    // OR an empty step that still exists. Here we use the empty-step
-    // case where the renderer is told to show the generic pending UI.
+  it('#4 active run with empty step (no toolCalls) → no TalentSurface (PendingIndicator covers UX, owned by ChatView)', () => {
+    // Per WHAT §4a / D4 / I4: pending UX is no longer rendered inline
+    // by TalentSurface. The ChatView-owned PendingIndicator covers
+    // dead zones; TalentSurface renders only when step.toolCalls is
+    // populated.
     const message = makeDerivedTurn([{content: '', partial: true}]);
     render(
       <Message
@@ -279,16 +280,11 @@ describe('Message — AssistantTurn renderer', () => {
         isGeneratingToolCall
       />,
     );
-    // Talent block fires when the active step is generating a tool call
-    // even before tool_calls land — generic pending copy is shown by
-    // TalentSurface.
-    expect(mockTalentSurfaceCalls).toHaveLength(1);
-    expect(mockTalentSurfaceCalls[0].isActiveRun).toBe(true);
-    expect(mockTalentSurfaceCalls[0].isGeneratingToolCall).toBe(true);
-    expect(mockTalentSurfaceCalls[0].pendingTalentNames).toEqual([]);
+    // No TalentSurface rendered because step.toolCalls is empty.
+    expect(mockTalentSurfaceCalls).toHaveLength(0);
   });
 
-  it('#5 active run with pendingTalentNames=["calculate"] → talent surface receives the names', () => {
+  it('#5 active run with pendingTalentNames=["calculate"] → no TalentSurface until toolCalls land (PendingIndicator covers UX)', () => {
     const message = makeDerivedTurn([{content: '', partial: true}]);
     render(
       <Message
@@ -304,8 +300,10 @@ describe('Message — AssistantTurn renderer', () => {
         isGeneratingToolCall
       />,
     );
-    expect(mockTalentSurfaceCalls).toHaveLength(1);
-    expect(mockTalentSurfaceCalls[0].pendingTalentNames).toEqual(['calculate']);
+    // pendingTalentNames are no longer threaded into TalentSurface;
+    // ChatView's PendingIndicator handles the lead-up. The renderer
+    // emits no TalentSurface until step.toolCalls is populated.
+    expect(mockTalentSurfaceCalls).toHaveLength(0);
   });
 
   it('#7 reasoning-only step still renders a TextMessage block (so the per-step reasoningContent surfaces)', () => {

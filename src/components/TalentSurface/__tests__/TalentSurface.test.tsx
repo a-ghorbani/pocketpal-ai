@@ -7,12 +7,19 @@ import {TalentSurface} from '../TalentSurface';
 import {talentUIRegistry} from '../../../services/talents/TalentUIRegistry';
 import {AgentStep} from '../../../utils/types';
 
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const {Text: PaperText} = require('react-native-paper');
+  return props => <PaperText>{props.name}</PaperText>;
+});
+
 describe('TalentSurface', () => {
   beforeEach(() => {
     talentUIRegistry.reset();
   });
 
-  it('#3 renders registered renderResult for each step.toolCall whose outcome is present', () => {
+  // The four-priority dispatch (WHAT §4a): error > talent UI > chip > none.
+
+  it('#1 talent UI: outcome present + non-error + UI registered → renderResult fires', () => {
     talentUIRegistry.register({
       name: 'calculate',
       renderResult: result => (
@@ -34,105 +41,157 @@ describe('TalentSurface', () => {
     expect(getByTestId('calc-result')).toBeTruthy();
   });
 
-  it('#4 active run with pendingTalentNames=[] + isGeneratingToolCall=true → renders generic "preparing tool" copy', () => {
-    const {getByTestId} = render(
-      <TalentSurface
-        step={undefined}
-        isActiveRun
-        pendingTalentNames={[]}
-        isGeneratingToolCall
-      />,
-    );
-    expect(getByTestId('talent-call-pending')).toBeTruthy();
-  });
-
-  it('#5 active run with pendingTalentNames=["calculate"] → renders the talent-specific renderPending', () => {
-    talentUIRegistry.register({
-      name: 'calculate',
-      renderPending: () => <Text testID="calc-pending">pending-calc</Text>,
-    });
-    const {getByTestId} = render(
-      <TalentSurface
-        step={undefined}
-        isActiveRun
-        pendingTalentNames={['calculate']}
-        isGeneratingToolCall
-      />,
-    );
-    expect(getByTestId('calc-pending')).toBeTruthy();
-  });
-
-  it('persisted step (not active) with no toolOutcome and no renderPending → null', () => {
-    talentUIRegistry.register({
-      name: 'calculate',
-      renderPending: () => <Text testID="pending">pending</Text>,
-    });
-    const step: AgentStep = {
-      toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
-    };
-    const {queryByTestId} = render(<TalentSurface step={step} />);
-    expect(queryByTestId('pending')).toBeNull();
-  });
-
-  it('persisted step on active run shows pending UI for unresolved tool calls', () => {
-    talentUIRegistry.register({
-      name: 'calculate',
-      renderPending: () => <Text testID="active-pending">active-pending</Text>,
-    });
-    const step: AgentStep = {
-      toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
-    };
-    const {getByTestId} = render(<TalentSurface step={step} isActiveRun />);
-    expect(getByTestId('active-pending')).toBeTruthy();
-  });
-
-  it('renders nothing when there are no toolCalls and no active-run hints', () => {
-    const {queryByTestId} = render(<TalentSurface />);
-    expect(queryByTestId('talent-call-pending')).toBeNull();
-  });
-
-  it('skips tool calls whose talent is not registered', () => {
+  it('#2 unregistered tool with non-error outcome → ToolUsedChip', () => {
     const step: AgentStep = {
       toolCalls: [
-        {id: 'c0', function: {name: 'unregistered_talent', arguments: '{}'}},
+        {id: 'c0', function: {name: 'datetime', arguments: '{}'}},
       ],
       toolOutcomes: [
         {
           callId: 'c0',
-          toolName: 'unregistered_talent',
-          result: {type: 'text', summary: 'x'},
-          responseContent: 'x',
+          toolName: 'datetime',
+          result: {type: 'text', summary: '8:28 AM'},
+          responseContent: '8:28 AM',
         },
       ],
     };
-    const {queryByTestId} = render(<TalentSurface step={step} />);
-    // No registered renderer fires; no generic pending UI either.
-    expect(queryByTestId('talent-call-pending')).toBeNull();
+    const {getByTestId, getByText} = render(<TalentSurface step={step} />);
+    expect(getByTestId('tool-used-chip')).toBeTruthy();
+    expect(getByText('used datetime')).toBeTruthy();
   });
 
-  it('renders pending UI when no toolCalls but pendingTalentNames is set', () => {
+  it('#3 error outcome → ToolErrorBlock (subtle, low-prominence)', () => {
+    const step: AgentStep = {
+      toolCalls: [
+        {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+      ],
+      toolOutcomes: [
+        {
+          callId: 'c0',
+          toolName: 'render_html',
+          result: {
+            type: 'error',
+            summary: 'failed',
+            errorMessage: 'invalid markup',
+          },
+          responseContent: 'failed',
+        },
+      ],
+    };
+    const {getByTestId, getByText} = render(<TalentSurface step={step} />);
+    expect(getByTestId('tool-error-block')).toBeTruthy();
+    expect(getByText('render_html failed')).toBeTruthy();
+    expect(getByText('invalid markup')).toBeTruthy();
+  });
+
+  it('#3b error outcome wins over registered talent UI (priority order)', () => {
     talentUIRegistry.register({
       name: 'render_html',
-      renderPending: () => <Text testID="html-pending">rendering…</Text>,
+      renderResult: () => <Text testID="html-result">should NOT fire</Text>,
     });
-    const {getByTestId} = render(
-      <TalentSurface
-        step={undefined}
-        isActiveRun
-        pendingTalentNames={['render_html']}
-      />,
-    );
-    expect(getByTestId('html-pending')).toBeTruthy();
+    const step: AgentStep = {
+      toolCalls: [
+        {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+      ],
+      toolOutcomes: [
+        {
+          callId: 'c0',
+          toolName: 'render_html',
+          result: {
+            type: 'error',
+            summary: 'oops',
+            errorMessage: 'not great',
+          },
+          responseContent: 'oops',
+        },
+      ],
+    };
+    const {getByTestId, queryByTestId} = render(<TalentSurface step={step} />);
+    expect(getByTestId('tool-error-block')).toBeTruthy();
+    expect(queryByTestId('html-result')).toBeNull();
   });
 
-  it('renders nothing for non-active run with empty pendingTalentNames (legacy persisted no-tool path)', () => {
-    const {queryByTestId} = render(
-      <TalentSurface
-        step={undefined}
-        isActiveRun={false}
-        pendingTalentNames={['x']}
-      />,
+  it('#4 no outcome yet (in-flight) → renders nothing (PendingIndicator covers UX)', () => {
+    talentUIRegistry.register({
+      name: 'calculate',
+      renderResult: () => <Text testID="should-not-fire">x</Text>,
+    });
+    const step: AgentStep = {
+      toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
+    };
+    const {queryByTestId} = render(<TalentSurface step={step} />);
+    expect(queryByTestId('should-not-fire')).toBeNull();
+    expect(queryByTestId('tool-used-chip')).toBeNull();
+    expect(queryByTestId('tool-error-block')).toBeNull();
+  });
+
+  it('#5 multi-tool turn renders blocks in step.toolCalls array order (I2)', () => {
+    talentUIRegistry.register({
+      name: 'render_html',
+      renderResult: r => (
+        <Text testID={`preview-${r.summary}`}>preview-{r.summary}</Text>
+      ),
+    });
+    const step: AgentStep = {
+      toolCalls: [
+        {id: 'c1', function: {name: 'render_html', arguments: '{}'}},
+        {id: 'c2', function: {name: 'render_html', arguments: '{}'}},
+      ],
+      toolOutcomes: [
+        {
+          callId: 'c1',
+          toolName: 'render_html',
+          result: {type: 'html', html: '<p>1</p>', summary: 'one'},
+          responseContent: 'one',
+        },
+        {
+          callId: 'c2',
+          toolName: 'render_html',
+          result: {type: 'html', html: '<p>2</p>', summary: 'two'},
+          responseContent: 'two',
+        },
+      ],
+    };
+    const {getByTestId} = render(<TalentSurface step={step} />);
+    expect(getByTestId('preview-one')).toBeTruthy();
+    expect(getByTestId('preview-two')).toBeTruthy();
+  });
+
+  it('renders nothing when step is undefined or has no toolCalls', () => {
+    const {queryByTestId} = render(<TalentSurface />);
+    expect(queryByTestId('tool-used-chip')).toBeNull();
+    expect(queryByTestId('tool-error-block')).toBeNull();
+  });
+
+  it('falls back to ToolUsedChip when renderResult returns null (e.g. unsupported result.type)', () => {
+    // RenderHtmlTalentUI returns null when result.type !== 'html'; the
+    // dispatcher should fall through to the chip.
+    talentUIRegistry.register({
+      name: 'render_html',
+      renderResult: result =>
+        result.type === 'html' ? (
+          <Text testID="ui">{result.html}</Text>
+        ) : null,
+    });
+    const step: AgentStep = {
+      toolCalls: [
+        {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+      ],
+      toolOutcomes: [
+        // Wrong type for this UI — renderResult returns null.
+        {
+          callId: 'c0',
+          toolName: 'render_html',
+          result: {type: 'text', summary: 'plain'},
+          responseContent: 'plain',
+        },
+      ],
+    };
+    const {queryByTestId, getByTestId, getByText} = render(
+      <TalentSurface step={step} />,
     );
-    expect(queryByTestId('talent-call-pending')).toBeNull();
+    expect(queryByTestId('ui')).toBeNull();
+    expect(getByTestId('tool-used-chip')).toBeTruthy();
+    expect(getByText('used render_html')).toBeTruthy();
   });
 });

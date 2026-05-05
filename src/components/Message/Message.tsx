@@ -112,9 +112,11 @@ export interface MessageProps extends MessageTopLevelProps {
 export const Message = React.memo(
   ({
     enableAnimation,
-    isActiveRun,
-    activeRunPendingTalentNames,
-    isGeneratingToolCall,
+    // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
+    // are kept on MessageTopLevelProps for ChatView's existing prop
+    // API but are no longer consumed here — pending UX is owned by
+    // ChatView's PendingIndicator (D4 / I4) and TalentSurface
+    // dispatches off persisted step data alone (WHAT §4a).
     message,
     messageWidth,
     onMessagePress,
@@ -261,13 +263,10 @@ export const Message = React.memo(
     const renderAssistantTurn = () => {
       const turn = message as MessageType.DerivedAssistantTurn;
       const steps = turn.steps ?? [];
-      const lastIdx = steps.length - 1;
       const blocks: React.ReactNode[] = [];
       let isFirstBlock = true;
 
       steps.forEach((step, stepIdx) => {
-        const stepIsActive = isActiveRun && stepIdx === lastIdx;
-
         // Text/reasoning bubble — only when there's something to show.
         // The bubble wraps a TextMessage(step) so per-step content
         // routes through the same markdown / link-preview machinery.
@@ -313,28 +312,17 @@ export const Message = React.memo(
         }
 
         // Talent surface — outside the bubble, with its own visual
-        // container (e.g. HtmlPreviewBubble). Renders nothing if the
-        // step has no toolCalls and we're not actively generating one.
-        const showTalentSurface =
-          (step.toolCalls && step.toolCalls.length > 0) ||
-          (stepIsActive &&
-            ((activeRunPendingTalentNames?.length ?? 0) > 0 ||
-              isGeneratingToolCall));
-        if (showTalentSurface) {
+        // container (e.g. HtmlPreviewBubble). Renders one block per
+        // call in step.toolCalls (in array order). Per WHAT §4a, the
+        // ChatView-owned PendingIndicator covers the in-flight window
+        // before tool outcomes land — there is no per-call pending UI
+        // here.
+        if (step.toolCalls && step.toolCalls.length > 0) {
           blocks.push(
             <View
               key={`step-${stepIdx}-talent`}
               style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}>
-              <TalentSurface
-                step={step}
-                isActiveRun={stepIsActive}
-                pendingTalentNames={
-                  stepIsActive ? activeRunPendingTalentNames : undefined
-                }
-                isGeneratingToolCall={
-                  stepIsActive ? isGeneratingToolCall : false
-                }
-              />
+              <TalentSurface step={step} />
             </View>,
           );
           isFirstBlock = false;

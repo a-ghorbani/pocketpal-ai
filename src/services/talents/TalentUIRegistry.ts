@@ -6,7 +6,17 @@ export interface TalentUI {
   readonly name: string;
   /** Render the completed result. Receives the typed TalentResult. */
   renderResult?(result: TalentResult): React.ReactNode;
-  /** Render a pending/loading state while the talent executes. */
+  /**
+   * Render a pending/loading state while the talent executes.
+   *
+   * @deprecated No longer called by TalentSurface (WHAT §4a, D4). The
+   * pending UX is owned by ChatView via PendingIndicator (D4 / I4) —
+   * a single subtle dot-row covers all in-flight phases including
+   * the dead zones in Scenario I phases 5 and 7. Existing
+   * implementations are kept for now to avoid a contract break, but
+   * new TalentUIs should NOT supply this method; it will be removed
+   * in a follow-up cleanup story.
+   */
   renderPending?(): React.ReactNode;
 }
 
