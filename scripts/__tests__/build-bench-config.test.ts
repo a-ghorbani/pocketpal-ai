@@ -95,9 +95,7 @@ describe('shared BenchConfig builder', () => {
     const matrix = getBenchmarkMatrix();
     const matrixWithAxes = {
       ...matrix,
-      settings_axes: [
-        {name: 'cache_type_k' as const, values: ['f16', 'q8_0']},
-      ],
+      settings_axes: [{name: 'cache_type_k' as const, values: ['f16', 'q8_0']}],
     };
     const cfg = buildSharedConfig(matrixWithAxes);
     expect((cfg as any).settings_axes).toEqual([
@@ -160,9 +158,9 @@ describe('parseSettingsAxes', () => {
   });
 
   it('rejects an invalid flash_attn_type (WHAT 9e)', () => {
-    expect(() =>
-      parseSettingsAxes({BENCH_FLASH_ATTN_TYPE: 'invalid'}),
-    ).toThrow(/BENCH_FLASH_ATTN_TYPE=invalid is not valid/);
+    expect(() => parseSettingsAxes({BENCH_FLASH_ATTN_TYPE: 'invalid'})).toThrow(
+      /BENCH_FLASH_ATTN_TYPE=invalid is not valid/,
+    );
   });
 
   it('rejects n_threads <= 0 (WHAT 9e)', () => {
@@ -193,8 +191,8 @@ describe('parseSettingsAxes', () => {
     // Whitespace-only values bypass the env-presence check via trim() in
     // getBenchmarkMatrix, but parseSettingsAxes itself defends against an
     // explicit empty-after-trim list (e.g. '   ,   ').
-    expect(() =>
-      parseSettingsAxes({BENCH_CACHE_TYPE_K: '   ,   '}),
-    ).toThrow(/empty value list/);
+    expect(() => parseSettingsAxes({BENCH_CACHE_TYPE_K: '   ,   '})).toThrow(
+      /empty value list/,
+    );
   });
 });

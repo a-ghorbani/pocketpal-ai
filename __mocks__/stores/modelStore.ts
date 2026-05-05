@@ -61,6 +61,10 @@ class MockModelStore {
   setNThreads: jest.Mock;
   setNBatch: jest.Mock;
   setNUBatch: jest.Mock;
+  setCacheTypeK: jest.Mock;
+  setCacheTypeV: jest.Mock;
+  setUseMmap: jest.Mock;
+  setNoExtraBufts: jest.Mock;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
 
@@ -100,6 +104,10 @@ class MockModelStore {
       setNThreads: false,
       setNBatch: false,
       setNUBatch: false,
+      setCacheTypeK: false,
+      setCacheTypeV: false,
+      setUseMmap: false,
+      setNoExtraBufts: false,
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
@@ -146,6 +154,10 @@ class MockModelStore {
     this.setNThreads = jest.fn();
     this.setNBatch = jest.fn();
     this.setNUBatch = jest.fn();
+    this.setCacheTypeK = jest.fn();
+    this.setCacheTypeV = jest.fn();
+    this.setUseMmap = jest.fn();
+    this.setNoExtraBufts = jest.fn();
   }
 
   setActiveModel = (modelId: string) => {

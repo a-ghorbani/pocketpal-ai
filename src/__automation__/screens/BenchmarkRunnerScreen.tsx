@@ -161,6 +161,179 @@ async function trackPeakMemory(): Promise<{
   }
 }
 
+type SettingsOverrides = Partial<Record<SettingsKnob, SettingsValue>>;
+
+/**
+ * Pre-run snapshot of all six fingerprint-eligible knobs (WHAT 4c.1).
+ * The matrix-level fixed point used for both restoration (4c.3) and
+ * the pre-init failure-path fingerprint construction (9c).
+ *
+ * Keys missing on the platform stay missing in the snapshot (e.g. iOS
+ * `no_extra_bufts`); the canonicaliser treats absence as `"-"`.
+ */
+type PreRunSnapshot = Partial<Record<SettingsKnob, SettingsValue>>;
+
+/**
+ * Expand sweep axes into a list of per-cell override maps. WHAT §2:
+ * absent / empty axes returns `[{}]` — single cell, empty overrides,
+ * which is the only path that produces the `app-default` fingerprint
+ * (D7). With axes, returns the full cartesian product preserving axis
+ * order (WHAT 4b.3 — fixed declaration order).
+ *
+ * Pure: no closure capture, no side effects. Exported for unit tests.
+ */
+export function expandAxes(
+  axes: SettingsAxis[] | undefined,
+): SettingsOverrides[] {
+  if (!axes || axes.length === 0) {
+    return [{}];
+  }
+  // Iteratively grow the cartesian product, axis by axis. Reads more
+  // naturally than a recursive variant for the small N we expect (six
+  // axes max, typically two or three values each).
+  let result: SettingsOverrides[] = [{}];
+  for (const axis of axes) {
+    const next: SettingsOverrides[] = [];
+    for (const acc of result) {
+      for (const value of axis.values) {
+        next.push({...acc, [axis.name]: value});
+      }
+    }
+    result = next;
+  }
+  return result;
+}
+
+/**
+ * Snapshot the matrix-level pre-run state of the six fingerprint knobs
+ * from `modelStore.contextInitParams`. Used as the fixed point for
+ * restoration (4c.3) and the pre-init failure-path fingerprint
+ * construction (9c).
+ *
+ * Reads from `contextInitParams` directly (operator-facing values,
+ * preserving e.g. `use_mmap='smart'`) — NOT from
+ * `getEffectiveContextInitParams(filePath)` which resolves smart-mmap
+ * to a concrete boolean dependent on file state. WHAT 4d explicitly
+ * pins the fingerprint to operator intent over engine-effective
+ * resolution.
+ *
+ * Keys missing on the current platform (e.g. iOS `no_extra_bufts`)
+ * stay missing in the result, so the canonicaliser later writes `"-"`
+ * for them.
+ */
+function snapshotFingerprintKeys(): PreRunSnapshot {
+  const params = modelStore.contextInitParams as unknown as Record<
+    string,
+    unknown
+  >;
+  const snapshot: PreRunSnapshot = {};
+  const keys: SettingsKnob[] = [
+    'cache_type_k',
+    'cache_type_v',
+    'flash_attn_type',
+    'no_extra_bufts',
+    'use_mmap',
+    'n_threads',
+  ];
+  for (const k of keys) {
+    const v = params[k];
+    if (v !== undefined) {
+      snapshot[k] = v as SettingsValue;
+    }
+  }
+  return snapshot;
+}
+
+/**
+ * Apply the cell's settings overrides via the existing `modelStore.setX`
+ * setters (WHAT 4c.2, I4 — no direct mutation of `contextInitParams`).
+ *
+ * Apply order rationale: `flash_attn_type` is applied BEFORE the
+ * cache-type setters because:
+ *   - When the requested `flash_attn_type` is `'auto'` or `'on'`, the
+ *     cache-type setters take effect (the requested override lands as
+ *     expected).
+ *   - When the requested `flash_attn_type` is `'off'`, `setCacheTypeK/V`
+ *     no-op silently (WHAT §4e). Applying flash_attn first makes that
+ *     no-op correctly attributable to the declared intent rather than
+ *     to stale state from a prior cell.
+ *
+ * The silent no-op is documented expected behaviour (WHAT D11). It
+ * surfaces in the report as a divergence between `settings_overrides`
+ * (the request) and `init_settings` (the post-init reality), which the
+ * operator can inspect.
+ */
+function applySettingsOverrides(overrides: SettingsOverrides): void {
+  if (overrides.flash_attn_type !== undefined) {
+    modelStore.setFlashAttnType(
+      overrides.flash_attn_type as 'auto' | 'on' | 'off',
+    );
+  }
+  if (overrides.cache_type_k !== undefined) {
+    // CacheType is a string-valued enum; runtime value already validated
+    // at config-build time (Step 3 / WHAT 4b.4).
+    modelStore.setCacheTypeK(overrides.cache_type_k as never);
+  }
+  if (overrides.cache_type_v !== undefined) {
+    modelStore.setCacheTypeV(overrides.cache_type_v as never);
+  }
+  if (overrides.no_extra_bufts !== undefined) {
+    modelStore.setNoExtraBufts(overrides.no_extra_bufts as boolean);
+  }
+  if (overrides.use_mmap !== undefined) {
+    modelStore.setUseMmap(overrides.use_mmap as 'true' | 'false' | 'smart');
+  }
+  if (overrides.n_threads !== undefined) {
+    modelStore.setNThreads(overrides.n_threads as number);
+  }
+}
+
+/**
+ * Restore the matrix-level pre-run snapshot using the same setters
+ * (WHAT 4c.3, I5 — restore runs on every exit path). Best-effort:
+ * a single setter throwing does NOT mask the matrix's own outcome.
+ *
+ * Apply order matches `applySettingsOverrides` (`flash_attn_type`
+ * first) so the restore deterministically lands the snapshot values
+ * regardless of the current (post-cell) state.
+ */
+function restoreSettingsSnapshot(snapshot: PreRunSnapshot): void {
+  const trySet = (fn: () => void): void => {
+    try {
+      fn();
+    } catch {
+      // Restore is best-effort; one setter failing does not abort the
+      // others. The next run's apply phase will normalise state again.
+    }
+  };
+  if (snapshot.flash_attn_type !== undefined) {
+    trySet(() =>
+      modelStore.setFlashAttnType(
+        snapshot.flash_attn_type as 'auto' | 'on' | 'off',
+      ),
+    );
+  }
+  if (snapshot.cache_type_k !== undefined) {
+    trySet(() => modelStore.setCacheTypeK(snapshot.cache_type_k as never));
+  }
+  if (snapshot.cache_type_v !== undefined) {
+    trySet(() => modelStore.setCacheTypeV(snapshot.cache_type_v as never));
+  }
+  if (snapshot.no_extra_bufts !== undefined) {
+    trySet(() =>
+      modelStore.setNoExtraBufts(snapshot.no_extra_bufts as boolean),
+    );
+  }
+  if (snapshot.use_mmap !== undefined) {
+    trySet(() =>
+      modelStore.setUseMmap(snapshot.use_mmap as 'true' | 'false' | 'smart'),
+    );
+  }
+  if (snapshot.n_threads !== undefined) {
+    trySet(() => modelStore.setNThreads(snapshot.n_threads as number));
+  }
+}
+
 /**
  * Run the matrix. Pure-async, takes setStatus as a parameter so that unit
  * tests can drive the state machine without a real React tree.
@@ -179,33 +352,60 @@ export async function runMatrix(
   setLastCell: (c: {pp?: number; tg?: number; cells?: number}) => void,
 ): Promise<void> {
   const bench = config.bench ?? DEFAULT_BENCH;
+  const hadAxesInConfig = !!(
+    config.settings_axes && config.settings_axes.length > 0
+  );
 
-  // Resolve the GPU device name ONCE at run start. Reuses the canonical
-  // helper (src/utils/deviceSelection.ts) instead of duplicating the
-  // getBackendDevicesInfo() filter logic. Cells with backend:'gpu' fail
-  // fast (status:'failed') if no GPU option is returned (e.g.
-  // supportsOpenCL=false device).
+  // Matrix-level pre-run snapshot (WHAT 4c.1). Captured ONCE before the
+  // first cell — the fixed point used for both restoration (4c.3) and
+  // the pre-init failure-path fingerprint construction (9c).
+  const preRunSnapshot = snapshotFingerprintKeys();
+
+  // Resolve the GPU and Hexagon device sets ONCE at run start. Reuses the
+  // canonical helper (`getDeviceOptions` from src/utils/deviceSelection.ts)
+  // instead of duplicating the getBackendDevicesInfo() filter logic.
+  // Cells with backend:'gpu' fail fast (status:'failed') if no GPU option
+  // is returned (e.g. supportsOpenCL=false device); same shape for hexagon.
   let adrenoDevices: string[] | null = null;
-  if (config.backends.includes('gpu')) {
+  let hexagonDevices: string[] | null = null;
+  const wantsGpu = config.backends.includes('gpu');
+  const wantsHexagon = config.backends.includes('hexagon');
+  if (wantsGpu || wantsHexagon) {
     try {
       const opts = await getDeviceOptions();
-      const gpu = opts.find(o => o.id === 'gpu');
-      adrenoDevices = gpu?.devices ?? null;
+      if (wantsGpu) {
+        const gpu = opts.find(o => o.id === 'gpu');
+        adrenoDevices = gpu?.devices ?? null;
+      }
+      if (wantsHexagon) {
+        const hex = opts.find(o => o.id === 'hexagon');
+        hexagonDevices = hex?.devices ?? null;
+      }
     } catch {
-      adrenoDevices = null;
+      adrenoDevices = wantsGpu ? null : adrenoDevices;
+      hexagonDevices = wantsHexagon ? null : hexagonDevices;
     }
   }
 
-  // Build a flat cell list.
+  // Expand the sweep-axes into per-cell override maps. Empty / absent
+  // axes produces `[{}]` — one cell per (model, variant, backend), empty
+  // overrides — the only path that mints `app-default` fingerprints
+  // (WHAT §2, §4d D7).
+  const overridesList = expandAxes(config.settings_axes);
+
+  // Build a flat cell list (4-deep cartesian product per WHAT §2).
   const cells: Array<{
     model: BenchModelEntry;
     variant: BenchVariant;
     backend: Backend;
+    overrides: SettingsOverrides;
   }> = [];
   for (const m of config.models) {
     for (const v of m.quants) {
       for (const b of config.backends) {
-        cells.push({model: m, variant: v, backend: b});
+        for (const overrides of overridesList) {
+          cells.push({model: m, variant: v, backend: b, overrides});
+        }
       }
     }
   }
@@ -228,14 +428,35 @@ export async function runMatrix(
       bench,
       runs: [],
     };
+    // settings_axes_used echoes config.settings_axes only when the run
+    // had axes (WHAT 1e, 9a — empty array MUST NOT be emitted).
+    if (hadAxesInConfig && config.settings_axes) {
+      report.settings_axes_used = config.settings_axes;
+    }
 
     // Write the shell up front so even an early crash leaves a JSON file.
     await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
 
     for (let i = 0; i < cells.length; i++) {
-      const {model, variant, backend} = cells[i];
+      const {model, variant, backend, overrides} = cells[i];
       const tStart = Date.now();
-      const tag = `${i + 1}/${cells.length}:${model.id}/${variant.quant}/${backend}`;
+      // Status `<tag>` extension (WHAT §3, §8 D9): when overrides are
+      // non-empty, append a short `key=value;...` summary so the WDIO
+      // spec can disambiguate identical (model,quant,backend) cells with
+      // different settings. Truncated to 60 chars to keep the polled
+      // status string bounded. The summary uses the REQUESTED overrides
+      // (not the post-init canonicalised fingerprint) — operators care
+      // about what they asked for in the live status.
+      const overrideEntries = Object.entries(overrides);
+      const tagSuffix =
+        overrideEntries.length === 0
+          ? ''
+          : '/' +
+            overrideEntries
+              .map(([k, v]) => `${k}=${String(v)}`)
+              .join(';')
+              .slice(0, 60);
+      const tag = `${i + 1}/${cells.length}:${model.id}/${variant.quant}/${backend}${tagSuffix}`;
       setStatus(`running:${tag}`);
 
       const rowBase: Pick<
@@ -257,6 +478,12 @@ export async function runMatrix(
       // finally block uses this to call releaseContext exactly once per
       // initialized cell, regardless of whether bench() then threw.
       let contextInitialized = false;
+      // Post-init snapshot, hoisted so the catch path can pick between the
+      // standard fingerprint (post-init available) and the `req:`-prefixed
+      // fingerprint (pre-init failure). WHAT 9d explicitly requires this
+      // hoist as part of the contract. Read by Step 7's fingerprint
+      // helpers in the catch block.
+      let postInitSnapshot: Record<string, unknown> | null = null;
 
       try {
         // 1. GPU pre-check: cell fails fast if backend=gpu but no GPU option.
@@ -270,10 +497,32 @@ export async function runMatrix(
             peak_memory_mb: null,
             log_signals: emptyLogSignals(),
             init_settings: {},
-            settings_overrides: {},
-            settings_fingerprint: 'app-default',
+            settings_overrides: overrides,
+            settings_fingerprint: 'app-default', // patched in Step 7/8
             status: 'failed',
             error: 'GPU device not available',
+          };
+          report.runs.push(row);
+          await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
+          continue;
+        }
+
+        // 1b. Hexagon pre-check (mirror of GPU): cell fails fast if the
+        // device has no Hexagon backend. WHAT 4a.7, I7, 6.C.
+        if (backend === 'hexagon' && !hexagonDevices) {
+          const row: BenchmarkRunRow = {
+            ...rowBase,
+            effective_backend: 'unknown',
+            pp_avg: null,
+            tg_avg: null,
+            wall_ms: Date.now() - tStart,
+            peak_memory_mb: null,
+            log_signals: emptyLogSignals(),
+            init_settings: {},
+            settings_overrides: overrides,
+            settings_fingerprint: 'app-default', // patched in Step 7/8
+            status: 'failed',
+            error: 'Hexagon device not available',
           };
           report.runs.push(row);
           await RNFS.writeFile(path, JSON.stringify(report, null, 2), 'utf8');
@@ -361,12 +610,26 @@ export async function runMatrix(
           setStatus(`running:${tag}`);
         }
 
-        // 3. Programmatic tier switch.
-        const cellDevices: string[] =
-          backend === 'cpu' ? ['CPU'] : (adrenoDevices as string[]);
+        // 3. Apply the cell's settings overrides via existing setters
+        //    (WHAT 4c.2, I4). Done AFTER GPU/Hexagon pre-check and AFTER
+        //    model resolve/download (which can take 30 min) so the window
+        //    where stale settings are visible is minimised if the run
+        //    aborts.
+        applySettingsOverrides(overrides);
+
+        // 4. Programmatic tier switch (CPU / GPU / Hexagon device set).
+        let cellDevices: string[];
+        if (backend === 'cpu') {
+          cellDevices = ['CPU'];
+        } else if (backend === 'gpu') {
+          cellDevices = adrenoDevices as string[];
+        } else {
+          // hexagon — pre-check above guarantees hexagonDevices is non-null.
+          cellDevices = hexagonDevices as string[];
+        }
         modelStore.setDevices(cellDevices);
 
-        // 3a. Attach native-log listener so the cell's load output (the same
+        // 4a. Attach native-log listener so the cell's load output (the same
         // lines that show up in `adb logcat`) lands in `logBuffer`. The
         // BENCH_LOG_RE pre-filter keeps the buffer bounded for long runs.
         logSub = addNativeLogListener((_level, text) => {
@@ -375,15 +638,20 @@ export async function runMatrix(
           }
         });
 
-        // 4. Init context (mutex-serialized inside ModelStore).
+        // 5. Init context (mutex-serialized inside ModelStore).
         await modelStore.initContext(resolvedModel);
         contextInitialized = true;
 
-        // 5. Snapshot init settings AFTER initContext (they may have been
-        // touched by initContext's quant-aware tweaks).
+        // 6. Snapshot init settings AFTER initContext (they may have been
+        // touched by initContext's quant-aware tweaks). Captured into the
+        // hoisted `postInitSnapshot` so the catch path can also build a
+        // standard (non-`req:`) fingerprint when initContext succeeded
+        // but bench() later threw (WHAT §9d).
         const initSettings = JSON.parse(
           JSON.stringify(modelStore.contextInitParams),
         );
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        postInitSnapshot = initSettings;
 
         // 6. Peak memory tracking.
         let peakMemory: {
@@ -450,8 +718,8 @@ export async function runMatrix(
               : null,
           log_signals: logSignals,
           init_settings: initSettings,
-          settings_overrides: {},
-          settings_fingerprint: 'app-default',
+          settings_overrides: overrides,
+          settings_fingerprint: 'app-default', // patched in Step 7/8
           status: 'ok',
         };
         report.runs.push(row);
@@ -478,8 +746,8 @@ export async function runMatrix(
           peak_memory_mb: null,
           log_signals: partialSignals,
           init_settings: {},
-          settings_overrides: {},
-          settings_fingerprint: 'app-default',
+          settings_overrides: overrides,
+          settings_fingerprint: 'app-default', // patched in Step 7/8
           status: 'failed',
           error: long,
         };
@@ -517,7 +785,16 @@ export async function runMatrix(
 
     setStatus('complete');
   } finally {
+    // Outer matrix-level finally: success and failure paths converge here.
+    // Order: log toggle off -> restore snapshot. Both wrapped so neither
+    // blocks the other (WHAT 4c.3, I5: restore runs on every exit path).
     await toggleNativeLog(false).catch(() => undefined);
+    try {
+      restoreSettingsSnapshot(preRunSnapshot);
+    } catch {
+      // Per WHAT 4c.3, restore is best-effort; a restore failure does not
+      // re-fail the matrix.
+    }
   }
 }
 

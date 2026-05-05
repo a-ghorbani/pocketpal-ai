@@ -32,6 +32,7 @@ import {
   BenchmarkRunnerScreen,
   runMatrix,
   BenchConfig,
+  expandAxes,
 } from '../BenchmarkRunnerScreen';
 
 const VALID_CONFIG: BenchConfig = {
@@ -555,6 +556,282 @@ describe('BenchmarkRunnerScreen', () => {
       expect(json.runs[0].error).toContain('connection-reset');
       // Verify the previous-error slot was cleared before the download started.
       expect((modelStore as any).clearDownloadError).toHaveBeenCalled();
+    });
+
+    // -------------------------------------------------------------------------
+    // Settings-axes sweep behaviour (WHAT 2, 6.A, 6.B)
+    // -------------------------------------------------------------------------
+
+    it('emits report.version "1.1" and omits settings_axes_used when no axes (WHAT 6.A)', async () => {
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.version).toBe('1.1');
+      expect(
+        Object.prototype.hasOwnProperty.call(json, 'settings_axes_used'),
+      ).toBe(false);
+    });
+
+    it('echoes settings_axes_used in the report when axes are present', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['f16', 'q8_0']}],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.settings_axes_used).toEqual([
+        {name: 'cache_type_k', values: ['f16', 'q8_0']},
+      ]);
+    });
+
+    it('expands one cache_type_k axis into two cells per (model,quant,backend) (WHAT 6.B)', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['f16', 'q8_0']}],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      // 1 model × 1 quant × 1 backend × 2 cache values = 2 cells.
+      expect(json.runs).toHaveLength(2);
+      expect(json.runs[0].settings_overrides).toEqual({cache_type_k: 'f16'});
+      expect(json.runs[1].settings_overrides).toEqual({cache_type_k: 'q8_0'});
+    });
+
+    // -------------------------------------------------------------------------
+    // Apply-overrides + restore (WHAT 4c, 4h I4/I5)
+    // -------------------------------------------------------------------------
+
+    it('applySettingsOverrides routes through existing setters (I4 — no direct mutation)', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      // Setter called for the cell's override.
+      expect(modelStore.setCacheTypeK).toHaveBeenCalledWith('q8_0');
+    });
+
+    it('apply order: flash_attn_type runs BEFORE cache_type_k (constraint state ready when cache setter runs)', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [
+          {name: 'cache_type_k', values: ['q8_0']},
+          {name: 'flash_attn_type', values: ['on']},
+        ],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      // Compute the call ordinals — flash_attn_type's mock `.mock.invocationCallOrder`
+      // entry must precede cache_type_k's. (Restore at the end runs the same
+      // setters again with the snapshot values, so we check the FIRST call
+      // ordinal of each.)
+      const flashOrders = (modelStore.setFlashAttnType as jest.Mock).mock
+        .invocationCallOrder;
+      const cacheOrders = (modelStore.setCacheTypeK as jest.Mock).mock
+        .invocationCallOrder;
+      expect(flashOrders.length).toBeGreaterThan(0);
+      expect(cacheOrders.length).toBeGreaterThan(0);
+      expect(flashOrders[0]).toBeLessThan(cacheOrders[0]);
+    });
+
+    it('restoreSettingsSnapshot runs in the outer finally on success path (I5)', async () => {
+      // Pre-run snapshot derives from contextInitParams set in beforeEach.
+      // The default snapshot has only n_ctx + devices; cache_type_k etc are
+      // undefined, so restore is a no-op for them. We force a non-empty
+      // snapshot to make the assertion non-trivial.
+      (modelStore as any).contextInitParams = {
+        ...((modelStore as any).contextInitParams ?? {}),
+        cache_type_k: 'f16',
+        n_threads: 6,
+      };
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      // Restore in finally calls the setters again with the snapshot values.
+      // The sequence is: apply('q8_0') for the cell, restore('f16') in finally.
+      const calls = (modelStore.setCacheTypeK as jest.Mock).mock.calls;
+      expect(calls.length).toBeGreaterThanOrEqual(2);
+      expect(calls[calls.length - 1][0]).toBe('f16');
+      const tCalls = (modelStore.setNThreads as jest.Mock).mock.calls;
+      // n_threads not in axes -> only restore() ran (or zero calls if not in
+      // snapshot). Snapshot had n_threads:6 so restore must have set it.
+      expect(tCalls.length).toBeGreaterThanOrEqual(1);
+      expect(tCalls[tCalls.length - 1][0]).toBe(6);
+    });
+
+    it('restoreSettingsSnapshot runs in the outer finally even when the loop body throws (I5)', async () => {
+      (modelStore as any).contextInitParams = {
+        ...((modelStore as any).contextInitParams ?? {}),
+        n_threads: 6,
+      };
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'n_threads', values: [4]}],
+      };
+      // Make the report-shell write throw, simulating a fatal early failure.
+      RNFS.writeFile.mockRejectedValueOnce(new Error('shell-write-failed'));
+      await expect(runMatrix(cfg, setStatus, setLastCell)).rejects.toThrow(
+        'shell-write-failed',
+      );
+      // The shell write fails BEFORE any cell-level apply runs, so the only
+      // setter activity is the final restore() in the outer finally — which
+      // resets n_threads back to the snapshot value (6).
+      const tCalls = (modelStore.setNThreads as jest.Mock).mock.calls;
+      expect(tCalls[tCalls.length - 1][0]).toBe(6);
+    });
+
+    // -------------------------------------------------------------------------
+    // Hexagon path (WHAT 4a.7, 4h I7, 6.C)
+    // -------------------------------------------------------------------------
+
+    it('hexagon cell fails fast with "Hexagon device not available" when getDeviceOptions has no hexagon entry', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        backends: ['hexagon'],
+      };
+      // getDeviceOptions returns cpu+gpu only — no hexagon option.
+      getDeviceOptions.mockResolvedValueOnce([
+        {id: 'cpu', label: 'CPU', devices: ['CPU']},
+        {id: 'gpu', label: 'GPU (OpenCL)', devices: ['Adreno (TM) 840v2']},
+      ]);
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(1);
+      expect(json.runs[0]).toMatchObject({
+        status: 'failed',
+        error: 'Hexagon device not available',
+        effective_backend: 'unknown',
+      });
+      // Final status still 'complete' (per-cell error containment, I7).
+      expect(setStatus.mock.calls[setStatus.mock.calls.length - 1][0]).toBe(
+        'complete',
+      );
+    });
+
+    it('hexagon cell dispatches HTP* devices when the option is available', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        backends: ['hexagon'],
+      };
+      getDeviceOptions.mockResolvedValueOnce([
+        {id: 'cpu', label: 'CPU', devices: ['CPU']},
+        {id: 'hexagon', label: 'Hexagon', devices: ['HTP*']},
+      ]);
+      await runMatrix(cfg, setStatus, setLastCell);
+      // setDevices called with the hexagon wildcard.
+      expect(modelStore.setDevices).toHaveBeenCalledWith(['HTP*']);
+    });
+
+    it('hexagon-on-non-hexagon-device does NOT abort the matrix (I7) — subsequent cells still run', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        backends: ['hexagon', 'cpu'],
+      };
+      getDeviceOptions.mockResolvedValueOnce([
+        {id: 'cpu', label: 'CPU', devices: ['CPU']},
+      ]);
+      await runMatrix(cfg, setStatus, setLastCell);
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.runs).toHaveLength(2);
+      // First cell (hexagon) fails, second (cpu) runs.
+      expect(json.runs[0]).toMatchObject({
+        requested_backend: 'hexagon',
+        status: 'failed',
+      });
+      expect(json.runs[1]).toMatchObject({
+        requested_backend: 'cpu',
+        status: 'ok',
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // Status `<tag>` extension (WHAT 3, 8 D9)
+    // -------------------------------------------------------------------------
+
+    it('status running:<tag> appends override summary when overrides are non-empty', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        settings_axes: [{name: 'cache_type_k', values: ['q8_0']}],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      const statusCalls = setStatus.mock.calls.map(c => c[0]);
+      const runningCall = statusCalls.find(
+        (s: string) =>
+          s.startsWith('running:') && s.includes('cache_type_k=q8_0'),
+      );
+      expect(runningCall).toBeDefined();
+    });
+
+    it('status running:<tag> matches legacy format when overrides are empty (no axes)', async () => {
+      await runMatrix(VALID_CONFIG, setStatus, setLastCell);
+      const statusCalls = setStatus.mock.calls.map(c => c[0]);
+      // Legacy format: 'running:1/1:qwen3-1.7b/q4_0/gpu' — no trailing slash.
+      const runningCall = statusCalls.find((s: string) =>
+        /^running:1\/1:qwen3-1\.7b\/q4_0\/gpu$/.test(s),
+      );
+      expect(runningCall).toBeDefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // expandAxes — pure helper unit tests (WHAT 2, 4c)
+  // ---------------------------------------------------------------------------
+
+  describe('expandAxes', () => {
+    it('returns [{}] for absent axes (WHAT 2)', () => {
+      expect(expandAxes(undefined)).toEqual([{}]);
+    });
+
+    it('returns [{}] for empty axes (defends against producers that emit [])', () => {
+      expect(expandAxes([])).toEqual([{}]);
+    });
+
+    it('expands a single axis into one cell per value', () => {
+      expect(
+        expandAxes([{name: 'cache_type_k', values: ['f16', 'q8_0']}]),
+      ).toEqual([{cache_type_k: 'f16'}, {cache_type_k: 'q8_0'}]);
+    });
+
+    it('expands two axes as the cartesian product, preserving axis order', () => {
+      const result = expandAxes([
+        {name: 'cache_type_k', values: ['f16', 'q8_0']},
+        {name: 'flash_attn_type', values: ['auto', 'on']},
+      ]);
+      expect(result).toEqual([
+        {cache_type_k: 'f16', flash_attn_type: 'auto'},
+        {cache_type_k: 'f16', flash_attn_type: 'on'},
+        {cache_type_k: 'q8_0', flash_attn_type: 'auto'},
+        {cache_type_k: 'q8_0', flash_attn_type: 'on'},
+      ]);
+    });
+
+    it('handles three axes with mixed value types', () => {
+      const result = expandAxes([
+        {name: 'cache_type_k', values: ['f16']},
+        {name: 'no_extra_bufts', values: [true, false]},
+        {name: 'n_threads', values: [4, 8]},
+      ]);
+      expect(result).toHaveLength(4);
+      expect(result[0]).toEqual({
+        cache_type_k: 'f16',
+        no_extra_bufts: true,
+        n_threads: 4,
+      });
+      expect(result[3]).toEqual({
+        cache_type_k: 'f16',
+        no_extra_bufts: false,
+        n_threads: 8,
+      });
     });
   });
 });
