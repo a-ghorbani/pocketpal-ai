@@ -38,7 +38,7 @@ export const adb = (udid: string | undefined, ...args: string[]): string => {
 };
 
 export function buildConfig(matrix: ReturnType<typeof getBenchmarkMatrix>) {
-  return {
+  const base = {
     models: matrix.models.map(m => ({
       id: m.id,
       hfModelId: `${m.searchQuery.trim().split(/\s+/)[0]}/${m.selectorText}-GGUF`,
@@ -50,6 +50,13 @@ export function buildConfig(matrix: ReturnType<typeof getBenchmarkMatrix>) {
     backends: matrix.backends,
     bench: {pp: 512, tg: 128, pl: 1, nr: 3},
   };
+  // WHAT 9a: empty settings_axes MUST be omitted (not emitted as []).
+  // Producers (CLI / spec helper) keep the wire format canonical so the
+  // screen has exactly one absence-shape to handle.
+  if (matrix.settings_axes && matrix.settings_axes.length > 0) {
+    return {...base, settings_axes: matrix.settings_axes};
+  }
+  return base;
 }
 
 export function pushConfig(

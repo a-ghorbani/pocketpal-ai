@@ -76,6 +76,34 @@ describe('shared BenchConfig builder', () => {
       expect(Array.isArray(m.quants)).toBe(true);
     }
   });
+
+  // ---------------------------------------------------------------------------
+  // settings_axes threading (WHAT 4b, 9a)
+  // ---------------------------------------------------------------------------
+
+  it('omits settings_axes from the JSON when the matrix has no axes (WHAT 9a)', () => {
+    const matrix = getBenchmarkMatrix(); // env-less matrix has no axes
+    const cfg = buildSharedConfig(matrix);
+    // Empty array MUST be omitted, not emitted — single canonical
+    // "no sweep" shape on the wire.
+    expect(Object.prototype.hasOwnProperty.call(cfg, 'settings_axes')).toBe(
+      false,
+    );
+  });
+
+  it('emits settings_axes verbatim when the matrix carries them', () => {
+    const matrix = getBenchmarkMatrix();
+    const matrixWithAxes = {
+      ...matrix,
+      settings_axes: [
+        {name: 'cache_type_k' as const, values: ['f16', 'q8_0']},
+      ],
+    };
+    const cfg = buildSharedConfig(matrixWithAxes);
+    expect((cfg as any).settings_axes).toEqual([
+      {name: 'cache_type_k', values: ['f16', 'q8_0']},
+    ]);
+  });
 });
 
 // -----------------------------------------------------------------------------
