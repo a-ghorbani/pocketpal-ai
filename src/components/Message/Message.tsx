@@ -2,6 +2,7 @@ import * as React from 'react';
 import {Pressable, StyleSheet, Text, View, Animated} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
+import {observer} from 'mobx-react';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {useTheme} from '../../hooks';
@@ -108,8 +109,20 @@ export interface MessageProps extends MessageTopLevelProps {
 
 /** Base component for all message types in the chat. Renders bubbles around
  * messages and status. Sets maximum width for a message for
- * a nice look on larger screens. */
-export const Message = React.memo(
+ * a nice look on larger screens.
+ *
+ * Wrapped with `observer` (mobx-react) — without it, per-token mutations of
+ * `step.content` via `chatSessionStore.applyStreamingUpdate` (which replaces
+ * `turn.steps[lastIdx]` with a new object) would NOT trigger this component
+ * to re-render. The AssistantTurn message reference itself is stable across
+ * streaming, so a plain `React.memo` would skip every per-token update and
+ * the chat would only refresh when an unrelated state transition (status
+ * flip, keyboard event, scroll) happened to re-render the parent.
+ *
+ * `observer` already provides memo-equivalent shallow-prop comparison, so it
+ * cleanly replaces `React.memo` here. See `chat-flow.md` §2 for the
+ * single-writer streaming path this hooks into. */
+export const Message = observer(
   ({
     enableAnimation,
     // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall

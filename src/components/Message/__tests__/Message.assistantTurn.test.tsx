@@ -1,7 +1,9 @@
 import * as React from 'react';
 import {Text} from 'react-native';
 
-import {fireEvent, render} from '../../../../jest/test-utils';
+import {observable, runInAction} from 'mobx';
+
+import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {defaultDerivedMessageProps} from '../../../../jest/fixtures';
 
 import {Message} from '../Message';
@@ -88,6 +90,57 @@ beforeEach(() => {
 
 describe('Message — AssistantTurn renderer', () => {
   // ---------- Story Test Requirements (Renderer) #1, #2, #10, #11, #12, #13 ----------
+
+  it('#0 streaming reactivity: in-place mutation of step.content re-renders Message (regression: would fail if `observer` were dropped)', () => {
+    // Mirrors the production streaming path: `applyStreamingUpdate` in
+    // ChatSessionStore replaces `turn.steps[lastIdx]` with a new spread
+    // object inside `runInAction`. The AssistantTurn message reference
+    // itself is stable across streaming. If Message used plain
+    // React.memo (no observer), this kind of inner mutation wouldn't
+    // trigger a re-render and the chat would freeze between status
+    // transitions until some unrelated event (keyboard, scroll) shook
+    // the tree. Wrapping Message with `observer` from mobx-react keeps
+    // the reads of `step.content` tracked so this works correctly.
+    const observableTurn = observable.object<MessageType.DerivedAssistantTurn>(
+      makeDerivedTurn([{content: 'Hel'}]),
+      {},
+      {deep: true},
+    );
+    render(
+      <Message
+        message={observableTurn}
+        messageWidth={440}
+        onMessagePress={jest.fn()}
+        roundBorder
+        showAvatar
+        showName
+        showStatus
+      />,
+    );
+    expect(mockTextMessageCalls).toHaveLength(1);
+    expect(mockTextMessageCalls[0].step?.content).toBe('Hel');
+
+    // Mutate the step in place — same shape as ChatSessionStore's
+    // `turn.steps[lastIdx] = {...last, ...partial}`. Wrapped in `act`
+    // so React flushes the observer-triggered re-render before we
+    // inspect mock calls.
+    act(() => {
+      runInAction(() => {
+        observableTurn.steps[0] = {
+          ...observableTurn.steps[0],
+          content: 'Hello',
+        };
+      });
+    });
+
+    // observer must have caught the read of `step.content` inside
+    // Message → TextMessage during the first render. The mutation
+    // schedules a re-render synchronously; React flushes it before
+    // the next assertion.
+    const latestCall = mockTextMessageCalls[mockTextMessageCalls.length - 1];
+    expect(latestCall.step?.content).toBe('Hello');
+    expect(mockTextMessageCalls.length).toBeGreaterThan(1);
+  });
 
   it('#1 single-step no-tool turn renders one TextMessage block + no talent block', () => {
     const message = makeDerivedTurn([{content: 'Hello!'}]);
