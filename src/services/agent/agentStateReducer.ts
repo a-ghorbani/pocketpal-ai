@@ -31,9 +31,17 @@ export function agentStateReducer(
         hitMaxTurns: false,
       };
     case 'step_started':
+      // Follow-up steps route through `prefill` so the indicator (D4,
+      // owned by ChatView) covers the dead zone between the tool
+      // finishing and the first follow-up token. The first content/
+      // reasoning `token` for the follow-up flips status back to
+      // `streaming_text` via the regular path. Initial steps (turn 0)
+      // were already in `prefill` from `run_started`; flipping to
+      // `streaming_text` here on the !isFollowUp branch is the
+      // conventional "first step is opening for tokens" transition.
       return {
         ...state,
-        status: 'streaming_text',
+        status: event.isFollowUp ? 'prefill' : 'streaming_text',
         pendingTalentNames: [],
       };
     case 'token': {
@@ -48,10 +56,23 @@ export function agentStateReducer(
           pendingTalentNames: names,
         };
       }
-      // Plain content/reasoning token: preserve current status and
-      // pendingTalentNames. Critically, do NOT clear pendingTalentNames
-      // when content arrives during a tool-call assembly — the
-      // legacy metadata-bag bug that motivated this refactor.
+      // Plain content/reasoning token: if we were waiting in `prefill`
+      // (initial step or follow-up routed through prefill per WHAT §3),
+      // the first such token flips status to `streaming_text` so the
+      // indicator (D4) hides as soon as visible output starts. Do NOT
+      // clear pendingTalentNames here — that's the regression guard for
+      // the legacy metadata-bag bug where streamed content overwrote
+      // the tool-call hint.
+      const hasVisibleDelta =
+        (event.delta.content && event.delta.content.length > 0) ||
+        (event.delta.reasoningContent &&
+          event.delta.reasoningContent.length > 0);
+      if (state.status === 'prefill' && hasVisibleDelta) {
+        return {
+          ...state,
+          status: 'streaming_text',
+        };
+      }
       return state;
     }
     case 'marker_seen':

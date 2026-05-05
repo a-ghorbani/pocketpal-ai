@@ -80,13 +80,39 @@ describe('agentStateReducer', () => {
     expect(next.pendingTalentNames).toEqual([]);
   });
 
-  it('#6 step_started with isFollowUp=true → streaming_text (D5: streaming_followup collapsed)', () => {
+  it('#6 step_started with isFollowUp=true → prefill (covers Scenario I phase 7 dead zone)', () => {
     const next = agentStateReducer(
       {...initialAgentUiState, status: 'executing_tool'},
       {type: 'step_started', turn: 1, isFollowUp: true},
     );
-    expect(next.status).toBe('streaming_text');
+    expect(next.status).toBe('prefill');
     expect(next.pendingTalentNames).toEqual([]);
+  });
+
+  it('#6c follow-up: first content/reasoning token after prefill → streaming_text (Scenario I phase 8)', () => {
+    const afterStepStarted = agentStateReducer(
+      {...initialAgentUiState, status: 'executing_tool'},
+      {type: 'step_started', turn: 1, isFollowUp: true},
+    );
+    expect(afterStepStarted.status).toBe('prefill');
+    const afterToken = agentStateReducer(afterStepStarted, {
+      type: 'token',
+      delta: {content: 'hello'},
+    });
+    expect(afterToken.status).toBe('streaming_text');
+  });
+
+  it('#6d follow-up: empty content token in prefill preserves prefill (no premature flip)', () => {
+    const prefillState: AgentUiState = {
+      status: 'prefill',
+      pendingTalentNames: [],
+      hitMaxTurns: false,
+    };
+    const next = agentStateReducer(prefillState, {
+      type: 'token',
+      delta: {content: ''},
+    });
+    expect(next.status).toBe('prefill');
   });
 
   it('#6b step_started with isFollowUp=false → streaming_text', () => {
@@ -254,6 +280,18 @@ describe('agentStateReducer', () => {
       states.push({...s});
     }
     const statuses = states.map(x => x.status);
+    // Scenario I phase walk:
+    //   run_started        → prefill
+    //   step_started(0)    → streaming_text
+    //   token(content)     → streaming_text (already streaming)
+    //   token(toolCalls)   → generating_tool_call
+    //   tool_call_started  → executing_tool
+    //   tool_call_finished → executing_tool
+    //   step_finished      → executing_tool (no-op)
+    //   step_started(F=t)  → prefill (follow-up dead zone covered)
+    //   token(content)     → streaming_text (first follow-up token)
+    //   step_finished      → streaming_text (no-op)
+    //   run_finished       → done
     expect(statuses).toEqual([
       'prefill',
       'streaming_text',
@@ -262,7 +300,7 @@ describe('agentStateReducer', () => {
       'executing_tool',
       'executing_tool',
       'executing_tool',
-      'streaming_text',
+      'prefill',
       'streaming_text',
       'streaming_text',
       'done',
