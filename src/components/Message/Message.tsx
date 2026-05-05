@@ -266,47 +266,94 @@ export const Message = React.memo(
       const blocks: React.ReactNode[] = [];
       let isFirstBlock = true;
 
+      // Helper: wrap one TextMessage child in the contentContainer +
+      // optional renderBubble + turn-block spacer. `isReasoningBlock`
+      // selects the testID so tests / E2E can target the two blocks
+      // independently.
+      const wrapTextBlock = (
+        keySuffix: string,
+        stepFragment: typeof steps[number],
+        isReasoningBlock: boolean,
+      ) => {
+        const child = (
+          <TextMessage
+            enableAnimation={enableAnimation}
+            message={turn}
+            messageWidth={messageWidth}
+            onPreviewDataFetched={onPreviewDataFetched}
+            showName={showName && isFirstBlock}
+            usePreviewData={usePreviewData}
+            step={stepFragment}
+          />
+        );
+        const wrapped = oneOf(
+          renderBubble,
+          <View
+            style={[
+              contentContainer,
+              !isFirstBlock && turnBlockStyles.blockSpacer,
+            ]}
+            testID={
+              isReasoningBlock
+                ? 'ContentContainer-reasoning'
+                : 'ContentContainer'
+            }>
+            {child}
+          </View>,
+        )({
+          child,
+          message: excludeDerivedMessageProps(message),
+          nextMessageInGroup: roundBorder,
+          scale: scaleAnim,
+        });
+        return (
+          <View
+            key={keySuffix}
+            style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}>
+            {wrapped}
+          </View>
+        );
+      };
+
       steps.forEach((step, stepIdx) => {
-        // Text/reasoning bubble — only when there's something to show.
-        // The bubble wraps a TextMessage(step) so per-step content
-        // routes through the same markdown / link-preview machinery.
-        if (
-          (step.content && step.content.length > 0) ||
-          (step.reasoningContent && step.reasoningContent.length > 0)
-        ) {
-          const child = (
-            <TextMessage
-              enableAnimation={enableAnimation}
-              message={turn}
-              messageWidth={messageWidth}
-              onPreviewDataFetched={onPreviewDataFetched}
-              showName={showName && isFirstBlock}
-              usePreviewData={usePreviewData}
-              step={step}
-            />
-          );
-          const wrapped = oneOf(
-            renderBubble,
-            <View
-              style={[
-                contentContainer,
-                !isFirstBlock && turnBlockStyles.blockSpacer,
-              ]}
-              testID="ContentContainer">
-              {child}
-            </View>,
-          )({
-            child,
-            message: excludeDerivedMessageProps(message),
-            nextMessageInGroup: roundBorder,
-            scale: scaleAnim,
-          });
+        // Per WHAT §4a / D3: reasoning and content render as SEPARATE
+        // blocks, reasoning first (matches model emission order). Each
+        // block is skipped when its source field is empty so a step
+        // with content-only or reasoning-only renders exactly one
+        // bubble (no phantom layout). Spacing between blocks is
+        // handled by `turnBlockStyles.blockSpacer`.
+        const hasReasoning =
+          step.reasoningContent !== undefined &&
+          step.reasoningContent.length > 0;
+        const hasContent =
+          step.content !== undefined && step.content.length > 0;
+
+        if (hasReasoning) {
+          // Reasoning-only fragment: drop content so MarkdownView
+          // renders only the ThinkingBubble. No type cast needed —
+          // step is already AgentStep-shaped.
+          const reasoningOnly = {...step, content: undefined};
           blocks.push(
-            <View
-              key={`step-${stepIdx}-text`}
-              style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}>
-              {wrapped}
-            </View>,
+            wrapTextBlock(
+              `step-${stepIdx}-reasoning`,
+              reasoningOnly,
+              true,
+            ),
+          );
+          isFirstBlock = false;
+        }
+
+        if (hasContent) {
+          // Content-only fragment: drop reasoningContent so the
+          // content block renders without the (already-emitted)
+          // ThinkingBubble.
+          const contentOnly = {...step, reasoningContent: undefined};
+          blocks.push(
+            wrapTextBlock(
+              `step-${stepIdx}-text`,
+              contentOnly,
+              false,
+            ),
           );
           isFirstBlock = false;
         }
