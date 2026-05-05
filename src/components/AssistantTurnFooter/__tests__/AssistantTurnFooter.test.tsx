@@ -74,10 +74,7 @@ describe('AssistantTurnFooter', () => {
 
   it('copy button copies derived text via Clipboard.setString', () => {
     const message = baseTurn({
-      steps: [
-        {content: 'Sure, here it is.'},
-        {content: 'Hope this helps.'},
-      ],
+      steps: [{content: 'Sure, here it is.'}, {content: 'Hope this helps.'}],
       metadata: {
         copyable: true,
         timings: {predicted_per_second: 50},

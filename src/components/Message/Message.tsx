@@ -272,7 +272,7 @@ export const Message = React.memo(
       // independently.
       const wrapTextBlock = (
         keySuffix: string,
-        stepFragment: typeof steps[number],
+        stepFragment: (typeof steps)[number],
         isReasoningBlock: boolean,
       ) => {
         const child = (
@@ -334,11 +334,7 @@ export const Message = React.memo(
           // step is already AgentStep-shaped.
           const reasoningOnly = {...step, content: undefined};
           blocks.push(
-            wrapTextBlock(
-              `step-${stepIdx}-reasoning`,
-              reasoningOnly,
-              true,
-            ),
+            wrapTextBlock(`step-${stepIdx}-reasoning`, reasoningOnly, true),
           );
           isFirstBlock = false;
         }
@@ -349,11 +345,7 @@ export const Message = React.memo(
           // ThinkingBubble.
           const contentOnly = {...step, reasoningContent: undefined};
           blocks.push(
-            wrapTextBlock(
-              `step-${stepIdx}-text`,
-              contentOnly,
-              false,
-            ),
+            wrapTextBlock(`step-${stepIdx}-text`, contentOnly, false),
           );
           isFirstBlock = false;
         }

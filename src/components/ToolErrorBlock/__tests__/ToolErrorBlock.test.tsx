@@ -12,10 +12,7 @@ jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
 describe('ToolErrorBlock', () => {
   it('renders the error block with name + message when message provided', () => {
     const {getByTestId, getByText} = render(
-      <ToolErrorBlock
-        toolName="render_html"
-        errorMessage="invalid markup"
-      />,
+      <ToolErrorBlock toolName="render_html" errorMessage="invalid markup" />,
     );
     expect(getByTestId('tool-error-block')).toBeTruthy();
     expect(getByText('render_html failed')).toBeTruthy();

@@ -233,7 +233,9 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       expect(lastStep.toolCalls).toEqual(calls);
       expect(lastStep.toolOutcomes).toEqual([outcome]);
       // Single-writer invariant: ids match by construction.
-      expect(lastStep.toolCalls?.[0].id).toBe(lastStep.toolOutcomes?.[0].callId);
+      expect(lastStep.toolCalls?.[0].id).toBe(
+        lastStep.toolOutcomes?.[0].callId,
+      );
     });
 
     it('replaces (does not merge) the active step toolCalls', async () => {

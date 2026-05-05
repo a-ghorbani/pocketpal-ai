@@ -380,7 +380,9 @@ describe('useChatSession — AssistantTurn integration', () => {
     const calledIds = callsArgs.flatMap(c =>
       (c[2] as Array<{id: string}>).map(x => x.id),
     );
-    const outcomeCallIds = outcomeArgs.map(c => (c[2] as {callId: string}).callId);
+    const outcomeCallIds = outcomeArgs.map(
+      c => (c[2] as {callId: string}).callId,
+    );
     // No empty ids emitted — runner normalized them.
     expect(calledIds.every(id => id.length > 0)).toBe(true);
     // Every outcome's callId must appear in the appendToolCall set.

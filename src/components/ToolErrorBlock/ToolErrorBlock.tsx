@@ -51,9 +51,7 @@ export const ToolErrorBlock: React.FC<ToolErrorBlockProps> = ({
         </Text>
       </View>
       {errorMessage ? (
-        <Text
-          style={componentStyles.message}
-          testID="tool-error-block-message">
+        <Text style={componentStyles.message} testID="tool-error-block-message">
           {errorMessage}
         </Text>
       ) : null}

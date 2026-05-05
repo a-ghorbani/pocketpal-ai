@@ -357,15 +357,12 @@ describe('Message — AssistantTurn renderer', () => {
 
   describe('canonical scenarios', () => {
     it('A — text only: single TextMessage block, no TalentSurface, ONE footer', () => {
-      const message = makeDerivedTurn(
-        [{content: 'Hi! How can I help?'}],
-        {
-          metadata: {
-            timings: {predicted_per_token_ms: 32, predicted_per_second: 30},
-            copyable: true,
-          },
+      const message = makeDerivedTurn([{content: 'Hi! How can I help?'}], {
+        metadata: {
+          timings: {predicted_per_token_ms: 32, predicted_per_second: 30},
+          copyable: true,
         },
-      );
+      });
       const {getAllByTestId, queryByTestId} = render(
         <Message
           message={message}

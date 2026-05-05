@@ -43,9 +43,7 @@ describe('TalentSurface', () => {
 
   it('#2 unregistered tool with non-error outcome → ToolUsedChip', () => {
     const step: AgentStep = {
-      toolCalls: [
-        {id: 'c0', function: {name: 'datetime', arguments: '{}'}},
-      ],
+      toolCalls: [{id: 'c0', function: {name: 'datetime', arguments: '{}'}}],
       toolOutcomes: [
         {
           callId: 'c0',
@@ -62,9 +60,7 @@ describe('TalentSurface', () => {
 
   it('#3 error outcome → ToolErrorBlock (subtle, low-prominence)', () => {
     const step: AgentStep = {
-      toolCalls: [
-        {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
-      ],
+      toolCalls: [{id: 'c0', function: {name: 'render_html', arguments: '{}'}}],
       toolOutcomes: [
         {
           callId: 'c0',
@@ -90,9 +86,7 @@ describe('TalentSurface', () => {
       renderResult: () => <Text testID="html-result">should NOT fire</Text>,
     });
     const step: AgentStep = {
-      toolCalls: [
-        {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
-      ],
+      toolCalls: [{id: 'c0', function: {name: 'render_html', arguments: '{}'}}],
       toolOutcomes: [
         {
           callId: 'c0',
@@ -169,14 +163,10 @@ describe('TalentSurface', () => {
     talentUIRegistry.register({
       name: 'render_html',
       renderResult: result =>
-        result.type === 'html' ? (
-          <Text testID="ui">{result.html}</Text>
-        ) : null,
+        result.type === 'html' ? <Text testID="ui">{result.html}</Text> : null,
     });
     const step: AgentStep = {
-      toolCalls: [
-        {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
-      ],
+      toolCalls: [{id: 'c0', function: {name: 'render_html', arguments: '{}'}}],
       toolOutcomes: [
         // Wrong type for this UI — renderResult returns null.
         {

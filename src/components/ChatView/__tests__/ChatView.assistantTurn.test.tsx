@@ -284,30 +284,41 @@ describe('ChatView — Scenario I (dead-zone phase walk via PendingIndicator)', 
   const phases: Array<{label: string; status: any; visible: boolean}> = [
     {label: 'idle (no run)', status: 'idle', visible: false},
     {label: 'phase 2 / 7: prefill', status: 'prefill', visible: true},
-    {label: 'phase 3 / 8: streaming_text', status: 'streaming_text', visible: false},
-    {label: 'phase 4: generating_tool_call', status: 'generating_tool_call', visible: true},
+    {
+      label: 'phase 3 / 8: streaming_text',
+      status: 'streaming_text',
+      visible: false,
+    },
+    {
+      label: 'phase 4: generating_tool_call',
+      status: 'generating_tool_call',
+      visible: true,
+    },
     {label: 'phase 5: executing_tool', status: 'executing_tool', visible: true},
     {label: 'phase 9: done', status: 'done', visible: false},
     {label: 'failed', status: 'failed', visible: false},
   ];
 
-  it.each(phases)('$label → indicator visible=$visible', ({status, visible}) => {
-    runInAction(() => {
-      chatSessionStore.agentUiState = {
-        status,
-        pendingTalentNames: [],
-        hitMaxTurns: false,
-      };
-    });
-    const turn = makeAssistantTurn([{content: 'hi'}], 't1', 1);
-    const {queryByTestId} = render(
-      <ChatView messages={[turn]} onSendPress={jest.fn()} user={user} />,
-      {withNavigation: true, withBottomSheetProvider: true},
-    );
-    if (visible) {
-      expect(queryByTestId('pending-indicator')).toBeTruthy();
-    } else {
-      expect(queryByTestId('pending-indicator')).toBeNull();
-    }
-  });
+  it.each(phases)(
+    '$label → indicator visible=$visible',
+    ({status, visible}) => {
+      runInAction(() => {
+        chatSessionStore.agentUiState = {
+          status,
+          pendingTalentNames: [],
+          hitMaxTurns: false,
+        };
+      });
+      const turn = makeAssistantTurn([{content: 'hi'}], 't1', 1);
+      const {queryByTestId} = render(
+        <ChatView messages={[turn]} onSendPress={jest.fn()} user={user} />,
+        {withNavigation: true, withBottomSheetProvider: true},
+      );
+      if (visible) {
+        expect(queryByTestId('pending-indicator')).toBeTruthy();
+      } else {
+        expect(queryByTestId('pending-indicator')).toBeNull();
+      }
+    },
+  );
 });
