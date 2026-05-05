@@ -58,11 +58,10 @@ export type AgentEvent =
 export interface AgentUiState {
   status:
     | 'idle'
-    | 'preparing'
+    | 'prefill'
     | 'streaming_text'
     | 'generating_tool_call'
     | 'executing_tool'
-    | 'streaming_followup'
     | 'done'
     | 'failed';
   pendingTalentNames: string[];

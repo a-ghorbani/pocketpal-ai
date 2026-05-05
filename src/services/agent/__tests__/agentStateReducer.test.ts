@@ -11,13 +11,13 @@ const noopRunResult = {
 describe('agentStateReducer', () => {
   // ---------- Story Test Requirements (Reducer) #1–#7 ----------
 
-  it('#1 run_started → status preparing', () => {
+  it('#1 run_started → status prefill', () => {
     const next = agentStateReducer(initialAgentUiState, {
       type: 'run_started',
       messageId: 'm1',
     });
     expect(next).toEqual<AgentUiState>({
-      status: 'preparing',
+      status: 'prefill',
       pendingTalentNames: [],
       hitMaxTurns: false,
     });
@@ -80,18 +80,18 @@ describe('agentStateReducer', () => {
     expect(next.pendingTalentNames).toEqual([]);
   });
 
-  it('#6 step_started with isFollowUp=true → streaming_followup', () => {
+  it('#6 step_started with isFollowUp=true → streaming_text (D5: streaming_followup collapsed)', () => {
     const next = agentStateReducer(
       {...initialAgentUiState, status: 'executing_tool'},
       {type: 'step_started', turn: 1, isFollowUp: true},
     );
-    expect(next.status).toBe('streaming_followup');
+    expect(next.status).toBe('streaming_text');
     expect(next.pendingTalentNames).toEqual([]);
   });
 
   it('#6b step_started with isFollowUp=false → streaming_text', () => {
     const next = agentStateReducer(
-      {...initialAgentUiState, status: 'preparing'},
+      {...initialAgentUiState, status: 'prefill'},
       {type: 'step_started', turn: 0, isFollowUp: false},
     );
     expect(next.status).toBe('streaming_text');
@@ -99,7 +99,7 @@ describe('agentStateReducer', () => {
 
   it('#7 run_finished hitMaxTurns=true → done, hitMaxTurns=true', () => {
     const next = agentStateReducer(
-      {...initialAgentUiState, status: 'streaming_followup'},
+      {...initialAgentUiState, status: 'streaming_text'},
       {
         type: 'run_finished',
         result: {...noopRunResult, hitMaxTurns: true},
@@ -255,16 +255,16 @@ describe('agentStateReducer', () => {
     }
     const statuses = states.map(x => x.status);
     expect(statuses).toEqual([
-      'preparing',
+      'prefill',
       'streaming_text',
       'streaming_text',
       'generating_tool_call',
       'executing_tool',
       'executing_tool',
       'executing_tool',
-      'streaming_followup',
-      'streaming_followup',
-      'streaming_followup',
+      'streaming_text',
+      'streaming_text',
+      'streaming_text',
       'done',
     ]);
   });

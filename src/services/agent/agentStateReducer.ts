@@ -26,14 +26,14 @@ export function agentStateReducer(
   switch (event.type) {
     case 'run_started':
       return {
-        status: 'preparing',
+        status: 'prefill',
         pendingTalentNames: [],
         hitMaxTurns: false,
       };
     case 'step_started':
       return {
         ...state,
-        status: event.isFollowUp ? 'streaming_followup' : 'streaming_text',
+        status: 'streaming_text',
         pendingTalentNames: [],
       };
     case 'token': {

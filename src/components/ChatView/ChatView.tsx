@@ -716,11 +716,10 @@ export const ChatView = observer(
     const newestMessageId = messages.length > 0 ? messages[0].id : null;
     const agentStatus = chatSessionStore.agentUiState.status;
     const isAgentActive =
-      agentStatus === 'preparing' ||
+      agentStatus === 'prefill' ||
       agentStatus === 'streaming_text' ||
       agentStatus === 'generating_tool_call' ||
-      agentStatus === 'executing_tool' ||
-      agentStatus === 'streaming_followup';
+      agentStatus === 'executing_tool';
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;
     const isGeneratingToolCall = agentStatus === 'generating_tool_call';
