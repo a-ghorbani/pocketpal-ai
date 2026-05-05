@@ -212,15 +212,17 @@ async function applyEventToStore(
       // Per-token writes go through the throttled streaming path so
       // they coalesce. Only forward fields that were actually present
       // in this delta to avoid clobbering existing content with empty.
+      // toolCalls are NO LONGER written here (WHAT §5 cleanup #1) —
+      // the reducer still consumes `event.delta.toolCalls` for
+      // pendingTalentNames, but the canonical step.toolCalls write
+      // happens after step_finished via appendToolCall (Step 4) so
+      // ids match outcomes by construction.
       const partial: Partial<MessageType.AssistantTurn['steps'][number]> = {};
       if (event.delta.content) {
         partial.content = event.delta.content.replace(/^\s+/, '');
       }
       if (event.delta.reasoningContent) {
         partial.reasoningContent = event.delta.reasoningContent;
-      }
-      if (event.delta.toolCalls) {
-        partial.toolCalls = event.delta.toolCalls;
       }
       if (Object.keys(partial).length > 0) {
         chatSessionStore.updateActiveStepStreaming(
