@@ -2,11 +2,11 @@
   "version": "1.0",
   "device": "POCO X7 Pro (Klee)",
   "soc": "Mediatek Dimensity 8400 / Mali-G720",
-  "commit": "0e24ad2",
+  "commit": "9634617",
   "llama_rn_version": "0.12.0-rc.9",
   "platform": "android",
   "os_version": null,
-  "timestamp": "2026-05-04T23:17:32.815Z",
+  "timestamp": "2026-05-05T09:54:00.775Z",
   "preseeded": false,
   "bench": {
     "pp": 512,
@@ -2770,6 +2770,48 @@
       "error": "GPU device not available"
     },
     {
+      "model_id": "phi-4-mini",
+      "quant": "q8_0",
+      "requested_backend": "cpu",
+      "timestamp": "2026-05-05T09:54:00.779Z",
+      "effective_backend": "cpu",
+      "pp_avg": 24.492435267345474,
+      "tg_avg": 7.673780498228588,
+      "wall_ms": 978761,
+      "peak_memory_mb": 4469.91,
+      "log_signals": {
+        "opencl_init": false,
+        "opencl_device_name": null,
+        "adreno_gen": null,
+        "large_buffer_enabled": false,
+        "large_buffer_unsupported": false,
+        "offloaded_layers": null,
+        "total_layers": null,
+        "raw_matches": []
+      },
+      "init_settings": {
+        "version": "2.2",
+        "n_ctx": 2048,
+        "n_batch": 512,
+        "n_ubatch": 512,
+        "n_threads": 6,
+        "cache_type_k": "f16",
+        "cache_type_v": "f16",
+        "n_gpu_layers": 99,
+        "use_mlock": false,
+        "use_mmap": "false",
+        "devices": [
+          "CPU"
+        ],
+        "flash_attn_type": "off",
+        "kv_unified": true,
+        "n_parallel": 1,
+        "image_max_tokens": 512,
+        "no_extra_bufts": false
+      },
+      "status": "ok"
+    },
+    {
       "model_id": "qwen2.5-1.5b",
       "quant": "iq1_s",
       "requested_backend": "cpu",
@@ -5347,8 +5389,13 @@
   "generated_by": "merge-bench-reports",
   "source_files": [
     "poco-x7-klee-gemma4.json",
+    "poco-x7-klee-head-snapshot.json",
     "poco-x7-klee-heavy.json",
     "poco-x7-klee-q8.json",
+    "poco-x7-klee-retry-gemma-4-e2b-q6_k.json",
+    "poco-x7-klee-retry-gemma-4-e2b-q8_0.json",
+    "poco-x7-klee-retry-phi-3.5-mini-q8_0.json",
+    "poco-x7-klee-retry-phi-4-mini-q8_0.json",
     "poco-x7-klee-topup.json",
     "poco-x7-klee.json"
   ]
