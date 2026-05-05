@@ -33,6 +33,10 @@ import {
   runMatrix,
   BenchConfig,
   expandAxes,
+  canonicaliseFingerprint,
+  buildSuccessFingerprint,
+  buildFailureFingerprint,
+  APP_DEFAULT_FINGERPRINT,
 } from '../BenchmarkRunnerScreen';
 
 const VALID_CONFIG: BenchConfig = {
@@ -832,6 +836,162 @@ describe('BenchmarkRunnerScreen', () => {
         no_extra_bufts: false,
         n_threads: 8,
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Fingerprint helpers (WHAT 4d, 4h I2/I3, 9b, 9c)
+  // ---------------------------------------------------------------------------
+
+  describe('canonicaliseFingerprint', () => {
+    it('renders missing keys as the "-" literal', () => {
+      // iOS does not populate no_extra_bufts; it should land as '-'.
+      const fp = canonicaliseFingerprint({
+        cache_type_k: 'f16',
+        cache_type_v: 'f16',
+        flash_attn_type: 'auto',
+        use_mmap: 'true',
+        n_threads: 4,
+      });
+      expect(fp).toBe(
+        'cache_type_k=f16;cache_type_v=f16;flash_attn_type=auto;no_extra_bufts=-;use_mmap=true;n_threads=4',
+      );
+    });
+
+    it('coerces booleans to lowercase true/false', () => {
+      const fp = canonicaliseFingerprint({no_extra_bufts: true});
+      expect(fp).toContain('no_extra_bufts=true');
+    });
+
+    it('coerces numbers to decimal strings', () => {
+      const fp = canonicaliseFingerprint({n_threads: 8});
+      expect(fp).toContain('n_threads=8');
+    });
+
+    it('lowercases string values (consistent across casings)', () => {
+      const fp = canonicaliseFingerprint({cache_type_k: 'F16'});
+      expect(fp).toContain('cache_type_k=f16');
+    });
+
+    it('emits keys in fixed declaration order regardless of input order', () => {
+      const fp = canonicaliseFingerprint({
+        n_threads: 6,
+        cache_type_k: 'f16',
+      });
+      // Cache type comes first, n_threads last.
+      expect(fp.startsWith('cache_type_k=f16')).toBe(true);
+      expect(fp.endsWith('n_threads=6')).toBe(true);
+    });
+
+    it('matches WHAT 4d example: cache_type_k=q8_0 sweep with rest at defaults', () => {
+      // WHAT 4d second example, with the same defaults the post-init
+      // snapshot would carry on a typical Android run.
+      const fp = canonicaliseFingerprint({
+        cache_type_k: 'q8_0',
+        cache_type_v: 'f16',
+        flash_attn_type: 'off',
+        no_extra_bufts: false,
+        use_mmap: 'false',
+        n_threads: 6,
+      });
+      expect(fp).toBe(
+        'cache_type_k=q8_0;cache_type_v=f16;flash_attn_type=off;no_extra_bufts=false;use_mmap=false;n_threads=6',
+      );
+    });
+  });
+
+  describe('buildSuccessFingerprint', () => {
+    it('returns the literal "app-default" when hadAxes=false AND empty overrides (WHAT D7/I2)', () => {
+      const fp = buildSuccessFingerprint(
+        {cache_type_k: 'f16', n_threads: 4}, // post-init snapshot
+        false, // hadAxesInConfig
+        true, // isEmptyOverrides
+      );
+      expect(fp).toBe(APP_DEFAULT_FINGERPRINT);
+    });
+
+    it('returns the canonicalised string when hadAxes=true (even with empty overrides) — WHAT 9b boundary', () => {
+      // The one-value-axis case (BENCH_CACHE_TYPE_K=q8_0 only) produces
+      // hadAxes=true but the cell that lands on defaults still emits a
+      // canonical fingerprint. The operator opted in to settings-aware
+      // reporting, so the legacy `app-default` dedupe is OFF.
+      const fp = buildSuccessFingerprint(
+        {cache_type_k: 'f16', n_threads: 4},
+        true, // hadAxesInConfig
+        true, // isEmptyOverrides — but axes exist
+      );
+      expect(fp).not.toBe(APP_DEFAULT_FINGERPRINT);
+      expect(fp).toContain('cache_type_k=f16');
+    });
+
+    it('returns the canonicalised string when overrides are non-empty', () => {
+      const fp = buildSuccessFingerprint(
+        {cache_type_k: 'q8_0', cache_type_v: 'f16', n_threads: 4},
+        true,
+        false,
+      );
+      expect(fp).not.toBe(APP_DEFAULT_FINGERPRINT);
+      expect(fp).toContain('cache_type_k=q8_0');
+    });
+  });
+
+  describe('buildFailureFingerprint', () => {
+    it('returns "app-default" when hadAxes=false AND empty overrides (failed app-default cell)', () => {
+      // WHAT 6.C — failed cell on a no-axes config still buckets with
+      // its successful peers as `app-default`. No `req:` prefix.
+      const fp = buildFailureFingerprint(
+        {cache_type_k: 'f16', n_threads: 6},
+        {},
+        false,
+      );
+      expect(fp).toBe(APP_DEFAULT_FINGERPRINT);
+    });
+
+    it('prefixes "req:" + canonicalised(merged snapshot+overrides) on the pre-init failure path (WHAT 9c, I3)', () => {
+      // WHAT 4d fourth example: failure path, pre-init snapshot has
+      // {cache_type_k:'f16',cache_type_v:'f16',flash_attn_type:'off',
+      //  no_extra_bufts:false,use_mmap:'smart',n_threads:6},
+      // requested overrides {cache_type_k:'q8_0'} — overlay produces a
+      // record whose canonicalised form is the WHAT example, prefixed
+      // 'req:'.
+      const fp = buildFailureFingerprint(
+        {
+          cache_type_k: 'f16',
+          cache_type_v: 'f16',
+          flash_attn_type: 'off',
+          no_extra_bufts: false,
+          use_mmap: 'smart',
+          n_threads: 6,
+        },
+        {cache_type_k: 'q8_0'},
+        true,
+      );
+      expect(fp).toBe(
+        'req:cache_type_k=q8_0;cache_type_v=f16;flash_attn_type=off;no_extra_bufts=false;use_mmap=smart;n_threads=6',
+      );
+    });
+
+    it('still prefixes "req:" when hadAxes=true and overrides are empty (WHAT 9b boundary)', () => {
+      const fp = buildFailureFingerprint(
+        {cache_type_k: 'f16', n_threads: 4},
+        {},
+        true,
+      );
+      expect(fp.startsWith('req:')).toBe(true);
+    });
+
+    it('preserves operator intent: use_mmap="smart" stays string-valued in the fingerprint', () => {
+      // WHAT 4d explicit: the fingerprint snapshots from
+      // `modelStore.contextInitParams` directly, NOT from
+      // `getEffectiveContextInitParams` which resolves smart-mmap to a
+      // boolean. Two cells where one was set to use_mmap='smart' and
+      // the other to use_mmap='true' MUST produce different fingerprints
+      // even when resolveUseMmap('smart',filePath) returns true.
+      const fpSmart = canonicaliseFingerprint({use_mmap: 'smart'});
+      const fpTrue = canonicaliseFingerprint({use_mmap: 'true'});
+      expect(fpSmart).not.toEqual(fpTrue);
+      expect(fpSmart).toContain('use_mmap=smart');
+      expect(fpTrue).toContain('use_mmap=true');
     });
   });
 });

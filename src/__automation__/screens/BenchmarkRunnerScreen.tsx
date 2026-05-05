@@ -335,6 +335,109 @@ function restoreSettingsSnapshot(snapshot: PreRunSnapshot): void {
 }
 
 /**
+ * Fingerprint canonical-form key list (WHAT 4d.1 — fixed contract).
+ * Adding a knob here is a fingerprint-version bump.
+ */
+export const FINGERPRINT_KEYS: readonly SettingsKnob[] = [
+  'cache_type_k',
+  'cache_type_v',
+  'flash_attn_type',
+  'no_extra_bufts',
+  'use_mmap',
+  'n_threads',
+];
+
+/**
+ * Reserved literal that distinguishes "no settings sweep was active"
+ * from "the canonicalised default fingerprint happens to match"
+ * (WHAT D7). Minted only by `buildSuccessFingerprint` /
+ * `buildFailureFingerprint` when the cell came from a no-axes config
+ * with empty overrides — and by the v1.0->v1.1 migration script for
+ * legacy rows.
+ */
+export const APP_DEFAULT_FINGERPRINT = 'app-default';
+
+/**
+ * Canonicalise an init_settings-shaped record into the deterministic
+ * fingerprint string. WHAT 4d.1-4:
+ *   1. Iterate FINGERPRINT_KEYS in fixed order.
+ *   2. Missing keys -> literal '-' (covers iOS's omitted no_extra_bufts).
+ *   3. Coerce: bool -> 'true'|'false', number -> decimal string,
+ *      string -> as-is lowercased.
+ *   4. Join 'key=value' pairs with ';'.
+ *
+ * Pure: no closure capture, no mutation of input. Exported for unit
+ * tests so the WHAT 4d examples can be byte-equality asserted.
+ */
+export function canonicaliseFingerprint(
+  record: Record<string, unknown> | PreRunSnapshot,
+): string {
+  const parts: string[] = [];
+  for (const key of FINGERPRINT_KEYS) {
+    const v = (record as Record<string, unknown>)[key];
+    let coerced: string;
+    if (v === undefined || v === null) {
+      coerced = '-';
+    } else if (typeof v === 'boolean') {
+      coerced = v ? 'true' : 'false';
+    } else if (typeof v === 'number') {
+      coerced = String(v);
+    } else {
+      coerced = String(v).toLowerCase();
+    }
+    parts.push(`${key}=${coerced}`);
+  }
+  return parts.join(';');
+}
+
+/**
+ * Build the fingerprint for the success path (or post-init failure
+ * path, WHAT 9d). Reads from the post-init snapshot — the source of
+ * truth for what the engine actually applied.
+ *
+ * Special case (WHAT D7, I2): when the cell came from a no-axes
+ * config AND overrides are empty, return the reserved
+ * `app-default` literal regardless of the canonicalised content. This
+ * keeps the legacy migration story (D8) from minting indistinguishable
+ * fingerprints from explicit "swept and landed on defaults" cells.
+ */
+export function buildSuccessFingerprint(
+  postInitSnapshot: Record<string, unknown>,
+  hadAxesInConfig: boolean,
+  isEmptyOverrides: boolean,
+): string {
+  if (!hadAxesInConfig && isEmptyOverrides) {
+    return APP_DEFAULT_FINGERPRINT;
+  }
+  return canonicaliseFingerprint(postInitSnapshot);
+}
+
+/**
+ * Build the fingerprint for the pre-init failure path (WHAT 9c, I3
+ * exception (b)). Constructed from the matrix-level pre-run snapshot
+ * (4c.1) overlaid with the cell's requested overrides — no constraint
+ * replay (no setter calls); the spread is mechanical so the result is
+ * reproducible without re-running setter logic.
+ *
+ * Result is prefixed `req:` to mark "derived from intent + pre-run
+ * snapshot, not from applied state." The reserved `app-default`
+ * literal is still minted in the no-axes-empty-overrides case so a
+ * failed `app-default` cell still buckets correctly with its
+ * successful peers (WHAT 6.C).
+ */
+export function buildFailureFingerprint(
+  preRunSnapshot: PreRunSnapshot,
+  requestedOverrides: SettingsOverrides,
+  hadAxesInConfig: boolean,
+): string {
+  if (!hadAxesInConfig && Object.keys(requestedOverrides).length === 0) {
+    return APP_DEFAULT_FINGERPRINT;
+  }
+  const merged = {...preRunSnapshot, ...requestedOverrides};
+  return 'req:' + canonicaliseFingerprint(merged);
+}
+
+/**
  * Run the matrix. Pure-async, takes setStatus as a parameter so that unit
  * tests can drive the state machine without a real React tree.
  *
