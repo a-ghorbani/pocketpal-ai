@@ -84,8 +84,12 @@ describe('deriveLogSignals', () => {
       total_layers: null,
       memory_buffers: {
         weights_mib: {},
+        weights_total_mib: 0,
         kv_cache_mib: {},
+        kv_cache_total_mib: 0,
         compute_mib: {},
+        compute_total_mib: 0,
+        total_mib: 0,
       },
       raw_matches: [],
     });
@@ -426,5 +430,22 @@ describe('deriveLogSignals — memory_buffers', () => {
       'load_tensors:          CPU model buffer size =   200.00 MiB',
     ]);
     expect(signals.memory_buffers.weights_mib).toEqual({CPU: 200});
+    // Total reflects the post-deduplication value, not the sum of all writes.
+    expect(signals.memory_buffers.weights_total_mib).toBe(200);
+  });
+
+  it('totals equal the sum of their records', () => {
+    const signals = deriveLogSignals([
+      'load_tensors:          CPU model buffer size =   189.42 MiB',
+      'load_tensors:   CPU_REPACK model buffer size =   243.43 MiB',
+      'load_tensors:  HTP0-REPACK model buffer size =   114.75 MiB',
+      'load_tensors:  HTP1-REPACK model buffer size =   135.00 MiB',
+      'llama_kv_cache:        CPU KV buffer size =     8.50 MiB',
+      'llama_context:        CPU compute buffer size =   296.05 MiB',
+    ]);
+    expect(signals.memory_buffers.weights_total_mib).toBeCloseTo(682.6, 2);
+    expect(signals.memory_buffers.kv_cache_total_mib).toBeCloseTo(8.5, 2);
+    expect(signals.memory_buffers.compute_total_mib).toBeCloseTo(296.05, 2);
+    expect(signals.memory_buffers.total_mib).toBeCloseTo(987.15, 2);
   });
 });

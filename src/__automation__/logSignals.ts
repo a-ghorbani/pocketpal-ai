@@ -54,13 +54,21 @@ export interface LogSignals {
 }
 
 export interface MemoryBuffers {
-  /** Per-allocator weight buffer sizes (MiB). Sum equals total model weight
-   * memory at load time. */
+  /** Per-allocator weight buffer sizes (MiB). */
   weights_mib: Record<string, number>;
+  /** Sum of weights_mib values. Always equals the sum by construction in
+   * deriveLogSignals — it cannot drift from the record. */
+  weights_total_mib: number;
   /** Per-allocator KV cache buffer sizes (MiB). */
   kv_cache_mib: Record<string, number>;
+  /** Sum of kv_cache_mib values. */
+  kv_cache_total_mib: number;
   /** Per-allocator compute scratch buffer sizes (MiB). */
   compute_mib: Record<string, number>;
+  /** Sum of compute_mib values. */
+  compute_total_mib: number;
+  /** Grand total: weights + kv_cache + compute (MiB). */
+  total_mib: number;
 }
 
 export type EffectiveBackend =
@@ -89,8 +97,12 @@ export function emptyLogSignals(): LogSignals {
     total_layers: null,
     memory_buffers: {
       weights_mib: {},
+      weights_total_mib: 0,
       kv_cache_mib: {},
+      kv_cache_total_mib: 0,
       compute_mib: {},
+      compute_total_mib: 0,
+      total_mib: 0,
     },
     raw_matches: [],
   };
@@ -233,6 +245,24 @@ export function deriveLogSignals(lines: string[]): LogSignals {
       }
     }
   }
+
+  // Totals are computed once at the end so they're always consistent with
+  // the records — last-write-wins on duplicate keys is honoured.
+  const sumValues = (rec: Record<string, number>): number =>
+    Object.values(rec).reduce((acc, v) => acc + v, 0);
+  signals.memory_buffers.weights_total_mib = sumValues(
+    signals.memory_buffers.weights_mib,
+  );
+  signals.memory_buffers.kv_cache_total_mib = sumValues(
+    signals.memory_buffers.kv_cache_mib,
+  );
+  signals.memory_buffers.compute_total_mib = sumValues(
+    signals.memory_buffers.compute_mib,
+  );
+  signals.memory_buffers.total_mib =
+    signals.memory_buffers.weights_total_mib +
+    signals.memory_buffers.kv_cache_total_mib +
+    signals.memory_buffers.compute_total_mib;
 
   return signals;
 }
