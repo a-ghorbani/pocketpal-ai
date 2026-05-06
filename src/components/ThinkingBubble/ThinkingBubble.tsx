@@ -13,7 +13,7 @@ import {
 import {Text} from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-import {ChevronDownIcon} from '../../assets/icons';
+import {ChevronRightIcon, ChevronDownIcon} from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
@@ -285,7 +285,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
             style={{
               transform: [{rotate: chevronRotationDeg}, {scale: chevronScale}],
             }}>
-            <ChevronDownIcon
+            <ChevronRightIcon
               testID="chevron-icon"
               width={12}
               height={12}

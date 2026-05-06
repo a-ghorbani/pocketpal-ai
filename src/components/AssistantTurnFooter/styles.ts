@@ -8,8 +8,6 @@ export const styles = ({theme}: {theme: Theme}) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingBottom: 12,
-      marginTop: -8,
-      marginLeft: 20,
     },
     timing: {
       color: theme.colors.textSecondary,
