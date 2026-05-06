@@ -28,6 +28,7 @@ export function agentStateReducer(
       return {
         status: 'prefill',
         pendingTalentNames: [],
+        pendingToolTokens: 0,
         hitMaxTurns: false,
       };
     case 'step_started':
@@ -50,6 +51,7 @@ export function agentStateReducer(
         ...state,
         status: 'prefill',
         pendingTalentNames: [],
+        pendingToolTokens: 0,
       };
     case 'token': {
       const incomingToolCalls = event.delta.toolCalls;
@@ -57,10 +59,24 @@ export function agentStateReducer(
         const names = incomingToolCalls
           .map(tc => tc.function?.name)
           .filter((n): n is string => !!n);
+        // Each token event during tool-call generation = one token
+        // emitted by the model. Counting events sidesteps engine
+        // encoding details (cumulative vs incremental arguments;
+        // llama.rn vs OpenAI streaming shape) — every emit is +1.
+        const carryNames =
+          state.status === 'generating_tool_call' &&
+          state.pendingTalentNames.length > 0
+            ? state.pendingTalentNames
+            : names;
         return {
           ...state,
           status: 'generating_tool_call',
-          pendingTalentNames: names,
+          // Preserve the names from the first delta — later deltas
+          // sometimes drop the function name once it's already been
+          // emitted, leaving us with anonymous calls. Honouring the
+          // first non-empty set keeps the label stable across the run.
+          pendingTalentNames: carryNames,
+          pendingToolTokens: state.pendingToolTokens + 1,
         };
       }
       // Plain content/reasoning token: if we were waiting in `prefill`
@@ -92,6 +108,7 @@ export function agentStateReducer(
         ...state,
         status: 'executing_tool',
         pendingTalentNames: [],
+        pendingToolTokens: 0,
       };
     case 'tool_call_finished':
       // Stay in executing_tool until step_finished or the next token
@@ -103,6 +120,7 @@ export function agentStateReducer(
       return {
         status: 'done',
         pendingTalentNames: [],
+        pendingToolTokens: 0,
         hitMaxTurns: !!event.result.hitMaxTurns,
       };
     case 'run_failed':
@@ -110,6 +128,7 @@ export function agentStateReducer(
         ...state,
         status: 'failed',
         pendingTalentNames: [],
+        pendingToolTokens: 0,
       };
     default: {
       const _exhaustive: never = event;

@@ -166,6 +166,23 @@ export interface ChatProps extends ChatTopLevelProps {
   user: User;
 }
 
+/**
+ * Thin observer wrapper around PendingIndicator so the per-token
+ * count + label updates only re-render this small subtree (and not
+ * the entire FlatList header), keeping the dot animations alive and
+ * the elapsed-seconds timer ticking. Without this isolation, MobX
+ * re-renders ChatView on each token, the `renderListHeaderComponent`
+ * useCallback would change reference (because it'd carry the count in
+ * its deps), and FlatList would unmount + remount the header every
+ * ~50ms — killing both Animated.loop and setInterval.
+ */
+const PendingIndicatorView: React.FC = observer(() => (
+  <PendingIndicator
+    pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
+    pendingToolTokens={chatSessionStore.agentUiState.pendingToolTokens}
+  />
+));
+
 /** Entry component, represents the complete chat */
 export const ChatView = observer(
   ({
@@ -879,7 +896,7 @@ export const ChatView = observer(
     const renderListHeaderComponent = React.useCallback(
       () => (
         <>
-          {isPending && <PendingIndicator />}
+          {isPending && <PendingIndicatorView />}
           {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),

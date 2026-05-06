@@ -517,6 +517,14 @@
     "thinkingBubble": {
       "reasoning": "Reasoning"
     },
+    "pendingIndicator": {
+      "preparingTool": "Preparing tool",
+      "buildingPage": "Building page",
+      "calculating": "Calculating",
+      "lookingUpTime": "Looking up time",
+      "tokens": "{{count}} tokens",
+      "elapsed": "{{seconds}}s"
+    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "No Models Available",
       "noModelsDescription": "Download a model to start chatting with PocketPal",

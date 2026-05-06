@@ -79,12 +79,26 @@ export interface AgentUiState {
     | 'done'
     | 'failed';
   pendingTalentNames: string[];
+  /**
+   * Number of streaming token events received during the current
+   * tool-call generation phase. The PendingIndicator surfaces this
+   * so the user can tell that long tool calls (e.g. `render_html`
+   * building a complex page) are still progressing rather than hung.
+   * Reset to 0 on transitions out of `generating_tool_call`.
+   *
+   * Counts events, not characters: each `case 'token'` while
+   * generating a tool call increments by 1, so the unit matches the
+   * model's intuition (and is independent of how the engine encodes
+   * arguments). For llama.rn this aligns with native token callbacks.
+   */
+  pendingToolTokens: number;
   hitMaxTurns: boolean;
 }
 
 export const initialAgentUiState: AgentUiState = {
   status: 'idle',
   pendingTalentNames: [],
+  pendingToolTokens: 0,
   hitMaxTurns: false,
 };
 

@@ -27,6 +27,7 @@ beforeEach(() => {
   chatSessionStore.agentUiState = {
     status: 'idle',
     pendingTalentNames: [],
+    pendingToolTokens: 0,
     hitMaxTurns: false,
   };
 

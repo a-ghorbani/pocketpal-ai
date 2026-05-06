@@ -1,8 +1,11 @@
 import {StyleSheet} from 'react-native';
 
+import {Theme} from '../../utils/types';
+
 export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
     paddingTop: 6,
     // Extra paddingBottom keeps the dot-row from sitting flush against
@@ -19,3 +22,13 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
   },
 });
+
+export const createCountStyle = (theme: Theme) =>
+  StyleSheet.create({
+    count: {
+      marginLeft: 4,
+      fontSize: 11,
+      color: theme.colors.onSurfaceVariant,
+      opacity: 0.75,
+    },
+  });
