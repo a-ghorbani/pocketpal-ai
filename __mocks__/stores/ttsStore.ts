@@ -3,7 +3,19 @@ import {makeAutoObservable} from 'mobx';
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 
 class MockTTSStore {
-  isTTSAvailable = false;
+  // Mirror the real store shape: `isTTSAvailable` is derived from
+  // `deviceMeetsMemory` and `userTTSOverride`. Tests should mutate the inputs.
+  deviceMeetsMemory = false;
+  userTTSOverride: boolean | null = null;
+  get isTTSAvailable(): boolean {
+    if (this.userTTSOverride === true) {
+      return true;
+    }
+    if (this.userTTSOverride === false) {
+      return false;
+    }
+    return this.deviceMeetsMemory;
+  }
   playbackState:
     | {mode: 'idle'}
     | {mode: 'streaming'; messageId: string}

@@ -26,7 +26,8 @@ describe('VoiceChip', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
-      ttsStore.isTTSAvailable = true;
+      ttsStore.deviceMeetsMemory = true;
+      ttsStore.userTTSOverride = null;
       ttsStore.currentVoice = null;
       ttsStore.autoSpeakEnabled = false;
       ttsStore.playbackState = {mode: 'idle'};
@@ -35,7 +36,8 @@ describe('VoiceChip', () => {
 
   it('renders nothing when TTS is unavailable', () => {
     runInAction(() => {
-      ttsStore.isTTSAvailable = false;
+      ttsStore.deviceMeetsMemory = false;
+      ttsStore.userTTSOverride = null;
     });
     const {queryByTestId} = renderChip();
     expect(queryByTestId('voicechip')).toBeNull();

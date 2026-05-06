@@ -62,9 +62,13 @@ const previewMessageId = (voice: Voice): string =>
 /**
  * Store that coordinates text-to-speech playback.
  *
- * Memory gate: if `DeviceInfo.getTotalMemory()` reports < 4 GiB once at init,
- * the store is inert (no listeners, no reactions) for the rest of the session.
- * The gate is deliberately never re-checked — RAM doesn't change at runtime.
+ * Availability gate: `isTTSAvailable` is the single boolean every TTS-aware
+ * surface reads. It is derived from `deviceMeetsMemory` (set once in `init()`
+ * from `DeviceInfo.getTotalMemory()`) and `userTTSOverride` (a persisted user
+ * choice). See architecture/tts.md §4a for the formula. The lifecycle hooks
+ * registered in `init()` (AppState listener, session reaction, isInstalled
+ * checks) run unconditionally so a low-memory user opting in mid-session has
+ * a safe runtime — see architecture/tts.md §4e.
  *
  * Streaming: `useChatSession` calls three hooks as an assistant message is
  * produced — `onAssistantMessageStart`, `onAssistantMessageChunk`, and
@@ -74,9 +78,29 @@ const previewMessageId = (voice: Voice): string =>
  * to the full-text `play()` path.
  */
 export class TTSStore {
-  // Memory gate — set once in `init()`, never mutated afterwards.
-  isTTSAvailable: boolean = false;
+  // Set once in init() from getTotalMemory() >= TTS_MIN_RAM_BYTES; never
+  // re-checked. RAM doesn't change at runtime. See architecture/tts.md §1a.
+  deviceMeetsMemory: boolean = false;
+  // Tristate persisted user choice. null = not set (mirrors deviceMeetsMemory).
+  // See architecture/tts.md §4a, D1.
+  userTTSOverride: boolean | null = null;
   private initialized: boolean = false;
+
+  /**
+   * The TTS availability gate. Single boolean every TTS-aware surface reads.
+   * Derived from `userTTSOverride` and `deviceMeetsMemory` per the formula
+   * in architecture/tts.md §4a.1: an explicit user override wins; otherwise
+   * the device-memory default applies.
+   */
+  get isTTSAvailable(): boolean {
+    if (this.userTTSOverride === true) {
+      return true;
+    }
+    if (this.userTTSOverride === false) {
+      return false;
+    }
+    return this.deviceMeetsMemory;
+  }
 
   // Runtime playback state (discriminated union)
   playbackState: TTSPlaybackState = {mode: 'idle'};
@@ -145,14 +169,16 @@ export class TTSStore {
       totalMemory = 0;
     }
 
-    const available = totalMemory >= TTS_MIN_RAM_BYTES;
     runInAction(() => {
-      this.isTTSAvailable = available;
+      this.deviceMeetsMemory = totalMemory >= TTS_MIN_RAM_BYTES;
     });
 
-    if (!available) {
-      return;
-    }
+    // Lifecycle hooks below run UNCONDITIONALLY — see architecture/tts.md §4e
+    // and I8. A user on a low-memory device may flip `userTTSOverride = true`
+    // mid-session, at which point the AppState listener and session reaction
+    // must already be in place. The four call-site guards in `play`,
+    // `preview`, `onAssistantMessageStart`, `onAssistantMessageComplete`
+    // (plus component-level guards) remain the gate on user-visible work.
 
     // Derive each neural engine's install state from disk in parallel.
     const neuralIds: NeuralEngineId[] = ['supertonic', 'kokoro', 'kitten'];

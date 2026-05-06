@@ -33,7 +33,8 @@ describe('PlayButton', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
-      ttsStore.isTTSAvailable = true;
+      ttsStore.deviceMeetsMemory = true;
+      ttsStore.userTTSOverride = null;
       ttsStore.currentVoice = null;
       ttsStore.playbackState = {mode: 'idle'};
       modelStore.isStreaming = false;
@@ -42,7 +43,8 @@ describe('PlayButton', () => {
 
   it('renders nothing when TTS is unavailable', () => {
     runInAction(() => {
-      ttsStore.isTTSAvailable = false;
+      ttsStore.deviceMeetsMemory = false;
+      ttsStore.userTTSOverride = null;
     });
     const {queryByTestId} = renderButton(makeAssistantMsg());
     expect(queryByTestId('playbutton-msg-1')).toBeNull();
