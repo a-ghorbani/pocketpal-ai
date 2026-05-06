@@ -22,7 +22,9 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
 
 // Stub TextMessage so renderer tests focus on per-block layout, not
 // internal markdown machinery. The stub records the step prop it was
-// rendered with so we can assert "right step → right block".
+// rendered with so we can assert "right step → right block". After
+// the reasoning split (see ReasoningBlock), TextMessage only renders
+// content blocks — reasoning is asserted via mockReasoningBlockCalls.
 let mockTextMessageCalls: Array<{step?: AgentStep; messageId: string}> = [];
 jest.mock('../../TextMessage/TextMessage', () => {
   return {
@@ -30,6 +32,22 @@ jest.mock('../../TextMessage/TextMessage', () => {
       mockTextMessageCalls.push({
         step: props.step,
         messageId: props.message?.id,
+      });
+      return <></>;
+    }),
+  };
+});
+
+// Stub ReasoningBlock so tests can assert reasoning rendering without
+// pulling in marked/RenderHtml. The stub records the text it was
+// rendered with — that's the only contract Message owes the block.
+let mockReasoningBlockCalls: Array<{text: string; autoCollapse?: boolean}> = [];
+jest.mock('../../ReasoningBlock/ReasoningBlock', () => {
+  return {
+    ReasoningBlock: jest.fn((props: any) => {
+      mockReasoningBlockCalls.push({
+        text: props.text,
+        autoCollapse: props.autoCollapse,
       });
       return <></>;
     }),
@@ -86,6 +104,7 @@ function makeDerivedTurn(
 beforeEach(() => {
   mockTextMessageCalls = [];
   mockTalentSurfaceCalls = [];
+  mockReasoningBlockCalls = [];
 });
 
 describe('Message — AssistantTurn renderer', () => {
@@ -370,7 +389,7 @@ describe('Message — AssistantTurn renderer', () => {
     expect(mockTalentSurfaceCalls).toHaveLength(0);
   });
 
-  it('#7 reasoning-only step still renders a TextMessage block (so the per-step reasoningContent surfaces)', () => {
+  it('#7 reasoning-only step renders a ReasoningBlock (no TextMessage, since content is empty)', () => {
     const message = makeDerivedTurn([
       {content: '', reasoningContent: 'thinking…'},
     ]);
@@ -385,8 +404,9 @@ describe('Message — AssistantTurn renderer', () => {
         showStatus
       />,
     );
-    expect(mockTextMessageCalls).toHaveLength(1);
-    expect(mockTextMessageCalls[0].step?.reasoningContent).toBe('thinking…');
+    expect(mockReasoningBlockCalls).toHaveLength(1);
+    expect(mockReasoningBlockCalls[0].text).toBe('thinking…');
+    expect(mockTextMessageCalls).toHaveLength(0);
   });
 
   it('renders empty content when AssistantTurn has zero steps', () => {
@@ -631,15 +651,13 @@ describe('Message — AssistantTurn renderer', () => {
           showStatus
         />,
       );
-      // Two TextMessage invocations: one for reasoning-only, one for
-      // content-only. Order: reasoning first, then content (D3).
-      expect(mockTextMessageCalls).toHaveLength(2);
-      expect(mockTextMessageCalls[0].step?.reasoningContent).toBe(
-        'Let me think…',
-      );
-      expect(mockTextMessageCalls[0].step?.content).toBeUndefined();
-      expect(mockTextMessageCalls[1].step?.content).toBe('The answer is 42.');
-      expect(mockTextMessageCalls[1].step?.reasoningContent).toBeUndefined();
+      // One ReasoningBlock for reasoning + one TextMessage for content.
+      // Order: reasoning first, then content (D3). Reasoning is no
+      // longer routed through TextMessage — see ReasoningBlock.
+      expect(mockReasoningBlockCalls).toHaveLength(1);
+      expect(mockReasoningBlockCalls[0].text).toBe('Let me think…');
+      expect(mockTextMessageCalls).toHaveLength(1);
+      expect(mockTextMessageCalls[0].step?.content).toBe('The answer is 42.');
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 

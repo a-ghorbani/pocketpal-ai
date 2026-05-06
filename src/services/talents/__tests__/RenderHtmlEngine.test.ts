@@ -3,6 +3,17 @@ import {RenderHtmlEngine} from '../RenderHtmlEngine';
 describe('RenderHtmlEngine', () => {
   const engine = new RenderHtmlEngine();
 
+  // The success summary is what the model reads as the tool result on
+  // its follow-up turn. It must (a) signal SUCCESS so the model
+  // doesn't apologize, (b) tell the model the user can already see
+  // the preview so it doesn't re-describe it, and (c) cap the
+  // follow-up at one sentence.
+  const expectSuccessSummary = (summary: string) => {
+    expect(summary).toMatch(/render_html.*SUCCESS/i);
+    expect(summary).toMatch(/preview/i);
+    expect(summary).toMatch(/one short sentence/i);
+  };
+
   it('exposes name "render_html"', () => {
     expect(engine.name).toBe('render_html');
   });
@@ -16,7 +27,7 @@ describe('RenderHtmlEngine', () => {
     if (result.type === 'html') {
       expect(result.html).toBe('<p>hi</p>');
       expect(result.title).toBe('Greeting');
-      expect(result.summary).toBe('Rendered HTML preview: "Greeting"');
+      expectSuccessSummary(result.summary);
     }
   });
 
@@ -27,9 +38,11 @@ describe('RenderHtmlEngine', () => {
     }
   });
 
-  it('defaults title to "Untitled" in summary when missing', async () => {
-    const result = await engine.execute({html: '<p>hi</p>'});
-    expect(result.summary).toBe('Rendered HTML preview: "Untitled"');
+  it('summary is independent of title presence (preview is what the user sees)', async () => {
+    const withTitle = await engine.execute({html: '<p/>', title: 'X'});
+    const withoutTitle = await engine.execute({html: '<p/>'});
+    expect(withTitle.summary).toBe(withoutTitle.summary);
+    expectSuccessSummary(withoutTitle.summary);
   });
 
   it('returns an error TalentResult for missing html', async () => {
@@ -52,7 +65,9 @@ describe('RenderHtmlEngine', () => {
 
   it('ignores non-string title values (treats as undefined)', async () => {
     const result = await engine.execute({html: '<p/>', title: 42 as any});
-    expect(result.summary).toBe('Rendered HTML preview: "Untitled"');
+    if (result.type === 'html') {
+      expect(result.title).toBeUndefined();
+    }
   });
 
   it('does not sanitize or mutate the html payload (pass-through)', async () => {

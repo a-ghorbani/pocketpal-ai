@@ -74,13 +74,17 @@ describe('PACT cleanup: result-keyed metadata by call ID', () => {
     const engine = new RenderHtmlEngine();
     const result = await engine.execute({html: '<p>test</p>', title: 'T'});
 
-    // The result must carry type, html, title, and summary as a unit
-    expect(result).toEqual({
-      type: 'html',
-      html: '<p>test</p>',
-      title: 'T',
-      summary: 'Rendered HTML preview: "T"',
-    });
+    // The result must carry type, html, title, and summary as a unit.
+    // The summary text itself is owned by RenderHtmlEngine — we
+    // assert structure (all four fields present, type narrowed) and
+    // leave the wording to RenderHtmlEngine.test.
+    expect(result.type).toBe('html');
+    if (result.type === 'html') {
+      expect(result.html).toBe('<p>test</p>');
+      expect(result.title).toBe('T');
+      expect(typeof result.summary).toBe('string');
+      expect(result.summary.length).toBeGreaterThan(0);
+    }
 
     // Verify it's a single object, not spread fields
     expect('type' in result).toBe(true);
