@@ -7,7 +7,6 @@ import CodeHighlighter from 'react-native-code-highlighter';
 import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import {useTheme} from '../../hooks';
-import {ThinkingBubble} from '../ThinkingBubble';
 import {CodeBlockHeader} from '../CodeBlockHeader';
 
 import {createTagsStyles, createStyles} from './styles';
@@ -20,8 +19,6 @@ interface MarkdownViewProps {
   maxMessageWidth: number;
   //isComplete: boolean; // indicating if message is complete
   selectable?: boolean;
-  /** Optional reasoning/thinking content */
-  reasoningContent?: string;
 }
 
 // Helper function to check if content is empty
@@ -101,26 +98,12 @@ const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
 };
 
 export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
-  ({markdownText, maxMessageWidth, selectable = false, reasoningContent}) => {
+  ({markdownText, maxMessageWidth, selectable = false}) => {
     const _maxWidth = maxMessageWidth;
 
     const theme = useTheme();
     const styles = createStyles(theme);
     const tagsStyles = useMemo(() => createTagsStyles(theme), [theme]);
-
-    // Create separate tag styles for reasoning content with thinking bubble styling
-    const reasoningTagsStyles = useMemo(
-      () => ({
-        ...tagsStyles,
-        body: {
-          ...tagsStyles.body,
-          color: theme.colors.thinkingBubbleText,
-          fontSize: 14,
-          lineHeight: 20,
-        },
-      }),
-      [tagsStyles, theme],
-    );
 
     const renderers = useMemo(
       () => ({
@@ -147,36 +130,10 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     );
     const source = useMemo(() => ({html: htmlContent}), [htmlContent]);
 
-    // Render reasoning content as markdown if present
-    const reasoningHtmlContent = useMemo(
-      () => (reasoningContent ? (marked(reasoningContent) as string) : null),
-      [reasoningContent],
-    );
-    const reasoningSource = useMemo(
-      () => (reasoningHtmlContent ? {html: reasoningHtmlContent} : null),
-      [reasoningHtmlContent],
-    );
-
     return (
       <View
         testID="markdown-content"
         style={[styles.markdownContainer, {maxWidth: _maxWidth}]}>
-        {/* Render reasoning/thinking content first if present */}
-        {reasoningSource && !isEmptyContent(reasoningContent || '') && (
-          <ThinkingBubble>
-            <RenderHtml
-              contentWidth={contentWidth}
-              source={reasoningSource}
-              tagsStyles={reasoningTagsStyles}
-              defaultTextProps={defaultTextProps}
-              systemFonts={systemFonts}
-              renderers={renderers}
-              customHTMLElementModels={tableHTMLElementModels}
-            />
-          </ThinkingBubble>
-        )}
-
-        {/* Render main content only if it's not empty */}
         {!isEmptyContent(markdownText) && (
           <RenderHtml
             contentWidth={contentWidth}
@@ -195,6 +152,5 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     prevProps.markdownText === nextProps.markdownText &&
     //prevProps.isComplete === nextProps.isComplete &&
     prevProps.maxMessageWidth === nextProps.maxMessageWidth &&
-    prevProps.selectable === nextProps.selectable &&
-    prevProps.reasoningContent === nextProps.reasoningContent,
+    prevProps.selectable === nextProps.selectable,
 );

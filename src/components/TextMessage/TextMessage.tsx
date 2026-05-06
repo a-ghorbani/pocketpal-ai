@@ -53,10 +53,10 @@ export interface TextMessageProps extends TextMessageTopLevelProps {
   messageWidth: number;
   showName: boolean;
   /**
-   * When provided, the component renders this step's `content` and
-   * `reasoningContent` in place of `message.text`. Set by the
-   * AssistantTurn renderer for each step within a turn — same
-   * component, per-step content.
+   * When provided, the component renders this step's `content` in
+   * place of `message.text`. Set by the AssistantTurn renderer for
+   * each step within a turn — same component, per-step content.
+   * Reasoning is rendered separately via ReasoningBlock.
    */
   step?: AgentStep;
 }
@@ -72,15 +72,13 @@ export const TextMessage = ({
 }: TextMessageProps) => {
   // For AssistantTurn rendering, the per-step `content` is the
   // authoritative source. For legacy `Text` messages, fall back to
-  // `message.text`. Same fallback for `reasoningContent`.
+  // `message.text`. Reasoning is rendered separately via
+  // ReasoningBlock — TextMessage only owns the content side.
   const visibleText: string = step
     ? (step.content ?? '')
     : 'text' in message
       ? message.text
       : '';
-  const reasoningContent: string | undefined = step
-    ? step.reasoningContent
-    : undefined;
   const theme = useTheme();
   const user = React.useContext(UserContext);
   const [previewData, setPreviewData] = React.useState(
@@ -279,7 +277,6 @@ export const TextMessage = ({
             markdownText={visibleText.trim()}
             maxMessageWidth={messageWidth}
             selectable={false}
-            reasoningContent={reasoningContent}
           />
         </View>
       )}

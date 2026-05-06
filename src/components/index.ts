@@ -42,6 +42,7 @@ export * from './ModelSettingsSheet';
 export * from './ModelTypeTag';
 export * from './ProjectionModelSelector';
 export * from './RenameModal';
+export * from './ReasoningBlock';
 export * from './ResponseBubble';
 export * from './Selector';
 export * from './SendButton';
