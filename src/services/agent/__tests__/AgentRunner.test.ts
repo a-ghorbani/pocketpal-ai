@@ -1140,4 +1140,178 @@ describe('runAgent', () => {
       expect(argLens[i]).toBeGreaterThan(argLens[i - 1]);
     }
   });
+
+  // ---------- Per-call metrics (post-hoc tokens + duration) ----------
+  //
+  // The runner counts streaming `token` events that carry tool_calls
+  // and tracks the wall-clock duration from the first such event to
+  // step finalisation. The metrics ride on the normalized toolCalls
+  // attached to `step_finished`, which the hook persists via
+  // appendToolCall — so post-hoc UI (chip + preview footer) can show
+  // them without any new persistence path.
+  it('attaches per-call generation metrics on step_finished', async () => {
+    const stages = ['{"a":', '{"a":1', '{"a":12', '{"a":123}'];
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: stages.map(args => ({
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function' as const,
+                function: {name: 'calculate', arguments: args},
+              },
+            ],
+          })),
+          result: {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {
+                  name: 'calculate',
+                  arguments: stages[stages.length - 1],
+                },
+              },
+            ],
+          },
+        },
+        {
+          tokens: [{content: 'done'}],
+          result: {text: 'done', content: 'done'},
+        },
+      ],
+    });
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate'],
+        talentLookup: () =>
+          makeTalent('calculate', () => ({type: 'text', summary: '0'})),
+        triggerMarkers: [],
+        messageId: 'm',
+      }),
+    );
+    const stepFinished = events.find(
+      (e): e is Extract<AgentEvent, {type: 'step_finished'}> =>
+        e.type === 'step_finished' && !!e.toolCalls && e.toolCalls.length > 0,
+    );
+    expect(stepFinished).toBeDefined();
+    const call = stepFinished!.toolCalls![0];
+    expect(call.metrics).toBeDefined();
+    expect(call.metrics!.tokens).toBe(stages.length);
+    // Duration is wall-clock — assert it's a non-negative finite number
+    // rather than a precise value (test scheduling is non-deterministic).
+    expect(call.metrics!.durationMs).toBeGreaterThanOrEqual(0);
+    expect(Number.isFinite(call.metrics!.durationMs)).toBe(true);
+  });
+
+  it('multi-tool steps replicate the step total onto each call', async () => {
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [
+            {
+              tool_calls: [
+                {
+                  id: 'c0',
+                  type: 'function',
+                  function: {name: 'calculate', arguments: '{}'},
+                },
+                {
+                  id: 'c1',
+                  type: 'function',
+                  function: {name: 'datetime', arguments: '{}'},
+                },
+              ],
+            },
+            {
+              tool_calls: [
+                {
+                  id: 'c0',
+                  type: 'function',
+                  function: {name: 'calculate', arguments: '{"x":1}'},
+                },
+                {
+                  id: 'c1',
+                  type: 'function',
+                  function: {name: 'datetime', arguments: '{}'},
+                },
+              ],
+            },
+          ],
+          result: {
+            text: '',
+            content: '',
+            tool_calls: [
+              {
+                id: 'c0',
+                type: 'function',
+                function: {name: 'calculate', arguments: '{"x":1}'},
+              },
+              {
+                id: 'c1',
+                type: 'function',
+                function: {name: 'datetime', arguments: '{}'},
+              },
+            ],
+          },
+        },
+        {
+          tokens: [{content: 'done'}],
+          result: {text: 'done', content: 'done'},
+        },
+      ],
+    });
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: ['calculate', 'datetime'],
+        talentLookup: name =>
+          makeTalent(name, () => ({type: 'text', summary: '0'})),
+        triggerMarkers: [],
+        messageId: 'm',
+      }),
+    );
+    const stepFinished = events.find(
+      (e): e is Extract<AgentEvent, {type: 'step_finished'}> =>
+        e.type === 'step_finished' && !!e.toolCalls && e.toolCalls.length > 0,
+    );
+    expect(stepFinished).toBeDefined();
+    const calls = stepFinished!.toolCalls!;
+    expect(calls).toHaveLength(2);
+    expect(calls[0].metrics?.tokens).toBe(2);
+    expect(calls[1].metrics?.tokens).toBe(2);
+  });
+
+  it('omits metrics on text-only steps (no tool-call tokens seen)', async () => {
+    const engine = makeScriptedEngine({
+      scripts: [
+        {
+          tokens: [{content: 'hi there'}],
+          result: {text: 'hi there', content: 'hi there'},
+        },
+      ],
+    });
+    const events = await collect(
+      runAgent({
+        engine,
+        initialParams: baseParams,
+        allowedTalentNames: [],
+        talentLookup: () => undefined,
+        triggerMarkers: [],
+        messageId: 'm',
+      }),
+    );
+    const stepFinished = events.find(
+      (e): e is Extract<AgentEvent, {type: 'step_finished'}> =>
+        e.type === 'step_finished',
+    );
+    expect(stepFinished).toBeDefined();
+    expect(stepFinished!.toolCalls).toBeUndefined();
+  });
 });

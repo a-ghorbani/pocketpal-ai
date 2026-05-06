@@ -303,4 +303,96 @@ describe('TalentSurface', () => {
       expect(queryByTestId('tool-used-chip')).toBeNull();
     });
   });
+
+  // ---------- Per-call metrics flow ----------
+  //
+  // Generation metrics are attached to step.toolCalls[i].metrics by
+  // the runner. TalentSurface forwards them to the chip (inline
+  // suffix) or renders a sibling ToolMetricsFooter beneath the
+  // talent UI's result. Both paths must degrade gracefully when
+  // metrics are absent (older persisted calls).
+  describe('per-call metrics', () => {
+    it('renders ToolMetricsFooter beneath a talent UI when metrics are present', () => {
+      talentUIRegistry.register({
+        name: 'render_html',
+        renderResult: () => <Text testID="html-preview">preview</Text>,
+      });
+      const step: AgentStep = {
+        toolCalls: [
+          {
+            id: 'c0',
+            function: {name: 'render_html', arguments: '{}'},
+            metrics: {tokens: 1500, durationMs: 35000},
+          },
+        ],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'render_html',
+            result: {
+              type: 'html',
+              html: '<p>x</p>',
+              summary: 'preview',
+            },
+            responseContent: 'preview',
+          },
+        ],
+      };
+      const {getByTestId, getByText} = render(<TalentSurface step={step} />);
+      expect(getByTestId('html-preview')).toBeTruthy();
+      expect(getByTestId('tool-metrics-footer')).toBeTruthy();
+      expect(getByText(/1.500 tokens.+35s/)).toBeTruthy();
+    });
+
+    it('omits the footer when metrics are absent (older persisted call)', () => {
+      talentUIRegistry.register({
+        name: 'render_html',
+        renderResult: () => <Text testID="html-preview">preview</Text>,
+      });
+      const step: AgentStep = {
+        toolCalls: [
+          {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
+        ],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'render_html',
+            result: {
+              type: 'html',
+              html: '<p>x</p>',
+              summary: 'preview',
+            },
+            responseContent: 'preview',
+          },
+        ],
+      };
+      const {getByTestId, queryByTestId} = render(
+        <TalentSurface step={step} />,
+      );
+      expect(getByTestId('html-preview')).toBeTruthy();
+      expect(queryByTestId('tool-metrics-footer')).toBeNull();
+    });
+
+    it('passes metrics through to ToolUsedChip for unregistered talents', () => {
+      const step: AgentStep = {
+        toolCalls: [
+          {
+            id: 'c0',
+            function: {name: 'datetime', arguments: '{}'},
+            metrics: {tokens: 7, durationMs: 1200},
+          },
+        ],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'datetime',
+            result: {type: 'text', summary: '8:28 AM'},
+            responseContent: '8:28 AM',
+          },
+        ],
+      };
+      const {getByText} = render(<TalentSurface step={step} />);
+      expect(getByText(/used datetime.+7 tokens.+1s/)).toBeTruthy();
+    });
+  });
 });

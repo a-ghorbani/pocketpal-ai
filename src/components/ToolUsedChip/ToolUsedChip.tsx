@@ -10,9 +10,17 @@ import {styles} from './styles';
 
 import {L10nContext} from '../../utils';
 import {t} from '../../locales';
+import {AgentToolCallMetrics} from '../../utils/types';
 
 interface ToolUsedChipProps {
   toolName: string;
+  /**
+   * Optional generation metrics — tokens emitted while the model
+   * produced this call's arguments and the wall-clock duration.
+   * Surfaced as a same-line suffix when present. Older persisted
+   * tool calls won't carry metrics; the chip degrades gracefully.
+   */
+  metrics?: AgentToolCallMetrics;
 }
 
 /**
@@ -25,7 +33,10 @@ interface ToolUsedChipProps {
  *
  * Renders nothing if `toolName` is empty.
  */
-export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({toolName}) => {
+export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
+  toolName,
+  metrics,
+}) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
 
@@ -34,6 +45,15 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({toolName}) => {
   }
 
   const componentStyles = styles({theme});
+  const baseLabel = t(l10n.chat.toolUsedChip, {name: toolName});
+  const labelWithMetrics =
+    metrics && metrics.tokens > 0
+      ? `${baseLabel} · ${t(l10n.components.toolMetrics.tokens, {
+          count: metrics.tokens.toLocaleString(),
+        })} · ${t(l10n.components.toolMetrics.elapsed, {
+          seconds: Math.max(1, Math.round(metrics.durationMs / 1000)),
+        })}`
+      : baseLabel;
 
   return (
     <View style={componentStyles.container} testID="tool-used-chip">
@@ -42,9 +62,7 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({toolName}) => {
         style={componentStyles.icon}
         testID="tool-used-chip-icon"
       />
-      <Text style={componentStyles.label}>
-        {t(l10n.chat.toolUsedChip, {name: toolName})}
-      </Text>
+      <Text style={componentStyles.label}>{labelWithMetrics}</Text>
     </View>
   );
 };

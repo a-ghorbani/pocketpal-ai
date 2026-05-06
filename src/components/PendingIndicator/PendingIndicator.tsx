@@ -136,15 +136,13 @@ export const PendingIndicator: React.FC<PendingIndicatorProps> = ({
     const parts: string[] = [label];
     if (pendingToolTokens >= MIN_TOKENS) {
       parts.push(
-        t(l10n.components.pendingIndicator.tokens, {
+        t(l10n.components.toolMetrics.tokens, {
           count: pendingToolTokens.toLocaleString(),
         }),
       );
     }
     if (elapsedSec >= 1) {
-      parts.push(
-        t(l10n.components.pendingIndicator.elapsed, {seconds: elapsedSec}),
-      );
+      parts.push(t(l10n.components.toolMetrics.elapsed, {seconds: elapsedSec}));
     }
     suffix = parts.join(' · ');
   }

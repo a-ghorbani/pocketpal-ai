@@ -285,6 +285,12 @@ export async function* runAgent(
       // (verified by Test #21).
       let accumulatedText = '';
       let markerSeenThisStep = false;
+      // Per-step generation metrics (post-hoc display in chip / preview
+      // footer). Counts streaming `token` events that carry tool_calls
+      // and tracks the time between the first such event and step
+      // finalisation. Reset every iteration via the surrounding `let`s.
+      let toolCallTokenCount = 0;
+      let toolCallStartedAt: number | null = null;
 
       // Bridge engine streaming callback into the iterator.
       const queue = new EventQueue<AgentEvent>();
@@ -310,6 +316,12 @@ export async function* runAgent(
             // this explicit sequence for a marker that straddles two
             // chunks.
             queue.push({type: 'token', delta});
+            if (delta.toolCalls && delta.toolCalls.length > 0) {
+              if (toolCallStartedAt === null) {
+                toolCallStartedAt = Date.now();
+              }
+              toolCallTokenCount += 1;
+            }
             if (delta.content) {
               accumulatedText += delta.content;
               if (!markerSeenThisStep && triggerMarkers.length > 0) {
@@ -359,10 +371,26 @@ export async function* runAgent(
       // ids that match the upcoming outcomes by construction.
       const finishedResult = lastResult;
       const rawToolCalls = finishedResult?.tool_calls ?? [];
-      const calls =
+      const callsWithoutMetrics =
         rawToolCalls.length === 0
           ? undefined
           : normalizeToolCallIds(rawToolCalls, callIdSeed + turn);
+      // Attach per-step generation metrics: tokens counted across the
+      // streaming run and ms from first tool-call token to here. The
+      // step total is replicated onto each call — for multi-tool steps
+      // this slightly overstates per-call cost, but the alternative
+      // (omitting metrics on multi-tool) is worse UX and the case is
+      // rare. Only attach when we actually saw tool-call tokens.
+      const calls =
+        callsWithoutMetrics && toolCallStartedAt !== null
+          ? callsWithoutMetrics.map(call => ({
+              ...call,
+              metrics: {
+                tokens: toolCallTokenCount,
+                durationMs: Date.now() - toolCallStartedAt!,
+              },
+            }))
+          : callsWithoutMetrics;
 
       yield {type: 'step_finished', turn, toolCalls: calls};
 

@@ -521,7 +521,9 @@
       "preparingTool": "Preparing tool",
       "buildingPage": "Building page",
       "calculating": "Calculating",
-      "lookingUpTime": "Looking up time",
+      "lookingUpTime": "Looking up time"
+    },
+    "toolMetrics": {
       "tokens": "{{count}} tokens",
       "elapsed": "{{seconds}}s"
     },

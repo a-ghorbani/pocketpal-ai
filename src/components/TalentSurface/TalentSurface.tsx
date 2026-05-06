@@ -4,6 +4,7 @@ import {talentUIRegistry} from '../../services/talents/TalentUIRegistry';
 import {AgentStep} from '../../utils/types';
 
 import {ToolErrorBlock} from '../ToolErrorBlock';
+import {ToolMetricsFooter} from '../ToolMetricsFooter';
 import {ToolUsedChip} from '../ToolUsedChip';
 
 interface TalentSurfaceProps {
@@ -66,20 +67,30 @@ export const TalentSurface: React.FC<TalentSurfaceProps> = ({step}) => {
     }
 
     // 2. Registered talent UI for this tool name — render its result.
+    //    The metrics footer (post-hoc tokens + duration) renders as a
+    //    sibling beneath the result so each TalentUI can stay focused
+    //    on its visual envelope; the footer is identical across all
+    //    talents (visual family with AssistantTurnFooter).
     const ui = talentUIRegistry.get(name);
     if (ui?.renderResult) {
       const node = ui.renderResult(outcome.result);
       if (node != null) {
-        rendered.push(<React.Fragment key={call.id}>{node}</React.Fragment>);
+        rendered.push(
+          <React.Fragment key={call.id}>
+            {node}
+            {call.metrics && <ToolMetricsFooter metrics={call.metrics} />}
+          </React.Fragment>,
+        );
         continue;
       }
     }
 
     // 3. No registered UI (or renderResult returned null) — subtle
     //    "used X" chip so the user still sees the tool was invoked.
+    //    The chip carries metrics inline (same line) when present.
     rendered.push(
       <React.Fragment key={call.id}>
-        <ToolUsedChip toolName={name} />
+        <ToolUsedChip toolName={name} metrics={call.metrics} />
       </React.Fragment>,
     );
   }

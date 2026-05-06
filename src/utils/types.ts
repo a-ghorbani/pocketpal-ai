@@ -17,10 +17,26 @@ import type {TalentResult} from '../services/talents/types';
  * in memory and serialize back to string at the wire boundary in
  * `convertToChatMessages`.
  */
+/**
+ * Generation-side metrics for a tool call: how much work the model
+ * did to produce the call's `arguments` JSON, NOT how long the
+ * engine took to execute it. Surfaced post-hoc by the chip / preview
+ * footer so the user can see the "cost" of a tool call after it
+ * lands. Optional — older persisted calls (or steps where multi-tool
+ * accounting isn't useful) may carry no metrics.
+ */
+export interface AgentToolCallMetrics {
+  /** Streaming token events the runner counted while this call was being generated. */
+  tokens: number;
+  /** Wall-clock ms between the first generation token and step finalisation. */
+  durationMs: number;
+}
+
 export interface AgentToolCall {
   id: string;
   type?: 'function';
   function: {name: string; arguments: string | Record<string, unknown>};
+  metrics?: AgentToolCallMetrics;
 }
 
 /**

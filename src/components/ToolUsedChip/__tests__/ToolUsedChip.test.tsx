@@ -24,4 +24,36 @@ describe('ToolUsedChip', () => {
     const {queryByTestId} = render(<ToolUsedChip toolName="" />);
     expect(queryByTestId('tool-used-chip')).toBeNull();
   });
+
+  it('appends generation metrics when present', () => {
+    const {getByText} = render(
+      <ToolUsedChip
+        toolName="calculate"
+        metrics={{tokens: 19, durationMs: 2300}}
+      />,
+    );
+    // Format: `used calculate · 19 tokens · 2s` (rounded seconds, min 1).
+    expect(getByText(/used calculate.+19 tokens.+2s/)).toBeTruthy();
+  });
+
+  it('omits metrics when tokens is 0 (graceful degradation for older calls)', () => {
+    const {getByText, queryByText} = render(
+      <ToolUsedChip
+        toolName="calculate"
+        metrics={{tokens: 0, durationMs: 0}}
+      />,
+    );
+    expect(getByText('used calculate')).toBeTruthy();
+    expect(queryByText(/tokens/)).toBeNull();
+  });
+
+  it('floors sub-1s durations to "1s" so the suffix never reads "0s"', () => {
+    const {getByText} = render(
+      <ToolUsedChip
+        toolName="calculate"
+        metrics={{tokens: 4, durationMs: 200}}
+      />,
+    );
+    expect(getByText(/4 tokens.+1s/)).toBeTruthy();
+  });
 });
