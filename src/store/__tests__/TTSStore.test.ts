@@ -168,22 +168,30 @@ describe('TTSStore', () => {
   });
 
   describe('memory gate', () => {
-    it('sets isTTSAvailable=false when total memory < 4 GiB and registers no listeners', async () => {
+    it('sets deviceMeetsMemory=false when total memory < 4 GiB; isTTSAvailable=false; lifecycle hooks STILL register (I8)', async () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
 
       const store = new TTSStore();
       await store.init();
 
+      expect(store.deviceMeetsMemory).toBe(false);
       expect(store.isTTSAvailable).toBe(false);
-      expect(mockAddEventListener).not.toHaveBeenCalled();
+      // Lifecycle hooks run unconditionally so a low-memory user opting in
+      // mid-session has the AppState listener already in place — see
+      // architecture/tts.md §4e and I8.
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function),
+      );
     });
 
-    it('sets isTTSAvailable=true when total memory >= 4 GiB and registers listeners', async () => {
+    it('sets deviceMeetsMemory=true when total memory >= 4 GiB; isTTSAvailable=true; registers listeners', async () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(6 * GIB);
 
       const store = new TTSStore();
       await store.init();
 
+      expect(store.deviceMeetsMemory).toBe(true);
       expect(store.isTTSAvailable).toBe(true);
       expect(mockAddEventListener).toHaveBeenCalledWith(
         'change',
@@ -200,6 +208,144 @@ describe('TTSStore', () => {
 
       expect(DeviceInfo.getTotalMemory).toHaveBeenCalledTimes(1);
       expect(mockAddEventListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('init() runs neural-engine isInstalled checks even on low-memory devices (I8)', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      mockSupertonicIsInstalled.mockResolvedValueOnce(false);
+      mockKokoroIsInstalled.mockResolvedValueOnce(false);
+      mockKittenIsInstalled.mockResolvedValueOnce(false);
+
+      const store = new TTSStore();
+      await store.init();
+
+      expect(mockSupertonicIsInstalled).toHaveBeenCalledTimes(1);
+      expect(mockKokoroIsInstalled).toHaveBeenCalledTimes(1);
+      expect(mockKittenIsInstalled).toHaveBeenCalledTimes(1);
+      // Session-change reaction is also registered — verified by the chat
+      // session change test below executing without an unhandled error.
+      expect(store.deviceMeetsMemory).toBe(false);
+    });
+  });
+
+  describe('availability gate (override formula)', () => {
+    it('§6.A — high-memory, no override: deviceMeetsMemory=true, userTTSOverride=null, isTTSAvailable=true', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(6 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.deviceMeetsMemory).toBe(true);
+      expect(store.userTTSOverride).toBeNull();
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('§6.B — low-memory, no override: deviceMeetsMemory=false, userTTSOverride=null, isTTSAvailable=false', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.deviceMeetsMemory).toBe(false);
+      expect(store.userTTSOverride).toBeNull();
+      expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§6.C — low-memory + setUserTTSOverride(true) flips isTTSAvailable to true', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      store.setUserTTSOverride(true);
+
+      expect(store.userTTSOverride).toBe(true);
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('§6.D — high-memory + setUserTTSOverride(false) forces isTTSAvailable to false (proves naive || formula is wrong)', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      await store.init();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      // Start an in-flight playback so we can observe the stop+release path.
+      await store.play('msg-1', 'hello');
+      mockSystemStop.mockClear();
+
+      store.setUserTTSOverride(false);
+      await flush();
+
+      expect(store.userTTSOverride).toBe(false);
+      expect(store.isTTSAvailable).toBe(false);
+      // I6: stop+release runs fire-and-forget when the gate transitions
+      // from open to closed, mirroring setAutoSpeak(false).
+      expect(mockSystemStop).toHaveBeenCalled();
+    });
+
+    it('§6.E — toggle from opt-in to off (low-memory): override is `false`, NOT null (D4)', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      store.setUserTTSOverride(true);
+      expect(store.isTTSAvailable).toBe(true);
+
+      store.setUserTTSOverride(false);
+
+      expect(store.userTTSOverride).toBe(false);
+      expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§9a — pre-hydration read: fresh store, no init(), isTTSAvailable=false', () => {
+      const store = new TTSStore();
+      // No init() — deviceMeetsMemory=false, userTTSOverride=null → false.
+      expect(store.deviceMeetsMemory).toBe(false);
+      expect(store.userTTSOverride).toBeNull();
+      expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§9d — getTotalMemory failure: deviceMeetsMemory=false; override path still works', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValueOnce(
+        new Error('boom'),
+      );
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.deviceMeetsMemory).toBe(false);
+      expect(store.isTTSAvailable).toBe(false);
+
+      store.setUserTTSOverride(true);
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('§9e — rapid toggles: last write wins, no debouncing', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      store.setUserTTSOverride(true);
+      store.setUserTTSOverride(false);
+      store.setUserTTSOverride(true);
+
+      expect(store.userTTSOverride).toBe(true);
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('persistence config includes userTTSOverride (I7, D7)', () => {
+      // makePersistable is mocked at module level (top of file). Construct a
+      // fresh store and inspect the call args to confirm `userTTSOverride`
+      // sits alongside the other persisted properties.
+      const {makePersistable} = require('mobx-persist-store');
+      (makePersistable as jest.Mock).mockClear();
+      // eslint-disable-next-line no-new
+      new TTSStore();
+      expect(makePersistable).toHaveBeenCalledTimes(1);
+      const config = (makePersistable as jest.Mock).mock.calls[0][1];
+      expect(config.properties).toEqual(
+        expect.arrayContaining([
+          'autoSpeakEnabled',
+          'currentVoice',
+          'supertonicSteps',
+          'userTTSOverride',
+        ]),
+      );
     });
   });
 
