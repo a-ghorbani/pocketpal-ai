@@ -3,7 +3,7 @@
   "device": "POCO X9 Pro Myron",
   "soc": "Snapdragon 8 Elite Gen 5 / Adreno 840",
   "commit": "1bca8e7",
-  "llama_rn_version": "0.12.0-rc.9",
+  "llama_rn_version": null,
   "platform": "android",
   "os_version": null,
   "timestamp": "2026-05-04T18:53:01.006Z",
@@ -31,8 +31,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 663.17
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -75,8 +84,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 503.7,
+            "OpenCL": 159.47
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -119,8 +138,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 712.33
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -163,8 +191,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 523.3,
+            "OpenCL": 189.03
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -207,8 +245,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 875.96
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -251,8 +298,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 443.03,
+            "OpenCL": 432.92
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -295,8 +352,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1013.62
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -339,8 +405,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 125.19,
+            "OpenCL": 888.43
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -383,8 +459,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1059.89
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -427,8 +512,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 125.19,
+            "OpenCL": 934.69
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -471,8 +566,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1220.27
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -515,8 +619,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 153.01,
+            "OpenCL": 1067.26
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -559,8 +673,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1390.67
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -603,8 +726,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 182.57,
+            "OpenCL": 1208.1
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -647,8 +780,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1801.09
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -691,8 +833,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 236.47,
+            "OpenCL": 1564.62
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -735,8 +887,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 632.52
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -779,8 +940,19 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 389.33,
+            "CPU_REPACK": 242.68,
+            "OpenCL": 306.51
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -823,8 +995,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 651.63
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -867,8 +1048,19 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 408.43,
+            "CPU_REPACK": 242.68,
+            "OpenCL": 306.51
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -911,8 +1103,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 682.72
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -955,8 +1156,19 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 311.06,
+            "CPU_REPACK": 242.68,
+            "OpenCL": 434.97
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -999,8 +1211,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 682.24
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1043,8 +1264,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 306,
+            "OpenCL": 682.24
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1087,8 +1318,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 762.49
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1131,8 +1371,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 605.13,
+            "OpenCL": 463.36
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1175,8 +1425,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 805.68
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1219,8 +1478,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 632.32,
+            "OpenCL": 479.36
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1263,8 +1532,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 958.64
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1307,8 +1585,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 306,
+            "OpenCL": 958.64
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1351,8 +1639,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1013.54
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1395,8 +1692,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 27,
         "total_layers": 27,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 306,
+            "OpenCL": 1013.54
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1439,8 +1746,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2747.73
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1483,8 +1799,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2357.07,
+            "OpenCL": 390.66
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1527,8 +1853,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3180.06
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1571,8 +1906,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2805.87,
+            "OpenCL": 374.2
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1615,8 +1960,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3377.24
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1659,8 +2013,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2650.55,
+            "OpenCL": 726.7
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1703,8 +2067,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3522.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1747,8 +2120,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2178.75,
+            "OpenCL": 1343.39
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1791,8 +2174,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3602.18
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1835,8 +2227,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2178.75,
+            "OpenCL": 1423.44
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1879,8 +2281,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3788.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1923,8 +2334,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2178.75,
+            "OpenCL": 1610.07
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -1967,8 +2388,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 4017.8
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2011,8 +2441,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2178.75,
+            "OpenCL": 1839.05
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2055,8 +2495,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 5130.29
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2099,8 +2548,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 36,
         "total_layers": 36,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2814.25,
+            "OpenCL": 2316.04
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2143,8 +2602,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 661.25
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2187,8 +2655,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 105,
+            "OpenCL": 661.25
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2231,8 +2709,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 694.76
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2275,8 +2762,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 105,
+            "OpenCL": 694.76
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2319,8 +2816,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 802.01
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2363,8 +2869,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 105,
+            "OpenCL": 802.01
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2407,8 +2923,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 915.96
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2451,8 +2976,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 105,
+            "OpenCL": 915.96
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2495,8 +3030,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1186.25
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2539,8 +3083,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 17,
         "total_layers": 17,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 136,
+            "OpenCL": 1186.25
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2583,8 +3137,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1254.71
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2627,8 +3190,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1189.36,
+            "OpenCL": 65.34
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2671,8 +3244,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1349.89
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2715,8 +3297,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1272.07,
+            "OpenCL": 77.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2759,8 +3351,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1864.18
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2803,8 +3404,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 700.36,
+            "OpenCL": 1163.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2847,8 +3458,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2080.66
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2891,8 +3511,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 52.84,
+            "OpenCL": 2027.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2935,8 +3565,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2281.66
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -2979,8 +3618,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 52.84,
+            "OpenCL": 2228.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3023,8 +3672,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2684.15
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3067,8 +3725,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 64.58,
+            "OpenCL": 2619.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3111,8 +3779,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2989.88
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3155,8 +3832,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 77.06,
+            "OpenCL": 2912.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3199,8 +3886,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3872.38
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3243,8 +3939,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 99.81,
+            "OpenCL": 3772.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3287,8 +3993,18 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 99.81,
+            "OpenCL": 3772.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3331,8 +4047,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1428.96,
+            "OpenCL": 403.72
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3375,8 +4101,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1596.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3419,8 +4154,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1596.06,
+            "OpenCL": 481.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3463,8 +4208,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2011.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3507,8 +4261,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1140.81,
+            "OpenCL": 1351.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3551,8 +4315,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2215.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3595,8 +4368,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 480.81,
+            "OpenCL": 2215.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3639,8 +4422,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2368.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3683,8 +4475,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 480.81,
+            "OpenCL": 2368.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3727,8 +4529,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2708.32
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3771,8 +4582,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 480.81,
+            "OpenCL": 2708.32
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3815,8 +4636,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3001.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3859,8 +4689,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 480.81,
+            "OpenCL": 3001.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3903,8 +4743,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 3887.52
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3947,8 +4796,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 33,
         "total_layers": 33,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 622.76,
+            "OpenCL": 3887.52
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -3991,8 +4850,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 567.54
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4035,8 +4903,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 561.08,
+            "OpenCL": 159.47
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4079,8 +4957,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 639.3
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4123,8 +5010,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 632.84,
+            "OpenCL": 189.03
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4167,8 +5064,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 780.32
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4211,8 +5117,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 529.97,
+            "OpenCL": 432.92
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4255,8 +5171,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 888.43
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4299,8 +5224,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 182.57,
+            "OpenCL": 888.43
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4343,8 +5278,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 934.69
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4387,8 +5331,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 182.57,
+            "OpenCL": 934.69
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4431,8 +5385,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1067.26
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4475,8 +5438,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 182.57,
+            "OpenCL": 1067.26
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4519,8 +5492,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1208.1
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4563,8 +5545,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 182.57,
+            "OpenCL": 1208.1
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4607,8 +5599,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1564.62
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4651,8 +5652,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 236.47,
+            "OpenCL": 1564.62
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4695,8 +5706,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 784.81
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4739,8 +5759,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 580.32,
+            "OpenCL": 204.49
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4783,8 +5813,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 833.46
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4827,8 +5866,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 589.56,
+            "OpenCL": 243.9
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4871,8 +5920,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1017.85
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4915,8 +5973,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 488.45,
+            "OpenCL": 529.4
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -4959,8 +6027,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1169.07
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5003,8 +6080,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 166.92,
+            "OpenCL": 1002.15
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5047,8 +6134,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1217.35
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5091,8 +6187,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 166.92,
+            "OpenCL": 1050.43
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5135,8 +6241,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1397.95
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5179,8 +6294,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 204.02,
+            "OpenCL": 1193.93
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5223,8 +6348,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1589.83
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5267,8 +6401,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 243.43,
+            "OpenCL": 1346.4
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5311,8 +6455,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 2059.07
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5355,8 +6508,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 29,
         "total_layers": 29,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 315.3,
+            "OpenCL": 1743.77
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5399,8 +6562,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 339.22
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5443,8 +6615,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 302.75,
+            "OpenCL": 203.19
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5487,8 +6669,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 407.59
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5531,8 +6722,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 321.88,
+            "OpenCL": 284.64
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5575,8 +6776,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 459.69
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5619,8 +6829,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 305.92,
+            "OpenCL": 352.7
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5663,8 +6883,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 479.36
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5707,8 +6936,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 198.93,
+            "OpenCL": 479.36
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5751,8 +6990,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 520.73
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5795,8 +7043,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 198.93,
+            "OpenCL": 520.73
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5839,8 +7097,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 586.41
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5883,8 +7150,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 198.93,
+            "OpenCL": 586.42
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5927,8 +7204,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 625.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -5971,8 +7257,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 198.93,
+            "OpenCL": 625.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6015,8 +7311,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 765.43
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6059,8 +7364,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 257.66,
+            "OpenCL": 765.44
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6103,8 +7418,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 793.69
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6147,8 +7471,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 722.45,
+            "OpenCL": 404.67
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6191,8 +7525,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 943.79
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6235,8 +7578,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 774.07,
+            "OpenCL": 567.57
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6279,8 +7632,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1088.93
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6323,8 +7685,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 714.96,
+            "OpenCL": 771.82
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6367,8 +7739,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1160.44
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6411,8 +7792,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 397.85,
+            "OpenCL": 1160.45
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6455,8 +7846,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1257.71
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6499,8 +7899,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 397.85,
+            "OpenCL": 1257.71
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6543,8 +7953,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1426.59
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6587,8 +8006,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 397.85,
+            "OpenCL": 1426.59
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6631,8 +8060,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1544.74
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6675,8 +8113,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 397.85,
+            "OpenCL": 1544.74
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6719,8 +8167,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1911.66
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6763,8 +8220,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 515.31,
+            "OpenCL": 1911.66
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6807,8 +8274,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 641.63
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6851,8 +8327,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 641.25,
+            "OpenCL": 79.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6895,8 +8381,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 818.63
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6939,8 +8434,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 491.25,
+            "OpenCL": 406.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -6983,8 +8488,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 946.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7027,8 +8541,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 78.75,
+            "OpenCL": 946.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7071,8 +8595,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1005.01
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7115,8 +8648,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 78.75,
+            "OpenCL": 1005.01
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7159,8 +8702,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1167.01
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7203,8 +8755,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 78.75,
+            "OpenCL": 1167.01
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7247,8 +8809,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1339.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7291,8 +8862,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 78.75,
+            "OpenCL": 1339.13
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7335,8 +8916,17 @@
         "adreno_gen": null,
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 1734.38
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
@@ -7379,8 +8969,18 @@
         "adreno_gen": "A8X",
         "large_buffer_enabled": false,
         "large_buffer_unsupported": false,
+        "hexagon_init": false,
+        "hexagon_device_name": null,
         "offloaded_layers": 25,
         "total_layers": 25,
+        "memory_buffers": {
+          "weights_mib": {
+            "CPU": 102,
+            "OpenCL": 1734.38
+          },
+          "kv_cache_mib": {},
+          "compute_mib": {}
+        },
         "raw_matches": []
       },
       "init_settings": {
