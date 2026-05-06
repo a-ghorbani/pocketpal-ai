@@ -33,7 +33,8 @@ export class RenderHtmlEngine implements TalentEngine {
       type: 'html',
       html,
       title,
-      summary: `Rendered HTML preview: "${title ?? 'Untitled'}"`,
+      summary: `[render_html SUCCESS] The html has been rendered into a preview above, and the user can see and toggle to see the code. 
+Reply with at most one short sentence what you build`,
     };
   }
 
