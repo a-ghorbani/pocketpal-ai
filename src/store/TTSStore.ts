@@ -146,7 +146,12 @@ export class TTSStore {
     makeAutoObservable(this, {}, {autoBind: true});
     makePersistable(this, {
       name: 'TTSStore',
-      properties: ['autoSpeakEnabled', 'currentVoice', 'supertonicSteps'],
+      properties: [
+        'autoSpeakEnabled',
+        'currentVoice',
+        'supertonicSteps',
+        'userTTSOverride',
+      ],
       storage: AsyncStorage,
     });
   }
