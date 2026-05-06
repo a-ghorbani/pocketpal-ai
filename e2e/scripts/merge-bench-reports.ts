@@ -25,6 +25,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {deriveLogSignals} from '../../src/__automation__/logSignals';
+
 /**
  * Tiny glob shim — supports `<dir>/<prefix>*<suffix>` of one segment, which
  * is all the merge script ever needs. Avoids depending on the transitive
@@ -207,9 +209,35 @@ function compareRuns(a: RunRow, b: RunRow): number {
 }
 
 /**
+ * Re-derive structured signals from the row's `raw_matches` before strip.
+ *
+ * Why: when we add a new structured field to logSignals (e.g.
+ * `memory_buffers`), older raw reports already have the source text in
+ * `raw_matches` — re-running the parser at merge time backfills the new
+ * field automatically. Without this, the only way to populate a new
+ * structured field on existing baselines would be to re-run every cell on
+ * device, which costs hours per device.
+ *
+ * No-op when raw_matches is absent or empty (legacy reports already
+ * stripped, or cells that failed before any log line landed). The
+ * row's existing structured fields are overwritten by the parser output —
+ * the source-of-truth is always `raw_matches`, structured fields are a
+ * cache.
+ */
+function rederiveLogSignals(r: RunRow): RunRow {
+  const ls = r.log_signals as Record<string, unknown> | undefined;
+  if (!ls || !Array.isArray(ls.raw_matches) || ls.raw_matches.length === 0) {
+    return r;
+  }
+  const fresh = deriveLogSignals(ls.raw_matches as string[]);
+  return {...r, log_signals: fresh as unknown as Record<string, unknown>};
+}
+
+/**
  * `log_signals.raw_matches` is debug context (the first ~200 captured native
  * log lines) — useful for one-off investigation, not for a versioned
- * baseline. Stripping it keeps baseline diffs readable.
+ * baseline. Stripping it keeps baseline diffs readable. Always called
+ * AFTER `rederiveLogSignals`, never before.
  */
 function stripRawMatches(r: RunRow): RunRow {
   const ls = r.log_signals as Record<string, unknown> | undefined;
@@ -346,7 +374,10 @@ export function mergeReports(
     }
   }
   return {
-    runs: Array.from(byKey.values()).map(stripRawMatches).sort(compareRuns),
+    runs: Array.from(byKey.values())
+      .map(rederiveLogSignals)
+      .map(stripRawMatches)
+      .sort(compareRuns),
     latestTimestamp,
     bench: reconcileBench(reports),
     settings_axes_used: mergeAxesUsed(reports),
