@@ -139,6 +139,7 @@ jest.mock('../../services/tts', () => {
 // Import after mocks
 import {TTSStore} from '../TTSStore';
 import type {Voice} from '../../services/tts';
+import {ttsRuntime} from '../../services/tts';
 import {chatSessionStore} from '../ChatSessionStore';
 
 const SYSTEM_VOICE: Voice = {
@@ -268,8 +269,17 @@ describe('TTSStore', () => {
       // Start an in-flight playback so we can observe the stop+release path.
       await store.play('msg-1', 'hello');
       mockSystemStop.mockClear();
+      // Spy on the singleton ttsRuntime.release — the action is fire-and-forget
+      // (`.then(() => ttsRuntime.release())`), so we need to await the promise
+      // chain after firing the OFF transition.
+      const releaseSpy = jest
+        .spyOn(ttsRuntime, 'release')
+        .mockResolvedValue(undefined);
 
       store.setUserTTSOverride(false);
+      // Yield twice: once for stop()'s resolution, once for the chained
+      // ttsRuntime.release() callback. flush() yields a single tick.
+      await flush();
       await flush();
 
       expect(store.userTTSOverride).toBe(false);
@@ -277,6 +287,11 @@ describe('TTSStore', () => {
       // I6: stop+release runs fire-and-forget when the gate transitions
       // from open to closed, mirroring setAutoSpeak(false).
       expect(mockSystemStop).toHaveBeenCalled();
+      // Strengthened per implementer note 1: also assert ttsRuntime.release()
+      // is invoked, mirroring the setAutoSpeak(false) precedent.
+      expect(releaseSpy).toHaveBeenCalled();
+
+      releaseSpy.mockRestore();
     });
 
     it('§6.E — toggle from opt-in to off (low-memory): override is `false`, NOT null (D4)', async () => {
@@ -299,6 +314,31 @@ describe('TTSStore', () => {
       expect(store.deviceMeetsMemory).toBe(false);
       expect(store.userTTSOverride).toBeNull();
       expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§9c — post-migration boot: pre-existing user with no persisted override hydrates as null and falls through to deviceMeetsMemory', async () => {
+      // Pre-existing user installed before this change has no
+      // `userTTSOverride` key in AsyncStorage. mobx-persist-store is mocked
+      // (top of file), so a fresh store starts with the field's initial
+      // value (`null`). After init() runs, the gate equals deviceMeetsMemory
+      // exactly — same behaviour as today, no migration needed.
+      // High-memory path:
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const high = new TTSStore();
+      expect(high.userTTSOverride).toBeNull();
+      await high.init();
+      expect(high.userTTSOverride).toBeNull();
+      expect(high.deviceMeetsMemory).toBe(true);
+      expect(high.isTTSAvailable).toBe(true);
+
+      // Low-memory path:
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      const low = new TTSStore();
+      expect(low.userTTSOverride).toBeNull();
+      await low.init();
+      expect(low.userTTSOverride).toBeNull();
+      expect(low.deviceMeetsMemory).toBe(false);
+      expect(low.isTTSAvailable).toBe(false);
     });
 
     it('§9d — getTotalMemory failure: deviceMeetsMemory=false; override path still works', async () => {
