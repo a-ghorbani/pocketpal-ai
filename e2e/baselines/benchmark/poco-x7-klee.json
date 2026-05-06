@@ -39,8 +39,12 @@
           "weights_mib": {
             "CPU": 663.17
           },
+          "weights_total_mib": 663.17,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 663.17
         },
         "raw_matches": []
       },
@@ -118,8 +122,12 @@
           "weights_mib": {
             "CPU": 712.33
           },
+          "weights_total_mib": 712.33,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 712.33
         },
         "raw_matches": []
       },
@@ -197,8 +205,12 @@
           "weights_mib": {
             "CPU": 875.96
           },
+          "weights_total_mib": 875.96,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 875.96
         },
         "raw_matches": []
       },
@@ -276,8 +288,12 @@
           "weights_mib": {
             "CPU": 1013.62
           },
+          "weights_total_mib": 1013.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1013.62
         },
         "raw_matches": []
       },
@@ -355,8 +371,12 @@
           "weights_mib": {
             "CPU": 1059.89
           },
+          "weights_total_mib": 1059.89,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1059.89
         },
         "raw_matches": []
       },
@@ -434,8 +454,12 @@
           "weights_mib": {
             "CPU": 1220.27
           },
+          "weights_total_mib": 1220.27,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1220.27
         },
         "raw_matches": []
       },
@@ -513,8 +537,12 @@
           "weights_mib": {
             "CPU": 1390.67
           },
+          "weights_total_mib": 1390.67,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1390.67
         },
         "raw_matches": []
       },
@@ -592,8 +620,12 @@
           "weights_mib": {
             "CPU": 1801.09
           },
+          "weights_total_mib": 1801.09,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1801.09
         },
         "raw_matches": []
       },
@@ -671,8 +703,12 @@
           "weights_mib": {
             "CPU": 632.52
           },
+          "weights_total_mib": 632.52,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 632.52
         },
         "raw_matches": []
       },
@@ -750,8 +786,12 @@
           "weights_mib": {
             "CPU": 651.63
           },
+          "weights_total_mib": 651.63,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 651.63
         },
         "raw_matches": []
       },
@@ -829,8 +869,12 @@
           "weights_mib": {
             "CPU": 682.72
           },
+          "weights_total_mib": 682.72,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 682.72
         },
         "raw_matches": []
       },
@@ -908,8 +952,12 @@
           "weights_mib": {
             "CPU": 682.24
           },
+          "weights_total_mib": 682.24,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 682.24
         },
         "raw_matches": []
       },
@@ -987,8 +1035,12 @@
           "weights_mib": {
             "CPU": 762.49
           },
+          "weights_total_mib": 762.49,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 762.49
         },
         "raw_matches": []
       },
@@ -1066,8 +1118,12 @@
           "weights_mib": {
             "CPU": 805.68
           },
+          "weights_total_mib": 805.68,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 805.68
         },
         "raw_matches": []
       },
@@ -1145,8 +1201,12 @@
           "weights_mib": {
             "CPU": 958.64
           },
+          "weights_total_mib": 958.64,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 958.64
         },
         "raw_matches": []
       },
@@ -1224,8 +1284,12 @@
           "weights_mib": {
             "CPU": 1013.54
           },
+          "weights_total_mib": 1013.54,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1013.54
         },
         "raw_matches": []
       },
@@ -1723,8 +1787,12 @@
           "weights_mib": {
             "CPU": 661.25
           },
+          "weights_total_mib": 661.25,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 661.25
         },
         "raw_matches": []
       },
@@ -1802,8 +1870,12 @@
           "weights_mib": {
             "CPU": 694.76
           },
+          "weights_total_mib": 694.76,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 694.76
         },
         "raw_matches": []
       },
@@ -1881,8 +1953,12 @@
           "weights_mib": {
             "CPU": 802.01
           },
+          "weights_total_mib": 802.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 802.01
         },
         "raw_matches": []
       },
@@ -1960,8 +2036,12 @@
           "weights_mib": {
             "CPU": 915.96
           },
+          "weights_total_mib": 915.96,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 915.96
         },
         "raw_matches": []
       },
@@ -2039,8 +2119,12 @@
           "weights_mib": {
             "CPU": 1186.25
           },
+          "weights_total_mib": 1186.25,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1186.25
         },
         "raw_matches": []
       },
@@ -2118,8 +2202,12 @@
           "weights_mib": {
             "CPU": 1254.71
           },
+          "weights_total_mib": 1254.71,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1254.71
         },
         "raw_matches": []
       },
@@ -2197,8 +2285,12 @@
           "weights_mib": {
             "CPU": 1349.89
           },
+          "weights_total_mib": 1349.89,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1349.89
         },
         "raw_matches": []
       },
@@ -2276,8 +2368,12 @@
           "weights_mib": {
             "CPU": 1864.18
           },
+          "weights_total_mib": 1864.18,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1864.18
         },
         "raw_matches": []
       },
@@ -2355,8 +2451,12 @@
           "weights_mib": {
             "CPU": 2080.66
           },
+          "weights_total_mib": 2080.66,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2080.66
         },
         "raw_matches": []
       },
@@ -2434,8 +2534,12 @@
           "weights_mib": {
             "CPU": 2281.66
           },
+          "weights_total_mib": 2281.66,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2281.66
         },
         "raw_matches": []
       },
@@ -2513,8 +2617,12 @@
           "weights_mib": {
             "CPU": 2684.15
           },
+          "weights_total_mib": 2684.15,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2684.15
         },
         "raw_matches": []
       },
@@ -2592,8 +2700,12 @@
           "weights_mib": {
             "CPU": 2989.88
           },
+          "weights_total_mib": 2989.88,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2989.88
         },
         "raw_matches": []
       },
@@ -2723,8 +2835,12 @@
           "weights_mib": {
             "CPU": 1429.72
           },
+          "weights_total_mib": 1429.72,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1429.72
         },
         "raw_matches": []
       },
@@ -2802,8 +2918,12 @@
           "weights_mib": {
             "CPU": 1596.82
           },
+          "weights_total_mib": 1596.82,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1596.82
         },
         "raw_matches": []
       },
@@ -2881,8 +3001,12 @@
           "weights_mib": {
             "CPU": 2011.57
           },
+          "weights_total_mib": 2011.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2011.57
         },
         "raw_matches": []
       },
@@ -2960,8 +3084,12 @@
           "weights_mib": {
             "CPU": 2215.57
           },
+          "weights_total_mib": 2215.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2215.57
         },
         "raw_matches": []
       },
@@ -3039,8 +3167,12 @@
           "weights_mib": {
             "CPU": 2368.57
           },
+          "weights_total_mib": 2368.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2368.57
         },
         "raw_matches": []
       },
@@ -3118,8 +3250,12 @@
           "weights_mib": {
             "CPU": 2708.32
           },
+          "weights_total_mib": 2708.32,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2708.32
         },
         "raw_matches": []
       },
@@ -3197,8 +3333,12 @@
           "weights_mib": {
             "CPU": 3001.57
           },
+          "weights_total_mib": 3001.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 3001.57
         },
         "raw_matches": []
       },
@@ -3276,8 +3416,12 @@
           "weights_mib": {
             "CPU": 3887.52
           },
+          "weights_total_mib": 3887.52,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 3887.52
         },
         "raw_matches": []
       },
@@ -3329,8 +3473,12 @@
           "weights_mib": {
             "CPU": 567.54
           },
+          "weights_total_mib": 567.54,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 567.54
         },
         "raw_matches": []
       },
@@ -3408,8 +3556,12 @@
           "weights_mib": {
             "CPU": 639.3
           },
+          "weights_total_mib": 639.3,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 639.3
         },
         "raw_matches": []
       },
@@ -3487,8 +3639,12 @@
           "weights_mib": {
             "CPU": 780.32
           },
+          "weights_total_mib": 780.32,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 780.32
         },
         "raw_matches": []
       },
@@ -3566,8 +3722,12 @@
           "weights_mib": {
             "CPU": 888.43
           },
+          "weights_total_mib": 888.43,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 888.43
         },
         "raw_matches": []
       },
@@ -3645,8 +3805,12 @@
           "weights_mib": {
             "CPU": 934.69
           },
+          "weights_total_mib": 934.69,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 934.69
         },
         "raw_matches": []
       },
@@ -3724,8 +3888,12 @@
           "weights_mib": {
             "CPU": 1067.26
           },
+          "weights_total_mib": 1067.26,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1067.26
         },
         "raw_matches": []
       },
@@ -3803,8 +3971,12 @@
           "weights_mib": {
             "CPU": 1208.1
           },
+          "weights_total_mib": 1208.1,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1208.1
         },
         "raw_matches": []
       },
@@ -3882,8 +4054,12 @@
           "weights_mib": {
             "CPU": 1564.62
           },
+          "weights_total_mib": 1564.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1564.62
         },
         "raw_matches": []
       },
@@ -3961,8 +4137,12 @@
           "weights_mib": {
             "CPU": 784.81
           },
+          "weights_total_mib": 784.81,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 784.81
         },
         "raw_matches": []
       },
@@ -4040,8 +4220,12 @@
           "weights_mib": {
             "CPU": 833.46
           },
+          "weights_total_mib": 833.46,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 833.46
         },
         "raw_matches": []
       },
@@ -4119,8 +4303,12 @@
           "weights_mib": {
             "CPU": 1017.85
           },
+          "weights_total_mib": 1017.85,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1017.85
         },
         "raw_matches": []
       },
@@ -4198,8 +4386,12 @@
           "weights_mib": {
             "CPU": 1169.07
           },
+          "weights_total_mib": 1169.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1169.07
         },
         "raw_matches": []
       },
@@ -4277,8 +4469,12 @@
           "weights_mib": {
             "CPU": 1217.35
           },
+          "weights_total_mib": 1217.35,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1217.35
         },
         "raw_matches": []
       },
@@ -4356,8 +4552,12 @@
           "weights_mib": {
             "CPU": 1397.95
           },
+          "weights_total_mib": 1397.95,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1397.95
         },
         "raw_matches": []
       },
@@ -4435,8 +4635,12 @@
           "weights_mib": {
             "CPU": 1589.83
           },
+          "weights_total_mib": 1589.83,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1589.83
         },
         "raw_matches": []
       },
@@ -4514,8 +4718,12 @@
           "weights_mib": {
             "CPU": 2059.07
           },
+          "weights_total_mib": 2059.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2059.07
         },
         "raw_matches": []
       },
@@ -4593,8 +4801,12 @@
           "weights_mib": {
             "CPU": 339.22
           },
+          "weights_total_mib": 339.22,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 339.22
         },
         "raw_matches": []
       },
@@ -4672,8 +4884,12 @@
           "weights_mib": {
             "CPU": 407.59
           },
+          "weights_total_mib": 407.59,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 407.59
         },
         "raw_matches": []
       },
@@ -4751,8 +4967,12 @@
           "weights_mib": {
             "CPU": 459.69
           },
+          "weights_total_mib": 459.69,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 459.69
         },
         "raw_matches": []
       },
@@ -4830,8 +5050,12 @@
           "weights_mib": {
             "CPU": 479.36
           },
+          "weights_total_mib": 479.36,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 479.36
         },
         "raw_matches": []
       },
@@ -4909,8 +5133,12 @@
           "weights_mib": {
             "CPU": 520.73
           },
+          "weights_total_mib": 520.73,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 520.73
         },
         "raw_matches": []
       },
@@ -4988,8 +5216,12 @@
           "weights_mib": {
             "CPU": 586.41
           },
+          "weights_total_mib": 586.41,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 586.41
         },
         "raw_matches": []
       },
@@ -5067,8 +5299,12 @@
           "weights_mib": {
             "CPU": 625.57
           },
+          "weights_total_mib": 625.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 625.57
         },
         "raw_matches": []
       },
@@ -5146,8 +5382,12 @@
           "weights_mib": {
             "CPU": 765.43
           },
+          "weights_total_mib": 765.43,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 765.43
         },
         "raw_matches": []
       },
@@ -5225,8 +5465,12 @@
           "weights_mib": {
             "CPU": 793.69
           },
+          "weights_total_mib": 793.69,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 793.69
         },
         "raw_matches": []
       },
@@ -5304,8 +5548,12 @@
           "weights_mib": {
             "CPU": 943.79
           },
+          "weights_total_mib": 943.79,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 943.79
         },
         "raw_matches": []
       },
@@ -5383,8 +5631,12 @@
           "weights_mib": {
             "CPU": 1088.93
           },
+          "weights_total_mib": 1088.93,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1088.93
         },
         "raw_matches": []
       },
@@ -5462,8 +5714,12 @@
           "weights_mib": {
             "CPU": 1160.44
           },
+          "weights_total_mib": 1160.44,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1160.44
         },
         "raw_matches": []
       },
@@ -5541,8 +5797,12 @@
           "weights_mib": {
             "CPU": 1257.71
           },
+          "weights_total_mib": 1257.71,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1257.71
         },
         "raw_matches": []
       },
@@ -5620,8 +5880,12 @@
           "weights_mib": {
             "CPU": 1426.59
           },
+          "weights_total_mib": 1426.59,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1426.59
         },
         "raw_matches": []
       },
@@ -5699,8 +5963,12 @@
           "weights_mib": {
             "CPU": 1544.74
           },
+          "weights_total_mib": 1544.74,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1544.74
         },
         "raw_matches": []
       },
@@ -5778,8 +6046,12 @@
           "weights_mib": {
             "CPU": 1911.66
           },
+          "weights_total_mib": 1911.66,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1911.66
         },
         "raw_matches": []
       },
@@ -5857,8 +6129,12 @@
           "weights_mib": {
             "CPU": 641.63
           },
+          "weights_total_mib": 641.63,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 641.63
         },
         "raw_matches": []
       },
@@ -5936,8 +6212,12 @@
           "weights_mib": {
             "CPU": 818.63
           },
+          "weights_total_mib": 818.63,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 818.63
         },
         "raw_matches": []
       },
@@ -6015,8 +6295,12 @@
           "weights_mib": {
             "CPU": 946.13
           },
+          "weights_total_mib": 946.13,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 946.13
         },
         "raw_matches": []
       },
@@ -6094,8 +6378,12 @@
           "weights_mib": {
             "CPU": 1005.01
           },
+          "weights_total_mib": 1005.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1005.01
         },
         "raw_matches": []
       },
@@ -6173,8 +6461,12 @@
           "weights_mib": {
             "CPU": 1167.01
           },
+          "weights_total_mib": 1167.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1167.01
         },
         "raw_matches": []
       },
@@ -6252,8 +6544,12 @@
           "weights_mib": {
             "CPU": 1339.13
           },
+          "weights_total_mib": 1339.13,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1339.13
         },
         "raw_matches": []
       },
@@ -6331,8 +6627,12 @@
           "weights_mib": {
             "CPU": 1734.38
           },
+          "weights_total_mib": 1734.38,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1734.38
         },
         "raw_matches": []
       },

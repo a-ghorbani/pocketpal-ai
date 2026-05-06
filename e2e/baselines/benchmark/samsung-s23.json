@@ -39,8 +39,12 @@
           "weights_mib": {
             "CPU": 663.17
           },
+          "weights_total_mib": 663.17,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 663.17
         },
         "raw_matches": []
       },
@@ -93,8 +97,12 @@
             "CPU": 503.7,
             "OpenCL": 159.47
           },
+          "weights_total_mib": 663.17,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 663.17
         },
         "raw_matches": []
       },
@@ -147,8 +155,12 @@
             "CPU": 397.85,
             "OpenCL": 1544.74
           },
+          "weights_total_mib": 1942.5900000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1942.5900000000001
         },
         "raw_matches": []
       },
@@ -201,8 +213,12 @@
             "CPU": 523.3,
             "OpenCL": 189.03
           },
+          "weights_total_mib": 712.3299999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 712.3299999999999
         },
         "raw_matches": []
       },
@@ -254,8 +270,12 @@
           "weights_mib": {
             "CPU": 875.96
           },
+          "weights_total_mib": 875.96,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 875.96
         },
         "raw_matches": []
       },
@@ -308,8 +328,12 @@
             "CPU": 443.03,
             "OpenCL": 432.92
           },
+          "weights_total_mib": 875.95,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 875.95
         },
         "raw_matches": []
       },
@@ -361,8 +385,12 @@
           "weights_mib": {
             "CPU": 1013.62
           },
+          "weights_total_mib": 1013.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1013.62
         },
         "raw_matches": []
       },
@@ -415,8 +443,12 @@
             "CPU": 125.19,
             "OpenCL": 888.43
           },
+          "weights_total_mib": 1013.6199999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1013.6199999999999
         },
         "raw_matches": []
       },
@@ -468,8 +500,12 @@
           "weights_mib": {
             "CPU": 1059.89
           },
+          "weights_total_mib": 1059.89,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1059.89
         },
         "raw_matches": []
       },
@@ -522,8 +558,12 @@
             "CPU": 125.19,
             "OpenCL": 934.69
           },
+          "weights_total_mib": 1059.88,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1059.88
         },
         "raw_matches": []
       },
@@ -575,8 +615,12 @@
           "weights_mib": {
             "CPU": 1220.27
           },
+          "weights_total_mib": 1220.27,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1220.27
         },
         "raw_matches": []
       },
@@ -629,8 +673,12 @@
             "CPU": 153.01,
             "OpenCL": 1067.26
           },
+          "weights_total_mib": 1220.27,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1220.27
         },
         "raw_matches": []
       },
@@ -682,8 +730,12 @@
           "weights_mib": {
             "CPU": 1390.67
           },
+          "weights_total_mib": 1390.67,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1390.67
         },
         "raw_matches": []
       },
@@ -736,8 +788,12 @@
             "CPU": 182.57,
             "OpenCL": 1208.1
           },
+          "weights_total_mib": 1390.6699999999998,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1390.6699999999998
         },
         "raw_matches": []
       },
@@ -789,8 +845,12 @@
           "weights_mib": {
             "CPU": 1801.09
           },
+          "weights_total_mib": 1801.09,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1801.09
         },
         "raw_matches": []
       },
@@ -843,8 +903,12 @@
             "CPU": 236.47,
             "OpenCL": 1564.62
           },
+          "weights_total_mib": 1801.09,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1801.09
         },
         "raw_matches": []
       },
@@ -896,8 +960,12 @@
           "weights_mib": {
             "CPU": 632.52
           },
+          "weights_total_mib": 632.52,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 632.52
         },
         "raw_matches": []
       },
@@ -951,8 +1019,12 @@
             "CPU_REPACK": 242.68,
             "OpenCL": 306.51
           },
+          "weights_total_mib": 938.52,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 938.52
         },
         "raw_matches": []
       },
@@ -1005,8 +1077,12 @@
             "CPU": 315.3,
             "OpenCL": 1743.77
           },
+          "weights_total_mib": 2059.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2059.07
         },
         "raw_matches": []
       },
@@ -1060,8 +1136,12 @@
             "CPU_REPACK": 242.68,
             "OpenCL": 306.51
           },
+          "weights_total_mib": 957.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 957.62
         },
         "raw_matches": []
       },
@@ -1113,8 +1193,12 @@
           "weights_mib": {
             "CPU": 682.72
           },
+          "weights_total_mib": 682.72,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 682.72
         },
         "raw_matches": []
       },
@@ -1168,8 +1252,12 @@
             "CPU_REPACK": 242.68,
             "OpenCL": 434.97
           },
+          "weights_total_mib": 988.71,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 988.71
         },
         "raw_matches": []
       },
@@ -1221,8 +1309,12 @@
           "weights_mib": {
             "CPU": 682.24
           },
+          "weights_total_mib": 682.24,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 682.24
         },
         "raw_matches": []
       },
@@ -1275,8 +1367,12 @@
             "CPU": 306,
             "OpenCL": 682.24
           },
+          "weights_total_mib": 988.24,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 988.24
         },
         "raw_matches": []
       },
@@ -1328,8 +1424,12 @@
           "weights_mib": {
             "CPU": 762.49
           },
+          "weights_total_mib": 762.49,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 762.49
         },
         "raw_matches": []
       },
@@ -1382,8 +1482,12 @@
             "CPU": 605.13,
             "OpenCL": 463.36
           },
+          "weights_total_mib": 1068.49,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1068.49
         },
         "raw_matches": []
       },
@@ -1435,8 +1539,12 @@
           "weights_mib": {
             "CPU": 805.68
           },
+          "weights_total_mib": 805.68,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 805.68
         },
         "raw_matches": []
       },
@@ -1489,8 +1597,12 @@
             "CPU": 632.32,
             "OpenCL": 479.36
           },
+          "weights_total_mib": 1111.68,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1111.68
         },
         "raw_matches": []
       },
@@ -1542,8 +1654,12 @@
           "weights_mib": {
             "CPU": 958.64
           },
+          "weights_total_mib": 958.64,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 958.64
         },
         "raw_matches": []
       },
@@ -1596,8 +1712,12 @@
             "CPU": 306,
             "OpenCL": 958.64
           },
+          "weights_total_mib": 1264.6399999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1264.6399999999999
         },
         "raw_matches": []
       },
@@ -1694,8 +1814,12 @@
             "CPU": 306,
             "OpenCL": 1013.54
           },
+          "weights_total_mib": 1319.54,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1319.54
         },
         "raw_matches": []
       },
@@ -1747,8 +1871,12 @@
           "weights_mib": {
             "CPU": 661.25
           },
+          "weights_total_mib": 661.25,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 661.25
         },
         "raw_matches": []
       },
@@ -1801,8 +1929,12 @@
             "CPU": 105,
             "OpenCL": 661.25
           },
+          "weights_total_mib": 766.25,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 766.25
         },
         "raw_matches": []
       },
@@ -1854,8 +1986,12 @@
           "weights_mib": {
             "CPU": 694.76
           },
+          "weights_total_mib": 694.76,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 694.76
         },
         "raw_matches": []
       },
@@ -1908,8 +2044,12 @@
             "CPU": 105,
             "OpenCL": 694.76
           },
+          "weights_total_mib": 799.76,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 799.76
         },
         "raw_matches": []
       },
@@ -1961,8 +2101,12 @@
           "weights_mib": {
             "CPU": 802.01
           },
+          "weights_total_mib": 802.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 802.01
         },
         "raw_matches": []
       },
@@ -2015,8 +2159,12 @@
             "CPU": 105,
             "OpenCL": 802.01
           },
+          "weights_total_mib": 907.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 907.01
         },
         "raw_matches": []
       },
@@ -2068,8 +2216,12 @@
           "weights_mib": {
             "CPU": 915.96
           },
+          "weights_total_mib": 915.96,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 915.96
         },
         "raw_matches": []
       },
@@ -2122,8 +2274,12 @@
             "CPU": 105,
             "OpenCL": 915.96
           },
+          "weights_total_mib": 1020.96,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1020.96
         },
         "raw_matches": []
       },
@@ -2175,8 +2331,12 @@
           "weights_mib": {
             "CPU": 1186.25
           },
+          "weights_total_mib": 1186.25,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1186.25
         },
         "raw_matches": []
       },
@@ -2229,8 +2389,12 @@
             "CPU": 136,
             "OpenCL": 1186.25
           },
+          "weights_total_mib": 1322.25,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1322.25
         },
         "raw_matches": []
       },
@@ -2282,8 +2446,12 @@
           "weights_mib": {
             "CPU": 1254.71
           },
+          "weights_total_mib": 1254.71,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1254.71
         },
         "raw_matches": []
       },
@@ -2336,8 +2504,12 @@
             "CPU": 1189.36,
             "OpenCL": 65.34
           },
+          "weights_total_mib": 1254.6999999999998,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1254.6999999999998
         },
         "raw_matches": []
       },
@@ -2390,8 +2562,12 @@
             "CPU": 105,
             "OpenCL": 915.96
           },
+          "weights_total_mib": 1020.96,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1020.96
         },
         "raw_matches": []
       },
@@ -2444,8 +2620,12 @@
             "CPU": 1272.07,
             "OpenCL": 77.82
           },
+          "weights_total_mib": 1349.8899999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1349.8899999999999
         },
         "raw_matches": []
       },
@@ -2497,8 +2677,12 @@
           "weights_mib": {
             "CPU": 1864.18
           },
+          "weights_total_mib": 1864.18,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1864.18
         },
         "raw_matches": []
       },
@@ -2551,8 +2735,12 @@
             "CPU": 700.36,
             "OpenCL": 1163.82
           },
+          "weights_total_mib": 1864.1799999999998,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1864.1799999999998
         },
         "raw_matches": []
       },
@@ -2604,8 +2792,12 @@
           "weights_mib": {
             "CPU": 2080.66
           },
+          "weights_total_mib": 2080.66,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2080.66
         },
         "raw_matches": []
       },
@@ -2657,8 +2849,12 @@
           "weights_mib": {
             "CPU": 2281.66
           },
+          "weights_total_mib": 2281.66,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2281.66
         },
         "raw_matches": []
       },
@@ -2710,8 +2906,12 @@
           "weights_mib": {
             "CPU": 2684.15
           },
+          "weights_total_mib": 2684.15,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2684.15
         },
         "raw_matches": []
       },
@@ -2763,8 +2963,12 @@
           "weights_mib": {
             "CPU": 1429.72
           },
+          "weights_total_mib": 1429.72,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1429.72
         },
         "raw_matches": []
       },
@@ -2817,8 +3021,12 @@
             "CPU": 1428.96,
             "OpenCL": 403.72
           },
+          "weights_total_mib": 1832.68,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1832.68
         },
         "raw_matches": []
       },
@@ -2870,8 +3078,12 @@
           "weights_mib": {
             "CPU": 1596.82
           },
+          "weights_total_mib": 1596.82,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1596.82
         },
         "raw_matches": []
       },
@@ -2924,8 +3136,12 @@
             "CPU": 1596.06,
             "OpenCL": 481.57
           },
+          "weights_total_mib": 2077.63,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2077.63
         },
         "raw_matches": []
       },
@@ -2978,8 +3194,12 @@
             "CPU": 1596.06,
             "OpenCL": 481.57
           },
+          "weights_total_mib": 2077.63,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2077.63
         },
         "raw_matches": []
       },
@@ -3031,8 +3251,12 @@
           "weights_mib": {
             "CPU": 2215.57
           },
+          "weights_total_mib": 2215.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2215.57
         },
         "raw_matches": []
       },
@@ -3084,8 +3308,12 @@
           "weights_mib": {
             "CPU": 2368.57
           },
+          "weights_total_mib": 2368.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2368.57
         },
         "raw_matches": []
       },
@@ -3137,8 +3365,12 @@
           "weights_mib": {
             "CPU": 2708.32
           },
+          "weights_total_mib": 2708.32,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2708.32
         },
         "raw_matches": []
       },
@@ -3190,8 +3422,12 @@
           "weights_mib": {
             "CPU": 567.54
           },
+          "weights_total_mib": 567.54,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 567.54
         },
         "raw_matches": []
       },
@@ -3244,8 +3480,12 @@
             "CPU": 561.08,
             "OpenCL": 159.47
           },
+          "weights_total_mib": 720.5500000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 720.5500000000001
         },
         "raw_matches": []
       },
@@ -3299,8 +3539,12 @@
             "CPU_REPACK": 242.68,
             "OpenCL": 306.51
           },
+          "weights_total_mib": 957.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 957.62
         },
         "raw_matches": []
       },
@@ -3353,8 +3597,12 @@
             "CPU": 632.84,
             "OpenCL": 189.03
           },
+          "weights_total_mib": 821.87,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 821.87
         },
         "raw_matches": []
       },
@@ -3406,8 +3654,12 @@
           "weights_mib": {
             "CPU": 780.32
           },
+          "weights_total_mib": 780.32,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 780.32
         },
         "raw_matches": []
       },
@@ -3460,8 +3712,12 @@
             "CPU": 529.97,
             "OpenCL": 432.92
           },
+          "weights_total_mib": 962.8900000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 962.8900000000001
         },
         "raw_matches": []
       },
@@ -3513,8 +3769,12 @@
           "weights_mib": {
             "CPU": 888.43
           },
+          "weights_total_mib": 888.43,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 888.43
         },
         "raw_matches": []
       },
@@ -3567,8 +3827,12 @@
             "CPU": 182.57,
             "OpenCL": 888.43
           },
+          "weights_total_mib": 1071,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1071
         },
         "raw_matches": []
       },
@@ -3620,8 +3884,12 @@
           "weights_mib": {
             "CPU": 934.69
           },
+          "weights_total_mib": 934.69,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 934.69
         },
         "raw_matches": []
       },
@@ -3674,8 +3942,12 @@
             "CPU": 182.57,
             "OpenCL": 934.69
           },
+          "weights_total_mib": 1117.26,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1117.26
         },
         "raw_matches": []
       },
@@ -3727,8 +3999,12 @@
           "weights_mib": {
             "CPU": 1067.26
           },
+          "weights_total_mib": 1067.26,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1067.26
         },
         "raw_matches": []
       },
@@ -3781,8 +4057,12 @@
             "CPU": 182.57,
             "OpenCL": 1067.26
           },
+          "weights_total_mib": 1249.83,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1249.83
         },
         "raw_matches": []
       },
@@ -3834,8 +4114,12 @@
           "weights_mib": {
             "CPU": 1208.1
           },
+          "weights_total_mib": 1208.1,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1208.1
         },
         "raw_matches": []
       },
@@ -3888,8 +4172,12 @@
             "CPU": 182.57,
             "OpenCL": 1208.1
           },
+          "weights_total_mib": 1390.6699999999998,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1390.6699999999998
         },
         "raw_matches": []
       },
@@ -3941,8 +4229,12 @@
           "weights_mib": {
             "CPU": 1564.62
           },
+          "weights_total_mib": 1564.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1564.62
         },
         "raw_matches": []
       },
@@ -3995,8 +4287,12 @@
             "CPU": 236.47,
             "OpenCL": 1564.62
           },
+          "weights_total_mib": 1801.09,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1801.09
         },
         "raw_matches": []
       },
@@ -4048,8 +4344,12 @@
           "weights_mib": {
             "CPU": 784.81
           },
+          "weights_total_mib": 784.81,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 784.81
         },
         "raw_matches": []
       },
@@ -4102,8 +4402,12 @@
             "CPU": 580.32,
             "OpenCL": 204.49
           },
+          "weights_total_mib": 784.8100000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 784.8100000000001
         },
         "raw_matches": []
       },
@@ -4155,8 +4459,12 @@
           "weights_mib": {
             "CPU": 2747.73
           },
+          "weights_total_mib": 2747.73,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2747.73
         },
         "raw_matches": []
       },
@@ -4209,8 +4517,12 @@
             "CPU": 589.56,
             "OpenCL": 243.9
           },
+          "weights_total_mib": 833.4599999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 833.4599999999999
         },
         "raw_matches": []
       },
@@ -4262,8 +4574,12 @@
           "weights_mib": {
             "CPU": 1017.85
           },
+          "weights_total_mib": 1017.85,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1017.85
         },
         "raw_matches": []
       },
@@ -4316,8 +4632,12 @@
             "CPU": 488.45,
             "OpenCL": 529.4
           },
+          "weights_total_mib": 1017.8499999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1017.8499999999999
         },
         "raw_matches": []
       },
@@ -4369,8 +4689,12 @@
           "weights_mib": {
             "CPU": 1169.07
           },
+          "weights_total_mib": 1169.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1169.07
         },
         "raw_matches": []
       },
@@ -4423,8 +4747,12 @@
             "CPU": 166.92,
             "OpenCL": 1002.15
           },
+          "weights_total_mib": 1169.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1169.07
         },
         "raw_matches": []
       },
@@ -4476,8 +4804,12 @@
           "weights_mib": {
             "CPU": 1217.35
           },
+          "weights_total_mib": 1217.35,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1217.35
         },
         "raw_matches": []
       },
@@ -4530,8 +4862,12 @@
             "CPU": 166.92,
             "OpenCL": 1050.43
           },
+          "weights_total_mib": 1217.3500000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1217.3500000000001
         },
         "raw_matches": []
       },
@@ -4583,8 +4919,12 @@
           "weights_mib": {
             "CPU": 1397.95
           },
+          "weights_total_mib": 1397.95,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1397.95
         },
         "raw_matches": []
       },
@@ -4637,8 +4977,12 @@
             "CPU": 204.02,
             "OpenCL": 1193.93
           },
+          "weights_total_mib": 1397.95,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1397.95
         },
         "raw_matches": []
       },
@@ -4690,8 +5034,12 @@
           "weights_mib": {
             "CPU": 1589.83
           },
+          "weights_total_mib": 1589.83,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1589.83
         },
         "raw_matches": []
       },
@@ -4744,8 +5092,12 @@
             "CPU": 243.43,
             "OpenCL": 1346.4
           },
+          "weights_total_mib": 1589.8300000000002,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1589.8300000000002
         },
         "raw_matches": []
       },
@@ -4797,8 +5149,12 @@
           "weights_mib": {
             "CPU": 2059.07
           },
+          "weights_total_mib": 2059.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2059.07
         },
         "raw_matches": []
       },
@@ -4851,8 +5207,12 @@
             "CPU": 315.3,
             "OpenCL": 1743.77
           },
+          "weights_total_mib": 2059.07,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2059.07
         },
         "raw_matches": []
       },
@@ -4904,8 +5264,12 @@
           "weights_mib": {
             "CPU": 339.22
           },
+          "weights_total_mib": 339.22,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 339.22
         },
         "raw_matches": []
       },
@@ -4958,8 +5322,12 @@
             "CPU": 302.75,
             "OpenCL": 203.19
           },
+          "weights_total_mib": 505.94,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 505.94
         },
         "raw_matches": []
       },
@@ -5012,8 +5380,12 @@
             "CPU": 102,
             "OpenCL": 1734.38
           },
+          "weights_total_mib": 1836.38,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1836.38
         },
         "raw_matches": []
       },
@@ -5066,8 +5438,12 @@
             "CPU": 321.88,
             "OpenCL": 284.64
           },
+          "weights_total_mib": 606.52,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 606.52
         },
         "raw_matches": []
       },
@@ -5119,8 +5495,12 @@
           "weights_mib": {
             "CPU": 459.69
           },
+          "weights_total_mib": 459.69,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 459.69
         },
         "raw_matches": []
       },
@@ -5173,8 +5553,12 @@
             "CPU": 305.92,
             "OpenCL": 352.7
           },
+          "weights_total_mib": 658.62,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 658.62
         },
         "raw_matches": []
       },
@@ -5227,8 +5611,12 @@
             "CPU": 321.88,
             "OpenCL": 284.64
           },
+          "weights_total_mib": 606.52,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 606.52
         },
         "raw_matches": []
       },
@@ -5281,8 +5669,12 @@
             "CPU": 198.93,
             "OpenCL": 479.36
           },
+          "weights_total_mib": 678.29,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 678.29
         },
         "raw_matches": []
       },
@@ -5334,8 +5726,12 @@
           "weights_mib": {
             "CPU": 520.73
           },
+          "weights_total_mib": 520.73,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 520.73
         },
         "raw_matches": []
       },
@@ -5388,8 +5784,12 @@
             "CPU": 198.93,
             "OpenCL": 520.73
           },
+          "weights_total_mib": 719.6600000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 719.6600000000001
         },
         "raw_matches": []
       },
@@ -5441,8 +5841,12 @@
           "weights_mib": {
             "CPU": 586.41
           },
+          "weights_total_mib": 586.41,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 586.41
         },
         "raw_matches": []
       },
@@ -5495,8 +5899,12 @@
             "CPU": 198.93,
             "OpenCL": 586.42
           },
+          "weights_total_mib": 785.3499999999999,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 785.3499999999999
         },
         "raw_matches": []
       },
@@ -5548,8 +5956,12 @@
           "weights_mib": {
             "CPU": 625.57
           },
+          "weights_total_mib": 625.57,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 625.57
         },
         "raw_matches": []
       },
@@ -5602,8 +6014,12 @@
             "CPU": 198.93,
             "OpenCL": 625.57
           },
+          "weights_total_mib": 824.5,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 824.5
         },
         "raw_matches": []
       },
@@ -5700,8 +6116,12 @@
             "CPU": 257.66,
             "OpenCL": 765.44
           },
+          "weights_total_mib": 1023.1000000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1023.1000000000001
         },
         "raw_matches": []
       },
@@ -5753,8 +6173,12 @@
           "weights_mib": {
             "CPU": 793.69
           },
+          "weights_total_mib": 793.69,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 793.69
         },
         "raw_matches": []
       },
@@ -5807,8 +6231,12 @@
             "CPU": 722.45,
             "OpenCL": 404.67
           },
+          "weights_total_mib": 1127.1200000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1127.1200000000001
         },
         "raw_matches": []
       },
@@ -5861,8 +6289,12 @@
             "CPU": 198.93,
             "OpenCL": 479.36
           },
+          "weights_total_mib": 678.29,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 678.29
         },
         "raw_matches": []
       },
@@ -5915,8 +6347,12 @@
             "CPU": 774.07,
             "OpenCL": 567.57
           },
+          "weights_total_mib": 1341.64,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1341.64
         },
         "raw_matches": []
       },
@@ -5968,8 +6404,12 @@
           "weights_mib": {
             "CPU": 1088.93
           },
+          "weights_total_mib": 1088.93,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1088.93
         },
         "raw_matches": []
       },
@@ -6022,8 +6462,12 @@
             "CPU": 714.96,
             "OpenCL": 771.82
           },
+          "weights_total_mib": 1486.7800000000002,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1486.7800000000002
         },
         "raw_matches": []
       },
@@ -6075,8 +6519,12 @@
           "weights_mib": {
             "CPU": 1160.44
           },
+          "weights_total_mib": 1160.44,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1160.44
         },
         "raw_matches": []
       },
@@ -6128,8 +6576,12 @@
           "weights_mib": {
             "CPU": 1257.71
           },
+          "weights_total_mib": 1257.71,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1257.71
         },
         "raw_matches": []
       },
@@ -6182,8 +6634,12 @@
             "CPU": 397.85,
             "OpenCL": 1257.71
           },
+          "weights_total_mib": 1655.56,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1655.56
         },
         "raw_matches": []
       },
@@ -6235,8 +6691,12 @@
           "weights_mib": {
             "CPU": 1426.59
           },
+          "weights_total_mib": 1426.59,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1426.59
         },
         "raw_matches": []
       },
@@ -6289,8 +6749,12 @@
             "CPU": 397.85,
             "OpenCL": 1426.59
           },
+          "weights_total_mib": 1824.44,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1824.44
         },
         "raw_matches": []
       },
@@ -6343,8 +6807,12 @@
             "CPU": 397.85,
             "OpenCL": 1257.71
           },
+          "weights_total_mib": 1655.56,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1655.56
         },
         "raw_matches": []
       },
@@ -6397,8 +6865,12 @@
             "CPU": 397.85,
             "OpenCL": 1544.74
           },
+          "weights_total_mib": 1942.5900000000001,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1942.5900000000001
         },
         "raw_matches": []
       },
@@ -6450,8 +6922,12 @@
           "weights_mib": {
             "CPU": 1911.66
           },
+          "weights_total_mib": 1911.66,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1911.66
         },
         "raw_matches": []
       },
@@ -6504,8 +6980,12 @@
             "CPU": 515.31,
             "OpenCL": 1911.66
           },
+          "weights_total_mib": 2426.9700000000003,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 2426.9700000000003
         },
         "raw_matches": []
       },
@@ -6602,8 +7082,12 @@
             "CPU": 641.25,
             "OpenCL": 79.13
           },
+          "weights_total_mib": 720.38,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 720.38
         },
         "raw_matches": []
       },
@@ -6655,8 +7139,12 @@
           "weights_mib": {
             "CPU": 818.63
           },
+          "weights_total_mib": 818.63,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 818.63
         },
         "raw_matches": []
       },
@@ -6709,8 +7197,12 @@
             "CPU": 491.25,
             "OpenCL": 406.13
           },
+          "weights_total_mib": 897.38,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 897.38
         },
         "raw_matches": []
       },
@@ -6763,8 +7255,12 @@
             "CPU": 641.25,
             "OpenCL": 79.13
           },
+          "weights_total_mib": 720.38,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 720.38
         },
         "raw_matches": []
       },
@@ -6817,8 +7313,12 @@
             "CPU": 78.75,
             "OpenCL": 946.13
           },
+          "weights_total_mib": 1024.88,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1024.88
         },
         "raw_matches": []
       },
@@ -6870,8 +7370,12 @@
           "weights_mib": {
             "CPU": 1005.01
           },
+          "weights_total_mib": 1005.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1005.01
         },
         "raw_matches": []
       },
@@ -6924,8 +7428,12 @@
             "CPU": 78.75,
             "OpenCL": 1005.01
           },
+          "weights_total_mib": 1083.76,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1083.76
         },
         "raw_matches": []
       },
@@ -6977,8 +7485,12 @@
           "weights_mib": {
             "CPU": 1167.01
           },
+          "weights_total_mib": 1167.01,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1167.01
         },
         "raw_matches": []
       },
@@ -7031,8 +7543,12 @@
             "CPU": 78.75,
             "OpenCL": 1167.01
           },
+          "weights_total_mib": 1245.76,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1245.76
         },
         "raw_matches": []
       },
@@ -7084,8 +7600,12 @@
           "weights_mib": {
             "CPU": 1339.13
           },
+          "weights_total_mib": 1339.13,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1339.13
         },
         "raw_matches": []
       },
@@ -7138,8 +7658,12 @@
             "CPU": 78.75,
             "OpenCL": 1339.13
           },
+          "weights_total_mib": 1417.88,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1417.88
         },
         "raw_matches": []
       },
@@ -7192,8 +7716,12 @@
             "CPU": 78.75,
             "OpenCL": 946.13
           },
+          "weights_total_mib": 1024.88,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1024.88
         },
         "raw_matches": []
       },
@@ -7246,8 +7774,12 @@
             "CPU": 102,
             "OpenCL": 1734.38
           },
+          "weights_total_mib": 1836.38,
           "kv_cache_mib": {},
-          "compute_mib": {}
+          "kv_cache_total_mib": 0,
+          "compute_mib": {},
+          "compute_total_mib": 0,
+          "total_mib": 1836.38
         },
         "raw_matches": []
       },
