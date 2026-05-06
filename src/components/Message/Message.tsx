@@ -436,9 +436,18 @@ export const Message = observer(
     const showAssistantFooter =
       !currentUserIsAuthor &&
       (message.type === 'assistant_turn' || message.type === 'text');
+    // Assistant-turn rows render no chat-bubble background, and their
+    // child blocks (text, reasoning, tool chip, html preview, footer)
+    // each size to their own content. The HtmlPreviewBubble's WebView
+    // in particular has no intrinsic width — without an explicit width
+    // here the wrapper collapses to whatever non-html sibling is
+    // widest (or to nothing when an html-only step is mid-stream).
+    // Forcing `width: messageWidth` gives the WebView a budget to
+    // stretch into; text-only siblings still wrap to their natural
+    // width via MarkdownView's own `maxWidth` cap.
     const innerContent =
       message.type === 'assistant_turn' ? (
-        <View>
+        <View style={{width: messageWidth}}>
           {renderAssistantTurn()}
           {showAssistantFooter && <AssistantTurnFooter message={message} />}
         </View>
