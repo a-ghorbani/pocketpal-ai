@@ -1,5 +1,6 @@
 import React from 'react';
 import {Platform, Keyboard} from 'react-native';
+import {runInAction} from 'mobx';
 
 import {
   fireEvent,
@@ -10,7 +11,8 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore} from '../../../store';
+import {modelStore, uiStore, ttsStore} from '../../../store';
+import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
 
@@ -229,6 +231,105 @@ describe('SettingsScreen', () => {
     });
 
     expect(modelStore.setImageMaxTokens).toHaveBeenCalledWith(768);
+  });
+
+  describe('TTS availability toggle', () => {
+    afterEach(() => {
+      // Reset observable fields between tests — beforeEach's clearAllMocks()
+      // resets jest.fn() call lists but not field values.
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = false;
+        ttsStore.userTTSOverride = null;
+      });
+    });
+
+    it('§6.A — high-memory, no override: switch ON, helper line hidden', async () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = true;
+        ttsStore.userTTSOverride = null;
+      });
+      const {getByTestId, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      const sw = getByTestId('tts-availability-switch');
+      expect(sw.props.value).toBe(true);
+      expect(
+        queryByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
+      ).toBeNull();
+    });
+
+    it('§6.B — low-memory, no override: switch OFF, helper line visible', async () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = false;
+        ttsStore.userTTSOverride = null;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      const sw = getByTestId('tts-availability-switch');
+      expect(sw.props.value).toBe(false);
+      expect(
+        getByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
+      ).toBeTruthy();
+    });
+
+    it('§6.C — low-memory: toggling ON calls setUserTTSOverride(true)', async () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = false;
+        ttsStore.userTTSOverride = null;
+      });
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      const sw = getByTestId('tts-availability-switch');
+
+      await act(async () => {
+        fireEvent(sw, 'valueChange', true);
+      });
+
+      expect(ttsStore.setUserTTSOverride).toHaveBeenCalledWith(true);
+    });
+
+    it('§6.D — high-memory: toggling OFF calls setUserTTSOverride(false)', async () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = true;
+        ttsStore.userTTSOverride = null;
+      });
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      const sw = getByTestId('tts-availability-switch');
+
+      await act(async () => {
+        fireEvent(sw, 'valueChange', false);
+      });
+
+      expect(ttsStore.setUserTTSOverride).toHaveBeenCalledWith(false);
+    });
+
+    it('§9f — low-memory + opt-in: switch ON, helper line still visible', async () => {
+      runInAction(() => {
+        ttsStore.deviceMeetsMemory = false;
+        ttsStore.userTTSOverride = true;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      const sw = getByTestId('tts-availability-switch');
+      expect(sw.props.value).toBe(true);
+      // Helper line tracks deviceMeetsMemory, NOT the override.
+      expect(
+        getByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
+      ).toBeTruthy();
+    });
   });
 
   it('shows effective value when image_max_tokens exceeds n_ctx', async () => {
