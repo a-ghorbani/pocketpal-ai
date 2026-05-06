@@ -424,9 +424,20 @@ export async function* runAgent(
         break;
       }
 
+      // Use `content` (parsed natural-language preamble), NOT `text`
+      // (raw streamed bytes). For tool-calling turns `text` includes
+      // the model's tool-call markers and the full arguments JSON
+      // (e.g. the entire `render_html` html string); putting that into
+      // assistantMsg.content makes the chat template render the
+      // tool_call TWICE on replay — once via `content` and once via
+      // the structured `tool_calls` field. That doubles the prompt
+      // size and breaks KV-cache prefix-match against turn N-1's
+      // streamed bytes, so the engine fully prefills again. `content`
+      // is the clean preamble (often empty for tool-only turns); the
+      // structured `tool_calls` arg below carries the actual call.
       messages = buildNextTurnMessages(
         messages,
-        finishedResult.text ?? finishedResult.content ?? '',
+        finishedResult.content ?? '',
         calls,
         outcomes,
         finishedResult.reasoning_content,
