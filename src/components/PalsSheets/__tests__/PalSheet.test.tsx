@@ -710,18 +710,10 @@ describe('PalSheet', () => {
 
       // Toggle calculate and datetime talents on
       await act(async () => {
-        fireEvent(
-          getByTestId('talent-switch-calculate'),
-          'valueChange',
-          true,
-        );
+        fireEvent(getByTestId('talent-switch-calculate'), 'valueChange', true);
       });
       await act(async () => {
-        fireEvent(
-          getByTestId('talent-switch-datetime'),
-          'valueChange',
-          true,
-        );
+        fireEvent(getByTestId('talent-switch-datetime'), 'valueChange', true);
       });
 
       // Submit the form
@@ -778,11 +770,7 @@ describe('PalSheet', () => {
 
       // Toggle calculate off
       await act(async () => {
-        fireEvent(
-          getByTestId('talent-switch-calculate'),
-          'valueChange',
-          false,
-        );
+        fireEvent(getByTestId('talent-switch-calculate'), 'valueChange', false);
       });
 
       // Submit the form
