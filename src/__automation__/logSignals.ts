@@ -20,7 +20,7 @@
  * Hexagon literals verified at HEAD per WHAT D2).
  */
 export const BENCH_LOG_RE =
-  /(ggml_opencl|using device GPUOpenCL|ggml_backend_|Adreno large buffer|offloaded \d+\/\d+ layers|load_tensors:|llama_model_load|ggml_cl|adreno_gen|ggml-hex|ggml_hexagon|Hexagon backend|new session: HTP|Hexagon Arch version)/;
+  /(ggml_opencl|using device GPUOpenCL|ggml_backend_|Adreno large buffer|offloaded \d+\/\d+ layers|load_tensors:|llama_model_load|ggml_cl|adreno_gen|ggml-hex|ggml_hexagon|Hexagon backend|new session: HTP|Hexagon Arch version|KV buffer size|compute buffer size)/;
 
 export interface LogSignals {
   opencl_init: boolean;
@@ -37,8 +37,30 @@ export interface LogSignals {
   hexagon_device_name: string | null;
   offloaded_layers: number | null;
   total_layers: number | null;
+  /** Memory buffers reported by llama.cpp at load + context-init time.
+   * Deterministic given (model, backend, context params) — does not depend
+   * on OS / PSS / GC state. Sources:
+   *   - weights_mib: `load_tensors: <DEV> model buffer size = X MiB`
+   *     (cpp/llama-model.cpp). Keys include "CPU", "CPU_REPACK", "OpenCL",
+   *     "HTP0".."HTP5", "HTP0-REPACK".."HTP5-REPACK", etc.
+   *   - kv_cache_mib: `<func>: <DEV> KV buffer size = X MiB`
+   *     (cpp/llama-kv-cache.cpp:267).
+   *   - compute_mib: `<func>: <DEV> compute buffer size = X MiB`
+   *     (cpp/llama-context.cpp:608).
+   * Empty objects when the cell failed before the corresponding lines fired. */
+  memory_buffers: MemoryBuffers;
   /** First 20 matched lines, kept for human debugging. Never the primary data. */
   raw_matches: string[];
+}
+
+export interface MemoryBuffers {
+  /** Per-allocator weight buffer sizes (MiB). Sum equals total model weight
+   * memory at load time. */
+  weights_mib: Record<string, number>;
+  /** Per-allocator KV cache buffer sizes (MiB). */
+  kv_cache_mib: Record<string, number>;
+  /** Per-allocator compute scratch buffer sizes (MiB). */
+  compute_mib: Record<string, number>;
 }
 
 export type EffectiveBackend =
@@ -65,6 +87,11 @@ export function emptyLogSignals(): LogSignals {
     hexagon_device_name: null,
     offloaded_layers: null,
     total_layers: null,
+    memory_buffers: {
+      weights_mib: {},
+      kv_cache_mib: {},
+      compute_mib: {},
+    },
     raw_matches: [],
   };
 }
@@ -103,6 +130,18 @@ export function deriveLogSignals(lines: string[]): LogSignals {
   // layers, including Hexagon.
   const hexagonInitRe = /ggml-hex:\s+Hexagon backend.*allocating new registry/;
   const hexagonDeviceRe = /ggml-hex:\s+new session:\s+(HTP\d+)/;
+  // Memory buffer anchors. llama.cpp emits these at load_tensors time and
+  // at context-init time; the device label is a fixed-width left-padded
+  // field (`%10s`), so we strip surrounding whitespace before keying.
+  //   "load_tensors:          CPU model buffer size =  189.42 MiB"
+  //   "load_tensors:  HTP0-REPACK model buffer size =  114.75 MiB"
+  //   "llama_kv_cache:        CPU KV buffer size =    8.50 MiB"
+  //   "llama_context:        CPU compute buffer size =  296.05 MiB"
+  const weightBufferRe =
+    /load_tensors:\s+(\S+)\s+model buffer size\s*=\s*([\d.]+)\s*MiB/;
+  const kvBufferRe = /:\s+(\S+)\s+KV buffer size\s*=\s*([\d.]+)\s*MiB/;
+  const computeBufferRe =
+    /:\s+(\S+)\s+compute buffer size\s*=\s*([\d.]+)\s*MiB/;
 
   for (const line of lines) {
     if (signals.raw_matches.length < RAW_MATCHES_CAP) {
@@ -172,6 +211,25 @@ export function deriveLogSignals(lines: string[]): LogSignals {
       const m = hexagonDeviceRe.exec(line);
       if (m) {
         signals.hexagon_device_name = m[1];
+      }
+    }
+
+    // Memory buffers — last-write-wins per (kind, device) key. llama.cpp
+    // only prints each buffer line once per context init, so collisions
+    // would mean a re-init within the same listener window; taking the
+    // latest value is correct for that case.
+    const wm = weightBufferRe.exec(line);
+    if (wm) {
+      signals.memory_buffers.weights_mib[wm[1]] = Number(wm[2]);
+    } else {
+      const km = kvBufferRe.exec(line);
+      if (km) {
+        signals.memory_buffers.kv_cache_mib[km[1]] = Number(km[2]);
+      } else {
+        const cm = computeBufferRe.exec(line);
+        if (cm) {
+          signals.memory_buffers.compute_mib[cm[1]] = Number(cm[2]);
+        }
       }
     }
   }

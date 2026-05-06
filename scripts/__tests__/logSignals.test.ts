@@ -82,6 +82,11 @@ describe('deriveLogSignals', () => {
       hexagon_device_name: null,
       offloaded_layers: null,
       total_layers: null,
+      memory_buffers: {
+        weights_mib: {},
+        kv_cache_mib: {},
+        compute_mib: {},
+      },
       raw_matches: [],
     });
   });
@@ -353,5 +358,73 @@ describe('deriveEffectiveBackend (Hexagon)', () => {
     expect(signals.opencl_init).toBe(true);
     expect(signals.hexagon_init).toBe(true);
     expect(deriveEffectiveBackend(signals)).toBe('hexagon');
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Memory buffers
+// -----------------------------------------------------------------------------
+
+describe('deriveLogSignals — memory_buffers', () => {
+  it('parses CPU-only weights from load_tensors lines', () => {
+    const signals = deriveLogSignals([
+      'load_tensors:          CPU model buffer size =  1169.07 MiB',
+      'llama_kv_cache:        CPU KV buffer size =    8.50 MiB',
+      'llama_context:        CPU compute buffer size =  296.05 MiB',
+    ]);
+    expect(signals.memory_buffers.weights_mib).toEqual({CPU: 1169.07});
+    expect(signals.memory_buffers.kv_cache_mib).toEqual({CPU: 8.5});
+    expect(signals.memory_buffers.compute_mib).toEqual({CPU: 296.05});
+  });
+
+  it('parses split CPU + OpenCL weights (Adreno path)', () => {
+    const signals = deriveLogSignals([
+      'load_tensors:          CPU model buffer size =   166.92 MiB',
+      'load_tensors:       OpenCL model buffer size =  1002.15 MiB',
+    ]);
+    expect(signals.memory_buffers.weights_mib).toEqual({
+      CPU: 166.92,
+      OpenCL: 1002.15,
+    });
+  });
+
+  it('parses Hexagon multi-session split with REPACK overhead', () => {
+    const signals = deriveLogSignals([
+      'load_tensors:          CPU model buffer size =   189.42 MiB',
+      'load_tensors:   CPU_REPACK model buffer size =   243.43 MiB',
+      'load_tensors:         HTP0 model buffer size =     0.08 MiB',
+      'load_tensors:  HTP0-REPACK model buffer size =   114.75 MiB',
+      'load_tensors:         HTP1 model buffer size =     0.08 MiB',
+      'load_tensors:  HTP1-REPACK model buffer size =   135.00 MiB',
+    ]);
+    expect(signals.memory_buffers.weights_mib).toEqual({
+      CPU: 189.42,
+      CPU_REPACK: 243.43,
+      HTP0: 0.08,
+      'HTP0-REPACK': 114.75,
+      HTP1: 0.08,
+      'HTP1-REPACK': 135.0,
+    });
+  });
+
+  it('starts empty when no buffer lines are seen (failure path)', () => {
+    const signals = deriveLogSignals([
+      'I/RNLlama: loadModel:240 Using n_parallel: 1',
+      'load_tensors: offloaded 0/0 layers to GPU',
+    ]);
+    expect(signals.memory_buffers.weights_mib).toEqual({});
+    expect(signals.memory_buffers.kv_cache_mib).toEqual({});
+    expect(signals.memory_buffers.compute_mib).toEqual({});
+  });
+
+  it('last-write-wins on duplicate (kind, device) keys', () => {
+    // llama.cpp normally prints each buffer once, but if the listener
+    // window straddles a re-init the second value is what was actually
+    // loaded for the bench reps.
+    const signals = deriveLogSignals([
+      'load_tensors:          CPU model buffer size =   100.00 MiB',
+      'load_tensors:          CPU model buffer size =   200.00 MiB',
+    ]);
+    expect(signals.memory_buffers.weights_mib).toEqual({CPU: 200});
   });
 });
