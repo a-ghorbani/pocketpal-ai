@@ -270,25 +270,31 @@ export function deriveLogSignals(lines: string[]): LogSignals {
 /**
  * Map a parsed LogSignals payload to an effective-backend label.
  *
- *   - hexagon_init, all layers offloaded -> hexagon
- *   - hexagon_init, partial offload -> cpu+hexagon-partial
- *   - hexagon_init, offload counts unknown -> unknown (symmetric with the
- *     OpenCL fallback per WHAT D2; can fire when init aborts before the
- *     offload line prints)
- *   - no opencl/hexagon init -> cpu
- *   - opencl init, all layers offloaded, no large-buffer regression -> opencl
- *   - opencl init, partial offload -> cpu+opencl-partial
- *   - large_buffer_unsupported -> cpu+opencl-partial (regression co-occurs
- *     with CPU reassignment even when the offloaded count "matches")
- *   - else -> unknown (logs were collected but no signal; investigate)
+ * Ground truth: `memory_buffers.weights_mib` keys. llama.cpp emits one
+ * `load_tensors: <DEV> model buffer size = X MiB` line per allocator that
+ * actually received tensors, so the key set is exact evidence of which
+ * backend(s) hold the weights — independent of any init-line side
+ * effects (e.g. `getDeviceOptions()` triggering a Hexagon registry
+ * allocation that fires `hexagon_init=true` even when the model never
+ * runs on Hexagon, observed on Snapdragon 8 Elite Gen 5).
  *
- * Hexagon is checked BEFORE OpenCL so a cell that dispatches `['HTP*']`
- * never gets misclassified as OpenCL on a device with both backends
- * present. By construction only one device set is dispatched per cell, so
- * collision is hypothetical — the order is defensive.
+ * Decision order:
+ *   - HTP* keys present -> hexagon (full or partial via offloaded counts)
+ *   - OpenCL key present -> opencl (full or partial)
+ *   - large_buffer_unsupported regression -> cpu+opencl-partial
+ *   - only CPU/CPU_REPACK keys -> cpu
+ *   - empty weight set + opencl_init -> opencl (fallback for early failure)
+ *   - empty weight set + hexagon_init -> unknown (symmetric)
+ *   - else -> unknown
  */
 export function deriveEffectiveBackend(signals: LogSignals): EffectiveBackend {
-  if (signals.hexagon_init) {
+  const wKeys = Object.keys(signals.memory_buffers.weights_mib);
+  const hasHTP = wKeys.some(k => k.startsWith('HTP'));
+  const hasOpenCL = wKeys.some(k => k === 'OpenCL');
+  const hasOnlyCPU =
+    wKeys.length > 0 && wKeys.every(k => k === 'CPU' || k === 'CPU_REPACK');
+
+  if (hasHTP) {
     if (
       signals.offloaded_layers !== null &&
       signals.total_layers !== null &&
@@ -296,15 +302,30 @@ export function deriveEffectiveBackend(signals: LogSignals): EffectiveBackend {
     ) {
       return 'cpu+hexagon-partial';
     }
+    return 'hexagon';
+  }
+
+  if (hasOpenCL) {
+    if (signals.large_buffer_unsupported) {
+      return 'cpu+opencl-partial';
+    }
     if (
       signals.offloaded_layers !== null &&
       signals.total_layers !== null &&
-      signals.offloaded_layers === signals.total_layers
+      signals.offloaded_layers < signals.total_layers
     ) {
-      return 'hexagon';
+      return 'cpu+opencl-partial';
     }
-    // Init line seen but no offload counts — symmetric with OpenCL's
-    // `unknown` fallback (WHAT 8 D2).
+    return 'opencl';
+  }
+
+  if (hasOnlyCPU) {
+    return 'cpu';
+  }
+
+  // Fallback to log-init heuristics for cells that failed before
+  // `load_tensors:` lines fired (cells where weights_mib stays empty).
+  if (signals.hexagon_init) {
     return 'unknown';
   }
   if (!signals.opencl_init) {

@@ -288,12 +288,19 @@ const HEXAGON_FULL_OFFLOAD_LINES = [
   'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
   'ggml-hex: Hexagon Arch version v75',
   'ggml-hex: new session: HTP0 : default',
+  // load_tensors entries are the ground truth that the model actually
+  // ended up on Hexagon — without them the registry alloc alone could
+  // fire even on a CPU-routed model (see Snapdragon 8 Elite Gen 5).
+  'load_tensors:          CPU model buffer size =   189.42 MiB',
+  'load_tensors:  HTP0-REPACK model buffer size =   980.00 MiB',
   'load_tensors: offloaded 28/28 layers to GPU',
 ];
 
 const HEXAGON_PARTIAL_OFFLOAD_LINES = [
   'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
   'ggml-hex: new session: HTP0 : default',
+  'load_tensors:          CPU model buffer size =   400.00 MiB',
+  'load_tensors:  HTP0-REPACK model buffer size =   600.00 MiB',
   'load_tensors: offloaded 22/28 layers to GPU',
 ];
 
@@ -351,17 +358,34 @@ describe('deriveEffectiveBackend (Hexagon)', () => {
     expect(deriveEffectiveBackend(signals)).toBe('unknown');
   });
 
-  it('hexagon arm takes precedence over opencl when both init lines coincide (defense)', () => {
-    // Hypothetical — by construction one device set is dispatched per
-    // cell — but the precedence rule is part of the contract (WHAT 8 D2).
+  it('hexagon takes precedence over opencl when both init lines fire and HTP buffers exist (defense)', () => {
+    // By construction only one device set is dispatched per cell, so
+    // both inits firing is hypothetical. memory_buffers ground truth:
+    // if HTP* keys are present, the model ran on Hexagon regardless of
+    // which init lines were observed.
     const signals = deriveLogSignals([
       'I/lm_ggml_opencl: Initializing OpenCL backend',
       'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
+      'load_tensors:  HTP0-REPACK model buffer size =   980.00 MiB',
       'load_tensors: offloaded 28/28 layers to GPU',
     ]);
     expect(signals.opencl_init).toBe(true);
     expect(signals.hexagon_init).toBe(true);
     expect(deriveEffectiveBackend(signals)).toBe('hexagon');
+  });
+
+  it('returns "cpu" when hexagon_init fires but only CPU weight buffers landed (registry-alloc false-positive)', () => {
+    // Real-world Snapdragon 8 Elite Gen 5 case: getDeviceOptions()
+    // enumeration triggers ggml-hex registry allocation (hexagon_init
+    // becomes true), but devices=['CPU'] keeps the model on CPU. The
+    // weights_mib ground truth dominates.
+    const signals = deriveLogSignals([
+      'ggml-hex: Hexagon backend (experimental) : allocating new registry : ndev 1',
+      'load_tensors:          CPU model buffer size =  1169.07 MiB',
+      'load_tensors: offloaded 29/29 layers to GPU',
+    ]);
+    expect(signals.hexagon_init).toBe(true);
+    expect(deriveEffectiveBackend(signals)).toBe('cpu');
   });
 });
 
