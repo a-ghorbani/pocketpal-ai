@@ -252,6 +252,25 @@ export class TTSStore {
     }
   }
 
+  /**
+   * Persist the user's explicit choice for the TTS availability gate.
+   * `true` forces the gate open even on low-memory devices; `false` forces
+   * it closed even on high-memory devices. Mirrors `setAutoSpeak(false)`'s
+   * stop+release pattern when the gate transitions from open to closed,
+   * to free engine RAM immediately. See architecture/tts.md §4a.5, I3, I6.
+   */
+  setUserTTSOverride(value: boolean): void {
+    const wasAvailable = this.isTTSAvailable;
+    this.userTTSOverride = value;
+    if (wasAvailable && !value) {
+      this.stop()
+        .then(() => ttsRuntime.release())
+        .catch(err => {
+          console.warn('[TTSStore] release on TTS opt-out failed:', err);
+        });
+    }
+  }
+
   setCurrentVoice(v: Voice | null) {
     this.currentVoice = v;
   }
