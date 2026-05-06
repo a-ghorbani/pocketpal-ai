@@ -222,6 +222,9 @@ describe('BenchmarkRunnerScreen', () => {
       expect(statusCalls[statusCalls.length - 1]).toBe('complete');
       // setDevices called with the resolved Adreno name.
       expect(modelStore.setDevices).toHaveBeenCalledWith(['Adreno (TM) 840v2']);
+      // setNGPULayers pinned to 99 for gpu — required so ggml does not
+      // route layers to other registered backends (Bug-2 fix).
+      expect(modelStore.setNGPULayers).toHaveBeenCalledWith(99);
       expect(modelStore.initContext).toHaveBeenCalled();
       expect(setLastCell).toHaveBeenCalledWith(
         expect.objectContaining({pp: 12.5, tg: 4.5, cells: 1}),
@@ -781,6 +784,28 @@ describe('BenchmarkRunnerScreen', () => {
       await runMatrix(cfg, setStatus, setLastCell);
       // setDevices called with the hexagon wildcard.
       expect(modelStore.setDevices).toHaveBeenCalledWith(['HTP*']);
+      // setNGPULayers pinned to 99 for hexagon (Bug-2 fix).
+      expect(modelStore.setNGPULayers).toHaveBeenCalledWith(99);
+    });
+
+    it('cpu cell pins setNGPULayers(0) so ggml does not route through other registered backends (Bug-2 fix)', async () => {
+      // Diagnosed on Snapdragon 8 Elite Gen 5 — devices=['CPU'] alone
+      // does not constrain to CPU when Hexagon is registered and
+      // n_gpu_layers > 0. The runner must explicitly pin n_gpu_layers=0
+      // for the cpu cell.
+      // Note: this test deliberately uses the default getDeviceOptions
+      // mock from beforeEach (cpu+gpu, no hexagon) instead of queuing a
+      // mockResolvedValueOnce with hexagon. Queuing the once-mock here
+      // would not be consumed cleanly across test boundaries (mockClear
+      // does not drain the once-queue) and pollutes the next test's
+      // getDeviceOptions return value.
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        backends: ['cpu'],
+      };
+      await runMatrix(cfg, setStatus, setLastCell);
+      expect(modelStore.setDevices).toHaveBeenCalledWith(['CPU']);
+      expect(modelStore.setNGPULayers).toHaveBeenCalledWith(0);
     });
 
     it('hexagon-on-non-hexagon-device does NOT abort the matrix (I7) — subsequent cells still run', async () => {
@@ -805,6 +830,31 @@ describe('BenchmarkRunnerScreen', () => {
         requested_backend: 'cpu',
         status: 'ok',
       });
+    });
+
+    it('restores user-state n_gpu_layers + devices on matrix exit (cross-session leak fix)', async () => {
+      const cfg: BenchConfig = {
+        ...VALID_CONFIG,
+        backends: ['hexagon'],
+      };
+      getDeviceOptions.mockResolvedValueOnce([
+        {id: 'cpu', label: 'CPU', devices: ['CPU']},
+        {id: 'hexagon', label: 'Hexagon', devices: ['HTP*']},
+      ]);
+      // Simulate user's persisted state: e.g. n_gpu_layers=42, devices set to
+      // something other than the cell's pin.
+      modelStore.contextInitParams.n_gpu_layers = 42;
+      modelStore.contextInitParams.devices = ['SomeOtherDevice'];
+      await runMatrix(cfg, setStatus, setLastCell);
+      // Last setNGPULayers / setDevices calls should restore the snapshot.
+      const lastNGpuCall = (
+        modelStore.setNGPULayers as jest.Mock
+      ).mock.calls.at(-1);
+      const lastDevicesCall = (
+        modelStore.setDevices as jest.Mock
+      ).mock.calls.at(-1);
+      expect(lastNGpuCall?.[0]).toBe(42);
+      expect(lastDevicesCall?.[0]).toEqual(['SomeOtherDevice']);
     });
 
     // -------------------------------------------------------------------------

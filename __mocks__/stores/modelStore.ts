@@ -222,6 +222,15 @@ class MockModelStore {
     return `/mock/path/${model.filename || model.name}`;
   }
 
+  async getEffectiveContextInitParams(
+    _filePath: string,
+  ): Promise<Record<string, unknown>> {
+    // Mock returns the current contextInitParams as the resolved view.
+    // Tests can spy on this if they need to assert what got passed to
+    // initLlama.
+    return JSON.parse(JSON.stringify(this.contextInitParams));
+  }
+
   getCompatibleProjectionModels = jest.fn().mockReturnValue([]);
   hasRequiredProjectionModel = jest.fn().mockReturnValue(true);
   getProjectionModelStatus = jest.fn().mockReturnValue({

@@ -105,6 +105,14 @@ interface BenchmarkRunRow {
   peak_memory_mb: number | null;
   log_signals: LogSignals;
   init_settings: Record<string, unknown>;
+  /** Exact params passed to llama.rn's initLlama, captured BEFORE
+   * initContext fires. Distinct from `init_settings` (which snapshots
+   * `modelStore.contextInitParams` AFTER init). The store may carry
+   * symbolic values like `use_mmap='smart'` that resolve to concrete
+   * booleans only via `getEffectiveContextInitParams(filePath)`. This
+   * field captures what the runtime actually saw. Diagnostic for
+   * cross-cell or cross-session state leaks. */
+  effective_init_params: Record<string, unknown>;
   /** What the cell asked for. Always present (possibly `{}`) — single
    * writer is `runMatrix` (WHAT §4h I1, §5). */
   settings_overrides: Partial<Record<SettingsKnob, SettingsValue>>;
@@ -335,6 +343,48 @@ function restoreSettingsSnapshot(snapshot: PreRunSnapshot): void {
 }
 
 /**
+ * Runner-state snapshot — separate from the fingerprint snapshot because
+ * these knobs do not contribute to row identity; they are dispatch-time
+ * decisions the runner pins per cell. Snapshotted at matrix start so the
+ * user's persisted choices are restored on exit.
+ *
+ * `n_gpu_layers` and `devices` together control which backend ggml dispatches
+ * to. The runner sets them per cell based on `backend`. Without this snapshot
+ * + per-cell pin, persisted state from a prior session can leak: e.g. a
+ * previous Hexagon run leaves `n_gpu_layers=99` in MMKV; a later cell with
+ * `requested_backend='cpu'` sets `devices=['CPU']` but inherits `n_gpu_layers=99`,
+ * and ggml routes the model through Hexagon anyway because the Hexagon
+ * backend is registered (observed on Snapdragon 8 Elite Gen 5).
+ */
+interface RunnerStateSnapshot {
+  n_gpu_layers: number | undefined;
+  devices: string[] | undefined;
+}
+
+function snapshotRunnerState(): RunnerStateSnapshot {
+  const params = modelStore.contextInitParams as unknown as Record<
+    string,
+    unknown
+  >;
+  return {
+    n_gpu_layers: params.n_gpu_layers as number | undefined,
+    devices: params.devices as string[] | undefined,
+  };
+}
+
+function restoreRunnerState(snapshot: RunnerStateSnapshot): void {
+  try {
+    if (snapshot.n_gpu_layers !== undefined) {
+      modelStore.setNGPULayers(snapshot.n_gpu_layers);
+    }
+    modelStore.setDevices(snapshot.devices);
+  } catch {
+    // Best-effort: a setter failing here does not abort the matrix's
+    // outcome. The next run's per-cell setters will normalise state.
+  }
+}
+
+/**
  * Fingerprint canonical-form key list (WHAT 4d.1 — fixed contract).
  * Adding a knob here is a fingerprint-version bump.
  */
@@ -463,6 +513,7 @@ export async function runMatrix(
   // first cell — the fixed point used for both restoration (4c.3) and
   // the pre-init failure-path fingerprint construction (9c).
   const preRunSnapshot = snapshotFingerprintKeys();
+  const runnerStateSnapshot = snapshotRunnerState();
 
   // Resolve the GPU and Hexagon device sets ONCE at run start. Reuses the
   // canonical helper (`getDeviceOptions` from src/utils/deviceSelection.ts)
@@ -587,6 +638,7 @@ export async function runMatrix(
       // hoist as part of the contract. Read by Step 7's fingerprint
       // helpers in the catch block.
       let postInitSnapshot: Record<string, unknown> | null = null;
+      let effectiveInitParams: Record<string, unknown> = {};
 
       try {
         // 1. GPU pre-check: cell fails fast if backend=gpu but no GPU option.
@@ -600,6 +652,7 @@ export async function runMatrix(
             peak_memory_mb: null,
             log_signals: emptyLogSignals(),
             init_settings: {},
+            effective_init_params: {},
             settings_overrides: overrides,
             settings_fingerprint: buildFailureFingerprint(
               preRunSnapshot,
@@ -626,6 +679,7 @@ export async function runMatrix(
             peak_memory_mb: null,
             log_signals: emptyLogSignals(),
             init_settings: {},
+            effective_init_params: {},
             settings_overrides: overrides,
             settings_fingerprint: buildFailureFingerprint(
               preRunSnapshot,
@@ -729,16 +783,27 @@ export async function runMatrix(
         applySettingsOverrides(overrides);
 
         // 4. Programmatic tier switch (CPU / GPU / Hexagon device set).
+        // Both `devices` AND `n_gpu_layers` are pinned per cell. Pinning
+        // n_gpu_layers is required because devices=['CPU'] alone does NOT
+        // prevent ggml from routing layers to other registered backends
+        // when n_gpu_layers > 0 — verified on Snapdragon 8 Elite Gen 5
+        // where devices=['CPU'] + n_gpu_layers=99 + Hexagon registered
+        // results in full Hexagon offload.
         let cellDevices: string[];
+        let cellNGpuLayers: number;
         if (backend === 'cpu') {
           cellDevices = ['CPU'];
+          cellNGpuLayers = 0;
         } else if (backend === 'gpu') {
           cellDevices = adrenoDevices as string[];
+          cellNGpuLayers = 99;
         } else {
           // hexagon — pre-check above guarantees hexagonDevices is non-null.
           cellDevices = hexagonDevices as string[];
+          cellNGpuLayers = 99;
         }
         modelStore.setDevices(cellDevices);
+        modelStore.setNGPULayers(cellNGpuLayers);
 
         // 4a. Attach native-log listener so the cell's load output (the same
         // lines that show up in `adb logcat`) lands in `logBuffer`. The
@@ -748,6 +813,16 @@ export async function runMatrix(
             logBuffer.push(text);
           }
         });
+
+        // 4b. Capture the EFFECTIVE init params handed to llama.rn — the
+        // post-resolution view (e.g. `use_mmap='smart'` resolves to a
+        // boolean, devices fully concrete). Distinct from `init_settings`
+        // (post-init store snapshot). Diagnostic for cross-cell /
+        // cross-session state leaks.
+        const filePath = await modelStore.getModelFullPath(resolvedModel);
+        effectiveInitParams = filePath
+          ? await modelStore.getEffectiveContextInitParams(filePath)
+          : {};
 
         // 5. Init context (mutex-serialized inside ModelStore).
         await modelStore.initContext(resolvedModel);
@@ -829,6 +904,7 @@ export async function runMatrix(
               : null,
           log_signals: logSignals,
           init_settings: initSettings,
+          effective_init_params: effectiveInitParams,
           settings_overrides: overrides,
           settings_fingerprint: buildSuccessFingerprint(
             initSettings,
@@ -878,6 +954,9 @@ export async function runMatrix(
           peak_memory_mb: null,
           log_signals: partialSignals,
           init_settings: postInitSnapshot ?? {},
+          // Hoisted at runMatrix scope so the catch path sees whatever was
+          // captured at step 4b. `{}` if the cell threw before 4b ran.
+          effective_init_params: effectiveInitParams,
           settings_overrides: overrides,
           settings_fingerprint: fingerprint,
           status: 'failed',
@@ -923,6 +1002,7 @@ export async function runMatrix(
     await toggleNativeLog(false).catch(() => undefined);
     try {
       restoreSettingsSnapshot(preRunSnapshot);
+      restoreRunnerState(runnerStateSnapshot);
     } catch {
       // Per WHAT 4c.3, restore is best-effort; a restore failure does not
       // re-fail the matrix.
