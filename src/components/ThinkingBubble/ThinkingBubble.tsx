@@ -36,9 +36,19 @@ enum BubbleState {
 
 interface ThinkingBubbleProps {
   children?: React.ReactNode;
+  /**
+   * When true, auto-collapse the bubble (typically when the step's main
+   * content has started streaming, signalling the model has moved past
+   * the reasoning block). Respects user intent — once the user manually
+   * toggles, this prop no longer drives state.
+   */
+  autoCollapse?: boolean;
 }
 
-export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({children}) => {
+export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
+  children,
+  autoCollapse,
+}) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
@@ -49,6 +59,25 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({children}) => {
 
   // Track animation state to optimize rendering
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // Once the user manually toggles, the autoCollapse signal is ignored
+  // for the lifetime of this bubble (per-row instance). Without this,
+  // a user who expanded mid-stream would get re-collapsed when content
+  // tokens start arriving — undesired.
+  const userToggledRef = useRef(false);
+
+  // React to autoCollapse: rising-edge collapse only, and only if the
+  // user hasn't taken control. Default streaming state is PARTIAL so
+  // the user can watch the reasoning live; the collapse fires once
+  // content begins streaming (or the step finalizes).
+  useEffect(() => {
+    if (autoCollapse && !userToggledRef.current) {
+      setBubbleState(BubbleState.COLLAPSED);
+      chevronRotation.setValue(0);
+    }
+    // chevronRotation is a stable ref, intentionally omitted
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCollapse]);
 
   const chevronRotation = useRef(new Animated.Value(0)).current;
 
@@ -233,31 +262,59 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({children}) => {
   };
 
   const handlePress = () => {
+    // Mark that the user has taken control — autoCollapse becomes
+    // a no-op from here on for this bubble instance.
+    userToggledRef.current = true;
     toggleState();
     animateChevronScale();
   };
 
+  // Text-only collapsed render: a single inline tappable row with a
+  // small chevron + label. No card, no border, no shadow. The whole
+  // row is the tap target.
+  if (bubbleState === BubbleState.COLLAPSED) {
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={l10n.components.thinkingBubble.reasoning}
+        activeOpacity={0.6}
+        onPress={handlePress}
+        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+        <View style={styles.collapsedRow} testID="thinking-bubble-collapsed">
+          <Animated.View
+            style={{
+              transform: [{rotate: chevronRotationDeg}, {scale: chevronScale}],
+            }}>
+            <ChevronDownIcon
+              testID="chevron-icon"
+              width={12}
+              height={12}
+              stroke={theme.colors.thinkingBubbleText}
+            />
+          </Animated.View>
+          <Text style={styles.collapsedRowLabel}>
+            {l10n.components.thinkingBubble.reasoning}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // PARTIAL / EXPANDED — original card rendering.
   return (
     <TouchableOpacity
-      style={bubbleState !== BubbleState.COLLAPSED && styles.shadowContainer}
+      style={styles.shadowContainer}
       activeOpacity={0.9}
       onPress={handlePress}>
       <View style={containerStyle}>
         {/* Header */}
-        <View
-          style={[
-            styles.headerContainer,
-            bubbleState === BubbleState.COLLAPSED &&
-              styles.collapsedHeaderContainer,
-          ]}>
+        <View style={styles.headerContainer}>
           <Text variant="titleSmall" style={styles.headerText}>
             {l10n.components.thinkingBubble.reasoning}
           </Text>
           <Animated.View
             style={[
               styles.chevronContainer,
-              bubbleState === BubbleState.COLLAPSED &&
-                styles.collapsedChevronContainer, // Smaller chevron in collapsed state
               {
                 transform: [
                   {rotate: chevronRotationDeg},
@@ -267,8 +324,8 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({children}) => {
             ]}>
             <ChevronDownIcon
               testID="chevron-icon"
-              width={bubbleState === BubbleState.COLLAPSED ? 16 : 18}
-              height={bubbleState === BubbleState.COLLAPSED ? 16 : 18}
+              width={18}
+              height={18}
               stroke={theme.colors.thinkingBubbleText}
             />
           </Animated.View>
