@@ -560,12 +560,20 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // Signal the runner first so the abort fires at the next turn
-    // boundary; engine.stopCompletion() then halts the in-flight
-    // engine call (terminating the current step's streaming).
+    // Abort first so the runner's signal listener (registered in
+    // runAgent) fires `engine.stopCompletion()` from inside the
+    // generator with a guaranteed-fresh engine handle. The direct
+    // call below is a redundant safety net — kept because the
+    // runner-side path depends on the runner being alive and
+    // listening, and we've previously shipped bugs where the
+    // fire-and-forget call swallowed errors silently.
     abortRef.current?.abort();
     if (modelStore.inferencing && modelStore.engine) {
-      modelStore.engine.stopCompletion();
+      try {
+        await modelStore.engine.stopCompletion();
+      } catch (error) {
+        console.warn('engine.stopCompletion failed:', error);
+      }
     }
     modelStore.setInferencing(false);
     modelStore.setIsStreaming(false);

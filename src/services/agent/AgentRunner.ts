@@ -258,6 +258,27 @@ export async function* runAgent(
 
   yield {type: 'run_started', messageId};
 
+  // When the consumer aborts mid-stream (e.g. user taps the stop
+  // button while the engine is generating tokens), the runner is the
+  // only layer that has BOTH the abort signal AND the engine handle —
+  // so it owns the abort→engine.stopCompletion translation. Without
+  // this, the signal would only be observed between turns and the
+  // in-flight engine.completion call could keep running native
+  // generation while the JS layer believed the run had stopped. The
+  // async IIFE handles all return shapes (Promise that resolves /
+  // rejects, sync function returning undefined, sync throw) without
+  // ever propagating an error out of the abort handler.
+  const onAbort = () => {
+    void (async () => {
+      try {
+        await engine.stopCompletion?.();
+      } catch (err) {
+        console.warn('[agent] engine.stopCompletion failed:', err);
+      }
+    })();
+  };
+  signal?.addEventListener('abort', onAbort);
+
   let messages = initialParams.messages;
   let turn = 0;
   // Holds the engine's CompletionResult after each turn finishes.
@@ -463,5 +484,7 @@ export async function* runAgent(
     yield {type: 'run_finished', result};
   } catch (error) {
     yield {type: 'run_failed', error: error as Error};
+  } finally {
+    signal?.removeEventListener('abort', onAbort);
   }
 }
