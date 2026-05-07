@@ -314,7 +314,11 @@ describe('convertToChatMessages — AssistantTurn', () => {
     ]);
   });
 
-  it('#3 step with empty content but tool_calls → assistant message with empty content + tool_calls', () => {
+  it('#3 step with empty content but tool_calls → assistant message with empty content + tool_calls + sentinel "aborted" tool response (B7 orphan-pair guard)', () => {
+    // A persisted step with toolCalls and no toolOutcomes is the
+    // abort/crash recovery shape (B7). The orphan-pair guard in
+    // stepToApiMessages synthesizes a sentinel tool response so the
+    // next-turn Jinja template doesn't see an unmatched tool_call_id.
     const turn = makeAssistantTurn([
       {
         content: '',
@@ -334,6 +338,86 @@ describe('convertToChatMessages — AssistantTurn', () => {
           },
         ],
       },
+      {role: 'tool', tool_call_id: 'c0', content: 'aborted'},
+    ]);
+  });
+
+  // B7 dedicated coverage — abort/crash recovery scenarios. Without
+  // these guards a strict-Jinja template throws on the next turn
+  // because every `tool_call_id` must have a matching role:'tool'
+  // response.
+  it('B7a abort after step_finished, before tool_call_finished → synthesizes "aborted" sentinel for the orphan call', () => {
+    // Simulates the canonical race: step_finished landed (so
+    // step.toolCalls is persisted), the user tapped Stop, and the
+    // tool_call_finished event never reached the store.
+    const turn = makeAssistantTurn([
+      {
+        content: 'Let me look that up',
+        toolCalls: [
+          {id: 'call_42_0', function: {name: 'datetime', arguments: '{}'}},
+        ],
+        toolOutcomes: [],
+      },
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: 'Let me look that up',
+        tool_calls: [
+          {
+            id: 'call_42_0',
+            type: 'function',
+            function: {name: 'datetime', arguments: '{}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'call_42_0', content: 'aborted'},
+    ]);
+  });
+
+  it('B7b mid-step crash with multiple tool_calls and partial outcomes → synthesizes sentinel only for the unmatched call', () => {
+    // Two tool_calls on one step, only the first finished before the
+    // process crashed. On reload the second must be filled in with the
+    // sentinel so the assistant.tool_calls[i] ↔ role:'tool' invariant
+    // is satisfied for both ids.
+    const turn = makeAssistantTurn([
+      {
+        content: '',
+        toolCalls: [
+          {id: 'c0', function: {name: 'calculate', arguments: '{"expr":"1"}'}},
+          {id: 'c1', function: {name: 'datetime', arguments: '{}'}},
+        ],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'calculate',
+            result: {type: 'text', summary: '1'},
+            responseContent: '1',
+          },
+        ],
+      },
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: '',
+        tool_calls: [
+          {
+            id: 'c0',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{"expr":"1"}'},
+          },
+          {
+            id: 'c1',
+            type: 'function',
+            function: {name: 'datetime', arguments: '{}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'c0', content: '1'},
+      {role: 'tool', tool_call_id: 'c1', content: 'aborted'},
     ]);
   });
 
@@ -390,13 +474,20 @@ describe('convertToChatMessages — AssistantTurn', () => {
     ]);
   });
 
-  it('#6 history filter: AssistantTurn with empty content but non-empty toolCalls is INCLUDED', () => {
+  it('#6 history filter: AssistantTurn with empty content but non-empty toolCalls is INCLUDED (with B7 orphan-pair sentinel)', () => {
     const turn = makeAssistantTurn([
       {toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}]},
     ]);
     const result = convertToChatMessages([turn]);
-    expect(result).toHaveLength(1);
+    // Two messages: the assistant message with tool_calls, plus the
+    // synthesized "aborted" sentinel tool response (B7 orphan-pair guard).
+    expect(result).toHaveLength(2);
     expect(result[0].tool_calls).toBeDefined();
+    expect(result[1]).toEqual({
+      role: 'tool',
+      tool_call_id: 'c0',
+      content: 'aborted',
+    });
   });
 
   it('AssistantTurn with steps:[] is excluded (filter rule)', () => {

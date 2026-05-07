@@ -68,6 +68,15 @@ function toWireToolCall(
  * its tool responses so `tool_call_id` back-refs resolve — preserved
  * by the inner ordering here (OUTER reverse below does not reorder inner
  * arrays).
+ *
+ * Orphan-pair guard: a step persisted with `tool_calls` but no matching
+ * `tool_outcomes` (user abort fired between `step_finished` and
+ * `tool_call_finished`, or process crash mid-step) would otherwise emit
+ * `assistant.tool_calls` with zero matching `role:'tool'` responses.
+ * Strict-Jinja chat templates reject that ("every tool_call_id must
+ * have a matching tool response") and the next turn's prompt becomes
+ * malformed. Synthesize an "aborted" sentinel response for every
+ * unmatched call so the invariant holds on reload.
  */
 function stepToApiMessages(step: AgentStep): ChatMessage[] {
   const assistantMsg: ChatMessage = {
@@ -80,11 +89,28 @@ function stepToApiMessages(step: AgentStep): ChatMessage[] {
   if (step.reasoningContent) {
     assistantMsg.reasoning_content = step.reasoningContent;
   }
-  const toolMsgs: ChatMessage[] = (step.toolOutcomes ?? []).map(o => ({
+  const outcomes = step.toolOutcomes ?? [];
+  const outcomeIds = new Set(outcomes.map(o => o.callId));
+  const toolMsgs: ChatMessage[] = outcomes.map(o => ({
     role: 'tool',
     tool_call_id: o.callId,
     content: o.responseContent,
   }));
+  // Orphan-pair guard (see fn doc): for any toolCall that lacks a
+  // matching outcome, synthesize a sentinel response. Order matches the
+  // toolCalls order so the assistant_msg.tool_calls[i] ↔ toolMsgs[i]
+  // back-ref resolution stays stable for any consumer that relies on it.
+  if (step.toolCalls) {
+    for (const call of step.toolCalls) {
+      if (!outcomeIds.has(call.id)) {
+        toolMsgs.push({
+          role: 'tool',
+          tool_call_id: call.id,
+          content: 'aborted',
+        });
+      }
+    }
+  }
   return [assistantMsg, ...toolMsgs];
 }
 
