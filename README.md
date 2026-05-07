@@ -104,11 +104,13 @@ Get PocketPal AI on Google Play:
 ### Copying Text
 
 - **Copy Entire Response**: Tap the copy icon at the bottom of the AI's response bubble. The default mode is configurable in Settings.
-- **Copy as Clean / Markdown / Raw**: Long-press an assistant message and choose the copy mode.
+- **Copy as Clean / Clean + thinking / Markdown / Raw**: Long-press an assistant message and choose the copy mode.
 - **Copy Code Blocks**: Use the copy button in a code block header.
 - **Copy Structured Blocks**: JSON, XML, tool-call, table, and block math segments expose their own copy controls where applicable.
 
-Assistant responses render Markdown, code blocks, tables, and common LaTeX delimiters. Clean copy hides thinking blocks and model template tokens by default, while raw copy preserves the exact model output. Unsafe HTML is escaped and never executed.
+Assistant responses render Markdown, code blocks, tables, and common LaTeX delimiters. Clean copy hides thinking blocks and model template tokens by default, Clean + thinking includes reasoning as plain text, and raw copy preserves the exact model output. Unsafe HTML is escaped and never executed.
+
+Message rendering can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility/collapse behavior, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers automatically fall back to cheaper rendering paths to keep chat responsive on mobile devices.
 
 ### Message Editing
 
