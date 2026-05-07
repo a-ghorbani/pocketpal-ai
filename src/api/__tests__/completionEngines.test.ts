@@ -150,6 +150,45 @@ describe('OpenAICompletionEngine', () => {
     expect(result).toEqual(mockResult);
   });
 
+  // B2: PACT support requires the engine to forward tools and
+  // tool_choice down to streamChatCompletion. Without this, any Pal
+  // with talents enabled silently degrades to text-only on remote
+  // engines (no tools schemas → no tool_calls).
+  it('forwards tools and tool_choice to streamChatCompletion', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    const calculateTool = {
+      type: 'function' as const,
+      function: {
+        name: 'calculate',
+        description: 'Evaluate a math expression',
+        parameters: {
+          type: 'object',
+          properties: {expression: {type: 'string'}},
+          required: ['expression'],
+        },
+      },
+    };
+    const params = {
+      messages: [{role: 'user', content: 'What is 2+2?'}],
+      tools: [calculateTool],
+      tool_choice: 'auto',
+    } as any;
+
+    await engine.completion(params);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: [calculateTool],
+        tool_choice: 'auto',
+      }),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+    );
+  });
+
   it('handles missing optional params gracefully', async () => {
     mockedStreamChat.mockResolvedValueOnce({
       text: '',
