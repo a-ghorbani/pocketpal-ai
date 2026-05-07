@@ -10,8 +10,8 @@ Note: Part of this guide is outdated. It will be updated soon.
 
 Note: This is a personal project, so I am working on it in my spare time. It might have bugs and issues, and obviously, I have not tested it on all devices. If you encounter any issues, open an issue, or even better, contribute to the project!
 
-
 ### Available Models
+
 PocketPal AI comes pre-configured with some popular SLMs:
 
 - Danube 2 and 3
@@ -33,7 +33,6 @@ Modells need to be downloaded before use. You can download and use these models 
 - Navigate to the “Models” page
 - Choose your desired model and hit download
 
-
 <div style="display: flex; justify-content: center;">
     <img src="../assets/add_model_1.webp" alt="Navigate to Models Page" style="width: 33%;">
     <img src="../assets/add_model_2.webp" alt="Download a Model" style="width: 33%;">
@@ -41,7 +40,8 @@ Modells need to be downloaded before use. You can download and use these models 
 </div>
 
 ### Loading a Model
-After downloading, tap *Load* to bring the model into memory. Now you’re ready to chat!
+
+After downloading, tap _Load_ to bring the model into memory. Now you’re ready to chat!
 
 ### Tips
 
@@ -85,9 +85,31 @@ The generation performance metric is also displayed. If interested, watch the ch
 
 ### Copying Text
 
+Assistant responses use a rich rendering pipeline with rendered, clean, and raw modes. Markdown headings, emphasis, lists, links, task lists, code blocks, and GitHub-style tables are rendered in the chat bubble. Tables and long code blocks scroll horizontally on small screens.
+
+Copy options:
+
+- Default copy: use the copy icon at the bottom of the AI response bubble.
+- Copy as clean text, Markdown, or raw text: long-press an assistant message and choose "Copy as".
+- Code blocks have their own copy button in the code header.
+
+Clean copy removes model template tokens and thinking blocks by default. Raw copy keeps the exact model output, including service tokens and thinking tags.
+
+### Markdown, Math, and Unsafe HTML
+
+PocketPal supports common Markdown syntax and safe fallbacks for malformed Markdown while streaming. Code blocks preserve indentation and newlines, and Markdown/LaTeX is not interpreted inside fenced code.
+
+Supported math delimiters:
+
+- Inline: `$...$` and `\(...\)`
+- Block: `$$...$$` and `\[...\]`
+
+Escaped dollar signs such as `\$5` are preserved. Long block equations scroll horizontally. Unsafe HTML is escaped before rendering; scripts, remote images, and raw HTML are not executed. XML/HTML-like model output is displayed as text/code fallback rather than run as markup.
+
 Important Note: As of now, I haven’t found an easy way to select and copy text from the generated responses while preserving the text formatting, particularly Markdown support.
 
 In the meantime, here are the current options for copying text:
+
 - Paragraph-level copying: Long-press on a specific paragraph to copy its content.
 - Full response copying: Use the copy icon at the bottom of the text bubble to copy the entire AI-generated response.
 
