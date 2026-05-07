@@ -519,6 +519,13 @@
       "tokensPerSec": "{{value}} tokens/sec",
       "ttft": "{{value}}ms TTFT"
     },
+    "assistantMessageRenderer": {
+      "modes": {
+        "rendered": "Rendered",
+        "clean": "Clean",
+        "raw": "Raw"
+      }
+    },
     "exportUtils": {
       "fileSaved": "File Saved",
       "fileSavedMessage": "The file has been saved to your Downloads folder as {{filename}}",

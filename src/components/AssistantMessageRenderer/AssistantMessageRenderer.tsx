@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useState} from 'react';
 import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {observer} from 'mobx-react-lite';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -9,6 +9,7 @@ import {MarkdownView} from '../MarkdownView';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {useTheme} from '../../hooks';
 import {modelStore, uiStore} from '../../store';
+import {L10nContext} from '../../utils';
 import {
   buildSegmentCopyText,
   defaultMessageRenderingSettings,
@@ -37,6 +38,8 @@ const hapticOptions = {
   enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
 };
+
+const MESSAGE_RENDER_MODES: MessageRenderMode[] = ['rendered', 'clean', 'raw'];
 
 function fencedBlock(language: string, content: string): string {
   const fence = content.includes('```') ? '~~~~' : '```';
@@ -117,6 +120,20 @@ function getStructuredSegmentDisplayContent(segment: MessageSegment): string {
   }
 
   return content;
+}
+
+function shouldShowModeSwitch(
+  parsed: ReturnType<typeof parseAssistantMessageCached>,
+  hasReasoningContent: boolean,
+): boolean {
+  return (
+    hasReasoningContent ||
+    parsed.hasThinking ||
+    parsed.hasServiceTags ||
+    parsed.hasUnsafeHtml ||
+    parsed.hasPartialSegment ||
+    parsed.raw !== parsed.markdownText
+  );
 }
 
 interface StructuredSegmentBlockProps {
@@ -258,13 +275,19 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
       reasoningContent,
     }) => {
       const theme = useTheme();
+      const l10n = useContext(L10nContext);
       const styles = createStyles(theme);
+      const [activeMode, setActiveMode] = useState<MessageRenderMode>(mode);
       const settings = {
         ...defaultMessageRenderingSettings,
         ...uiStore.messageRenderingSettings,
       };
       const thinkingStartTag = modelStore.activeModel?.thinkingStartTag;
       const thinkingEndTag = modelStore.activeModel?.thinkingEndTag;
+
+      useEffect(() => {
+        setActiveMode(mode);
+      }, [mode]);
 
       const parsed = useMemo(
         () =>
@@ -288,6 +311,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 
       const thinkingContent =
         reasoningContent?.trim() || parsedThinkingContent.trim();
+      const showModeSwitch = shouldShowModeSwitch(parsed, !!thinkingContent);
       const streamingFallbackText = useMemo(
         () => getStreamingFallbackText(parsed),
         [parsed],
@@ -301,19 +325,66 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
         [parsed],
       );
 
-      if (mode === 'raw') {
+      const handleModePress = (nextMode: MessageRenderMode) => {
+        ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+        setActiveMode(nextMode);
+      };
+
+      const renderModeSwitch = () =>
+        showModeSwitch ? (
+          <View style={styles.modeSwitch} accessibilityRole="tablist">
+            {MESSAGE_RENDER_MODES.map(nextMode => {
+              const isActive = activeMode === nextMode;
+              const label =
+                l10n.components.assistantMessageRenderer.modes[nextMode];
+              return (
+                <TouchableOpacity
+                  key={nextMode}
+                  accessibilityLabel={label}
+                  accessibilityRole="tab"
+                  accessibilityState={{selected: isActive}}
+                  activeOpacity={0.75}
+                  onPress={() => handleModePress(nextMode)}
+                  style={[
+                    styles.modeButton,
+                    isActive && styles.modeButtonActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.modeButtonText,
+                      isActive && styles.modeButtonTextActive,
+                    ]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null;
+
+      if (activeMode === 'raw') {
         return (
-          <Text selectable={selectable} style={styles.rawText}>
-            {content}
-          </Text>
+          <View
+            testID={`assistant-message-renderer-${messageId}`}
+            style={styles.container}>
+            {renderModeSwitch()}
+            <Text selectable={selectable} style={styles.rawText}>
+              {content}
+            </Text>
+          </View>
         );
       }
 
-      if (mode === 'clean') {
+      if (activeMode === 'clean') {
         return (
-          <Text selectable={selectable} style={styles.rawText}>
-            {parsed.plainText || parsed.cleanText}
-          </Text>
+          <View
+            testID={`assistant-message-renderer-${messageId}`}
+            style={styles.container}>
+            {renderModeSwitch()}
+            <Text selectable={selectable} style={styles.rawText}>
+              {parsed.plainText || parsed.cleanText}
+            </Text>
+          </View>
         );
       }
 
@@ -321,6 +392,8 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
         <View
           testID={`assistant-message-renderer-${messageId}`}
           style={styles.container}>
+          {renderModeSwitch()}
+
           {settings.showThinkingBlocks && !!thinkingContent && (
             <ThinkingBubble
               initiallyCollapsed={settings.collapseThinkingByDefault}>
