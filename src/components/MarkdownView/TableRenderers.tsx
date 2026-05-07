@@ -15,6 +15,8 @@ import type {
 import type {Element} from '@native-html/transient-render-engine';
 
 import {useTheme} from '../../hooks';
+import {uiStore} from '../../store';
+import {defaultMessageRenderingSettings} from '../../utils/messageRendering';
 import {createTableStyles} from './tableStyles';
 import {ScrollView} from 'react-native-gesture-handler';
 
@@ -117,7 +119,13 @@ function findTNodeForDomElement(
 
 const TableRenderer: CustomBlockRenderer = ({tnode}) => {
   const theme = useTheme();
-  const styles = useMemo(() => createTableStyles(theme), [theme]);
+  const compact =
+    uiStore.messageRenderingSettings.useCompactTables ??
+    defaultMessageRenderingSettings.useCompactTables;
+  const styles = useMemo(
+    () => createTableStyles(theme, compact),
+    [theme, compact],
+  );
 
   const tableDOM = tnode.domNode as Element | null;
   if (!tableDOM) {

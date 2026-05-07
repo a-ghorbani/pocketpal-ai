@@ -1,4 +1,5 @@
 export * from './AttachmentButton';
+export * from './AssistantMessageRenderer';
 export * from './Avatar';
 export * from './Bubble';
 export * from './ChatGenerationSettingsSheet';

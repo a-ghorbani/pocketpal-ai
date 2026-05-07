@@ -36,21 +36,27 @@ enum BubbleState {
 
 interface ThinkingBubbleProps {
   children?: React.ReactNode;
+  initiallyCollapsed?: boolean;
 }
 
-export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({children}) => {
+export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
+  children,
+  initiallyCollapsed = false,
+}) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
 
   const [bubbleState, setBubbleState] = useState<BubbleState>(
-    BubbleState.PARTIAL,
+    initiallyCollapsed ? BubbleState.COLLAPSED : BubbleState.PARTIAL,
   );
 
   // Track animation state to optimize rendering
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const chevronRotation = useRef(new Animated.Value(0)).current;
+  const chevronRotation = useRef(
+    new Animated.Value(initiallyCollapsed ? 0 : 90),
+  ).current;
 
   // Reference to the ScrollView for auto-scrolling
   const scrollViewRef = useRef<ScrollView>(null);
