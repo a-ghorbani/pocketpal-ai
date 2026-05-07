@@ -5,6 +5,28 @@ import {render, fireEvent} from '@testing-library/react-native';
 
 import {MarkdownView} from '../MarkdownView';
 
+const treeHasStyleValue = (node: any, key: string, value: unknown): boolean => {
+  if (Array.isArray(node)) {
+    return node.some(child => treeHasStyleValue(child, key, value));
+  }
+
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
+
+  const styles = Array.isArray(node.props?.style)
+    ? node.props.style
+    : [node.props?.style];
+
+  if (styles.some((style: any) => style && style[key] === value)) {
+    return true;
+  }
+
+  return (node.children || []).some((child: any) =>
+    treeHasStyleValue(child, key, value),
+  );
+};
+
 describe('MarkdownView Component', () => {
   it('renders markdown content correctly', () => {
     const markdownText = 'Hello **World**';
@@ -230,6 +252,20 @@ describe('MarkdownView Component', () => {
       expect(getByText('Status')).toBeTruthy();
       expect(getByText('Bold')).toBeTruthy();
       expect(getByText('Italic')).toBeTruthy();
+    });
+
+    it('uses compact table styles when requested by prop', () => {
+      const markdownText = '| A | B |\n|---|---|\n| 1 | 2 |';
+      const {toJSON} = render(
+        <MarkdownView
+          markdownText={markdownText}
+          maxMessageWidth={300}
+          useCompactTables
+        />,
+      );
+
+      expect(treeHasStyleValue(toJSON(), 'minWidth', 84)).toBe(true);
+      expect(treeHasStyleValue(toJSON(), 'padding', 4)).toBe(true);
     });
   });
 
