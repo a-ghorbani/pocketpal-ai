@@ -1,27 +1,22 @@
 import type {ReactNode} from 'react';
 import React, {useContext} from 'react';
-import {View, TouchableOpacity, Animated} from 'react-native';
-
-import {Text} from 'react-native-paper';
-import Clipboard from '@react-native-clipboard/clipboard';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import {Animated} from 'react-native';
 
 import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
-import {PlayButton} from '../TextMessage/PlayButton';
 
-import {UserContext, L10nContext} from '../../utils';
-import {assistant, derivedText} from '../../utils/chat';
+import {UserContext} from '../../utils';
 import {MessageType} from '../../utils/types';
-import {t} from '../../locales';
 
-const hapticOptions = {
-  enableVibrateFallback: true,
-  ignoreAndroidSystemSettings: false,
-};
-
+/**
+ * Pure shape primitive (border, background, scale animation). Per D9
+ * (WHAT §4d) Bubble no longer renders chrome — timing, copy, and any
+ * future turn-level slots are owned by `AssistantTurnFooter` rendered
+ * adjacent to the Bubble by `Message`. This collapses the
+ * "chrome-in-Bubble" pattern that produced the duplicate-footer bug
+ * for multi-step AssistantTurns.
+ */
 export const Bubble = ({
   child,
   message,
@@ -36,78 +31,20 @@ export const Bubble = ({
 }) => {
   const theme = useTheme();
   const user = useContext(UserContext);
-  const l10n = useContext(L10nContext);
   const currentUserIsAuthor = user?.id === message.author.id;
-  const {copyable, timings} = message.metadata || {};
 
-  // Build timing string from whichever parts are available
-  const timingParts: string[] = [];
-  if (timings?.predicted_per_token_ms != null) {
-    timingParts.push(
-      t(l10n.components.bubble.msPerToken, {
-        value: timings.predicted_per_token_ms.toFixed(),
-      }),
-    );
-  }
-  if (timings?.predicted_per_second != null) {
-    timingParts.push(
-      t(l10n.components.bubble.tokensPerSec, {
-        value: timings.predicted_per_second.toFixed(2),
-      }),
-    );
-  }
-  if (timings?.time_to_first_token_ms != null) {
-    timingParts.push(
-      t(l10n.components.bubble.ttft, {
-        value: timings.time_to_first_token_ms,
-      }),
-    );
-  }
-  const fullTimingsString = timingParts.join(', ');
-
-  const {contentContainer, dateHeaderContainer, dateHeader, iconContainer} =
-    styles({
-      currentUserIsAuthor,
-      message,
-      roundBorder: true,
-      theme,
-    });
-
-  const copyToClipboard = () => {
-    if (message.type !== 'text' && message.type !== 'assistant_turn') {
-      return;
-    }
-    ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-    Clipboard.setString(derivedText(message).trim());
-  };
-
-  const isAssistantText =
-    message.author?.id === assistant.id && message.type === 'text';
-  const showFooter = timings || isAssistantText;
+  const {contentContainer} = styles({
+    currentUserIsAuthor,
+    message,
+    roundBorder: true,
+    theme,
+  });
 
   return (
     <Animated.View
       testID={currentUserIsAuthor ? 'user-message' : 'ai-message'}
-      style={[
-        contentContainer,
-        {
-          transform: [{scale}],
-        },
-      ]}>
+      style={[contentContainer, {transform: [{scale}]}]}>
       {child}
-      {showFooter && (
-        <View style={dateHeaderContainer} testID="message-timing">
-          {isAssistantText && <PlayButton message={message} />}
-          {timings && copyable && (
-            <TouchableOpacity onPress={copyToClipboard}>
-              <Icon name="content-copy" style={iconContainer} />
-            </TouchableOpacity>
-          )}
-          {timings && fullTimingsString ? (
-            <Text style={dateHeader}>{fullTimingsString}</Text>
-          ) : null}
-        </View>
-      )}
     </Animated.View>
   );
 };

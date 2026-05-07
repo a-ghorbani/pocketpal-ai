@@ -74,23 +74,4 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 6,
       marginTop: 4,
     },
-    thinkContainer: {
-      backgroundColor: theme.colors.surfaceContainerHigh,
-      borderRadius: 8,
-      padding: 12,
-      marginVertical: 8,
-      borderLeftWidth: 4,
-      borderLeftColor: theme.colors.primary,
-      opacity: 0.8,
-    },
-    thinkText: {
-      color: theme.colors.primary,
-      fontWeight: 'bold',
-      marginRight: 8,
-    },
-    thinkTextContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 4,
-    },
   });

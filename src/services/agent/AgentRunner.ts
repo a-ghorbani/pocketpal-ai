@@ -258,6 +258,27 @@ export async function* runAgent(
 
   yield {type: 'run_started', messageId};
 
+  // When the consumer aborts mid-stream (e.g. user taps the stop
+  // button while the engine is generating tokens), the runner is the
+  // only layer that has BOTH the abort signal AND the engine handle —
+  // so it owns the abort→engine.stopCompletion translation. Without
+  // this, the signal would only be observed between turns and the
+  // in-flight engine.completion call could keep running native
+  // generation while the JS layer believed the run had stopped. The
+  // async IIFE handles all return shapes (Promise that resolves /
+  // rejects, sync function returning undefined, sync throw) without
+  // ever propagating an error out of the abort handler.
+  const onAbort = () => {
+    (async () => {
+      try {
+        await engine.stopCompletion?.();
+      } catch (err) {
+        console.warn('[agent] engine.stopCompletion failed:', err);
+      }
+    })();
+  };
+  signal?.addEventListener('abort', onAbort);
+
   let messages = initialParams.messages;
   let turn = 0;
   // Holds the engine's CompletionResult after each turn finishes.
@@ -285,6 +306,12 @@ export async function* runAgent(
       // (verified by Test #21).
       let accumulatedText = '';
       let markerSeenThisStep = false;
+      // Per-step generation metrics (post-hoc display in chip / preview
+      // footer). Counts streaming `token` events that carry tool_calls
+      // and tracks the time between the first such event and step
+      // finalisation. Reset every iteration via the surrounding `let`s.
+      let toolCallTokenCount = 0;
+      let toolCallStartedAt: number | null = null;
 
       // Bridge engine streaming callback into the iterator.
       const queue = new EventQueue<AgentEvent>();
@@ -310,6 +337,12 @@ export async function* runAgent(
             // this explicit sequence for a marker that straddles two
             // chunks.
             queue.push({type: 'token', delta});
+            if (delta.toolCalls && delta.toolCalls.length > 0) {
+              if (toolCallStartedAt === null) {
+                toolCallStartedAt = Date.now();
+              }
+              toolCallTokenCount += 1;
+            }
             if (delta.content) {
               accumulatedText += delta.content;
               if (!markerSeenThisStep && triggerMarkers.length > 0) {
@@ -353,20 +386,43 @@ export async function* runAgent(
         return;
       }
 
-      yield {type: 'step_finished', turn};
-
+      // Compute normalized tool calls BEFORE the step_finished yield
+      // so the event payload can carry them. The hook's appendToolCall
+      // writer (WHAT §5 cleanup #1) lands them on step.toolCalls with
+      // ids that match the upcoming outcomes by construction.
       const finishedResult = lastResult;
+      const rawToolCalls = finishedResult?.tool_calls ?? [];
+      const callsWithoutMetrics =
+        rawToolCalls.length === 0
+          ? undefined
+          : normalizeToolCallIds(rawToolCalls, callIdSeed + turn);
+      // Attach per-step generation metrics: tokens counted across the
+      // streaming run and ms from first tool-call token to here. The
+      // step total is replicated onto each call — for multi-tool steps
+      // this slightly overstates per-call cost, but the alternative
+      // (omitting metrics on multi-tool) is worse UX and the case is
+      // rare. Only attach when we actually saw tool-call tokens.
+      const calls =
+        callsWithoutMetrics && toolCallStartedAt !== null
+          ? callsWithoutMetrics.map(call => ({
+              ...call,
+              metrics: {
+                tokens: toolCallTokenCount,
+                durationMs: Date.now() - toolCallStartedAt!,
+              },
+            }))
+          : callsWithoutMetrics;
+
+      yield {type: 'step_finished', turn, toolCalls: calls};
+
       if (!finishedResult) {
         break;
       }
 
-      const rawToolCalls = finishedResult.tool_calls ?? [];
-      if (rawToolCalls.length === 0) {
+      if (!calls || calls.length === 0) {
         // No tools requested — final answer landed.
         break;
       }
-
-      const calls = normalizeToolCallIds(rawToolCalls, callIdSeed + turn);
 
       const outcomes: AgentToolOutcome[] = [];
       for (const call of calls) {
@@ -389,9 +445,20 @@ export async function* runAgent(
         break;
       }
 
+      // Use `content` (parsed natural-language preamble), NOT `text`
+      // (raw streamed bytes). For tool-calling turns `text` includes
+      // the model's tool-call markers and the full arguments JSON
+      // (e.g. the entire `render_html` html string); putting that into
+      // assistantMsg.content makes the chat template render the
+      // tool_call TWICE on replay — once via `content` and once via
+      // the structured `tool_calls` field. That doubles the prompt
+      // size and breaks KV-cache prefix-match against turn N-1's
+      // streamed bytes, so the engine fully prefills again. `content`
+      // is the clean preamble (often empty for tool-only turns); the
+      // structured `tool_calls` arg below carries the actual call.
       messages = buildNextTurnMessages(
         messages,
-        finishedResult.text ?? finishedResult.content ?? '',
+        finishedResult.content ?? '',
         calls,
         outcomes,
         finishedResult.reasoning_content,
@@ -417,5 +484,7 @@ export async function* runAgent(
     yield {type: 'run_finished', result};
   } catch (error) {
     yield {type: 'run_failed', error: error as Error};
+  } finally {
+    signal?.removeEventListener('abort', onAbort);
   }
 }

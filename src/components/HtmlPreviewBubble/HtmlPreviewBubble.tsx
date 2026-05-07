@@ -128,7 +128,9 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
             onPress={() => setShowCode(s => !s)}
             accessibilityRole="button"
             accessibilityLabel={
-              showCode ? l10n.htmlPreview.showPreview : l10n.htmlPreview.showCode
+              showCode
+                ? l10n.htmlPreview.showPreview
+                : l10n.htmlPreview.showCode
             }
             testID="html-preview-toggle-code"
             hitSlop={8}
@@ -142,7 +144,10 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
           <Pressable
             onPress={() => setFullscreen(true)}
             accessibilityRole="button"
-            accessibilityLabel={l10n.htmlPreview.openFullscreen.replace('{{title}}', displayTitle)}
+            accessibilityLabel={l10n.htmlPreview.openFullscreen.replace(
+              '{{title}}',
+              displayTitle,
+            )}
             testID="html-preview-bubble-collapsed"
             hitSlop={8}
             style={styles.headerButton}>
@@ -200,7 +205,9 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                 onPress={() => setShowCode(s => !s)}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  showCode ? l10n.htmlPreview.showPreview : l10n.htmlPreview.showCode
+                  showCode
+                    ? l10n.htmlPreview.showPreview
+                    : l10n.htmlPreview.showCode
                 }
                 testID="html-preview-modal-toggle-code"
                 hitSlop={8}

@@ -2,16 +2,19 @@ import * as React from 'react';
 import {Pressable, StyleSheet, Text, View, Animated} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
+import {observer} from 'mobx-react';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {useTheme} from '../../hooks';
 
 import styles from './styles';
 import {
+  AssistantTurnFooter,
   Avatar,
   StatusIcon,
   FileMessage,
   ImageMessage,
+  ReasoningBlock,
   TalentSurface,
   TextMessage,
   TextMessageTopLevelProps,
@@ -26,7 +29,12 @@ import {excludeDerivedMessageProps, UserContext} from '../../utils';
 // HtmlPreview-after-text-bubble layout. The first block in a turn uses
 // no extra top margin so single-step no-tool turns render identically
 // to the legacy Text bubble snapshot.
-const ASSISTANT_TURN_BLOCK_GAP = 8;
+// Tightened from 8 → 4 (Idea F). With the auto-collapsed text-only
+// reasoning row and the smaller tool chip, an 8px gap between every
+// inner block bloated short turns ("what time is it now?" had visible
+// dead space between every annotation). 4px keeps the visual rhythm
+// without the airiness.
+const ASSISTANT_TURN_BLOCK_GAP = 4;
 const turnBlockStyles = StyleSheet.create({
   blockSpacer: {marginTop: ASSISTANT_TURN_BLOCK_GAP},
 });
@@ -107,13 +115,27 @@ export interface MessageProps extends MessageTopLevelProps {
 
 /** Base component for all message types in the chat. Renders bubbles around
  * messages and status. Sets maximum width for a message for
- * a nice look on larger screens. */
-export const Message = React.memo(
+ * a nice look on larger screens.
+ *
+ * Wrapped with `observer` (mobx-react) — without it, per-token mutations of
+ * `step.content` via `chatSessionStore.applyStreamingUpdate` (which replaces
+ * `turn.steps[lastIdx]` with a new object) would NOT trigger this component
+ * to re-render. The AssistantTurn message reference itself is stable across
+ * streaming, so a plain `React.memo` would skip every per-token update and
+ * the chat would only refresh when an unrelated state transition (status
+ * flip, keyboard event, scroll) happened to re-render the parent.
+ *
+ * `observer` already provides memo-equivalent shallow-prop comparison, so it
+ * cleanly replaces `React.memo` here. See `chat-flow.md` §2 for the
+ * single-writer streaming path this hooks into. */
+export const Message = observer(
   ({
     enableAnimation,
-    isActiveRun,
-    activeRunPendingTalentNames,
-    isGeneratingToolCall,
+    // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
+    // are kept on MessageTopLevelProps for ChatView's existing prop
+    // API but are no longer consumed here — pending UX is owned by
+    // ChatView's PendingIndicator (D4 / I4) and TalentSurface
+    // dispatches off persisted step data alone (WHAT §4a).
     message,
     messageWidth,
     onMessagePress,
@@ -260,80 +282,133 @@ export const Message = React.memo(
     const renderAssistantTurn = () => {
       const turn = message as MessageType.DerivedAssistantTurn;
       const steps = turn.steps ?? [];
-      const lastIdx = steps.length - 1;
       const blocks: React.ReactNode[] = [];
+      // `isFirstBlock` drives the inter-block spacer (no top margin on
+      // the first block). `nameShown` tracks whether the author header
+      // has already been rendered — reasoning blocks never render the
+      // header (they're metadata, not chat posts), so the showName
+      // slot passes through to the first content/talent block.
       let isFirstBlock = true;
+      let nameShown = false;
+
+      // Wraps a single TextMessage step fragment in the chat-bubble
+      // shell (contentContainer / renderBubble) plus the turn-block
+      // spacer. Used for content blocks only — reasoning has its own
+      // wrapper via `wrapReasoningBlock` because it's not a bubble.
+      const wrapTextBlock = (
+        keySuffix: string,
+        stepFragment: (typeof steps)[number],
+      ) => {
+        const showNameForBlock = showName && !nameShown;
+        const child = (
+          <TextMessage
+            enableAnimation={enableAnimation}
+            message={turn}
+            messageWidth={messageWidth}
+            onPreviewDataFetched={onPreviewDataFetched}
+            showName={showNameForBlock}
+            usePreviewData={usePreviewData}
+            step={stepFragment}
+          />
+        );
+        const wrapped = oneOf(
+          renderBubble,
+          <View
+            style={[
+              contentContainer,
+              !isFirstBlock && turnBlockStyles.blockSpacer,
+            ]}
+            testID="ContentContainer">
+            {child}
+          </View>,
+        )({
+          child,
+          message: excludeDerivedMessageProps(message),
+          nextMessageInGroup: roundBorder,
+          scale: scaleAnim,
+        });
+        if (showNameForBlock) {
+          nameShown = true;
+        }
+        return (
+          <View
+            key={keySuffix}
+            style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}>
+            {wrapped}
+          </View>
+        );
+      };
+
+      // Reasoning is metadata, not a chat bubble — it skips the
+      // contentContainer / renderBubble shell entirely, so the
+      // collapsed text-only row (and partial card) sit directly on
+      // the chat surface with no bubble background or insets fighting
+      // them. The author header is intentionally not shown here:
+      // it belongs to the first true content block.
+      const wrapReasoningBlock = (
+        keySuffix: string,
+        text: string,
+        autoCollapse: boolean,
+      ) => (
+        <View
+          key={keySuffix}
+          style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}
+          testID="ContentContainer-reasoning">
+          <ReasoningBlock
+            text={text}
+            maxWidth={messageWidth}
+            autoCollapse={autoCollapse}
+          />
+        </View>
+      );
 
       steps.forEach((step, stepIdx) => {
-        const stepIsActive = isActiveRun && stepIdx === lastIdx;
+        // Per WHAT §4a / D3: reasoning and content render as SEPARATE
+        // blocks, reasoning first (matches model emission order). Each
+        // block is skipped when its source field is empty so a step
+        // with content-only or reasoning-only renders exactly one
+        // block (no phantom layout). Spacing between blocks is handled
+        // by `turnBlockStyles.blockSpacer`.
+        const hasReasoning =
+          step.reasoningContent !== undefined &&
+          step.reasoningContent.length > 0;
+        const hasContent =
+          step.content !== undefined && step.content.length > 0;
 
-        // Text/reasoning bubble — only when there's something to show.
-        // The bubble wraps a TextMessage(step) so per-step content
-        // routes through the same markdown / link-preview machinery.
-        if (
-          (step.content && step.content.length > 0) ||
-          (step.reasoningContent && step.reasoningContent.length > 0)
-        ) {
-          const child = (
-            <TextMessage
-              enableAnimation={enableAnimation}
-              message={turn}
-              messageWidth={messageWidth}
-              onPreviewDataFetched={onPreviewDataFetched}
-              showName={showName && isFirstBlock}
-              usePreviewData={usePreviewData}
-              step={step}
-            />
-          );
-          const wrapped = oneOf(
-            renderBubble,
-            <View
-              style={[
-                contentContainer,
-                !isFirstBlock && turnBlockStyles.blockSpacer,
-              ]}
-              testID="ContentContainer">
-              {child}
-            </View>,
-          )({
-            child,
-            message: excludeDerivedMessageProps(message),
-            nextMessageInGroup: roundBorder,
-            scale: scaleAnim,
-          });
+        if (hasReasoning) {
+          // Auto-collapse the reasoning bubble once content has begun
+          // streaming OR the step has finalized. Streaming reasoning
+          // alone (before content starts) keeps the bubble in PARTIAL
+          // so the user sees thoughts live; once the model has moved
+          // on to content, the bubble shrinks to its text-only form.
+          const autoCollapseReasoning = hasContent || step.partial === false;
           blocks.push(
-            <View
-              key={`step-${stepIdx}-text`}
-              style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}>
-              {wrapped}
-            </View>,
+            wrapReasoningBlock(
+              `step-${stepIdx}-reasoning`,
+              step.reasoningContent as string,
+              autoCollapseReasoning,
+            ),
           );
           isFirstBlock = false;
         }
 
+        if (hasContent) {
+          blocks.push(wrapTextBlock(`step-${stepIdx}-text`, step));
+          isFirstBlock = false;
+        }
+
         // Talent surface — outside the bubble, with its own visual
-        // container (e.g. HtmlPreviewBubble). Renders nothing if the
-        // step has no toolCalls and we're not actively generating one.
-        const showTalentSurface =
-          (step.toolCalls && step.toolCalls.length > 0) ||
-          (stepIsActive &&
-            ((activeRunPendingTalentNames?.length ?? 0) > 0 ||
-              isGeneratingToolCall));
-        if (showTalentSurface) {
+        // container (e.g. HtmlPreviewBubble). Renders one block per
+        // call in step.toolCalls (in array order). Per WHAT §4a, the
+        // ChatView-owned PendingIndicator covers the in-flight window
+        // before tool outcomes land — there is no per-call pending UI
+        // here.
+        if (step.toolCalls && step.toolCalls.length > 0) {
           blocks.push(
             <View
               key={`step-${stepIdx}-talent`}
               style={!isFirstBlock ? turnBlockStyles.blockSpacer : undefined}>
-              <TalentSurface
-                step={step}
-                isActiveRun={stepIsActive}
-                pendingTalentNames={
-                  stepIsActive ? activeRunPendingTalentNames : undefined
-                }
-                isGeneratingToolCall={
-                  stepIsActive ? isGeneratingToolCall : false
-                }
-              />
+              <TalentSurface step={step} />
             </View>,
           );
           isFirstBlock = false;
@@ -347,11 +422,40 @@ export const Message = React.memo(
     // The single Pressable + Avatar + StatusIcon wrapping is preserved
     // so long-press routing stays turn-level (selectedMessage holds the
     // turn id) and avatar shows once per turn.
+    //
+    // Per WHAT §4b / D9 / I1: ONE AssistantTurnFooter per assistant
+    // row, attached HERE in the outer JSX (not inside renderMessage())
+    // so:
+    //   - AssistantTurn rows render N step blocks then one footer
+    //     (regardless of step count — fixes the duplicate-footer bug
+    //     by construction).
+    //   - Legacy assistant Text rows still get exactly one footer
+    //     (chrome moves out of Bubble, into here).
+    //   - User-authored Text rows render no footer (no behaviour
+    //     change for the user side).
+    const showAssistantFooter =
+      !currentUserIsAuthor &&
+      (message.type === 'assistant_turn' || message.type === 'text');
+    // Assistant-turn rows render no chat-bubble background, and their
+    // child blocks (text, reasoning, tool chip, html preview, footer)
+    // each size to their own content. The HtmlPreviewBubble's WebView
+    // in particular has no intrinsic width — without an explicit width
+    // here the wrapper collapses to whatever non-html sibling is
+    // widest (or to nothing when an html-only step is mid-stream).
+    // Forcing `width: messageWidth` gives the WebView a budget to
+    // stretch into; text-only siblings still wrap to their natural
+    // width via MarkdownView's own `maxWidth` cap.
     const innerContent =
       message.type === 'assistant_turn' ? (
-        <View>{renderAssistantTurn()}</View>
+        <View style={{width: messageWidth}}>
+          {renderAssistantTurn()}
+          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+        </View>
       ) : (
-        renderBubbleContainer()
+        <>
+          {renderBubbleContainer()}
+          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+        </>
       );
 
     return (

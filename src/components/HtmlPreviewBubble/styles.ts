@@ -9,6 +9,16 @@ export const createStyles = (colors: {
 }) =>
   StyleSheet.create({
     container: {
+      // alignSelf: 'stretch' makes the bubble fill the cross-axis of its
+      // parent (horizontal width in the default column-flex chat row).
+      // Without it, the auto-width parent + percentage-width WebView
+      // (`collapsedWebView: { width: '100%' }`) hits the classic flexbox
+      // "0% of nothing" race: on first layout pass the container shrink-
+      // wraps to intrinsic content, the WebView's 100% resolves to that
+      // small value, and only a later layout pass (e.g., when the model
+      // emits a follow-up text bubble below) gives container a definite
+      // width that lets WebView re-measure.
+      alignSelf: 'stretch',
       marginVertical: 8,
       marginHorizontal: 12,
       borderRadius: 12,

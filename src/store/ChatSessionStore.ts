@@ -2,7 +2,12 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {format, isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {AgentStep, AgentToolOutcome, MessageType} from '../utils/types';
+import {
+  AgentStep,
+  AgentToolCall,
+  AgentToolOutcome,
+  MessageType,
+} from '../utils/types';
 import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
@@ -66,6 +71,20 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
+  /**
+   * True between the moment the user taps Stop and the moment the
+   * runner's loop has actually finished (i.e. native llama.rn has
+   * returned from its in-flight `llama_decode` chunk and the for-await
+   * loop in `useChatSession` exits). During this window the JS layer
+   * cannot start a new completion (the native context is still busy)
+   * — the send button must be disabled and the user needs visible
+   * "Stopping…" feedback so they don't mistake the silent gap for the
+   * stop having succeeded already.
+   *
+   * Cleared in the same place that clears `isGenerating` (after the
+   * for-await loop ends, success or failure).
+   */
+  isStopping: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
   newChatSettingsSource: 'pal' | 'custom' = 'pal';
@@ -159,6 +178,10 @@ class ChatSessionStore {
 
   setIsGenerating(value: boolean) {
     this.isGenerating = value;
+  }
+
+  setIsStopping(value: boolean) {
+    this.isStopping = value;
   }
 
   /**
@@ -543,6 +566,31 @@ class ChatSessionStore {
     }, remainingTime);
   }
 
+  /**
+   * Drain the throttled streaming slot synchronously. Call before any
+   * structural change to `turn.steps` (e.g. pushAgentStep or
+   * finalizeActiveStep) so a pending update scheduled for the previous
+   * `lastIdx` lands on the step it was intended for, not on a freshly
+   * pushed step that happens to be `lastIdx` when the timer fires.
+   *
+   * Without this, the regression sequence is: final `token` for step 0
+   * schedules the throttle (fires in 150ms) → step_finished + tool_call
+   * events run synchronously → step_started(1) pushes step 1 → throttle
+   * timer fires → applies step 0's pending content to step 1, briefly
+   * showing step 0's text duplicated under the talent block until the
+   * follow-up step's first real token replaces it.
+   */
+  private flushStreamingUpdate(): void {
+    if (this.streamingThrottleTimer) {
+      clearTimeout(this.streamingThrottleTimer);
+      this.streamingThrottleTimer = null;
+    }
+    if (this.pendingStreamingUpdate) {
+      this.applyStreamingUpdate();
+      this.lastStreamingUpdateTime = Date.now();
+    }
+  }
+
   // Update message during streaming - no database write, triggers reactivity
   // Throttled to avoid excessive re-renders. Accepts either a Text-shaped
   // partial (legacy path) or an AssistantTurn-shaped partial (new
@@ -718,6 +766,11 @@ class ChatSessionStore {
     sessionId: string,
     step: AgentStep,
   ): Promise<void> {
+    // Drain any pending throttled update onto the CURRENT lastIdx
+    // before structurally extending the array. Otherwise a pending
+    // step-0 write would land on the freshly pushed step-1 when the
+    // timer fires.
+    this.flushStreamingUpdate();
     const targetSessionId = sessionId || this.activeSessionId;
     if (!targetSessionId) {
       return;
@@ -744,6 +797,59 @@ class ChatSessionStore {
       await chatSessionRepository.updateMessage(id, {steps: nextSteps});
     } catch (error) {
       console.error('Failed to persist pushAgentStep:', error);
+    }
+  }
+
+  /**
+   * Replace the active (last) step's `toolCalls` array with the
+   * runner's authoritative normalized list. Called from the hook
+   * exactly once per step, on `step_finished`, with ids that match
+   * the upcoming `appendToolOutcome` callIds by construction (the
+   * runner reconciles ids via `normalizeToolCallIds` and attaches
+   * them to the `step_finished` event payload).
+   *
+   * Single-writer rule per WHAT §5 cleanup #1 — the streaming
+   * partial in `applyEventToStore` no longer carries `toolCalls`
+   * as of Step 3, so this is the ONLY writer for `step.toolCalls`
+   * after that change.
+   */
+  async appendToolCall(
+    id: string,
+    sessionId: string,
+    calls: AgentToolCall[],
+  ): Promise<void> {
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+    const index = session.messages.findIndex(msg => msg.id === id);
+    if (index < 0) {
+      return;
+    }
+    const message = session.messages[index];
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    if (!turn.steps || turn.steps.length === 0) {
+      return;
+    }
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      const lastIdx = turn.steps.length - 1;
+      const last = turn.steps[lastIdx];
+      const nextLast: AgentStep = {...last, toolCalls: calls};
+      nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist appendToolCall:', error);
     }
   }
 
@@ -799,6 +905,12 @@ class ChatSessionStore {
    * whole `steps` array wholesale.
    */
   async finalizeActiveStep(id: string, sessionId: string): Promise<void> {
+    // Drain any pending throttled update first so the final partial
+    // content for this step lands BEFORE we mark it `partial: false`
+    // and replace the array. Otherwise a late-firing timer could
+    // either (a) write to a stale array reference or (b) write to
+    // whatever step happens to be lastIdx after this finalize completes.
+    this.flushStreamingUpdate();
     const targetSessionId = sessionId || this.activeSessionId;
     if (!targetSessionId) {
       return;

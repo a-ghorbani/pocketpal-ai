@@ -270,7 +270,6 @@ export const VideoPalScreen = observer(({activePal}: VideoPalScreenProps) => {
             onPalSettingsSelect={handleOpenPalSheet}
             user={user}
             isStopVisible={modelStore.inferencing}
-            isThinking={modelStore.inferencing && !modelStore.isStreaming}
             isStreaming={modelStore.isStreaming}
             sendButtonVisibilityMode="editing"
             textInputProps={{

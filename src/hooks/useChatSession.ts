@@ -156,7 +156,11 @@ const prepareCompletion = async ({
     metadata: {
       contextId,
       conversationId: conversationIdRef,
-      copyable: true,
+      // copyable is intentionally absent here — see WHAT D1/I1: the
+      // turn footer's copy button renders iff metadata.copyable is set,
+      // and at this point the turn has nothing worth copying yet.
+      // copyable is set later: at run_finished (success/maxTurns) or
+      // at the abort catch path with partial content.
       multimodal: hasImages,
     },
   };
@@ -218,15 +222,17 @@ async function applyEventToStore(
       // Per-token writes go through the throttled streaming path so
       // they coalesce. Only forward fields that were actually present
       // in this delta to avoid clobbering existing content with empty.
+      // toolCalls are NO LONGER written here (WHAT §5 cleanup #1) —
+      // the reducer still consumes `event.delta.toolCalls` for
+      // pendingTalentNames, but the canonical step.toolCalls write
+      // happens after step_finished via appendToolCall (Step 4) so
+      // ids match outcomes by construction.
       const partial: Partial<MessageType.AssistantTurn['steps'][number]> = {};
       if (event.delta.content) {
         partial.content = event.delta.content.replace(/^\s+/, '');
       }
       if (event.delta.reasoningContent) {
         partial.reasoningContent = event.delta.reasoningContent;
-      }
-      if (event.delta.toolCalls) {
-        partial.toolCalls = event.delta.toolCalls;
       }
       if (Object.keys(partial).length > 0) {
         chatSessionStore.updateActiveStepStreaming(
@@ -252,6 +258,17 @@ async function applyEventToStore(
       );
       return;
     case 'step_finished':
+      // WHAT §5 cleanup #1: land step.toolCalls AFTER step_finished
+      // with the runner's authoritative normalized ids, so they match
+      // the outcomes' callIds by construction. Skipped for text-only
+      // and final-of-chain steps (no payload attached).
+      if (event.toolCalls && event.toolCalls.length > 0) {
+        await chatSessionStore.appendToolCall(
+          ctx.messageId,
+          ctx.sessionId,
+          event.toolCalls,
+        );
+      }
       await chatSessionStore.finalizeActiveStep(ctx.messageId, ctx.sessionId);
       return;
     case 'run_finished': {
@@ -464,26 +481,13 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
-
-      // Fire TTS auto-speak after the final completionResult is written.
-      // Store enforces auto-speak / voice / idempotency gating internally.
-      // Wrapped defensively — UI-path errors must not bubble.
-      try {
-        ttsStore.onAssistantMessageComplete(
-          currentMessageInfo.current.id,
-          result.text,
-          {
-            hadReasoning: !!result.reasoning_content?.trim(),
-          },
-        );
-      } catch (ttsErr) {
-        console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
-      }
+      chatSessionStore.setIsStopping(false);
     } catch (error) {
       console.error('Completion error:', error);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setIsStopping(false);
       // Reset agentUiState back to idle so renderers don't get
       // stuck in a failed state across the next user message.
       chatSessionStore.setAgentUiState(initialAgentUiState);
@@ -570,24 +574,34 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // Signal the runner first so the abort fires at the next turn
-    // boundary; engine.stopCompletion() then halts the in-flight
-    // engine call (terminating the current step's streaming).
+    // Enter the `stopping` state IMMEDIATELY: the user gets visible
+    // feedback ("Stopping…") and the send button is gated off so a
+    // new completion can't try to use the still-busy native context.
+    // We do NOT touch `inferencing` / `isGenerating` here — those get
+    // cleared by the for-await cleanup in handleSendPress once the
+    // runner has actually exited (native llama.rn has returned from
+    // its current llama_decode chunk; see ChatSessionStore.isStopping
+    // for the rationale).
+    chatSessionStore.setIsStopping(true);
     abortRef.current?.abort();
     if (modelStore.inferencing && modelStore.engine) {
-      modelStore.engine.stopCompletion();
+      try {
+        await modelStore.engine.stopCompletion();
+      } catch (error) {
+        console.warn('engine.stopCompletion failed:', error);
+      }
     }
-    modelStore.setInferencing(false);
-    modelStore.setIsStreaming(false);
-    chatSessionStore.setIsGenerating(false);
-
     // Stop any in-flight TTS so buffered audio doesn't keep playing
-    // after the user tapped Stop.
+    // after the user tapped Stop. Inferencing/isStreaming/isGenerating
+    // flags are NOT cleared here — those get cleared by the for-await
+    // cleanup in handleSendPress once the runner has actually exited.
     ttsStore.stop().catch(err => {
       console.warn('[useChatSession] TTS stop on user-stop failed:', err);
     });
 
-    // Deactivate keep awake when stopping completion
+    // Note: deactivateKeepAwake intentionally stays here so the device
+    // can sleep as soon as the user signals stop, even if native is
+    // still finishing the current chunk.
     try {
       deactivateKeepAwake();
     } catch (error) {

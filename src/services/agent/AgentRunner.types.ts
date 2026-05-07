@@ -45,7 +45,21 @@ export type AgentEvent =
   | {type: 'marker_seen'; marker: string}
   | {type: 'tool_call_started'; call: AgentToolCall}
   | {type: 'tool_call_finished'; outcome: AgentToolOutcome}
-  | {type: 'step_finished'; turn: number}
+  | {
+      type: 'step_finished';
+      turn: number;
+      /**
+       * The runner's authoritative normalized tool calls for this
+       * step, attached when the step actually invoked tools. Optional
+       * because text-only steps and the final step of a multi-turn
+       * chain don't have any. When present, ids are reconciled with
+       * outcome callIds via {@link normalizeToolCallIds} — the hook's
+       * `appendToolCall` writer relies on this to make
+       * `step.toolCalls[i].id === outcome.callId` true by construction.
+       * See WHAT §5 cleanup #1.
+       */
+      toolCalls?: AgentToolCall[];
+    }
   | {type: 'run_finished'; result: AgentRunResult}
   | {type: 'run_failed'; error: Error};
 
@@ -58,20 +72,33 @@ export type AgentEvent =
 export interface AgentUiState {
   status:
     | 'idle'
-    | 'preparing'
+    | 'prefill'
     | 'streaming_text'
     | 'generating_tool_call'
     | 'executing_tool'
-    | 'streaming_followup'
     | 'done'
     | 'failed';
   pendingTalentNames: string[];
+  /**
+   * Number of streaming token events received during the current
+   * tool-call generation phase. The PendingIndicator surfaces this
+   * so the user can tell that long tool calls (e.g. `render_html`
+   * building a complex page) are still progressing rather than hung.
+   * Reset to 0 on transitions out of `generating_tool_call`.
+   *
+   * Counts events, not characters: each `case 'token'` while
+   * generating a tool call increments by 1, so the unit matches the
+   * model's intuition (and is independent of how the engine encodes
+   * arguments). For llama.rn this aligns with native token callbacks.
+   */
+  pendingToolTokens: number;
   hitMaxTurns: boolean;
 }
 
 export const initialAgentUiState: AgentUiState = {
   status: 'idle',
   pendingTalentNames: [],
+  pendingToolTokens: 0,
   hitMaxTurns: false,
 };
 

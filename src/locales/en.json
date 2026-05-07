@@ -519,6 +519,17 @@
     "thinkingBubble": {
       "reasoning": "Reasoning"
     },
+    "pendingIndicator": {
+      "preparingTool": "Preparing tool",
+      "buildingPage": "Building page",
+      "calculating": "Calculating",
+      "lookingUpTime": "Looking up time",
+      "stopping": "Stopping…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} tokens",
+      "elapsed": "{{seconds}}s"
+    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "No Models Available",
       "noModelsDescription": "Download a model to start chatting with PocketPal",
@@ -1072,7 +1083,9 @@
     "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
     "softCapWarning": "Start a new chat for best performance.",
     "generatingPreview": "Generating preview… ({{tokens}} tokens)",
-    "generatingPreviewPending": "Generating preview…"
+    "generatingPreviewPending": "Generating preview…",
+    "toolUsedChip": "used {{name}}",
+    "toolErrorBlock": "{{name}} failed"
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

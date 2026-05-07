@@ -57,7 +57,7 @@ import {
   ChatInputAdditionalProps,
   ChatInputTopLevelProps,
   Menu,
-  LoadingBubble,
+  PendingIndicator,
   ChatPalModelPickerSheet,
   ChatHeader,
   ChatEmptyPlaceholder,
@@ -128,10 +128,13 @@ export interface ChatProps extends ChatTopLevelProps {
    * When true, indicates that there are no more pages to load and
    * pagination will not be triggered. */
   isLastPage?: boolean;
-  /** Indicates if the AI is currently streaming tokens */
+  /** Indicates if the AI is currently streaming tokens. Used by the
+   * FlatList's `maintainVisibleContentPosition` to keep the latest
+   * tokens in view while the stream lands. The legacy `isThinking`
+   * prop has been retired — pending UX is now derived inside
+   * ChatView from `chatSessionStore.agentUiState.status` (WHAT §4d
+   * / D4 / I4). */
   isStreaming?: boolean;
-  /** Indicates if the AI is currently thinking (processing but not yet streaming) */
-  isThinking?: boolean;
   messages: MessageType.Any[];
   /** Used for pagination (infinite scroll). Called when user scrolls
    * to the very end of the list (minus `onEndReachedThreshold`).
@@ -163,6 +166,24 @@ export interface ChatProps extends ChatTopLevelProps {
   user: User;
 }
 
+/**
+ * Thin observer wrapper around PendingIndicator so the per-token
+ * count + label updates only re-render this small subtree (and not
+ * the entire FlatList header), keeping the dot animations alive and
+ * the elapsed-seconds timer ticking. Without this isolation, MobX
+ * re-renders ChatView on each token, the `renderListHeaderComponent`
+ * useCallback would change reference (because it'd carry the count in
+ * its deps), and FlatList would unmount + remount the header every
+ * ~50ms — killing both Animated.loop and setInterval.
+ */
+const PendingIndicatorView: React.FC = observer(() => (
+  <PendingIndicator
+    pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
+    pendingToolTokens={chatSessionStore.agentUiState.pendingToolTokens}
+    isStopping={chatSessionStore.isStopping}
+  />
+));
+
 /** Entry component, represents the complete chat */
 export const ChatView = observer(
   ({
@@ -176,7 +197,6 @@ export const ChatView = observer(
     isLastPage,
     isStopVisible,
     isStreaming = false,
-    isThinking = false,
     messages,
     onEndReached,
     onMessageLongPress: externalOnMessageLongPress,
@@ -716,11 +736,24 @@ export const ChatView = observer(
     const newestMessageId = messages.length > 0 ? messages[0].id : null;
     const agentStatus = chatSessionStore.agentUiState.status;
     const isAgentActive =
-      agentStatus === 'preparing' ||
+      agentStatus === 'prefill' ||
       agentStatus === 'streaming_text' ||
       agentStatus === 'generating_tool_call' ||
+      agentStatus === 'executing_tool';
+    // PendingIndicator visibility (WHAT §3 table, §7 derivation,
+    // I4). The indicator covers every dead zone: prefill (initial
+    // and follow-up), generating_tool_call, executing_tool. Hidden
+    // in streaming_text and done so it doesn't compete with the
+    // visible token stream / final footer.
+    const isPending =
+      agentStatus === 'prefill' ||
+      agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool' ||
-      agentStatus === 'streaming_followup';
+      // Keep the indicator visible during the user-initiated stop
+      // window so they see the "Stopping…" feedback even if status
+      // had been `streaming_text` (no indicator) at the moment of the
+      // tap. Cleared together with `isStopping` once the runner exits.
+      chatSessionStore.isStopping;
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;
     const isGeneratingToolCall = agentStatus === 'generating_tool_call';
@@ -861,15 +894,19 @@ export const ChatView = observer(
       };
     });
 
-    // Render header (loading bubble and keyboard spacer)
+    // Render header (pending indicator + keyboard spacer). The
+    // FlatList is `inverted={true}`, so the ListHeaderComponent
+    // renders at the bottom of the visible list — i.e. BELOW the
+    // latest turn, satisfying I4 ("PendingIndicator lives below the
+    // latest turn during dead zones, never inside one").
     const renderListHeaderComponent = React.useCallback(
       () => (
         <>
-          {isThinking && <LoadingBubble />}
+          {isPending && <PendingIndicatorView />}
           {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),
-      [isThinking, chatMessages.length, headerStyle],
+      [isPending, chatMessages.length, headerStyle],
     );
 
     // Render complete chat list with scroll-to-bottom button
