@@ -108,7 +108,7 @@ Get PocketPal AI on Google Play:
 - **Copy Code Blocks**: Use the copy button in a code block header.
 - **Copy Structured Blocks**: JSON, XML, tool-call, table, and block math segments expose their own copy controls where applicable.
 
-Assistant responses render Markdown, code blocks, tables, and common LaTeX delimiters. Clean copy hides thinking blocks and model template tokens by default, Clean + thinking includes reasoning as plain text, and raw copy preserves the exact model output. Unsafe HTML is escaped and never executed.
+Assistant responses render Markdown, code blocks, tables, and common LaTeX delimiters. LaTeX is rendered locally with bundled KaTeX assets in a locked-down WebView; no CDN, remote images, or external scripts are used. Clean copy hides thinking blocks and model template tokens by default, Clean + thinking includes reasoning as plain text, and raw copy preserves the exact model output. Unsafe HTML is escaped and never executed.
 
 When an answer contains thinking tags, service/template tokens, unsafe HTML, or partial streaming markup, the bubble exposes Rendered, Clean, and Raw view modes so you can inspect the fallback output without changing copy settings.
 

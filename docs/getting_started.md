@@ -102,14 +102,14 @@ Clean copy removes model template tokens and thinking blocks by default. Clean t
 
 ### Markdown, Math, and Unsafe HTML
 
-PocketPal supports common Markdown syntax and safe fallbacks for malformed Markdown while streaming. Code blocks preserve indentation and newlines, and Markdown/LaTeX is not interpreted inside fenced code.
+PocketPal supports common Markdown syntax and safe fallbacks for malformed Markdown while streaming. Code blocks preserve indentation and newlines, and Markdown/LaTeX is not interpreted inside fenced code. LaTeX fragments render locally with bundled KaTeX assets in a locked-down WebView, with no CDN, remote images, or external scripts.
 
 Supported math delimiters:
 
 - Inline: `$...$` and `\(...\)`
 - Block: `$$...$$` and `\[...\]`
 
-Escaped dollar signs such as `\$5` are preserved. Long block equations scroll horizontally. Unsafe HTML is escaped before rendering; scripts, remote images, and raw HTML are not executed. XML/HTML-like model output is displayed as text/code fallback rather than run as markup.
+Escaped dollar signs such as `\$5` are preserved. Long block equations scroll horizontally. Malformed or too-large formulas fall back to styled raw TeX and remain copyable. Unsafe HTML is escaped before rendering; scripts, remote images, and raw HTML are not executed. XML/HTML-like model output is displayed as text/code fallback rather than run as markup.
 
 Rendering behavior can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility, default thinking collapse, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers, large tables, many code blocks, and large math blocks use cheaper fallback paths so the chat stays responsive while streaming on mobile devices.
 
