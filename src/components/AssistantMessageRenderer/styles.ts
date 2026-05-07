@@ -12,6 +12,36 @@ export const createStyles = (theme: Theme) =>
       fontSize: 16,
       lineHeight: 22,
     },
+    modeSwitch: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 6,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.outlineVariant,
+      borderRadius: 6,
+      overflow: 'hidden',
+      backgroundColor: theme.colors.surfaceContainerHigh,
+    },
+    modeButton: {
+      minHeight: 30,
+      paddingHorizontal: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderRightColor: theme.colors.outlineVariant,
+    },
+    modeButtonActive: {
+      backgroundColor: theme.colors.primaryContainer,
+    },
+    modeButtonText: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    modeButtonTextActive: {
+      color: theme.colors.onPrimaryContainer,
+    },
     structuredBlock: {
       maxWidth: '100%',
       marginVertical: 6,
