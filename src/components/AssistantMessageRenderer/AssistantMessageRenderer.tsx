@@ -13,7 +13,7 @@ import {
   buildSegmentCopyText,
   defaultMessageRenderingSettings,
   getThinkingContent,
-  parseAssistantMessage,
+  parseAssistantMessageCached,
   MessageRenderMode,
   MessageSegment,
   prettyPrintJson,
@@ -266,7 +266,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 
       const parsed = useMemo(
         () =>
-          parseAssistantMessage(content, {
+          parseAssistantMessageCached(content, {
             thinkingStartTag,
             thinkingEndTag,
             hideServiceTokens: settings.hideModelTemplateTokens,

@@ -1,4 +1,4 @@
-import {parseAssistantMessage} from './parser';
+import {parseAssistantMessageCached} from './cache';
 import {
   MessageCopyMode,
   MessageParserOptions,
@@ -34,7 +34,7 @@ export function buildMessageCopyText(
     return raw;
   }
 
-  const parsed = parseAssistantMessage(raw, options);
+  const parsed = parseAssistantMessageCached(raw, options);
 
   switch (mode) {
     case 'markdown':
