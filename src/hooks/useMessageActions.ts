@@ -29,6 +29,11 @@ export const useMessageActions = ({
   const handleCopy = useCallback(
     (message: MessageType.Text, mode?: MessageCopyMode) => {
       if (message.type === 'text') {
+        if (message.author.id === user.id) {
+          Clipboard.setString(message.text);
+          return;
+        }
+
         const settings = {
           ...defaultMessageRenderingSettings,
           ...uiStore.messageRenderingSettings,
@@ -43,7 +48,7 @@ export const useMessageActions = ({
         );
       }
     },
-    [],
+    [user.id],
   );
 
   const handleEdit = useCallback(

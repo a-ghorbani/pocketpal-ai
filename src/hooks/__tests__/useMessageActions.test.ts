@@ -55,6 +55,30 @@ describe('useMessageActions', () => {
     expect(Clipboard.setString).toHaveBeenCalledWith('Copy this text');
   });
 
+  it('copies user-authored text literally without assistant cleanup', () => {
+    const {result} = renderHook(() =>
+      useMessageActions({
+        user,
+        messages,
+        handleSendPress: mockHandleSendPress,
+        setInputText: mockSetInputText,
+      }),
+    );
+
+    act(() => {
+      result.current.handleCopy({
+        ...textMessage,
+        author: user,
+        text: '<think>literal prompt</think>\nUse <|assistant|> as text',
+        type: 'text',
+      });
+    });
+
+    expect(Clipboard.setString).toHaveBeenCalledWith(
+      '<think>literal prompt</think>\nUse <|assistant|> as text',
+    );
+  });
+
   it('enters edit mode for user message', () => {
     const {result} = renderHook(() =>
       useMessageActions({
