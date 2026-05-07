@@ -76,3 +76,10 @@ export interface MessageWithRenderingMetadata {
   text: string;
   metadata?: Record<string, any>;
 }
+
+export interface MessageRenderingCacheStats {
+  entries: number;
+  cachedChars: number;
+  hits: number;
+  misses: number;
+}
