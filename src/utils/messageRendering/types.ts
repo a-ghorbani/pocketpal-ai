@@ -1,6 +1,11 @@
 export type MessageRenderMode = 'rendered' | 'raw' | 'clean';
 
-export type MessageCopyMode = 'clean' | 'markdown' | 'raw' | 'plain';
+export type MessageCopyMode =
+  | 'clean'
+  | 'cleanWithThinking'
+  | 'markdown'
+  | 'raw'
+  | 'plain';
 
 export type MessageSegmentKind =
   | 'text'

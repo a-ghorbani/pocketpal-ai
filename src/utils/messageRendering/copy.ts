@@ -1,10 +1,12 @@
 import {parseAssistantMessageCached} from './cache';
+import {getThinkingContent} from './parser';
 import {
   MessageCopyMode,
   MessageParserOptions,
   MessageSegment,
   MessageWithRenderingMetadata,
 } from './types';
+import {markdownToPlainText} from './markdown';
 
 export function getMessageRawContent(
   message: MessageWithRenderingMetadata,
@@ -37,6 +39,13 @@ export function buildMessageCopyText(
   const parsed = parseAssistantMessageCached(raw, options);
 
   switch (mode) {
+    case 'cleanWithThinking': {
+      const thinkingText = markdownToPlainText(getThinkingContent(parsed));
+      const answerText = parsed.plainText || parsed.cleanText;
+      return [thinkingText && `Thinking\n${thinkingText}`, answerText]
+        .filter(Boolean)
+        .join('\n\n');
+    }
     case 'markdown':
       return parsed.markdownText;
     case 'plain':

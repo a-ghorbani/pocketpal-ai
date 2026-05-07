@@ -558,6 +558,7 @@ export const ChatView = observer(
       copy: copyLabel,
       copyAs: copyAsLabel,
       copyClean: copyCleanLabel,
+      copyCleanWithThinking: copyCleanWithThinkingLabel,
       copyMarkdown: copyMarkdownLabel,
       copyRaw: copyRawLabel,
       regenerate: regenerateLabel,
@@ -594,6 +595,13 @@ export const ChatView = observer(
               label: copyCleanLabel,
               onPress: () => {
                 handleCopy(selectedMessage, 'clean');
+                handleMenuDismiss();
+              },
+            },
+            {
+              label: copyCleanWithThinkingLabel,
+              onPress: () => {
+                handleCopy(selectedMessage, 'cleanWithThinking');
                 handleMenuDismiss();
               },
             },
@@ -677,6 +685,7 @@ export const ChatView = observer(
       copyLabel,
       copyAsLabel,
       copyCleanLabel,
+      copyCleanWithThinkingLabel,
       copyMarkdownLabel,
       copyRawLabel,
       regenerateLabel,

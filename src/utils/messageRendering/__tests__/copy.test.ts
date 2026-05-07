@@ -23,6 +23,12 @@ describe('message rendering copy helpers', () => {
     );
   });
 
+  it('can copy clean text with thinking included', () => {
+    expect(
+      buildMessageCopyText(goldenMessages.think, 'cleanWithThinking'),
+    ).toBe('Thinking\nNeed a plan.\n\nFinal answer.');
+  });
+
   it('keeps raw text untouched', () => {
     expect(buildMessageCopyText(goldenMessages.llamaTokens, 'raw')).toBe(
       goldenMessages.llamaTokens,
