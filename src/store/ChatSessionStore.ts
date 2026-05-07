@@ -71,6 +71,20 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
+  /**
+   * True between the moment the user taps Stop and the moment the
+   * runner's loop has actually finished (i.e. native llama.rn has
+   * returned from its in-flight `llama_decode` chunk and the for-await
+   * loop in `useChatSession` exits). During this window the JS layer
+   * cannot start a new completion (the native context is still busy)
+   * — the send button must be disabled and the user needs visible
+   * "Stopping…" feedback so they don't mistake the silent gap for the
+   * stop having succeeded already.
+   *
+   * Cleared in the same place that clears `isGenerating` (after the
+   * for-await loop ends, success or failure).
+   */
+  isStopping: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
   newChatSettingsSource: 'pal' | 'custom' = 'pal';
@@ -164,6 +178,10 @@ class ChatSessionStore {
 
   setIsGenerating(value: boolean) {
     this.isGenerating = value;
+  }
+
+  setIsStopping(value: boolean) {
+    this.isStopping = value;
   }
 
   /**

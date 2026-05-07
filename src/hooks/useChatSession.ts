@@ -475,11 +475,13 @@ export const useChatSession = (
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setIsStopping(false);
     } catch (error) {
       console.error('Completion error:', error);
       modelStore.setInferencing(false);
       modelStore.setIsStreaming(false);
       chatSessionStore.setIsGenerating(false);
+      chatSessionStore.setIsStopping(false);
       // Reset agentUiState back to idle so renderers don't get
       // stuck in a failed state across the next user message.
       chatSessionStore.setAgentUiState(initialAgentUiState);
@@ -560,13 +562,15 @@ export const useChatSession = (
   };
 
   const handleStopPress = async () => {
-    // Abort first so the runner's signal listener (registered in
-    // runAgent) fires `engine.stopCompletion()` from inside the
-    // generator with a guaranteed-fresh engine handle. The direct
-    // call below is a redundant safety net — kept because the
-    // runner-side path depends on the runner being alive and
-    // listening, and we've previously shipped bugs where the
-    // fire-and-forget call swallowed errors silently.
+    // Enter the `stopping` state IMMEDIATELY: the user gets visible
+    // feedback ("Stopping…") and the send button is gated off so a
+    // new completion can't try to use the still-busy native context.
+    // We do NOT touch `inferencing` / `isGenerating` here — those get
+    // cleared by the for-await cleanup in handleSendPress once the
+    // runner has actually exited (native llama.rn has returned from
+    // its current llama_decode chunk; see ChatSessionStore.isStopping
+    // for the rationale).
+    chatSessionStore.setIsStopping(true);
     abortRef.current?.abort();
     if (modelStore.inferencing && modelStore.engine) {
       try {
@@ -575,10 +579,9 @@ export const useChatSession = (
         console.warn('engine.stopCompletion failed:', error);
       }
     }
-    modelStore.setInferencing(false);
-    modelStore.setIsStreaming(false);
-    chatSessionStore.setIsGenerating(false);
-
+    // Note: deactivateKeepAwake intentionally stays here so the device
+    // can sleep as soon as the user signals stop, even if native is
+    // still finishing the current chunk.
     try {
       deactivateKeepAwake();
     } catch (error) {

@@ -80,6 +80,27 @@ describe('PendingIndicator', () => {
     );
   });
 
+  it('overrides everything with "Stopping…" when isStopping is true', () => {
+    // The user has tapped Stop and we're waiting for native llama.rn
+    // to finish its current llama_decode chunk. Even if a tool-call
+    // was in flight (label, token count, elapsed) the indicator must
+    // surface ONLY the stopping signal so the user knows their tap
+    // landed and the silent gap isn't a hung UI.
+    const {getByTestId} = render(
+      <PendingIndicator
+        pendingTalentNames={['render_html']}
+        pendingToolTokens={150}
+        isStopping
+      />,
+    );
+    const suffix = getByTestId('pending-indicator-suffix');
+    expect(suffix.props.children).toBe(
+      l10n.en.components.pendingIndicator.stopping,
+    );
+    // No leftover token count or elapsed text from the previous mode.
+    expect(suffix.props.children).not.toMatch(/tokens/);
+  });
+
   it('appends elapsed seconds after one second has passed', () => {
     jest.useFakeTimers();
     const {getByTestId, rerender} = render(

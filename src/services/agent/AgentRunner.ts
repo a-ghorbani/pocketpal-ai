@@ -269,7 +269,7 @@ export async function* runAgent(
   // rejects, sync function returning undefined, sync throw) without
   // ever propagating an error out of the abort handler.
   const onAbort = () => {
-    void (async () => {
+    (async () => {
       try {
         await engine.stopCompletion?.();
       } catch (err) {

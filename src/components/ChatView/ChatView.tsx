@@ -180,6 +180,7 @@ const PendingIndicatorView: React.FC = observer(() => (
   <PendingIndicator
     pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
     pendingToolTokens={chatSessionStore.agentUiState.pendingToolTokens}
+    isStopping={chatSessionStore.isStopping}
   />
 ));
 
@@ -747,7 +748,12 @@ export const ChatView = observer(
     const isPending =
       agentStatus === 'prefill' ||
       agentStatus === 'generating_tool_call' ||
-      agentStatus === 'executing_tool';
+      agentStatus === 'executing_tool' ||
+      // Keep the indicator visible during the user-initiated stop
+      // window so they see the "Stopping…" feedback even if status
+      // had been `streaming_text` (no indicator) at the moment of the
+      // tap. Cleared together with `isStopping` once the runner exits.
+      chatSessionStore.isStopping;
     const activeRunPendingTalentNames =
       chatSessionStore.agentUiState.pendingTalentNames;
     const isGeneratingToolCall = agentStatus === 'generating_tool_call';

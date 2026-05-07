@@ -142,6 +142,27 @@ describe('useChatSession', () => {
     expect(modelStore.context?.stopCompletion).not.toHaveBeenCalled();
   });
 
+  it('handleStopPress sets isStopping immediately so the UI can gate sends', async () => {
+    // Simulate a real in-flight chat: inferencing is true and the
+    // engine has been wired (mock above). The stop press should:
+    //   - flip isStopping to true (UI feedback + send-button gate)
+    //   - leave inferencing alone (cleared later by the runner exit)
+    // The cleanup of isStopping happens in the for-await loop, so it
+    // is exercised in `should set inferencing correctly during send`.
+    modelStore.setInferencing(true);
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await result.current.handleStopPress();
+
+    expect(chatSessionStore.setIsStopping).toHaveBeenCalledWith(true);
+    // inferencing flag is NOT cleared by handleStopPress anymore — the
+    // runner's for-await cleanup is the single owner of that.
+    const calls = (chatSessionStore.setIsGenerating as jest.Mock).mock.calls;
+    expect(calls.find(c => c[0] === false)).toBeUndefined();
+  });
+
   it('should set inferencing correctly during send', async () => {
     let resolveCompletion: (value: any) => void;
     const completionPromise = new Promise(resolve => {
