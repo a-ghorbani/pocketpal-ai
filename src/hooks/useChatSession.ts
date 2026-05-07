@@ -186,6 +186,17 @@ const prepareCompletion = async ({
  * else (per-step content, tool outcomes, finalization) goes through
  * the dedicated step-actions added in step 2.
  */
+// Per-run TTS streaming state. The runner emits CUMULATIVE content/
+// reasoning on each `token` event (mirroring llama.rn's callback
+// semantics); the TTS streaming hooks expect per-call deltas, so we
+// diff cumulative against `prev*` and forward only the new substring.
+// Carried in ctx so a single run keeps a coherent audio stream.
+type TtsRunState = {
+  started: boolean;
+  prevContent: string;
+  prevReasoning: string;
+};
+
 async function applyEventToStore(
   event: AgentEvent,
   ctx: {
@@ -195,6 +206,7 @@ async function applyEventToStore(
     timeToFirstTokenMs: {value: number | null};
     hasImages: boolean;
     isMultimodalEnabled: boolean;
+    tts: TtsRunState;
   },
 ): Promise<void> {
   switch (event.type) {
@@ -218,6 +230,41 @@ async function applyEventToStore(
       }
       if (!modelStore.isStreaming) {
         modelStore.setIsStreaming(true);
+      }
+      // TTS streaming hooks. Open a StreamingHandle on the first token
+      // that carries content OR reasoning, then forward each new
+      // substring via onAssistantMessageChunk. Wrapped defensively so a
+      // UI-path failure cannot kill the completion stream.
+      try {
+        const cumulativeContent = event.delta.content ?? ctx.tts.prevContent;
+        const cumulativeReasoning =
+          event.delta.reasoningContent ?? ctx.tts.prevReasoning;
+        if (
+          !ctx.tts.started &&
+          (event.delta.content || event.delta.reasoningContent)
+        ) {
+          ctx.tts.started = true;
+          ttsStore.onAssistantMessageStart(ctx.messageId);
+        }
+        const contentDelta =
+          cumulativeContent.length > ctx.tts.prevContent.length
+            ? cumulativeContent.slice(ctx.tts.prevContent.length)
+            : '';
+        const reasoningDelta =
+          cumulativeReasoning.length > ctx.tts.prevReasoning.length
+            ? cumulativeReasoning.slice(ctx.tts.prevReasoning.length)
+            : '';
+        if (contentDelta || reasoningDelta) {
+          ctx.tts.prevContent = cumulativeContent;
+          ctx.tts.prevReasoning = cumulativeReasoning;
+          ttsStore.onAssistantMessageChunk(
+            ctx.messageId,
+            contentDelta,
+            reasoningDelta || undefined,
+          );
+        }
+      } catch (ttsErr) {
+        console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
       }
       // Per-token writes go through the throttled streaming path so
       // they coalesce. Only forward fields that were actually present
@@ -291,6 +338,18 @@ async function applyEventToStore(
         console.warn(
           '[useChatSession] agent run hit maxTurns; surfacing last available content',
         );
+      }
+      // Fire TTS auto-speak after the final text is observable. Store
+      // enforces auto-speak / voice / idempotency gating internally.
+      // Wrapped defensively — UI-path errors must not bubble.
+      try {
+        ttsStore.onAssistantMessageComplete(
+          ctx.messageId,
+          finalResult.text ?? '',
+          {hadReasoning: !!finalResult.reasoning_content?.trim()},
+        );
+      } catch (ttsErr) {
+        console.warn('[useChatSession] TTS complete hook failed:', ttsErr);
       }
       return;
     }
@@ -419,6 +478,11 @@ export const useChatSession = (
     abortRef.current = new AbortController();
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
+    const tts: TtsRunState = {
+      started: false,
+      prevContent: '',
+      prevReasoning: '',
+    };
     let uiState: AgentUiState = initialAgentUiState;
 
     // Precompute trigger markers via the per-hook cache. We use the
@@ -471,6 +535,7 @@ export const useChatSession = (
           timeToFirstTokenMs,
           hasImages,
           isMultimodalEnabled,
+          tts,
         });
 
         if (event.type === 'run_failed') {
