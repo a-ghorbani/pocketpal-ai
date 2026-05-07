@@ -4,7 +4,13 @@ import {TalentEngine, TalentResult, ToolDefinition} from './types';
 
 export class CalculateEngine implements TalentEngine {
   readonly name = 'calculate';
-  private parser = new Parser();
+  // allowMemberAccess: false blocks the `(0).constructor.constructor("…")()`
+  // sandbox-escape on RN runtimes where Hermes is disabled and a JIT lives
+  // behind the Function constructor. Math operators and the standard
+  // library still resolve through expr-eval's evaluator without member
+  // access, so this only removes a privilege the model never legitimately
+  // needs.
+  private parser = new Parser({allowMemberAccess: false});
 
   async execute(args: Record<string, any>): Promise<TalentResult> {
     const expression =
