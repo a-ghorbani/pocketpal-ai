@@ -12,4 +12,66 @@ export const createStyles = (theme: Theme) =>
       fontSize: 16,
       lineHeight: 22,
     },
+    structuredBlock: {
+      maxWidth: '100%',
+      marginVertical: 6,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.outlineVariant,
+      borderRadius: 8,
+      overflow: 'hidden',
+      backgroundColor: theme.colors.surfaceContainerHigh,
+    },
+    structuredHeader: {
+      minHeight: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.outlineVariant,
+    },
+    structuredToggle: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    structuredChevron: {
+      transform: [{rotate: '-90deg'}],
+    },
+    structuredChevronExpanded: {
+      transform: [{rotate: '0deg'}],
+    },
+    structuredTitle: {
+      flexShrink: 1,
+      color: theme.colors.text,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    structuredLanguage: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+    },
+    structuredCopyButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    structuredScroll: {
+      maxWidth: '100%',
+      backgroundColor: theme.colors.surface,
+    },
+    structuredScrollContent: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    structuredCodeText: {
+      color: theme.colors.text,
+      fontFamily: 'monospace',
+      fontSize: 13,
+      lineHeight: 18,
+    },
   });

@@ -1,7 +1,10 @@
-import React, {useMemo} from 'react';
-import {Text, View} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {observer} from 'mobx-react-lite';
+import Clipboard from '@react-native-clipboard/clipboard';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
+import {ChevronDownIcon, CopyIcon} from '../../assets/icons';
 import {MarkdownView} from '../MarkdownView';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {useTheme} from '../../hooks';
@@ -13,6 +16,7 @@ import {
   MessageRenderMode,
   MessageSegment,
   prettyPrintJson,
+  prettyPrintXml,
 } from '../../utils/messageRendering';
 
 import {createStyles} from './styles';
@@ -26,30 +30,33 @@ interface AssistantMessageRendererProps {
   reasoningContent?: string;
 }
 
+const hapticOptions = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
+
 function fencedBlock(language: string, content: string): string {
   const fence = content.includes('```') ? '~~~~' : '```';
   const normalizedContent = content.endsWith('\n') ? content : `${content}\n`;
   return `${fence}${language}\n${normalizedContent}${fence}`;
 }
 
-function segmentToMarkdown(segment: MessageSegment): string | undefined {
-  const trimmedContent = segment.content.trim();
+function isStructuredSegment(segment: MessageSegment): boolean {
+  return (
+    segment.kind === 'json' || segment.kind === 'xml' || segment.kind === 'tool'
+  );
+}
 
+function segmentToMarkdown(segment: MessageSegment): string | undefined {
   switch (segment.kind) {
     case 'thinking':
     case 'serviceTag':
+    case 'json':
+    case 'xml':
+    case 'tool':
       return undefined;
     case 'code':
       return fencedBlock(segment.language || 'text', segment.content);
-    case 'json':
-      return fencedBlock('json', prettyPrintJson(trimmedContent));
-    case 'xml':
-      return fencedBlock('xml', trimmedContent);
-    case 'tool': {
-      const prettyToolContent = prettyPrintJson(trimmedContent);
-      const language = /^[{[]/.test(trimmedContent) ? 'json' : 'text';
-      return fencedBlock(language, prettyToolContent);
-    }
     case 'math':
     case 'table':
       return segment.raw;
@@ -59,6 +66,128 @@ function segmentToMarkdown(segment: MessageSegment): string | undefined {
       return segment.content.replace(/<\/?final>/gi, '');
   }
 }
+
+function getStructuredSegmentTitle(segment: MessageSegment): string {
+  if (segment.kind === 'json') {
+    return segment.malformed ? 'JSON fallback' : 'JSON';
+  }
+
+  if (segment.kind === 'xml') {
+    return segment.malformed ? 'XML fallback' : 'XML';
+  }
+
+  if (/function_call/i.test(segment.delimiter || segment.raw)) {
+    return 'function_call';
+  }
+
+  return 'tool_call';
+}
+
+function getStructuredSegmentLanguage(segment: MessageSegment): string {
+  const content = segment.content.trim();
+
+  if (segment.kind === 'json' || /^[{[]/.test(content)) {
+    return 'json';
+  }
+
+  if (segment.kind === 'xml' || content.startsWith('<')) {
+    return 'xml';
+  }
+
+  return 'text';
+}
+
+function getStructuredSegmentDisplayContent(segment: MessageSegment): string {
+  const content = segment.content.trim() || segment.raw.trim();
+  const language = getStructuredSegmentLanguage(segment);
+
+  if (language === 'json') {
+    return prettyPrintJson(content);
+  }
+
+  if (language === 'xml') {
+    return prettyPrintXml(content);
+  }
+
+  return content;
+}
+
+interface StructuredSegmentBlockProps {
+  segment: MessageSegment;
+  selectable?: boolean;
+}
+
+const StructuredSegmentBlock: React.FC<StructuredSegmentBlockProps> = ({
+  segment,
+  selectable,
+}) => {
+  const [collapsed, setCollapsed] = useState(true);
+  const theme = useTheme();
+  const styles = createStyles(theme);
+  const title = getStructuredSegmentTitle(segment);
+  const language = getStructuredSegmentLanguage(segment);
+  const displayContent = getStructuredSegmentDisplayContent(segment);
+
+  const handleCopy = () => {
+    ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+    Clipboard.setString(segment.raw);
+  };
+
+  return (
+    <View style={styles.structuredBlock}>
+      <View style={styles.structuredHeader}>
+        <TouchableOpacity
+          accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
+          activeOpacity={0.75}
+          onPress={() => setCollapsed(value => !value)}
+          style={styles.structuredToggle}>
+          <View
+            style={[
+              styles.structuredChevron,
+              !collapsed && styles.structuredChevronExpanded,
+            ]}>
+            <ChevronDownIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          </View>
+          <Text style={styles.structuredTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={styles.structuredLanguage} numberOfLines={1}>
+            {language}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          accessibilityLabel={`Copy raw ${title} segment`}
+          activeOpacity={0.75}
+          onPress={handleCopy}
+          style={styles.structuredCopyButton}>
+          <CopyIcon
+            width={16}
+            height={16}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {!collapsed && (
+        <ScrollView
+          horizontal
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator
+          style={styles.structuredScroll}
+          contentContainerStyle={styles.structuredScrollContent}>
+          <Text selectable={selectable} style={styles.structuredCodeText}>
+            {displayContent}
+          </Text>
+        </ScrollView>
+      )}
+    </View>
+  );
+};
 
 export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
   observer(
@@ -147,24 +276,57 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
             </ThinkingBubble>
           )}
 
-          {(visibleSegmentMarkdown.length
-            ? visibleSegmentMarkdown
-            : [parsed.markdownText]
-          ).map((segmentMarkdown, index) => (
-            <MarkdownView
-              key={`${parsed.hash}-${index}`}
-              markdownText={segmentMarkdown}
-              maxMessageWidth={maxMessageWidth}
-              selectable={selectable}
-              renderMarkdown={settings.renderMarkdown}
-              renderLatex={settings.renderLatex}
-              renderTables={settings.renderTables}
-              wrapCodeLines={settings.wrapCodeLines}
-              useSyntaxHighlighting={settings.useSyntaxHighlighting}
-              useCompactTables={settings.useCompactTables}
-              showThinkingBlocks={false}
-            />
-          ))}
+          {parsed.segments.some(isStructuredSegment)
+            ? parsed.segments.map((segment, index) => {
+                if (isStructuredSegment(segment)) {
+                  return (
+                    <StructuredSegmentBlock
+                      key={segment.id}
+                      segment={segment}
+                      selectable={selectable}
+                    />
+                  );
+                }
+
+                const segmentMarkdown = segmentToMarkdown(segment);
+                if (!segmentMarkdown?.trim()) {
+                  return null;
+                }
+
+                return (
+                  <MarkdownView
+                    key={`${parsed.hash}-${index}`}
+                    markdownText={segmentMarkdown}
+                    maxMessageWidth={maxMessageWidth}
+                    selectable={selectable}
+                    renderMarkdown={settings.renderMarkdown}
+                    renderLatex={settings.renderLatex}
+                    renderTables={settings.renderTables}
+                    wrapCodeLines={settings.wrapCodeLines}
+                    useSyntaxHighlighting={settings.useSyntaxHighlighting}
+                    useCompactTables={settings.useCompactTables}
+                    showThinkingBlocks={false}
+                  />
+                );
+              })
+            : (visibleSegmentMarkdown.length
+                ? visibleSegmentMarkdown
+                : [parsed.markdownText]
+              ).map((segmentMarkdown, index) => (
+                <MarkdownView
+                  key={`${parsed.hash}-${index}`}
+                  markdownText={segmentMarkdown}
+                  maxMessageWidth={maxMessageWidth}
+                  selectable={selectable}
+                  renderMarkdown={settings.renderMarkdown}
+                  renderLatex={settings.renderLatex}
+                  renderTables={settings.renderTables}
+                  wrapCodeLines={settings.wrapCodeLines}
+                  useSyntaxHighlighting={settings.useSyntaxHighlighting}
+                  useCompactTables={settings.useCompactTables}
+                  showThinkingBlocks={false}
+                />
+              ))}
         </View>
       );
     },
