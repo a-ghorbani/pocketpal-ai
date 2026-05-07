@@ -157,6 +157,22 @@ const DEFAULT_BENCH = {pp: 512, tg: 128, pl: 1, nr: 3};
 const TRUNCATE_ERROR = 200; // status string error length
 const TRUNCATE_ROW_ERROR = 500; // row.error length
 const PEAK_POLL_MS = 1000;
+// Wall-time spent in setTimeout between successful cells, after
+// ctx.release() resolves. Backend drivers (Adreno OpenCL, Hexagon HTP)
+// can defer their final memory release past the JSI-promise boundary;
+// 2s is generous insurance and is a rounding error in a multi-hour
+// matrix run. Pre-redesign code carried a 100ms equivalent inside
+// _releaseContextInternal, added in response to real failures.
+//
+// Overridable for tests via `BENCH_INTER_CELL_SETTLE_MS=0` so the unit
+// suite doesn't pay 2s × N cells of pure setTimeout wall time. Production
+// (release JS bundle) doesn't see the env var so the 2000ms default
+// stands.
+const INTER_CELL_SETTLE_MS =
+  typeof process !== 'undefined' &&
+  process.env?.BENCH_INTER_CELL_SETTLE_MS != null
+    ? Number(process.env.BENCH_INTER_CELL_SETTLE_MS)
+    : 2000;
 
 async function loadConfig(): Promise<BenchConfig> {
   const exists = await RNFS.exists(CONFIG_PATH);
@@ -926,6 +942,21 @@ export async function runMatrix(
             // the cumulative `g_context_limit` check in RNLlamaJSI will
             // surface it as a hard error on a later cell.
           }
+          // Inter-cell settle. `ctx.release()` resolves once
+          // ~llama_rn_context() returns, but some backend drivers (Adreno
+          // OpenCL command-queue tear-down on a worker thread, Hexagon HTP
+          // FastRPC teardown) defer their final memory release a few
+          // hundred ms past that boundary. The pre-redesign code had a
+          // 100ms `setTimeout` inside `ModelStore._releaseContextInternal`
+          // — added in response to actual failures, not preemptively.
+          // The matrix runs for hours, so 2s is essentially free wall
+          // time and gives the OS a comfortable window to reclaim VRAM
+          // / HTP arena pages before the next cell's `initLlama`. Skipped
+          // when ctx is null (cell failed before init) since there is
+          // nothing the OS needs to reclaim.
+          await new Promise(resolve =>
+            setTimeout(resolve, INTER_CELL_SETTLE_MS),
+          );
         }
         // Sole listener-detach site. Idempotent: no-op when null.
         logSub?.remove();
