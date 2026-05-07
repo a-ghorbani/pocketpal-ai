@@ -92,6 +92,9 @@ Copy options:
 - Default copy: use the copy icon at the bottom of the AI response bubble.
 - Copy as clean text, Markdown, or raw text: long-press an assistant message and choose "Copy as".
 - Code blocks have their own copy button in the code header.
+- JSON, XML, and tool-call blocks are shown as collapsible safe code blocks with raw copy.
+- Markdown tables can be copied as Markdown or plain tab-delimited text.
+- Block equations can be copied as raw LaTeX.
 
 Clean copy removes model template tokens and thinking blocks by default. Raw copy keeps the exact model output, including service tokens and thinking tags.
 
@@ -105,17 +108,6 @@ Supported math delimiters:
 - Block: `$$...$$` and `\[...\]`
 
 Escaped dollar signs such as `\$5` are preserved. Long block equations scroll horizontally. Unsafe HTML is escaped before rendering; scripts, remote images, and raw HTML are not executed. XML/HTML-like model output is displayed as text/code fallback rather than run as markup.
-
-Important Note: As of now, I haven’t found an easy way to select and copy text from the generated responses while preserving the text formatting, particularly Markdown support.
-
-In the meantime, here are the current options for copying text:
-
-- Paragraph-level copying: Long-press on a specific paragraph to copy its content.
-- Full response copying: Use the copy icon at the bottom of the text bubble to copy the entire AI-generated response.
-
-I know these options might not be ideal, and this is one of my frustrations with using other apps. The difficulty of copying portions of text used to be a particularly annoying aspect of chat apps like ChatGPT and others.
-
-**Developers**: PocketPal AI is built using React Native. Finding an easy solution that balances text selection with preserved formatting (especially Markdown support) has been tricky for me. If you have experience in this area, I’d love to hear from you!
 
 ## Feedback Welcome!
 
