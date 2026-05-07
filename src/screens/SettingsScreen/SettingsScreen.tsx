@@ -1069,6 +1069,28 @@ export const SettingsScreen: React.FC = observer(() => {
                 <View style={styles.switchContainer}>
                   <View style={styles.textContainer}>
                     <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.collapseThinkingByDefault}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.collapseThinkingByDefaultDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="collapse-thinking-switch"
+                    value={messageRenderingSettings.collapseThinkingByDefault}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'collapseThinkingByDefault',
+                        value,
+                      )
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
                       {l10n.settings.hideModelTemplateTokens}
                     </Text>
                     <Text variant="labelSmall" style={styles.textDescription}>

@@ -106,6 +106,8 @@
     "renderTablesDescription": "Render GitHub-style tables with horizontal scrolling.",
     "showThinkingBlocks": "Show Thinking Blocks",
     "showThinkingBlocksDescription": "Display model reasoning metadata and inline thinking tags in a collapsible block.",
+    "collapseThinkingByDefault": "Collapse Thinking by Default",
+    "collapseThinkingByDefaultDescription": "Start reasoning sections collapsed while still allowing them to be expanded.",
     "hideModelTemplateTokens": "Hide Model Template Tokens",
     "hideModelTemplateTokensDescription": "Hide ChatML, BOS/EOS, instruction, and service tokens in rendered and clean copy modes.",
     "defaultCopyMode": "Default Copy Mode",
