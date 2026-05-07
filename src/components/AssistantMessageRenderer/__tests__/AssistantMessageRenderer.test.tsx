@@ -1,9 +1,15 @@
 import React from 'react';
 import {fireEvent, render} from '../../../../jest/test-utils';
 
+import {uiStore} from '../../../store';
+import {defaultMessageRenderingSettings} from '../../../utils/messageRendering';
 import {AssistantMessageRenderer} from '../AssistantMessageRenderer';
 
 describe('AssistantMessageRenderer', () => {
+  beforeEach(() => {
+    uiStore.messageRenderingSettings = {...defaultMessageRenderingSettings};
+  });
+
   it('exposes rendered, clean, and raw modes for tagged assistant output', () => {
     const content = '<think>hidden reasoning</think>\nVisible **answer**';
     const {getByText, queryByText} = render(
@@ -39,5 +45,23 @@ describe('AssistantMessageRenderer', () => {
 
     expect(queryByText('Rendered')).toBeNull();
     expect(queryByText('Raw')).toBeNull();
+  });
+
+  it('shows service tokens in rendered mode when token hiding is disabled', () => {
+    uiStore.messageRenderingSettings = {
+      ...defaultMessageRenderingSettings,
+      hideModelTemplateTokens: false,
+    };
+
+    const {getByText} = render(
+      <AssistantMessageRenderer
+        content="<|assistant|>\nVisible answer"
+        messageId="message-3"
+        maxMessageWidth={320}
+      />,
+    );
+
+    expect(getByText('<|assistant|>')).toBeTruthy();
+    expect(getByText(/Visible answer/)).toBeTruthy();
   });
 });

@@ -57,14 +57,18 @@ function isCopyableRenderedSegment(segment: MessageSegment): boolean {
   return segment.kind === 'table' || segment.kind === 'math';
 }
 
-function segmentToMarkdown(segment: MessageSegment): string | undefined {
+function segmentToMarkdown(
+  segment: MessageSegment,
+  hideServiceTokens: boolean,
+): string | undefined {
   switch (segment.kind) {
     case 'thinking':
-    case 'serviceTag':
     case 'json':
     case 'xml':
     case 'tool':
       return undefined;
+    case 'serviceTag':
+      return hideServiceTokens ? undefined : segment.raw;
     case 'code':
       return fencedBlock(segment.language || 'text', segment.content);
     case 'math':
@@ -320,9 +324,11 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
       const visibleSegmentMarkdown = useMemo(
         () =>
           parsed.segments
-            .map(segmentToMarkdown)
+            .map(segment =>
+              segmentToMarkdown(segment, settings.hideModelTemplateTokens),
+            )
             .filter((value): value is string => !!value?.trim()),
-        [parsed],
+        [parsed, settings.hideModelTemplateTokens],
       );
 
       const handleModePress = (nextMode: MessageRenderMode) => {
@@ -434,7 +440,10 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                 );
               }
 
-              const segmentMarkdown = segmentToMarkdown(segment);
+              const segmentMarkdown = segmentToMarkdown(
+                segment,
+                settings.hideModelTemplateTokens,
+              );
               if (!segmentMarkdown?.trim()) {
                 return null;
               }

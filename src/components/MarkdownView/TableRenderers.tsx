@@ -15,7 +15,6 @@ import type {
 import type {Element} from '@native-html/transient-render-engine';
 
 import {useTheme} from '../../hooks';
-import {uiStore} from '../../store';
 import {defaultMessageRenderingSettings} from '../../utils/messageRendering';
 import {createTableStyles} from './tableStyles';
 import {ScrollView} from 'react-native-gesture-handler';
@@ -117,69 +116,70 @@ function findTNodeForDomElement(
 
 // ---- Table renderer ----
 
-const TableRenderer: CustomBlockRenderer = ({tnode}) => {
-  const theme = useTheme();
-  const compact =
-    uiStore.messageRenderingSettings.useCompactTables ??
-    defaultMessageRenderingSettings.useCompactTables;
-  const styles = useMemo(
-    () => createTableStyles(theme, compact),
-    [theme, compact],
-  );
+const createTableRenderer =
+  (compact: boolean): CustomBlockRenderer =>
+  ({tnode}) => {
+    const theme = useTheme();
+    const styles = useMemo(() => createTableStyles(theme, compact), [theme]);
 
-  const tableDOM = tnode.domNode as Element | null;
-  if (!tableDOM) {
-    return null;
-  }
+    const tableDOM = tnode.domNode as Element | null;
+    if (!tableDOM) {
+      return null;
+    }
 
-  const rows = getTableRows(tableDOM);
+    const rows = getTableRows(tableDOM);
 
-  return (
-    <View style={styles.tableOuter}>
-      <ScrollView horizontal nestedScrollEnabled>
-        <View style={styles.tableInner}>
-          {rows.map(({row, isHeader}, rowIndex) => {
-            const cells = getDomChildrenByTag(row, 'td', 'th');
-            return (
-              <View
-                key={rowIndex}
-                style={[
-                  styles.row,
-                  isHeader && styles.headerRow,
-                  rowIndex === rows.length - 1 && styles.lastRow,
-                ]}>
-                {cells.map((cell, cellIndex) => {
-                  const cellTNode = findTNodeForDomElement(tnode, cell);
-                  const isHeaderCell = isHeader || cell.tagName === 'th';
-                  const align = cell.attribs?.align;
-                  return (
-                    <View
-                      key={cellIndex}
-                      style={[
-                        styles.cell,
-                        isHeaderCell && styles.headerCell,
-                        cellIndex < cells.length - 1 && styles.cellBorderRight,
-                        align === 'center' && styles.alignCenter,
-                        align === 'right' && styles.alignRight,
-                        align === 'left' && styles.alignLeft,
-                      ]}>
-                      {cellTNode ? (
-                        <TNodeChildrenRenderer tnode={cellTNode} />
-                      ) : (
-                        <RNText>{''}</RNText>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </View>
-  );
-};
+    return (
+      <View style={styles.tableOuter}>
+        <ScrollView horizontal nestedScrollEnabled>
+          <View style={styles.tableInner}>
+            {rows.map(({row, isHeader}, rowIndex) => {
+              const cells = getDomChildrenByTag(row, 'td', 'th');
+              return (
+                <View
+                  key={rowIndex}
+                  style={[
+                    styles.row,
+                    isHeader && styles.headerRow,
+                    rowIndex === rows.length - 1 && styles.lastRow,
+                  ]}>
+                  {cells.map((cell, cellIndex) => {
+                    const cellTNode = findTNodeForDomElement(tnode, cell);
+                    const isHeaderCell = isHeader || cell.tagName === 'th';
+                    const align = cell.attribs?.align;
+                    return (
+                      <View
+                        key={cellIndex}
+                        style={[
+                          styles.cell,
+                          isHeaderCell && styles.headerCell,
+                          cellIndex < cells.length - 1 &&
+                            styles.cellBorderRight,
+                          align === 'center' && styles.alignCenter,
+                          align === 'right' && styles.alignRight,
+                          align === 'left' && styles.alignLeft,
+                        ]}>
+                        {cellTNode ? (
+                          <TNodeChildrenRenderer tnode={cellTNode} />
+                        ) : (
+                          <RNText>{''}</RNText>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  };
 
-export const tableRenderers: CustomTagRendererRecord = {
-  table: TableRenderer,
-};
+export const createTableRenderers = (
+  compact = defaultMessageRenderingSettings.useCompactTables,
+): CustomTagRendererRecord => ({
+  table: createTableRenderer(compact),
+});
+
+export const tableRenderers: CustomTagRendererRecord = createTableRenderers();

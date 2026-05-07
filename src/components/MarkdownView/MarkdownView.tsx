@@ -11,7 +11,7 @@ import {ThinkingBubble} from '../ThinkingBubble';
 import {CodeBlockHeader} from '../CodeBlockHeader';
 
 import {createTagsStyles, createStyles} from './styles';
-import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
+import {createTableRenderers, tableHTMLElementModels} from './TableRenderers';
 import {
   decodeHtmlEntities,
   fallbackTablesToCodeBlocks,
@@ -169,6 +169,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     renderTables = true,
     wrapCodeLines = false,
     useSyntaxHighlighting = true,
+    useCompactTables = false,
     showThinkingBlocks = true,
   }) => {
     const _maxWidth = maxMessageWidth;
@@ -219,11 +220,16 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
       };
 
       if (effectiveRenderTables) {
-        Object.assign(enabledRenderers, tableRenderers);
+        Object.assign(enabledRenderers, createTableRenderers(useCompactTables));
       }
 
       return enabledRenderers;
-    }, [effectiveRenderTables, effectiveUseSyntaxHighlighting, wrapCodeLines]);
+    }, [
+      effectiveRenderTables,
+      effectiveUseSyntaxHighlighting,
+      useCompactTables,
+      wrapCodeLines,
+    ]);
 
     const defaultTextProps = useMemo(
       () => ({
