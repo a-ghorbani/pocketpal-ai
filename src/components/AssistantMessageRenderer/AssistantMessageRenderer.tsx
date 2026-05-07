@@ -18,6 +18,8 @@ import {
   MessageSegment,
   prettyPrintJson,
   prettyPrintXml,
+  getStreamingFallbackText,
+  shouldUseStreamingFallback,
 } from '../../utils/messageRendering';
 
 import {createStyles} from './styles';
@@ -286,6 +288,11 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 
       const thinkingContent =
         reasoningContent?.trim() || parsedThinkingContent.trim();
+      const streamingFallbackText = useMemo(
+        () => getStreamingFallbackText(parsed),
+        [parsed],
+      );
+      const useStreamingFallback = shouldUseStreamingFallback(parsed);
       const visibleSegmentMarkdown = useMemo(
         () =>
           parsed.segments
@@ -332,64 +339,35 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
             </ThinkingBubble>
           )}
 
-          {parsed.segments.some(
-            segment =>
-              isStructuredSegment(segment) ||
-              isCopyableRenderedSegment(segment),
-          )
-            ? parsed.segments.map((segment, index) => {
-                if (isStructuredSegment(segment)) {
-                  return (
-                    <StructuredSegmentBlock
-                      key={segment.id}
-                      segment={segment}
-                      selectable={selectable}
-                    />
-                  );
-                }
-
-                const segmentMarkdown = segmentToMarkdown(segment);
-                if (!segmentMarkdown?.trim()) {
-                  return null;
-                }
-
-                const markdownView = (
-                  <MarkdownView
-                    markdownText={segmentMarkdown}
-                    maxMessageWidth={maxMessageWidth}
+          {useStreamingFallback ? (
+            streamingFallbackText.trim() ? (
+              <Text selectable={selectable} style={styles.rawText}>
+                {streamingFallbackText}
+              </Text>
+            ) : null
+          ) : parsed.segments.some(
+              segment =>
+                isStructuredSegment(segment) ||
+                isCopyableRenderedSegment(segment),
+            ) ? (
+            parsed.segments.map((segment, index) => {
+              if (isStructuredSegment(segment)) {
+                return (
+                  <StructuredSegmentBlock
+                    key={segment.id}
+                    segment={segment}
                     selectable={selectable}
-                    renderMarkdown={settings.renderMarkdown}
-                    renderLatex={settings.renderLatex}
-                    renderTables={settings.renderTables}
-                    wrapCodeLines={settings.wrapCodeLines}
-                    useSyntaxHighlighting={settings.useSyntaxHighlighting}
-                    useCompactTables={settings.useCompactTables}
-                    showThinkingBlocks={false}
                   />
                 );
+              }
 
-                if (isCopyableRenderedSegment(segment)) {
-                  return (
-                    <CopyableRenderedSegmentBlock
-                      key={segment.id}
-                      segment={segment}>
-                      {markdownView}
-                    </CopyableRenderedSegmentBlock>
-                  );
-                }
+              const segmentMarkdown = segmentToMarkdown(segment);
+              if (!segmentMarkdown?.trim()) {
+                return null;
+              }
 
-                return (
-                  <React.Fragment key={`${parsed.hash}-${index}`}>
-                    {markdownView}
-                  </React.Fragment>
-                );
-              })
-            : (visibleSegmentMarkdown.length
-                ? visibleSegmentMarkdown
-                : [parsed.markdownText]
-              ).map((segmentMarkdown, index) => (
+              const markdownView = (
                 <MarkdownView
-                  key={`${parsed.hash}-${index}`}
                   markdownText={segmentMarkdown}
                   maxMessageWidth={maxMessageWidth}
                   selectable={selectable}
@@ -401,7 +379,44 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                   useCompactTables={settings.useCompactTables}
                   showThinkingBlocks={false}
                 />
-              ))}
+              );
+
+              if (isCopyableRenderedSegment(segment)) {
+                return (
+                  <CopyableRenderedSegmentBlock
+                    key={segment.id}
+                    segment={segment}>
+                    {markdownView}
+                  </CopyableRenderedSegmentBlock>
+                );
+              }
+
+              return (
+                <React.Fragment key={`${parsed.hash}-${index}`}>
+                  {markdownView}
+                </React.Fragment>
+              );
+            })
+          ) : (
+            (visibleSegmentMarkdown.length
+              ? visibleSegmentMarkdown
+              : [parsed.markdownText]
+            ).map((segmentMarkdown, index) => (
+              <MarkdownView
+                key={`${parsed.hash}-${index}`}
+                markdownText={segmentMarkdown}
+                maxMessageWidth={maxMessageWidth}
+                selectable={selectable}
+                renderMarkdown={settings.renderMarkdown}
+                renderLatex={settings.renderLatex}
+                renderTables={settings.renderTables}
+                wrapCodeLines={settings.wrapCodeLines}
+                useSyntaxHighlighting={settings.useSyntaxHighlighting}
+                useCompactTables={settings.useCompactTables}
+                showThinkingBlocks={false}
+              />
+            ))
+          )}
         </View>
       );
     },
