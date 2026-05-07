@@ -512,6 +512,33 @@ describe('exportUtils', () => {
 
         await expect(exportPal('nonexistent')).rejects.toThrow('Pal not found');
       });
+
+      // B8: pact (talent set) and greeting are first-class persisted state
+      // since migration v7+. They MUST round-trip through export/import or
+      // backups silently drop tool configuration and the empty-chat greeting.
+      it('round-trips pact (talents) and greeting through exported data', async () => {
+        const palWithTalents = {
+          ...mockPal,
+          pact: {
+            talents: [
+              {name: 'calculate'},
+              {name: 'render_html', required: true},
+            ],
+          },
+          greeting: {
+            text: 'Hello! How can I help you today?',
+            suggestedPrompts: ['Tell me a joke', 'Summarize this'],
+          },
+        };
+        palStore.pals = [palWithTalents as any];
+
+        await exportPal('pal-1');
+
+        const writeCall = (RNFS.writeFile as jest.Mock).mock.calls[0];
+        const exportedData = JSON.parse(writeCall[1]);
+        expect(exportedData.pact).toEqual(palWithTalents.pact);
+        expect(exportedData.greeting).toEqual(palWithTalents.greeting);
+      });
     });
 
     describe('exportAllPals', () => {

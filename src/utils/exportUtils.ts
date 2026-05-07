@@ -216,6 +216,12 @@ const transformExportPal = async (pal: Pal) => {
     generatingPrompt: pal.generatingPrompt,
     color: pal.color,
     capabilities: pal.capabilities,
+    // Talent set (pact.talents) and the optional greeting/suggestedPrompts
+    // are first-class persisted state from migration v7+; round-tripping
+    // them is required so backups + share-and-reimport don't silently drop
+    // a Pal's tool configuration or greeting.
+    pact: pal.pact,
+    greeting: pal.greeting,
     parameters: pal.parameters,
     parameterSchema: pal.parameterSchema,
     source: pal.source,
