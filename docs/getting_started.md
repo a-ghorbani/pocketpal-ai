@@ -90,13 +90,13 @@ Assistant responses use a rich rendering pipeline with rendered, clean, and raw 
 Copy options:
 
 - Default copy: use the copy icon at the bottom of the AI response bubble.
-- Copy as clean text, Markdown, or raw text: long-press an assistant message and choose "Copy as".
+- Copy as clean text, clean text with thinking, Markdown, or raw text: long-press an assistant message and choose "Copy as".
 - Code blocks have their own copy button in the code header.
 - JSON, XML, and tool-call blocks are shown as collapsible safe code blocks with raw copy.
 - Markdown tables can be copied as Markdown or plain tab-delimited text.
 - Block equations can be copied as raw LaTeX.
 
-Clean copy removes model template tokens and thinking blocks by default. Raw copy keeps the exact model output, including service tokens and thinking tags.
+Clean copy removes model template tokens and thinking blocks by default. Clean text with thinking includes reasoning as plain text without model template tokens. Raw copy keeps the exact model output, including service tokens and thinking tags.
 
 ### Markdown, Math, and Unsafe HTML
 
@@ -108,6 +108,8 @@ Supported math delimiters:
 - Block: `$$...$$` and `\[...\]`
 
 Escaped dollar signs such as `\$5` are preserved. Long block equations scroll horizontally. Unsafe HTML is escaped before rendering; scripts, remote images, and raw HTML are not executed. XML/HTML-like model output is displayed as text/code fallback rather than run as markup.
+
+Rendering behavior can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility, default thinking collapse, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers, large tables, many code blocks, and large math blocks use cheaper fallback paths so the chat stays responsive while streaming on mobile devices.
 
 ## Feedback Welcome!
 
