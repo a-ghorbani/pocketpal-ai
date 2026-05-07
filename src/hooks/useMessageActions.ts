@@ -2,9 +2,14 @@ import {useCallback} from 'react';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 
-import {chatSessionStore, modelStore} from '../store';
+import {chatSessionStore, modelStore, uiStore} from '../store';
 
 import {MessageType, User} from '../utils/types';
+import {
+  buildMessageCopyTextFromMessage,
+  defaultMessageRenderingSettings,
+  MessageCopyMode,
+} from '../utils/messageRendering';
 
 interface UseMessageActionsProps {
   user: User;
@@ -21,11 +26,25 @@ export const useMessageActions = ({
   setInputText,
   setInputImages,
 }: UseMessageActionsProps) => {
-  const handleCopy = useCallback((message: MessageType.Text) => {
-    if (message.type === 'text') {
-      Clipboard.setString(message.text.trim());
-    }
-  }, []);
+  const handleCopy = useCallback(
+    (message: MessageType.Text, mode?: MessageCopyMode) => {
+      if (message.type === 'text') {
+        const settings = {
+          ...defaultMessageRenderingSettings,
+          ...uiStore.messageRenderingSettings,
+        };
+        const copyMode = mode ?? settings.defaultCopyMode;
+        Clipboard.setString(
+          buildMessageCopyTextFromMessage(message, copyMode || 'clean', {
+            thinkingStartTag: modelStore.activeModel?.thinkingStartTag,
+            thinkingEndTag: modelStore.activeModel?.thinkingEndTag,
+            hideServiceTokens: settings.hideModelTemplateTokens,
+          }),
+        );
+      }
+    },
+    [],
+  );
 
   const handleEdit = useCallback(
     async (message: MessageType.Text) => {

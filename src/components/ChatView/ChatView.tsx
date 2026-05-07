@@ -556,6 +556,10 @@ export const ChatView = observer(
     // ============ CONTEXT MENU CONFIGURATION ============
     const {
       copy: copyLabel,
+      copyAs: copyAsLabel,
+      copyClean: copyCleanLabel,
+      copyMarkdown: copyMarkdownLabel,
+      copyRaw: copyRawLabel,
       regenerate: regenerateLabel,
       regenerateWith: regenerateWithLabel,
       edit: editLabel,
@@ -580,6 +584,34 @@ export const ChatView = observer(
           },
           icon: () => <CopyIcon stroke={theme.colors.primary} />,
           disabled: false,
+        },
+        {
+          label: copyAsLabel,
+          icon: () => <CopyIcon stroke={theme.colors.primary} />,
+          disabled: false,
+          submenu: [
+            {
+              label: copyCleanLabel,
+              onPress: () => {
+                handleCopy(selectedMessage, 'clean');
+                handleMenuDismiss();
+              },
+            },
+            {
+              label: copyMarkdownLabel,
+              onPress: () => {
+                handleCopy(selectedMessage, 'markdown');
+                handleMenuDismiss();
+              },
+            },
+            {
+              label: copyRawLabel,
+              onPress: () => {
+                handleCopy(selectedMessage, 'raw');
+                handleMenuDismiss();
+              },
+            },
+          ],
         },
       ];
 
@@ -643,6 +675,10 @@ export const ChatView = observer(
       size.width,
       theme.colors.primary,
       copyLabel,
+      copyAsLabel,
+      copyCleanLabel,
+      copyMarkdownLabel,
+      copyRawLabel,
       regenerateLabel,
       regenerateWithLabel,
       editLabel,
