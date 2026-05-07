@@ -9,6 +9,7 @@ import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import {useTheme} from '../../hooks';
 import {ThinkingBubble} from '../ThinkingBubble';
 import {CodeBlockHeader} from '../CodeBlockHeader';
+import {KaTeXMathView} from '../KaTeXMathView';
 
 import {createTagsStyles, createStyles} from './styles';
 import {createTableRenderers, tableHTMLElementModels} from './TableRenderers';
@@ -125,36 +126,28 @@ const CodeRenderer = ({
   );
 };
 
-const MathRenderer = ({TDefaultRenderer, ...props}: any) => {
-  const theme = useTheme();
-  const styles = createStyles(theme);
+const MathRenderer = ({
+  TDefaultRenderer,
+  maxMessageWidth,
+  selectable = false,
+  ...props
+}: any) => {
   const attribs = props.tnode?.domNode?.attribs || {};
   const kind = attribs['data-pp-math'];
 
-  if (!kind) {
+  if (kind !== 'inline' && kind !== 'block') {
     return <TDefaultRenderer {...props} />;
   }
 
   const content = decodeHtmlEntities(attribs['data-source'] || '');
 
-  if (kind === 'inline') {
-    return (
-      <Text selectable style={styles.inlineMath}>
-        {content}
-      </Text>
-    );
-  }
-
   return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      style={styles.mathBlockScroll}
-      contentContainerStyle={styles.mathBlockContent}>
-      <Text selectable style={styles.mathBlockText}>
-        {content}
-      </Text>
-    </ScrollView>
+    <KaTeXMathView
+      source={content}
+      displayMode={kind === 'block'}
+      maxWidth={maxMessageWidth}
+      selectable={selectable}
+    />
   );
 };
 
@@ -215,8 +208,18 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             initialWrapCodeLines: wrapCodeLines,
             useSyntaxHighlighting: effectiveUseSyntaxHighlighting,
           }),
-        span: (props: any) => MathRenderer(props),
-        div: (props: any) => MathRenderer(props),
+        span: (props: any) =>
+          MathRenderer({
+            ...props,
+            maxMessageWidth: _maxWidth,
+            selectable,
+          }),
+        div: (props: any) =>
+          MathRenderer({
+            ...props,
+            maxMessageWidth: _maxWidth,
+            selectable,
+          }),
       };
 
       if (effectiveRenderTables) {
@@ -227,6 +230,8 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     }, [
       effectiveRenderTables,
       effectiveUseSyntaxHighlighting,
+      _maxWidth,
+      selectable,
       useCompactTables,
       wrapCodeLines,
     ]);

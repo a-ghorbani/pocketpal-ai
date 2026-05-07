@@ -25,6 +25,7 @@ export * from './HeaderRight';
 export * from './HeaderLeft';
 export * from './HFTokenSheet';
 export * from './ImageMessage';
+export * from './KaTeXMathView';
 export * from './KeyboardAccessoryView';
 export * from './LoadingBubble';
 export * from './MarkdownView';
