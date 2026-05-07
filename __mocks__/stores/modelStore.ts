@@ -65,6 +65,9 @@ class MockModelStore {
   setCacheTypeV: jest.Mock;
   setUseMmap: jest.Mock;
   setNoExtraBufts: jest.Mock;
+  enterBenchmarkMode: jest.Mock;
+  exitBenchmarkMode: jest.Mock;
+  benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
 
@@ -108,6 +111,8 @@ class MockModelStore {
       setCacheTypeV: false,
       setUseMmap: false,
       setNoExtraBufts: false,
+      enterBenchmarkMode: false,
+      exitBenchmarkMode: false,
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
@@ -158,6 +163,8 @@ class MockModelStore {
     this.setCacheTypeV = jest.fn();
     this.setUseMmap = jest.fn();
     this.setNoExtraBufts = jest.fn();
+    this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
+    this.exitBenchmarkMode = jest.fn();
   }
 
   setActiveModel = (modelId: string) => {

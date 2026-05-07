@@ -198,4 +198,74 @@ describe('chat', () => {
 
     expect(ChatEmptyPlaceholder).toHaveBeenCalled();
   });
+
+  // ---------------------------------------------------------------------------
+  // Active-pal auto-load gate (e2e bench isolation).
+  //
+  // The mount-time `useEffect` calls `modelStore.selectModel(palDefaultModel)`
+  // when `activePal` is set and no model is active. That cold-launch path is
+  // benign for end users but catastrophic for the e2e benchmark runner: the
+  // matrix's per-cell `devices` / `n_gpu_layers` arrive AFTER the auto-load
+  // has already loaded the model with default devices, and `initContext`'s
+  // "already loaded → skip" path silently dropped the runner's intent.
+  //
+  // The fix: gate the auto-load on `modelStore.benchmarkActive` so the
+  // benchmark's `enterBenchmarkMode` window is honoured at the React-tree
+  // boundary. Two assertions: gate-off triggers the load; gate-on suppresses.
+  // ---------------------------------------------------------------------------
+
+  describe('active pal auto-load gate', () => {
+    const mockPal = {
+      id: 'test-pal',
+      name: 'Test',
+      type: 'roleplay',
+      defaultModel: {id: 'qwen3-1.7b-q4_0'} as any,
+    } as any;
+
+    beforeEach(() => {
+      (modelStore.selectModel as jest.Mock).mockClear();
+      runInAction(() => {
+        (modelStore as any).activeModelId = undefined;
+        modelStore.benchmarkActive = false;
+        modelStore.models = [
+          {
+            id: 'qwen3-1.7b-q4_0',
+            name: 'qwen3',
+            isDownloaded: true,
+          },
+        ] as any;
+      });
+    });
+
+    it('calls modelStore.selectModel(palDefault) when benchmarkActive=false', () => {
+      render(
+        <ChatView
+          messages={[]}
+          onSendPress={jest.fn()}
+          user={user}
+          activePal={mockPal}
+        />,
+        {withNavigation: true, withBottomSheetProvider: true},
+      );
+      expect(modelStore.selectModel).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'qwen3-1.7b-q4_0'}),
+      );
+    });
+
+    it('does NOT call modelStore.selectModel when benchmarkActive=true', () => {
+      runInAction(() => {
+        modelStore.benchmarkActive = true;
+      });
+      render(
+        <ChatView
+          messages={[]}
+          onSendPress={jest.fn()}
+          user={user}
+          activePal={mockPal}
+        />,
+        {withNavigation: true, withBottomSheetProvider: true},
+      );
+      expect(modelStore.selectModel).not.toHaveBeenCalled();
+    });
+  });
 });

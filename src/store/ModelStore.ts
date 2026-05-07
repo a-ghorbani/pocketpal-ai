@@ -177,6 +177,13 @@ class ModelStore {
   // Last requested model ID - enables "last one wins" during rapid switching
   private pendingModelId: string | null = null;
 
+  // When true, the e2e benchmark runner owns the native context lifecycle.
+  // Other callers (ChatView auto-load, selectModel, initContext) must defer
+  // to keep the matrix's per-cell devices/n_gpu_layers from being shadowed
+  // by an in-flight init that started before the matrix could configure them.
+  // Runtime-only; not persisted.
+  benchmarkActive: boolean = false;
+
   downloadError: ErrorState | null = null;
   modelLoadError: ErrorState | null = null;
 
@@ -1432,6 +1439,41 @@ class ModelStore {
   };
 
   /**
+   * Take exclusive ownership of the native context for the e2e benchmark
+   * runner. Sets `benchmarkActive` synchronously so any new auto-load is
+   * gated, then drains the mutex (in case one is already in flight) and
+   * releases whatever context exists. After this resolves, the runner can
+   * safely call `initLlama` directly without racing the rest of the app.
+   *
+   * Pairs with `exitBenchmarkMode()`. The runner MUST call exit even on
+   * failure paths or chat / header / sheet inits will stay rejected.
+   */
+  enterBenchmarkMode = async (): Promise<void> => {
+    runInAction(() => {
+      this.benchmarkActive = true;
+    });
+
+    const op = this.contextOperationMutex.then(async () => {
+      // Release any context the rest of the app loaded (e.g. ChatView's
+      // auto-load on cold launch). clearActiveModel:true so the queued
+      // post-mutex callers see a clean slate if they ever run.
+      await this._releaseContextInternal(true);
+    });
+    this.contextOperationMutex = op.then(() => {}).catch(() => {});
+    await op;
+  };
+
+  /**
+   * Hand context ownership back to the rest of the app. Intentionally
+   * trivial — no native work — so it's safe to call from a `finally` block.
+   */
+  exitBenchmarkMode = (): void => {
+    runInAction(() => {
+      this.benchmarkActive = false;
+    });
+  };
+
+  /**
    * Initialize a model context, optionally with multimodal support.
    *
    * Architecture:
@@ -1448,6 +1490,16 @@ class ModelStore {
    * @returns The initialized LlamaContext, or null if cancelled/skipped
    */
   initContext = async (model: Model, mmProjPath?: string) => {
+    // Benchmark mode owns the native context lifecycle end-to-end.
+    // Reject synchronously so any racing caller (ChatView auto-load, header,
+    // sheet) fails fast instead of silently shadowing the matrix's per-cell
+    // devices / n_gpu_layers via the "already loaded → skip" path.
+    if (this.benchmarkActive) {
+      throw new Error(
+        '[ModelStore] initContext rejected: benchmark mode is active',
+      );
+    }
+
     // === Phase 1: Pre-flight checks OUTSIDE mutex ===
 
     // Mark intent immediately - this is the "last-one-wins" tracking
@@ -1489,6 +1541,16 @@ class ModelStore {
       // === Phase 2: Execute context operations WITH mutex ===
 
       const operationPromise = this.contextOperationMutex.then(async () => {
+        // A benchmark may have started while this load sat in the mutex
+        // queue (cold-launch deep-link race). Bail before doing native work
+        // — enterBenchmarkMode will release any context we leave behind.
+        if (this.benchmarkActive) {
+          console.log(
+            `[ModelStore] Skipping queued load for "${model.name}" - benchmark mode is active`,
+          );
+          return null;
+        }
+
         // Final check if this request is still current (last-one-wins)
         // This catches race conditions where another request queued while we waited
         if (this.pendingModelId !== model.id) {

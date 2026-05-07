@@ -350,3 +350,37 @@ export function deriveEffectiveBackend(signals: LogSignals): EffectiveBackend {
   }
   return 'unknown';
 }
+
+/**
+ * Closed enum of requested-backend values the bench config can carry.
+ * Mirrors `Backend` in `BenchmarkRunnerScreen.tsx`; redeclared here so
+ * `logSignals.ts` stays standalone and importable from non-screen code
+ * (tests, future tooling).
+ */
+export type RequestedBackend = 'cpu' | 'gpu' | 'hexagon';
+
+/**
+ * Returns true when the actual backend the cell landed on satisfies the
+ * cell's `requested_backend`. Partial offload (cpu+opencl-partial,
+ * cpu+hexagon-partial) IS considered a satisfied request — the runner
+ * landed on the requested backend, just incompletely; the report's
+ * `effective_backend` field carries the partial signal so operators can
+ * still spot it. Mismatch happens when the cell asked for one backend
+ * and the model loaded on a fundamentally different one (e.g. requested
+ * gpu, weights landed entirely on CPU).
+ *
+ * Pure: no closure capture, no side effects. Exported for unit tests.
+ */
+export function requestSatisfiedBy(
+  requested: RequestedBackend,
+  actual: EffectiveBackend,
+): boolean {
+  switch (requested) {
+    case 'cpu':
+      return actual === 'cpu';
+    case 'gpu':
+      return actual === 'opencl' || actual === 'cpu+opencl-partial';
+    case 'hexagon':
+      return actual === 'hexagon' || actual === 'cpu+hexagon-partial';
+  }
+}

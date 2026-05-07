@@ -1,19 +1,31 @@
 import React, {useCallback, useRef, useState} from 'react';
 import {Button, ScrollView, StyleSheet, Text, View} from 'react-native';
 import RNDeviceInfo from 'react-native-device-info';
-import {addNativeLogListener, toggleNativeLog} from 'llama.rn';
+import {
+  addNativeLogListener,
+  initLlama,
+  toggleNativeLog,
+  type LlamaContext,
+} from 'llama.rn';
 import {observer} from 'mobx-react';
 
 import {modelStore} from '../../store';
 import {getDeviceOptions} from '../../utils/deviceSelection';
+import {getRecommendedThreadCount} from '../../utils/deviceCapabilities';
 import type {Model} from '../../utils/types';
 import {
   BENCH_LOG_RE,
   deriveEffectiveBackend,
   deriveLogSignals,
   emptyLogSignals,
+  requestSatisfiedBy,
   type LogSignals,
 } from '../logSignals';
+import {
+  DEFAULT_BENCH_BASE_PARAMS,
+  composeCellParams,
+  type BenchBaseParams,
+} from '../benchParams';
 
 // Top-level require keeps RNFS access DCE-friendly (matches MemoryAdapter
 // pattern from TASK-20260423-2331 Step 0). The whole module is gated
@@ -213,28 +225,43 @@ export function expandAxes(
 }
 
 /**
- * Snapshot the matrix-level pre-run state of the six fingerprint knobs
- * from `modelStore.contextInitParams`. Used as the fixed point for
- * restoration (4c.3) and the pre-init failure-path fingerprint
- * construction (9c).
+ * Project the bench's matrix-level base params onto the six
+ * fingerprint-eligible knobs (WHAT 4d.1 — fixed contract). This is the
+ * fixed point used to build `req:`-prefixed failure fingerprints when a
+ * cell throws BEFORE init params are composed (e.g. download timeout,
+ * GPU/Hexagon pre-check failure).
  *
- * Reads from `contextInitParams` directly (operator-facing values,
- * preserving e.g. `use_mmap='smart'`) — NOT from
- * `getEffectiveContextInitParams(filePath)` which resolves smart-mmap
- * to a concrete boolean dependent on file state. WHAT 4d explicitly
- * pins the fingerprint to operator intent over engine-effective
- * resolution.
- *
- * Keys missing on the current platform (e.g. iOS `no_extra_bufts`)
- * stay missing in the result, so the canonicaliser later writes `"-"`
- * for them.
+ * Reads only from the bench's own base params — never from
+ * `modelStore.contextInitParams`. The runner is fully isolated from the
+ * rest of the app's state, so the fingerprint reflects the bench's
+ * declared base, not whatever the user happens to have in Settings.
  */
-function snapshotFingerprintKeys(): PreRunSnapshot {
-  const params = modelStore.contextInitParams as unknown as Record<
-    string,
-    unknown
-  >;
-  const snapshot: PreRunSnapshot = {};
+function snapshotFingerprintKeys(base: BenchBaseParams): PreRunSnapshot {
+  return {
+    cache_type_k: base.cache_type_k as SettingsValue,
+    cache_type_v: base.cache_type_v as SettingsValue,
+    flash_attn_type: base.flash_attn_type as SettingsValue,
+    no_extra_bufts: base.no_extra_bufts as SettingsValue,
+    use_mmap: base.use_mmap as SettingsValue,
+    n_threads: base.n_threads as SettingsValue,
+  };
+}
+
+/**
+ * Project a cell's composed `ContextParams` onto the fingerprint-eligible
+ * knobs. Used to build the success-path fingerprint AND to populate the
+ * report's `init_settings` field. Replaces the prior post-init snapshot
+ * read from `modelStore.contextInitParams`: under the isolated lifecycle
+ * the runner never goes through ModelStore, so the cell's composed
+ * params ARE the post-init reality (no in-store mutation can shadow
+ * them).
+ *
+ * `model` and other non-fingerprint fields are dropped so the snapshot
+ * is shaped to feed `canonicaliseFingerprint` directly.
+ */
+function snapshotCellInitSettings(
+  cellParams: Record<string, unknown>,
+): Record<string, unknown> {
   const keys: SettingsKnob[] = [
     'cache_type_k',
     'cache_type_v',
@@ -243,111 +270,16 @@ function snapshotFingerprintKeys(): PreRunSnapshot {
     'use_mmap',
     'n_threads',
   ];
+  const out: Record<string, unknown> = {};
   for (const k of keys) {
-    const v = params[k];
-    if (v !== undefined) {
-      snapshot[k] = v as SettingsValue;
+    if (cellParams[k] !== undefined) {
+      out[k] = cellParams[k];
     }
   }
-  return snapshot;
+  return out;
 }
 
 /**
- * Apply the cell's settings overrides via the existing `modelStore.setX`
- * setters (WHAT 4c.2, I4 — no direct mutation of `contextInitParams`).
- *
- * Apply order rationale: `flash_attn_type` is applied BEFORE the
- * cache-type setters because:
- *   - When the requested `flash_attn_type` is `'auto'` or `'on'`, the
- *     cache-type setters take effect (the requested override lands as
- *     expected).
- *   - When the requested `flash_attn_type` is `'off'`, `setCacheTypeK/V`
- *     no-op silently (WHAT §4e). Applying flash_attn first makes that
- *     no-op correctly attributable to the declared intent rather than
- *     to stale state from a prior cell.
- *
- * The silent no-op is documented expected behaviour (WHAT D11). It
- * surfaces in the report as a divergence between `settings_overrides`
- * (the request) and `init_settings` (the post-init reality), which the
- * operator can inspect.
- */
-function applySettingsOverrides(overrides: SettingsOverrides): void {
-  if (overrides.flash_attn_type !== undefined) {
-    modelStore.setFlashAttnType(
-      overrides.flash_attn_type as 'auto' | 'on' | 'off',
-    );
-  }
-  if (overrides.cache_type_k !== undefined) {
-    // CacheType is a string-valued enum; runtime value already validated
-    // at config-build time (Step 3 / WHAT 4b.4).
-    modelStore.setCacheTypeK(overrides.cache_type_k as never);
-  }
-  if (overrides.cache_type_v !== undefined) {
-    modelStore.setCacheTypeV(overrides.cache_type_v as never);
-  }
-  if (overrides.no_extra_bufts !== undefined) {
-    modelStore.setNoExtraBufts(overrides.no_extra_bufts as boolean);
-  }
-  if (overrides.use_mmap !== undefined) {
-    modelStore.setUseMmap(overrides.use_mmap as 'true' | 'false' | 'smart');
-  }
-  if (overrides.n_threads !== undefined) {
-    modelStore.setNThreads(overrides.n_threads as number);
-  }
-}
-
-/**
- * Restore the matrix-level pre-run snapshot using the same setters
- * (WHAT 4c.3, I5 — restore runs on every exit path). Best-effort:
- * a single setter throwing does NOT mask the matrix's own outcome.
- *
- * Apply order matches `applySettingsOverrides` (`flash_attn_type`
- * first) so the restore deterministically lands the snapshot values
- * regardless of the current (post-cell) state.
- */
-function restoreSettingsSnapshot(snapshot: PreRunSnapshot): void {
-  const trySet = (fn: () => void): void => {
-    try {
-      fn();
-    } catch {
-      // Restore is best-effort; one setter failing does not abort the
-      // others. The next run's apply phase will normalise state again.
-    }
-  };
-  if (snapshot.flash_attn_type !== undefined) {
-    trySet(() =>
-      modelStore.setFlashAttnType(
-        snapshot.flash_attn_type as 'auto' | 'on' | 'off',
-      ),
-    );
-  }
-  if (snapshot.cache_type_k !== undefined) {
-    trySet(() => modelStore.setCacheTypeK(snapshot.cache_type_k as never));
-  }
-  if (snapshot.cache_type_v !== undefined) {
-    trySet(() => modelStore.setCacheTypeV(snapshot.cache_type_v as never));
-  }
-  if (snapshot.no_extra_bufts !== undefined) {
-    trySet(() =>
-      modelStore.setNoExtraBufts(snapshot.no_extra_bufts as boolean),
-    );
-  }
-  if (snapshot.use_mmap !== undefined) {
-    trySet(() =>
-      modelStore.setUseMmap(snapshot.use_mmap as 'true' | 'false' | 'smart'),
-    );
-  }
-  if (snapshot.n_threads !== undefined) {
-    trySet(() => modelStore.setNThreads(snapshot.n_threads as number));
-  }
-}
-
-/**
- * Runner-state snapshot — separate from the fingerprint snapshot because
- * these knobs do not contribute to row identity; they are dispatch-time
- * decisions the runner pins per cell. Snapshotted at matrix start so the
- * user's persisted choices are restored on exit.
- *
  * `n_gpu_layers` and `devices` together control which backend ggml dispatches
  * to. The runner sets them per cell based on `backend`. Without this snapshot
  * + per-cell pin, persisted state from a prior session can leak: e.g. a
@@ -356,32 +288,29 @@ function restoreSettingsSnapshot(snapshot: PreRunSnapshot): void {
  * and ggml routes the model through Hexagon anyway because the Hexagon
  * backend is registered (observed on Snapdragon 8 Elite Gen 5).
  */
-interface RunnerStateSnapshot {
-  n_gpu_layers: number | undefined;
-  devices: string[] | undefined;
-}
-
-function snapshotRunnerState(): RunnerStateSnapshot {
-  const params = modelStore.contextInitParams as unknown as Record<
-    string,
-    unknown
-  >;
-  return {
-    n_gpu_layers: params.n_gpu_layers as number | undefined,
-    devices: params.devices as string[] | undefined,
-  };
-}
-
-function restoreRunnerState(snapshot: RunnerStateSnapshot): void {
-  try {
-    if (snapshot.n_gpu_layers !== undefined) {
-      modelStore.setNGPULayers(snapshot.n_gpu_layers);
-    }
-    modelStore.setDevices(snapshot.devices);
-  } catch {
-    // Best-effort: a setter failing here does not abort the matrix's
-    // outcome. The next run's per-cell setters will normalise state.
+/**
+ * Map a cell's `backend` to its concrete (`devices`, `n_gpu_layers`) slot.
+ * Both fields are pinned per cell; pinning `n_gpu_layers` is required
+ * because `devices=['CPU']` alone does NOT prevent ggml from routing
+ * layers to other registered backends when `n_gpu_layers > 0` — verified
+ * on Snapdragon 8 Elite Gen 5 where `devices=['CPU']` + `n_gpu_layers=99`
+ * + Hexagon registered results in full Hexagon offload.
+ *
+ * Caller MUST gate `gpu` / `hexagon` on the corresponding device-options
+ * being available (see GPU/Hexagon pre-checks in `runMatrix`).
+ */
+function backendSlot(
+  backend: Backend,
+  adrenoDevices: string[] | null,
+  hexagonDevices: string[] | null,
+): {devices: string[]; n_gpu_layers: number} {
+  if (backend === 'cpu') {
+    return {devices: ['CPU'], n_gpu_layers: 0};
   }
+  if (backend === 'gpu') {
+    return {devices: adrenoDevices as string[], n_gpu_layers: 99};
+  }
+  return {devices: hexagonDevices as string[], n_gpu_layers: 99};
 }
 
 /**
@@ -509,11 +438,22 @@ export async function runMatrix(
     config.settings_axes && config.settings_axes.length > 0
   );
 
-  // Matrix-level pre-run snapshot (WHAT 4c.1). Captured ONCE before the
-  // first cell — the fixed point used for both restoration (4c.3) and
-  // the pre-init failure-path fingerprint construction (9c).
-  const preRunSnapshot = snapshotFingerprintKeys();
-  const runnerStateSnapshot = snapshotRunnerState();
+  // Resolve the device-appropriate thread count ONCE for the matrix.
+  // `getRecommendedThreadCount()` is a pure utility (no modelStore
+  // coupling), so the bench's base stays isolated from the user's
+  // persisted Settings while still picking a sensible per-device
+  // default (80% of cores when >4, otherwise all cores).
+  const recommendedThreads = await getRecommendedThreadCount();
+  const benchBase: BenchBaseParams = {
+    ...DEFAULT_BENCH_BASE_PARAMS,
+    n_threads: recommendedThreads,
+  };
+
+  // Matrix-level fingerprint snapshot (WHAT 4c.1). Derived from the
+  // bench's own base — NOT from `modelStore.contextInitParams` — so the
+  // fingerprint reflects what the bench would have run, independent of
+  // whatever the user has in Settings.
+  const preRunSnapshot = snapshotFingerprintKeys(benchBase);
 
   // Resolve the GPU and Hexagon device sets ONCE at run start. Reuses the
   // canonical helper (`getDeviceOptions` from src/utils/deviceSelection.ts)
@@ -570,6 +510,17 @@ export async function runMatrix(
   // of the app session. Per-cell scoping is done by attaching a fresh
   // listener around each init+bench window.
   await toggleNativeLog(true).catch(() => undefined);
+
+  // Take exclusive ownership of the native context lifecycle. This:
+  //   - Sets `modelStore.benchmarkActive = true` synchronously so any
+  //     in-flight or new auto-load (e.g. ChatView's pal-default
+  //     selectModel on cold-launch) is gated.
+  //   - Releases any context the rest of the app loaded so no stale
+  //     LlamaContext occupies the native context list while the matrix
+  //     is creating its own.
+  // The runner from this point on calls `initLlama` directly per cell;
+  // it never touches `modelStore.context` / `modelStore.activeModelId`.
+  await modelStore.enterBenchmarkMode();
   try {
     const startTimestamp = new Date().toISOString();
     const safeStamp = startTimestamp.replace(/[:.]/g, '-');
@@ -628,10 +579,11 @@ export async function runMatrix(
       // detach the listener) when a cell throws mid-init.
       const logBuffer: string[] = [];
       let logSub: {remove: () => void} | null = null;
-      // Tracks whether modelStore.initContext resolved for this cell. The
-      // finally block uses this to call releaseContext exactly once per
-      // initialized cell, regardless of whether bench() then threw.
-      let contextInitialized = false;
+      // The native context the runner owns for this cell. Stored at outer
+      // scope so the `finally` block can release it regardless of where in
+      // the try body a throw lands. Distinct from `modelStore.context` —
+      // the runner never assigns to that.
+      let ctx: LlamaContext | null = null;
       // Post-init snapshot, hoisted so the catch path can pick between the
       // standard fingerprint (post-init available) and the `req:`-prefixed
       // fingerprint (pre-init failure). WHAT 9d explicitly requires this
@@ -775,71 +727,64 @@ export async function runMatrix(
           setStatus(`running:${tag}`);
         }
 
-        // 3. Apply the cell's settings overrides via existing setters
-        //    (WHAT 4c.2, I4). Done AFTER GPU/Hexagon pre-check and AFTER
-        //    model resolve/download (which can take 30 min) so the window
-        //    where stale settings are visible is minimised if the run
-        //    aborts.
-        applySettingsOverrides(overrides);
+        // 3. Compose the literal `ContextParams` for this cell. No store
+        //    mutation: per-cell overrides + backend slot land directly in
+        //    the dict we hand to `initLlama`. This is the single source of
+        //    truth for `init_settings` AND `effective_init_params`.
+        const filePath = await modelStore.getModelFullPath(resolvedModel);
+        const slot = backendSlot(backend, adrenoDevices, hexagonDevices);
+        const cellParams = composeCellParams({
+          filePath,
+          base: benchBase,
+          overrides,
+          devices: slot.devices,
+          n_gpu_layers: slot.n_gpu_layers,
+        });
 
-        // 4. Programmatic tier switch (CPU / GPU / Hexagon device set).
-        // Both `devices` AND `n_gpu_layers` are pinned per cell. Pinning
-        // n_gpu_layers is required because devices=['CPU'] alone does NOT
-        // prevent ggml from routing layers to other registered backends
-        // when n_gpu_layers > 0 — verified on Snapdragon 8 Elite Gen 5
-        // where devices=['CPU'] + n_gpu_layers=99 + Hexagon registered
-        // results in full Hexagon offload.
-        let cellDevices: string[];
-        let cellNGpuLayers: number;
-        if (backend === 'cpu') {
-          cellDevices = ['CPU'];
-          cellNGpuLayers = 0;
-        } else if (backend === 'gpu') {
-          cellDevices = adrenoDevices as string[];
-          cellNGpuLayers = 99;
-        } else {
-          // hexagon — pre-check above guarantees hexagonDevices is non-null.
-          cellDevices = hexagonDevices as string[];
-          cellNGpuLayers = 99;
-        }
-        modelStore.setDevices(cellDevices);
-        modelStore.setNGPULayers(cellNGpuLayers);
+        // The fingerprint snapshot (and the `init_settings` field) is the
+        // composed params projected onto the six fingerprint-eligible
+        // knobs. Captured here so a throw in `initLlama` still yields a
+        // standard (non-`req:`) fingerprint via `postInitSnapshot`.
+        const initSettings = snapshotCellInitSettings(
+          cellParams as unknown as Record<string, unknown>,
+        );
+        postInitSnapshot = initSettings;
+        // `effective_init_params` is what hit native, with the model path
+        // dropped (operator-private and not load-bearing for analysis).
+        effectiveInitParams = Object.fromEntries(
+          Object.entries(cellParams).filter(([k]) => k !== 'model'),
+        );
 
-        // 4a. Attach native-log listener so the cell's load output (the same
-        // lines that show up in `adb logcat`) lands in `logBuffer`. The
-        // BENCH_LOG_RE pre-filter keeps the buffer bounded for long runs.
+        // 4. Attach native-log listener so the cell's load output lands in
+        //    `logBuffer`. The `BENCH_LOG_RE` pre-filter keeps the buffer
+        //    bounded for long runs.
         logSub = addNativeLogListener((_level, text) => {
           if (BENCH_LOG_RE.test(text)) {
             logBuffer.push(text);
           }
         });
 
-        // 4b. Capture the EFFECTIVE init params handed to llama.rn — the
-        // post-resolution view (e.g. `use_mmap='smart'` resolves to a
-        // boolean, devices fully concrete). Distinct from `init_settings`
-        // (post-init store snapshot). Diagnostic for cross-cell /
-        // cross-session state leaks.
-        const filePath = await modelStore.getModelFullPath(resolvedModel);
-        effectiveInitParams = filePath
-          ? await modelStore.getEffectiveContextInitParams(filePath)
-          : {};
+        // 5. Init the native context directly. `initLlama` is the runner's
+        //    ONLY native-load entrypoint — `modelStore.initContext` /
+        //    `selectModel` are gated by `benchmarkActive` and would throw
+        //    if accidentally invoked.
+        ctx = await initLlama(cellParams);
 
-        // 5. Init context (mutex-serialized inside ModelStore).
-        await modelStore.initContext(resolvedModel);
-        contextInitialized = true;
+        // 6. Validate the actual backend satisfies the requested backend.
+        //    Partial offload (cpu+opencl-partial, cpu+hexagon-partial) IS
+        //    considered satisfied — the cell landed on the requested
+        //    backend, just incompletely. A fundamentally different backend
+        //    (e.g. requested gpu, model loaded entirely on CPU) is a hard
+        //    failure: under shared-state designs this could silently land
+        //    in baselines as `status:ok` with `effective_backend:cpu` —
+        //    the redesign disallows that.
+        const okSignals = deriveLogSignals(logBuffer);
+        const okBackend = deriveEffectiveBackend(okSignals);
+        if (!requestSatisfiedBy(backend, okBackend)) {
+          throw new Error(`backend-mismatch:${backend}:${okBackend}`);
+        }
 
-        // 6. Snapshot init settings AFTER initContext (they may have been
-        // touched by initContext's quant-aware tweaks). Captured into the
-        // hoisted `postInitSnapshot` so the catch path can also build a
-        // standard (non-`req:`) fingerprint when initContext succeeded
-        // but bench() later threw (WHAT §9d).
-        const initSettings = JSON.parse(
-          JSON.stringify(modelStore.contextInitParams),
-        );
-
-        postInitSnapshot = initSettings;
-
-        // 6. Peak memory tracking.
+        // 7. Peak memory tracking.
         let peakMemory: {
           total: number;
           used: number;
@@ -855,10 +800,6 @@ export async function runMatrix(
         let speedPp: number | undefined;
         let speedTg: number | undefined;
         try {
-          const ctx = modelStore.context;
-          if (!ctx) {
-            throw new Error('context-not-initialized');
-          }
           const benchResult = await ctx.bench(
             bench.pp,
             bench.tg,
@@ -883,18 +824,13 @@ export async function runMatrix(
           );
         }
 
-        // Derive backend evidence from the cell's load output. The log
-        // listener is detached in the finally block (sole detach site).
-        const logSignals = deriveLogSignals(logBuffer);
-        const effectiveBackend = deriveEffectiveBackend(logSignals);
-
         const wall = Date.now() - tStart;
         const peakBytes = peakMemory
           ? (peakMemory as {used: number}).used
           : null;
         const row: BenchmarkRunRow = {
           ...rowBase,
-          effective_backend: effectiveBackend,
+          effective_backend: okBackend,
           pp_avg: speedPp,
           tg_avg: speedTg,
           wall_ms: wall,
@@ -902,7 +838,7 @@ export async function runMatrix(
             typeof peakBytes === 'number'
               ? Math.round((peakBytes / (1024 * 1024)) * 100) / 100
               : null,
-          log_signals: logSignals,
+          log_signals: okSignals,
           init_settings: initSettings,
           effective_init_params: effectiveInitParams,
           settings_overrides: overrides,
@@ -976,16 +912,19 @@ export async function runMatrix(
         setStatus(`cell-failed:${i + 1}/${cells.length}:${short}`);
         // continue to the next cell — per-cell error containment.
       } finally {
-        // Sole release site: cells that finished initContext (success path or
-        // any throw afterwards) release exactly once. Cells that threw before
-        // initContext resolved (e.g. download-timeout, GPU pre-check) skip
-        // release because there is no context to release.
-        if (contextInitialized) {
+        // Sole release site for the runner-owned context. If `initLlama`
+        // threw, `ctx` stays null and we skip release. If anything between
+        // `initLlama` and the success-row throws, the local `ctx` is the
+        // only handle to the native context — we MUST release it here or
+        // the native context list grows on every failed cell.
+        if (ctx) {
           try {
-            await (modelStore as any).releaseContext?.();
+            await ctx.release();
           } catch {
-            // releaseContext throwing should not abort the matrix; the next
-            // cell's initContext will tear down the stale context anyway.
+            // Best-effort: a release throwing here doesn't abort the matrix.
+            // The next cell creates a fresh context; if the leak persists
+            // the cumulative `g_context_limit` check in RNLlamaJSI will
+            // surface it as a hard error on a later cell.
           }
         }
         // Sole listener-detach site. Idempotent: no-op when null.
@@ -997,16 +936,12 @@ export async function runMatrix(
     setStatus('complete');
   } finally {
     // Outer matrix-level finally: success and failure paths converge here.
-    // Order: log toggle off -> restore snapshot. Both wrapped so neither
-    // blocks the other (WHAT 4c.3, I5: restore runs on every exit path).
+    // No "restore settings" step is required — under the isolated
+    // lifecycle the runner never wrote to `modelStore.contextInitParams`,
+    // so there is nothing to undo. The single side-effect we own is
+    // native-log toggle (matrix-scoped) and benchmark-mode (matrix-scoped).
     await toggleNativeLog(false).catch(() => undefined);
-    try {
-      restoreSettingsSnapshot(preRunSnapshot);
-      restoreRunnerState(runnerStateSnapshot);
-    } catch {
-      // Per WHAT 4c.3, restore is best-effort; a restore failure does not
-      // re-fail the matrix.
-    }
+    modelStore.exitBenchmarkMode();
   }
 }
 

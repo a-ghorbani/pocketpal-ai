@@ -278,8 +278,14 @@ export const ChatView = observer(
     }, [chatSessionStore.activeSessionId]);
 
     // ============ ACTIVE PAL MODEL INITIALIZATION ============
-    // Initialize model context when active pal changes
+    // Initialize model context when active pal changes.
+    // Gate: while the e2e benchmark runner owns the native context lifecycle,
+    // this auto-load must NOT fire — otherwise it shadows the matrix's per-cell
+    // devices/n_gpu_layers via initContext's "already loaded → skip" path.
     React.useEffect(() => {
+      if (modelStore.benchmarkActive) {
+        return;
+      }
       if (activePal) {
         if (!modelStore.activeModel && activePal.defaultModel) {
           const palDefaultModel = modelStore.availableModels.find(
