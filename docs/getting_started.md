@@ -87,6 +87,8 @@ The generation performance metric is also displayed. If interested, watch the ch
 
 Assistant responses use a rich rendering pipeline with rendered, clean, and raw modes. Markdown headings, emphasis, lists, links, task lists, code blocks, and GitHub-style tables are rendered in the chat bubble. Tables and long code blocks scroll horizontally on small screens.
 
+When an answer contains thinking tags, model template tokens, unsafe HTML, or partial streaming markup, the message bubble shows Rendered, Clean, and Raw modes. Rendered is the normal formatted view, Clean shows plain text after cleanup, and Raw shows the exact model output preserved for inspection.
+
 Copy options:
 
 - Default copy: use the copy icon at the bottom of the AI response bubble.

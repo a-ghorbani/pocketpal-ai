@@ -110,6 +110,8 @@ Get PocketPal AI on Google Play:
 
 Assistant responses render Markdown, code blocks, tables, and common LaTeX delimiters. Clean copy hides thinking blocks and model template tokens by default, Clean + thinking includes reasoning as plain text, and raw copy preserves the exact model output. Unsafe HTML is escaped and never executed.
 
+When an answer contains thinking tags, service/template tokens, unsafe HTML, or partial streaming markup, the bubble exposes Rendered, Clean, and Raw view modes so you can inspect the fallback output without changing copy settings.
+
 Message rendering can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility/collapse behavior, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers automatically fall back to cheaper rendering paths to keep chat responsive on mobile devices.
 
 ### Message Editing
