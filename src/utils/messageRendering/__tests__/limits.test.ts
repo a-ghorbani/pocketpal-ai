@@ -43,4 +43,19 @@ describe('message rendering limits', () => {
 
     expect(getMarkdownRenderLimits(markdown).disableLatex).toBe(true);
   });
+
+  it('disables math injection for too many inline formulas', () => {
+    const markdown = Array.from(
+      {length: 50},
+      (_value, index) => `$x_${index}$`,
+    ).join(' ');
+
+    expect(getMarkdownRenderLimits(markdown).disableLatex).toBe(true);
+  });
+
+  it('ignores math-looking content inside fenced code when limiting LaTeX', () => {
+    const markdown = `\`\`\`text\n${'$x$ '.repeat(80)}\n\`\`\``;
+
+    expect(getMarkdownRenderLimits(markdown).disableLatex).toBe(false);
+  });
 });

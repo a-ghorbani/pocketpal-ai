@@ -269,6 +269,80 @@ describe('MarkdownView Component', () => {
     });
   });
 
+  describe('LaTeX rendering', () => {
+    it('renders inline math with the local KaTeX WebView renderer', () => {
+      const {getByTestId} = render(
+        <MarkdownView
+          markdownText="Energy is $E=mc^2$."
+          maxMessageWidth={300}
+        />,
+      );
+
+      const webView = getByTestId('katex-math-inline-webview');
+
+      expect(webView.props.source.html).toContain('class="katex"');
+      expect(webView.props.source.html).toContain('E');
+      expect(webView.props.domStorageEnabled).toBe(false);
+      expect(webView.props.allowFileAccess).toBe(false);
+    });
+
+    it('renders block math inside a horizontal scroll container', () => {
+      const {getByTestId, UNSAFE_getAllByType} = render(
+        <MarkdownView
+          markdownText={'$$\n\\frac{dx}{dt}=\\alpha x + \\beta\n$$'}
+          maxMessageWidth={240}
+        />,
+      );
+
+      const webView = getByTestId('katex-math-block-webview');
+      const style = Array.isArray(webView.props.style)
+        ? webView.props.style
+        : [webView.props.style];
+
+      expect(webView.props.source.html).toContain('class="katex-display"');
+      expect(style.some((item: any) => item?.width === 240)).toBe(true);
+      expect(
+        UNSAFE_getAllByType(ScrollView).some(node => node.props.horizontal),
+      ).toBe(true);
+    });
+
+    it('shows the raw styled fallback when LaTeX rendering is disabled', () => {
+      const {getByText, queryByTestId} = render(
+        <MarkdownView
+          markdownText="Energy is $E=mc^2$."
+          maxMessageWidth={300}
+          renderLatex={false}
+        />,
+      );
+
+      expect(queryByTestId('katex-math-inline-webview')).toBeNull();
+      expect(getByText(/E=mc\^2/)).toBeTruthy();
+    });
+
+    it('falls back to raw TeX for malformed formulas', () => {
+      const {getByText, queryByTestId} = render(
+        <MarkdownView markdownText="Broken $\\frac{$" maxMessageWidth={300} />,
+      );
+
+      expect(queryByTestId('katex-math-inline-webview')).toBeNull();
+      expect(getByText(/frac/)).toBeTruthy();
+    });
+
+    it('recovers from fallback when a later formula is valid', () => {
+      const {queryByTestId, rerender} = render(
+        <MarkdownView markdownText="Broken $\\frac{$" maxMessageWidth={300} />,
+      );
+
+      expect(queryByTestId('katex-math-inline-webview')).toBeNull();
+
+      rerender(
+        <MarkdownView markdownText="Valid $E=mc^2$" maxMessageWidth={300} />,
+      );
+
+      expect(queryByTestId('katex-math-inline-webview')).toBeTruthy();
+    });
+  });
+
   describe('React.memo behavior', () => {
     it('does not re-render when props are unchanged', () => {
       const markdownText = 'Hello';
