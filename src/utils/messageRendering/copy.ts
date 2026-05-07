@@ -2,6 +2,7 @@ import {parseAssistantMessage} from './parser';
 import {
   MessageCopyMode,
   MessageParserOptions,
+  MessageSegment,
   MessageWithRenderingMetadata,
 } from './types';
 
@@ -101,6 +102,35 @@ export function prettyPrintXml(raw: string): string {
   } catch {
     return raw;
   }
+}
+
+export function buildSegmentCopyText(
+  segment: MessageSegment,
+  mode: 'raw' | 'markdown' | 'plain' = 'raw',
+): string {
+  if (mode === 'raw') {
+    return segment.raw;
+  }
+
+  if (segment.kind === 'table') {
+    return mode === 'plain'
+      ? tableMarkdownToPlainText(segment.raw)
+      : segment.raw;
+  }
+
+  if (segment.kind === 'math') {
+    return mode === 'plain' ? segment.content.trim() : segment.raw;
+  }
+
+  if (segment.kind === 'json') {
+    return prettyPrintJson(segment.content.trim() || segment.raw.trim());
+  }
+
+  if (segment.kind === 'xml') {
+    return prettyPrintXml(segment.content.trim() || segment.raw.trim());
+  }
+
+  return mode === 'plain' ? segment.content.trim() : segment.raw;
 }
 
 function looksLikeBalancedXml(raw: string): boolean {

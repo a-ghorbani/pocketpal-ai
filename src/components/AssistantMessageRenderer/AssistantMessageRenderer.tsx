@@ -10,6 +10,7 @@ import {ThinkingBubble} from '../ThinkingBubble';
 import {useTheme} from '../../hooks';
 import {modelStore, uiStore} from '../../store';
 import {
+  buildSegmentCopyText,
   defaultMessageRenderingSettings,
   getThinkingContent,
   parseAssistantMessage,
@@ -45,6 +46,10 @@ function isStructuredSegment(segment: MessageSegment): boolean {
   return (
     segment.kind === 'json' || segment.kind === 'xml' || segment.kind === 'tool'
   );
+}
+
+function isCopyableRenderedSegment(segment: MessageSegment): boolean {
+  return segment.kind === 'table' || segment.kind === 'math';
 }
 
 function segmentToMarkdown(segment: MessageSegment): string | undefined {
@@ -189,6 +194,57 @@ const StructuredSegmentBlock: React.FC<StructuredSegmentBlockProps> = ({
   );
 };
 
+interface CopyableRenderedSegmentBlockProps {
+  segment: MessageSegment;
+  children: React.ReactNode;
+}
+
+const CopyableRenderedSegmentBlock: React.FC<
+  CopyableRenderedSegmentBlockProps
+> = ({segment, children}) => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
+  const title = segment.kind === 'table' ? 'Table' : 'Math';
+  const actions =
+    segment.kind === 'table'
+      ? [
+          {label: 'MD', mode: 'markdown' as const},
+          {label: 'Text', mode: 'plain' as const},
+        ]
+      : [{label: 'TeX', mode: 'raw' as const}];
+
+  const handleCopy = (mode: 'raw' | 'markdown' | 'plain') => {
+    ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+    Clipboard.setString(buildSegmentCopyText(segment, mode));
+  };
+
+  return (
+    <View style={styles.renderedSegmentBlock}>
+      <View style={styles.renderedSegmentHeader}>
+        <Text style={styles.renderedSegmentTitle}>{title}</Text>
+        <View style={styles.renderedSegmentActions}>
+          {actions.map(action => (
+            <TouchableOpacity
+              key={action.label}
+              accessibilityLabel={`Copy ${title} as ${action.label}`}
+              activeOpacity={0.75}
+              onPress={() => handleCopy(action.mode)}
+              style={styles.renderedSegmentCopyButton}>
+              <CopyIcon
+                width={14}
+                height={14}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+              <Text style={styles.renderedSegmentCopyText}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      <View style={styles.renderedSegmentContent}>{children}</View>
+    </View>
+  );
+};
+
 export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
   observer(
     ({
@@ -276,7 +332,11 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
             </ThinkingBubble>
           )}
 
-          {parsed.segments.some(isStructuredSegment)
+          {parsed.segments.some(
+            segment =>
+              isStructuredSegment(segment) ||
+              isCopyableRenderedSegment(segment),
+          )
             ? parsed.segments.map((segment, index) => {
                 if (isStructuredSegment(segment)) {
                   return (
@@ -293,9 +353,8 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                   return null;
                 }
 
-                return (
+                const markdownView = (
                   <MarkdownView
-                    key={`${parsed.hash}-${index}`}
                     markdownText={segmentMarkdown}
                     maxMessageWidth={maxMessageWidth}
                     selectable={selectable}
@@ -307,6 +366,22 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                     useCompactTables={settings.useCompactTables}
                     showThinkingBlocks={false}
                   />
+                );
+
+                if (isCopyableRenderedSegment(segment)) {
+                  return (
+                    <CopyableRenderedSegmentBlock
+                      key={segment.id}
+                      segment={segment}>
+                      {markdownView}
+                    </CopyableRenderedSegmentBlock>
+                  );
+                }
+
+                return (
+                  <React.Fragment key={`${parsed.hash}-${index}`}>
+                    {markdownView}
+                  </React.Fragment>
                 );
               })
             : (visibleSegmentMarkdown.length
