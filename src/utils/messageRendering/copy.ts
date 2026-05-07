@@ -54,6 +54,86 @@ export function prettyPrintJson(raw: string): string {
   }
 }
 
+export function prettyPrintXml(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed || !looksLikeBalancedXml(trimmed)) {
+    return raw;
+  }
+
+  try {
+    const tokens = trimmed
+      .replace(/>\s+</g, '><')
+      .split(/(?=<)|(?<=>)/g)
+      .map(token => token.trim())
+      .filter(Boolean);
+
+    let depth = 0;
+    const lines = tokens.map(token => {
+      const isClosingTag = /^<\//.test(token);
+      const isSelfClosingTag =
+        /\/>$/.test(token) ||
+        /^<\?/.test(token) ||
+        /^<!/.test(token) ||
+        /^<!--/.test(token);
+
+      if (isClosingTag) {
+        depth = Math.max(depth - 1, 0);
+      }
+
+      const line = `${'  '.repeat(depth)}${token}`;
+
+      if (
+        /^<[^/!?][^>]*>$/.test(token) &&
+        !isSelfClosingTag &&
+        !token.includes('</')
+      ) {
+        depth += 1;
+      }
+
+      return line;
+    });
+
+    if (depth !== 0) {
+      return raw;
+    }
+
+    return lines.join('\n');
+  } catch {
+    return raw;
+  }
+}
+
+function looksLikeBalancedXml(raw: string): boolean {
+  const stack: string[] = [];
+  const tagRe = /<\/?([A-Za-z][\w:-]*)(?:\s[^<>]*)?>/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = tagRe.exec(raw))) {
+    const tag = match[0];
+    const name = match[1];
+
+    if (
+      tag.startsWith('<?') ||
+      tag.startsWith('<!') ||
+      tag.endsWith('/>') ||
+      tag.startsWith('<!--')
+    ) {
+      continue;
+    }
+
+    if (tag.startsWith('</')) {
+      if (stack.pop() !== name) {
+        return false;
+      }
+      continue;
+    }
+
+    stack.push(name);
+  }
+
+  return stack.length === 0;
+}
+
 export function tableMarkdownToPlainText(markdown: string): string {
   const rows = markdown
     .split('\n')

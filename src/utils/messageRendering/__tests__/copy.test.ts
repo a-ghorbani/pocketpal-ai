@@ -2,6 +2,7 @@ import {
   buildMessageCopyTextFromMessage,
   buildMessageCopyText,
   prettyPrintJson,
+  prettyPrintXml,
   tableMarkdownToPlainText,
 } from '..';
 import {goldenMessages} from '../__fixtures__/goldenMessages';
@@ -46,6 +47,21 @@ describe('message rendering copy helpers', () => {
   it('pretty prints valid JSON and falls back for malformed JSON', () => {
     expect(prettyPrintJson('{"a":1}')).toBe('{\n  "a": 1\n}');
     expect(prettyPrintJson('{"a":')).toBe('{"a":');
+  });
+
+  it('pretty prints balanced XML and falls back for malformed XML', () => {
+    expect(prettyPrintXml('<response><answer>42</answer></response>')).toBe(
+      '<response>\n  <answer>\n    42\n  </answer>\n</response>',
+    );
+    expect(prettyPrintXml('<response><answer>42</response>')).toBe(
+      '<response><answer>42</response>',
+    );
+  });
+
+  it('keeps unsafe HTML as copy-safe XML text', () => {
+    expect(prettyPrintXml('<script>alert("no")</script>')).toBe(
+      '<script>\n  alert("no")\n</script>',
+    );
   });
 
   it('copies markdown table as tab-delimited plain text', () => {
