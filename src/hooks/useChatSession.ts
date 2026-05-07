@@ -23,6 +23,19 @@ import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {
+  getThinkingContent,
+  parseAssistantMessage,
+} from '../utils/messageRendering';
+
+const buildRawCompletionContent = (content: string, reasoning?: string) => {
+  const trimmedReasoning = reasoning?.trim();
+  if (!trimmedReasoning) {
+    return content;
+  }
+
+  return `<think>\n${trimmedReasoning}\n</think>\n\n${content}`;
+};
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -94,10 +107,15 @@ const prepareCompletion = async ({
   // If the user has disabled including thinking parts, remove them from assistant messages
   if (!includeThinkingInContext) {
     chatMessages = chatMessages.map(msg => {
-      if (msg.role === 'assistant' && typeof msg.content === 'string') {
+      if (msg.role === 'assistant') {
+        const nextMessage = {...(msg as any)};
+        delete nextMessage.reasoning_content;
+        if (typeof nextMessage.content !== 'string') {
+          return nextMessage;
+        }
         return {
-          ...msg,
-          content: removeThinkingParts(msg.content),
+          ...nextMessage,
+          content: removeThinkingParts(nextMessage.content),
         };
       }
       return msg;
@@ -286,6 +304,11 @@ export const useChatSession = (
       // forward the delta so TTS can emit the thinking placeholder during
       // the silent gap before real content starts.
       let prevSpokenReasoning = '';
+      const parserOptions = {
+        thinkingStartTag: modelStore.activeModel?.thinkingStartTag,
+        thinkingEndTag: modelStore.activeModel?.thinkingEndTag,
+        hideServiceTokens: true,
+      };
 
       // Create the completion promise using the engine interface
       // This works for both local (LlamaContext wrapper) and remote (OpenAI SSE) models
@@ -338,25 +361,39 @@ export const useChatSession = (
               modelStore.setIsStreaming(true);
             }
 
-            // Use content and reasoning_content from the streaming data
-            // llama.rn already separates these for us when enable_thinking is true
+            // Use content and reasoning_content from the streaming data.
+            // llama.rn already separates these when enable_thinking is true;
+            // for models that still inline tags, normalize cumulative content.
             const {content = '', reasoning_content: reasoningContent} = data;
+            const parsedContent = parseAssistantMessage(content, parserOptions);
+            const inlineReasoning = getThinkingContent(parsedContent);
+            const normalizedReasoning =
+              reasoningContent || inlineReasoning || undefined;
+            const normalizedContent = parsedContent.markdownText.replace(
+              /^\s+/,
+              '',
+            );
+            const rawContent = buildRawCompletionContent(
+              content,
+              reasoningContent,
+            );
 
             // Update message with the separated content
-            if (content || reasoningContent) {
+            if (normalizedContent || normalizedReasoning) {
               // Build the update object
               const update: any = {
                 metadata: {
                   partialCompletionResult: {
-                    reasoning_content: reasoningContent,
-                    content: content.replace(/^\s+/, ''),
+                    reasoning_content: normalizedReasoning,
+                    content: normalizedContent,
+                    raw_content: rawContent,
                   },
                 },
               };
 
               // Only update text if we have actual content
-              if (content) {
-                update.text = content.replace(/^\s+/, '');
+              if (normalizedContent) {
+                update.text = normalizedContent;
               }
 
               // Use the store's streaming update method which properly triggers reactivity
@@ -394,11 +431,27 @@ export const useChatSession = (
         console.log('result', result);
       }
 
+      const finalText = result.text ?? result.content ?? '';
+      const parsedFinalContent = parseAssistantMessage(
+        finalText,
+        parserOptions,
+      );
+      const finalContent = parsedFinalContent.markdownText;
+      const finalReasoning =
+        result.reasoning_content ||
+        getThinkingContent(parsedFinalContent) ||
+        undefined;
+      const rawFinalContent = buildRawCompletionContent(
+        finalText,
+        result.reasoning_content,
+      );
+
       // Update final completion metadata
       await chatSessionStore.updateMessage(
         currentMessageInfo.current.id,
         currentMessageInfo.current.sessionId,
         {
+          text: finalContent,
           metadata: {
             timings: {
               ...result.timings,
@@ -409,8 +462,9 @@ export const useChatSession = (
             multimodal: hasImages && isMultimodalEnabled,
             // Save the final completion result with reasoning_content
             completionResult: {
-              reasoning_content: result.reasoning_content,
-              content: result.text,
+              reasoning_content: finalReasoning,
+              content: finalContent,
+              raw_content: rawFinalContent,
             },
           },
         },
@@ -425,9 +479,9 @@ export const useChatSession = (
       try {
         ttsStore.onAssistantMessageComplete(
           currentMessageInfo.current.id,
-          result.text,
+          finalContent,
           {
-            hadReasoning: !!result.reasoning_content?.trim(),
+            hadReasoning: !!finalReasoning?.trim(),
           },
         );
       } catch (ttsErr) {
