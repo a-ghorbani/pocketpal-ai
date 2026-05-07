@@ -3,11 +3,7 @@ import {
   MessageSegment,
   ParsedAssistantMessage,
 } from './types';
-import {
-  findServiceToken,
-  hasServiceTokens,
-  stripServiceTokens,
-} from './serviceTokens';
+import {findServiceToken, hasServiceTokens} from './serviceTokens';
 import {containsUnsafeHtml, markdownToPlainText} from './markdown';
 
 const DEFAULT_THINKING_PAIRS: ReadonlyArray<readonly [string, string]> = [
@@ -222,13 +218,6 @@ function findChannelThinking(text: string, fromIndex: number) {
   };
 }
 
-function stripChannelThinking(text: string): string {
-  return text.replace(
-    /<\|channel\|?>\s*(analysis|thought)[\s\S]*?(?=<\|channel\|?>\s*final|$)/gi,
-    '',
-  );
-}
-
 function findBlockMath(text: string, fromIndex: number) {
   const dollarIndex = findUnescaped(text, '$$', fromIndex);
   const bracketIndex = text.indexOf('\\[', fromIndex);
@@ -347,26 +336,28 @@ function splitSegments(
   return segments;
 }
 
-function stripThinkingSegments(
-  text: string,
+function buildMarkdownTextFromSegments(
+  segments: MessageSegment[],
   options: MessageParserOptions,
+  hideServiceTokens: boolean,
 ): string {
-  let result = text;
-  for (const [start, end] of getThinkingPairs(options)) {
-    const escapedStart = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const escapedEnd = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    result = result.replace(
-      new RegExp(`${escapedStart}[\\s\\S]*?(${escapedEnd}|$)`, 'gi'),
-      '',
-    );
-  }
-  return stripChannelThinking(result);
-}
+  return segments
+    .map(segment => {
+      if (segment.kind === 'thinking') {
+        return options.includeThinkingInClean ? segment.raw : '';
+      }
 
-function stripToolTags(text: string): string {
-  return text
-    .replace(/<tool_call>([\s\S]*?)(<\/tool_call>|$)/gi, '$1')
-    .replace(/<function_call>([\s\S]*?)(<\/function_call>|$)/gi, '$1');
+      if (segment.kind === 'serviceTag' && hideServiceTokens) {
+        return '';
+      }
+
+      if (segment.kind === 'tool') {
+        return segment.content;
+      }
+
+      return segment.raw;
+    })
+    .join('');
 }
 
 export function parseAssistantMessage(
@@ -376,15 +367,12 @@ export function parseAssistantMessage(
   const hideServiceTokens = options.hideServiceTokens ?? true;
   const segments = splitSegments(raw, options);
 
-  let markdownText = raw;
-  if (!options.includeThinkingInClean) {
-    markdownText = stripThinkingSegments(markdownText, options);
-  }
-  markdownText = stripToolTags(markdownText);
+  let markdownText = buildMarkdownTextFromSegments(
+    segments,
+    options,
+    hideServiceTokens,
+  );
   markdownText = markdownText.replace(/<\/?final>/gi, '');
-  if (hideServiceTokens) {
-    markdownText = stripServiceTokens(markdownText);
-  }
   markdownText = normalizeCleanText(markdownText);
 
   const cleanText = normalizeCleanText(markdownText);

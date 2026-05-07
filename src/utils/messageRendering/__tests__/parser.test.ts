@@ -19,6 +19,25 @@ describe('message rendering parser', () => {
     expect(code?.content).toContain('print("$not math")');
   });
 
+  it('keeps model tags literal inside fenced code when cleaning output', () => {
+    const raw = [
+      '```xml',
+      '<think>literal</think>',
+      '<|assistant|>',
+      '```',
+      'Final answer.',
+    ].join('\n');
+
+    const parsed = parseAssistantMessage(raw);
+
+    expect(parsed.markdownText).toBe(raw);
+    expect(buildMessageCopyText(raw, 'markdown')).toBe(raw);
+    expect(buildMessageCopyText(raw, 'clean')).toContain(
+      '<think>literal</think>',
+    );
+    expect(buildMessageCopyText(raw, 'clean')).toContain('<|assistant|>');
+  });
+
   it('extracts thinking and excludes it from clean output', () => {
     const parsed = parseAssistantMessage(goldenMessages.think);
 
