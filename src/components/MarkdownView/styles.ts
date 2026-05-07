@@ -74,6 +74,45 @@ export const createStyles = (theme: Theme) =>
       borderRadius: 6,
       marginTop: 4,
     },
+    codeFallbackScroll: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 6,
+      marginTop: 4,
+    },
+    codeFallbackContent: {
+      padding: 8,
+    },
+    codeFallbackText: {
+      color: theme.colors.onSurface,
+      fontFamily: 'Courier',
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    codeWrapText: {
+      flexWrap: 'wrap',
+    },
+    inlineMath: {
+      color: theme.colors.onSurface,
+      backgroundColor: theme.colors.surfaceContainerHigh,
+      borderRadius: 4,
+      fontFamily: 'Courier',
+      fontSize: 14,
+      paddingHorizontal: 3,
+    },
+    mathBlockScroll: {
+      backgroundColor: theme.colors.surfaceContainerHigh,
+      borderRadius: 6,
+      marginVertical: 8,
+    },
+    mathBlockContent: {
+      padding: 10,
+    },
+    mathBlockText: {
+      color: theme.colors.onSurface,
+      fontFamily: 'Courier',
+      fontSize: 15,
+      lineHeight: 22,
+    },
     thinkContainer: {
       backgroundColor: theme.colors.surfaceContainerHigh,
       borderRadius: 8,

@@ -20,6 +20,8 @@ import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
+import {AssistantMessageRenderer} from '../AssistantMessageRenderer';
+import {getMessageRawContent} from '../../utils/messageRendering';
 
 import {MessageType} from '../../utils/types';
 import {
@@ -80,6 +82,8 @@ export const TextMessage = ({
     theme,
     user,
   });
+  const currentUserIsAuthor = user?.id === message.author.id;
+  const isAssistantMessage = !currentUserIsAuthor;
 
   // Extract imageUris from the message if available
   const imageUris = (message as any).imageUris || [];
@@ -205,7 +209,8 @@ export const TextMessage = ({
 
   return (
     <>
-      {usePreviewData &&
+      {currentUserIsAuthor &&
+      usePreviewData &&
       !!onPreviewDataFetched &&
       REGEX_LINK.test(message.text.toLowerCase()) ? (
         <LinkPreview
@@ -240,15 +245,24 @@ export const TextMessage = ({
           {/* Render images above the text */}
           {renderImages()}
 
-          <MarkdownView
-            markdownText={message.text.trim()}
-            maxMessageWidth={messageWidth}
-            selectable={false}
-            reasoningContent={
-              message.metadata?.completionResult?.reasoning_content ||
-              message.metadata?.partialCompletionResult?.reasoning_content
-            }
-          />
+          {isAssistantMessage ? (
+            <AssistantMessageRenderer
+              content={getMessageRawContent(message)}
+              messageId={message.id}
+              maxMessageWidth={messageWidth}
+              selectable={false}
+              reasoningContent={
+                message.metadata?.completionResult?.reasoning_content ||
+                message.metadata?.partialCompletionResult?.reasoning_content
+              }
+            />
+          ) : (
+            <MarkdownView
+              markdownText={message.text.trim()}
+              maxMessageWidth={messageWidth}
+              selectable={false}
+            />
+          )}
 
           {/*Platform.OS === 'ios' ? (
             <TextInput
