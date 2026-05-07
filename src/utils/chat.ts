@@ -2,6 +2,8 @@ import {applyTemplate, Templates} from 'chat-formatter';
 import {JinjaFormattedChatResult, LlamaContext} from 'llama.rn';
 import {CompletionParams} from './completionTypes';
 import {defaultCompletionParams} from './completionSettingsVersions';
+import {parseAssistantMessageCached} from './messageRendering/cache';
+import type {MessageParserOptions} from './messageRendering/types';
 
 import {
   ChatMessage,
@@ -325,35 +327,38 @@ export const stops = [
 ];
 
 /**
- * Removes thinking parts from text content.
- * This function removes content between <think>, <thought>, or <thinking> tags and their closing tags.
- *
- * @param text - The text to process
- * @returns The text with thinking parts removed
+ * Removes thinking/reasoning blocks from assistant text before it is sent back
+ * into model context.
  */
-export function removeThinkingParts(text: string): string {
-  // Check if the text contains any thinking tags
-  const hasThinkingTags =
-    text.includes('<think>') ||
-    text.includes('<thought>') ||
-    text.includes('<thinking>');
+export function removeThinkingParts(
+  text: string,
+  options: MessageParserOptions = {},
+): string {
+  const hideServiceTokens = options.hideServiceTokens ?? true;
+  const parsed = parseAssistantMessageCached(text, {
+    ...options,
+    includeThinkingInClean: false,
+    hideServiceTokens,
+  });
 
-  // If no thinking tags are found, return the original text
-  if (!hasThinkingTags) {
-    return text;
-  }
+  return parsed.segments
+    .map(segment => {
+      if (segment.kind === 'thinking') {
+        return '';
+      }
 
-  // Remove content between <think> and </think> tags
-  let result = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+      if (segment.kind === 'serviceTag' && hideServiceTokens) {
+        return '';
+      }
 
-  // Remove content between <thought> and </thought> tags
-  result = result.replace(/<thought>[\s\S]*?<\/thought>/g, '');
+      if (segment.kind === 'tool') {
+        return segment.content;
+      }
 
-  // Remove content between <thinking> and </thinking> tags
-  result = result.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
-
-  // Log for debugging
-  console.log('Removed thinking parts from context');
-
-  return result;
+      return segment.raw;
+    })
+    .join('')
+    .replace(/<\/?final>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }

@@ -2,6 +2,7 @@ import {Templates} from 'chat-formatter';
 import {
   applyChatTemplate,
   convertToChatMessages,
+  removeThinkingParts,
   user,
   assistant,
 } from '../chat';
@@ -230,6 +231,31 @@ describe('convertToChatMessages', () => {
         content: 'Hello',
       },
     ] as ChatMessage[]);
+  });
+});
+
+describe('removeThinkingParts', () => {
+  it('removes supported thinking blocks and service tokens from context text', () => {
+    expect(
+      removeThinkingParts(
+        '<|begin_of_text|><analysis>hidden</analysis>\nFinal answer',
+      ),
+    ).toBe('Final answer');
+  });
+
+  it('removes custom llama thinking tags from context text', () => {
+    expect(
+      removeThinkingParts('<start_of_thought>hidden', {
+        thinkingStartTag: '<start_of_thought>',
+        thinkingEndTag: '<end_of_thought>',
+      }),
+    ).toBe('');
+  });
+
+  it('does not remove literal code containing thinking tags', () => {
+    expect(
+      removeThinkingParts('```xml\n<think>literal</think>\n```\nAnswer'),
+    ).toBe('```xml\n<think>literal</think>\n```\nAnswer');
   });
 });
 

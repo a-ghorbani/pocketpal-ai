@@ -103,6 +103,10 @@ const prepareCompletion = async ({
   const includeThinkingInContext =
     (sessionCompletionSettings as CompletionParams)
       ?.include_thinking_in_context !== false;
+  const thinkingParserOptions = {
+    thinkingStartTag: modelStore.activeModel?.thinkingStartTag,
+    thinkingEndTag: modelStore.activeModel?.thinkingEndTag,
+  };
 
   // If the user has disabled including thinking parts, remove them from assistant messages
   if (!includeThinkingInContext) {
@@ -115,7 +119,10 @@ const prepareCompletion = async ({
         }
         return {
           ...nextMessage,
-          content: removeThinkingParts(nextMessage.content),
+          content: removeThinkingParts(
+            nextMessage.content,
+            thinkingParserOptions,
+          ),
         };
       }
       return msg;
