@@ -1,4 +1,5 @@
 import {
+  buildSegmentCopyText,
   buildMessageCopyTextFromMessage,
   buildMessageCopyText,
   prettyPrintJson,
@@ -68,5 +69,29 @@ describe('message rendering copy helpers', () => {
     expect(tableMarkdownToPlainText('| A | B |\n|---|---|\n| 1 | 2 |')).toBe(
       'A\tB\n1\t2',
     );
+  });
+
+  it('copies table segments as markdown or plain text', () => {
+    const table = {
+      id: 'table',
+      kind: 'table' as const,
+      raw: '| A | B |\n|---|---|\n| 1 | 2 |',
+      content: '| A | B |\n|---|---|\n| 1 | 2 |',
+    };
+
+    expect(buildSegmentCopyText(table, 'markdown')).toBe(table.raw);
+    expect(buildSegmentCopyText(table, 'plain')).toBe('A\tB\n1\t2');
+  });
+
+  it('copies math segments as raw latex or inner expression', () => {
+    const math = {
+      id: 'math',
+      kind: 'math' as const,
+      raw: '$$E = mc^2$$',
+      content: 'E = mc^2',
+    };
+
+    expect(buildSegmentCopyText(math, 'raw')).toBe('$$E = mc^2$$');
+    expect(buildSegmentCopyText(math, 'plain')).toBe('E = mc^2');
   });
 });
