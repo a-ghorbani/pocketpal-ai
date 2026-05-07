@@ -15,7 +15,9 @@ import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
 import {
   decodeHtmlEntities,
   fallbackTablesToCodeBlocks,
+  getMarkdownRenderLimits,
   isSafeLinkUrl,
+  markdownToPlainText,
   prepareMarkdownForRender,
 } from '../../utils/messageRendering';
 
@@ -174,6 +176,21 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
     const theme = useTheme();
     const styles = createStyles(theme);
     const tagsStyles = useMemo(() => createTagsStyles(theme), [theme]);
+    const renderLimits = useMemo(
+      () => getMarkdownRenderLimits(markdownText),
+      [markdownText],
+    );
+    const effectiveRenderLatex = renderLatex && !renderLimits.disableLatex;
+    const effectiveRenderTables = renderTables && !renderLimits.fallbackTables;
+    const effectiveUseSyntaxHighlighting =
+      useSyntaxHighlighting && !renderLimits.disableSyntaxHighlighting;
+    const plainFallbackText = useMemo(
+      () =>
+        renderLimits.usePlainTextFallback
+          ? markdownToPlainText(markdownText)
+          : '',
+      [markdownText, renderLimits.usePlainTextFallback],
+    );
 
     // Create separate tag styles for reasoning content with thinking bubble styling
     const reasoningTagsStyles = useMemo(
@@ -195,18 +212,18 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
           CodeRenderer({
             ...props,
             initialWrapCodeLines: wrapCodeLines,
-            useSyntaxHighlighting,
+            useSyntaxHighlighting: effectiveUseSyntaxHighlighting,
           }),
         span: (props: any) => MathRenderer(props),
         div: (props: any) => MathRenderer(props),
       };
 
-      if (renderTables) {
+      if (effectiveRenderTables) {
         Object.assign(enabledRenderers, tableRenderers);
       }
 
       return enabledRenderers;
-    }, [renderTables, useSyntaxHighlighting, wrapCodeLines]);
+    }, [effectiveRenderTables, effectiveUseSyntaxHighlighting, wrapCodeLines]);
 
     const defaultTextProps = useMemo(
       () => ({
@@ -242,12 +259,16 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         return '';
       }
 
+      if (renderLimits.usePlainTextFallback) {
+        return '';
+      }
+
       try {
-        const markdownInput = renderTables
+        const markdownInput = effectiveRenderTables
           ? markdownText
           : fallbackTablesToCodeBlocks(markdownText);
         const preparedMarkdown = prepareMarkdownForRender(markdownInput, {
-          renderLatex,
+          renderLatex: effectiveRenderLatex,
         });
         return marked(preparedMarkdown) as string;
       } catch {
@@ -255,25 +276,44 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
           renderLatex: false,
         })}</p>`;
       }
-    }, [markdownText, renderLatex, renderMarkdown, renderTables]);
+    }, [
+      effectiveRenderLatex,
+      effectiveRenderTables,
+      markdownText,
+      renderLimits.usePlainTextFallback,
+      renderMarkdown,
+    ]);
     const source = useMemo(() => ({html: htmlContent}), [htmlContent]);
 
     // Render reasoning content as markdown if present
     const reasoningHtmlContent = useMemo(() => {
-      if (!reasoningContent || !showThinkingBlocks || !renderMarkdown) {
+      if (
+        !reasoningContent ||
+        !showThinkingBlocks ||
+        !renderMarkdown ||
+        renderLimits.usePlainTextFallback
+      ) {
         return null;
       }
 
       try {
         return marked(
-          prepareMarkdownForRender(reasoningContent, {renderLatex}),
+          prepareMarkdownForRender(reasoningContent, {
+            renderLatex: effectiveRenderLatex,
+          }),
         ) as string;
       } catch {
         return `<p>${prepareMarkdownForRender(reasoningContent, {
           renderLatex: false,
         })}</p>`;
       }
-    }, [reasoningContent, renderLatex, renderMarkdown, showThinkingBlocks]);
+    }, [
+      effectiveRenderLatex,
+      reasoningContent,
+      renderLimits.usePlainTextFallback,
+      renderMarkdown,
+      showThinkingBlocks,
+    ]);
     const reasoningSource = useMemo(
       () => (reasoningHtmlContent ? {html: reasoningHtmlContent} : null),
       [reasoningHtmlContent],
@@ -294,7 +334,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               systemFonts={systemFonts}
               renderers={renderers}
               customHTMLElementModels={
-                renderTables ? tableHTMLElementModels : undefined
+                effectiveRenderTables ? tableHTMLElementModels : undefined
               }
               renderersProps={renderersProps}
             />
@@ -307,20 +347,29 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             {markdownText}
           </Text>
         )}
-        {renderMarkdown && !isEmptyContent(markdownText) && (
-          <RenderHtml
-            contentWidth={contentWidth}
-            source={source}
-            tagsStyles={tagsStyles}
-            defaultTextProps={defaultTextProps}
-            systemFonts={systemFonts}
-            renderers={renderers}
-            customHTMLElementModels={
-              renderTables ? tableHTMLElementModels : undefined
-            }
-            renderersProps={renderersProps}
-          />
-        )}
+        {renderMarkdown &&
+          renderLimits.usePlainTextFallback &&
+          !isEmptyContent(markdownText) && (
+            <Text selectable={selectable} style={tagsStyles.body}>
+              {plainFallbackText || markdownText}
+            </Text>
+          )}
+        {renderMarkdown &&
+          !renderLimits.usePlainTextFallback &&
+          !isEmptyContent(markdownText) && (
+            <RenderHtml
+              contentWidth={contentWidth}
+              source={source}
+              tagsStyles={tagsStyles}
+              defaultTextProps={defaultTextProps}
+              systemFonts={systemFonts}
+              renderers={renderers}
+              customHTMLElementModels={
+                effectiveRenderTables ? tableHTMLElementModels : undefined
+              }
+              renderersProps={renderersProps}
+            />
+          )}
       </View>
     );
   },
