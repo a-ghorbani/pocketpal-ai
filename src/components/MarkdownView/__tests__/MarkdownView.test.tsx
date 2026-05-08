@@ -1,5 +1,6 @@
 import React from 'react';
 import {ScrollView} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import {render, fireEvent} from '@testing-library/react-native';
 
@@ -28,6 +29,10 @@ const treeHasStyleValue = (node: any, key: string, value: unknown): boolean => {
 };
 
 describe('MarkdownView Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders markdown content correctly', () => {
     const markdownText = 'Hello **World**';
     const {getByText} = render(
@@ -284,6 +289,19 @@ describe('MarkdownView Component', () => {
       expect(webView.props.source.html).toContain('E');
       expect(webView.props.domStorageEnabled).toBe(false);
       expect(webView.props.allowFileAccess).toBe(false);
+    });
+
+    it('copies inline math TeX on long press', () => {
+      const {getByLabelText} = render(
+        <MarkdownView
+          markdownText="Energy is $E=mc^2$."
+          maxMessageWidth={300}
+        />,
+      );
+
+      fireEvent(getByLabelText('Copy LaTeX'), 'longPress');
+
+      expect(Clipboard.setString).toHaveBeenCalledWith('E=mc^2');
     });
 
     it('renders block math inside a horizontal scroll container', () => {

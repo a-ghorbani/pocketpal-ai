@@ -1,10 +1,19 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import {WebView} from 'react-native-webview';
 import type {WebViewMessageEvent} from 'react-native-webview';
 import {renderToString} from 'katex';
 
 import {useTheme} from '../../hooks';
+import {L10nContext} from '../../utils';
 import {Theme} from '../../utils/types';
 import {KATEX_CSS} from '../../utils/messageRendering/katexAssets';
 
@@ -13,6 +22,7 @@ interface KaTeXMathViewProps {
   displayMode: boolean;
   maxWidth: number;
   selectable?: boolean;
+  copyable?: boolean;
 }
 
 interface MathSize {
@@ -25,6 +35,10 @@ const MAX_CACHE_ENTRIES = 200;
 const MIN_INLINE_HEIGHT = 30;
 const MIN_BLOCK_HEIGHT = 52;
 const MAX_WEBVIEW_HEIGHT = 360;
+const hapticOptions = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
 
 const MEASURE_SCRIPT = `
 (function() {
@@ -149,8 +163,10 @@ export const KaTeXMathView: React.FC<KaTeXMathViewProps> = ({
   displayMode,
   maxWidth,
   selectable = false,
+  copyable = true,
 }) => {
   const theme = useTheme();
+  const l10n = useContext(L10nContext);
   const styles = useMemo(() => createStyles(theme), [theme]);
   const cacheKey = useMemo(
     () => `${displayMode ? 'block' : 'inline'}:${maxWidth}:${hashText(source)}`,
@@ -219,9 +235,35 @@ export const KaTeXMathView: React.FC<KaTeXMathViewProps> = ({
     const url = request.url || '';
     return !url || url === 'about:blank' || url.startsWith('about:blank#');
   }, []);
+  const handleCopyLatex = useCallback(() => {
+    ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+    Clipboard.setString(source);
+  }, [source]);
+
+  const copyLabel = l10n.components.assistantMessageRenderer.segments.copyLatex;
+
+  const wrapCopyTarget = useCallback(
+    (children: React.ReactNode, style?: object | object[]) => {
+      if (!copyable) {
+        return style ? <View style={style}>{children}</View> : <>{children}</>;
+      }
+
+      return (
+        <Pressable
+          accessibilityLabel={copyLabel}
+          accessibilityRole="button"
+          delayLongPress={250}
+          onLongPress={handleCopyLatex}
+          style={style}>
+          {children}
+        </Pressable>
+      );
+    },
+    [copyLabel, copyable, handleCopyLatex],
+  );
 
   if (!html || failed) {
-    return displayMode ? (
+    const fallback = displayMode ? (
       <ScrollView
         horizontal
         nestedScrollEnabled
@@ -236,6 +278,8 @@ export const KaTeXMathView: React.FC<KaTeXMathViewProps> = ({
         {source}
       </Text>
     );
+
+    return wrapCopyTarget(fallback);
   }
 
   const webView = (
@@ -271,29 +315,24 @@ export const KaTeXMathView: React.FC<KaTeXMathViewProps> = ({
   );
 
   if (displayMode) {
-    return (
+    return wrapCopyTarget(
       <ScrollView
         horizontal
         nestedScrollEnabled
         style={styles.blockScroll}
         contentContainerStyle={styles.blockContent}>
         {webView}
-      </ScrollView>
+      </ScrollView>,
     );
   }
 
-  return (
-    <View
-      style={[
-        styles.inlineContainer,
-        {
-          height: size.height,
-          width: size.width,
-        },
-      ]}>
-      {webView}
-    </View>
-  );
+  return wrapCopyTarget(webView, [
+    styles.inlineContainer,
+    {
+      height: size.height,
+      width: size.width,
+    },
+  ]);
 };
 
 const createStyles = (theme: Theme) =>

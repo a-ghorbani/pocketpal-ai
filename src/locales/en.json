@@ -539,6 +539,7 @@
         "texShort": "TeX",
         "copyRawSegment": "Copy raw {{title}} segment",
         "copySegmentAs": "Copy {{title}} as {{mode}}",
+        "copyLatex": "Copy LaTeX",
         "expandSegment": "Expand {{title}}",
         "collapseSegment": "Collapse {{title}}"
       }
