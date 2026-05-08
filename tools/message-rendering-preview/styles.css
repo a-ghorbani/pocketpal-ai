@@ -1,0 +1,414 @@
+:root {
+  color-scheme: dark;
+  --bg: #101214;
+  --panel: #171b1f;
+  --panel-2: #20262b;
+  --bubble: #242b31;
+  --text: #eef2f4;
+  --muted: #aab4bd;
+  --border: #3a444d;
+  --accent: #5fbf9f;
+  --accent-strong: #99e1c8;
+  --code: #121619;
+  --danger: #ffb4ab;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+}
+
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.brand-mark {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 8px;
+  color: #08110e;
+  display: inline-flex;
+  font-weight: 800;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+h2 {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.brand p,
+.stage-header p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.field {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  gap: 8px;
+}
+
+select,
+textarea {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  outline: none;
+  padding: 10px 12px;
+}
+
+textarea {
+  min-height: 260px;
+  resize: vertical;
+  white-space: pre;
+}
+
+.control-group {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+}
+
+.segment,
+.copy-main,
+.copy-chip {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.segment.active,
+.copy-main,
+.copy-chip {
+  background: #2d383c;
+  color: var(--text);
+}
+
+.copy-main:hover,
+.copy-chip:hover,
+.segment:hover {
+  color: var(--accent-strong);
+}
+
+.toggles {
+  display: grid;
+  gap: 10px;
+}
+
+.toggles label {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.stage {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+
+.stage-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 18px 24px;
+}
+
+.device-frame {
+  align-items: start;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 28px;
+}
+
+.message-bubble {
+  background: var(--bubble);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 80px rgb(0 0 0 / 30%);
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 100%;
+  padding: 16px;
+  width: 390px;
+}
+
+.message-bubble.tablet {
+  width: 720px;
+}
+
+.message-bubble.desktop {
+  width: 980px;
+}
+
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3 {
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.message-bubble p,
+.message-bubble ul,
+.message-bubble ol,
+.message-bubble blockquote,
+.message-bubble pre,
+.message-bubble table,
+.thinking,
+.structured,
+.math-block-shell {
+  margin: 0 0 12px;
+}
+
+.message-bubble a {
+  color: var(--accent-strong);
+}
+
+.message-bubble hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.message-bubble blockquote {
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  padding-left: 12px;
+}
+
+.message-bubble code {
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.92em;
+  padding: 1px 5px;
+}
+
+.code-block,
+.structured-body {
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.code-head,
+.structured-head,
+.copyable-head {
+  align-items: center;
+  background: #1a2024;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 6px 8px 6px 12px;
+}
+
+.code-lang,
+.structured-title,
+.copyable-title {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+pre {
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+pre code {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #f4f7f8;
+  display: block;
+  padding: 0;
+  white-space: pre;
+}
+
+.wrap-code pre code,
+.wrap-code pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.table-scroll,
+.math-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+table {
+  border-collapse: collapse;
+  min-width: max-content;
+  width: 100%;
+}
+
+th,
+td {
+  border: 1px solid var(--border);
+  max-width: 260px;
+  padding: 8px 10px;
+  vertical-align: top;
+  white-space: normal;
+}
+
+th {
+  background: #1b2227;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.thinking {
+  background: #1d2528;
+  border: 1px solid #33434a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.thinking summary,
+.structured summary {
+  cursor: pointer;
+  padding: 10px 12px;
+}
+
+.thinking-content {
+  border-top: 1px solid #33434a;
+  color: var(--muted);
+  padding: 12px;
+}
+
+.structured {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.structured summary {
+  background: #1a2024;
+  color: var(--muted);
+}
+
+.structured-body {
+  border: 0;
+  border-radius: 0;
+}
+
+.copyable {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.copyable-content {
+  padding: 12px;
+}
+
+.math-inline {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  vertical-align: middle;
+}
+
+.math-fallback {
+  color: var(--danger);
+}
+
+.raw-view,
+.clean-view {
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+}

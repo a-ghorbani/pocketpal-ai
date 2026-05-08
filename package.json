@@ -22,6 +22,7 @@
     "l10n:validate": "node scripts/validate-l10n.js",
     "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "format": "prettier --write \"**/*.{js,ts,tsx,json,md}\"",
+    "preview:renderer": "node scripts/renderer-preview-server.js",
     "start": "react-native start",
     "start:reset": "react-native start --reset-cache",
     "test": "jest"

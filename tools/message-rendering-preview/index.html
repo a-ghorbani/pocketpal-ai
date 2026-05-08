@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>PocketPal Renderer Preview</title>
+    <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">P</span>
+          <div>
+            <h1>PocketPal Renderer</h1>
+            <p>Desktop visual preview</p>
+          </div>
+        </div>
+
+        <label class="field">
+          Message fixture
+          <select id="fixture-select"></select>
+        </label>
+
+        <div class="control-group" aria-label="Render mode">
+          <button class="segment active" data-mode="rendered">Rendered</button>
+          <button class="segment" data-mode="clean">Clean</button>
+          <button class="segment" data-mode="raw">Raw</button>
+        </div>
+
+        <div class="control-group" aria-label="Viewport width">
+          <button class="segment active" data-width="phone">Phone</button>
+          <button class="segment" data-width="tablet">Tablet</button>
+          <button class="segment" data-width="desktop">Desktop</button>
+        </div>
+
+        <div class="toggles">
+          <label
+            ><input id="render-markdown" type="checkbox" checked />
+            Markdown</label
+          >
+          <label
+            ><input id="render-latex" type="checkbox" checked /> LaTeX</label
+          >
+          <label
+            ><input id="render-tables" type="checkbox" checked /> Tables</label
+          >
+          <label
+            ><input id="show-thinking" type="checkbox" checked /> Show
+            thinking</label
+          >
+          <label
+            ><input id="hide-tokens" type="checkbox" checked /> Hide template
+            tokens</label
+          >
+          <label><input id="wrap-code" type="checkbox" /> Wrap code</label>
+        </div>
+
+        <label class="field">
+          Raw message
+          <textarea id="raw-input" spellcheck="false"></textarea>
+        </label>
+      </aside>
+
+      <section class="stage">
+        <header class="stage-header">
+          <div>
+            <h2 id="fixture-title">Simple Markdown</h2>
+            <p id="fixture-description">Basic markdown rendering.</p>
+          </div>
+          <button id="copy-output" class="copy-main">Copy visible text</button>
+        </header>
+
+        <div class="device-frame">
+          <article id="bubble" class="message-bubble"></article>
+        </div>
+      </section>
+    </main>
+
+    <script src="/vendor/marked/marked.umd.js"></script>
+    <script src="/vendor/katex/katex.min.js"></script>
+    <script src="/preview.js"></script>
+  </body>
+</html>

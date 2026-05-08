@@ -114,6 +114,10 @@ When an answer contains thinking tags, service/template tokens, unsafe HTML, or 
 
 Message rendering can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility/collapse behavior, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers automatically fall back to cheaper rendering paths to keep chat responsive on mobile devices.
 
+Developers can visually inspect the renderer on a desktop without an iOS or Android device by running `yarn preview:renderer` and opening the local URL printed by the command. The preview uses local `marked` and `katex` assets, includes golden messages for Markdown, tables, code, LaTeX, thinking, template tokens, JSON/XML/tool calls, unsafe HTML, and streaming partials, and exposes rendered/clean/raw mode switches plus phone/tablet/desktop widths.
+
+See [`docs/message_rendering_qa.md`](docs/message_rendering_qa.md) for the rich renderer QA matrix.
+
 ### Message Editing
 
 1. Long-press on any of your messages to edit them.

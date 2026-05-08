@@ -113,6 +113,16 @@ Escaped dollar signs such as `\$5` are preserved. Long block equations scroll ho
 
 Rendering behavior can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility, default thinking collapse, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers, large tables, many code blocks, and large math blocks use cheaper fallback paths so the chat stays responsive while streaming on mobile devices.
 
+### Desktop Renderer Preview
+
+To inspect message rendering without a phone or simulator, run:
+
+```sh
+yarn preview:renderer
+```
+
+Open the local URL printed by the command. The preview is a desktop-only visual QA harness backed by local `marked` and `katex` assets. It includes golden cases for Markdown, nested lists, tables, code blocks, inline/block LaTeX, escaped dollars, thinking tags, service tokens, JSON/XML/tool calls, unsafe HTML, and streaming partial output. Use the controls to switch rendered/clean/raw modes, toggle Markdown/LaTeX/tables/thinking/template-token cleanup, wrap code lines, and compare phone/tablet/desktop widths.
+
 ## Feedback Welcome!
 
 If you have suggestions for new models or features, please let us know by creating an issue.
