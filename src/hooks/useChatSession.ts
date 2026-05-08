@@ -25,16 +25,101 @@ import {
 } from '../utils/completionTypes';
 import {
   getThinkingContent,
+  hasServiceTokens,
   parseAssistantMessage,
 } from '../utils/messageRendering';
 
-const buildRawCompletionContent = (content: string, reasoning?: string) => {
-  const trimmedReasoning = reasoning?.trim();
-  if (!trimmedReasoning) {
+const INLINE_THINKING_MARKER_RE =
+  /<think|<thinking|<thought|<reasoning|<analysis|<start_of_thought|<\|begin_of_thought\|>|<\|start_thinking\|>|<\|channel\|?>\s*(analysis|thought)/i;
+
+const serializeToolCallsForRendering = (toolCalls?: unknown[]) => {
+  if (!toolCalls?.length) {
+    return '';
+  }
+
+  return toolCalls
+    .map(toolCall => {
+      const body =
+        typeof toolCall === 'string'
+          ? toolCall
+          : JSON.stringify(toolCall, null, 2);
+      return `<tool_call>\n${body}\n</tool_call>`;
+    })
+    .join('\n\n');
+};
+
+const appendToolCallsToContent = (content: string, toolCalls?: unknown[]) => {
+  const serializedToolCalls = serializeToolCallsForRendering(toolCalls);
+  if (!serializedToolCalls) {
     return content;
   }
 
-  return `<think>\n${trimmedReasoning}\n</think>\n\n${content}`;
+  return [content.trim(), serializedToolCalls].filter(Boolean).join('\n\n');
+};
+
+const buildRawCompletionContent = (
+  content: string,
+  reasoning?: string,
+  toolCalls?: unknown[],
+) => {
+  const trimmedReasoning = reasoning?.trim();
+  const contentWithToolCalls = appendToolCallsToContent(content, toolCalls);
+  if (!trimmedReasoning) {
+    return contentWithToolCalls;
+  }
+
+  return `<think>\n${trimmedReasoning}\n</think>\n\n${contentWithToolCalls}`;
+};
+
+const shouldParseStreamingContent = (
+  content: string,
+  parserOptions: {
+    thinkingStartTag?: string;
+    thinkingEndTag?: string;
+    hideServiceTokens: boolean;
+  },
+) => {
+  if (!content) {
+    return false;
+  }
+
+  return (
+    hasServiceTokens(content) ||
+    INLINE_THINKING_MARKER_RE.test(content) ||
+    (!!parserOptions.thinkingStartTag &&
+      content.includes(parserOptions.thinkingStartTag))
+  );
+};
+
+const normalizeCompletionContent = (
+  content: string,
+  reasoningContent: string | undefined,
+  toolCalls: unknown[] | undefined,
+  parserOptions: {
+    thinkingStartTag?: string;
+    thinkingEndTag?: string;
+    hideServiceTokens: boolean;
+  },
+) => {
+  const contentWithToolCalls = appendToolCallsToContent(content, toolCalls);
+
+  if (!shouldParseStreamingContent(contentWithToolCalls, parserOptions)) {
+    return {
+      normalizedContent: contentWithToolCalls.replace(/^\s+/, ''),
+      normalizedReasoning: reasoningContent || undefined,
+    };
+  }
+
+  const parsedContent = parseAssistantMessage(
+    contentWithToolCalls,
+    parserOptions,
+  );
+
+  return {
+    normalizedContent: parsedContent.markdownText.replace(/^\s+/, ''),
+    normalizedReasoning:
+      reasoningContent || getThinkingContent(parsedContent) || undefined,
+  };
 };
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
@@ -371,18 +456,22 @@ export const useChatSession = (
             // Use content and reasoning_content from the streaming data.
             // llama.rn already separates these when enable_thinking is true;
             // for models that still inline tags, normalize cumulative content.
-            const {content = '', reasoning_content: reasoningContent} = data;
-            const parsedContent = parseAssistantMessage(content, parserOptions);
-            const inlineReasoning = getThinkingContent(parsedContent);
-            const normalizedReasoning =
-              reasoningContent || inlineReasoning || undefined;
-            const normalizedContent = parsedContent.markdownText.replace(
-              /^\s+/,
-              '',
-            );
+            const {
+              content = '',
+              reasoning_content: reasoningContent,
+              tool_calls: toolCalls,
+            } = data;
+            const {normalizedContent, normalizedReasoning} =
+              normalizeCompletionContent(
+                content,
+                reasoningContent,
+                toolCalls,
+                parserOptions,
+              );
             const rawContent = buildRawCompletionContent(
               content,
               reasoningContent,
+              toolCalls,
             );
 
             // Update message with the separated content
@@ -394,6 +483,7 @@ export const useChatSession = (
                     reasoning_content: normalizedReasoning,
                     content: normalizedContent,
                     raw_content: rawContent,
+                    tool_calls: toolCalls,
                   },
                 },
               };
@@ -439,19 +529,24 @@ export const useChatSession = (
       }
 
       const finalText = result.text ?? result.content ?? '';
-      const parsedFinalContent = parseAssistantMessage(
-        finalText,
-        parserOptions,
-      );
-      const finalContent = parsedFinalContent.markdownText;
+      const {normalizedContent: finalContent, normalizedReasoning} =
+        normalizeCompletionContent(
+          finalText,
+          result.reasoning_content,
+          result.tool_calls,
+          parserOptions,
+        );
       const finalReasoning =
-        result.reasoning_content ||
-        getThinkingContent(parsedFinalContent) ||
-        undefined;
+        normalizedReasoning || result.reasoning_content || undefined;
       const rawFinalContent = buildRawCompletionContent(
         finalText,
         result.reasoning_content,
+        result.tool_calls,
       );
+      const finalContentForSpeech = parseAssistantMessage(
+        finalContent,
+        parserOptions,
+      ).plainText;
 
       // Update final completion metadata
       await chatSessionStore.updateMessage(
@@ -472,6 +567,7 @@ export const useChatSession = (
               reasoning_content: finalReasoning,
               content: finalContent,
               raw_content: rawFinalContent,
+              tool_calls: result.tool_calls,
             },
           },
         },
@@ -486,7 +582,7 @@ export const useChatSession = (
       try {
         ttsStore.onAssistantMessageComplete(
           currentMessageInfo.current.id,
-          finalContent,
+          finalContentForSpeech || finalContent,
           {
             hadReasoning: !!finalReasoning?.trim(),
           },

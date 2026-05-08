@@ -65,17 +65,19 @@ export interface CompletionStreamData {
   token?: string;
   content?: string;
   reasoning_content?: string;
+  tool_calls?: unknown[];
 }
 
 /**
  * Completion result shape for CompletionEngine.
  * Mirrors NativeCompletionResult from llama.rn, excluding local-only fields
- * (chat_format, tokens_cached, completion_probabilities, tool_calls).
+ * (chat_format, tokens_cached, completion_probabilities).
  */
 export interface CompletionResult {
   text: string;
   content: string;
   reasoning_content?: string;
+  tool_calls?: unknown[];
   timings?: {
     predicted_per_second?: number;
     predicted_ms?: number;

@@ -27,6 +27,9 @@ describe('LocalCompletionEngine', () => {
       text: 'Hello world',
       content: 'Hello world',
       reasoning_content: undefined,
+      tool_calls: [
+        {type: 'function', function: {name: 'search', arguments: '{}'}},
+      ],
       timings: {predicted_per_second: 50},
       tokens_predicted: 2,
       tokens_evaluated: 5,
@@ -54,6 +57,7 @@ describe('LocalCompletionEngine', () => {
     expect(result.stopped_eos).toBe(true);
     expect(result.tokens_predicted).toBe(2);
     expect(result.timings).toEqual({predicted_per_second: 50});
+    expect(result.tool_calls).toEqual(mockResult.tool_calls);
   });
 
   it('passes callback to LlamaContext and maps token data', async () => {
@@ -65,7 +69,12 @@ describe('LocalCompletionEngine', () => {
     (mockContext.completion as jest.Mock).mockImplementationOnce(
       async (params: any, cb: any) => {
         // Simulate LlamaContext calling the callback with TokenData shape
-        cb({token: 'tok', content: 'tok', reasoning_content: 'think'});
+        cb({
+          token: 'tok',
+          content: 'tok',
+          reasoning_content: 'think',
+          tool_calls: [{type: 'function'}],
+        });
         return mockResult;
       },
     );
@@ -77,6 +86,7 @@ describe('LocalCompletionEngine', () => {
       token: 'tok',
       content: 'tok',
       reasoning_content: 'think',
+      tool_calls: [{type: 'function'}],
     });
   });
 

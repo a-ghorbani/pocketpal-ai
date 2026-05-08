@@ -232,6 +232,48 @@ export async function streamChatCompletion(
     let lastProcessedLength = 0;
     let settled = false;
     let serverTimings: CompletionResult['timings'] | undefined;
+    let toolCalls: Record<number, any> = {};
+
+    const mergeToolCallDeltas = (deltaToolCalls: unknown) => {
+      if (!Array.isArray(deltaToolCalls)) {
+        return false;
+      }
+
+      for (const rawCall of deltaToolCalls) {
+        if (!rawCall || typeof rawCall !== 'object') {
+          continue;
+        }
+
+        const call = rawCall as any;
+        const index = Number.isInteger(call.index) ? call.index : 0;
+        const current = toolCalls[index] || {};
+        const next = {...current};
+
+        if (call.id) {
+          next.id = call.id;
+        }
+        if (call.type) {
+          next.type = call.type;
+        }
+        if (call.function) {
+          next.function = {
+            ...(current.function || {}),
+            ...(call.function.name ? {name: call.function.name} : {}),
+            arguments: `${current.function?.arguments || ''}${call.function.arguments || ''}`,
+          };
+        }
+
+        toolCalls[index] = next;
+      }
+
+      return true;
+    };
+
+    const getToolCalls = () =>
+      Object.keys(toolCalls)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map(index => toolCalls[index]);
 
     // Connection timeout: abort if no headers received within 30s
     const connectionTimer = setTimeout(() => {
@@ -310,6 +352,7 @@ export async function streamChatCompletion(
         if (reasoningContent) {
           fullReasoningContent += reasoningContent;
         }
+        const hasToolCallDelta = mergeToolCallDeltas(delta.tool_calls);
         if (choice.finish_reason) {
           finishReason = choice.finish_reason;
         }
@@ -319,13 +362,14 @@ export async function streamChatCompletion(
           serverTimings = parsed.timings;
         }
 
-        if (onToken && (content || reasoningContent)) {
+        if (onToken && (content || reasoningContent || hasToolCallDelta)) {
           onToken({
             token: content || reasoningContent,
             // Pass accumulated content to match llama.rn's callback behavior
             // (useChatSession replaces message text, not appends)
             content: fullContent || undefined,
             reasoning_content: fullReasoningContent || undefined,
+            tool_calls: hasToolCallDelta ? getToolCalls() : undefined,
           });
         }
       }
@@ -426,6 +470,7 @@ export async function streamChatCompletion(
         if (delta.reasoning_content || delta.reasoning) {
           fullReasoningContent += delta.reasoning_content || delta.reasoning;
         }
+        mergeToolCallDeltas(delta.tool_calls);
         if (choice.finish_reason) {
           finishReason = choice.finish_reason;
         }
@@ -440,6 +485,7 @@ export async function streamChatCompletion(
           text: fullContent,
           content: fullContent,
           reasoning_content: fullReasoningContent || undefined,
+          tool_calls: getToolCalls().length ? getToolCalls() : undefined,
           tokens_predicted: tokensPredicted,
           interrupted: true,
         });
@@ -450,6 +496,7 @@ export async function streamChatCompletion(
         text: fullContent,
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
+        tool_calls: getToolCalls().length ? getToolCalls() : undefined,
         tokens_predicted: tokensPredicted,
         timings: serverTimings,
       };
@@ -496,6 +543,7 @@ export async function streamChatCompletion(
           text: fullContent,
           content: fullContent,
           reasoning_content: fullReasoningContent || undefined,
+          tool_calls: getToolCalls().length ? getToolCalls() : undefined,
           tokens_predicted: tokensPredicted,
           interrupted: true,
         });

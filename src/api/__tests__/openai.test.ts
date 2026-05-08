@@ -574,6 +574,52 @@ describe('streamChatCompletion', () => {
     );
   });
 
+  it('accumulates streamed tool call deltas', async () => {
+    const onToken = jest.fn();
+    const resultPromise = streamChatCompletion(
+      {messages: [{role: 'user', content: 'Use a tool'}], model: 'test-model'},
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      onToken,
+    );
+
+    const xhr = MockXHR.instances[0];
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"search","arguments":"{\\"query\\":"}}]},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\\"PocketPal\\"}"}}]},"finish_reason":null}]}\n\n',
+    );
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+
+    const result = await resultPromise;
+    expect(result.tool_calls).toEqual([
+      {
+        id: 'call_1',
+        type: 'function',
+        function: {
+          name: 'search',
+          arguments: '{"query":"PocketPal"}',
+        },
+      },
+    ]);
+    expect(onToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tool_calls: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'call_1',
+            function: expect.objectContaining({name: 'search'}),
+          }),
+        ]),
+      }),
+    );
+  });
+
   it('rejects on 401 response', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},
