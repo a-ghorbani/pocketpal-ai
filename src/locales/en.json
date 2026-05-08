@@ -524,6 +524,23 @@
         "rendered": "Rendered",
         "clean": "Clean",
         "raw": "Raw"
+      },
+      "segments": {
+        "json": "JSON",
+        "jsonFallback": "JSON fallback",
+        "xml": "XML",
+        "xmlFallback": "XML fallback",
+        "toolCall": "tool_call",
+        "functionCall": "function_call",
+        "table": "Table",
+        "math": "Math",
+        "markdownShort": "MD",
+        "textShort": "Text",
+        "texShort": "TeX",
+        "copyRawSegment": "Copy raw {{title}} segment",
+        "copySegmentAs": "Copy {{title}} as {{mode}}",
+        "expandSegment": "Expand {{title}}",
+        "collapseSegment": "Collapse {{title}}"
       }
     },
     "exportUtils": {

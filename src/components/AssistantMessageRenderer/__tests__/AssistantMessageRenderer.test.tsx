@@ -64,4 +64,20 @@ describe('AssistantMessageRenderer', () => {
     expect(getByText('<|assistant|>')).toBeTruthy();
     expect(getByText(/Visible answer/)).toBeTruthy();
   });
+
+  it('renders tool calls as structured copyable blocks', () => {
+    const {getByText, getByLabelText} = render(
+      <AssistantMessageRenderer
+        content={
+          '<tool_call>\n{"name":"calculator","arguments":{"x":2}}\n</tool_call>'
+        }
+        messageId="message-4"
+        maxMessageWidth={320}
+      />,
+    );
+
+    expect(getByText('tool_call')).toBeTruthy();
+    expect(getByText('json')).toBeTruthy();
+    expect(getByLabelText('Copy raw tool_call segment')).toBeTruthy();
+  });
 });

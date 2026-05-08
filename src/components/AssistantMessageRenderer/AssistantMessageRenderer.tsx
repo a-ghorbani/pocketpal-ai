@@ -81,20 +81,21 @@ function segmentToMarkdown(
   }
 }
 
-function getStructuredSegmentTitle(segment: MessageSegment): string {
+function getStructuredSegmentTitle(segment: MessageSegment, l10n: any): string {
+  const labels = l10n.components.assistantMessageRenderer.segments;
   if (segment.kind === 'json') {
-    return segment.malformed ? 'JSON fallback' : 'JSON';
+    return segment.malformed ? labels.jsonFallback : labels.json;
   }
 
   if (segment.kind === 'xml') {
-    return segment.malformed ? 'XML fallback' : 'XML';
+    return segment.malformed ? labels.xmlFallback : labels.xml;
   }
 
   if (/function_call/i.test(segment.delimiter || segment.raw)) {
-    return 'function_call';
+    return labels.functionCall;
   }
 
-  return 'tool_call';
+  return labels.toolCall;
 }
 
 function getStructuredSegmentLanguage(segment: MessageSegment): string {
@@ -151,10 +152,12 @@ const StructuredSegmentBlock: React.FC<StructuredSegmentBlockProps> = ({
 }) => {
   const [collapsed, setCollapsed] = useState(true);
   const theme = useTheme();
+  const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
-  const title = getStructuredSegmentTitle(segment);
+  const title = getStructuredSegmentTitle(segment, l10n);
   const language = getStructuredSegmentLanguage(segment);
   const displayContent = getStructuredSegmentDisplayContent(segment);
+  const labels = l10n.components.assistantMessageRenderer.segments;
 
   const handleCopy = () => {
     ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
@@ -165,7 +168,10 @@ const StructuredSegmentBlock: React.FC<StructuredSegmentBlockProps> = ({
     <View style={styles.structuredBlock}>
       <View style={styles.structuredHeader}>
         <TouchableOpacity
-          accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
+          accessibilityLabel={(collapsed
+            ? labels.expandSegment
+            : labels.collapseSegment
+          ).replace('{{title}}', title)}
           activeOpacity={0.75}
           onPress={() => setCollapsed(value => !value)}
           style={styles.structuredToggle}>
@@ -189,7 +195,7 @@ const StructuredSegmentBlock: React.FC<StructuredSegmentBlockProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          accessibilityLabel={`Copy raw ${title} segment`}
+          accessibilityLabel={labels.copyRawSegment.replace('{{title}}', title)}
           activeOpacity={0.75}
           onPress={handleCopy}
           style={styles.structuredCopyButton}>
@@ -226,15 +232,17 @@ const CopyableRenderedSegmentBlock: React.FC<
   CopyableRenderedSegmentBlockProps
 > = ({segment, children}) => {
   const theme = useTheme();
+  const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
-  const title = segment.kind === 'table' ? 'Table' : 'Math';
+  const labels = l10n.components.assistantMessageRenderer.segments;
+  const title = segment.kind === 'table' ? labels.table : labels.math;
   const actions =
     segment.kind === 'table'
       ? [
-          {label: 'MD', mode: 'markdown' as const},
-          {label: 'Text', mode: 'plain' as const},
+          {label: labels.markdownShort, mode: 'markdown' as const},
+          {label: labels.textShort, mode: 'plain' as const},
         ]
-      : [{label: 'TeX', mode: 'raw' as const}];
+      : [{label: labels.texShort, mode: 'raw' as const}];
 
   const handleCopy = (mode: 'raw' | 'markdown' | 'plain') => {
     ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
@@ -249,7 +257,9 @@ const CopyableRenderedSegmentBlock: React.FC<
           {actions.map(action => (
             <TouchableOpacity
               key={action.label}
-              accessibilityLabel={`Copy ${title} as ${action.label}`}
+              accessibilityLabel={labels.copySegmentAs
+                .replace('{{title}}', title)
+                .replace('{{mode}}', action.label)}
               activeOpacity={0.75}
               onPress={() => handleCopy(action.mode)}
               style={styles.renderedSegmentCopyButton}>
