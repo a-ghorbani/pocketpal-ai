@@ -1,4 +1,5 @@
 import React from 'react';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {uiStore} from '../../../store';
@@ -7,6 +8,7 @@ import {AssistantMessageRenderer} from '../AssistantMessageRenderer';
 
 describe('AssistantMessageRenderer', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     uiStore.messageRenderingSettings = {...defaultMessageRenderingSettings};
   });
 
@@ -79,5 +81,76 @@ describe('AssistantMessageRenderer', () => {
     expect(getByText('tool_call')).toBeTruthy();
     expect(getByText('json')).toBeTruthy();
     expect(getByLabelText('Copy raw tool_call segment')).toBeTruthy();
+  });
+
+  it('renders JSON and XML as structured blocks', () => {
+    const jsonRender = render(
+      <AssistantMessageRenderer
+        content='{"name":"search","arguments":{"query":"PocketPal"}}'
+        messageId="message-json"
+        maxMessageWidth={320}
+      />,
+    );
+
+    expect(jsonRender.getByText('JSON')).toBeTruthy();
+    expect(jsonRender.getByText('json')).toBeTruthy();
+    expect(jsonRender.getByLabelText('Copy raw JSON segment')).toBeTruthy();
+    jsonRender.unmount();
+
+    const xmlRender = render(
+      <AssistantMessageRenderer
+        content="<response><answer>42</answer></response>"
+        messageId="message-xml"
+        maxMessageWidth={320}
+      />,
+    );
+
+    expect(xmlRender.getByText('XML')).toBeTruthy();
+    expect(xmlRender.getByText('xml')).toBeTruthy();
+    expect(xmlRender.getByLabelText('Copy raw XML segment')).toBeTruthy();
+  });
+
+  it('shows raw fallback for malformed JSON without crashing', () => {
+    const {getByText, queryByText} = render(
+      <AssistantMessageRenderer
+        content='{"name":'
+        messageId="message-json-fallback"
+        maxMessageWidth={320}
+      />,
+    );
+
+    expect(getByText('{"name":')).toBeTruthy();
+    expect(queryByText('JSON fallback')).toBeNull();
+  });
+
+  it('copies tables as Markdown and plain text from rendered controls', () => {
+    const table = '| A | B |\n|---|---|\n| 1 | 2 |';
+    const {getByLabelText} = render(
+      <AssistantMessageRenderer
+        content={table}
+        messageId="message-table"
+        maxMessageWidth={320}
+      />,
+    );
+
+    fireEvent.press(getByLabelText('Copy Table as MD'));
+    expect(Clipboard.setString).toHaveBeenLastCalledWith(table);
+
+    fireEvent.press(getByLabelText('Copy Table as Text'));
+    expect(Clipboard.setString).toHaveBeenLastCalledWith('A\tB\n1\t2');
+  });
+
+  it('copies block math as raw TeX from rendered controls', () => {
+    const math = '$$E = mc^2$$';
+    const {getByLabelText} = render(
+      <AssistantMessageRenderer
+        content={math}
+        messageId="message-math"
+        maxMessageWidth={320}
+      />,
+    );
+
+    fireEvent.press(getByLabelText('Copy Math as TeX'));
+    expect(Clipboard.setString).toHaveBeenLastCalledWith(math);
   });
 });

@@ -1,7 +1,27 @@
 /* global marked, katex */
 
-const serviceTokenPattern =
-  /<\|begin_of_text\|>|<\|end_of_text\|>|<\|eot_id\|>|<\|im_start\|>|<\|im_end\|>|<\|assistant\|>|<\|user\|>|<\|system\|>|<\|start_header_id\|>|<\|end_header_id\|>|<\|channel\|?>\s*(analysis|thought|final)?|\[\/?INST\]|<\/?s>|<\/?(bos|eos)>/gi;
+const serviceTokenPattern = new RegExp(
+  [
+    '<\\|start_header_id\\|>\\s*(assistant|user|system|model)?\\s*<\\|end_header_id\\|>\\s*',
+    '<\\|im_start\\|>\\s*(assistant|user|system|model)?\\s*',
+    '<start_of_turn>\\s*(assistant|user|system|model)?\\s*',
+    '<\\|begin_of_text\\|>',
+    '<\\|end_of_text\\|>',
+    '<\\|eot_id\\|>',
+    '<\\|im_end\\|>\\s*',
+    '<\\|assistant\\|>',
+    '<\\|user\\|>',
+    '<\\|system\\|>',
+    '<\\|start_header_id\\|>',
+    '<\\|end_header_id\\|>',
+    '<\\|channel\\|?>\\s*(analysis|thought|final)?',
+    '<end_of_turn>\\s*',
+    '\\[\\/?INST\\]',
+    '<\\/?s>',
+    '<\\/?(bos|eos)>',
+  ].join('|'),
+  'gi',
+);
 
 const fixtures = [
   {
@@ -74,6 +94,23 @@ Need to reason privately before answering.
 <final>
 Visible **final** answer.
 </final><|eot_id|>`,
+  },
+  {
+    id: 'template-variants',
+    title: 'Template Variants',
+    description: 'ChatML, Llama header, channel, and Gemma-style tags.',
+    text: `<|start_header_id|>assistant<|end_header_id|>
+<|channel|>analysis
+Hidden channel reasoning.
+<|channel|>final
+Llama header answer.
+
+<start_of_turn>model
+<start_of_thought>
+Hidden Gemma reasoning.
+<end_of_thought>
+Gemma answer.
+<end_of_turn>`,
   },
   {
     id: 'structured',
@@ -274,7 +311,12 @@ function splitSegments(raw) {
   const pairs = [
     ['<think>', '</think>', 'thinking'],
     ['<thinking>', '</thinking>', 'thinking'],
+    ['<thought>', '</thought>', 'thinking'],
+    ['<reasoning>', '</reasoning>', 'thinking'],
     ['<analysis>', '</analysis>', 'thinking'],
+    ['<start_of_thought>', '<end_of_thought>', 'thinking'],
+    ['<|begin_of_thought|>', '<|end_of_thought|>', 'thinking'],
+    ['<|start_thinking|>', '<|end_thinking|>', 'thinking'],
     ['<tool_call>', '</tool_call>', 'tool'],
     ['<function_call>', '</function_call>', 'tool'],
   ];
@@ -320,6 +362,28 @@ function splitSegments(raw) {
       }
     }
 
+    const channelRe = /<\|channel\|?>\s*(analysis|thought)/gi;
+    channelRe.lastIndex = index;
+    const channel = channelRe.exec(raw);
+    if (channel) {
+      const contentStart = channelRe.lastIndex;
+      const finalRe = /<\|channel\|?>\s*final/gi;
+      finalRe.lastIndex = contentStart;
+      const final = finalRe.exec(raw);
+      candidates.push({
+        index: channel.index,
+        kind: 'thinking',
+        raw: final
+          ? raw.slice(channel.index, final.index)
+          : raw.slice(channel.index),
+        content: final
+          ? raw.slice(contentStart, final.index)
+          : raw.slice(contentStart),
+        end: final ? final.index : raw.length,
+        partial: !final,
+      });
+    }
+
     serviceTokenPattern.lastIndex = index;
     const token = serviceTokenPattern.exec(raw);
     if (token) {
@@ -359,6 +423,7 @@ function cleanText(raw, includeThinking = false) {
     })
     .join('')
     .replace(serviceTokenPattern, '')
+    .replace(/^\s*(assistant|user|system|model)\s*$/gim, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
