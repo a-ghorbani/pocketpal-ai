@@ -416,10 +416,7 @@ export async function streamChatCompletion(
         // forward a token event so the agent loop can react to a tool
         // call beginning to assemble — same shape llama.rn emits.
         let toolCallsDelta: ToolCall[] | undefined;
-        if (
-          Array.isArray(delta.tool_calls) &&
-          delta.tool_calls.length > 0
-        ) {
+        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
           toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
         }
 
