@@ -10,7 +10,11 @@ const DEFAULT_THINKING_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['<think>', '</think>'],
   ['<thinking>', '</thinking>'],
   ['<thought>', '</thought>'],
+  ['<reasoning>', '</reasoning>'],
   ['<analysis>', '</analysis>'],
+  ['<start_of_thought>', '<end_of_thought>'],
+  ['<|begin_of_thought|>', '<|end_of_thought|>'],
+  ['<|start_thinking|>', '<|end_thinking|>'],
 ] as const;
 
 const TOOL_PAIRS: ReadonlyArray<readonly [string, string]> = [

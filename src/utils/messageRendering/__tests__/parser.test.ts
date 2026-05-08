@@ -55,6 +55,18 @@ describe('message rendering parser', () => {
     expect(buildMessageCopyText(goldenMessages.chatML, 'clean')).toBe('Hello');
   });
 
+  it('strips role-wrapped ChatML, Llama, and Gemma template tokens', () => {
+    expect(
+      buildMessageCopyText(goldenMessages.chatMLRoleWrapped, 'clean'),
+    ).toBe('Hello');
+    expect(
+      buildMessageCopyText(goldenMessages.llamaHeaderTokens, 'clean'),
+    ).toBe('Hello');
+    expect(buildMessageCopyText(goldenMessages.gemmaTurnTokens, 'clean')).toBe(
+      'Hello',
+    );
+  });
+
   it('handles unclosed thinking during streaming as a partial segment', () => {
     const parsed = parseAssistantMessage(goldenMessages.unclosedThink);
 
@@ -113,6 +125,14 @@ describe('message rendering parser', () => {
 
     expect(parsed.cleanText).toBe('visible');
     expect(parsed.segments[0].kind).toBe('thinking');
+  });
+
+  it('supports Gemma-style thought tags', () => {
+    const parsed = parseAssistantMessage(goldenMessages.gemmaThinking);
+
+    expect(parsed.hasThinking).toBe(true);
+    expect(parsed.cleanText).toBe('Final answer.');
+    expect(getThinkingText(parsed)).toBe('private plan');
   });
 
   it('treats channel analysis as thinking and keeps final content clean', () => {

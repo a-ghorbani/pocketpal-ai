@@ -1,15 +1,18 @@
 const SERVICE_TOKEN_PATTERNS: RegExp[] = [
+  /<\|start_header_id\|>\s*(assistant|user|system|model)?\s*<\|end_header_id\|>\s*/gi,
+  /<\|im_start\|>\s*(assistant|user|system|model)?\s*/gi,
+  /<start_of_turn>\s*(assistant|user|system|model)?\s*/gi,
   /<\|begin_of_text\|>/g,
   /<\|end_of_text\|>/g,
   /<\|eot_id\|>/g,
-  /<\|im_start\|>/g,
-  /<\|im_end\|>/g,
+  /<\|im_end\|>\s*/g,
   /<\|assistant\|>/g,
   /<\|user\|>/g,
   /<\|system\|>/g,
   /<\|start_header_id\|>/g,
   /<\|end_header_id\|>/g,
   /<\|channel\|?>\s*(analysis|thought|final)?/gi,
+  /<end_of_turn>\s*/gi,
   /\[\/?INST\]/g,
   /<\/?s>/g,
   /<\/?(bos|eos)>/gi,
@@ -28,7 +31,7 @@ export function hasServiceTokens(text: string): boolean {
 export function stripServiceTokens(text: string): string {
   return text
     .replace(SERVICE_TOKEN_RE, '')
-    .replace(/^\s*(assistant|user|system)\s*$/gim, '')
+    .replace(/^\s*(assistant|user|system|model)\s*$/gim, '')
     .replace(/\n{3,}/g, '\n\n');
 }
 

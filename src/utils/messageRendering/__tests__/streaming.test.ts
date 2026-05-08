@@ -27,6 +27,13 @@ describe('message rendering streaming fallback', () => {
     expect(getStreamingFallbackText(parsed)).toBe('');
   });
 
+  it('uses fallback rendering for incomplete JSON objects', () => {
+    const parsed = parseAssistantMessage('{"name":');
+
+    expect(shouldUseStreamingFallback(parsed)).toBe(true);
+    expect(getStreamingFallbackText(parsed)).toContain('{"name":');
+  });
+
   it('keeps complete messages on the rich render path', () => {
     const parsed = parseAssistantMessage(goldenMessages.simpleMarkdown);
 

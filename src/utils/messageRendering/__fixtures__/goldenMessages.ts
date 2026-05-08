@@ -18,9 +18,15 @@ export const goldenMessages = {
   think: '<think>Need a plan.</think>\nFinal answer.',
   unclosedThink: '<think>Need a plan.\nStill thinking',
   chatML: '<|begin_of_text|><|assistant|>\nHello<|eot_id|>',
+  chatMLRoleWrapped: '<|im_start|>assistant\nHello<|im_end|>',
+  llamaHeaderTokens:
+    '<|begin_of_text|><|start_header_id|>assistant<|end_header_id|>\n\nHello<|eot_id|>',
+  gemmaTurnTokens: '<start_of_turn>model\nHello<end_of_turn>',
   llamaTokens: '<s>[INST] Hello [/INST] Hi </s>',
   qwenDeepSeekThinking:
     '<analysis>Reason step</analysis>\n<final>Visible answer</final>',
+  gemmaThinking:
+    '<start_of_thought>private plan<end_of_thought>\nFinal answer.',
   toolCall:
     '<tool_call>\n{"name":"calculator","arguments":{"x":2}}\n</tool_call>',
   unsafeHtml: '<script>alert("no")</script>\n<tag attr="x">value</tag>',
