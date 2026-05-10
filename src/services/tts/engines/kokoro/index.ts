@@ -21,10 +21,10 @@ import {KOKORO_VOICES} from './voices';
 export type KokoroProgressCallback = (progress: number) => void;
 
 /**
- * Kokoro neural TTS engine (82M Q8 ONNX port).
+ * Kokoro neural TTS engine (82M FP32 ONNX port).
  *
  * Installation is two-phase:
- *   1. Core files (`model.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
+ *   1. Core files (`model_fp32.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
  *      any failure cleans up the whole `tts/kokoro/` dir.
  *   2. Per-voice `.bin` embedding files — best-effort; partial success is
  *      accepted (engine usable with whichever voices did land). The voices
@@ -88,6 +88,14 @@ export class KokoroEngine implements Engine {
     await RNFS.mkdir(parentDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(voicesDir, {NSURLIsExcludedFromBackupKey: true});
+
+    // Drop legacy FP16 weights from previous installs (saved as `model.onnx`).
+    // isInstalled() reports false for those users because the new local name
+    // is `model_fp32.onnx`, so this download path runs — clean up the orphan.
+    const legacyModelPath = this.getFilePath('model.onnx');
+    if (await RNFS.exists(legacyModelPath)) {
+      await RNFS.unlink(legacyModelPath).catch(() => {});
+    }
 
     // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
     const corePhaseWeight = 0.6;
@@ -213,7 +221,7 @@ export class KokoroEngine implements Engine {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.KOKORO,
-      modelPath: `file://${modelDir}/model.onnx`,
+      modelPath: `file://${modelDir}/model_fp32.onnx`,
       tokenizerPath: `file://${modelDir}/tokenizer.json`,
       voicesPath: `file://${modelDir}/${KOKORO_VOICES_MANIFEST_FILENAME}`,
       dictPath: `file://${modelDir}/${TTS_DICT_FILENAME}`,

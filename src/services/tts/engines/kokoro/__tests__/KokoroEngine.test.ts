@@ -88,6 +88,30 @@ describe('KokoroEngine', () => {
       jobId: 1,
     });
 
+    it('deletes a legacy FP16 weights file (model.onnx) before downloading FP32', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+      (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+        Promise.resolve(path.endsWith('/model.onnx')),
+      );
+
+      await new KokoroEngine().downloadModel();
+
+      expect(RNFS.unlink).toHaveBeenCalledWith(
+        expect.stringContaining('/tts/kokoro/model.onnx'),
+      );
+    });
+
+    it('does not unlink anything when no legacy FP16 weights are present', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      await new KokoroEngine().downloadModel();
+
+      expect(RNFS.unlink).not.toHaveBeenCalledWith(
+        expect.stringContaining('/tts/kokoro/model.onnx'),
+      );
+    });
+
     it('phase 1 downloads model + tokenizer + dict, phase 2 downloads each voice, then writes manifest', async () => {
       (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
 
@@ -242,7 +266,7 @@ describe('KokoroEngine', () => {
       expect(Speech.initialize).toHaveBeenCalledWith(
         expect.objectContaining({
           engine: TTSEngine.KOKORO,
-          modelPath: expect.stringMatching(/^file:\/\/.*model\.onnx$/),
+          modelPath: expect.stringMatching(/^file:\/\/.*model_fp32\.onnx$/),
           tokenizerPath: expect.stringMatching(/tokenizer\.json$/),
           voicesPath: expect.stringMatching(/voices-manifest\.json$/),
           dictPath: expect.stringMatching(/en-us\.bin$/),
