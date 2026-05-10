@@ -10,6 +10,7 @@ import {
 import {observer} from 'mobx-react';
 
 import {modelStore} from '../../store';
+import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
 import {getDeviceOptions} from '../../utils/deviceSelection';
 import {getRecommendedThreadCount} from '../../utils/deviceCapabilities';
 import type {Model} from '../../utils/types';
@@ -94,6 +95,23 @@ export interface BenchConfig {
    * with empty overrides and the reserved `app-default` fingerprint
    * (WHAT §1a, §2, §4d D7). */
   settings_axes?: SettingsAxis[];
+  /** Wall-time (ms) to wait between cells, after `ctx.release()` resolves.
+   * Two purposes layered together:
+   *   1. Backend drivers (Adreno OpenCL command-queue tear-down on a worker
+   *      thread, Hexagon HTP FastRPC teardown) defer their final memory
+   *      release a few hundred ms past the JSI-promise boundary. ≥200ms is
+   *      enough for that.
+   *   2. **Thermal stabilisation** — long matrix runs see CPU/SoC/battery
+   *      temperatures climb monotonically across cells (≈1°C per cell on
+   *      Snapdragon under sustained pp+tg load), and a hot device throttles
+   *      mid-cell, distorting pp/tg numbers. Setting this to e.g. 15-60s
+   *      gives the cooling system a window to bring temperatures back to a
+   *      stable working range before the next cell.
+   * Default 2000ms when absent (driver-release insurance only — does NOT
+   * stabilise thermals on hot devices). Operators tune higher in the
+   * pushed bench-config.json without rebuilding the APK. The effective
+   * value is echoed in the report's top-level `inter_cell_settle_ms`. */
+  inter_cell_settle_ms?: number;
 }
 
 /** Effective backend after parsing native-log signals. Mirrors the
@@ -147,6 +165,11 @@ interface BenchmarkReport {
   timestamp: string;
   preseeded: boolean;
   bench: {pp: number; tg: number; pl: number; nr: number};
+  /** Echo of the effective inter-cell settle (ms) actually used by this
+   * run. Always present; resolves the config's `inter_cell_settle_ms`
+   * with the 2000ms default. Useful for thermal-throttling forensics
+   * when comparing two reports captured under different settle values. */
+  inter_cell_settle_ms: number;
   /** Echo of `config.settings_axes` when the run had axes. Omitted when the
    * config had none (WHAT §1e, §9a — empty array MUST NOT be emitted). */
   settings_axes_used?: SettingsAxis[];
@@ -157,22 +180,7 @@ const DEFAULT_BENCH = {pp: 512, tg: 128, pl: 1, nr: 3};
 const TRUNCATE_ERROR = 200; // status string error length
 const TRUNCATE_ROW_ERROR = 500; // row.error length
 const PEAK_POLL_MS = 1000;
-// Wall-time spent in setTimeout between successful cells, after
-// ctx.release() resolves. Backend drivers (Adreno OpenCL, Hexagon HTP)
-// can defer their final memory release past the JSI-promise boundary;
-// 2s is generous insurance and is a rounding error in a multi-hour
-// matrix run. Pre-redesign code carried a 100ms equivalent inside
-// _releaseContextInternal, added in response to real failures.
-//
-// Overridable for tests via `BENCH_INTER_CELL_SETTLE_MS=0` so the unit
-// suite doesn't pay 2s × N cells of pure setTimeout wall time. Production
-// (release JS bundle) doesn't see the env var so the 2000ms default
-// stands.
-const INTER_CELL_SETTLE_MS =
-  typeof process !== 'undefined' &&
-  process.env?.BENCH_INTER_CELL_SETTLE_MS != null
-    ? Number(process.env.BENCH_INTER_CELL_SETTLE_MS)
-    : 2000;
+const DEFAULT_INTER_CELL_SETTLE_MS = 2000;
 
 async function loadConfig(): Promise<BenchConfig> {
   const exists = await RNFS.exists(CONFIG_PATH);
@@ -450,6 +458,16 @@ export async function runMatrix(
   setLastCell: (c: {pp?: number; tg?: number; cells?: number}) => void,
 ): Promise<void> {
   const bench = config.bench ?? DEFAULT_BENCH;
+  // Resolve inter-cell settle once per matrix. Validates: must be a finite
+  // non-negative number; anything else falls back to the default rather
+  // than throwing — keeps the matrix robust to a typo'd config value
+  // (e.g. "30000" string instead of 30000 number).
+  const interCellSettleMs =
+    typeof config.inter_cell_settle_ms === 'number' &&
+    Number.isFinite(config.inter_cell_settle_ms) &&
+    config.inter_cell_settle_ms >= 0
+      ? config.inter_cell_settle_ms
+      : DEFAULT_INTER_CELL_SETTLE_MS;
   const hadAxesInConfig = !!(
     config.settings_axes && config.settings_axes.length > 0
   );
@@ -547,6 +565,7 @@ export async function runMatrix(
       timestamp: startTimestamp,
       preseeded: true, // pessimistic — flips false on first downloading: transition
       bench,
+      inter_cell_settle_ms: interCellSettleMs,
       runs: [],
     };
     // settings_axes_used echoes config.settings_axes only when the run
@@ -934,29 +953,66 @@ export async function runMatrix(
         // only handle to the native context — we MUST release it here or
         // the native context list grows on every failed cell.
         if (ctx) {
+          // Lifecycle log lines so logcat (`ReactNativeJS:V`) gives us a
+          // timestamped record of release timing per cell. Diagnostic for
+          // process-death debugging: pairing alloc-time with release-time
+          // lets us tell "release call never fired" from "release call
+          // fired but native heap didn't drop". The N/total + tag fields
+          // are the same shape as the on-screen status string so reports
+          // and logs cross-reference cleanly.
+          const releaseStart = Date.now();
+          console.log(`[BENCH] cell ${tag}: releasing ctx`);
           try {
             await ctx.release();
-          } catch {
+            console.log(
+              `[BENCH] cell ${tag}: released ctx in ${Date.now() - releaseStart}ms`,
+            );
+          } catch (e) {
             // Best-effort: a release throwing here doesn't abort the matrix.
             // The next cell creates a fresh context; if the leak persists
             // the cumulative `g_context_limit` check in RNLlamaJSI will
             // surface it as a hard error on a later cell.
+            console.log(
+              `[BENCH] cell ${tag}: release threw after ${Date.now() - releaseStart}ms: ${String(e)}`,
+            );
           }
-          // Inter-cell settle. `ctx.release()` resolves once
-          // ~llama_rn_context() returns, but some backend drivers (Adreno
-          // OpenCL command-queue tear-down on a worker thread, Hexagon HTP
-          // FastRPC teardown) defer their final memory release a few
-          // hundred ms past that boundary. The pre-redesign code had a
-          // 100ms `setTimeout` inside `ModelStore._releaseContextInternal`
-          // — added in response to actual failures, not preemptively.
-          // The matrix runs for hours, so 2s is essentially free wall
-          // time and gives the OS a comfortable window to reclaim VRAM
-          // / HTP arena pages before the next cell's `initLlama`. Skipped
-          // when ctx is null (cell failed before init) since there is
-          // nothing the OS needs to reclaim.
-          await new Promise(resolve =>
-            setTimeout(resolve, INTER_CELL_SETTLE_MS),
-          );
+          // Cells release model weights/KV/compute through the native
+          // allocator, which on Android may retain freed pages in its
+          // arena rather than returning them to the kernel. Without a
+          // purge between cells, RSS climbs across the matrix and the
+          // process can be reaped before later cells finish. The rss
+          // before/after fields make the effect observable in reports.
+          try {
+            const purgeStart = Date.now();
+            const purgeResult = await NativeHardwareInfo.purgeNativeAllocator();
+            const reclaimedKb =
+              purgeResult.rss_kb_before - purgeResult.rss_kb_after;
+            console.log(
+              `[BENCH] cell ${tag}: purge purged=${purgeResult.purged} ` +
+                `rss_before_kb=${purgeResult.rss_kb_before} ` +
+                `rss_after_kb=${purgeResult.rss_kb_after} ` +
+                `reclaimed_kb=${reclaimedKb} ` +
+                `wall_ms=${Date.now() - purgeStart}`,
+            );
+          } catch (e) {
+            // Non-fatal — we'd rather continue the matrix than abort
+            // because a memory hint failed.
+            console.log(`[BENCH] cell ${tag}: purge threw: ${String(e)}`);
+          }
+          // Inter-cell settle. Two purposes:
+          //   1. `ctx.release()` resolves once ~llama_rn_context() returns,
+          //      but some backend drivers (Adreno OpenCL command-queue
+          //      tear-down on a worker thread, Hexagon HTP FastRPC
+          //      teardown) defer their final memory release a few hundred
+          //      ms past that boundary. The pre-redesign code carried a
+          //      100ms `setTimeout` inside `ModelStore._releaseContextInternal`
+          //      — added in response to actual failures, not preemptively.
+          //   2. Thermal stabilisation across long matrix runs — operators
+          //      tune `config.inter_cell_settle_ms` (default 2000ms) up
+          //      to 15-60s when the device is throttling mid-cell.
+          // Skipped when ctx is null (cell failed before init) since there
+          // is nothing to settle.
+          await new Promise(resolve => setTimeout(resolve, interCellSettleMs));
         }
         // Sole listener-detach site. Idempotent: no-op when null.
         logSub?.remove();

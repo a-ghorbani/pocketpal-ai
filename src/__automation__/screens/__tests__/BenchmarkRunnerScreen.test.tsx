@@ -67,6 +67,10 @@ const VALID_CONFIG: BenchConfig = {
   ],
   backends: ['gpu'],
   bench: {pp: 4, tg: 4, pl: 1, nr: 1},
+  // Tests pin to 0 so the suite doesn't pay 2s × N cells of pure setTimeout
+  // wall time. Production default (2000ms) and tuned-up values (15-60s for
+  // thermal stabilisation) are exercised by dedicated tests below.
+  inter_cell_settle_ms: 0,
 };
 
 // Fresh mock LlamaContext for each `initLlama` resolution. Tests that need
@@ -704,6 +708,58 @@ describe('BenchmarkRunnerScreen', () => {
       expect(json.settings_axes_used).toEqual([
         {name: 'cache_type_k', values: ['f16', 'q8_0']},
       ]);
+    });
+
+    it('echoes inter_cell_settle_ms (custom) in the report top level', async () => {
+      stubOpenCLLogs();
+      const cfg: BenchConfig = {...VALID_CONFIG, inter_cell_settle_ms: 15000};
+      // Custom settle would otherwise burn 15s of real wall time per cell.
+      // Fake timers fast-forward through the setTimeout, keeping the suite
+      // tight while still exercising the same code path.
+      jest.useFakeTimers();
+      const promise = runMatrix(cfg, setStatus, setLastCell);
+      await jest.runAllTimersAsync();
+      await promise;
+      jest.useRealTimers();
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.inter_cell_settle_ms).toBe(15000);
+    });
+
+    it('echoes inter_cell_settle_ms = 2000 (default) when omitted from config', async () => {
+      stubOpenCLLogs();
+      // Drop the test-fixture override so the default branch fires.
+      const cfg: BenchConfig = {...VALID_CONFIG};
+      delete cfg.inter_cell_settle_ms;
+      jest.useFakeTimers();
+      const promise = runMatrix(cfg, setStatus, setLastCell);
+      await jest.runAllTimersAsync();
+      await promise;
+      jest.useRealTimers();
+      const lastWrite =
+        RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+      const json = JSON.parse(lastWrite[1]);
+      expect(json.inter_cell_settle_ms).toBe(2000);
+    });
+
+    it('falls back to default when inter_cell_settle_ms is invalid (string, NaN, negative)', async () => {
+      stubOpenCLLogs();
+      // Validates the typeof+isFinite+>=0 guard. A typo'd value should not
+      // throw or silently apply — it falls back to the safe default.
+      for (const bad of ['30000' as unknown as number, NaN, -1, Infinity]) {
+        RNFS.writeFile.mockClear();
+        const cfg: BenchConfig = {...VALID_CONFIG, inter_cell_settle_ms: bad};
+        jest.useFakeTimers();
+        const promise = runMatrix(cfg, setStatus, setLastCell);
+        await jest.runAllTimersAsync();
+        await promise;
+        jest.useRealTimers();
+        const lastWrite =
+          RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
+        const json = JSON.parse(lastWrite[1]);
+        expect(json.inter_cell_settle_ms).toBe(2000);
+      }
     });
 
     it('expands one cache_type_k axis into two cells per (model,quant,backend)', async () => {

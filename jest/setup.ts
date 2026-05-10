@@ -9,13 +9,6 @@ import 'react-native-gesture-handler/jestSetup';
 // that assert the DCE gate override with `(global as any).__E2E__ = false`.
 (global as any).__E2E__ = true;
 
-// The bench matrix runner waits 2s between successful cells in production
-// to give backend drivers time to finalise memory release after
-// ctx.release() resolves. Tests don't need to pay that wall time — set to
-// 0 here so the suite stays fast; production builds (release JS bundle)
-// don't read this env var.
-process.env.BENCH_INTER_CELL_SETTLE_MS = '0';
-
 jest.mock('react-native-haptic-feedback');
 
 jest.mock('react-native-keyboard-controller', () => {
@@ -89,6 +82,9 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
     getAvailableMemory: jest.fn(() => Promise.resolve(3 * 1000 * 1000 * 1000)), // 3GB
     writeMemorySnapshot: jest.fn((label: string) =>
       Promise.resolve({label, status: 'written'}),
+    ),
+    purgeNativeAllocator: jest.fn(() =>
+      Promise.resolve({purged: true, rss_kb_before: 0, rss_kb_after: 0}),
     ),
   },
 }));
