@@ -8,19 +8,19 @@
 // completes. M_PURGE_ALL madvise(MADV_DONTNEED)s fully-free pages,
 // converting "freed by us, hoarded by scudo" into "returned to OS".
 //
-// Why dlsym: minSdkVersion is 24, but `mallopt` lands at API 26 and
-// the M_PURGE_ALL option at API 30. Linking against `mallopt`
-// directly would break the loader on older devices, so we resolve
-// the symbol at runtime and silently no-op when absent. M_PURGE_ALL
-// / M_PURGE are bionic-internal #defines; we redeclare them locally
-// so the build doesn't depend on NDK header completeness.
+// Why dlsym: minSdkVersion is 24, but `mallopt` itself lands at
+// API 26, M_PURGE at API 28, and M_PURGE_ALL at API 34. Linking
+// against `mallopt` directly would break the loader on API 24/25,
+// so we resolve the symbol at runtime and silently no-op on devices
+// that don't expose it. We pull the option constants from
+// <malloc.h> rather than hand-rolling them — the values have changed
+// across NDK releases (M_PURGE_ALL was -102 in early bionic) and
+// drifting from the canonical header silently degrades the call.
 
 #include <android/log.h>
 #include <dlfcn.h>
 #include <jni.h>
-
-#define M_PURGE_ALL (-102) // API 30+, aggressive — releases all fully-free pages
-#define M_PURGE (-101)     // API 28+, opportunistic fallback
+#include <malloc.h>
 
 typedef int (*mallopt_fn_t)(int, int);
 
