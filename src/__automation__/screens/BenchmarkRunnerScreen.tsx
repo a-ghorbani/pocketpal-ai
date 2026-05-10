@@ -538,24 +538,29 @@ export async function runMatrix(
     }
   }
 
-  // Native log capture is global state in llama.rn — flip it on once for the
-  // whole matrix and toggle off in the outer finally so an unexpected throw
-  // anywhere in the loop body doesn't leave native logging on for the rest
-  // of the app session. Per-cell scoping is done by attaching a fresh
-  // listener around each init+bench window.
-  await toggleNativeLog(true).catch(() => undefined);
-
-  // Take exclusive ownership of the native context lifecycle. This:
-  //   - Sets `modelStore.benchmarkActive = true` synchronously so any
-  //     in-flight or new auto-load (e.g. ChatView's pal-default
-  //     selectModel on cold-launch) is gated.
-  //   - Releases any context the rest of the app loaded so no stale
-  //     LlamaContext occupies the native context list while the matrix
-  //     is creating its own.
-  // The runner from this point on calls `initLlama` directly per cell;
-  // it never touches `modelStore.context` / `modelStore.activeModelId`.
-  await modelStore.enterBenchmarkMode();
+  // From here on the runner acquires global state (native logging,
+  // benchmark-mode flag, exclusive context ownership). Wrap the entire
+  // acquisition+work span in try/finally so a rejection during
+  // toggleNativeLog or enterBenchmarkMode can't strand the app with
+  // logging on or benchmarkActive=true. Both cleanup calls in the
+  // finally are idempotent — safe to call even if their setup
+  // counterpart never ran or only partially ran.
   try {
+    // Native log capture is global state in llama.rn — flip it on once for
+    // the whole matrix. Per-cell scoping is done by attaching a fresh
+    // listener around each init+bench window.
+    await toggleNativeLog(true).catch(() => undefined);
+
+    // Take exclusive ownership of the native context lifecycle. This:
+    //   - Sets `modelStore.benchmarkActive = true` synchronously so any
+    //     in-flight or new auto-load (e.g. ChatView's pal-default
+    //     selectModel on cold-launch) is gated.
+    //   - Releases any context the rest of the app loaded so no stale
+    //     LlamaContext occupies the native context list while the matrix
+    //     is creating its own.
+    // The runner from this point on calls `initLlama` directly per cell;
+    // it never touches `modelStore.context` / `modelStore.activeModelId`.
+    await modelStore.enterBenchmarkMode();
     const startTimestamp = new Date().toISOString();
     const safeStamp = startTimestamp.replace(/[:.]/g, '-');
     const path = reportPath(safeStamp);
