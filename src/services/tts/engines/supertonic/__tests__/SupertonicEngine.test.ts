@@ -222,6 +222,7 @@ describe('SupertonicEngine (v1.2 real)', () => {
           ),
           vocoderPath: expect.stringMatching(/^file:\/\/.*vocoder\.onnx$/),
           voicesPath: expect.stringMatching(/voices-manifest\.json$/),
+          executionProviders: ['cpu'],
         }),
       );
       expect(Speech.speak).toHaveBeenCalledWith('hello', anyVoice.id, {
