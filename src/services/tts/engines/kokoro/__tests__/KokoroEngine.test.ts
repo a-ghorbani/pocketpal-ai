@@ -246,7 +246,7 @@ describe('KokoroEngine', () => {
           tokenizerPath: expect.stringMatching(/tokenizer\.json$/),
           voicesPath: expect.stringMatching(/voices-manifest\.json$/),
           dictPath: expect.stringMatching(/en-us\.bin$/),
-          executionProviders: 'cpu',
+          executionProviders: ['cpu'],
         }),
       );
       expect(Speech.speak).toHaveBeenCalledWith('hello', anyVoice.id);

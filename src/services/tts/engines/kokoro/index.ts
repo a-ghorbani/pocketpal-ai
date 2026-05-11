@@ -31,9 +31,10 @@ export type KokoroProgressCallback = (progress: number) => void;
  *      manifest is (re)written at the end to point at the full voice
  *      catalog.
  *
- * CPU-only execution is forced (`executionProviders: 'cpu'`) across all
+ * CPU-only execution is forced (`executionProviders: ['cpu']`) across all
  * three neural engines for consistent battery/thermal behavior and easier
- * QA.
+ * QA. The library default on iOS would otherwise include CoreML; we keep
+ * it bare CPU for now.
  */
 export class KokoroEngine implements Engine {
   readonly id = 'kokoro' as const;
@@ -216,7 +217,7 @@ export class KokoroEngine implements Engine {
       tokenizerPath: `file://${modelDir}/tokenizer.json`,
       voicesPath: `file://${modelDir}/${KOKORO_VOICES_MANIFEST_FILENAME}`,
       dictPath: `file://${modelDir}/${TTS_DICT_FILENAME}`,
-      executionProviders: 'cpu',
+      executionProviders: ['cpu'],
       maxChunkSize: 200,
       silentMode: 'obey',
       ducking: true,

@@ -153,7 +153,7 @@ export class KittenEngine implements Engine {
       modelPath: `file://${modelDir}/kitten.onnx`,
       voicesPath: `file://${modelDir}/voices-manifest.json`,
       dictPath: `file://${modelDir}/${TTS_DICT_FILENAME}`,
-      executionProviders: 'cpu',
+      executionProviders: ['cpu'],
       maxChunkSize: 200,
       silentMode: 'obey',
       ducking: true,
