@@ -31,6 +31,7 @@ import {
   CpuChipIcon,
   ShareIcon,
   LinkExternalIcon,
+  VolumeOnIcon,
 } from '../../assets/icons';
 
 import {
@@ -778,33 +779,6 @@ export const SettingsScreen: React.FC = observer(() => {
               </View>
               <Divider />
 
-              {/* Text-to-speech availability toggle */}
-              <View style={styles.settingItemContainer}>
-                <View style={styles.switchContainer}>
-                  <View style={styles.textContainer}>
-                    <Text variant="titleMedium" style={styles.textLabel}>
-                      {l10n.settings.ttsAvailability}
-                    </Text>
-                    <Text variant="labelSmall" style={styles.textDescription}>
-                      {l10n.settings.ttsAvailabilityDescription}
-                    </Text>
-                    {!ttsStore.deviceMeetsMemory && (
-                      <Text variant="labelSmall" style={styles.textDescription}>
-                        {l10n.settings.ttsAvailabilityLowMemoryWarning}
-                      </Text>
-                    )}
-                  </View>
-                  <Switch
-                    testID="tts-availability-switch"
-                    value={
-                      ttsStore.userTTSOverride ?? ttsStore.deviceMeetsMemory
-                    }
-                    onValueChange={value => ttsStore.setUserTTSOverride(value)}
-                  />
-                </View>
-              </View>
-              <Divider />
-
               {/* Enable Weight Repacking (Android only) */}
               {Platform.OS === 'android' && (
                 <View style={styles.settingItemContainer}>
@@ -961,6 +935,39 @@ export const SettingsScreen: React.FC = observer(() => {
                     onValueChange={value =>
                       uiStore.setColorScheme(value ? 'dark' : 'light')
                     }
+                  />
+                </View>
+                <Divider />
+
+                {/* Text-to-speech availability toggle */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <VolumeOnIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.ttsAvailability}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.ttsAvailabilityDescription}
+                    </Text>
+                    {!ttsStore.deviceMeetsMemory && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.ttsAvailabilityLowMemoryWarning}
+                      </Text>
+                    )}
+                  </View>
+                  <Switch
+                    testID="tts-availability-switch"
+                    value={
+                      ttsStore.userTTSOverride ?? ttsStore.deviceMeetsMemory
+                    }
+                    onValueChange={value => ttsStore.setUserTTSOverride(value)}
                   />
                 </View>
 
