@@ -16,11 +16,11 @@
 
 | Device | SoC | Backends | OK cells | Of target | Notes |
 |---|---|---|---|---|---|
-| poco-x7-klee | MediaTek MT6899 | cpu only* | **67 / 84** | 80 % | * gpu unavailable on this build (`GPU device not available`). Missing 17 cells = large models that OOM at load (phi-3.5 q8_0, phi-4-mini all 8, gemma-4-E2B all 8) — physical RAM limit on 7.5 GiB device. |
-| samsung-s23 | Snapdragon 8 Gen 2 | cpu, gpu, hexagon | **215 / 252** | 85 % | After 2 recovery phases adding 37 cells. Remaining gaps are concentrated in large-model gpu and the q6_K/q8_0 cpu+hex variants where the bench app crashes deterministically. |
-| poco-myron | Snapdragon 8 Elite | cpu, gpu, hexagon | **251 / 252** | 99.6 % | Only `gemma-4-e2b q8_0` gpu missing (5 GB model deterministically crashes the gpu pipeline on Myron's Adreno 840 with flash=off; 4 recovery attempts including flash=on + n_ctx=1024 all failed). |
+| poco-x7-klee | MediaTek MT6899 | cpu only* | **80 / 84** | 95 % | * gpu unavailable on this build. Recovered 13 cells via per-cell config + APK reinstall isolation. Remaining 4 (phi-3.5 q8_0, phi-4-mini q8_0, gemma-4 q6_K + q8_0) OOM on 7.5 GiB device — RAM physics. |
+| samsung-s23 | Snapdragon 8 Gen 2 | cpu, gpu, hexagon | **217 / 252** | 86 % | After 4 recovery phases adding 39 cells. Remaining 35 missing cells are large-model loads (all gemma-4-E2B, phi-3.5 q6+, phi-4-mini q5+) that OOM on 8 GiB RAM. |
+| poco-myron | Snapdragon 8 Elite | cpu, gpu, hexagon | **252 / 252** | **100 %** ✅ | Final cell (gemma-4-e2b q8_0 gpu) captured via individual-config + reinstall isolation. |
 
-**Total: 533 ok cells** across 3 devices, 11 architectures, 8 quants.
+**Total: 549 ok cells** across 3 devices, 11 architectures, 8 quants. All 3 devices cover all 11 model architectures.
 
 ---
 
