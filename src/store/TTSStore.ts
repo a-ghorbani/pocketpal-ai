@@ -137,6 +137,15 @@ export class TTSStore {
 
   private appStateSubscription: {remove: () => void} | null = null;
   private sessionReactionDispose: (() => void) | null = null;
+  /**
+   * Voice id pending restore after a forced engine re-download (e.g. Kokoro
+   * FP16 → FP32 migration). When `init()` finds a persisted voice whose
+   * engine reports not-installed, the voice id is stashed here so the next
+   * successful download of that engine can restore the user's selection
+   * instead of falling back to `voices[0]`. Reset to null after restore.
+   * Map keyed by engine id; only neural engines participate.
+   */
+  private pendingVoiceRestore: Partial<Record<NeuralEngineId, string>> = {};
 
   // Per-streaming-session state for stripping `<think>…</think>` markup.
   private streamStripper: ThinkingStripper | null = null;
@@ -202,14 +211,19 @@ export class TTSStore {
         this.setDownloadState(id, installed ? 'ready' : 'not_installed');
       }
       // Reconcile persisted currentVoice: if the engine's model files
-      // were deleted (app restore, manual cleanup), clear the voice so
+      // were deleted (app restore, manual cleanup) or the engine layout
+      // changed (e.g. Kokoro FP16 → FP32 migration), clear the voice so
       // play/stream paths don't crash trying to init a missing engine.
+      // Stash the voice id first so it can be restored after re-download
+      // — otherwise users lose their selection across the forced upgrade.
       if (
         this.currentVoice != null &&
         this.currentVoice.engine !== 'system' &&
         this.getDownloadState(this.currentVoice.engine as NeuralEngineId) !==
           'ready'
       ) {
+        const engineId = this.currentVoice.engine as NeuralEngineId;
+        this.pendingVoiceRestore[engineId] = this.currentVoice.id;
         this.currentVoice = null;
       }
     });
@@ -633,6 +647,26 @@ export class TTSStore {
       this.setDownloadError(id, null);
     });
 
+    const engine = getEngine(id) as
+      | SupertonicEngine
+      | KokoroEngine
+      | KittenEngine;
+
+    // Reclaim engine-specific legacy files BEFORE the disk-space preflight,
+    // so a borderline device upgrading from an older engine layout (e.g.
+    // Kokoro FP16 → FP32) is not blocked by space the migration is about to
+    // free. Idempotent; safe when there is nothing to reclaim.
+    if (
+      'reclaimLegacySpace' in engine &&
+      typeof engine.reclaimLegacySpace === 'function'
+    ) {
+      try {
+        await engine.reclaimLegacySpace();
+      } catch (err) {
+        console.warn(`[TTSStore] ${id} legacy reclaim failed:`, err);
+      }
+    }
+
     // Safety-net disk-space check. The UI already disables the Install
     // button when `freeDiskBytes` is too low, so this is a last resort
     // guard for race conditions (space changed between sheet open and tap).
@@ -650,26 +684,28 @@ export class TTSStore {
     } catch (err) {
       console.warn('[TTSStore] disk-space preflight failed:', err);
     }
-
-    const engine = getEngine(id) as
-      | SupertonicEngine
-      | KokoroEngine
-      | KittenEngine;
     try {
       await engine.downloadModel(progress => {
         runInAction(() => {
           this.setDownloadProgress(id, progress);
         });
       });
-      // Auto-select the first voice when no voice is set yet — so play
-      // and auto-speak work immediately after the first engine install.
+      // Auto-select a voice when none is set — so play and auto-speak work
+      // immediately after install. If a previous selection for this engine
+      // was stashed during init() (e.g. forced re-download after a model
+      // layout migration), restore it when still valid; otherwise fall
+      // back to the first voice.
       const voices = await engine.getVoices();
       runInAction(() => {
         this.setDownloadState(id, 'ready');
         this.setDownloadProgress(id, 1);
         if (this.currentVoice == null && voices.length > 0) {
-          this.currentVoice = voices[0]!;
+          const pendingId = this.pendingVoiceRestore[id];
+          const restored =
+            pendingId != null ? voices.find(v => v.id === pendingId) : null;
+          this.currentVoice = restored ?? voices[0]!;
         }
+        delete this.pendingVoiceRestore[id];
       });
     } catch (err) {
       console.warn(`[TTSStore] ${id} download failed:`, err);

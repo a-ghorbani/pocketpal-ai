@@ -35,6 +35,8 @@ const mockKokoroDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKokoroDeleteModel = jest.fn().mockResolvedValue(undefined);
 const mockKokoroPlay = jest.fn().mockResolvedValue(undefined);
 const mockKokoroStop = jest.fn().mockResolvedValue(undefined);
+const mockKokoroGetVoices = jest.fn().mockResolvedValue([]);
+const mockKokoroReclaimLegacySpace = jest.fn().mockResolvedValue(undefined);
 const mockKittenIsInstalled = jest.fn().mockResolvedValue(false);
 const mockKittenDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKittenDeleteModel = jest.fn().mockResolvedValue(undefined);
@@ -94,7 +96,7 @@ jest.mock('../../services/tts', () => {
         return {
           id: 'kokoro',
           isInstalled: mockKokoroIsInstalled,
-          getVoices: jest.fn().mockResolvedValue([]),
+          getVoices: mockKokoroGetVoices,
           play: mockKokoroPlay,
           playStreaming: jest.fn(() => ({
             appendText: jest.fn(),
@@ -104,6 +106,7 @@ jest.mock('../../services/tts', () => {
           stop: mockKokoroStop,
           downloadModel: mockKokoroDownloadModel,
           deleteModel: mockKokoroDeleteModel,
+          reclaimLegacySpace: mockKokoroReclaimLegacySpace,
         };
       }
       if (id === 'kitten') {
@@ -1026,6 +1029,79 @@ describe('TTSStore', () => {
 
       resolve();
       await first;
+    });
+
+    it('downloadKokoro: restores persisted voice after forced re-download (FP16 → FP32 migration)', async () => {
+      // Simulates a legacy FP16 user upgrading to FP32: persisted
+      // currentVoice points to a Kokoro voice but isInstalled() returns
+      // false (FP32 file missing), so init() clears the voice. The
+      // user's previously chosen voice id must be restored after the
+      // forced re-download instead of defaulting to voices[0].
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      const previousVoice: Voice = {
+        id: 'bm_lewis',
+        name: 'Lewis',
+        engine: 'kokoro',
+        language: 'en',
+      };
+      store.setCurrentVoice(previousVoice);
+
+      await store.init();
+      expect(store.currentVoice).toBeNull();
+
+      mockKokoroGetVoices.mockResolvedValueOnce([
+        {id: 'af_bella', name: 'Bella', engine: 'kokoro', language: 'en'},
+        previousVoice,
+      ]);
+
+      await store.downloadKokoro();
+
+      expect(store.currentVoice).toEqual(previousVoice);
+    });
+
+    it('downloadKokoro: reclaims legacy FP16 file BEFORE the disk-space gate', async () => {
+      // Regression: the FP32 footprint estimate is ~330 MB → buffered
+      // requirement ~396 MB. A legacy FP16 install holds ~163 MB at
+      // `model.onnx`. If the disk gate ran before reclaim, a device with
+      // free space between (396 - 163) and 396 MB could be wrongly
+      // blocked from upgrading. Guard via invocation-call-order: reclaim
+      // must run before getFreeDiskStorage.
+      const store = await makeStore();
+      (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValueOnce(
+        500 * 1024 * 1024, // > 396 MB so download proceeds end-to-end
+      );
+
+      await store.downloadKokoro();
+
+      expect(mockKokoroReclaimLegacySpace).toHaveBeenCalledTimes(1);
+      const reclaimOrder =
+        mockKokoroReclaimLegacySpace.mock.invocationCallOrder[0];
+      const diskCheckOrder = (DeviceInfo.getFreeDiskStorage as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(reclaimOrder).toBeLessThan(diskCheckOrder);
+    });
+
+    it('downloadKokoro: falls back to first voice when stashed id is no longer available', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice({
+        id: 'bm_removed',
+        name: 'Removed',
+        engine: 'kokoro',
+        language: 'en',
+      });
+
+      await store.init();
+      expect(store.currentVoice).toBeNull();
+
+      mockKokoroGetVoices.mockResolvedValueOnce([
+        {id: 'af_bella', name: 'Bella', engine: 'kokoro', language: 'en'},
+      ]);
+
+      await store.downloadKokoro();
+
+      expect(store.currentVoice?.id).toBe('af_bella');
     });
 
     it('deleteKokoro: clears Kokoro currentVoice but preserves a System voice', async () => {

@@ -80,6 +80,19 @@ export class KokoroEngine implements Engine {
     return KOKORO_VOICES;
   }
 
+  // Reclaim FP16 weights from previous installs (saved as `model.onnx`)
+  // before the disk-space gate runs. isInstalled() reports false for legacy
+  // users because the new local name is `model_fp32.onnx`, so the bundled
+  // FP32 file does not double-count — but the orphan ~163 MB sits on disk
+  // and can push a borderline device below the install threshold. Run this
+  // BEFORE the store's disk preflight so reclaimable space counts.
+  async reclaimLegacySpace(): Promise<void> {
+    const legacyModelPath = this.getFilePath('model.onnx');
+    if (await RNFS.exists(legacyModelPath)) {
+      await RNFS.unlink(legacyModelPath).catch(() => {});
+    }
+  }
+
   async downloadModel(onProgress?: KokoroProgressCallback): Promise<void> {
     const parentDir = this.getParentDir();
     const modelDir = this.getModelPath();
@@ -89,13 +102,9 @@ export class KokoroEngine implements Engine {
     await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(voicesDir, {NSURLIsExcludedFromBackupKey: true});
 
-    // Drop legacy FP16 weights from previous installs (saved as `model.onnx`).
-    // isInstalled() reports false for those users because the new local name
-    // is `model_fp32.onnx`, so this download path runs — clean up the orphan.
-    const legacyModelPath = this.getFilePath('model.onnx');
-    if (await RNFS.exists(legacyModelPath)) {
-      await RNFS.unlink(legacyModelPath).catch(() => {});
-    }
+    // Defensive: ensure legacy FP16 file is gone even if the store skipped
+    // `reclaimLegacySpace()`. Idempotent.
+    await this.reclaimLegacySpace();
 
     // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
     const corePhaseWeight = 0.6;
