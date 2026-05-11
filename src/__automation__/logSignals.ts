@@ -279,13 +279,16 @@ export function deriveLogSignals(lines: string[]): LogSignals {
  * runs on Hexagon, observed on Snapdragon 8 Elite Gen 5).
  *
  * Decision order:
- *   - HTP* keys present -> hexagon (full or partial via offloaded counts)
- *   - OpenCL key present -> opencl (full or partial)
- *   - large_buffer_unsupported regression -> cpu+opencl-partial
+ *   - HTP* keys present -> hexagon (full, or cpu+hexagon-partial via offloaded counts)
+ *   - OpenCL key present -> opencl (full, or cpu+opencl-partial via large_buffer_unsupported / offloaded counts)
  *   - only CPU/CPU_REPACK keys -> cpu
- *   - empty weight set + opencl_init -> opencl (fallback for early failure)
- *   - empty weight set + hexagon_init -> unknown (symmetric)
- *   - else -> unknown
+ *   - empty weight set: fall back to log-init heuristics:
+ *       * hexagon_init -> unknown (Hexagon registry-allocation fires even when the model never runs there)
+ *       * !opencl_init -> cpu
+ *       * large_buffer_unsupported -> cpu+opencl-partial
+ *       * partial offload counts -> cpu+opencl-partial
+ *       * full offload counts -> opencl
+ *       * else -> unknown
  */
 export function deriveEffectiveBackend(signals: LogSignals): EffectiveBackend {
   const wKeys = Object.keys(signals.memory_buffers.weights_mib);

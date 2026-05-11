@@ -44,7 +44,7 @@ const CONFIG_PATH = `${RNFS.ExternalDirectoryPath}/bench-config.json`;
 const reportPath = (timestamp: string) =>
   `${RNFS.ExternalDirectoryPath}/benchmark-report-${timestamp}.json`;
 
-type Status = string; // 'idle' | 'downloading:<f>' | 'running:<i/n>:<...>' | 'complete' | 'error:<msg>'
+type Status = string; // 'idle' | 'downloading:<f>[ <pct>%]' | 'running:<i/n>:<tag>' (tag may include /<key=val;...> override suffix) | 'cell-failed:<i/n>:<msg>' | 'complete' | 'error:<msg>'
 
 /** Closed enum for the requested-backend axis. Hexagon (Qualcomm NPU) is a
  * third backend value, distinct from cpu/gpu, and gated by the same
