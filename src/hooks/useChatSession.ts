@@ -142,10 +142,10 @@ const prepareCompletion = async ({
     cleanCompletionParams.reasoning_format = 'auto';
   }
 
-  // Create the empty AssistantTurn row in the store. Done BEFORE the
-  // run flips agentUiState.status to `preparing` so the active-vs-
-  // persisted predicate (last message AND status in active set) sees
-  // a coherent state from the very first frame — see story step 8.
+  // Create the empty AssistantTurn row in the store BEFORE the run
+  // flips agentUiState.status to `preparing` so the active-vs-persisted
+  // predicate (last message AND status in active set) sees a coherent
+  // state from the very first frame.
   const createdAt = Date.now();
   const emptyTurn: MessageType.AssistantTurn = {
     author: assistant,
@@ -156,11 +156,11 @@ const prepareCompletion = async ({
     metadata: {
       contextId,
       conversationId: conversationIdRef,
-      // copyable is intentionally absent here — see WHAT D1/I1: the
-      // turn footer's copy button renders iff metadata.copyable is set,
-      // and at this point the turn has nothing worth copying yet.
-      // copyable is set later: at run_finished (success/maxTurns) or
-      // at the abort catch path with partial content.
+      // copyable is intentionally absent here: the turn footer's copy
+      // button renders iff metadata.copyable is set, and at this point
+      // the turn has nothing worth copying yet. It is set later at
+      // run_finished (success/maxTurns) or at the abort catch path with
+      // partial content.
       multimodal: hasImages,
     },
   };
@@ -267,13 +267,12 @@ async function applyEventToStore(
         console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
       }
       // Per-token writes go through the throttled streaming path so
-      // they coalesce. Only forward fields that were actually present
-      // in this delta to avoid clobbering existing content with empty.
-      // toolCalls are NO LONGER written here (WHAT §5 cleanup #1) —
-      // the reducer still consumes `event.delta.toolCalls` for
-      // pendingTalentNames, but the canonical step.toolCalls write
-      // happens after step_finished via appendToolCall (Step 4) so
-      // ids match outcomes by construction.
+      // they coalesce. Only forward fields that were actually present in
+      // this delta to avoid clobbering existing content with empty.
+      // toolCalls are not written here — the reducer still consumes
+      // `event.delta.toolCalls` for pendingTalentNames, but the
+      // canonical step.toolCalls write happens after step_finished via
+      // appendToolCall so ids match outcomes by construction.
       const partial: Partial<MessageType.AssistantTurn['steps'][number]> = {};
       if (event.delta.content) {
         partial.content = event.delta.content.replace(/^\s+/, '');
@@ -305,10 +304,10 @@ async function applyEventToStore(
       );
       return;
     case 'step_finished':
-      // WHAT §5 cleanup #1: land step.toolCalls AFTER step_finished
-      // with the runner's authoritative normalized ids, so they match
-      // the outcomes' callIds by construction. Skipped for text-only
-      // and final-of-chain steps (no payload attached).
+      // Land step.toolCalls AFTER step_finished with the runner's
+      // authoritative normalized ids so they match outcomes' callIds by
+      // construction. Skipped for text-only and final-of-chain steps
+      // (no payload attached).
       if (event.toolCalls && event.toolCalls.length > 0) {
         await chatSessionStore.appendToolCall(
           ctx.messageId,

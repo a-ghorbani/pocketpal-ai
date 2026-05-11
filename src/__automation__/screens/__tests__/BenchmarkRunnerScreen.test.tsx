@@ -302,8 +302,7 @@ describe('BenchmarkRunnerScreen', () => {
         new Error('init exploded'),
       );
       await runMatrix(VALID_CONFIG, setStatus, setLastCell);
-      // finally is the sole detach site: exactly one remove() per cell, no
-      // duplicate from the now-deleted catch-path detach (round-1 C3).
+      // finally is the sole detach site: exactly one remove() per cell.
       expect(remove).toHaveBeenCalledTimes(1);
       const lastWrite =
         RNFS.writeFile.mock.calls[RNFS.writeFile.mock.calls.length - 1];
@@ -318,10 +317,10 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     it('listener is detached exactly once on the success path (no duplicate from finally)', async () => {
-      // Sole-detach-site invariant: when a cell completes cleanly the finally
-      // block is the ONLY detach site. The success-path detach at the
-      // pre-fix call site was deleted; the catch-path detach was deleted.
-      // If a future refactor reintroduces either, this assertion fires.
+      // Sole-detach-site invariant: when a cell completes cleanly the
+      // finally block is the ONLY detach site. If a future refactor
+      // reintroduces detach on the success or catch path, this
+      // assertion fires.
       const remove = jest.fn();
       (addNativeLogListener as jest.Mock).mockImplementation(
         (cb: (level: string, text: string) => void) => {
@@ -384,7 +383,7 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     // -------------------------------------------------------------------------
-    // C3: per-cell context release in `finally`.
+    // Per-cell context release in `finally`.
     // -------------------------------------------------------------------------
 
     it('releases context when bench rejects after a successful initContext', async () => {
@@ -424,9 +423,9 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     // -------------------------------------------------------------------------
-    // C1(a) screen-side invariant: status:'ok' rows always have non-null
-    // pp_avg AND tg_avg. If ctx.bench resolves with either metric undefined,
-    // the row must end up as status:'failed' (catch path).
+    // Screen-side invariant: status:'ok' rows always have non-null pp_avg
+    // AND tg_avg. If ctx.bench resolves with either metric undefined, the
+    // row must end up as status:'failed' (catch path).
     // -------------------------------------------------------------------------
 
     it('forces status:failed when bench() resolves with speedPp undefined', async () => {
@@ -465,8 +464,8 @@ describe('BenchmarkRunnerScreen', () => {
     });
 
     // -------------------------------------------------------------------------
-    // C2 persist: report JSON must include the resolved bench block at the
-    // top level, copied from config.bench (NOT the DEFAULT_BENCH fallback).
+    // Report JSON must include the resolved bench block at the top level,
+    // copied from config.bench (NOT the DEFAULT_BENCH fallback).
     // -------------------------------------------------------------------------
 
     it('persists config.bench at the top level of the report (not DEFAULT_BENCH)', async () => {

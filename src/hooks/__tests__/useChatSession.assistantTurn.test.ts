@@ -76,10 +76,10 @@ describe('useChatSession — AssistantTurn integration', () => {
 
     // The hook adds the user message AND the empty assistant turn.
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalled();
-    // The empty assistant turn is added WITHOUT metadata.copyable so the
-    // turn footer's copy button stays hidden during streaming. copyable
-    // is set later at run_finished (asserted below) or at the abort
-    // catch path (covered by #3 / hookTest5). Per WHAT D1 / I1.
+    // The empty assistant turn is added WITHOUT metadata.copyable so
+    // the turn footer's copy button stays hidden during streaming.
+    // copyable is set later at run_finished (asserted below) or at the
+    // abort catch path.
     const addAssistantCall = (
       chatSessionStore.addMessageToCurrentSession as jest.Mock
     ).mock.calls.find(args => args[0]?.type === 'assistant_turn');
@@ -299,15 +299,14 @@ describe('useChatSession — AssistantTurn integration', () => {
   });
 
   it('#hookTest2 tool turn: appendToolCall lands ids that match the upcoming appendToolOutcome callId by construction (per-frame id-match invariant)', async () => {
-    // WHAT §5 cleanup #1 regression guard. The runner attaches its
-    // normalized toolCalls to step_finished; the hook calls
-    // appendToolCall with that list before appendToolOutcome fires
-    // for each call. Per WHAT §6 canonical scenarios, the invariant
-    // is: at every render frame, step.toolCalls[i].id === outcome.callId
-    // (vacuously true while outcomes lag the calls; strictly enforced
-    // as soon as both are present). This test verifies the invariant
-    // by intercepting both writers and checking the call-order
-    // produces matching ids.
+    // The runner attaches its normalized toolCalls to step_finished;
+    // the hook calls appendToolCall with that list before
+    // appendToolOutcome fires for each call. Invariant: at every
+    // render frame, step.toolCalls[i].id === outcome.callId (vacuously
+    // true while outcomes lag the calls; strictly enforced as soon as
+    // both are present). This test verifies the invariant by
+    // intercepting both writers and checking the call-order produces
+    // matching ids.
     const fakeTalent: TalentEngine = {
       name: 'calculate',
       execute: async () => ({type: 'text', summary: '4'}) as TalentResult,
@@ -445,18 +444,17 @@ describe('useChatSession — AssistantTurn integration', () => {
     });
   });
 
-  // ---------- Tester augmentation: per-frame id-match invariant under
-  // multi-tool / multi-step / abort variations. The implementer's
-  // hookTest2 covers the single-tool case; these add coverage for the
-  // remaining shapes called out in WHAT §5 cleanup #1. ----------
+  // ---------- Per-frame id-match invariant under multi-tool /
+  // multi-step / abort variations. hookTest2 covers the single-tool
+  // case; these add coverage for the remaining shapes. ----------
 
   it('#hookTest3 multi-tool turn: appendToolCall lands TWO normalized ids before two appendToolOutcome calls (per-frame id-match holds across tools)', async () => {
     // Both tools succeed. The runner emits one step_finished with
     // toolCalls.length === 2; the hook calls appendToolCall once with
-    // both, then appendToolOutcome twice (one per tool). Per WHAT §5
-    // cleanup #1, the ids attached to step_finished MUST match the
-    // outcome callIds by construction — the runner reuses the same
-    // normalized list for tool_call_started and tool_call_finished.
+    // both, then appendToolOutcome twice (one per tool). The ids
+    // attached to step_finished MUST match the outcome callIds by
+    // construction — the runner reuses the same normalized list for
+    // tool_call_started and tool_call_finished.
     const calcTalent: TalentEngine = {
       name: 'calculate',
       execute: async () => ({type: 'text', summary: '4'}) as TalentResult,
@@ -583,10 +581,10 @@ describe('useChatSession — AssistantTurn integration', () => {
   });
 
   it('#hookTest4 tool-followed-by-tool (multi-step chain): appendToolCall fires per step, ids stay distinct across steps', async () => {
-    // Step 0: invoke calculate. Step 1: invoke datetime. Step 2:
-    // final answer. Per WHAT §5 cleanup #1 the runner attaches a
-    // fresh normalized list to each step_finished; ids carry
-    // `seed + turn` so distinct across steps.
+    // Step 0: invoke calculate. Step 1: invoke datetime. Step 2: final
+    // answer. The runner attaches a fresh normalized list to each
+    // step_finished; ids carry `seed + turn` so they stay distinct
+    // across steps.
     const calcTalent: TalentEngine = {
       name: 'calculate',
       execute: async () => ({type: 'text', summary: '4'}) as TalentResult,

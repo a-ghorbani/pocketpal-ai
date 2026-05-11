@@ -310,11 +310,10 @@ describe('PACT cleanup: vocabulary audit (old field names eliminated)', () => {
     expect(hits).toEqual([]);
   });
 
-  it('chat.ts wire conversion reads step.toolOutcomes (post-AssistantTurn refactor)', () => {
-    // Post TASK-20260502-2115: convertToChatMessages reads step.toolOutcomes
-    // and emits one role:'tool' message per outcome. The old metadata-bag
-    // shape (toolMessages / talentResults / talentCalls) is gone from
-    // chat.ts entirely.
+  it('chat.ts wire conversion reads step.toolOutcomes', () => {
+    // convertToChatMessages reads step.toolOutcomes and emits one
+    // role:'tool' message per outcome. The legacy metadata-bag shape
+    // (toolMessages / talentResults / talentCalls) is gone from chat.ts.
     const chatPath = path.resolve(srcDir, 'utils/chat.ts');
     const content = fs.readFileSync(chatPath, 'utf8');
     expect(content).toContain('step.toolOutcomes');

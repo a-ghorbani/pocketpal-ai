@@ -84,7 +84,7 @@ describe('CalculateEngine', () => {
     expect(result.type).toBe('error');
   });
 
-  // --- Additional edge cases (TASK-20260415-1200 tester) ---
+  // --- Additional edge cases ---
 
   it('handles division by zero (returns Infinity)', async () => {
     const result = await engine.execute({expression: '1 / 0'});

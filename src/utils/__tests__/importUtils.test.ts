@@ -200,9 +200,9 @@ describe('importUtils', () => {
         expect(result).toBe(1);
       });
 
-      // B8: pact (talent set) and greeting are first-class persisted state
-      // since migration v7+. The transform path MUST forward them onto
-      // palStore.createPal so a re-imported Pal keeps its tools and greeting.
+      // pact (talent set) and greeting are first-class persisted state.
+      // The transform path MUST forward them onto palStore.createPal so a
+      // re-imported Pal keeps its tools and greeting.
       it('preserves pact (talents) and greeting through import', async () => {
         const palWithTalents = {
           ...mockImportedPal,

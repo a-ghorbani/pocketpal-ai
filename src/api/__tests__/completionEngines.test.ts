@@ -150,10 +150,10 @@ describe('OpenAICompletionEngine', () => {
     expect(result).toEqual(mockResult);
   });
 
-  // B2: PACT support requires the engine to forward tools and
-  // tool_choice down to streamChatCompletion. Without this, any Pal
-  // with talents enabled silently degrades to text-only on remote
-  // engines (no tools schemas → no tool_calls).
+  // PACT support requires the engine to forward tools and tool_choice
+  // down to streamChatCompletion. Without this, any Pal with talents
+  // enabled silently degrades to text-only on remote engines (no tools
+  // schemas → no tool_calls).
   it('forwards tools and tool_choice to streamChatCompletion', async () => {
     mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
 

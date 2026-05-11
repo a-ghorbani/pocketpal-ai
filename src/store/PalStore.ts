@@ -197,7 +197,6 @@ class PalStore {
         // Clean up local thumbnail image if it exists
         if (pal?.thumbnail_url) {
           try {
-            // deletePalThumbnail now handles all path formats (relative, absolute, file://)
             await deletePalThumbnail(pal.thumbnail_url);
           } catch (imageError) {
             console.warn('Failed to delete thumbnail image:', imageError);

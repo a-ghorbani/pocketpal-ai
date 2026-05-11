@@ -48,8 +48,6 @@ export interface StreamChatParams {
   max_tokens?: number;
   stop?: string | string[];
   stream?: boolean;
-  // Tool definitions and choice are forwarded to OpenAI-compatible
-  // servers so PACT talents work end-to-end on remote engines (B2).
   tools?: OpenAIToolDefinition[];
   tool_choice?: OpenAIToolChoice;
 }
@@ -320,10 +318,10 @@ export async function streamChatCompletion(
     let lastProcessedLength = 0;
     let settled = false;
     let serverTimings: CompletionResult['timings'] | undefined;
-    // Tool-call accumulator (B2): OpenAI streams partial tool_calls
-    // across chunks, indexed by `delta.tool_calls[i].index`. We rebuild
-    // the per-call shape here so the final result carries fully formed
-    // tool_calls and the streaming callback sees a running snapshot.
+    // OpenAI streams partial tool_calls across chunks, indexed by
+    // `delta.tool_calls[i].index`. Rebuild the per-call shape here so
+    // the final result carries fully formed tool_calls and the streaming
+    // callback sees a running snapshot.
     const toolCallAcc: ToolCallAccumulator = new Map();
 
     // Connection timeout: abort if no headers received within 30s
@@ -412,9 +410,9 @@ export async function streamChatCompletion(
           serverTimings = parsed.timings;
         }
 
-        // Accumulate streamed tool_calls deltas (B2). When present we
-        // forward a token event so the agent loop can react to a tool
-        // call beginning to assemble — same shape llama.rn emits.
+        // When tool_calls deltas are present, forward a token event so
+        // the agent loop can react to a tool call beginning to assemble
+        // — same shape llama.rn emits.
         let toolCallsDelta: ToolCall[] | undefined;
         if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
           toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
@@ -544,9 +542,8 @@ export async function streamChatCompletion(
         }
       }
 
-      // Materialize the assembled tool_calls (B2). Only attach if any
-      // were observed during the stream so the final result mirrors
-      // llama.rn's shape (undefined when none).
+      // Mirror llama.rn's shape: undefined when no tool_calls were
+      // observed during the stream.
       const finalToolCalls: ToolCall[] | undefined =
         toolCallAcc.size > 0
           ? Array.from(toolCallAcc.entries())
@@ -659,10 +656,8 @@ export async function streamChatCompletion(
     if (params.stop && params.stop.length > 0) {
       requestBody.stop = params.stop;
     }
-    // Forward tools + tool_choice so PACT talents work end-to-end
-    // against OpenAI-compatible remote engines (B2). Only attach when
-    // the caller actually supplied them — empty arrays would cause
-    // some servers (and their schema validators) to choke.
+    // Only attach when the caller actually supplied them — empty arrays
+    // cause some servers (and their schema validators) to choke.
     if (params.tools && params.tools.length > 0) {
       requestBody.tools = params.tools;
     }

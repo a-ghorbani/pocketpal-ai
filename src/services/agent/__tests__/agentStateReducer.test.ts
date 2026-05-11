@@ -362,7 +362,7 @@ describe('agentStateReducer', () => {
       states.push({...s});
     }
     const statuses = states.map(x => x.status);
-    // Scenario I phase walk:
+    // Phase walk:
     //   run_started        → prefill
     //   step_started(0)    → prefill (initial dead zone covered)
     //   token(content)     → streaming_text (first content token flips)
@@ -389,16 +389,15 @@ describe('agentStateReducer', () => {
     ]);
   });
 
-  // ---------- WHAT §3 / D4 / I4 — PendingIndicator no-flicker
+  // ---------- PendingIndicator no-flicker invariant.
   //   The active-set predicate (`isPending`) at ChatView is:
   //   status ∈ { prefill, generating_tool_call, executing_tool }
-  //   It must stay stable through a fast streaming sequence — i.e.
-  //   once status flips to `streaming_text`, no token event flips it
-  //   back. Otherwise the indicator would visibly flicker on/off
-  //   between tokens (one of the user-visible problems intent #2
-  //   was meant to fix). ----------
+  //   It must stay stable through a fast streaming sequence — once
+  //   status flips to `streaming_text`, no token event flips it back.
+  //   Otherwise the indicator would visibly flicker on/off between
+  //   tokens. ----------
 
-  describe('PendingIndicator no-flicker invariant (WHAT §3 / D4 / I4)', () => {
+  describe('PendingIndicator no-flicker invariant', () => {
     const isPending = (s: AgentUiState) =>
       s.status === 'prefill' ||
       s.status === 'generating_tool_call' ||

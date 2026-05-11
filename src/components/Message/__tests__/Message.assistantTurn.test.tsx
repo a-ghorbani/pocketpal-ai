@@ -344,10 +344,9 @@ describe('Message — AssistantTurn renderer', () => {
   });
 
   it('#4 active run with empty step (no toolCalls) → no TalentSurface (PendingIndicator covers UX, owned by ChatView)', () => {
-    // Per WHAT §4a / D4 / I4: pending UX is no longer rendered inline
-    // by TalentSurface. The ChatView-owned PendingIndicator covers
-    // dead zones; TalentSurface renders only when step.toolCalls is
-    // populated.
+    // Pending UX is not rendered inline by TalentSurface. The
+    // ChatView-owned PendingIndicator covers dead zones; TalentSurface
+    // renders only when step.toolCalls is populated.
     const message = makeDerivedTurn([{content: '', partial: true}]);
     render(
       <Message
@@ -426,7 +425,7 @@ describe('Message — AssistantTurn renderer', () => {
     expect(mockTalentSurfaceCalls).toHaveLength(0);
   });
 
-  // ---------- Canonical scenarios from WHAT §6 ----------
+  // ---------- Canonical scenarios ----------
 
   describe('canonical scenarios', () => {
     it('A — text only: single TextMessage block, no TalentSurface, ONE footer', () => {
@@ -496,7 +495,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(mockTalentSurfaceCalls[0].step?.toolCalls?.[0].function.name).toBe(
         'datetime',
       );
-      // ONE footer (regression guard for duplicate-footer bug — I1)
+      // Exactly ONE footer per assistant row.
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
@@ -652,8 +651,8 @@ describe('Message — AssistantTurn renderer', () => {
         />,
       );
       // One ReasoningBlock for reasoning + one TextMessage for content.
-      // Order: reasoning first, then content (D3). Reasoning is no
-      // longer routed through TextMessage — see ReasoningBlock.
+      // Order: reasoning first, then content. Reasoning is routed
+      // through ReasoningBlock, not TextMessage.
       expect(mockReasoningBlockCalls).toHaveLength(1);
       expect(mockReasoningBlockCalls[0].text).toBe('Let me think…');
       expect(mockTextMessageCalls).toHaveLength(1);
@@ -715,9 +714,8 @@ describe('Message — AssistantTurn renderer', () => {
       );
       expect(mockTextMessageCalls).toHaveLength(1);
       // Single TalentSurface invocation per step; the surface itself
-      // renders both calls in array order (verified by
-      // TalentSurface.test.tsx — block order matches array order
-      // [I2]).
+      // renders both calls in array order (the block-order assertion
+      // lives in TalentSurface.test.tsx).
       expect(queryAllByTestId('talent-surface')).toHaveLength(1);
       const calls = mockTalentSurfaceCalls[0].step?.toolCalls;
       expect(calls?.[0].id).toBe('c1');
@@ -725,13 +723,13 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('multi-tool partial completion (WHAT §9e): step₀ has two calls, first ok + second error → both rendered in array order via TalentSurface, ONE footer', () => {
-      // WHAT §9e: one talent block (A) followed by one error block
-      // (B), in array order (I2). Both surface simultaneously after
-      // step_finished — verified here at the Message-renderer level
-      // by asserting TalentSurface receives both calls + outcomes
-      // in the right order. The per-block dispatch (talent UI vs
-      // error block) is verified by TalentSurface.test.tsx:#3,#5.
+    it('multi-tool partial completion: step₀ has two calls, first ok + second error → both rendered in array order via TalentSurface, ONE footer', () => {
+      // One talent block (A) followed by one error block (B), in array
+      // order. Both surface simultaneously after step_finished —
+      // asserted here at the Message-renderer level by checking
+      // TalentSurface receives both calls + outcomes in the right
+      // order. Per-block dispatch (talent UI vs error block) lives in
+      // TalentSurface.test.tsx.
       const message = makeDerivedTurn(
         [
           {
@@ -784,21 +782,20 @@ describe('Message — AssistantTurn renderer', () => {
       // step₀.
       expect(mockTextMessageCalls).toHaveLength(2);
       expect(queryAllByTestId('talent-surface')).toHaveLength(1);
-      // Both calls reach TalentSurface in array order (I2). The
-      // surface-level dispatch is tested in TalentSurface.test.tsx
-      // — here we verify the renderer doesn't drop calls or
-      // shuffle order.
+      // Both calls reach TalentSurface in array order. The
+      // surface-level dispatch is tested in TalentSurface.test.tsx —
+      // here we verify the renderer doesn't drop calls or shuffle order.
       const calls = mockTalentSurfaceCalls[0].step?.toolCalls;
       const outcomes = mockTalentSurfaceCalls[0].step?.toolOutcomes;
       expect(calls?.[0].id).toBe('c1');
       expect(calls?.[1].id).toBe('c2');
       expect(outcomes?.[0].result.type).toBe('html');
       expect(outcomes?.[1].result.type).toBe('error');
-      // ONE footer (I1).
+      // Exactly ONE footer per assistant row.
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('I1 multi-step turn renders exactly ONE AssistantTurnFooter (regression guard)', () => {
+    it('multi-step turn renders exactly ONE AssistantTurnFooter', () => {
       const message = makeDerivedTurn(
         [
           {content: 'A'},

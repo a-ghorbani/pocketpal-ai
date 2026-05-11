@@ -331,20 +331,6 @@ describe('useChatSession', () => {
     );
   });
 
-  // ---------- Step 10 (TASK-20260502-2115): trim ----------
-  //
-  // Tests that duplicated AgentRunner-level coverage were dropped:
-  //
-  //   - "should save completionResult with reasoning_content after
-  //     completion" (deleted in step 8 commit ad6d8b6) — replaced by
-  //     runner reasoning_content tests in
-  //     src/services/agent/__tests__/AgentRunner.test.ts and per-step
-  //     reasoningContent assertions in chat.test.ts.
-  //
-  // Tests that exercise hook-specific surface — error rollback, stop
-  // semantics, message persistence calls, multimodal warning, and
-  // system-prompt construction — are kept above and below.
-
   it('emits multimodal warning when user sends an image but multimodal is disabled', async () => {
     // modelStore.isMultimodalEnabled is mocked to return false by default
     // (see __mocks__/stores/modelStore.ts). The hook should call

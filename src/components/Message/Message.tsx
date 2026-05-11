@@ -132,10 +132,10 @@ export const Message = observer(
   ({
     enableAnimation,
     // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
-    // are kept on MessageTopLevelProps for ChatView's existing prop
-    // API but are no longer consumed here — pending UX is owned by
-    // ChatView's PendingIndicator (D4 / I4) and TalentSurface
-    // dispatches off persisted step data alone (WHAT §4a).
+    // are kept on MessageTopLevelProps for ChatView's existing prop API
+    // but are no longer consumed here — pending UX is owned by
+    // ChatView's PendingIndicator and TalentSurface dispatches off
+    // persisted step data alone.
     message,
     messageWidth,
     onMessagePress,
@@ -363,12 +363,10 @@ export const Message = observer(
       );
 
       steps.forEach((step, stepIdx) => {
-        // Per WHAT §4a / D3: reasoning and content render as SEPARATE
-        // blocks, reasoning first (matches model emission order). Each
-        // block is skipped when its source field is empty so a step
-        // with content-only or reasoning-only renders exactly one
-        // block (no phantom layout). Spacing between blocks is handled
-        // by `turnBlockStyles.blockSpacer`.
+        // Reasoning and content render as separate blocks, reasoning
+        // first (matches model emission order). Each block is skipped
+        // when its source field is empty so a step with content-only or
+        // reasoning-only renders exactly one block (no phantom layout).
         const hasReasoning =
           step.reasoningContent !== undefined &&
           step.reasoningContent.length > 0;
@@ -398,11 +396,10 @@ export const Message = observer(
         }
 
         // Talent surface — outside the bubble, with its own visual
-        // container (e.g. HtmlPreviewBubble). Renders one block per
-        // call in step.toolCalls (in array order). Per WHAT §4a, the
-        // ChatView-owned PendingIndicator covers the in-flight window
-        // before tool outcomes land — there is no per-call pending UI
-        // here.
+        // container (e.g. HtmlPreviewBubble). Renders one block per call
+        // in step.toolCalls (in array order). The ChatView-owned
+        // PendingIndicator covers the in-flight window before outcomes
+        // land — no per-call pending UI here.
         if (step.toolCalls && step.toolCalls.length > 0) {
           blocks.push(
             <View
@@ -423,12 +420,10 @@ export const Message = observer(
     // so long-press routing stays turn-level (selectedMessage holds the
     // turn id) and avatar shows once per turn.
     //
-    // Per WHAT §4b / D9 / I1: ONE AssistantTurnFooter per assistant
-    // row, attached HERE in the outer JSX (not inside renderMessage())
-    // so:
+    // Exactly ONE AssistantTurnFooter per assistant row, attached HERE
+    // in the outer JSX (not inside renderMessage()) so:
     //   - AssistantTurn rows render N step blocks then one footer
-    //     (regardless of step count — fixes the duplicate-footer bug
-    //     by construction).
+    //     (regardless of step count).
     //   - Legacy assistant Text rows still get exactly one footer
     //     (chrome moves out of Bubble, into here).
     //   - User-authored Text rows render no footer (no behaviour

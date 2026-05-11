@@ -49,14 +49,13 @@ export type AgentEvent =
       type: 'step_finished';
       turn: number;
       /**
-       * The runner's authoritative normalized tool calls for this
-       * step, attached when the step actually invoked tools. Optional
-       * because text-only steps and the final step of a multi-turn
-       * chain don't have any. When present, ids are reconciled with
-       * outcome callIds via {@link normalizeToolCallIds} — the hook's
-       * `appendToolCall` writer relies on this to make
+       * The runner's authoritative normalized tool calls for this step,
+       * attached when the step actually invoked tools. Optional because
+       * text-only steps and the final step of a multi-turn chain don't
+       * have any. When present, ids are reconciled with outcome callIds
+       * via {@link normalizeToolCallIds} — the hook's `appendToolCall`
+       * writer relies on this to make
        * `step.toolCalls[i].id === outcome.callId` true by construction.
-       * See WHAT §5 cleanup #1.
        */
       toolCalls?: AgentToolCall[];
     }

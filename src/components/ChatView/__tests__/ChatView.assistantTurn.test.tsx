@@ -271,17 +271,16 @@ describe('ChatView — Scenario H (abort with partial content)', () => {
     expect(getByTestId('assistant-turn-footer')).toBeTruthy();
     // Copy renders (copyable=true).
     expect(getByTestId('footer-copy')).toBeTruthy();
-    // No timing line — `metadata.timings` is absent (D1 / Scenario H).
+    // No timing line — `metadata.timings` is absent.
     expect(queryByTestId('footer-timing')).toBeNull();
   });
 });
 
-describe('ChatView — Scenario I (dead-zone phase walk via PendingIndicator)', () => {
-  // The PendingIndicator (D4 / I4) is owned by ChatView and gated on
-  // `chatSessionStore.agentUiState.status`. The §3 table says it
-  // appears in every status EXCEPT streaming_text and done. Drive
-  // the status across that table and assert testID presence /
-  // absence per phase.
+describe('ChatView — dead-zone phase walk via PendingIndicator', () => {
+  // The PendingIndicator is owned by ChatView and gated on
+  // `chatSessionStore.agentUiState.status`. It appears in every status
+  // EXCEPT streaming_text and done. Drive the status across the table
+  // and assert testID presence / absence per phase.
   const phases: Array<{label: string; status: any; visible: boolean}> = [
     {label: 'idle (no run)', status: 'idle', visible: false},
     {label: 'phase 2 / 7: prefill', status: 'prefill', visible: true},

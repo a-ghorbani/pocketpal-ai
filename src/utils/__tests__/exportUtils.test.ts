@@ -513,9 +513,9 @@ describe('exportUtils', () => {
         await expect(exportPal('nonexistent')).rejects.toThrow('Pal not found');
       });
 
-      // B8: pact (talent set) and greeting are first-class persisted state
-      // since migration v7+. They MUST round-trip through export/import or
-      // backups silently drop tool configuration and the empty-chat greeting.
+      // pact (talent set) and greeting are first-class persisted state.
+      // They MUST round-trip through export/import or backups silently
+      // drop tool configuration and the empty-chat greeting.
       it('round-trips pact (talents) and greeting through exported data', async () => {
         const palWithTalents = {
           ...mockPal,

@@ -77,7 +77,7 @@ describe('Message.toMessageObject', () => {
     expect(obj.metadata?.copyable).toBe(true);
   });
 
-  // ---------- Lift semantics (story Persistence section) ----------
+  // ---------- Lift semantics ----------
 
   it('strips metadata.steps from in-memory metadata (lift semantics, pinned)', () => {
     const steps: AgentStep[] = [{content: 'visible'}];

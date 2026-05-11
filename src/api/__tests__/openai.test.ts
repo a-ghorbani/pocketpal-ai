@@ -702,8 +702,8 @@ describe('streamChatCompletion', () => {
     ).rejects.toThrow('Completion aborted');
   });
 
-  // B2: PACT support over OpenAI-compatible remote engines.
-  describe('tool support (B2)', () => {
+  // PACT support over OpenAI-compatible remote engines.
+  describe('tool support', () => {
     const calculateTool = {
       type: 'function' as const,
       function: {

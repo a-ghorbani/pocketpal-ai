@@ -84,11 +84,9 @@ export class OpenAICompletionEngine implements CompletionEngine {
         max_tokens: params.n_predict,
         stop: params.stop,
         stream: true,
-        // B2: forward PACT tool definitions + tool_choice so any Pal
-        // with talents enabled can run against an OpenAI-compatible
-        // remote engine. Cast at the boundary because llama.rn's
-        // `tools` typedef is structurally compatible with OpenAI's
-        // function-tool shape but lives under a different name.
+        // Cast at the boundary: llama.rn's `tools` typedef is
+        // structurally compatible with OpenAI's function-tool shape but
+        // lives under a different name.
         tools: (params as any).tools,
         tool_choice: (params as any).tool_choice,
       },

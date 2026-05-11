@@ -740,11 +740,10 @@ export const ChatView = observer(
       agentStatus === 'streaming_text' ||
       agentStatus === 'generating_tool_call' ||
       agentStatus === 'executing_tool';
-    // PendingIndicator visibility (WHAT §3 table, §7 derivation,
-    // I4). The indicator covers every dead zone: prefill (initial
-    // and follow-up), generating_tool_call, executing_tool. Hidden
-    // in streaming_text and done so it doesn't compete with the
-    // visible token stream / final footer.
+    // The PendingIndicator covers every dead zone: prefill (initial
+    // and follow-up), generating_tool_call, executing_tool. Hidden in
+    // streaming_text and done so it doesn't compete with the visible
+    // token stream / final footer.
     const isPending =
       agentStatus === 'prefill' ||
       agentStatus === 'generating_tool_call' ||
@@ -895,10 +894,9 @@ export const ChatView = observer(
     });
 
     // Render header (pending indicator + keyboard spacer). The
-    // FlatList is `inverted={true}`, so the ListHeaderComponent
-    // renders at the bottom of the visible list — i.e. BELOW the
-    // latest turn, satisfying I4 ("PendingIndicator lives below the
-    // latest turn during dead zones, never inside one").
+    // FlatList is `inverted={true}`, so the ListHeaderComponent renders
+    // at the bottom of the visible list — i.e. BELOW the latest turn,
+    // never inside it.
     const renderListHeaderComponent = React.useCallback(
       () => (
         <>

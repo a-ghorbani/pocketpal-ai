@@ -100,9 +100,9 @@ class ChatSessionStore {
   selectedSessionIds: Set<string> = new Set();
 
   // UX state for the active agent run. Driven by `agentStateReducer`
-  // (added in step 6) from `AgentEvent`s emitted by the runner. The
-  // only writer is `setAgentUiState`. Renderers compute the
-  // active-vs-persisted predicate at the ChatView level (see story).
+  // from `AgentEvent`s emitted by the runner. The only writer is
+  // `setAgentUiState`. Renderers compute the active-vs-persisted
+  // predicate at the ChatView level.
   agentUiState: AgentUiState = initialAgentUiState;
 
   constructor() {

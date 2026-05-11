@@ -33,10 +33,10 @@ export function agentStateReducer(
       };
     case 'step_started':
       // Both initial and follow-up steps route through `prefill` so the
-      // indicator (D4, owned by ChatView) covers the dead zone between
-      // step setup and the first content/reasoning token. The first
-      // such token flips status to `streaming_text` via the regular
-      // `case 'token'` path below (the prefill→streaming_text rule).
+      // ChatView-owned indicator covers the dead zone between step
+      // setup and the first content/reasoning token. The first such
+      // token flips status to `streaming_text` via the regular
+      // `case 'token'` path below.
       //
       // For initial steps, `prefill` was already set by `run_started`,
       // but explicitly setting it here keeps the rule uniform across
@@ -79,13 +79,11 @@ export function agentStateReducer(
           pendingToolTokens: state.pendingToolTokens + 1,
         };
       }
-      // Plain content/reasoning token: if we were waiting in `prefill`
-      // (initial step or follow-up routed through prefill per WHAT §3),
+      // Plain content/reasoning token: if we were waiting in `prefill`,
       // the first such token flips status to `streaming_text` so the
-      // indicator (D4) hides as soon as visible output starts. Do NOT
-      // clear pendingTalentNames here — that's the regression guard for
-      // the legacy metadata-bag bug where streamed content overwrote
-      // the tool-call hint.
+      // indicator hides as soon as visible output starts. Do NOT clear
+      // pendingTalentNames here — streamed content must not overwrite a
+      // tool-call hint already set on this step.
       const hasVisibleDelta =
         (event.delta.content && event.delta.content.length > 0) ||
         (event.delta.reasoningContent &&

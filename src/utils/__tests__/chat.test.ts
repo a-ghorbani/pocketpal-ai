@@ -239,7 +239,7 @@ describe('convertToChatMessages', () => {
   });
 });
 
-// ---------- AssistantTurn coverage (story Test Requirements §convertToChatMessages) ----------
+// ---------- AssistantTurn coverage ----------
 
 const makeUserText = (text: string, id = String(Math.random())) =>
   ({
@@ -314,9 +314,9 @@ describe('convertToChatMessages — AssistantTurn', () => {
     ]);
   });
 
-  it('#3 step with empty content but tool_calls → assistant message with empty content + tool_calls + sentinel "aborted" tool response (B7 orphan-pair guard)', () => {
+  it('#3 step with empty content but tool_calls → assistant message with empty content + tool_calls + sentinel "aborted" tool response (orphan-pair guard)', () => {
     // A persisted step with toolCalls and no toolOutcomes is the
-    // abort/crash recovery shape (B7). The orphan-pair guard in
+    // abort/crash recovery shape. The orphan-pair guard in
     // stepToApiMessages synthesizes a sentinel tool response so the
     // next-turn Jinja template doesn't see an unmatched tool_call_id.
     const turn = makeAssistantTurn([
@@ -342,11 +342,10 @@ describe('convertToChatMessages — AssistantTurn', () => {
     ]);
   });
 
-  // B7 dedicated coverage — abort/crash recovery scenarios. Without
-  // these guards a strict-Jinja template throws on the next turn
-  // because every `tool_call_id` must have a matching role:'tool'
-  // response.
-  it('B7a abort after step_finished, before tool_call_finished → synthesizes "aborted" sentinel for the orphan call', () => {
+  // Abort/crash recovery scenarios. Without these guards a strict-Jinja
+  // template throws on the next turn because every `tool_call_id` must
+  // have a matching role:'tool' response.
+  it('abort after step_finished, before tool_call_finished → synthesizes "aborted" sentinel for the orphan call', () => {
     // Simulates the canonical race: step_finished landed (so
     // step.toolCalls is persisted), the user tapped Stop, and the
     // tool_call_finished event never reached the store.
@@ -480,7 +479,7 @@ describe('convertToChatMessages — AssistantTurn', () => {
     ]);
     const result = convertToChatMessages([turn]);
     // Two messages: the assistant message with tool_calls, plus the
-    // synthesized "aborted" sentinel tool response (B7 orphan-pair guard).
+    // synthesized "aborted" sentinel tool response (orphan-pair guard).
     expect(result).toHaveLength(2);
     expect(result[0].tool_calls).toBeDefined();
     expect(result[1]).toEqual({

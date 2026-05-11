@@ -302,8 +302,7 @@ export async function* runAgent(
       // while body so each turn gets a fresh value automatically — no
       // function-scope state, no manual reset. A multi-step run with a
       // marker in step 0 and another in step 1 yields exactly two
-      // `marker_seen` events because each iteration redeclares these
-      // (verified by Test #21).
+      // `marker_seen` events because each iteration redeclares these.
       let accumulatedText = '';
       let markerSeenThisStep = false;
       // Per-step generation metrics (post-hoc display in chip / preview
@@ -386,10 +385,10 @@ export async function* runAgent(
         return;
       }
 
-      // Compute normalized tool calls BEFORE the step_finished yield
-      // so the event payload can carry them. The hook's appendToolCall
-      // writer (WHAT §5 cleanup #1) lands them on step.toolCalls with
-      // ids that match the upcoming outcomes by construction.
+      // Compute normalized tool calls BEFORE the step_finished yield so
+      // the event payload can carry them. The hook's appendToolCall
+      // writer lands them on step.toolCalls with ids that match the
+      // upcoming outcomes by construction.
       const finishedResult = lastResult;
       const rawToolCalls = finishedResult?.tool_calls ?? [];
       const callsWithoutMetrics =

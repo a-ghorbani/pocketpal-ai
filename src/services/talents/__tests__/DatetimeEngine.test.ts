@@ -125,7 +125,7 @@ describe('DatetimeEngine', () => {
     }
   });
 
-  // --- Additional edge cases (TASK-20260415-1200 tester) ---
+  // --- Additional edge cases ---
 
   describe('action=now with invalid timezone', () => {
     it('returns error for invalid timezone string', async () => {

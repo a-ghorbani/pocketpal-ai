@@ -17,7 +17,7 @@ describe('TalentSurface', () => {
     talentUIRegistry.reset();
   });
 
-  // The four-priority dispatch (WHAT §4a): error > talent UI > chip > none.
+  // Four-priority dispatch: error > talent UI > chip > none.
 
   it('#1 talent UI: outcome present + non-error + UI registered → renderResult fires', () => {
     talentUIRegistry.register({
@@ -185,14 +185,13 @@ describe('TalentSurface', () => {
     expect(getByText('used render_html')).toBeTruthy();
   });
 
-  // ---------- WHAT §9e — Multi-tool partial completion ----------
+  // ---------- Multi-tool partial completion ----------
 
-  it('#9e multi-tool partial completion: talent block + error block render together in array order (I2)', () => {
-    // WHAT §9e: step₀ has [A, B]; A succeeds (talent UI registered),
-    // B fails (error result). Per I2, blocks emit in step.toolCalls
-    // array order. Both must appear simultaneously after
-    // step_finished — ChatView's pending indicator stops covering
-    // them once outcomes land.
+  it('multi-tool partial completion: talent block + error block render together in array order', () => {
+    // step₀ has [A, B]; A succeeds (talent UI registered), B fails
+    // (error result). Blocks emit in step.toolCalls array order. Both
+    // must appear simultaneously after step_finished — ChatView's
+    // pending indicator stops covering them once outcomes land.
     talentUIRegistry.register({
       name: 'render_html',
       renderResult: result =>
@@ -232,16 +231,15 @@ describe('TalentSurface', () => {
     expect(getByText('render_html failed')).toBeTruthy();
   });
 
-  // ---------- WHAT §9c — Persistence load with deleted talent ----------
+  // ---------- Persistence load with deleted talent ----------
 
-  describe('persistence load with deleted talent (WHAT §9c)', () => {
+  describe('persistence load with deleted talent', () => {
     it('persisted turn references render_html but registry has no entry → ToolUsedChip renders, no row drop, no crash', () => {
       // Simulate the post-load state: TalentUIRegistry was reset
-      // (e.g. talent removed from the build, or registry init lost
-      // a race with the chat reload). The persisted step still has
-      // a valid html outcome; per WHAT §9c / D8 the UI must
-      // gracefully fall back to the subtle "used X" chip — no
-      // crash, no missing row.
+      // (e.g. talent removed from the build, or registry init lost a
+      // race with the chat reload). The persisted step still has a
+      // valid html outcome; the UI must gracefully fall back to the
+      // subtle "used X" chip — no crash, no missing row.
       // Note: registry was reset() in the outer beforeEach.
       const step: AgentStep = {
         toolCalls: [
@@ -265,8 +263,8 @@ describe('TalentSurface', () => {
       const {getByTestId, getByText, queryByTestId} = render(
         <TalentSurface step={step} />,
       );
-      // Tool-used chip surfaces the call (intent issue #3 fix —
-      // tool's name is visible even though the rich UI is gone).
+      // Tool-used chip surfaces the call so the tool's name is visible
+      // even though the rich UI is gone.
       expect(getByTestId('tool-used-chip')).toBeTruthy();
       expect(getByText('used render_html')).toBeTruthy();
       // No error block — outcome is non-error.
@@ -274,10 +272,9 @@ describe('TalentSurface', () => {
     });
 
     it('persisted error outcome with deleted talent UI → still renders ToolErrorBlock (error wins over missing UI)', () => {
-      // Edge of WHAT §9c: even with no registered UI, an error
-      // outcome remains an error. Priority order error > talent UI
-      // > chip says the error block wins regardless of registry
-      // state.
+      // Even with no registered UI, an error outcome remains an
+      // error. Priority order (error > talent UI > chip) says the
+      // error block wins regardless of registry state.
       const step: AgentStep = {
         toolCalls: [
           {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
