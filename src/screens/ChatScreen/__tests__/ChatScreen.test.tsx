@@ -321,7 +321,9 @@ describe('ChatScreen', () => {
     it('warns once when all four capability slots are absent', () => {
       renderWithToolPal(buildContextWithCaps({}));
       expect(uiStore.setChatWarning).toHaveBeenCalledTimes(1);
-      expect(uiStore.markToolCompatWarned).toHaveBeenCalledWith('tool-model-id');
+      expect(uiStore.markToolCompatWarned).toHaveBeenCalledWith(
+        'tool-model-id',
+      );
     });
   });
 });
