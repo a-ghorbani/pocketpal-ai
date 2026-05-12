@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Pressable, StyleSheet, Text, View, Animated} from 'react-native';
+import {Pressable, Text, View, Animated} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
 import {observer} from 'mobx-react';
@@ -7,7 +7,7 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import {useTheme} from '../../hooks';
 
-import styles from './styles';
+import styles, {turnBlockStyles} from './styles';
 import {
   AssistantTurnFooter,
   Avatar,
@@ -22,22 +22,6 @@ import {
 
 import {MessageType} from '../../utils/types';
 import {excludeDerivedMessageProps, UserContext} from '../../utils';
-
-// Inter-block spacing within a single AssistantTurn row. Matches the
-// existing `marginVertical: 8` already used by HtmlPreviewBubble's own
-// container, so a multi-step turn lines up visually with the existing
-// HtmlPreview-after-text-bubble layout. The first block in a turn uses
-// no extra top margin so single-step no-tool turns render identically
-// to the legacy Text bubble snapshot.
-// Tightened from 8 → 4 (Idea F). With the auto-collapsed text-only
-// reasoning row and the smaller tool chip, an 8px gap between every
-// inner block bloated short turns ("what time is it now?" had visible
-// dead space between every annotation). 4px keeps the visual rhythm
-// without the airiness.
-const ASSISTANT_TURN_BLOCK_GAP = 4;
-const turnBlockStyles = StyleSheet.create({
-  blockSpacer: {marginTop: ASSISTANT_TURN_BLOCK_GAP},
-});
 
 const hapticOptions = {
   enableVibrateFallback: true,
