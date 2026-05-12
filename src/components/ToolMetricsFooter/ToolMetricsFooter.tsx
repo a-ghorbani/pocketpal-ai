@@ -1,12 +1,14 @@
 import React, {useContext} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {View} from 'react-native';
 
 import {Text} from 'react-native-paper';
 
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 import {t} from '../../locales';
-import {AgentToolCallMetrics, Theme} from '../../utils/types';
+import {AgentToolCallMetrics} from '../../utils/types';
+
+import {styles} from './styles';
 
 interface ToolMetricsFooterProps {
   metrics: AgentToolCallMetrics;
@@ -45,17 +47,3 @@ export const ToolMetricsFooter: React.FC<ToolMetricsFooterProps> = ({
     </View>
   );
 };
-
-const styles = ({theme}: {theme: Theme}) =>
-  StyleSheet.create({
-    container: {
-      paddingTop: 4,
-      paddingBottom: 8,
-      // No horizontal padding — aligns with the AI text / footer / chip
-      // at the assistant row's marginLeft (single shared gutter).
-    },
-    text: {
-      color: theme.colors.textSecondary,
-      fontSize: 10,
-    },
-  });
