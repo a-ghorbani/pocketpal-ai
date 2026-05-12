@@ -5,8 +5,8 @@
   "scripts": {
     "prepare": "husky",
     "postinstall": "./scripts/postinstall.sh",
-    "android": "react-native run-android",
-    "build:android": "cd android && ./gradlew assembleDebug && cd ..",
+    "android": "react-native run-android --mode=prodDebug",
+    "build:android": "cd android && ./gradlew assembleProdDebug && cd ..",
     "build:android:release": "cd android && ./gradlew bundleRelease && cd ..",
     "android:build:e2e": "cd android && E2E_BUILD=true ./gradlew assembleE2eReleaseE2e && cd ..",
     "ios": "react-native run-ios --simulator=\"iPhone 16 Pro\"",
