@@ -125,7 +125,7 @@ export default appSchema({
         {name: 'is_owned', type: 'boolean', isOptional: true},
         {name: 'generation_settings', type: 'string', isOptional: true}, // JSON stringified
         {name: 'pact', type: 'string', isOptional: true}, // JSON stringified { talents: TalentRef[] }
-        {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified { text }
+        {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified Pal['greeting']
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
       ],

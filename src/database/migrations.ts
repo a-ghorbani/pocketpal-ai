@@ -138,7 +138,7 @@ export default schemaMigrations({
           table: 'local_pals',
           columns: [
             {name: 'pact', type: 'string', isOptional: true}, // JSON stringified { talents: TalentRef[] }
-            {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified { text }
+            {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified Pal['greeting']
           ],
         }),
       ],

@@ -60,6 +60,16 @@ describe('LocalPal.toPal - pact / greeting round-trip', () => {
     expect(pal.toPal().greeting).toEqual({text: 'hi there'});
   });
 
+  it('round-trips greeting.suggestedPrompts alongside text', () => {
+    const full = {
+      text: 'hi there',
+      suggestedPrompts: ['Tell me a joke', 'Summarize this'],
+    };
+    const pal = makePal({greeting: LocalPal.safeStringify(full)});
+    expect(pal.greetingObject).toEqual(full);
+    expect(pal.toPal().greeting).toEqual(full);
+  });
+
   it('returns undefined when pact/greeting are unset', () => {
     const pal = makePal({});
     expect(pal.pactObject).toBeUndefined();

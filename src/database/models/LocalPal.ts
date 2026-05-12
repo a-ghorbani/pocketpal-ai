@@ -38,7 +38,7 @@ export default class LocalPal extends Model {
   @field('is_owned') isOwned?: boolean;
   @field('generation_settings') generationSettings?: string; // JSON stringified
   @field('pact') pact?: string; // JSON stringified { talents: TalentRef[] }
-  @field('greeting') greeting?: string; // JSON stringified { text }
+  @field('greeting') greeting?: string; // JSON stringified Pal['greeting']
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
@@ -125,7 +125,7 @@ export default class LocalPal extends Model {
     }
   }
 
-  get greetingObject(): {text: string} | undefined {
+  get greetingObject(): Pal['greeting'] {
     try {
       return this.greeting ? JSON.parse(this.greeting) : undefined;
     } catch {
