@@ -40,7 +40,8 @@ const TOOL_USE_MODEL = {
 };
 
 const PAL_NAME = 'E2E Code Companion';
-const APP_BUNDLE_ID = 'ai.pocketpal';
+const getAppBundleId = (): string =>
+  (driver as any).isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
 
 const SYSTEM_PROMPT =
   'You are a code companion assistant. When the user asks you to create a webpage, ' +
@@ -123,9 +124,9 @@ describe('Talent Tool-Use Pipeline', () => {
     // is unreliable (gesture conflicts with BottomActionBar/sheet dismiss).
     // Restart the app — it always opens on Chat, the Pal persists in DB.
     await browser.pause(1000);
-    await driver.terminateApp(APP_BUNDLE_ID);
+    await driver.terminateApp(getAppBundleId());
     await browser.pause(1000);
-    await driver.activateApp(APP_BUNDLE_ID);
+    await driver.activateApp(getAppBundleId());
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
     // Re-load the model (app restart clears the loaded context).
