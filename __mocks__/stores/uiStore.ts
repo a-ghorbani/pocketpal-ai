@@ -33,4 +33,7 @@ export const mockUiStore = {
   showError: jest.fn(),
   setChatWarning: jest.fn(),
   clearChatWarning: jest.fn(),
+  toolCompatWarnedModels: [] as string[],
+  hasWarnedToolCompat: jest.fn(() => false),
+  markToolCompatWarned: jest.fn(),
 };

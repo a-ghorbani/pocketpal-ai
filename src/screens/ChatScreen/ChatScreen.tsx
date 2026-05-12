@@ -130,9 +130,10 @@ export const ChatScreen: React.FC = observer(() => {
     activePalId,
   ]);
 
-  // Tool-compatibility one-time banner: when the active Pal declares tools but
-  // the loaded model's jinja template lacks `toolUseCaps`, surface an inline
-  // warning. Persisted per model id so the warning fires at most once.
+  // Tool-compatibility one-time banner: when the active Pal declares
+  // tools but the loaded model's jinja metadata signals no tool support
+  // in any of its slots (see below), surface an inline warning.
+  // Persisted per model id so the warning fires at most once.
   React.useEffect(() => {
     const palDeclaresTools =
       activePal?.pact?.talents !== undefined &&
@@ -145,10 +146,18 @@ export const ChatScreen: React.FC = observer(() => {
     if (!model || !modelId) {
       return;
     }
-    const hasToolUseCaps =
-      !!model.chatTemplates?.jinja?.toolUse ||
-      !!model.chatTemplates?.jinja?.toolUseCaps;
-    if (hasToolUseCaps) {
+    // Tool support surfaces in four independent places in llama.rn's
+    // jinja metadata: defaultCaps.tools/toolCalls (model declares it
+    // inline in the default template — Ministral, Llama 3.x, etc.) or
+    // toolUse/toolUseCaps (separate tool-use template — Qwen3, etc.).
+    // Any one is sufficient; only warn when all four are absent.
+    const jinja = model.chatTemplates?.jinja;
+    const hasToolSupport =
+      !!jinja?.defaultCaps?.tools ||
+      !!jinja?.defaultCaps?.toolCalls ||
+      !!jinja?.toolUse ||
+      !!jinja?.toolUseCaps;
+    if (hasToolSupport) {
       return;
     }
     if (uiStore.hasWarnedToolCompat(modelId)) {
