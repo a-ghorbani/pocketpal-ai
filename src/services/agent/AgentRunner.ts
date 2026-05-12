@@ -153,10 +153,8 @@ async function executeOne(
   }
 
   let parsedArgs: Record<string, unknown> = {};
-  const args = call.function?.arguments;
   try {
-    parsedArgs =
-      typeof args === 'string' ? JSON.parse(args || '{}') : (args ?? {});
+    parsedArgs = JSON.parse(call.function?.arguments || '{}');
   } catch {
     const summary = `Error: invalid JSON arguments for ${fnName}`;
     const result: TalentResult = {
@@ -208,10 +206,7 @@ function buildNextTurnMessages(
       type: 'function',
       function: {
         name: tc.function.name,
-        arguments:
-          typeof tc.function.arguments === 'string'
-            ? tc.function.arguments
-            : JSON.stringify(tc.function.arguments ?? {}),
+        arguments: tc.function.arguments,
       },
     })) as NonNullable<ChatMessage['tool_calls']>,
   };

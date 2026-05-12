@@ -495,18 +495,14 @@ describe('convertToChatMessages — AssistantTurn', () => {
     expect(result).toEqual([]);
   });
 
-  it('serializes AgentToolCall.arguments as a string at the wire boundary even when stored as object', () => {
+  it('passes JSON-encoded AgentToolCall.arguments through to the wire verbatim', () => {
     const turn = makeAssistantTurn([
       {
         content: '',
         toolCalls: [
           {
             id: 'c0',
-            function: {
-              name: 'calculate',
-              // Stored as parsed object — must be JSON.stringified at wire.
-              arguments: {expr: '2+2'} as unknown as Record<string, unknown>,
-            },
+            function: {name: 'calculate', arguments: '{"expr":"2+2"}'},
           },
         ],
       },

@@ -41,22 +41,18 @@ export function derivedText(message: MessageType.Any): string {
 
 /**
  * Serialize an in-memory `AgentToolCall` into the wire shape llama.rn /
- * OpenAI accept: `function.arguments` is a JSON-encoded string. The
- * runner stores arguments as either string or parsed object depending
- * on what llama.rn returned; this normalizes both cases.
+ * OpenAI accept. `function.arguments` is stored as a JSON-encoded
+ * string throughout the runner; this just lifts it onto a ChatMessage.
  */
 function toWireToolCall(
   call: AgentToolCall,
 ): NonNullable<ChatMessage['tool_calls']>[number] {
-  const argsValue = call.function?.arguments;
-  const argsString =
-    typeof argsValue === 'string' ? argsValue : JSON.stringify(argsValue ?? {});
   return {
     id: call.id,
     type: 'function',
     function: {
       name: call.function?.name ?? '',
-      arguments: argsString,
+      arguments: call.function?.arguments ?? '',
     },
   } as NonNullable<ChatMessage['tool_calls']>[number];
 }

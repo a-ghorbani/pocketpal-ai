@@ -35,7 +35,7 @@ export interface AgentToolCallMetrics {
 export interface AgentToolCall {
   id: string;
   type?: 'function';
-  function: {name: string; arguments: string | Record<string, unknown>};
+  function: {name: string; arguments: string};
   metrics?: AgentToolCallMetrics;
 }
 
