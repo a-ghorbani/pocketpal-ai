@@ -30,7 +30,8 @@ describe('TTS setup end-to-end (single-view)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     runInAction(() => {
-      ttsStore.isTTSAvailable = true;
+      ttsStore.deviceMeetsMemory = true;
+      ttsStore.userTTSOverride = null;
       ttsStore.currentVoice = null;
       ttsStore.playbackState = {mode: 'idle'};
       ttsStore.isSetupSheetOpen = false;

@@ -25,6 +25,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {deriveLogSignals} from '../../src/__automation__/logSignals';
+
 /**
  * Tiny glob shim — supports `<dir>/<prefix>*<suffix>` of one segment, which
  * is all the merge script ever needs. Avoids depending on the transitive
@@ -50,7 +52,7 @@ function expandGlob(pattern: string): string[] {
 interface RunRow {
   model_id: string;
   quant: string;
-  requested_backend: 'cpu' | 'gpu';
+  requested_backend: 'cpu' | 'gpu' | 'hexagon';
   effective_backend: string;
   pp_avg: number | null;
   tg_avg: number | null;
@@ -58,10 +60,20 @@ interface RunRow {
   peak_memory_mb: number | null;
   log_signals: Record<string, unknown>;
   init_settings: Record<string, unknown>;
+  /** WHAT v1.1 row identity: the fourth axis of the dedupe key. v1.0
+   * inputs lack this field and must be migrated before merging. */
+  settings_fingerprint?: string;
+  /** WHAT v1.1 row identity: what the cell asked for. */
+  settings_overrides?: Record<string, unknown>;
   status: string;
   error?: string;
   reason?: string;
   timestamp: string;
+}
+
+interface SettingsAxis {
+  name: string;
+  values: Array<string | number | boolean>;
 }
 
 interface BenchParams {
@@ -82,6 +94,10 @@ interface RawReport {
   timestamp?: string;
   preseeded?: boolean;
   bench?: BenchParams;
+  /** Echo of the run's `config.settings_axes` when axes were set
+   * (WHAT 1e, 4f.5). Absent on legacy v1.0 reports and on v1.1 reports
+   * that ran with no sweep. */
+  settings_axes_used?: SettingsAxis[];
   runs: RunRow[];
 }
 
@@ -151,7 +167,14 @@ Usage: npx ts-node scripts/merge-bench-reports.ts \\
 }
 
 function rowKey(r: RunRow): string {
-  return `${r.model_id}::${r.quant}::${r.requested_backend}`;
+  // WHAT 4f.1: dedupe key extends to the settings fingerprint so multiple
+  // sweep configurations coexist in one baseline. The merger refuses to
+  // accept rows without a fingerprint when the report version is 1.1
+  // (I1); for v1.0 inputs the merger refuses up front (I8) before this
+  // function ever runs.
+  return `${r.model_id}::${r.quant}::${r.requested_backend}::${
+    r.settings_fingerprint ?? 'app-default'
+  }`;
 }
 
 function preferLatest(a: RunRow, b: RunRow): RunRow {
@@ -175,13 +198,48 @@ function compareRuns(a: RunRow, b: RunRow): number {
   if (a.requested_backend !== b.requested_backend) {
     return a.requested_backend < b.requested_backend ? -1 : 1;
   }
+  // WHAT 4f.4: tie-break on fingerprint after backend so baseline diffs
+  // stay stable when multiple cells share (model,quant,backend).
+  const fa = a.settings_fingerprint ?? '';
+  const fb = b.settings_fingerprint ?? '';
+  if (fa !== fb) {
+    return fa < fb ? -1 : 1;
+  }
   return 0;
+}
+
+/**
+ * Re-derive structured signals from the row's `raw_matches` before strip.
+ *
+ * Why: when we add a new structured field to logSignals (e.g.
+ * `memory_buffers`), older raw reports can backfill it on merge — re-running
+ * the parser populates the new field without re-running cells on device.
+ * Caveat: `raw_matches` is gated by `BENCH_LOG_RE` at capture time, so the
+ * backfill only works if the new field's source lines were already matched
+ * by the regex in the run that produced the report. Adding a new field
+ * whose source lines were NOT in the old regex requires either widening
+ * `BENCH_LOG_RE` AND re-capturing on device, or accepting empty backfill
+ * for legacy reports.
+ *
+ * No-op when raw_matches is absent or empty (legacy reports already
+ * stripped, or cells that failed before any log line landed). The row's
+ * existing structured fields are overwritten by the parser output — the
+ * source-of-truth is always `raw_matches`, structured fields are a cache.
+ */
+function rederiveLogSignals(r: RunRow): RunRow {
+  const ls = r.log_signals as Record<string, unknown> | undefined;
+  if (!ls || !Array.isArray(ls.raw_matches) || ls.raw_matches.length === 0) {
+    return r;
+  }
+  const fresh = deriveLogSignals(ls.raw_matches as string[]);
+  return {...r, log_signals: fresh as unknown as Record<string, unknown>};
 }
 
 /**
  * `log_signals.raw_matches` is debug context (the first ~200 captured native
  * log lines) — useful for one-off investigation, not for a versioned
- * baseline. Stripping it keeps baseline diffs readable.
+ * baseline. Stripping it keeps baseline diffs readable. Always called
+ * AFTER `rederiveLogSignals`, never before.
  */
 function stripRawMatches(r: RunRow): RunRow {
   const ls = r.log_signals as Record<string, unknown> | undefined;
@@ -224,10 +282,82 @@ function reconcileBench(reports: RawReport[]): BenchParams | null {
   return resolved;
 }
 
+/**
+ * Merge two settings_axes_used lists across input reports (WHAT 4f.5).
+ * Same axis name in two inputs -> union of values; values keep
+ * first-seen order (env-var order from the earlier input, then any new
+ * values appended). Axis declaration order across inputs follows the
+ * first input that declared each axis.
+ */
+function mergeAxesUsed(
+  reports: RawReport[],
+): SettingsAxis[] | undefined {
+  const merged = new Map<string, SettingsAxis>();
+  let anyHadAxes = false;
+  for (const rep of reports) {
+    if (!rep.settings_axes_used || rep.settings_axes_used.length === 0) {
+      continue;
+    }
+    anyHadAxes = true;
+    for (const axis of rep.settings_axes_used) {
+      const prior = merged.get(axis.name);
+      if (!prior) {
+        merged.set(axis.name, {name: axis.name, values: [...axis.values]});
+      } else {
+        for (const v of axis.values) {
+          if (!prior.values.includes(v)) {
+            prior.values.push(v);
+          }
+        }
+      }
+    }
+  }
+  return anyHadAxes ? Array.from(merged.values()) : undefined;
+}
+
 export function mergeReports(
   reports: RawReport[],
   drop: Set<string>,
-): {runs: RunRow[]; latestTimestamp: string | null; bench: BenchParams | null} {
+): {
+  runs: RunRow[];
+  latestTimestamp: string | null;
+  bench: BenchParams | null;
+  settings_axes_used: SettingsAxis[] | undefined;
+  version: string;
+} {
+  // WHAT 4f.2 / 4h I8: refuse to merge inputs that mix v1.0 and v1.1.
+  // The version mismatch check fires BEFORE row dedupe so a malformed
+  // mix is surfaced as a single error, not as silent fingerprint loss.
+  const versions = new Set(reports.map(r => r.version ?? '1.0'));
+  if (versions.size > 1) {
+    throw new Error(
+      `inconsistent baseline versions: ${[...versions].join(
+        ',',
+      )}; run migrate-baseline-v1-to-v1_1 first`,
+    );
+  }
+  const version = (versions.values().next().value as string) ?? '1.0';
+
+  // WHAT 4h I1: every v1.1 row MUST carry non-null settings_fingerprint
+  // and settings_overrides. Surfacing this here (rather than letting
+  // rowKey silently fall back to 'app-default' under undefined) keeps a
+  // malformed v1.1 input from polluting the baseline.
+  if (version === '1.1') {
+    for (const rep of reports) {
+      for (const r of rep.runs ?? []) {
+        if (
+          typeof r.settings_fingerprint !== 'string' ||
+          r.settings_overrides === undefined ||
+          r.settings_overrides === null
+        ) {
+          throw new Error(
+            `row missing settings_fingerprint/settings_overrides — input is malformed (model_id=${r.model_id}, quant=${r.quant})`,
+          );
+        }
+      }
+    }
+  }
+
   const byKey = new Map<string, RunRow>();
   let latestTimestamp: string | null = null;
   for (const rep of reports) {
@@ -246,9 +376,14 @@ export function mergeReports(
     }
   }
   return {
-    runs: Array.from(byKey.values()).map(stripRawMatches).sort(compareRuns),
+    runs: Array.from(byKey.values())
+      .map(rederiveLogSignals)
+      .map(stripRawMatches)
+      .sort(compareRuns),
     latestTimestamp,
     bench: reconcileBench(reports),
+    settings_axes_used: mergeAxesUsed(reports),
+    version,
   };
 }
 
@@ -278,10 +413,13 @@ function main() {
     JSON.parse(fs.readFileSync(f, 'utf8')),
   );
   const drop = new Set(args.dropModels);
-  const {runs, latestTimestamp, bench} = mergeReports(reports, drop);
+  const {runs, latestTimestamp, bench, settings_axes_used, version} =
+    mergeReports(reports, drop);
 
   const baseline: BaselineReport = {
-    version: pickFirst<string>(reports, 'version') ?? '1.0',
+    // mergeReports already enforced single-version (I8); use its return
+    // value rather than pickFirst.
+    version,
     device: args.device ?? pickFirst<string>(reports, 'device') ?? null,
     soc: args.soc ?? pickFirst<string>(reports, 'soc') ?? null,
     commit: args.commit ?? pickFirst<string>(reports, 'commit') ?? null,
@@ -299,6 +437,9 @@ function main() {
     // (benchmark-compare warns and skips the protocol-mismatch gate when
     // either side lacks `bench`).
     ...(bench ? {bench} : {}),
+    // WHAT 4f.5: include settings_axes_used as the union of input axes
+    // when any input had them.
+    ...(settings_axes_used ? {settings_axes_used} : {}),
     runs,
     generated_by: 'merge-bench-reports',
     source_files: files.map(f => path.basename(f)),

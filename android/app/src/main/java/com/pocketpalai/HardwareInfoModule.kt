@@ -21,6 +21,12 @@ import org.json.JSONObject
 class HardwareInfoModule(reactContext: ReactApplicationContext) :
     NativeHardwareInfoSpec(reactContext) {
 
+  // The JNI implementation lives in jni/src/hardware_info.cpp; our
+  // CMakeLists.txt links it into libappmodules.so, which SoLoader has
+  // already mapped by the time this is called. No System.loadLibrary
+  // needed.
+  private external fun nativePurgeAll(): Boolean
+
   override fun getName(): String = NativeHardwareInfoSpec.NAME
 
   override fun getChipset(promise: Promise) {
@@ -212,6 +218,47 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
       promise.resolve(memInfo.availMem.toDouble())
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
+    }
+  }
+
+  // Best-effort: a failing JNI/symbol-resolution path still resolves
+  // with purged=false rather than rejecting, so callers don't have to
+  // handle platform-availability cases themselves.
+  override fun purgeNativeAllocator(promise: Promise) {
+    try {
+      val rssBefore = readVmRssKb()
+      val purged = try {
+        nativePurgeAll()
+      } catch (_: Throwable) {
+        // UnsatisfiedLinkError on a build where libappmodules lacks
+        // the symbol; report purged=false and let the caller continue.
+        false
+      }
+      val rssAfter = readVmRssKb()
+      promise.resolve(Arguments.createMap().apply {
+        putBoolean("purged", purged)
+        // RN bridge has no long; doubles round-trip cleanly to JS number.
+        putDouble("rss_kb_before", rssBefore.toDouble())
+        putDouble("rss_kb_after", rssAfter.toDouble())
+      })
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  private fun readVmRssKb(): Long {
+    return try {
+      File("/proc/self/status").bufferedReader().useLines { lines ->
+        for (line in lines) {
+          if (line.startsWith("VmRSS:")) {
+            // Format: "VmRSS:  <whitespace>  12345 kB"
+            return line.substringAfter("VmRSS:").trim().substringBefore(" ").toLong()
+          }
+        }
+        0L
+      }
+    } catch (e: Throwable) {
+      0L
     }
   }
 

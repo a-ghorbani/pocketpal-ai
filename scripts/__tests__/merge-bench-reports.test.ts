@@ -12,17 +12,22 @@ function makeRow(
   over: Partial<{
     model_id: string;
     quant: string;
-    requested_backend: 'cpu' | 'gpu';
+    requested_backend: 'cpu' | 'gpu' | 'hexagon';
     pp_avg: number | null;
     status: string;
     timestamp: string;
     raw_matches: string[];
+    settings_fingerprint: string;
+    settings_overrides: Record<string, unknown>;
   }>,
 ) {
   return {
     model_id: over.model_id ?? 'qwen3-1.7b',
     quant: over.quant ?? 'q4_0',
-    requested_backend: (over.requested_backend ?? 'cpu') as 'cpu' | 'gpu',
+    requested_backend: (over.requested_backend ?? 'cpu') as
+      | 'cpu'
+      | 'gpu'
+      | 'hexagon',
     effective_backend: 'unknown',
     pp_avg: over.pp_avg ?? 100,
     tg_avg: 10,
@@ -30,6 +35,8 @@ function makeRow(
     peak_memory_mb: 100,
     log_signals: {raw_matches: over.raw_matches ?? []},
     init_settings: {},
+    settings_fingerprint: over.settings_fingerprint ?? 'app-default',
+    settings_overrides: over.settings_overrides ?? {},
     status: over.status ?? 'ok',
     timestamp: over.timestamp ?? '2026-04-29T08:00:00Z',
   };
@@ -173,5 +180,128 @@ describe('mergeReports', () => {
     expect(() => mergeReports(reports, new Set())).toThrow(
       /inconsistent bench/,
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // v1.1 row identity (WHAT 4f.1, 4f.4, 4h I1, 4h I8, 9g)
+  // ---------------------------------------------------------------------------
+
+  it('keys rows by 4-tuple including settings_fingerprint (WHAT 4f.1)', () => {
+    // Same (model,quant,backend) but different fingerprints -> two rows.
+    const reports = [
+      {
+        version: '1.1',
+        runs: [
+          makeRow({settings_fingerprint: 'app-default'}),
+          makeRow({settings_fingerprint: 'cache_type_k=q8_0;...'}),
+        ],
+      },
+    ];
+    const {runs} = mergeReports(reports, new Set());
+    expect(runs).toHaveLength(2);
+  });
+
+  it('tie-breaks compareRuns on fingerprint after backend (WHAT 4f.4)', () => {
+    // Two rows with identical (model,quant,backend) but different
+    // fingerprints land in deterministic order in the merged baseline.
+    const reports = [
+      {
+        version: '1.1',
+        runs: [
+          makeRow({settings_fingerprint: 'z-fingerprint'}),
+          makeRow({settings_fingerprint: 'a-fingerprint'}),
+        ],
+      },
+    ];
+    const {runs} = mergeReports(reports, new Set());
+    expect(runs.map(r => r.settings_fingerprint)).toEqual([
+      'a-fingerprint',
+      'z-fingerprint',
+    ]);
+  });
+
+  it('throws when input reports mix version "1.0" and "1.1" (WHAT 4h I8, 9g)', () => {
+    const reports = [
+      {version: '1.0', runs: [makeRow({})]},
+      {version: '1.1', runs: [makeRow({pp_avg: 200})]},
+    ];
+    expect(() => mergeReports(reports, new Set())).toThrow(
+      /inconsistent baseline versions.*migrate-baseline-v1-to-v1_1/,
+    );
+  });
+
+  it('treats missing version as 1.0 (legacy default) — mixing missing with explicit 1.1 is fatal', () => {
+    const reports = [
+      {runs: [makeRow({})]}, // missing version -> 1.0
+      {version: '1.1', runs: [makeRow({pp_avg: 200})]},
+    ];
+    expect(() => mergeReports(reports, new Set())).toThrow(
+      /inconsistent baseline versions/,
+    );
+  });
+
+  it('rejects a v1.1 row missing settings_fingerprint (WHAT 4h I1)', () => {
+    const malformed: any = makeRow({});
+    delete malformed.settings_fingerprint;
+    const reports = [{version: '1.1', runs: [malformed]}];
+    expect(() => mergeReports(reports, new Set())).toThrow(
+      /row missing settings_fingerprint\/settings_overrides/,
+    );
+  });
+
+  it('rejects a v1.1 row missing settings_overrides (WHAT 4h I1)', () => {
+    const malformed: any = makeRow({});
+    delete malformed.settings_overrides;
+    const reports = [{version: '1.1', runs: [malformed]}];
+    expect(() => mergeReports(reports, new Set())).toThrow(
+      /row missing settings_fingerprint\/settings_overrides/,
+    );
+  });
+
+  it('returns the input version (single value after mixing-check)', () => {
+    const reports = [
+      {version: '1.1', runs: [makeRow({})]},
+      {version: '1.1', runs: [makeRow({pp_avg: 200})]},
+    ];
+    const {version} = mergeReports(reports, new Set());
+    expect(version).toBe('1.1');
+  });
+
+  it('defaults to "1.0" when no input declares a version (legacy)', () => {
+    const reports = [{runs: [makeRow({})]}];
+    const {version} = mergeReports(reports, new Set());
+    expect(version).toBe('1.0');
+  });
+
+  it('returns settings_axes_used=undefined when no input had axes', () => {
+    const reports = [
+      {version: '1.1', runs: [makeRow({})]},
+      {version: '1.1', runs: [makeRow({pp_avg: 200})]},
+    ];
+    const {settings_axes_used} = mergeReports(reports, new Set());
+    expect(settings_axes_used).toBeUndefined();
+  });
+
+  it('unions settings_axes_used across inputs, preserving first-seen order', () => {
+    const reports = [
+      {
+        version: '1.1',
+        settings_axes_used: [{name: 'cache_type_k', values: ['f16', 'q8_0']}],
+        runs: [makeRow({})],
+      },
+      {
+        version: '1.1',
+        settings_axes_used: [
+          {name: 'cache_type_k', values: ['q8_0', 'q4_0']}, // q8_0 already seen
+          {name: 'flash_attn_type', values: ['on']},
+        ],
+        runs: [makeRow({pp_avg: 200})],
+      },
+    ];
+    const {settings_axes_used} = mergeReports(reports, new Set());
+    expect(settings_axes_used).toEqual([
+      {name: 'cache_type_k', values: ['f16', 'q8_0', 'q4_0']},
+      {name: 'flash_attn_type', values: ['on']},
+    ]);
   });
 });

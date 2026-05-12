@@ -83,6 +83,9 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
     writeMemorySnapshot: jest.fn((label: string) =>
       Promise.resolve({label, status: 'written'}),
     ),
+    purgeNativeAllocator: jest.fn(() =>
+      Promise.resolve({purged: true, rss_kb_before: 0, rss_kb_after: 0}),
+    ),
   },
 }));
 

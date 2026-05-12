@@ -318,7 +318,11 @@ describe('compareReports (benchmark-compare)', () => {
 
     const result = compareReports(baseline, current);
 
-    expect(result.missing_in_current).toEqual(['qwen3-1.7b::q5_k_m::gpu']);
+    // 4-tuple key format with the defensive 'app-default' fallback for
+    // legacy v1.0 runs that lack settings_fingerprint (WHAT 4g.1).
+    expect(result.missing_in_current).toEqual([
+      'qwen3-1.7b::q5_k_m::gpu::app-default',
+    ]);
     expect(result.missing_in_baseline).toEqual([]);
     expect(result.rows).toHaveLength(1);
     expect(result.pass).toBe(false);
@@ -345,11 +349,13 @@ describe('compareReports (benchmark-compare)', () => {
 
     const result = compareReports(baseline, current);
 
-    expect(result.missing_in_baseline).toEqual(['qwen3-1.7b::q8_0::gpu']);
+    expect(result.missing_in_baseline).toEqual([
+      'qwen3-1.7b::q8_0::gpu::app-default',
+    ]);
     expect(result.missing_in_current).toEqual([]);
   });
 
-  it('keys rows by model::quant::requested_backend (CPU and GPU are separate rows)', () => {
+  it('keys rows by model::quant::requested_backend::fingerprint (4-tuple per WHAT 4g.1)', () => {
     const runs = [
       makeRun({requested_backend: 'cpu', effective_backend: 'cpu'}),
       makeRun({requested_backend: 'gpu', effective_backend: 'opencl'}),
@@ -358,7 +364,12 @@ describe('compareReports (benchmark-compare)', () => {
 
     expect(result.rows).toHaveLength(2);
     const keys = result.rows.map(r => r.key).sort();
-    expect(keys).toEqual(['qwen3-1.7b::q4_0::cpu', 'qwen3-1.7b::q4_0::gpu']);
+    // Legacy v1.0 inputs lack fingerprint; rowKey falls back to
+    // 'app-default' (defensive default for direct-baseline use).
+    expect(keys).toEqual([
+      'qwen3-1.7b::q4_0::cpu::app-default',
+      'qwen3-1.7b::q4_0::gpu::app-default',
+    ]);
   });
 
   // ---------------------------------------------------------------------------
@@ -502,5 +513,96 @@ describe('compareReports (benchmark-compare)', () => {
 
     expect(result.bench_protocol_mismatch).toBeUndefined();
     expect(result.pass).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // v1.1 — settings_fingerprint axis + Hexagon effective_backend arms
+  // (WHAT 4g.1, 4g.4)
+  // ---------------------------------------------------------------------------
+
+  it('keys rows by 4-tuple including settings_fingerprint when both sides carry v1.1 fields', () => {
+    const runs = [
+      makeRun({
+        settings_fingerprint: 'cache_type_k=f16;...',
+      } as Partial<BenchmarkRunReport>),
+      makeRun({
+        settings_fingerprint: 'cache_type_k=q8_0;...',
+      } as Partial<BenchmarkRunReport>),
+    ];
+    const result = compareReports(makeReport(runs), makeReport(runs));
+    expect(result.rows).toHaveLength(2);
+    const keys = result.rows.map(r => r.key).sort();
+    expect(keys).toEqual([
+      'qwen3-1.7b::q4_0::gpu::cache_type_k=f16;...',
+      'qwen3-1.7b::q4_0::gpu::cache_type_k=q8_0;...',
+    ]);
+  });
+
+  it('reports a baseline app-default row missing in a current sweep run as missing_in_current (WHAT 4g.3)', () => {
+    // Operator-facing signal: current run swept cache_type_k but did
+    // not also include the app-default cell.
+    const baseline = makeReport([
+      makeRun({
+        settings_fingerprint: 'app-default',
+      } as Partial<BenchmarkRunReport>),
+    ]);
+    const current = makeReport([
+      makeRun({
+        settings_fingerprint: 'cache_type_k=q8_0;...',
+      } as Partial<BenchmarkRunReport>),
+    ]);
+
+    const result = compareReports(baseline, current);
+
+    expect(result.missing_in_current).toEqual([
+      'qwen3-1.7b::q4_0::gpu::app-default',
+    ]);
+    expect(result.missing_in_baseline).toEqual([
+      'qwen3-1.7b::q4_0::gpu::cache_type_k=q8_0;...',
+    ]);
+    expect(result.pass).toBe(false);
+  });
+
+  it('flags effective_backend mismatch on hexagon arms (WHAT 4g.4)', () => {
+    // Same numeric performance, but the run silently fell back from
+    // hexagon to cpu+hexagon-partial. Existing string-equality check
+    // covers the new arm without code changes.
+    const baseline = makeReport([
+      makeRun({
+        effective_backend: 'hexagon',
+        requested_backend: 'hexagon',
+      } as Partial<BenchmarkRunReport>),
+    ]);
+    const current = makeReport([
+      makeRun({
+        effective_backend: 'cpu+hexagon-partial',
+        requested_backend: 'hexagon',
+      } as Partial<BenchmarkRunReport>),
+    ]);
+
+    const result = compareReports(baseline, current);
+
+    expect(result.pass).toBe(false);
+    expect(result.rows[0].flags).toContain(
+      'effective_backend:hexagon->cpu+hexagon-partial',
+    );
+  });
+
+  it('passes when hexagon arms match (regression of cpu+hexagon-partial -> cpu+hexagon-partial is not a flag)', () => {
+    const baseline = makeReport([
+      makeRun({
+        effective_backend: 'cpu+hexagon-partial',
+        requested_backend: 'hexagon',
+      } as Partial<BenchmarkRunReport>),
+    ]);
+    const current = makeReport([
+      makeRun({
+        effective_backend: 'cpu+hexagon-partial',
+        requested_backend: 'hexagon',
+      } as Partial<BenchmarkRunReport>),
+    ]);
+    const result = compareReports(baseline, current);
+    expect(result.pass).toBe(true);
+    expect(result.rows[0].flagged).toBe(false);
   });
 });

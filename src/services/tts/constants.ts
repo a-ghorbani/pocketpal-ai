@@ -62,14 +62,16 @@ export const SUPERTONIC_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 265 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
-// Kokoro (FP16 variant)
+// Kokoro (FP32 variant)
 // ---------------------------------------------------------------------------
 
 /**
  * HuggingFace base URL for Kokoro 82M v1.0 ONNX community port.
- * FP16 variant — faster inference than Q8 and works reliably on Android
- * (Q8 produces garbage on some Android ONNX Runtime builds). ~163 MB on
- * disk, ~510 MB peak RAM.
+ * Full-precision (FP32) variant. The FP16 weights produce silent audio on
+ * some devices (numeric overflow during inference); FP32 trades disk + RAM
+ * for correctness everywhere: ~330 MB on disk, ~1 GB peak RAM. Q8 also
+ * produces garbage on some Android ONNX Runtime builds, so neither
+ * quantized variant is viable today.
  */
 export const KOKORO_MODEL_BASE_URL =
   'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main';
@@ -79,10 +81,12 @@ export const KOKORO_VOICES_BASE_URL = `${KOKORO_MODEL_BASE_URL}/voices`;
 
 /**
  * Core Kokoro files — downloaded all-or-nothing (Phase 1). Without these
- * the engine cannot initialize.
+ * the engine cannot initialize. Local name is `model_fp32.onnx` so users
+ * who previously downloaded the FP16 weights (saved as `model.onnx`) get
+ * a clean re-download instead of inheriting the silent-audio bug.
  */
 export const KOKORO_MODEL_FILES = [
-  {name: 'model.onnx', urlPath: 'onnx/model_fp16.onnx'},
+  {name: 'model_fp32.onnx', urlPath: 'onnx/model.onnx'},
   {name: 'tokenizer.json', urlPath: 'tokenizer.json'},
 ] as const;
 
@@ -101,8 +105,8 @@ export const TTS_DICT_FILENAME = 'en-us.bin';
 /** Name of the Kokoro voices manifest generated locally after download. */
 export const KOKORO_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 
-/** Estimated total size of the Kokoro FP16 model bundle (~170 MB including voices). */
-export const KOKORO_MODEL_ESTIMATED_BYTES = 170 * 1024 * 1024;
+/** Estimated total size of the Kokoro FP32 model bundle (~330 MB including voices). */
+export const KOKORO_MODEL_ESTIMATED_BYTES = 330 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Kitten (nano-fp32 variant)

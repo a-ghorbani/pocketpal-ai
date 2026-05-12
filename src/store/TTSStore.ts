@@ -62,9 +62,13 @@ const previewMessageId = (voice: Voice): string =>
 /**
  * Store that coordinates text-to-speech playback.
  *
- * Memory gate: if `DeviceInfo.getTotalMemory()` reports < 4 GiB once at init,
- * the store is inert (no listeners, no reactions) for the rest of the session.
- * The gate is deliberately never re-checked — RAM doesn't change at runtime.
+ * Availability gate: `isTTSAvailable` is the single boolean every TTS-aware
+ * surface reads. It is derived from `deviceMeetsMemory` (set once in `init()`
+ * from `DeviceInfo.getTotalMemory()`) and `userTTSOverride` (a persisted user
+ * choice). See architecture/tts.md §4a for the formula. The lifecycle hooks
+ * registered in `init()` (AppState listener, session reaction, isInstalled
+ * checks) run unconditionally so a low-memory user opting in mid-session has
+ * a safe runtime — see architecture/tts.md §4e.
  *
  * Streaming: `useChatSession` calls three hooks as an assistant message is
  * produced — `onAssistantMessageStart`, `onAssistantMessageChunk`, and
@@ -74,9 +78,29 @@ const previewMessageId = (voice: Voice): string =>
  * to the full-text `play()` path.
  */
 export class TTSStore {
-  // Memory gate — set once in `init()`, never mutated afterwards.
-  isTTSAvailable: boolean = false;
+  // Set once in init() from getTotalMemory() >= TTS_MIN_RAM_BYTES; never
+  // re-checked. RAM doesn't change at runtime. See architecture/tts.md §1a.
+  deviceMeetsMemory: boolean = false;
+  // Tristate persisted user choice. null = not set (mirrors deviceMeetsMemory).
+  // See architecture/tts.md §4a, D1.
+  userTTSOverride: boolean | null = null;
   private initialized: boolean = false;
+
+  /**
+   * The TTS availability gate. Single boolean every TTS-aware surface reads.
+   * Derived from `userTTSOverride` and `deviceMeetsMemory` per the formula
+   * in architecture/tts.md §4a.1: an explicit user override wins; otherwise
+   * the device-memory default applies.
+   */
+  get isTTSAvailable(): boolean {
+    if (this.userTTSOverride === true) {
+      return true;
+    }
+    if (this.userTTSOverride === false) {
+      return false;
+    }
+    return this.deviceMeetsMemory;
+  }
 
   // Runtime playback state (discriminated union)
   playbackState: TTSPlaybackState = {mode: 'idle'};
@@ -113,6 +137,15 @@ export class TTSStore {
 
   private appStateSubscription: {remove: () => void} | null = null;
   private sessionReactionDispose: (() => void) | null = null;
+  /**
+   * Voice id pending restore after a forced engine re-download (e.g. Kokoro
+   * FP16 → FP32 migration). When `init()` finds a persisted voice whose
+   * engine reports not-installed, the voice id is stashed here so the next
+   * successful download of that engine can restore the user's selection
+   * instead of falling back to `voices[0]`. Reset to null after restore.
+   * Map keyed by engine id; only neural engines participate.
+   */
+  private pendingVoiceRestore: Partial<Record<NeuralEngineId, string>> = {};
 
   // Per-streaming-session state for stripping `<think>…</think>` markup.
   private streamStripper: ThinkingStripper | null = null;
@@ -122,7 +155,12 @@ export class TTSStore {
     makeAutoObservable(this, {}, {autoBind: true});
     makePersistable(this, {
       name: 'TTSStore',
-      properties: ['autoSpeakEnabled', 'currentVoice', 'supertonicSteps'],
+      properties: [
+        'autoSpeakEnabled',
+        'currentVoice',
+        'supertonicSteps',
+        'userTTSOverride',
+      ],
       storage: AsyncStorage,
     });
   }
@@ -145,14 +183,16 @@ export class TTSStore {
       totalMemory = 0;
     }
 
-    const available = totalMemory >= TTS_MIN_RAM_BYTES;
     runInAction(() => {
-      this.isTTSAvailable = available;
+      this.deviceMeetsMemory = totalMemory >= TTS_MIN_RAM_BYTES;
     });
 
-    if (!available) {
-      return;
-    }
+    // Lifecycle hooks below run UNCONDITIONALLY — see architecture/tts.md §4e
+    // and I8. A user on a low-memory device may flip `userTTSOverride = true`
+    // mid-session, at which point the AppState listener and session reaction
+    // must already be in place. The four call-site guards in `play`,
+    // `preview`, `onAssistantMessageStart`, `onAssistantMessageComplete`
+    // (plus component-level guards) remain the gate on user-visible work.
 
     // Derive each neural engine's install state from disk in parallel.
     const neuralIds: NeuralEngineId[] = ['supertonic', 'kokoro', 'kitten'];
@@ -171,14 +211,19 @@ export class TTSStore {
         this.setDownloadState(id, installed ? 'ready' : 'not_installed');
       }
       // Reconcile persisted currentVoice: if the engine's model files
-      // were deleted (app restore, manual cleanup), clear the voice so
+      // were deleted (app restore, manual cleanup) or the engine layout
+      // changed (e.g. Kokoro FP16 → FP32 migration), clear the voice so
       // play/stream paths don't crash trying to init a missing engine.
+      // Stash the voice id first so it can be restored after re-download
+      // — otherwise users lose their selection across the forced upgrade.
       if (
         this.currentVoice != null &&
         this.currentVoice.engine !== 'system' &&
         this.getDownloadState(this.currentVoice.engine as NeuralEngineId) !==
           'ready'
       ) {
+        const engineId = this.currentVoice.engine as NeuralEngineId;
+        this.pendingVoiceRestore[engineId] = this.currentVoice.id;
         this.currentVoice = null;
       }
     });
@@ -222,6 +267,25 @@ export class TTSStore {
         .then(() => ttsRuntime.release())
         .catch(err => {
           console.warn('[TTSStore] release on auto-speak off failed:', err);
+        });
+    }
+  }
+
+  /**
+   * Persist the user's explicit choice for the TTS availability gate.
+   * `true` forces the gate open even on low-memory devices; `false` forces
+   * it closed even on high-memory devices. Mirrors `setAutoSpeak(false)`'s
+   * stop+release pattern when the gate transitions from open to closed,
+   * to free engine RAM immediately. See architecture/tts.md §4a.5, I3, I6.
+   */
+  setUserTTSOverride(value: boolean): void {
+    const wasAvailable = this.isTTSAvailable;
+    this.userTTSOverride = value;
+    if (wasAvailable && !value) {
+      this.stop()
+        .then(() => ttsRuntime.release())
+        .catch(err => {
+          console.warn('[TTSStore] release on TTS opt-out failed:', err);
         });
     }
   }
@@ -583,6 +647,26 @@ export class TTSStore {
       this.setDownloadError(id, null);
     });
 
+    const engine = getEngine(id) as
+      | SupertonicEngine
+      | KokoroEngine
+      | KittenEngine;
+
+    // Reclaim engine-specific legacy files BEFORE the disk-space preflight,
+    // so a borderline device upgrading from an older engine layout (e.g.
+    // Kokoro FP16 → FP32) is not blocked by space the migration is about to
+    // free. Idempotent; safe when there is nothing to reclaim.
+    if (
+      'reclaimLegacySpace' in engine &&
+      typeof engine.reclaimLegacySpace === 'function'
+    ) {
+      try {
+        await engine.reclaimLegacySpace();
+      } catch (err) {
+        console.warn(`[TTSStore] ${id} legacy reclaim failed:`, err);
+      }
+    }
+
     // Safety-net disk-space check. The UI already disables the Install
     // button when `freeDiskBytes` is too low, so this is a last resort
     // guard for race conditions (space changed between sheet open and tap).
@@ -600,26 +684,28 @@ export class TTSStore {
     } catch (err) {
       console.warn('[TTSStore] disk-space preflight failed:', err);
     }
-
-    const engine = getEngine(id) as
-      | SupertonicEngine
-      | KokoroEngine
-      | KittenEngine;
     try {
       await engine.downloadModel(progress => {
         runInAction(() => {
           this.setDownloadProgress(id, progress);
         });
       });
-      // Auto-select the first voice when no voice is set yet — so play
-      // and auto-speak work immediately after the first engine install.
+      // Auto-select a voice when none is set — so play and auto-speak work
+      // immediately after install. If a previous selection for this engine
+      // was stashed during init() (e.g. forced re-download after a model
+      // layout migration), restore it when still valid; otherwise fall
+      // back to the first voice.
       const voices = await engine.getVoices();
       runInAction(() => {
         this.setDownloadState(id, 'ready');
         this.setDownloadProgress(id, 1);
         if (this.currentVoice == null && voices.length > 0) {
-          this.currentVoice = voices[0]!;
+          const pendingId = this.pendingVoiceRestore[id];
+          const restored =
+            pendingId != null ? voices.find(v => v.id === pendingId) : null;
+          this.currentVoice = restored ?? voices[0]!;
         }
+        delete this.pendingVoiceRestore[id];
       });
     } catch (err) {
       console.warn(`[TTSStore] ${id} download failed:`, err);

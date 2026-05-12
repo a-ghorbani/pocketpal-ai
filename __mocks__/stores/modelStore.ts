@@ -61,6 +61,13 @@ class MockModelStore {
   setNThreads: jest.Mock;
   setNBatch: jest.Mock;
   setNUBatch: jest.Mock;
+  setCacheTypeK: jest.Mock;
+  setCacheTypeV: jest.Mock;
+  setUseMmap: jest.Mock;
+  setNoExtraBufts: jest.Mock;
+  enterBenchmarkMode: jest.Mock;
+  exitBenchmarkMode: jest.Mock;
+  benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
 
@@ -100,6 +107,12 @@ class MockModelStore {
       setNThreads: false,
       setNBatch: false,
       setNUBatch: false,
+      setCacheTypeK: false,
+      setCacheTypeV: false,
+      setUseMmap: false,
+      setNoExtraBufts: false,
+      enterBenchmarkMode: false,
+      exitBenchmarkMode: false,
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
@@ -146,6 +159,12 @@ class MockModelStore {
     this.setNThreads = jest.fn();
     this.setNBatch = jest.fn();
     this.setNUBatch = jest.fn();
+    this.setCacheTypeK = jest.fn();
+    this.setCacheTypeV = jest.fn();
+    this.setUseMmap = jest.fn();
+    this.setNoExtraBufts = jest.fn();
+    this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
+    this.exitBenchmarkMode = jest.fn();
   }
 
   setActiveModel = (modelId: string) => {
@@ -208,6 +227,15 @@ class MockModelStore {
   async getModelFullPath(model: Model): Promise<string> {
     // Mock implementation - return a simple path for tests
     return `/mock/path/${model.filename || model.name}`;
+  }
+
+  async getEffectiveContextInitParams(
+    _filePath: string,
+  ): Promise<Record<string, unknown>> {
+    // Mock returns the current contextInitParams as the resolved view.
+    // Tests can spy on this if they need to assert what got passed to
+    // initLlama.
+    return JSON.parse(JSON.stringify(this.contextInitParams));
   }
 
   getCompatibleProjectionModels = jest.fn().mockReturnValue([]);

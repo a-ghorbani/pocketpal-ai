@@ -35,6 +35,8 @@ const mockKokoroDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKokoroDeleteModel = jest.fn().mockResolvedValue(undefined);
 const mockKokoroPlay = jest.fn().mockResolvedValue(undefined);
 const mockKokoroStop = jest.fn().mockResolvedValue(undefined);
+const mockKokoroGetVoices = jest.fn().mockResolvedValue([]);
+const mockKokoroReclaimLegacySpace = jest.fn().mockResolvedValue(undefined);
 const mockKittenIsInstalled = jest.fn().mockResolvedValue(false);
 const mockKittenDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKittenDeleteModel = jest.fn().mockResolvedValue(undefined);
@@ -94,7 +96,7 @@ jest.mock('../../services/tts', () => {
         return {
           id: 'kokoro',
           isInstalled: mockKokoroIsInstalled,
-          getVoices: jest.fn().mockResolvedValue([]),
+          getVoices: mockKokoroGetVoices,
           play: mockKokoroPlay,
           playStreaming: jest.fn(() => ({
             appendText: jest.fn(),
@@ -104,6 +106,7 @@ jest.mock('../../services/tts', () => {
           stop: mockKokoroStop,
           downloadModel: mockKokoroDownloadModel,
           deleteModel: mockKokoroDeleteModel,
+          reclaimLegacySpace: mockKokoroReclaimLegacySpace,
         };
       }
       if (id === 'kitten') {
@@ -139,6 +142,7 @@ jest.mock('../../services/tts', () => {
 // Import after mocks
 import {TTSStore} from '../TTSStore';
 import type {Voice} from '../../services/tts';
+import {ttsRuntime} from '../../services/tts';
 import {chatSessionStore} from '../ChatSessionStore';
 
 const SYSTEM_VOICE: Voice = {
@@ -168,22 +172,30 @@ describe('TTSStore', () => {
   });
 
   describe('memory gate', () => {
-    it('sets isTTSAvailable=false when total memory < 4 GiB and registers no listeners', async () => {
+    it('sets deviceMeetsMemory=false when total memory < 4 GiB; isTTSAvailable=false; lifecycle hooks STILL register (I8)', async () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
 
       const store = new TTSStore();
       await store.init();
 
+      expect(store.deviceMeetsMemory).toBe(false);
       expect(store.isTTSAvailable).toBe(false);
-      expect(mockAddEventListener).not.toHaveBeenCalled();
+      // Lifecycle hooks run unconditionally so a low-memory user opting in
+      // mid-session has the AppState listener already in place — see
+      // architecture/tts.md §4e and I8.
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function),
+      );
     });
 
-    it('sets isTTSAvailable=true when total memory >= 4 GiB and registers listeners', async () => {
+    it('sets deviceMeetsMemory=true when total memory >= 4 GiB; isTTSAvailable=true; registers listeners', async () => {
       (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(6 * GIB);
 
       const store = new TTSStore();
       await store.init();
 
+      expect(store.deviceMeetsMemory).toBe(true);
       expect(store.isTTSAvailable).toBe(true);
       expect(mockAddEventListener).toHaveBeenCalledWith(
         'change',
@@ -200,6 +212,183 @@ describe('TTSStore', () => {
 
       expect(DeviceInfo.getTotalMemory).toHaveBeenCalledTimes(1);
       expect(mockAddEventListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('init() runs neural-engine isInstalled checks even on low-memory devices (I8)', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      mockSupertonicIsInstalled.mockResolvedValueOnce(false);
+      mockKokoroIsInstalled.mockResolvedValueOnce(false);
+      mockKittenIsInstalled.mockResolvedValueOnce(false);
+
+      const store = new TTSStore();
+      await store.init();
+
+      expect(mockSupertonicIsInstalled).toHaveBeenCalledTimes(1);
+      expect(mockKokoroIsInstalled).toHaveBeenCalledTimes(1);
+      expect(mockKittenIsInstalled).toHaveBeenCalledTimes(1);
+      // Session-change reaction is also registered — verified by the chat
+      // session change test below executing without an unhandled error.
+      expect(store.deviceMeetsMemory).toBe(false);
+    });
+  });
+
+  describe('availability gate (override formula)', () => {
+    it('§6.A — high-memory, no override: deviceMeetsMemory=true, userTTSOverride=null, isTTSAvailable=true', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(6 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.deviceMeetsMemory).toBe(true);
+      expect(store.userTTSOverride).toBeNull();
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('§6.B — low-memory, no override: deviceMeetsMemory=false, userTTSOverride=null, isTTSAvailable=false', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.deviceMeetsMemory).toBe(false);
+      expect(store.userTTSOverride).toBeNull();
+      expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§6.C — low-memory + setUserTTSOverride(true) flips isTTSAvailable to true', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(3 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      store.setUserTTSOverride(true);
+
+      expect(store.userTTSOverride).toBe(true);
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('§6.D — high-memory + setUserTTSOverride(false) forces isTTSAvailable to false (proves naive || formula is wrong)', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      await store.init();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      // Start an in-flight playback so we can observe the stop+release path.
+      await store.play('msg-1', 'hello');
+      mockSystemStop.mockClear();
+      // Spy on the singleton ttsRuntime.release — the action is fire-and-forget
+      // (`.then(() => ttsRuntime.release())`), so we need to await the promise
+      // chain after firing the OFF transition.
+      const releaseSpy = jest
+        .spyOn(ttsRuntime, 'release')
+        .mockResolvedValue(undefined);
+
+      store.setUserTTSOverride(false);
+      // Yield twice: once for stop()'s resolution, once for the chained
+      // ttsRuntime.release() callback. flush() yields a single tick.
+      await flush();
+      await flush();
+
+      expect(store.userTTSOverride).toBe(false);
+      expect(store.isTTSAvailable).toBe(false);
+      // I6: stop+release runs fire-and-forget when the gate transitions
+      // from open to closed, mirroring setAutoSpeak(false).
+      expect(mockSystemStop).toHaveBeenCalled();
+      // Strengthened per implementer note 1: also assert ttsRuntime.release()
+      // is invoked, mirroring the setAutoSpeak(false) precedent.
+      expect(releaseSpy).toHaveBeenCalled();
+
+      releaseSpy.mockRestore();
+    });
+
+    it('§6.E — toggle from opt-in to off (low-memory): override is `false`, NOT null (D4)', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      store.setUserTTSOverride(true);
+      expect(store.isTTSAvailable).toBe(true);
+
+      store.setUserTTSOverride(false);
+
+      expect(store.userTTSOverride).toBe(false);
+      expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§9a — pre-hydration read: fresh store, no init(), isTTSAvailable=false', () => {
+      const store = new TTSStore();
+      // No init() — deviceMeetsMemory=false, userTTSOverride=null → false.
+      expect(store.deviceMeetsMemory).toBe(false);
+      expect(store.userTTSOverride).toBeNull();
+      expect(store.isTTSAvailable).toBe(false);
+    });
+
+    it('§9c — post-migration boot: pre-existing user with no persisted override hydrates as null and falls through to deviceMeetsMemory', async () => {
+      // Pre-existing user installed before this change has no
+      // `userTTSOverride` key in AsyncStorage. mobx-persist-store is mocked
+      // (top of file), so a fresh store starts with the field's initial
+      // value (`null`). After init() runs, the gate equals deviceMeetsMemory
+      // exactly — same behaviour as today, no migration needed.
+      // High-memory path:
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const high = new TTSStore();
+      expect(high.userTTSOverride).toBeNull();
+      await high.init();
+      expect(high.userTTSOverride).toBeNull();
+      expect(high.deviceMeetsMemory).toBe(true);
+      expect(high.isTTSAvailable).toBe(true);
+
+      // Low-memory path:
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(2 * GIB);
+      const low = new TTSStore();
+      expect(low.userTTSOverride).toBeNull();
+      await low.init();
+      expect(low.userTTSOverride).toBeNull();
+      expect(low.deviceMeetsMemory).toBe(false);
+      expect(low.isTTSAvailable).toBe(false);
+    });
+
+    it('§9d — getTotalMemory failure: deviceMeetsMemory=false; override path still works', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValueOnce(
+        new Error('boom'),
+      );
+      const store = new TTSStore();
+      await store.init();
+
+      expect(store.deviceMeetsMemory).toBe(false);
+      expect(store.isTTSAvailable).toBe(false);
+
+      store.setUserTTSOverride(true);
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('§9e — rapid toggles: last write wins, no debouncing', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      await store.init();
+
+      store.setUserTTSOverride(true);
+      store.setUserTTSOverride(false);
+      store.setUserTTSOverride(true);
+
+      expect(store.userTTSOverride).toBe(true);
+      expect(store.isTTSAvailable).toBe(true);
+    });
+
+    it('persistence config includes userTTSOverride (I7, D7)', () => {
+      // makePersistable is mocked at module level (top of file). Construct a
+      // fresh store and inspect the call args to confirm `userTTSOverride`
+      // sits alongside the other persisted properties.
+      const {makePersistable} = require('mobx-persist-store');
+      (makePersistable as jest.Mock).mockClear();
+      // eslint-disable-next-line no-new
+      new TTSStore();
+      expect(makePersistable).toHaveBeenCalledTimes(1);
+      const config = (makePersistable as jest.Mock).mock.calls[0][1];
+      expect(config.properties).toEqual(
+        expect.arrayContaining([
+          'autoSpeakEnabled',
+          'currentVoice',
+          'supertonicSteps',
+          'userTTSOverride',
+        ]),
+      );
     });
   });
 
@@ -840,6 +1029,79 @@ describe('TTSStore', () => {
 
       resolve();
       await first;
+    });
+
+    it('downloadKokoro: restores persisted voice after forced re-download (FP16 → FP32 migration)', async () => {
+      // Simulates a legacy FP16 user upgrading to FP32: persisted
+      // currentVoice points to a Kokoro voice but isInstalled() returns
+      // false (FP32 file missing), so init() clears the voice. The
+      // user's previously chosen voice id must be restored after the
+      // forced re-download instead of defaulting to voices[0].
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      const previousVoice: Voice = {
+        id: 'bm_lewis',
+        name: 'Lewis',
+        engine: 'kokoro',
+        language: 'en',
+      };
+      store.setCurrentVoice(previousVoice);
+
+      await store.init();
+      expect(store.currentVoice).toBeNull();
+
+      mockKokoroGetVoices.mockResolvedValueOnce([
+        {id: 'af_bella', name: 'Bella', engine: 'kokoro', language: 'en'},
+        previousVoice,
+      ]);
+
+      await store.downloadKokoro();
+
+      expect(store.currentVoice).toEqual(previousVoice);
+    });
+
+    it('downloadKokoro: reclaims legacy FP16 file BEFORE the disk-space gate', async () => {
+      // Regression: the FP32 footprint estimate is ~330 MB → buffered
+      // requirement ~396 MB. A legacy FP16 install holds ~163 MB at
+      // `model.onnx`. If the disk gate ran before reclaim, a device with
+      // free space between (396 - 163) and 396 MB could be wrongly
+      // blocked from upgrading. Guard via invocation-call-order: reclaim
+      // must run before getFreeDiskStorage.
+      const store = await makeStore();
+      (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValueOnce(
+        500 * 1024 * 1024, // > 396 MB so download proceeds end-to-end
+      );
+
+      await store.downloadKokoro();
+
+      expect(mockKokoroReclaimLegacySpace).toHaveBeenCalledTimes(1);
+      const reclaimOrder =
+        mockKokoroReclaimLegacySpace.mock.invocationCallOrder[0];
+      const diskCheckOrder = (DeviceInfo.getFreeDiskStorage as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(reclaimOrder).toBeLessThan(diskCheckOrder);
+    });
+
+    it('downloadKokoro: falls back to first voice when stashed id is no longer available', async () => {
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice({
+        id: 'bm_removed',
+        name: 'Removed',
+        engine: 'kokoro',
+        language: 'en',
+      });
+
+      await store.init();
+      expect(store.currentVoice).toBeNull();
+
+      mockKokoroGetVoices.mockResolvedValueOnce([
+        {id: 'af_bella', name: 'Bella', engine: 'kokoro', language: 'en'},
+      ]);
+
+      await store.downloadKokoro();
+
+      expect(store.currentVoice?.id).toBe('af_bella');
     });
 
     it('deleteKokoro: clears Kokoro currentVoice but preserves a System voice', async () => {

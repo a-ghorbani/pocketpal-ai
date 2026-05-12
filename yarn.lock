@@ -2153,10 +2153,10 @@
   resolved "https://registry.yarnpkg.com/@pkgr/core/-/core-0.2.9.tgz#d229a7b7f9dac167a156992ef23c7f023653f53b"
   integrity sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==
 
-"@pocketpalai/react-native-speech@2.2.2":
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.2.2.tgz#b61ee6cff8f90773f4bb5c0630ac5dd4d5b01187"
-  integrity sha512-XiV4jBZFxa3EwRE2m7sz88KGXSu9toM+yCwZokgxW0JP6Mg7Y+Vfu5Oc3JZ0PoBB070zX6zVnMOaqH/dLl+dxw==
+"@pocketpalai/react-native-speech@2.3.1":
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/@pocketpalai/react-native-speech/-/react-native-speech-2.3.1.tgz#7fd0fa9167da4985dd6a4227ac41f22226074b12"
+  integrity sha512-U1az9eIwNFi/3RC+3JaIGpR8/qhCs4ou8E6z0owVVbvXSVpiNlMFZITzh3mX1Tk9bShNuWdl+rWqpKkfFKpgoA==
   dependencies:
     phonemize "^1.1.0"
 
@@ -6520,10 +6520,10 @@ lines-and-columns@^1.1.6:
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
 
-llama.rn@0.12.0-rc.9:
-  version "0.12.0-rc.9"
-  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.0-rc.9.tgz#1f90a1a0bebc0c07ed39032cfa93ff4c6a69e571"
-  integrity sha512-6qmo0sOGs7mk7stAGPtQ13R002yV2sYWR5z0YmUNlBUWVeOVeSXfsG2CTAfbyEr6fjXhFNgZVPYEt0Hd7Yd27A==
+llama.rn@0.12.0:
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/llama.rn/-/llama.rn-0.12.0.tgz#115e0de1769e93c023ade4a6387e6ceea3bd7882"
+  integrity sha512-RDcY1wVxARBblNmYUncAfSrKnyPtCVwZFtERhyL9oZBcZshMK+p2/yjNYHvnU6UEokTlHUFFqGp+3CUcUJpVtQ==
 
 locate-path@^5.0.0:
   version "5.0.0"

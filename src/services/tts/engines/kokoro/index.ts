@@ -21,19 +21,20 @@ import {KOKORO_VOICES} from './voices';
 export type KokoroProgressCallback = (progress: number) => void;
 
 /**
- * Kokoro neural TTS engine (82M Q8 ONNX port).
+ * Kokoro neural TTS engine (82M FP32 ONNX port).
  *
  * Installation is two-phase:
- *   1. Core files (`model.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
+ *   1. Core files (`model_fp32.onnx`, `tokenizer.json`, IPA dict) — all-or-nothing;
  *      any failure cleans up the whole `tts/kokoro/` dir.
  *   2. Per-voice `.bin` embedding files — best-effort; partial success is
  *      accepted (engine usable with whichever voices did land). The voices
  *      manifest is (re)written at the end to point at the full voice
  *      catalog.
  *
- * CPU-only execution is forced (`executionProviders: 'cpu'`) across all
+ * CPU-only execution is forced (`executionProviders: ['cpu']`) across all
  * three neural engines for consistent battery/thermal behavior and easier
- * QA.
+ * QA. The library default on iOS would otherwise include CoreML; we keep
+ * it bare CPU for now.
  */
 export class KokoroEngine implements Engine {
   readonly id = 'kokoro' as const;
@@ -79,6 +80,19 @@ export class KokoroEngine implements Engine {
     return KOKORO_VOICES;
   }
 
+  // Reclaim FP16 weights from previous installs (saved as `model.onnx`)
+  // before the disk-space gate runs. isInstalled() reports false for legacy
+  // users because the new local name is `model_fp32.onnx`, so the bundled
+  // FP32 file does not double-count — but the orphan ~163 MB sits on disk
+  // and can push a borderline device below the install threshold. Run this
+  // BEFORE the store's disk preflight so reclaimable space counts.
+  async reclaimLegacySpace(): Promise<void> {
+    const legacyModelPath = this.getFilePath('model.onnx');
+    if (await RNFS.exists(legacyModelPath)) {
+      await RNFS.unlink(legacyModelPath).catch(() => {});
+    }
+  }
+
   async downloadModel(onProgress?: KokoroProgressCallback): Promise<void> {
     const parentDir = this.getParentDir();
     const modelDir = this.getModelPath();
@@ -87,6 +101,10 @@ export class KokoroEngine implements Engine {
     await RNFS.mkdir(parentDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(modelDir, {NSURLIsExcludedFromBackupKey: true});
     await RNFS.mkdir(voicesDir, {NSURLIsExcludedFromBackupKey: true});
+
+    // Defensive: ensure legacy FP16 file is gone even if the store skipped
+    // `reclaimLegacySpace()`. Idempotent.
+    await this.reclaimLegacySpace();
 
     // Phase 1: core files (model + tokenizer + dict) — all-or-nothing.
     const corePhaseWeight = 0.6;
@@ -212,11 +230,11 @@ export class KokoroEngine implements Engine {
     const modelDir = this.getModelPath();
     await Speech.initialize({
       engine: TTSEngine.KOKORO,
-      modelPath: `file://${modelDir}/model.onnx`,
+      modelPath: `file://${modelDir}/model_fp32.onnx`,
       tokenizerPath: `file://${modelDir}/tokenizer.json`,
       voicesPath: `file://${modelDir}/${KOKORO_VOICES_MANIFEST_FILENAME}`,
       dictPath: `file://${modelDir}/${TTS_DICT_FILENAME}`,
-      executionProviders: 'cpu',
+      executionProviders: ['cpu'],
       maxChunkSize: 200,
       silentMode: 'obey',
       ducking: true,

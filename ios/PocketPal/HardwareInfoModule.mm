@@ -129,6 +129,20 @@ RCT_EXPORT_METHOD(writeMemorySnapshot:(NSString *)label
   }
 }
 
+// iOS has no userspace allocator-purge equivalent (the system manages
+// page reclamation). Resolved as a no-op so callers don't need a
+// platform check; matches the Android contract on devices where the
+// bionic symbol is unavailable.
+RCT_EXPORT_METHOD(purgeNativeAllocator:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  resolve(@{
+    @"purged": @NO,
+    @"rss_kb_before": @0,
+    @"rss_kb_after": @0,
+  });
+}
+
 // Don't synthesize default module since we want to use the custom name
 + (BOOL)requiresMainQueueSetup
 {

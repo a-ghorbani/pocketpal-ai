@@ -251,7 +251,7 @@ export class SupertonicEngine implements Engine {
       silentMode: 'obey',
       ducking: true,
       maxChunkSize: 200,
-      executionProviders: 'cpu',
+      executionProviders: ['cpu'],
     });
   }
 

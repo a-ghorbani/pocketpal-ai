@@ -718,6 +718,77 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('benchmark mode', () => {
+    // The pre-existing 'context management → should reinitialize context'
+    // test (~line 711) reassigns `modelStore.initContext` to a `jest.fn()`
+    // and never restores it. That mocked replacement bypasses our
+    // `if (this.benchmarkActive) throw ...` gate, so we capture the
+    // original method once and restore it before each gate test.
+    const originalInitContext = modelStore.initContext;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      modelStore.models = [];
+      modelStore.context = undefined;
+      modelStore.activeModelId = undefined;
+      modelStore.benchmarkActive = false;
+      modelStore.initContext = originalInitContext;
+    });
+
+    it('benchmarkActive defaults to false', () => {
+      expect(modelStore.benchmarkActive).toBe(false);
+    });
+
+    it('enterBenchmarkMode sets benchmarkActive=true synchronously (before awaiting the mutex)', async () => {
+      const promise = modelStore.enterBenchmarkMode();
+      // Synchronous side-effect: any auto-load `useEffect` that fires now
+      // will see the gate and skip. The promise still represents the
+      // release of any in-flight context.
+      expect(modelStore.benchmarkActive).toBe(true);
+      await promise;
+      expect(modelStore.benchmarkActive).toBe(true);
+    });
+
+    it('enterBenchmarkMode releases any existing context (cold-launch auto-load gets unwound)', async () => {
+      const release = jest.fn().mockResolvedValue(undefined);
+      modelStore.context = {release} as any;
+      modelStore.activeModelId = 'auto-loaded-model';
+      await modelStore.enterBenchmarkMode();
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(modelStore.context).toBeUndefined();
+      expect(modelStore.activeModelId).toBeUndefined();
+    });
+
+    it('exitBenchmarkMode flips benchmarkActive back to false', () => {
+      modelStore.benchmarkActive = true;
+      modelStore.exitBenchmarkMode();
+      expect(modelStore.benchmarkActive).toBe(false);
+    });
+
+    it('initContext throws when benchmark mode is active', async () => {
+      modelStore.benchmarkActive = true;
+      const model = {...defaultModels[0], isDownloaded: true};
+      await expect(modelStore.initContext(model)).rejects.toThrow(
+        /benchmark mode is active/i,
+      );
+    });
+
+    it('initContext succeeds again after exitBenchmarkMode', async () => {
+      modelStore.benchmarkActive = true;
+      const model = {...defaultModels[0], isDownloaded: true};
+      modelStore.exitBenchmarkMode();
+      // After exit, the synchronous gate is gone — initContext proceeds
+      // to its normal pre-flight (memory check, etc.). The model isn't
+      // downloaded in this test fixture so the call may resolve to null
+      // or throw a non-benchmark error; we only care that the
+      // benchmark-mode rejection is gone.
+      const result = await modelStore.initContext(model).catch((e: Error) => e);
+      if (result instanceof Error) {
+        expect(result.message).not.toMatch(/benchmark mode is active/i);
+      }
+    });
+  });
+
   describe('settings management', () => {
     it('should update stop words', () => {
       const model = {...defaultModels[0]};
