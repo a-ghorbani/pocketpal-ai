@@ -17,13 +17,9 @@ interface ToolErrorBlockProps {
 }
 
 /**
- * Subtle, low-prominence inline error block rendered when a tool
- * call's outcome is an error (`result.type === 'error'`). Per WHAT
- * D2 / I3, this must NOT visually compete with bubbles — only a
- * warning icon plus low-prominence text. Falls back to "Tool call
- * failed" copy when no errorMessage is supplied.
- *
- * Renders nothing if `toolName` is empty.
+ * Inline error block for tool calls whose outcome is
+ * `result.type === 'error'`. Falls back to "Tool call failed" copy when
+ * no errorMessage is supplied. Renders nothing when `toolName` is empty.
  */
 export const ToolErrorBlock: React.FC<ToolErrorBlockProps> = ({
   toolName,

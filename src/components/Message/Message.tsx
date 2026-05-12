@@ -97,29 +97,20 @@ export interface MessageProps extends MessageTopLevelProps {
   showStatus: boolean;
 }
 
-/** Base component for all message types in the chat. Renders bubbles around
- * messages and status. Sets maximum width for a message for
- * a nice look on larger screens.
+/** Base component for all message types in the chat. Sets maximum width
+ * for a nice look on larger screens.
  *
- * Wrapped with `observer` (mobx-react) — without it, per-token mutations of
- * `step.content` via `chatSessionStore.applyStreamingUpdate` (which replaces
- * `turn.steps[lastIdx]` with a new object) would NOT trigger this component
- * to re-render. The AssistantTurn message reference itself is stable across
- * streaming, so a plain `React.memo` would skip every per-token update and
- * the chat would only refresh when an unrelated state transition (status
- * flip, keyboard event, scroll) happened to re-render the parent.
- *
- * `observer` already provides memo-equivalent shallow-prop comparison, so it
- * cleanly replaces `React.memo` here. See `chat-flow.md` §2 for the
- * single-writer streaming path this hooks into. */
+ * `observer` is required (not `React.memo`): per-token streaming mutates
+ * `turn.steps[lastIdx]` to a new object while the AssistantTurn message
+ * reference stays stable, so a shallow-prop memo would skip every token
+ * update. `observer` also provides shallow-prop comparison. */
 export const Message = observer(
   ({
     enableAnimation,
     // isActiveRun / activeRunPendingTalentNames / isGeneratingToolCall
-    // are kept on MessageTopLevelProps for ChatView's existing prop API
-    // but are no longer consumed here — pending UX is owned by
-    // ChatView's PendingIndicator and TalentSurface dispatches off
-    // persisted step data alone.
+    // are kept on MessageTopLevelProps for ChatView's prop API but not
+    // consumed here — pending UX is owned by ChatView's PendingIndicator
+    // and TalentSurface dispatches off persisted step data alone.
     message,
     messageWidth,
     onMessagePress,
@@ -359,10 +350,9 @@ export const Message = observer(
 
         if (hasReasoning) {
           // Auto-collapse the reasoning bubble once content has begun
-          // streaming OR the step has finalized. Streaming reasoning
-          // alone (before content starts) keeps the bubble in PARTIAL
-          // so the user sees thoughts live; once the model has moved
-          // on to content, the bubble shrinks to its text-only form.
+          // streaming or the step has finalized. While only reasoning
+          // is streaming, the bubble stays expanded so the user sees
+          // thoughts live.
           const autoCollapseReasoning = hasContent || step.partial === false;
           blocks.push(
             wrapReasoningBlock(
@@ -399,31 +389,19 @@ export const Message = observer(
       return blocks;
     };
 
-    // AssistantTurn renders N visual blocks within ONE FlatList row.
+    // AssistantTurn renders N visual blocks within one FlatList row.
     // The single Pressable + Avatar + StatusIcon wrapping is preserved
-    // so long-press routing stays turn-level (selectedMessage holds the
-    // turn id) and avatar shows once per turn.
-    //
-    // Exactly ONE AssistantTurnFooter per assistant row, attached HERE
-    // in the outer JSX (not inside renderMessage()) so:
-    //   - AssistantTurn rows render N step blocks then one footer
-    //     (regardless of step count).
-    //   - Legacy assistant Text rows still get exactly one footer
-    //     (chrome moves out of Bubble, into here).
-    //   - User-authored Text rows render no footer (no behaviour
-    //     change for the user side).
+    // so long-press stays turn-level and the avatar shows once per turn.
+    // AssistantTurnFooter is attached in the outer JSX (not inside
+    // renderMessage) so each assistant row gets exactly one footer
+    // regardless of step count; user-authored rows render none.
     const showAssistantFooter =
       !currentUserIsAuthor &&
       (message.type === 'assistant_turn' || message.type === 'text');
-    // Assistant-turn rows render no chat-bubble background, and their
-    // child blocks (text, reasoning, tool chip, html preview, footer)
-    // each size to their own content. The HtmlPreviewBubble's WebView
-    // in particular has no intrinsic width — without an explicit width
-    // here the wrapper collapses to whatever non-html sibling is
-    // widest (or to nothing when an html-only step is mid-stream).
-    // Forcing `width: messageWidth` gives the WebView a budget to
-    // stretch into; text-only siblings still wrap to their natural
-    // width via MarkdownView's own `maxWidth` cap.
+    // HtmlPreviewBubble's WebView has no intrinsic width. Force the
+    // wrapper to `messageWidth` so it has a budget to stretch into;
+    // text-only siblings still wrap to their natural width via
+    // MarkdownView's own `maxWidth` cap.
     const innerContent =
       message.type === 'assistant_turn' ? (
         <View style={{width: messageWidth}}>

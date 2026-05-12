@@ -825,7 +825,7 @@ describe('useChatSession — AssistantTurn integration', () => {
     (talentRegistry as any).engines.delete('calculate');
   });
 
-  it('#hookTest6 abort with no partial content (Scenario H path B / WHAT §9a): empty turn deleted via repository, no interrupted-metadata write', async () => {
+  it('#hookTest6 abort with no partial content: empty turn deleted via repository, no interrupted-metadata write', async () => {
     // The runner throws BEFORE any token / step_finished. The hook's
     // catch path sees `hasPartialContent === false` → calls
     // chatSessionRepository.deleteMessage(turnId) and skips the

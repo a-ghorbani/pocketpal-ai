@@ -25,25 +25,15 @@ interface AssistantTurnFooterProps {
 }
 
 /**
- * Turn-level chrome (timing + copy) rendered ONCE per assistant row,
- * below all step blocks. Per WHAT §4b / I1, the footer's two slots
- * render independently:
+ * Turn-level chrome (timing + copy) rendered once per assistant row,
+ * below all step blocks. Each slot is gated only by field presence:
  *
  *   - `metadata.timings` present → render the timing line
  *   - `metadata.copyable` true   → render the copy button
  *
- * Each is gated only by field presence, not by run status (D1: "show
- * what we have"). On a turn aborted mid-stream with partial content,
- * `copyable` is true but `timings` is absent — the footer renders the
- * copy button alone (Scenario H).
- *
- * Per D9, this component is the universal owner of timing+copy chrome
- * for ALL assistant rows (legacy Text rows AND AssistantTurn rows).
- * Bubble (the shape primitive) no longer renders chrome.
- *
- * Sender-name handling stays where it is today — TextMessage renders
- * the author name above its text via `showName`. This component only
- * owns the below-bubble chrome.
+ * On a turn aborted mid-stream with partial content, `copyable` is true
+ * but `timings` is absent — the footer renders the copy button alone.
+ * Used by both AssistantTurn rows and legacy assistant Text rows.
  */
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = ({
   message,

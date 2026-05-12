@@ -10,12 +10,9 @@ import {UserContext} from '../../utils';
 import {MessageType} from '../../utils/types';
 
 /**
- * Pure shape primitive (border, background, scale animation). Per D9
- * (WHAT §4d) Bubble no longer renders chrome — timing, copy, and any
- * future turn-level slots are owned by `AssistantTurnFooter` rendered
- * adjacent to the Bubble by `Message`. This collapses the
- * "chrome-in-Bubble" pattern that produced the duplicate-footer bug
- * for multi-step AssistantTurns.
+ * Pure shape primitive (border, background, scale animation). Chrome —
+ * timing, copy, and any other turn-level slots — is owned by
+ * `AssistantTurnFooter` rendered adjacent to the Bubble by `Message`.
  */
 export const Bubble = ({
   child,

@@ -24,14 +24,8 @@ interface ToolUsedChipProps {
 }
 
 /**
- * Subtle, low-prominence "used X" chip rendered for tool calls that
- * have no registered TalentUI (e.g. datetime, calculate). Per WHAT
- * I3 / D8, this gives the user feedback that *something* happened
- * without dominating the chat layout. Intentionally minimal — no
- * card, no border; only a small wrench icon and onSurfaceVariant
- * text on a single line.
- *
- * Renders nothing if `toolName` is empty.
+ * "Used X" chip for tool calls with no registered TalentUI (e.g.
+ * datetime, calculate). Renders nothing when `toolName` is empty.
  */
 export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
   toolName,

@@ -91,22 +91,14 @@ interface PendingIndicatorProps {
 }
 
 /**
- * Subtle dot-row indicator owned by ChatView (WHAT §4d, D4, I4).
- * Replaces the louder LoadingBubble: same three-dot motion at lower
- * visual weight (smaller dots, no card background, low-prominence
- * theme colour), positioned below the latest turn so it covers
- * every dead zone in Scenario I phases 2, 4, 5, 7.
+ * Three-dot pending indicator rendered below the latest turn during
+ * prefill / tool-call generation / tool execution. Pure decoration —
+ * visibility is gated by the caller.
  *
- * For long tool calls (e.g. `render_html` building a complex page)
- * the bare dots aren't enough to tell the user it's still working.
- * When `pendingTalentNames` is non-empty, the indicator additionally
- * renders:
- *   1. A friendly label per talent (e.g. "Building page").
- *   2. The token count once it crosses the threshold.
- *   3. Elapsed seconds once at least one second has passed.
- *
- * Visibility gating (whether the indicator renders at all) lives at
- * ChatView (Step 11) — this component is a pure decoration.
+ * For long tool calls, when `pendingTalentNames` is non-empty the
+ * indicator also renders a friendly per-talent label, the running
+ * token count, and elapsed seconds so the user can tell the model is
+ * still working rather than hung.
  */
 export const PendingIndicator: React.FC<PendingIndicatorProps> = ({
   pendingTalentNames,

@@ -474,9 +474,8 @@ class ChatSessionRepository {
             record.text = message.text;
           }
           // For assistant_turn rows the `text` column stays empty;
-          // every consumer routes through `derivedText(message)` (added
-          // in Step 3) which reads top-level `steps`. Same pattern as
-          // existing `image` / `file` rows.
+          // every consumer routes through `derivedText(message)` which
+          // reads top-level `steps`. Same pattern as `image` / `file`.
           record.type = message.type;
           record.metadata = JSON.stringify(metadata);
           record.position = highestPosition + 1;

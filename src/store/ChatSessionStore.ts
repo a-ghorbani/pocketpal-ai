@@ -803,15 +803,11 @@ class ChatSessionStore {
   /**
    * Replace the active (last) step's `toolCalls` array with the
    * runner's authoritative normalized list. Called from the hook
-   * exactly once per step, on `step_finished`, with ids that match
-   * the upcoming `appendToolOutcome` callIds by construction (the
-   * runner reconciles ids via `normalizeToolCallIds` and attaches
-   * them to the `step_finished` event payload).
+   * once per step on `step_finished`, with ids that match the
+   * upcoming `appendToolOutcome` callIds by construction.
    *
-   * Single-writer rule per WHAT §5 cleanup #1 — the streaming
-   * partial in `applyEventToStore` no longer carries `toolCalls`
-   * as of Step 3, so this is the ONLY writer for `step.toolCalls`
-   * after that change.
+   * Single writer for `step.toolCalls` — the streaming partial in
+   * `applyEventToStore` does not write this field.
    */
   async appendToolCall(
     id: string,

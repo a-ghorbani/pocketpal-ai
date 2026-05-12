@@ -130,10 +130,8 @@ export interface ChatProps extends ChatTopLevelProps {
   isLastPage?: boolean;
   /** Indicates if the AI is currently streaming tokens. Used by the
    * FlatList's `maintainVisibleContentPosition` to keep the latest
-   * tokens in view while the stream lands. The legacy `isThinking`
-   * prop has been retired — pending UX is now derived inside
-   * ChatView from `chatSessionStore.agentUiState.status` (WHAT §4d
-   * / D4 / I4). */
+   * tokens in view while the stream lands. Pending UX is derived
+   * inside ChatView from `chatSessionStore.agentUiState.status`. */
   isStreaming?: boolean;
   messages: MessageType.Any[];
   /** Used for pagination (infinite scroll). Called when user scrolls

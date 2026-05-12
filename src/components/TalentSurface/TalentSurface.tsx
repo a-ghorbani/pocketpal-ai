@@ -9,28 +9,23 @@ import {ToolUsedChip} from '../ToolUsedChip';
 
 interface TalentSurfaceProps {
   /**
-   * Persisted step data from an `AssistantTurn` row. The component
-   * iterates `step.toolCalls` in array order (per WHAT §4a / I2) and
-   * for each call dispatches to one of:
+   * Persisted step data. The component iterates `step.toolCalls` in
+   * array order and dispatches each to one of four cases:
    *
    *   1. <ToolErrorBlock />  — outcome.result.type === 'error'
    *   2. talent UI           — outcome exists, non-error, and the
    *                            TalentUIRegistry has a renderResult
    *                            for the call's name
-   *   3. <ToolUsedChip />    — outcome exists, non-error, and there
-   *                            is no registered TalentUI (D8)
-   *   4. (none)              — outcome doesn't exist yet; the
-   *                            ChatView-owned PendingIndicator (D4 /
-   *                            I4) covers feedback during the
-   *                            in-flight window. No inline pending
-   *                            UI is rendered here — that would
-   *                            duplicate the indicator's role.
+   *   3. <ToolUsedChip />    — outcome exists, non-error, no
+   *                            registered TalentUI
+   *   4. (none)              — outcome not yet landed; the
+   *                            ChatView-owned PendingIndicator covers
+   *                            feedback during the in-flight window
    *
-   * The id-match (`outcome.callId === call.id`) is safe by
-   * construction after WHAT §5 cleanup #1: the runner attaches the
-   * same normalized id to both `step_finished` (consumed by
-   * `appendToolCall`) and the per-call `tool_call_finished`
-   * (consumed by `appendToolOutcome`).
+   * `outcome.callId === call.id` holds by construction: the runner
+   * attaches the same normalized id to both `step_finished` (consumed
+   * by `appendToolCall`) and `tool_call_finished` (consumed by
+   * `appendToolOutcome`).
    */
   step?: AgentStep;
 }

@@ -629,7 +629,7 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
-    it('F — reasoning + content: separate reasoning block + content block + ONE footer (D3)', () => {
+    it('F — reasoning + content: separate reasoning block + content block + ONE footer', () => {
       const message = makeDerivedTurn(
         [
           {

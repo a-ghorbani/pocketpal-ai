@@ -119,7 +119,7 @@ describe('TalentSurface', () => {
     expect(queryByTestId('tool-error-block')).toBeNull();
   });
 
-  it('#5 multi-tool turn renders blocks in step.toolCalls array order (I2)', () => {
+  it('#5 multi-tool turn renders blocks in step.toolCalls array order', () => {
     talentUIRegistry.register({
       name: 'render_html',
       renderResult: r => (

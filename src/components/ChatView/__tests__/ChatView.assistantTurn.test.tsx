@@ -254,7 +254,7 @@ describe('ChatView — Copy menu item label is present in l10n', () => {
 
 // ---------- Canonical scenario H + I ----------
 
-describe('ChatView — Scenario H (abort with partial content)', () => {
+describe('ChatView — abort with partial content', () => {
   it('H — interrupted turn with copyable but no timings: AssistantTurnFooter shows copy alone, no timing', () => {
     const turn: MessageType.AssistantTurn = {
       id: 't1',

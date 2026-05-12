@@ -178,13 +178,10 @@ const prepareCompletion = async ({
 
 /**
  * Map a single AgentEvent into the corresponding store mutation(s).
- * Kept under ~80 lines and free of business logic — every event maps
- * to a known action surface on `chatSessionStore`. This is the ONLY
- * place inside the run lifecycle that writes to the store.
- *
- * The reducer (`agentStateReducer`) updates `agentUiState`; everything
- * else (per-step content, tool outcomes, finalization) goes through
- * the dedicated step-actions added in step 2.
+ * Free of business logic — every event maps to a known action surface
+ * on `chatSessionStore`. This is the only place inside the run
+ * lifecycle that writes to the store. The reducer
+ * (`agentStateReducer`) updates `agentUiState` separately.
  */
 // Per-run TTS streaming state. The runner emits CUMULATIVE content/
 // reasoning on each `token` event (mirroring llama.rn's callback

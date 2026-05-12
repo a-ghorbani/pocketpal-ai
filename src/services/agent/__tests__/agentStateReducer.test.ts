@@ -83,7 +83,7 @@ describe('agentStateReducer', () => {
     expect(next.pendingTalentNames).toEqual([]);
   });
 
-  it('#6 step_started with isFollowUp=true → prefill (covers Scenario I phase 7 dead zone)', () => {
+  it('#6 step_started with isFollowUp=true → prefill (covers follow-up dead zone)', () => {
     const next = agentStateReducer(
       {...initialAgentUiState, status: 'executing_tool'},
       {type: 'step_started', turn: 1, isFollowUp: true},
@@ -92,7 +92,7 @@ describe('agentStateReducer', () => {
     expect(next.pendingTalentNames).toEqual([]);
   });
 
-  it('#6c follow-up: first content/reasoning token after prefill → streaming_text (Scenario I phase 8)', () => {
+  it('#6c follow-up: first content/reasoning token after prefill → streaming_text', () => {
     const afterStepStarted = agentStateReducer(
       {...initialAgentUiState, status: 'executing_tool'},
       {type: 'step_started', turn: 1, isFollowUp: true},
@@ -119,7 +119,7 @@ describe('agentStateReducer', () => {
     expect(next.status).toBe('prefill');
   });
 
-  it('#6b step_started with isFollowUp=false → prefill (initial step also waits for first token; WHAT §3)', () => {
+  it('#6b step_started with isFollowUp=false → prefill (initial step also waits for first token)', () => {
     // Both initial and follow-up step_started events keep status at
     // `prefill`. The transition to `streaming_text` happens on the
     // first content/reasoning token via `case 'token'`. This is what

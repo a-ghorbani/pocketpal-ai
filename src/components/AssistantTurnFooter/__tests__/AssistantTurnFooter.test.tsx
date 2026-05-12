@@ -48,7 +48,7 @@ describe('AssistantTurnFooter', () => {
     expect(queryByText('content-copy')).toBeNull();
   });
 
-  it('renders copy button when copyable, even if timings absent (Scenario H abort path)', () => {
+  it('renders copy button when copyable, even if timings absent (abort path)', () => {
     const message = baseTurn({
       metadata: {copyable: true, interrupted: true},
     });
