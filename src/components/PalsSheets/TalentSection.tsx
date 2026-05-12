@@ -31,7 +31,10 @@ export const TalentSection = observer(() => {
           <View>
             {availableTalents.map(engine => {
               const isEnabled = (value ?? []).includes(engine.name);
+              const names = l10n.components.palSheet.talentNames;
               const descriptions = l10n.components.palSheet.talentDescriptions;
+              const title =
+                names[engine.name as keyof typeof names] ?? engine.name;
               const description =
                 descriptions[engine.name as keyof typeof descriptions] ??
                 engine.toToolDefinition().function.description;
@@ -41,7 +44,7 @@ export const TalentSection = observer(() => {
                   style={styles.talentItem}
                   testID={`talent-item-${engine.name}`}>
                   <View style={styles.talentInfo}>
-                    <Text variant="bodyMedium">{engine.name}</Text>
+                    <Text variant="bodyMedium">{title}</Text>
                     <Text variant="bodySmall" style={styles.talentDescription}>
                       {description}
                     </Text>

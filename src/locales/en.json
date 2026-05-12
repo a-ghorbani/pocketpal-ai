@@ -758,10 +758,15 @@
         "promptModelRequired": "Prompt generation model is required when using AI prompt"
       },
       "talents": "Talents",
+      "talentNames": {
+        "render_html": "HTML preview",
+        "calculate": "Math expressions",
+        "datetime": "Date & time"
+      },
       "talentDescriptions": {
-        "render_html": "HTML preview — render HTML documents inline in chat",
-        "calculate": "Math expressions — evaluate mathematical expressions",
-        "datetime": "Date & time — get current time, format dates, compute differences"
+        "render_html": "Render HTML documents inline in chat",
+        "calculate": "Evaluate mathematical expressions",
+        "datetime": "Get current time, format dates, compute differences"
       }
     },
     "assistantPalSheet": {

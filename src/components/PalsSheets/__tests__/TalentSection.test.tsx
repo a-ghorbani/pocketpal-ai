@@ -92,16 +92,17 @@ describe('TalentSection', () => {
       expect(getByTestId('talent-item-datetime')).toBeTruthy();
     });
 
-    it('renders talent names as text', () => {
+    it('renders talent natural names from l10n', () => {
       const {getByText} = render(
         <FormWrapper>
           <TalentSection />
         </FormWrapper>,
       );
 
-      expect(getByText('render_html')).toBeTruthy();
-      expect(getByText('calculate')).toBeTruthy();
-      expect(getByText('datetime')).toBeTruthy();
+      const names = l10n.en.components.palSheet.talentNames;
+      expect(getByText(names.render_html)).toBeTruthy();
+      expect(getByText(names.calculate)).toBeTruthy();
+      expect(getByText(names.datetime)).toBeTruthy();
     });
 
     it('renders talent descriptions from l10n', () => {
