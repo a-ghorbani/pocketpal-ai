@@ -176,13 +176,6 @@ const prepareCompletion = async ({
   return {cleanCompletionParams, messageInfo};
 };
 
-/**
- * Map a single AgentEvent into the corresponding store mutation(s).
- * Free of business logic — every event maps to a known action surface
- * on `chatSessionStore`. This is the only place inside the run
- * lifecycle that writes to the store. The reducer
- * (`agentStateReducer`) updates `agentUiState` separately.
- */
 // Per-run TTS streaming state. The runner emits CUMULATIVE content/
 // reasoning on each `token` event (mirroring llama.rn's callback
 // semantics); the TTS streaming hooks expect per-call deltas, so we
@@ -194,6 +187,13 @@ type TtsRunState = {
   prevReasoning: string;
 };
 
+/**
+ * Map a single AgentEvent into the corresponding store mutation(s).
+ * Free of business logic — every event maps to a known action surface
+ * on `chatSessionStore`. This is the only place inside the run
+ * lifecycle that writes to the store. The reducer
+ * (`agentStateReducer`) updates `agentUiState` separately.
+ */
 async function applyEventToStore(
   event: AgentEvent,
   ctx: {
