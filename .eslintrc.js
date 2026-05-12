@@ -16,19 +16,18 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'error',
-    // Prevent the imperative agent-status setter race that the
-    // AssistantTurn refactor (TASK-20260502-2115) eliminated. The
-    // single writer of `agentUiState` is `setAgentUiState`; UI flags
-    // derive via `@computed`. If a future patch reaches for a
-    // deprecated `setIsGeneratingToolCall`-style imperative setter,
-    // this rule catches it. `setAgentUiState` itself is allowed.
+    // Single writer for `agentUiState` is `chatSessionStore.setAgentUiState`;
+    // every UI flag derives from it via `@computed`. Ban imperative
+    // setters like `setIsGeneratingToolCall` so a regression that
+    // reintroduces them is caught at lint time even if TypeScript
+    // accepts the new method.
     'no-restricted-syntax': [
       'error',
       {
         selector:
           "CallExpression[callee.property.name='setIsGeneratingToolCall']",
         message:
-          'Imperative agent-status setters are banned (TASK-20260502-2115). Drive agentUiState through agentStateReducer + chatSessionStore.setAgentUiState instead.',
+          'Imperative agent-status setters are banned. Drive agentUiState through agentStateReducer + chatSessionStore.setAgentUiState.',
       },
     ],
   },
