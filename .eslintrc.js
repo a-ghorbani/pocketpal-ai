@@ -5,6 +5,11 @@ module.exports = {
     // put Prettier last so it can disable conflicting ESLint rules
     'plugin:prettier/recommended',
   ],
+  globals: {
+    // Compile-time-defined flag (see babel.config.js `transform-define`).
+    // Declared as a global so ESLint's no-undef rule doesn't trip.
+    __E2E__: 'readonly',
+  },
   ignorePatterns: [
     'coverage/',
     'node_modules/',
