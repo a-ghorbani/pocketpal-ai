@@ -146,6 +146,39 @@ describe('PlayButton', () => {
     });
   });
 
+  it('handles assistant_turn messages using derivedText', () => {
+    runInAction(() => {
+      ttsStore.deviceMeetsMemory = true;
+      ttsStore.currentVoice = {
+        id: 'v1',
+        name: 'Alex',
+        engine: 'system',
+      } as any;
+    });
+    const turnMessage = {
+      id: 'turn-9',
+      type: 'assistant_turn' as const,
+      author: {id: assistant.id},
+      createdAt: 0,
+      steps: [
+        {content: 'Sure, here it is.', reasoningContent: 'planning…'},
+        {content: 'Hope this helps.'},
+      ],
+      metadata: {},
+    } as unknown as MessageType.Any;
+    const {getByTestId} = render(
+      <L10nContext.Provider value={l10n.en}>
+        <PlayButton message={turnMessage} />
+      </L10nContext.Provider>,
+    );
+    fireEvent.press(getByTestId('playbutton-turn-9'));
+    expect(ttsStore.play).toHaveBeenCalledWith(
+      'turn-9',
+      'Sure, here it is.\n\nHope this helps.',
+      {hadReasoning: true},
+    );
+  });
+
   it('calls stop when tapped while this message is playing', () => {
     runInAction(() => {
       ttsStore.currentVoice = {

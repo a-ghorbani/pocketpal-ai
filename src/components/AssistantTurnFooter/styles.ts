@@ -13,9 +13,7 @@ export const styles = ({theme}: {theme: Theme}) =>
       color: theme.colors.textSecondary,
       fontSize: 10,
     },
-    icon: {
+    copyButton: {
       marginRight: 5,
-      color: theme.colors.textSecondary,
-      fontSize: 16,
     },
   });

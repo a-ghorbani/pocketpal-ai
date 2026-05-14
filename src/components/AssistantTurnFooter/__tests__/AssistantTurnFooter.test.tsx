@@ -4,11 +4,6 @@ import {render, fireEvent} from '../../../../jest/test-utils';
 
 import {AssistantTurnFooter} from '../AssistantTurnFooter';
 
-jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
-  const {Text: PaperText} = require('react-native-paper');
-  return props => <PaperText>{props.name}</PaperText>;
-});
-
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
 }));
@@ -40,23 +35,21 @@ describe('AssistantTurnFooter', () => {
         timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
       },
     });
-    const {getByText, queryByText, queryByTestId} = render(
+    const {getByText, queryByTestId} = render(
       <AssistantTurnFooter message={message} />,
     );
     expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
     expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
-    expect(queryByText('content-copy')).toBeNull();
+    expect(queryByTestId('footer-copy')).toBeNull();
   });
 
   it('renders copy button when copyable, even if timings absent (abort path)', () => {
     const message = baseTurn({
       metadata: {copyable: true, interrupted: true},
     });
-    const {getByText, queryByTestId} = render(
-      <AssistantTurnFooter message={message} />,
-    );
+    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
     expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
-    expect(getByText('content-copy')).toBeTruthy();
+    expect(queryByTestId('footer-copy')).toBeTruthy();
     expect(queryByTestId('footer-timing')).toBeNull();
   });
 
@@ -67,9 +60,11 @@ describe('AssistantTurnFooter', () => {
         timings: {predicted_per_token_ms: 32, predicted_per_second: 30},
       },
     });
-    const {getByText} = render(<AssistantTurnFooter message={message} />);
+    const {getByText, queryByTestId} = render(
+      <AssistantTurnFooter message={message} />,
+    );
     expect(getByText('32ms/token, 30.00 tokens/sec')).toBeTruthy();
-    expect(getByText('content-copy')).toBeTruthy();
+    expect(queryByTestId('footer-copy')).toBeTruthy();
   });
 
   it('copy button copies derived text via Clipboard.setString', () => {
@@ -80,8 +75,8 @@ describe('AssistantTurnFooter', () => {
         timings: {predicted_per_second: 50},
       },
     });
-    const {getByText} = render(<AssistantTurnFooter message={message} />);
-    fireEvent.press(getByText('content-copy'));
+    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
+    fireEvent.press(getByTestId('footer-copy'));
     expect(
       require('@react-native-clipboard/clipboard').setString,
     ).toHaveBeenCalledWith('Sure, here it is.\n\nHope this helps.');
@@ -100,8 +95,8 @@ describe('AssistantTurnFooter', () => {
       name: 'foo.png',
       metadata: {copyable: true},
     } as any;
-    const {getByText} = render(<AssistantTurnFooter message={message} />);
-    fireEvent.press(getByText('content-copy'));
+    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
+    fireEvent.press(getByTestId('footer-copy'));
     expect(
       require('@react-native-clipboard/clipboard').setString,
     ).not.toHaveBeenCalled();
@@ -124,10 +119,8 @@ describe('AssistantTurnFooter', () => {
         timings: {},
       },
     });
-    const {getByText, queryByTestId} = render(
-      <AssistantTurnFooter message={message} />,
-    );
+    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
     expect(queryByTestId('footer-timing')).toBeNull();
-    expect(getByText('content-copy')).toBeTruthy();
+    expect(queryByTestId('footer-copy')).toBeTruthy();
   });
 });

@@ -3,10 +3,11 @@ import {TouchableOpacity, View} from 'react-native';
 
 import {Text} from 'react-native-paper';
 import Clipboard from '@react-native-clipboard/clipboard';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
+import {CopyIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
+import {PlayButton} from '../TextMessage/PlayButton';
 
 import {styles} from './styles';
 
@@ -84,9 +85,17 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = ({
 
   return (
     <View style={componentStyles.container} testID="assistant-turn-footer">
+      <PlayButton message={message} />
       {copyable && (
-        <TouchableOpacity onPress={copyToClipboard} testID="footer-copy">
-          <Icon name="content-copy" style={componentStyles.icon} />
+        <TouchableOpacity
+          onPress={copyToClipboard}
+          testID="footer-copy"
+          style={componentStyles.copyButton}>
+          <CopyIcon
+            stroke={theme.colors.textSecondary}
+            width={16}
+            height={16}
+          />
         </TouchableOpacity>
       )}
       {timings && fullTimingsString ? (
