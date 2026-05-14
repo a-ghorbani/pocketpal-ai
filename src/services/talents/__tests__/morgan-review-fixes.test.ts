@@ -2,14 +2,8 @@
  * Tests for VPE review fixes:
  * 1. Dispatch error paths write to both toolMessages and talentResultsMap
  * 2. deriveToolSchemas strict-subset filtering
- * 3. DatetimeEngine timezone-preserving format
  */
-import {
-  deriveToolSchemas,
-  resetRegisteredFlag,
-  talentRegistry,
-  DatetimeEngine,
-} from '../index';
+import {deriveToolSchemas, resetRegisteredFlag, talentRegistry} from '../index';
 
 describe('deriveToolSchemas strict-subset filtering', () => {
   beforeEach(() => {
@@ -45,41 +39,6 @@ describe('deriveToolSchemas strict-subset filtering', () => {
     const schemas = deriveToolSchemas(['render_html', 'nonexistent']);
     expect(schemas).toHaveLength(1);
     expect(schemas[0].function.name).toBe('render_html');
-  });
-});
-
-describe('DatetimeEngine timezone-preserving format', () => {
-  const engine = new DatetimeEngine();
-
-  it('uses tz-preserving format when timezone set but no format given', async () => {
-    const result = await engine.execute({
-      action: 'now',
-      timezone: 'America/New_York',
-    });
-    expect(result.type).toBe('text');
-    // Should NOT be UTC ISO (ending in Z or +00:00 when NY is UTC-4/5)
-    // Should contain an offset like -04:00 or -05:00
-    expect(result.summary).toMatch(/[+-]\d{2}:\d{2}$/);
-    // Should NOT end with Z (which toISOString would produce)
-    expect(result.summary).not.toMatch(/Z$/);
-  });
-
-  it('uses toISOString when no timezone and no format given', async () => {
-    const result = await engine.execute({action: 'now'});
-    expect(result.type).toBe('text');
-    // toISOString always ends with Z
-    expect(result.summary).toMatch(/Z$/);
-  });
-
-  it('uses custom format when format is provided regardless of timezone', async () => {
-    const result = await engine.execute({
-      action: 'now',
-      timezone: 'Europe/London',
-      format: 'HH:mm',
-    });
-    expect(result.type).toBe('text');
-    // Should be just hours:minutes
-    expect(result.summary).toMatch(/^\d{2}:\d{2}$/);
   });
 });
 

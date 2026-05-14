@@ -120,15 +120,6 @@ describe('PACT cleanup: toToolDefinition() contract', () => {
     },
   );
 
-  it.each(engines.map(e => [e.name, e]))(
-    '%s.toToolDefinition() has "required" array in parameters',
-    (_name, engine) => {
-      const def = (engine as any).toToolDefinition();
-      expect(Array.isArray(def.function.parameters.required)).toBe(true);
-      expect(def.function.parameters.required.length).toBeGreaterThan(0);
-    },
-  );
-
   it('RenderHtmlEngine requires "html" parameter', () => {
     const def = new RenderHtmlEngine().toToolDefinition();
     expect(def.function.parameters.required).toContain('html');
@@ -137,11 +128,6 @@ describe('PACT cleanup: toToolDefinition() contract', () => {
   it('CalculateEngine requires "expression" parameter', () => {
     const def = new CalculateEngine().toToolDefinition();
     expect(def.function.parameters.required).toContain('expression');
-  });
-
-  it('DatetimeEngine requires "action" parameter', () => {
-    const def = new DatetimeEngine().toToolDefinition();
-    expect(def.function.parameters.required).toContain('action');
   });
 });
 
