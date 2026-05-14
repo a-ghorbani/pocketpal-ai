@@ -769,7 +769,7 @@
       "talentDescriptions": {
         "render_html": "Render HTML documents inline in chat",
         "calculate": "Evaluate mathematical expressions",
-        "datetime": "Get current time, format dates, compute differences"
+        "datetime": "Get the current date and time"
       }
     },
     "assistantPalSheet": {
