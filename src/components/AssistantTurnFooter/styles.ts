@@ -8,12 +8,10 @@ export const styles = ({theme}: {theme: Theme}) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingBottom: 12,
+      gap: 5,
     },
     timing: {
       color: theme.colors.textSecondary,
       fontSize: 10,
-    },
-    copyButton: {
-      marginRight: 5,
     },
   });

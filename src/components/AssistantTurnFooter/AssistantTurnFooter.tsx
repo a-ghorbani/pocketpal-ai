@@ -87,10 +87,7 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = ({
     <View style={componentStyles.container} testID="assistant-turn-footer">
       <PlayButton message={message} />
       {copyable && (
-        <TouchableOpacity
-          onPress={copyToClipboard}
-          testID="footer-copy"
-          style={componentStyles.copyButton}>
+        <TouchableOpacity onPress={copyToClipboard} testID="footer-copy">
           <CopyIcon
             stroke={theme.colors.textSecondary}
             width={16}

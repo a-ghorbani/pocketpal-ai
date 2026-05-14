@@ -97,13 +97,13 @@ export const PlayButton: React.FC<PlayButtonProps> = observer(({message}) => {
         <StopIcon
           width={iconSize}
           height={iconSize}
-          stroke={theme.colors.onSurfaceVariant}
+          stroke={theme.colors.textSecondary}
         />
       ) : (
         <PlayIcon
           width={iconSize}
           height={iconSize}
-          stroke={theme.colors.onSurfaceVariant}
+          stroke={theme.colors.textSecondary}
         />
       )}
     </Pressable>
