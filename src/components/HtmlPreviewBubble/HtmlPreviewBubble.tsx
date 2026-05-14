@@ -2,10 +2,10 @@ import React, {useContext, useMemo, useState} from 'react';
 import {Modal, Pressable, ScrollView, Text, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {WebView} from 'react-native-webview';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import CodeHighlighter from 'react-native-code-highlighter';
 import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
+import {BrowserIcon, CloseIcon, CodeIcon, ExpandIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 
@@ -135,11 +135,19 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
             testID="html-preview-toggle-code"
             hitSlop={8}
             style={styles.headerButton}>
-            <Icon
-              name={showCode ? 'eye-outline' : 'code-tags'}
-              size={18}
-              color={theme.colors.onSurfaceVariant}
-            />
+            {showCode ? (
+              <BrowserIcon
+                stroke={theme.colors.onSurfaceVariant}
+                width={18}
+                height={18}
+              />
+            ) : (
+              <CodeIcon
+                stroke={theme.colors.onSurfaceVariant}
+                width={18}
+                height={18}
+              />
+            )}
           </Pressable>
           <Pressable
             onPress={() => setFullscreen(true)}
@@ -151,10 +159,10 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
             testID="html-preview-bubble-collapsed"
             hitSlop={8}
             style={styles.headerButton}>
-            <Icon
-              name="arrow-expand"
-              size={18}
-              color={theme.colors.onSurfaceVariant}
+            <ExpandIcon
+              stroke={theme.colors.onSurfaceVariant}
+              width={18}
+              height={18}
             />
           </Pressable>
         </View>
@@ -212,11 +220,19 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                 testID="html-preview-modal-toggle-code"
                 hitSlop={8}
                 style={styles.modalHeaderButton}>
-                <Icon
-                  name={showCode ? 'eye-outline' : 'code-tags'}
-                  size={22}
-                  color={theme.colors.onSurface}
-                />
+                {showCode ? (
+                  <BrowserIcon
+                    stroke={theme.colors.onSurface}
+                    width={22}
+                    height={22}
+                  />
+                ) : (
+                  <CodeIcon
+                    stroke={theme.colors.onSurface}
+                    width={22}
+                    height={22}
+                  />
+                )}
               </Pressable>
               <Pressable
                 onPress={() => setFullscreen(false)}
@@ -225,7 +241,11 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                 testID="html-preview-modal-close"
                 hitSlop={8}
                 style={styles.modalHeaderButton}>
-                <Icon name="close" size={22} color={theme.colors.onSurface} />
+                <CloseIcon
+                  stroke={theme.colors.onSurface}
+                  width={22}
+                  height={22}
+                />
               </Pressable>
             </View>
             {showCode ? (
