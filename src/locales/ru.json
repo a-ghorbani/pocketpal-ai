@@ -1058,7 +1058,10 @@
     "removeRemoteModel": "Удалить {{modelName}} ({{serverName}})?",
     "retryConnection": "Повторить",
     "enterUrlManually": "Введите URL вручную",
-    "manageServers": "Управление серверами"
+    "manageServers": "Управление серверами",
+    "ttsAvailability": "Синтез речи",
+    "ttsAvailabilityDescription": "Озвучивать ответы ассистента.",
+    "ttsAvailabilityLowMemoryWarning": "Память вашего устройства заполнена — может работать нестабильно."
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
