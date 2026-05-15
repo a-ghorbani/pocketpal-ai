@@ -1,15 +1,28 @@
-import React, {useContext, useMemo, useState} from 'react';
-import {Modal, Pressable, ScrollView, Text, View} from 'react-native';
+import React, {useCallback, useContext, useMemo, useState} from 'react';
+import {Modal, ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {WebView} from 'react-native-webview';
+import Clipboard from '@react-native-clipboard/clipboard';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import CodeHighlighter from 'react-native-code-highlighter';
 import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
-import {BrowserIcon, CloseIcon, CodeIcon, ExpandIcon} from '../../assets/icons';
+import {
+  BrowserIcon,
+  CloseIcon,
+  CodeIcon,
+  CopyIcon,
+  ExpandIcon,
+} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 
 import {createStyles} from './styles';
+
+const hapticOptions = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
 
 interface HtmlPreviewBubbleProps {
   html: string;
@@ -31,6 +44,15 @@ const HEAD_INJECTION = `<meta http-equiv="Content-Security-Policy" content="${CS
      which pushes content off-screen when intrinsic content height exceeds
      the bubble height. Force body to grow with content instead. */
   html, body { height: auto !important; min-height: 100% !important; }
+  /* Constrain content to the viewport width. Models often emit fixed
+     pixel widths (e.g. 1024px containers, full-bleed images, wide
+     tables) that would otherwise overflow horizontally inside the
+     chat bubble — and horizontal scroll in a chat row reads as broken.
+     Cap top-level children and common wide elements; let tables/pre
+     scroll internally so their content is still reachable. */
+  body > * { max-width: 100vw; box-sizing: border-box; }
+  img, video, iframe, svg, canvas { max-width: 100%; height: auto; }
+  table, pre, code { max-width: 100%; overflow-x: auto; }
 </style>`;
 
 const FRAGMENT_STYLES = `<style>
@@ -117,6 +139,11 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
   const displayTitle =
     title && title.length > 0 ? title : l10n.htmlPreview.defaultTitle;
 
+  const copyHtml = useCallback(() => {
+    ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+    Clipboard.setString(html);
+  }, [html]);
+
   return (
     <View testID="html-preview-bubble">
       <View style={styles.container}>
@@ -124,7 +151,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
           <Text style={styles.headerTitle} numberOfLines={1}>
             {displayTitle}
           </Text>
-          <Pressable
+          <TouchableOpacity
             onPress={() => setShowCode(s => !s)}
             accessibilityRole="button"
             accessibilityLabel={
@@ -148,8 +175,21 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                 height={18}
               />
             )}
-          </Pressable>
-          <Pressable
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={copyHtml}
+            accessibilityRole="button"
+            accessibilityLabel={l10n.htmlPreview.copyHtml}
+            testID="html-preview-copy"
+            hitSlop={8}
+            style={styles.headerButton}>
+            <CopyIcon
+              stroke={theme.colors.onSurfaceVariant}
+              width={18}
+              height={18}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setFullscreen(true)}
             accessibilityRole="button"
             accessibilityLabel={l10n.htmlPreview.openFullscreen.replace(
@@ -164,7 +204,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
               width={18}
               height={18}
             />
-          </Pressable>
+          </TouchableOpacity>
         </View>
         {showCode ? (
           <ScrollView
@@ -198,18 +238,29 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
         visible={fullscreen}
         animationType="slide"
         onRequestClose={() => setFullscreen(false)}
+        // iOS Modal's default is portrait-only, which would lock the
+        // fullscreen view to portrait even when the parent app is
+        // already rotated. Mirror Info.plist (Portrait + Landscape on
+        // iPhone, plus portrait-upside-down on iPad).
+        supportedOrientations={[
+          'portrait',
+          'portrait-upside-down',
+          'landscape',
+        ]}
         testID="html-preview-modal">
         {/* Re-provide SafeAreaProvider: Modal renders in a separate view
             hierarchy on iOS and does not inherit insets from the app-level
             provider, so the top safe area would otherwise collapse to 0 and
             hide the Close button behind the notch/status bar. */}
         <SafeAreaProvider>
-          <SafeAreaView style={styles.modalRoot} edges={['top', 'bottom']}>
+          <SafeAreaView
+            style={styles.modalRoot}
+            edges={['top', 'bottom', 'left', 'right']}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle} numberOfLines={1}>
                 {displayTitle}
               </Text>
-              <Pressable
+              <TouchableOpacity
                 onPress={() => setShowCode(s => !s)}
                 accessibilityRole="button"
                 accessibilityLabel={
@@ -233,8 +284,21 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                     height={22}
                   />
                 )}
-              </Pressable>
-              <Pressable
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={copyHtml}
+                accessibilityRole="button"
+                accessibilityLabel={l10n.htmlPreview.copyHtml}
+                testID="html-preview-modal-copy"
+                hitSlop={8}
+                style={styles.modalHeaderButton}>
+                <CopyIcon
+                  stroke={theme.colors.onSurface}
+                  width={22}
+                  height={22}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => setFullscreen(false)}
                 accessibilityRole="button"
                 accessibilityLabel={l10n.htmlPreview.closePreview}
@@ -246,7 +310,7 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                   width={22}
                   height={22}
                 />
-              </Pressable>
+              </TouchableOpacity>
             </View>
             {showCode ? (
               <ScrollView

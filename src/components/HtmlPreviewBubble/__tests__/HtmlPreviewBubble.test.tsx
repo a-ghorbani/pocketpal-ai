@@ -1,4 +1,6 @@
 import React from 'react';
+import Clipboard from '@react-native-clipboard/clipboard';
+
 import {fireEvent, render} from '../../../../jest/test-utils';
 import {HtmlPreviewBubble} from '../HtmlPreviewBubble';
 
@@ -67,6 +69,25 @@ describe('HtmlPreviewBubble', () => {
 
     fireEvent.press(closeBtn);
     expect(queryByTestId('html-preview-modal-close')).toBeNull();
+  });
+
+  it('copies the raw HTML (not the wrapped document) on copy press', () => {
+    const setStringSpy = jest.spyOn(Clipboard, 'setString');
+    const {getByTestId} = render(
+      <HtmlPreviewBubble html={html} title="Copy Test" />,
+    );
+
+    // Collapsed-header copy button
+    fireEvent.press(getByTestId('html-preview-copy'));
+    expect(setStringSpy).toHaveBeenLastCalledWith(html);
+
+    // Fullscreen-modal copy button copies the same raw html
+    fireEvent.press(getByTestId('html-preview-bubble-collapsed'));
+    fireEvent.press(getByTestId('html-preview-modal-copy'));
+    expect(setStringSpy).toHaveBeenLastCalledWith(html);
+    expect(setStringSpy).toHaveBeenCalledTimes(2);
+
+    setStringSpy.mockRestore();
   });
 
   it('toggles between rendered preview and raw HTML code', () => {

@@ -1099,6 +1099,7 @@
     "defaultTitle": "Preview",
     "showPreview": "Show rendered preview",
     "showCode": "Show HTML code",
+    "copyHtml": "Copy HTML",
     "closePreview": "Close preview",
     "openFullscreen": "Open fullscreen: {{title}}"
   },
