@@ -9,7 +9,11 @@ import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import {useTheme} from '../../hooks';
 import {CodeBlockHeader} from '../CodeBlockHeader';
 
-import {createTagsStyles, createStyles} from './styles';
+import {
+  codeHighlighterPreOverride,
+  createStyles,
+  createTagsStyles,
+} from './styles';
 import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
 
 marked.use({});
@@ -90,7 +94,8 @@ const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
         textStyle={styles.codeHighlighterText}
         scrollViewProps={{
           contentContainerStyle: styles.codeHighlighterScrollContent,
-        }}>
+        }}
+        customStyle={codeHighlighterPreOverride}>
         {content}
       </CodeHighlighter>
     </View>

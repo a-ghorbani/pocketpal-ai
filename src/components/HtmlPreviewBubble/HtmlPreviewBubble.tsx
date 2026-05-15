@@ -17,7 +17,7 @@ import {
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 
-import {createStyles} from './styles';
+import {codeHighlighterPreOverride, createStyles} from './styles';
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -217,7 +217,8 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
               scrollViewProps={{
                 style: styles.codeInnerScroll,
                 contentContainerStyle: styles.codeContent,
-              }}>
+              }}
+              customStyle={codeHighlighterPreOverride}>
               {html}
             </CodeHighlighter>
           </ScrollView>
@@ -323,7 +324,8 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
                   scrollViewProps={{
                     style: styles.codeInnerScroll,
                     contentContainerStyle: styles.codeContent,
-                  }}>
+                  }}
+                  customStyle={codeHighlighterPreOverride}>
                   {html}
                 </CodeHighlighter>
               </ScrollView>

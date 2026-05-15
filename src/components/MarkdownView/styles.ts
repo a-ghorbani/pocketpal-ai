@@ -2,6 +2,13 @@ import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
 
+// Plain object (not via StyleSheet.create) because react-syntax-highlighter's
+// customStyle is merged with Object.assign — a numeric StyleSheet id won't
+// flatten the upstream white PreTag fallback. See MarkdownView for the why.
+export const codeHighlighterPreOverride = {
+  backgroundColor: 'transparent',
+} as const;
+
 export const createTagsStyles = (theme: Theme) => ({
   body: {
     color: theme.colors.text,
@@ -27,11 +34,11 @@ export const createTagsStyles = (theme: Theme) => ({
     backgroundColor: theme.colors.surface, // Background for pre blocks
     padding: 8,
     borderRadius: 6,
+    marginVertical: 8,
     color: theme.colors.onPrimaryContainer,
     fontFamily: 'Courier',
     fontSize: 14,
     whiteSpace: 'pre' as const,
-    // overflow: 'scroll', // Ensure scrolling for long code blocks
   },
   // Styles for thinking tags
   thinking: {
