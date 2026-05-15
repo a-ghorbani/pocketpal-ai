@@ -492,19 +492,29 @@ export const useChatSession = (
     const tools =
       (cleanCompletionParams.tools as ToolDefinition[] | undefined) ?? [];
     let triggerMarkers: string[] = [];
-    try {
-      triggerMarkers = await triggerCacheRef.current.getMarkers(
-        String(modelStore.context!.id),
-        tools,
-        () =>
-          modelStore.context!.getFormattedChat(
-            cleanCompletionParams.messages ?? [],
-            undefined,
-            {tools: cleanCompletionParams.tools, jinja: true},
-          ) as Promise<JinjaFormattedChatResult>,
-      );
-    } catch (e) {
-      console.warn('[chat] trigger marker compute failed; falling back', e);
+    // Marker detection reads `grammar_triggers` from a local Jinja
+    // `getFormattedChat` call — only meaningful when a local llama.rn
+    // context exists. In server mode (`modelStore.context` undefined)
+    // the remote llama.cpp parser handles tool-call detection on its
+    // own, so this whole step is skipped. Without the guard the
+    // non-null assertion below throws TypeError on every server-mode
+    // turn (caught + warned, but noisy).
+    const localContext = modelStore.context;
+    if (localContext) {
+      try {
+        triggerMarkers = await triggerCacheRef.current.getMarkers(
+          String(localContext.id),
+          tools,
+          () =>
+            localContext.getFormattedChat(
+              cleanCompletionParams.messages ?? [],
+              undefined,
+              {tools: cleanCompletionParams.tools, jinja: true},
+            ) as Promise<JinjaFormattedChatResult>,
+        );
+      } catch (e) {
+        console.warn('[chat] trigger marker compute failed; falling back', e);
+      }
     }
 
     try {
