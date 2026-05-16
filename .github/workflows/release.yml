@@ -151,7 +151,7 @@ jobs:
 
   # Job 2: iOS Build and Upload (runs on macOS)
   build_ios:
-    runs-on: macos-15 # macOS 15 with Xcode 16
+    runs-on: macos-26 # macOS 26 includes an iOS 26-capable Xcode toolchain
     needs: build_android
     if: ${{ always() && (needs.build_android.result == 'success' || needs.build_android.result == 'skipped') }}
     env:
@@ -164,10 +164,12 @@ jobs:
           ref: ${{ github.ref }}    # This ensures we get the latest changes including the version bump
           fetch-depth: 0
 
-      # Step 1: Setup Xcode to use the correct version
+      # Step 1: Select the default Xcode shipped on macOS 26.
+      # App Store Connect now requires uploads built with the iOS 26 SDK or later.
       - name: Setup Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
 
       # Step 2: Set up Node.js
       - name: Set up Node.js
