@@ -10,6 +10,18 @@ export class UIStore {
 export const mockUiStore = {
   colorScheme: 'light',
   autoNavigatetoChat: false,
+  messageRenderingSettings: {
+    renderMarkdown: true,
+    renderLatex: true,
+    renderTables: true,
+    showThinkingBlocks: true,
+    collapseThinkingByDefault: true,
+    hideModelTemplateTokens: true,
+    defaultCopyMode: 'clean',
+    wrapCodeLines: false,
+    useSyntaxHighlighting: true,
+    useCompactTables: false,
+  },
   benchmarkShareDialog: {
     shouldShow: true,
   },
@@ -29,6 +41,8 @@ export const mockUiStore = {
   setAutoNavigateToChat: jest.fn(),
   setColorScheme: jest.fn(),
   setDisplayMemUsage: jest.fn(),
+  setMessageRenderingSetting: jest.fn(),
+  resetMessageRenderingSettings: jest.fn(),
   setBenchmarkShareDialogPreference: jest.fn(),
   showError: jest.fn(),
 };

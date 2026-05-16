@@ -100,6 +100,27 @@
     "darkMode": "Dark Mode",
     "displayMemoryUsage": "Display Memory Usage",
     "displayMemoryUsageDescription": "Display memory usage in the chat page.",
+    "messageRenderingSettings": "Message Rendering",
+    "renderMarkdown": "Render Markdown",
+    "renderMarkdownDescription": "Format assistant answers with headings, lists, links, code blocks, and tables.",
+    "renderLatex": "Render LaTeX",
+    "renderLatexDescription": "Show inline and block math delimiters as math blocks with safe fallback.",
+    "renderTables": "Render Tables",
+    "renderTablesDescription": "Render GitHub-style tables with horizontal scrolling.",
+    "showThinkingBlocks": "Show Thinking Blocks",
+    "showThinkingBlocksDescription": "Display model reasoning metadata and inline thinking tags in a collapsible block.",
+    "hideModelTemplateTokens": "Hide Model Template Tokens",
+    "hideModelTemplateTokensDescription": "Hide ChatML, BOS/EOS, instruction, and service tokens in rendered and clean copy modes.",
+    "defaultCopyMode": "Default Copy Mode",
+    "copyModeClean": "Clean",
+    "copyModeMarkdown": "Markdown",
+    "copyModeRaw": "Raw",
+    "wrapCodeLines": "Wrap Code Lines",
+    "wrapCodeLinesDescription": "Wrap long code lines instead of requiring horizontal scrolling.",
+    "useSyntaxHighlighting": "Use Syntax Highlighting",
+    "useSyntaxHighlightingDescription": "Highlight fenced code blocks when a language is available.",
+    "useCompactTables": "Use Compact Tables",
+    "useCompactTablesDescription": "Use tighter table spacing for dense answers.",
     "exportOptions": "Export Options",
     "exportLegacyChats": "Export Legacy Chats",
     "exportLegacyChatsDescription": "Use this if migration failed or you need to recover old chat sessions.",
@@ -499,6 +520,30 @@
       "tokensPerSec": "{{value}} tokens/sec",
       "ttft": "{{value}}ms TTFT"
     },
+    "assistantMessageRenderer": {
+      "modes": {
+        "rendered": "Rendered",
+        "clean": "Clean",
+        "raw": "Raw"
+      },
+      "segments": {
+        "json": "JSON",
+        "jsonFallback": "JSON fallback",
+        "xml": "XML",
+        "xmlFallback": "XML fallback",
+        "toolCall": "tool_call",
+        "functionCall": "function_call",
+        "table": "Table",
+        "math": "Math",
+        "markdownShort": "MD",
+        "textShort": "Text",
+        "texShort": "TeX",
+        "copyRawSegment": "Copy raw {{title}} segment",
+        "copySegmentAs": "Copy {{title}} as {{mode}}",
+        "expandSegment": "Expand {{title}}",
+        "collapseSegment": "Collapse {{title}}"
+      }
+    },
     "exportUtils": {
       "fileSaved": "File Saved",
       "fileSavedMessage": "The file has been saved to your Downloads folder as {{filename}}",
@@ -891,16 +936,15 @@
         "total": "Total: ",
         "usage": "Usage: "
       },
-      "byteSizes": [
-        "Bytes",
-        "KB",
-        "MB",
-        "GB"
-      ]
+      "byteSizes": ["Bytes", "KB", "MB", "GB"]
     },
     "chatView": {
       "menuItems": {
         "copy": "Copy",
+        "copyAs": "Copy as",
+        "copyClean": "Clean text",
+        "copyMarkdown": "Markdown",
+        "copyRaw": "Raw text",
         "regenerate": "Regenerate",
         "regenerateWith": "Regenerate with",
         "edit": "Edit",

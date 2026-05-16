@@ -35,6 +35,7 @@ PocketPal AI is a pocket-sized AI assistant powered by small language models (SL
   - [Acknowledgements](#acknowledgements)
 
 ## 📰 News & Announcements
+
 - **🔒 HF Token Authentication (v1.9.0, Apr, 2025)**: Access gated models from Hugging Face with your authentication token.
 - **🌐 Localization Support (v1.8.16, Apr, 2025)**: PocketPal AI now supports multiple languages (At the moment Japanese and Chinese).
 - **📱 iPad Support (v1.8.12, Mar, 2025)**: Full support for iPad devices including landscape orientation.
@@ -90,7 +91,7 @@ Get PocketPal AI on Google Play:
 - After downloading, tap **Load** next to the model to load it to memory.
 - You can also load a model directly within the chat page using the chevron icon on the left side of the chat input.
 
-### Chatting with the model 
+### Chatting with the model
 
 1. Ensure a model is loaded.
 2. Navigate to the **Chat** page from the menu.
@@ -102,10 +103,16 @@ Get PocketPal AI on Google Play:
 
 ### Copying Text
 
-- **Copy Entire Response**: Tap the copy icon at the bottom of the AI's response bubble.
-- **Copy Specific Paragraph**: Long-press on a paragraph to copy its content.
+- **Copy Entire Response**: Tap the copy icon at the bottom of the AI's response bubble. The default mode is configurable in Settings.
+- **Copy as Clean / Clean + thinking / Markdown / Raw**: Long-press an assistant message and choose the copy mode.
+- **Copy Code Blocks**: Use the copy button in a code block header.
+- **Copy Structured Blocks**: JSON, XML, tool-call, table, and block math segments expose their own copy controls where applicable.
 
-*Note*: Preserving text formatting while copying is currently limited. We're working on improving this feature.
+Assistant responses render Markdown, code blocks, tables, and common LaTeX delimiters. Clean copy hides thinking blocks and model template tokens by default, Clean + thinking includes reasoning as plain text, and raw copy preserves the exact model output. Unsafe HTML is escaped and never executed.
+
+When an answer contains thinking tags, service/template tokens, unsafe HTML, or partial streaming markup, the bubble exposes Rendered, Clean, and Raw view modes so you can inspect the fallback output without changing copy settings.
+
+Message rendering can be tuned from Settings: Markdown, LaTeX, tables, thinking visibility/collapse behavior, template-token cleanup, default copy mode, code wrapping, syntax highlighting, and compact tables. Very large answers automatically fall back to cheaper rendering paths to keep chat responsive on mobile devices.
 
 ### Message Editing
 
@@ -168,7 +175,7 @@ Access gated models from Hugging Face by setting up your authentication token:
 Share your thoughts directly from the app:
 
 1. Navigate to the App Info page
-2. Tap on "Sharing your thoughts" 
+2. Tap on "Sharing your thoughts"
 3. Type in whatever you'd like to share, from feature requests to suggestions
 4. Hit "Submit Feedback"
 
@@ -210,7 +217,6 @@ Interested in contributing or running the app locally? Follow the steps below.
    ```
 
 4. **Run the App**
-
    - **iOS Simulator**
 
      ```bash
@@ -265,7 +271,6 @@ We welcome all contributions! Please read our [Contributing Guidelines](CONTRIBU
 
 3. **Make Your Changes**
 4. **Test Your Changes**
-
    - **Run on iOS**
 
      ```bash
@@ -286,7 +291,6 @@ We welcome all contributions! Please read our [Contributing Guidelines](CONTRIBU
    ```
 
 6. **Commit Your Changes**
-
    - Follow the Conventional Commits format:
 
      ```bash

@@ -16,6 +16,11 @@ import {UserContext, L10nContext} from '../../utils';
 import {assistant} from '../../utils/chat';
 import {MessageType} from '../../utils/types';
 import {t} from '../../locales';
+import {modelStore, uiStore} from '../../store';
+import {
+  buildMessageCopyTextFromMessage,
+  defaultMessageRenderingSettings,
+} from '../../utils/messageRendering';
 
 const hapticOptions = {
   enableVibrateFallback: true,
@@ -76,7 +81,17 @@ export const Bubble = ({
   const copyToClipboard = () => {
     if (message.type === 'text') {
       ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-      Clipboard.setString(message.text.trim());
+      const settings = {
+        ...defaultMessageRenderingSettings,
+        ...uiStore.messageRenderingSettings,
+      };
+      Clipboard.setString(
+        buildMessageCopyTextFromMessage(message, settings.defaultCopyMode, {
+          thinkingStartTag: modelStore.activeModel?.thinkingStartTag,
+          thinkingEndTag: modelStore.activeModel?.thinkingEndTag,
+          hideServiceTokens: settings.hideModelTemplateTokens,
+        }),
+      );
     }
   };
 
