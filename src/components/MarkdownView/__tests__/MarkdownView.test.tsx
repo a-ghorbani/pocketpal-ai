@@ -4,6 +4,7 @@ import {ScrollView} from 'react-native';
 import {render, fireEvent} from '@testing-library/react-native';
 
 import {MarkdownView} from '../MarkdownView';
+import {SearchQueryContext} from '../../../utils';
 
 describe('MarkdownView Component', () => {
   it('renders markdown content correctly', () => {
@@ -260,6 +261,26 @@ describe('MarkdownView Component', () => {
       rerender(<MarkdownView markdownText="Second" maxMessageWidth={300} />);
 
       expect(getByText('Second')).toBeTruthy();
+    });
+  });
+
+  describe('Search highlighting', () => {
+    it('renders without highlighting when search query is empty', () => {
+      const {getByText} = render(
+        <SearchQueryContext.Provider value="">
+          <MarkdownView markdownText="Hello world" maxMessageWidth={300} />
+        </SearchQueryContext.Provider>,
+      );
+
+      expect(getByText('Hello world')).toBeTruthy();
+    });
+
+    it('renders without highlighting when no context is provided', () => {
+      const {getByText} = render(
+        <MarkdownView markdownText="Hello world" maxMessageWidth={300} />,
+      );
+
+      expect(getByText('Hello world')).toBeTruthy();
     });
   });
 });

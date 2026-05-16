@@ -41,6 +41,9 @@ export const mockChatSessionStore = {
   // Selection mode state
   isSelectionMode: false,
   selectedSessionIds: new Set<string>(),
+  // Search mode state
+  isSearchMode: false,
+  searchQuery: '',
   loadSessionList: jest.fn().mockResolvedValue(undefined),
   loadGlobalSettings: jest.fn().mockResolvedValue(undefined),
   deleteSession: jest.fn().mockResolvedValue(undefined),
@@ -73,6 +76,10 @@ export const mockChatSessionStore = {
   getCurrentCompletionSettings: jest
     .fn()
     .mockResolvedValue(mockDefaultCompletionSettings),
+  // Search mode methods
+  enterSearchMode: jest.fn(),
+  exitSearchMode: jest.fn(),
+  setSearchQuery: jest.fn(),
   // Selection mode methods
   enterSelectionMode: jest.fn(),
   exitSelectionMode: jest.fn(),
@@ -113,6 +120,11 @@ Object.defineProperty(mockChatSessionStore, 'shouldShowHeaderDivider', {
 
 Object.defineProperty(mockChatSessionStore, 'selectedCount', {
   get: jest.fn(() => mockChatSessionStore.selectedSessionIds.size),
+  configurable: true,
+});
+
+Object.defineProperty(mockChatSessionStore, 'filteredSessionMessages', {
+  get: jest.fn(() => []),
   configurable: true,
 });
 

@@ -1,8 +1,12 @@
 import {View} from 'react-native';
-import React, {useMemo} from 'react';
+import React, {useContext, useMemo} from 'react';
 
 import {marked} from 'marked';
-import RenderHtml, {defaultSystemFonts} from 'react-native-render-html';
+import RenderHtml, {
+  defaultSystemFonts,
+  HTMLElementModel,
+  HTMLContentModel,
+} from 'react-native-render-html';
 import CodeHighlighter from 'react-native-code-highlighter';
 import {atomOneDark} from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
@@ -12,6 +16,7 @@ import {CodeBlockHeader} from '../CodeBlockHeader';
 
 import {createTagsStyles, createStyles} from './styles';
 import {tableRenderers, tableHTMLElementModels} from './TableRenderers';
+import {SearchQueryContext} from '../../utils';
 
 marked.use({});
 
@@ -100,13 +105,36 @@ const CodeRenderer = ({TDefaultRenderer, ...props}: any) => {
   );
 };
 
+// Wrap search query matches in <mark> tags, only in text nodes (not inside HTML tags)
+const highlightSearchMatches = (html: string, query: string): string => {
+  if (!query.trim()) {
+    return html;
+  }
+  const escapedQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  return html.replace(/>([^<]*)</g, (_match, textContent) => {
+    return '>' + textContent.replace(regex, '<mark>$1</mark>') + '<';
+  });
+};
+
 export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
   ({markdownText, maxMessageWidth, selectable = false, reasoningContent}) => {
     const _maxWidth = maxMessageWidth;
+    const searchQuery = useContext(SearchQueryContext);
 
     const theme = useTheme();
     const styles = createStyles(theme);
-    const tagsStyles = useMemo(() => createTagsStyles(theme), [theme]);
+    const tagsStyles = useMemo(
+      () => ({
+        ...createTagsStyles(theme),
+        mark: {
+          backgroundColor: theme.colors.tertiaryContainer,
+          color: theme.colors.onTertiaryContainer,
+          borderRadius: 2,
+        },
+      }),
+      [theme],
+    );
 
     // Create separate tag styles for reasoning content with thinking bubble styling
     const reasoningTagsStyles = useMemo(
@@ -141,10 +169,22 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
 
     const contentWidth = useMemo(() => _maxWidth, [_maxWidth]);
 
-    const htmlContent = useMemo(
-      () => marked(markdownText) as string,
-      [markdownText],
+    // Element models including mark tag for search highlighting
+    const elementModels = useMemo(
+      () => ({
+        ...tableHTMLElementModels,
+        mark: HTMLElementModel.fromCustomModel({
+          tagName: 'mark',
+          contentModel: HTMLContentModel.textual,
+        }),
+      }),
+      [],
     );
+
+    const htmlContent = useMemo(() => {
+      const html = marked(markdownText) as string;
+      return highlightSearchMatches(html, searchQuery);
+    }, [markdownText, searchQuery]);
     const source = useMemo(() => ({html: htmlContent}), [htmlContent]);
 
     // Render reasoning content as markdown if present
@@ -171,7 +211,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
               defaultTextProps={defaultTextProps}
               systemFonts={systemFonts}
               renderers={renderers}
-              customHTMLElementModels={tableHTMLElementModels}
+              customHTMLElementModels={elementModels}
             />
           </ThinkingBubble>
         )}
@@ -185,7 +225,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
             defaultTextProps={defaultTextProps}
             systemFonts={systemFonts}
             renderers={renderers}
-            customHTMLElementModels={tableHTMLElementModels}
+            customHTMLElementModels={elementModels}
           />
         )}
       </View>
