@@ -240,7 +240,7 @@ jobs:
 
   # Job for iOS build
   build-ios:
-    runs-on: macos-15  # macOS 15 with Xcode 16
+    runs-on: macos-26  # Keep CI on the same Xcode major as the release workflow
     needs: [build-and-test, detect-changes]
     if: needs.detect-changes.outputs.translation_only != 'true'
     env:
@@ -346,6 +346,11 @@ jobs:
           cd ios
           pod install
           cd ..
+
+      - name: Select default Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
 
       - name: Build iOS Release
         run: |
