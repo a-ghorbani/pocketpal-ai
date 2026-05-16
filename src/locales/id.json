@@ -154,7 +154,8 @@
     "removeRemoteModel": "Hapus {{modelName}} ({{serverName}})?",
     "retryConnection": "Coba lagi",
     "enterUrlManually": "Masukkan URL secara manual",
-    "manageServers": "Kelola Server"
+    "manageServers": "Kelola Server",
+    "ttsAvailability": "Text-to-speech"
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
