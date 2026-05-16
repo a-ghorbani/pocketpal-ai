@@ -127,7 +127,7 @@
     "serverUrlPlaceholder": "misalnya, http://192.168.1.100:1234",
     "apiKey": "Kunci API",
     "apiKeyPlaceholder": "Opsional - diperlukan untuk OpenAI/Groq",
-    "apiKeyDescription": "Disimpan dengan aman di perangkat",
+    "apiKeyDescription": "Disimpan dengan aman di perangkat.",
     "remoteModel": "Jarak jauh(Remote)",
     "remotePrivacyNotice": "Pesan dikirim ke server remote meninggalkan perangkat Anda. Hanya hubungkan ke server yang Anda percaya.",
     "remoteIndicator": "Remote",
