@@ -155,7 +155,9 @@
     "retryConnection": "Coba lagi",
     "enterUrlManually": "Masukkan URL secara manual",
     "manageServers": "Kelola Server",
-    "ttsAvailability": "Text-to-speech"
+    "ttsAvailability": "Text-to-speech",
+    "ttsAvailabilityDescription": "Bacakan balasan asisten dengan suara.",
+    "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah — fitur ini mungkin tidak bekerja dengan baik."
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
