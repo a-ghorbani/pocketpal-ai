@@ -39,6 +39,22 @@ export type OpenAIToolChoice =
   | 'required'
   | {type: 'function'; function: {name: string}};
 
+/** OpenAI-compatible response_format. `json_schema` is the structured-output
+ * mode supported by OpenAI, llama.cpp server, LM Studio, Ollama, and most
+ * other compatible servers. `name` is required by OpenAI but ignored by
+ * others — we inject a default when the caller doesn't supply one. */
+export type OpenAIResponseFormat =
+  | {type: 'text'}
+  | {type: 'json_object'}
+  | {
+      type: 'json_schema';
+      json_schema: {
+        name?: string;
+        strict?: boolean;
+        schema: object;
+      };
+    };
+
 /** Parameters for streaming chat completion */
 export interface StreamChatParams {
   messages: OpenAIChatMessage[];
@@ -50,6 +66,7 @@ export interface StreamChatParams {
   stream?: boolean;
   tools?: OpenAIToolDefinition[];
   tool_choice?: OpenAIToolChoice;
+  response_format?: OpenAIResponseFormat;
 }
 
 /**
@@ -663,6 +680,25 @@ export async function streamChatCompletion(
     }
     if (params.tool_choice !== undefined) {
       requestBody.tool_choice = params.tool_choice;
+    }
+    if (params.response_format) {
+      // OpenAI requires `name` inside json_schema; llama.cpp / Ollama /
+      // LM Studio ignore it. Inject a default so the same call works
+      // everywhere.
+      if (
+        params.response_format.type === 'json_schema' &&
+        !params.response_format.json_schema.name
+      ) {
+        requestBody.response_format = {
+          ...params.response_format,
+          json_schema: {
+            ...params.response_format.json_schema,
+            name: 'response',
+          },
+        };
+      } else {
+        requestBody.response_format = params.response_format;
+      }
     }
     xhr.send(JSON.stringify(requestBody));
   });

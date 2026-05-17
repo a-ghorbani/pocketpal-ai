@@ -445,6 +445,61 @@ describe('streamChatCompletion', () => {
     await resultPromise;
   });
 
+  it('forwards response_format and injects json_schema.name for OpenAI compatibility', async () => {
+    const schema = {type: 'object', properties: {name: {type: 'string'}}};
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+        response_format: {
+          type: 'json_schema',
+          json_schema: {strict: true, schema},
+        },
+      },
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.response_format).toEqual({
+      type: 'json_schema',
+      json_schema: {strict: true, schema, name: 'response'},
+    });
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('preserves caller-supplied json_schema.name', async () => {
+    const schema = {type: 'object', properties: {x: {type: 'number'}}};
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'test-model',
+        response_format: {
+          type: 'json_schema',
+          json_schema: {name: 'custom', strict: false, schema},
+        },
+      },
+      'http://localhost:1234',
+    );
+
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.response_format.json_schema.name).toBe('custom');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
   it('maps finish_reason "length" to stopped_limit', async () => {
     const resultPromise = streamChatCompletion(
       {messages: [{role: 'user', content: 'Hi'}], model: 'test-model'},

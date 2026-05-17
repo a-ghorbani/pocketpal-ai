@@ -89,6 +89,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
         // lives under a different name.
         tools: (params as any).tools,
         tool_choice: (params as any).tool_choice,
+        response_format: (params as any).response_format,
       },
       this.serverUrl,
       this.apiKey,

@@ -161,7 +161,7 @@ export const ModelsScreen: React.FC = observer(() => {
       if (modelId) {
         const model = modelStore.models.find(m => m.id === modelId);
         if (model) {
-          modelStore.initContext(model);
+          modelStore.selectModel(model);
         }
       }
     }
