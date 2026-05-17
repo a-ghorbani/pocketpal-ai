@@ -15,6 +15,7 @@ import {
   Divider,
   IconButton,
   SegmentedButtons,
+  RadioButton,
 } from 'react-native-paper';
 
 import {Menu} from '../../../../components';
@@ -42,6 +43,21 @@ const JSON_SCHEMA_EXAMPLE = `
   },
   "required": ["name", "age"]
 }`;
+
+// Object form of the schema above, for response_format.json_schema.
+// llama.rn's getJsonSchema reads `json_schema.schema` (an object) and
+// converts it to a GBNF grammar internally. See llama.rn README "Grammar
+// Sampling" / CompletionResponseFormat in llama.rn src/index.ts.
+const JSON_SCHEMA_OBJECT = {
+  type: 'object',
+  properties: {
+    name: {type: 'string'},
+    age: {type: 'number'},
+    isActive: {type: 'boolean'},
+    tags: {type: 'array', items: {type: 'string'}},
+  },
+  required: ['name', 'age'],
+};
 
 // GBNF grammar for JSON
 const JSON_GBNF = `
@@ -110,11 +126,23 @@ const SAMPLE_CHAT_MESSAGES: ChatMessage[] = [
   },
 ];
 
+// Selectable tests. Each entry maps a radio option to the matching test
+// runner; the descriptions are UI-only and do not affect behavior.
+type TestId =
+  | 'chatCompletion'
+  | 'textCompletion'
+  | 'toolCalling'
+  | 'grammarSampling'
+  | 'structuredOutput'
+  | 'formattedChat'
+  | 'grammarTriggers';
+
 export const TestCompletionScreen: React.FC = observer(() => {
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [currentTest, setCurrentTest] = useState<string | null>(null);
+  const [selectedTest, setSelectedTest] = useState<TestId>('chatCompletion');
   const [results, setResults] = useState<{
     [key: string]: {
       text: string;
@@ -127,7 +155,9 @@ export const TestCompletionScreen: React.FC = observer(() => {
   }>({});
   const [tokenBuffer, setTokenBuffer] = useState('');
   const [textCompletionMethod, setTextCompletionMethod] = useState('direct');
-  const [useJinja, setUseJinja] = useState(false);
+  // Global Jinja toggle, applied to every message-based test. Default true
+  // (llama.rn also defaults jinja to true when the model supports it).
+  const [useJinja, setUseJinja] = useState(true);
   const [formattedChatDetails, setFormattedChatDetails] = useState<{
     prompt?: string;
     format?: number;
@@ -159,7 +189,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
     setShowModelMenu(false);
     if (model.id !== modelStore.activeModelId) {
       try {
-        await modelStore.initContext(model);
+        await modelStore.selectModel(model);
         setSelectedModel(model);
       } catch (error) {
         console.error('Model initialization error:', error);
@@ -207,6 +237,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ],
         n_predict: 100,
         stop: stopWords,
+        jinja: useJinja,
+        enable_thinking: false,
       };
 
       const result = await modelStore.context.completion(
@@ -264,6 +296,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
           'This is a conversation between user and llama, a friendly chatbot. respond in simple markdown.\n\nUser: Hello! Tell me a short joke.\nLlama:',
         n_predict: 100,
         stop: [...stopWords, 'Llama:', 'User:'],
+        enable_thinking: false,
       };
 
       const result = await modelStore.context.completion(
@@ -355,6 +388,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
         prompt,
         n_predict: 100,
         stop: stopWords,
+        enable_thinking: false,
       };
 
       const result = await modelStore.context.completion(
@@ -436,9 +470,10 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ],
         n_predict: 200,
         stop: stopWords,
-        jinja: true,
+        jinja: useJinja,
         tool_choice: 'auto',
         tools: TOOLS,
+        enable_thinking: false,
       };
 
       const result = await modelStore.context.completion(
@@ -508,7 +543,9 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ],
         n_predict: 200,
         stop: stopWords,
+        jinja: useJinja,
         grammar: JSON_GBNF, // Grammar is applied here
+        enable_thinking: false,
       };
 
       const result = await modelStore.context.completion(
@@ -533,6 +570,92 @@ export const TestCompletionScreen: React.FC = observer(() => {
         grammarSampling: {
           text: '',
           error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      }));
+    } finally {
+      setIsRunning(false);
+      setCurrentTest(null);
+    }
+  };
+
+  /**
+   * Tests structured output via response_format.json_schema
+   *
+   * Expected behavior:
+   * - Passes a JSON Schema object under response_format.json_schema.schema
+   * - llama.rn's getJsonSchema reads that object and converts it to a GBNF
+   *   grammar internally (it is overridden if `grammar` is also set)
+   * - The model output should be valid JSON matching the schema's shape
+   * - This is the canonical structured-output path per the llama.rn README
+   *   ("json_schema in response_format ... converts the json_schema to gbnf")
+   */
+  const runStructuredOutputTest = async () => {
+    console.log('------------- runStructuredOutputTest -------------');
+    if (!modelStore.context) {
+      return;
+    }
+
+    setIsRunning(true);
+    setCurrentTest('structuredOutput');
+    setTokenBuffer('');
+
+    try {
+      const completionParams: CompletionParams = {
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that generates valid JSON.',
+          },
+          {
+            role: 'user',
+            content:
+              'Generate a JSON object for a person with name, age, isActive status, and an array of tags.',
+          },
+        ],
+        n_predict: 200,
+        stop: stopWords,
+        jinja: useJinja,
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            strict: true,
+            schema: JSON_SCHEMA_OBJECT,
+          },
+        },
+        // Low temperature for deterministic JSON, matching the llama.rn
+        // StructuredOutputScreen reference example.
+        temperature: 0.2,
+        enable_thinking: false,
+      };
+
+      const result = await modelStore.context.completion(
+        completionParams,
+        data => {
+          // Structured output streams via `content`; fall back to `token`.
+          const chunk = data.content || data.token || '';
+          if (chunk) {
+            setTokenBuffer(prev => prev + chunk);
+          }
+        },
+      );
+
+      setResults(prev => ({
+        ...prev,
+        structuredOutput: {
+          text: result.content || result.text,
+          timings: result.timings,
+        },
+      }));
+    } catch (error) {
+      // Read the message synchronously: Hermes does not keep a catch binding
+      // alive inside the deferred setResults updater closure.
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      setResults(prev => ({
+        ...prev,
+        structuredOutput: {
+          text: '',
+          error: errorMessage,
         },
       }));
     } finally {
@@ -774,7 +897,9 @@ export const TestCompletionScreen: React.FC = observer(() => {
             ],
             n_predict: 150,
             stop: stopWords,
+            jinja: useJinja,
             ...testCase.params,
+            enable_thinking: false,
           };
 
           const result = await modelStore.context.completion(
@@ -820,6 +945,66 @@ export const TestCompletionScreen: React.FC = observer(() => {
     }
   };
 
+  // UI-only mapping from the selected radio option to its existing runner.
+  const TESTS: {
+    id: TestId;
+    label: string;
+    description: string;
+    run: () => Promise<void>;
+  }[] = [
+    {
+      id: 'chatCompletion',
+      label: 'Chat completion',
+      description: 'messages[] → model reply using the built-in chat template.',
+      run: runChatCompletionTest,
+    },
+    {
+      id: 'textCompletion',
+      label: 'Text completion',
+      description:
+        'Raw prompt continuation. Direct = hand-written prompt; Formatted = SAMPLE_CHAT_MESSAGES via getFormattedChat.',
+      run: runTextCompletionTest,
+    },
+    {
+      id: 'toolCalling',
+      label: 'Tool calling',
+      description:
+        'messages[] + get_weather tool (jinja on). Expect a tool_calls result.',
+      run: runToolCallingTest,
+    },
+    {
+      id: 'grammarSampling',
+      label: 'Grammar sampling',
+      description: 'GBNF grammar applied directly in the completion params.',
+      run: runGrammarSamplingTest,
+    },
+    {
+      id: 'structuredOutput',
+      label: 'Structured output (JSON schema)',
+      description:
+        'completion() with response_format.json_schema — llama.rn converts the schema object to GBNF internally.',
+      run: runStructuredOutputTest,
+    },
+    {
+      id: 'formattedChat',
+      label: 'Formatted chat inspector',
+      description:
+        'getFormattedChat with Default / Jinja / JSON Schema / Tools. Formatting only, no generation.',
+      run: runFormattedChatTest,
+    },
+    {
+      id: 'grammarTriggers',
+      label: 'Grammar triggers',
+      description:
+        'Grammar trigger configurations (lazy / token / word / pattern).',
+      run: runGrammarTriggersTest,
+    },
+  ];
+
+  const activeTest = TESTS.find(
+    t => t.id === selectedTest,
+  ) as (typeof TESTS)[0];
+
   const renderModelSelector = () => (
     <Menu
       visible={showModelMenu}
@@ -847,21 +1032,6 @@ export const TestCompletionScreen: React.FC = observer(() => {
         />
       ))}
     </Menu>
-  );
-
-  const renderTestButton = (
-    testId: string,
-    label: string,
-    onPress: () => Promise<void>,
-    disabled: boolean = false,
-  ) => (
-    <Button
-      mode="contained"
-      onPress={onPress}
-      disabled={disabled || isRunning}
-      style={styles.testButton}>
-      {label}
-    </Button>
   );
 
   const renderResultCard = (testId: string, title: string) => {
@@ -986,93 +1156,69 @@ export const TestCompletionScreen: React.FC = observer(() => {
                     Please select and initialize a model first
                   </Text>
                 ) : (
-                  <View style={styles.testButtonsContainer}>
-                    <View style={styles.testRow}>
-                      {renderTestButton(
-                        'chatCompletion',
-                        'Chat Completion',
-                        runChatCompletionTest,
-                      )}
-                      {renderTestButton(
-                        'formattedChat',
-                        'Formatted Chat Test',
-                        runFormattedChatTest,
-                      )}
-                    </View>
+                  <>
+                    <Text style={styles.optionsHeader}>Test type</Text>
+                    <RadioButton.Group
+                      value={selectedTest}
+                      onValueChange={v => setSelectedTest(v as TestId)}>
+                      {TESTS.map(t => (
+                        <RadioButton.Item
+                          key={t.id}
+                          value={t.id}
+                          label={t.label}
+                          position="leading"
+                          labelStyle={styles.radioLabel}
+                          style={styles.radioItem}
+                        />
+                      ))}
+                    </RadioButton.Group>
+
+                    <Text style={styles.testDescription}>
+                      {activeTest.description}
+                    </Text>
 
                     <View style={styles.testOptionsContainer}>
-                      <Text style={styles.optionLabel}>
-                        Text Completion Method:
-                      </Text>
+                      <Text style={styles.optionLabel}>Use Jinja:</Text>
                       <SegmentedButtons
-                        value={textCompletionMethod}
-                        onValueChange={setTextCompletionMethod}
+                        value={useJinja ? 'true' : 'false'}
+                        onValueChange={value => setUseJinja(value === 'true')}
                         buttons={[
-                          {value: 'direct', label: 'Direct'},
-                          {value: 'formatted', label: 'Formatted'},
+                          {value: 'false', label: 'No'},
+                          {value: 'true', label: 'Yes'},
                         ]}
                       />
 
-                      {textCompletionMethod === 'formatted' && (
+                      {selectedTest === 'textCompletion' && (
                         <View style={styles.jinjaOption}>
-                          <Text style={styles.optionLabel}>Use Jinja:</Text>
+                          <Text style={styles.optionLabel}>
+                            Text Completion Method:
+                          </Text>
                           <SegmentedButtons
-                            value={useJinja ? 'true' : 'false'}
-                            onValueChange={value =>
-                              setUseJinja(value === 'true')
-                            }
+                            value={textCompletionMethod}
+                            onValueChange={setTextCompletionMethod}
                             buttons={[
-                              {value: 'false', label: 'No'},
-                              {value: 'true', label: 'Yes'},
+                              {value: 'direct', label: 'Direct'},
+                              {value: 'formatted', label: 'Formatted'},
                             ]}
                           />
                         </View>
                       )}
                     </View>
 
-                    <View style={styles.testRow}>
-                      {renderTestButton(
-                        'textCompletion',
-                        'Text Completion',
-                        runTextCompletionTest,
-                      )}
-                    </View>
-
-                    <View style={styles.testRow}>
-                      {renderTestButton(
-                        'toolCalling',
-                        'Tool Calling',
-                        runToolCallingTest,
-                      )}
-                      {renderTestButton(
-                        'grammarSampling',
-                        'Grammar Sampling',
-                        runGrammarSamplingTest,
-                      )}
-                    </View>
-
-                    <View style={styles.testRow}>
-                      {renderTestButton(
-                        'grammarTriggers',
-                        'Grammar Triggers Test',
-                        runGrammarTriggersTest,
-                      )}
-                    </View>
-                  </View>
+                    <Button
+                      mode="contained"
+                      onPress={activeTest.run}
+                      disabled={isRunning}
+                      style={styles.runButton}>
+                      {isRunning ? 'Running…' : `Run: ${activeTest.label}`}
+                    </Button>
+                  </>
                 )}
               </>
             )}
 
             <View style={styles.resultsContainer}>
-              {renderResultCard('chatCompletion', 'Chat Completion Result')}
-              {renderResultCard('textCompletion', 'Text Completion Result')}
-              {renderResultCard('toolCalling', 'Tool Calling Result')}
-              {renderResultCard('grammarSampling', 'Grammar Sampling Result')}
-              {renderResultCard('formattedChat', 'Formatted Chat Test Results')}
-              {renderResultCard(
-                'grammarTriggers',
-                'Grammar Triggers Test Results',
-              )}
+              {renderResultCard(selectedTest, `${activeTest.label} Result`)}
             </View>
           </Card.Content>
         </Card>
