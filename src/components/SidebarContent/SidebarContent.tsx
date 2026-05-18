@@ -18,6 +18,7 @@ import {
   PalIcon,
   SettingsIcon,
   ShareIcon,
+  StarIcon,
   TrashIcon,
   AppInfoIcon,
 } from '../../assets/icons';
@@ -33,11 +34,13 @@ const isDebugMode = __DEV__;
 interface SessionItemProps {
   session: SessionMetaData;
   isActive: boolean;
+  isPinned: boolean;
   onPress: (sessionId: string) => void;
   onLongPress: (sessionId: string, event: any) => void;
   menuVisible: string | null;
   menuPosition: {x: number; y: number};
   onMenuDismiss: () => void;
+  onPressPin: (sessionId: string) => void;
   onPressRename: (session: SessionMetaData) => void;
   onPressDelete: (sessionId: string) => void;
   onPressExport: (sessionId: string) => void;
@@ -55,11 +58,13 @@ const SessionItem = React.memo<SessionItemProps>(
   ({
     session,
     isActive,
+    isPinned,
     onPress,
     onLongPress,
     menuVisible,
     menuPosition,
     onMenuDismiss,
+    onPressPin,
     onPressRename,
     onPressDelete,
     onPressExport,
@@ -114,6 +119,23 @@ const SessionItem = React.memo<SessionItemProps>(
             style={styles.menu}
             contentStyle={{}}
             anchorPosition="bottom">
+            <Menu.Item
+              onPress={() => {
+                onPressPin(session.id);
+                onMenuDismiss();
+              }}
+              label={
+                isPinned
+                  ? l10n.components.sidebarContent.unpin
+                  : l10n.components.sidebarContent.pin
+              }
+              leadingIcon={() => (
+                <StarIcon
+                  stroke={theme.colors.primary}
+                  fill={isPinned ? theme.colors.primary : 'none'}
+                />
+              )}
+            />
             <Menu.Item
               onPress={() => {
                 onPressRename(session);
@@ -349,6 +371,10 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
       [l10n, closeMenu],
     );
 
+    const handlePressPin = React.useCallback(async (sessionId: string) => {
+      await chatSessionStore.togglePinSession(sessionId);
+    }, []);
+
     const handlePressExport = React.useCallback(
       async (sessionId: string) => {
         try {
@@ -449,11 +475,13 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
           <SessionItem
             session={item}
             isActive={isActive}
+            isPinned={item.pinned || false}
             onPress={handleSessionPress}
             onLongPress={handleSessionLongPress}
             menuVisible={menuVisible}
             menuPosition={menuPosition}
             onMenuDismiss={closeMenu}
+            onPressPin={handlePressPin}
             onPressRename={handlePressRename}
             onPressDelete={onPressDelete}
             onPressExport={handlePressExport}
@@ -473,6 +501,7 @@ export const SidebarContent: React.FC<DrawerContentComponentProps> = observer(
         menuVisible,
         menuPosition,
         closeMenu,
+        handlePressPin,
         handlePressRename,
         onPressDelete,
         handlePressExport,

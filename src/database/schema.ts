@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 6,
+  version: 7,
   tables: [
     tableSchema({
       name: 'chat_sessions',
@@ -10,6 +10,7 @@ export default appSchema({
         {name: 'date', type: 'string'},
         {name: 'active_pal_id', type: 'string', isOptional: true},
         {name: 'settings_source', type: 'string', isOptional: true},
+        {name: 'pinned', type: 'boolean'},
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
       ],
