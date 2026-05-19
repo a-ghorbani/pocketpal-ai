@@ -1058,7 +1058,10 @@
     "removeRemoteModel": "{{modelName}} ({{serverName}}) 모델을 삭제하시겠습니까?",
     "retryConnection": "재시도",
     "enterUrlManually": "URL 수동 입력",
-    "manageServers": "서버 관리"
+    "manageServers": "서버 관리",
+    "ttsAvailability": "텍스트 음성 변환 (TTS)",
+    "ttsAvailabilityDescription": "어시스턴트의 답변을 음성으로 출력합니다.",
+    "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 — 신뢰성 있게 작동하지 않을 수 있습니다."
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
