@@ -1,13 +1,10 @@
 name: E2E Android Build (manual)
 
 on:
-  # Manual trigger targeting a specific branch or commit SHA
+  # Manual trigger. Pick the branch/tag to build via the GitHub
+  # "Use workflow from" selector (or `gh workflow run --ref <branch>`);
+  # checkout below builds whatever ref the run was dispatched on.
   workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Branch name or commit SHA to build the E2E APK from'
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -23,7 +20,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Setup Java
