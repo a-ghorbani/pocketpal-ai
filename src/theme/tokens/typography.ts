@@ -33,17 +33,24 @@ export const FONT_FAMILIES = {
 } as const;
 
 /**
- * Locales whose primary script falls outside Inter's Latin + Cyrillic
- * coverage and outside Fraunces's design intent. For these, Fraunces
- * tokens fall back to Inter. Cyrillic locales (ru, uk) are Latin
- * script-set and NOT in this list. Latin locales (id, ms, en) are not
- * in this list either.
+ * Locales whose primary script is not covered by the bundled Fraunces
+ * font subset. For these, Fraunces tokens fall back to Inter (which
+ * covers Latin + Cyrillic) so the headline renders in a known family
+ * instead of an unpredictable system fallback for missing glyphs.
+ *
+ * Why Cyrillic (ru, uk) is on this list: the bundled Fraunces TTFs are
+ * the Latin-only subset from Fontsource and contain no Cyrillic
+ * codepoints. CJK / Hebrew / Arabic / Persian / Hangul are intentionally
+ * not bundled — Inter passes those glyphs through to the platform
+ * system font.
  */
 export const NON_LATIN_LOCALES: ReadonlyArray<AvailableLanguage> = [
   'fa',
   'he',
   'ja',
   'ko',
+  'ru',
+  'uk',
   'zh',
   'zh_Hant',
 ];
@@ -124,8 +131,8 @@ export const typography: TokenTypography = {
     fontWeight: '400',
   },
 
-  // Headlines (Fraunces — Latin/Cyrillic only; non-Latin locales swap to
-  // Inter via `typographyForLocale`)
+  // Headlines (Fraunces — bundled subset is Latin-only; non-Latin and
+  // Cyrillic locales swap to Inter via `typographyForLocale`)
   headlineH1: {
     fontFamily: FONT_FAMILIES.FRAUNCES_REGULAR,
     fontSize: 36,
@@ -166,8 +173,10 @@ export const typography: TokenTypography = {
  *   - Fraunces italic  + non-Latin locale → Inter-Medium with
  *     `fontStyle: 'italic'` (synthesised italic — no Inter-Italic cut
  *     bundled).
- *   - Inter / JetBrains Mono → no swap (Inter covers Latin + Cyrillic;
- *     code is locale-agnostic).
+ *   - Inter / JetBrains Mono → no swap. Inter ships with Latin +
+ *     Cyrillic glyphs and renders ru/uk/Latin locales directly; for
+ *     scripts Inter doesn't cover, the platform falls back to system
+ *     fonts. Code is locale-agnostic.
  *
  * Invoked from the theme builder — components never call this directly,
  * so components remain locale-agnostic.

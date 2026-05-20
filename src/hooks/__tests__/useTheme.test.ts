@@ -94,24 +94,22 @@ describe('useTheme', () => {
       );
     });
 
-    it('headlineH1 stays Fraunces for Cyrillic locale ru (Latin script-set)', () => {
-      uiStore.setLanguage('ru');
-      const {result} = renderHook(() => useTheme());
-      expect(result.current.typography.headlineH1.fontFamily).toBe(
-        FONT_FAMILIES.FRAUNCES_REGULAR,
-      );
+    it('headlineH1 swaps Fraunces → Inter for Cyrillic locales (ru, uk)', () => {
+      // Bundled Fraunces subset is Latin-only — ru/uk must use Inter.
+      for (const lang of ['ru', 'uk'] as const) {
+        uiStore.setLanguage(lang);
+        const {result} = renderHook(() => useTheme());
+        expect(result.current.typography.headlineH1.fontFamily).toBe(
+          FONT_FAMILIES.INTER_REGULAR,
+        );
+      }
     });
 
-    it('headlineH1 swaps for every non-Latin locale', () => {
-      const nonLatin: Array<'fa' | 'he' | 'ja' | 'ko' | 'zh' | 'zh_Hant'> = [
-        'fa',
-        'he',
-        'ja',
-        'ko',
-        'zh',
-        'zh_Hant',
-      ];
-      for (const lang of nonLatin) {
+    it('headlineH1 swaps for every non-Latin / non-Latin-script locale', () => {
+      const fallbackLocales: Array<
+        'fa' | 'he' | 'ja' | 'ko' | 'ru' | 'uk' | 'zh' | 'zh_Hant'
+      > = ['fa', 'he', 'ja', 'ko', 'ru', 'uk', 'zh', 'zh_Hant'];
+      for (const lang of fallbackLocales) {
         uiStore.setLanguage(lang);
         const {result} = renderHook(() => useTheme());
         expect(result.current.typography.headlineH1.fontFamily).toBe(

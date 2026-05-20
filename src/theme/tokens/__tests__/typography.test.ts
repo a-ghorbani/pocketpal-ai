@@ -47,7 +47,7 @@ describe('typography tokens', () => {
   });
 
   describe('Latin locales render Fraunces', () => {
-    const latinLocales: AvailableLanguage[] = ['en', 'id', 'ru', 'ms', 'uk'];
+    const latinLocales: AvailableLanguage[] = ['en', 'id', 'ms'];
 
     it.each(latinLocales)(
       'headlineH1 in %s resolves to Fraunces-Regular at 36 / 50',
