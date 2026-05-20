@@ -83,6 +83,11 @@ jobs:
       - name: Validate l10n files
         run: node scripts/validate-l10n.js
 
+      # Step 4b: Verify font registration (I8 — every fontFamily must
+      # be bundled on iOS + Android + listed in Info.plist UIAppFonts).
+      - name: Verify font registration
+        run: node scripts/verify-fonts.js
+
       # Step 5: Run linters (ESLint)
       - name: Run ESLint
         run: yarn lint

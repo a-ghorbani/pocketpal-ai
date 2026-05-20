@@ -1,7 +1,8 @@
 import * as React from 'react';
-import {Dimensions, StyleSheet} from 'react-native';
+import {Appearance, Dimensions, StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
+import {isHydrated} from 'mobx-persist-store';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider as PaperProvider} from 'react-native-paper';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
@@ -209,13 +210,43 @@ const createStyles = (theme: Theme) =>
     },
   });
 
-// Wrap the App component with AppWithMigration to show migration UI when needed
-const AppWithMigrationWrapper = () => {
+// Hydration splash — rendered until mobx-persist-store has loaded UIStore
+// from AsyncStorage. Background colour resolved from the system color
+// scheme: on the common case where system == persisted mode, this matches
+// the eventual tokens.colors.background so the transition is imperceptible.
+// No spinner — splash is visually neutral.
+const splashStyles = StyleSheet.create({
+  light: {flex: 1, backgroundColor: '#ffffff'},
+  dark: {flex: 1, backgroundColor: '#000000'},
+});
+
+const HydrationSplash = () => {
+  const scheme = Appearance.getColorScheme();
+  return (
+    <View
+      testID="hydration-splash"
+      style={scheme === 'dark' ? splashStyles.dark : splashStyles.light}
+    />
+  );
+};
+
+// Wrap the App component with AppWithMigration to show migration UI when
+// needed. Gates the first render of any theme-consuming subtree on
+// mobx-persist-store hydration so persisted `language` and `colorScheme`
+// are observed on first paint.
+//
+// The gate must wrap App itself (App.tsx:60 calls useTheme() BEFORE
+// <PaperProvider> mounts), so AppWithMigrationWrapper — which sits above
+// App and has no theme dependency — is the chosen host.
+const AppWithMigrationWrapper = observer(() => {
+  if (!isHydrated(uiStore)) {
+    return <HydrationSplash />;
+  }
   return (
     <AppWithMigration>
       <App />
     </AppWithMigration>
   );
-};
+});
 
 export default AppWithMigrationWrapper;

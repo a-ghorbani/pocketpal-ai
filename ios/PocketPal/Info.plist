@@ -75,6 +75,12 @@
 		<string>Inter-SemiBold.ttf</string>
 		<string>Inter-Thin.ttf</string>
 		<string>Inter-ExtraBold.ttf</string>
+		<string>Fraunces-Regular.ttf</string>
+		<string>Fraunces-Medium.ttf</string>
+		<string>Fraunces-Italic.ttf</string>
+		<string>Fraunces-MediumItalic.ttf</string>
+		<string>JetBrainsMono-Regular.ttf</string>
+		<string>JetBrainsMono-Medium.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

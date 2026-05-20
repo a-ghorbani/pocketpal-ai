@@ -7,6 +7,7 @@ import {ContextParams, TokenData} from 'llama.rn';
 import {CompletionParams} from './completionTypes';
 import {PreviewData} from '@flyerhq/react-native-link-preview';
 import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
+import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 
 export namespace MessageType {
@@ -282,10 +283,35 @@ export interface ThemeInsets {
   messageInsetsVertical: number;
 }
 
+/**
+ * Spacing on the consumed Theme is a superset of the new token scale and
+ * the legacy `default` key (preserved verbatim for consumers like
+ * `theme.spacing.default` used in 4 files today; removed in a later
+ * cleanup phase).
+ */
 export interface ThemeSpacing {
   default: number;
+  none: 0;
+  xxs: 2;
+  xs: 4;
+  s: 8;
+  sm: 12;
+  m: 16;
+  ml: 20;
+  l: 24;
 }
 
+/**
+ * The Theme consumed via `useTheme()`. Superset of:
+ *   - resolved tokens (typography, radius, stroke) — the new surface that
+ *     per-screen restyle work migrates consumers onto.
+ *   - the legacy MD3 alias surface (colors keys + MD3 typescale on
+ *     `fonts`) — pinned to today's values to avoid visual regression.
+ *
+ * The two surfaces do NOT cross-feed: the legacy `fonts` block is
+ * preserved verbatim and is not derived from `theme.typography.*`. This
+ * is the migration window contract.
+ */
 export interface Theme extends MD3Theme {
   colors: MD3BaseColors & SemanticColors;
   borders: ThemeBorders;
@@ -293,6 +319,9 @@ export interface Theme extends MD3Theme {
   fonts: ThemeFonts;
   insets: ThemeInsets;
   icons?: ThemeIcons;
+  typography: TokenTypography;
+  radius: TokenRadius;
+  stroke: TokenStroke;
 }
 
 export interface User {
