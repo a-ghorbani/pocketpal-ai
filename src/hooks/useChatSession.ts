@@ -528,7 +528,39 @@ export const useChatSession = (
         signal: abortRef.current.signal,
       });
 
+      // Cooperative yield + consumer-side abort guard.
+      //
+      // Without the yield, the chunk-cycle (native callback →
+      // queue.push → microtask resume → consumer body → await
+      // queue.next() suspend → next chunk callback) runs entirely
+      // via microtask resumption from a Promise-resolved queue.next().
+      // The macrotask queue — where touch events, the Stop button
+      // onPress, and other low-priority callbacks are dispatched —
+      // never gets a slot. Measured starvation: tens of seconds
+      // during long streams on the OnePlus 6.
+      //
+      // Adding a setTimeout(_, 0) yield every YIELD_INTERVAL_MS of
+      // body work fixes the macrotask starvation, but has a side
+      // effect: it decouples native production from JS consumption.
+      // Without the consumer body blocking the JSI chunk callback,
+      // native runs at full speed. On a fast local model (SmolLM at
+      // ~36 chunks/s) the consumer can fall behind and a multi-hundred-
+      // event backlog accumulates. After the user taps Stop, the
+      // runner's chunk-handler abort guard stops accepting new chunks
+      // (so chunksAfterAbort stays near 0), but the queued backlog
+      // still drains here — the chat would keep updating with stale
+      // tokens for tens of seconds. The consumer-side guard below
+      // drops queued token events once the abort signal fires; the
+      // lifecycle events (step_finished, run_finished) still run so
+      // the state machine winds down cleanly.
+      let lastYieldTs = performance.now();
+      const YIELD_INTERVAL_MS = 100;
+
       for await (const event of events) {
+        if (abortRef.current?.signal.aborted && event.type === 'token') {
+          continue;
+        }
+
         // Drive the reducer first so renderers see the new status as
         // soon as the per-step persistence write lands.
         uiState = agentStateReducer(uiState, event);
@@ -543,6 +575,11 @@ export const useChatSession = (
           isMultimodalEnabled,
           tts,
         });
+
+        if (performance.now() - lastYieldTs >= YIELD_INTERVAL_MS) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+          lastYieldTs = performance.now();
+        }
 
         if (event.type === 'run_failed') {
           throw event.error;
@@ -654,14 +691,11 @@ export const useChatSession = (
     // its current llama_decode chunk; see ChatSessionStore.isStopping
     // for the rationale).
     chatSessionStore.setIsStopping(true);
+    // The runner's abort listener calls engine.stopCompletion when the
+    // signal fires — the explicit call here used to be a redundant
+    // second hop that just added ~90 ms of await to the handler. The
+    // signal dispatch below is the single source of stop intent.
     abortRef.current?.abort();
-    if (modelStore.inferencing && modelStore.engine) {
-      try {
-        await modelStore.engine.stopCompletion();
-      } catch (error) {
-        console.warn('engine.stopCompletion failed:', error);
-      }
-    }
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop. Inferencing/isStreaming/isGenerating
     // flags are NOT cleared here — those get cleared by the for-await

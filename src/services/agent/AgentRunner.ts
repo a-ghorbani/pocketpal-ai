@@ -319,6 +319,18 @@ export async function* runAgent(
       let engineError: Error | null = null;
       const completionPromise = engine
         .completion(turnParams, data => {
+          // Per-chunk abort short-circuit. Native generation can keep
+          // firing this callback for several seconds after the user
+          // taps Stop (llama.rn's stopCompletion is non-blocking and
+          // can deliver hundreds of queued tokens during wind-down).
+          // Once the run is aborted, drop every chunk on the floor so
+          // the consumer pipeline (MobX writes, React renders, throttled
+          // store updates) doesn't keep churning. Native still runs to
+          // its natural stop, but the chat stops updating the moment
+          // the user taps Stop.
+          if (signal?.aborted) {
+            return;
+          }
           const delta = projectStreamChunk(data);
           if (
             delta.content ||

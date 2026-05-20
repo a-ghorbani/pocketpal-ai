@@ -508,6 +508,14 @@ export async function streamChatCompletion(
     };
 
     xhr.onprogress = () => {
+      // After `xhr.abort()` the OS may still deliver bytes already
+      // queued in the receive buffer via further onprogress firings.
+      // Drop them — but consume the offset so onload (if it ever
+      // fires) doesn't double-process them.
+      if (signal?.aborted) {
+        lastProcessedLength = xhr.responseText.length;
+        return;
+      }
       // Extract only the new data since last onprogress
       const newText = xhr.responseText.substring(lastProcessedLength);
       lastProcessedLength = xhr.responseText.length;
