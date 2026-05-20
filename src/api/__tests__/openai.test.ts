@@ -888,12 +888,9 @@ describe('streamChatCompletion', () => {
       // loop treats it as a normal step end.
       expect(result.stopped_eos).toBe(true);
 
-      // Streaming callback received per-chunk tool_calls deltas: each
-      // event carries id + name (the running known state) plus only
-      // THIS chunk's arguments fragment. The fully assembled arguments
-      // live on the final CompletionResult.tool_calls — not the
-      // mid-stream events. This avoids O(N²) string copying over long
-      // arguments payloads.
+      // Per-chunk callbacks carry only THIS chunk's arguments fragment
+      // (not the accumulated string); the assembled args live on the
+      // final result.tool_calls. Keeps assembly out of the hot path.
       const toolCallEvents = onToken.mock.calls.filter(
         ([data]) => data.tool_calls && data.tool_calls.length > 0,
       );

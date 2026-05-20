@@ -70,14 +70,10 @@ export interface StreamChatParams {
 }
 
 /**
- * Mutable accumulator state for streamed tool_call deltas. OpenAI
- * streams tool_calls index-by-index across multiple SSE chunks; the
- * `id` and `function.name` typically arrive on the first chunk for a
- * given index, then `function.arguments` is delivered in fragments
- * over many subsequent chunks. Store fragments in an array and join
- * once at end-of-stream — concatenating into a growing string on each
- * chunk plus copying it into a fresh snapshot was O(N²) over long
- * argument payloads (e.g. a multi-KB `render_html` html string).
+ * Streamed tool_call state per OpenAI `index`. Arguments are stored
+ * as fragments and joined once at end-of-stream — concatenating into
+ * a growing string per chunk was O(N²) on long argument payloads
+ * (e.g. a multi-KB `render_html` html string).
  */
 type ToolCallAccumulator = Map<
   number,
@@ -92,12 +88,9 @@ function applyToolCallDelta(
   acc: ToolCallAccumulator,
   deltaCalls: Array<any>,
 ): ToolCall[] {
-  // Per-chunk snapshot the streaming callback sees. `arguments` is
-  // the THIS-CHUNK fragment only, not the accumulated string. The
-  // consumer (AgentRunner's reducer) only reads `function.name`
-  // mid-stream to populate `pendingTalentNames`; the canonical full
-  // arguments are read off the final `CompletionResult.tool_calls`
-  // assembled at xhr.onload.
+  // Per-chunk snapshot: `arguments` is this chunk's fragment only.
+  // The consumer reads only `function.name` mid-stream; full args are
+  // assembled from the accumulator at xhr.onload.
   const result: ToolCall[] = [];
   for (const delta of deltaCalls) {
     if (typeof delta?.index !== 'number') {
@@ -131,8 +124,7 @@ function applyToolCallDelta(
 
 /**
  * Materialise the final tool_calls array from the fragment-based
- * accumulator. Single O(N) join per call rather than O(N²) over the
- * stream. Returns undefined when no tool_calls were seen, mirroring
+ * accumulator. Undefined when no tool_calls were seen — mirrors
  * llama.rn's shape.
  */
 function assembleFinalToolCalls(

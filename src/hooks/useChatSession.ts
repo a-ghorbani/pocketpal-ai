@@ -182,14 +182,8 @@ const prepareCompletion = async ({
 // diff cumulative against `prev*` and forward only the new substring.
 // Carried in ctx so a single run keeps a coherent audio stream.
 type TtsRunState = {
-  // Snapshot of `ttsStore.autoSpeakEnabled` at the start of the run.
-  // When false, the per-token TTS hook in `applyEventToStore` is
-  // skipped entirely — saving the cumulative-length compute and the
-  // String.slice deltas that would otherwise run on every chunk only
-  // to feed a no-op `onAssistantMessageChunk`. Captured per-run
-  // (rather than read live on every chunk) so a mid-stream settings
-  // toggle does not flicker the audio path; the next user message
-  // will pick up the new value.
+  // Snapshot of autoSpeakEnabled at run start; gates the per-chunk
+  // TTS hook. Per-run so mid-stream toggles don't flicker audio.
   enabled: boolean;
   started: boolean;
   prevContent: string;
@@ -241,10 +235,8 @@ async function applyEventToStore(
       // that carries content OR reasoning, then forward each new
       // substring via onAssistantMessageChunk. Wrapped defensively so a
       // UI-path failure cannot kill the completion stream. Skipped
-      // entirely when auto-speak is off for this run — the inner
-      // ttsStore calls would early-return anyway, but the cumulative-
-      // length compute and String.slice deltas are a real per-token
-      // cost on low-end devices.
+      // when auto-speak is off — ttsStore calls would early-return
+      // anyway, but the slice math is the residual per-token cost.
       if (ctx.tts.enabled) {
         try {
           const cumulativeContent = event.delta.content ?? ctx.tts.prevContent;
@@ -544,31 +536,14 @@ export const useChatSession = (
         signal: abortRef.current.signal,
       });
 
-      // Cooperative yield + consumer-side abort guard.
-      //
-      // Without the yield, the chunk-cycle (native callback →
-      // queue.push → microtask resume → consumer body → await
-      // queue.next() suspend → next chunk callback) runs entirely
-      // via microtask resumption from a Promise-resolved queue.next().
-      // The macrotask queue — where touch events, the Stop button
-      // onPress, and other low-priority callbacks are dispatched —
-      // never gets a slot. Measured starvation: tens of seconds
-      // during long streams on the OnePlus 6.
-      //
-      // Adding a setTimeout(_, 0) yield every YIELD_INTERVAL_MS of
-      // body work fixes the macrotask starvation, but has a side
-      // effect: it decouples native production from JS consumption.
-      // Without the consumer body blocking the JSI chunk callback,
-      // native runs at full speed. On a fast local model (SmolLM at
-      // ~36 chunks/s) the consumer can fall behind and a multi-hundred-
-      // event backlog accumulates. After the user taps Stop, the
-      // runner's chunk-handler abort guard stops accepting new chunks
-      // (so chunksAfterAbort stays near 0), but the queued backlog
-      // still drains here — the chat would keep updating with stale
-      // tokens for tens of seconds. The consumer-side guard below
-      // drops queued token events once the abort signal fires; the
-      // lifecycle events (step_finished, run_finished) still run so
-      // the state machine winds down cleanly.
+      // The chunk-cycle would otherwise run entirely via microtask
+      // resumption from queue.next(), starving the macrotask queue
+      // where touch events ride — Stop taps could sit for tens of
+      // seconds during long streams. A setTimeout(_, 0) yield every
+      // YIELD_INTERVAL_MS lets touches dispatch. The yield also
+      // decouples native production from consumption, so a backlog
+      // can grow on fast models; the abort guard below drops queued
+      // token events on stop while lifecycle events still run.
       let lastYieldTs = performance.now();
       const YIELD_INTERVAL_MS = 100;
 
@@ -707,10 +682,8 @@ export const useChatSession = (
     // its current llama_decode chunk; see ChatSessionStore.isStopping
     // for the rationale).
     chatSessionStore.setIsStopping(true);
-    // The runner's abort listener calls engine.stopCompletion when the
-    // signal fires — the explicit call here used to be a redundant
-    // second hop that just added ~90 ms of await to the handler. The
-    // signal dispatch below is the single source of stop intent.
+    // The runner's abort listener owns engine.stopCompletion — this
+    // signal is the single source of stop intent.
     abortRef.current?.abort();
     // Stop any in-flight TTS so buffered audio doesn't keep playing
     // after the user tapped Stop. Inferencing/isStreaming/isGenerating

@@ -415,9 +415,8 @@ describe('useChatSession', () => {
 
   describe('TTS streaming wiring', () => {
     beforeEach(() => {
-      // The per-token TTS hook is gated on `ttsStore.autoSpeakEnabled`
-      // captured at run start. Default mock value is false; these tests
-      // assert the hook fires, so opt in.
+      // Hook is gated on autoSpeakEnabled (default false in the mock);
+      // opt in for tests that assert it fires.
       (ttsStore as any).autoSpeakEnabled = true;
     });
 
@@ -708,11 +707,6 @@ describe('useChatSession', () => {
         await result.current.handleSendPress(textMessage);
       });
 
-      // Per-token TTS hook is gated → start/chunk are NEVER invoked
-      // during streaming when auto-speak is off, even though native
-      // produced three deltas. The post-run onAssistantMessageComplete
-      // still fires (auto-speak / voice gating happens inside the
-      // store) — outside the scope of this gate.
       expect(ttsStore.onAssistantMessageStart).not.toHaveBeenCalled();
       expect(ttsStore.onAssistantMessageChunk).not.toHaveBeenCalled();
     });
