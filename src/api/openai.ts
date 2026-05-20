@@ -1,5 +1,9 @@
 import {SSEParser} from './sseParser';
-import {CompletionResult, CompletionStreamData} from '../utils/completionTypes';
+import {
+  CompletionResult,
+  CompletionStreamData,
+  ToolCall,
+} from '../utils/completionTypes';
 
 /** Raw API response shape from OpenAI /v1/models */
 export interface RemoteModelInfo {
@@ -16,6 +20,25 @@ export interface OpenAIChatMessage {
     | Array<{type: string; text?: string; image_url?: {url?: string}}>;
 }
 
+/** OpenAI-style function tool definition. Mirrors the shape PACT
+ * talents emit via `TalentEngine.toToolDefinition()`. */
+export interface OpenAIToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, any>;
+  };
+}
+
+/** OpenAI tool_choice — `'auto' | 'none' | 'required'` for the simple
+ * case, or `{type:'function', function:{name}}` to pin a single tool. */
+export type OpenAIToolChoice =
+  | 'auto'
+  | 'none'
+  | 'required'
+  | {type: 'function'; function: {name: string}};
+
 /** Parameters for streaming chat completion */
 export interface StreamChatParams {
   messages: OpenAIChatMessage[];
@@ -25,6 +48,69 @@ export interface StreamChatParams {
   max_tokens?: number;
   stop?: string | string[];
   stream?: boolean;
+  tools?: OpenAIToolDefinition[];
+  tool_choice?: OpenAIToolChoice;
+}
+
+/**
+ * Mutable accumulator state for streamed tool_call deltas. OpenAI
+ * streams tool_calls index-by-index across multiple SSE chunks; the
+ * `id` and `function.name` typically arrive on the first chunk for a
+ * given index, then `function.arguments` is concatenated across many
+ * subsequent chunks. Mirror that into a stable shape per `index` so we
+ * can both forward per-delta updates AND assemble the final
+ * `CompletionResult.tool_calls` array.
+ */
+type ToolCallAccumulator = Map<
+  number,
+  {
+    id: string;
+    type: 'function';
+    function: {name: string; arguments: string};
+  }
+>;
+
+function applyToolCallDelta(
+  acc: ToolCallAccumulator,
+  deltaCalls: Array<any>,
+): ToolCall[] {
+  const touched: number[] = [];
+  for (const delta of deltaCalls) {
+    if (typeof delta?.index !== 'number') {
+      continue;
+    }
+    const idx = delta.index;
+    touched.push(idx);
+    const existing = acc.get(idx) ?? {
+      id: '',
+      type: 'function' as const,
+      function: {name: '', arguments: ''},
+    };
+    if (delta.id) {
+      existing.id = delta.id;
+    }
+    if (delta.function?.name) {
+      existing.function.name = delta.function.name;
+    }
+    if (delta.function?.arguments) {
+      existing.function.arguments += delta.function.arguments;
+    }
+    acc.set(idx, existing);
+  }
+  // Project touched indices into a snapshot so the streaming callback
+  // sees the running accumulated state for this delta only — same
+  // semantics as llama.rn's CompletionStreamData.tool_calls.
+  return touched
+    .map(i => acc.get(i))
+    .filter(Boolean)
+    .map(entry => ({
+      id: entry!.id,
+      type: entry!.type,
+      function: {
+        name: entry!.function.name,
+        arguments: entry!.function.arguments,
+      },
+    })) as ToolCall[];
 }
 
 const CONNECTION_TIMEOUT_MS = 30000;
@@ -232,6 +318,11 @@ export async function streamChatCompletion(
     let lastProcessedLength = 0;
     let settled = false;
     let serverTimings: CompletionResult['timings'] | undefined;
+    // OpenAI streams partial tool_calls across chunks, indexed by
+    // `delta.tool_calls[i].index`. Rebuild the per-call shape here so
+    // the final result carries fully formed tool_calls and the streaming
+    // callback sees a running snapshot.
+    const toolCallAcc: ToolCallAccumulator = new Map();
 
     // Connection timeout: abort if no headers received within 30s
     const connectionTimer = setTimeout(() => {
@@ -319,13 +410,27 @@ export async function streamChatCompletion(
           serverTimings = parsed.timings;
         }
 
-        if (onToken && (content || reasoningContent)) {
+        // When tool_calls deltas are present, forward a token event so
+        // the agent loop can react to a tool call beginning to assemble
+        // — same shape llama.rn emits.
+        let toolCallsDelta: ToolCall[] | undefined;
+        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+          toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
+        }
+
+        if (
+          onToken &&
+          (content ||
+            reasoningContent ||
+            (toolCallsDelta && toolCallsDelta.length > 0))
+        ) {
           onToken({
             token: content || reasoningContent,
             // Pass accumulated content to match llama.rn's callback behavior
             // (useChatSession replaces message text, not appends)
             content: fullContent || undefined,
             reasoning_content: fullReasoningContent || undefined,
+            tool_calls: toolCallsDelta,
           });
         }
       }
@@ -432,7 +537,26 @@ export async function streamChatCompletion(
         if (parsed.timings) {
           serverTimings = parsed.timings;
         }
+        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+          applyToolCallDelta(toolCallAcc, delta.tool_calls);
+        }
       }
+
+      // Mirror llama.rn's shape: undefined when no tool_calls were
+      // observed during the stream.
+      const finalToolCalls: ToolCall[] | undefined =
+        toolCallAcc.size > 0
+          ? Array.from(toolCallAcc.entries())
+              .sort(([a], [b]) => a - b)
+              .map(([, entry]) => ({
+                id: entry.id,
+                type: entry.type,
+                function: {
+                  name: entry.function.name,
+                  arguments: entry.function.arguments,
+                },
+              }))
+          : undefined;
 
       // Build result
       if (signal?.aborted) {
@@ -440,6 +564,7 @@ export async function streamChatCompletion(
           text: fullContent,
           content: fullContent,
           reasoning_content: fullReasoningContent || undefined,
+          tool_calls: finalToolCalls,
           tokens_predicted: tokensPredicted,
           interrupted: true,
         });
@@ -450,12 +575,20 @@ export async function streamChatCompletion(
         text: fullContent,
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
+        tool_calls: finalToolCalls,
         tokens_predicted: tokensPredicted,
         timings: serverTimings,
       };
 
       switch (finishReason) {
         case 'stop':
+          result.stopped_eos = true;
+          break;
+        case 'tool_calls':
+          // OpenAI emits finish_reason="tool_calls" when the model
+          // chose to call tools instead of producing a final answer.
+          // Treat as a normal stop — the agent loop reads .tool_calls
+          // off the result and dispatches the next turn.
           result.stopped_eos = true;
           break;
         case 'length':
@@ -522,6 +655,14 @@ export async function streamChatCompletion(
     }
     if (params.stop && params.stop.length > 0) {
       requestBody.stop = params.stop;
+    }
+    // Only attach when the caller actually supplied them — empty arrays
+    // cause some servers (and their schema validators) to choke.
+    if (params.tools && params.tools.length > 0) {
+      requestBody.tools = params.tools;
+    }
+    if (params.tool_choice !== undefined) {
+      requestBody.tool_choice = params.tool_choice;
     }
     xhr.send(JSON.stringify(requestBody));
   });

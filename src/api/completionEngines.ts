@@ -27,6 +27,8 @@ export class LocalCompletionEngine implements CompletionEngine {
               token: data.token,
               content: data.content,
               reasoning_content: data.reasoning_content,
+              tool_calls: data.tool_calls,
+              accumulated_text: data.accumulated_text,
             });
           }
         : undefined,
@@ -35,6 +37,7 @@ export class LocalCompletionEngine implements CompletionEngine {
       text: result.text,
       content: result.content,
       reasoning_content: result.reasoning_content,
+      tool_calls: result.tool_calls,
       timings: result.timings,
       tokens_predicted: result.tokens_predicted,
       tokens_evaluated: result.tokens_evaluated,
@@ -81,6 +84,11 @@ export class OpenAICompletionEngine implements CompletionEngine {
         max_tokens: params.n_predict,
         stop: params.stop,
         stream: true,
+        // Cast at the boundary: llama.rn's `tools` typedef is
+        // structurally compatible with OpenAI's function-tool shape but
+        // lives under a different name.
+        tools: (params as any).tools,
+        tool_choice: (params as any).tool_choice,
       },
       this.serverUrl,
       this.apiKey,

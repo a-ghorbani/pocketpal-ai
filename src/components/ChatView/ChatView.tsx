@@ -9,6 +9,7 @@ import {
   View,
   TouchableOpacity,
   Keyboard,
+  Text,
 } from 'react-native';
 
 import dayjs from 'dayjs';
@@ -56,12 +57,14 @@ import {
   ChatInputAdditionalProps,
   ChatInputTopLevelProps,
   Menu,
-  LoadingBubble,
+  PendingIndicator,
   ChatPalModelPickerSheet,
   ChatHeader,
   ChatEmptyPlaceholder,
   VideoPalEmptyPlaceholder,
   ContentReportSheet,
+  GreetingBubble,
+  SuggestedPromptsRow,
 } from '..';
 import {
   AlertIcon,
@@ -125,10 +128,11 @@ export interface ChatProps extends ChatTopLevelProps {
    * When true, indicates that there are no more pages to load and
    * pagination will not be triggered. */
   isLastPage?: boolean;
-  /** Indicates if the AI is currently streaming tokens */
+  /** Indicates if the AI is currently streaming tokens. Used by the
+   * FlatList's `maintainVisibleContentPosition` to keep the latest
+   * tokens in view while the stream lands. Pending UX is derived
+   * inside ChatView from `chatSessionStore.agentUiState.status`. */
   isStreaming?: boolean;
-  /** Indicates if the AI is currently thinking (processing but not yet streaming) */
-  isThinking?: boolean;
   messages: MessageType.Any[];
   /** Used for pagination (infinite scroll). Called when user scrolls
    * to the very end of the list (minus `onEndReachedThreshold`).
@@ -160,6 +164,24 @@ export interface ChatProps extends ChatTopLevelProps {
   user: User;
 }
 
+/**
+ * Thin observer wrapper around PendingIndicator so the per-token
+ * count + label updates only re-render this small subtree (and not
+ * the entire FlatList header), keeping the dot animations alive and
+ * the elapsed-seconds timer ticking. Without this isolation, MobX
+ * re-renders ChatView on each token, the `renderListHeaderComponent`
+ * useCallback would change reference (because it'd carry the count in
+ * its deps), and FlatList would unmount + remount the header every
+ * ~50ms — killing both Animated.loop and setInterval.
+ */
+const PendingIndicatorView: React.FC = observer(() => (
+  <PendingIndicator
+    pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
+    pendingToolTokens={chatSessionStore.agentUiState.pendingToolTokens}
+    isStopping={chatSessionStore.isStopping}
+  />
+));
+
 /** Entry component, represents the complete chat */
 export const ChatView = observer(
   ({
@@ -173,7 +195,6 @@ export const ChatView = observer(
     isLastPage,
     isStopVisible,
     isStreaming = false,
-    isThinking = false,
     messages,
     onEndReached,
     onMessageLongPress: externalOnMessageLongPress,
@@ -319,6 +340,16 @@ export const ChatView = observer(
         {translateY: keyboard.height.value - keyboardOffsetBottom.value},
       ],
       paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
+    }));
+
+    // Suggested-prompts overlay shares the input's keyboard translation but
+    // must NOT inherit paddingBottom (which the input uses to clear the
+    // home indicator). Applying it here would create a large empty gap
+    // between the chips and the input when the keyboard is closed.
+    const suggestedPromptsAnimatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
+      ],
     }));
 
     // Monitor keyboard height changes and animate the offset value
@@ -535,7 +566,7 @@ export const ChatView = observer(
 
     const handleMessageLongPress = React.useCallback(
       (message: MessageType.Any, event: any) => {
-        if (message.type !== 'text') {
+        if (message.type !== 'text' && message.type !== 'assistant_turn') {
           externalOnMessageLongPress?.(message);
           return;
         }
@@ -569,7 +600,11 @@ export const ChatView = observer(
     } = l10n.components.chatView.menuItems;
 
     const menuItems = React.useMemo((): MenuItem[] => {
-      if (!selectedMessage || selectedMessage.type !== 'text') {
+      if (
+        !selectedMessage ||
+        (selectedMessage.type !== 'text' &&
+          selectedMessage.type !== 'assistant_turn')
+      ) {
         return [];
       }
 
@@ -697,6 +732,35 @@ export const ChatView = observer(
       [],
     );
 
+    // Active-vs-persisted predicate (single source of truth). A message
+    // is "active" if it is the LAST (newest) message in the input
+    // `messages` list AND the agent's UI status is in the actively-
+    // running set. Computed once here and passed down via props so
+    // individual blocks within an AssistantTurn don't re-derive it.
+    const newestMessageId = messages.length > 0 ? messages[0].id : null;
+    const agentStatus = chatSessionStore.agentUiState.status;
+    const isAgentActive =
+      agentStatus === 'prefill' ||
+      agentStatus === 'streaming_text' ||
+      agentStatus === 'generating_tool_call' ||
+      agentStatus === 'executing_tool';
+    // The PendingIndicator covers every dead zone: prefill (initial
+    // and follow-up), generating_tool_call, executing_tool. Hidden in
+    // streaming_text and done so it doesn't compete with the visible
+    // token stream / final footer.
+    const isPending =
+      agentStatus === 'prefill' ||
+      agentStatus === 'generating_tool_call' ||
+      agentStatus === 'executing_tool' ||
+      // Keep the indicator visible during the user-initiated stop
+      // window so they see the "Stopping…" feedback even if status
+      // had been `streaming_text` (no indicator) at the moment of the
+      // tap. Cleared together with `isStopping` once the runner exits.
+      chatSessionStore.isStopping;
+    const activeRunPendingTalentNames =
+      chatSessionStore.agentUiState.pendingTalentNames;
+    const isGeneratingToolCall = agentStatus === 'generating_tool_call';
+
     // Render individual message
     const renderMessage = React.useCallback(
       ({item: message}: {item: MessageType.DerivedAny; index: number}) => {
@@ -714,11 +778,23 @@ export const ChatView = observer(
         const showName = message.type !== 'dateHeader' && message.showName;
         const showStatus = message.type !== 'dateHeader' && message.showStatus;
 
+        const isActiveRun =
+          isAgentActive &&
+          message.type !== 'dateHeader' &&
+          message.id === newestMessageId;
+
         return (
           <View>
             <Message
               {...{
                 enableAnimation,
+                isActiveRun,
+                activeRunPendingTalentNames: isActiveRun
+                  ? activeRunPendingTalentNames
+                  : undefined,
+                isGeneratingToolCall: isActiveRun
+                  ? isGeneratingToolCall
+                  : false,
                 message,
                 messageWidth,
                 onMessageLongPress: handleMessageLongPress,
@@ -754,6 +830,10 @@ export const ChatView = observer(
         size.width,
         usePreviewData,
         user.id,
+        isAgentActive,
+        newestMessageId,
+        activeRunPendingTalentNames,
+        isGeneratingToolCall,
       ],
     );
 
@@ -769,10 +849,15 @@ export const ChatView = observer(
       }
 
       return (
-        <ChatEmptyPlaceholder
-          bottomComponentHeight={bottomComponentHeight}
-          onSelectModel={() => setIsPickerVisible(true)}
-        />
+        <>
+          {activePal?.greeting?.text && modelStore.activeModelId ? (
+            <GreetingBubble text={activePal.greeting.text} />
+          ) : null}
+          <ChatEmptyPlaceholder
+            bottomComponentHeight={bottomComponentHeight}
+            onSelectModel={() => setIsPickerVisible(true)}
+          />
+        </>
       );
     }, [bottomComponentHeight, setIsPickerVisible, activePal]);
 
@@ -812,15 +897,18 @@ export const ChatView = observer(
       };
     });
 
-    // Render header (loading bubble and keyboard spacer)
+    // Render header (pending indicator + keyboard spacer). The
+    // FlatList is `inverted={true}`, so the ListHeaderComponent renders
+    // at the bottom of the visible list — i.e. BELOW the latest turn,
+    // never inside it.
     const renderListHeaderComponent = React.useCallback(
       () => (
         <>
-          {isThinking && <LoadingBubble />}
+          {isPending && <PendingIndicatorView />}
           {chatMessages.length > 0 && <Reanimated.View style={headerStyle} />}
         </>
       ),
-      [isThinking, chatMessages.length, headerStyle],
+      [isPending, chatMessages.length, headerStyle],
     );
 
     // Render complete chat list with scroll-to-bottom button
@@ -932,6 +1020,32 @@ export const ChatView = observer(
       ? activePal.color?.[1]
       : theme.colors.surface;
 
+    // Soft cap: warn the user before the 5th HTML preview in this session.
+    // Memory pressure on budget Android becomes a hazard above 5 WebViews;
+    // we surface the banner non-blockingly at >=4 so they can start a new
+    // chat. Counts html-result outcomes across all steps of every
+    // AssistantTurn row in the visible message list.
+    const htmlPreviewCount = React.useMemo(
+      () =>
+        messages.reduce((acc, m) => {
+          if (m.type !== 'assistant_turn') {
+            return acc;
+          }
+          const turn = m as MessageType.AssistantTurn;
+          let count = 0;
+          for (const step of turn.steps ?? []) {
+            for (const outcome of step.toolOutcomes ?? []) {
+              if (outcome.result.type === 'html') {
+                count += 1;
+              }
+            }
+          }
+          return acc + count;
+        }, 0),
+      [messages],
+    );
+    const showSoftCapWarning = htmlPreviewCount >= 4;
+
     // ============ COMPONENT RENDER ============
     return (
       <UserContext.Provider value={user}>
@@ -956,6 +1070,13 @@ export const ChatView = observer(
                 inputContainerAnimatedStyle,
                 {backgroundColor: inputBackgroundColor},
               ]}>
+              {showSoftCapWarning ? (
+                <View testID="soft-cap-warning" style={styles.softCapBanner}>
+                  <Text style={styles.softCapBannerText}>
+                    {l10n.chat.softCapWarning}
+                  </Text>
+                </View>
+              ) : null}
               <ChatInput
                 {...{
                   ...unwrap(inputProps),
@@ -984,6 +1105,30 @@ export const ChatView = observer(
                 }}
               />
             </Reanimated.View>
+
+            {/* Suggested prompts — float above the input container, share
+                its keyboard-tracking transform so they rise together but
+                render as a sibling (no shared background / rounded top). */}
+            {messages.length === 0 &&
+            !isStreaming &&
+            modelStore.activeModelId !== undefined &&
+            activePal?.greeting?.suggestedPrompts &&
+            activePal.greeting.suggestedPrompts.length > 0 ? (
+              <Reanimated.View
+                pointerEvents="box-none"
+                style={[
+                  styles.suggestedPromptsOverlay,
+                  suggestedPromptsAnimatedStyle,
+                  {bottom: chatInputHeight.height},
+                ]}>
+                <SuggestedPromptsRow
+                  prompts={activePal.greeting.suggestedPrompts}
+                  onSelect={prompt =>
+                    wrappedOnSendPress({type: 'text', text: prompt})
+                  }
+                />
+              </Reanimated.View>
+            ) : null}
 
             {/* Pal/Model picker sheet */}
             {/* Conditionally render the sheet to avoid keyboard issues.

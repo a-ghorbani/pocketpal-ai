@@ -198,4 +198,18 @@ export const createStyles = (theme: Theme) =>
     generationSettingsButton: {
       marginTop: 8,
     },
+    talentItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: theme.spacing.default,
+    },
+    talentInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    talentDescription: {
+      color: theme.colors.onSurfaceVariant,
+    },
   });

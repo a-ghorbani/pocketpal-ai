@@ -9,9 +9,9 @@ import {ttsStore} from '../../../store';
 
 import {HeroRow} from '../HeroRow';
 
-// HeroRow now routes preview through ttsStore.preview (which is the
-// store-level coordinator). The store is globally mocked via the
-// __mocks__/stores/ttsStore module — no engine mock needed here.
+// HeroRow routes preview through ttsStore.preview (the store-level
+// coordinator). The store is globally mocked via __mocks__/stores/ttsStore
+// — no engine mock needed here.
 
 const renderHero = () =>
   render(

@@ -12,7 +12,13 @@ import {
 
 import {useChatSession} from '../useChatSession';
 
-import {chatSessionStore, modelStore, palStore, ttsStore} from '../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
@@ -140,6 +146,27 @@ describe('useChatSession', () => {
     result.current.handleStopPress();
 
     expect(modelStore.context?.stopCompletion).not.toHaveBeenCalled();
+  });
+
+  it('handleStopPress sets isStopping immediately so the UI can gate sends', async () => {
+    // Simulate a real in-flight chat: inferencing is true and the
+    // engine has been wired (mock above). The stop press should:
+    //   - flip isStopping to true (UI feedback + send-button gate)
+    //   - leave inferencing alone (cleared later by the runner exit)
+    // The cleanup of isStopping happens in the for-await loop, so it
+    // is exercised in `should set inferencing correctly during send`.
+    modelStore.setInferencing(true);
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await result.current.handleStopPress();
+
+    expect(chatSessionStore.setIsStopping).toHaveBeenCalledWith(true);
+    // inferencing flag is NOT cleared by handleStopPress anymore — the
+    // runner's for-await cleanup is the single owner of that.
+    const calls = (chatSessionStore.setIsGenerating as jest.Mock).mock.calls;
+    expect(calls.find(c => c[0] === false)).toBeUndefined();
   });
 
   it('should set inferencing correctly during send', async () => {
@@ -304,50 +331,29 @@ describe('useChatSession', () => {
     );
   });
 
-  it('should save completionResult with reasoning_content after completion', async () => {
-    const mockReasoningContent = 'Let me think step by step...';
-    const mockContent = 'The answer is 42.';
-
+  it('emits multimodal warning when user sends an image but multimodal is disabled', async () => {
+    // modelStore.isMultimodalEnabled is mocked to return false by default
+    // (see __mocks__/stores/modelStore.ts). The hook should call
+    // uiStore.setChatWarning with the multimodal-not-enabled message.
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockImplementation((_params, onData) => {
-          // Simulate streaming with reasoning content
-          onData({
-            token: 'tok',
-            content: mockContent,
-            reasoning_content: mockReasoningContent,
-          });
-          return Promise.resolve({
-            text: mockContent,
-            reasoning_content: mockReasoningContent,
-            timings: {total: 100},
-            usage: {},
-          });
-        });
+        .mockResolvedValue({text: 'ok', content: 'ok', timings: {}});
     }
-
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
-
     await act(async () => {
-      await result.current.handleSendPress(textMessage);
+      await result.current.handleSendPress({
+        text: 'look at this',
+        type: 'text',
+        imageUris: ['file:///photo.jpg'],
+      });
     });
-
-    // Verify the final updateMessage call includes completionResult
-    expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.objectContaining({
-        metadata: expect.objectContaining({
-          completionResult: {
-            reasoning_content: mockReasoningContent,
-            content: mockContent,
-          },
-        }),
-      }),
-    );
+    expect(uiStore.setChatWarning).toHaveBeenCalled();
+    const arg = (uiStore.setChatWarning as jest.Mock).mock.calls[0][0];
+    // The warning carries the multimodalNotEnabled message text.
+    expect(JSON.stringify(arg)).toContain(l10n.en.chat.multimodalNotEnabled);
   });
 
   it('should use system prompt as-is when pal has no parameters', async () => {

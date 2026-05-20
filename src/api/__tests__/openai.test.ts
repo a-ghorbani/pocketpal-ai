@@ -701,4 +701,175 @@ describe('streamChatCompletion', () => {
       ),
     ).rejects.toThrow('Completion aborted');
   });
+
+  // PACT support over OpenAI-compatible remote engines.
+  describe('tool support', () => {
+    const calculateTool = {
+      type: 'function' as const,
+      function: {
+        name: 'calculate',
+        description: 'Evaluate a math expression',
+        parameters: {
+          type: 'object',
+          properties: {expression: {type: 'string'}},
+          required: ['expression'],
+        },
+      },
+    };
+
+    it('forwards tools and tool_choice in the request body', async () => {
+      const resultPromise = streamChatCompletion(
+        {
+          messages: [{role: 'user', content: 'What is 2+2?'}],
+          model: 'test-model',
+          tools: [calculateTool],
+          tool_choice: 'auto',
+        },
+        'http://localhost:1234',
+      );
+
+      const xhr = MockXHR.instances[0];
+      const body = JSON.parse(xhr.requestBody);
+      expect(body.tools).toEqual([calculateTool]);
+      expect(body.tool_choice).toBe('auto');
+
+      // Drain so the promise resolves cleanly.
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+      await resultPromise;
+    });
+
+    it('omits tools/tool_choice from the body when caller did not supply them', async () => {
+      const resultPromise = streamChatCompletion(
+        {messages: [{role: 'user', content: 'hi'}], model: 'test-model'},
+        'http://localhost:1234',
+      );
+      const xhr = MockXHR.instances[0];
+      const body = JSON.parse(xhr.requestBody);
+      expect(body.tools).toBeUndefined();
+      expect(body.tool_choice).toBeUndefined();
+
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+      await resultPromise;
+    });
+
+    it('omits empty tools array (some servers reject it)', async () => {
+      const resultPromise = streamChatCompletion(
+        {
+          messages: [{role: 'user', content: 'hi'}],
+          model: 'test-model',
+          tools: [],
+        },
+        'http://localhost:1234',
+      );
+      const xhr = MockXHR.instances[0];
+      const body = JSON.parse(xhr.requestBody);
+      expect(body.tools).toBeUndefined();
+
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+      await resultPromise;
+    });
+
+    it('reassembles streamed tool_call deltas into a single complete call', async () => {
+      const onToken = jest.fn();
+      const resultPromise = streamChatCompletion(
+        {
+          messages: [{role: 'user', content: 'What is 2+2?'}],
+          model: 'test-model',
+          tools: [calculateTool],
+        },
+        'http://localhost:1234',
+        undefined,
+        undefined,
+        onToken,
+      );
+
+      const xhr = MockXHR.instances[0];
+      xhr.simulateHeaders(200);
+
+      // Chunk 1: id + name arrive on the first delta for index 0.
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"calculate","arguments":""}}]},"finish_reason":null}]}\n\n',
+      );
+      // Chunk 2: arguments start streaming.
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"expression\\":\\"2"}}]},"finish_reason":null}]}\n\n',
+      );
+      // Chunk 3: arguments finish streaming.
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"+2\\"}"}}]},"finish_reason":null}]}\n\n',
+      );
+      // Final chunk: finish_reason="tool_calls".
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+
+      const result = await resultPromise;
+
+      // Final result carries the assembled call.
+      expect(result.tool_calls).toEqual([
+        {
+          id: 'call_abc',
+          type: 'function',
+          function: {
+            name: 'calculate',
+            arguments: '{"expression":"2+2"}',
+          },
+        },
+      ]);
+      // tool_calls finish_reason maps to stopped_eos so the agent
+      // loop treats it as a normal step end.
+      expect(result.stopped_eos).toBe(true);
+
+      // Streaming callback received tool_calls deltas (running snapshot
+      // shape — same as llama.rn's CompletionStreamData.tool_calls).
+      const toolCallEvents = onToken.mock.calls.filter(
+        ([data]) => data.tool_calls && data.tool_calls.length > 0,
+      );
+      expect(toolCallEvents.length).toBeGreaterThanOrEqual(1);
+      // The last event's tool_calls should be the fully assembled call.
+      const last = toolCallEvents[toolCallEvents.length - 1][0].tool_calls[0];
+      expect(last.id).toBe('call_abc');
+      expect(last.function.name).toBe('calculate');
+      expect(last.function.arguments).toBe('{"expression":"2+2"}');
+    });
+
+    it('handles parallel tool_calls indexed across chunks', async () => {
+      const resultPromise = streamChatCompletion(
+        {
+          messages: [{role: 'user', content: 'Hi'}],
+          model: 'test-model',
+          tools: [calculateTool],
+        },
+        'http://localhost:1234',
+      );
+
+      const xhr = MockXHR.instances[0];
+      xhr.simulateHeaders(200);
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"calculate","arguments":"{\\"x\\":1}"}},{"index":1,"id":"call_b","type":"function","function":{"name":"calculate","arguments":"{\\"x\\":2}"}}]},"finish_reason":null}]}\n\n',
+      );
+      xhr.simulateProgress(
+        'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\ndata: [DONE]\n\n',
+      );
+      xhr.simulateLoad();
+
+      const result = await resultPromise;
+      expect(result.tool_calls).toHaveLength(2);
+      expect(result.tool_calls?.[0].id).toBe('call_a');
+      expect(result.tool_calls?.[1].id).toBe('call_b');
+    });
+  });
 });

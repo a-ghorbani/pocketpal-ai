@@ -28,10 +28,10 @@ import {
   type BenchBaseParams,
 } from '../benchParams';
 
-// Top-level require keeps RNFS access DCE-friendly (matches MemoryAdapter
-// pattern from TASK-20260423-2331 Step 0). The whole module is gated
-// behind __E2E__ at every reachable import site (App.tsx, deepLink.ts,
-// useDeepLinking.ts), so this require is unreachable in prod.
+// Top-level require keeps RNFS access DCE-friendly (matches the
+// MemoryAdapter pattern). The whole module is gated behind __E2E__ at
+// every reachable import site (App.tsx, deepLink.ts, useDeepLinking.ts),
+// so this require is unreachable in prod.
 
 const RNFS = require('@dr.pogodin/react-native-fs');
 

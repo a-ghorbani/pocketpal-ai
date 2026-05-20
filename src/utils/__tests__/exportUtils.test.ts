@@ -147,6 +147,15 @@ describe('exportUtils', () => {
           type: 'text',
           metadata: '{"test": true}',
           createdAt: 1704067200000,
+          // Mimic the WatermelonDB Message model surface used by exportUtils.
+          toMessageObject: () => ({
+            id: 'msg-1',
+            type: 'text',
+            text: 'Hello',
+            author: {id: 'user'},
+            createdAt: 1704067200000,
+            metadata: {test: true},
+          }),
         },
       ],
       completionSettings: {
@@ -189,6 +198,53 @@ describe('exportUtils', () => {
       await expect(exportChatSession('session-1')).rejects.toThrow(
         'Write failed',
       );
+    });
+
+    it('exports AssistantTurn rows with derivedText (joined step.content) — story Hook test #5', async () => {
+      const turnSessionData = {
+        session: {
+          id: 'session-2',
+          title: 'Turn Session',
+          date: '2024-01-01T00:00:00Z',
+        },
+        messages: [
+          {
+            id: 'msg-turn',
+            author: 'assistant',
+            text: '', // empty by design for assistant_turn
+            type: 'assistant_turn',
+            metadata: JSON.stringify({
+              copyable: true,
+              steps: [{content: 'Let me check'}, {content: 'The answer is 42'}],
+            }),
+            createdAt: 1704067200000,
+            // Real WatermelonDB Message.toMessageObject lifts metadata.steps
+            // to top-level — we mirror that here.
+            toMessageObject: () => ({
+              id: 'msg-turn',
+              type: 'assistant_turn',
+              author: {id: 'assistant'},
+              createdAt: 1704067200000,
+              steps: [{content: 'Let me check'}, {content: 'The answer is 42'}],
+              metadata: {copyable: true},
+            }),
+          },
+        ],
+        completionSettings: null,
+      };
+      chatSessionRepository.getSessionById = jest
+        .fn()
+        .mockResolvedValue(turnSessionData as any);
+
+      await exportChatSession('session-2');
+
+      expect(RNFS.writeFile).toHaveBeenCalled();
+      const writtenJson = (RNFS.writeFile as jest.Mock).mock.calls[0][1];
+      const parsed = JSON.parse(writtenJson);
+      expect(parsed.messages).toHaveLength(1);
+      expect(parsed.messages[0].type).toBe('assistant_turn');
+      // derivedText joins step.content with two newlines.
+      expect(parsed.messages[0].text).toBe('Let me check\n\nThe answer is 42');
     });
   });
 
@@ -286,6 +342,15 @@ describe('exportUtils', () => {
           type: 'text',
           metadata: '{"test": true}',
           createdAt: 1704067200000,
+          // Mimic the WatermelonDB Message model surface used by exportUtils.
+          toMessageObject: () => ({
+            id: 'msg-1',
+            type: 'text',
+            text: 'Hello',
+            author: {id: 'user'},
+            createdAt: 1704067200000,
+            metadata: {test: true},
+          }),
         },
       ],
       completionSettings: {
@@ -446,6 +511,33 @@ describe('exportUtils', () => {
         palStore.pals = [];
 
         await expect(exportPal('nonexistent')).rejects.toThrow('Pal not found');
+      });
+
+      // pact (talent set) and greeting are first-class persisted state.
+      // They MUST round-trip through export/import or backups silently
+      // drop tool configuration and the empty-chat greeting.
+      it('round-trips pact (talents) and greeting through exported data', async () => {
+        const palWithTalents = {
+          ...mockPal,
+          pact: {
+            talents: [
+              {name: 'calculate'},
+              {name: 'render_html', required: true},
+            ],
+          },
+          greeting: {
+            text: 'Hello! How can I help you today?',
+            suggestedPrompts: ['Tell me a joke', 'Summarize this'],
+          },
+        };
+        palStore.pals = [palWithTalents as any];
+
+        await exportPal('pal-1');
+
+        const writeCall = (RNFS.writeFile as jest.Mock).mock.calls[0];
+        const exportedData = JSON.parse(writeCall[1]);
+        expect(exportedData.pact).toEqual(palWithTalents.pact);
+        expect(exportedData.greeting).toEqual(palWithTalents.greeting);
       });
     });
 

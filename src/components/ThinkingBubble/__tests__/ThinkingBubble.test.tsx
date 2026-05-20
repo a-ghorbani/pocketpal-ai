@@ -67,24 +67,35 @@ describe('ThinkingBubble', () => {
   });
 
   it('transitions through all states when pressed multiple times', () => {
-    const {getByText} = renderThinkingBubble();
+    const {getByText, queryByTestId} = renderThinkingBubble();
 
-    const headerText = getByText(l10n.en.components.thinkingBubble.reasoning);
+    // The reasoning label is rendered in PARTIAL/EXPANDED inside
+    // headerContainer and in COLLAPSED inside collapsedRow — different
+    // elements, same text. Re-query after each press so the press
+    // event lands on the live element.
+    const press = () =>
+      fireEvent.press(getByText(l10n.en.components.thinkingBubble.reasoning));
 
-    // First press: PARTIAL to EXPANDED
-    fireEvent.press(headerText);
+    // Initial: PARTIAL — no collapsed row
+    expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
+
+    // Press 1: PARTIAL → EXPANDED (still card, no collapsed row)
+    press();
+    expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
     expect(
       require('react-native').LayoutAnimation.configureNext,
     ).toHaveBeenCalledTimes(1);
 
-    // Second press: EXPANDED to COLLAPSED
-    fireEvent.press(headerText);
+    // Press 2: EXPANDED → COLLAPSED (text-only row appears)
+    press();
+    expect(queryByTestId('thinking-bubble-collapsed')).not.toBeNull();
     expect(
       require('react-native').LayoutAnimation.configureNext,
     ).toHaveBeenCalledTimes(2);
 
-    // Third press: COLLAPSED to PARTIAL
-    fireEvent.press(headerText);
+    // Press 3: COLLAPSED → PARTIAL (back to card)
+    press();
+    expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
     expect(
       require('react-native').LayoutAnimation.configureNext,
     ).toHaveBeenCalledTimes(3);

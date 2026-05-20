@@ -5,6 +5,11 @@ module.exports = {
     // put Prettier last so it can disable conflicting ESLint rules
     'plugin:prettier/recommended',
   ],
+  globals: {
+    // Compile-time-defined flag (see babel.config.js `transform-define`).
+    // Declared as a global so ESLint's no-undef rule doesn't trip.
+    __E2E__: 'readonly',
+  },
   ignorePatterns: [
     'coverage/',
     'node_modules/',
@@ -16,6 +21,20 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'error',
+    // Single writer for `agentUiState` is `chatSessionStore.setAgentUiState`;
+    // every UI flag derives from it via `@computed`. Ban imperative
+    // setters like `setIsGeneratingToolCall` so a regression that
+    // reintroduces them is caught at lint time even if TypeScript
+    // accepts the new method.
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector:
+          "CallExpression[callee.property.name='setIsGeneratingToolCall']",
+        message:
+          'Imperative agent-status setters are banned. Drive agentUiState through agentStateReducer + chatSessionStore.setAgentUiState.',
+      },
+    ],
   },
   overrides: [
     {
@@ -45,6 +64,17 @@ module.exports = {
       files: ['App.tsx', 'src/hooks/useDeepLinking.ts'],
       rules: {
         'no-restricted-imports': 'off',
+      },
+    },
+    {
+      // The agent runner module is the producer of AgentEvents and
+      // does not consume the store; tests for it sometimes need to
+      // reach for low-level surfaces. The ban above doesn't fire
+      // here anyway (no setIsGeneratingToolCall anywhere in the
+      // module), but scope-out for clarity.
+      files: ['src/services/agent/**'],
+      rules: {
+        'no-restricted-syntax': 'off',
       },
     },
   ],

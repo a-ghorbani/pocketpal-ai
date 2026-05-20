@@ -141,9 +141,9 @@ describe('ttsRuntime', () => {
     });
 
     it('serializes a stop ordered before a new acquire on the same engine', async () => {
-      // This is the B2 fix: when JS issues stop() then immediately starts
-      // a new utterance, the FIFO mutex guarantees the native stop
-      // completes before the new speak begins.
+      // When JS issues stop() then immediately starts a new utterance,
+      // the FIFO mutex guarantees the native stop completes before the
+      // new speak begins.
       const kokoro = makeEngine('kokoro');
       await ttsRuntime.acquire(kokoro, async () => undefined);
 

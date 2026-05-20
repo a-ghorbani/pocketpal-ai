@@ -299,6 +299,9 @@ class ChatSessionRepository {
         if (msg.type === 'text' && msg.imageUris) {
           metadata.imageUris = msg.imageUris;
         }
+        if (msg.type === 'assistant_turn') {
+          metadata.steps = (msg as MessageType.AssistantTurn).steps ?? [];
+        }
 
         await database.collections.get('messages').create((record: any) => {
           record.sessionId = newSession.id;
@@ -306,6 +309,7 @@ class ChatSessionRepository {
           if (msg.type === 'text') {
             record.text = msg.text;
           }
+          // assistant_turn rows leave `text` unset (see addMessageToSession).
           record.type = msg.type;
           record.metadata = JSON.stringify(metadata);
           record.position = initialMessages.length - i; // Reverse order
@@ -453,6 +457,14 @@ class ChatSessionRepository {
         metadata.imageUris = (message as MessageType.Text).imageUris;
       }
 
+      // Persist top-level `steps` for assistant_turn rows by writing it
+      // into metadata.steps. The in-memory shape strips `steps` from
+      // metadata (see Message.toMessageObject); this repository is the
+      // sole writer of `metadata.steps` on the way back to disk.
+      if (message.type === 'assistant_turn') {
+        metadata.steps = (message as MessageType.AssistantTurn).steps ?? [];
+      }
+
       newMessage = await database.collections
         .get('messages')
         .create((record: any) => {
@@ -461,6 +473,9 @@ class ChatSessionRepository {
           if (message.type === 'text') {
             record.text = message.text;
           }
+          // For assistant_turn rows the `text` column stays empty;
+          // every consumer routes through `derivedText(message)` which
+          // reads top-level `steps`. Same pattern as `image` / `file`.
           record.type = message.type;
           record.metadata = JSON.stringify(metadata);
           record.position = highestPosition + 1;
@@ -471,10 +486,15 @@ class ChatSessionRepository {
     return newMessage as unknown as Message;
   }
 
-  // Update a message
+  // Update a message. Accepts either a Text-shaped partial (legacy) or
+  // an AssistantTurn-shaped partial (new pipeline). The type is wide to
+  // support both shapes; both legacy timings/copyable updates and the
+  // new agent runner per-step writes go through this path.
   async updateMessage(
     id: string,
-    update: Partial<MessageType.Text>,
+    update:
+      | Partial<MessageType.Text>
+      | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>,
   ): Promise<boolean> {
     try {
       const message = await database.collections
@@ -491,15 +511,30 @@ class ChatSessionRepository {
 
       await database.write(async () => {
         await message.update((record: any) => {
-          if (update.text !== undefined) {
+          if ('text' in update && update.text !== undefined) {
             record.text = update.text;
           }
           if (update.metadata !== undefined) {
-            // MERGE metadata instead of replacing to preserve existing fields (e.g., timings)
+            // MERGE metadata to preserve existing fields (e.g., timings,
+            // metadata.steps for assistant_turn rows). The new agent
+            // runner uses dedicated `pushAgentStep`/`updateActiveStep
+            // Streaming`/`appendToolOutcome` paths that write the whole
+            // `steps` array wholesale; ad-hoc `{metadata: {interrupted}}`
+            // calls (e.g. error rollback) MUST NOT clobber metadata.steps.
             const existingMetadata = JSON.parse(record.metadata || '{}');
             record.metadata = JSON.stringify({
               ...existingMetadata,
               ...update.metadata,
+            });
+          }
+          // Lift top-level `steps` (in-memory shape) back into
+          // metadata.steps on disk. The schema column is unchanged; the
+          // asymmetry (top-level on type, nested on disk) is intentional.
+          if ('steps' in update && update.steps !== undefined) {
+            const existingMetadata = JSON.parse(record.metadata || '{}');
+            record.metadata = JSON.stringify({
+              ...existingMetadata,
+              steps: update.steps,
             });
           }
         });

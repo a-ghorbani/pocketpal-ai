@@ -8,8 +8,28 @@ import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
 import {uiStore, palStore} from '../store';
 import {ensureLegacyStoragePermission} from './androidPermission';
+import {derivedText} from './chat';
 import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
 import type {Pal} from '../types/pal';
+import type {Message} from '../database';
+
+/**
+ * Project a WatermelonDB Message into the export DTO. For
+ * `assistant_turn` rows the `text` column is empty by design — we
+ * route through `derivedText(toMessageObject())` so the export carries
+ * the visible joined content. Same DTO shape as before for `text` rows.
+ */
+const toExportedMessage = (msg: Message) => {
+  const inMemory = msg.toMessageObject();
+  return {
+    id: msg.id,
+    author: msg.author,
+    text: derivedText(inMemory),
+    type: msg.type,
+    metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
+    createdAt: msg.createdAt,
+  };
+};
 /**
  * Export a single chat session to a JSON file
  * @param sessionId The ID of the session to export
@@ -29,14 +49,7 @@ export const exportChatSession = async (sessionId: string): Promise<void> => {
       id: session.id,
       title: session.title,
       date: session.date,
-      messages: messages.map(msg => ({
-        id: msg.id,
-        author: msg.author,
-        text: msg.text,
-        type: msg.type,
-        metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
-        createdAt: msg.createdAt,
-      })),
+      messages: messages.map(toExportedMessage),
       completionSettings: completionSettings
         ? JSON.parse(completionSettings.settings)
         : {},
@@ -88,14 +101,7 @@ export const exportAllChatSessions = async (): Promise<void> => {
           id: sessionInfo.id,
           title: sessionInfo.title,
           date: sessionInfo.date,
-          messages: messages.map(msg => ({
-            id: msg.id,
-            author: msg.author,
-            text: msg.text,
-            type: msg.type,
-            metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
-            createdAt: msg.createdAt,
-          })),
+          messages: messages.map(toExportedMessage),
           completionSettings: completionSettings
             ? JSON.parse(completionSettings.settings)
             : {},
@@ -210,6 +216,12 @@ const transformExportPal = async (pal: Pal) => {
     generatingPrompt: pal.generatingPrompt,
     color: pal.color,
     capabilities: pal.capabilities,
+    // Talent set (pact.talents) and the optional greeting/suggestedPrompts
+    // are first-class persisted state from migration v7+; round-tripping
+    // them is required so backups + share-and-reimport don't silently drop
+    // a Pal's tool configuration or greeting.
+    pact: pal.pact,
+    greeting: pal.greeting,
     parameters: pal.parameters,
     parameterSchema: pal.parameterSchema,
     source: pal.source,
