@@ -414,6 +414,17 @@ describe('useChatSession', () => {
   });
 
   describe('TTS streaming wiring', () => {
+    beforeEach(() => {
+      // The per-token TTS hook is gated on `ttsStore.autoSpeakEnabled`
+      // captured at run start. Default mock value is false; these tests
+      // assert the hook fires, so opt in.
+      (ttsStore as any).autoSpeakEnabled = true;
+    });
+
+    afterEach(() => {
+      (ttsStore as any).autoSpeakEnabled = false;
+    });
+
     it('fires onAssistantMessageStart on first token and onAssistantMessageChunk per delta', async () => {
       const finalText = 'Hello world.';
 
@@ -663,6 +674,47 @@ describe('useChatSession', () => {
       });
 
       expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    });
+
+    it('skips per-chunk TTS hooks entirely when autoSpeakEnabled is off', async () => {
+      // Override the beforeEach default for this single test.
+      (ttsStore as any).autoSpeakEnabled = false;
+
+      const finalText = 'one two three';
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'tok', content: 'one '});
+              onData({token: 'tok', content: 'one two '});
+              onData({token: 'tok', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // Per-token TTS hook is gated → start/chunk are NEVER invoked
+      // during streaming when auto-speak is off, even though native
+      // produced three deltas. The post-run onAssistantMessageComplete
+      // still fires (auto-speak / voice gating happens inside the
+      // store) — outside the scope of this gate.
+      expect(ttsStore.onAssistantMessageStart).not.toHaveBeenCalled();
+      expect(ttsStore.onAssistantMessageChunk).not.toHaveBeenCalled();
     });
   });
 });

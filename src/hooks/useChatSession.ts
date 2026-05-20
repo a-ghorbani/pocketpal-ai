@@ -182,6 +182,15 @@ const prepareCompletion = async ({
 // diff cumulative against `prev*` and forward only the new substring.
 // Carried in ctx so a single run keeps a coherent audio stream.
 type TtsRunState = {
+  // Snapshot of `ttsStore.autoSpeakEnabled` at the start of the run.
+  // When false, the per-token TTS hook in `applyEventToStore` is
+  // skipped entirely — saving the cumulative-length compute and the
+  // String.slice deltas that would otherwise run on every chunk only
+  // to feed a no-op `onAssistantMessageChunk`. Captured per-run
+  // (rather than read live on every chunk) so a mid-stream settings
+  // toggle does not flicker the audio path; the next user message
+  // will pick up the new value.
+  enabled: boolean;
   started: boolean;
   prevContent: string;
   prevReasoning: string;
@@ -231,37 +240,43 @@ async function applyEventToStore(
       // TTS streaming hooks. Open a StreamingHandle on the first token
       // that carries content OR reasoning, then forward each new
       // substring via onAssistantMessageChunk. Wrapped defensively so a
-      // UI-path failure cannot kill the completion stream.
-      try {
-        const cumulativeContent = event.delta.content ?? ctx.tts.prevContent;
-        const cumulativeReasoning =
-          event.delta.reasoningContent ?? ctx.tts.prevReasoning;
-        if (
-          !ctx.tts.started &&
-          (event.delta.content || event.delta.reasoningContent)
-        ) {
-          ctx.tts.started = true;
-          ttsStore.onAssistantMessageStart(ctx.messageId);
+      // UI-path failure cannot kill the completion stream. Skipped
+      // entirely when auto-speak is off for this run — the inner
+      // ttsStore calls would early-return anyway, but the cumulative-
+      // length compute and String.slice deltas are a real per-token
+      // cost on low-end devices.
+      if (ctx.tts.enabled) {
+        try {
+          const cumulativeContent = event.delta.content ?? ctx.tts.prevContent;
+          const cumulativeReasoning =
+            event.delta.reasoningContent ?? ctx.tts.prevReasoning;
+          if (
+            !ctx.tts.started &&
+            (event.delta.content || event.delta.reasoningContent)
+          ) {
+            ctx.tts.started = true;
+            ttsStore.onAssistantMessageStart(ctx.messageId);
+          }
+          const contentDelta =
+            cumulativeContent.length > ctx.tts.prevContent.length
+              ? cumulativeContent.slice(ctx.tts.prevContent.length)
+              : '';
+          const reasoningDelta =
+            cumulativeReasoning.length > ctx.tts.prevReasoning.length
+              ? cumulativeReasoning.slice(ctx.tts.prevReasoning.length)
+              : '';
+          if (contentDelta || reasoningDelta) {
+            ctx.tts.prevContent = cumulativeContent;
+            ctx.tts.prevReasoning = cumulativeReasoning;
+            ttsStore.onAssistantMessageChunk(
+              ctx.messageId,
+              contentDelta,
+              reasoningDelta || undefined,
+            );
+          }
+        } catch (ttsErr) {
+          console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
         }
-        const contentDelta =
-          cumulativeContent.length > ctx.tts.prevContent.length
-            ? cumulativeContent.slice(ctx.tts.prevContent.length)
-            : '';
-        const reasoningDelta =
-          cumulativeReasoning.length > ctx.tts.prevReasoning.length
-            ? cumulativeReasoning.slice(ctx.tts.prevReasoning.length)
-            : '';
-        if (contentDelta || reasoningDelta) {
-          ctx.tts.prevContent = cumulativeContent;
-          ctx.tts.prevReasoning = cumulativeReasoning;
-          ttsStore.onAssistantMessageChunk(
-            ctx.messageId,
-            contentDelta,
-            reasoningDelta || undefined,
-          );
-        }
-      } catch (ttsErr) {
-        console.warn('[useChatSession] TTS stream hook failed:', ttsErr);
       }
       // Per-token writes go through the throttled streaming path so
       // they coalesce. Only forward fields that were actually present in
@@ -475,6 +490,7 @@ export const useChatSession = (
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
     const tts: TtsRunState = {
+      enabled: ttsStore.autoSpeakEnabled,
       started: false,
       prevContent: '',
       prevReasoning: '',
