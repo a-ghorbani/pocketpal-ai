@@ -73,17 +73,18 @@ export interface StreamChatParams {
  * Mutable accumulator state for streamed tool_call deltas. OpenAI
  * streams tool_calls index-by-index across multiple SSE chunks; the
  * `id` and `function.name` typically arrive on the first chunk for a
- * given index, then `function.arguments` is concatenated across many
- * subsequent chunks. Mirror that into a stable shape per `index` so we
- * can both forward per-delta updates AND assemble the final
- * `CompletionResult.tool_calls` array.
+ * given index, then `function.arguments` is delivered in fragments
+ * over many subsequent chunks. Store fragments in an array and join
+ * once at end-of-stream — concatenating into a growing string on each
+ * chunk plus copying it into a fresh snapshot was O(N²) over long
+ * argument payloads (e.g. a multi-KB `render_html` html string).
  */
 type ToolCallAccumulator = Map<
   number,
   {
     id: string;
     type: 'function';
-    function: {name: string; arguments: string};
+    function: {name: string; argsFragments: string[]};
   }
 >;
 
@@ -91,17 +92,22 @@ function applyToolCallDelta(
   acc: ToolCallAccumulator,
   deltaCalls: Array<any>,
 ): ToolCall[] {
-  const touched: number[] = [];
+  // Per-chunk snapshot the streaming callback sees. `arguments` is
+  // the THIS-CHUNK fragment only, not the accumulated string. The
+  // consumer (AgentRunner's reducer) only reads `function.name`
+  // mid-stream to populate `pendingTalentNames`; the canonical full
+  // arguments are read off the final `CompletionResult.tool_calls`
+  // assembled at xhr.onload.
+  const result: ToolCall[] = [];
   for (const delta of deltaCalls) {
     if (typeof delta?.index !== 'number') {
       continue;
     }
     const idx = delta.index;
-    touched.push(idx);
     const existing = acc.get(idx) ?? {
       id: '',
       type: 'function' as const,
-      function: {name: '', arguments: ''},
+      function: {name: '', argsFragments: [] as string[]},
     };
     if (delta.id) {
       existing.id = delta.id;
@@ -109,25 +115,42 @@ function applyToolCallDelta(
     if (delta.function?.name) {
       existing.function.name = delta.function.name;
     }
-    if (delta.function?.arguments) {
-      existing.function.arguments += delta.function.arguments;
+    const argsDelta: string = delta.function?.arguments ?? '';
+    if (argsDelta) {
+      existing.function.argsFragments.push(argsDelta);
     }
     acc.set(idx, existing);
+    result.push({
+      id: existing.id,
+      type: existing.type,
+      function: {name: existing.function.name, arguments: argsDelta},
+    });
   }
-  // Project touched indices into a snapshot so the streaming callback
-  // sees the running accumulated state for this delta only — same
-  // semantics as llama.rn's CompletionStreamData.tool_calls.
-  return touched
-    .map(i => acc.get(i))
-    .filter(Boolean)
-    .map(entry => ({
-      id: entry!.id,
-      type: entry!.type,
+  return result;
+}
+
+/**
+ * Materialise the final tool_calls array from the fragment-based
+ * accumulator. Single O(N) join per call rather than O(N²) over the
+ * stream. Returns undefined when no tool_calls were seen, mirroring
+ * llama.rn's shape.
+ */
+function assembleFinalToolCalls(
+  acc: ToolCallAccumulator,
+): ToolCall[] | undefined {
+  if (acc.size === 0) {
+    return undefined;
+  }
+  return Array.from(acc.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([, entry]) => ({
+      id: entry.id,
+      type: entry.type,
       function: {
-        name: entry!.function.name,
-        arguments: entry!.function.arguments,
+        name: entry.function.name,
+        arguments: entry.function.argsFragments.join(''),
       },
-    })) as ToolCall[];
+    }));
 }
 
 const CONNECTION_TIMEOUT_MS = 30000;
@@ -569,19 +592,7 @@ export async function streamChatCompletion(
 
       // Mirror llama.rn's shape: undefined when no tool_calls were
       // observed during the stream.
-      const finalToolCalls: ToolCall[] | undefined =
-        toolCallAcc.size > 0
-          ? Array.from(toolCallAcc.entries())
-              .sort(([a], [b]) => a - b)
-              .map(([, entry]) => ({
-                id: entry.id,
-                type: entry.type,
-                function: {
-                  name: entry.function.name,
-                  arguments: entry.function.arguments,
-                },
-              }))
-          : undefined;
+      const finalToolCalls = assembleFinalToolCalls(toolCallAcc);
 
       // Build result
       if (signal?.aborted) {

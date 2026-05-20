@@ -888,17 +888,29 @@ describe('streamChatCompletion', () => {
       // loop treats it as a normal step end.
       expect(result.stopped_eos).toBe(true);
 
-      // Streaming callback received tool_calls deltas (running snapshot
-      // shape — same as llama.rn's CompletionStreamData.tool_calls).
+      // Streaming callback received per-chunk tool_calls deltas: each
+      // event carries id + name (the running known state) plus only
+      // THIS chunk's arguments fragment. The fully assembled arguments
+      // live on the final CompletionResult.tool_calls — not the
+      // mid-stream events. This avoids O(N²) string copying over long
+      // arguments payloads.
       const toolCallEvents = onToken.mock.calls.filter(
         ([data]) => data.tool_calls && data.tool_calls.length > 0,
       );
-      expect(toolCallEvents.length).toBeGreaterThanOrEqual(1);
-      // The last event's tool_calls should be the fully assembled call.
-      const last = toolCallEvents[toolCallEvents.length - 1][0].tool_calls[0];
-      expect(last.id).toBe('call_abc');
-      expect(last.function.name).toBe('calculate');
-      expect(last.function.arguments).toBe('{"expression":"2+2"}');
+      expect(toolCallEvents.length).toBe(3);
+      const calls = toolCallEvents.map(c => c[0].tool_calls[0]);
+      expect(calls[0]).toMatchObject({
+        id: 'call_abc',
+        function: {name: 'calculate', arguments: ''},
+      });
+      expect(calls[1]).toMatchObject({
+        id: 'call_abc',
+        function: {name: 'calculate', arguments: '{"expression":"2'},
+      });
+      expect(calls[2]).toMatchObject({
+        id: 'call_abc',
+        function: {name: 'calculate', arguments: '+2"}'},
+      });
     });
 
     it('handles parallel tool_calls indexed across chunks', async () => {
