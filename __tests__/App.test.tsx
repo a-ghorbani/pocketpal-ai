@@ -10,7 +10,7 @@ jest.useFakeTimers(); // Mock all timers
 // Note: import explicitly to use the types shipped with jest.
 import {it} from '@jest/globals';
 
-import {render} from '@testing-library/react-native';
+import {act, render} from '@testing-library/react-native';
 
 // Hydration gate test plumbing — see __mocks__/external/mobx-persist-store.js.
 // __setHydrated() flips the controllable mock; we restore the default
@@ -41,4 +41,22 @@ it('renders hydration splash while UIStore is not hydrated', () => {
   expect(result.queryByTestId('hydration-splash')).not.toBeNull();
   expect(result.queryByText('Models')).toBeNull();
   expect(result.queryByText('Settings')).toBeNull();
+});
+
+it('mounts the app once UIStore hydration completes', () => {
+  // Pending hydration: splash mounts, nothing below.
+  __setHydrated(false);
+  const result = render(<App />);
+  expect(result.queryByTestId('hydration-splash')).not.toBeNull();
+  expect(result.queryByText('Models')).toBeNull();
+
+  // Hydration completes. The observable flag flips inside MobX action;
+  // the observer-wrapped gate re-renders and falls through to the app.
+  act(() => {
+    __setHydrated(true);
+  });
+
+  // Splash gone, post-hydration tree mounted (drawer titles present).
+  expect(result.queryByTestId('hydration-splash')).toBeNull();
+  expect(result.queryByText('Models')).not.toBeNull();
 });
