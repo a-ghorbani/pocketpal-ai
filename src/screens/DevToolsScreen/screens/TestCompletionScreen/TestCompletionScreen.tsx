@@ -16,6 +16,7 @@ import {
   IconButton,
   SegmentedButtons,
   RadioButton,
+  TextInput,
 } from 'react-native-paper';
 
 import {Menu} from '../../../../components';
@@ -148,6 +149,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
       text: string;
       formattedPrompt?: string;
       rawResult?: any;
+      inputParams?: any;
+      rawOutput?: any;
       timings?: any;
       toolCalls?: any;
       error?: string;
@@ -158,6 +161,12 @@ export const TestCompletionScreen: React.FC = observer(() => {
   // Global Jinja toggle, applied to every message-based test. Default true
   // (llama.rn also defaults jinja to true when the model supports it).
   const [useJinja, setUseJinja] = useState(true);
+  // Global enable_thinking toggle. Default false to match the original
+  // hardcoded behavior across every test.
+  const [enableThinking, setEnableThinking] = useState(false);
+  // Global n_predict (max tokens). A single value applied to every test
+  // (tests previously used 100 / 150 / 200 individually).
+  const [nPredict, setNPredict] = useState('200');
   const [formattedChatDetails, setFormattedChatDetails] = useState<{
     prompt?: string;
     format?: number;
@@ -170,6 +179,12 @@ export const TestCompletionScreen: React.FC = observer(() => {
 
   const theme = useTheme();
   const styles = createStyles(theme);
+
+  // Parsed n_predict, falling back to 200 for empty/invalid input.
+  const parsedNPredict = (() => {
+    const n = parseInt(nPredict, 10);
+    return Number.isFinite(n) && n > 0 ? n : 200;
+  })();
 
   // Common stop words for all tests
   const stopWords = [
@@ -213,7 +228,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
    * - Tokens should stream in real-time during generation
    */
   const runChatCompletionTest = async () => {
-    if (!modelStore.context) {
+    if (!modelStore.engine) {
       return;
     }
     console.log('------------- runChatCompletionTest -------------');
@@ -235,13 +250,13 @@ export const TestCompletionScreen: React.FC = observer(() => {
             content: 'Hello! Tell me a short joke.',
           },
         ],
-        n_predict: 100,
+        n_predict: parsedNPredict,
         stop: stopWords,
         jinja: useJinja,
-        enable_thinking: false,
+        enable_thinking: enableThinking,
       };
 
-      const result = await modelStore.context.completion(
+      const result = await modelStore.engine.completion(
         completionParams,
         data => {
           if (data.token) {
@@ -254,6 +269,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ...prev,
         chatCompletion: {
           text: result.text,
+          inputParams: completionParams,
+          rawOutput: result,
           timings: result.timings,
         },
       }));
@@ -281,7 +298,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
    * - Custom stop words (Llama:, User:) should prevent the model from generating new turns
    */
   const runTextCompletionDirectTest = async () => {
-    if (!modelStore.context) {
+    if (!modelStore.engine) {
       return;
     }
     console.log('------------- runTextCompletionDirectTest -------------');
@@ -294,12 +311,12 @@ export const TestCompletionScreen: React.FC = observer(() => {
       const completionParams: CompletionParams = {
         prompt:
           'This is a conversation between user and llama, a friendly chatbot. respond in simple markdown.\n\nUser: Hello! Tell me a short joke.\nLlama:',
-        n_predict: 100,
+        n_predict: parsedNPredict,
         stop: [...stopWords, 'Llama:', 'User:'],
-        enable_thinking: false,
+        enable_thinking: enableThinking,
       };
 
-      const result = await modelStore.context.completion(
+      const result = await modelStore.engine.completion(
         completionParams,
         data => {
           if (data.token) {
@@ -313,6 +330,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
         textCompletion: {
           text: result.text,
           formattedPrompt: completionParams.prompt,
+          inputParams: completionParams,
+          rawOutput: result,
           timings: result.timings,
         },
       }));
@@ -342,6 +361,14 @@ export const TestCompletionScreen: React.FC = observer(() => {
    */
   const runTextCompletionFormattedTest = async () => {
     if (!modelStore.context) {
+      setResults(prev => ({
+        ...prev,
+        textCompletion: {
+          text: '',
+          error:
+            'This test requires a local model — getFormattedChat is not available for remote models.',
+        },
+      }));
       return;
     }
     console.log('------------- runTextCompletionFormattedTest -------------');
@@ -386,9 +413,9 @@ export const TestCompletionScreen: React.FC = observer(() => {
 
       const completionParams: CompletionParams = {
         prompt,
-        n_predict: 100,
+        n_predict: parsedNPredict,
         stop: stopWords,
-        enable_thinking: false,
+        enable_thinking: enableThinking,
       };
 
       const result = await modelStore.context.completion(
@@ -405,6 +432,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
         textCompletion: {
           text: result.text,
           formattedPrompt: prompt,
+          inputParams: completionParams,
+          rawOutput: result,
           timings: result.timings,
           rawResult: typeof formattedChat !== 'string' ? formattedChat : null,
         },
@@ -447,7 +476,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
    */
   const runToolCallingTest = async () => {
     console.log('------------- runToolCallingTest -------------');
-    if (!modelStore.context) {
+    if (!modelStore.engine) {
       return;
     }
 
@@ -468,15 +497,15 @@ export const TestCompletionScreen: React.FC = observer(() => {
             content: "What's the weather like in San Francisco?",
           },
         ],
-        n_predict: 200,
+        n_predict: parsedNPredict,
         stop: stopWords,
         jinja: useJinja,
         tool_choice: 'auto',
         tools: TOOLS,
-        enable_thinking: false,
+        enable_thinking: enableThinking,
       };
 
-      const result = await modelStore.context.completion(
+      const result = await modelStore.engine.completion(
         completionParams,
         data => {
           if (data.token) {
@@ -489,6 +518,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ...prev,
         toolCalling: {
           text: result.text,
+          inputParams: completionParams,
+          rawOutput: result,
           timings: result.timings,
           toolCalls: result.tool_calls,
         },
@@ -519,7 +550,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
    */
   const runGrammarSamplingTest = async () => {
     console.log('------------- runGrammarSamplingTest -------------');
-    if (!modelStore.context) {
+    if (!modelStore.engine) {
       return;
     }
 
@@ -541,14 +572,14 @@ export const TestCompletionScreen: React.FC = observer(() => {
               'Generate a JSON object for a person with name, age, isActive status, and an array of tags.',
           },
         ],
-        n_predict: 200,
+        n_predict: parsedNPredict,
         stop: stopWords,
         jinja: useJinja,
         grammar: JSON_GBNF, // Grammar is applied here
-        enable_thinking: false,
+        enable_thinking: enableThinking,
       };
 
-      const result = await modelStore.context.completion(
+      const result = await modelStore.engine.completion(
         completionParams,
         data => {
           if (data.token) {
@@ -561,6 +592,8 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ...prev,
         grammarSampling: {
           text: result.text,
+          inputParams: completionParams,
+          rawOutput: result,
           timings: result.timings,
         },
       }));
@@ -591,7 +624,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
    */
   const runStructuredOutputTest = async () => {
     console.log('------------- runStructuredOutputTest -------------');
-    if (!modelStore.context) {
+    if (!modelStore.engine) {
       return;
     }
 
@@ -612,7 +645,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
               'Generate a JSON object for a person with name, age, isActive status, and an array of tags.',
           },
         ],
-        n_predict: 200,
+        n_predict: parsedNPredict,
         stop: stopWords,
         jinja: useJinja,
         response_format: {
@@ -625,10 +658,10 @@ export const TestCompletionScreen: React.FC = observer(() => {
         // Low temperature for deterministic JSON, matching the llama.rn
         // StructuredOutputScreen reference example.
         temperature: 0.2,
-        enable_thinking: false,
+        enable_thinking: enableThinking,
       };
 
-      const result = await modelStore.context.completion(
+      const result = await modelStore.engine.completion(
         completionParams,
         data => {
           // Structured output streams via `content`; fall back to `token`.
@@ -643,6 +676,10 @@ export const TestCompletionScreen: React.FC = observer(() => {
         ...prev,
         structuredOutput: {
           text: result.content || result.text,
+          inputParams: completionParams,
+          // Full raw result so you can see exactly what the model returned
+          // (text/content/reasoning_content) even when no JSON is visible.
+          rawOutput: result,
           timings: result.timings,
         },
       }));
@@ -679,6 +716,14 @@ export const TestCompletionScreen: React.FC = observer(() => {
   const runFormattedChatTest = async () => {
     console.log('------------- runFormattedChatTest -------------');
     if (!modelStore.context) {
+      setResults(prev => ({
+        ...prev,
+        formattedChat: {
+          text: '',
+          error:
+            'This test requires a local model — getFormattedChat is not available for remote models.',
+        },
+      }));
       return;
     }
 
@@ -793,7 +838,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
    */
   const runGrammarTriggersTest = async () => {
     console.log('------------- runGrammarTriggersTest -------------');
-    if (!modelStore.context) {
+    if (!modelStore.engine) {
       return;
     }
 
@@ -895,14 +940,14 @@ export const TestCompletionScreen: React.FC = observer(() => {
                   'Generate a JSON object for a person with name, age, and isActive status.',
               },
             ],
-            n_predict: 150,
+            n_predict: parsedNPredict,
             stop: stopWords,
             jinja: useJinja,
             ...testCase.params,
-            enable_thinking: false,
+            enable_thinking: enableThinking,
           };
 
-          const result = await modelStore.context.completion(
+          const result = await modelStore.engine.completion(
             completionParams,
             data => {
               if (data.token) {
@@ -1076,8 +1121,32 @@ export const TestCompletionScreen: React.FC = observer(() => {
                     </>
                   )}
 
+                  {result.inputParams && (
+                    <>
+                      <Text style={styles.sectionTitle}>
+                        Input (request params):
+                      </Text>
+                      <Text style={styles.codeBlock}>
+                        {JSON.stringify(result.inputParams, null, 2)}
+                      </Text>
+                      <Divider style={styles.divider} />
+                    </>
+                  )}
+
                   <Text style={styles.sectionTitle}>Result:</Text>
                   <Text style={styles.resultText}>{result.text}</Text>
+
+                  {result.rawOutput && (
+                    <>
+                      <Divider style={styles.divider} />
+                      <Text style={styles.sectionTitle}>
+                        Raw Output (full result):
+                      </Text>
+                      <Text style={styles.codeBlock}>
+                        {JSON.stringify(result.rawOutput, null, 2)}
+                      </Text>
+                    </>
+                  )}
 
                   {result.rawResult && (
                     <>
@@ -1151,7 +1220,7 @@ export const TestCompletionScreen: React.FC = observer(() => {
               </View>
             ) : (
               <>
-                {!modelStore.context ? (
+                {!modelStore.engine ? (
                   <Text style={styles.warning}>
                     Please select and initialize a model first
                   </Text>
@@ -1187,6 +1256,32 @@ export const TestCompletionScreen: React.FC = observer(() => {
                           {value: 'true', label: 'Yes'},
                         ]}
                       />
+
+                      <View style={styles.jinjaOption}>
+                        <Text style={styles.optionLabel}>Enable thinking:</Text>
+                        <SegmentedButtons
+                          value={enableThinking ? 'true' : 'false'}
+                          onValueChange={value =>
+                            setEnableThinking(value === 'true')
+                          }
+                          buttons={[
+                            {value: 'false', label: 'Off'},
+                            {value: 'true', label: 'On'},
+                          ]}
+                        />
+                      </View>
+
+                      <View style={styles.jinjaOption}>
+                        <Text style={styles.optionLabel}>n_predict:</Text>
+                        <TextInput
+                          mode="outlined"
+                          dense
+                          keyboardType="number-pad"
+                          value={nPredict}
+                          onChangeText={setNPredict}
+                          style={styles.nPredictInput}
+                        />
+                      </View>
 
                       {selectedTest === 'textCompletion' && (
                         <View style={styles.jinjaOption}>
