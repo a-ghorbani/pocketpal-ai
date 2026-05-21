@@ -1,3 +1,5 @@
+import {useTheme as usePaperTheme, MD3Theme} from 'react-native-paper';
+
 import {uiStore} from '../store';
 
 import {Theme} from '../utils/types';
@@ -6,34 +8,44 @@ import {buildTheme} from '../utils/theme';
 /**
  * Consumes the active design-system Theme.
  *
- * Subscribes (via MobX observation, when invoked from an `observer`
- * component) to both `uiStore.colorScheme` and `uiStore.language` and
- * returns a Theme matching the current (mode, language) pair.
+ * Reads `uiStore.colorScheme` and `uiStore.language` (reactive inside an
+ * `observer`) and `usePaperTheme()`. The `usePaperTheme()` call is load-
+ * bearing: it subscribes the consumer to Paper's ThemeContext, which is
+ * the React-context path that re-renders NON-`observer` consumers (and
+ * consumers behind `React.memo` / navigator boundaries) when the provider
+ * theme changes. `App` (an `observer`) feeds `useTheme()`'s result to
+ * `<PaperProvider theme={...}>`, so a colorScheme/language change updates
+ * the provider theme and propagates through context to every consumer.
  *
- * Built themes are memoized at the module level by `${mode}:${language}`.
- * Bounded by modes (2) × supported languages (~12) so it never grows
- * beyond ~24 entries. Memoization restores referential stability across
- * renders that don't change mode or language — important on hot UI
- * surfaces (chat) where downstream `useMemo` deps would otherwise
- * re-fire every render.
- *
- * `buildTheme` already spreads the Paper base theme (MD3DarkTheme /
- * PaperLightTheme), so the result carries every Paper-internal field
- * components reach through `useTheme()`. No separate `usePaperTheme()`
- * merge is needed — and keying the cache on (mode, language) alone is
- * correct because the built theme is the single source for those fields.
+ * Memoization: built themes are cached in a WeakMap keyed first on the
+ * Paper theme identity (so a changed provider theme can never return a
+ * stale merge) then on `${mode}:${language}`. This restores referential
+ * stability across renders that don't change any of those inputs —
+ * important on hot UI surfaces (chat) where downstream `useMemo` deps
+ * would otherwise re-fire every render. The WeakMap lets stale Paper-theme
+ * buckets be garbage-collected.
  */
-const themeCache = new Map<string, Theme>();
+const themeCache = new WeakMap<MD3Theme, Map<string, Theme>>();
 
 export const useTheme = (): Theme => {
+  const paperTheme = usePaperTheme<MD3Theme>();
   const mode = uiStore.colorScheme;
   const language = uiStore.language;
   const key = `${mode}:${language}`;
 
-  let cached = themeCache.get(key);
+  let byKey = themeCache.get(paperTheme);
+  if (byKey === undefined) {
+    byKey = new Map();
+    themeCache.set(paperTheme, byKey);
+  }
+
+  let cached = byKey.get(key);
   if (cached === undefined) {
-    cached = buildTheme({mode, language});
-    themeCache.set(key, cached);
+    cached = {
+      ...paperTheme,
+      ...buildTheme({mode, language}),
+    } as Theme;
+    byKey.set(key, cached);
   }
   return cached;
 };

@@ -1,4 +1,8 @@
-import {renderHook, waitFor} from '@testing-library/react-native';
+import React from 'react';
+import {Text} from 'react-native';
+import {act, render, renderHook, waitFor} from '@testing-library/react-native';
+import {Provider as PaperProvider} from 'react-native-paper';
+import {observer} from 'mobx-react';
 
 jest.unmock('../useTheme');
 jest.unmock('../../store');
@@ -124,6 +128,48 @@ describe('useTheme', () => {
       expect(result.current.typography.codeM.fontFamily).toBe(
         FONT_FAMILIES.JETBRAINS_MONO_REGULAR,
       );
+    });
+  });
+
+  // Non-observer consumer reactivity through the React-context path.
+  // `useTheme()` calls Paper's `usePaperTheme()`, which subscribes the
+  // consumer to Paper's ThemeContext. An `observer` parent feeds the theme
+  // to `<PaperProvider>`, so a `uiStore.colorScheme` change must reach a
+  // NON-observer child even behind a `React.memo` boundary (mimicking
+  // navigator-memoized screens) WITHOUT the test rerendering it manually.
+  describe('non-observer consumer subscription', () => {
+    it('updates a memoized non-observer child when colorScheme flips', () => {
+      const Leaf = () => {
+        const theme = useTheme();
+        return <Text testID="leaf-bg">{theme.colors.background}</Text>;
+      };
+      // memo boundary: a parent re-render does NOT propagate here; only a
+      // context change can re-render this subtree.
+      const MemoBoundary = React.memo(() => <Leaf />);
+      // observer parent mirrors App: feeds PaperProvider from the theme.
+      const Harness = observer(() => {
+        const theme = useTheme();
+        return (
+          <PaperProvider theme={theme}>
+            <MemoBoundary />
+          </PaperProvider>
+        );
+      });
+
+      act(() => {
+        uiStore.setColorScheme('light');
+      });
+      const screen = render(<Harness />);
+      const lightBg = screen.getByTestId('leaf-bg').props.children;
+
+      act(() => {
+        uiStore.setColorScheme('dark');
+      });
+      const darkBg = screen.getByTestId('leaf-bg').props.children;
+
+      expect(lightBg).toBe(lightTheme.colors.background);
+      expect(darkBg).toBe(darkTheme.colors.background);
+      expect(darkBg).not.toBe(lightBg);
     });
   });
 });
