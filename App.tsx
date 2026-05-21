@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Appearance, Dimensions, StyleSheet, View} from 'react-native';
+import {Appearance, Dimensions, StyleSheet, Text, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {isHydrated} from 'mobx-persist-store';
@@ -211,22 +211,46 @@ const createStyles = (theme: Theme) =>
   });
 
 // Hydration splash — rendered until mobx-persist-store has loaded UIStore
-// from AsyncStorage. Background colour resolved from the system color
-// scheme: on the common case where system == persisted mode, this matches
-// the eventual tokens.colors.background so the transition is imperceptible.
-// No spinner — splash is visually neutral.
+// from AsyncStorage. Mirrors the native iOS launch screen
+// (ios/PocketPal/LaunchScreen.storyboard): same system-background colour
+// and the same two labels ("PocketPal" bold ~36, "LLM Ventures" near the
+// bottom), using the platform system font (no custom font dependency).
+// Matching the launch screen means the native-launch → JS-splash handoff
+// is visually seamless instead of flashing to a blank screen.
 const splashStyles = StyleSheet.create({
-  light: {flex: 1, backgroundColor: '#ffffff'},
-  dark: {flex: 1, backgroundColor: '#000000'},
+  container: {flex: 1, alignItems: 'center'},
+  light: {backgroundColor: '#ffffff'},
+  dark: {backgroundColor: '#000000'},
+  title: {
+    position: 'absolute',
+    top: '30%',
+    fontSize: 36,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  tagline: {
+    position: 'absolute',
+    bottom: 24,
+    fontSize: 17,
+    textAlign: 'center',
+  },
+  textLight: {color: '#000000'},
+  textDark: {color: '#ffffff'},
 });
 
 const HydrationSplash = () => {
-  const scheme = Appearance.getColorScheme();
+  const isDark = Appearance.getColorScheme() === 'dark';
+  const textStyle = isDark ? splashStyles.textDark : splashStyles.textLight;
   return (
     <View
       testID="hydration-splash"
-      style={scheme === 'dark' ? splashStyles.dark : splashStyles.light}
-    />
+      style={[
+        splashStyles.container,
+        isDark ? splashStyles.dark : splashStyles.light,
+      ]}>
+      <Text style={[splashStyles.title, textStyle]}>PocketPal</Text>
+      <Text style={[splashStyles.tagline, textStyle]}>LLM Ventures</Text>
+    </View>
   );
 };
 
