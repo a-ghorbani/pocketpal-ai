@@ -71,8 +71,13 @@ export function pushConfig(
 }
 
 export async function deepLinkLaunch(): Promise<void> {
+  // `?autostart=1` makes the runner screen self-start its matrix run with no
+  // injected tap. This is the fix for HyperOS / MediaTek devices, where the
+  // OS silently drops `adb shell input tap` (and WDIO's analogous .click()),
+  // so a tap-driven start never fired onPress. The screen now invokes the
+  // exact same start handler the button does.
   await driver.execute('mobile: deepLink', {
-    url: 'pocketpal://e2e/benchmark',
+    url: 'pocketpal://e2e/benchmark?autostart=1',
     package: PACKAGE,
   });
 }

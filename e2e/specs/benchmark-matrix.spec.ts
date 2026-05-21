@@ -4,7 +4,8 @@
  * Drives the in-app BenchmarkRunnerScreen across {models} x {quants} x
  * {backends}. The screen owns the matrix loop, downloads, init/release,
  * peak-memory tracking, and JSON writing. This spec just pushes a config,
- * deep-links the screen, taps Run, polls status, and pulls the JSON.
+ * deep-links the screen with `?autostart=1` (which self-starts the run, no
+ * tap), polls status, and pulls the JSON.
  *
  *   yarn e2e --platform android --spec benchmark-matrix --skip-build
  *   BENCH_MODELS=qwen3-1.7b BENCH_QUANTS=q4_0 BENCH_BACKENDS=gpu yarn e2e ...
@@ -57,12 +58,13 @@ describe('Benchmark Matrix', () => {
   it('runs the matrix and writes a JSON report', async function (this: Mocha.Context) {
     this.timeout(MAX_WAIT_MS + 60_000);
 
-    const runBtn = await driver.$(byTestId('bench-run-button'));
-    await runBtn.waitForDisplayed({timeout: 30_000});
-
-    await runBtn.click();
-
+    // No tap: the deep link carried `?autostart=1`, so the screen self-starts
+    // the matrix once it mounts (the fix for HyperOS / MediaTek dropping
+    // injected taps). We just wait for the status element to appear, then
+    // poll it for a terminal state — no `bench-run-button` interaction.
     const status = await driver.$(byTestId('bench-runner-screen-status'));
+    await status.waitForDisplayed({timeout: 30_000});
+
     const deadline = Date.now() + MAX_WAIT_MS;
     let terminal: string | null = null;
     while (Date.now() < deadline) {
