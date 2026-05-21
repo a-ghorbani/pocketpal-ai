@@ -1,8 +1,8 @@
 /**
  * useDeepLinking — cold-launch routing tests
  *
- * Covers the SHOULD rows from the TASK-20260428-1532 Test Requirements
- * table for the new `__E2E__`-gated `useEffect` that reads
+ * Covers the SHOULD rows from the Test Requirements table for the
+ * `__E2E__`-gated `useEffect` that reads
  * `Linking.getInitialURL()` and routes to `BenchmarkRunner` when the
  * launching intent matches `pocketpal://e2e/benchmark`.
  *

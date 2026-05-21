@@ -471,7 +471,7 @@ describe('BenchmarkRunnerScreen', () => {
       const [paramsArg] = (initLlama as jest.Mock).mock.calls[0];
       expect(paramsArg.devices).toEqual(['CPU']);
       // Pinned to 0 so ggml does not route layers through other registered
-      // backends (Bug-2 — verified on Snapdragon 8 Elite Gen 5).
+      // backends (verified on Snapdragon 8 Elite Gen 5).
       expect(paramsArg.n_gpu_layers).toBe(0);
     });
 
