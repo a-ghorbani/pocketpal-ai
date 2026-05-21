@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Appearance, Dimensions, StyleSheet, Text, View} from 'react-native';
+import {Appearance, Dimensions, StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {isHydrated} from 'mobx-persist-store';
@@ -7,11 +7,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {Provider as PaperProvider} from 'react-native-paper';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {createDrawerNavigator} from '@react-navigation/drawer';
-import {
-  initialWindowMetrics,
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardProvider} from 'react-native-keyboard-controller';
 import {
   gestureHandlerRootHOC,
@@ -214,65 +210,28 @@ const createStyles = (theme: Theme) =>
     },
   });
 
-// Hydration splash — rendered until mobx-persist-store has loaded UIStore
-// from AsyncStorage. Mirrors the native iOS launch screen
-// (ios/PocketPal/LaunchScreen.storyboard): same system-background colour
-// and the same two labels ("PocketPal" bold ~36, "LLM Ventures" near the
-// bottom), using the platform system font (no custom font dependency).
-// Matching the launch screen means the native-launch → JS-splash handoff
-// is visually seamless instead of flashing to a blank screen.
+// Neutral background-only hold, rendered until mobx-persist-store has
+// loaded UIStore from AsyncStorage. It is a single full-screen View whose
+// only meaningful property is backgroundColor, resolved from the system
+// color scheme. Deliberately carries NO branding, NO Text, NO
+// SafeAreaProvider, NO insets, and NO spinner: a flat colored View has
+// nothing to match against either native launch surface (iOS has a branded
+// storyboard, Android has no native launch screen), so it cannot diverge
+// from native on any axis and reads simply as "app launching".
 const splashStyles = StyleSheet.create({
-  container: {flex: 1, alignItems: 'center'},
-  light: {backgroundColor: '#ffffff'},
-  dark: {backgroundColor: '#000000'},
-  title: {
-    position: 'absolute',
-    top: '30%',
-    fontSize: 36,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  tagline: {
-    position: 'absolute',
-    fontSize: 17,
-    textAlign: 'center',
-  },
-  textLight: {color: '#000000'},
-  textDark: {color: '#ffffff'},
+  light: {flex: 1, backgroundColor: '#ffffff'},
+  dark: {flex: 1, backgroundColor: '#000000'},
 });
 
-const HydrationSplashContent = () => {
-  const isDark = Appearance.getColorScheme() === 'dark';
-  const insets = useSafeAreaInsets();
-  const textStyle = isDark ? splashStyles.textDark : splashStyles.textLight;
-  return (
-    <View
-      testID="hydration-splash"
-      style={[
-        splashStyles.container,
-        isDark ? splashStyles.dark : splashStyles.light,
-      ]}>
-      <Text style={[splashStyles.title, textStyle]}>PocketPal</Text>
-      {/* Safe-area-bottom + 20pt, matching the storyboard's tagline
-          constraint so the position doesn't jump across the handoff. */}
-      <Text
-        style={[splashStyles.tagline, textStyle, {bottom: insets.bottom + 20}]}>
-        LLM Ventures
-      </Text>
-    </View>
-  );
-};
-
-// The gate renders above App's provider tree, so the splash supplies its
-// own SafeAreaProvider to read the bottom inset. `initialMetrics` seeds
-// the insets synchronously from native window metrics — without it the
-// provider renders nothing until the first native inset event, which
-// would blank the branded splash for a frame. App's SafeAreaProvider
-// takes over once the gate falls through.
-const HydrationSplash = () => (
-  <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-    <HydrationSplashContent />
-  </SafeAreaProvider>
+const HydrationHold = () => (
+  <View
+    testID="hydration-splash"
+    style={
+      Appearance.getColorScheme() === 'dark'
+        ? splashStyles.dark
+        : splashStyles.light
+    }
+  />
 );
 
 // Wrap the App component with AppWithMigration to show migration UI when
@@ -280,12 +239,13 @@ const HydrationSplash = () => (
 // mobx-persist-store hydration so persisted `language` and `colorScheme`
 // are observed on first paint.
 //
-// The gate must wrap App itself (App.tsx:60 calls useTheme() BEFORE
-// <PaperProvider> mounts), so AppWithMigrationWrapper — which sits above
-// App and has no theme dependency — is the chosen host.
+// The gate must wrap App itself (App calls useTheme() BEFORE <PaperProvider>
+// mounts), so AppWithMigrationWrapper — which sits above App and has no
+// theme dependency — is the chosen host. While unhydrated it renders the
+// neutral background-only hold above.
 const AppWithMigrationWrapper = observer(() => {
   if (!isHydrated(uiStore)) {
-    return <HydrationSplash />;
+    return <HydrationHold />;
   }
   return (
     <AppWithMigration>
