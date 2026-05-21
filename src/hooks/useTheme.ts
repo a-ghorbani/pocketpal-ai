@@ -1,5 +1,3 @@
-import {useTheme as usePaperTheme, MD3Theme} from 'react-native-paper';
-
 import {uiStore} from '../store';
 
 import {Theme} from '../utils/types';
@@ -13,33 +11,28 @@ import {buildTheme} from '../utils/theme';
  * returns a Theme matching the current (mode, language) pair.
  *
  * Built themes are memoized at the module level by `${mode}:${language}`.
- * The cache is bounded by the cartesian product of modes (2) × supported
- * languages (~12) so it can never grow beyond ~24 entries. Memoization
- * restores referential stability for the returned Theme across renders
- * that don't change mode or language — important on hot UI surfaces
- * (e.g. chat with many message components) where downstream `useMemo`
- * deps would otherwise re-fire every render.
+ * Bounded by modes (2) × supported languages (~12) so it never grows
+ * beyond ~24 entries. Memoization restores referential stability across
+ * renders that don't change mode or language — important on hot UI
+ * surfaces (chat) where downstream `useMemo` deps would otherwise
+ * re-fire every render.
  *
- * The `usePaperTheme<MD3Theme>()` spread preserves any Paper-internal
- * fields components reach through `useTheme()` (rare, but kept for
- * Paper-compat). `paperTheme` is itself referentially stable per
- * `<PaperProvider>` mount (it's the context value), so it participates
- * in the cached object's identity implicitly.
+ * `buildTheme` already spreads the Paper base theme (MD3DarkTheme /
+ * PaperLightTheme), so the result carries every Paper-internal field
+ * components reach through `useTheme()`. No separate `usePaperTheme()`
+ * merge is needed — and keying the cache on (mode, language) alone is
+ * correct because the built theme is the single source for those fields.
  */
 const themeCache = new Map<string, Theme>();
 
 export const useTheme = (): Theme => {
-  const paperTheme = usePaperTheme<MD3Theme>();
   const mode = uiStore.colorScheme;
   const language = uiStore.language;
   const key = `${mode}:${language}`;
 
   let cached = themeCache.get(key);
   if (cached === undefined) {
-    cached = {
-      ...paperTheme,
-      ...buildTheme({mode, language}),
-    } as Theme;
+    cached = buildTheme({mode, language});
     themeCache.set(key, cached);
   }
   return cached;
