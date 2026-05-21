@@ -3,7 +3,9 @@
  */
 
 import 'react-native';
+import {StyleSheet} from 'react-native';
 import React from 'react';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import App from '../App';
 jest.useFakeTimers(); // Mock all timers
 
@@ -17,9 +19,12 @@ import {act, render} from '@testing-library/react-native';
 // (true) after each test so other suites are unaffected.
 
 const {__setHydrated} = require('mobx-persist-store');
+const zeroInsets = {top: 0, right: 0, bottom: 0, left: 0};
 
 afterEach(() => {
   __setHydrated(true);
+  // Restore the default zero insets (jest/setup.ts) for other suites.
+  (useSafeAreaInsets as jest.Mock).mockReturnValue(zeroInsets);
 });
 
 it('renders correctly', () => {
@@ -59,4 +64,20 @@ it('mounts the app once UIStore hydration completes', () => {
   // Splash gone, post-hydration tree mounted (drawer titles present).
   expect(result.queryByTestId('hydration-splash')).toBeNull();
   expect(result.queryByText('Models')).not.toBeNull();
+});
+
+it('positions the splash tagline at safe-area bottom + 20', () => {
+  // Simulate a home-indicator device with a non-zero bottom inset.
+  (useSafeAreaInsets as jest.Mock).mockReturnValue({
+    top: 0,
+    right: 0,
+    bottom: 34,
+    left: 0,
+  });
+  __setHydrated(false);
+  const result = render(<App />);
+  const tagline = result.getByText('LLM Ventures');
+  const flattened = StyleSheet.flatten(tagline.props.style);
+  // bottom = insets.bottom (34) + 20, matching the storyboard constraint.
+  expect(flattened.bottom).toBe(54);
 });

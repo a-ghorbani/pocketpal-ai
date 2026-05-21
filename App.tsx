@@ -8,6 +8,7 @@ import {Provider as PaperProvider} from 'react-native-paper';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {
+  initialWindowMetrics,
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
@@ -263,10 +264,13 @@ const HydrationSplashContent = () => {
 };
 
 // The gate renders above App's provider tree, so the splash supplies its
-// own SafeAreaProvider to read the bottom inset. App's SafeAreaProvider
+// own SafeAreaProvider to read the bottom inset. `initialMetrics` seeds
+// the insets synchronously from native window metrics — without it the
+// provider renders nothing until the first native inset event, which
+// would blank the branded splash for a frame. App's SafeAreaProvider
 // takes over once the gate falls through.
 const HydrationSplash = () => (
-  <SafeAreaProvider>
+  <SafeAreaProvider initialMetrics={initialWindowMetrics}>
     <HydrationSplashContent />
   </SafeAreaProvider>
 );
