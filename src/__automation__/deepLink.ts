@@ -10,10 +10,14 @@
  *                                doesn't deliver the URL via DeepLinkService)
  */
 import type {DeepLinkParams} from '../services/DeepLinkService';
-import {ROUTES, isBenchmarkRunnerUrl} from '../utils/navigationConstants';
+import {
+  ROUTES,
+  isBenchmarkRunnerUrl,
+  parseBenchmarkAutostart,
+} from '../utils/navigationConstants';
 
 interface NavigationLike {
-  navigate: (route: string) => void;
+  navigate: (route: string, params?: Record<string, unknown>) => void;
 }
 
 /** Returns true if handled; false if caller should fall through. */
@@ -39,7 +43,12 @@ export async function dispatchAutomationDeepLink(
   // the shared helper so both deep-link sites (this dispatcher and the
   // useDeepLinking cold/warm-launch effect) accept the exact same shape.
   if (isBenchmarkRunnerUrl(params.url)) {
-    navigation?.navigate(ROUTES.BENCHMARK_RUNNER);
+    // Resolve autostart from the same raw URL string via the shared helper —
+    // NOT from params.queryParams — so the iOS/DeepLinkService origin and the
+    // Android/Linking origin cannot diverge in truthiness.
+    navigation?.navigate(ROUTES.BENCHMARK_RUNNER, {
+      autostart: parseBenchmarkAutostart(params.url),
+    });
     return true;
   }
   return false;
