@@ -6,9 +6,14 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 
-import {uiStore, palStore} from '../store';
+import {uiStore, palStore, modelStore} from '../store';
 import {ensureLegacyStoragePermission} from './androidPermission';
+import {assistant} from './chat';
 import {getAbsoluteThumbnailPath, isLocalThumbnailPath} from './imageUtils';
+import {
+  buildMessageCopyTextFromMessage,
+  defaultMessageRenderingSettings,
+} from './messageRendering';
 import type {Pal} from '../types/pal';
 /**
  * Export a single chat session to a JSON file
@@ -29,14 +34,7 @@ export const exportChatSession = async (sessionId: string): Promise<void> => {
       id: session.id,
       title: session.title,
       date: session.date,
-      messages: messages.map(msg => ({
-        id: msg.id,
-        author: msg.author,
-        text: msg.text,
-        type: msg.type,
-        metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
-        createdAt: msg.createdAt,
-      })),
+      messages: messages.map(formatExportMessage),
       completionSettings: completionSettings
         ? JSON.parse(completionSettings.settings)
         : {},
@@ -88,14 +86,7 @@ export const exportAllChatSessions = async (): Promise<void> => {
           id: sessionInfo.id,
           title: sessionInfo.title,
           date: sessionInfo.date,
-          messages: messages.map(msg => ({
-            id: msg.id,
-            author: msg.author,
-            text: msg.text,
-            type: msg.type,
-            metadata: msg.metadata ? JSON.parse(msg.metadata) : {},
-            createdAt: msg.createdAt,
-          })),
+          messages: messages.map(formatExportMessage),
           completionSettings: completionSettings
             ? JSON.parse(completionSettings.settings)
             : {},
@@ -256,6 +247,64 @@ export const exportLegacyChatSessions = async (): Promise<void> => {
     console.error('Error exporting legacy chat sessions:', error);
     throw error;
   }
+};
+
+const parseMetadata = (metadata: unknown): Record<string, any> => {
+  if (!metadata) {
+    return {};
+  }
+
+  if (typeof metadata === 'string') {
+    return JSON.parse(metadata);
+  }
+
+  return metadata as Record<string, any>;
+};
+
+const isAssistantAuthor = (author: unknown): boolean => {
+  if (typeof author === 'string') {
+    return author === assistant.id;
+  }
+
+  return (author as {id?: string} | undefined)?.id === assistant.id;
+};
+
+const buildExportCopyText = (text: string, metadata: Record<string, any>) => {
+  const settings = {
+    ...defaultMessageRenderingSettings,
+    ...uiStore.messageRenderingSettings,
+  };
+  const message = {text, metadata};
+  const options = {
+    thinkingStartTag: modelStore.activeModel?.thinkingStartTag,
+    thinkingEndTag: modelStore.activeModel?.thinkingEndTag,
+    hideServiceTokens: settings.hideModelTemplateTokens,
+  };
+
+  return {
+    clean: buildMessageCopyTextFromMessage(message, 'clean', options),
+    markdown: buildMessageCopyTextFromMessage(message, 'markdown', options),
+    raw: buildMessageCopyTextFromMessage(message, 'raw', options),
+  };
+};
+
+const formatExportMessage = (msg: any) => {
+  const metadata = parseMetadata(msg.metadata);
+  const text = msg.text || '';
+  const exportMessage: Record<string, any> = {
+    id: msg.id,
+    author: msg.author,
+    text,
+    type: msg.type,
+    metadata,
+    createdAt: msg.createdAt,
+  };
+
+  if (msg.type === 'text' && isAssistantAuthor(msg.author)) {
+    exportMessage.copyText = buildExportCopyText(text, metadata);
+  }
+
+  return exportMessage;
 };
 
 /**

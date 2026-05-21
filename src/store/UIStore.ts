@@ -9,6 +9,10 @@ import {
   type AvailableLanguage,
 } from '../locales';
 import {ErrorState} from '../utils/errors';
+import {
+  defaultMessageRenderingSettings,
+  MessageRenderingSettings,
+} from '../utils/messageRendering';
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -43,6 +47,10 @@ export class UIStore {
   displayMemUsage = false;
 
   iOSBackgroundDownloading = true;
+
+  messageRenderingSettings: MessageRenderingSettings = {
+    ...defaultMessageRenderingSettings,
+  };
 
   benchmarkShareDialog = {
     shouldShow: true,
@@ -79,6 +87,7 @@ export class UIStore {
         'displayMemUsage',
         'benchmarkShareDialog',
         '_language',
+        'messageRenderingSettings',
       ],
       storage: AsyncStorage,
     });
@@ -131,6 +140,25 @@ export class UIStore {
   setDisplayMemUsage(value: boolean) {
     runInAction(() => {
       this.displayMemUsage = value;
+    });
+  }
+
+  setMessageRenderingSetting<K extends keyof MessageRenderingSettings>(
+    key: K,
+    value: MessageRenderingSettings[K],
+  ) {
+    runInAction(() => {
+      this.messageRenderingSettings = {
+        ...defaultMessageRenderingSettings,
+        ...this.messageRenderingSettings,
+        [key]: value,
+      };
+    });
+  }
+
+  resetMessageRenderingSettings() {
+    runInAction(() => {
+      this.messageRenderingSettings = {...defaultMessageRenderingSettings};
     });
   }
 

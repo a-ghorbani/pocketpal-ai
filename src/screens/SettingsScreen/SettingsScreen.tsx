@@ -56,6 +56,7 @@ import {
   clearAllSessionCaches,
   getSessionCacheInfo,
 } from '../../utils';
+import {defaultMessageRenderingSettings} from '../../utils/messageRendering';
 import {t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
 import {exportLegacyChatSessions} from '../../utils/exportUtils';
@@ -109,6 +110,10 @@ export const SettingsScreen: React.FC = observer(() => {
       modelStore.setNContext(value);
     }, 500),
   ).current;
+  const messageRenderingSettings = {
+    ...defaultMessageRenderingSettings,
+    ...uiStore.messageRenderingSettings,
+  };
 
   useEffect(() => {
     setContextSize(modelStore.contextInitParams.n_ctx.toString());
@@ -1004,6 +1009,215 @@ export const SettingsScreen: React.FC = observer(() => {
                     </View>
                   </>
                 )}
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Message Rendering Settings */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.messageRenderingSettings} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.renderMarkdown}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.renderMarkdownDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="render-markdown-switch"
+                    value={messageRenderingSettings.renderMarkdown}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'renderMarkdown',
+                        value,
+                      )
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.renderLatex}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.renderLatexDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="render-latex-switch"
+                    value={messageRenderingSettings.renderLatex}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting('renderLatex', value)
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.renderTables}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.renderTablesDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="render-tables-switch"
+                    value={messageRenderingSettings.renderTables}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting('renderTables', value)
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.showThinkingBlocks}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.showThinkingBlocksDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="show-thinking-blocks-switch"
+                    value={messageRenderingSettings.showThinkingBlocks}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'showThinkingBlocks',
+                        value,
+                      )
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.hideModelTemplateTokens}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.hideModelTemplateTokensDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="hide-template-tokens-switch"
+                    value={messageRenderingSettings.hideModelTemplateTokens}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'hideModelTemplateTokens',
+                        value,
+                      )
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.settingItemContainer}>
+                  <Text variant="titleMedium" style={styles.textLabel}>
+                    {l10n.settings.defaultCopyMode}
+                  </Text>
+                  <SegmentedButtons
+                    value={messageRenderingSettings.defaultCopyMode}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'defaultCopyMode',
+                        value as 'clean' | 'markdown' | 'raw',
+                      )
+                    }
+                    density="medium"
+                    buttons={[
+                      {
+                        value: 'clean',
+                        label: l10n.settings.copyModeClean,
+                        testID: 'copy-mode-clean',
+                      },
+                      {
+                        value: 'markdown',
+                        label: l10n.settings.copyModeMarkdown,
+                        testID: 'copy-mode-markdown',
+                      },
+                      {
+                        value: 'raw',
+                        label: l10n.settings.copyModeRaw,
+                        testID: 'copy-mode-raw',
+                      },
+                    ]}
+                    style={styles.segmentedButtons}
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.wrapCodeLines}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.wrapCodeLinesDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="wrap-code-lines-switch"
+                    value={messageRenderingSettings.wrapCodeLines}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting('wrapCodeLines', value)
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.useSyntaxHighlighting}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.useSyntaxHighlightingDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="syntax-highlighting-switch"
+                    value={messageRenderingSettings.useSyntaxHighlighting}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'useSyntaxHighlighting',
+                        value,
+                      )
+                    }
+                  />
+                </View>
+                <Divider />
+
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.useCompactTables}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.useCompactTablesDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="compact-tables-switch"
+                    value={messageRenderingSettings.useCompactTables}
+                    onValueChange={value =>
+                      uiStore.setMessageRenderingSetting(
+                        'useCompactTables',
+                        value,
+                      )
+                    }
+                  />
+                </View>
               </View>
             </Card.Content>
           </Card>

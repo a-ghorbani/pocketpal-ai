@@ -114,6 +114,7 @@ jest.mock('../src/store', () => {
     serverStore: mockServerStore,
     ttsStore: mockTTSStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
+    defaultMessageRenderingSettings: mockUiStore.messageRenderingSettings,
   };
 });
 

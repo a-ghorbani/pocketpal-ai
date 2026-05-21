@@ -189,6 +189,41 @@ describe('SettingsScreen', () => {
     expect(uiStore.setDisplayMemUsage).toHaveBeenCalledWith(true);
   });
 
+  it('updates message rendering switches and copy mode', async () => {
+    const {getByTestId} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    await act(async () => {
+      fireEvent(getByTestId('render-latex-switch'), 'valueChange', false);
+      fireEvent(
+        getByTestId('hide-template-tokens-switch'),
+        'valueChange',
+        false,
+      );
+      fireEvent(getByTestId('wrap-code-lines-switch'), 'valueChange', true);
+      fireEvent(getByTestId('copy-mode-raw'), 'press');
+    });
+
+    expect(uiStore.setMessageRenderingSetting).toHaveBeenCalledWith(
+      'renderLatex',
+      false,
+    );
+    expect(uiStore.setMessageRenderingSetting).toHaveBeenCalledWith(
+      'hideModelTemplateTokens',
+      false,
+    );
+    expect(uiStore.setMessageRenderingSetting).toHaveBeenCalledWith(
+      'wrapCodeLines',
+      true,
+    );
+    expect(uiStore.setMessageRenderingSetting).toHaveBeenCalledWith(
+      'defaultCopyMode',
+      'raw',
+    );
+  });
+
   it('renders image max tokens slider in advanced settings', async () => {
     jest.useFakeTimers();
     const {getByTestId, getByText} = render(<SettingsScreen />, {

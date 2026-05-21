@@ -58,6 +58,7 @@ import {
   isLocalThumbnailPath,
   isRemoteThumbnailUrl,
 } from '../imageUtils';
+import {assistant} from '../chat';
 
 jest.mock('../androidPermission', () => ({
   ensureLegacyStoragePermission: jest.fn().mockResolvedValue(true),
@@ -169,6 +170,38 @@ describe('exportUtils', () => {
       );
       expect(RNFS.writeFile).toHaveBeenCalled();
       expect(Share.open).toHaveBeenCalled();
+    });
+
+    it('should include assistant copy text variants in chat exports', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          ...mockSessionData,
+          messages: [
+            {
+              id: 'msg-assistant',
+              author: assistant.id,
+              text: 'Visible answer',
+              type: 'text',
+              metadata: JSON.stringify({
+                completionResult: {
+                  raw_content: '<think>hidden</think>\nVisible **answer**',
+                },
+              }),
+              createdAt: 1704067200000,
+            },
+          ],
+        } as any,
+      );
+
+      await exportChatSession('session-1');
+
+      const writeCall = (RNFS.writeFile as jest.Mock).mock.calls[0];
+      const exportedData = JSON.parse(writeCall[1]);
+      expect(exportedData.messages[0].copyText).toEqual({
+        clean: 'Visible answer',
+        markdown: 'Visible **answer**',
+        raw: '<think>hidden</think>\nVisible **answer**',
+      });
     });
 
     it('should throw error if session not found', async () => {

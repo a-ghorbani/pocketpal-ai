@@ -341,10 +341,11 @@ describe('useChatSession', () => {
       expect.any(String),
       expect.objectContaining({
         metadata: expect.objectContaining({
-          completionResult: {
+          completionResult: expect.objectContaining({
             reasoning_content: mockReasoningContent,
             content: mockContent,
-          },
+            raw_content: expect.stringContaining(mockReasoningContent),
+          }),
         }),
       }),
     );
