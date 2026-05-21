@@ -209,6 +209,118 @@ describe('BenchmarkRunnerScreen', () => {
     });
   });
 
+  describe('autostart', () => {
+    it('fires the runner exactly once after mount when autostart is true (no tap)', async () => {
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      render(
+        <BenchmarkRunnerScreen
+          __runner={runner}
+          __loadConfig={loader}
+          __autostart={true}
+        />,
+      );
+      // Same start path the button uses: loadConfig then runMatrix, once.
+      await waitFor(() => {
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(runner).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('does NOT fire the runner and stays idle when autostart is absent', async () => {
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />,
+      );
+      // Flush mount effects so a (wrongly) scheduled autostart would surface.
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(runner).not.toHaveBeenCalled();
+      expect(
+        getByTestId('bench-runner-screen-status').props.accessibilityLabel,
+      ).toBe('idle');
+    });
+
+    it('does NOT fire the runner and stays idle when autostart is false', async () => {
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen
+          __runner={runner}
+          __loadConfig={loader}
+          __autostart={false}
+        />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(runner).not.toHaveBeenCalled();
+      expect(
+        getByTestId('bench-runner-screen-status').props.accessibilityLabel,
+      ).toBe('idle');
+    });
+
+    it('autostart then a redundant tap mid-run still invokes the runner exactly once (single-flight)', async () => {
+      let resolveRunner: () => void = () => {};
+      const runner = jest.fn(
+        () =>
+          new Promise<void>(r => {
+            resolveRunner = r;
+          }),
+      );
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen
+          __runner={runner}
+          __loadConfig={loader}
+          __autostart={true}
+        />,
+      );
+      // Autostart kicks off the run.
+      await waitFor(() => {
+        expect(runner).toHaveBeenCalledTimes(1);
+      });
+      // A later tap arrives while the run is in flight — single-flight gate
+      // rejects it.
+      await act(async () => {
+        fireEvent.press(getByTestId('bench-run-button'));
+      });
+      expect(runner).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        resolveRunner();
+      });
+    });
+
+    it('does not re-fire the runner on re-render after autostart fired (once per mount)', async () => {
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {rerender} = render(
+        <BenchmarkRunnerScreen
+          __runner={runner}
+          __loadConfig={loader}
+          __autostart={true}
+        />,
+      );
+      await waitFor(() => {
+        expect(runner).toHaveBeenCalledTimes(1);
+      });
+      // Force a re-render with stable autostart — the ref latch must keep the
+      // run from firing again.
+      await act(async () => {
+        rerender(
+          <BenchmarkRunnerScreen
+            __runner={runner}
+            __loadConfig={loader}
+            __autostart={true}
+          />,
+        );
+      });
+      expect(runner).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('runMatrix', () => {
     const setStatus = jest.fn();
     const setLastCell = jest.fn();

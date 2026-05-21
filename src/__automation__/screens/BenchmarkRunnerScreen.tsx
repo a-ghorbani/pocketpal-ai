@@ -1,5 +1,6 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Button, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useRoute} from '@react-navigation/native';
 import RNDeviceInfo from 'react-native-device-info';
 import {
   addNativeLogListener,
@@ -1043,10 +1044,14 @@ interface BenchmarkRunnerScreenProps {
   // matrix. Production code never passes this prop.
   __runner?: typeof runMatrix;
   __loadConfig?: typeof loadConfig;
+  // Test-only seam: lets unit tests drive the autostart trigger without
+  // registering a navigator route. When provided it wins over route params;
+  // the production path always reads route.params.autostart.
+  __autostart?: boolean;
 }
 
 export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
-  observer(({__runner, __loadConfig}) => {
+  observer(({__runner, __loadConfig, __autostart}) => {
     const [status, setStatus] = useState<Status>('idle');
     const [lastCell, setLastCell] = useState<{
       pp?: number;
@@ -1054,6 +1059,21 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
       cells?: number;
     }>({});
     const runningRef = useRef(false);
+
+    // Resolve the autostart navigation param. This is an E2E-only route
+    // (registered only under __E2E__), so route params are the production
+    // source of truth. `useRoute` throws when there is no navigator in the
+    // tree (unit tests render the screen bare), so the read is contained;
+    // the `__autostart` seam covers those tests. The two deep-link delivery
+    // sites set this param via the shared parseBenchmarkAutostart helper.
+    let routeAutostart: boolean | undefined;
+    try {
+      routeAutostart = (useRoute().params as {autostart?: boolean} | undefined)
+        ?.autostart;
+    } catch {
+      routeAutostart = undefined;
+    }
+    const autostart = __autostart ?? routeAutostart;
 
     const onRun = useCallback(async () => {
       // Single-flight: ignore taps while a run is in progress.
@@ -1090,6 +1110,23 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
       setStatus('idle');
       setLastCell({});
     }, []);
+
+    // Autostart: when the route carries autostart=true, invoke the SAME
+    // onRun the button uses — no second start path, same use of the
+    // already-pushed bench-config.json. Fired at most once per mount via the
+    // ref latch, so MobX-observer re-renders (this is an `observer`) cannot
+    // re-trigger it; onRun's single-flight gate (runningRef + status guard)
+    // remains the authoritative backstop. A falsey/absent autostart leaves
+    // the screen idle, waiting for a tap, exactly as before.
+    const autostartFiredRef = useRef(false);
+    useEffect(() => {
+      if (autostart && !autostartFiredRef.current) {
+        autostartFiredRef.current = true;
+        // onRun owns its own try/catch (it sets status='error:...' on
+        // failure), so the catch here is only a floating-promise guard.
+        onRun().catch(() => undefined);
+      }
+    }, [autostart, onRun]);
 
     return (
       <ScrollView
