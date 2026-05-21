@@ -7,7 +7,10 @@ import {NavigationContainer} from '@react-navigation/native';
 import {Provider as PaperProvider} from 'react-native-paper';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {createDrawerNavigator} from '@react-navigation/drawer';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import {KeyboardProvider} from 'react-native-keyboard-controller';
 import {
   gestureHandlerRootHOC,
@@ -230,7 +233,6 @@ const splashStyles = StyleSheet.create({
   },
   tagline: {
     position: 'absolute',
-    bottom: 24,
     fontSize: 17,
     textAlign: 'center',
   },
@@ -238,8 +240,9 @@ const splashStyles = StyleSheet.create({
   textDark: {color: '#ffffff'},
 });
 
-const HydrationSplash = () => {
+const HydrationSplashContent = () => {
   const isDark = Appearance.getColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const textStyle = isDark ? splashStyles.textDark : splashStyles.textLight;
   return (
     <View
@@ -249,10 +252,24 @@ const HydrationSplash = () => {
         isDark ? splashStyles.dark : splashStyles.light,
       ]}>
       <Text style={[splashStyles.title, textStyle]}>PocketPal</Text>
-      <Text style={[splashStyles.tagline, textStyle]}>LLM Ventures</Text>
+      {/* Safe-area-bottom + 20pt, matching the storyboard's tagline
+          constraint so the position doesn't jump across the handoff. */}
+      <Text
+        style={[splashStyles.tagline, textStyle, {bottom: insets.bottom + 20}]}>
+        LLM Ventures
+      </Text>
     </View>
   );
 };
+
+// The gate renders above App's provider tree, so the splash supplies its
+// own SafeAreaProvider to read the bottom inset. App's SafeAreaProvider
+// takes over once the gate falls through.
+const HydrationSplash = () => (
+  <SafeAreaProvider>
+    <HydrationSplashContent />
+  </SafeAreaProvider>
+);
 
 // Wrap the App component with AppWithMigration to show migration UI when
 // needed. Gates the first render of any theme-consuming subtree on
