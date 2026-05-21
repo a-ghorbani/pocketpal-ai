@@ -20,7 +20,7 @@ describe('PendingIndicator', () => {
     const {getByTestId} = render(
       <PendingIndicator
         pendingTalentNames={['render_html']}
-        pendingToolTokens={0}
+        toolCallTokenCount={0}
       />,
     );
     const suffix = getByTestId('pending-indicator-suffix');
@@ -33,7 +33,7 @@ describe('PendingIndicator', () => {
     const {getByTestId} = render(
       <PendingIndicator
         pendingTalentNames={['render_html']}
-        pendingToolTokens={3}
+        toolCallTokenCount={3}
       />,
     );
     const suffix = getByTestId('pending-indicator-suffix');
@@ -45,7 +45,7 @@ describe('PendingIndicator', () => {
     const {getByTestId} = render(
       <PendingIndicator
         pendingTalentNames={['render_html']}
-        pendingToolTokens={120}
+        toolCallTokenCount={120}
       />,
     );
     expect(getByTestId('pending-indicator-suffix').props.children).toBe(
@@ -89,7 +89,7 @@ describe('PendingIndicator', () => {
     const {getByTestId} = render(
       <PendingIndicator
         pendingTalentNames={['render_html']}
-        pendingToolTokens={150}
+        toolCallTokenCount={150}
         isStopping
       />,
     );
@@ -106,7 +106,7 @@ describe('PendingIndicator', () => {
     const {getByTestId, rerender} = render(
       <PendingIndicator
         pendingTalentNames={['render_html']}
-        pendingToolTokens={120}
+        toolCallTokenCount={120}
       />,
     );
     // Initial render: no elapsed segment yet.
@@ -119,7 +119,7 @@ describe('PendingIndicator', () => {
     rerender(
       <PendingIndicator
         pendingTalentNames={['render_html']}
-        pendingToolTokens={120}
+        toolCallTokenCount={120}
       />,
     );
     expect(getByTestId('pending-indicator-suffix').props.children).toMatch(

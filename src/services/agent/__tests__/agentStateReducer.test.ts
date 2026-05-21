@@ -19,7 +19,6 @@ describe('agentStateReducer', () => {
     expect(next).toEqual<AgentUiState>({
       status: 'prefill',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     });
   });
@@ -36,7 +35,6 @@ describe('agentStateReducer', () => {
     const initial: AgentUiState = {
       status: 'generating_tool_call',
       pendingTalentNames: ['calculate'],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const event: AgentEvent = {
@@ -70,7 +68,6 @@ describe('agentStateReducer', () => {
       {
         status: 'generating_tool_call',
         pendingTalentNames: ['calculate'],
-        pendingToolTokens: 0,
         hitMaxTurns: false,
       },
       {
@@ -109,7 +106,6 @@ describe('agentStateReducer', () => {
     const prefillState: AgentUiState = {
       status: 'prefill',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const next = agentStateReducer(prefillState, {
@@ -163,7 +159,6 @@ describe('agentStateReducer', () => {
     const before: AgentUiState = {
       status: 'executing_tool',
       pendingTalentNames: ['calculate'],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const next = agentStateReducer(before, {
@@ -179,7 +174,6 @@ describe('agentStateReducer', () => {
     const before: AgentUiState = {
       status: 'streaming_text',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const next = agentStateReducer(before, {
@@ -193,7 +187,6 @@ describe('agentStateReducer', () => {
     const before: AgentUiState = {
       status: 'streaming_text',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const next = agentStateReducer(before, {
@@ -207,7 +200,6 @@ describe('agentStateReducer', () => {
     const before: AgentUiState = {
       status: 'executing_tool',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const next = agentStateReducer(before, {
@@ -226,41 +218,43 @@ describe('agentStateReducer', () => {
     const before: AgentUiState = {
       status: 'streaming_text',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
     const next = agentStateReducer(before, {type: 'step_finished', turn: 0});
     expect(next).toEqual(before);
   });
 
-  it('token with toolCalls increments pendingToolTokens by 1', () => {
-    const next = agentStateReducer(initialAgentUiState, {
+  it('subsequent tool-call tokens during the same phase return the same state reference', () => {
+    // Reference equality is load-bearing for streaming perf: the chat
+    // hook's call-site guard (`if (next !== uiState)`) relies on this
+    // to suppress per-token MobX writes during long tool-call
+    // generations (e.g. render_html building a complex page).
+    const first = agentStateReducer(initialAgentUiState, {
       type: 'token',
       delta: {
         toolCalls: [
-          {id: 'c0', function: {name: 'render_html', arguments: '{"html":"<'}},
+          {id: 'c0', function: {name: 'render_html', arguments: '{'}},
         ],
       },
     });
-    expect(next.pendingToolTokens).toBe(1);
-  });
-
-  it('subsequent token events accumulate the token count', () => {
-    let state = initialAgentUiState;
-    for (let i = 0; i < 5; i++) {
-      state = agentStateReducer(state, {
+    expect(first.status).toBe('generating_tool_call');
+    expect(first.pendingTalentNames).toEqual(['render_html']);
+    // Now feed many subsequent tool-call tokens. The reducer must
+    // return the same `first` reference each time — not a structurally
+    // equal new object.
+    let state = first;
+    for (let i = 0; i < 10; i++) {
+      const next = agentStateReducer(state, {
         type: 'token',
         delta: {
           toolCalls: [
-            {
-              id: 'c0',
-              function: {name: 'render_html', arguments: 'x'.repeat(i)},
-            },
+            {id: 'c0', function: {name: '', arguments: 'x'.repeat(i)}},
           ],
         },
       });
+      expect(next).toBe(state);
+      state = next;
     }
-    expect(state.pendingToolTokens).toBe(5);
   });
 
   it('pendingTalentNames stay stable when later deltas drop the function name', () => {
@@ -284,20 +278,6 @@ describe('agentStateReducer', () => {
       },
     });
     expect(after2.pendingTalentNames).toEqual(['render_html']);
-  });
-
-  it('tool_call_started clears pendingToolTokens', () => {
-    const before: AgentUiState = {
-      status: 'generating_tool_call',
-      pendingTalentNames: ['render_html'],
-      pendingToolTokens: 47,
-      hitMaxTurns: false,
-    };
-    const next = agentStateReducer(before, {
-      type: 'tool_call_started',
-      call: {id: 'c0', function: {name: 'render_html', arguments: '{}'}},
-    });
-    expect(next.pendingToolTokens).toBe(0);
   });
 
   it('toolCalls without function names are filtered out of pendingTalentNames', () => {

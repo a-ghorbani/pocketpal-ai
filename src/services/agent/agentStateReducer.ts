@@ -1,23 +1,15 @@
 import type {AgentEvent, AgentUiState} from './AgentRunner.types';
 
 /**
- * Pure reducer over the `AgentEvent` stream produced by `runAgent`.
- * Hand-rolled (no XState dependency). Used by the chat hook to derive
- * `chatSessionStore.agentUiState` — the single observable bag that
- * powers every "the agent is doing X right now" UI signal.
+ * Reducer over the `AgentEvent` stream. Drives
+ * `chatSessionStore.agentUiState`.
  *
- * Invariants:
- *  - No side effects, no async, no React/MobX/store imports.
- *  - Idempotent on re-application of the same event (same input + state
- *    yields the same output).
- *  - Exhaustive switch over `AgentEvent.type`; the `never` default
- *    catches new event variants at compile time.
- *  - `pendingTalentNames` is purely transient — populated when parsed
- *    `toolCalls` first land in the stream and cleared once execution
- *    starts (`tool_call_started`) or the run finishes.
- *  - The reducer NEVER clears `pendingTalentNames` on a plain `token`
- *    event that carries `content` (regression guard for the metadata-bag
- *    bug where the streamed text overwrote the tool-call hint).
+ * Returns the same `state` reference when no semantic change occurred;
+ * the chat hook's call-site guard relies on this to skip redundant
+ * MobX writes (load-bearing for streaming perf).
+ *
+ * Never clears `pendingTalentNames` on a content/reasoning `token` —
+ * streamed text must not overwrite a tool-call hint already on the step.
  */
 export function agentStateReducer(
   state: AgentUiState,
@@ -28,30 +20,15 @@ export function agentStateReducer(
       return {
         status: 'prefill',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
         hitMaxTurns: false,
       };
     case 'step_started':
       // Both initial and follow-up steps route through `prefill` so the
-      // ChatView-owned indicator covers the dead zone between step
-      // setup and the first content/reasoning token. The first such
-      // token flips status to `streaming_text` via the regular
-      // `case 'token'` path below.
-      //
-      // For initial steps, `prefill` was already set by `run_started`,
-      // but explicitly setting it here keeps the rule uniform across
-      // both branches and prevents the indicator from disappearing in
-      // the brief window between run_started and the first token.
-      //
-      // For follow-up steps, this transitions out of `executing_tool`
-      // (where the previous step left us) into `prefill` until the
-      // follow-up's first token lands. The `isFollowUp` flag remains on
-      // the event for any per-step UI that needs it.
+      // pending indicator covers the dead zone until the first token.
       return {
         ...state,
         status: 'prefill',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
       };
     case 'token': {
       const incomingToolCalls = event.delta.toolCalls;
@@ -59,31 +36,23 @@ export function agentStateReducer(
         const names = incomingToolCalls
           .map(tc => tc.function?.name)
           .filter((n): n is string => !!n);
-        // Each token event during tool-call generation = one token
-        // emitted by the model. Counting events sidesteps engine
-        // encoding details (cumulative vs incremental arguments;
-        // llama.rn vs OpenAI streaming shape) — every emit is +1.
+        const alreadyGenerating = state.status === 'generating_tool_call';
+        // Carry names — later deltas sometimes drop the function name
+        // once it's been emitted, leaving anonymous calls.
         const carryNames =
-          state.status === 'generating_tool_call' &&
-          state.pendingTalentNames.length > 0
+          alreadyGenerating && state.pendingTalentNames.length > 0
             ? state.pendingTalentNames
             : names;
+        if (alreadyGenerating && carryNames === state.pendingTalentNames) {
+          return state;
+        }
         return {
           ...state,
           status: 'generating_tool_call',
-          // Preserve the names from the first delta — later deltas
-          // sometimes drop the function name once it's already been
-          // emitted, leaving us with anonymous calls. Honouring the
-          // first non-empty set keeps the label stable across the run.
           pendingTalentNames: carryNames,
-          pendingToolTokens: state.pendingToolTokens + 1,
         };
       }
-      // Plain content/reasoning token: if we were waiting in `prefill`,
-      // the first such token flips status to `streaming_text` so the
-      // indicator hides as soon as visible output starts. Do NOT clear
-      // pendingTalentNames here — streamed content must not overwrite a
-      // tool-call hint already set on this step.
+      // First content/reasoning token flips out of prefill.
       const hasVisibleDelta =
         (event.delta.content && event.delta.content.length > 0) ||
         (event.delta.reasoningContent &&
@@ -97,6 +66,9 @@ export function agentStateReducer(
       return state;
     }
     case 'marker_seen':
+      if (state.status === 'generating_tool_call') {
+        return state;
+      }
       return {
         ...state,
         status: 'generating_tool_call',
@@ -106,19 +78,15 @@ export function agentStateReducer(
         ...state,
         status: 'executing_tool',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
       };
     case 'tool_call_finished':
-      // Stay in executing_tool until step_finished or the next token
-      // event flips status; outcomes accumulate on the step itself.
-      return state;
     case 'step_finished':
+      // Outcomes accumulate on the step; status flips on the next event.
       return state;
     case 'run_finished':
       return {
         status: 'done',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
         hitMaxTurns: !!event.result.hitMaxTurns,
       };
     case 'run_failed':
@@ -126,7 +94,6 @@ export function agentStateReducer(
         ...state,
         status: 'failed',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
       };
     default: {
       const _exhaustive: never = event;

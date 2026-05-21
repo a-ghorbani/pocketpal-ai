@@ -177,7 +177,7 @@ export interface ChatProps extends ChatTopLevelProps {
 const PendingIndicatorView: React.FC = observer(() => (
   <PendingIndicator
     pendingTalentNames={chatSessionStore.agentUiState.pendingTalentNames}
-    pendingToolTokens={chatSessionStore.agentUiState.pendingToolTokens}
+    toolCallTokenCount={chatSessionStore.toolCallTokenCount}
     isStopping={chatSessionStore.isStopping}
   />
 ));

@@ -50,7 +50,6 @@ beforeEach(() => {
     chatSessionStore.agentUiState = {
       status: 'idle',
       pendingTalentNames: [],
-      pendingToolTokens: 0,
       hitMaxTurns: false,
     };
   });
@@ -306,7 +305,6 @@ describe('ChatView — dead-zone phase walk via PendingIndicator', () => {
         chatSessionStore.agentUiState = {
           status,
           pendingTalentNames: [],
-          pendingToolTokens: 0,
           hitMaxTurns: false,
         };
       });
@@ -336,7 +334,6 @@ describe('ChatView — dead-zone phase walk via PendingIndicator', () => {
       chatSessionStore.agentUiState = {
         status: 'streaming_text',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
         hitMaxTurns: false,
       };
     });

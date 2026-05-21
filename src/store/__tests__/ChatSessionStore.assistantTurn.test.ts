@@ -44,7 +44,6 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       chatSessionStore.setAgentUiState({
         status: 'generating_tool_call',
         pendingTalentNames: ['calculate'],
-        pendingToolTokens: 0,
         hitMaxTurns: false,
       });
       expect(chatSessionStore.isGeneratingToolCall).toBe(true);
@@ -52,7 +51,6 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       chatSessionStore.setAgentUiState({
         status: 'streaming_text',
         pendingTalentNames: [],
-        pendingToolTokens: 0,
         hitMaxTurns: false,
       });
       expect(chatSessionStore.isGeneratingToolCall).toBe(false);
@@ -62,7 +60,6 @@ describe('ChatSessionStore — AssistantTurn extensions', () => {
       const next = {
         status: 'executing_tool' as const,
         pendingTalentNames: ['render_html'],
-        pendingToolTokens: 0,
         hitMaxTurns: false,
       };
       chatSessionStore.setAgentUiState(next);

@@ -35,7 +35,6 @@ import {
   type AgentEvent,
   type AgentUiState,
 } from '../services/agent';
-
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
 // active-vs-persisted predicate sees the right "last message" before the
@@ -547,15 +546,51 @@ export const useChatSession = (
       let lastYieldTs = performance.now();
       const YIELD_INTERVAL_MS = 100;
 
+      // Bucket the tool-token counter: PendingIndicator hides counts
+      // below 10, so publish every increment up to 10, then only on
+      // bucket boundaries. Drops the indicator's re-render rate by
+      // ~10× without visible loss.
+      let toolCallTokensRaw = 0;
+      const TOOL_TOKEN_BUCKET = 10;
+
       for await (const event of events) {
         if (abortRef.current?.signal.aborted && event.type === 'token') {
           continue;
         }
 
-        // Drive the reducer first so renderers see the new status as
-        // soon as the per-step persistence write lands.
-        uiState = agentStateReducer(uiState, event);
-        chatSessionStore.setAgentUiState(uiState);
+        // Reference guard before MobX write: deep observables wrap
+        // values in a proxy, so equality inside the setter can't see
+        // "same object". The reducer returns the input ref when nothing
+        // changed; without this guard every event still publishes.
+        const nextUiState = agentStateReducer(uiState, event);
+        if (nextUiState !== uiState) {
+          uiState = nextUiState;
+          chatSessionStore.setAgentUiState(nextUiState);
+        }
+
+        switch (event.type) {
+          case 'run_started':
+          case 'step_started':
+          case 'tool_call_started':
+          case 'run_finished':
+          case 'run_failed':
+            toolCallTokensRaw = 0;
+            chatSessionStore.setToolCallTokenCount(0);
+            break;
+          case 'token':
+            if (event.delta.toolCalls && event.delta.toolCalls.length > 0) {
+              toolCallTokensRaw += 1;
+              if (
+                toolCallTokensRaw < TOOL_TOKEN_BUCKET ||
+                toolCallTokensRaw % TOOL_TOKEN_BUCKET === 0
+              ) {
+                chatSessionStore.setToolCallTokenCount(toolCallTokensRaw);
+              }
+            }
+            break;
+          default:
+            break;
+        }
 
         await applyEventToStore(event, {
           messageId: messageInfo.id,
@@ -590,6 +625,7 @@ export const useChatSession = (
       // Reset agentUiState back to idle so renderers don't get
       // stuck in a failed state across the next user message.
       chatSessionStore.setAgentUiState(initialAgentUiState);
+      chatSessionStore.setToolCallTokenCount(0);
 
       // Stop any in-flight TTS — the completion errored, so buffered
       // audio should not keep playing.

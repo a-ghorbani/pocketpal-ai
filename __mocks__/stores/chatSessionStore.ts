@@ -110,6 +110,8 @@ export const mockChatSessionStore = {
     hitMaxTurns: false,
   },
   setAgentUiState: jest.fn(),
+  toolCallTokenCount: 0,
+  setToolCallTokenCount: jest.fn(),
   pushAgentStep: jest.fn().mockResolvedValue(undefined),
   updateActiveStepStreaming: jest.fn(),
   appendToolCall: jest.fn().mockResolvedValue(undefined),

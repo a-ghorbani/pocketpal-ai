@@ -78,7 +78,7 @@ interface PendingIndicatorProps {
    * Number of token events received during the current tool-call
    * generation. Surfaced once it crosses {@link MIN_TOKENS}.
    */
-  pendingToolTokens?: number;
+  toolCallTokenCount?: number;
   /**
    * True between the user pressing Stop and the runner actually
    * exiting (native llama.rn finishing its in-flight `llama_decode`
@@ -102,7 +102,7 @@ interface PendingIndicatorProps {
  */
 export const PendingIndicator: React.FC<PendingIndicatorProps> = ({
   pendingTalentNames,
-  pendingToolTokens = 0,
+  toolCallTokenCount = 0,
   isStopping = false,
 }) => {
   const theme = useTheme();
@@ -143,10 +143,10 @@ export const PendingIndicator: React.FC<PendingIndicatorProps> = ({
       ? l10n.components.pendingIndicator[labelKey]
       : l10n.components.pendingIndicator.preparingTool;
     const parts: string[] = [label];
-    if (pendingToolTokens >= MIN_TOKENS) {
+    if (toolCallTokenCount >= MIN_TOKENS) {
       parts.push(
         t(l10n.components.toolMetrics.tokens, {
-          count: pendingToolTokens.toLocaleString(),
+          count: toolCallTokenCount.toLocaleString(),
         }),
       );
     }

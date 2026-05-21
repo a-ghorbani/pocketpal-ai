@@ -29,8 +29,7 @@ type MessageUpdate =
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
 
-// Minimum time between streaming UI updates to prevent excessive re-renders
-// Set to 150ms to stay well above the 50ms threshold that triggers React warnings
+// Coalesce per-token writes into batched UI flushes (~33 Hz).
 const STREAMING_THROTTLE_MS = 30;
 
 export interface SessionMetaData {
@@ -104,6 +103,12 @@ class ChatSessionStore {
   // `setAgentUiState`. Renderers compute the active-vs-persisted
   // predicate at the ChatView level.
   agentUiState: AgentUiState = initialAgentUiState;
+
+  // Per-token counter for PendingIndicator's tool-call suffix. Lives
+  // outside `agentUiState` so broad observers (ChatView) aren't
+  // invalidated on every tool-call token; only `PendingIndicatorView`
+  // reads it.
+  toolCallTokenCount: number = 0;
 
   constructor() {
     makeAutoObservable(this);
@@ -192,6 +197,13 @@ class ChatSessionStore {
    */
   setAgentUiState(state: AgentUiState) {
     this.agentUiState = state;
+  }
+
+  setToolCallTokenCount(value: number) {
+    if (this.toolCallTokenCount === value) {
+      return;
+    }
+    this.toolCallTokenCount = value;
   }
 
   /**
@@ -667,7 +679,6 @@ class ChatSessionStore {
           };
         }
       });
-
       chatSessionRepository
         .updateMessage(pending.id, update)
         .catch(error =>
@@ -695,7 +706,6 @@ class ChatSessionStore {
         ...partial,
       };
     });
-
     chatSessionRepository
       .updateMessage(pending.id, {steps: turn.steps})
       .catch(error =>
