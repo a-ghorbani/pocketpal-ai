@@ -154,7 +154,10 @@
     "removeRemoteModel": "حذف {{modelName}} ({{serverName}})؟",
     "retryConnection": "تلاش مجدد",
     "enterUrlManually": "ورود دستی آدرس",
-    "manageServers": "مدیریت سرورها"
+    "manageServers": "مدیریت سرورها",
+    "ttsAvailability": "تبدیل متن به گفتار",
+    "ttsAvailabilityDescription": "خواندن پاسخ‌ها با صدای بلند.",
+    "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند."
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
@@ -187,7 +190,9 @@
       "fileAlreadyExists": "فایل از قبل وجود دارد",
       "fileAlreadyExistsMessage": "فایلی با این نام از قبل وجود دارد. می‌خواهید چه کار کنید؟",
       "replace": "جایگزینی",
-      "keepBoth": "حفظ هر دو"
+      "keepBoth": "حفظ هر دو",
+      "copyingModel": "در حال کپی کردن فایل مدل…",
+      "copyFailed": "کپی کردن فایل مدل ناموفق بود"
     },
     "labels": {
       "localModel": "محلی",
@@ -408,7 +413,7 @@
     "jinja": "قالب‌بندی Jinja را برای فرمت چت فعال کنید. وقتی فعال باشد، از پردازش قالب چت مبتنی بر Jinja برای سازگاری بهتر با مدل‌های جدید استفاده می‌شود.",
     "grammar": "اعمال قوانین دستوری خاص برای اطمینان از اینکه متن تولید شده از ساختار یا فرمت مشخصی پیروی کند",
     "stop": "عبارت‌های خاصی تعریف کنید که تولید متن را متوقف می‌کنند",
-    "n_predict": "طول پاسخ تولید شده را تنظیم کنید (بر حسب token)",
+    "n_predict": "حداکثر توکن‌های تولیدی. برای حذف محدودیت «نامحدود» یا برای تعیین مقدار «سفارشی» را انتخاب کنید.",
     "n_probs": "امتیاز احتمال کلمات جایگزین را نشان دهید.",
     "top_k": "خلاقیت را با محدود کردن انتخاب کلمات به K گزینه محتمل‌تر کنترل کنید. مقادیر کمتر پاسخ‌ها را متمرکزتر می‌کنند",
     "top_p": "تعادل بین خلاقیت و انسجام. مقادیر بالاتر (نزدیک به ۱.۰) پاسخ‌های خلاقانه‌تر اما احتمالاً کمتر متمرکز ایجاد می‌کنند",
@@ -443,7 +448,9 @@
     "orBy": "یا با",
     "sponsorButton": "حامی مالی شوید",
     "versionCopiedTitle": "نسخه کپی شد",
-    "versionCopiedDescription": "اطلاعات نسخه در کلیپ‌بورد کپی شد"
+    "versionCopiedDescription": "اطلاعات نسخه در کلیپ‌بورد کپی شد",
+    "privacyPolicy": "سیاست حریم خصوصی",
+    "termsOfService": "شرایط استفاده از خدمات"
   },
   "feedback": {
     "title": "ارسال بازخورد",
@@ -1213,5 +1220,48 @@
   },
   "simulator": {
     "cameraNotAvailable": "دوربین در شبیه‌ساز در دسترس نیست. لطفاً از دستگاه واقعی استفاده کنید."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "صدا و گفتار",
+    "voiceRowTitle": "صدا",
+    "notSet": "تنظیم نشده",
+    "previewButton": "پیش‌نمایش",
+    "stopPreviewButton": "توقف پیش‌نمایش",
+    "voicesTitle": "صداها",
+    "voicesEmptyHint": "روی هر صدایی ضربه بزنید تا نصب و استفاده شود. یا یک صدای سیستمی انتخاب کنید — آن‌ها همیشه در دسترس‌اند.",
+    "supertonicStepsLabel": "کیفیت (گام‌های انتشار)",
+    "toggleAutoSpeakLabel": "تغییر وضعیت خواندن خودکار",
+    "openSettingsLabel": "تنظیمات تبدیل متن به گفتار",
+    "playMessageLabel": "پخش پیام",
+    "stopMessageLabel": "توقف پخش پیام",
+    "autoSpeakLabel": "خواندن خودکار پاسخ‌ها",
+    "autoSpeakDescription": "پاسخ‌های جدید را با رسیدن، با صدای بلند می‌خواند.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "سیستم",
+    "stepsCount": "{{steps}} گام",
+    "engineKittenTagline": "کم‌حجم‌ترین. قابل اعتماد. بهترین انتخاب برای دستگاه‌های قدیمی.",
+    "engineKokoroTagline": "بالاترین کیفیت. شروع کندتر. ممکن است برخی صداها روی همه دستگاه‌ها کار نکنند.",
+    "engineSupertonicTagline": "سریع‌ترین شروع. RAM بیشتری مصرف می‌کند. گاهی ممکن است کلماتی را از قلم بیندازد.",
+    "engineSystemTagline": "صداهای داخلی سیستم‌عامل. همیشه در دسترس، بدون نیاز به نصب.",
+    "engineSystemTitleIos": "صداهای iOS",
+    "engineSystemTitleAndroid": "صداهای Android",
+    "engineSystemTier": "همیشه در دسترس",
+    "engineTierLightest": "سبک‌ترین",
+    "engineTierBestQuality": "بهترین کیفیت",
+    "engineTierFastestStart": "سریع‌ترین شروع",
+    "engineSpecsLine": "{{voices}} صدا  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} صدا",
+    "engineRemoveTitle": "حذف {{engineTitle}}؟",
+    "engineRemoveBody": "~{{sizeMb}} MB روی این دستگاه آزاد می‌کند.",
+    "engineRemoveCancel": "لغو",
+    "engineRemoveConfirm": "حذف",
+    "engineInstallCta": "نصب · {{sizeMb}} MB",
+    "engineDownloadingLabel": "در حال دانلود…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "تلاش مجدد",
+    "voicesEmptyState": "هیچ صدایی یافت نشد.",
+    "kokoroDeviceNote": "ممکن است برخی صداها روی همه دستگاه‌ها کار نکنند.",
+    "insufficientStorage": "فضای کافی نیست — برای نصب این موتور {{requiredMb}} MB فضا آزاد کنید ({{freeMb}} MB در دسترس است)."
   }
 }

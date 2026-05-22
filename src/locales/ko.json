@@ -9,7 +9,9 @@
     "orBy": "또는",
     "versionCopiedDescription": "버전 정보가 클립보드에 복사되었습니다",
     "sponsorButton": "스폰서 되기",
-    "versionCopiedTitle": "버전 복사됨"
+    "versionCopiedTitle": "버전 복사됨",
+    "privacyPolicy": "개인정보 처리방침",
+    "termsOfService": "서비스 약관"
   },
   "benchmark": {
     "title": "벤치마크",
@@ -191,7 +193,7 @@
   "completionParams": {
     "grammar": "특정 문법 규칙을 적용하여 생성된 텍스트가 정해진 구조나 형식을 따르도록 강제합니다.",
     "stop": "텍스트 생성을 중단할 특정 문구를 지정합니다.",
-    "n_predict": "생성될 답변의 최대 길이를 설정합니다(토큰 단위).",
+    "n_predict": "생성할 최대 토큰 수를 설정하십시오. 제한을 없애려면 무제한을, 특정 수치를 입력하려면 사용자 정의를 선택하세요.",
     "n_probs": "대체 단어들에 대한 확률 점수를 표시합니다.",
     "top_k": "가장 확률이 높은 K개의 단어 중에서만 선택하도록 제한합니다. 값이 낮을수록 답변이 더 일관되고 정교해집니다.",
     "top_p": "답변의 창의성을 조절합니다. 값이 클수록(1.0에 가까울수록) 답변이 창의적이지만, 때로는 주제에서 벗어날 수 있습니다.",
@@ -707,7 +709,9 @@
       "fileAlreadyExists": "이미 존재하는 파일입니다",
       "fileAlreadyExistsMessage": "이름이 같은 파일이 이미 있습니다. 수행할 작업을 선택해 주세요.",
       "replace": "덮어쓰기",
-      "keepBoth": "둘 다 유지"
+      "keepBoth": "둘 다 유지",
+      "copyFailed": "모델 파일 복사 실패",
+      "copyingModel": "모델 파일 복사 중..."
     },
     "labels": {
       "localModel": "로컬",
@@ -1213,5 +1217,48 @@
   },
   "simulator": {
     "cameraNotAvailable": "시뮬레이터에서는 카메라를 사용할 수 없습니다. 실제 기기를 사용해 주세요."
+  },
+  "voiceAndSpeech": {
+    "stopPreviewButton": "미리보기 중지",
+    "voicesTitle": "음성",
+    "voiceRowTitle": "음성",
+    "notSet": "설정되지 않음",
+    "previewButton": "미리보기",
+    "voicesEmptyHint": "원하는 음성을 탭하여 설치 후 사용해 보세요. 또는 시스템 음성을 선택할 수도 있습니다 — 시스템 음성은 언제나 사용 가능합니다.",
+    "supertonicStepsLabel": "품질 (디퓨전 단계)",
+    "toggleAutoSpeakLabel": "자동 말하기 토글",
+    "openSettingsLabel": "TTS 설정",
+    "playMessageLabel": "메시지 재생",
+    "stopMessageLabel": "메시지 중단",
+    "autoSpeakLabel": "응답 자동 말하기",
+    "autoSpeakDescription": "새 답변이 생성되면 음성으로 읽어줍니다.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "시스템",
+    "stepsCount": "{{steps}} 스텝",
+    "engineKittenTagline": "최소한의 리소스 점유. 뛰어난 안정성. 구형 기기에 최적화.",
+    "engineKokoroTagline": "최고 수준의 품질. 초기 구동 속도 느림. 일부 음성은 기기에 따라 작동하지 않을 수 있음.",
+    "engineSupertonicTagline": "가장 빠른 구동 속도. 더 많은 RAM 사용. 간혹 일부 단어가 누락될 수 있음.",
+    "engineSystemTagline": "운영체제 내장 음성. 설치가 필요 없으며 언제나 즉시 사용 가능.",
+    "engineSystemTitleIos": "iOS 음성",
+    "engineSystemTitleAndroid": "Android 음성",
+    "engineSystemTier": "항상 사용 가능",
+    "sectionTitle": "음성 & 말하기",
+    "engineTierLightest": "가장 가벼움",
+    "engineTierBestQuality": "가장 고성능",
+    "engineTierFastestStart": "가장 빠른 시작",
+    "engineSpecsLine": "{{voices}}개의 음성  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}}개의 음성",
+    "engineRemoveTitle": "{{engineTitle}}을(를) 제거하시겠습니까?",
+    "engineRemoveCancel": "취소",
+    "engineRemoveConfirm": "제거",
+    "engineInstallCta": "설치 · {{sizeMb}} MB",
+    "engineDownloadingLabel": "다운로드 중…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "다시 시도하기",
+    "voicesEmptyState": "음성 없음.",
+    "kokoroDeviceNote": "일부 음성은 모든 기기에서 작동하지 않을 수 있습니다.",
+    "insufficientStorage": "저장 공간 부족 — 이 엔진 설치에 필요한 {{requiredMb}}MB를 확보하세요. ({{freeMb}} MB 사용 가능).",
+    "engineRemoveBody": "저장 공간 {{sizeMb}} MB 확보 가능"
   }
 }

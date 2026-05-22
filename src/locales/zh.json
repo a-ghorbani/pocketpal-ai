@@ -84,7 +84,7 @@
     "useMmapTrue": "启用",
     "useMmapFalse": "禁用",
     "useMmapTrueDescription": "始终使用内存映射以实现更快的加载",
-    "useMmapFalseDescription": "从不使用内存映射（加载较慢但可能减少内存使用）",
+    "useMmapFalseDescription": "当启用权重重新打包时，建议禁用该功能以避免内存使用量翻倍",
     "modelLoadingSettings": "模型加载设置",
     "autoOffloadLoad": "自动卸载/加载",
     "autoOffloadLoadDescription": "当APP在后台时自动卸载模型",
@@ -119,7 +119,42 @@
     "clearCachesConfirmMessage": "这将清除所有缓存的会话数据（{{fileCount}}个文件，{{size}}）。清除后，快捷指令首次使用时可能会变慢。这不会影响你的Pal或聊天历史记录。",
     "clearCachesSuccess": "成功清除{{count}}个缓存文件。",
     "clearCachesError": "清除缓存失败，请重试。",
-    "noCachesToClear": "没有可清除的缓存。"
+    "noCachesToClear": "没有可清除的缓存。",
+    "weightRepacking": "启用权重重新分配",
+    "weightRepackingDescription": "禁用内存映射时，Prompt处理速度更快，内存开销极小；Token生成不受影响",
+    "serverName": "服务器名称",
+    "serverUrl": "服务器URL",
+    "serverUrlPlaceholder": "例如：http://192.168.1.100:1234",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "可选（使用OpenAI/Groq时必填）",
+    "apiKeyDescription": "安全存储在设备上",
+    "remoteModel": "远端模型",
+    "remotePrivacyNotice": "发送至远端服务器的消息将离开本设备，请永远确保仅连接可信任的服务器！",
+    "remoteIndicator": "远程",
+    "serverUrlRequired": "服务器URL为必填项",
+    "serverUrlInvalid": "URL格式错误",
+    "serverUrlHttpWarning": "iOS 对非本地服务器强制要求 HTTPS，请改用 https:// 或本地网络地址",
+    "addRemoteModel": "添加远端模型",
+    "yourServers": "你的服务器",
+    "orConnectNewServer": "或连接新服务器",
+    "selectModel": "选择模型",
+    "addModel": "添加模型",
+    "connected": "已连接",
+    "connectionFailed": "连接失败：{{error}}",
+    "connecting": "连接中...",
+    "noModelsAvailable": "该服务器无可用模型",
+    "alreadyAdded": "已存在",
+    "connectedServers": "已连接的服务器",
+    "modelsCount": "{{count}} 个模型",
+    "serverDetails": "服务器信息",
+    "modelsUsingServer": "使用此服务器模型：",
+    "saveChanges": "保存更改",
+    "removeServer": "移除服务器",
+    "removeServerMessage": "删除 {{serverName}} 及其 {{count}} 个模型？",
+    "removeRemoteModel": "删除 {{modelName}} ({{serverName}})？",
+    "retryConnection": "重试",
+    "enterUrlManually": "手动输入URL",
+    "manageServers": "管理服务器"
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -152,7 +187,9 @@
       "fileAlreadyExists": "文件已存在",
       "fileAlreadyExistsMessage": "此名称的文件已存在，你想做什么？",
       "replace": "替换",
-      "keepBoth": "保留两者"
+      "keepBoth": "保留两者",
+      "copyingModel": "正在复制模型文件...",
+      "copyFailed": "复制模型文件失败"
     },
     "labels": {
       "localModel": "本地",
@@ -373,7 +410,7 @@
     "jinja": "启用Jinja模板进行聊天格式化；启用时，使用基于Jinja的聊天模板处理以提高与现代模型的兼容性",
     "grammar": "应用特定的语法规则，以确保生成的文本遵循特定的结构或格式",
     "stop": "定义将停止文本生成的特定短语",
-    "n_predict": "设置生成响应的长度（以token为单位）",
+    "n_predict": "要生成的最大 token 数量，设为\"无限制\"则不设上限，或选\"自定义\"指定一个值",
     "n_probs": "显示替代词的概率分数",
     "top_k": "通过限制单词选择到K个最可能的选项来控制创造性，较低的值会使响应更集中",
     "top_p": "平衡创造性和连贯性，较高的值（接近1.0）允许更富有创造性但可能不那么集中的响应",
@@ -408,7 +445,9 @@
     "orBy": "或通过",
     "sponsorButton": "成为帅气且尊贵的赞助者！",
     "versionCopiedTitle": "复制成功！",
-    "versionCopiedDescription": "版本信息已复制到剪贴板"
+    "versionCopiedDescription": "版本信息已复制到剪贴板",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款"
   },
   "feedback": {
     "title": "发送反馈",
@@ -865,6 +904,11 @@
       "importPals": "导入帕尔",
       "importSuccess": "成功导入{{count}}个帕尔",
       "importError": "导入帕尔失败，请检查文件格式"
+    },
+    "bubble": {
+      "msPerToken": "{{value}}毫秒/token",
+      "tokensPerSec": "{{value}} tokens/秒",
+      "ttft": "{{value}}毫秒 TTFT"
     }
   },
   "palsScreen": {
@@ -944,7 +988,8 @@
       "failedToLoadDetails": "加载Pal详情失败",
       "failedToDownload": "下载Pal失败",
       "premiumPalMessage": "这是一个高级Pal。\n• 如果您已经通过Palshub账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问palshub.ai应用了解更多。",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "buyOnPalshub": "在Palshub购买"
     }
   },
   "validation": {
@@ -1022,7 +1067,8 @@
   "benchmark": {
     "title": "基准测试",
     "modelSelector": {
-      "prompt": "选择模型"
+      "prompt": "选择模型",
+      "noModels": "未下载任何模型"
     },
     "buttons": {
       "advancedSettings": "高级设置",
@@ -1171,5 +1217,48 @@
   },
   "simulator": {
     "cameraNotAvailable": "当前虚拟机无法使用摄像头，请使用物理机！！"
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "语音与朗读",
+    "voiceRowTitle": "语音",
+    "notSet": "未设置",
+    "previewButton": "预览",
+    "stopPreviewButton": "停止预览",
+    "voicesTitle": "语音",
+    "voicesEmptyHint": "轻点任意语音即可安装并使用，或选择系统语音——这些始终可用",
+    "supertonicStepsLabel": "质量（扩散步数）",
+    "toggleAutoSpeakLabel": "切换自动朗读",
+    "openSettingsLabel": "TTS设置",
+    "playMessageLabel": "播放消息",
+    "stopMessageLabel": "停止播放",
+    "autoSpeakLabel": "自动朗读回复",
+    "autoSpeakDescription": "自动朗读新回复",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "系统",
+    "stepsCount": "{{steps}} 步",
+    "engineKittenTagline": "占用最小、稳定可靠、最适合旧设备",
+    "engineKokoroTagline": "最高质量、启动较慢、部分语音可能不兼容所有设备",
+    "engineSupertonicTagline": "启动最快、内存占用较高、偶尔可能漏字",
+    "engineSystemTagline": "系统内置语音，始终可用无需安装",
+    "engineSystemTitleIos": "iOS语音",
+    "engineSystemTitleAndroid": "安卓语音",
+    "engineSystemTier": "始终可用",
+    "engineTierLightest": "最轻量",
+    "engineTierBestQuality": "最佳品质",
+    "engineTierFastestStart": "启动最快",
+    "engineSpecsLine": "{{voices}} 个语音  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB 内存",
+    "engineSystemSpecsLine": "{{voices}} 个语音",
+    "engineRemoveTitle": "删除 {{engineTitle}}？",
+    "engineRemoveBody": "可在此设备上释放约 {{sizeMb}} MB 空间",
+    "engineRemoveCancel": "取消",
+    "engineRemoveConfirm": "删除",
+    "engineInstallCta": "安装 · {{sizeMb}} MB",
+    "engineDownloadingLabel": "下载中…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "再试一次",
+    "voicesEmptyState": "未找到语音",
+    "kokoroDeviceNote": "某些语音可能不兼容所有设备",
+    "insufficientStorage": "空间不足——请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）"
   }
 }
