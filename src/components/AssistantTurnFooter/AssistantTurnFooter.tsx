@@ -26,11 +26,14 @@ interface AssistantTurnFooterProps {
 }
 
 /**
- * Turn-level chrome (timing + copy) rendered once per assistant row,
- * below all step blocks. Each slot is gated only by field presence:
+ * Turn-level chrome (timing + copy + interrupt status) rendered once per
+ * assistant row, below all step blocks. Each slot is gated only by field
+ * presence:
  *
- *   - `metadata.timings` present → render the timing line
- *   - `metadata.copyable` true   → render the copy button
+ *   - `metadata.timings` present       → render the timing line
+ *   - `metadata.copyable` true         → render the copy button
+ *   - `metadata.interrupted` true      → render the interrupted status
+ *   - `metadata.truncationLikely` true → upgrade status to "cut off"
  *
  * On a turn aborted mid-stream with partial content, `copyable` is true
  * but `timings` is absent — the footer renders the copy button alone.
@@ -41,9 +44,10 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = ({
 }) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
-  const {copyable, timings} = message.metadata || {};
+  const {copyable, timings, interrupted, truncationLikely} =
+    message.metadata || {};
 
-  if (!timings && !copyable) {
+  if (!timings && !copyable && !interrupted) {
     return null;
   }
 
@@ -98,6 +102,15 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = ({
       {timings && fullTimingsString ? (
         <Text style={componentStyles.timing} testID="footer-timing">
           {fullTimingsString}
+        </Text>
+      ) : null}
+      {interrupted ? (
+        <Text
+          style={componentStyles.interruptedStatus}
+          testID="footer-interrupted-status">
+          {truncationLikely
+            ? l10n.components.bubble.truncated
+            : l10n.components.bubble.interrupted}
         </Text>
       ) : null}
     </View>
