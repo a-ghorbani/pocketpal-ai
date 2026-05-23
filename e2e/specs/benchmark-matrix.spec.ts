@@ -65,20 +65,49 @@ describe('Benchmark Matrix', () => {
     const status = await driver.$(byTestId('bench-runner-screen-status'));
     await status.waitForDisplayed({timeout: 30_000});
 
+    const readStatus = async (): Promise<string | null> =>
+      (await status.getAttribute('content-desc').catch(() => null)) ??
+      (await status.getText().catch(() => null));
+
+    // Fast-fail diagnostic: with autostart=1 the screen must leave `idle`
+    // within seconds of mount. If it doesn't, the autostart param never
+    // reached the screen — fail in 30s with that specific signal instead
+    // of burning the full BENCH_MAX_WAIT_MIN on a silent timeout.
+    let lastObserved: string | null = await readStatus();
+    try {
+      await browser.waitUntil(
+        async () => {
+          lastObserved = await readStatus();
+          return typeof lastObserved === 'string' && lastObserved !== 'idle';
+        },
+        {timeout: 30_000, interval: 1_000},
+      );
+    } catch {
+      // Rethrow with the actual last-observed status interpolated. (WDIO's
+      // own timeoutMsg is a static string built before the wait starts, so
+      // it cannot include the value of `lastObserved` at timeout time.)
+      throw new Error(
+        `autostart did not leave 'idle' within 30s (last status=${lastObserved ?? 'null'}). The screen mounted but the autostart deep-link param never triggered onRun — likely a regression in the deep-link param plumbing or the screen's once-per-mount effect.`,
+      );
+    }
+
     const deadline = Date.now() + MAX_WAIT_MS;
     let terminal: string | null = null;
     while (Date.now() < deadline) {
       await browser.pause(POLL_MS);
-      const s =
-        (await status.getAttribute('content-desc').catch(() => null)) ??
-        (await status.getText().catch(() => null));
+      const s = await readStatus();
+      if (typeof s === 'string') {
+        lastObserved = s;
+      }
       if (s === 'complete' || (typeof s === 'string' && s.startsWith('error:'))) {
         terminal = s;
         break;
       }
     }
     if (!terminal) {
-      throw new Error(`No terminal state within ${MAX_WAIT_MS / 60_000} min`);
+      throw new Error(
+        `No terminal state within ${MAX_WAIT_MS / 60_000} min (last status=${lastObserved ?? 'null'}).`,
+      );
     }
 
     const localFile = pullLatestReport(outDir, udid);
