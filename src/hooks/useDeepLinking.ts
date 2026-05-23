@@ -10,11 +10,11 @@ import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
 import {chatSessionStore, palStore, deepLinkStore} from '../store';
+import {ROUTES} from '../utils/navigationConstants';
 import {
-  ROUTES,
   isBenchmarkRunnerUrl,
   parseBenchmarkAutostart,
-} from '../utils/navigationConstants';
+} from '../__automation__/benchmarkRoute';
 
 /**
  * Hook for handling deep link navigation

@@ -1,9 +1,6 @@
-import {
-  isBenchmarkRunnerUrl,
-  parseBenchmarkAutostart,
-} from '../navigationConstants';
+import {isBenchmarkRunnerUrl, parseBenchmarkAutostart} from '../benchmarkRoute';
 
-describe('navigationConstants', () => {
+describe('benchmarkRoute', () => {
   describe('isBenchmarkRunnerUrl', () => {
     it('matches the bare bench URL', () => {
       expect(isBenchmarkRunnerUrl('pocketpal://e2e/benchmark')).toBe(true);

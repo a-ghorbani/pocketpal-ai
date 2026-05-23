@@ -10,11 +10,8 @@
  *                                doesn't deliver the URL via DeepLinkService)
  */
 import type {DeepLinkParams} from '../services/DeepLinkService';
-import {
-  ROUTES,
-  isBenchmarkRunnerUrl,
-  parseBenchmarkAutostart,
-} from '../utils/navigationConstants';
+import {ROUTES} from '../utils/navigationConstants';
+import {isBenchmarkRunnerUrl, parseBenchmarkAutostart} from './benchmarkRoute';
 
 interface NavigationLike {
   navigate: (route: string, params?: Record<string, unknown>) => void;
