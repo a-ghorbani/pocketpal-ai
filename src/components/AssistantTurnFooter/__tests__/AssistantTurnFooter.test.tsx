@@ -123,4 +123,37 @@ describe('AssistantTurnFooter', () => {
     expect(queryByTestId('footer-timing')).toBeNull();
     expect(queryByTestId('footer-copy')).toBeTruthy();
   });
+
+  it('renders "Interrupted" status when metadata.interrupted is set', () => {
+    const message = baseTurn({
+      metadata: {copyable: true, interrupted: true},
+    });
+    const {getByTestId, getByText} = render(
+      <AssistantTurnFooter message={message} />,
+    );
+    expect(getByTestId('footer-interrupted-status')).toBeTruthy();
+    expect(getByText('Interrupted')).toBeTruthy();
+  });
+
+  it('upgrades the status to "Cut off — likely context full" when truncationLikely is set', () => {
+    const message = baseTurn({
+      metadata: {copyable: true, interrupted: true, truncationLikely: true},
+    });
+    const {getByTestId, getByText} = render(
+      <AssistantTurnFooter message={message} />,
+    );
+    expect(getByTestId('footer-interrupted-status')).toBeTruthy();
+    expect(getByText('Cut off — likely context full')).toBeTruthy();
+  });
+
+  it('renders the footer for interrupted-only turns (no copyable, no timings)', () => {
+    // Defensive: the footer should still surface the failure even if
+    // the rollback path forgot to set `copyable`.
+    const message = baseTurn({metadata: {interrupted: true}});
+    const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+    expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
+    expect(queryByTestId('footer-interrupted-status')).toBeTruthy();
+    expect(queryByTestId('footer-copy')).toBeNull();
+    expect(queryByTestId('footer-timing')).toBeNull();
+  });
 });

@@ -633,11 +633,22 @@ export const useChatSession = (
         console.warn('[useChatSession] TTS stop on error failed:', ttsErr);
       });
 
+      const errorMessage = (error as Error).message;
+      // Native tool-call parser throws on truncated JSON when the model
+      // ran out of context mid-args (most often `render_html` with a
+      // long string). Detect by error shape and route through the
+      // turn's metadata so the footer can show a friendlier hint
+      // instead of a multi-KB raw error dump.
+      const isToolArgsParseError =
+        /Failed to parse tool call arguments as JSON/i.test(errorMessage);
+
       // Error rollback path. The empty/in-flight AssistantTurn row
       // already exists; preserve any partial steps and tag with
-      // {interrupted, copyable}. The store widening from step 2
-      // ensures this metadata write does not silently no-op on
-      // assistant_turn rows and does not clobber metadata.steps.
+      // {interrupted, copyable} (plus {truncationLikely} on the
+      // tool-call parse case). The store widening from step 2 ensures
+      // this metadata write does not silently no-op on assistant_turn
+      // rows and does not clobber metadata.steps.
+      let turnAbsorbedError = false;
       if (currentMessageInfo.current) {
         const session = chatSessionStore.sessions.find(
           s => s.id === currentMessageInfo.current!.sessionId,
@@ -664,9 +675,13 @@ export const useChatSession = (
               metadata: {
                 interrupted: true,
                 copyable: true,
+                ...(isToolArgsParseError ? {truncationLikely: true} : {}),
               },
             },
           );
+          // The turn now carries the failure context; suppress the
+          // duplicate `Completion failed: …` system message dump.
+          turnAbsorbedError = true;
         } else {
           try {
             await chatSessionRepository.deleteMessage(
@@ -688,9 +703,15 @@ export const useChatSession = (
         }
       }
 
-      const errorMessage = (error as Error).message;
-      if (errorMessage.includes('network')) {
+      if (turnAbsorbedError) {
+        // Footer already surfaces interrupted / truncationLikely; nothing
+        // more to add to chat.
+      } else if (errorMessage.includes('network')) {
         await addSystemMessage(l10n.common.networkError);
+      } else if (isToolArgsParseError) {
+        // No turn content to attach the hint to — fall back to a
+        // friendly system message instead of the raw native error dump.
+        await addSystemMessage(l10n.chat.toolCallTruncated);
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }

@@ -14,4 +14,8 @@ export const styles = ({theme}: {theme: Theme}) =>
       color: theme.colors.textSecondary,
       fontSize: 10,
     },
+    interruptedStatus: {
+      color: theme.colors.error,
+      fontSize: 10,
+    },
   });

@@ -192,28 +192,98 @@ describe('useChatSession — AssistantTurn integration', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // Rollback path: updateMessage called with {interrupted: true} —
-    // unless the partial-content check decided to delete the empty
-    // turn instead. Either branch is acceptable; this test exercises
-    // the FIRST branch by ensuring there is partial step content
-    // present at rollback time.
+    // Rollback path: updateMessage called with {interrupted: true,
+    // copyable: true}. Seed includes partial step content so the
+    // preserve branch (not the delete-empty branch) must run.
     const updateMessageCalls = (chatSessionStore.updateMessage as jest.Mock)
       .mock.calls;
     const interruptedCall = updateMessageCalls.find(
       c => c[2]?.metadata?.interrupted === true,
     );
-    // Either the interrupted-write branch fired (partial content present)
-    // or the delete-empty branch fired (no partial content). Both are
-    // valid; the contract is "no crash and no silent no-op".
-    if (interruptedCall) {
-      expect(interruptedCall[2].metadata.copyable).toBe(true);
-    }
-    // `addSystemMessage` always fires on a failed run — system message
-    // gets added to surface the error.
+    expect(interruptedCall).toBeDefined();
+    expect(interruptedCall![2].metadata.copyable).toBe(true);
+    // Generic engine failure (not a tool-arg parse error), so
+    // truncationLikely should NOT be set.
+    expect(interruptedCall![2].metadata.truncationLikely).toBeUndefined();
+    // When the turn carries the failure context via its own metadata,
+    // the legacy `Completion failed: …` system-message dump is
+    // suppressed to avoid duplicating the same signal in two places.
     const sysCall = (
       chatSessionStore.addMessageToCurrentSession as jest.Mock
     ).mock.calls.find(c => c[0]?.metadata?.system === true);
-    expect(sysCall).toBeDefined();
+    expect(sysCall).toBeUndefined();
+
+    errSpy.mockRestore();
+  });
+
+  it('#3b run_failed with tool-args parse error → metadata.truncationLikely set; no system message', async () => {
+    // llama.cpp's native tool-call parser throws when the model emits
+    // a malformed tool_calls arguments string — typically because it
+    // ran out of context mid-args (very common for `render_html` with
+    // long HTML). The catch block detects this shape and writes
+    // {truncationLikely: true} on the turn so the footer can surface
+    // a more actionable hint instead of dumping the multi-KB native
+    // error string into chat.
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(
+          new Error(
+            'Failed to parse tool call arguments as JSON: [json.exception.parse_error.101] parse error',
+          ),
+        );
+    }
+    const ref: {
+      current: {createdAt: number; id: string; sessionId: string} | null;
+    } = {current: null};
+    const {result} = renderHook(() =>
+      useChatSession(ref, textMessage.author, mockAssistant),
+    );
+
+    const turnId = 'turn-truncation-test';
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [
+          {
+            id: turnId,
+            type: 'assistant_turn',
+            author: assistant,
+            createdAt: Date.now(),
+            steps: [{content: 'partial'}],
+            metadata: {copyable: true},
+          } as MessageType.AssistantTurn,
+        ],
+        completionSettings: {},
+        settingsSource: 'pal',
+      },
+    ] as any;
+    (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mockImplementation(async (msg: any) => {
+      msg.id = turnId;
+    });
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const updateMessageCalls = (chatSessionStore.updateMessage as jest.Mock)
+      .mock.calls;
+    const interruptedCall = updateMessageCalls.find(
+      c => c[2]?.metadata?.interrupted === true,
+    );
+    expect(interruptedCall).toBeDefined();
+    expect(interruptedCall![2].metadata.truncationLikely).toBe(true);
+    expect(interruptedCall![2].metadata.copyable).toBe(true);
+
+    const sysCall = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls.find(c => c[0]?.metadata?.system === true);
+    expect(sysCall).toBeUndefined();
 
     errSpy.mockRestore();
   });
