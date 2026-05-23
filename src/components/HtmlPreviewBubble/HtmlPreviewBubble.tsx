@@ -1,7 +1,14 @@
-import React, {useCallback, useContext, useMemo, useState} from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {Modal, ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {WebView} from 'react-native-webview';
+import {useIsFocused} from '@react-navigation/native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import CodeHighlighter from 'react-native-code-highlighter';
@@ -29,10 +36,13 @@ interface HtmlPreviewBubbleProps {
   title?: string;
 }
 
-// NOTE: v1.1 spike — JS enabled for game/interactive testing. Keeps strict
-// default-src 'none' so network/external resources are still blocked.
-// `'unsafe-inline'` + `'unsafe-eval'` on script-src because model-generated
-// games often use eval-like patterns (Function, setTimeout(string)).
+// JS is enabled only in the fullscreen modal (user-activated); the in-row
+// preview keeps `javaScriptEnabled={false}` so chat history scrolling
+// cannot pin CPU or drain battery on model-generated `while(true)` /
+// `setInterval` loops. Strict CSP (default-src 'none') blocks network
+// exfiltration regardless. `'unsafe-inline'` + `'unsafe-eval'` on
+// script-src are needed in the fullscreen path so model-generated games
+// can use eval-like patterns (Function, setTimeout(string)).
 const CSP =
   "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval'; img-src data:; font-src data:";
 
@@ -67,10 +77,14 @@ const FRAGMENT_STYLES = `<style>
  * Renders model-supplied HTML inside an isolated WebView. Security envelope:
  *  - originWhitelist + onShouldStartLoadWithRequest pin navigation to about:blank
  *  - CSP default-src 'none' blocks all external resource loads
- *  - script-src 'unsafe-inline' 'unsafe-eval' (deliberate v1.1 tradeoff for games)
  *  - no onMessage / injectedJavaScript → no native bridge surface
- * Residual risk: model-generated JS can pin CPU / drain battery via infinite
- * loops; cannot exfiltrate data over the network or escape the WebView origin.
+ *  - in-row preview has `javaScriptEnabled={false}` so scrolling chat
+ *    history cannot trigger model-generated JS; only the fullscreen modal
+ *    (opened on explicit user tap) mounts a JS-enabled WebView, and that
+ *    modal auto-closes when the chat screen loses focus.
+ * Residual risk: while the fullscreen modal is open, model-generated JS
+ * can still pin CPU / drain battery via infinite loops, but cannot
+ * exfiltrate data over the network or escape the WebView origin.
  *
  * Handles two shapes the model can emit:
  *   1. Full document (<!doctype ...><html>...) — inject CSP + viewport into
@@ -120,8 +134,18 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
 }) => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
+  const isFocused = useIsFocused();
   const [fullscreen, setFullscreen] = useState(false);
   const [showCode, setShowCode] = useState(false);
+
+  // Auto-dismiss the JS-enabled fullscreen modal when the user navigates
+  // away from the chat screen so model-generated JS cannot keep running
+  // off-screen. The collapsed in-row preview is already JS-disabled.
+  useEffect(() => {
+    if (!isFocused && fullscreen) {
+      setFullscreen(false);
+    }
+  }, [isFocused, fullscreen]);
 
   const styles = useMemo(
     () =>
@@ -225,7 +249,9 @@ export const HtmlPreviewBubble: React.FC<HtmlPreviewBubbleProps> = ({
         ) : (
           <WebView
             source={{html: wrappedHtml, baseUrl: 'about:blank'}}
-            javaScriptEnabled={true}
+            // JS off in the in-row preview — see file-level doc. Layout +
+            // CSS still render; interactive content waits for fullscreen.
+            javaScriptEnabled={false}
             originWhitelist={['about:blank']}
             onShouldStartLoadWithRequest={req => req.url === 'about:blank'}
             scrollEnabled={true}

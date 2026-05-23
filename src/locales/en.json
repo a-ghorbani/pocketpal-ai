@@ -497,7 +497,9 @@
     "bubble": {
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
-      "ttft": "{{value}}ms TTFT"
+      "ttft": "{{value}}ms TTFT",
+      "interrupted": "Interrupted",
+      "truncated": "Cut off — likely context full"
     },
     "exportUtils": {
       "fileSaved": "File Saved",
@@ -1080,6 +1082,7 @@
     "conversationReset": "Conversation reset!",
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
+    "toolCallTruncated": "Tool call cut off — the model likely ran out of room. Try a larger context or a smaller request.",
     "loadingModel": "Loading model ...",
     "typeYourMessage": "Type your message here",
     "load": "Load",

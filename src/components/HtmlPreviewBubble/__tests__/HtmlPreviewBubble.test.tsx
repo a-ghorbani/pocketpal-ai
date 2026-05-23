@@ -10,6 +10,7 @@ describe('HtmlPreviewBubble', () => {
   it('renders the collapsed bubble with the provided title', () => {
     const {getByText, getByTestId} = render(
       <HtmlPreviewBubble html={html} title="My Preview" />,
+      {withNavigation: true},
     );
     expect(getByTestId('html-preview-bubble')).toBeTruthy();
     expect(getByTestId('html-preview-bubble-collapsed')).toBeTruthy();
@@ -17,16 +18,19 @@ describe('HtmlPreviewBubble', () => {
   });
 
   it('falls back to "Preview" when title is missing or empty', () => {
-    const {getByText, rerender} = render(<HtmlPreviewBubble html={html} />);
+    const {getByText, rerender} = render(<HtmlPreviewBubble html={html} />, {
+      withNavigation: true,
+    });
     expect(getByText('Preview')).toBeTruthy();
 
     rerender(<HtmlPreviewBubble html={html} title="" />);
     expect(getByText('Preview')).toBeTruthy();
   });
 
-  it('wraps html inside a full document with CSP meta tag and JS enabled', () => {
+  it('wraps html inside a full document with CSP meta tag and JS disabled in the in-row preview', () => {
     const {getByTestId} = render(
       <HtmlPreviewBubble html={html} title="CSP Test" />,
+      {withNavigation: true},
     );
     const webview = getByTestId('html-preview-webview');
     // The mock WebView (see __mocks__/external/react-native-webview.ts) forwards
@@ -38,7 +42,9 @@ describe('HtmlPreviewBubble', () => {
     expect(source.html).toContain("default-src 'none'");
     expect(source.html).toContain('img-src data:');
     expect(source.html).toContain(html);
-    expect(webview.props.javaScriptEnabled).toBe(true);
+    // In-row preview is intentionally JS-disabled so chat history
+    // scrolling cannot trigger model-generated CPU-pinning JS.
+    expect(webview.props.javaScriptEnabled).toBe(false);
     expect(webview.props.originWhitelist).toEqual(['about:blank']);
     // Initial about:blank load is allowed; any other navigation is blocked.
     expect(
@@ -53,6 +59,7 @@ describe('HtmlPreviewBubble', () => {
     // In the jest RN mock, <Modal> renders its children only while visible.
     const {getByTestId, queryByTestId} = render(
       <HtmlPreviewBubble html={html} title="Modal Test" />,
+      {withNavigation: true},
     );
 
     // Modal content is not visible initially.
@@ -75,6 +82,7 @@ describe('HtmlPreviewBubble', () => {
     const setStringSpy = jest.spyOn(Clipboard, 'setString');
     const {getByTestId} = render(
       <HtmlPreviewBubble html={html} title="Copy Test" />,
+      {withNavigation: true},
     );
 
     // Collapsed-header copy button
@@ -93,6 +101,7 @@ describe('HtmlPreviewBubble', () => {
   it('toggles between rendered preview and raw HTML code', () => {
     const {getByTestId, queryByTestId} = render(
       <HtmlPreviewBubble html={html} title="Toggle Test" />,
+      {withNavigation: true},
     );
 
     // Preview is shown by default.
