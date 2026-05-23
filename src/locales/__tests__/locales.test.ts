@@ -33,6 +33,7 @@ const EXPECTED_SECTIONS = [
   'errors',
   'simulator',
   'voiceAndSpeech',
+  'htmlPreview',
 ];
 
 const ALL_LANGUAGES: AvailableLanguage[] = [

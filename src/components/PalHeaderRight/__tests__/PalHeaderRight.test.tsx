@@ -70,7 +70,7 @@ describe('PalHeaderRight', () => {
       );
 
       expect(getByTestId('menu')).toBeTruthy();
-      expect(getByTestId('menu-button')).toBeTruthy();
+      expect(getByTestId('pal-menu-button')).toBeTruthy();
     });
 
     it('menu is initially closed', () => {
@@ -92,7 +92,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       expect(getByTestId('menu-content')).toBeTruthy();
@@ -107,7 +107,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       expect(Keyboard.dismiss).toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       expect(Keyboard.dismiss).not.toHaveBeenCalled();
@@ -138,7 +138,7 @@ describe('PalHeaderRight', () => {
       );
 
       // Open menu
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       // Find and press export all pals button
@@ -164,7 +164,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const exportButton = getByTestId(
@@ -193,7 +193,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const exportButton = getByTestId(
@@ -223,7 +223,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const importButton = getByTestId(
@@ -245,7 +245,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const importButton = getByTestId(
@@ -270,7 +270,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const importButton = getByTestId(
@@ -296,7 +296,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const importButton = getByTestId(
@@ -325,7 +325,7 @@ describe('PalHeaderRight', () => {
         </L10nContext.Provider>,
       );
 
-      const menuButton = getByTestId('menu-button');
+      const menuButton = getByTestId('pal-menu-button');
       fireEvent.press(menuButton);
 
       const importButton = getByTestId(

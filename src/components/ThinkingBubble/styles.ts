@@ -22,7 +22,10 @@ export const createStyles = (theme: Theme) => {
       }),
     },
     container: {
-      marginVertical: 16, // Increased margin for better elevation appearance
+      // Tightened from 16 → 6 (Idea G). With auto-collapse + text-only
+      // collapsed state, the expanded card is rare; the original 16
+      // bloated the layout for the common collapsed case.
+      marginVertical: 6,
       borderRadius: 20,
       overflow: 'hidden',
       backgroundColor: bubbleBackground,
@@ -121,6 +124,22 @@ export const createStyles = (theme: Theme) => {
     maskSolid: {
       flex: 1,
       backgroundColor: 'black',
+    },
+    // Text-only collapsed state (Idea A): a single inline tappable
+    // row, no card / no border / no shadow. Kept on the left edge so
+    // it reads as a metadata annotation, not a chat bubble.
+    collapsedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      //paddingVertical: 4,
+      paddingHorizontal: 4,
+      gap: 6,
+    },
+    collapsedRowLabel: {
+      fontSize: 12,
+      color: textColor,
+      opacity: 0.75,
     },
   });
 };

@@ -2,6 +2,11 @@ import {StyleSheet} from 'react-native';
 
 import {MessageType, Theme} from '../../utils/types';
 
+// Inter-block gap within a single AssistantTurn row.
+export const turnBlockStyles = StyleSheet.create({
+  blockSpacer: {marginTop: 4},
+});
+
 const styles = ({
   currentUserIsAuthor,
   message,

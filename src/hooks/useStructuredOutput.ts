@@ -32,7 +32,12 @@ export const useStructuredOutput = () => {
         repeat_penalty?: number;
       },
     ) => {
-      if (!modelStore.context) {
+      // `engine` is set for both local (LocalCompletionEngine wrapping a
+      // LlamaContext) and remote (OpenAICompletionEngine) — so structured
+      // output works against any backend that honours
+      // response_format.json_schema.
+      const engine = modelStore.engine;
+      if (!engine) {
         throw new Error(l10n.generation.modelNotInitialized);
       }
 
@@ -41,10 +46,11 @@ export const useStructuredOutput = () => {
       const stopWords = toJS(modelStore.activeModel?.stopWords);
 
       try {
-        // Store the stop function for later use
-        stopRef.current = () => modelStore.context?.stopCompletion();
+        stopRef.current = () => {
+          engine.stopCompletion().catch(() => {});
+        };
 
-        const result = await modelStore.context.completion({
+        const result = await engine.completion({
           messages: [{role: 'user', content: prompt}],
           response_format: {
             type: 'json_schema',
@@ -53,12 +59,13 @@ export const useStructuredOutput = () => {
               schema,
             },
           },
-          temperature: options?.temperature ?? 0.7,
+          temperature: options?.temperature ?? 0.2,
           top_p: options?.top_p ?? 0.9,
           top_k: options?.top_k ?? 40,
           n_predict: 2000,
 
           stop: stopWords,
+          enable_thinking: false,
         });
 
         stopRef.current = null;

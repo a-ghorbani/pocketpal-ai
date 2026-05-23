@@ -192,20 +192,39 @@ async function swipeUpInSheet(): Promise<void> {
 }
 
 /**
- * Scroll within a sheet to find an element
- * Uses safe coordinates that won't trigger Android home gesture
+ * Scroll within a sheet until the target element is fully inside a
+ * "safe viewport" — the screen minus a bottom reserve that accounts for
+ * fixed UI like Sheet.Actions (Cancel/Create), tab bars, system
+ * navigation. UIAutomator2 reports `isDisplayed=true` for elements
+ * whose bounds intersect the screen even when those elements are
+ * z-occluded by a fixed action bar painted on top, which on Android
+ * causes taps to hit the overlay instead of the intended element. By
+ * requiring the element's bottom edge to be above the safe area, we
+ * scroll past the overlay before clicking.
+ *
  * @param selector - Element selector to scroll to
  * @param maxScrolls - Maximum number of scroll attempts
+ * @param bottomReservePct - Fraction of screen height (0–1) reserved
+ *   for the bottom-anchored UI. Defaults to 0.15 (~15%), enough for a
+ *   Sheet.Actions row plus system nav on Android. Pass a larger value
+ *   when scrolling inside a sheet with a tall action area.
  */
 async function scrollInSheetToElement(
   selector: string,
   maxScrolls = 5,
+  bottomReservePct = 0.15,
 ): Promise<boolean> {
+  const screen = await driver.getWindowSize();
+  const safeMaxY = Math.floor(screen.height * (1 - bottomReservePct));
   for (let i = 0; i < maxScrolls; i++) {
     try {
       const element = await browser.$(selector);
       if (await element.isDisplayed()) {
-        return true;
+        const loc = await element.getLocation();
+        const size = await element.getSize();
+        if (loc.y >= 0 && loc.y + size.height <= safeMaxY) {
+          return true;
+        }
       }
     } catch {
       // Element not found yet

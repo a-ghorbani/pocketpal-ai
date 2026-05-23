@@ -321,7 +321,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
             m => m.id === localPal.defaultModel?.id,
           );
           if (palDefaultModel) {
-            await modelStore.initContext(palDefaultModel);
+            await modelStore.selectModel(palDefaultModel);
           }
         } else if (localPal.defaultModel.id !== modelStore.activeModelId) {
           // Step 3: Different model loaded, ask user
@@ -337,7 +337,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                 {
                   text: 'Switch',
                   onPress: () => {
-                    modelStore.initContext(palDefaultModel);
+                    modelStore.selectModel(palDefaultModel);
                   },
                 },
               ],

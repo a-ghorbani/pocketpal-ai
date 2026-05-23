@@ -2,18 +2,35 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {format, isToday, isYesterday} from 'date-fns';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {MessageType} from '../utils/types';
+import {
+  AgentStep,
+  AgentToolCall,
+  AgentToolOutcome,
+  MessageType,
+} from '../utils/types';
 import {CompletionParams} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
+import {derivedText} from '../utils/chat';
 import {palStore} from './PalStore';
+import {deriveToolSchemas} from '../services/talents';
+import {AgentUiState, initialAgentUiState} from '../services/agent';
+
+/**
+ * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
+ * Covers both `Text` updates (timings, copyable) and `AssistantTurn`
+ * updates which carry top-level `steps` plus arbitrary metadata fields
+ * (interrupted, copyable, etc.).
+ */
+type MessageUpdate =
+  | Partial<MessageType.Text>
+  | Partial<Omit<MessageType.AssistantTurn, 'type' | 'id' | 'author'>>;
 
 const NEW_SESSION_TITLE = 'New Session';
 const TITLE_LIMIT = 40;
 
-// Minimum time between streaming UI updates to prevent excessive re-renders
-// Set to 150ms to stay well above the 50ms threshold that triggers React warnings
-const STREAMING_THROTTLE_MS = 150;
+// Coalesce per-token writes into batched UI flushes (~33 Hz).
+const STREAMING_THROTTLE_MS = 30;
 
 export interface SessionMetaData {
   id: string;
@@ -53,6 +70,20 @@ class ChatSessionStore {
   isEditMode: boolean = false;
   editingMessageId: string | null = null;
   isGenerating: boolean = false;
+  /**
+   * True between the moment the user taps Stop and the moment the
+   * runner's loop has actually finished (i.e. native llama.rn has
+   * returned from its in-flight `llama_decode` chunk and the for-await
+   * loop in `useChatSession` exits). During this window the JS layer
+   * cannot start a new completion (the native context is still busy)
+   * — the send button must be disabled and the user needs visible
+   * "Stopping…" feedback so they don't mistake the silent gap for the
+   * stop having succeeded already.
+   *
+   * Cleared in the same place that clears `isGenerating` (after the
+   * for-await loop ends, success or failure).
+   */
+  isStopping: boolean = false;
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
   newChatSettingsSource: 'pal' | 'custom' = 'pal';
@@ -66,6 +97,18 @@ class ChatSessionStore {
   // Selection mode state
   isSelectionMode: boolean = false;
   selectedSessionIds: Set<string> = new Set();
+
+  // UX state for the active agent run. Driven by `agentStateReducer`
+  // from `AgentEvent`s emitted by the runner. The only writer is
+  // `setAgentUiState`. Renderers compute the active-vs-persisted
+  // predicate at the ChatView level.
+  agentUiState: AgentUiState = initialAgentUiState;
+
+  // Per-token counter for PendingIndicator's tool-call suffix. Lives
+  // outside `agentUiState` so broad observers (ChatView) aren't
+  // invalidated on every tool-call token; only `PendingIndicatorView`
+  // reads it.
+  toolCallTokenCount: number = 0;
 
   constructor() {
     makeAutoObservable(this);
@@ -140,6 +183,35 @@ class ChatSessionStore {
 
   setIsGenerating(value: boolean) {
     this.isGenerating = value;
+  }
+
+  setIsStopping(value: boolean) {
+    this.isStopping = value;
+  }
+
+  /**
+   * The single writer of `agentUiState`. The hook drives this from the
+   * `AgentEvent` stream via `agentStateReducer`. There is intentionally
+   * NO imperative `setIsGeneratingToolCall` setter — UI flags derive
+   * from `agentUiState.status` via `@computed get`.
+   */
+  setAgentUiState(state: AgentUiState) {
+    this.agentUiState = state;
+  }
+
+  setToolCallTokenCount(value: number) {
+    if (this.toolCallTokenCount === value) {
+      return;
+    }
+    this.toolCallTokenCount = value;
+  }
+
+  /**
+   * Convenience derived flag for renderers that previously consulted a
+   * boolean. Single source of truth: `agentUiState.status`.
+   */
+  get isGeneratingToolCall(): boolean {
+    return this.agentUiState.status === 'generating_tool_call';
   }
 
   async loadSessionList(): Promise<void> {
@@ -306,23 +378,30 @@ class ChatSessionStore {
   }
 
   async updateSessionTitle(session: SessionMetaData) {
-    if (session.messages.length > 0) {
-      const message = session.messages[session.messages.length - 1];
-      if (session.title === NEW_SESSION_TITLE && message.type === 'text') {
-        runInAction(() => {
-          session.title =
-            message.text.length > TITLE_LIMIT
-              ? `${message.text.substring(0, TITLE_LIMIT)}...`
-              : message.text;
-        });
-
-        // Update in database - await the async call
-        await chatSessionRepository.updateSessionTitle(
-          session.id,
-          session.title,
-        );
-      }
+    if (session.messages.length === 0 || session.title !== NEW_SESSION_TITLE) {
+      return;
     }
+    // `updateSessionTitle` reads the LAST message of the session, which
+    // is the most recently added one. The gate accepts both `text` and
+    // `assistant_turn` rows so sessions whose latest message is an
+    // assistant_turn (greeting bubbles, single-reply sessions, sessions
+    // where the assistant has just replied) get titled correctly.
+    const message = session.messages[session.messages.length - 1];
+    if (message.type !== 'text' && message.type !== 'assistant_turn') {
+      return;
+    }
+    const titleSource = derivedText(message);
+    if (!titleSource) {
+      return;
+    }
+    runInAction(() => {
+      session.title =
+        titleSource.length > TITLE_LIMIT
+          ? `${titleSource.substring(0, TITLE_LIMIT)}...`
+          : titleSource;
+    });
+
+    await chatSessionRepository.updateSessionTitle(session.id, session.title);
   }
 
   async addMessageToCurrentSession(message: MessageType.Any): Promise<void> {
@@ -448,24 +527,34 @@ class ChatSessionStore {
   }
 
   private streamingThrottleTimer: NodeJS.Timeout | null = null;
-  private pendingStreamingUpdate: {
-    id: string;
-    sessionId: string;
-    update: Partial<MessageType.Text>;
-  } | null = null;
+  /**
+   * Pending throttled update. Discriminated so the same throttle slot
+   * can serve both legacy `Text` updates (`kind: 'text'`) and the new
+   * AssistantTurn active-step updates (`kind: 'step'`). Per-token writes
+   * coalesce — they don't stack — because each call overwrites this slot.
+   */
+  private pendingStreamingUpdate:
+    | {
+        kind: 'text';
+        id: string;
+        sessionId: string;
+        update: Partial<MessageType.Text>;
+      }
+    | {
+        kind: 'step';
+        id: string;
+        sessionId: string;
+        partial: Partial<AgentStep>;
+      }
+    | null = null;
   private lastStreamingUpdateTime: number = 0;
 
-  // Update message during streaming - no database write, triggers reactivity
-  // Throttled to avoid excessive re-renders
-  updateMessageStreaming(
-    id: string,
-    sessionId: string,
-    update: Partial<MessageType.Text>,
-  ): void {
-    // Store the latest update
-    this.pendingStreamingUpdate = {id, sessionId, update};
-
-    // If timer is already running, the update will be applied when it fires
+  /**
+   * Schedule a throttled update through the shared throttle slot. The
+   * scheduling logic is identical for both `text` and `step` shapes; only
+   * the eventual `applyStreamingUpdate` dispatch differs.
+   */
+  private scheduleStreamingUpdate(): void {
     if (this.streamingThrottleTimer) {
       return;
     }
@@ -473,14 +562,12 @@ class ChatSessionStore {
     const now = Date.now();
     const timeSinceLastUpdate = now - this.lastStreamingUpdateTime;
 
-    // If enough time has passed, apply immediately
     if (timeSinceLastUpdate >= STREAMING_THROTTLE_MS) {
       this.applyStreamingUpdate();
       this.lastStreamingUpdateTime = Date.now();
       return;
     }
 
-    // Otherwise, schedule for later (wait for the remaining time)
     const remainingTime = STREAMING_THROTTLE_MS - timeSinceLastUpdate;
     this.streamingThrottleTimer = setTimeout(() => {
       this.streamingThrottleTimer = null;
@@ -491,15 +578,74 @@ class ChatSessionStore {
     }, remainingTime);
   }
 
+  /**
+   * Drain the throttled streaming slot synchronously. Call before any
+   * structural change to `turn.steps` (e.g. pushAgentStep or
+   * finalizeActiveStep) so a pending update scheduled for the previous
+   * `lastIdx` lands on the step it was intended for, not on a freshly
+   * pushed step that happens to be `lastIdx` when the timer fires.
+   *
+   * Without this, the regression sequence is: final `token` for step 0
+   * schedules the throttle (fires in 150ms) → step_finished + tool_call
+   * events run synchronously → step_started(1) pushes step 1 → throttle
+   * timer fires → applies step 0's pending content to step 1, briefly
+   * showing step 0's text duplicated under the talent block until the
+   * follow-up step's first real token replaces it.
+   */
+  private flushStreamingUpdate(): void {
+    if (this.streamingThrottleTimer) {
+      clearTimeout(this.streamingThrottleTimer);
+      this.streamingThrottleTimer = null;
+    }
+    if (this.pendingStreamingUpdate) {
+      this.applyStreamingUpdate();
+      this.lastStreamingUpdateTime = Date.now();
+    }
+  }
+
+  // Update message during streaming - no database write, triggers reactivity
+  // Throttled to avoid excessive re-renders. Accepts either a Text-shaped
+  // partial (legacy path) or an AssistantTurn-shaped partial (new
+  // pipeline). The hook should prefer `updateActiveStepStreaming` for
+  // assistant_turn rows; this remains for the legacy code path.
+  updateMessageStreaming(
+    id: string,
+    sessionId: string,
+    update: MessageUpdate,
+  ): void {
+    this.pendingStreamingUpdate = {
+      kind: 'text',
+      id,
+      sessionId,
+      update: update as Partial<MessageType.Text>,
+    };
+    this.scheduleStreamingUpdate();
+  }
+
+  /**
+   * Throttled streaming update for an `assistant_turn` row's active
+   * (last) step. Reuses the same `streamingThrottleTimer` slot as
+   * `updateMessageStreaming` so per-token writes coalesce and do not
+   * stack across the two paths.
+   */
+  updateActiveStepStreaming(
+    id: string,
+    sessionId: string,
+    partial: Partial<AgentStep>,
+  ): void {
+    this.pendingStreamingUpdate = {kind: 'step', id, sessionId, partial};
+    this.scheduleStreamingUpdate();
+  }
+
   private applyStreamingUpdate(): void {
     if (!this.pendingStreamingUpdate) {
       return;
     }
 
-    const {id, sessionId, update} = this.pendingStreamingUpdate;
+    const pending = this.pendingStreamingUpdate;
     this.pendingStreamingUpdate = null;
 
-    const targetSessionId = sessionId || this.activeSessionId;
+    const targetSessionId = pending.sessionId || this.activeSessionId;
     if (!targetSessionId) {
       return;
     }
@@ -509,37 +655,68 @@ class ChatSessionStore {
       return;
     }
 
-    const message = session.messages.find(msg => msg.id === id);
-    if (!message || message.type !== 'text') {
+    const message = session.messages.find(msg => msg.id === pending.id);
+    if (!message) {
       return;
     }
 
-    // Update the message properties directly - MobX will track changes
-    runInAction(() => {
-      if (update.text !== undefined) {
-        (message as MessageType.Text).text = update.text;
+    if (pending.kind === 'text') {
+      // Legacy text path. Gate widened to also accept assistant_turn so
+      // ad-hoc metadata writes (e.g. error rollback) don't silently no-op
+      // on the new shape.
+      if (message.type !== 'text' && message.type !== 'assistant_turn') {
+        return;
       }
-      if (update.metadata !== undefined) {
-        (message as MessageType.Text).metadata = {
-          ...(message as MessageType.Text).metadata,
-          ...update.metadata,
-        };
-      }
-    });
+      const update = pending.update;
+      runInAction(() => {
+        if (message.type === 'text' && update.text !== undefined) {
+          (message as MessageType.Text).text = update.text;
+        }
+        if (update.metadata !== undefined) {
+          message.metadata = {
+            ...(message.metadata || {}),
+            ...update.metadata,
+          };
+        }
+      });
+      chatSessionRepository
+        .updateMessage(pending.id, update)
+        .catch(error =>
+          console.error('Failed to persist streaming update to DB:', error),
+        );
+      return;
+    }
 
-    // Also persist to database for crash resilience
-    // This is async but we don't await to keep streaming fast
+    // pending.kind === 'step'
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    if (!turn.steps || turn.steps.length === 0) {
+      return;
+    }
+    const partial = pending.partial;
+    runInAction(() => {
+      const lastIdx = turn.steps.length - 1;
+      const last = turn.steps[lastIdx];
+      // Shallow merge of step fields. `pushAgentStep` adds new steps;
+      // this only mutates the active (last) one in place.
+      turn.steps[lastIdx] = {
+        ...last,
+        ...partial,
+      };
+    });
     chatSessionRepository
-      .updateMessage(id, update)
+      .updateMessage(pending.id, {steps: turn.steps})
       .catch(error =>
-        console.error('Failed to persist streaming update to DB:', error),
+        console.error('Failed to persist streaming step update to DB:', error),
       );
   }
 
   async updateMessage(
     id: string,
     sessionId: string,
-    update: Partial<MessageType.Text>,
+    update: MessageUpdate,
   ): Promise<void> {
     try {
       // Update in database
@@ -551,33 +728,227 @@ class ChatSessionStore {
         const session = this.sessions.find(s => s.id === targetSessionId);
         if (session) {
           const index = session.messages.findIndex(msg => msg.id === id);
-          if (index >= 0 && session.messages[index].type === 'text') {
-            // Update local state - only update the specific message
-            runInAction(() => {
-              const existingMessage = session.messages[
-                index
-              ] as MessageType.Text;
-              const mergedUpdate = {...update};
-
-              // Merge metadata instead of replacing, to preserve existing fields
-              // (e.g., partialCompletionResult from streaming)
-              if (update.metadata !== undefined && existingMessage.metadata) {
-                mergedUpdate.metadata = {
-                  ...existingMessage.metadata,
-                  ...update.metadata,
-                };
-              }
-
-              session.messages[index] = {
-                ...existingMessage,
-                ...mergedUpdate,
-              } as MessageType.Text;
-            });
+          if (index < 0) {
+            return;
           }
+          const existingType = session.messages[index].type;
+          if (existingType !== 'text' && existingType !== 'assistant_turn') {
+            return;
+          }
+
+          // Update local state - only update the specific message
+          runInAction(() => {
+            const existingMessage = session.messages[index];
+            const mergedUpdate: Record<string, any> = {...update};
+
+            // Merge metadata instead of replacing, to preserve existing
+            // fields (e.g., timings written by an earlier event, or
+            // metadata.steps if a caller naively passes metadata.steps —
+            // though this should not happen since metadata.steps is a
+            // persistence-layer detail).
+            if (update.metadata !== undefined && existingMessage.metadata) {
+              mergedUpdate.metadata = {
+                ...existingMessage.metadata,
+                ...update.metadata,
+              };
+            }
+
+            session.messages[index] = {
+              ...existingMessage,
+              ...mergedUpdate,
+            } as MessageType.Any;
+          });
         }
       }
     } catch (error) {
       console.error('Failed to update message:', error);
+    }
+  }
+
+  /**
+   * Append a new step to an `assistant_turn` row. Writes the whole
+   * `steps` array wholesale (no shallow-merge tricks — see Persistence
+   * notes in the story). Used by the agent runner via `applyEventToStore`
+   * on `step_started`.
+   */
+  async pushAgentStep(
+    id: string,
+    sessionId: string,
+    step: AgentStep,
+  ): Promise<void> {
+    // Drain any pending throttled update onto the CURRENT lastIdx
+    // before structurally extending the array. Otherwise a pending
+    // step-0 write would land on the freshly pushed step-1 when the
+    // timer fires.
+    this.flushStreamingUpdate();
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+    const index = session.messages.findIndex(msg => msg.id === id);
+    if (index < 0) {
+      return;
+    }
+    const message = session.messages[index];
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      nextSteps = [...(turn.steps ?? []), step];
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist pushAgentStep:', error);
+    }
+  }
+
+  /**
+   * Replace the active (last) step's `toolCalls` array with the
+   * runner's authoritative normalized list. Called from the hook
+   * once per step on `step_finished`, with ids that match the
+   * upcoming `appendToolOutcome` callIds by construction.
+   *
+   * Single writer for `step.toolCalls` — the streaming partial in
+   * `applyEventToStore` does not write this field.
+   */
+  async appendToolCall(
+    id: string,
+    sessionId: string,
+    calls: AgentToolCall[],
+  ): Promise<void> {
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+    const index = session.messages.findIndex(msg => msg.id === id);
+    if (index < 0) {
+      return;
+    }
+    const message = session.messages[index];
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    if (!turn.steps || turn.steps.length === 0) {
+      return;
+    }
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      const lastIdx = turn.steps.length - 1;
+      const last = turn.steps[lastIdx];
+      const nextLast: AgentStep = {...last, toolCalls: calls};
+      nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist appendToolCall:', error);
+    }
+  }
+
+  /**
+   * Append a tool outcome to the active (last) step of an
+   * `assistant_turn` row. Writes the whole `steps` array wholesale.
+   */
+  async appendToolOutcome(
+    id: string,
+    sessionId: string,
+    outcome: AgentToolOutcome,
+  ): Promise<void> {
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+    const index = session.messages.findIndex(msg => msg.id === id);
+    if (index < 0) {
+      return;
+    }
+    const message = session.messages[index];
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    if (!turn.steps || turn.steps.length === 0) {
+      return;
+    }
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      const lastIdx = turn.steps.length - 1;
+      const last = turn.steps[lastIdx];
+      const nextLast: AgentStep = {
+        ...last,
+        toolOutcomes: [...(last.toolOutcomes ?? []), outcome],
+      };
+      nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist appendToolOutcome:', error);
+    }
+  }
+
+  /**
+   * Mark the active (last) step as no longer streaming. Writes the
+   * whole `steps` array wholesale.
+   */
+  async finalizeActiveStep(id: string, sessionId: string): Promise<void> {
+    // Drain any pending throttled update first so the final partial
+    // content for this step lands BEFORE we mark it `partial: false`
+    // and replace the array. Otherwise a late-firing timer could
+    // either (a) write to a stale array reference or (b) write to
+    // whatever step happens to be lastIdx after this finalize completes.
+    this.flushStreamingUpdate();
+    const targetSessionId = sessionId || this.activeSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+    const session = this.sessions.find(s => s.id === targetSessionId);
+    if (!session) {
+      return;
+    }
+    const index = session.messages.findIndex(msg => msg.id === id);
+    if (index < 0) {
+      return;
+    }
+    const message = session.messages[index];
+    if (message.type !== 'assistant_turn') {
+      return;
+    }
+    const turn = message as MessageType.AssistantTurn;
+    if (!turn.steps || turn.steps.length === 0) {
+      return;
+    }
+    let nextSteps: AgentStep[] = [];
+    runInAction(() => {
+      const lastIdx = turn.steps.length - 1;
+      const last = turn.steps[lastIdx];
+      const nextLast: AgentStep = {...last, partial: false};
+      nextSteps = [...turn.steps.slice(0, lastIdx), nextLast];
+      turn.steps = nextSteps;
+    });
+    try {
+      await chatSessionRepository.updateMessage(id, {steps: nextSteps});
+    } catch (error) {
+      console.error('Failed to persist finalizeActiveStep:', error);
     }
   }
 
@@ -997,6 +1368,18 @@ class ChatSessionStore {
           ...palSettings,
         };
       }
+
+      // Inject tool schemas from pact.talents (PACT → completionSettings.tools)
+      const talentNames = pal?.pact?.talents?.map(t => t.name);
+      if (talentNames && talentNames.length > 0) {
+        const tools = deriveToolSchemas(talentNames);
+        if (tools.length > 0) {
+          resolvedSettings = {
+            ...resolvedSettings,
+            tools,
+          };
+        }
+      }
     }
 
     // Apply session-specific settings based on explicit user choice
@@ -1004,8 +1387,15 @@ class ChatSessionStore {
       const session = this.sessions.find(s => s.id === sessionId);
 
       if (session?.settingsSource === 'custom') {
-        // User explicitly chose custom settings - use session settings
+        // User explicitly chose custom settings - use session settings.
+        // Preserve PACT-derived tools — custom settings control generation
+        // params (temperature, etc.) but pact.talents is the source of truth
+        // for tool availability.
+        const pactTools = resolvedSettings.tools;
         resolvedSettings = session.completionSettings;
+        if (pactTools) {
+          resolvedSettings = {...resolvedSettings, tools: pactTools};
+        }
       }
     }
 

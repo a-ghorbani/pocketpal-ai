@@ -1,5 +1,9 @@
 import {SSEParser} from './sseParser';
-import {CompletionResult, CompletionStreamData} from '../utils/completionTypes';
+import {
+  CompletionResult,
+  CompletionStreamData,
+  ToolCall,
+} from '../utils/completionTypes';
 
 /** Raw API response shape from OpenAI /v1/models */
 export interface RemoteModelInfo {
@@ -16,6 +20,41 @@ export interface OpenAIChatMessage {
     | Array<{type: string; text?: string; image_url?: {url?: string}}>;
 }
 
+/** OpenAI-style function tool definition. Mirrors the shape PACT
+ * talents emit via `TalentEngine.toToolDefinition()`. */
+export interface OpenAIToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, any>;
+  };
+}
+
+/** OpenAI tool_choice — `'auto' | 'none' | 'required'` for the simple
+ * case, or `{type:'function', function:{name}}` to pin a single tool. */
+export type OpenAIToolChoice =
+  | 'auto'
+  | 'none'
+  | 'required'
+  | {type: 'function'; function: {name: string}};
+
+/** OpenAI-compatible response_format. `json_schema` is the structured-output
+ * mode supported by OpenAI, llama.cpp server, LM Studio, Ollama, and most
+ * other compatible servers. `name` is required by OpenAI but ignored by
+ * others — we inject a default when the caller doesn't supply one. */
+export type OpenAIResponseFormat =
+  | {type: 'text'}
+  | {type: 'json_object'}
+  | {
+      type: 'json_schema';
+      json_schema: {
+        name?: string;
+        strict?: boolean;
+        schema: object;
+      };
+    };
+
 /** Parameters for streaming chat completion */
 export interface StreamChatParams {
   messages: OpenAIChatMessage[];
@@ -25,6 +64,85 @@ export interface StreamChatParams {
   max_tokens?: number;
   stop?: string | string[];
   stream?: boolean;
+  tools?: OpenAIToolDefinition[];
+  tool_choice?: OpenAIToolChoice;
+  response_format?: OpenAIResponseFormat;
+}
+
+/**
+ * Streamed tool_call state per OpenAI `index`. Arguments are stored
+ * as fragments and joined once at end-of-stream — concatenating into
+ * a growing string per chunk was O(N²) on long argument payloads
+ * (e.g. a multi-KB `render_html` html string).
+ */
+type ToolCallAccumulator = Map<
+  number,
+  {
+    id: string;
+    type: 'function';
+    function: {name: string; argsFragments: string[]};
+  }
+>;
+
+function applyToolCallDelta(
+  acc: ToolCallAccumulator,
+  deltaCalls: Array<any>,
+): ToolCall[] {
+  // Per-chunk snapshot: `arguments` is this chunk's fragment only.
+  // The consumer reads only `function.name` mid-stream; full args are
+  // assembled from the accumulator at xhr.onload.
+  const result: ToolCall[] = [];
+  for (const delta of deltaCalls) {
+    if (typeof delta?.index !== 'number') {
+      continue;
+    }
+    const idx = delta.index;
+    const existing = acc.get(idx) ?? {
+      id: '',
+      type: 'function' as const,
+      function: {name: '', argsFragments: [] as string[]},
+    };
+    if (delta.id) {
+      existing.id = delta.id;
+    }
+    if (delta.function?.name) {
+      existing.function.name = delta.function.name;
+    }
+    const argsDelta: string = delta.function?.arguments ?? '';
+    if (argsDelta) {
+      existing.function.argsFragments.push(argsDelta);
+    }
+    acc.set(idx, existing);
+    result.push({
+      id: existing.id,
+      type: existing.type,
+      function: {name: existing.function.name, arguments: argsDelta},
+    });
+  }
+  return result;
+}
+
+/**
+ * Materialise the final tool_calls array from the fragment-based
+ * accumulator. Undefined when no tool_calls were seen — mirrors
+ * llama.rn's shape.
+ */
+function assembleFinalToolCalls(
+  acc: ToolCallAccumulator,
+): ToolCall[] | undefined {
+  if (acc.size === 0) {
+    return undefined;
+  }
+  return Array.from(acc.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([, entry]) => ({
+      id: entry.id,
+      type: entry.type,
+      function: {
+        name: entry.function.name,
+        arguments: entry.function.argsFragments.join(''),
+      },
+    }));
 }
 
 const CONNECTION_TIMEOUT_MS = 30000;
@@ -232,6 +350,11 @@ export async function streamChatCompletion(
     let lastProcessedLength = 0;
     let settled = false;
     let serverTimings: CompletionResult['timings'] | undefined;
+    // OpenAI streams partial tool_calls across chunks, indexed by
+    // `delta.tool_calls[i].index`. Rebuild the per-call shape here so
+    // the final result carries fully formed tool_calls and the streaming
+    // callback sees a running snapshot.
+    const toolCallAcc: ToolCallAccumulator = new Map();
 
     // Connection timeout: abort if no headers received within 30s
     const connectionTimer = setTimeout(() => {
@@ -319,13 +442,27 @@ export async function streamChatCompletion(
           serverTimings = parsed.timings;
         }
 
-        if (onToken && (content || reasoningContent)) {
+        // When tool_calls deltas are present, forward a token event so
+        // the agent loop can react to a tool call beginning to assemble
+        // — same shape llama.rn emits.
+        let toolCallsDelta: ToolCall[] | undefined;
+        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+          toolCallsDelta = applyToolCallDelta(toolCallAcc, delta.tool_calls);
+        }
+
+        if (
+          onToken &&
+          (content ||
+            reasoningContent ||
+            (toolCallsDelta && toolCallsDelta.length > 0))
+        ) {
           onToken({
             token: content || reasoningContent,
             // Pass accumulated content to match llama.rn's callback behavior
             // (useChatSession replaces message text, not appends)
             content: fullContent || undefined,
             reasoning_content: fullReasoningContent || undefined,
+            tool_calls: toolCallsDelta,
           });
         }
       }
@@ -386,6 +523,14 @@ export async function streamChatCompletion(
     };
 
     xhr.onprogress = () => {
+      // After `xhr.abort()` the OS may still deliver bytes already
+      // queued in the receive buffer via further onprogress firings.
+      // Drop them — but consume the offset so onload (if it ever
+      // fires) doesn't double-process them.
+      if (signal?.aborted) {
+        lastProcessedLength = xhr.responseText.length;
+        return;
+      }
       // Extract only the new data since last onprogress
       const newText = xhr.responseText.substring(lastProcessedLength);
       lastProcessedLength = xhr.responseText.length;
@@ -432,7 +577,14 @@ export async function streamChatCompletion(
         if (parsed.timings) {
           serverTimings = parsed.timings;
         }
+        if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+          applyToolCallDelta(toolCallAcc, delta.tool_calls);
+        }
       }
+
+      // Mirror llama.rn's shape: undefined when no tool_calls were
+      // observed during the stream.
+      const finalToolCalls = assembleFinalToolCalls(toolCallAcc);
 
       // Build result
       if (signal?.aborted) {
@@ -440,6 +592,7 @@ export async function streamChatCompletion(
           text: fullContent,
           content: fullContent,
           reasoning_content: fullReasoningContent || undefined,
+          tool_calls: finalToolCalls,
           tokens_predicted: tokensPredicted,
           interrupted: true,
         });
@@ -450,12 +603,20 @@ export async function streamChatCompletion(
         text: fullContent,
         content: fullContent,
         reasoning_content: fullReasoningContent || undefined,
+        tool_calls: finalToolCalls,
         tokens_predicted: tokensPredicted,
         timings: serverTimings,
       };
 
       switch (finishReason) {
         case 'stop':
+          result.stopped_eos = true;
+          break;
+        case 'tool_calls':
+          // OpenAI emits finish_reason="tool_calls" when the model
+          // chose to call tools instead of producing a final answer.
+          // Treat as a normal stop — the agent loop reads .tool_calls
+          // off the result and dispatches the next turn.
           result.stopped_eos = true;
           break;
         case 'length':
@@ -522,6 +683,33 @@ export async function streamChatCompletion(
     }
     if (params.stop && params.stop.length > 0) {
       requestBody.stop = params.stop;
+    }
+    // Only attach when the caller actually supplied them — empty arrays
+    // cause some servers (and their schema validators) to choke.
+    if (params.tools && params.tools.length > 0) {
+      requestBody.tools = params.tools;
+    }
+    if (params.tool_choice !== undefined) {
+      requestBody.tool_choice = params.tool_choice;
+    }
+    if (params.response_format) {
+      // OpenAI requires `name` inside json_schema; llama.cpp / Ollama /
+      // LM Studio ignore it. Inject a default so the same call works
+      // everywhere.
+      if (
+        params.response_format.type === 'json_schema' &&
+        !params.response_format.json_schema.name
+      ) {
+        requestBody.response_format = {
+          ...params.response_format,
+          json_schema: {
+            ...params.response_format.json_schema,
+            name: 'response',
+          },
+        };
+      } else {
+        requestBody.response_format = params.response_format;
+      }
     }
     xhr.send(JSON.stringify(requestBody));
   });

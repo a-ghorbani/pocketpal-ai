@@ -38,17 +38,43 @@ export const createStyles = (theme: Theme) =>
       textAlign: 'center',
       marginVertical: 20,
     },
-    testButtonsContainer: {
-      marginVertical: 16,
-    },
-    testRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    optionsHeader: {
+      fontWeight: 'bold',
+      marginTop: 16,
       marginBottom: 8,
     },
-    testButton: {
-      flex: 1,
-      marginHorizontal: 4,
+    radioItem: {
+      paddingVertical: 0,
+    },
+    radioLabel: {
+      textAlign: 'left',
+    },
+    testDescription: {
+      color: theme.colors.onSurfaceVariant,
+      fontSize: 13,
+      marginBottom: 12,
+    },
+    optionsCard: {
+      marginVertical: 12,
+      padding: 12,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: 8,
+    },
+    optionBlock: {
+      marginBottom: 12,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    nPredictInput: {
+      width: 100,
+      height: 40,
+    },
+    runButton: {
+      marginTop: 8,
     },
     resultsContainer: {
       marginTop: 16,

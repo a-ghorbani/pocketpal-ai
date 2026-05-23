@@ -39,7 +39,7 @@ describe('ModelNotLoadedMessage', () => {
     jest.clearAllMocks();
     modelStore.models = modelsList;
     modelStore.lastUsedModelId = undefined;
-    (modelStore.initContext as jest.Mock).mockReset();
+    (modelStore.selectModel as jest.Mock).mockReset();
   });
 
   it('renders correctly when no last used model exists', () => {
@@ -65,7 +65,7 @@ describe('ModelNotLoadedMessage', () => {
 
   it('loads last used model when available', async () => {
     modelStore.lastUsedModelId = basicModel.id;
-    (modelStore.initContext as jest.Mock).mockResolvedValue(undefined);
+    (modelStore.selectModel as jest.Mock).mockResolvedValue(undefined);
 
     const {getByText} = customRender(<ModelNotLoadedMessage />);
 
@@ -73,14 +73,14 @@ describe('ModelNotLoadedMessage', () => {
       fireEvent.press(getByText(l10n.en.chat.load));
     });
 
-    expect(modelStore.initContext).toHaveBeenCalledWith(basicModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(basicModel);
   });
 
   it('handles model loading error correctly', async () => {
     modelStore.lastUsedModelId = basicModel.id;
 
     const mockError = new Error('Failed to load model');
-    (modelStore.initContext as jest.Mock).mockRejectedValue(mockError);
+    (modelStore.selectModel as jest.Mock).mockRejectedValue(mockError);
 
     // TODO: is there a better way to test this that relying on console.log?
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
@@ -94,7 +94,7 @@ describe('ModelNotLoadedMessage', () => {
     // Wait for the promise to resolve/reject
     await new Promise(resolve => setTimeout(resolve, 0));
 
-    expect(modelStore.initContext).toHaveBeenCalledWith(basicModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(basicModel);
     expect(consoleSpy).toHaveBeenCalledWith(`Error: ${mockError}`);
 
     consoleSpy.mockRestore();

@@ -29,9 +29,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {ChatPage} from '../pages/ChatPage';
-import {Selectors} from '../helpers/selectors';
+import {DrawerPage} from '../pages/DrawerPage';
+import {ModelsPage} from '../pages/ModelsPage';
+import {PalSheetPage} from '../pages/PalSheetPage';
+import {Selectors, byText} from '../helpers/selectors';
 import {
   downloadAndLoadModel,
+  dismissPerformanceWarningIfPresent,
   waitForInferenceComplete,
 } from '../helpers/model-actions';
 import {QUICK_TEST_MODEL, TIMEOUTS, getModelsToTest} from '../fixtures/models';
@@ -49,15 +53,27 @@ interface VisualCapture {
   description?: string;
 }
 
+interface VisualCapturePal {
+  name: string;
+  systemPrompt?: string;
+  talents: string[];
+}
+
 const capturesJson = process.env.VISUAL_CAPTURES;
 const captures: VisualCapture[] = capturesJson
   ? JSON.parse(capturesJson)
   : [];
 
+const palJson = process.env.VISUAL_CAPTURE_PAL;
+const palConfig: VisualCapturePal | null = palJson ? JSON.parse(palJson) : null;
+
 const models = getModelsToTest(true);
 const model = models[0] || QUICK_TEST_MODEL;
 
 const VISUAL_DIR = path.join(SCREENSHOT_DIR, 'visual-captures');
+
+const getAppBundleId = (): string =>
+  (driver as any).isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
 
 describe('Visual Capture', () => {
   let chatPage: ChatPage;
@@ -77,6 +93,63 @@ describe('Visual Capture', () => {
 
     console.log(`Loading model: ${model.id}`);
     await downloadAndLoadModel(model);
+
+    // Optional: create a Pal with talents enabled, then re-load the model
+    // and select the Pal so the captures below exercise tool calls.
+    if (palConfig) {
+      console.log(`Creating Pal "${palConfig.name}" with talents:`,
+        palConfig.talents);
+      const drawerPage = new DrawerPage();
+      const palSheetPage = new PalSheetPage();
+
+      await chatPage.openDrawer();
+      await drawerPage.navigateToPals();
+
+      const addBtn = browser.$(Selectors.palsScreen.addButton);
+      await addBtn.waitForDisplayed({timeout: 15000});
+      await addBtn.click();
+      await browser.pause(500);
+
+      const assistantItem = browser.$(byText('Assistant'));
+      await assistantItem.waitForDisplayed({timeout: 5000});
+      await assistantItem.click();
+      await browser.pause(500);
+
+      await palSheetPage.setName(palConfig.name);
+      if (palConfig.systemPrompt) {
+        await palSheetPage.setSystemPrompt(palConfig.systemPrompt);
+      }
+      for (const talent of palConfig.talents) {
+        await palSheetPage.enableTalent(talent);
+      }
+      await palSheetPage.submit();
+
+      // Restart the app so we land back on Chat reliably; the Pal
+      // persists in the DB. Then re-load the model and select the Pal.
+      await browser.pause(1000);
+      await driver.terminateApp(getAppBundleId());
+      await browser.pause(1000);
+      await driver.activateApp(getAppBundleId());
+      await chatPage.waitForReady(TIMEOUTS.appReady);
+
+      await chatPage.openDrawer();
+      await drawerPage.waitForOpen();
+      await drawerPage.navigateToModels();
+
+      const modelsPage = new ModelsPage();
+      await modelsPage.waitForReady();
+      const cardSelector = Selectors.modelCard.cardContainer(model.downloadFile);
+      const modelCard = browser.$(cardSelector);
+      await modelCard.waitForDisplayed({timeout: 30000});
+      const loadBtn = modelCard.$(Selectors.modelCard.loadButtonElement);
+      await loadBtn.waitForDisplayed({timeout: 10000});
+      await loadBtn.click();
+      await dismissPerformanceWarningIfPresent();
+      await chatPage.waitForReady();
+
+      await chatPage.openPalPicker();
+      await chatPage.selectPal(palConfig.name);
+    }
 
     // Ensure screenshot output directory exists
     if (!fs.existsSync(VISUAL_DIR)) {

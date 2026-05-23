@@ -522,6 +522,17 @@
     "thinkingBubble": {
       "reasoning": "Reasoning"
     },
+    "pendingIndicator": {
+      "preparingTool": "Preparing tool",
+      "buildingPage": "Building page",
+      "calculating": "Calculating",
+      "lookingUpTime": "Looking up time",
+      "stopping": "Stopping…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} tokens",
+      "elapsed": "{{seconds}}s"
+    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "No Models Available",
       "noModelsDescription": "Download a model to start chatting with PocketPal",
@@ -748,6 +759,17 @@
         "nameRequired": "Name is required",
         "generatingPromptRequired": "Generating prompt is required when using AI prompt",
         "promptModelRequired": "Prompt generation model is required when using AI prompt"
+      },
+      "talents": "Talents",
+      "talentNames": {
+        "render_html": "HTML preview",
+        "calculate": "Math expressions",
+        "datetime": "Date & time"
+      },
+      "talentDescriptions": {
+        "render_html": "Render HTML documents inline in chat",
+        "calculate": "Evaluate mathematical expressions",
+        "datetime": "Get the current date and time"
       }
     },
     "assistantPalSheet": {
@@ -1065,7 +1087,21 @@
     "readyToChat": "Ready to chat? Load the last used model.",
     "pleaseLoadModel": "Load a model to chat.",
     "multimodalNotEnabled": "Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.",
-    "cannotSendWithoutModel": "Load a model first"
+    "cannotSendWithoutModel": "Load a model first",
+    "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
+    "softCapWarning": "Start a new chat for best performance.",
+    "generatingPreview": "Generating preview… ({{tokens}} tokens)",
+    "generatingPreviewPending": "Generating preview…",
+    "toolUsedChip": "used {{name}}",
+    "toolErrorBlock": "{{name}} failed"
+  },
+  "htmlPreview": {
+    "defaultTitle": "Preview",
+    "showPreview": "Show rendered preview",
+    "showCode": "Show HTML code",
+    "copyHtml": "Copy HTML",
+    "closePreview": "Close preview",
+    "openFullscreen": "Open fullscreen: {{title}}"
   },
   "benchmark": {
     "title": "Benchmark",

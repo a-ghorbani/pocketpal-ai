@@ -61,6 +61,12 @@ jest.mock('../../../hooks/useStructuredOutput', () => ({
 // Import the mocked palStore (already mocked globally in jest/setup.ts)
 import {palStore} from '../../../store';
 
+import {
+  talentRegistry,
+  registerDefaultTalents,
+  resetRegisteredFlag,
+} from '../../../services/talents';
+
 describe('PalSheet', () => {
   const mockOnClose = jest.fn();
 
@@ -668,6 +674,137 @@ describe('PalSheet', () => {
           'test-pal-id',
           expect.objectContaining({
             completionSettings,
+          }),
+        );
+      });
+    });
+  });
+
+  describe('Talent Integration', () => {
+    beforeEach(() => {
+      // Ensure talents are registered for integration tests
+      talentRegistry.reset();
+      resetRegisteredFlag();
+      registerDefaultTalents();
+    });
+
+    afterAll(() => {
+      talentRegistry.reset();
+      resetRegisteredFlag();
+    });
+
+    it('renders talent section in PalSheet', () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      expect(getByTestId('talent-section')).toBeTruthy();
+    });
+
+    it('creates a pal with talents selected and correct pact', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      // Fill required name field
+      const nameInput = getByTestId('form-field-name');
+      await act(async () => {
+        fireEvent.changeText(nameInput, 'Pal With Talents');
+      });
+
+      // Toggle calculate and datetime talents on
+      await act(async () => {
+        fireEvent(getByTestId('talent-switch-calculate'), 'valueChange', true);
+      });
+      await act(async () => {
+        fireEvent(getByTestId('talent-switch-datetime'), 'valueChange', true);
+      });
+
+      // Submit the form
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Pal With Talents',
+            pact: {
+              talents: expect.arrayContaining([
+                {name: 'calculate', necessity: 'required'},
+                {name: 'datetime', necessity: 'required'},
+              ]),
+            },
+          }),
+        );
+      });
+    });
+
+    it('edits a pal with existing pact.talents and pre-selects switches', () => {
+      const {getByTestId} = renderPalSheet(
+        createExistingPal({
+          pact: {
+            talents: [
+              {name: 'render_html', necessity: 'required'},
+              {name: 'calculate', necessity: 'required'},
+            ],
+          },
+        }),
+      );
+
+      // render_html and calculate should be on
+      expect(getByTestId('talent-switch-render_html').props.value).toBe(true);
+      expect(getByTestId('talent-switch-calculate').props.value).toBe(true);
+
+      // datetime should be off
+      expect(getByTestId('talent-switch-datetime').props.value).toBe(false);
+    });
+
+    it('removing all talents results in pact with empty talents array', async () => {
+      const {getByTestId, getByText} = renderPalSheet(
+        createExistingPal({
+          pact: {
+            talents: [{name: 'calculate', necessity: 'required'}],
+          },
+        }),
+      );
+
+      // Verify calculate is initially on
+      expect(getByTestId('talent-switch-calculate').props.value).toBe(true);
+
+      // Toggle calculate off
+      await act(async () => {
+        fireEvent(getByTestId('talent-switch-calculate'), 'valueChange', false);
+      });
+
+      // Submit the form
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.updatePal).toHaveBeenCalledWith(
+          'test-pal-id',
+          expect.objectContaining({
+            pact: {talents: []},
+          }),
+        );
+      });
+    });
+
+    it('creates a pal with no talents selected and pact has empty talents', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      const nameInput = getByTestId('form-field-name');
+      await act(async () => {
+        fireEvent.changeText(nameInput, 'No Talents Pal');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'No Talents Pal',
+            pact: {talents: []},
           }),
         );
       });

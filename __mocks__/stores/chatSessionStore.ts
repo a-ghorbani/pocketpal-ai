@@ -63,6 +63,8 @@ export const mockChatSessionStore = {
   enterEditMode: jest.fn(),
   removeMessagesFromId: jest.fn(),
   setIsGenerating: jest.fn(),
+  setIsStopping: jest.fn(),
+  isStopping: false,
   duplicateSession: jest.fn().mockResolvedValue(undefined),
   setNewChatCompletionSettings: jest.fn().mockResolvedValue(undefined),
   resetNewChatCompletionSettings: jest.fn().mockResolvedValue(undefined),
@@ -94,7 +96,35 @@ export const mockChatSessionStore = {
   },
   setDateGroupNames: jest.fn(),
   initialize: jest.fn().mockResolvedValue(undefined),
+  // Agent UI state and per-step actions (added with AssistantTurn refactor)
+  agentUiState: {
+    status: 'idle' as
+      | 'idle'
+      | 'prefill'
+      | 'streaming_text'
+      | 'generating_tool_call'
+      | 'executing_tool'
+      | 'done'
+      | 'failed',
+    pendingTalentNames: [] as string[],
+    hitMaxTurns: false,
+  },
+  setAgentUiState: jest.fn(),
+  toolCallTokenCount: 0,
+  setToolCallTokenCount: jest.fn(),
+  pushAgentStep: jest.fn().mockResolvedValue(undefined),
+  updateActiveStepStreaming: jest.fn(),
+  appendToolCall: jest.fn().mockResolvedValue(undefined),
+  appendToolOutcome: jest.fn().mockResolvedValue(undefined),
+  finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
 };
+
+Object.defineProperty(mockChatSessionStore, 'isGeneratingToolCall', {
+  get: jest.fn(
+    () => mockChatSessionStore.agentUiState.status === 'generating_tool_call',
+  ),
+  configurable: true,
+});
 
 Object.defineProperty(mockChatSessionStore, 'currentSessionMessages', {
   get: jest.fn(() => []),
