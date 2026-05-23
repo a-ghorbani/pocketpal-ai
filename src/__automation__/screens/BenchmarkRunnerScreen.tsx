@@ -1044,14 +1044,10 @@ interface BenchmarkRunnerScreenProps {
   // matrix. Production code never passes this prop.
   __runner?: typeof runMatrix;
   __loadConfig?: typeof loadConfig;
-  // Test-only seam: lets unit tests drive the autostart trigger without
-  // registering a navigator route. When provided it wins over route params;
-  // the production path always reads route.params.autostart.
-  __autostart?: boolean;
 }
 
 export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
-  observer(({__runner, __loadConfig, __autostart}) => {
+  observer(({__runner, __loadConfig}) => {
     const [status, setStatus] = useState<Status>('idle');
     const [lastCell, setLastCell] = useState<{
       pp?: number;
@@ -1060,20 +1056,15 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
     }>({});
     const runningRef = useRef(false);
 
-    // Resolve the autostart navigation param. This is an E2E-only route
-    // (registered only under __E2E__), so route params are the production
-    // source of truth. `useRoute` throws when there is no navigator in the
-    // tree (unit tests render the screen bare), so the read is contained;
-    // the `__autostart` seam covers those tests. The two deep-link delivery
-    // sites set this param via the shared parseBenchmarkAutostart helper.
-    let routeAutostart: boolean | undefined;
-    try {
-      routeAutostart = (useRoute().params as {autostart?: boolean} | undefined)
-        ?.autostart;
-    } catch {
-      routeAutostart = undefined;
-    }
-    const autostart = __autostart ?? routeAutostart;
+    // Autostart trigger source: the two deep-link delivery sites set
+    // `autostart` on the navigation route params via parseBenchmarkAutostart;
+    // we just read it here. Tests mock @react-navigation/native's useRoute
+    // to inject the desired params (the codebase's existing per-file
+    // navigation-mock pattern; see SquarePalCard / ModelCard / useDeepLinking
+    // test files).
+    const route = useRoute();
+    const autostart = (route.params as {autostart?: boolean} | undefined)
+      ?.autostart;
 
     const onRun = useCallback(async () => {
       // Single-flight: ignore taps while a run is in progress.
