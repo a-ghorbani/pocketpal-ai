@@ -1,0 +1,615 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) center-default-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        {
+          "justifyContent": "space-between",
+        },
+        null,
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) center-default-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        {
+          "justifyContent": "space-between",
+        },
+        null,
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) center-default-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        {
+          "justifyContent": "space-between",
+        },
+        {
+          "opacity": 0.5,
+        },
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) center-default-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        {
+          "justifyContent": "space-between",
+        },
+        {
+          "opacity": 0.5,
+        },
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) leading-default-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        false,
+        null,
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) leading-default-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        false,
+        null,
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) leading-default-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        false,
+        {
+          "opacity": 0.5,
+        },
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix baseline (variant x size x {default,disabled} x modes) leading-default-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        false,
+        {
+          "opacity": 0.5,
+        },
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Header — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) leading-default-default-light-fa 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#F9FAFB",
+          "flexDirection": "row",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        false,
+        null,
+      ]
+    }
+    testID="ds-header"
+  >
+    <View
+      style={
+        {
+          "flex": 1,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 18,
+            "fontWeight": "500",
+            "lineHeight": 24,
+          }
+        }
+      >
+        Title
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+            "marginTop": 2,
+          }
+        }
+      >
+        Subtitle
+      </Text>
+    </View>
+  </View>
+</View>
+`;
