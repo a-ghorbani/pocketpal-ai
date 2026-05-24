@@ -51,7 +51,7 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
     "expr-eval": "^2.0.2",
-    "llama.rn": "0.12.1",
+    "llama.rn": "0.12.3",
     "marked": "^16.4.0",
     "mobx": "^6.15.0",
     "mobx-persist-store": "^1.1.8",
