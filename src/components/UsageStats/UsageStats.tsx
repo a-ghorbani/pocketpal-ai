@@ -7,10 +7,11 @@ import React, {
   useContext,
 } from 'react';
 
-import {Surface, Portal} from 'react-native-paper';
+import {Portal} from 'react-native-paper';
 import DeviceInfo from 'react-native-device-info';
 import {Svg, Path, Rect, Line} from 'react-native-svg';
 
+import {Surface as DSSurface} from '../ds';
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 
@@ -93,7 +94,7 @@ export const UsageStats: React.FC<UsageStatsProps> = ({
   const Tooltip = useCallback(
     () => (
       <Portal>
-        <Surface
+        <DSSurface
           testID="memory-usage-tooltip"
           style={[
             styles.tooltip,
@@ -117,7 +118,7 @@ export const UsageStats: React.FC<UsageStatsProps> = ({
             {l10n.components.usageStats.tooltip.usage}
             {memoryStats.percentage.toFixed(1)}%
           </Text>
-        </Surface>
+        </DSSurface>
       </Portal>
     ),
     [
