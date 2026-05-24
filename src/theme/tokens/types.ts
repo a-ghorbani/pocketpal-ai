@@ -166,25 +166,30 @@ export interface TokenSpacing {
   m: 16;
   ml: 20;
   l: 24;
+  xl: 32;
 }
 
+// Key names mirror canonical Figma `Radius/*` (None/XXS/XS/S/M/ML/L/XL/XXL)
+// so a Figma spec saying `Radius/L` maps directly to `theme.radius.l`.
+// Note: there is no `sm` step — Figma jumps S(8) → M(12).
 export interface TokenRadius {
   none: 0;
   xxs: 2;
   xs: 4;
   s: 8;
-  sm: 12;
-  m: 16;
-  ml: 20;
-  l: 32;
-  xl: 40;
+  m: 12;
+  ml: 16;
+  l: 20;
+  xl: 32;
+  xxl: 40;
 }
 
+// Key names mirror canonical Figma `Stroke/*` (xs/sm/md/lg).
 export interface TokenStroke {
-  hairline: 0.5;
-  s: 1;
-  m: 1.5;
-  l: 3;
+  xs: 0.5;
+  sm: 1;
+  md: 1.5;
+  lg: 3;
 }
 
 /**
