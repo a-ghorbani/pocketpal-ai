@@ -1,0 +1,4558 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) pill-s-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 14,
+            "fontWeight": "500",
+            "lineHeight": 20,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix baseline (variant x size x {default,disabled} x modes) underline-s-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix pressed (variant x size=default x pressed x light) pill-s-pressed-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 20,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix pressed (variant x size=default x pressed x light) underline-s-pressed-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
+
+exports[`Tabs — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) underline-s-default-light-fa 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ds-tabs"
+  >
+    <View
+      accessibilityLabel="Alpha"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-a"
+    >
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Alpha
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "#333333",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Beta"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-b"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Beta
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+    <View
+      accessibilityLabel="Gamma"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": false,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 8,
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-tab-item-c"
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Medium",
+            "fontSize": 12,
+            "fontWeight": "500",
+            "lineHeight": 16,
+          }
+        }
+      >
+        Gamma
+      </Text>
+      <View
+        pointerEvents="none"
+        style={
+          {
+            "backgroundColor": "transparent",
+            "bottom": 0,
+            "height": 1.5,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+          }
+        }
+      />
+    </View>
+  </View>
+</View>
+`;
