@@ -1,0 +1,1267 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "backgroundColor": "#F9FAFB",
+          "borderTopColor": "#a1a1a1",
+          "borderTopWidth": 0.5,
+          "flexDirection": "row",
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ds-bottom-nav"
+  >
+    <View
+      accessibilityLabel="Chat"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-chat"
+    >
+      <Text>
+        C
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Chat
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Pals"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-pals"
+    >
+      <Text>
+        P
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Pals
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Models"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-models"
+    >
+      <Text>
+        M
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Models
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "backgroundColor": "#F9FAFB",
+          "borderTopColor": "#a1a1a1",
+          "borderTopWidth": 0.5,
+          "flexDirection": "row",
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ds-bottom-nav"
+  >
+    <View
+      accessibilityLabel="Chat"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-chat"
+    >
+      <Text>
+        C
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Chat
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Pals"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-pals"
+    >
+      <Text>
+        P
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Pals
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Models"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-models"
+    >
+      <Text>
+        M
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Models
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "backgroundColor": "#F9FAFB",
+          "borderTopColor": "#a1a1a1",
+          "borderTopWidth": 0.5,
+          "flexDirection": "row",
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ds-bottom-nav"
+  >
+    <View
+      accessibilityLabel="Chat"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-chat"
+    >
+      <Text>
+        C
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Chat
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Pals"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-pals"
+    >
+      <Text>
+        P
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Pals
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Models"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-models"
+    >
+      <Text>
+        M
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Models
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "backgroundColor": "#F9FAFB",
+          "borderTopColor": "#a1a1a1",
+          "borderTopWidth": 0.5,
+          "flexDirection": "row",
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ds-bottom-nav"
+  >
+    <View
+      accessibilityLabel="Chat"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-chat"
+    >
+      <Text>
+        C
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Chat
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Pals"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-pals"
+    >
+      <Text>
+        P
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Pals
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Models"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-models"
+    >
+      <Text>
+        M
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Models
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BottomNavBar — snapshot matrix pressed (variant x size=default x pressed x light) default-m-pressed-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "backgroundColor": "#F9FAFB",
+          "borderTopColor": "#a1a1a1",
+          "borderTopWidth": 0.5,
+          "flexDirection": "row",
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ds-bottom-nav"
+  >
+    <View
+      accessibilityLabel="Chat"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-chat"
+    >
+      <Text>
+        C
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Chat
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Pals"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-pals"
+    >
+      <Text>
+        P
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Pals
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Models"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-models"
+    >
+      <Text>
+        M
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Models
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BottomNavBar — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) default-m-default-light-fa 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="tablist"
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "backgroundColor": "#F9FAFB",
+          "borderTopColor": "#a1a1a1",
+          "borderTopWidth": 0.5,
+          "flexDirection": "row",
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ds-bottom-nav"
+  >
+    <View
+      accessibilityLabel="Chat"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": true,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-chat"
+    >
+      <Text>
+        C
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#333333",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Chat
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Pals"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-pals"
+    >
+      <Text>
+        P
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Pals
+      </Text>
+    </View>
+    <View
+      accessibilityLabel="Models"
+      accessibilityRole="tab"
+      accessibilityState={
+        {
+          "busy": undefined,
+          "checked": undefined,
+          "disabled": undefined,
+          "expanded": undefined,
+          "selected": false,
+        }
+      }
+      accessibilityValue={
+        {
+          "max": undefined,
+          "min": undefined,
+          "now": undefined,
+          "text": undefined,
+        }
+      }
+      accessible={true}
+      collapsable={false}
+      focusable={true}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onFocus={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderRelease={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      style={
+        {
+          "alignItems": "center",
+          "flex": 1,
+          "gap": 2,
+          "justifyContent": "center",
+          "paddingVertical": 4,
+        }
+      }
+      testID="ds-bottom-nav-item-models"
+    >
+      <Text>
+        M
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "lineHeight": 14,
+          }
+        }
+      >
+        Models
+      </Text>
+    </View>
+  </View>
+</View>
+`;
