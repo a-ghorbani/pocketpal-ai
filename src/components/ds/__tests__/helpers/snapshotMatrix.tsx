@@ -73,9 +73,7 @@ const renderCell = <V extends string, S extends string>(
   cell: SnapshotCellProps<V, S>,
 ) => {
   const theme = themeFixtures.byMode(cell.mode).byLocale(cell.language);
-  return render(
-    <PaperProvider theme={theme}>{factory(cell)}</PaperProvider>,
-  );
+  return render(<PaperProvider theme={theme}>{factory(cell)}</PaperProvider>);
 };
 
 /**
