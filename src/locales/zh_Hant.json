@@ -155,7 +155,14 @@
     "readyToChat": "準備聊天？載入上一次使用的模型。",
     "pleaseLoadModel": "載入模型以聊天。",
     "multimodalNotEnabled": "此模型未啟用多模態功能。圖片將會顯示，但不會被 AI 處理。",
-    "cannotSendWithoutModel": "請先載入模型"
+    "cannotSendWithoutModel": "請先載入模型",
+    "toolCallTruncated": "工具呼叫中斷 — 模型可能已達到空間限制。請嘗試使用更大的上下文或更小的請求。",
+    "toolCompatWarning": "本模型可能不支援工具呼叫。結果可能不可靠。",
+    "softCapWarning": "為獲得最佳表現，請開始一個新的聊天室。",
+    "generatingPreview": "正在生成預覽... ({{tokens}} 個詞元)",
+    "generatingPreviewPending": "正在生成預覽…",
+    "toolUsedChip": "使用了 {{name}}",
+    "toolErrorBlock": "{{name}} 失敗"
   },
   "common": {
     "cancel": "取消",
@@ -573,6 +580,17 @@
         "nameRequired": "名稱是必要的",
         "generatingPromptRequired": "使用 AI 提示詞時需要生成提示詞",
         "promptModelRequired": "使用 AI 提示詞時需要提示詞生成模型"
+      },
+      "talents": "才華",
+      "talentNames": {
+        "render_html": "HTML 預覽",
+        "calculate": "數學式子",
+        "datetime": "日期與時間"
+      },
+      "talentDescriptions": {
+        "render_html": "在聊天室內行內渲染 HTML 文件",
+        "calculate": "評估數學表達式",
+        "datetime": "取得目前的日期與時間"
       }
     },
     "chatView": {
@@ -601,7 +619,9 @@
     "bubble": {
       "msPerToken": "{{value}}毫秒/詞元",
       "tokensPerSec": "{{value}} 詞元/秒",
-      "ttft": "{{value}}毫秒 TTFT"
+      "ttft": "{{value}}毫秒 TTFT",
+      "interrupted": "被打斷",
+      "truncated": "中斷 — 可能為上下文容量已滿載"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -642,6 +662,17 @@
       "importPals": "匯入 pal",
       "importSuccess": "已成功匯入 {{count}} 個 pal。",
       "importError": "匯入 pal 失敗。請檢查檔案格式。"
+    },
+    "pendingIndicator": {
+      "preparingTool": "正在準備工具",
+      "buildingPage": "建置頁面",
+      "calculating": "計算中",
+      "lookingUpTime": "檢索時間",
+      "stopping": "停止…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} 個詞元",
+      "elapsed": "{{seconds}} 秒"
     }
   },
   "feedback": {
@@ -1263,5 +1294,13 @@
     "voicesEmptyState": "找不到任何語音。",
     "kokoroDeviceNote": "部分語音可能無法在所有裝置上運作。",
     "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此引擎（目前剩餘 {{freeMb}} MB）。"
+  },
+  "htmlPreview": {
+    "defaultTitle": "預覽",
+    "showPreview": "顯示渲染的預覽",
+    "showCode": "顯示 HTML 程式碼",
+    "copyHtml": "複製 HTML",
+    "closePreview": "關閉預覽",
+    "openFullscreen": "全螢幕開啟：{{title}}"
   }
 }
