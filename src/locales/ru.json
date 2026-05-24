@@ -4,9 +4,9 @@
     "description": "Приложение, которое приносит языковые модели прямо в ваш телефон. Работает на базе llama.cpp и llama.rn.",
     "supportProject": "Поддержать проект",
     "supportProjectDescription": "Если вам нравится PocketPal AI, поддержите разработчиков:",
-    "githubButton": "Поставьте звезду на GitHub",
+    "githubButton": "Поставить звезду на GitHub",
     "orText": "или",
-    "sponsorButton": "Станьте спонсором",
+    "sponsorButton": "Стать спонсором",
     "versionCopiedTitle": "Версия скопирована",
     "versionCopiedDescription": "Информация о версии скопирована в буфер обмена",
     "orBy": "или через",
@@ -104,7 +104,7 @@
       "errors": {
         "networkRetry": "Проверить соединение и повторить",
         "appCheckRetry": "Отправить повторно",
-        "serverRetry": "Повторить попытку позже",
+        "serverRetry": "Попробуйте ещё раз позже",
         "genericRetry": "Повторить",
         "failedToSubmit": "Не удалось отправить результаты тестирования"
       }
@@ -568,7 +568,7 @@
       "tokenDisabledMessage": "У вас задан токен Hugging Face, но он отключен в настройках. Для загрузки этой модели требуется токен. Включите токен, чтобы продолжить.",
       "enableAndRetry": "Включить и повторить",
       "goToSettings": "В настройки",
-      "tryAgain": "Ещё раз",
+      "tryAgain": "Повторить",
       "viewOnHuggingFace": "Открыть на HF ↗"
     },
     "hfTokenSheet": {
@@ -678,7 +678,7 @@
   "feedback": {
     "title": "Оставить отзыв",
     "description": "Ваш голос важен! Расскажите, как PocketPal AI помогает вам и что мы можем улучшить, чтобы сделать его ещё более полезным.",
-    "shareThoughtsButton": "Поделиться мнением",
+    "shareThoughtsButton": "Поделитесь мнением",
     "useCase": {
       "label": "Для чего вы используете PocketPal AI?",
       "placeholder": "например: саммаризация, ролевые игры, код и т.д."
@@ -1091,7 +1091,7 @@
     "enterUrlManually": "Введите URL вручную",
     "manageServers": "Управление серверами",
     "ttsAvailability": "Голосовой синтез",
-    "ttsAvailabilityDescription": "Читать ответы ассистента вслух.",
+    "ttsAvailabilityDescription": "Озвучивать ответы ассистента.",
     "ttsAvailabilityLowMemoryWarning": "Недостаточно памяти на вашем устройстве — может работать нестабильно."
   },
   "storage": {
@@ -1255,7 +1255,7 @@
   "voiceAndSpeech": {
     "sectionTitle": "Голос и речь",
     "voiceRowTitle": "Голос",
-    "notSet": "Не установлено",
+    "notSet": "Не задан",
     "previewButton": "Предпросмотр",
     "stopPreviewButton": "Остановить предпросмотр",
     "voicesTitle": "Голоса",
@@ -1272,14 +1272,14 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "Система",
     "stepsCount": "{{steps}} шаг(ов)",
-    "engineKittenTagline": "Минимум ресурсов. Надежно. Подходит для старых устройств.",
+    "engineKittenTagline": "Минимум ресурсов. Надёжно. Подходит для старых устройств.",
     "engineKokoroTagline": "Высокое качество. Медленный запуск. Некоторые голоса могут быть недоступны на вашем устройстве.",
     "engineSupertonicTagline": "Быстрый запуск. Использует больше ОЗУ. Возможны пропуски слов.",
     "engineSystemTagline": "Системные голоса ОС. Всегда доступны, установка не требуется.",
     "engineSystemTitleIos": "Голоса iOS",
     "engineSystemTitleAndroid": "Голоса Android",
     "engineSystemTier": "всегда доступны",
-    "engineTierLightest": "самые легкие",
+    "engineTierLightest": "лёгкие",
     "engineTierBestQuality": "макс. качество",
     "engineTierFastestStart": "быстрый запуск",
     "engineSpecsLine": "{{voices}} голосов · {{sizeMb}} МБ · ~{{ramMb}} МБ ОЗУ",
@@ -1290,7 +1290,7 @@
     "engineRemoveConfirm": "Удалить",
     "engineInstallCta": "Установить · {{sizeMb}} МБ",
     "engineDownloadingLabel": "Загрузка… {{pct}}% · {{mbDone}} / {{sizeMb}} МБ",
-    "engineRetryCta": "Ещё раз",
+    "engineRetryCta": "Повторить",
     "voicesEmptyState": "Голоса не найдены.",
     "kokoroDeviceNote": "Некоторые голоса могут быть недоступны на вашем устройстве.",
     "insufficientStorage": "Недостаточно места — освободите {{requiredMb}} МБ для установки этого движка (доступно {{freeMb}} МБ)."
