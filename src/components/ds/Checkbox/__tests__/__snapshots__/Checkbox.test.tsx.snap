@@ -11,6 +11,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -23,7 +31,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -129,6 +136,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -141,7 +156,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -247,6 +261,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -259,7 +281,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -365,6 +386,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -377,7 +406,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -483,6 +511,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -495,7 +531,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -601,6 +636,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -613,7 +656,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -719,6 +761,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -731,7 +781,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -837,6 +886,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -849,7 +906,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -955,6 +1011,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -967,7 +1031,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1073,6 +1136,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1085,7 +1156,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1191,6 +1261,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1203,7 +1281,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1309,6 +1386,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1321,7 +1406,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1427,6 +1511,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1439,7 +1531,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1545,6 +1636,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1557,7 +1656,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1663,6 +1761,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1675,7 +1781,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1781,6 +1886,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1793,7 +1906,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -1899,6 +2011,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -1911,7 +2031,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2017,6 +2136,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2029,7 +2156,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2135,6 +2261,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2147,7 +2281,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2253,6 +2386,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2265,7 +2406,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2371,6 +2511,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2383,7 +2531,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2489,6 +2636,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2501,7 +2656,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2607,6 +2761,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2619,7 +2781,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2725,6 +2886,14 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": true,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2737,7 +2906,6 @@ exports[`Checkbox — snapshot matrix baseline (variant x size x {default,disabl
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={
@@ -2843,6 +3011,14 @@ exports[`Checkbox — snapshot matrix rtl canary (rtlCanaryVariant x size=defaul
   }
 >
   <View
+    accessibilityLabel="x"
+    accessibilityRole="checkbox"
+    accessibilityState={
+      {
+        "checked": false,
+        "disabled": false,
+      }
+    }
     style={
       [
         {
@@ -2855,7 +3031,6 @@ exports[`Checkbox — snapshot matrix rtl canary (rtlCanaryVariant x size=defaul
     testID="ds-checkbox"
   >
     <View
-      accessibilityLabel="x"
       accessibilityLiveRegion="polite"
       accessibilityRole="checkbox"
       accessibilityState={

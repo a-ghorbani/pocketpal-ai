@@ -40,15 +40,19 @@ export const Checkbox: React.FC<CheckboxProps> = ({
   warnIfNoA11yLabel('Checkbox', undefined, accessibilityLabel);
   const styles = createStyles(theme, {size});
   return (
-    <View testID={testID} style={[styles.root, style]}>
+    <View
+      testID={testID}
+      accessibilityRole="checkbox"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{checked: value, disabled: disabled === true}}
+      style={[styles.root, style]}>
       <PaperCheckbox
         status={value ? 'checked' : 'unchecked'}
         onPress={() => onValueChange(!value)}
         disabled={disabled}
         color={theme.colors.primary}
         uncheckedColor={theme.colors.onSurfaceVariant}
-        accessibilityLabel={accessibilityLabel}
-        accessibilityHint={accessibilityHint}
       />
     </View>
   );
