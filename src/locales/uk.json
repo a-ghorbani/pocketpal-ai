@@ -497,7 +497,9 @@
     "bubble": {
       "msPerToken": "{{value}} мс/токен",
       "tokensPerSec": "{{value}} токенів/сек",
-      "ttft": "{{value}} мс TTFT"
+      "ttft": "{{value}} мс TTFT",
+      "interrupted": "Перервано",
+      "truncated": "Перервано — ймовірно, контекст вичерпано"
     },
     "exportUtils": {
       "fileSaved": "Файл збережено",
@@ -748,6 +750,17 @@
         "nameRequired": "Ім'я вводити обов'язково",
         "generatingPromptRequired": "При використанні підказки ШІ необхідно ввести підказку",
         "promptModelRequired": "При використанні підказки ШІ необхідна модель генерації підказок"
+      },
+      "talents": "Таланти",
+      "talentNames": {
+        "render_html": "Попередній перегляд HTML",
+        "calculate": "Математичні вирази",
+        "datetime": "Дата й час"
+      },
+      "talentDescriptions": {
+        "render_html": "Відображати HTML-документи вбудовано в чаті",
+        "calculate": "Обчислення математичних виразів",
+        "datetime": "Отримати поточну дату й час"
       }
     },
     "assistantPalSheet": {
@@ -912,6 +925,17 @@
       "importPals": "Імпортувати pals",
       "importSuccess": "Успішно імпортовано {{count}} pal.",
       "importError": "Не вдалося імпортувати контакти. Перевірте формат файлу."
+    },
+    "pendingIndicator": {
+      "preparingTool": "Підготовка інструмента",
+      "buildingPage": "Створення сторінки",
+      "calculating": "Обчислення",
+      "lookingUpTime": "Час пошуку",
+      "stopping": "Зупинення…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} ток.",
+      "elapsed": "{{seconds}} сек."
     }
   },
   "palsScreen": {
@@ -1065,7 +1089,14 @@
     "readyToChat": "Готові поспілкуватися? Завантажте останню використану модель.",
     "pleaseLoadModel": "Завантажте модель для чату.",
     "multimodalNotEnabled": "Для цієї моделі функція «Мультимодальність» не увімкнена. Зображення будуть відображатися, але штучний інтелект їх не оброблятиме.",
-    "cannotSendWithoutModel": "Спочатку завантажте модель"
+    "cannotSendWithoutModel": "Спочатку завантажте модель",
+    "toolCallTruncated": "Виклик інструмента перервано — ймовірно, моделі бракує місця в контексті. Спробуйте збільшити контекст або скоротити запит.",
+    "toolCompatWarning": "Ця модель може не підтримувати виклики інструментів. Результати можуть бути ненадійними.",
+    "softCapWarning": "Почніть новий чат для кращої продуктивності.",
+    "generatingPreview": "Створення попереднього перегляду… ({{tokens}} ток.)",
+    "generatingPreviewPending": "Створення попереднього перегляду…",
+    "toolUsedChip": "використав {{name}}",
+    "toolErrorBlock": "{{name}} завершилося з помилкою"
   },
   "benchmark": {
     "title": "Бенчмарк",
@@ -1263,5 +1294,13 @@
     "voicesEmptyState": "Голосів не знайдено.",
     "kokoroDeviceNote": "Деякі голоси можуть працювати не на всіх пристроях.",
     "insufficientStorage": "Недостатньо місця — для встановлення цього движка потрібно звільнити {{requiredMb}} МБ (доступно {{freeMb}} МБ)."
+  },
+  "htmlPreview": {
+    "defaultTitle": "Попередній перегляд",
+    "showPreview": "Показати попередній перегляд",
+    "showCode": "Показати HTML-код",
+    "copyHtml": "Копіювати HTML",
+    "closePreview": "Закрити попередній перегляд",
+    "openFullscreen": "Відкрити на весь екран: {{title}}"
   }
 }
