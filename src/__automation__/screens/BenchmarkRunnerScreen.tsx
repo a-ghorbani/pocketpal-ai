@@ -1,5 +1,6 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Button, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useRoute} from '@react-navigation/native';
 import RNDeviceInfo from 'react-native-device-info';
 import {
   addNativeLogListener,
@@ -1055,6 +1056,16 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
     }>({});
     const runningRef = useRef(false);
 
+    // Autostart trigger source: the two deep-link delivery sites set
+    // `autostart` on the navigation route params via parseBenchmarkAutostart;
+    // we just read it here. Tests mock @react-navigation/native's useRoute
+    // to inject the desired params (the codebase's existing per-file
+    // navigation-mock pattern; see SquarePalCard / ModelCard / useDeepLinking
+    // test files).
+    const route = useRoute();
+    const autostart = (route.params as {autostart?: boolean} | undefined)
+      ?.autostart;
+
     const onRun = useCallback(async () => {
       // Single-flight: ignore taps while a run is in progress.
       if (runningRef.current) {
@@ -1090,6 +1101,23 @@ export const BenchmarkRunnerScreen: React.FC<BenchmarkRunnerScreenProps> =
       setStatus('idle');
       setLastCell({});
     }, []);
+
+    // Autostart: when the route carries autostart=true, invoke the SAME
+    // onRun the button uses — no second start path, same use of the
+    // already-pushed bench-config.json. Fired at most once per mount via the
+    // ref latch, so MobX-observer re-renders (this is an `observer`) cannot
+    // re-trigger it; onRun's single-flight gate (runningRef + status guard)
+    // remains the authoritative backstop. A falsey/absent autostart leaves
+    // the screen idle, waiting for a tap, exactly as before.
+    const autostartFiredRef = useRef(false);
+    useEffect(() => {
+      if (autostart && !autostartFiredRef.current) {
+        autostartFiredRef.current = true;
+        // onRun owns its own try/catch (it sets status='error:...' on
+        // failure), so the catch here is only a floating-promise guard.
+        onRun().catch(() => undefined);
+      }
+    }, [autostart, onRun]);
 
     return (
       <ScrollView

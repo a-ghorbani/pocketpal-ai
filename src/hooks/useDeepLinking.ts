@@ -10,7 +10,11 @@ import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
 import {chatSessionStore, palStore, deepLinkStore} from '../store';
-import {ROUTES, isBenchmarkRunnerUrl} from '../utils/navigationConstants';
+import {ROUTES} from '../utils/navigationConstants';
+import {
+  isBenchmarkRunnerUrl,
+  parseBenchmarkAutostart,
+} from '../__automation__/benchmarkRoute';
 
 /**
  * Hook for handling deep link navigation
@@ -104,7 +108,14 @@ export const useDeepLinking = () => {
     }
     const routeIfBench = (url: string | null) => {
       if (isBenchmarkRunnerUrl(url)) {
-        (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER);
+        // Resolve autostart from the same raw URL the gate matched, via the
+        // shared helper, so cold-launch (getInitialURL) and warm-launch
+        // ('url' event) deliveries — and the iOS dispatchAutomationDeepLink
+        // path — cannot diverge in truthiness. A bare bench URL resolves
+        // false, so the screen stays idle exactly as before.
+        (navigation as any).navigate(ROUTES.BENCHMARK_RUNNER, {
+          autostart: parseBenchmarkAutostart(url),
+        });
       }
     };
     Linking.getInitialURL()

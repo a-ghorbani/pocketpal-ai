@@ -99,7 +99,7 @@ describe('dispatchAutomationDeepLink', () => {
   });
 
   describe('bench host', () => {
-    it('navigates to BenchmarkRunner for pocketpal://e2e/benchmark', async () => {
+    it('navigates to BenchmarkRunner with autostart:false for pocketpal://e2e/benchmark', async () => {
       const navigate = jest.fn();
       const handled = await dispatchAutomationDeepLink(
         makeParams({
@@ -110,7 +110,42 @@ describe('dispatchAutomationDeepLink', () => {
       );
 
       expect(handled).toBe(true);
-      expect(navigate).toHaveBeenCalledWith('BenchmarkRunner');
+      // Bare URL still routes; autostart false keeps the screen idle.
+      expect(navigate).toHaveBeenCalledWith('BenchmarkRunner', {
+        autostart: false,
+      });
+    });
+
+    it('navigates with autostart:true for pocketpal://e2e/benchmark?autostart=1', async () => {
+      const navigate = jest.fn();
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({
+          url: 'pocketpal://e2e/benchmark?autostart=1',
+          host: 'e2e',
+        }),
+        {navigate},
+      );
+
+      expect(handled).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('BenchmarkRunner', {
+        autostart: true,
+      });
+    });
+
+    it('navigates with autostart:false for pocketpal://e2e/benchmark?autostart=0', async () => {
+      const navigate = jest.fn();
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({
+          url: 'pocketpal://e2e/benchmark?autostart=0',
+          host: 'e2e',
+        }),
+        {navigate},
+      );
+
+      expect(handled).toBe(true);
+      expect(navigate).toHaveBeenCalledWith('BenchmarkRunner', {
+        autostart: false,
+      });
     });
 
     it('returns true even when no navigation is supplied (cold-launch path handles nav itself)', async () => {
