@@ -46,10 +46,7 @@ const variantTokens = (theme: Theme, variant: LabelVariant) => {
   }
 };
 
-export const createStyles = (
-  theme: Theme,
-  {variant, size}: LabelStyleArgs,
-) => {
+export const createStyles = (theme: Theme, {variant, size}: LabelStyleArgs) => {
   const v = variantTokens(theme, variant);
   const labelStyle =
     size === 's' ? theme.typography.captionS : theme.typography.captionM;

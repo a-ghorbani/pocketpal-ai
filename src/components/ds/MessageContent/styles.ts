@@ -28,10 +28,7 @@ const variantTokens = (theme: Theme, variant: MessageContentVariant) => {
   }
 };
 
-export const createStyles = (
-  theme: Theme,
-  variant: MessageContentVariant,
-) => {
+export const createStyles = (theme: Theme, variant: MessageContentVariant) => {
   const v = variantTokens(theme, variant);
   const root: ViewStyle = {
     paddingHorizontal: theme.spacing.m,

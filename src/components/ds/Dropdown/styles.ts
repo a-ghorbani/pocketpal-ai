@@ -52,9 +52,7 @@ export const createStyles = (
   };
   const label: TextStyle = {
     ...s.labelStyle,
-    color: disabled
-      ? theme.colors.onSurfaceVariant
-      : theme.colors.onSurface,
+    color: disabled ? theme.colors.onSurfaceVariant : theme.colors.onSurface,
   };
   return StyleSheet.create({trigger, label});
 };

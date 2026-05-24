@@ -43,12 +43,35 @@ module.exports = {
       // any stray import could drag it into the prod bundle, defeating DCE.
       // The allow-list below re-enables the rule only for App.tsx and the
       // deep-link hook — the two legitimate mount points.
+      //
+      // The same rule also seeds the Paper-import discipline blocklist
+      // (FOU-115 / WHAT §4g): Paper symbols whose DS replacement has
+      // shipped get banned per-symbol as call-sites migrate. Phase 2
+      // seeds the list with 'Surface'; every Phase 3 swap adds the
+      // family it replaces (I_DS4 monotonic growth).
+      //
+      // Wrap-Paper DS components (Switch/Checkbox/RadioButton) need to
+      // keep importing their Paper counterpart — they are the only
+      // legal place those imports live by Phase 4. Excluded below.
       files: ['src/**/*.{ts,tsx}'],
-      excludedFiles: ['src/__automation__/**'],
+      excludedFiles: [
+        'src/__automation__/**',
+        'src/components/ds/Switch/**',
+        'src/components/ds/Checkbox/**',
+        'src/components/ds/RadioButton/**',
+      ],
       rules: {
         'no-restricted-imports': [
           'error',
           {
+            paths: [
+              {
+                name: 'react-native-paper',
+                importNames: ['Surface'],
+                message:
+                  "Phase 2 DS replacement available: import 'Surface' from 'src/components/ds' instead. Locked thin Paper set: Text, Button, IconButton, Portal, Provider.",
+              },
+            ],
             patterns: [
               {
                 group: ['**/__automation__', '**/__automation__/**'],
@@ -56,6 +79,26 @@ module.exports = {
                   'Do not import from src/__automation__/ outside the automation folder itself. See src/__automation__/README.md.',
               },
             ],
+          },
+        ],
+      },
+    },
+    {
+      // I_DS1 (no raw hex in DS styles.ts) — mechanical guard against
+      // hex literals in any DS family's styles.ts. Tokens-only contract:
+      // every color flows through theme.colors.* (or theme.interaction.*
+      // once that namespace lands). Snapshot review remains the visual
+      // cross-check; this catches the common regression at lint time.
+      // Scoped intentionally narrow — DS test fixtures may still need
+      // literal hex; component .tsx files don't have inline styles.
+      files: ['src/components/ds/**/styles.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: 'Literal[value=/^#[0-9a-fA-F]{3,8}$/]',
+            message:
+              'I_DS1: raw hex literal in DS styles.ts is banned — read the color through theme.colors.* (or theme.interaction.*) instead. If the value genuinely cannot come from a token, surface it as a token-layer gap, not a styles.ts string.',
           },
         ],
       },

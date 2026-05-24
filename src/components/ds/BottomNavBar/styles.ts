@@ -9,10 +9,7 @@ export type BottomNavBarStyleArgs = {
   selected?: boolean;
 };
 
-export const createStyles = (
-  theme: Theme,
-  {selected}: BottomNavBarStyleArgs,
-) =>
+export const createStyles = (theme: Theme, {selected}: BottomNavBarStyleArgs) =>
   StyleSheet.create({
     root: {
       flexDirection: 'row',
@@ -31,8 +28,6 @@ export const createStyles = (
     } as ViewStyle,
     label: {
       ...theme.typography.captionS,
-      color: selected
-        ? theme.colors.primary
-        : theme.colors.onSurfaceVariant,
+      color: selected ? theme.colors.primary : theme.colors.onSurfaceVariant,
     } as TextStyle,
   });

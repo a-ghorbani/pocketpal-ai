@@ -23,12 +23,12 @@ describe('Tabs', () => {
     const {getByTestId} = render(
       <Tabs items={items} selectedValue="b" onChange={() => {}} />,
     );
-    expect(getByTestId('ds-tab-item-b').props.accessibilityState?.selected).toBe(
-      true,
-    );
-    expect(getByTestId('ds-tab-item-a').props.accessibilityState?.selected).toBe(
-      false,
-    );
+    expect(
+      getByTestId('ds-tab-item-b').props.accessibilityState?.selected,
+    ).toBe(true);
+    expect(
+      getByTestId('ds-tab-item-a').props.accessibilityState?.selected,
+    ).toBe(false);
   });
 
   it('fires onChange with item value on press', () => {

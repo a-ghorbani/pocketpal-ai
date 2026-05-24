@@ -11,12 +11,8 @@ describe('Divider', () => {
   });
 });
 
-runSnapshotMatrix(
-  'Divider',
-  ({variant}) => <Divider variant={variant} />,
-  {
-    variants: ['horizontal', 'vertical'] as const,
-    sizes: ['default'] as const,
-    states: ['default'] as const,
-  },
-);
+runSnapshotMatrix('Divider', ({variant}) => <Divider variant={variant} />, {
+  variants: ['horizontal', 'vertical'] as const,
+  sizes: ['default'] as const,
+  states: ['default'] as const,
+});

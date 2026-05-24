@@ -15,11 +15,7 @@ const items = [
 describe('BottomNavBar', () => {
   it('defaults to testID=ds-bottom-nav and role=tablist', () => {
     const {getByTestId} = render(
-      <BottomNavBar
-        items={items}
-        selectedValue="chat"
-        onSelect={() => {}}
-      />,
+      <BottomNavBar items={items} selectedValue="chat" onSelect={() => {}} />,
     );
     expect(getByTestId('ds-bottom-nav').props.accessibilityRole).toBe(
       'tablist',
@@ -28,26 +24,17 @@ describe('BottomNavBar', () => {
 
   it('templates testID per item and marks selected', () => {
     const {getByTestId} = render(
-      <BottomNavBar
-        items={items}
-        selectedValue="pals"
-        onSelect={() => {}}
-      />,
+      <BottomNavBar items={items} selectedValue="pals" onSelect={() => {}} />,
     );
     expect(
-      getByTestId('ds-bottom-nav-item-pals').props.accessibilityState
-        ?.selected,
+      getByTestId('ds-bottom-nav-item-pals').props.accessibilityState?.selected,
     ).toBe(true);
   });
 
   it('fires onSelect on press', () => {
     const onSelect = jest.fn();
     const {getByTestId} = render(
-      <BottomNavBar
-        items={items}
-        selectedValue="chat"
-        onSelect={onSelect}
-      />,
+      <BottomNavBar items={items} selectedValue="chat" onSelect={onSelect} />,
     );
     fireEvent.press(getByTestId('ds-bottom-nav-item-models'));
     expect(onSelect).toHaveBeenCalledWith('models');

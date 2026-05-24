@@ -54,9 +54,7 @@ export const createStyles = (
     backgroundColor: v.background,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(v.border
-      ? {borderWidth: theme.stroke.sm, borderColor: v.border}
-      : {}),
+    ...(v.border ? {borderWidth: theme.stroke.sm, borderColor: v.border} : {}),
   };
   return StyleSheet.create({root});
 };

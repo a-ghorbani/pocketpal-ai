@@ -7,11 +7,7 @@ import {Pressable} from '../primitives/Pressable';
 import type {CommonDSProps, WithRequiredA11yLabel} from '../types';
 import {warnIfNoA11yLabel} from '../types';
 
-import {
-  createStyles,
-  type ButtonSize,
-  type ButtonVariant,
-} from './styles';
+import {createStyles, type ButtonSize, type ButtonVariant} from './styles';
 
 type ButtonBase = CommonDSProps & {
   variant?: ButtonVariant;

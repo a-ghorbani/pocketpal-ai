@@ -50,8 +50,18 @@ runSnapshotMatrix(
   {
     variants: ['primary', 'secondary', 'tertiary', 'destructive'] as const,
     sizes: ['s', 'm', 'l'] as const,
-    pressedVariants: ['primary', 'secondary', 'tertiary', 'destructive'] as const,
-    focusedVariants: ['primary', 'secondary', 'tertiary', 'destructive'] as const,
+    pressedVariants: [
+      'primary',
+      'secondary',
+      'tertiary',
+      'destructive',
+    ] as const,
+    focusedVariants: [
+      'primary',
+      'secondary',
+      'tertiary',
+      'destructive',
+    ] as const,
     langs: ['fa'] as const,
   },
 );

@@ -22,10 +22,7 @@ const sizePadding = (theme: Theme, size: CardSize) => {
   }
 };
 
-export const createStyles = (
-  theme: Theme,
-  {variant, size}: CardStyleArgs,
-) => {
+export const createStyles = (theme: Theme, {variant, size}: CardStyleArgs) => {
   const padding = sizePadding(theme, size);
   const root: ViewStyle = {
     padding,

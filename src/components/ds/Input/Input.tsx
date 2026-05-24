@@ -1,10 +1,5 @@
 import React, {useState} from 'react';
-import {
-  Text,
-  TextInput,
-  View,
-  type TextInputProps,
-} from 'react-native';
+import {Text, TextInput, View, type TextInputProps} from 'react-native';
 
 import {useTheme} from '../../../hooks';
 
@@ -12,10 +7,7 @@ import type {CommonDSProps} from '../types';
 
 import {createStyles, type InputSize, type InputVariant} from './styles';
 
-export type InputProps = Omit<
-  CommonDSProps,
-  'accessibilityRole'
-> & {
+export type InputProps = Omit<CommonDSProps, 'accessibilityRole'> & {
   variant?: InputVariant;
   size?: InputSize;
   label?: string;
