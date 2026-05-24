@@ -79,6 +79,17 @@ target 'PocketPal' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Workaround: pin the fmt pod to C++17 so it skips the consteval code path
+    # that Apple clang 21 (Xcode 26.4.1) rejects. Tracking facebook/react-native#55601.
+    # Remove once RN vendors a fmt release that is clang-21-compatible.
+    installer.pods_project.targets.each do |target|
+      if target.name == 'fmt'
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+      end
+    end
   end
 
 

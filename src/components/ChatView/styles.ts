@@ -46,6 +46,13 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       shadowRadius: 3.84,
       elevation: 5,
     },
+    suggestedPromptsOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      zIndex: 9,
+      backgroundColor: 'transparent',
+    },
     inputContainer: {
       borderTopLeftRadius: theme.borders.inputBorderRadius,
       borderTopRightRadius: theme.borders.inputBorderRadius,
@@ -74,5 +81,18 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       bottom: 0,
       left: 0,
       right: 0,
+    },
+    softCapBanner: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.colors.outline,
+    },
+    softCapBannerText: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center' as const,
     },
   });

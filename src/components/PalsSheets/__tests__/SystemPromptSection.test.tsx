@@ -18,7 +18,7 @@ jest.mock('../../../store', () => {
       isContextLoading: false,
       activeModelId: mockedModelsList[0].id,
       isDownloading: () => false,
-      initContext: jest.fn(),
+      selectModel: jest.fn(),
       models: mockedModelsList,
       isModelAvailable: (modelId?: string) => {
         if (!modelId) {
@@ -247,7 +247,7 @@ describe('SystemPromptSection', () => {
     fireEvent.press(getByText('Generate System Prompt'));
 
     await waitFor(() => {
-      expect(modelStore.initContext).toHaveBeenCalledWith(modelsList[1]);
+      expect(modelStore.selectModel).toHaveBeenCalledWith(modelsList[1]);
     });
   });
 

@@ -260,6 +260,11 @@ export interface ImportedPal {
   generatingPrompt?: string;
   color?: [string, string];
   capabilities?: any;
+  // Talent set + greeting; round-tripped from exportUtils since migration v7+
+  // promoted them to first-class persisted state. Optional on read so legacy
+  // exports without these fields still validate.
+  pact?: Pal['pact'];
+  greeting?: Pal['greeting'];
   parameters: Record<string, any>;
   parameterSchema: ParameterDefinition[];
   source: 'local' | 'palshub';
@@ -432,6 +437,8 @@ const transformImportPal = async (
     generatingPrompt: pal.generatingPrompt,
     color: pal.color,
     capabilities: pal.capabilities || {},
+    pact: pal.pact,
+    greeting: pal.greeting,
     parameters: pal.parameters,
     parameterSchema: pal.parameterSchema,
     source: pal.source,

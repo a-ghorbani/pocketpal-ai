@@ -31,4 +31,9 @@ export const mockUiStore = {
   setDisplayMemUsage: jest.fn(),
   setBenchmarkShareDialogPreference: jest.fn(),
   showError: jest.fn(),
+  setChatWarning: jest.fn(),
+  clearChatWarning: jest.fn(),
+  toolCompatWarnedModels: [] as string[],
+  hasWarnedToolCompat: jest.fn(() => false),
+  markToolCompatWarned: jest.fn(),
 };

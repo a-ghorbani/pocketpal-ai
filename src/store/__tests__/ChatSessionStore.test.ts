@@ -309,6 +309,58 @@ describe('chatSessionStore', () => {
       );
     });
 
+    it('should preserve talentResults and talent metadata across subsequent updates (PR #578 hazard)', async () => {
+      // Simulates the talent-call flow: first update writes talentCalls/talentResults,
+      // a later update (e.g. post-regen timing refresh) must NOT wipe them.
+      const messageWithTalentMeta = {
+        ...mockMessage,
+        metadata: {
+          talentCalls: [
+            {id: 'c1', type: 'function', function: {name: 'render_html'}},
+          ],
+          toolMessages: [{tool_call_id: 'c1', content: 'ok'}],
+          talentResults: {
+            c1: {
+              type: 'html',
+              html: '<p>hi</p>',
+              title: 'Greeting',
+              summary: 'Rendered HTML preview: "Greeting"',
+            },
+          },
+          completionResult: {reasoning_content: '', content: ''},
+        },
+      };
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [messageWithTalentMeta],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [mockSession];
+      chatSessionStore.activeSessionId = mockSession.id;
+
+      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      // Simulate a later refresh that only touches `timings`.
+      await chatSessionStore.updateMessage(mockMessage.id, mockSession.id, {
+        metadata: {timings: {total: 200}},
+      });
+
+      const md = (chatSessionStore.sessions[0].messages[0] as MessageType.Text)
+        .metadata;
+      expect(md?.timings).toEqual({total: 200});
+      expect((md as any)?.talentCalls).toHaveLength(1);
+      expect((md as any)?.toolMessages).toHaveLength(1);
+      expect((md as any)?.talentResults).toEqual({
+        c1: expect.objectContaining({type: 'html', html: '<p>hi</p>'}),
+      });
+    });
+
     it('should handle updateMessage when existing message has no metadata', async () => {
       const messageWithoutMetadata = {
         ...mockMessage,

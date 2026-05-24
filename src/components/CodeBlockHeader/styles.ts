@@ -14,7 +14,7 @@ export const createStyles = (theme: Theme) =>
       fontSize: 12,
     },
     iconTouchable: {
-      padding: 12, // 16 (icon) + 10*2 = 40 for accessibility
+      padding: 4,
       justifyContent: 'center',
       alignItems: 'center',
     },

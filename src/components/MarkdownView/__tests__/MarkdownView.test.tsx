@@ -1,7 +1,10 @@
 import React from 'react';
 import {ScrollView} from 'react-native';
 
-import {render, fireEvent} from '@testing-library/react-native';
+// Use the project's custom render which mounts MarkdownProvider — required
+// because MarkdownView now relies on the ambient TRenderEngineProvider
+// instead of building its own engine per instance.
+import {render, fireEvent} from '../../../../jest/test-utils';
 
 import {MarkdownView} from '../MarkdownView';
 

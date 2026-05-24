@@ -150,6 +150,74 @@ describe('OpenAICompletionEngine', () => {
     expect(result).toEqual(mockResult);
   });
 
+  // PACT support requires the engine to forward tools and tool_choice
+  // down to streamChatCompletion. Without this, any Pal with talents
+  // enabled silently degrades to text-only on remote engines (no tools
+  // schemas → no tool_calls).
+  it('forwards tools and tool_choice to streamChatCompletion', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    const calculateTool = {
+      type: 'function' as const,
+      function: {
+        name: 'calculate',
+        description: 'Evaluate a math expression',
+        parameters: {
+          type: 'object',
+          properties: {expression: {type: 'string'}},
+          required: ['expression'],
+        },
+      },
+    };
+    const params = {
+      messages: [{role: 'user', content: 'What is 2+2?'}],
+      tools: [calculateTool],
+      tool_choice: 'auto',
+    } as any;
+
+    await engine.completion(params);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: [calculateTool],
+        tool_choice: 'auto',
+      }),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+    );
+  });
+
+  // Structured-output (json_schema response_format) is provider-agnostic:
+  // local goes through llama.rn natively, remote needs response_format
+  // forwarded down to the OpenAI request body.
+  it('forwards response_format to streamChatCompletion', async () => {
+    mockedStreamChat.mockResolvedValueOnce({text: '{}', content: '{}'});
+
+    const responseFormat = {
+      type: 'json_schema' as const,
+      json_schema: {
+        strict: true,
+        schema: {type: 'object', properties: {name: {type: 'string'}}},
+      },
+    };
+    const params = {
+      messages: [{role: 'user', content: 'give me a name'}],
+      response_format: responseFormat,
+    } as any;
+
+    await engine.completion(params);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({response_format: responseFormat}),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+    );
+  });
+
   it('handles missing optional params gracefully', async () => {
     mockedStreamChat.mockResolvedValueOnce({
       text: '',

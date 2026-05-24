@@ -200,9 +200,9 @@ export const SystemPromptSection = observer(
         }
 
         if (modelStore.activeModelId !== selectedModel.id) {
-          const context = await modelStore.initContext(selectedModel);
-          if (!context) {
-            console.error('Failed to initialize context');
+          await modelStore.selectModel(selectedModel);
+          if (!modelStore.engine) {
+            console.error('Failed to initialize completion engine');
             return;
           }
         }

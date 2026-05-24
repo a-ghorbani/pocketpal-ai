@@ -82,6 +82,16 @@ export class DrawerPage extends BasePage {
   }
 
   /**
+   * Navigate to Pals screen
+   */
+  async navigateToPals(): Promise<void> {
+    await this.waitForOpen();
+    await this.tap(Selectors.drawer.palsTab);
+    await browser.pause(300);
+    await this.waitForClose();
+  }
+
+  /**
    * Navigate to Settings screen
    */
   async navigateToSettings(): Promise<void> {

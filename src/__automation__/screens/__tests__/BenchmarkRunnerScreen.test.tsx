@@ -5,6 +5,22 @@ import {fireEvent, render, waitFor} from '../../../../jest/test-utils';
 
 import {modelStore} from '../../../store';
 
+// Mock @react-navigation/native's useRoute so the screen can read route
+// params without a real navigator in the tree. The default return covers
+// every non-autostart test; the autostart suite overrides per-test. This
+// mirrors the per-file navigation mock pattern used in SquarePalCard,
+// ModelCard, ModelNotLoadedMessage, and useDeepLinking tests.
+jest.mock('@react-navigation/native', () => ({
+  useRoute: jest.fn(() => ({
+    key: 'bench',
+    name: 'BenchmarkRunner',
+    params: {},
+  })),
+}));
+const {useRoute} = require('@react-navigation/native') as {
+  useRoute: jest.Mock;
+};
+
 // Mock RNFS at the module path the screen imports.
 jest.mock('@dr.pogodin/react-native-fs', () => ({
   ExternalDirectoryPath: '/mock/external',
@@ -91,6 +107,12 @@ function makeMockContext(overrides?: {bench?: jest.Mock; release?: jest.Mock}) {
 describe('BenchmarkRunnerScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default useRoute → no autostart. Autostart tests override this.
+    useRoute.mockReturnValue({
+      key: 'bench',
+      name: 'BenchmarkRunner',
+      params: {},
+    });
     RNFS.exists.mockResolvedValue(true);
     RNFS.readFile.mockResolvedValue(JSON.stringify(VALID_CONFIG));
     RNFS.writeFile.mockResolvedValue(undefined);
@@ -206,6 +228,112 @@ describe('BenchmarkRunnerScreen', () => {
         expect(typeof lbl).toBe('string');
         expect(lbl.startsWith('error:')).toBe(true);
       });
+    });
+  });
+
+  describe('autostart', () => {
+    // Helper: configure useRoute to return params {autostart: <value>}. The
+    // production read path is `route.params.autostart` — this mirrors what
+    // the two deep-link delivery sites set via parseBenchmarkAutostart.
+    const setRouteAutostart = (autostart: boolean | undefined) => {
+      useRoute.mockReturnValue({
+        key: 'bench',
+        name: 'BenchmarkRunner',
+        params: autostart === undefined ? {} : {autostart},
+      });
+    };
+
+    it('fires the runner exactly once after mount when autostart is true (no tap)', async () => {
+      setRouteAutostart(true);
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      render(<BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />);
+      // Same start path the button uses: loadConfig then runMatrix, once.
+      await waitFor(() => {
+        expect(loader).toHaveBeenCalledTimes(1);
+        expect(runner).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('does NOT fire the runner and stays idle when autostart is absent', async () => {
+      // beforeEach default: route.params === {} → autostart undefined.
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />,
+      );
+      // Flush mount effects so a (wrongly) scheduled autostart would surface.
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(runner).not.toHaveBeenCalled();
+      expect(
+        getByTestId('bench-runner-screen-status').props.accessibilityLabel,
+      ).toBe('idle');
+    });
+
+    it('does NOT fire the runner and stays idle when autostart is false', async () => {
+      setRouteAutostart(false);
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(runner).not.toHaveBeenCalled();
+      expect(
+        getByTestId('bench-runner-screen-status').props.accessibilityLabel,
+      ).toBe('idle');
+    });
+
+    it('autostart then a redundant tap mid-run still invokes the runner exactly once (single-flight)', async () => {
+      setRouteAutostart(true);
+      let resolveRunner: () => void = () => {};
+      const runner = jest.fn(
+        () =>
+          new Promise<void>(r => {
+            resolveRunner = r;
+          }),
+      );
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {getByTestId} = render(
+        <BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />,
+      );
+      // Autostart kicks off the run.
+      await waitFor(() => {
+        expect(runner).toHaveBeenCalledTimes(1);
+      });
+      // A later tap arrives while the run is in flight — single-flight gate
+      // rejects it.
+      await act(async () => {
+        fireEvent.press(getByTestId('bench-run-button'));
+      });
+      expect(runner).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        resolveRunner();
+      });
+    });
+
+    it('does not re-fire the runner on re-render after autostart fired (once per mount)', async () => {
+      setRouteAutostart(true);
+      const runner = jest.fn().mockResolvedValue(undefined);
+      const loader = jest.fn().mockResolvedValue(VALID_CONFIG);
+      const {rerender} = render(
+        <BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />,
+      );
+      await waitFor(() => {
+        expect(runner).toHaveBeenCalledTimes(1);
+      });
+      // Force a re-render with stable autostart — the ref latch must keep the
+      // run from firing again.
+      await act(async () => {
+        rerender(
+          <BenchmarkRunnerScreen __runner={runner} __loadConfig={loader} />,
+        );
+      });
+      expect(runner).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -359,7 +487,7 @@ describe('BenchmarkRunnerScreen', () => {
       const [paramsArg] = (initLlama as jest.Mock).mock.calls[0];
       expect(paramsArg.devices).toEqual(['CPU']);
       // Pinned to 0 so ggml does not route layers through other registered
-      // backends (Bug-2 — verified on Snapdragon 8 Elite Gen 5).
+      // backends (verified on Snapdragon 8 Elite Gen 5).
       expect(paramsArg.n_gpu_layers).toBe(0);
     });
 

@@ -1,8 +1,8 @@
 /**
  * useDeepLinking — cold-launch routing tests
  *
- * Covers the SHOULD rows from the TASK-20260428-1532 Test Requirements
- * table for the new `__E2E__`-gated `useEffect` that reads
+ * Covers the SHOULD rows from the Test Requirements table for the
+ * `__E2E__`-gated `useEffect` that reads
  * `Linking.getInitialURL()` and routes to `BenchmarkRunner` when the
  * launching intent matches `pocketpal://e2e/benchmark`.
  *
@@ -63,7 +63,7 @@ describe('useDeepLinking — cold-launch routing', () => {
     getInitialURLSpy.mockRestore();
   });
 
-  it('navigates to BenchmarkRunner when __E2E__=true and getInitialURL returns the bench URL', async () => {
+  it('navigates to BenchmarkRunner with autostart:false for the bare bench URL on cold launch', async () => {
     getInitialURLSpy.mockResolvedValue('pocketpal://e2e/benchmark');
 
     renderHook(() => useDeepLinking());
@@ -73,7 +73,24 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
 
     expect(getInitialURLSpy).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER);
+    // Bare URL still routes; autostart resolves false so the screen stays
+    // idle and waits for a tap — current behaviour preserved.
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
+      autostart: false,
+    });
+  });
+
+  it('navigates with autostart:true for the autostart bench URL on cold launch', async () => {
+    getInitialURLSpy.mockResolvedValue('pocketpal://e2e/benchmark?autostart=1');
+
+    renderHook(() => useDeepLinking());
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
+      autostart: true,
+    });
   });
 
   it('does NOT navigate when __E2E__=false (cold-launch effect short-circuits)', async () => {
@@ -157,7 +174,65 @@ describe('useDeepLinking — cold-launch routing', () => {
     // Simulate WDIO firing `mobile: deepLink` after the app started.
     expect(captured.handler).not.toBeNull();
     captured.handler!({url: 'pocketpal://e2e/benchmark'});
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER);
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
+      autostart: false,
+    });
+
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('navigates with autostart:true on a warm-state autostart url event', async () => {
+    getInitialURLSpy.mockResolvedValue(null);
+
+    const captured: {handler: ((evt: {url: string}) => void) | null} = {
+      handler: null,
+    };
+    const addEventListenerSpy = jest
+      .spyOn(Linking, 'addEventListener')
+      .mockImplementation((event: string, cb: any) => {
+        if (event === 'url') {
+          captured.handler = cb;
+        }
+        return {remove: jest.fn()} as any;
+      });
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(captured.handler).not.toBeNull();
+    captured.handler!({url: 'pocketpal://e2e/benchmark?autostart=1'});
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
+      autostart: true,
+    });
+
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('navigates with autostart:false for autostart=0 on a warm-state url event', async () => {
+    getInitialURLSpy.mockResolvedValue(null);
+
+    const captured: {handler: ((evt: {url: string}) => void) | null} = {
+      handler: null,
+    };
+    const addEventListenerSpy = jest
+      .spyOn(Linking, 'addEventListener')
+      .mockImplementation((event: string, cb: any) => {
+        if (event === 'url') {
+          captured.handler = cb;
+        }
+        return {remove: jest.fn()} as any;
+      });
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(captured.handler).not.toBeNull();
+    captured.handler!({url: 'pocketpal://e2e/benchmark?autostart=0'});
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
+      autostart: false,
+    });
 
     addEventListenerSpy.mockRestore();
   });

@@ -1,5 +1,6 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick} from '@react-native-documents/picker';
+import {palStore} from '../../store';
 import {
   readJsonFile,
   validateImportedData,
@@ -197,6 +198,35 @@ describe('importUtils', () => {
         const result = await importPals();
 
         expect(result).toBe(1);
+      });
+
+      // pact (talent set) and greeting are first-class persisted state.
+      // The transform path MUST forward them onto palStore.createPal so a
+      // re-imported Pal keeps its tools and greeting.
+      it('preserves pact (talents) and greeting through import', async () => {
+        const palWithTalents = {
+          ...mockImportedPal,
+          pact: {
+            talents: [
+              {name: 'calculate'},
+              {name: 'render_html', required: true},
+            ],
+          },
+          greeting: {
+            text: 'Hello! How can I help you today?',
+            suggestedPrompts: ['Tell me a joke', 'Summarize this'],
+          },
+        };
+        (RNFS.readFile as jest.Mock).mockResolvedValue(
+          JSON.stringify(palWithTalents),
+        );
+
+        await importPals();
+
+        expect(palStore.createPal).toHaveBeenCalledTimes(1);
+        const created = (palStore.createPal as jest.Mock).mock.calls[0][0];
+        expect(created.pact).toEqual(palWithTalents.pact);
+        expect(created.greeting).toEqual(palWithTalents.greeting);
       });
     });
   });
