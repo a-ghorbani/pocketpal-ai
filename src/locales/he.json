@@ -154,7 +154,10 @@
     "removeRemoteModel": "להסיר את {{modelName}} ({{serverName}})?",
     "retryConnection": "נסה שוב",
     "enterUrlManually": "הזן כתובת (URL) ידנית",
-    "manageServers": "ניהול שרתים"
+    "manageServers": "ניהול שרתים",
+    "ttsAvailability": "טקסט לדיבור",
+    "ttsAvailabilityDescription": "קרא את תשובות העוזר בקול רם.",
+    "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה."
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -394,7 +397,7 @@
     "modelCapabilities": {
       "questionAnswering": "מענה לשאלות",
       "summarization": "סיכום",
-      "reasoning": "הנמקה",
+      "reasoning": "חשיבה",
       "roleplay": "משחק תפקידים",
       "instructions": "ביצוע הוראות",
       "code": "יצירת קוד",
@@ -410,7 +413,7 @@
     "jinja": "הפעל תבניות Jinja לעיצוב צ'אט. כאשר מופעל, נעשה שימוש בעיבוד תבניות צ'אט מבוססות Jinja לצורך תאימות טובה יותר עם מודלים מודרניים.",
     "grammar": "אכוף כללי דקדוק ספציפיים כדי להבטיח שהטקסט שנוצר יעקוב אחר מבנה או פורמט מסוימים",
     "stop": "הגדר ביטויים ספציפיים שיעצרו את יצירת הטקסט",
-    "n_predict": "הגדר את אורך התגובה שתיווצר (בטוקנים)",
+    "n_predict": "מספר מקסימלי של טוקנים ליצירה. הגדר \"ללא הגבלה\" אם אתה רוצה יצירה ללא הגבלה, או \"מותאם אישית\" כדי לציין ערך.",
     "n_probs": "הצג ציוני הסתברות עבור מילים חלופיות.",
     "top_k": "שלוט ביצירתיות על ידי הגבלת בחירת המילים ל-K האפשרויות הסבירות ביותר. ערכים נמוכים יותר הופכים את התשובות לממוקדות יותר",
     "top_p": "אזן בין יצירתיות לקוהרנטיות. ערכים גבוהים יותר (בקרבת 1.0) מאפשרים תגובות יצירתיות יותר אך פחות ממוקדות",
@@ -446,7 +449,8 @@
     "sponsorButton": "הפוך לספונסר",
     "versionCopiedTitle": "הגרסה הועתקה",
     "versionCopiedDescription": "פרטי הגרסה הועתקו ללוח",
-    "privacyPolicy": "מדיניות הפרטיות"
+    "privacyPolicy": "מדיניות הפרטיות",
+    "termsOfService": "תנאי השירות"
   },
   "feedback": {
     "title": "שלח משוב",
@@ -739,6 +743,17 @@
         "nameRequired": "נדרש שם",
         "generatingPromptRequired": "נדרשת הנחיית יצירה לצורך שימוש בהנחיית AI",
         "promptModelRequired": "נדרש מודל יצירת הנחיות בעת שימוש בהנחיית AI"
+      },
+      "talents": "כישרונות",
+      "talentNames": {
+        "render_html": "תצוגה מקדימה של HTML",
+        "calculate": "ביטויים מתמטיים",
+        "datetime": "תאריך ושעה"
+      },
+      "talentDescriptions": {
+        "render_html": "הצג מסמכי HTML ישירות בצ'אט",
+        "calculate": "הערך ביטויים מתמטיים",
+        "datetime": "הצג את התאריך והשעה הנוכחיים"
       }
     },
     "assistantPalSheet": {
@@ -907,7 +922,20 @@
     "bubble": {
       "msPerToken": "{{value}}מ.ש./טוקן",
       "tokensPerSec": "{{value}} טוקנים/שנ'",
-      "ttft": "{{value}}מ.ש. TTFT"
+      "ttft": "{{value}}מ.ש. TTFT",
+      "interrupted": "מופרע",
+      "truncated": "קטיעה — ככל הנראה ההקשר מלא"
+    },
+    "pendingIndicator": {
+      "preparingTool": "מכין כלי",
+      "buildingPage": "בונה דף",
+      "calculating": "מחשב",
+      "lookingUpTime": "בודק את השעה",
+      "stopping": "עוצר…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} טוקנים",
+      "elapsed": "{{seconds}} ש'"
     }
   },
   "palsScreen": {
@@ -1061,7 +1089,14 @@
     "readyToChat": "מוכן לשוחח? טען את המודל האחרון שהיה בשימוש.",
     "pleaseLoadModel": "טען מודל כדי לשוחח.",
     "multimodalNotEnabled": "רב-מודאליות אינה מופעלת עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
-    "cannotSendWithoutModel": "טען מודל תחילה"
+    "cannotSendWithoutModel": "טען מודל תחילה",
+    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה אזל המקום בזיכרון של המודל. נסה להשתמש בהקשר (Context) גדול יותר או שלח בקשה קטנה יותר.",
+    "toolCompatWarning": "מודל זה עשוי שלא לתמוך בקריאה לכלי. התוצאות עלולות להיות לא אמינות.",
+    "softCapWarning": "פתח צ'אט חדש לביצועים מיטביים.",
+    "generatingPreview": "מייצר תצוגה מקדימה... ({{tokens}} טוקנים)",
+    "generatingPreviewPending": "מייצר תצוגה מקדימה…",
+    "toolUsedChip": "נעשה שימוש ב-{{name}}",
+    "toolErrorBlock": "{{name}} נכשל"
   },
   "benchmark": {
     "title": "מבחן ביצועים",
@@ -1216,5 +1251,56 @@
   },
   "simulator": {
     "cameraNotAvailable": "מצלמה אינה זמינה בסימולטור. אנא השתמש במכשיר פיזי."
+  },
+  "htmlPreview": {
+    "defaultTitle": "תצוגה מקדימה",
+    "showPreview": "הצג תצוגה מקדימה מוכנה",
+    "showCode": "הצג קוד HTML",
+    "copyHtml": "העתק HTML",
+    "closePreview": "סגור תצוגה מקדימה",
+    "openFullscreen": "פתח במסך מלא: {{title}}"
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "קול ודיבור",
+    "voiceRowTitle": "קול",
+    "notSet": "לא מוגדר",
+    "previewButton": "תצוגה מקדימה",
+    "stopPreviewButton": "עצור תצוגה מקדימה",
+    "voicesTitle": "קולות",
+    "voicesEmptyHint": "הקש על קול כלשהו כדי להתקין אותו ולהשתמש בו. או בחר בקול מערכת — קולות אלו זמינים תמיד.",
+    "supertonicStepsLabel": "איכות (צעדי דיפוזיה)",
+    "toggleAutoSpeakLabel": "הפעל/השבת הקראה אוטומטית",
+    "openSettingsLabel": "הגדרות TTS",
+    "playMessageLabel": "הפעל הודעה",
+    "stopMessageLabel": "עצור הודעה",
+    "autoSpeakLabel": "הקראת תגובות אוטומטית",
+    "autoSpeakDescription": "קרא תגובות חדשות בקול עם קבלתן.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "מערכת",
+    "stepsCount": "{{steps}} צעדים",
+    "engineKittenTagline": "טביעת הרגל הקטנה ביותר. אמין. הכי טוב במכשירים חלשים.",
+    "engineKokoroTagline": "האיכות הגבוהה ביותר. איטי יותר להפעלה. ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
+    "engineSupertonicTagline": "המהיר ביותר להפעלה. צורך יותר זיכרון RAM. עלול להשמיט מילים מדי פעם.",
+    "engineSystemTagline": "קולות מובנים של מערכת ההפעלה. זמינים תמיד, ללא צורך בהתקנה.",
+    "engineSystemTitleIos": "קולות iOS",
+    "engineSystemTitleAndroid": "קולות אנדרואיד",
+    "engineSystemTier": "תמיד זמין",
+    "engineTierLightest": "הקליל ביותר",
+    "engineTierBestQuality": "האיכות הטובה ביותר",
+    "engineTierFastestStart": "המהיר ביותר להפעלה",
+    "engineSpecsLine": "{{voices}} קולות  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} קולות",
+    "engineRemoveTitle": "להסיר את {{engineTitle}}?",
+    "engineRemoveBody": "מפנה כ-‎{{sizeMb}} MB במכשיר זה.",
+    "engineRemoveCancel": "ביטול",
+    "engineRemoveConfirm": "הסר",
+    "engineInstallCta": "התקן · ‎{{sizeMb}} MB",
+    "engineDownloadingLabel": "מוריד...  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "נסה שוב",
+    "voicesEmptyState": "לא נמצאו קולות.",
+    "kokoroDeviceNote": "ייתכן שחלק מהקולות לא יעבדו בכל המכשירים.",
+    "insufficientStorage": "אין מספיק מקום — פנה {{requiredMb}} MB כדי להתקין מנוע זה ({{freeMb}} MB זמינים)."
   }
 }
