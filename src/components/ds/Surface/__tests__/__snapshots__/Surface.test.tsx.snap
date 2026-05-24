@@ -1,0 +1,170 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Surface — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "backgroundColor": "#F9FAFB",
+          "borderRadius": 12,
+        },
+        {
+          "elevation": 1,
+        },
+        null,
+      ]
+    }
+    testID="surf"
+  >
+    <Text>
+      surface body
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Surface — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "backgroundColor": "#F9FAFB",
+          "borderRadius": 12,
+        },
+        {
+          "elevation": 1,
+        },
+        null,
+      ]
+    }
+    testID="surf"
+  >
+    <Text>
+      surface body
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Surface — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "backgroundColor": "#F9FAFB",
+          "borderRadius": 12,
+        },
+        {
+          "elevation": 1,
+        },
+        {
+          "opacity": 0.5,
+        },
+      ]
+    }
+    testID="surf"
+  >
+    <Text>
+      surface body
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Surface — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "backgroundColor": "#F9FAFB",
+          "borderRadius": 12,
+        },
+        {
+          "elevation": 1,
+        },
+        {
+          "opacity": 0.5,
+        },
+      ]
+    }
+    testID="surf"
+  >
+    <Text>
+      surface body
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Surface — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) default-default-default-light-fa 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "backgroundColor": "#F9FAFB",
+          "borderRadius": 12,
+        },
+        {
+          "elevation": 1,
+        },
+        null,
+      ]
+    }
+    testID="surf"
+  >
+    <Text>
+      surface body
+    </Text>
+  </View>
+</View>
+`;

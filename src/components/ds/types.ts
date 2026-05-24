@@ -1,8 +1,4 @@
-import type {
-  AccessibilityRole,
-  StyleProp,
-  ViewStyle,
-} from 'react-native';
+import type {AccessibilityRole, StyleProp, ViewStyle} from 'react-native';
 
 /**
  * Common props shared by every DS component (WHAT §4c).
@@ -61,7 +57,6 @@ export function warnIfNoA11yLabel(
   accessibilityLabel?: string,
 ): void {
   if (__DEV__ && !label && !accessibilityLabel) {
-    // eslint-disable-next-line no-console
     console.warn(
       `[ds/${componentName}] accessibilityLabel or label is required; types may have been bypassed.`,
     );
