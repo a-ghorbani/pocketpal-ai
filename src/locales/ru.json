@@ -4,9 +4,9 @@
     "description": "Приложение, которое приносит языковые модели прямо в ваш телефон. Работает на базе llama.cpp и llama.rn.",
     "supportProject": "Поддержать проект",
     "supportProjectDescription": "Если вам нравится PocketPal AI, поддержите разработчиков:",
-    "githubButton": "Поставить звезду на GitHub",
+    "githubButton": "Поставьте звезду на GitHub",
     "orText": "или",
-    "sponsorButton": "Стать спонсором",
+    "sponsorButton": "Станьте спонсором",
     "versionCopiedTitle": "Версия скопирована",
     "versionCopiedDescription": "Информация о версии скопирована в буфер обмена",
     "orBy": "или через",
@@ -104,7 +104,7 @@
       "errors": {
         "networkRetry": "Проверить соединение и повторить",
         "appCheckRetry": "Отправить повторно",
-        "serverRetry": "Попробуйте ещё раз позже",
+        "serverRetry": "Повторить попытку позже",
         "genericRetry": "Повторить",
         "failedToSubmit": "Не удалось отправить результаты тестирования"
       }
@@ -155,14 +155,21 @@
     "modelNotLoaded": "Модель не загружена. Пожалуйста, инициализируйте модель.",
     "completionFailed": "Завершение не удалось: ",
     "multimodalNotEnabled": "Мультимодальность для этой модели не включена. Изображения будут отображаться, но не будут обрабатываться ИИ.",
-    "cannotSendWithoutModel": "Загрузите модель перед началом работы"
+    "cannotSendWithoutModel": "Загрузите модель перед началом работы",
+    "toolCallTruncated": "Вызов инструмента прерван — вероятно, модели не хватило памяти. Попробуйте использовать более широкий контекст или более короткий запрос.",
+    "toolCompatWarning": "Эта модель может не поддерживать вызовы инструментов. Результаты могут быть недостоверными.",
+    "softCapWarning": "Начните новый чат для лучшей производительности.",
+    "generatingPreview": "Генерация предпросмотра… ({{tokens}} ток.)",
+    "generatingPreviewPending": "Генерация предпросмотра…",
+    "toolUsedChip": "использовал {{name}}",
+    "toolErrorBlock": "{{name}} завершилось с ошибкой"
   },
   "common": {
     "cancel": "Отмена",
     "delete": "Удалить",
     "dismiss": "Отклонить",
     "rename": "Переименовать",
-    "reset": "Сброс",
+    "reset": "Сбросить",
     "save": "Сохранить",
     "networkError": "Ошибка сети. Попробуйте ещё раз.",
     "downloadETA": "Осталось",
@@ -482,18 +489,18 @@
       "includeModelInfo": "Включить данные о модели",
       "includeModelInfoDescription": "Добавить название и ID модели для помощи в расследовании",
       "noActiveModelNote": "Нет активной модели",
-      "submit": "Отправить жалобу",
+      "submit": "Отправить отчёт",
       "validation": {
         "title": "Недостаточно данных",
         "message": "Пожалуйста, выберите категорию и добавьте описание."
       },
       "success": {
-        "title": "Жалоба отправлена",
+        "title": "Отчёт отправлен",
         "message": "Спасибо. Мы рассмотрим ваше сообщение и примем меры."
       },
       "error": {
         "title": "Ошибка",
-        "message": "Не удалось отправить жалобу. Попробуйте ещё раз."
+        "message": "Не удалось отправить отчёт. Попробуйте ещё раз."
       }
     },
     "modelErrorReportSheet": {
@@ -561,7 +568,7 @@
       "tokenDisabledMessage": "У вас задан токен Hugging Face, но он отключен в настройках. Для загрузки этой модели требуется токен. Включите токен, чтобы продолжить.",
       "enableAndRetry": "Включить и повторить",
       "goToSettings": "В настройки",
-      "tryAgain": "Повторить",
+      "tryAgain": "Ещё раз",
       "viewOnHuggingFace": "Открыть на HF ↗"
     },
     "hfTokenSheet": {
@@ -607,6 +614,17 @@
         "nameRequired": "Требуется имя",
         "generatingPromptRequired": "Требуется генерирующий промпт при использовании ИИ-промпта.",
         "promptModelRequired": "Требуется модель генерации промпта при использовании ИИ-промпта"
+      },
+      "talents": "Таланты",
+      "talentNames": {
+        "render_html": "Предпросмотр HTML",
+        "calculate": "Математические выражения",
+        "datetime": "Дата и время"
+      },
+      "talentDescriptions": {
+        "render_html": "Отображать HTML-документы встроенно в чате",
+        "calculate": "Вычисление математических выражений",
+        "datetime": "Получить текущую дату и время"
       }
     },
     "lookiePalSheet": {
@@ -641,13 +659,26 @@
     "bubble": {
       "msPerToken": "{{value}} мс/ток",
       "tokensPerSec": "{{value}} ток/сек",
-      "ttft": "{{value}} мс TTFT"
+      "ttft": "{{value}} мс TTFT",
+      "interrupted": "Прервано",
+      "truncated": "Прервано — вероятно, контекст исчерпан"
+    },
+    "pendingIndicator": {
+      "preparingTool": "Подготовка инструмента",
+      "buildingPage": "Создание страницы",
+      "calculating": "Вычисление",
+      "lookingUpTime": "Время поиска",
+      "stopping": "Остановка…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} ток.",
+      "elapsed": "{{seconds}} сек."
     }
   },
   "feedback": {
     "title": "Оставить отзыв",
     "description": "Ваш голос важен! Расскажите, как PocketPal AI помогает вам и что мы можем улучшить, чтобы сделать его ещё более полезным.",
-    "shareThoughtsButton": "Поделитесь мнением",
+    "shareThoughtsButton": "Поделиться мнением",
     "useCase": {
       "label": "Для чего вы используете PocketPal AI?",
       "placeholder": "например: саммаризация, ролевые игры, код и т.д."
@@ -1059,9 +1090,9 @@
     "retryConnection": "Повторить",
     "enterUrlManually": "Введите URL вручную",
     "manageServers": "Управление серверами",
-    "ttsAvailability": "Синтез речи",
-    "ttsAvailabilityDescription": "Озвучивать ответы ассистента.",
-    "ttsAvailabilityLowMemoryWarning": "Память вашего устройства заполнена — может работать нестабильно."
+    "ttsAvailability": "Голосовой синтез",
+    "ttsAvailabilityDescription": "Читать ответы ассистента вслух.",
+    "ttsAvailabilityLowMemoryWarning": "Недостаточно памяти на вашем устройстве — может работать нестабильно."
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
@@ -1224,7 +1255,7 @@
   "voiceAndSpeech": {
     "sectionTitle": "Голос и речь",
     "voiceRowTitle": "Голос",
-    "notSet": "Не задан",
+    "notSet": "Не установлено",
     "previewButton": "Предпросмотр",
     "stopPreviewButton": "Остановить предпросмотр",
     "voicesTitle": "Голоса",
@@ -1241,14 +1272,14 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "Система",
     "stepsCount": "{{steps}} шаг(ов)",
-    "engineKittenTagline": "Минимум ресурсов. Надёжно. Подходит для старых устройств.",
+    "engineKittenTagline": "Минимум ресурсов. Надежно. Подходит для старых устройств.",
     "engineKokoroTagline": "Высокое качество. Медленный запуск. Некоторые голоса могут быть недоступны на вашем устройстве.",
     "engineSupertonicTagline": "Быстрый запуск. Использует больше ОЗУ. Возможны пропуски слов.",
     "engineSystemTagline": "Системные голоса ОС. Всегда доступны, установка не требуется.",
     "engineSystemTitleIos": "Голоса iOS",
     "engineSystemTitleAndroid": "Голоса Android",
     "engineSystemTier": "всегда доступны",
-    "engineTierLightest": "лёгкие",
+    "engineTierLightest": "самые легкие",
     "engineTierBestQuality": "макс. качество",
     "engineTierFastestStart": "быстрый запуск",
     "engineSpecsLine": "{{voices}} голосов · {{sizeMb}} МБ · ~{{ramMb}} МБ ОЗУ",
@@ -1259,9 +1290,17 @@
     "engineRemoveConfirm": "Удалить",
     "engineInstallCta": "Установить · {{sizeMb}} МБ",
     "engineDownloadingLabel": "Загрузка… {{pct}}% · {{mbDone}} / {{sizeMb}} МБ",
-    "engineRetryCta": "Повторить",
+    "engineRetryCta": "Ещё раз",
     "voicesEmptyState": "Голоса не найдены.",
     "kokoroDeviceNote": "Некоторые голоса могут быть недоступны на вашем устройстве.",
     "insufficientStorage": "Недостаточно места — освободите {{requiredMb}} МБ для установки этого движка (доступно {{freeMb}} МБ)."
+  },
+  "htmlPreview": {
+    "defaultTitle": "Предпросмотр",
+    "showPreview": "Показать рендеринг предпросмотра",
+    "showCode": "Показать HTML-код",
+    "copyHtml": "Копировать HTML",
+    "closePreview": "Закрыть предпросмотр",
+    "openFullscreen": "Открыть во весь экран: {{title}}"
   }
 }
