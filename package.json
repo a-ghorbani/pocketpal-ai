@@ -20,6 +20,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "l10n:validate": "node scripts/validate-l10n.js",
+    "verify:fonts": "node scripts/verify-fonts.js",
     "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "format": "prettier --write \"**/*.{js,ts,tsx,json,md}\"",
     "start": "react-native start",

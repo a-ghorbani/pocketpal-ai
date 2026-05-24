@@ -1,7 +1,8 @@
 import * as React from 'react';
-import {Dimensions, StyleSheet} from 'react-native';
+import {Appearance, Dimensions, StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
+import {isHydrated} from 'mobx-persist-store';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider as PaperProvider} from 'react-native-paper';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
@@ -214,13 +215,48 @@ const createStyles = (theme: Theme) =>
     },
   });
 
-// Wrap the App component with AppWithMigration to show migration UI when needed
-const AppWithMigrationWrapper = () => {
+// Neutral background-only hold, rendered until mobx-persist-store has
+// loaded UIStore from AsyncStorage. It is a single full-screen View whose
+// only meaningful property is backgroundColor, resolved from the system
+// color scheme. Deliberately carries NO branding, NO Text, NO
+// SafeAreaProvider, NO insets, and NO spinner: a flat colored View has
+// nothing to match against either native launch surface (iOS has a branded
+// storyboard, Android has no native launch screen), so it cannot diverge
+// from native on any axis and reads simply as "app launching".
+const splashStyles = StyleSheet.create({
+  light: {flex: 1, backgroundColor: '#ffffff'},
+  dark: {flex: 1, backgroundColor: '#000000'},
+});
+
+const HydrationHold = () => (
+  <View
+    testID="hydration-splash"
+    style={
+      Appearance.getColorScheme() === 'dark'
+        ? splashStyles.dark
+        : splashStyles.light
+    }
+  />
+);
+
+// Wrap the App component with AppWithMigration to show migration UI when
+// needed. Gates the first render of any theme-consuming subtree on
+// mobx-persist-store hydration so persisted `language` and `colorScheme`
+// are observed on first paint.
+//
+// The gate must wrap App itself (App calls useTheme() BEFORE <PaperProvider>
+// mounts), so AppWithMigrationWrapper — which sits above App and has no
+// theme dependency — is the chosen host. While unhydrated it renders the
+// neutral background-only hold above.
+const AppWithMigrationWrapper = observer(() => {
+  if (!isHydrated(uiStore)) {
+    return <HydrationHold />;
+  }
   return (
     <AppWithMigration>
       <App />
     </AppWithMigration>
   );
-};
+});
 
 export default AppWithMigrationWrapper;
