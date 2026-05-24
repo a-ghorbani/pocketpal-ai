@@ -103,11 +103,15 @@ describe('design-token grep invariants', () => {
     //   - the tokens module itself
     //   - the theme builder (`theme.ts`) and the hook (`useTheme.ts`)
     //   - the Theme interface (`types.ts`)
+    //   - the FOU-115 Phase 2 DS layer at `components/ds/**` (lands in
+    //     this PR alongside the Surface consumer swaps; the DS layer
+    //     is the new token surface's canonical consumer going forward).
     const ALLOWED_RELATIVE: ReadonlyArray<string> = [
       'theme/tokens',
       'utils/theme.ts',
       'utils/types.ts',
       'hooks/useTheme.ts',
+      'components/ds',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');
