@@ -547,6 +547,364 @@ describe('PalStore', () => {
         );
       });
     });
+
+    describe('createLocalPalFromPalsHub (via downloadPalsHubPal)', () => {
+      // Drive the private conversion through the public download entry point
+      // and assert on the first argument of the palRepository.createPal mock.
+      const buildPalsHubPal = (overrides: Partial<PalsHubPal>): PalsHubPal => ({
+        ...mockPalsHubPal,
+        id: 'conversion-test',
+        ...overrides,
+      });
+
+      const getCreatePalArg = () =>
+        (palRepository.createPal as jest.Mock).mock.calls[0][0];
+
+      beforeEach(() => {
+        (palRepository.createPal as jest.Mock).mockImplementation(
+          async (data: any) => ({
+            ...data,
+            id: 'created-pal-id',
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          }),
+        );
+        (imageUtils.downloadPalThumbnail as jest.Mock).mockResolvedValue(
+          '/path/to/thumb.jpg',
+        );
+      });
+
+      it('happy path: maps pact + greeting with snake_case to camelCase rename', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [
+              {name: 'render_html', required: true},
+              {name: 'calculate', required: false},
+            ],
+          },
+          greeting: {
+            text: 'Hi! Want me to sketch something?',
+            suggested_prompts: ['Draw a sunset', 'Make a chart'],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).toEqual({
+          talents: [
+            {name: 'render_html', necessity: 'required'},
+            {name: 'calculate', necessity: 'optional'},
+          ],
+        });
+        expect(arg.greeting).toEqual({
+          text: 'Hi! Want me to sketch something?',
+          suggestedPrompts: ['Draw a sunset', 'Make a chart'],
+        });
+      });
+
+      it('legacy / both absent: pact and greeting are undefined', async () => {
+        const palsHubPal = buildPalsHubPal({});
+        // mockPalsHubPal has no pact / greeting — older Palshub server shape.
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).toBeUndefined();
+        expect(arg.greeting).toBeUndefined();
+      });
+
+      it('unknown talent name is preserved (no registry validation)', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [{name: 'web_search', required: true}],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).toEqual({
+          talents: [{name: 'web_search', necessity: 'required'}],
+        });
+      });
+
+      it('strict-boolean coercion: only literal true maps to required', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [
+              {name: 'a', required: 'true' as any},
+              {name: 'b', required: 1 as any},
+              {name: 'c', required: true},
+              {name: 'd', required: false},
+              {name: 'e'},
+              {name: 'f', required: null as any},
+              {name: 'g', required: 0 as any},
+              {name: 'h', required: '' as any},
+              {name: 'i', required: 'false' as any},
+              {name: 'j', required: {} as any},
+            ],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).toEqual({
+          talents: [
+            {name: 'a', necessity: 'optional'},
+            {name: 'b', necessity: 'optional'},
+            {name: 'c', necessity: 'required'},
+            {name: 'd', necessity: 'optional'},
+            {name: 'e', necessity: 'optional'},
+            {name: 'f', necessity: 'optional'},
+            {name: 'g', necessity: 'optional'},
+            {name: 'h', necessity: 'optional'},
+            {name: 'i', necessity: 'optional'},
+            {name: 'j', necessity: 'optional'},
+          ],
+        });
+      });
+
+      it('drops pact.version at the conversion boundary', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [{name: 'calculate'}],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).not.toHaveProperty('version');
+        expect(arg.pact).toEqual({
+          talents: [{name: 'calculate', necessity: 'optional'}],
+        });
+      });
+
+      it('empty talents array collapses to undefined', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {version: 1, talents: []},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().pact).toBeUndefined();
+      });
+
+      it('pact with no talents key collapses to undefined', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {version: 1} as any,
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().pact).toBeUndefined();
+      });
+
+      it('pact: null collapses to undefined', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: null as any,
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().pact).toBeUndefined();
+      });
+
+      it('greeting with only text: no suggestedPrompts key', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {text: 'Hi'},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({text: 'Hi'});
+        expect(arg.greeting).not.toHaveProperty('suggestedPrompts');
+      });
+
+      it('greeting with only prompts: text defaults to empty string', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {suggested_prompts: ['a']},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({text: '', suggestedPrompts: ['a']});
+      });
+
+      it('greeting with text + empty prompts array: prompts key omitted', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {text: 'Hi', suggested_prompts: []},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({text: 'Hi'});
+        expect(arg.greeting).not.toHaveProperty('suggestedPrompts');
+      });
+
+      it('greeting all empty (text: "" + empty prompts): collapses to undefined', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {text: '', suggested_prompts: []},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().greeting).toBeUndefined();
+      });
+
+      it('greeting: null collapses to undefined', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: null as any,
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().greeting).toBeUndefined();
+      });
+
+      it('whitespace-only text passes through verbatim (no trim)', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {text: '   '},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({text: '   '});
+      });
+
+      it('drops talent entries with missing or non-string name', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [
+              {name: 'render_html', required: true},
+              {required: true} as any,
+              {name: '', required: true} as any,
+              {name: 42, required: true} as any,
+              {name: null, required: true} as any,
+            ],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).toEqual({
+          talents: [{name: 'render_html', necessity: 'required'}],
+        });
+      });
+
+      it('drops non-object talent entries (null, string)', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [
+              {name: 'calculate', required: true},
+              null as any,
+              'render_html' as any,
+              undefined as any,
+            ],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.pact).toEqual({
+          talents: [{name: 'calculate', necessity: 'required'}],
+        });
+      });
+
+      it('pact collapses to undefined when all talent entries are invalid', async () => {
+        const palsHubPal = buildPalsHubPal({
+          pact: {
+            version: 1,
+            talents: [null as any, {required: true} as any, {name: ''} as any],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().pact).toBeUndefined();
+      });
+
+      it('drops non-array suggested_prompts (defends against payload drift)', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {text: 'Hi', suggested_prompts: 'render_html' as any},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({text: 'Hi'});
+        expect(arg.greeting).not.toHaveProperty('suggestedPrompts');
+      });
+
+      it('non-string text becomes empty string when prompts are present', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {text: 42 as any, suggested_prompts: ['a']},
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({text: '', suggestedPrompts: ['a']});
+      });
+
+      it('non-array suggested_prompts + non-string text together collapse greeting to undefined', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {
+            text: 42 as any,
+            suggested_prompts: 'render_html' as any,
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().greeting).toBeUndefined();
+      });
+
+      it('does not re-derive thumbnail_url or defaultModel from new server arrays', async () => {
+        // Local conversion keeps reading the server-derived legacy singular
+        // fields; the new arrays are not consumed.
+        const palsHubPal = buildPalsHubPal({
+          thumbnail_url: 'https://example.com/thumb.jpg',
+          images: [
+            {url: 'https://example.com/other.jpg', is_primary: true},
+          ] as any,
+          models: [
+            {
+              reference: {
+                repo_id: 'other/repo',
+                filename: 'other.gguf',
+                author: 'other',
+                downloadUrl: 'https://example.com/other.gguf',
+                size: 1,
+              },
+              is_recommended: true,
+            },
+          ] as any,
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.thumbnail_url).toBe('/path/to/thumb.jpg');
+        expect(arg.defaultModel).toBeUndefined();
+        expect(arg).not.toHaveProperty('images');
+        expect(arg).not.toHaveProperty('models');
+      });
+    });
   });
 
   describe('Utility Methods', () => {

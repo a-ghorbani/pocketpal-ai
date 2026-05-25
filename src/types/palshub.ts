@@ -165,6 +165,49 @@ export interface PalsHubPal {
   review_count?: number;
   /** Whether the current user owns this pal (for premium pals) */
   is_owned?: boolean;
+
+  // ============================================================================
+  // PACT (Pal Action & Capability Treaty) — wire shape, snake_case
+  // ============================================================================
+  /**
+   * Optional PACT declaration carried from PalsHub. The wire shape uses
+   * snake_case (`required`) and includes a `version` integer. The local
+   * `Pal.pact` shape uses `necessity: 'required' | 'optional'` and has no
+   * `version` field; the conversion happens once inside
+   * `PalStore.createLocalPalFromPalsHub` (the single conversion site).
+   */
+  pact?: {
+    version: number;
+    talents: Array<{name: string; required?: boolean}>;
+  };
+
+  // ============================================================================
+  // GREETING — wire shape, snake_case
+  // ============================================================================
+  /**
+   * Optional greeting carried from PalsHub. `suggested_prompts` (snake_case)
+   * is renamed to `suggestedPrompts` (camelCase) at the conversion boundary.
+   */
+  greeting?: {
+    text?: string;
+    suggested_prompts?: string[];
+  };
+
+  // ============================================================================
+  // PASS-THROUGH ARRAYS — not consumed by the client today
+  // ============================================================================
+  /**
+   * Server-side image array. The server derives `thumbnail_url` from
+   * `images[].is_primary`; the client reads only `thumbnail_url`. Typed as
+   * `unknown[]` until a concrete consumer arrives.
+   */
+  images?: unknown[];
+  /**
+   * Server-side model array. The server derives `model_reference` from
+   * `models[].is_recommended`; the client reads only `model_reference`. Typed
+   * as `unknown[]` until a concrete consumer arrives.
+   */
+  models?: unknown[];
 }
 
 export interface PalsHubUserPal {
