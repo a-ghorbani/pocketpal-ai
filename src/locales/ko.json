@@ -155,7 +155,14 @@
     "readyToChat": "채팅을 시작할까요? 마지막으로 사용한 모델을 불러옵니다.",
     "pleaseLoadModel": "채팅을 시작하려면 모델을 로드해 주세요.",
     "multimodalNotEnabled": "이 모델은 멀티모달 기능이 활성화되지 않았습니다. 이미지는 표시되지만 AI가 처리하지는 않습니다.",
-    "cannotSendWithoutModel": "모델을 먼저 로드해 주세요"
+    "cannotSendWithoutModel": "모델을 먼저 로드해 주세요",
+    "toolCallTruncated": "도구 호출 중단됨 — 모델의 컨텍스트 용량이 부족한 것으로 보입니다. 더 큰 컨텍스트를 지정하거나 요청 크기를 줄이십시오.",
+    "toolCompatWarning": "이 모델은 도구 호출을 지원하지 않을 수 있어, 결과가 정확하지 않을 수 있습니다.",
+    "softCapWarning": "최상의 성능을 위해 새로운 대화를 시작하세요.",
+    "generatingPreview": "미리보기 생성 중… ({{tokens}} 토큰)",
+    "generatingPreviewPending": "미리보기 생성 중…",
+    "toolUsedChip": "{{name}} 사용됨",
+    "toolErrorBlock": "{{name}} 실패함"
   },
   "common": {
     "cancel": "취소",
@@ -607,6 +614,17 @@
         "nameRequired": "이름을 입력해 주세요",
         "generatingPromptRequired": "AI 프롬프트를 사용한다면 답변 생성 프롬프트를 입력해 주세요",
         "promptModelRequired": "AI 프롬프트를 사용한다면 프롬프트 생성을 위한 모델를 선택해 주세요"
+      },
+      "talents": "능력",
+      "talentNames": {
+        "render_html": "HTML 미리보기",
+        "calculate": "수학 표현식",
+        "datetime": "날짜와 시간"
+      },
+      "talentDescriptions": {
+        "render_html": "채팅 내 HTML 문서 인라인 렌더링",
+        "calculate": "수학 표현식 계산",
+        "datetime": "현재 날짜와 시간 가져오기"
       }
     },
     "lookiePalSheet": {
@@ -641,7 +659,20 @@
     "bubble": {
       "msPerToken": "{{value}}ms/토큰",
       "tokensPerSec": "{{value}} 토큰/초",
-      "ttft": "{{value}}ms TTFT"
+      "ttft": "{{value}}ms TTFT",
+      "interrupted": "중단됨",
+      "truncated": "응답 중단됨 — 컨텍스트가 가득 참"
+    },
+    "pendingIndicator": {
+      "preparingTool": "도구 준비 중",
+      "buildingPage": "페이지 생성 중",
+      "calculating": "계산 중",
+      "lookingUpTime": "시간 확인 중",
+      "stopping": "중단 중…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} 토큰",
+      "elapsed": "{{seconds}}초"
     }
   },
   "feedback": {
@@ -1263,5 +1294,13 @@
     "kokoroDeviceNote": "일부 음성은 모든 기기에서 작동하지 않을 수 있습니다.",
     "insufficientStorage": "저장 공간 부족 — 이 엔진 설치에 필요한 {{requiredMb}}MB를 확보하세요. ({{freeMb}} MB 사용 가능).",
     "engineRemoveBody": "저장 공간 {{sizeMb}} MB 확보 가능"
+  },
+  "htmlPreview": {
+    "defaultTitle": "미리보기",
+    "showPreview": "렌더링된 미리보기 표시",
+    "showCode": "HTML 코드 표시",
+    "copyHtml": "HTML 복사",
+    "closePreview": "미리보기 닫기",
+    "openFullscreen": "전체화면 표시: {{title}}"
   }
 }
