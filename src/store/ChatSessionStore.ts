@@ -87,6 +87,11 @@ class ChatSessionStore {
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
   newChatSettingsSource: 'pal' | 'custom' = 'pal';
+  // User's manual thinking toggle in the no-session chat path. When set,
+  // the resolver applies it as the last layer (after pal) so the toggle
+  // persists; cleared on session creation, new-chat reset, and session
+  // switch.
+  newChatThinkingOverride: boolean | undefined = undefined;
   // Store localized date group names
   dateGroupNames: typeof DEFAULT_GROUP_NAMES = DEFAULT_GROUP_NAMES;
   // Migration status
@@ -309,6 +314,7 @@ class ChatSessionStore {
     runInAction(() => {
       this.newChatPalId = this.activePalId;
       this.newChatSettingsSource = 'pal'; // Reset to default for new chat
+      this.newChatThinkingOverride = undefined;
       // Do not copy completion settings from session to global settings
       // Instead, preserve global settings as they are
       this.exitEditMode();
@@ -355,6 +361,7 @@ class ChatSessionStore {
       // Don't modify global settings when changing sessions
       this.newChatPalId = undefined;
       this.newChatSettingsSource = 'pal'; // Reset for consistency
+      this.newChatThinkingOverride = undefined;
     });
   }
 
@@ -514,6 +521,7 @@ class ChatSessionStore {
         metaData.activePalId = this.newChatPalId;
         this.newChatPalId = undefined;
       }
+      this.newChatThinkingOverride = undefined;
 
       await this.updateSessionTitle(metaData);
 
