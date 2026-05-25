@@ -4,7 +4,7 @@ import {View, Image, Alert, Linking} from 'react-native';
 import {observer} from 'mobx-react-lite';
 import {Text, Button, Divider} from 'react-native-paper';
 
-import {Surface as DSSurface} from '../../ui';
+import {Surface} from '../../ui';
 import {StarIcon, DownloadIcon, UserIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
@@ -166,7 +166,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     );
 
     const renderStats = () => (
-      <DSSurface style={styles.statsSection} elevation={0}>
+      <Surface style={styles.statsSection} elevation={0}>
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <View style={styles.ratingContainer}>
@@ -203,7 +203,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
             </Text>
           </View>
         </View>
-      </DSSurface>
+      </Surface>
     );
 
     return (
