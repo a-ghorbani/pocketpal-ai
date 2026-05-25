@@ -23,9 +23,7 @@ export type RadioSectionProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS RadioSection — composite of label + helper + a list of
- * wrapped RadioButtons (D20 "rebuild on top of wrapped
- * RadioButton").
+ * DS RadioSection — composite of label + helper + a list of RadioButtons.
  */
 export const RadioSection: React.FC<RadioSectionProps> = ({
   testID = 'ds-radio-section',

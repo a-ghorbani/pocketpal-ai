@@ -20,8 +20,7 @@ export type CheckboxProps = Omit<CommonDSProps, 'accessibilityRole'> & {
 };
 
 /**
- * DS Checkbox — Paper wrap (D21). Paper handles accessibilityRole=
- * 'checkbox', accessibilityState, and platform tick visuals.
+ * DS Checkbox (wraps Paper Checkbox).
  *
  * Defaults: variant='default', size='m', testID='ds-checkbox'.
  */

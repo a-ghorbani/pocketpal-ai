@@ -1,28 +1,12 @@
 /**
- * Grep-based invariants for the DS component layer (FOU-115 Phase 2).
- *
- * Companion to `src/theme/tokens/__tests__/invariants.test.ts` — same
- * pattern (recursive `src/components/ds` walk, comment-stripped match)
- * applied to the contract that WHAT §4j sets out.
+ * Grep-based invariants for the DS component layer.
  *
  * Coverage:
- *   - I_DS2: no file under `src/components/ds/` imports `mobx`,
- *     `mobx-react`, or any store module. The DS layer is
- *     observation-free; state integration is the consumer's job.
- *   - I_DS3: `Sheet`, `Modal`, and `Dialog` compose the `Header`
- *     building block (no inline header markup). Caught by asserting
- *     each overlay file imports `Header` and uses it as a JSX tag.
- *   - Scenario I' permanent regression: outside the three wrap-Paper
- *     DS files (Switch / Checkbox / RadioButton) and the locked
- *     thin set, no production file imports the Paper `Surface`
- *     symbol. Mirrors the ESLint `no-restricted-imports` seed and
- *     ensures the rule is not silently weakened by carve-outs.
- *
- * Why duplicate ESLint coverage:
- *   - These walks fail fast in CI even if the lint job is skipped
- *     (translation-only PRs, etc.).
- *   - They make the contract explicit at the test layer, which is
- *     where the rest of the FOU-115 surface is asserted.
+ *   - DS layer is observation-free: no file under `src/components/ds/`
+ *     imports `mobx`, `mobx-react`, or any store module.
+ *   - Sheet / Modal / Dialog compose the `Header` building block.
+ *   - No production file imports the Paper `Surface` symbol — DS
+ *     consumers must import `Surface` from `src/components/ds`.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -56,7 +40,7 @@ function stripComments(src: string): string {
 }
 
 describe('DS layer grep invariants', () => {
-  describe('I_DS2: DS layer is observation-free (no mobx, no store imports)', () => {
+  describe('DS layer is observation-free (no mobx, no store imports)', () => {
     const files = listFiles(DS, n => /\.(ts|tsx)$/.test(n));
 
     it('walks at least one DS file (sanity check)', () => {
@@ -90,14 +74,14 @@ describe('DS layer grep invariants', () => {
           .map(o => `  - ${path.relative(SRC, o.file)}: ${o.match}`)
           .join('\n');
         throw new Error(
-          `DS file(s) violate I_DS2 (observation-free):\n${detail}`,
+          `DS file(s) violate observation-free invariant:\n${detail}`,
         );
       }
       expect(offenders).toEqual([]);
     });
   });
 
-  describe('I_DS3: Sheet / Modal / Dialog compose the Header building block', () => {
+  describe('Sheet / Modal / Dialog compose the Header building block', () => {
     const overlayFiles = [
       path.join(DS, 'Sheet', 'Sheet.tsx'),
       path.join(DS, 'Modal', 'Modal.tsx'),
@@ -116,14 +100,10 @@ describe('DS layer grep invariants', () => {
     );
   });
 
-  describe("Scenario I': Paper `Surface` is not imported outside the wrap-Paper carve-outs", () => {
-    // The ESLint rule excludes Switch/Checkbox/RadioButton — those are
-    // the only DS files that may keep importing the Paper counterpart
-    // (and only after Phase 4 inversion). They don't import Surface
-    // anyway; the exclusion is a forward-compatibility carve-out. The
-    // grep below is broader: NO Paper Surface import anywhere in
-    // `src/`. If a future PR legitimately needs one, the carve-out
-    // belongs both here and in the ESLint config.
+  describe('Paper `Surface` is not imported outside the wrap-Paper carve-outs', () => {
+    // No Paper Surface import anywhere in `src/`. If a future PR
+    // legitimately needs one, the carve-out belongs both here and in
+    // the ESLint config.
     const files = listFiles(SRC, n => /\.(ts|tsx)$/.test(n));
 
     it('walks a meaningful slice of `src/` (sanity check)', () => {

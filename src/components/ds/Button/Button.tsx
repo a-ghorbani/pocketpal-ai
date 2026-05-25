@@ -22,12 +22,11 @@ type ButtonBase = CommonDSProps & {
 export type ButtonProps = WithRequiredA11yLabel<ButtonBase>;
 
 /**
- * DS Button — rebuild family (D13). Built on Pressable + token styles;
- * no react-native-paper.
+ * DS Button. Built on Pressable + token styles; no react-native-paper.
  *
  * Defaults: variant='primary', size='m', testID='ds-button',
  * accessibilityRole='button'. `label` or `accessibilityLabel` (or
- * both) is required at every call-site (D34).
+ * both) is required at every call-site.
  */
 export const Button: React.FC<ButtonProps> = props => {
   const theme = useTheme();

@@ -16,10 +16,9 @@ export type CardProps = CommonDSProps & {
 };
 
 /**
- * DS Card — rebuild family (D17). Token-bound View + radius + padding;
- * optional elevation (variant='elevated') or outline (variant=
- * 'outlined'). When `onPress` is supplied, wraps children in the
- * Pressable primitive for the state-layer overlay.
+ * DS Card. Token-bound View with radius + padding; optional elevation
+ * (variant='elevated') or outline (variant='outlined'). When `onPress`
+ * is supplied, wraps children in Pressable for the state-layer overlay.
  *
  * Defaults: variant='flat', size='m', testID='ds-card',
  * accessibilityRole='none'.

@@ -23,12 +23,11 @@ export type InputProps = Omit<CommonDSProps, 'accessibilityRole'> & {
 };
 
 /**
- * DS Input — rebuild family (D15). Wraps RN TextInput with token-bound
- * bottom-divider + helper/error text + leading/trailing slots.
+ * DS Input. Wraps RN TextInput with token-bound bottom-divider +
+ * helper/error text + leading/trailing slots.
  *
  * Defaults: variant='single', size='m', testID='ds-input'. RN
- * TextInput owns its own a11y so accessibilityRole defaults to
- * 'none'.
+ * TextInput owns its own a11y so accessibilityRole defaults to 'none'.
  */
 export const Input: React.FC<InputProps> = ({
   testID = 'ds-input',

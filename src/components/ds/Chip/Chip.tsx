@@ -26,7 +26,7 @@ const isInteractive = (variant: ChipVariant) =>
   variant === 'selectable' || variant === 'input';
 
 /**
- * DS Chip — rebuild family (D16). Canonical Figma `890:29153` (D8).
+ * DS Chip.
  *
  * Variants:
  * - display: non-interactive label chip (View root).

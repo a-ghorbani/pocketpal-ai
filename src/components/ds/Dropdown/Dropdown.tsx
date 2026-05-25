@@ -25,11 +25,8 @@ export type DropdownProps = CommonDSProps & {
 };
 
 /**
- * DS Dropdown — rebuild family (D25). Composes the sanctioned
- * `src/components/Menu` wrapper (which itself wraps Paper Menu) so
- * the DS layer does NOT import Paper directly — preserves WHAT
- * §4g #6's exact wrap-Paper exception list (Switch/Checkbox/
- * RadioButton only).
+ * DS Dropdown. Composes the existing `src/components/Menu` wrapper
+ * so the DS layer does not import Paper directly.
  *
  * Defaults: variant='standard', size='m', testID='ds-dropdown',
  * accessibilityRole='button'.

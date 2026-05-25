@@ -21,9 +21,7 @@ export type RadioButtonProps = Omit<CommonDSProps, 'accessibilityRole'> & {
 };
 
 /**
- * DS RadioButton — Paper wrap (D20). Paper handles
- * accessibilityRole='radio', group state via parent
- * RadioButton.Group plumbing (or via direct status here).
+ * DS RadioButton (wraps Paper RadioButton).
  *
  * Defaults: variant='default', size='m', testID='ds-radio-<value>',
  * accessibilityRole='radio'.

@@ -16,14 +16,13 @@ export type SwitchProps = Omit<CommonDSProps, 'accessibilityRole'> & {
   size?: SwitchSize;
   value: boolean;
   onValueChange: (value: boolean) => void;
-  /** Required (D34 single-form) — Switch has no visible label. */
+  /** Required — Switch has no visible label. */
   accessibilityLabel: string;
 };
 
 /**
- * DS Switch — Paper wrap (D22). Paper handles accessibilityRole=
- * 'switch', accessibilityValue, and the platform-specific iOS/
- * Android thumb-track behaviour we do not want to re-implement.
+ * DS Switch (wraps Paper Switch — Paper handles accessibilityRole
+ * 'switch', accessibilityValue, and platform thumb-track behaviour).
  *
  * Defaults: variant='default', size='m', testID='ds-switch'.
  */

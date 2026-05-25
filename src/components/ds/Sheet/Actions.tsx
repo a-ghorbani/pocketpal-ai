@@ -21,9 +21,8 @@ export type ActionsProps = {
 };
 
 /**
- * Standard CTA row shared by Sheet/Modal/Dialog. Up to two
- * actions per WHAT §4e.4; bespoke overlays needing more compose
- * their own actions in the body.
+ * Standard CTA row shared by Sheet/Modal/Dialog. Up to two actions;
+ * overlays needing more compose their own actions in the body.
  */
 export const Actions: React.FC<ActionsProps> = ({
   primary,

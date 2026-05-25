@@ -19,16 +19,15 @@ export type IconButtonProps = CommonDSProps & {
   icon: React.ReactNode;
   /**
    * Required: icon-only controls have no visible label, so an
-   * accessibilityLabel must be supplied (D34, single-form
-   * requirement).
+   * accessibilityLabel must be supplied.
    */
   accessibilityLabel: string;
   onPress?: () => void;
 };
 
 /**
- * DS IconButton — rebuild family (D14). Icon-only Pressable with
- * token-bound padding/radius/colors. No Paper IconButton.
+ * DS IconButton. Icon-only Pressable with token-bound padding /
+ * radius / colors. No Paper IconButton.
  *
  * Defaults: variant='standard', size='m', testID='ds-icon-button',
  * accessibilityRole='button'.

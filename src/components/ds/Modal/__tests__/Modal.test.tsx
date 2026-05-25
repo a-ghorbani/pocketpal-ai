@@ -5,7 +5,7 @@ import {render} from '../../../../../jest/test-utils';
 import {Modal} from '../Modal';
 
 describe('Modal', () => {
-  it('renders a single ds-header when visible (I_DS3)', () => {
+  it('renders a single ds-header when visible', () => {
     const {getAllByTestId} = render(
       <Modal isVisible title="Settings">
         <Text>body</Text>

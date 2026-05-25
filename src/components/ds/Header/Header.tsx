@@ -17,10 +17,8 @@ export type HeaderProps = Omit<CommonDSProps, 'disabled'> & {
 
 /**
  * Header — the shared building block for every DS overlay
- * (Sheet, Modal, Dialog). Figma `3011:23955`.
- *
- * I_DS3: every DS overlay MUST compose `<Header>`; bespoke header
- * markup inside an overlay is forbidden.
+ * (Sheet, Modal, Dialog). Every DS overlay MUST compose `<Header>`;
+ * bespoke header markup inside an overlay is forbidden.
  *
  * Defaults: testID='ds-header', accessibilityRole='header',
  * align='leading'.

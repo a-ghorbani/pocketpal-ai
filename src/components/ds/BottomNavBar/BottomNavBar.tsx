@@ -21,8 +21,7 @@ export type BottomNavBarProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS BottomNavBar — rebuild family (D19). Canonical Figma `143:4685`
- * (D10). Presentational shell — no React Navigation wiring (Phase 3).
+ * DS BottomNavBar — presentational shell (no navigation wiring).
  *
  * Defaults: testID='ds-bottom-nav', accessibilityRole='tablist'.
  * Item testID: 'ds-bottom-nav-item-<value>'; item role 'tab'.

@@ -5,7 +5,7 @@ import {render} from '../../../../../jest/test-utils';
 import {Dialog} from '../Dialog';
 
 describe('Dialog', () => {
-  it('renders a single ds-header when visible (I_DS3)', () => {
+  it('renders a single ds-header when visible', () => {
     const {getAllByTestId} = render(
       <Dialog isVisible title="Confirm">
         <Text>body</Text>

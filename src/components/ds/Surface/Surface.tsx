@@ -17,9 +17,7 @@ export type SurfaceProps = Omit<CommonDSProps, 'disabled'> & {
   /**
    * Elevation value (Android shadow + iOS shadow once paired with
    * shadow* props by the consumer). Defaults to `1` to match Paper
-   * Surface's v5 default — keeps the two Phase 2 Surface swap consumers
-   * pixel-identical (UsageStats does not pass elevation; PalDetailSheet
-   * passes elevation={0} explicitly).
+   * Surface's v5 default.
    */
   elevation?: number;
   children?: React.ReactNode;
@@ -27,10 +25,6 @@ export type SurfaceProps = Omit<CommonDSProps, 'disabled'> & {
 
 /**
  * DS Surface — token-bound background + radius + optional elevation.
- *
- * Rebuild family (D32). Replaces `react-native-paper` Surface for the
- * two existing consumers (UsageStats tooltip + PalDetailSheet stats
- * section); seeds the Paper-import blocklist (§4g.7).
  *
  * Defaults: testID='ds-surface', accessibilityRole='none', elevation=1.
  */

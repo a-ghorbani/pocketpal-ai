@@ -32,9 +32,9 @@ interface SheetComponent extends React.FC<SheetProps> {
 }
 
 /**
- * DS Sheet — composition of @gorhom/bottom-sheet + DS Header
- * + body + Actions (D27, D7). The DS Sheet renders exactly one
- * Header (I_DS3); bespoke header markup inside is forbidden.
+ * DS Sheet — composition of @gorhom/bottom-sheet + DS Header + body +
+ * Actions. Renders exactly one Header; bespoke header markup inside is
+ * forbidden.
  *
  * Defaults: testID='ds-sheet'.
  */

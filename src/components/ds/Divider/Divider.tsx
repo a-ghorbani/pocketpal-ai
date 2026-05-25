@@ -14,8 +14,8 @@ export type DividerProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS Divider — rebuild family. Single-thickness rule from
- * theme.stroke.<thickness> with theme.colors.outlineVariant.
+ * DS Divider. Single-thickness rule from theme.stroke.<thickness> with
+ * theme.colors.outlineVariant.
  *
  * Defaults: variant='horizontal', thickness='sm', testID='ds-divider',
  * accessibilityRole='none'.

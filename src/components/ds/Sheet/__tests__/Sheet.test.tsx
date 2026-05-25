@@ -5,7 +5,7 @@ import {render} from '../../../../../jest/test-utils';
 import {Sheet} from '../Sheet';
 
 describe('Sheet', () => {
-  it('renders a single ds-header in the tree (I_DS3)', () => {
+  it('renders a single ds-header in the tree', () => {
     const {getAllByTestId} = render(
       <Sheet isVisible title="Pick a model" subtitle="Loaded models only">
         <Text>body</Text>

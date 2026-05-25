@@ -23,9 +23,7 @@ export type TabsProps = Omit<CommonDSProps, 'disabled'> & {
 };
 
 /**
- * DS Tabs — rebuild family (D18). Canonical Figma `764:27807` (D9).
- *
- * Defaults: variant='underline', size='m', testID='ds-tabs',
+ * DS Tabs. Defaults: variant='underline', size='m', testID='ds-tabs',
  * accessibilityRole='tablist'. Each item is a Pressable with
  * accessibilityRole='tab' and selected state from `selectedValue`.
  */

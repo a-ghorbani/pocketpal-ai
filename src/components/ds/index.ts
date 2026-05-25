@@ -1,12 +1,5 @@
 /**
- * Public DS surface for Phase 2 (FOU-115).
- *
- * Named re-exports only (no default exports). Phase 3 swaps import
- * from this barrel.
- *
- * NOT re-exported:
- * - primitives/Pressable (DS-internal building block).
- * - anything from src/components/* (legacy namespace).
+ * Public DS surface. Named re-exports only.
  */
 export {Surface} from './Surface';
 export type {SurfaceProps} from './Surface';

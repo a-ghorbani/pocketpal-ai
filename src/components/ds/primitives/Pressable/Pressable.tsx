@@ -38,16 +38,10 @@ export type PressablePrimitiveProps = Omit<
 };
 
 /**
- * The DS Pressable primitive.
- *
- * Wraps RN Pressable and renders a token-bound state-layer overlay on
- * press / focus / hover. It is the single writer of the state-layer
- * pipeline for the DS layer (WHAT §4c.4, §4k row 1).
- *
- * - Tokens-only: every color it draws comes from theme.colors.*.
- * - Observation-free: no mobx imports (I_DS2).
- * - Does NOT supply padding, radius, background. Consumers wrap in
- *   their own styled View / pass an outer style.
+ * DS Pressable primitive. Wraps RN Pressable and renders a token-bound
+ * state-layer overlay on press / focus / hover. Tokens-only; does NOT
+ * supply padding, radius, or background — consumers wrap in their own
+ * styled View or pass an outer style.
  */
 export const Pressable: React.FC<PressablePrimitiveProps> = ({
   style,

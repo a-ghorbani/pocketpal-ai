@@ -17,11 +17,7 @@ export type MessageContentProps = Omit<CommonDSProps, 'disabled'> & {
 /**
  * DS MessageContent — token-bound message bubble shell.
  *
- * Variants: user / assistant / system. Size axis is single ('m') —
- * message bubbles don't vary by size in Figma `128:3113`.
- *
- * The existing `src/components/Message/*` continues to render; this
- * is the additive DS variant for Phase 3 to wire.
+ * Variants: user / assistant / system. Size axis is single ('m').
  *
  * Defaults: variant='assistant', size='m', testID='ds-message-content',
  * accessibilityRole='none'.

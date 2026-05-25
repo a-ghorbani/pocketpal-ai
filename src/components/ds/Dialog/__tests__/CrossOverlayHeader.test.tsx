@@ -7,12 +7,7 @@ import {Dialog} from '../Dialog';
 import {Modal} from '../../Modal/Modal';
 import {Sheet} from '../../Sheet/Sheet';
 
-/**
- * Scenario F (WHAT §6): a DSDialog and a DSModal and a DSSheet
- * all rendered with the same title produce the SAME Header
- * subtree shape (modulo wrapping by the overlay's surface).
- */
-describe('Cross-overlay header reuse (Scenario F)', () => {
+describe('Cross-overlay header reuse', () => {
   it('all three overlays render the same ds-header subtree', () => {
     const dialog = render(
       <Dialog isVisible title="Hello" subtitle="World">

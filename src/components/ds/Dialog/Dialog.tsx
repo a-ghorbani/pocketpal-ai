@@ -27,8 +27,8 @@ interface DialogComponent extends React.FC<DialogProps> {
 }
 
 /**
- * DS Dialog — Portal + centered Surface + DS Header composition
- * (D29). Single Header per I_DS3.
+ * DS Dialog — Portal + centered Surface + DS Header composition.
+ * Renders a single Header; bespoke header markup is forbidden.
  *
  * Defaults: testID='ds-dialog'.
  */

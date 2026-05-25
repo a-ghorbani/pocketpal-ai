@@ -3,9 +3,8 @@ import {StyleSheet, type TextStyle, type ViewStyle} from 'react-native';
 import type {Theme} from '../../../utils/types';
 
 /**
- * CategoryBadge palette — closed union. Phase 3 may widen this as
- * Pals categories surface real labels; today we ship a small,
- * token-bound palette covering the common badge color slots.
+ * CategoryBadge palette — small token-bound palette covering the common
+ * badge color slots.
  */
 export type CategoryBadgeVariant =
   | 'neutral'

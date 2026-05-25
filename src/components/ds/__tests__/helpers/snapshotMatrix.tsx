@@ -1,8 +1,6 @@
 /**
  * Snapshot-matrix helper for DS family tests.
  *
- * Generates the bounded snapshot matrix described in WHAT §4h:
- *
  *   Rebuild families (default):
  *     baseline   = variant × size × {default,disabled} × {light,dark}
  *     pressed    = variant × size=<default> × pressed × light  (opt-in via pressedVariants)
@@ -14,8 +12,8 @@
  *     no pressed / no focused (those are Paper internals).
  *
  * Each cell renders against a real theme from
- * themeFixtures.byMode(mode).byLocale(lang) (D33) wrapped in a
- * PaperProvider, snapshotting the resolved tree via toJSON().
+ * themeFixtures.byMode(mode).byLocale(lang) wrapped in a PaperProvider,
+ * snapshotting the resolved tree via toJSON().
  */
 import React from 'react';
 import {PaperProvider} from 'react-native-paper';
@@ -45,7 +43,7 @@ export type SnapshotMatrixAxes<V extends string, S extends string> = {
   modes?: readonly DSMode[];
   /** Variants to snapshot in the pressed cell. Empty = skip. */
   pressedVariants?: readonly V[];
-  /** Variants to snapshot in the focused cell. Empty = skip per WHAT §4h.2 #4 (Input/Button only). */
+  /** Variants to snapshot in the focused cell. Empty = skip (Input/Button only). */
   focusedVariants?: readonly V[];
   /** RTL canary languages. Empty = no canary. Typical: ['fa']. */
   langs?: readonly AvailableLanguage[];
@@ -53,7 +51,7 @@ export type SnapshotMatrixAxes<V extends string, S extends string> = {
    * Variant used for the RTL canary. Falls back to variants[0] when
    * absent. Caller MUST set this when variants[0] is non-interactive
    * (e.g. Chip's `display`) so the canary exercises the state-layer
-   * path. See HOW Step 4 sub-task 4.
+   * path.
    */
   rtlCanaryVariant?: V;
   /** Wrap-Paper value axis ({true,false}). Empty = no value axis. */
