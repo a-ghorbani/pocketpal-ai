@@ -22,6 +22,7 @@ import type {PalFormData} from './types';
 import {ColorSection} from './ColorSection';
 import {TalentSection} from './TalentSection';
 import {ModelSelector} from './ModelSelector';
+import {GreetingSection} from './GreetingSection';
 import {SectionDivider} from './SectionDivider';
 import {ModelNotAvailable} from './ModelNotAvailable';
 import {SystemPromptSection} from './SystemPromptSection';
@@ -55,6 +56,8 @@ const INITIAL_STATE: PalFormData = {
   generatingPrompt: '',
   completionSettings: undefined,
   talents: [],
+  greetingText: '',
+  suggestedPrompts: [],
 };
 
 export const PalSheet: React.FC<PalSheetProps> = observer(
@@ -103,6 +106,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         generatingPrompt: z.string().nullable().optional(),
         completionSettings: z.record(z.string(), z.any()).optional(),
         talents: z.array(z.string()).optional(),
+        greetingText: z.string().optional(),
+        suggestedPrompts: z.array(z.string()).optional(),
       });
 
       // Add dynamic parameter validation
@@ -158,6 +163,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         generatingPrompt: pal.generatingPrompt || '',
         completionSettings: pal.completionSettings,
         talents: pal.pact?.talents?.map(t => t.name) ?? [],
+        greetingText: pal.greeting?.text ?? '',
+        suggestedPrompts: pal.greeting?.suggestedPrompts ?? [],
         ...pal.parameters, // Spread dynamic parameters
       };
       setCurrentCompletionSettings(pal.completionSettings);
@@ -178,6 +185,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
         generatingPrompt: pal.generatingPrompt || '',
         completionSettings: pal.completionSettings,
         talents: pal.pact?.talents?.map(t => t.name) ?? [],
+        greetingText: pal.greeting?.text ?? '',
+        suggestedPrompts: pal.greeting?.suggestedPrompts ?? [],
         ...pal.parameters, // Spread dynamic parameters
       };
       methods.reset(formData);
@@ -394,6 +403,8 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
                   closeSheet={handleClose}
                   parameterSchema={activeSchema}
                 />
+
+                <GreetingSection />
 
                 <ColorSection />
 
