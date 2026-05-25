@@ -95,12 +95,20 @@ export class PalSheetPage extends BasePage {
     await addBtn.waitForDisplayed({timeout: 5000});
     await addBtn.click();
     await browser.pause(500);
-    // iOS sim sometimes drops accessibility-id taps on a paper Button wrapper;
-    // a follow-up tap on the same element reliably triggers onPress.
-    await addBtn.click().catch(() => undefined);
-    await browser.pause(800);
 
     const rowSelector = Selectors.palSheet.suggestedPromptInput(nextIdx);
+    // iOS sim sometimes drops accessibility-id taps on a paper Button wrapper;
+    // only re-tap when the first click did not append a new row so we don't
+    // create an orphan empty row on platforms where the first tap is reliable.
+    const rowAppeared = await browser
+      .$(rowSelector)
+      .isExisting()
+      .catch(() => false);
+    if (!rowAppeared) {
+      await addBtn.click().catch(() => undefined);
+      await browser.pause(800);
+    }
+
     // Sheets on iOS often report isDisplayed=false for elements that exist
     // (Paper TextInput with empty value has zero rendered size). Use the
     // existence-only scroll + waitForExist instead of waitForDisplayed.

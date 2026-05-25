@@ -260,13 +260,10 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
               }
             : {talents: [] as TalentRef[]};
 
-        // Build greeting from editor fields. Same pattern as `pact` above:
-        // always set the key explicitly, using an empty-object sentinel for
-        // the "no greeting" case so PalRepository's `!== undefined` gate
-        // does not preserve a stale value. `greetingText` is never trimmed —
-        // the predicate uses raw length to stay symmetric with the PalsHub
-        // wire-boundary predicate (greeting body is prose, leading/trailing
-        // whitespace can be intentional).
+        // Empty-object sentinel clears stale greeting via PalRepository's
+        // `!== undefined` update gate. Greeting text is not trimmed (raw
+        // length matches the wire-side text predicate); prompts are trimmed
+        // + de-empted here as an editor-side UX cleanup.
         const greetingText = data.greetingText ?? '';
         const cleanedPrompts = (data.suggestedPrompts ?? [])
           .map(p => p.trim())

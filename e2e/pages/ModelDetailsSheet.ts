@@ -86,9 +86,15 @@ export class ModelDetailsSheet extends BasePage {
     const downloadButton = fileCard.$(Selectors.modelDetails.downloadButtonElement);
     const exists = await downloadButton
       .waitForExist({timeout: 2000})
+      .then(() => true)
       .catch(() => false);
-    if (exists !== false) {
+    if (exists) {
       await downloadButton.click();
+    } else {
+      console.log(
+        `[tapDownloadForFile] no download button on card for ${filename} ` +
+          `after 2s; assuming already downloaded`,
+      );
     }
   }
 

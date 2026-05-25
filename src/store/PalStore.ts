@@ -484,13 +484,18 @@ class PalStore {
     const wireGreeting = palsHubPal.greeting;
     const wireText = wireGreeting?.text;
     const wirePrompts = wireGreeting?.suggested_prompts;
+    const validPrompts = Array.isArray(wirePrompts)
+      ? wirePrompts.filter(
+          (p): p is string => typeof p === 'string' && p.length > 0,
+        )
+      : [];
     const hasText = typeof wireText === 'string' && wireText.length > 0;
-    const hasPrompts = Array.isArray(wirePrompts) && wirePrompts.length > 0;
+    const hasPrompts = validPrompts.length > 0;
     const greeting =
       hasText || hasPrompts
         ? {
             text: typeof wireText === 'string' ? wireText : '',
-            ...(hasPrompts ? {suggestedPrompts: wirePrompts} : {}),
+            ...(hasPrompts ? {suggestedPrompts: validPrompts} : {}),
           }
         : undefined;
 

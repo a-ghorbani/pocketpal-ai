@@ -874,6 +874,41 @@ describe('PalStore', () => {
         expect(getCreatePalArg().greeting).toBeUndefined();
       });
 
+      it('drops non-string and empty-string entries from suggested_prompts', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {
+            text: 'Hi',
+            suggested_prompts: [
+              'Draw a sunset',
+              42 as any,
+              null as any,
+              '',
+              'Make a chart',
+            ],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        const arg = getCreatePalArg();
+        expect(arg.greeting).toEqual({
+          text: 'Hi',
+          suggestedPrompts: ['Draw a sunset', 'Make a chart'],
+        });
+      });
+
+      it('collapses greeting when all suggested_prompts entries are invalid', async () => {
+        const palsHubPal = buildPalsHubPal({
+          greeting: {
+            suggested_prompts: ['', null as any, 7 as any],
+          },
+        });
+
+        await palStore.downloadPalsHubPal(palsHubPal);
+
+        expect(getCreatePalArg().greeting).toBeUndefined();
+      });
+
       it('does not re-derive thumbnail_url or defaultModel from new server arrays', async () => {
         // Local conversion keeps reading the server-derived legacy singular
         // fields; the new arrays are not consumed.

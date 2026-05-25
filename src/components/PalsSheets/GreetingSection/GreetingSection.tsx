@@ -56,7 +56,7 @@ export const GreetingSection = () => {
                       <View style={styles.promptInput}>
                         <TextInput
                           testID={`suggested-prompt-input-${idx}`}
-                          value={prompt}
+                          value={typeof prompt === 'string' ? prompt : ''}
                           onChangeText={text =>
                             onChange([
                               ...prompts.slice(0, idx),
