@@ -1,7 +1,6 @@
 import React, {useContext} from 'react';
-import {Pressable, View} from 'react-native';
-import {IconButton, Text} from 'react-native-paper';
-import {observer} from 'mobx-react-lite';
+import {View} from 'react-native';
+import {Button, IconButton, Text} from 'react-native-paper';
 import {useFormContext, Controller} from 'react-hook-form';
 
 import {useTheme} from '../../../hooks';
@@ -12,7 +11,7 @@ import type {PalFormData} from '../types';
 
 import {createStyles} from './styles';
 
-export const GreetingSection = observer(() => {
+export const GreetingSection = () => {
   const {control} = useFormContext<PalFormData>();
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -80,19 +79,13 @@ export const GreetingSection = observer(() => {
                     </View>
                   ))}
                 </View>
-                <Pressable
+                <Button
                   testID="suggested-prompt-add-button"
-                  accessibilityRole="button"
-                  accessibilityLabel={labels.addPromptButton}
-                  style={({pressed}) => [
-                    styles.addButton,
-                    pressed && styles.addButtonPressed,
-                  ]}
+                  mode="contained-tonal"
+                  style={styles.addButton}
                   onPress={() => onChange([...prompts, ''])}>
-                  <Text style={styles.addButtonText}>
-                    {`+  ${labels.addPromptButton}`}
-                  </Text>
-                </Pressable>
+                  {`+  ${labels.addPromptButton}`}
+                </Button>
               </View>
             );
           }}
@@ -100,4 +93,4 @@ export const GreetingSection = observer(() => {
       </View>
     </View>
   );
-});
+};

@@ -31,14 +31,5 @@ export const createStyles = (theme: Theme) =>
     addButton: {
       alignSelf: 'flex-start',
       marginTop: 4,
-      paddingVertical: 8,
-      paddingHorizontal: 4,
-    },
-    addButtonPressed: {
-      opacity: 0.6,
-    },
-    addButtonText: {
-      ...theme.fonts.labelLarge,
-      color: theme.colors.primary,
     },
   });
