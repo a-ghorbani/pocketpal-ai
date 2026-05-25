@@ -94,13 +94,20 @@ export class PalSheetPage extends BasePage {
     const addBtn = browser.$(addSelector);
     await addBtn.waitForDisplayed({timeout: 5000});
     await addBtn.click();
-    await browser.pause(300);
+    await browser.pause(500);
+    // iOS sim sometimes drops accessibility-id taps on a paper Button wrapper;
+    // a follow-up tap on the same element reliably triggers onPress.
+    await addBtn.click().catch(() => undefined);
+    await browser.pause(800);
 
     const rowSelector = Selectors.palSheet.suggestedPromptInput(nextIdx);
-    await Gestures.scrollInSheetToElement(rowSelector, 5);
+    // Sheets on iOS often report isDisplayed=false for elements that exist
+    // (Paper TextInput with empty value has zero rendered size). Use the
+    // existence-only scroll + waitForExist instead of waitForDisplayed.
+    await Gestures.scrollInSheetToElementExists(rowSelector, 5);
     const rowInput = browser.$(rowSelector);
-    await rowInput.waitForDisplayed({timeout: 5000});
-    await rowInput.clearValue();
+    await rowInput.waitForExist({timeout: 5000});
+    await rowInput.clearValue().catch(() => undefined);
     await rowInput.setValue(text);
     await this.dismissKeyboard();
   }
