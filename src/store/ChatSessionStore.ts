@@ -477,13 +477,24 @@ class ChatSessionStore {
     completionSettings: CompletionParams = defaultCompletionSettings,
   ): Promise<void> {
     try {
+      // If the user has staged a thinking override for the new-chat path,
+      // the resolved snapshot in `completionSettings` already carries it
+      // (applied last in `resolveCompletionSettings`). Birth the session as
+      // 'custom' so the resolver returns that snapshot verbatim on every
+      // subsequent inference — pal-derived params survive (merged before
+      // the override) and the user's choice is preserved.
+      const birthSource: 'pal' | 'custom' =
+        this.newChatThinkingOverride !== undefined
+          ? 'custom'
+          : this.newChatSettingsSource;
+
       // Create in database
       const newSession = await chatSessionRepository.createSession(
         title,
         initialMessages,
         completionSettings,
         this.newChatPalId,
-        this.newChatSettingsSource,
+        birthSource,
       );
 
       // Get the full session data
@@ -513,7 +524,7 @@ class ChatSessionStore {
         date: newSession.date,
         messages,
         completionSettings: settings,
-        settingsSource: this.newChatSettingsSource, // Use the stored settings source choice
+        settingsSource: birthSource, // 'custom' if a thinking override was staged, else stored source
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
 
