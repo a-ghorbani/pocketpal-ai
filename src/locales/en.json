@@ -772,6 +772,15 @@
         "render_html": "Render HTML documents inline in chat",
         "calculate": "Evaluate mathematical expressions",
         "datetime": "Get the current date and time"
+      },
+      "greeting": {
+        "sectionLabel": "Greeting",
+        "textLabel": "Greeting message",
+        "textPlaceholder": "What should this pal say on an empty chat?",
+        "suggestedPromptsLabel": "Suggested prompts",
+        "addPromptButton": "+ Add prompt",
+        "promptPlaceholder": "A short prompt for the chip",
+        "removePromptLabel": "Remove prompt"
       }
     },
     "assistantPalSheet": {
