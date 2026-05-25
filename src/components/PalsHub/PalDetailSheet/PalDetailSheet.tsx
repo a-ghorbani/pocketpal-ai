@@ -4,7 +4,7 @@ import {View, Image, Alert, Linking} from 'react-native';
 import {observer} from 'mobx-react-lite';
 import {Text, Button, Divider} from 'react-native-paper';
 
-import {Surface as DSSurface} from '../../ds';
+import {Surface as DSSurface} from '../../ui';
 import {StarIcon, DownloadIcon, UserIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';

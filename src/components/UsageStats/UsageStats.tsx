@@ -11,7 +11,7 @@ import {Portal} from 'react-native-paper';
 import DeviceInfo from 'react-native-device-info';
 import {Svg, Path, Rect, Line} from 'react-native-svg';
 
-import {Surface as DSSurface} from '../ds';
+import {Surface as DSSurface} from '../ui';
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 

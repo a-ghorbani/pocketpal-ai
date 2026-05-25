@@ -53,9 +53,9 @@ module.exports = {
       files: ['src/**/*.{ts,tsx}'],
       excludedFiles: [
         'src/__automation__/**',
-        'src/components/ds/Switch/**',
-        'src/components/ds/Checkbox/**',
-        'src/components/ds/RadioButton/**',
+        'src/components/ui/Switch/**',
+        'src/components/ui/Checkbox/**',
+        'src/components/ui/RadioButton/**',
       ],
       rules: {
         'no-restricted-imports': [
@@ -66,7 +66,7 @@ module.exports = {
                 name: 'react-native-paper',
                 importNames: ['Surface'],
                 message:
-                  "DS replacement available: import 'Surface' from 'src/components/ds' instead. Locked thin Paper set: Text, Button, IconButton, Portal, Provider.",
+                  "DS replacement available: import 'Surface' from 'src/components/ui' instead. Locked thin Paper set: Text, Button, IconButton, Portal, Provider.",
               },
             ],
             patterns: [
@@ -86,7 +86,7 @@ module.exports = {
       // theme.colors.* (or theme.interaction.*). Scoped intentionally
       // narrow — DS test fixtures may still need literal hex; component
       // .tsx files don't have inline styles.
-      files: ['src/components/ds/**/styles.ts'],
+      files: ['src/components/ui/**/styles.ts'],
       rules: {
         'no-restricted-syntax': [
           'error',
