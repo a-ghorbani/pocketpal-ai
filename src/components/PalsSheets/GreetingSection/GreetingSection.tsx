@@ -1,6 +1,6 @@
 import React, {useContext} from 'react';
-import {View} from 'react-native';
-import {Button, IconButton, Text} from 'react-native-paper';
+import {Pressable, View} from 'react-native';
+import {IconButton, Text} from 'react-native-paper';
 import {observer} from 'mobx-react-lite';
 import {useFormContext, Controller} from 'react-hook-form';
 
@@ -80,14 +80,19 @@ export const GreetingSection = observer(() => {
                     </View>
                   ))}
                 </View>
-                <Button
+                <Pressable
                   testID="suggested-prompt-add-button"
-                  mode="text"
-                  icon="plus"
-                  style={styles.addButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={labels.addPromptButton}
+                  style={({pressed}) => [
+                    styles.addButton,
+                    pressed && styles.addButtonPressed,
+                  ]}
                   onPress={() => onChange([...prompts, ''])}>
-                  {labels.addPromptButton}
-                </Button>
+                  <Text style={styles.addButtonText}>
+                    {`+  ${labels.addPromptButton}`}
+                  </Text>
+                </Pressable>
               </View>
             );
           }}
