@@ -778,7 +778,7 @@
         "textLabel": "Greeting message",
         "textPlaceholder": "What should this pal say on an empty chat?",
         "suggestedPromptsLabel": "Suggested prompts",
-        "addPromptButton": "+ Add prompt",
+        "addPromptButton": "Add prompt",
         "promptPlaceholder": "A short prompt for the chip",
         "removePromptLabel": "Remove prompt"
       }
