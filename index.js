@@ -7,14 +7,10 @@ import 'react-native-url-polyfill/auto';
 
 import {AppRegistry, LogBox} from 'react-native';
 
-// The e2e flavor ships a debuggable release build (so `adb shell
-// run-as` works for the automation bridge), which keeps LogBox active.
-// The in-app warning toast covers UI elements (most visibly the
-// Models-screen FAB) and breaks Appium selectors. Silence LogBox only
-// in e2e builds so day-to-day dev sessions keep seeing warnings.
-if (__E2E__) {
-  LogBox.ignoreAllLogs(true);
-}
+// The in-app warning toast covers chat-bottom controls and other UI
+// elements that Appium needs to interact with. Silence LogBox at module
+// init — no-op in true release builds where LogBox is already inactive.
+LogBox.ignoreAllLogs(true);
 
 import App from './App';
 import {name as appName} from './app.json';
