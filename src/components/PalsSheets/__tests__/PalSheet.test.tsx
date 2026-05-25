@@ -1034,10 +1034,7 @@ describe('PalSheet', () => {
         fireEvent.press(getByTestId('suggested-prompt-add-button'));
       });
       await act(async () => {
-        fireEvent.changeText(
-          getByTestId('suggested-prompt-input-0'),
-          '  a  ',
-        );
+        fireEvent.changeText(getByTestId('suggested-prompt-input-0'), '  a  ');
       });
 
       // Row 1: '' (empty — should be dropped)
@@ -1050,10 +1047,7 @@ describe('PalSheet', () => {
         fireEvent.press(getByTestId('suggested-prompt-add-button'));
       });
       await act(async () => {
-        fireEvent.changeText(
-          getByTestId('suggested-prompt-input-2'),
-          '   ',
-        );
+        fireEvent.changeText(getByTestId('suggested-prompt-input-2'), '   ');
       });
 
       await act(async () => {
