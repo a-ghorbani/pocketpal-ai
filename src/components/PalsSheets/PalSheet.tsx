@@ -260,6 +260,25 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
               }
             : {talents: [] as TalentRef[]};
 
+        // Build greeting from editor fields. Same pattern as `pact` above:
+        // always set the key explicitly, using an empty-object sentinel for
+        // the "no greeting" case so PalRepository's `!== undefined` gate
+        // does not preserve a stale value. `greetingText` is never trimmed —
+        // the predicate uses raw length to stay symmetric with the PalsHub
+        // wire-boundary predicate (greeting body is prose, leading/trailing
+        // whitespace can be intentional).
+        const greetingText = data.greetingText ?? '';
+        const cleanedPrompts = (data.suggestedPrompts ?? [])
+          .map(p => p.trim())
+          .filter(p => p.length > 0);
+        const hasGreeting =
+          greetingText.length > 0 || cleanedPrompts.length > 0;
+        const greeting: Pal['greeting'] = hasGreeting
+          ? cleanedPrompts.length > 0
+            ? {text: greetingText, suggestedPrompts: cleanedPrompts}
+            : {text: greetingText}
+          : {text: '', suggestedPrompts: []};
+
         // Create pal data
         // For updates, if we don't set values, it will preserve the original pal's values
         const palData: Partial<Pal> = {
@@ -281,6 +300,7 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           // Include (local) completion settings if they exist
           completionSettings: data.completionSettings,
           pact,
+          greeting,
         };
 
         if (isEditing) {
