@@ -230,6 +230,80 @@ describe('ChatScreen', () => {
     expect(modelStore.engine?.stopCompletion).toHaveBeenCalled();
   });
 
+  describe('thinking toggle in no-session chat', () => {
+    const palStore = require('../../../store').palStore;
+    const thinkingPal = {
+      id: 'pal-thinking',
+      type: 'assistant' as const,
+      name: 'Thinker',
+      systemPrompt: '',
+      parameters: {},
+      parameterSchema: [],
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      source: 'local' as const,
+      completionSettings: {enable_thinking: true},
+    };
+
+    let savedModels: any[];
+
+    beforeEach(() => {
+      // Inject a thinking-capable model into the mock model list so the
+      // `activeModel?.supportsThinking` computed in ChatScreen returns true.
+      savedModels = modelStore.models;
+      const thinkingModel = {
+        ...modelStore.models[0],
+        id: 'thinking-model-id',
+        supportsThinking: true,
+      };
+      modelStore.models = [...modelStore.models, thinkingModel];
+
+      runInAction(() => {
+        modelStore.activeModelId = 'thinking-model-id';
+        modelStore.context = new LlamaContext(mockLlamaContextParams);
+        chatSessionStore.activeSessionId = null;
+        chatSessionStore.newChatPalId = thinkingPal.id;
+        chatSessionStore.newChatThinkingOverride = undefined;
+      });
+      modelStore.engine = {
+        completion: jest.fn(),
+        stopCompletion: jest.fn(),
+      };
+      palStore.pals = [thinkingPal];
+    });
+
+    afterEach(() => {
+      modelStore.models = savedModels;
+      modelStore.activeModelId = undefined;
+      jest.restoreAllMocks();
+    });
+
+    it('toggle press writes newChatThinkingOverride and does NOT touch newChatCompletionSettings', async () => {
+      const setGlobalSpy = jest.spyOn(
+        chatSessionStore,
+        'setNewChatCompletionSettings',
+      );
+
+      const {getByLabelText} = render(<ChatScreen />, {
+        withNavigation: true,
+      });
+
+      // Initial state: thinkingEnabled defaults true → toggle label is
+      // "Disable thinking mode". Tapping it should write `false` into the
+      // override field.
+      const toggle = getByLabelText('Disable thinking mode');
+      await act(async () => {
+        fireEvent.press(toggle);
+      });
+
+      // Primary signal: override is set to the new value.
+      expect(chatSessionStore.newChatThinkingOverride).toBe(false);
+
+      // Negative guard: global no-chat settings were NOT mutated.
+      expect(setGlobalSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('tool-compatibility banner', () => {
     const palStore = require('../../../store').palStore;
     const uiStore = require('../../../store').uiStore;
