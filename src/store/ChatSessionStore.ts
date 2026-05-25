@@ -1390,6 +1390,16 @@ class ChatSessionStore {
       }
     }
 
+    // No-session-only: apply user's explicit thinking override last so it
+    // wins over pal's enable_thinking. Single-key overlay — does NOT touch
+    // any other field, and does NOT affect tool availability.
+    if (!sessionId && this.newChatThinkingOverride !== undefined) {
+      resolvedSettings = {
+        ...resolvedSettings,
+        enable_thinking: this.newChatThinkingOverride,
+      };
+    }
+
     // Apply session-specific settings based on explicit user choice
     if (sessionId) {
       const session = this.sessions.find(s => s.id === sessionId);
