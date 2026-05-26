@@ -103,11 +103,14 @@ describe('design-token grep invariants', () => {
     //   - the tokens module itself
     //   - the theme builder (`theme.ts`) and the hook (`useTheme.ts`)
     //   - the Theme interface (`types.ts`)
+    //   - the DS layer at `components/ui/**` — canonical consumer of
+    //     the new token surface.
     const ALLOWED_RELATIVE: ReadonlyArray<string> = [
       'theme/tokens',
       'utils/theme.ts',
       'utils/types.ts',
       'hooks/useTheme.ts',
+      'components/ui',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

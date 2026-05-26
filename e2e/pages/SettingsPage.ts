@@ -55,6 +55,18 @@ export class SettingsPage extends BasePage {
   }
 
   /**
+   * Scroll down to the "Display Memory Usage" switch in the App Settings card.
+   * Lives deep in the settings list (~line 998 of SettingsScreen.tsx), so it
+   * needs several swipes to surface.
+   */
+  async scrollToDisplayMemoryUsageSwitch(): Promise<boolean> {
+    return Gestures.scrollToElement(
+      Selectors.settings.displayMemoryUsageSwitch,
+      8,
+    );
+  }
+
+  /**
    * Tap the language selector button to open the language menu.
    */
   async openLanguageMenu(): Promise<void> {

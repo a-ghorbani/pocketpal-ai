@@ -7,10 +7,11 @@ import React, {
   useContext,
 } from 'react';
 
-import {Surface, Portal} from 'react-native-paper';
+import {Portal} from 'react-native-paper';
 import DeviceInfo from 'react-native-device-info';
 import {Svg, Path, Rect, Line} from 'react-native-svg';
 
+import {Surface} from '../ui';
 import {useTheme} from '../../hooks';
 import {L10nContext} from '../../utils';
 

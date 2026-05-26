@@ -2,8 +2,9 @@ import React, {useState, useEffect, useContext} from 'react';
 import {View, Image, Alert, Linking} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
-import {Text, Button, Surface, Divider} from 'react-native-paper';
+import {Text, Button, Divider} from 'react-native-paper';
 
+import {Surface} from '../../ui';
 import {StarIcon, DownloadIcon, UserIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';

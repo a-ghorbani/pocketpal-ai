@@ -392,6 +392,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     return (
       <View>
         <TouchableOpacity
+          testID={`${isPalsHubPal(pal) ? 'palshub' : 'local'}-pal-card-${pal.id}`}
           style={[styles.container, {width: cardWidth}]}
           onPress={onPress}
           activeOpacity={0.7}>
