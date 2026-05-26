@@ -17,7 +17,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -92,7 +92,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -167,7 +167,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -196,7 +196,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#FF653F",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -211,7 +211,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -242,7 +242,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -271,7 +271,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#FF653F",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -286,7 +286,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -317,7 +317,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -392,7 +392,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -467,7 +467,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -496,7 +496,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#FF653F",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -511,7 +511,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -542,7 +542,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -571,7 +571,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#FF653F",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -586,7 +586,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -617,7 +617,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -692,7 +692,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -767,7 +767,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -796,7 +796,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#FF653F",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -811,7 +811,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -842,7 +842,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -871,7 +871,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#FF653F",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -886,7 +886,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -917,7 +917,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -992,7 +992,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1067,7 +1067,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1096,7 +1096,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#333333",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -1111,7 +1111,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -1142,7 +1142,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1171,7 +1171,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#333333",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -1186,7 +1186,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -1217,7 +1217,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1292,7 +1292,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1367,7 +1367,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1396,7 +1396,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#333333",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -1411,7 +1411,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -1442,7 +1442,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1471,7 +1471,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#333333",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -1486,7 +1486,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -1517,7 +1517,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1592,7 +1592,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1667,7 +1667,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1696,7 +1696,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#333333",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -1711,7 +1711,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -1742,7 +1742,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1771,7 +1771,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#333333",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -1786,7 +1786,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#FFFFFF",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -1817,7 +1817,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1892,7 +1892,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1967,7 +1967,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1996,7 +1996,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2011,7 +2011,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#424242",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -2042,7 +2042,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2071,7 +2071,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2086,7 +2086,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#424242",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -2117,7 +2117,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2192,7 +2192,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2267,7 +2267,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2296,7 +2296,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2311,7 +2311,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#424242",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -2342,7 +2342,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2371,7 +2371,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2386,7 +2386,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#424242",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -2417,7 +2417,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2492,7 +2492,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2567,7 +2567,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2596,7 +2596,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2611,7 +2611,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#424242",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -2642,7 +2642,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2671,7 +2671,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2686,7 +2686,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#424242",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -2717,7 +2717,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2792,7 +2792,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2867,7 +2867,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2896,7 +2896,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2911,7 +2911,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#333333",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -2942,7 +2942,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2971,7 +2971,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -2986,7 +2986,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#333333",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -3017,7 +3017,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3092,7 +3092,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3167,7 +3167,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3196,7 +3196,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -3211,7 +3211,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#333333",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -3242,7 +3242,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3271,7 +3271,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -3286,7 +3286,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#333333",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 14,
           "fontWeight": "500",
@@ -3317,7 +3317,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3392,7 +3392,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3467,7 +3467,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3496,7 +3496,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -3511,7 +3511,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#333333",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -3542,7 +3542,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -3571,7 +3571,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "flexDirection": "row",
           "justifyContent": "center",
@@ -3586,7 +3586,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
     <Text
       style={
         {
-          "color": "#333333",
+          "color": "#646466",
           "fontFamily": "Inter-Medium",
           "fontSize": 12,
           "fontWeight": "500",
@@ -3600,7 +3600,7 @@ exports[`Button — snapshot matrix baseline (variant x size x {default,disabled
 </View>
 `;
 
-exports[`Button — snapshot matrix focused (variant x size=default x focused x light) destructive-s-focused-light 1`] = `
+exports[`Button — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) primary-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -3617,607 +3617,7 @@ exports[`Button — snapshot matrix focused (variant x size=default x focused x 
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#FF653F",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#FFFFFF",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix focused (variant x size=default x focused x light) primary-s-focused-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#333333",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#FFFFFF",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix focused (variant x size=default x focused x light) secondary-s-focused-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#424242",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix focused (variant x size=default x focused x light) tertiary-s-focused-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#333333",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix pressed (variant x size=default x pressed x light) destructive-s-pressed-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#FF653F",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#FFFFFF",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix pressed (variant x size=default x pressed x light) primary-s-pressed-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#333333",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#FFFFFF",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix pressed (variant x size=default x pressed x light) secondary-s-pressed-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#E0E0E0",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#424242",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix pressed (variant x size=default x pressed x light) tertiary-s-pressed-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderRadius": 8,
-          "flexDirection": "row",
-          "justifyContent": "center",
-          "paddingHorizontal": 16,
-          "paddingVertical": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-button"
-  >
-    <Text
-      style={
-        {
-          "color": "#333333",
-          "fontFamily": "Inter-Medium",
-          "fontSize": 12,
-          "fontWeight": "500",
-          "lineHeight": 16,
-        }
-      }
-    >
-      Save
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`Button — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) primary-s-default-light-fa 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Save"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }

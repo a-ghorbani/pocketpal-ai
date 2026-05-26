@@ -17,7 +17,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -80,7 +80,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -143,7 +143,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -172,7 +172,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "justifyContent": "center",
           "padding": 8,
@@ -206,7 +206,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -235,7 +235,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "justifyContent": "center",
           "padding": 8,
@@ -269,7 +269,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -332,7 +332,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -395,7 +395,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -424,7 +424,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -458,7 +458,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -487,7 +487,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -521,7 +521,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -584,7 +584,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -647,7 +647,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -676,7 +676,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -710,7 +710,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -739,7 +739,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -773,7 +773,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -838,7 +838,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -903,7 +903,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -932,10 +932,8 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
-          "borderWidth": 1,
           "justifyContent": "center",
           "padding": 8,
         },
@@ -968,7 +966,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -997,10 +995,8 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
-          "borderWidth": 1,
           "justifyContent": "center",
           "padding": 8,
         },
@@ -1033,7 +1029,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1098,7 +1094,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1163,7 +1159,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1192,10 +1188,8 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
-          "borderWidth": 1,
           "justifyContent": "center",
           "padding": 4,
         },
@@ -1228,7 +1222,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1257,10 +1251,8 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
-          "borderWidth": 1,
           "justifyContent": "center",
           "padding": 4,
         },
@@ -1293,7 +1285,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1358,7 +1350,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1423,7 +1415,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1452,10 +1444,8 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
-          "borderWidth": 1,
           "justifyContent": "center",
           "padding": 4,
         },
@@ -1488,7 +1478,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1517,10 +1507,8 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
-          "borderWidth": 1,
           "justifyContent": "center",
           "padding": 4,
         },
@@ -1553,7 +1541,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1616,7 +1604,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1679,7 +1667,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1708,7 +1696,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "justifyContent": "center",
           "padding": 8,
@@ -1742,7 +1730,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1771,7 +1759,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 12,
           "justifyContent": "center",
           "padding": 8,
@@ -1805,7 +1793,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1868,7 +1856,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1931,7 +1919,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -1960,7 +1948,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -1994,7 +1982,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2023,7 +2011,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -2057,7 +2045,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2120,7 +2108,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2183,7 +2171,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2212,7 +2200,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -2246,7 +2234,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
+        "disabled": true,
         "expanded": undefined,
         "selected": undefined,
       }
@@ -2275,7 +2263,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
       [
         {
           "alignItems": "center",
-          "backgroundColor": "transparent",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
           "borderRadius": 8,
           "justifyContent": "center",
           "padding": 4,
@@ -2292,7 +2280,7 @@ exports[`IconButton — snapshot matrix baseline (variant x size x {default,disa
 </View>
 `;
 
-exports[`IconButton — snapshot matrix pressed (variant x size=default x pressed x light) filled-s-pressed-light 1`] = `
+exports[`IconButton — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -2309,198 +2297,7 @@ exports[`IconButton — snapshot matrix pressed (variant x size=default x presse
       {
         "busy": undefined,
         "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "#DEE0E6",
-          "borderRadius": 8,
-          "justifyContent": "center",
-          "padding": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-icon-button"
-  >
-    <Text>
-      ★
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`IconButton — snapshot matrix pressed (variant x size=default x pressed x light) outlined-s-pressed-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Star"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderColor": "rgba(51, 51, 51, 0.05)",
-          "borderRadius": 8,
-          "borderWidth": 1,
-          "justifyContent": "center",
-          "padding": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-icon-button"
-  >
-    <Text>
-      ★
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`IconButton — snapshot matrix pressed (variant x size=default x pressed x light) standard-s-pressed-light 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Star"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
-        "expanded": undefined,
-        "selected": undefined,
-      }
-    }
-    accessibilityValue={
-      {
-        "max": undefined,
-        "min": undefined,
-        "now": undefined,
-        "text": undefined,
-      }
-    }
-    accessible={true}
-    collapsable={false}
-    focusable={true}
-    onBlur={[Function]}
-    onClick={[Function]}
-    onFocus={[Function]}
-    onResponderGrant={[Function]}
-    onResponderMove={[Function]}
-    onResponderRelease={[Function]}
-    onResponderTerminate={[Function]}
-    onResponderTerminationRequest={[Function]}
-    onStartShouldSetResponder={[Function]}
-    style={
-      [
-        {
-          "alignItems": "center",
-          "backgroundColor": "transparent",
-          "borderRadius": 8,
-          "justifyContent": "center",
-          "padding": 4,
-        },
-        undefined,
-      ]
-    }
-    testID="ui-icon-button"
-  >
-    <Text>
-      ★
-    </Text>
-  </View>
-</View>
-`;
-
-exports[`IconButton — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
-<View
-  collapsable={false}
-  pointerEvents="box-none"
-  style={
-    {
-      "flex": 1,
-    }
-  }
->
-  <View
-    accessibilityLabel="Star"
-    accessibilityRole="button"
-    accessibilityState={
-      {
-        "busy": undefined,
-        "checked": undefined,
-        "disabled": undefined,
+        "disabled": false,
         "expanded": undefined,
         "selected": undefined,
       }

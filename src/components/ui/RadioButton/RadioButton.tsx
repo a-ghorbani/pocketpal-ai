@@ -7,13 +7,12 @@ import {useTheme} from '../../../hooks';
 import type {CommonDSProps} from '../types';
 import {warnIfNoA11yLabel} from '../types';
 
-import {createStyles, type RadioButtonSize} from './styles';
+import {createStyles} from './styles';
 
 export type RadioButtonVariant = 'default';
 
 export type RadioButtonProps = Omit<CommonDSProps, 'accessibilityRole'> & {
   variant?: RadioButtonVariant;
-  size?: RadioButtonSize;
   value: string;
   groupValue: string;
   onSelect: (value: string) => void;
@@ -23,8 +22,9 @@ export type RadioButtonProps = Omit<CommonDSProps, 'accessibilityRole'> & {
 /**
  * DS RadioButton (wraps Paper RadioButton).
  *
- * Defaults: variant='default', size='m', testID='ui-radio-<value>',
- * accessibilityRole='radio'.
+ * Defaults: variant='default', testID='ui-radio-<value>',
+ * accessibilityRole='radio'. Size is owned by Paper and not exposed
+ * on the DS surface.
  */
 export const RadioButton: React.FC<RadioButtonProps> = ({
   testID,
@@ -33,14 +33,13 @@ export const RadioButton: React.FC<RadioButtonProps> = ({
   style,
   disabled,
   variant: _variant = 'default',
-  size = 'm',
   value,
   groupValue,
   onSelect,
 }) => {
   const theme = useTheme();
   warnIfNoA11yLabel('RadioButton', undefined, accessibilityLabel);
-  const styles = createStyles(theme, {size});
+  const styles = createStyles(theme);
   const resolvedTestID = testID ?? `ui-radio-${value}`;
   return (
     <View

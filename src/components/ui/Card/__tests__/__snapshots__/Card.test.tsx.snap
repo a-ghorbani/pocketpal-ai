@@ -1152,7 +1152,7 @@ exports[`Card — snapshot matrix baseline (variant x size x {default,disabled} 
 </View>
 `;
 
-exports[`Card — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) flat-s-default-light-fa 1`] = `
+exports[`Card — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) flat-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

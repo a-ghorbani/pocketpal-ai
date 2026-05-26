@@ -7,13 +7,12 @@ import {useTheme} from '../../../hooks';
 import type {CommonDSProps} from '../types';
 import {warnIfNoA11yLabel} from '../types';
 
-import {createStyles, type CheckboxSize} from './styles';
+import {createStyles} from './styles';
 
 export type CheckboxVariant = 'default';
 
 export type CheckboxProps = Omit<CommonDSProps, 'accessibilityRole'> & {
   variant?: CheckboxVariant;
-  size?: CheckboxSize;
   value: boolean;
   onValueChange: (value: boolean) => void;
   accessibilityLabel: string;
@@ -22,7 +21,8 @@ export type CheckboxProps = Omit<CommonDSProps, 'accessibilityRole'> & {
 /**
  * DS Checkbox (wraps Paper Checkbox).
  *
- * Defaults: variant='default', size='m', testID='ui-checkbox'.
+ * Defaults: variant='default', testID='ui-checkbox'. Size is owned by
+ * Paper and not exposed on the DS surface.
  */
 export const Checkbox: React.FC<CheckboxProps> = ({
   testID = 'ui-checkbox',
@@ -31,13 +31,12 @@ export const Checkbox: React.FC<CheckboxProps> = ({
   style,
   disabled,
   variant: _variant = 'default',
-  size = 'm',
   value,
   onValueChange,
 }) => {
   const theme = useTheme();
   warnIfNoA11yLabel('Checkbox', undefined, accessibilityLabel);
-  const styles = createStyles(theme, {size});
+  const styles = createStyles(theme);
   return (
     <View
       testID={testID}

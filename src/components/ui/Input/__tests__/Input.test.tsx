@@ -44,7 +44,6 @@ runSnapshotMatrix(
   {
     variants: ['single', 'multi'] as const,
     sizes: ['s', 'm', 'l'] as const,
-    focusedVariants: ['single', 'multi'] as const,
     langs: ['fa'] as const,
   },
 );

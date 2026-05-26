@@ -1,15 +1,22 @@
 /**
  * Snapshot-matrix helper for DS family tests.
  *
- *   Rebuild families (default):
- *     baseline   = variant × size × {default,disabled} × {light,dark}
- *     pressed    = variant × size=<default> × pressed × light  (opt-in via pressedVariants)
- *     focused    = variant × size=<default> × focused × light  (opt-in via focusedVariants)
- *     rtl canary = rtlCanaryVariant (or variants[0]) × size=<default> × default × light × <lang>
+ *   Rebuild families:
+ *     baseline = variant × size × {default,disabled} × {light,dark}
+ *     non-Latin font-fallback canary = canaryVariant × size=<default> × default × light × <lang>
  *
- *   Wrap-Paper families (Switch / Checkbox / RadioButton):
- *     baseline   = variant × size × {default,disabled} × {light,dark} × value
- *     no pressed / no focused (those are Paper internals).
+ *   Wrap-Paper families (Switch / Checkbox / RadioButton / Dropdown):
+ *     baseline = variant × size × {default,disabled} × {light,dark} × value
+ *
+ * Pressed / focused / hovered are NOT snapshotted: Jest's render()
+ * cannot drive Pressable's pressed branch via the style callback, and
+ * Input's focused state needs fireEvent.focus(). Emitting those cells
+ * produces snapshots byte-identical to default (misleading green
+ * coverage). Interactive-state signal is deferred to Phase 3 via a
+ * per-component fireEvent-driven harness.
+ *
+ * The factory MUST consume cell.state and forward `disabled` so the
+ * disabled cell renders the disabled tree (not a relabelled default).
  *
  * Each cell renders against a real theme from
  * themeFixtures.byMode(mode).byLocale(lang) wrapped in a PaperProvider,
@@ -22,7 +29,7 @@ import {render} from '@testing-library/react-native';
 import {themeFixtures} from '../../../../../jest/fixtures/theme';
 import type {AvailableLanguage} from '../../../../locales';
 
-export type DSState = 'default' | 'disabled' | 'pressed' | 'focused';
+export type DSState = 'default' | 'disabled';
 export type DSMode = 'light' | 'dark';
 
 export type SnapshotCellProps<V extends string, S extends string> = {
@@ -38,18 +45,14 @@ export type SnapshotMatrixAxes<V extends string, S extends string> = {
   variants: readonly V[];
   sizes: readonly S[];
   /** Baseline static states. Defaults to ['default','disabled']. */
-  states?: readonly Extract<DSState, 'default' | 'disabled'>[];
+  states?: readonly DSState[];
   /** Defaults to ['light','dark']. */
   modes?: readonly DSMode[];
-  /** Variants to snapshot in the pressed cell. Empty = skip. */
-  pressedVariants?: readonly V[];
-  /** Variants to snapshot in the focused cell. Empty = skip (Input/Button only). */
-  focusedVariants?: readonly V[];
-  /** RTL canary languages. Empty = no canary. Typical: ['fa']. */
+  /** Non-Latin font-fallback canary languages. Empty = no canary. Typical: ['fa']. */
   langs?: readonly AvailableLanguage[];
   /**
-   * Variant used for the RTL canary. Falls back to variants[0] when
-   * absent. Caller MUST set this when variants[0] is non-interactive
+   * Variant used for the font-fallback canary. Falls back to variants[0]
+   * when absent. Caller SHOULD set this when variants[0] is non-interactive
    * (e.g. Chip's `display`) so the canary exercises the state-layer
    * path.
    */
@@ -62,7 +65,7 @@ export type SnapshotRenderFactory<V extends string, S extends string> = (
   cell: SnapshotCellProps<V, S>,
 ) => React.ReactElement;
 
-const DEFAULT_STATES = ['default', 'disabled'] as const;
+const DEFAULT_STATES: readonly DSState[] = ['default', 'disabled'] as const;
 const DEFAULT_MODES: readonly DSMode[] = ['light', 'dark'] as const;
 const DEFAULT_LANG: AvailableLanguage = 'en';
 
@@ -99,9 +102,7 @@ export function runSnapshotMatrix<V extends string, S extends string>(
   const modes = axes.modes ?? DEFAULT_MODES;
   const langs = axes.langs ?? [];
   const values = axes.values ?? [];
-  const pressedVariants = axes.pressedVariants ?? [];
-  const focusedVariants = axes.focusedVariants ?? [];
-  const rtlVariant = axes.rtlCanaryVariant ?? axes.variants[0];
+  const canaryVariant = axes.rtlCanaryVariant ?? axes.variants[0];
   const defaultSize = axes.sizes[0];
 
   describe(`${name} — snapshot matrix`, () => {
@@ -144,47 +145,11 @@ export function runSnapshotMatrix<V extends string, S extends string>(
       }
     });
 
-    if (pressedVariants.length > 0) {
-      describe('pressed (variant x size=default x pressed x light)', () => {
-        for (const variant of pressedVariants) {
-          const cell: SnapshotCellProps<V, S> = {
-            variant,
-            size: defaultSize,
-            state: 'pressed',
-            mode: 'light',
-            language: DEFAULT_LANG,
-          };
-          it(cellLabel(cell), () => {
-            const {toJSON} = renderCell(factory, cell);
-            expect(toJSON()).toMatchSnapshot();
-          });
-        }
-      });
-    }
-
-    if (focusedVariants.length > 0) {
-      describe('focused (variant x size=default x focused x light)', () => {
-        for (const variant of focusedVariants) {
-          const cell: SnapshotCellProps<V, S> = {
-            variant,
-            size: defaultSize,
-            state: 'focused',
-            mode: 'light',
-            language: DEFAULT_LANG,
-          };
-          it(cellLabel(cell), () => {
-            const {toJSON} = renderCell(factory, cell);
-            expect(toJSON()).toMatchSnapshot();
-          });
-        }
-      });
-    }
-
-    if (langs.length > 0 && rtlVariant !== undefined) {
-      describe('rtl canary (rtlCanaryVariant x size=default x default x light x lang)', () => {
+    if (langs.length > 0 && canaryVariant !== undefined) {
+      describe('non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang)', () => {
         for (const language of langs) {
           const cell: SnapshotCellProps<V, S> = {
-            variant: rtlVariant,
+            variant: canaryVariant,
             size: defaultSize,
             state: 'default',
             mode: 'light',

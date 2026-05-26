@@ -41,18 +41,18 @@ describe('RadioSection', () => {
 
 runSnapshotMatrix(
   'RadioButton',
-  ({variant: _v, size, value}) => (
+  ({variant: _v, size: _s, value, state}) => (
     <RadioButton
-      size={size}
       value="a"
       groupValue={value ? 'a' : 'b'}
       onSelect={() => {}}
       accessibilityLabel="A"
+      disabled={state === 'disabled'}
     />
   ),
   {
     variants: ['default'] as const,
-    sizes: ['s', 'm', 'l'] as const,
+    sizes: ['default'] as const,
     values: [true, false] as const,
     langs: ['fa'] as const,
   },

@@ -26,17 +26,17 @@ describe('Switch', () => {
 
 runSnapshotMatrix(
   'Switch',
-  ({variant: _v, size, value}) => (
+  ({variant: _v, size: _s, value, state}) => (
     <Switch
-      size={size}
       value={value ?? false}
       onValueChange={() => {}}
       accessibilityLabel="x"
+      disabled={state === 'disabled'}
     />
   ),
   {
     variants: ['default'] as const,
-    sizes: ['s', 'm', 'l'] as const,
+    sizes: ['default'] as const,
     values: [true, false] as const,
     langs: ['fa'] as const,
   },

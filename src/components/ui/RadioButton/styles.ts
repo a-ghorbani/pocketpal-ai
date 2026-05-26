@@ -2,13 +2,7 @@ import {StyleSheet, type TextStyle, type ViewStyle} from 'react-native';
 
 import type {Theme} from '../../../utils/types';
 
-export type RadioButtonSize = 's' | 'm' | 'l';
-
-export type RadioButtonStyleArgs = {
-  size: RadioButtonSize;
-};
-
-export const createStyles = (theme: Theme, _args: RadioButtonStyleArgs) =>
+export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     root: {
       flexDirection: 'row',

@@ -55,7 +55,6 @@ runSnapshotMatrix(
   {
     variants: ['underline', 'pill'] as const,
     sizes: ['s', 'm'] as const,
-    pressedVariants: ['underline', 'pill'] as const,
     langs: ['fa'] as const,
   },
 );

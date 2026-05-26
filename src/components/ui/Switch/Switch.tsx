@@ -7,13 +7,12 @@ import {useTheme} from '../../../hooks';
 import type {CommonDSProps} from '../types';
 import {warnIfNoA11yLabel} from '../types';
 
-import {createStyles, type SwitchSize} from './styles';
+import {createStyles} from './styles';
 
 export type SwitchVariant = 'default';
 
 export type SwitchProps = Omit<CommonDSProps, 'accessibilityRole'> & {
   variant?: SwitchVariant;
-  size?: SwitchSize;
   value: boolean;
   onValueChange: (value: boolean) => void;
   /** Required — Switch has no visible label. */
@@ -24,7 +23,8 @@ export type SwitchProps = Omit<CommonDSProps, 'accessibilityRole'> & {
  * DS Switch (wraps Paper Switch — Paper handles accessibilityRole
  * 'switch', accessibilityValue, and platform thumb-track behaviour).
  *
- * Defaults: variant='default', size='m', testID='ui-switch'.
+ * Defaults: variant='default', testID='ui-switch'. Size is owned by
+ * Paper and not exposed on the DS surface.
  */
 export const Switch: React.FC<SwitchProps> = ({
   testID = 'ui-switch',
@@ -33,13 +33,12 @@ export const Switch: React.FC<SwitchProps> = ({
   style,
   disabled,
   variant: _variant = 'default',
-  size = 'm',
   value,
   onValueChange,
 }) => {
   const theme = useTheme();
   warnIfNoA11yLabel('Switch', undefined, accessibilityLabel);
-  const styles = createStyles(theme, {size});
+  const styles = createStyles(theme);
   return (
     <View testID={testID} style={[styles.root, style]}>
       <PaperSwitch

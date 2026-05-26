@@ -32,8 +32,14 @@ describe('Dropdown', () => {
 
 runSnapshotMatrix(
   'Dropdown',
-  ({variant: _v, size}) => (
-    <Dropdown size={size} value="a" options={options} onChange={() => {}} />
+  ({variant: _v, size, state}) => (
+    <Dropdown
+      size={size}
+      value="a"
+      options={options}
+      onChange={() => {}}
+      disabled={state === 'disabled'}
+    />
   ),
   {
     variants: ['standard'] as const,

@@ -36,7 +36,7 @@ export const RadioSection: React.FC<RadioSectionProps> = ({
   onSelect,
 }) => {
   const theme = useTheme();
-  const styles = createStyles(theme, {size: 'm'});
+  const styles = createStyles(theme);
   return (
     <View
       testID={testID}

@@ -940,7 +940,7 @@ exports[`Label — snapshot matrix baseline (variant x size x {default,disabled}
 </View>
 `;
 
-exports[`Label — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) informational-s-default-light-fa 1`] = `
+exports[`Label — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) informational-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"

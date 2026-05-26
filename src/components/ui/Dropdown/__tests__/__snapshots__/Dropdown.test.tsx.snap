@@ -20,7 +20,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -100,7 +100,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -180,7 +180,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": true,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -210,7 +210,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
           {
             "alignItems": "center",
             "alignSelf": "flex-start",
-            "backgroundColor": "rgba(51, 51, 51, 0.02)",
+            "backgroundColor": "rgba(51, 51, 51, 0.01)",
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
@@ -225,7 +225,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#646466",
             "fontFamily": "Inter-Medium",
             "fontSize": 14,
             "fontWeight": "500",
@@ -260,7 +260,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": true,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -290,7 +290,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
           {
             "alignItems": "center",
             "alignSelf": "flex-start",
-            "backgroundColor": "rgba(51, 51, 51, 0.02)",
+            "backgroundColor": "rgba(51, 51, 51, 0.01)",
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
@@ -305,7 +305,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#646466",
             "fontFamily": "Inter-Medium",
             "fontSize": 14,
             "fontWeight": "500",
@@ -340,7 +340,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -420,7 +420,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -500,7 +500,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": true,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -530,7 +530,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
           {
             "alignItems": "center",
             "alignSelf": "flex-start",
-            "backgroundColor": "rgba(51, 51, 51, 0.02)",
+            "backgroundColor": "rgba(51, 51, 51, 0.01)",
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
@@ -545,7 +545,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#646466",
             "fontFamily": "Inter-Medium",
             "fontSize": 14,
             "fontWeight": "500",
@@ -580,7 +580,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": true,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -610,7 +610,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
           {
             "alignItems": "center",
             "alignSelf": "flex-start",
-            "backgroundColor": "rgba(51, 51, 51, 0.02)",
+            "backgroundColor": "rgba(51, 51, 51, 0.01)",
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
@@ -625,7 +625,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#646466",
             "fontFamily": "Inter-Medium",
             "fontSize": 14,
             "fontWeight": "500",
@@ -660,7 +660,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -740,7 +740,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -820,7 +820,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": true,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -850,7 +850,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
           {
             "alignItems": "center",
             "alignSelf": "flex-start",
-            "backgroundColor": "rgba(51, 51, 51, 0.02)",
+            "backgroundColor": "rgba(51, 51, 51, 0.01)",
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
@@ -865,7 +865,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#646466",
             "fontFamily": "Inter-Medium",
             "fontSize": 12,
             "fontWeight": "500",
@@ -900,7 +900,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": true,
           "expanded": undefined,
           "selected": undefined,
         }
@@ -930,7 +930,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
           {
             "alignItems": "center",
             "alignSelf": "flex-start",
-            "backgroundColor": "rgba(51, 51, 51, 0.02)",
+            "backgroundColor": "rgba(51, 51, 51, 0.01)",
             "borderRadius": 8,
             "flexDirection": "row",
             "gap": 4,
@@ -945,7 +945,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#646466",
             "fontFamily": "Inter-Medium",
             "fontSize": 12,
             "fontWeight": "500",
@@ -960,7 +960,7 @@ exports[`Dropdown — snapshot matrix baseline (variant x size x {default,disabl
 </View>
 `;
 
-exports[`Dropdown — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
+exports[`Dropdown — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) standard-s-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -980,7 +980,7 @@ exports[`Dropdown — snapshot matrix rtl canary (rtlCanaryVariant x size=defaul
         {
           "busy": undefined,
           "checked": undefined,
-          "disabled": undefined,
+          "disabled": false,
           "expanded": undefined,
           "selected": undefined,
         }

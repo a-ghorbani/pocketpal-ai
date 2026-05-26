@@ -43,8 +43,8 @@ describe('CardList', () => {
 
 runSnapshotMatrix(
   'Card',
-  ({variant, size}) => (
-    <Card variant={variant} size={size}>
+  ({variant, size, state}) => (
+    <Card variant={variant} size={size} disabled={state === 'disabled'}>
       <Text>card body</Text>
     </Card>
   ),

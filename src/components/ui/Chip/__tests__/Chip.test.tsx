@@ -27,13 +27,18 @@ describe('Chip', () => {
 
 runSnapshotMatrix(
   'Chip',
-  ({variant, size}) => (
-    <Chip variant={variant} size={size} label="Tag" selected />
+  ({variant, size, state}) => (
+    <Chip
+      variant={variant}
+      size={size}
+      label="Tag"
+      selected
+      disabled={state === 'disabled'}
+    />
   ),
   {
     variants: ['display', 'selectable', 'input'] as const,
     sizes: ['s', 'm'] as const,
-    pressedVariants: ['selectable', 'input'] as const,
     langs: ['fa'] as const,
     rtlCanaryVariant: 'selectable',
   },

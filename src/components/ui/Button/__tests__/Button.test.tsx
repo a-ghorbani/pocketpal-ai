@@ -46,22 +46,17 @@ describe('Button', () => {
 
 runSnapshotMatrix(
   'Button',
-  ({variant, size}) => <Button variant={variant} size={size} label="Save" />,
+  ({variant, size, state}) => (
+    <Button
+      variant={variant}
+      size={size}
+      label="Save"
+      disabled={state === 'disabled'}
+    />
+  ),
   {
     variants: ['primary', 'secondary', 'tertiary', 'destructive'] as const,
     sizes: ['s', 'm', 'l'] as const,
-    pressedVariants: [
-      'primary',
-      'secondary',
-      'tertiary',
-      'destructive',
-    ] as const,
-    focusedVariants: [
-      'primary',
-      'secondary',
-      'tertiary',
-      'destructive',
-    ] as const,
     langs: ['fa'] as const,
   },
 );

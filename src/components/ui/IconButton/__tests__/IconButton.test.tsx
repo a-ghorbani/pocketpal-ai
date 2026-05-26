@@ -41,18 +41,18 @@ describe('IconButton', () => {
 
 runSnapshotMatrix(
   'IconButton',
-  ({variant, size}) => (
+  ({variant, size, state}) => (
     <IconButton
       variant={variant}
       size={size}
       icon={<Icon />}
       accessibilityLabel="Star"
+      disabled={state === 'disabled'}
     />
   ),
   {
     variants: ['standard', 'filled', 'outlined'] as const,
     sizes: ['s', 'm', 'l'] as const,
-    pressedVariants: ['standard', 'filled', 'outlined'] as const,
     langs: ['fa'] as const,
   },
 );

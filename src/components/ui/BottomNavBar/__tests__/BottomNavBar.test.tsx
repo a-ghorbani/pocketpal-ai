@@ -49,7 +49,6 @@ runSnapshotMatrix(
   {
     variants: ['default'] as const,
     sizes: ['m'] as const,
-    pressedVariants: ['default'] as const,
     langs: ['fa'] as const,
   },
 );
