@@ -94,3 +94,8 @@ e2e/testspec-*-allmodels.yml
 # E2E pipeline
 e2e/devices.json
 e2e/reports/
+
+# Per-task one-shot visual-capture specs. Authored in the worktree for a
+# single PR review (pre/post diff against main), never committed. They die
+# with the worktree.
+e2e/specs/visual-capture/TASK-*.spec.ts
