@@ -1311,5 +1311,70 @@
     "voicesEmptyState": "No voices found.",
     "kokoroDeviceNote": "Some voices may not work on all devices.",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
+  },
+  "onboarding": {
+    "back": "Back",
+    "skip": "Skip",
+    "splash": {
+      "title": ""
+    },
+    "screen1": {
+      "eyebrow": "Welcome to Pocket Pal",
+      "title": "Meet your pals.",
+      "body": "",
+      "cta": "Get started"
+    },
+    "screen2": {
+      "eyebrow": "The idea",
+      "title": "Anytime, Anywhere.",
+      "body": "",
+      "cta": "Continue"
+    },
+    "screen3": {
+      "eyebrow": "A heads-up",
+      "title": "Smaller, but yours.",
+      "body": "",
+      "cta": "Continue"
+    },
+    "screen4": {
+      "eyebrow": "Privacy promised",
+      "title": "Nothing leaves your phone.",
+      "body": "",
+      "cta": "Continue"
+    },
+    "screen5": {
+      "title": "What's your pal for?",
+      "body": "Pick what you'd like to discuss.",
+      "cta": "Continue",
+      "topic": {
+        "everyday": "Everyday",
+        "creative": "Creative",
+        "learning": "Learning",
+        "coding": "Coding",
+        "productivity": "Productivity",
+        "roleplay": "Roleplay"
+      }
+    },
+    "screen6": {
+      "eyebrow": "Pip",
+      "title": "We found a perfect pal for you.",
+      "body": "Pip thinks using a small AI model on your phone — pick one that fits.",
+      "cta": "Finish",
+      "deviceChip": "Local · on-device",
+      "model": {
+        "llama32_1b": {
+          "title": "Llama 3.2 1B (Q8_0)",
+          "subtitle": "~1.3 GB · runs on most phones"
+        },
+        "qwen25_15b": {
+          "title": "Qwen 2.5 1.5B (Q8_0)",
+          "subtitle": "~1.9 GB · balanced quality"
+        },
+        "smollm2_17b": {
+          "title": "SmolLM2 1.7B (Q8_0)",
+          "subtitle": "~1.8 GB · capable small model"
+        }
+      }
+    }
   }
 }
