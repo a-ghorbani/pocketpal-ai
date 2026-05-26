@@ -12,6 +12,7 @@ describe('ChatSessionStore - Pal Settings', () => {
     chatSessionStore.activeSessionId = null;
     chatSessionStore.newChatPalId = undefined;
     chatSessionStore.newChatCompletionSettings = {...defaultCompletionSettings};
+    chatSessionStore.newChatThinkingOverride = undefined;
     // Reset palStore
     palStore.pals = [];
   });
@@ -195,6 +196,116 @@ describe('ChatSessionStore - Pal Settings', () => {
       const result = await chatSessionStore.getCurrentCompletionSettings();
 
       expect(result.temperature).toBe(0.9);
+    });
+  });
+
+  describe('newChatThinkingOverride', () => {
+    const makeThinkingPal = (
+      id: string,
+      enableThinking: boolean,
+      extra: Partial<CompletionParams> = {},
+    ): Pal => ({
+      type: 'local',
+      id,
+      name: `Pal ${id}`,
+      description: '',
+      systemPrompt: '',
+      isSystemPromptChanged: false,
+      useAIPrompt: false,
+      parameters: {},
+      parameterSchema: [],
+      completionSettings: {
+        ...defaultCompletionSettings,
+        enable_thinking: enableThinking,
+        ...extra,
+      } as CompletionParams,
+      source: 'local',
+    });
+
+    it('override wins over pal in no-session resolve (default pal flips OFF)', async () => {
+      palStore.pals.push(makeThinkingPal('palX', true, {temperature: 0.5}));
+      chatSessionStore.newChatPalId = 'palX';
+      chatSessionStore.newChatThinkingOverride = false;
+
+      const result = await chatSessionStore.resolveCompletionSettings(
+        undefined,
+        'palX',
+      );
+
+      // Override wins for enable_thinking.
+      expect(result.enable_thinking).toBe(false);
+      // Pal's other completion settings survive — override is single-key.
+      expect(result.temperature).toBe(0.5);
+    });
+
+    it('override wins over pal in no-session resolve (authored pal flips ON)', async () => {
+      // Pal has enable_thinking: false; user flips to true via override.
+      palStore.pals.push(makeThinkingPal('palX', false));
+      chatSessionStore.newChatPalId = 'palX';
+      chatSessionStore.newChatThinkingOverride = true;
+
+      const result = await chatSessionStore.resolveCompletionSettings(
+        undefined,
+        'palX',
+      );
+
+      expect(result.enable_thinking).toBe(true);
+    });
+
+    it('override is ignored on session-branch resolution (settingsSource pal)', async () => {
+      palStore.pals.push(makeThinkingPal('palX', true));
+      // Active session with settingsSource='pal' — resolver should
+      // return pal's enable_thinking, NOT the no-session override.
+      chatSessionStore.sessions = [
+        {
+          id: 'session-1',
+          title: 'Session 1',
+          date: '2024-01-01',
+          messages: [],
+          completionSettings: {
+            ...defaultCompletionSettings,
+            enable_thinking: true,
+          },
+          activePalId: 'palX',
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.newChatThinkingOverride = false;
+
+      const result = await chatSessionStore.resolveCompletionSettings(
+        'session-1',
+        'palX',
+      );
+
+      // Pal's value wins; override is not applied on the session branch.
+      expect(result.enable_thinking).toBe(true);
+    });
+
+    it('override does NOT strip PACT-derived tools', async () => {
+      // Pal advertises a registered talent — resolver should inject
+      // tools AND still let the override flip enable_thinking last.
+      const palWithTalent: Pal = {
+        ...makeThinkingPal('palToolful', true),
+        pact: {
+          talents: [{name: 'calculate', necessity: 'required'}],
+        },
+      };
+      palStore.pals.push(palWithTalent);
+      chatSessionStore.newChatPalId = 'palToolful';
+      chatSessionStore.newChatThinkingOverride = false;
+
+      const result = await chatSessionStore.resolveCompletionSettings(
+        undefined,
+        'palToolful',
+      );
+
+      expect(result.enable_thinking).toBe(false);
+      const tools = (result.tools ?? []) as any[];
+      expect(Array.isArray(tools)).toBe(true);
+      expect(tools.length).toBeGreaterThan(0);
+      // Tools came from the requested talent.
+      const toolNames = tools.map((t: any) => t?.function?.name ?? t?.name);
+      expect(toolNames).toContain('calculate');
     });
   });
 });
