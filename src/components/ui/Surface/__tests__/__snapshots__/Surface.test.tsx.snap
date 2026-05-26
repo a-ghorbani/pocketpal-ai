@@ -16,12 +16,11 @@ exports[`Surface — snapshot matrix baseline (variant x size x {default,disable
       [
         {
           "backgroundColor": "#F9FAFB",
-          "borderRadius": 12,
         },
         {
           "elevation": 1,
         },
-        null,
+        undefined,
       ]
     }
     testID="surf"
@@ -49,12 +48,11 @@ exports[`Surface — snapshot matrix baseline (variant x size x {default,disable
       [
         {
           "backgroundColor": "#F9FAFB",
-          "borderRadius": 12,
         },
         {
           "elevation": 1,
         },
-        null,
+        undefined,
       ]
     }
     testID="surf"
@@ -82,7 +80,6 @@ exports[`Surface — snapshot matrix baseline (variant x size x {default,disable
       [
         {
           "backgroundColor": "#F9FAFB",
-          "borderRadius": 12,
         },
         {
           "elevation": 1,
@@ -117,7 +114,6 @@ exports[`Surface — snapshot matrix baseline (variant x size x {default,disable
       [
         {
           "backgroundColor": "#F9FAFB",
-          "borderRadius": 12,
         },
         {
           "elevation": 1,
@@ -136,7 +132,7 @@ exports[`Surface — snapshot matrix baseline (variant x size x {default,disable
 </View>
 `;
 
-exports[`Surface — snapshot matrix rtl canary (rtlCanaryVariant x size=default x default x light x lang) default-default-default-light-fa 1`] = `
+exports[`Surface — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) default-default-default-light-fa 1`] = `
 <View
   collapsable={false}
   pointerEvents="box-none"
@@ -152,12 +148,11 @@ exports[`Surface — snapshot matrix rtl canary (rtlCanaryVariant x size=default
       [
         {
           "backgroundColor": "#F9FAFB",
-          "borderRadius": 12,
         },
         {
           "elevation": 1,
         },
-        null,
+        undefined,
       ]
     }
     testID="surf"
