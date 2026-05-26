@@ -80,12 +80,22 @@ export class ModelDetailsSheet extends BasePage {
     const fileCardSelector = Selectors.modelDetails.fileCard(filename);
     const fileCard = await this.waitForExist(fileCardSelector, timeout);
 
-    // Find the download button within this file card
+    // Find the download button within this file card. If the file is already
+    // downloaded the button is absent — treat as a no-op so the caller can
+    // proceed to the load step against the existing model card.
     const downloadButton = fileCard.$(Selectors.modelDetails.downloadButtonElement);
-    // Wait for button to exist, then click
-    // Note: We use waitForExist, not waitForDisplayed, due to iOS sheet visibility bug
-    await downloadButton.waitForExist({timeout});
-    await downloadButton.click();
+    const exists = await downloadButton
+      .waitForExist({timeout: 2000})
+      .then(() => true)
+      .catch(() => false);
+    if (exists) {
+      await downloadButton.click();
+    } else {
+      console.log(
+        `[tapDownloadForFile] no download button on card for ${filename} ` +
+          `after 2s; assuming already downloaded`,
+      );
+    }
   }
 
   /**

@@ -457,6 +457,48 @@ class PalStore {
       ? await this.createLocalModelFromPHModel(palsHubPal.model_reference)
       : undefined;
 
+    // Strict-`=== true` so stringly-typed `required` becomes optional.
+    // Drop talents that aren't objects with a non-empty string name.
+    const wireTalents = palsHubPal.pact?.talents;
+    const validTalents = Array.isArray(wireTalents)
+      ? wireTalents.filter(
+          t =>
+            t != null &&
+            typeof t === 'object' &&
+            typeof t.name === 'string' &&
+            t.name.length > 0,
+        )
+      : [];
+    const pact =
+      validTalents.length > 0
+        ? {
+            talents: validTalents.map(t => ({
+              name: t.name,
+              necessity: (t.required === true ? 'required' : 'optional') as
+                | 'required'
+                | 'optional',
+            })),
+          }
+        : undefined;
+
+    const wireGreeting = palsHubPal.greeting;
+    const wireText = wireGreeting?.text;
+    const wirePrompts = wireGreeting?.suggested_prompts;
+    const validPrompts = Array.isArray(wirePrompts)
+      ? wirePrompts.filter(
+          (p): p is string => typeof p === 'string' && p.length > 0,
+        )
+      : [];
+    const hasText = typeof wireText === 'string' && wireText.length > 0;
+    const hasPrompts = validPrompts.length > 0;
+    const greeting =
+      hasText || hasPrompts
+        ? {
+            text: typeof wireText === 'string' ? wireText : '',
+            ...(hasPrompts ? {suggestedPrompts: validPrompts} : {}),
+          }
+        : undefined;
+
     return {
       type: 'local',
       id: uuidv4(),
@@ -470,6 +512,8 @@ class PalStore {
       defaultModel,
       parameters,
       parameterSchema,
+      ...(pact ? {pact} : {}),
+      ...(greeting ? {greeting} : {}),
       source: 'palshub',
       palshub_id: palsHubPal.id,
       creator_info: {

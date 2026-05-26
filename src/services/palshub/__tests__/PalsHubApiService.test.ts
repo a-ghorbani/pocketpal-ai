@@ -300,5 +300,126 @@ describe('PalsHubApiService', () => {
         nested: {param: 'test'},
       });
     });
+
+    it('forwards pact, greeting, images, models when present', () => {
+      const apiPal = {
+        id: 'pal-new-fields',
+        title: 'Has new fields',
+        price_cents: 0,
+        is_free: true,
+        categories: [],
+        tags: [],
+        stats: {rating: null, review_count: 0},
+        is_owned: false,
+        created_at: '2024-01-01T00:00:00Z',
+        pact: {
+          version: 1,
+          talents: [
+            {name: 'render_html', required: true},
+            {name: 'calculate', required: false},
+          ],
+        },
+        greeting: {
+          text: 'Hello there',
+          suggested_prompts: ['Draw a sunset', 'Make a chart'],
+        },
+        images: [{url: 'https://example.com/a.png', is_primary: true}],
+        models: [{repo_id: 'foo/bar', is_recommended: true}],
+      };
+
+      const result = service.transformApiPal(apiPal);
+
+      // Wire-boundary forwarding is verbatim — snake_case preserved, no
+      // shape conversion. The snake_case to camelCase rename and the
+      // strict-boolean to necessity mapping happen at the next boundary
+      // (PalStore.createLocalPalFromPalsHub).
+      expect(result.pact).toEqual({
+        version: 1,
+        talents: [
+          {name: 'render_html', required: true},
+          {name: 'calculate', required: false},
+        ],
+      });
+      expect(result.greeting).toEqual({
+        text: 'Hello there',
+        suggested_prompts: ['Draw a sunset', 'Make a chart'],
+      });
+      expect(result.images).toEqual([
+        {url: 'https://example.com/a.png', is_primary: true},
+      ]);
+      expect(result.models).toEqual([
+        {repo_id: 'foo/bar', is_recommended: true},
+      ]);
+    });
+
+    it('leaves new fields undefined when absent', () => {
+      const apiPal = {
+        id: 'pal-no-new-fields',
+        title: 'No new fields',
+        price_cents: 0,
+        is_free: true,
+        categories: [],
+        tags: [],
+        stats: {rating: null, review_count: 0},
+        is_owned: false,
+        created_at: '2024-01-01T00:00:00Z',
+      };
+
+      const result = service.transformApiPal(apiPal);
+
+      expect(result.pact).toBeUndefined();
+      expect(result.greeting).toBeUndefined();
+      expect(result.images).toBeUndefined();
+      expect(result.models).toBeUndefined();
+    });
+
+    it('forwards pact with version field intact (drop happens at next boundary)', () => {
+      const apiPal = {
+        id: 'pal-pact-version',
+        title: 'Pact with version',
+        price_cents: 0,
+        is_free: true,
+        categories: [],
+        tags: [],
+        stats: {rating: null, review_count: 0},
+        is_owned: false,
+        created_at: '2024-01-01T00:00:00Z',
+        pact: {
+          version: 1,
+          talents: [{name: 'calculate', required: true}],
+        },
+      };
+
+      const result = service.transformApiPal(apiPal);
+
+      // Wire boundary preserves `version`; the conversion site drops it.
+      expect(result.pact).toEqual({
+        version: 1,
+        talents: [{name: 'calculate', required: true}],
+      });
+      expect(result.pact?.version).toBe(1);
+    });
+
+    it('forwards explicit null pact/greeting verbatim (server-side null vs absent)', () => {
+      const apiPal = {
+        id: 'pal-null-fields',
+        title: 'Explicit null fields',
+        price_cents: 0,
+        is_free: true,
+        categories: [],
+        tags: [],
+        stats: {rating: null, review_count: 0},
+        is_owned: false,
+        created_at: '2024-01-01T00:00:00Z',
+        pact: null,
+        greeting: null,
+      };
+
+      const result = service.transformApiPal(apiPal);
+
+      // Forwarder is verbatim; the conversion site collapses null → undefined.
+      expect(result.pact).toBeNull();
+      expect(result.greeting).toBeNull();
+    });
   });
 });
