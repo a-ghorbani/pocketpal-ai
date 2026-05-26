@@ -128,6 +128,10 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // RN dev menu + Metro-served JS. Mirrors BuildConfig.DEBUG but
+            // is independent of `debuggable`, so `releaseE2e` (which sets
+            // debuggable=true for `adb run-as`) can still pin to false.
+            buildConfigField "boolean", "USE_DEV_SUPPORT", "true"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -142,6 +146,7 @@ android {
             }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            buildConfigField "boolean", "USE_DEV_SUPPORT", "false"
         }
         releaseE2e {
             // E2E buildType: inherits 95% of release (Hermes, minify toggle,
