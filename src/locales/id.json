@@ -743,6 +743,26 @@
         "nameRequired": "Nama wajib diisi",
         "generatingPromptRequired": "Prompt generasi wajib diisi saat menggunakan prompt AI",
         "promptModelRequired": "Model generasi prompt wajib diisi saat menggunakan prompt AI"
+      },
+      "talents": "Talenta",
+      "talentNames": {
+        "render_html": "Pratinjau HTML",
+        "calculate": "Ekspresi matematika",
+        "datetime": "Tanggal & waktu"
+      },
+      "talentDescriptions": {
+        "render_html": "Render dokumen HTML secara inline di chat",
+        "calculate": "Evaluasi ekspresi matematika",
+        "datetime": "Dapatkan tanggal dan waktu saat ini"
+      },
+      "greeting": {
+        "sectionLabel": "Sapaan",
+        "textLabel": "Pesan sapaan",
+        "textPlaceholder": "Apa yang sebaiknya dikatakan teman ini pada chat kosong?",
+        "suggestedPromptsLabel": "Prompt yang disarankan",
+        "addPromptButton": "Tambahkan prompt",
+        "promptPlaceholder": "Prompt singkat untuk chip",
+        "removePromptLabel": "Hapus prompt"
       }
     },
     "assistantPalSheet": {
@@ -911,7 +931,20 @@
     "bubble": {
       "msPerToken": "{{value}}md/token",
       "tokensPerSec": "{{value}} token/detik",
-      "ttft": "{{value}}md TTFT"
+      "ttft": "{{value}}md TTFT",
+      "interrupted": "Terputus",
+      "truncated": "Terpotong — kemungkinan konteks penuh"
+    },
+    "pendingIndicator": {
+      "preparingTool": "Menyiapkan alat",
+      "buildingPage": "Membangun halaman",
+      "calculating": "Menghitung",
+      "lookingUpTime": "Mencari waktu",
+      "stopping": "Menghentikan…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} token",
+      "elapsed": "{{seconds}} dtk"
     }
   },
   "palsScreen": {
@@ -1065,7 +1098,14 @@
     "readyToChat": "Siap mengobrol? Muat model yang terakhir digunakan.",
     "pleaseLoadModel": "Muat model untuk mengobrol.",
     "multimodalNotEnabled": "Multimodal tidak diaktifkan untuk model ini. Gambar akan ditampilkan tetapi tidak diproses oleh AI.",
-    "cannotSendWithoutModel": "Muat model terlebih dahulu"
+    "cannotSendWithoutModel": "Muat model terlebih dahulu",
+    "toolCallTruncated": "Pemanggilan alat terpotong — model kemungkinan kehabisan ruang. Coba konteks yang lebih besar atau permintaan yang lebih kecil.",
+    "toolCompatWarning": "Model ini mungkin tidak mendukung pemanggilan alat. Hasil mungkin tidak andal.",
+    "softCapWarning": "Mulai chat baru untuk performa terbaik.",
+    "generatingPreview": "Membuat pratinjau… ({{tokens}} token)",
+    "generatingPreviewPending": "Membuat pratinjau…",
+    "toolUsedChip": "menggunakan {{name}}",
+    "toolErrorBlock": "{{name}} gagal"
   },
   "benchmark": {
     "title": "Benchmark",
@@ -1263,5 +1303,13 @@
     "voicesEmptyState": "Suara tidak ditemukan.",
     "kokoroDeviceNote": "Beberapa suara mungkin tidak berfungsi di semua perangkat.",
     "insufficientStorage": "Ruang tidak mencukupi — bebaskan {{requiredMb}} MB untuk memasang mesin ini ({{freeMb}} MB tersedia)."
+  },
+  "htmlPreview": {
+    "defaultTitle": "Pratinjau",
+    "showPreview": "Tampilkan pratinjau hasil render",
+    "showCode": "Tampilkan kode HTML",
+    "copyHtml": "Salin HTML",
+    "closePreview": "Tutup pratinjau",
+    "openFullscreen": "Buka layar penuh: {{title}}"
   }
 }
