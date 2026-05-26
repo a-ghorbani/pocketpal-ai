@@ -1,0 +1,605 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 2-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 2"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 2,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 2-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 2"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 2,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 3-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 3"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 3,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-3"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 3-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 3"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 3,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-3"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 4-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 4"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 4,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-3"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-4"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 4-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 4"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 4,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-3"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-4"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 5-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 5"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 5,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-3"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-4"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-5"
+    />
+  </View>
+</View>
+`;
+
+exports[`Stepper — snapshot matrix baseline (variant x size x {default,disabled} x modes) 5-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Step 1 of 5"
+    accessibilityRole="progressbar"
+    accessibilityValue={
+      {
+        "max": 5,
+        "min": 1,
+        "now": 1,
+      }
+    }
+    style={
+      [
+        {
+          "alignItems": "center",
+          "alignSelf": "flex-start",
+          "flexDirection": "row",
+          "gap": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-stepper"
+  >
+    <View
+      style={
+        {
+          "backgroundColor": "#333333",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 48,
+        }
+      }
+      testID="ui-stepper-dot-1"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-2"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-3"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-4"
+    />
+    <View
+      style={
+        {
+          "backgroundColor": "#a1a1a1",
+          "borderRadius": 4,
+          "height": 4,
+          "width": 20,
+        }
+      }
+      testID="ui-stepper-dot-5"
+    />
+  </View>
+</View>
+`;
