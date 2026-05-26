@@ -88,6 +88,9 @@ class PalStore {
       // Initialize Lookie pal after database is loaded
       await this.initializeLookiePal();
 
+      // Initialize Pip pal (idempotent — see initializePipPal).
+      await this.initializePipPal();
+
       // Register talent engines (idempotent)
       registerDefaultTalents();
 
@@ -787,6 +790,45 @@ class PalStore {
       }
     } catch (error) {
       console.error('Error initializing Lookie pal:', error);
+    }
+  }
+
+  /**
+   * Initialize the default "Pip" recommended pal if it doesn't exist.
+   *
+   * Idempotent: a re-entry never overwrites an existing Pip record, so a
+   * `defaultModel` bound from a prior session (e.g. by the onboarding
+   * recommended-pal picker) survives subsequent app starts.
+   */
+  private async initializePipPal(): Promise<void> {
+    try {
+      const existing = this.pals.find(
+        p => p.name === 'Pip' && p.source === 'local',
+      );
+      if (existing) {
+        return;
+      }
+
+      const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
+        type: 'local',
+        name: 'Pip',
+        description:
+          'A friendly general-purpose pal that runs entirely on your phone.',
+        systemPrompt:
+          'You are Pip, a friendly and helpful assistant who runs locally on the user’s phone. Keep replies concise and warm.',
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        defaultModel: undefined,
+        parameters: {},
+        parameterSchema: [],
+        capabilities: {},
+        color: ['#0E0D0C', '#FAFAFA'],
+        source: 'local',
+      };
+
+      await this.addPal(palData);
+    } catch (error) {
+      console.error('Error initializing Pip pal:', error);
     }
   }
 }
