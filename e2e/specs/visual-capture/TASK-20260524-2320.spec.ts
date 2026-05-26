@@ -31,7 +31,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
-import {Selectors, byText} from '../../helpers/selectors';
+import {SettingsPage} from '../../pages/SettingsPage';
+import {Selectors} from '../../helpers/selectors';
 import {
   downloadAndLoadModel,
   dismissPerformanceWarningIfPresent,
@@ -80,10 +81,12 @@ function recordFailure(name: string, err: unknown): void {
 describe(`Visual captures for ${TASK_ID} (label=${LABEL})`, () => {
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
+  let settingsPage: SettingsPage;
 
   before(async () => {
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
+    settingsPage = new SettingsPage();
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
     // UsageStats tooltip needs a loaded model so the memory chart has data.
@@ -93,12 +96,15 @@ describe(`Visual captures for ${TASK_ID} (label=${LABEL})`, () => {
 
   it('captures UsageStats tooltip (`memory-usage-tooltip`)', async () => {
     try {
-      // Enable Display Memory Usage if not already on.
+      // Enable Display Memory Usage if not already on. The switch lives deep
+      // in the settings list, so scroll first.
       await chatPage.openDrawer();
       await drawerPage.waitForOpen();
       await drawerPage.navigateToSettings();
+      await settingsPage.waitForReady();
+      await settingsPage.scrollToDisplayMemoryUsageSwitch();
 
-      const memSwitch = browser.$('~display-memory-usage-switch');
+      const memSwitch = browser.$(Selectors.settings.displayMemoryUsageSwitch);
       await memSwitch.waitForDisplayed({timeout: 10000});
       const wasOn = (await memSwitch.getAttribute('value')) === '1';
       if (!wasOn) {
@@ -134,23 +140,17 @@ describe(`Visual captures for ${TASK_ID} (label=${LABEL})`, () => {
       await drawerPage.waitForOpen();
       await drawerPage.navigateToPals();
 
-      const list = browser.$('~pals-flat-list');
-      await list.waitForDisplayed({timeout: 15000});
-
-      // Wait for the Palshub fetch to populate cards.
-      await browser.pause(3000);
-
-      // Tap the first pal card. SquarePalCard has no testID, so we tap the
-      // first cell of the FlatList via accessibility-tree position.
-      const firstCard = (driver as any).isAndroid
-        ? browser.$(
-            'android=new UiSelector().resourceId("pals-flat-list").childSelector(new UiSelector().clickable(true).index(0))',
-          )
-        : browser.$(
-            '-ios class chain:**/XCUIElementTypeOther[`name == "pals-flat-list"`]/**/XCUIElementTypeOther[1]/XCUIElementTypeOther[1]',
-          );
-
-      await firstCard.waitForDisplayed({timeout: 10000});
+      // The Pals screen renders either a sectioned ScrollView or a flat
+      // FlatList depending on filter state — both contain SquarePalCard
+      // instances. PalsHub cards carry `palshub-pal-card-<id>`; local cards
+      // carry `local-pal-card-<id>`. We target PalsHub specifically because
+      // only those open `PalDetailSheet` (the surface containing the
+      // Surface swap we want to capture).
+      const cardPredicate = (driver as any).isAndroid
+        ? 'android=new UiSelector().resourceIdMatches("palshub-pal-card-.*")'
+        : '-ios predicate string:name BEGINSWITH "palshub-pal-card-"';
+      const firstCard = browser.$(cardPredicate);
+      await firstCard.waitForDisplayed({timeout: 20000});
       await firstCard.click();
 
       // Sheet animation + content render.

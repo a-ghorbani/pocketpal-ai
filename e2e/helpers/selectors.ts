@@ -347,6 +347,9 @@ export const Selectors = {
     get languageSelectorButton(): string {
       return byTestId('language-selector-button');
     },
+    get displayMemoryUsageSwitch(): string {
+      return byTestId('display-memory-usage-switch');
+    },
     languageOption: (lang: string): string =>
       byTestId(`language-option-${lang}`),
     /**
