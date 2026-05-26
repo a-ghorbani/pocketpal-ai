@@ -87,6 +87,11 @@ class ChatSessionStore {
   newChatCompletionSettings: CompletionParams = defaultCompletionSettings;
   newChatPalId: string | undefined = undefined;
   newChatSettingsSource: 'pal' | 'custom' = 'pal';
+  // User's manual thinking toggle in the no-session chat path. When set,
+  // the resolver applies it as the last layer (after pal) so the toggle
+  // persists; cleared on session creation, new-chat reset, and session
+  // switch.
+  newChatThinkingOverride: boolean | undefined = undefined;
   // Store localized date group names
   dateGroupNames: typeof DEFAULT_GROUP_NAMES = DEFAULT_GROUP_NAMES;
   // Migration status
@@ -309,6 +314,7 @@ class ChatSessionStore {
     runInAction(() => {
       this.newChatPalId = this.activePalId;
       this.newChatSettingsSource = 'pal'; // Reset to default for new chat
+      this.newChatThinkingOverride = undefined;
       // Do not copy completion settings from session to global settings
       // Instead, preserve global settings as they are
       this.exitEditMode();
@@ -355,6 +361,7 @@ class ChatSessionStore {
       // Don't modify global settings when changing sessions
       this.newChatPalId = undefined;
       this.newChatSettingsSource = 'pal'; // Reset for consistency
+      this.newChatThinkingOverride = undefined;
     });
   }
 
@@ -470,13 +477,24 @@ class ChatSessionStore {
     completionSettings: CompletionParams = defaultCompletionSettings,
   ): Promise<void> {
     try {
+      // If the user has staged a thinking override for the new-chat path,
+      // the resolved snapshot in `completionSettings` already carries it
+      // (applied last in `resolveCompletionSettings`). Birth the session as
+      // 'custom' so the resolver returns that snapshot verbatim on every
+      // subsequent inference — pal-derived params survive (merged before
+      // the override) and the user's choice is preserved.
+      const birthSource: 'pal' | 'custom' =
+        this.newChatThinkingOverride !== undefined
+          ? 'custom'
+          : this.newChatSettingsSource;
+
       // Create in database
       const newSession = await chatSessionRepository.createSession(
         title,
         initialMessages,
         completionSettings,
         this.newChatPalId,
-        this.newChatSettingsSource,
+        birthSource,
       );
 
       // Get the full session data
@@ -506,13 +524,12 @@ class ChatSessionStore {
         date: newSession.date,
         messages,
         completionSettings: settings,
-        settingsSource: this.newChatSettingsSource, // Use the stored settings source choice
+        settingsSource: birthSource, // 'custom' if a thinking override was staged, else stored source
         messagesLoaded: true, // Mark as loaded since we have the messages
       };
 
       if (this.newChatPalId) {
         metaData.activePalId = this.newChatPalId;
-        this.newChatPalId = undefined;
       }
 
       await this.updateSessionTitle(metaData);
@@ -520,6 +537,8 @@ class ChatSessionStore {
       runInAction(() => {
         this.sessions.push(metaData);
         this.activeSessionId = newSession.id;
+        this.newChatPalId = undefined;
+        this.newChatThinkingOverride = undefined;
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -1380,6 +1399,16 @@ class ChatSessionStore {
           };
         }
       }
+    }
+
+    // No-session-only: apply user's explicit thinking override last so it
+    // wins over pal's enable_thinking. Single-key overlay — does NOT touch
+    // any other field, and does NOT affect tool availability.
+    if (!sessionId && this.newChatThinkingOverride !== undefined) {
+      resolvedSettings = {
+        ...resolvedSettings,
+        enable_thinking: this.newChatThinkingOverride,
+      };
     }
 
     // Apply session-specific settings based on explicit user choice

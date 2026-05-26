@@ -1,6 +1,7 @@
 import React, {useRef, ReactNode, useState} from 'react';
 
 import {observer} from 'mobx-react';
+import {runInAction} from 'mobx';
 
 import {
   Bubble,
@@ -127,6 +128,7 @@ export const ChatScreen: React.FC = observer(() => {
     activeSession?.settingsSource,
     activeSession?.completionSettings,
     chatSessionStore.newChatCompletionSettings,
+    chatSessionStore.newChatThinkingOverride,
     activePalId,
   ]);
 
@@ -190,12 +192,14 @@ export const ChatScreen: React.FC = observer(() => {
       };
       await chatSessionStore.updateSessionCompletionSettings(updatedSettings);
     } else {
-      // Update global settings for new chats
-      const updatedSettings = {
-        ...chatSessionStore.newChatCompletionSettings,
-        enable_thinking: enabled,
-      };
-      await chatSessionStore.setNewChatCompletionSettings(updatedSettings);
+      // No active session: stage the user's choice on the new-chat
+      // override field. Resolver applies it as the last layer so the
+      // toggle persists; session creation bakes it in and births the
+      // session as 'custom'. Does NOT touch newChatCompletionSettings or
+      // newChatSettingsSource — pal's other params remain intact.
+      runInAction(() => {
+        chatSessionStore.newChatThinkingOverride = enabled;
+      });
     }
   };
 

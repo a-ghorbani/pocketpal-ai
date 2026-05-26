@@ -31,6 +31,7 @@ export const mockChatSessionStore = {
   //currentSessionMessages: [],
   activeSessionId: 'session-1',
   newChatCompletionSettings: mockDefaultCompletionSettings,
+  newChatThinkingOverride: undefined as boolean | undefined,
   isMigrating: false,
   migrationComplete: true,
   // Draft autosave

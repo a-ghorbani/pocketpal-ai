@@ -33,7 +33,10 @@ class MainApplication : Application(), ReactApplication {
 
         override fun getJSMainModuleName(): String = "index"
 
-        override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
+        // Independent of BuildConfig.DEBUG: releaseE2e is `debuggable=true`
+        // for `adb run-as` but must still load the baked bundle, not from
+        // a locally-running Metro server.
+        override fun getUseDeveloperSupport(): Boolean = BuildConfig.USE_DEV_SUPPORT
 
         override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
         override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED

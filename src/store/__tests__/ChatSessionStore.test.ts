@@ -1373,6 +1373,106 @@ describe('chatSessionStore', () => {
     });
   });
 
+  describe('newChatThinkingOverride — session-creation handoff & clears', () => {
+    beforeEach(() => {
+      chatSessionStore.newChatPalId = undefined;
+      chatSessionStore.newChatThinkingOverride = undefined;
+      chatSessionStore.newChatSettingsSource = 'pal';
+    });
+
+    it("births session as 'custom' when override is staged (overrides 'pal' source) — memory + DB", async () => {
+      const mockNewSession = {
+        id: 'new-session-override',
+        title: 'With Override',
+        date: new Date().toISOString(),
+      };
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
+        mockNewSession,
+      );
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      });
+
+      chatSessionStore.newChatPalId = 'palX';
+      chatSessionStore.newChatSettingsSource = 'pal';
+      chatSessionStore.newChatThinkingOverride = false;
+
+      await chatSessionStore.createNewSession('With Override');
+
+      // Memory-side: session.settingsSource is 'custom' at birth.
+      expect(chatSessionStore.sessions[0].settingsSource).toBe('custom');
+      // DB-side: repo received 'custom' too.
+      expect(chatSessionRepository.createSession).toHaveBeenCalledWith(
+        'With Override',
+        [],
+        defaultCompletionSettings,
+        'palX',
+        'custom',
+      );
+      // Override is one-shot — cleared in the same code block as newChatPalId.
+      expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
+      expect(chatSessionStore.newChatPalId).toBeUndefined();
+    });
+
+    it('births session with newChatSettingsSource when override is undefined (regression guard)', async () => {
+      const mockNewSession = {
+        id: 'new-session-default',
+        title: 'No Override',
+        date: new Date().toISOString(),
+      };
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
+        mockNewSession,
+      );
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      });
+
+      chatSessionStore.newChatPalId = 'palX';
+      chatSessionStore.newChatSettingsSource = 'pal';
+      chatSessionStore.newChatThinkingOverride = undefined;
+
+      await chatSessionStore.createNewSession('No Override');
+
+      expect(chatSessionStore.sessions[0].settingsSource).toBe('pal');
+      expect(chatSessionRepository.createSession).toHaveBeenCalledWith(
+        'No Override',
+        [],
+        defaultCompletionSettings,
+        'palX',
+        'pal',
+      );
+    });
+
+    it('clears override on resetActiveSession', () => {
+      chatSessionStore.newChatThinkingOverride = false;
+      chatSessionStore.activeSessionId = 'session1';
+
+      chatSessionStore.resetActiveSession();
+
+      expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
+    });
+
+    it('clears override on setActiveSession (session switch)', async () => {
+      const existing = {
+        id: 'session1',
+        title: 'Existing',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [existing];
+      chatSessionStore.newChatThinkingOverride = true;
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
+    });
+  });
+
   describe('lazy loading', () => {
     it('setActiveSession loads messages on first access', async () => {
       const mockSession = {

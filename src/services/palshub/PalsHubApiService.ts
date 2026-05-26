@@ -72,6 +72,16 @@ interface ApiPalResponse {
   // Additional field for library pals
   protection_level?: 'public' | 'reveal_on_purchase' | 'private';
   purchased_at?: string;
+  pact?: {
+    version: number;
+    talents: Array<{name: string; required?: boolean}>;
+  };
+  greeting?: {
+    text?: string;
+    suggested_prompts?: string[];
+  };
+  images?: unknown[];
+  models?: unknown[];
 }
 
 interface ApiPalsResponse {
@@ -256,6 +266,10 @@ class PalsHubApiService {
       average_rating: apiPal.stats.rating || undefined,
       review_count: apiPal.stats.review_count,
       is_owned: apiPal.is_owned,
+      pact: apiPal.pact,
+      greeting: apiPal.greeting,
+      images: apiPal.images,
+      models: apiPal.models,
     };
   }
 

@@ -171,6 +171,14 @@ export const Selectors = {
     get markdownContent(): string {
       return byTestId('markdown-content');
     },
+    get greetingBubble(): string {
+      return byTestId('greeting-bubble');
+    },
+    get suggestedPromptsRow(): string {
+      return byTestId('suggested-prompts-row');
+    },
+    suggestedPromptChip: (idx: number): string =>
+      byTestId(`suggested-prompt-chip-${idx}`),
     /**
      * Selector for detecting inference completion.
      * Matches any element with "tokens/sec" in its accessibility label/content-desc.
@@ -386,6 +394,19 @@ export const Selectors = {
       return byTestId('talent-section');
     },
     talentSwitch: (name: string): string => byTestId(`talent-switch-${name}`),
+    get greetingSection(): string {
+      return byTestId('greeting-section');
+    },
+    get greetingTextInput(): string {
+      return byTestId('form-field-greetingText');
+    },
+    get suggestedPromptAddButton(): string {
+      return byTestId('suggested-prompt-add-button');
+    },
+    suggestedPromptInput: (idx: number): string =>
+      byTestId(`suggested-prompt-input-${idx}`),
+    suggestedPromptRemove: (idx: number): string =>
+      byTestId(`suggested-prompt-remove-${idx}`),
   },
 
   // Common dialogs and sheets
