@@ -111,6 +111,11 @@ describe('design-token grep invariants', () => {
       'utils/types.ts',
       'hooks/useTheme.ts',
       'components/ui',
+      // First restyle slice consuming the new token surface (Phase 3a
+      // onboarding flow). Future restyle slices land alongside, not
+      // through this allow-list — see the per-slice contract in
+      // context/redesign/FOU-112-rollout.md.
+      'screens/OnboardingScreens',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

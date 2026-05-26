@@ -36,4 +36,16 @@ export const mockUiStore = {
   toolCompatWarnedModels: [] as string[],
   hasWarnedToolCompat: jest.fn(() => false),
   markToolCompatWarned: jest.fn(),
+  hasCompletedOnboarding: true,
+  onboardingTopicsSnapshot: [] as string[],
+  onboardingState: {
+    currentStep: 1 as 1 | 2 | 3 | 4 | 5 | 6,
+    selectedTopics: [] as string[],
+    selectedModelId: null as string | null,
+  },
+  setOnboardingStep: jest.fn(),
+  toggleOnboardingTopic: jest.fn(),
+  setOnboardingModelId: jest.fn(),
+  completeOnboarding: jest.fn(),
+  resetOnboarding: jest.fn(),
 };
