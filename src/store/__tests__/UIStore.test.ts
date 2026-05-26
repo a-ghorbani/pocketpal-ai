@@ -111,4 +111,86 @@ describe('UIStore', () => {
       ]);
     });
   });
+
+  describe('onboarding', () => {
+    beforeEach(() => {
+      uiStore.resetOnboarding();
+    });
+
+    it('defaults hasCompletedOnboarding=false on a fresh store', () => {
+      expect(uiStore.hasCompletedOnboarding).toBe(false);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopics: [],
+        selectedModelId: null,
+      });
+    });
+
+    it('setOnboardingStep updates currentStep', () => {
+      uiStore.setOnboardingStep(3);
+      expect(uiStore.onboardingState.currentStep).toBe(3);
+    });
+
+    it('toggleOnboardingTopic adds then removes idempotently', () => {
+      uiStore.toggleOnboardingTopic('everyday');
+      expect(uiStore.onboardingState.selectedTopics).toEqual(['everyday']);
+      uiStore.toggleOnboardingTopic('coding');
+      expect(uiStore.onboardingState.selectedTopics).toEqual([
+        'everyday',
+        'coding',
+      ]);
+      uiStore.toggleOnboardingTopic('everyday');
+      expect(uiStore.onboardingState.selectedTopics).toEqual(['coding']);
+    });
+
+    it('setOnboardingModelId writes the picked id (or null)', () => {
+      uiStore.setOnboardingModelId('model-a');
+      expect(uiStore.onboardingState.selectedModelId).toBe('model-a');
+      uiStore.setOnboardingModelId(null);
+      expect(uiStore.onboardingState.selectedModelId).toBeNull();
+    });
+
+    it('completeOnboarding flips the flag, freezes snapshot, resets state', () => {
+      uiStore.setOnboardingStep(5);
+      uiStore.toggleOnboardingTopic('coding');
+      uiStore.setOnboardingModelId('model-a');
+      uiStore.completeOnboarding({
+        topics: ['coding', 'creative'],
+        modelId: 'model-a',
+      });
+      expect(uiStore.hasCompletedOnboarding).toBe(true);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual(['coding', 'creative']);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopics: [],
+        selectedModelId: null,
+      });
+    });
+
+    it('completeOnboarding accepts an empty topics array (Skip path)', () => {
+      uiStore.completeOnboarding({topics: [], modelId: null});
+      expect(uiStore.hasCompletedOnboarding).toBe(true);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
+    });
+
+    it('resetOnboarding returns to the clean state', () => {
+      uiStore.completeOnboarding({topics: ['everyday'], modelId: 'm'});
+      uiStore.resetOnboarding();
+      expect(uiStore.hasCompletedOnboarding).toBe(false);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopics: [],
+        selectedModelId: null,
+      });
+    });
+
+    it('snapshot is a copy, not a reference (frozen at completion)', () => {
+      const topics = ['everyday' as const];
+      uiStore.completeOnboarding({topics, modelId: null});
+      topics.push('coding' as never);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual(['everyday']);
+    });
+  });
 });

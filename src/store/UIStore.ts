@@ -9,6 +9,12 @@ import {
   type AvailableLanguage,
 } from '../locales';
 import {ErrorState} from '../utils/errors';
+import {
+  INITIAL_ONBOARDING_STATE,
+  type OnboardingState,
+  type OnboardingStep,
+  type TopicKey,
+} from './onboarding/types';
 
 export class UIStore {
   static readonly GROUP_KEYS = {
@@ -55,6 +61,19 @@ export class UIStore {
   // Persisted so each model warns at most once per device.
   toolCompatWarnedModels: string[] = [];
 
+  // Onboarding flow gating: persisted; default false on a fresh install.
+  // Once flipped true, the OnboardingStack never re-mounts in this app
+  // lifetime.
+  hasCompletedOnboarding: boolean = false;
+
+  // Frozen at onboarding completion; consumed by future Homepage
+  // pal-suggestion surfaces. Never re-edited after the single write in
+  // `completeOnboarding`.
+  onboardingTopicsSnapshot: TopicKey[] = [];
+
+  // Per-session, in-memory only. Reset on completion. Not persisted.
+  onboardingState: OnboardingState = {...INITIAL_ONBOARDING_STATE};
+
   hasWarnedToolCompat(modelId: string): boolean {
     return this.toolCompatWarnedModels.includes(modelId);
   }
@@ -96,6 +115,8 @@ export class UIStore {
         'benchmarkShareDialog',
         '_language',
         'toolCompatWarnedModels',
+        'hasCompletedOnboarding',
+        'onboardingTopicsSnapshot',
       ],
       storage: AsyncStorage,
     });
@@ -160,6 +181,52 @@ export class UIStore {
   setBenchmarkShareDialogPreference(shouldShow: boolean) {
     runInAction(() => {
       this.benchmarkShareDialog.shouldShow = shouldShow;
+    });
+  }
+
+  setOnboardingStep(step: OnboardingStep) {
+    runInAction(() => {
+      this.onboardingState.currentStep = step;
+    });
+  }
+
+  toggleOnboardingTopic(key: TopicKey) {
+    runInAction(() => {
+      const idx = this.onboardingState.selectedTopics.indexOf(key);
+      if (idx === -1) {
+        this.onboardingState.selectedTopics.push(key);
+      } else {
+        this.onboardingState.selectedTopics.splice(idx, 1);
+      }
+    });
+  }
+
+  setOnboardingModelId(modelId: string | null) {
+    runInAction(() => {
+      this.onboardingState.selectedModelId = modelId;
+    });
+  }
+
+  completeOnboarding({
+    topics,
+    modelId: _modelId,
+  }: {
+    topics: TopicKey[];
+    modelId: string | null;
+  }) {
+    runInAction(() => {
+      this.hasCompletedOnboarding = true;
+      this.onboardingTopicsSnapshot = [...topics];
+      this.onboardingState = {...INITIAL_ONBOARDING_STATE};
+    });
+  }
+
+  // Test / E2E only — callers MUST gate with `__DEV__ || __E2E__`.
+  resetOnboarding() {
+    runInAction(() => {
+      this.hasCompletedOnboarding = false;
+      this.onboardingTopicsSnapshot = [];
+      this.onboardingState = {...INITIAL_ONBOARDING_STATE};
     });
   }
 }
