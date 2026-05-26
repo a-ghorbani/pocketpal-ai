@@ -17,21 +17,19 @@ export type PressablePrimitiveProps = Omit<
 > & {
   /**
    * Outer style for the Pressable container. May be a static style or
-   * a function of (pressed, hovered, focused, disabled) — additive on
-   * top of the state-layer overlay.
+   * a function of (pressed, disabled) — additive on top of the
+   * state-layer overlay. `hovered`/`focused` are not surfaced: RN's
+   * `Pressable` only exposes `pressed` via its style callback on mobile.
+   * Focus, where it applies, is consumer-driven (e.g. Input wraps
+   * `onFocus`/`onBlur` itself).
    */
   style?:
     | StyleProp<ViewStyle>
-    | ((state: {
-        pressed: boolean;
-        hovered?: boolean;
-        focused?: boolean;
-        disabled?: boolean;
-      }) => StyleProp<ViewStyle>);
+    | ((state: {pressed: boolean; disabled?: boolean}) => StyleProp<ViewStyle>);
   /**
-   * Color of the state-layer overlay rendered on press/focus/hover.
-   * Defaults to theme.colors.onSurface so the overlay reads correctly
-   * on every surface variant.
+   * Color of the state-layer overlay rendered on press. Defaults to
+   * theme.colors.onSurface so the overlay reads correctly on every
+   * surface variant.
    */
   stateLayerColor?: string;
   children?: React.ReactNode;
@@ -39,9 +37,9 @@ export type PressablePrimitiveProps = Omit<
 
 /**
  * DS Pressable primitive. Wraps RN Pressable and renders a token-bound
- * state-layer overlay on press / focus / hover. Tokens-only; does NOT
- * supply padding, radius, or background — consumers wrap in their own
- * styled View or pass an outer style.
+ * state-layer overlay on press. Tokens-only; does NOT supply padding,
+ * radius, or background — consumers wrap in their own styled View or
+ * pass an outer style.
  */
 export const Pressable: React.FC<PressablePrimitiveProps> = ({
   style,
@@ -65,12 +63,7 @@ export const Pressable: React.FC<PressablePrimitiveProps> = ({
       style={state => {
         const outer =
           typeof style === 'function'
-            ? style({
-                pressed: state.pressed,
-                hovered: undefined,
-                focused: undefined,
-                disabled: isDisabled,
-              })
+            ? style({pressed: state.pressed, disabled: isDisabled})
             : style;
         return outer;
       }}>

@@ -41,7 +41,7 @@ export function warnIfNoA11yLabel(
 ): void {
   if (__DEV__ && !label && !accessibilityLabel) {
     console.warn(
-      `[ds/${componentName}] accessibilityLabel or label is required; types may have been bypassed.`,
+      `[ui/${componentName}] accessibilityLabel or label is required; types may have been bypassed.`,
     );
   }
 }

@@ -89,13 +89,15 @@ describe('UI layer grep invariants', () => {
     ];
 
     it.each(overlayFiles)(
-      '%s imports Header and renders a <Header ...> JSX tag',
+      '%s imports Header and renders exactly one <Header ...> JSX tag',
       file => {
         const code = stripComments(fs.readFileSync(file, 'utf-8'));
         // Header must be imported from the sibling UI Header module.
         expect(code).toMatch(/from\s+['"]\.\.\/Header['"]/);
-        // And used as a JSX tag (self-closing or with children).
-        expect(code).toMatch(/<Header(\s|\/|>)/);
+        // And used as a JSX tag exactly once (single source of structural
+        // truth — bespoke inline header markup is forbidden alongside it).
+        const headerOpenings = code.match(/<Header(\s|\/|>)/g) ?? [];
+        expect(headerOpenings).toHaveLength(1);
       },
     );
   });
