@@ -167,6 +167,7 @@ export interface TokenSpacing {
   ml: 20;
   l: 24;
   xl: 32;
+  xxl: 40;
 }
 
 // Key names mirror canonical Figma `Radius/*` (None/XXS/XS/S/M/ML/L/XL/XXL)

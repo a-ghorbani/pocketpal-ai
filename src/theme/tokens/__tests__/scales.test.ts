@@ -30,13 +30,14 @@ describe('design-token scales — single scale per dimension', () => {
       'ml',
       'l',
       'xl',
+      'xxl',
     ] as const;
 
     it('exposes exactly the canonical scale keys (no Gap/* aliases)', () => {
       expect(Object.keys(spacing).sort()).toEqual([...expectedKeys].sort());
     });
 
-    it('values match the canonical scale (0/2/4/8/12/16/20/24/32)', () => {
+    it('values match the canonical scale (0/2/4/8/12/16/20/24/32/40)', () => {
       expect(spacing).toEqual({
         none: 0,
         xxs: 2,
@@ -47,6 +48,7 @@ describe('design-token scales — single scale per dimension', () => {
         ml: 20,
         l: 24,
         xl: 32,
+        xxl: 40,
       });
     });
 
