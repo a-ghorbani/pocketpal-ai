@@ -1,10 +1,10 @@
 import React, {useEffect, useMemo, useRef} from 'react';
-import {View} from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
   type BottomSheetModalProps,
 } from '@gorhom/bottom-sheet';
+import {View} from 'react-native';
 import type {BottomSheetModalMethods} from '@gorhom/bottom-sheet/lib/typescript/types';
 
 import {useTheme} from '../../../hooks';
@@ -74,19 +74,17 @@ const SheetBase: React.FC<SheetProps> = ({
       onDismiss={onDismiss}
       backgroundStyle={{backgroundColor: theme.colors.surface}}
       handleIndicatorStyle={{backgroundColor: theme.colors.outlineVariant}}>
-      <BottomSheetView style={[styles.container, style]}>
-        <View testID={testID}>
-          {(title || subtitle || leading || trailing) && (
-            <Header
-              title={title}
-              subtitle={subtitle}
-              leading={leading}
-              trailing={trailing}
-              align={align}
-            />
-          )}
-          <View style={styles.body}>{children}</View>
-        </View>
+      <BottomSheetView testID={testID} style={[styles.container, style]}>
+        {(title || subtitle || leading || trailing) && (
+          <Header
+            title={title}
+            subtitle={subtitle}
+            leading={leading}
+            trailing={trailing}
+            align={align}
+          />
+        )}
+        <View style={styles.body}>{children}</View>
       </BottomSheetView>
     </BottomSheetModal>
   );
