@@ -111,10 +111,9 @@ describe('design-token grep invariants', () => {
       'utils/types.ts',
       'hooks/useTheme.ts',
       'components/ui',
-      // First restyle slice consuming the new token surface (Phase 3a
-      // onboarding flow). Future restyle slices land alongside, not
-      // through this allow-list — see the per-slice contract in
-      // context/redesign/FOU-112-rollout.md.
+      // First feature surface consuming the new token axes. Future
+      // screens land alongside; do not relax this allow-list without a
+      // matching architecture-doc note.
       'screens/OnboardingScreens',
     ];
     const files = listFiles(SRC).filter(f => {
