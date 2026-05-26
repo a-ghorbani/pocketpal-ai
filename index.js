@@ -7,10 +7,12 @@ import 'react-native-url-polyfill/auto';
 
 import {AppRegistry, LogBox} from 'react-native';
 
-// The in-app warning toast covers chat-bottom controls and other UI
-// elements that Appium needs to interact with. Silence LogBox at module
-// init — no-op in true release builds where LogBox is already inactive.
-LogBox.ignoreAllLogs(true);
+// Silence LogBox in E2E builds so the in-app warning toast doesn't cover
+// chat-bottom controls Appium needs. Left active otherwise so warnings
+// surface during development.
+if (__E2E__) {
+  LogBox.ignoreAllLogs(true);
+}
 
 import App from './App';
 import {name as appName} from './app.json';
