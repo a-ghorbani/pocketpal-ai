@@ -761,6 +761,15 @@
         "render_html": "Відображати HTML-документи вбудовано в чаті",
         "calculate": "Обчислення математичних виразів",
         "datetime": "Отримати поточну дату й час"
+      },
+      "greeting": {
+        "sectionLabel": "Привіт",
+        "textLabel": "Вітальне повідомлення",
+        "textPlaceholder": "Що б сказав цей приятель у порожньому чаті?",
+        "suggestedPromptsLabel": "Рекомендовані запити",
+        "addPromptButton": "Додати підказку",
+        "promptPlaceholder": "Короткий опис мікросхеми",
+        "removePromptLabel": "Прибрати підказку"
       }
     },
     "assistantPalSheet": {
@@ -934,8 +943,8 @@
       "stopping": "Зупинення…"
     },
     "toolMetrics": {
-      "tokens": "{{count}} ток.",
-      "elapsed": "{{seconds}} сек."
+      "tokens": "{{count}} токен",
+      "elapsed": "{{seconds}} сек"
     }
   },
   "palsScreen": {
