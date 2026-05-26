@@ -530,15 +530,15 @@ class ChatSessionStore {
 
       if (this.newChatPalId) {
         metaData.activePalId = this.newChatPalId;
-        this.newChatPalId = undefined;
       }
-      this.newChatThinkingOverride = undefined;
 
       await this.updateSessionTitle(metaData);
 
       runInAction(() => {
         this.sessions.push(metaData);
         this.activeSessionId = newSession.id;
+        this.newChatPalId = undefined;
+        this.newChatThinkingOverride = undefined;
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
