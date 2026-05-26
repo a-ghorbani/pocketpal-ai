@@ -48,15 +48,13 @@ module.exports = {
       // Paper symbols whose DS replacement has shipped get banned
       // per-symbol as call-sites migrate.
       //
-      // Wrap-Paper DS components (Switch/Checkbox/RadioButton) keep
-      // importing their Paper counterpart and are excluded below.
+      // No per-folder Paper carve-out is wired yet because the blocklist
+      // only contains 'Surface', and none of the wrap-Paper DS folders
+      // (Switch/Checkbox/RadioButton/Dropdown) import Surface. Each
+      // future blocklist entry that overlaps a wrap-Paper folder gets
+      // its own allowance in lock-step with the addition.
       files: ['src/**/*.{ts,tsx}'],
-      excludedFiles: [
-        'src/__automation__/**',
-        'src/components/ui/Switch/**',
-        'src/components/ui/Checkbox/**',
-        'src/components/ui/RadioButton/**',
-      ],
+      excludedFiles: ['src/__automation__/**'],
       rules: {
         'no-restricted-imports': [
           'error',
