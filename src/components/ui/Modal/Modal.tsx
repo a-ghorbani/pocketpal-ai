@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, View} from 'react-native';
+import {View} from 'react-native';
 import {Portal} from 'react-native-paper';
 
 import {useTheme} from '../../../hooks';
@@ -12,6 +12,11 @@ import {createStyles} from './styles';
 
 export type ModalProps = Omit<CommonDSProps, 'disabled'> & {
   isVisible?: boolean;
+  /**
+   * Optional dismiss callback. Modal is fullscreen by composition (no
+   * scrim region to tap); consumers wire dismiss to the Header
+   * leading/trailing close button or the platform back gesture.
+   */
   onDismiss?: () => void;
   title?: string;
   subtitle?: string;
@@ -29,13 +34,17 @@ interface ModalComponent extends React.FC<ModalProps> {
  * DS Modal — Portal + full-screen View + DS Header composition.
  * Renders a single Header; bespoke header markup is forbidden.
  *
+ * Dismiss model: Modal is fullscreen, so there is no scrim region for
+ * tap-to-dismiss. Consumers route `onDismiss` through a header close
+ * button (leading/trailing slot) or platform back navigation. The prop
+ * is exposed so the wiring is uniform across overlays.
+ *
  * Defaults: testID='ui-modal'.
  */
 const ModalBase: React.FC<ModalProps> = ({
   testID = 'ui-modal',
   style,
   isVisible,
-  onDismiss,
   title,
   subtitle,
   leading,
@@ -51,12 +60,6 @@ const ModalBase: React.FC<ModalProps> = ({
   return (
     <Portal>
       <View testID={testID} style={[styles.surface, style]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss"
-          onPress={onDismiss}
-          style={styles.scrim}
-        />
         {(title || subtitle || leading || trailing) && (
           <Header
             title={title}

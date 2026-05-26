@@ -14,6 +14,13 @@ import {createStyles} from './styles';
 export type DialogProps = Omit<CommonDSProps, 'disabled'> & {
   isVisible?: boolean;
   onDismiss?: () => void;
+  /**
+   * Localized accessibility label for the scrim's dismiss Pressable.
+   * Consumers pass an L10n string (e.g. l10n.common.dismiss). When
+   * undefined, the Pressable is rendered without an accessibility
+   * label rather than with a hard-coded English fallback.
+   */
+  dismissAccessibilityLabel?: string;
   title?: string;
   subtitle?: string;
   leading?: React.ReactNode;
@@ -37,6 +44,7 @@ const DialogBase: React.FC<DialogProps> = ({
   style,
   isVisible,
   onDismiss,
+  dismissAccessibilityLabel,
   title,
   subtitle,
   leading,
@@ -54,7 +62,7 @@ const DialogBase: React.FC<DialogProps> = ({
       <View style={styles.centerWrapper}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Dismiss"
+          accessibilityLabel={dismissAccessibilityLabel}
           onPress={onDismiss}
           style={styles.scrim}
         />
