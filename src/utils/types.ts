@@ -385,6 +385,8 @@ export interface ThemeSpacing {
   m: 16;
   ml: 20;
   l: 24;
+  xl: 32;
+  xxl: 40;
 }
 
 /**
