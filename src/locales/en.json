@@ -1362,17 +1362,17 @@
       "cta": "Finish",
       "deviceChip": "Local · on-device",
       "model": {
-        "llama32_1b": {
-          "title": "Llama 3.2 1B (Q8_0)",
-          "subtitle": "~1.3 GB · runs on most phones"
+        "quick": {
+          "title": "Quick",
+          "subtitle": "Llama 3.2 1B · Q2_K"
         },
-        "qwen25_15b": {
-          "title": "Qwen 2.5 1.5B (Q8_0)",
-          "subtitle": "~1.9 GB · balanced quality"
+        "balanced": {
+          "title": "Balanced",
+          "subtitle": "Llama 3.2 1B · Q4_K_M"
         },
-        "smollm2_17b": {
-          "title": "SmolLM2 1.7B (Q8_0)",
-          "subtitle": "~1.8 GB · capable small model"
+        "best": {
+          "title": "Best",
+          "subtitle": "Llama 3.2 1B · Q8_0"
         }
       }
     }

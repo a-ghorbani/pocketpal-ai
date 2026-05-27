@@ -19,7 +19,7 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-const PICKED_ID = RECOMMENDED_PAL_MODEL_SET[0];
+const PICKED_ID = RECOMMENDED_PAL_MODEL_SET[0].modelId;
 
 describe('useOnboardingHandlers', () => {
   beforeEach(() => {
@@ -233,8 +233,8 @@ describe('useOnboardingHandlers', () => {
     });
 
     it('every RECOMMENDED_PAL_MODEL_SET id resolves in defaultModels (sanity guard for the finish path)', () => {
-      RECOMMENDED_PAL_MODEL_SET.forEach(id => {
-        expect(defaultModels.find(m => m.id === id)).toBeDefined();
+      RECOMMENDED_PAL_MODEL_SET.forEach(entry => {
+        expect(defaultModels.find(m => m.id === entry.modelId)).toBeDefined();
       });
     });
   });
