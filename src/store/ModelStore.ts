@@ -64,6 +64,7 @@ import {
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
+import {effectiveNCtx} from '../utils/bannerVariantResolver';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -419,8 +420,14 @@ class ModelStore {
   getEffectiveContextInitParams = async (
     filePath?: string,
   ): Promise<Omit<ContextParams, 'model'>> => {
-    // Apply batch constraints
-    const effectiveContext = this.contextInitParams.n_ctx;
+    // Per-session override (set via the "Increase context" banner CTA)
+    // wins over the global default. Reads the same Map the banner
+    // resolver consults so both stay in lockstep.
+    const effectiveContext = effectiveNCtx(
+      chatSessionStore.sessionContextOverrides,
+      chatSessionStore.activeSessionId,
+      this.contextInitParams.n_ctx,
+    );
     const effectiveBatch = Math.min(
       this.contextInitParams.n_batch,
       effectiveContext,
