@@ -1,10 +1,11 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Image, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 
 import {useTheme} from '../../hooks';
 import type {Theme} from '../../utils/types';
 import {ROUTES} from '../../utils/navigationConstants';
+import {onboardingIllustrations} from '../../assets/onboarding/illustrations';
 
 const SPLASH_MIN_DWELL_MS = 600;
 
@@ -16,9 +17,9 @@ const createStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    brand: {
-      ...theme.typography.headlineH1,
-      color: theme.colors.onBackground,
+    mark: {
+      width: 112,
+      height: 112,
     },
   });
 
@@ -36,7 +37,13 @@ export const SplashScreen: React.FC = () => {
 
   return (
     <View testID="onboarding-splash" style={styles.root}>
-      <Text style={styles.brand}>Pocket Pal</Text>
+      <Image
+        source={onboardingIllustrations.splashMark}
+        style={styles.mark}
+        resizeMode="contain"
+        accessibilityRole="image"
+        accessibilityLabel="Pocket Pal"
+      />
     </View>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Image, StyleSheet, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {uiStore} from '../../store';
@@ -7,7 +7,7 @@ import {useTheme} from '../../hooks';
 import type {Theme} from '../../utils/types';
 import {RECOMMENDED_PAL_MODEL_SET} from '../../store/onboarding/recommendedPalModelSet';
 import {defaultModels} from '../../store/defaultModels';
-import {onboardingIllustrationPlaceholders} from '../../assets/onboarding/placeholders';
+import {onboardingIllustrations} from '../../assets/onboarding/illustrations';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
 import {OnboardingAudioButton} from './components/OnboardingAudioButton';
@@ -24,9 +24,9 @@ const createStyles = (theme: Theme) =>
       paddingTop: theme.spacing.m,
       paddingBottom: theme.spacing.s,
     },
-    mascotPlaceholder: {
-      ...theme.typography.captionS,
-      color: theme.colors.onSurfaceVariant,
+    mascotImage: {
+      width: 74,
+      height: 70,
     },
     body: {
       ...theme.typography.bodyM,
@@ -85,9 +85,13 @@ export const Onboarding6Screen: React.FC = observer(() => {
       }
       illustration={
         <View style={styles.mascot}>
-          <Text style={styles.mascotPlaceholder}>
-            {onboardingIllustrationPlaceholders.pipMascot}
-          </Text>
+          <Image
+            source={onboardingIllustrations.pipMascot}
+            style={styles.mascotImage}
+            resizeMode="contain"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
         </View>
       }
       title={<ItalicAccentTitle title={t.screen6.title} align="center" />}

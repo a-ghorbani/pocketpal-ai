@@ -1,34 +1,29 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Image, StyleSheet, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import type {Theme} from '../../utils/types';
-import {onboardingIllustrationPlaceholders} from '../../assets/onboarding/placeholders';
+import {onboardingIllustrations} from '../../assets/onboarding/illustrations';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
 import {OnboardingSkipButton} from './components/OnboardingSkipButton';
 import {OnboardingArrowGlyph} from './components/OnboardingArrowGlyph';
 import {ItalicAccentTitle} from './components/ItalicAccentTitle';
 import {HighlightText} from './components/HighlightText';
-import {ComparisonCards} from './components/ComparisonCards';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    placeholder: {
-      ...theme.typography.captionS,
-      color: theme.colors.onSurfaceVariant,
-    },
     illustration: {
       paddingVertical: theme.spacing.l,
       paddingHorizontal: theme.spacing.l,
       width: '100%',
+      alignItems: 'center',
     },
-    cardVisual: {
-      ...theme.typography.captionS,
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'center',
+    cards: {
+      width: '100%',
+      aspectRatio: 369 / 217,
     },
   });
 
@@ -44,20 +39,12 @@ export const Onboarding3Screen: React.FC = observer(() => {
       topRight={<OnboardingSkipButton label={t.skip} onPress={skip} />}
       illustration={
         <View style={styles.illustration}>
-          <ComparisonCards
-            leftLabel={t.screen3.leftLabel}
-            rightLabel={t.screen3.rightLabel}
-            vsLabel={t.screen3.vs}
-            leftVisual={
-              <Text style={styles.cardVisual}>
-                {onboardingIllustrationPlaceholders.screen3PhoneCard}
-              </Text>
-            }
-            rightVisual={
-              <Text style={styles.cardVisual}>
-                {onboardingIllustrationPlaceholders.screen3CloudCard}
-              </Text>
-            }
+          <Image
+            source={onboardingIllustrations.screen3Cards}
+            style={styles.cards}
+            resizeMode="contain"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
           />
         </View>
       }

@@ -1336,10 +1336,7 @@
       "titleAccent": "Smaller,",
       "body": "Cloud assistants are massive and shared. Your pals are small, quick and private — tuned to your phone.",
       "highlight": "quick and private",
-      "cta": "Got it",
-      "vs": "VS",
-      "leftLabel": "On device",
-      "rightLabel": "Cloud"
+      "cta": "Got it"
     },
     "screen4": {
       "title": "Nothing leaves your phone.",
@@ -1358,6 +1355,14 @@
         "roleplay": "Roleplay",
         "creative_writing": "Creative Writing",
         "else": "Looking for something else?"
+      },
+      "topicDescription": {
+        "smartchat": "Friendly everyday companion",
+        "coding": "Code, debug, explain",
+        "education": "Learn, explain, quiz",
+        "roleplay": "Characters, scenarios",
+        "creative_writing": "Stories, ideas, drafts",
+        "else": "Browse all pals later in the app"
       }
     },
     "screen6": {

@@ -32,6 +32,7 @@ export const Onboarding5Screen: React.FC = observer(() => {
   const t = l10n.onboarding;
   const selected = uiStore.onboardingState.selectedTopic;
   const labels = t.screen5.topic as Record<TopicKey, string>;
+  const descriptions = t.screen5.topicDescription as Record<TopicKey, string>;
   return (
     <OnboardingScaffold
       step={5}
@@ -58,6 +59,7 @@ export const Onboarding5Screen: React.FC = observer(() => {
         selected={selected}
         onSelect={key => selectTopic(key)}
         labels={labels}
+        descriptions={descriptions}
       />
     </OnboardingScaffold>
   );

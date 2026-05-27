@@ -1,10 +1,10 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Image, StyleSheet, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {useTheme} from '../../hooks';
 import type {Theme} from '../../utils/types';
-import {onboardingIllustrationPlaceholders} from '../../assets/onboarding/placeholders';
+import {onboardingIllustrations} from '../../assets/onboarding/illustrations';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
 import {OnboardingSkipButton} from './components/OnboardingSkipButton';
@@ -15,14 +15,14 @@ import {useOnboardingHandlers} from './useOnboardingHandlers';
 
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    placeholder: {
-      ...theme.typography.captionS,
-      color: theme.colors.onSurfaceVariant,
-    },
     illustration: {
       paddingVertical: theme.spacing.l,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    image: {
+      width: 170,
+      height: 286,
     },
   });
 
@@ -38,9 +38,13 @@ export const Onboarding4Screen: React.FC = observer(() => {
       topRight={<OnboardingSkipButton label={t.skip} onPress={skip} />}
       illustration={
         <View style={styles.illustration}>
-          <Text style={styles.placeholder}>
-            {onboardingIllustrationPlaceholders.screen4Shield}
-          </Text>
+          <Image
+            source={onboardingIllustrations.screen4Shield}
+            style={styles.image}
+            resizeMode="contain"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
         </View>
       }
       title={
