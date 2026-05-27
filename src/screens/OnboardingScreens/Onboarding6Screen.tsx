@@ -1,5 +1,5 @@
 import React from 'react';
-import {Image, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {uiStore} from '../../store';
@@ -7,34 +7,38 @@ import {useTheme} from '../../hooks';
 import type {Theme} from '../../utils/types';
 import {RECOMMENDED_PAL_MODEL_SET} from '../../store/onboarding/recommendedPalModelSet';
 import {defaultModels} from '../../store/defaultModels';
-import {onboardingIllustrations} from '../../assets/onboarding/illustrations';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
 import {OnboardingAudioButton} from './components/OnboardingAudioButton';
-import {OnboardingArrowGlyph} from './components/OnboardingArrowGlyph';
 import {ItalicAccentTitle} from './components/ItalicAccentTitle';
 import {DeviceInfoChip} from './components/DeviceInfoChip';
 import {ModelRadioGroup, type ModelOption} from './components/ModelRadioGroup';
+import {PipMascot} from './illustrations/PipMascot';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    mascot: {
+    header: {
       alignItems: 'center',
-      paddingTop: theme.spacing.m,
-      paddingBottom: theme.spacing.s,
+      gap: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.m,
     },
-    mascotImage: {
-      width: 74,
-      height: 70,
+    pipBody: {
+      ...theme.typography.bodyS,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
+      width: 335,
     },
-    body: {
-      ...theme.typography.bodyM,
-      color: theme.colors.textSecondary,
-      marginBottom: theme.spacing.m,
+    subtitle: {
+      ...theme.typography.bodyS,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
+      marginTop: theme.spacing.ml,
+      marginBottom: theme.spacing.s,
     },
-    chipRow: {
-      marginBottom: theme.spacing.m,
+    options: {
+      width: 335,
+      alignSelf: 'center',
     },
   });
 
@@ -76,6 +80,7 @@ export const Onboarding6Screen: React.FC = observer(() => {
     <OnboardingScaffold
       step={6}
       showStepper={false}
+      layout="top"
       topRight={
         <OnboardingAudioButton
           titleText={t.screen6.title}
@@ -83,41 +88,42 @@ export const Onboarding6Screen: React.FC = observer(() => {
           accessibilityLabel={t.audio}
         />
       }
-      illustration={
-        <View style={styles.mascot}>
-          <Image
-            source={onboardingIllustrations.pipMascot}
-            style={styles.mascotImage}
-            resizeMode="contain"
-            accessibilityElementsHidden
-            importantForAccessibility="no"
+      content={
+        <>
+          <View style={styles.header}>
+            <PipMascot width={66} />
+            <ItalicAccentTitle title={t.screen6.title} align="center" />
+            <Text style={styles.pipBody}>{t.screen6.body}</Text>
+          </View>
+          <DeviceInfoChip
+            ramSuffix={t.screen6.deviceRamSuffix}
+            freeSuffix={t.screen6.deviceFreeSuffix}
           />
-        </View>
+          <View style={styles.options}>
+            <Text style={styles.subtitle}>
+              {(t.screen6 as {subtitle?: string}).subtitle ?? ''}
+            </Text>
+            <ModelRadioGroup
+              options={options}
+              selectedId={selectedId}
+              recommendedBadgeLabel={t.screen6.recommended}
+              onSelect={id => uiStore.setOnboardingModelId(id)}
+            />
+          </View>
+        </>
       }
-      title={<ItalicAccentTitle title={t.screen6.title} align="center" />}
-      body={<Text style={styles.body}>{t.screen6.body}</Text>}
       bottomBar={
         <OnboardingBottomBar
+          elevated
           primaryLabel={primaryLabel}
-          primaryTrailing={<OnboardingArrowGlyph glyph="↓" />}
+          primaryGlyph="download"
+          primaryGlyphPosition="leading"
           primaryDisabled={!canFinish}
           onPrimary={finish}
           onBack={goBack}
           backAccessibilityLabel={t.back}
         />
-      }>
-      <View style={styles.chipRow}>
-        <DeviceInfoChip
-          ramSuffix={t.screen6.deviceRamSuffix}
-          freeSuffix={t.screen6.deviceFreeSuffix}
-        />
-      </View>
-      <ModelRadioGroup
-        options={options}
-        selectedId={selectedId}
-        recommendedBadgeLabel={t.screen6.recommended}
-        onSelect={id => uiStore.setOnboardingModelId(id)}
-      />
-    </OnboardingScaffold>
+      }
+    />
   );
 });

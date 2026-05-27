@@ -1,29 +1,46 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
+import {Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import {uiStore} from '../../store';
 import {useTheme} from '../../hooks';
 import type {Theme} from '../../utils/types';
 import type {TopicKey} from '../../store/onboarding/types';
+import {FONT_FAMILIES} from '../../theme/tokens/typography';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingAudioButton} from './components/OnboardingAudioButton';
 import {OnboardingBackButton} from './components/OnboardingBackButton';
 import {TopicChipGrid} from './components/TopicChipGrid';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
-const createStyles = (theme: Theme) =>
-  StyleSheet.create({
-    body: {
-      ...theme.typography.bodyM,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-      marginBottom: theme.spacing.l,
-    },
-    titleWrap: {
+const createStyles = (theme: Theme) => {
+  const isFraunces =
+    theme.typography.headlineH1.fontFamily === FONT_FAMILIES.FRAUNCES_REGULAR;
+  return StyleSheet.create({
+    header: {
+      width: 369,
       alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    title: {
+      // Figma `Headline/H2` — Fraunces 24/28, centered.
+      fontFamily: isFraunces
+        ? FONT_FAMILIES.FRAUNCES_REGULAR
+        : FONT_FAMILIES.INTER_MEDIUM,
+      fontSize: 24,
+      lineHeight: 28,
+      color: theme.colors.onBackground,
+      textAlign: 'center',
+      width: 279,
+    },
+    body: {
+      ...theme.typography.bodyS,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
     },
   });
+};
 
 export const Onboarding5Screen: React.FC = observer(() => {
   const {l10n, goBack, selectTopic} = useOnboardingHandlers(5);
@@ -37,7 +54,7 @@ export const Onboarding5Screen: React.FC = observer(() => {
     <OnboardingScaffold
       step={5}
       showStepper={false}
-      titleAlign="center"
+      layout="top"
       topLeft={
         <OnboardingBackButton onPress={goBack} accessibilityLabel={t.back} />
       }
@@ -48,19 +65,21 @@ export const Onboarding5Screen: React.FC = observer(() => {
           accessibilityLabel={t.audio}
         />
       }
-      title={t.screen5.title}
-      body={
-        <View style={styles.titleWrap}>
-          <Text style={styles.body}>{t.screen5.body}</Text>
-        </View>
+      content={
+        <>
+          <View style={styles.header}>
+            <Text style={styles.title}>{t.screen5.title}</Text>
+            <Text style={styles.body}>{t.screen5.body}</Text>
+          </View>
+          <TopicChipGrid
+            selected={selected}
+            onSelect={key => selectTopic(key)}
+            labels={labels}
+            descriptions={descriptions}
+          />
+        </>
       }
-      bottomBar={null}>
-      <TopicChipGrid
-        selected={selected}
-        onSelect={key => selectTopic(key)}
-        labels={labels}
-        descriptions={descriptions}
-      />
-    </OnboardingScaffold>
+      bottomBar={null}
+    />
   );
 });
