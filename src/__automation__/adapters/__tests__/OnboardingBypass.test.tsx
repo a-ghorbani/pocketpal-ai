@@ -41,7 +41,7 @@ describe('OnboardingBypass adapter', () => {
 
     expect(uiStore.completeOnboarding).toHaveBeenCalledTimes(1);
     expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-      topics: [],
+      topic: null,
       modelId: null,
     });
   });

@@ -12,7 +12,7 @@ export const OnboardingBypass: React.FC = () => {
   React.useEffect(() => {
     if (__E2E__ && __E2E_SKIP_ONBOARDING__) {
       if (!uiStore.hasCompletedOnboarding) {
-        uiStore.completeOnboarding({topics: [], modelId: null});
+        uiStore.completeOnboarding({topic: null, modelId: null});
       }
     }
   }, []);

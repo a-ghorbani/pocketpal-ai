@@ -7,8 +7,8 @@ import type {Theme} from '../../../utils/types';
 import {TOPIC_KEYS, type TopicKey} from '../../../store/onboarding/types';
 
 export type TopicChipGridProps = {
-  selected: TopicKey[];
-  onToggle: (key: TopicKey) => void;
+  selected: TopicKey | null;
+  onSelect: (key: TopicKey | null) => void;
   labels: Record<TopicKey, string>;
 };
 
@@ -30,7 +30,7 @@ const createStyles = (theme: Theme) =>
 
 export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
   selected,
-  onToggle,
+  onSelect,
   labels,
 }) => {
   const theme = useTheme();
@@ -38,7 +38,10 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
   return (
     <View style={styles.grid}>
       {TOPIC_KEYS.map(key => {
-        const isSelected = selected.includes(key);
+        const isSelected = selected === key;
+        // The 'else' escape-hatch chip writes null (no preference) but
+        // still triggers the auto-advance in the parent screen.
+        const onPress = () => onSelect(key === 'else' ? null : key);
         return (
           <View key={key} style={styles.cell}>
             <Chip
@@ -46,7 +49,7 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
               variant="selectable"
               label={labels[key]}
               selected={isSelected}
-              onPress={() => onToggle(key)}
+              onPress={onPress}
             />
           </View>
         );

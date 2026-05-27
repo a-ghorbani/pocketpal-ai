@@ -5,13 +5,16 @@ import {uiStore, palStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
 import {defaultModels} from '../../store/defaultModels';
-import type {OnboardingStep} from '../../store/onboarding/types';
+import type {
+  OnboardingStep,
+  TopicKey,
+} from '../../store/onboarding/types';
 
 /**
  * Per-screen onboarding helpers: mark `currentStep` on mount, expose
- * `goNext` / `goBack` / `skip` / `finish` that route through the single-
- * writer methods on `uiStore` (and, on finish, bind the picked model to
- * the Pip pal and kick off the download via `modelStore`).
+ * `goNext` / `goBack` / `skip` / `finish` / `selectTopic` that route through
+ * the single-writer methods on `uiStore` (and, on finish, bind the picked
+ * model to the Pip pal and kick off the download via `modelStore`).
  */
 export const useOnboardingHandlers = (step: OnboardingStep) => {
   const navigation = useNavigation<any>();
@@ -23,7 +26,7 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
 
   const skip = useCallback(() => {
     uiStore.completeOnboarding({
-      topics: uiStore.onboardingState.selectedTopics.slice(),
+      topic: uiStore.onboardingState.selectedTopic,
       modelId: null,
     });
   }, []);
@@ -56,9 +59,19 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
     }
   }, [step, goTo]);
 
+  // Screen-5 chip tap: write topic + navigate in the same handler
+  // (single forward control — there is no Continue button on screen 5).
+  const selectTopic = useCallback(
+    (key: TopicKey | null) => {
+      uiStore.setOnboardingTopic(key);
+      goTo(ROUTES.ONBOARDING.STEP_6);
+    },
+    [goTo],
+  );
+
   const finish = useCallback(() => {
     const modelId = uiStore.onboardingState.selectedModelId;
-    const topics = uiStore.onboardingState.selectedTopics.slice();
+    const topic = uiStore.onboardingState.selectedTopic;
     if (modelId) {
       const picked = defaultModels.find(m => m.id === modelId);
       const pip = palStore.pals.find(
@@ -69,15 +82,15 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
         // idempotent-no-overwrite contract on initializePipPal.
         palStore.updatePal(pip.id, {defaultModel: picked});
       }
-      uiStore.completeOnboarding({topics, modelId: picked?.id ?? null});
+      uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
       if (picked) {
         // Fire-and-forget; downloads surface via the existing Models screen.
         modelStore.checkSpaceAndDownload(picked.id);
       }
     } else {
-      uiStore.completeOnboarding({topics, modelId: null});
+      uiStore.completeOnboarding({topic, modelId: null});
     }
   }, []);
 
-  return {l10n, next, goBack, skip, finish};
+  return {l10n, next, goBack, skip, finish, selectTopic};
 };

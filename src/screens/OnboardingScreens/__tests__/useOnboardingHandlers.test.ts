@@ -29,12 +29,15 @@ describe('useOnboardingHandlers', () => {
     uiStore.onboardingTopicsSnapshot = [];
     uiStore.onboardingState = {
       currentStep: 1,
-      selectedTopics: [],
+      selectedTopic: null,
       selectedModelId: null,
     };
     // Mock store mutators back to jest.fn() since some specs replace them.
     (uiStore.completeOnboarding as jest.Mock) = jest.fn();
     (uiStore.setOnboardingStep as jest.Mock) = jest.fn();
+    (uiStore.setOnboardingTopic as jest.Mock) = jest.fn(key => {
+      uiStore.onboardingState.selectedTopic = key;
+    });
     // Reset palStore.pals + spies.
     palStore.pals = [];
     (palStore.updatePal as jest.Mock).mockClear();
@@ -80,16 +83,34 @@ describe('useOnboardingHandlers', () => {
     });
   });
 
+  describe('selectTopic (screen 5 — single forward control)', () => {
+    it('writes the picked topic and navigates to Onboarding6 in one handler', () => {
+      const {result} = renderHook(() => useOnboardingHandlers(5));
+      act(() => result.current.selectTopic('smartchat'));
+
+      expect(uiStore.setOnboardingTopic).toHaveBeenCalledWith('smartchat');
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ONBOARDING.STEP_6);
+    });
+
+    it("the 'else' escape-hatch tap writes null but still navigates", () => {
+      const {result} = renderHook(() => useOnboardingHandlers(5));
+      act(() => result.current.selectTopic(null));
+
+      expect(uiStore.setOnboardingTopic).toHaveBeenCalledWith(null);
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ONBOARDING.STEP_6);
+    });
+  });
+
   describe('skip', () => {
-    it('completeOnboarding with current topics + modelId=null; no pal/model writes', () => {
-      uiStore.onboardingState.selectedTopics = ['everyday'];
+    it('completeOnboarding with current topic + modelId=null; no pal/model writes', () => {
+      uiStore.onboardingState.selectedTopic = 'smartchat';
       uiStore.onboardingState.selectedModelId = PICKED_ID; // user picked but tapped Skip
-      const {result} = renderHook(() => useOnboardingHandlers(6));
+      const {result} = renderHook(() => useOnboardingHandlers(4));
       act(() => result.current.skip());
 
       expect(uiStore.completeOnboarding).toHaveBeenCalledTimes(1);
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topics: ['everyday'],
+        topic: 'smartchat',
         modelId: null,
       });
       // Skip path does NOT bind a model or enqueue a download.
@@ -97,16 +118,15 @@ describe('useOnboardingHandlers', () => {
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
     });
 
-    it('passes a defensive copy of selectedTopics (not the live array)', () => {
-      uiStore.onboardingState.selectedTopics = ['everyday'];
+    it('with no topic picked yet, passes null (default Skip on a Skip-able screen)', () => {
+      uiStore.onboardingState.selectedTopic = null;
       const {result} = renderHook(() => useOnboardingHandlers(3));
       act(() => result.current.skip());
-      const callArg = (uiStore.completeOnboarding as jest.Mock).mock.calls[0][0]
-        .topics;
-      // Mutating the live store after the call must not affect the
-      // argument captured by completeOnboarding — slice() guard.
-      uiStore.onboardingState.selectedTopics.push('coding');
-      expect(callArg).toEqual(['everyday']);
+
+      expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
+        topic: null,
+        modelId: null,
+      });
     });
   });
 
@@ -125,7 +145,7 @@ describe('useOnboardingHandlers', () => {
         } as any,
       ];
       uiStore.onboardingState.selectedModelId = PICKED_ID;
-      uiStore.onboardingState.selectedTopics = ['coding'];
+      uiStore.onboardingState.selectedTopic = 'coding';
 
       const {result} = renderHook(() => useOnboardingHandlers(6));
       act(() => result.current.finish());
@@ -140,7 +160,7 @@ describe('useOnboardingHandlers', () => {
       // 2. completeOnboarding runs with the picked modelId.
       expect(uiStore.completeOnboarding).toHaveBeenCalledTimes(1);
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topics: ['coding'],
+        topic: 'coding',
         modelId: PICKED_ID,
       });
 
@@ -165,14 +185,14 @@ describe('useOnboardingHandlers', () => {
     it('with no Pip pal seeded, still completes onboarding and enqueues download (Pip seed runs on next launch via PalStore.initialize)', () => {
       palStore.pals = [];
       uiStore.onboardingState.selectedModelId = PICKED_ID;
-      uiStore.onboardingState.selectedTopics = [];
+      uiStore.onboardingState.selectedTopic = null;
 
       const {result} = renderHook(() => useOnboardingHandlers(6));
       act(() => result.current.finish());
 
       expect(palStore.updatePal).not.toHaveBeenCalled();
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topics: [],
+        topic: null,
         modelId: PICKED_ID,
       });
       expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(PICKED_ID);
@@ -181,14 +201,14 @@ describe('useOnboardingHandlers', () => {
     it('with selectedModelId=null, falls through to completeOnboarding(modelId:null) and skips download', () => {
       palStore.pals = [{id: 'pip-id', name: 'Pip', source: 'local'} as any];
       uiStore.onboardingState.selectedModelId = null;
-      uiStore.onboardingState.selectedTopics = ['everyday'];
+      uiStore.onboardingState.selectedTopic = 'smartchat';
 
       const {result} = renderHook(() => useOnboardingHandlers(6));
       act(() => result.current.finish());
 
       expect(palStore.updatePal).not.toHaveBeenCalled();
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topics: ['everyday'],
+        topic: 'smartchat',
         modelId: null,
       });
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
@@ -197,7 +217,7 @@ describe('useOnboardingHandlers', () => {
     it('with a selectedModelId that does NOT resolve in defaultModels, does not bind Pip and does not enqueue a download (defensive against catalogue drift)', () => {
       palStore.pals = [{id: 'pip-id', name: 'Pip', source: 'local'} as any];
       uiStore.onboardingState.selectedModelId = 'totally-unknown-id';
-      uiStore.onboardingState.selectedTopics = [];
+      uiStore.onboardingState.selectedTopic = null;
 
       const {result} = renderHook(() => useOnboardingHandlers(6));
       act(() => result.current.finish());
@@ -206,7 +226,7 @@ describe('useOnboardingHandlers', () => {
       // completeOnboarding sees modelId:null when picked is undefined
       // (per `picked?.id ?? null` in finish()).
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topics: [],
+        topic: null,
         modelId: null,
       });
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();

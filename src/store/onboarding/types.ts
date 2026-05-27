@@ -6,35 +6,38 @@
  * `OnboardingState` lives inside `UIStore` (single store; per-session,
  * not persisted) — see `UIStore.onboardingState`. `hasCompletedOnboarding`
  * and `onboardingTopicsSnapshot` are persisted there too.
+ *
+ * The 'else' chip is rendered differently (outlined, no icon) and on tap
+ * writes `null` (no preference recorded) before auto-advancing to screen 6.
  */
 
 export type TopicKey =
-  | 'everyday'
-  | 'creative'
-  | 'learning'
+  | 'smartchat'
   | 'coding'
-  | 'productivity'
-  | 'roleplay';
+  | 'education'
+  | 'roleplay'
+  | 'creative_writing'
+  | 'else';
 
 export const TOPIC_KEYS: readonly TopicKey[] = [
-  'everyday',
-  'creative',
-  'learning',
+  'smartchat',
   'coding',
-  'productivity',
+  'education',
   'roleplay',
+  'creative_writing',
+  'else',
 ] as const;
 
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface OnboardingState {
   currentStep: OnboardingStep;
-  selectedTopics: TopicKey[];
+  selectedTopic: TopicKey | null;
   selectedModelId: string | null;
 }
 
 export const INITIAL_ONBOARDING_STATE: OnboardingState = {
   currentStep: 1,
-  selectedTopics: [],
+  selectedTopic: null,
   selectedModelId: null,
 };

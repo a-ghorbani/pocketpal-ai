@@ -190,14 +190,9 @@ export class UIStore {
     });
   }
 
-  toggleOnboardingTopic(key: TopicKey) {
+  setOnboardingTopic(key: TopicKey | null) {
     runInAction(() => {
-      const idx = this.onboardingState.selectedTopics.indexOf(key);
-      if (idx === -1) {
-        this.onboardingState.selectedTopics.push(key);
-      } else {
-        this.onboardingState.selectedTopics.splice(idx, 1);
-      }
+      this.onboardingState.selectedTopic = key;
     });
   }
 
@@ -208,15 +203,17 @@ export class UIStore {
   }
 
   completeOnboarding({
-    topics,
+    topic,
     modelId: _modelId,
   }: {
-    topics: TopicKey[];
+    topic: TopicKey | null;
     modelId: string | null;
   }) {
     runInAction(() => {
       this.hasCompletedOnboarding = true;
-      this.onboardingTopicsSnapshot = [...topics];
+      // Persisted snapshot stays as `TopicKey[]` (FOU-117 multi-tag
+      // headroom). Derive from the new scalar: null → [], else [topic].
+      this.onboardingTopicsSnapshot = topic === null ? [] : [topic];
       this.onboardingState = {...INITIAL_ONBOARDING_STATE};
     });
   }

@@ -1347,12 +1347,12 @@
       "body": "Pick what you'd like to discuss.",
       "cta": "Continue",
       "topic": {
-        "everyday": "Everyday",
-        "creative": "Creative",
-        "learning": "Learning",
+        "smartchat": "Smart Chat",
         "coding": "Coding",
-        "productivity": "Productivity",
-        "roleplay": "Roleplay"
+        "education": "Education",
+        "roleplay": "Roleplay",
+        "creative_writing": "Creative Writing",
+        "else": "Looking for something else?"
       }
     },
     "screen6": {

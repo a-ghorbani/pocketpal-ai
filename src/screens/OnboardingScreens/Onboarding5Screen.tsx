@@ -9,10 +9,9 @@ import {TopicChipGrid} from './components/TopicChipGrid';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
 export const Onboarding5Screen: React.FC = observer(() => {
-  const {l10n, next, goBack, skip} = useOnboardingHandlers(5);
+  const {l10n, goBack, skip, selectTopic} = useOnboardingHandlers(5);
   const t = l10n.onboarding;
-  const selected = uiStore.onboardingState.selectedTopics;
-  const canContinue = selected.length > 0;
+  const selected = uiStore.onboardingState.selectedTopic;
   const labels = t.screen5.topic as Record<TopicKey, string>;
   return (
     <OnboardingScaffold
@@ -25,16 +24,15 @@ export const Onboarding5Screen: React.FC = observer(() => {
       body={t.screen5.body}
       bottom={
         <OnboardingBottomBar
-          primaryLabel={t.screen5.cta}
-          primaryDisabled={!canContinue}
-          onPrimary={next}
+          primaryLabel={t.skip}
+          onPrimary={skip}
           onBack={goBack}
           backAccessibilityLabel={t.back}
         />
       }>
       <TopicChipGrid
         selected={selected}
-        onToggle={key => uiStore.toggleOnboardingTopic(key)}
+        onSelect={key => selectTopic(key)}
         labels={labels}
       />
     </OnboardingScaffold>

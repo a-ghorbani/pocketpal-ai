@@ -122,7 +122,7 @@ describe('UIStore', () => {
       expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
       expect(uiStore.onboardingState).toEqual({
         currentStep: 1,
-        selectedTopics: [],
+        selectedTopic: null,
         selectedModelId: null,
       });
     });
@@ -132,16 +132,13 @@ describe('UIStore', () => {
       expect(uiStore.onboardingState.currentStep).toBe(3);
     });
 
-    it('toggleOnboardingTopic adds then removes idempotently', () => {
-      uiStore.toggleOnboardingTopic('everyday');
-      expect(uiStore.onboardingState.selectedTopics).toEqual(['everyday']);
-      uiStore.toggleOnboardingTopic('coding');
-      expect(uiStore.onboardingState.selectedTopics).toEqual([
-        'everyday',
-        'coding',
-      ]);
-      uiStore.toggleOnboardingTopic('everyday');
-      expect(uiStore.onboardingState.selectedTopics).toEqual(['coding']);
+    it('setOnboardingTopic overwrites the single selection', () => {
+      uiStore.setOnboardingTopic('smartchat');
+      expect(uiStore.onboardingState.selectedTopic).toBe('smartchat');
+      uiStore.setOnboardingTopic('coding');
+      expect(uiStore.onboardingState.selectedTopic).toBe('coding');
+      uiStore.setOnboardingTopic(null);
+      expect(uiStore.onboardingState.selectedTopic).toBeNull();
     });
 
     it('setOnboardingModelId writes the picked id (or null)', () => {
@@ -151,46 +148,39 @@ describe('UIStore', () => {
       expect(uiStore.onboardingState.selectedModelId).toBeNull();
     });
 
-    it('completeOnboarding flips the flag, freezes snapshot, resets state', () => {
+    it('completeOnboarding flips the flag, derives snapshot, resets state', () => {
       uiStore.setOnboardingStep(5);
-      uiStore.toggleOnboardingTopic('coding');
+      uiStore.setOnboardingTopic('coding');
       uiStore.setOnboardingModelId('model-a');
       uiStore.completeOnboarding({
-        topics: ['coding', 'creative'],
+        topic: 'coding',
         modelId: 'model-a',
       });
       expect(uiStore.hasCompletedOnboarding).toBe(true);
-      expect(uiStore.onboardingTopicsSnapshot).toEqual(['coding', 'creative']);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual(['coding']);
       expect(uiStore.onboardingState).toEqual({
         currentStep: 1,
-        selectedTopics: [],
+        selectedTopic: null,
         selectedModelId: null,
       });
     });
 
-    it('completeOnboarding accepts an empty topics array (Skip path)', () => {
-      uiStore.completeOnboarding({topics: [], modelId: null});
+    it('completeOnboarding with null topic writes an empty snapshot (Skip / else path)', () => {
+      uiStore.completeOnboarding({topic: null, modelId: null});
       expect(uiStore.hasCompletedOnboarding).toBe(true);
       expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
     });
 
     it('resetOnboarding returns to the clean state', () => {
-      uiStore.completeOnboarding({topics: ['everyday'], modelId: 'm'});
+      uiStore.completeOnboarding({topic: 'smartchat', modelId: 'm'});
       uiStore.resetOnboarding();
       expect(uiStore.hasCompletedOnboarding).toBe(false);
       expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
       expect(uiStore.onboardingState).toEqual({
         currentStep: 1,
-        selectedTopics: [],
+        selectedTopic: null,
         selectedModelId: null,
       });
-    });
-
-    it('snapshot is a copy, not a reference (frozen at completion)', () => {
-      const topics = ['everyday' as const];
-      uiStore.completeOnboarding({topics, modelId: null});
-      topics.push('coding' as never);
-      expect(uiStore.onboardingTopicsSnapshot).toEqual(['everyday']);
     });
   });
 });
