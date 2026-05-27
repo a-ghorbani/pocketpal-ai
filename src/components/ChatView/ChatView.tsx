@@ -9,12 +9,11 @@ import {
   View,
   TouchableOpacity,
   Keyboard,
-  Text,
 } from 'react-native';
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
-import {Portal, Snackbar, Button as PaperButton} from 'react-native-paper';
+import {Portal, Snackbar} from 'react-native-paper';
 import calendar from 'dayjs/plugin/calendar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -69,17 +68,8 @@ import {
   SuggestedPromptsRow,
 } from '..';
 
-import {
-  effectiveNCtx,
-  pickNextTier,
-  resolveBannerVariant,
-  type BannerVariant,
-} from '../../utils/bannerVariantResolver';
-import {derivedText} from '../../utils/chat';
-import {hasEnoughMemoryWithNCtx} from '../../hooks/useMemoryCheck';
-import {usePalLoadHint} from '../../hooks/usePalLoadHint';
-import {ModelOrigin} from '../../utils/types';
-import {t} from '../../locales';
+import {BannerRow} from './BannerRow';
+import {useContextBanner} from '../../hooks/useContextBanner';
 import {
   AlertIcon,
   CopyIcon,
@@ -1059,171 +1049,24 @@ export const ChatView = observer(
       [messages],
     );
 
-    // ============ CONTEXT BANNER STATE ============
-    const snap = chatSessionStore.lastCompletionResult;
-    const dismissedKeys = chatSessionStore.dismissedBannerVariants;
-    const consecutiveFullFailures = chatSessionStore.consecutiveFullFailures;
-    const activeSessionId = chatSessionStore.activeSessionId;
-    const sessionOverrides = chatSessionStore.sessionContextOverrides;
-    const activeModel = modelStore.activeModel;
-    const baseNCtx = modelStore.contextInitParams.n_ctx;
-    const effectiveNCtxForSession = effectiveNCtx(
-      sessionOverrides,
-      activeSessionId,
-      baseNCtx,
-    );
-    const isRemoteSession = activeModel?.origin === ModelOrigin.REMOTE;
-    const isRunActive =
-      chatSessionStore.isGenerating || chatSessionStore.isStopping;
-
-    const [nextTierTokens, setNextTierTokens] = React.useState<number | null>(
-      null,
-    );
-    React.useEffect(() => {
-      let cancelled = false;
-      if (!activeModel || isRemoteSession) {
-        setNextTierTokens(null);
-        return () => {
-          cancelled = true;
-        };
-      }
-      pickNextTier(effectiveNCtxForSession, n =>
-        hasEnoughMemoryWithNCtx(activeModel, n),
-      )
-        .then(tier => {
-          if (!cancelled) {
-            setNextTierTokens(tier);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setNextTierTokens(null);
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, [activeModel, isRemoteSession, effectiveNCtxForSession]);
-
-    const lastAssistantMsg = React.useMemo(
-      () =>
-        messages.find(m => m.type === 'assistant_turn' || m.type === 'text') as
-          | MessageType.Any
-          | undefined,
-      [messages],
-    );
-    const lastAssistantText = lastAssistantMsg
-      ? derivedText(lastAssistantMsg)
-      : '';
-    const lastAssistantTurn =
-      lastAssistantMsg?.type === 'assistant_turn'
-        ? (lastAssistantMsg as MessageType.AssistantTurn)
-        : undefined;
-
-    const bannerVariant: BannerVariant = React.useMemo(
-      () =>
-        resolveBannerVariant({
-          snapshot: snap,
-          effectiveNCtx: effectiveNCtxForSession,
-          isRemote: !!isRemoteSession,
-          htmlPreviewCount,
-          consecutiveFullFailures,
-          dismissedKeys,
-          sessionId: activeSessionId,
-          nextTierTokens,
-          lastAssistantText,
-          lastAssistantTurn,
-        }),
-      [
-        snap,
-        effectiveNCtxForSession,
-        isRemoteSession,
-        htmlPreviewCount,
-        consecutiveFullFailures,
-        dismissedKeys,
-        activeSessionId,
-        nextTierTokens,
-        lastAssistantText,
-        lastAssistantTurn,
-      ],
-    );
-
-    // ============ INCREASE CONTEXT CTA ============
-    const [increaseSheetVisible, setIncreaseSheetVisible] =
-      React.useState(false);
-    const [isReloading, setIsReloading] = React.useState(false);
-    const [reloadSnackbar, setReloadSnackbar] = React.useState<{
-      message: string;
-      visible: boolean;
-      duration?: number;
-    } | null>(null);
-
-    const handleDismissBanner = React.useCallback(
-      (kind: BannerVariant['kind']) => {
-        if (!activeSessionId) {
-          return;
-        }
-        chatSessionStore.setBannerDismissed(activeSessionId, kind);
-      },
-      [activeSessionId],
-    );
-
-    const handleConfirmIncrease = React.useCallback(async () => {
-      if (!activeSessionId || !activeModel || nextTierTokens === null) {
-        return;
-      }
-      const target = nextTierTokens;
-      const priorOverride = sessionOverrides.get(activeSessionId);
-      chatSessionStore.setSessionContextOverride(activeSessionId, target);
-      setIsReloading(true);
-      setReloadSnackbar({
-        message: l10n.chat.contextWarning.reloadingSubcopy,
-        visible: true,
-        // Stay visible until success / failure dismisses it explicitly.
-        duration: Number.MAX_SAFE_INTEGER,
-      });
-      setIncreaseSheetVisible(false);
-      try {
-        await modelStore.releaseContext();
-        await modelStore.initContext(activeModel);
-        setReloadSnackbar({
-          message: l10n.chat.contextWarning.sheet.successSnackbar,
-          visible: true,
-        });
-      } catch (err) {
-        if (priorOverride === undefined) {
-          chatSessionStore.clearSessionContextOverride(activeSessionId);
-        } else {
-          chatSessionStore.setSessionContextOverride(
-            activeSessionId,
-            priorOverride,
-          );
-        }
-        console.warn('[ChatView] increase context failed:', err);
-        setReloadSnackbar({
-          message: l10n.chat.contextWarning.sheet.failureSnackbar,
-          visible: true,
-        });
-      } finally {
-        setIsReloading(false);
-      }
-    }, [activeSessionId, activeModel, nextTierTokens, sessionOverrides, l10n]);
-
-    const handleNewChat = React.useCallback(() => {
-      chatSessionStore.resetActiveSession();
-    }, []);
-
-    // Pal-load hint snackbar (one-shot per (palId, n_ctx) per session).
-    // Lives on the snackbar surface so the one-banner invariant is preserved.
-    const palLoadHint = usePalLoadHint(activePal);
-    const handlePalLoadHintAction = React.useCallback(async () => {
-      const action = await palLoadHint.onAction();
-      if (action === 'increase') {
-        setIncreaseSheetVisible(true);
-      } else if (action === 'newChat') {
-        chatSessionStore.resetActiveSession();
-      }
-    }, [palLoadHint]);
+    const {
+      bannerVariant,
+      isRunActive,
+      activeModel,
+      effectiveNCtxForSession,
+      nextTierTokens,
+      increaseSheetVisible,
+      isReloading,
+      reloadSnackbar,
+      handleIncrease,
+      handleCloseIncreaseSheet,
+      handleConfirmIncrease,
+      handleDismissBanner,
+      handleNewChat,
+      dismissReloadSnackbar,
+      palLoadHint,
+      handlePalLoadHintAction,
+    } = useContextBanner({activePal, htmlPreviewCount, messages, l10n});
 
     // ============ COMPONENT RENDER ============
     return (
@@ -1254,7 +1097,7 @@ export const ChatView = observer(
                   variant={bannerVariant}
                   l10n={l10n}
                   isRunActive={isRunActive}
-                  onIncrease={() => setIncreaseSheetVisible(true)}
+                  onIncrease={handleIncrease}
                   onDismiss={handleDismissBanner}
                   onNewChat={handleNewChat}
                   styles={styles}
@@ -1355,7 +1198,7 @@ export const ChatView = observer(
           {activeModel && nextTierTokens !== null ? (
             <IncreaseContextSheet
               isVisible={increaseSheetVisible}
-              onClose={() => setIncreaseSheetVisible(false)}
+              onClose={handleCloseIncreaseSheet}
               onConfirm={handleConfirmIncrease}
               currentNCtx={effectiveNCtxForSession}
               nextTierTokens={nextTierTokens}
@@ -1368,11 +1211,7 @@ export const ChatView = observer(
             <Portal>
               <Snackbar
                 visible={reloadSnackbar.visible}
-                onDismiss={() =>
-                  setReloadSnackbar(prev =>
-                    prev ? {...prev, visible: false} : null,
-                  )
-                }
+                onDismiss={dismissReloadSnackbar}
                 duration={reloadSnackbar.duration ?? 4000}
                 testID="increase-context-snackbar">
                 {reloadSnackbar.message}
@@ -1401,124 +1240,3 @@ export const ChatView = observer(
     );
   },
 );
-
-interface BannerRowProps {
-  variant: BannerVariant;
-  l10n: ReturnType<typeof React.useContext> & any;
-  isRunActive: boolean;
-  onIncrease: () => void;
-  onDismiss: (kind: BannerVariant['kind']) => void;
-  onNewChat: () => void;
-  styles: ReturnType<typeof createStyles>;
-}
-
-/**
- * Inline banner row that renders one of the four visible variants
- * resolved by `resolveBannerVariant`. The shell (chrome, padding,
- * background) is shared via `softCapBanner` styles; only the inner
- * content changes per variant.
- */
-const BannerRow: React.FC<BannerRowProps> = ({
-  variant,
-  l10n,
-  isRunActive,
-  onIncrease,
-  onDismiss,
-  onNewChat,
-  styles,
-}) => {
-  const copy = l10n.chat.contextWarning;
-
-  if (variant.kind === 'html-soft-cap') {
-    return (
-      <View testID="soft-cap-warning" style={styles.softCapBanner}>
-        <Text style={styles.softCapBannerText}>{l10n.chat.softCapWarning}</Text>
-        <View style={styles.bannerActions}>
-          <PaperButton
-            mode="text"
-            compact
-            onPress={() => onDismiss('html-soft-cap')}>
-            {copy.warning.dismiss}
-          </PaperButton>
-        </View>
-      </View>
-    );
-  }
-
-  if (variant.kind === 'context-warning') {
-    return (
-      <View testID="context-warning-banner" style={styles.softCapBanner}>
-        <Text style={styles.bannerTitle}>{copy.warning.title}</Text>
-        <Text style={styles.softCapBannerText}>{copy.warning.message}</Text>
-        <View style={styles.bannerActions}>
-          {variant.nextTierTokens !== null ? (
-            <PaperButton
-              mode="text"
-              compact
-              disabled={isRunActive}
-              onPress={onIncrease}>
-              {copy.warning.increase}
-            </PaperButton>
-          ) : null}
-          <PaperButton
-            mode="text"
-            compact
-            onPress={() => onDismiss('context-warning')}>
-            {copy.warning.dismiss}
-          </PaperButton>
-        </View>
-      </View>
-    );
-  }
-
-  if (variant.kind === 'context-full') {
-    const titleCopy = variant.escalated
-      ? copy.fullEscalated.title
-      : variant.heavyTalent
-        ? copy.fullHeavyTalent.title
-        : copy.full.title;
-    const messageCopy = variant.escalated
-      ? copy.fullEscalated.message
-      : variant.heavyTalent
-        ? t(copy.fullHeavyTalent.message, {
-            talentName: variant.heavyTalent.name,
-          })
-        : copy.full.message;
-    return (
-      <View testID="context-full-banner" style={styles.softCapBanner}>
-        <Text style={styles.bannerTitle}>{titleCopy}</Text>
-        <Text style={styles.softCapBannerText}>{messageCopy}</Text>
-        <View style={styles.bannerActions}>
-          {variant.nextTierTokens !== null ? (
-            <PaperButton
-              mode="text"
-              compact
-              disabled={isRunActive}
-              onPress={onIncrease}>
-              {copy.full.increase}
-            </PaperButton>
-          ) : null}
-          <PaperButton mode="text" compact onPress={onNewChat}>
-            {copy.full.newChat}
-          </PaperButton>
-        </View>
-      </View>
-    );
-  }
-
-  // context-remote-hedged
-  return (
-    <View testID="context-remote-hedged-banner" style={styles.softCapBanner}>
-      <Text style={styles.bannerTitle}>{copy.remoteHedged.title}</Text>
-      <Text style={styles.softCapBannerText}>{copy.remoteHedged.message}</Text>
-      <View style={styles.bannerActions}>
-        <PaperButton
-          mode="text"
-          compact
-          onPress={() => onDismiss('context-remote-hedged')}>
-          {copy.remoteHedged.dismiss}
-        </PaperButton>
-      </View>
-    </View>
-  );
-};
