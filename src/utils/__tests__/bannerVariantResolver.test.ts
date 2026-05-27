@@ -290,7 +290,7 @@ describe('resolveBannerVariant', () => {
     expect(v.kind).toBe('none');
   });
 
-  // §4d escalation — copy flag flips at the second consecutive full turn.
+  // Escalation — copy flag flips at the second consecutive full turn.
   it('flags escalated=true when consecutiveFullFailures >= 2', () => {
     const snap = snapshot({contextFull: true});
     const v = resolveBannerVariant({

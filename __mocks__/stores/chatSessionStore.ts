@@ -118,7 +118,7 @@ export const mockChatSessionStore = {
   appendToolCall: jest.fn().mockResolvedValue(undefined),
   appendToolOutcome: jest.fn().mockResolvedValue(undefined),
   finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
-  // Context-warning banner observables / writers (TASK-20260526-2259).
+  // Context-warning banner observables / writers.
   lastCompletionResult: null as
     | import('../../src/utils/bannerVariantResolver').CompletionResultSnapshot
     | null,
