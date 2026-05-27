@@ -17,33 +17,40 @@ exports[`HighlightText ignores empty phrase entries (defensive) 1`] = `
       }
     }
   >
-    <Text
+    <View
       style={
         {
-          "color": "rgba(51, 51, 51, 0.5)",
-          "fontFamily": "Inter-Regular",
-          "fontSize": 16,
-          "fontWeight": "400",
-          "lineHeight": 24,
+          "width": "100%",
         }
       }
     >
       <Text
         style={
           {
-            "backgroundColor": "#FCE7CF",
-            "borderRadius": 4,
-            "color": "#111111",
-            "paddingHorizontal": 4,
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
           }
         }
       >
-        Quick
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          Quick
+        </Text>
+        <Text>
+           body.
+        </Text>
       </Text>
-      <Text>
-         body.
-      </Text>
-    </Text>
+    </View>
   </View>
 </View>
 `;
@@ -65,21 +72,30 @@ exports[`HighlightText renders the body plain when no phrase matches 1`] = `
       }
     }
   >
-    <Text
+    <View
       style={
         {
-          "color": "rgba(51, 51, 51, 0.5)",
-          "fontFamily": "Inter-Regular",
-          "fontSize": 16,
-          "fontWeight": "400",
-          "lineHeight": 24,
+          "width": "100%",
         }
       }
     >
-      <Text>
-        Plain copy with nothing to highlight.
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
+          }
+        }
+      >
+        <Text>
+          Plain copy with nothing to highlight.
+        </Text>
       </Text>
-    </Text>
+    </View>
   </View>
 </View>
 `;
@@ -101,36 +117,43 @@ exports[`HighlightText wraps a single matching phrase in a pill segment 1`] = `
       }
     }
   >
-    <Text
+    <View
       style={
         {
-          "color": "rgba(51, 51, 51, 0.5)",
-          "fontFamily": "Inter-Regular",
-          "fontSize": 16,
-          "fontWeight": "400",
-          "lineHeight": 24,
+          "width": "100%",
         }
       }
     >
-      <Text>
-        Anytime, with 
-      </Text>
       <Text
         style={
           {
-            "backgroundColor": "#FCE7CF",
-            "borderRadius": 4,
-            "color": "#111111",
-            "paddingHorizontal": 4,
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
           }
         }
       >
-        no internet, no signal
+        <Text>
+          Anytime, with 
+        </Text>
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          no internet, no signal
+        </Text>
+        <Text>
+           — nice.
+        </Text>
       </Text>
-      <Text>
-         — nice.
-      </Text>
-    </Text>
+    </View>
   </View>
 </View>
 `;
@@ -152,63 +175,66 @@ exports[`HighlightText wraps multiple distinct phrases in separate pills 1`] = `
       }
     }
   >
-    <Text
+    <View
       style={
         {
-          "color": "rgba(51, 51, 51, 0.5)",
-          "fontFamily": "Inter-Regular",
-          "fontSize": 16,
-          "fontWeight": "400",
-          "lineHeight": 24,
+          "width": "100%",
         }
       }
     >
       <Text
         style={
           {
-            "backgroundColor": "#FCE7CF",
-            "borderRadius": 4,
-            "color": "#111111",
-            "paddingHorizontal": 4,
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
           }
         }
       >
-        No accounts.
-      </Text>
-      <Text>
-         
-      </Text>
-      <Text
-        style={
-          {
-            "backgroundColor": "#FCE7CF",
-            "borderRadius": 4,
-            "color": "#111111",
-            "paddingHorizontal": 4,
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
           }
-        }
-      >
-        No cloud.
-      </Text>
-      <Text>
-         
-      </Text>
-      <Text
-        style={
-          {
-            "backgroundColor": "#FCE7CF",
-            "borderRadius": 4,
-            "color": "#111111",
-            "paddingHorizontal": 4,
+        >
+          No accounts.
+        </Text>
+        <Text>
+           
+        </Text>
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
           }
-        }
-      >
-        No tracking.
+        >
+          No cloud.
+        </Text>
+        <Text>
+           
+        </Text>
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          No tracking.
+        </Text>
+        <Text>
+           We promise.
+        </Text>
       </Text>
-      <Text>
-         We promise.
-      </Text>
-    </Text>
+    </View>
   </View>
 </View>
 `;

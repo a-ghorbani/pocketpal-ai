@@ -1321,33 +1321,38 @@
     },
     "screen1": {
       "title": "Meet your pals.",
-      "titleAccent": "pals",
-      "body": "Pals are tiny AI helpers that live on your phone. Friendly, focused, and ready when you are.",
-      "cta": "Show me Around"
+      "titleAccent": "pals.",
+      "body": "Smart little friends that live inside your phone. Let’s get you set up - it’ll take a minute.",
+      "cta": "Show me Around",
+      "eyebrow": "Welcome to Pocket Pal"
     },
     "screen2": {
-      "title": "Anytime, Anywhere.",
-      "body": "No internet, no signal — your pals are always with you. Whether you're on a flight, on a hike, or off the grid.",
+      "title": "Anytime,\nAnywhere.",
+      "body": "Your pals live inside your phone. No internet, no signal - they work on planes, off-grid, in remote villages.",
       "highlight": "No internet, no signal",
-      "cta": "Next"
+      "cta": "Next",
+      "eyebrow": "The idea",
+      "titleAccent": "Anytime,"
     },
     "screen3": {
-      "title": "Smaller, but yours.",
+      "title": "Smaller,\nbut yours.",
       "titleAccent": "Smaller,",
-      "body": "Cloud assistants are massive and shared. Your pals are small, quick and private — tuned to your phone.",
+      "body": "Pals on your phone are quick and private - but lighter than Cloud AI. Think pocket companion, not all-knowing oracle.",
       "highlight": "quick and private",
-      "cta": "Got it"
+      "cta": "Got it",
+      "eyebrow": "A heads-up"
     },
     "screen4": {
       "title": "Nothing leaves your phone.",
       "titleAccent": "leaves",
-      "body": "Everything stays on your device. No accounts. No cloud. No tracking. That is the deal.",
+      "body": "No accounts. No cloud. No tracking. Your conversations stay yours.",
       "highlight": "No accounts. No cloud. No tracking.",
-      "cta": "Get Started"
+      "cta": "Get Started",
+      "eyebrow": "Privacy promised"
     },
     "screen5": {
-      "title": "What's your pal for?",
-      "body": "Pick what you'd like to do — we'll suggest a pal that fits.",
+      "title": "What’s your pal for?",
+      "body": "Pick what you’d like to discuss - we’ll match a pal that fits your phone.",
       "topic": {
         "smartchat": "Smart Chat",
         "coding": "Coding",
@@ -1363,7 +1368,8 @@
         "roleplay": "Characters, scenarios",
         "creative_writing": "Stories, ideas, drafts",
         "else": "Browse all pals later in the app"
-      }
+      },
+      "subtitle": "Pick what you’d like to discuss - we’ll match a pal that fits your phone."
     },
     "screen6": {
       "title": "Pip",
@@ -1386,7 +1392,8 @@
           "title": "Best",
           "subtitle": "Llama 3.2 1B · Q8_0"
         }
-      }
+      },
+      "subtitle": "Pip thinks using a small AI model on your phone - pick one that fits."
     }
   }
 }
