@@ -591,6 +591,15 @@
         "render_html": "在聊天室內行內渲染 HTML 文件",
         "calculate": "評估數學表達式",
         "datetime": "取得目前的日期與時間"
+      },
+      "greeting": {
+        "sectionLabel": "問候語",
+        "textLabel": "問候訊息",
+        "textPlaceholder": "此 pal 在空聊天室中該說什麼？",
+        "suggestedPromptsLabel": "建議提示詞",
+        "addPromptButton": "新增提示詞",
+        "promptPlaceholder": "給晶片的簡短提示詞",
+        "removePromptLabel": "移除提示詞"
       }
     },
     "chatView": {
