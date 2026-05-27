@@ -147,6 +147,11 @@ export const lightColors: TokenColors = {
   iconModelTypeText: '#3b82f6',
   iconModelTypeVision: '#9810fa',
   iconModelTypeAudio: '#f97316',
+
+  // Accent — peach pill background (canonical Figma `Color/Accent/Peach`).
+  accent: {
+    peach: '#FCE7CF',
+  },
 };
 
 // Dark base values from canonical Figma. Where the canonical dark binding
@@ -275,4 +280,9 @@ export const darkColors: TokenColors = {
   iconModelTypeText: '#93c5fd',
   iconModelTypeVision: '#c4b5fd',
   iconModelTypeAudio: '#fdba74',
+
+  // Accent — peach pill background (dark binding from canonical Figma).
+  accent: {
+    peach: '#7A4A1F',
+  },
 };

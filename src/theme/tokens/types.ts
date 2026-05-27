@@ -121,6 +121,12 @@ export interface TokenColors {
   iconModelTypeText: string;
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
+
+  // Accent — peach pill / recommended-tier highlight (canonical Figma
+  // `Color/Accent/Peach`; see `accent.peach` consumers in onboarding).
+  accent: {
+    peach: string;
+  };
 }
 
 /**
