@@ -77,6 +77,7 @@ import {
 } from '../../utils/bannerVariantResolver';
 import {derivedText} from '../../utils/chat';
 import {hasEnoughMemoryWithNCtx} from '../../hooks/useMemoryCheck';
+import {usePalLoadHint} from '../../hooks/usePalLoadHint';
 import {ModelOrigin} from '../../utils/types';
 import {t} from '../../locales';
 import {
@@ -1212,6 +1213,19 @@ export const ChatView = observer(
       chatSessionStore.resetActiveSession();
     }, []);
 
+    // Pal-load hint snackbar (one-shot per (palId, n_ctx) per session).
+    // Snackbar lives on a separate surface from the banner so I4
+    // (exactly one banner) is preserved.
+    const palLoadHint = usePalLoadHint(activePal);
+    const handlePalLoadHintAction = React.useCallback(async () => {
+      const action = await palLoadHint.onAction();
+      if (action === 'increase') {
+        setIncreaseSheetVisible(true);
+      } else if (action === 'newChat') {
+        chatSessionStore.resetActiveSession();
+      }
+    }, [palLoadHint]);
+
     // ============ COMPONENT RENDER ============
     return (
       <UserContext.Provider value={user}>
@@ -1363,6 +1377,23 @@ export const ChatView = observer(
                 duration={reloadSnackbar.duration ?? 4000}
                 testID="increase-context-snackbar">
                 {reloadSnackbar.message}
+              </Snackbar>
+            </Portal>
+          ) : null}
+
+          {/* One-shot pal-load hint */}
+          {palLoadHint.state !== null ? (
+            <Portal>
+              <Snackbar
+                visible={palLoadHint.state.visible}
+                onDismiss={palLoadHint.dismiss}
+                duration={8000}
+                action={{
+                  label: palLoadHint.state.actionLabel,
+                  onPress: handlePalLoadHintAction,
+                }}
+                testID="pal-load-hint-snackbar">
+                {palLoadHint.state.message}
               </Snackbar>
             </Portal>
           ) : null}
