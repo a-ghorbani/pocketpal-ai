@@ -1105,7 +1105,51 @@
     "generatingPreview": "Generating preview… ({{tokens}} tokens)",
     "generatingPreviewPending": "Generating preview…",
     "toolUsedChip": "used {{name}}",
-    "toolErrorBlock": "{{name}} failed"
+    "toolErrorBlock": "{{name}} failed",
+    "contextWarning": {
+      "warning": {
+        "title": "This chat is filling up.",
+        "message": "Replies may start getting cut off.",
+        "increase": "Increase context",
+        "dismiss": "Dismiss"
+      },
+      "full": {
+        "title": "Chat reached its memory limit.",
+        "message": "The model can't fit any more of this conversation. Increase context or start a new chat.",
+        "increase": "Increase context",
+        "newChat": "New chat"
+      },
+      "fullEscalated": {
+        "title": "Still at the memory limit.",
+        "message": "Recent replies have been truncated. Try a larger context or start a new chat with a shorter prompt."
+      },
+      "fullHeavyTalent": {
+        "title": "Chat reached its memory limit.",
+        "message": "{{talentName}} needs more room than this chat has. Increase context or start a new chat."
+      },
+      "remoteHedged": {
+        "title": "Reply may be cut off.",
+        "message": "You may be near the model's context limit on the server.",
+        "dismiss": "Dismiss"
+      },
+      "sheet": {
+        "title": "Increase context size",
+        "body": "We'll reload the model with a larger context so this chat has more room.",
+        "currentLabel": "Current context",
+        "nextLabel": "New context",
+        "reloadHint": "Reloading the model takes a few seconds.",
+        "confirm": "Increase",
+        "cancel": "Cancel",
+        "successSnackbar": "Context increased.",
+        "failureSnackbar": "Couldn't increase context. Reverted."
+      },
+      "reloadingSubcopy": "Reloading with a larger context…",
+      "palLoadHint": {
+        "message": "This pal works better with more context.",
+        "increase": "Increase context",
+        "newChat": "Start new chat"
+      }
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Preview",
