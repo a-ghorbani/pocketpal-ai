@@ -12,12 +12,19 @@ export type OnboardingSkipButtonProps = {
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
     root: {
-      paddingHorizontal: theme.spacing.s,
-      paddingVertical: theme.spacing.xs,
+      // Figma `884:32492` Buttons (Skip) — pill, padding xxs, radius
+      // m, height 28. Background is transparent so it floats over
+      // the body bg.
+      height: 28,
+      paddingHorizontal: theme.spacing.xs,
+      paddingVertical: theme.spacing.none,
+      borderRadius: theme.radius.m,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     label: {
-      ...theme.typography.uiS,
-      color: theme.colors.onSurfaceVariant,
+      ...theme.typography.titleS,
+      color: theme.colors.onBackground,
     },
   });
 

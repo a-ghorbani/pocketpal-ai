@@ -14,28 +14,39 @@ export type DeviceInfoChipProps = {
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
     chip: {
-      alignSelf: 'flex-start',
+      // Figma `888:30378`: bg muted/subtle, radius m=12, padding sm.
+      alignSelf: 'center',
       paddingHorizontal: theme.spacing.sm,
-      paddingVertical: theme.spacing.xs,
-      borderRadius: theme.radius.s,
-      borderWidth: theme.stroke.sm,
-      borderColor: theme.colors.outlineVariant,
-      backgroundColor: theme.colors.surface,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.m,
+      backgroundColor: theme.colors.secondaryContainer,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
     },
     text: {
       ...theme.typography.captionM,
-      color: theme.colors.onSurfaceVariant,
+      color: theme.colors.text,
+      opacity: 0.7,
+    },
+    bullet: {
+      width: 1.5,
+      height: 1.5,
+      borderRadius: 1,
+      backgroundColor: theme.colors.text,
+      opacity: 0.7,
     },
   });
 
 const bytesToGB = (bytes: number) => Math.round(bytes / (1024 * 1024 * 1024));
 
 /**
- * Mount-time read of device name, total RAM, and free disk. Each field
- * resolves independently; if a field fails to read, it is dropped from
- * the rendered string AND its separator is dropped (no orphan `·`).
- * Empty result renders an empty chip rather than nothing — keeps the
- * testID present for E2E.
+ * Mount-time read of device name, total RAM, and free disk. Each
+ * field resolves independently; if a field fails to read, it is
+ * dropped from the rendered string AND its separator is dropped (no
+ * orphan `·`).
  */
 export const DeviceInfoChip: React.FC<DeviceInfoChipProps> = ({
   ramSuffix,
@@ -89,7 +100,14 @@ export const DeviceInfoChip: React.FC<DeviceInfoChipProps> = ({
 
   return (
     <View testID="onboarding-device-chip" style={styles.chip}>
-      <Text style={styles.text}>{parts.join(' · ')}</Text>
+      <View style={styles.row}>
+        {parts.map((p, i) => (
+          <React.Fragment key={i}>
+            {i > 0 ? <View style={styles.bullet} /> : null}
+            <Text style={styles.text}>{p}</Text>
+          </React.Fragment>
+        ))}
+      </View>
     </View>
   );
 };

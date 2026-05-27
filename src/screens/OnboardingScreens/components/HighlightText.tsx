@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, Text} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
@@ -9,30 +9,37 @@ export type HighlightTextProps = {
   body: string;
   /** Phrases to wrap in a peach pill. Order is preserved. */
   phrases: string[];
+  /** Text alignment (centered on screens 1–4). */
+  align?: 'left' | 'center';
 };
 
-const createStyles = (theme: Theme) =>
+const createStyles = (theme: Theme, align: 'left' | 'center') =>
   StyleSheet.create({
-    body: {
+    bodyText: {
       ...theme.typography.bodyM,
-      color: theme.colors.textSecondary,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: align,
     },
-    pill: {
+    pillRun: {
+      // The Figma highlight is a peach rectangle laid under a darker
+      // text span via mix-blend-multiply. RN can't reproduce the
+      // blend directly; the closest faithful approximation is a
+      // background-coloured run with the darker foreground text
+      // colour. `accent.peach` is the canonical token (#FCE7CF).
       backgroundColor: theme.colors.accent.peach,
       color: theme.colors.text,
-      paddingHorizontal: theme.spacing.xs,
-      borderRadius: theme.radius.xs,
     },
   });
 
 /**
  * Split `body` around each phrase in `phrases`. Matched runs render
- * inside a nested <Text> with a peach pill background; unmatched runs
- * render plain. Phrase matching is case-sensitive and exact-substring
- * (matches the design contract — phrases are translator-edited).
+ * inside a nested `<Text>` with a peach pill background; unmatched
+ * runs render plain. Phrase matching is case-sensitive and
+ * exact-substring (matches the design contract — phrases are
+ * translator-edited).
  *
- * If no phrase appears in `body`, the body renders plain (fallback for
- * translator drift).
+ * If no phrase appears in `body`, the body renders plain (fallback
+ * for translator drift).
  */
 function splitOnPhrases(
   body: string,
@@ -69,21 +76,24 @@ function splitOnPhrases(
 export const HighlightText: React.FC<HighlightTextProps> = ({
   body,
   phrases,
+  align = 'center',
 }) => {
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, align);
   const segments = splitOnPhrases(body, phrases);
   return (
-    <Text style={styles.body}>
-      {segments.map((seg, idx) =>
-        seg.highlighted ? (
-          <Text key={idx} style={styles.pill}>
-            {seg.text}
-          </Text>
-        ) : (
-          <Text key={idx}>{seg.text}</Text>
-        ),
-      )}
-    </Text>
+    <View style={{width: '100%'}}>
+      <Text style={styles.bodyText}>
+        {segments.map((seg, idx) =>
+          seg.highlighted ? (
+            <Text key={idx} style={styles.pillRun}>
+              {seg.text}
+            </Text>
+          ) : (
+            <Text key={idx}>{seg.text}</Text>
+          ),
+        )}
+      </Text>
+    </View>
   );
 };

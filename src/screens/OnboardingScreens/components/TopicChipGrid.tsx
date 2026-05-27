@@ -1,10 +1,10 @@
 import React from 'react';
-import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
 import {TOPIC_KEYS, type TopicKey} from '../../../store/onboarding/types';
-import {topicChipIcons} from '../../../assets/onboarding/illustrations';
+import {topicChipGlyphs} from '../../../assets/onboarding/illustrations';
 
 export type TopicChipGridProps = {
   selected: TopicKey | null;
@@ -18,17 +18,19 @@ const createStyles = (theme: Theme) =>
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      paddingHorizontal: theme.spacing.l,
-      gap: theme.spacing.sm,
+      width: 362,
+      gap: theme.spacing.s,
     },
     cell: {
-      flexBasis: '48%',
-      flexGrow: 1,
+      // Figma chips: 177×160 exactly. 362-width grid with 8px gap →
+      // (362-8)/2 = 177 per cell.
+      width: 177,
+      height: 160,
     },
     chip: {
-      minHeight: 160,
+      flex: 1,
       borderRadius: theme.radius.s,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
       paddingHorizontal: theme.spacing.sm,
       paddingVertical: theme.spacing.ml,
       alignItems: 'center',
@@ -37,25 +39,30 @@ const createStyles = (theme: Theme) =>
     },
     chipElse: {
       backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: theme.colors.outlineVariant,
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
     },
     chipSelected: {
       backgroundColor: theme.colors.secondaryContainer,
     },
-    icon: {
-      width: 40,
-      height: 40,
-    },
     label: {
       ...theme.typography.titleS,
-      color: theme.colors.onSurface,
+      color: theme.colors.onBackground,
       textAlign: 'center',
+      width: '100%',
     },
     description: {
       ...theme.typography.bodyS,
-      color: theme.colors.onSurfaceVariant,
+      color: theme.colors.onBackground,
+      opacity: 0.7,
       textAlign: 'center',
+      width: '100%',
+    },
+    textBlock: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.xs,
+      width: '100%',
     },
   });
 
@@ -73,7 +80,7 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
         const isElse = key === 'else';
         const isSelected = selected === key;
         const onPress = () => onSelect(isElse ? null : key);
-        const icon = isElse ? undefined : topicChipIcons[key];
+        const Glyph = isElse ? undefined : topicChipGlyphs[key];
         const description = descriptions?.[key];
         return (
           <View key={key} style={styles.cell}>
@@ -88,19 +95,19 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
                 isElse && styles.chipElse,
                 isSelected && styles.chipSelected,
               ]}>
-              {icon ? (
-                <Image
-                  source={icon}
-                  style={styles.icon}
-                  resizeMode="contain"
-                  accessibilityElementsHidden
-                  importantForAccessibility="no"
+              {Glyph ? (
+                <Glyph
+                  width={40}
+                  height={40}
+                  fill={theme.colors.onBackground}
                 />
               ) : null}
-              <Text style={styles.label}>{labels[key]}</Text>
-              {description ? (
-                <Text style={styles.description}>{description}</Text>
-              ) : null}
+              <View style={styles.textBlock}>
+                <Text style={styles.label}>{labels[key]}</Text>
+                {description ? (
+                  <Text style={styles.description}>{description}</Text>
+                ) : null}
+              </View>
             </Pressable>
           </View>
         );

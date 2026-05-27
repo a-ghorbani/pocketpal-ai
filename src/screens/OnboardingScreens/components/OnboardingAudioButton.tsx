@@ -1,9 +1,9 @@
 import React from 'react';
-import {AccessibilityInfo} from 'react-native';
+import {AccessibilityInfo, Pressable, StyleSheet} from 'react-native';
 
-import {IconButton} from '../../../components/ui';
-import {SpeakerIcon} from '../../../assets/icons';
+import {HeadphonesGlyph} from '../../../assets/onboarding/illustrations';
 import {useTheme} from '../../../hooks';
+import type {Theme} from '../../../utils/types';
 
 export type OnboardingAudioButtonProps = {
   /** Screen title text — first half of the announcement. */
@@ -13,6 +13,24 @@ export type OnboardingAudioButtonProps = {
   /** Accessibility label (l10n-keyed by the consumer). */
   accessibilityLabel: string;
 };
+
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    root: {
+      // Figma `884:28301` Audio: 40×40 IconButton with secondary
+      // default bg, border light-grey, radius m=12, padding sm/ml.
+      width: 40,
+      height: 40,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.ml,
+      borderRadius: theme.radius.m,
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outlineVariant,
+      backgroundColor: theme.colors.secondaryContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
 
 /**
  * Side-effect-only button shown in the top-right header slot of
@@ -28,15 +46,22 @@ export const OnboardingAudioButton: React.FC<OnboardingAudioButtonProps> = ({
   accessibilityLabel,
 }) => {
   const theme = useTheme();
+  const styles = createStyles(theme);
   const onPress = () => {
     AccessibilityInfo.announceForAccessibility(`${titleText} ${bodyText}`);
   };
   return (
-    <IconButton
+    <Pressable
       testID="onboarding-audio"
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      icon={<SpeakerIcon width={20} height={20} stroke={theme.colors.text} />}
       onPress={onPress}
-    />
+      style={styles.root}>
+      <HeadphonesGlyph
+        width={16}
+        height={16}
+        fill={theme.colors.onBackground}
+      />
+    </Pressable>
   );
 };
