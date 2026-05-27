@@ -27,4 +27,13 @@ export interface TalentEngine {
   readonly name: string;
   execute(args: Record<string, any>): Promise<TalentResult>;
   toToolDefinition(): ToolDefinition;
+  /**
+   * Optional hint: minimum n_ctx (in tokens) under which this engine
+   * tends to overflow the context on its first invocation. Consumed
+   * declaratively — never drives per-turn behaviour. Read at pal-load
+   * to surface the one-shot snackbar, and at run_finished to swap the
+   * `context-full` banner sub-copy when the offending tool was a
+   * heavy talent.
+   */
+  readonly recommendedContextTokens?: number;
 }
