@@ -2387,7 +2387,7 @@ describe('chatSessionStore', () => {
             createdAt: 1,
             text: 'old reply',
             metadata: {
-              // No completionResult — legacy session pre-this-story.
+              // No completionResult — legacy session without snapshot fields.
               timings: {predicted_per_second: 12},
             },
           } as any,

@@ -70,7 +70,7 @@ delete defaultCompletionSettings.stop;
  * the newest assistant message (messages[0] per the unshift order). If
  * its `metadata.completionResult` carries the snapshot fields we wrote
  * at `run_finished`, lift them; otherwise return null (legacy turns
- * pre-this-story).
+ * where the snapshot fields were never written).
  */
 function hydrateLastCompletionResult(
   session: SessionMetaData | undefined,
