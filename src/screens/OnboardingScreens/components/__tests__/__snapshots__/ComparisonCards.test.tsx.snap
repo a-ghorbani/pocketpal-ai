@@ -1,0 +1,111 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ComparisonCards matches the snapshot baseline 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    collapsable={false}
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 16,
+          "justifyContent": "center",
+        }
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "backgroundColor": "#F9FAFB",
+            "borderColor": "#a1a1a1",
+            "borderRadius": 20,
+            "borderWidth": 1,
+            "flex": 1,
+            "justifyContent": "center",
+            "minHeight": 140,
+            "paddingHorizontal": 16,
+            "paddingVertical": 24,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#333333",
+              "fontFamily": "Inter-Medium",
+              "fontSize": 16,
+              "fontWeight": "500",
+              "lineHeight": 22,
+              "marginTop": 8,
+              "textAlign": "center",
+            }
+          }
+        >
+          On device
+        </Text>
+      </View>
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 12,
+            "fontWeight": "400",
+            "lineHeight": 16,
+            "paddingHorizontal": 4,
+          }
+        }
+      >
+        VS
+      </Text>
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "backgroundColor": "#F9FAFB",
+            "borderColor": "#a1a1a1",
+            "borderRadius": 20,
+            "borderWidth": 1,
+            "flex": 1,
+            "justifyContent": "center",
+            "minHeight": 140,
+            "paddingHorizontal": 16,
+            "paddingVertical": 24,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#333333",
+              "fontFamily": "Inter-Medium",
+              "fontSize": 16,
+              "fontWeight": "500",
+              "lineHeight": 22,
+              "marginTop": 8,
+              "textAlign": "center",
+            }
+          }
+        >
+          Cloud
+        </Text>
+      </View>
+    </View>
+  </View>
+</View>
+`;
