@@ -15,6 +15,7 @@ import {derivedText} from '../utils/chat';
 import {palStore} from './PalStore';
 import {deriveToolSchemas} from '../services/talents';
 import {AgentUiState, initialAgentUiState} from '../services/agent';
+import type {CompletionResultSnapshot} from '../utils/bannerVariantResolver';
 
 /**
  * Update payload accepted by `updateMessage` / `updateMessageStreaming`.
@@ -63,6 +64,40 @@ const DEFAULT_GROUP_NAMES = {
 export const defaultCompletionSettings = {...defaultCompletionParams};
 delete defaultCompletionSettings.prompt;
 delete defaultCompletionSettings.stop;
+
+/**
+ * Rehydrate the per-session completion snapshot from disk by inspecting
+ * the newest assistant message (messages[0] per the unshift order). If
+ * its `metadata.completionResult` carries the snapshot fields we wrote
+ * at `run_finished`, lift them; otherwise return null (legacy turns
+ * pre-this-story).
+ */
+function hydrateLastCompletionResult(
+  session: SessionMetaData | undefined,
+): CompletionResultSnapshot | null {
+  if (!session) {
+    return null;
+  }
+  const lastAssistant = session.messages.find(
+    m => m.type === 'assistant_turn' || m.type === 'text',
+  );
+  if (!lastAssistant) {
+    return null;
+  }
+  const completionResult = (lastAssistant.metadata ?? {}).completionResult as
+    | Partial<CompletionResultSnapshot>
+    | undefined;
+  if (!completionResult || typeof completionResult.contextFull !== 'boolean') {
+    return null;
+  }
+  return {
+    tokensCached: completionResult.tokensCached ?? 0,
+    tokensEvaluated: completionResult.tokensEvaluated ?? 0,
+    tokensPredicted: completionResult.tokensPredicted ?? 0,
+    contextFull: completionResult.contextFull,
+    finishReason: completionResult.finishReason ?? 'unknown',
+  };
+}
 
 class ChatSessionStore {
   sessions: SessionMetaData[] = [];
@@ -114,6 +149,34 @@ class ChatSessionStore {
   // invalidated on every tool-call token; only `PendingIndicatorView`
   // reads it.
   toolCallTokenCount: number = 0;
+
+  // Snapshot of the most recent finished completion for the active
+  // session. Written by `useChatSession` at `run_finished` / abort-catch,
+  // hydrated from disk on `setActiveSession`, cleared on
+  // `resetActiveSession`. Read by the banner-variant resolver.
+  lastCompletionResult: CompletionResultSnapshot | null = null;
+
+  // Per-draft banner dismiss memory keyed by `${sessionId}:${variant}`.
+  // Cleared on every `run_finished` so a dismissed warning reappears
+  // next turn if still triggered.
+  dismissedBannerVariants: Set<string> = new Set();
+
+  // Counter of consecutive turns that matched the "context full"
+  // predicate. Escalated banner copy unlocks at >= 2; resets to 0
+  // on any non-full turn.
+  consecutiveFullFailures: number = 0;
+
+  // Session-keyed n_ctx override applied silently inside
+  // `ModelStore.getEffectiveContextInitParams`. Survives
+  // `releaseContext` -> `initContext` cycles within one app run;
+  // intentionally not persisted (process death resets to the global
+  // default — the user reverts to a clean slate).
+  sessionContextOverrides: Map<string, number> = new Map();
+
+  // Pal-load hint suppressor keyed by `${palId}:${n_ctx}`. Records
+  // (pal, n_ctx) pairs for which the snackbar already fired in the
+  // current session; cleared on `resetActiveSession`.
+  palLoadHintSeen: Set<string> = new Set();
 
   constructor() {
     makeAutoObservable(this);
@@ -219,6 +282,47 @@ class ChatSessionStore {
     return this.agentUiState.status === 'generating_tool_call';
   }
 
+  setLastCompletionResult(snapshot: CompletionResultSnapshot | null) {
+    this.lastCompletionResult = snapshot;
+  }
+
+  setBannerDismissed(sessionId: string, variant: string) {
+    this.dismissedBannerVariants.add(`${sessionId}:${variant}`);
+  }
+
+  clearBannerDismissalsForSession(sessionId: string) {
+    const prefix = `${sessionId}:`;
+    for (const key of Array.from(this.dismissedBannerVariants)) {
+      if (key.startsWith(prefix)) {
+        this.dismissedBannerVariants.delete(key);
+      }
+    }
+  }
+
+  incrementConsecutiveFullFailures() {
+    this.consecutiveFullFailures += 1;
+  }
+
+  resetConsecutiveFullFailures() {
+    this.consecutiveFullFailures = 0;
+  }
+
+  setSessionContextOverride(sessionId: string, nCtx: number) {
+    this.sessionContextOverrides.set(sessionId, nCtx);
+  }
+
+  clearSessionContextOverride(sessionId: string) {
+    this.sessionContextOverrides.delete(sessionId);
+  }
+
+  markPalLoadHintSeen(palId: string, nCtx: number) {
+    this.palLoadHintSeen.add(`${palId}:${nCtx}`);
+  }
+
+  hasPalLoadHintSeen(palId: string, nCtx: number): boolean {
+    return this.palLoadHintSeen.has(`${palId}:${nCtx}`);
+  }
+
   async loadSessionList(): Promise<void> {
     try {
       const sessions = await chatSessionRepository.getAllSessions();
@@ -293,6 +397,8 @@ class ChatSessionStore {
       runInAction(() => {
         this.sessions = this.sessions.filter(session => session.id !== id);
         this.sessionDrafts.delete(id);
+        this.sessionContextOverrides.delete(id);
+        this.clearBannerDismissalsForSession(id);
       });
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -319,6 +425,9 @@ class ChatSessionStore {
       // Instead, preserve global settings as they are
       this.exitEditMode();
       this.activeSessionId = null;
+      this.lastCompletionResult = null;
+      this.consecutiveFullFailures = 0;
+      this.palLoadHintSeen.clear();
     });
   }
 
@@ -362,6 +471,10 @@ class ChatSessionStore {
       this.newChatPalId = undefined;
       this.newChatSettingsSource = 'pal'; // Reset for consistency
       this.newChatThinkingOverride = undefined;
+      this.consecutiveFullFailures = 0;
+      this.clearBannerDismissalsForSession(sessionId);
+      this.lastCompletionResult = hydrateLastCompletionResult(session);
+      this.palLoadHintSeen.clear();
     });
   }
 

@@ -75,7 +75,7 @@ export interface CompletionStreamData {
 /**
  * Completion result shape for CompletionEngine.
  * Mirrors NativeCompletionResult from llama.rn, excluding local-only fields
- * (chat_format, tokens_cached, completion_probabilities).
+ * (chat_format, completion_probabilities).
  */
 export interface CompletionResult {
   text: string;
@@ -89,6 +89,7 @@ export interface CompletionResult {
     prompt_ms?: number;
     [key: string]: number | undefined;
   };
+  tokens_cached?: number;
   tokens_predicted?: number;
   tokens_evaluated?: number;
   truncated?: boolean;
