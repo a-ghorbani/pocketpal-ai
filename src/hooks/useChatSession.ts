@@ -25,6 +25,7 @@ import {
   ApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {deriveSnapshotFromResult} from '../utils/bannerVariantResolver';
 import {talentRegistry} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
@@ -325,6 +326,7 @@ async function applyEventToStore(
       // (not in the runner) because timings are an observability
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
+      const snapshot = deriveSnapshotFromResult(finalResult, false);
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
@@ -333,8 +335,30 @@ async function applyEventToStore(
           },
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
+          completionResult: {
+            content: finalResult.content ?? finalResult.text ?? '',
+            reasoning_content: finalResult.reasoning_content,
+            tokensCached: snapshot.tokensCached,
+            tokensEvaluated: snapshot.tokensEvaluated,
+            tokensPredicted: snapshot.tokensPredicted,
+            contextFull: snapshot.contextFull,
+            finishReason: snapshot.finishReason,
+          },
           ...(event.result.hitMaxTurns ? {hitMaxTurns: true} : {}),
         },
+      });
+      // Single writer of `lastCompletionResult` and the matching
+      // failure counter. `dismissedBannerVariants` is cleared here too
+      // so a dismissed warning reappears on the next turn if still
+      // triggered (per-draft dismiss semantics).
+      runInAction(() => {
+        chatSessionStore.setLastCompletionResult(snapshot);
+        if (snapshot.contextFull) {
+          chatSessionStore.incrementConsecutiveFullFailures();
+        } else {
+          chatSessionStore.resetConsecutiveFullFailures();
+        }
+        chatSessionStore.clearBannerDismissalsForSession(ctx.sessionId);
       });
       if (event.result.hitMaxTurns) {
         console.warn(
@@ -668,6 +692,18 @@ export const useChatSession = (
         const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
         if (hasPartialContent) {
+          // Synthesise a partial-data CompletionResult so the snapshot
+          // helper still produces a consistent shape on the abort path.
+          // The tool-args parse failure is the n_ctx-exhaustion smoking
+          // gun, so `isToolArgsParseError` flips `contextFull` true.
+          const abortSnapshot = deriveSnapshotFromResult(
+            {
+              text: '',
+              content: '',
+              interrupted: true,
+            },
+            isToolArgsParseError,
+          );
           await chatSessionStore.updateMessage(
             currentMessageInfo.current.id,
             currentMessageInfo.current.sessionId,
@@ -676,9 +712,28 @@ export const useChatSession = (
                 interrupted: true,
                 copyable: true,
                 ...(isToolArgsParseError ? {truncationLikely: true} : {}),
+                completionResult: {
+                  content: '',
+                  tokensCached: abortSnapshot.tokensCached,
+                  tokensEvaluated: abortSnapshot.tokensEvaluated,
+                  tokensPredicted: abortSnapshot.tokensPredicted,
+                  contextFull: abortSnapshot.contextFull,
+                  finishReason: abortSnapshot.finishReason,
+                },
               },
             },
           );
+          runInAction(() => {
+            chatSessionStore.setLastCompletionResult(abortSnapshot);
+            if (abortSnapshot.contextFull) {
+              chatSessionStore.incrementConsecutiveFullFailures();
+            } else {
+              chatSessionStore.resetConsecutiveFullFailures();
+            }
+            chatSessionStore.clearBannerDismissalsForSession(
+              currentMessageInfo.current!.sessionId,
+            );
+          });
           // The turn now carries the failure context; suppress the
           // duplicate `Completion failed: …` system message dump.
           turnAbsorbedError = true;
