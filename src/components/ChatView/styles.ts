@@ -95,4 +95,15 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center' as const,
     },
+    bannerTitle: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center' as const,
+    },
+    bannerActions: {
+      flexDirection: 'row',
+      gap: 8,
+      justifyContent: 'flex-end',
+    },
   });

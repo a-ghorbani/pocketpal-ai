@@ -257,3 +257,31 @@ export function effectiveNCtx(
   }
   return baseNCtx;
 }
+
+/**
+ * Quantised n_ctx steps offered by the "Increase context" CTA. Tiers
+ * grow by 2x so the UX matches user mental models of "double the room"
+ * without exposing every llama.cpp valid value.
+ */
+export const CONTEXT_TIERS = [2048, 4096, 8192, 16384, 32768] as const;
+
+/**
+ * Find the smallest tier strictly greater than `currentNCtx` that the
+ * memory check accepts. Returns `null` when no tier fits. The caller
+ * supplies the predicate (typically `hasEnoughMemoryWithNCtx`) so the
+ * resolver module stays free of MobX / device dependencies.
+ */
+export async function pickNextTier(
+  currentNCtx: number,
+  fitsMemory: (nCtx: number) => Promise<boolean>,
+): Promise<number | null> {
+  for (const tier of CONTEXT_TIERS) {
+    if (tier <= currentNCtx) {
+      continue;
+    }
+    if (await fitsMemory(tier)) {
+      return tier;
+    }
+  }
+  return null;
+}

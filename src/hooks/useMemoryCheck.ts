@@ -72,6 +72,51 @@ export const hasEnoughMemory = async (
 };
 
 /**
+ * Check whether the device has enough memory to load `model` with an
+ * explicit `n_ctx` (instead of reading the global default off the store).
+ * Used by the banner's tier picker to ask "does the next higher tier
+ * fit?" without mutating `modelStore.contextInitParams`.
+ */
+export const hasEnoughMemoryWithNCtx = async (
+  model: Model,
+  nCtx: number,
+  projectionModel?: Model,
+): Promise<boolean> => {
+  let modelForCalc = model;
+  if (!model.ggufMetadata && model.isDownloaded) {
+    try {
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+      const updatedModel = modelStore.models.find(m => m.id === model.id);
+      if (updatedModel) {
+        modelForCalc = updatedModel;
+      }
+    } catch {
+      // Continue with fallback estimation
+    }
+  }
+
+  const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
+  let ceiling: number;
+  if (
+    largestSuccessfulLoad !== undefined ||
+    availableMemoryCeiling !== undefined
+  ) {
+    ceiling = Math.max(largestSuccessfulLoad ?? 0, availableMemoryCeiling ?? 0);
+  } else {
+    const totalMemory = await DeviceInfo.getTotalMemory();
+    ceiling = Math.max(Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9), 0);
+  }
+
+  const memoryRequirement = getModelMemoryRequirement(
+    modelForCalc,
+    projectionModel,
+    {...modelStore.contextInitParams, n_ctx: nCtx},
+  );
+
+  return memoryRequirement <= ceiling;
+};
+
+/**
  * Get memory fit status with details
  */
 async function getMemoryFitDetails(
