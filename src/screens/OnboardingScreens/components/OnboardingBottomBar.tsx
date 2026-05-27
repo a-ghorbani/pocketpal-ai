@@ -1,12 +1,16 @@
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 
 import {Button, IconButton} from '../../../components/ui';
+import {ChevronRightIcon} from '../../../assets/icons';
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
 
 export type OnboardingBottomBarProps = {
+  /** Visible label on the primary button. Pass the bare copy without arrow. */
   primaryLabel: string;
+  /** Optional trailing glyph (downward arrow on screen 6). */
+  primaryTrailing?: React.ReactNode;
   primaryDisabled?: boolean;
   onPrimary: () => void;
   showBack?: boolean;
@@ -26,10 +30,14 @@ const createStyles = (theme: Theme) =>
     primary: {
       flex: 1,
     },
+    backIcon: {
+      transform: [{rotate: '180deg'}],
+    },
   });
 
 export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
   primaryLabel,
+  primaryTrailing,
   primaryDisabled,
   onPrimary,
   showBack = true,
@@ -44,7 +52,14 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
         <IconButton
           testID="onboarding-back"
           accessibilityLabel={backAccessibilityLabel}
-          icon={null}
+          icon={
+            <ChevronRightIcon
+              width={20}
+              height={20}
+              stroke={theme.colors.onBackground}
+              style={styles.backIcon}
+            />
+          }
           onPress={onBack}
         />
       ) : null}
@@ -53,8 +68,9 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
         label={primaryLabel}
         disabled={primaryDisabled}
         onPress={onPrimary}
-        style={styles.primary}
-      />
+        style={styles.primary}>
+        {primaryTrailing}
+      </Button>
     </View>
   );
 };

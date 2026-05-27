@@ -1,5 +1,6 @@
 import React from 'react';
-import {View, Text, StyleSheet, Pressable} from 'react-native';
+import {StyleSheet, View} from 'react-native';
+import {Text} from 'react-native-paper';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {Stepper} from '../../../components/ui';
@@ -9,18 +10,27 @@ import type {Theme} from '../../../utils/types';
 export type OnboardingScaffoldProps = {
   /** 1-based screen index used for the testID and Stepper. */
   step: 1 | 2 | 3 | 4 | 5 | 6;
+  /** Show the 4-dot Stepper (screens 1–4 only). */
   showStepper: boolean;
-  showSkip: boolean;
-  onSkip?: () => void;
-  skipLabel: string;
-  eyebrow?: string;
-  title: string;
-  body?: string;
+  /** Top-right slot — typically Skip (1–4) or AudioButton (5+6). */
+  topRight?: React.ReactNode;
+  /** Top-left slot — typically the screen-5 in-header Back chevron. */
+  topLeft?: React.ReactNode;
+  /** Optional illustration block rendered between header and content. */
+  illustration?: React.ReactNode;
+  /** Title — may be a `<Text>` tree (for nested italic accents). */
+  title: React.ReactNode;
+  /** Body — may be a `<Text>` or `<HighlightText>` tree. */
+  body?: React.ReactNode;
+  /** Children render after the body — chip grids, model groups, etc. */
   children?: React.ReactNode;
-  bottom?: React.ReactNode;
+  /** Bottom bar (Back + primary). Null on screen 5. */
+  bottomBar?: React.ReactNode;
+  /** Title alignment (screen 5 centers). */
+  titleAlign?: 'left' | 'center';
 };
 
-const createStyles = (theme: Theme) =>
+const createStyles = (theme: Theme, titleAlign: 'left' | 'center') =>
   StyleSheet.create({
     root: {
       flex: 1,
@@ -35,33 +45,32 @@ const createStyles = (theme: Theme) =>
       paddingBottom: theme.spacing.s,
       minHeight: 48,
     },
-    headerSpacer: {flex: 1},
-    skip: {
-      paddingHorizontal: theme.spacing.s,
-      paddingVertical: theme.spacing.xs,
+    headerSlot: {
+      minWidth: 48,
+      alignItems: 'center',
     },
-    skipText: {
-      ...theme.typography.uiS,
-      color: theme.colors.onSurfaceVariant,
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    illustration: {
+      paddingHorizontal: theme.spacing.l,
+      paddingTop: theme.spacing.m,
+      alignItems: 'center',
     },
     content: {
       flex: 1,
       paddingHorizontal: theme.spacing.l,
-      paddingTop: theme.spacing.xl,
-    },
-    eyebrow: {
-      ...theme.typography.uiS,
-      color: theme.colors.onSurfaceVariant,
-      marginBottom: theme.spacing.s,
+      paddingTop: theme.spacing.l,
     },
     title: {
       ...theme.typography.headlineH1,
       color: theme.colors.onBackground,
       marginBottom: theme.spacing.m,
+      textAlign: titleAlign,
     },
     body: {
-      ...theme.typography.bodyM,
-      color: theme.colors.textSecondary,
       marginBottom: theme.spacing.l,
     },
     bottom: {
@@ -73,44 +82,42 @@ const createStyles = (theme: Theme) =>
 export const OnboardingScaffold: React.FC<OnboardingScaffoldProps> = ({
   step,
   showStepper,
-  showSkip,
-  onSkip,
-  skipLabel,
-  eyebrow,
+  topRight,
+  topLeft,
+  illustration,
   title,
   body,
   children,
-  bottom,
+  bottomBar,
+  titleAlign = 'left',
 }) => {
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const styles = createStyles(theme, titleAlign);
   return (
     <SafeAreaView
       testID={`onboarding-screen-${step}`}
       style={styles.root}
       edges={['top', 'bottom']}>
       <View style={styles.header}>
-        {showStepper ? <Stepper total={4} current={step} /> : <View />}
-        {showSkip ? (
-          <Pressable
-            testID="onboarding-skip"
-            accessibilityRole="button"
-            accessibilityLabel={skipLabel}
-            onPress={onSkip}
-            style={styles.skip}>
-            <Text style={styles.skipText}>{skipLabel}</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.headerSpacer} />
-        )}
+        <View style={styles.headerSlot}>{topLeft}</View>
+        <View style={styles.headerCenter}>
+          {showStepper ? <Stepper total={4} current={step} /> : null}
+        </View>
+        <View style={styles.headerSlot}>{topRight}</View>
       </View>
+      {illustration ? (
+        <View style={styles.illustration}>{illustration}</View>
+      ) : null}
       <View style={styles.content}>
-        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-        <Text style={styles.title}>{title}</Text>
-        {body ? <Text style={styles.body}>{body}</Text> : null}
+        {typeof title === 'string' ? (
+          <Text style={styles.title}>{title}</Text>
+        ) : (
+          <Text style={styles.title}>{title}</Text>
+        )}
+        {body ? <View style={styles.body}>{body}</View> : null}
         {children}
       </View>
-      {bottom ? <View style={styles.bottom}>{bottom}</View> : null}
+      {bottomBar ? <View style={styles.bottom}>{bottomBar}</View> : null}
     </SafeAreaView>
   );
 };

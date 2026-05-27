@@ -19,7 +19,9 @@ describe('OnboardingAudioButton', () => {
     );
     fireEvent.press(getByTestId('onboarding-audio'));
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith('Meet your pals. They live on your phone.');
+    expect(spy).toHaveBeenCalledWith(
+      'Meet your pals. They live on your phone.',
+    );
     spy.mockRestore();
   });
 

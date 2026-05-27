@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet, Pressable} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
@@ -8,15 +8,17 @@ export type ModelOption = {
   id: string;
   title: string;
   subtitle: string;
+  recommended?: boolean;
 };
 
 export type ModelRadioGroupProps = {
   options: ModelOption[];
   selectedId: string | null;
+  recommendedBadgeLabel?: string;
   onSelect: (id: string) => void;
 };
 
-const createStyles = (theme: Theme, selected: boolean) =>
+const createStyles = (theme: Theme, selected: boolean, recommended: boolean) =>
   StyleSheet.create({
     row: {
       flexDirection: 'row',
@@ -28,15 +30,17 @@ const createStyles = (theme: Theme, selected: boolean) =>
       borderColor: selected
         ? theme.colors.primary
         : theme.colors.outlineVariant,
-      backgroundColor: selected
-        ? theme.colors.primaryContainer
-        : theme.colors.surface,
+      backgroundColor: recommended
+        ? theme.colors.accent.peach
+        : selected
+          ? theme.colors.primaryContainer
+          : theme.colors.surface,
       gap: theme.spacing.sm,
       marginBottom: theme.spacing.s,
     },
     title: {
       ...theme.typography.titleS,
-      color: theme.colors.onSurface,
+      color: theme.colors.text,
     },
     subtitle: {
       ...theme.typography.bodyS,
@@ -53,11 +57,22 @@ const createStyles = (theme: Theme, selected: boolean) =>
     body: {
       flex: 1,
     },
+    badge: {
+      paddingHorizontal: theme.spacing.s,
+      paddingVertical: theme.spacing.xxs,
+      borderRadius: theme.radius.s,
+      backgroundColor: theme.colors.surface,
+    },
+    badgeText: {
+      ...theme.typography.captionM,
+      color: theme.colors.text,
+    },
   });
 
 export const ModelRadioGroup: React.FC<ModelRadioGroupProps> = ({
   options,
   selectedId,
+  recommendedBadgeLabel,
   onSelect,
 }) => {
   const theme = useTheme();
@@ -65,7 +80,8 @@ export const ModelRadioGroup: React.FC<ModelRadioGroupProps> = ({
     <View>
       {options.map(opt => {
         const selected = selectedId === opt.id;
-        const styles = createStyles(theme, selected);
+        const recommended = !!opt.recommended;
+        const styles = createStyles(theme, selected, recommended);
         return (
           <Pressable
             key={opt.id}
@@ -80,6 +96,11 @@ export const ModelRadioGroup: React.FC<ModelRadioGroupProps> = ({
               <Text style={styles.title}>{opt.title}</Text>
               <Text style={styles.subtitle}>{opt.subtitle}</Text>
             </View>
+            {recommended && recommendedBadgeLabel ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{recommendedBadgeLabel}</Text>
+              </View>
+            ) : null}
           </Pressable>
         );
       })}

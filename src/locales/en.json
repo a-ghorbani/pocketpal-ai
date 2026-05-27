@@ -1315,37 +1315,42 @@
   "onboarding": {
     "back": "Back",
     "skip": "Skip",
+    "audio": "Read this screen aloud",
     "splash": {
       "title": ""
     },
     "screen1": {
-      "eyebrow": "Welcome to Pocket Pal",
       "title": "Meet your pals.",
-      "body": "",
-      "cta": "Get started"
+      "titleAccent": "pals",
+      "body": "Pals are tiny AI helpers that live on your phone. Friendly, focused, and ready when you are.",
+      "cta": "Show me Around"
     },
     "screen2": {
-      "eyebrow": "The idea",
       "title": "Anytime, Anywhere.",
-      "body": "",
-      "cta": "Continue"
+      "body": "No internet, no signal — your pals are always with you. Whether you're on a flight, on a hike, or off the grid.",
+      "highlight": "No internet, no signal",
+      "cta": "Next"
     },
     "screen3": {
-      "eyebrow": "A heads-up",
       "title": "Smaller, but yours.",
-      "body": "",
-      "cta": "Continue"
+      "titleAccent": "Smaller,",
+      "body": "Cloud assistants are massive and shared. Your pals are small, quick and private — tuned to your phone.",
+      "highlight": "quick and private",
+      "cta": "Got it",
+      "vs": "VS",
+      "leftLabel": "On device",
+      "rightLabel": "Cloud"
     },
     "screen4": {
-      "eyebrow": "Privacy promised",
       "title": "Nothing leaves your phone.",
-      "body": "",
-      "cta": "Continue"
+      "titleAccent": "leaves",
+      "body": "Everything stays on your device. No accounts. No cloud. No tracking. That is the deal.",
+      "highlight": "No accounts. No cloud. No tracking.",
+      "cta": "Get Started"
     },
     "screen5": {
       "title": "What's your pal for?",
-      "body": "Pick what you'd like to discuss.",
-      "cta": "Continue",
+      "body": "Pick what you'd like to do — we'll suggest a pal that fits.",
       "topic": {
         "smartchat": "Smart Chat",
         "coding": "Coding",
@@ -1356,11 +1361,13 @@
       }
     },
     "screen6": {
-      "eyebrow": "Pip",
-      "title": "We found a perfect pal for you.",
-      "body": "Pip thinks using a small AI model on your phone — pick one that fits.",
-      "cta": "Finish",
-      "deviceChip": "Local · on-device",
+      "title": "Pip",
+      "body": "We found perfect pal for you - a friendly everyday companion. Smart enough for most things, light enough for any phone.",
+      "cta": "Download Pip",
+      "ctaTemplate": "Download Pip ({{size}})",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB free",
+      "recommended": "Recommended",
       "model": {
         "quick": {
           "title": "Quick",

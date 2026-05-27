@@ -66,7 +66,10 @@ function splitOnPhrases(
   return segments;
 }
 
-export const HighlightText: React.FC<HighlightTextProps> = ({body, phrases}) => {
+export const HighlightText: React.FC<HighlightTextProps> = ({
+  body,
+  phrases,
+}) => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const segments = splitOnPhrases(body, phrases);

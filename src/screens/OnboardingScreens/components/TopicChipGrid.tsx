@@ -1,15 +1,24 @@
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 
 import {Chip} from '../../../components/ui';
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
 import {TOPIC_KEYS, type TopicKey} from '../../../store/onboarding/types';
+import {onboardingIllustrationPlaceholders as placeholders} from '../../../assets/onboarding/placeholders';
 
 export type TopicChipGridProps = {
   selected: TopicKey | null;
   onSelect: (key: TopicKey | null) => void;
   labels: Record<TopicKey, string>;
+};
+
+const ICON_PLACEHOLDER: Record<Exclude<TopicKey, 'else'>, string> = {
+  smartchat: placeholders.screen5ChipSmartchat,
+  coding: placeholders.screen5ChipCoding,
+  education: placeholders.screen5ChipEducation,
+  roleplay: placeholders.screen5ChipRoleplay,
+  creative_writing: placeholders.screen5ChipCreativeWriting,
 };
 
 const createStyles = (theme: Theme) =>
@@ -21,10 +30,17 @@ const createStyles = (theme: Theme) =>
       gap: theme.spacing.sm,
     },
     cell: {
-      // 2-column grid: each chip spans roughly half the row with the
-      // inter-cell gap accounted for.
       flexBasis: '48%',
       flexGrow: 1,
+    },
+    chipContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
+    iconPlaceholder: {
+      ...theme.typography.captionS,
+      color: theme.colors.onSurfaceVariant,
     },
   });
 
@@ -38,10 +54,9 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
   return (
     <View style={styles.grid}>
       {TOPIC_KEYS.map(key => {
+        const isElse = key === 'else';
         const isSelected = selected === key;
-        // The 'else' escape-hatch chip writes null (no preference) but
-        // still triggers the auto-advance in the parent screen.
-        const onPress = () => onSelect(key === 'else' ? null : key);
+        const onPress = () => onSelect(isElse ? null : key);
         return (
           <View key={key} style={styles.cell}>
             <Chip
@@ -51,6 +66,11 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
               selected={isSelected}
               onPress={onPress}
             />
+            {!isElse ? (
+              <Text style={styles.iconPlaceholder} accessibilityElementsHidden>
+                {ICON_PLACEHOLDER[key as Exclude<TopicKey, 'else'>]}
+              </Text>
+            ) : null}
           </View>
         );
       })}

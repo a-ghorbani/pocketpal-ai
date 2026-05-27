@@ -339,6 +339,11 @@ export interface SemanticColors {
   iconModelTypeText: string;
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
+
+  // Accent — peach pill / Recommended-tier card highlight.
+  accent: {
+    peach: string;
+  };
 }
 
 export interface ThemeBorders {

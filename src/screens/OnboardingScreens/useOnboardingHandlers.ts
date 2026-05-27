@@ -5,10 +5,7 @@ import {uiStore, palStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
 import {defaultModels} from '../../store/defaultModels';
-import type {
-  OnboardingStep,
-  TopicKey,
-} from '../../store/onboarding/types';
+import type {OnboardingStep, TopicKey} from '../../store/onboarding/types';
 
 /**
  * Per-screen onboarding helpers: mark `currentStep` on mount, expose
