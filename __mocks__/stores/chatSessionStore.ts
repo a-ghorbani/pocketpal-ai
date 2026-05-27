@@ -118,6 +118,65 @@ export const mockChatSessionStore = {
   appendToolCall: jest.fn().mockResolvedValue(undefined),
   appendToolOutcome: jest.fn().mockResolvedValue(undefined),
   finalizeActiveStep: jest.fn().mockResolvedValue(undefined),
+  // Context-warning banner observables / writers (TASK-20260526-2259).
+  lastCompletionResult: null as
+    | import('../../src/utils/bannerVariantResolver').CompletionResultSnapshot
+    | null,
+  dismissedBannerVariants: new Set<string>(),
+  consecutiveFullFailures: 0,
+  sessionContextOverrides: new Map<string, number>(),
+  palLoadHintSeen: new Set<string>(),
+  setLastCompletionResult: jest.fn(function (this: any, snap: any) {
+    this.lastCompletionResult = snap;
+  }),
+  setBannerDismissed: jest.fn(function (
+    this: any,
+    sessionId: string,
+    variant: string,
+  ) {
+    this.dismissedBannerVariants.add(`${sessionId}:${variant}`);
+  }),
+  clearBannerDismissalsForSession: jest.fn(function (
+    this: any,
+    sessionId: string,
+  ) {
+    const prefix = `${sessionId}:`;
+    for (const key of Array.from(this.dismissedBannerVariants)) {
+      if ((key as string).startsWith(prefix)) {
+        this.dismissedBannerVariants.delete(key);
+      }
+    }
+  }),
+  incrementConsecutiveFullFailures: jest.fn(function (this: any) {
+    this.consecutiveFullFailures += 1;
+  }),
+  resetConsecutiveFullFailures: jest.fn(function (this: any) {
+    this.consecutiveFullFailures = 0;
+  }),
+  setSessionContextOverride: jest.fn(function (
+    this: any,
+    sessionId: string,
+    nCtx: number,
+  ) {
+    this.sessionContextOverrides.set(sessionId, nCtx);
+  }),
+  clearSessionContextOverride: jest.fn(function (this: any, sessionId: string) {
+    this.sessionContextOverrides.delete(sessionId);
+  }),
+  markPalLoadHintSeen: jest.fn(function (
+    this: any,
+    palId: string,
+    nCtx: number,
+  ) {
+    this.palLoadHintSeen.add(`${palId}:${nCtx}`);
+  }),
+  hasPalLoadHintSeen: jest.fn(function (
+    this: any,
+    palId: string,
+    nCtx: number,
+  ) {
+    return this.palLoadHintSeen.has(`${palId}:${nCtx}`);
+  }),
 };
 
 Object.defineProperty(mockChatSessionStore, 'isGeneratingToolCall', {

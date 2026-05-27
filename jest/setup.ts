@@ -131,6 +131,7 @@ jest.mock('../src/hooks/useMemoryCheck', () => ({
     multimodalWarning: '',
   }),
   hasEnoughMemory: jest.fn().mockResolvedValue(true),
+  hasEnoughMemoryWithNCtx: jest.fn().mockResolvedValue(true),
   isHighEndDevice: jest.fn().mockResolvedValue(true),
 }));
 

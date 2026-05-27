@@ -2198,4 +2198,255 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.getDraft('session2')).toBe('draft B');
     });
   });
+
+  describe('lastCompletionResult snapshot', () => {
+    beforeEach(() => {
+      // Reset every snapshot-adjacent observable so each test starts clean.
+      chatSessionStore.lastCompletionResult = null;
+      chatSessionStore.consecutiveFullFailures = 0;
+      chatSessionStore.dismissedBannerVariants.clear();
+      chatSessionStore.sessionContextOverrides.clear();
+      chatSessionStore.palLoadHintSeen.clear();
+    });
+
+    it('setLastCompletionResult writes the snapshot fields', () => {
+      const snap = {
+        tokensCached: 0,
+        tokensEvaluated: 1500,
+        tokensPredicted: 200,
+        contextFull: false,
+        finishReason: 'eos' as const,
+      };
+      chatSessionStore.setLastCompletionResult(snap);
+      expect(chatSessionStore.lastCompletionResult).toEqual(snap);
+    });
+
+    it('setLastCompletionResult(null) clears the field', () => {
+      chatSessionStore.setLastCompletionResult({
+        tokensCached: 0,
+        tokensEvaluated: 100,
+        tokensPredicted: 50,
+        contextFull: true,
+        finishReason: 'length',
+      });
+      chatSessionStore.setLastCompletionResult(null);
+      expect(chatSessionStore.lastCompletionResult).toBeNull();
+    });
+
+    it('consecutive-full counter increments and resets', () => {
+      expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+      chatSessionStore.incrementConsecutiveFullFailures();
+      chatSessionStore.incrementConsecutiveFullFailures();
+      expect(chatSessionStore.consecutiveFullFailures).toBe(2);
+      chatSessionStore.resetConsecutiveFullFailures();
+      expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+    });
+
+    it('banner dismiss is per (sessionId, variant) and cleared by session', () => {
+      chatSessionStore.setBannerDismissed('sA', 'context-warning');
+      chatSessionStore.setBannerDismissed('sA', 'html-soft-cap');
+      chatSessionStore.setBannerDismissed('sB', 'context-warning');
+      expect(chatSessionStore.dismissedBannerVariants.size).toBe(3);
+
+      chatSessionStore.clearBannerDismissalsForSession('sA');
+      expect(
+        chatSessionStore.dismissedBannerVariants.has('sA:context-warning'),
+      ).toBe(false);
+      expect(
+        chatSessionStore.dismissedBannerVariants.has('sA:html-soft-cap'),
+      ).toBe(false);
+      expect(
+        chatSessionStore.dismissedBannerVariants.has('sB:context-warning'),
+      ).toBe(true);
+    });
+  });
+
+  describe('sessionContextOverrides Map', () => {
+    beforeEach(() => {
+      chatSessionStore.sessionContextOverrides.clear();
+    });
+
+    it('set/clear lifecycle on the override Map', () => {
+      chatSessionStore.setSessionContextOverride('sA', 4096);
+      expect(chatSessionStore.sessionContextOverrides.get('sA')).toBe(4096);
+      chatSessionStore.clearSessionContextOverride('sA');
+      expect(chatSessionStore.sessionContextOverrides.has('sA')).toBe(false);
+    });
+
+    it('deleteSession also clears the per-session override entry', async () => {
+      const id = 'session-with-override';
+      chatSessionStore.sessions = [
+        {
+          id,
+          title: 'X',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.setSessionContextOverride(id, 8192);
+      chatSessionStore.setBannerDismissed(id, 'context-warning');
+
+      (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValueOnce(
+        undefined,
+      );
+      await chatSessionStore.deleteSession(id);
+
+      expect(chatSessionStore.sessionContextOverrides.has(id)).toBe(false);
+      expect(
+        chatSessionStore.dismissedBannerVariants.has(`${id}:context-warning`),
+      ).toBe(false);
+    });
+  });
+
+  describe('palLoadHintSeen one-shot suppressor', () => {
+    beforeEach(() => {
+      chatSessionStore.palLoadHintSeen.clear();
+    });
+
+    it('markPalLoadHintSeen + hasPalLoadHintSeen agree on (palId, nCtx)', () => {
+      expect(chatSessionStore.hasPalLoadHintSeen('pal-1', 2048)).toBe(false);
+      chatSessionStore.markPalLoadHintSeen('pal-1', 2048);
+      expect(chatSessionStore.hasPalLoadHintSeen('pal-1', 2048)).toBe(true);
+      // Same pal, different n_ctx ⇒ different key, hint is allowed again.
+      expect(chatSessionStore.hasPalLoadHintSeen('pal-1', 4096)).toBe(false);
+    });
+
+    it('resetActiveSession clears the suppressor set', () => {
+      chatSessionStore.markPalLoadHintSeen('pal-1', 2048);
+      chatSessionStore.markPalLoadHintSeen('pal-2', 4096);
+      chatSessionStore.activeSessionId = 'session1';
+
+      chatSessionStore.resetActiveSession();
+
+      expect(chatSessionStore.palLoadHintSeen.size).toBe(0);
+      expect(chatSessionStore.lastCompletionResult).toBeNull();
+      expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+    });
+  });
+
+  describe('setActiveSession hydration of lastCompletionResult', () => {
+    beforeEach(() => {
+      chatSessionStore.lastCompletionResult = null;
+      chatSessionStore.consecutiveFullFailures = 0;
+      chatSessionStore.dismissedBannerVariants.clear();
+      chatSessionStore.palLoadHintSeen.clear();
+    });
+
+    it('hydrates the snapshot from the newest assistant message metadata', async () => {
+      const session = {
+        id: 'sess-hydrate',
+        title: 'Hydrate',
+        date: new Date().toISOString(),
+        messages: [
+          {
+            id: 'msg-1',
+            type: 'text',
+            author: {id: 'asst-1'},
+            createdAt: 1,
+            text: 'reply',
+            metadata: {
+              completionResult: {
+                tokensCached: 0,
+                tokensEvaluated: 1900,
+                tokensPredicted: 100,
+                contextFull: true,
+                finishReason: 'length',
+              },
+            },
+          } as any,
+        ],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as const,
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [session];
+
+      await chatSessionStore.setActiveSession('sess-hydrate');
+
+      expect(chatSessionStore.lastCompletionResult).toEqual({
+        tokensCached: 0,
+        tokensEvaluated: 1900,
+        tokensPredicted: 100,
+        contextFull: true,
+        finishReason: 'length',
+      });
+    });
+
+    it('returns null when the newest assistant message lacks a snapshot', async () => {
+      const session = {
+        id: 'sess-legacy',
+        title: 'Legacy',
+        date: new Date().toISOString(),
+        messages: [
+          {
+            id: 'msg-legacy',
+            type: 'text',
+            author: {id: 'asst-1'},
+            createdAt: 1,
+            text: 'old reply',
+            metadata: {
+              // No completionResult — legacy session pre-this-story.
+              timings: {predicted_per_second: 12},
+            },
+          } as any,
+        ],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as const,
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [session];
+
+      await chatSessionStore.setActiveSession('sess-legacy');
+      expect(chatSessionStore.lastCompletionResult).toBeNull();
+    });
+
+    it('returns null when the metadata.completionResult.contextFull is not a boolean', async () => {
+      const session = {
+        id: 'sess-broken',
+        title: 'Broken',
+        date: new Date().toISOString(),
+        messages: [
+          {
+            id: 'msg-broken',
+            type: 'text',
+            author: {id: 'asst-1'},
+            createdAt: 1,
+            text: 'reply',
+            metadata: {
+              // Older shape: only carried content/reasoning_content with no
+              // contextFull field. Resolver guard rejects to null.
+              completionResult: {
+                content: 'reply',
+              },
+            },
+          } as any,
+        ],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as const,
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [session];
+
+      await chatSessionStore.setActiveSession('sess-broken');
+      expect(chatSessionStore.lastCompletionResult).toBeNull();
+    });
+
+    it('returns null when there are no assistant messages yet', async () => {
+      const session = {
+        id: 'sess-empty',
+        title: 'Empty',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as const,
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [session];
+
+      await chatSessionStore.setActiveSession('sess-empty');
+      expect(chatSessionStore.lastCompletionResult).toBeNull();
+    });
+  });
 });
