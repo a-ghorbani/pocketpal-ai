@@ -41,7 +41,6 @@ const baseContext = {
 };
 
 describe('deriveSnapshotFromResult', () => {
-  // The §1a derivation table — one row per finishReason source.
   it('maps stopped_limit=1 to length and contextFull=true', () => {
     const result: CompletionResult = {
       text: '',
@@ -124,13 +123,11 @@ describe('deriveSnapshotFromResult', () => {
 });
 
 describe('resolveBannerVariant', () => {
-  // Scenario A
   it('returns none when there is no snapshot yet', () => {
     const v = resolveBannerVariant({...baseContext, snapshot: null});
     expect(v.kind).toBe('none');
   });
 
-  // Scenario B
   it('returns context-warning when local ratio >= threshold and not contextFull', () => {
     // cached + eval + predicted = 1700 → 1700/2048 = 0.83 ≥ 0.80
     const snap = snapshot({
@@ -148,7 +145,6 @@ describe('resolveBannerVariant', () => {
     expect(v.kind).toBe('none');
   });
 
-  // Scenario C
   it('returns context-full when snapshot.contextFull is true (local)', () => {
     const snap = snapshot({
       contextFull: true,
@@ -165,7 +161,7 @@ describe('resolveBannerVariant', () => {
     });
   });
 
-  // Scenario D — truncationLikely propagates via deriveSnapshotFromResult
+  // truncationLikely propagates via deriveSnapshotFromResult
   it('resolves context-full when the catch path forces contextFull via truncationLikely', () => {
     const snap = deriveSnapshotFromResult(
       {text: '', content: '', interrupted: true},
@@ -175,9 +171,9 @@ describe('resolveBannerVariant', () => {
     expect(v.kind).toBe('context-full');
   });
 
-  // Scenario E auto-clear math invariant — the resolver itself does not own
-  // the writer (that lives in useChatSession), so we assert the predicate
-  // shape: when contextFull is false and the ratio drops, banner is none.
+  // Auto-clear math invariant — the resolver itself does not own the writer
+  // (that lives in useChatSession), so we assert the predicate shape: when
+  // contextFull is false and the ratio drops, banner is none.
   it('drops back to none after a low-ratio non-full follow-up turn', () => {
     // used=1000, nCtx=2048, runway boundary = 2048-32 = 2016. used<2016 holds.
     const snap = snapshot({tokensEvaluated: 800, tokensPredicted: 200});
@@ -187,7 +183,6 @@ describe('resolveBannerVariant', () => {
     expect(AUTOCLEAR_RUNWAY).toBe(32);
   });
 
-  // Scenario F
   it('returns context-full on remote when finishReason is length', () => {
     const snap = snapshot({contextFull: true, finishReason: 'length'});
     const v = resolveBannerVariant({
@@ -204,7 +199,6 @@ describe('resolveBannerVariant', () => {
     }
   });
 
-  // Scenario G
   it('returns context-remote-hedged when all four weak-signal conditions hold', () => {
     const snap = snapshot({
       tokensPredicted: 850,
@@ -219,7 +213,6 @@ describe('resolveBannerVariant', () => {
     expect(v.kind).toBe('context-remote-hedged');
   });
 
-  // Scenario H
   it('returns none on a short remote answer (predicted < 500)', () => {
     const snap = snapshot({tokensPredicted: 120, finishReason: 'eos'});
     const v = resolveBannerVariant({
@@ -258,7 +251,6 @@ describe('resolveBannerVariant', () => {
     expect(v.kind).toBe('none');
   });
 
-  // Scenario I — precedence
   it('prefers context-warning over html-soft-cap when both could fire', () => {
     const snap = snapshot({tokensEvaluated: 1500, tokensPredicted: 200});
     const v = resolveBannerVariant({

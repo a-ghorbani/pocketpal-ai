@@ -1214,8 +1214,7 @@ export const ChatView = observer(
     }, []);
 
     // Pal-load hint snackbar (one-shot per (palId, n_ctx) per session).
-    // Snackbar lives on a separate surface from the banner so I4
-    // (exactly one banner) is preserved.
+    // Lives on the snackbar surface so the one-banner invariant is preserved.
     const palLoadHint = usePalLoadHint(activePal);
     const handlePalLoadHintAction = React.useCallback(async () => {
       const action = await palLoadHint.onAction();
