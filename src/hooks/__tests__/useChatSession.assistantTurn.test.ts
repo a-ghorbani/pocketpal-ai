@@ -989,4 +989,154 @@ describe('useChatSession — AssistantTurn integration', () => {
     deleteMessageSpy.mockRestore();
     errSpy.mockRestore();
   });
+
+  // Single-writer atomicity for the completion snapshot. The hook is the
+  // sole writer of `chatSessionStore.lastCompletionResult` and the only
+  // place that writes `metadata.completionResult` onto the assistant turn.
+  // Both writes must land together — on the run_finished success path AND
+  // on the abort-catch path when partial content exists — so the
+  // resolver's view of "what just happened" never disagrees with the
+  // turn's persisted metadata. This test fails if a future refactor
+  // splits the two writes across MobX scopes or drops one of them.
+  describe('completion snapshot — single-writer atomicity', () => {
+    it('run_finished writes metadata.completionResult AND lastCompletionResult with matching snapshot fields', async () => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            onData?.({content: 'done'});
+            return {
+              text: 'done',
+              content: 'done',
+              tokens_evaluated: 1234,
+              tokens_predicted: 56,
+              timings: {predicted_per_second: 100},
+            };
+          });
+      }
+
+      const setSnapSpy = chatSessionStore.setLastCompletionResult as jest.Mock;
+      const updateMessageSpy = chatSessionStore.updateMessage as jest.Mock;
+      setSnapSpy.mockClear();
+      updateMessageSpy.mockClear();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // Both writes must have fired.
+      const metaCall = updateMessageSpy.mock.calls.find(
+        c => c[2]?.metadata?.completionResult,
+      );
+      expect(metaCall).toBeDefined();
+      expect(setSnapSpy).toHaveBeenCalledTimes(1);
+
+      // The same snapshot fields must appear in both writes — if a
+      // refactor split the writes (e.g. moved setLastCompletionResult to
+      // a different event handler computing its own snapshot), these
+      // could diverge.
+      const meta = metaCall![2].metadata.completionResult;
+      const snap = setSnapSpy.mock.calls[0][0];
+      expect(snap.tokensEvaluated).toBe(meta.tokensEvaluated);
+      expect(snap.tokensPredicted).toBe(meta.tokensPredicted);
+      expect(snap.tokensCached).toBe(meta.tokensCached);
+      expect(snap.contextFull).toBe(meta.contextFull);
+      expect(snap.finishReason).toBe(meta.finishReason);
+
+      // Ordering: updateMessage fires first (await), then the synchronous
+      // runInAction block writes lastCompletionResult. The relative
+      // invocation order of the two mocks must reflect that — if a future
+      // refactor swaps them or interleaves an unrelated writer of
+      // lastCompletionResult, this fails.
+      const metaCallIndex = updateMessageSpy.mock.calls.indexOf(metaCall!);
+      expect(setSnapSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+        updateMessageSpy.mock.invocationCallOrder[metaCallIndex],
+      );
+    });
+
+    it('abort with partial content writes metadata.completionResult AND lastCompletionResult with matching snapshot fields', async () => {
+      // Mirror the #3b setup: tool-args parse error path produces partial
+      // step content + writes the abort snapshot.
+      const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(
+            new Error(
+              'Failed to parse tool call arguments as JSON: [json.exception.parse_error.101] parse error',
+            ),
+          );
+      }
+      const ref: {
+        current: {createdAt: number; id: string; sessionId: string} | null;
+      } = {current: null};
+
+      const turnId = 'turn-atomicity-abort';
+      chatSessionStore.sessions = [
+        {
+          id: 'session-1',
+          title: '',
+          date: '',
+          messages: [
+            {
+              id: turnId,
+              type: 'assistant_turn',
+              author: assistant,
+              createdAt: Date.now(),
+              steps: [{content: 'partial'}],
+              metadata: {copyable: true},
+            } as MessageType.AssistantTurn,
+          ],
+          completionSettings: {},
+          settingsSource: 'pal',
+        },
+      ] as any;
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async (msg: any) => {
+        msg.id = turnId;
+      });
+
+      const setSnapSpy = chatSessionStore.setLastCompletionResult as jest.Mock;
+      const updateMessageSpy = chatSessionStore.updateMessage as jest.Mock;
+      setSnapSpy.mockClear();
+      updateMessageSpy.mockClear();
+
+      const {result} = renderHook(() =>
+        useChatSession(ref, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const metaCall = updateMessageSpy.mock.calls.find(
+        c => c[2]?.metadata?.completionResult,
+      );
+      expect(metaCall).toBeDefined();
+      // Abort path treats tool-args parse error as the context-exhaustion
+      // signal — contextFull is true on the snapshot.
+      expect(metaCall![2].metadata.completionResult.contextFull).toBe(true);
+
+      expect(setSnapSpy).toHaveBeenCalledTimes(1);
+      const meta = metaCall![2].metadata.completionResult;
+      const snap = setSnapSpy.mock.calls[0][0];
+      expect(snap.tokensEvaluated).toBe(meta.tokensEvaluated);
+      expect(snap.tokensPredicted).toBe(meta.tokensPredicted);
+      expect(snap.tokensCached).toBe(meta.tokensCached);
+      expect(snap.contextFull).toBe(meta.contextFull);
+      expect(snap.finishReason).toBe(meta.finishReason);
+
+      // Ordering check: metadata write awaited before lastCompletionResult
+      // write.
+      const metaCallIndex = updateMessageSpy.mock.calls.indexOf(metaCall!);
+      expect(setSnapSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+        updateMessageSpy.mock.invocationCallOrder[metaCallIndex],
+      );
+
+      errSpy.mockRestore();
+    });
+  });
 });
