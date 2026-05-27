@@ -1,7 +1,7 @@
 /**
  * Onboarding flow E2E spec.
  *
- * Covers the canonical scenarios A, B, C, G, G', H. Runs against a
+ * Covers the canonical scenarios A, B, C, G, G'', H. Runs against a
  * fresh-install state; the onboarding-bypass capability (see
  * AutomationBridge `__E2E_SKIP_ONBOARDING__`) is left UNSET for this
  * spec so the OnboardingStack actually mounts.
@@ -19,6 +19,8 @@ declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 const TIMEOUT = 15000;
+const BALANCED_MODEL_ID =
+  'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf';
 
 const getAppId = (): string =>
   (driver as any).isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
@@ -37,11 +39,13 @@ describe('Onboarding flow', () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
 
-    // Step 1: no back, no skip, single primary CTA.
+    // Step 1: no back, Skip top-right, single primary CTA.
+    expect(await onboarding.skip.isDisplayed()).toBe(true);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(2);
 
-    // Steps 2..4: Continue forward.
+    // Steps 2..4: Continue forward. Skip remains visible on each.
+    expect(await onboarding.skip.isDisplayed()).toBe(true);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(3);
     await onboarding.tapPrimary();
@@ -49,15 +53,26 @@ describe('Onboarding flow', () => {
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(5);
 
-    // Step 5: Continue disabled until at least one topic picked.
-    await onboarding.tapTopic('everyday');
-    await onboarding.tapPrimary();
+    // Step 5: no primary button, no Skip; Audio top-right; chip-tap
+    // auto-advances to step 6.
+    expect(await onboarding.audio.isDisplayed()).toBe(true);
+    const primaryOn5 = await browser
+      .$(byTestId('onboarding-primary'))
+      .isDisplayed()
+      .catch(() => false);
+    expect(primaryOn5).toBe(false);
+    await onboarding.tapTopic('smartchat');
     await onboarding.waitForScreen(6);
 
-    // Step 6: Finish disabled until a model radio picked.
-    await onboarding.tapPipModel(
-      'hugging-quants/Llama-3.2-1B-Instruct-Q8_0-GGUF/llama-3.2-1b-instruct-q8_0.gguf',
-    );
+    // Step 6: Audio top-right (no Skip). Download primary disabled
+    // until a quant tier is picked.
+    expect(await onboarding.audio.isDisplayed()).toBe(true);
+    const skipOn6 = await browser
+      .$(byTestId('onboarding-skip'))
+      .isDisplayed()
+      .catch(() => false);
+    expect(skipOn6).toBe(false);
+    await onboarding.tapPipModel(BALANCED_MODEL_ID);
     await onboarding.tapPrimary();
 
     // Drawer mounts → Chat empty state visible.
@@ -93,7 +108,7 @@ describe('Onboarding flow', () => {
     await chat.waitForReady(TIMEOUT);
   });
 
-  it('Skip on screen 6 lands on Chat (no model bound, no download)', async () => {
+  it("'else' chip on screen 5 auto-advances to step 6 with no topic recorded", async () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
@@ -104,10 +119,10 @@ describe('Onboarding flow', () => {
     await onboarding.waitForScreen(4);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(5);
-    await onboarding.tapTopic('coding');
-    await onboarding.tapPrimary();
+    await onboarding.tapTopic('else');
     await onboarding.waitForScreen(6);
-    await onboarding.tapSkip();
+    await onboarding.tapPipModel(BALANCED_MODEL_ID);
+    await onboarding.tapPrimary();
     await chat.waitForReady(TIMEOUT);
   });
 

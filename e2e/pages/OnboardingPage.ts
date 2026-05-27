@@ -31,6 +31,10 @@ export class OnboardingPage extends BasePage {
     return browser.$(byTestId('onboarding-skip'));
   }
 
+  get audio(): ChainableElement {
+    return browser.$(byTestId('onboarding-audio'));
+  }
+
   get back(): ChainableElement {
     return browser.$(byTestId('onboarding-back'));
   }
