@@ -1322,9 +1322,9 @@
     "screen1": {
       "title": "Meet your pals.",
       "titleAccent": "pals.",
-      "body": "Smart little friends that live inside your phone. Let’s get you set up - it’ll take a minute.",
+      "body": "Smart little friends that live inside your phone.\nLet’s get you set up - it’ll take a minute.",
       "cta": "Show me Around",
-      "eyebrow": "Welcome to Pocket Pal"
+      "eyebrow": "Welcome to PocketPal"
     },
     "screen2": {
       "title": "Anytime,\nAnywhere.",

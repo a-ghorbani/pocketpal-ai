@@ -21,7 +21,7 @@ export const createStyles = (theme: Theme, isRTL: boolean) => {
   const dotInactive: ViewStyle = {
     ...dotBase,
     width: INACTIVE_DOT_WIDTH,
-    backgroundColor: theme.colors.outlineVariant,
+    backgroundColor: theme.colors.mutedLight,
   };
   const dotActive: ViewStyle = {
     ...dotBase,

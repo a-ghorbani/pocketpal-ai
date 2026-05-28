@@ -38,6 +38,8 @@ export interface TokenColors {
   onSurfaceVariant: string;
   outline: string;
   outlineVariant: string;
+  // Subtle border / divider colour. Maps to design-system muted/light.
+  mutedLight: string;
 
   // MD3 extras
   surfaceDisabled: string;

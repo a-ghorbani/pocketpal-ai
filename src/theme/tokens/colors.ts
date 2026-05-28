@@ -61,6 +61,7 @@ export const lightColors: TokenColors = {
   onSurfaceVariant: '#646466',
   outline: withOpacity(LIGHT_PRIMARY, 0.05),
   outlineVariant: '#a1a1a1',
+  mutedLight: '#e5e3e1',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -193,6 +194,7 @@ export const darkColors: TokenColors = {
   onSurfaceVariant: '#e3e4e6',
   outline: '#444444',
   outlineVariant: '#a1a1a1',
+  mutedLight: '#3a3937',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),

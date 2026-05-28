@@ -95,6 +95,15 @@ const createStyles = (theme: Theme, elevated: boolean) =>
     primaryLabelDisabled: {
       color: theme.colors.onSurfaceVariant,
     },
+    // Figma `I888:33571;746:26871`: trailing icon container is 20×20;
+    // the glyph itself sits inset ~17.84% on all sides. Centering a
+    // 13×13 glyph inside a 20×20 box reproduces the breathing room.
+    glyphBox: {
+      width: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });
 
 export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
@@ -117,7 +126,9 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
     primaryGlyph === 'download' ? (
       <DownloadIcon width={20} height={20} stroke={glyphColor} />
     ) : (
-      <ArrowRightGlyph width={13} height={13} fill={glyphColor} />
+      <View style={styles.glyphBox}>
+        <ArrowRightGlyph width={13} height={13} fill={glyphColor} />
+      </View>
     );
   return (
     <View style={styles.wrapper}>
