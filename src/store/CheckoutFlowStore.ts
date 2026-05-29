@@ -1,0 +1,171 @@
+import {makeAutoObservable, runInAction} from 'mobx';
+import InAppBrowser from 'react-native-inappbrowser-reborn';
+
+import {palsHubApiService} from '../services/palshub/PalsHubApiService';
+import {palsHubService} from '../services';
+import {getStorefrontCountryCode} from '../utils/region';
+
+/**
+ * CheckoutFlowStore
+ *
+ * App-global owner of the PalsHub in-app checkout state (iOS). Lives for the
+ * app process so a Universal-Link return (warm or cold) can drive it even when
+ * the originating PalDetailSheet is unmounted. Sole writer of checkout state;
+ * ownership is never written here (read live from the server).
+ */
+
+export type CheckoutStatus =
+  | 'idle'
+  | 'creating'
+  | 'browser_open'
+  | 'finalizing'
+  | 'owned'
+  | 'processing_deferred'
+  | 'cancelled'
+  | 'error';
+
+export type CheckoutErrorKind = '401' | '404' | '500' | 'network';
+
+// TODO(checkout-host): PLACEHOLDER Universal-Link host pending confirmation of
+// the canonical apex-vs-www host PalsHub serves the association file on. Must
+// stay identical to the applinks entitlement host in PocketPal.entitlements.
+export const RETURN_HOST = 'palshub.ai';
+
+const RECONCILE_BACKOFFS_MS = [1000, 2000, 3000, 4000, 4000, 4000];
+
+class CheckoutFlowStore {
+  status: CheckoutStatus = 'idle';
+  palId: string | null = null;
+  purchaseId?: string;
+  errorKind?: CheckoutErrorKind;
+
+  // Bumped on reset/cancel to abort an in-flight reconcile poll (I7).
+  private epoch = 0;
+
+  constructor() {
+    makeAutoObservable(this);
+  }
+
+  // True while a checkout is in flight; a new press is a no-op then (I7/9g).
+  get isInFlight(): boolean {
+    return this.status === 'creating' || this.status === 'finalizing';
+  }
+
+  private setStatus(status: CheckoutStatus) {
+    runInAction(() => {
+      this.status = status;
+    });
+  }
+
+  // Create a session and open the Stripe-hosted page in the system browser.
+  async start(palId: string): Promise<void> {
+    if (this.isInFlight) {
+      return;
+    }
+    runInAction(() => {
+      this.status = 'creating';
+      this.palId = palId;
+      this.purchaseId = undefined;
+      this.errorKind = undefined;
+    });
+
+    const successUrl = `https://${RETURN_HOST}/app-return/success`;
+    const cancelUrl = `https://${RETURN_HOST}/app-return/cancel`;
+
+    let selectedCountryCode: string | undefined;
+    try {
+      selectedCountryCode = (await getStorefrontCountryCode()) ?? undefined;
+    } catch {
+      selectedCountryCode = undefined;
+    }
+
+    try {
+      const session = await palsHubApiService.createCheckoutSession(palId, {
+        successUrl,
+        cancelUrl,
+        selectedCountryCode,
+      });
+      runInAction(() => {
+        this.purchaseId = session.purchase_id;
+        this.status = 'browser_open';
+      });
+      await InAppBrowser.open(session.checkout_url);
+    } catch (error) {
+      const status = (error as {details?: {status?: unknown}})?.details?.status;
+      if (status === 'already_owned') {
+        this.setStatus('owned');
+        return;
+      }
+      runInAction(() => {
+        this.errorKind =
+          status === 401
+            ? '401'
+            : status === 404
+              ? '404'
+              : status === 500
+                ? '500'
+                : 'network';
+        this.status = 'error';
+      });
+    }
+  }
+
+  // Handle a Universal-Link return. Ignored when it targets a stale/closed
+  // flow (I7/9f). Success enters reconcile (§4); cancel is silent (I5).
+  onReturn(palId: string | null, kind: 'success' | 'cancel') {
+    if (this.status === 'idle' || !this.palId || this.palId !== palId) {
+      return;
+    }
+    if (kind === 'cancel') {
+      this.setStatus('cancelled');
+      return;
+    }
+    this.reconcile(this.palId);
+  }
+
+  // Bounded ownership re-check after a success return. Any per-attempt failure
+  // (owned:false OR thrown) is non-terminal; the first owned===true ends as
+  // owned; exhausting attempts -> processing_deferred, never error (I4).
+  // Cancellable via the epoch token (I7). Never writes ownership (I8).
+  private async reconcile(palId: string): Promise<void> {
+    this.setStatus('finalizing');
+    const myEpoch = this.epoch;
+
+    for (let i = 0; i < RECONCILE_BACKOFFS_MS.length; i++) {
+      await new Promise(resolve =>
+        setTimeout(resolve, RECONCILE_BACKOFFS_MS[i]),
+      );
+      if (this.epoch !== myEpoch) {
+        return;
+      }
+      try {
+        const {owned} = await palsHubService.checkPalOwnership(palId);
+        if (this.epoch !== myEpoch) {
+          return;
+        }
+        if (owned) {
+          this.setStatus('owned');
+          return;
+        }
+      } catch {
+        // Non-terminal: swallow and try the next attempt (I4).
+      }
+    }
+
+    if (this.epoch === myEpoch) {
+      this.setStatus('processing_deferred');
+    }
+  }
+
+  reset() {
+    runInAction(() => {
+      this.epoch += 1;
+      this.status = 'idle';
+      this.palId = null;
+      this.purchaseId = undefined;
+      this.errorKind = undefined;
+    });
+  }
+}
+
+export const checkoutFlowStore = new CheckoutFlowStore();
