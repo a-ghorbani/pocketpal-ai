@@ -39,14 +39,14 @@ class CheckoutFlowStore {
   purchaseId?: string;
   errorKind?: CheckoutErrorKind;
 
-  // Bumped on reset/cancel to abort an in-flight reconcile poll (I7).
+  // Bumped on reset to abort an in-flight reconcile poll.
   private epoch = 0;
 
   constructor() {
     makeAutoObservable(this);
   }
 
-  // True while a checkout is in flight; a new press is a no-op then (I7/9g).
+  // True while a checkout is in flight; a new press is a no-op then.
   get isInFlight(): boolean {
     return this.status === 'creating' || this.status === 'finalizing';
   }
@@ -111,7 +111,7 @@ class CheckoutFlowStore {
   }
 
   // Handle a Universal-Link return. Ignored when it targets a stale/closed
-  // flow (I7/9f). Success enters reconcile (§4); cancel is silent (I5).
+  // flow. Success runs the ownership reconcile; cancel returns silently.
   onReturn(palId: string | null, kind: 'success' | 'cancel') {
     if (this.status === 'idle' || !this.palId || this.palId !== palId) {
       return;
@@ -125,8 +125,8 @@ class CheckoutFlowStore {
 
   // Bounded ownership re-check after a success return. Any per-attempt failure
   // (owned:false OR thrown) is non-terminal; the first owned===true ends as
-  // owned; exhausting attempts -> processing_deferred, never error (I4).
-  // Cancellable via the epoch token (I7). Never writes ownership (I8).
+  // owned; exhausting attempts -> processing_deferred, never error.
+  // Cancellable via the epoch token. Never writes ownership locally.
   private async reconcile(palId: string): Promise<void> {
     this.setStatus('finalizing');
     const myEpoch = this.epoch;
@@ -148,7 +148,7 @@ class CheckoutFlowStore {
           return;
         }
       } catch {
-        // Non-terminal: swallow and try the next attempt (I4).
+        // Non-terminal: swallow and try the next attempt.
       }
     }
 
