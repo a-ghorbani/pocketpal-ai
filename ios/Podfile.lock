@@ -2933,6 +2933,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNInAppBrowser (3.7.1):
+    - React-Core
   - RNKeychain (10.0.0):
     - boost
     - DoubleConversion
@@ -3480,6 +3482,7 @@ DEPENDENCIES:
   - "RNFBAppCheck (from `../node_modules/@react-native-firebase/app-check`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
+  - RNInAppBrowser (from `../node_modules/react-native-inappbrowser-reborn`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
   - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -3703,6 +3706,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
     :path: "../node_modules/@react-native-google-signin/google-signin"
+  RNInAppBrowser:
+    :path: "../node_modules/react-native-inappbrowser-reborn"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
   RNReactNativeHapticFeedback:
@@ -3839,6 +3844,7 @@ SPEC CHECKSUMS:
   RNFBAppCheck: 6474ee3310e125f6a76ffb657d76f22854ab74a0
   RNGestureHandler: e1cc4de7646eb557ad62d1271d8eac73c304a896
   RNGoogleSignin: 85c82d6e1494bd4a039804959362e63771f7ad5a
+  RNInAppBrowser: 904d24dc75e8e6c6c98a3160329192608946f9df
   RNKeychain: 76d042fc1dfba47f3945920bc82e0bce9ad1ff55
   RNReactNativeHapticFeedback: 5f1542065f0b24c9252bd8cf3e83bc9c548182e4
   RNReanimated: 8f0185df21f0dea34ee8c9611ba88c17a290ed9a
