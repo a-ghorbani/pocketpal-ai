@@ -94,6 +94,137 @@ describe('PalsHubApiService', () => {
     );
   });
 
+  describe('createCheckoutSession', () => {
+    const session = {
+      checkout_url: 'https://stripe.test/c/123',
+      session_url: 'https://stripe.test/c/123',
+      session_id: 'cs_123',
+      purchase_id: 'pur_123',
+      platform_fee_cents: 50,
+    };
+
+    const loadService = () => {
+      jest.doMock('@env', () => ({PALSHUB_API_BASE_URL: 'https://api.test'}));
+      jest.doMock('../supabase', () => ({
+        getAuthHeaders: jest
+          .fn()
+          .mockResolvedValue({Authorization: 'Bearer token-abc'}),
+      }));
+      return require('../PalsHubApiService');
+    };
+
+    it('posts to /api/mobile/purchases with the Bearer header and return URLs', async () => {
+      const {palsHubApiService} = loadService();
+      // @ts-ignore
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue({ok: true, json: async () => session});
+
+      const result = await palsHubApiService.createCheckoutSession('pal-1', {
+        successUrl: 'https://host.test/app-return/success',
+        cancelUrl: 'https://host.test/app-return/cancel',
+      });
+
+      expect(result).toEqual(session);
+      const [url, options] = (global.fetch as jest.Mock).mock.calls[0];
+      expect(url).toBe('https://api.test/api/mobile/purchases');
+      expect(options.method).toBe('POST');
+      expect(options.headers.Authorization).toBe('Bearer token-abc');
+      expect(JSON.parse(options.body)).toEqual({
+        pal_id: 'pal-1',
+        success_url: 'https://host.test/app-return/success',
+        cancel_url: 'https://host.test/app-return/cancel',
+      });
+    });
+
+    it('includes selected_country_code only for alpha-2 codes', async () => {
+      const {palsHubApiService} = loadService();
+      // @ts-ignore
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue({ok: true, json: async () => session});
+
+      await palsHubApiService.createCheckoutSession('pal-1', {
+        successUrl: 'https://host.test/app-return/success',
+        cancelUrl: 'https://host.test/app-return/cancel',
+        selectedCountryCode: 'US',
+      });
+
+      const body = JSON.parse(
+        (global.fetch as jest.Mock).mock.calls[0][1].body,
+      );
+      expect(body.selected_country_code).toBe('US');
+    });
+
+    it('omits selected_country_code for alpha-3 ("USA") and undefined', async () => {
+      const {palsHubApiService} = loadService();
+      // @ts-ignore
+      global.fetch = jest
+        .fn()
+        .mockResolvedValue({ok: true, json: async () => session});
+
+      await palsHubApiService.createCheckoutSession('pal-1', {
+        successUrl: 'https://host.test/app-return/success',
+        cancelUrl: 'https://host.test/app-return/cancel',
+        selectedCountryCode: 'USA',
+      });
+      await palsHubApiService.createCheckoutSession('pal-1', {
+        successUrl: 'https://host.test/app-return/success',
+        cancelUrl: 'https://host.test/app-return/cancel',
+      });
+
+      const body1 = JSON.parse(
+        (global.fetch as jest.Mock).mock.calls[0][1].body,
+      );
+      const body2 = JSON.parse(
+        (global.fetch as jest.Mock).mock.calls[1][1].body,
+      );
+      expect(body1.selected_country_code).toBeUndefined();
+      expect(body2.selected_country_code).toBeUndefined();
+    });
+
+    it.each([
+      [400, 'already_owned'],
+      [401, 401],
+      [404, 404],
+      [500, 500],
+    ])('maps HTTP %s to checkout error status %s', async (http, expected) => {
+      const {palsHubApiService, PalsHubError} = loadService();
+      // @ts-ignore
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: http,
+        statusText: 'err',
+        json: async () => ({error: 'nope'}),
+      });
+
+      const err = await palsHubApiService
+        .createCheckoutSession('pal-1', {
+          successUrl: 'https://host.test/app-return/success',
+          cancelUrl: 'https://host.test/app-return/cancel',
+        })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(PalsHubError);
+      expect((err as {details: {status: unknown}}).details.status).toBe(
+        expected,
+      );
+    });
+
+    it('maps a fetch throw to network', async () => {
+      const {palsHubApiService} = loadService();
+      // @ts-ignore
+      global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+
+      await expect(
+        palsHubApiService.createCheckoutSession('pal-1', {
+          successUrl: 'https://host.test/app-return/success',
+          cancelUrl: 'https://host.test/app-return/cancel',
+        }),
+      ).rejects.toMatchObject({details: {status: 'network'}});
+    });
+  });
+
   describe('transformApiPal', () => {
     let service: any;
 
