@@ -129,6 +129,25 @@ interface ApiMyPalsResponse {
   };
 }
 
+// Checkout session request/response (POST /api/mobile/purchases)
+export interface CheckoutSessionRequest {
+  successUrl: string;
+  cancelUrl: string;
+  selectedCountryCode?: string;
+}
+
+export interface CheckoutSession {
+  checkout_url: string;
+  session_url: string;
+  session_id: string;
+  purchase_id: string;
+  platform_fee_cents: number;
+}
+
+// Status carried on PalsHubError.details for checkout error mapping.
+// 'already_owned' marks a 400 the caller treats as success.
+export type CheckoutErrorStatus = 'already_owned' | 401 | 404 | 500 | 'network';
+
 class PalsHubApiService {
   private apiBase = PALSHUB_API_BASE_URL;
 
@@ -353,6 +372,49 @@ class PalsHubApiService {
         `Failed to fetch pal: ${
           error instanceof Error ? error.message : 'Unknown error'
         }`,
+      );
+    }
+  }
+
+  // Create a Stripe-hosted checkout session for a premium pal.
+  // Reuses the existing Bearer auth path (no new token). 400 ("already
+  // owned") is surfaced as a non-network error the caller treats as success.
+  async createCheckoutSession(
+    palId: string,
+    {successUrl, cancelUrl, selectedCountryCode}: CheckoutSessionRequest,
+  ): Promise<CheckoutSession> {
+    const body: Record<string, string> = {
+      pal_id: palId,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    };
+    // Tax hint only; send alpha-2 codes, omit alpha-3 / null (server IP
+    // fallback handles those).
+    if (selectedCountryCode?.length === 2) {
+      body.selected_country_code = selectedCountryCode;
+    }
+
+    try {
+      return await this.apiRequest<CheckoutSession>('/api/mobile/purchases', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      if (error instanceof PalsHubError) {
+        const status = (error.details as {status?: number} | undefined)?.status;
+        let errorStatus: CheckoutErrorStatus = 'network';
+        if (status === 400) {
+          errorStatus = 'already_owned';
+        } else if (status === 401 || status === 404 || status === 500) {
+          errorStatus = status;
+        }
+        throw new PalsHubError(error.message, {status: errorStatus});
+      }
+      throw new PalsHubError(
+        `Failed to create checkout session: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+        {status: 'network'},
       );
     }
   }
