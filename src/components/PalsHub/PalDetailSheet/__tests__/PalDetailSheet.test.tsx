@@ -1,5 +1,6 @@
 import React from 'react';
-import {Alert, Linking} from 'react-native';
+import {Alert, Linking, Platform} from 'react-native';
+import {runInAction} from 'mobx';
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
@@ -74,6 +75,12 @@ describe('PalDetailSheet', () => {
     (palStore.downloadPalsHubPal as jest.Mock).mockResolvedValue(undefined);
     // Reset isUSRegion to false (default non-US)
     (palStore as any).isUSRegion = false;
+    // Reset checkout flow state between tests
+    runInAction(() => {
+      checkoutFlowStore.status = 'idle';
+      checkoutFlowStore.palId = null;
+      checkoutFlowStore.errorKind = undefined;
+    });
     // Reset defaultProps with a fresh mock for each test
     defaultProps = {
       pal: mockPalsHubPal,
@@ -621,6 +628,59 @@ describe('PalDetailSheet', () => {
       await waitFor(() => {
         expect(queryByTestId('buy-button')).toBeNull();
       });
+    });
+
+    it('uses the web URL on non-iOS, keeping the catch', async () => {
+      const original = Platform.OS;
+      Platform.OS = 'android';
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      expect(Linking.openURL).toHaveBeenCalledWith(
+        expect.stringContaining(`/pals/${mockPremiumPalsHubPal.id}`),
+      );
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+
+      Platform.OS = original;
+    });
+
+    it('renders "Sign in again" on a 401 error and calls onSignInPress', async () => {
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+      runInAction(() => {
+        checkoutFlowStore.status = 'error';
+        checkoutFlowStore.errorKind = '401';
+      });
+      const onSignInPress = jest.fn();
+
+      const {getByTestId} = render(
+        <PalDetailSheet
+          {...defaultProps}
+          pal={mockPremiumPalsHubPal}
+          onSignInPress={onSignInPress}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('checkout-signin-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('checkout-signin-button'));
+      expect(onSignInPress).toHaveBeenCalled();
     });
   });
 });
