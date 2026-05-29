@@ -656,6 +656,95 @@ describe('PalDetailSheet', () => {
       Platform.OS = original;
     });
 
+    it('shows the finalizing indicator while the purchase settles', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'finalizing';
+        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+      });
+
+      const {getByText} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByText('Finalizing your purchase…')).toBeTruthy();
+      });
+    });
+
+    it('shows the processing-deferred message after webhook lag', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'processing_deferred';
+        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+      });
+
+      const {getByText} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByText('Processing — will unlock shortly.')).toBeTruthy();
+      });
+    });
+
+    it('shows the not-available message on a 404 error without a sign-in control', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'error';
+        checkoutFlowStore.errorKind = '404';
+      });
+
+      const {getByText, queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(
+          getByText('This pal is not available for purchase right now.'),
+        ).toBeTruthy();
+      });
+      expect(queryByTestId('checkout-signin-button')).toBeNull();
+    });
+
+    it('disables the buy button while a checkout is creating', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'creating';
+        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+      });
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      let buyButton: ReturnType<typeof getByTestId>;
+      await waitFor(() => {
+        buyButton = getByTestId('buy-button');
+        expect(buyButton).toBeTruthy();
+      });
+
+      fireEvent.press(buyButton!);
+      // A second press while in flight must not start another checkout.
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+    });
+
+    it('resets the checkout flow when the sheet is closed', async () => {
+      (palStore as any).isUSRegion = true;
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('sheet-close-button'));
+      expect(checkoutFlowStore.reset).toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
     it('renders "Sign in again" on a 401 error and calls onSignInPress', async () => {
       (palStore as any).isUSRegion = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
