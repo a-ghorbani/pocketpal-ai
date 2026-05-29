@@ -4,7 +4,7 @@ import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
 import {palsHubService} from '../../../../services';
-import {palStore} from '../../../../store';
+import {palStore, checkoutFlowStore} from '../../../../store';
 import {
   createPalsHubPal,
   mockPalsHubPal,
@@ -574,7 +574,7 @@ describe('PalDetailSheet', () => {
       });
     });
 
-    it('opens correct palshub URL when buy button is pressed', async () => {
+    it('starts the in-app checkout on iOS when buy button is pressed', async () => {
       (palStore as any).isUSRegion = true;
 
       const {getByTestId} = render(
@@ -587,9 +587,12 @@ describe('PalDetailSheet', () => {
 
       fireEvent.press(getByTestId('buy-button'));
 
-      expect(Linking.openURL).toHaveBeenCalledWith(
-        expect.stringContaining(`/pals/${mockPremiumPalsHubPal.id}`),
+      // iOS (default Platform.OS in jest) drives the authenticated checkout
+      // flow, not the anonymous web URL.
+      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
+        mockPremiumPalsHubPal.id,
       );
+      expect(Linking.openURL).not.toHaveBeenCalled();
     });
 
     it('does not show buy button for owned premium pals', async () => {

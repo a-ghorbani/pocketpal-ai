@@ -1025,7 +1025,13 @@
       "failedToDownload": "Failed to download pal",
       "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
       "notAvailable": "N/A",
-      "buyOnPalshub": "Buy on Palshub"
+      "buyOnPalshub": "Buy on Palshub",
+      "finalizingPurchase": "Finalizing your purchase…",
+      "processingPurchase": "Processing — will unlock shortly.",
+      "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
+      "signInAgain": "Sign in again",
+      "palNotAvailable": "This pal is not available for purchase right now.",
+      "checkoutFailed": "Something went wrong. Please try again."
     }
   },
   "validation": {
