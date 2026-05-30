@@ -68,8 +68,8 @@ describe('CheckoutFlowStore', () => {
     expect(createSession).toHaveBeenCalledWith(
       'pal-1',
       expect.objectContaining({
-        successUrl: expect.stringContaining('/app-return/success'),
-        cancelUrl: expect.stringContaining('/app-return/cancel'),
+        successUrl: expect.stringContaining('/app-return/checkout/success'),
+        cancelUrl: expect.stringContaining('/app-return/checkout/cancel'),
         selectedCountryCode: 'US',
       }),
     );
@@ -179,7 +179,7 @@ describe('CheckoutFlowStore', () => {
 
   it('openAuth resolves a success callback -> reconcile -> owned', async () => {
     openAuth.mockResolvedValue(
-      'pocketpal://app-return/success?purchase_id=pur_1',
+      'pocketpal://checkout/success?purchase_id=pur_1',
     );
     checkPalOwnership.mockResolvedValueOnce({owned: true});
     await checkoutFlowStore.start('pal-1');
@@ -190,7 +190,7 @@ describe('CheckoutFlowStore', () => {
   });
 
   it('openAuth resolves a cancel callback -> cancelled, silent', async () => {
-    openAuth.mockResolvedValue('pocketpal://app-return/cancel');
+    openAuth.mockResolvedValue('pocketpal://checkout/cancel');
     await checkoutFlowStore.start('pal-1');
     await flushMicrotasks();
     expect(checkoutFlowStore.status).toBe('cancelled');
@@ -214,7 +214,7 @@ describe('CheckoutFlowStore', () => {
   it('openAuth resolves an unexpected path -> cancelled, silent', async () => {
     // Well-formed URL whose trailing segment is neither success nor cancel
     // falls through to the cancel default — no reconcile, no error.
-    openAuth.mockResolvedValue('pocketpal://app-return/unexpected');
+    openAuth.mockResolvedValue('pocketpal://checkout/unexpected');
     await checkoutFlowStore.start('pal-1');
     await flushMicrotasks();
     expect(checkoutFlowStore.status).toBe('cancelled');
