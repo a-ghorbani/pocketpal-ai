@@ -302,7 +302,11 @@
       "menuTitleHf": "Модели от Hugging Face",
       "menuTitleDownloaded": "Загруженные модели",
       "menuTitleGrouped": "Группировать по типу модели",
-      "menuTitleReset": "Сбросить список моделей"
+      "menuTitleReset": "Сбросить список моделей",
+      "filtersGroup": "Фильтры",
+      "viewGroup": "Вид",
+      "menuTitleHfMirror": "Зеркало Hugging Face",
+      "menuTitleModelScope": "Модели ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Выполнить сброс",
@@ -562,7 +566,8 @@
       "enableAndRetry": "Включить и повторить",
       "goToSettings": "В настройки",
       "tryAgain": "Ещё раз",
-      "viewOnHuggingFace": "Открыть на HF ↗"
+      "viewOnHuggingFace": "Открыть на HF ↗",
+      "viewOnSource": "Открыть источник модели ↗"
     },
     "hfTokenSheet": {
       "title": "Токен Hugging Face",
@@ -743,7 +748,11 @@
       "menuTitleHf": "Модели от Hugging Face",
       "menuTitleDownloaded": "Загруженные модели",
       "menuTitleGrouped": "Группировать по типу модели",
-      "menuTitleReset": "Сбросить список моделей"
+      "menuTitleReset": "Сбросить список моделей",
+      "filtersGroup": "Фильтры",
+      "viewGroup": "Вид",
+      "menuTitleHfMirror": "Зеркало Hugging Face",
+      "menuTitleModelScope": "Модели ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Выполнить сброс",
@@ -763,12 +772,15 @@
       "unknownGroup": "Неизвестно",
       "availableToUse": "Готово к использованию",
       "availableToDownload": "Доступно для загрузки",
-      "useAddButtonForMore": "Используйте кнопку +, чтобы найти больше моделей"
+      "useAddButtonForMore": "Используйте кнопку +, чтобы найти больше моделей",
+      "hfMirrorModel": "Зеркало HF",
+      "modelScopeModel": "ModelScope"
     },
     "buttons": {
       "addFromHuggingFace": "Добавить из Hugging Face",
       "addLocalModel": "Добавить локальную модель",
-      "reset": "Сброс"
+      "reset": "Сброс",
+      "addFromModelSources": "Скачать модель"
     },
     "chatTemplate": {
       "label": "Базовый шаблон чата:"
@@ -779,7 +791,7 @@
     "search": {
       "noResults": "Модели не найдены",
       "loadingMore": "Загрузка дополнительных данных...",
-      "searchPlaceholder": "Поиск моделей на Hugging Face",
+      "searchPlaceholder": "Поиск репозиториев моделей",
       "modelUpdatedLong": "Обновлено {{time}} назад",
       "modelUpdatedShort": "{{time}} назад",
       "modelUpdatedJustNowLong": "Обновлено только что",
@@ -796,6 +808,13 @@
         "sortDownloads": "Загрузки",
         "sortRecent": "Недавно обновлено",
         "sortLikes": "Самые популярные"
+      },
+      "source": "Источник",
+      "sourceTitle": "Источник загрузки",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "Зеркало HF",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -822,7 +841,8 @@
         "author": "Автор",
         "requiresProjectionModel": "Требуется модель проекции",
         "downloadProjectionModel": "Загрузить модель проекции",
-        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face"
+        "viewModelCardOnHuggingFace": "Открыть карточку модели на Hugging Face",
+        "viewModelCardOnSource": "Открыть источник модели"
       },
       "accessibility": {
         "expandDetails": "Развернуть детали",

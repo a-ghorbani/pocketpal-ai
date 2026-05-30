@@ -80,6 +80,11 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def reactNativeArchitectures() {
+    def value = project.getProperties().get("reactNativeArchitectures")
+    return value ? value.split(",") : ["arm64-v8a", "x86_64"]
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -93,7 +98,7 @@ android {
         versionCode 140
         versionName "1.15.1"
         ndk {
-            abiFilters "arm64-v8a", "x86_64"
+            abiFilters (*reactNativeArchitectures())
         }
     }
     externalNativeBuild {
@@ -103,6 +108,11 @@ android {
             // shim) into libappmodules.so. The replacement file must
             // include ReactNative-application.cmake — see jni/CMakeLists.txt.
             path file("src/main/jni/CMakeLists.txt")
+        }
+    }
+    packaging {
+        jniLibs {
+            pickFirsts += ['lib/**/libworklets.so']
         }
     }
     signingConfigs {
@@ -237,4 +247,3 @@ project.ext.vectoricons = [
 ]
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
-

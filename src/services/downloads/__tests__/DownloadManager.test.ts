@@ -107,6 +107,34 @@ describe('DownloadManager', () => {
     expect(downloadManager.isDownloading('model-1')).toBe(true);
   });
 
+  it('passes source-specific headers to Android downloads', async () => {
+    NativeModules.DownloadModule.startDownload.mockResolvedValue({
+      downloadId: 'download123',
+    });
+    const modelScopeModel = {
+      ...basicModel,
+      id: 'modelscope:owner/repo/model.gguf',
+      source: 'modelscope',
+    };
+
+    await downloadManager.startDownload(
+      modelScopeModel as any,
+      '/path/to/model.bin',
+      'token-123',
+    );
+
+    expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalledWith(
+      modelScopeModel.downloadUrl,
+      expect.objectContaining({
+        authToken: 'token-123',
+        headers: {
+          Authorization: 'Bearer token-123',
+          Referer: 'https://modelscope.cn/',
+        },
+      }),
+    );
+  });
+
   it('starts a download on iOS', async () => {
     (Platform as any).OS = 'ios';
 
@@ -138,6 +166,36 @@ describe('DownloadManager', () => {
 
     expect(callbacks.onComplete).toHaveBeenCalledWith('model-1');
     expect(downloadManager.isDownloading('model-1')).toBe(false);
+  });
+
+  it('passes source-specific headers to iOS downloads', async () => {
+    (Platform as any).OS = 'ios';
+    const modelScopeModel = {
+      ...basicModel,
+      id: 'modelscope:owner/repo/model.gguf',
+      source: 'modelscope',
+    };
+    const mockDownloadResult = {
+      jobId: 123,
+      promise: Promise.resolve({statusCode: 200}),
+    };
+
+    (RNFS.downloadFile as jest.Mock).mockReturnValue(mockDownloadResult);
+
+    await downloadManager.startDownload(
+      modelScopeModel as any,
+      '/path/to/model.bin',
+      'token-123',
+    );
+
+    expect(RNFS.downloadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer token-123',
+          Referer: 'https://modelscope.cn/',
+        },
+      }),
+    );
   });
 
   it('cancels a download', async () => {

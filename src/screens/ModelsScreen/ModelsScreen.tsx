@@ -30,6 +30,7 @@ import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {Model, ModelOrigin} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
+import {getModelSource} from '../../utils/modelSources';
 
 export const ModelsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
@@ -288,8 +289,17 @@ export const ModelsScreen: React.FC = observer(() => {
         return 0;
       });
     }
-    if (filters.includes('hf')) {
-      result = result.filter(model => model.origin === ModelOrigin.HF);
+    const selectedSources = ['hf', 'hf_mirror', 'modelscope'].filter(filter =>
+      filters.includes(filter),
+    );
+    if (selectedSources.length > 0) {
+      result = result.filter(model => {
+        const source = getModelSource(model);
+        return (
+          (selectedSources.includes('hf') && source === 'huggingface') ||
+          selectedSources.includes(source)
+        );
+      });
     }
     return result;
   }).get();
@@ -300,6 +310,12 @@ export const ModelsScreen: React.FC = observer(() => {
         return l10n.models.labels.availableToUse;
       case UIStore.GROUP_KEYS.AVAILABLE_TO_DOWNLOAD:
         return l10n.models.labels.availableToDownload;
+      case 'huggingface':
+        return l10n.models.labels.hfModel;
+      case 'hf_mirror':
+        return l10n.models.labels.hfMirrorModel;
+      case 'modelscope':
+        return l10n.models.labels.modelScopeModel;
       default:
         return key;
     }
@@ -318,10 +334,15 @@ export const ModelsScreen: React.FC = observer(() => {
 
     return filteredAndSortedModels.reduce(
       (acc, item) => {
-        const groupKey =
+        const rawGroupKey =
           item.origin === ModelOrigin.LOCAL || item.isLocal
             ? l10n.models.labels.localModel
-            : item.type || l10n.models.labels.unknownGroup;
+            : item.origin === ModelOrigin.HF ||
+                item.origin === ModelOrigin.HF_MIRROR ||
+                item.origin === ModelOrigin.MODELSCOPE
+              ? getModelSource(item)
+              : item.type || l10n.models.labels.unknownGroup;
+        const groupKey = getGroupDisplayName(rawGroupKey);
 
         if (!acc[groupKey]) {
           acc[groupKey] = [];

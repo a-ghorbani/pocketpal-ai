@@ -4,6 +4,7 @@ export const mockHFStore = {
   models: [mockHFModel1, mockHFModel2],
   isLoading: false,
   error: '',
+  modelDetailsLoading: false,
   nextPageLink: null,
   searchQuery: '',
   queryFilter: 'gguf',

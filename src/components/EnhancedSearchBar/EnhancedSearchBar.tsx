@@ -13,6 +13,8 @@ import {L10nContext} from '../../utils';
 import {XIcon} from '../../assets/icons';
 
 import {SortOption, SearchFilters} from '../../store/HFStore';
+import {MODEL_SOURCE_IDS} from '../../utils/modelSources';
+import {ModelSourceId} from '../../utils/types';
 
 interface EnhancedSearchBarProps {
   value: string;
@@ -21,10 +23,12 @@ interface EnhancedSearchBarProps {
   containerStyle?: object;
   filters: SearchFilters;
   onFiltersChange: (filters: Partial<SearchFilters>) => void;
+  source?: ModelSourceId;
+  onSourceChange?: (source: ModelSourceId) => void;
   testID?: string;
 }
 
-type FilterType = 'author' | 'sort';
+type FilterType = 'source' | 'author' | 'sort';
 
 export const EnhancedSearchBar = ({
   value,
@@ -33,6 +37,8 @@ export const EnhancedSearchBar = ({
   containerStyle,
   filters,
   onFiltersChange,
+  source = 'huggingface',
+  onSourceChange,
   testID,
 }: EnhancedSearchBarProps) => {
   const theme = useTheme();
@@ -66,6 +72,15 @@ export const EnhancedSearchBar = ({
     [l10n],
   );
 
+  const sourceOptions = useMemo(
+    () =>
+      MODEL_SOURCE_IDS.map(value => ({
+        value,
+        label: l10n.models.search.sources[value],
+      })),
+    [l10n],
+  );
+
   const openFilterSheet = useCallback((filterType: FilterType) => {
     setActiveFilterSheet(filterType);
   }, []);
@@ -77,6 +92,11 @@ export const EnhancedSearchBar = ({
   const getFilterDisplayValue = useCallback(
     (filterType: FilterType): string => {
       switch (filterType) {
+        case 'source':
+          return (
+            sourceOptions.find(option => option.value === source)?.label ||
+            l10n.models.search.source
+          );
         case 'author':
           return filters.author || l10n.models.search.filters.author;
         case 'sort':
@@ -88,12 +108,14 @@ export const EnhancedSearchBar = ({
           return '';
       }
     },
-    [filters, sortOptions, l10n],
+    [filters, sortOptions, source, sourceOptions, l10n],
   );
 
   const isFilterActive = useCallback(
     (filterType: FilterType): boolean => {
       switch (filterType) {
+        case 'source':
+          return source !== 'huggingface';
         case 'author':
           return !!filters.author;
         case 'sort':
@@ -102,7 +124,7 @@ export const EnhancedSearchBar = ({
           return false;
       }
     },
-    [filters],
+    [filters, source],
   );
 
   // Memoized callback for clearing search
@@ -118,6 +140,14 @@ export const EnhancedSearchBar = ({
       closeFilterSheet();
     },
     [onFiltersChange, closeFilterSheet],
+  );
+
+  const handleSourceSelect = useCallback(
+    (filterValue: ModelSourceId) => {
+      onSourceChange?.(filterValue);
+      closeFilterSheet();
+    },
+    [onSourceChange, closeFilterSheet],
   );
 
   return (
@@ -160,6 +190,33 @@ export const EnhancedSearchBar = ({
         showsHorizontalScrollIndicator={false}
         style={styles.filterDropdownContainer}
         contentContainerStyle={styles.filterDropdownContent}>
+        {/* Source Filter Button */}
+        <TouchableOpacity
+          testID="filter-button-source"
+          onPress={() => openFilterSheet('source')}
+          style={[
+            styles.filterDropdownButton,
+            isFilterActive('source') && styles.filterDropdownButtonActive,
+          ]}>
+          <Text
+            variant="labelMedium"
+            style={[
+              styles.filterDropdownText,
+              isFilterActive('source') && styles.filterDropdownTextActive,
+            ]}>
+            {getFilterDisplayValue('source')}
+          </Text>
+          <Icon
+            name="chevron-down"
+            size={16}
+            color={
+              isFilterActive('source')
+                ? theme.colors.primary
+                : theme.colors.onSurfaceVariant
+            }
+          />
+        </TouchableOpacity>
+
         {/* Author Filter Button */}
         <TouchableOpacity
           testID="filter-button-author"
@@ -215,6 +272,42 @@ export const EnhancedSearchBar = ({
       </ScrollView>
 
       {/* Filter Sheets */}
+      <Sheet
+        isVisible={activeFilterSheet === 'source'}
+        onClose={closeFilterSheet}
+        title={l10n.models.search.sourceTitle}>
+        <Sheet.View style={styles.filterSheetContent}>
+          {sourceOptions.map(option => {
+            const isSelected = source === option.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => handleSourceSelect(option.value)}
+                style={[
+                  styles.filterOption,
+                  isSelected && styles.filterOptionSelected,
+                ]}
+                activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    isSelected && styles.filterOptionTextSelected,
+                  ]}>
+                  {option.label}
+                </Text>
+                {isSelected && (
+                  <Icon
+                    name="check-circle"
+                    size={24}
+                    color={theme.colors.primary}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </Sheet.View>
+      </Sheet>
+
       <Sheet
         isVisible={activeFilterSheet === 'author'}
         onClose={closeFilterSheet}

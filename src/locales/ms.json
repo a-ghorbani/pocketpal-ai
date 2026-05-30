@@ -160,7 +160,9 @@
       "unknownGroup": "Tidak Diketahui",
       "availableToUse": "Sedia Digunakan",
       "availableToDownload": "Tersedia untuk Dimuat Turun",
-      "useAddButtonForMore": "Guna butang + untuk mencari model lain"
+      "useAddButtonForMore": "Guna butang + untuk mencari model lain",
+      "hfMirrorModel": "Cermin HF",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "Penglihatan",
     "mmproj": "Projektor",
@@ -206,13 +208,18 @@
     "buttons": {
       "addFromHuggingFace": "Tambah daripada Hugging Face",
       "addLocalModel": "Tambah Model Tempatan",
-      "reset": "Tetap Semula"
+      "reset": "Tetap Semula",
+      "addFromModelSources": "Muat Turun Model"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Model Hugging Face",
       "menuTitleDownloaded": "Model yang Dimuat Turun",
       "menuTitleGrouped": "Kumpulkan Mengikut Jenis Model",
-      "menuTitleReset": "Tetap Semula Senarai Model"
+      "menuTitleReset": "Tetap Semula Senarai Model",
+      "filtersGroup": "Penapis",
+      "viewGroup": "Paparan",
+      "menuTitleHfMirror": "Cermin Hugging Face",
+      "menuTitleModelScope": "Model ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Teruskan Tetapan Semula",
@@ -261,7 +268,7 @@
     "search": {
       "noResults": "Model tidak ditemui",
       "loadingMore": "Memuatkan lebih banyak...",
-      "searchPlaceholder": "Cari model Hugging Face",
+      "searchPlaceholder": "Cari repositori model",
       "modelUpdatedLong": "Dikemas kini {{time}} lalu",
       "modelUpdatedShort": "{{time}} lalu",
       "modelUpdatedJustNowLong": "Dikemas kini baru sahaja",
@@ -278,6 +285,13 @@
         "sortDownloads": "Bilangan Muat Turun",
         "sortRecent": "Dikemas Kini Terkini",
         "sortLikes": "Paling Disukai"
+      },
+      "source": "Sumber",
+      "sourceTitle": "Sumber Muat Turun",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "Cermin HF",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -304,7 +318,8 @@
         "author": "Pengarang",
         "requiresProjectionModel": "Memerlukan model unjuran",
         "downloadProjectionModel": "Muat turun model unjuran",
-        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kad Model di Hugging Face",
+        "viewModelCardOnSource": "Lihat Sumber Model"
       },
       "accessibility": {
         "expandDetails": "Kembangkan butiran",
@@ -629,7 +644,8 @@
       "enableAndRetry": "Dayakan dan Cuba Lagi",
       "goToSettings": "Pergi ke Tetapan",
       "tryAgain": "Cuba Lagi",
-      "viewOnHuggingFace": "Lihat Model di HF ↗"
+      "viewOnHuggingFace": "Lihat Model di HF ↗",
+      "viewOnSource": "Lihat Sumber Model ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Padam Sembang",
@@ -680,7 +696,11 @@
       "menuTitleHf": "Model Hugging Face",
       "menuTitleDownloaded": "Model yang Dimuat Turun",
       "menuTitleGrouped": "Kumpulkan Mengikut Jenis Model",
-      "menuTitleReset": "Tetap Semula Senarai Model"
+      "menuTitleReset": "Tetap Semula Senarai Model",
+      "filtersGroup": "Penapis",
+      "viewGroup": "Paparan",
+      "menuTitleHfMirror": "Cermin Hugging Face",
+      "menuTitleModelScope": "Model ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Teruskan Tetapan Semula",

@@ -345,4 +345,24 @@ describe('hfAsModel', () => {
 
     expect(model.repo).toBe('');
   });
+
+  it('should preserve official HF ids and scope mirror ids', () => {
+    const mirrorModel = {
+      ...mockHFModel1,
+      source: 'hf_mirror',
+      sourceRepoId: mockHFModel1.id,
+    };
+
+    const official = hfAsModel(mockHFModel1, mockHFModelFiles1[0]);
+    const mirror = hfAsModel(mirrorModel, mockHFModelFiles1[0]);
+
+    expect(official.id).toBe(
+      `${mockHFModel1.id}/${mockHFModelFiles1[0].rfilename}`,
+    );
+    expect(mirror.id).toBe(
+      `hf_mirror:${mockHFModel1.id}/${mockHFModelFiles1[0].rfilename}`,
+    );
+    expect(mirror.source).toBe('hf_mirror');
+    expect(mirror.origin).toBe('hf_mirror');
+  });
 });

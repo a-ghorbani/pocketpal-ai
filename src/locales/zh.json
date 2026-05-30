@@ -197,7 +197,9 @@
       "unknownGroup": "未知",
       "availableToUse": "可使用",
       "availableToDownload": "可下载",
-      "useAddButtonForMore": "点击 + 按钮添加更多模型"
+      "useAddButtonForMore": "点击 + 按钮添加更多模型",
+      "hfMirrorModel": "HF镜像",
+      "modelScopeModel": "魔搭"
     },
     "vision": "视觉",
     "mmproj": "投影仪",
@@ -243,13 +245,18 @@
     "buttons": {
       "addFromHuggingFace": "从Hugging Face添加",
       "addLocalModel": "添加本地模型",
-      "reset": "重置"
+      "reset": "重置",
+      "addFromModelSources": "下载模型"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face模型",
       "menuTitleDownloaded": "已下载模型",
       "menuTitleGrouped": "按模型类型分组",
-      "menuTitleReset": "重置模型列表"
+      "menuTitleReset": "重置模型列表",
+      "filtersGroup": "筛选",
+      "viewGroup": "视图",
+      "menuTitleHfMirror": "Hugging Face镜像",
+      "menuTitleModelScope": "魔搭模型"
     },
     "modelsResetDialog": {
       "proceedWithReset": "继续重置",
@@ -298,7 +305,7 @@
     "search": {
       "noResults": "找不到模型",
       "loadingMore": "加载中...",
-      "searchPlaceholder": "搜索Hugging Face模型",
+      "searchPlaceholder": "搜索模型仓库",
       "modelUpdatedLong": "{{time}}前更新",
       "modelUpdatedShort": "{{time}}前",
       "modelUpdatedJustNowLong": "刚刚更新",
@@ -315,6 +322,13 @@
         "sortDownloads": "下载量",
         "sortRecent": "最近更新",
         "sortLikes": "点赞数"
+      },
+      "source": "来源",
+      "sourceTitle": "下载来源",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF镜像",
+        "modelscope": "魔搭"
       }
     },
     "modelCard": {
@@ -341,7 +355,8 @@
         "author": "作者",
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下载投影模型",
-        "viewModelCardOnHuggingFace": "在Hugging Face上查看模型卡片"
+        "viewModelCardOnHuggingFace": "在Hugging Face上查看模型卡片",
+        "viewModelCardOnSource": "查看模型来源"
       },
       "accessibility": {
         "expandDetails": "展开详情",
@@ -668,7 +683,8 @@
       "enableAndRetry": "启用并重试",
       "goToSettings": "前往设置",
       "tryAgain": "重试",
-      "viewOnHuggingFace": "在HF上查看模型 ↗"
+      "viewOnHuggingFace": "在HF上查看模型 ↗",
+      "viewOnSource": "查看模型来源 ↗"
     },
     "headerRight": {
       "deleteChatTitle": "删除聊天",
@@ -719,7 +735,11 @@
       "menuTitleHf": "Hugging Face模型",
       "menuTitleDownloaded": "已下载模型",
       "menuTitleGrouped": "按模型类型分组",
-      "menuTitleReset": "重置模型列表"
+      "menuTitleReset": "重置模型列表",
+      "filtersGroup": "筛选",
+      "viewGroup": "视图",
+      "menuTitleHfMirror": "Hugging Face镜像",
+      "menuTitleModelScope": "魔搭模型"
     },
     "modelsResetDialog": {
       "proceedWithReset": "继续重置",

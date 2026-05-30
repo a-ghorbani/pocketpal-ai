@@ -41,26 +41,7 @@ export const hasEnoughMemory = async (
     }
   }
 
-  // Get calibration data from ModelStore
-  const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
-
-  // Calculate ceiling from calibration data
-  let ceiling: number;
-  if (
-    largestSuccessfulLoad !== undefined ||
-    availableMemoryCeiling !== undefined
-  ) {
-    // Use the maximum of both calibration signals
-    ceiling = Math.max(largestSuccessfulLoad ?? 0, availableMemoryCeiling ?? 0);
-  } else {
-    // Cold start: no calibration data yet, use conservative fallback
-    const totalMemory = await DeviceInfo.getTotalMemory();
-    // Use heuristic: min(60% of RAM, RAM - 1.2GB)
-    ceiling = Math.max(
-      Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9),
-      0, // Ensure non-negative
-    );
-  }
+  const ceiling = await getAvailableMemoryCeiling();
 
   const memoryRequirement = getModelMemoryRequirement(
     modelForCalc,
@@ -70,6 +51,20 @@ export const hasEnoughMemory = async (
 
   return memoryRequirement <= ceiling;
 };
+
+async function getAvailableMemoryCeiling(): Promise<number> {
+  const calibratedCeiling = Math.max(
+    modelStore.largestSuccessfulLoad ?? 0,
+    modelStore.availableMemoryCeiling ?? 0,
+  );
+
+  if (calibratedCeiling > 0) {
+    return calibratedCeiling;
+  }
+
+  const totalMemory = await DeviceInfo.getTotalMemory();
+  return Math.max(Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9), 0);
+}
 
 /**
  * Get memory fit status with details
@@ -93,11 +88,7 @@ async function getMemoryFitDetails(
   // Get device total memory
   const totalMemory = await DeviceInfo.getTotalMemory();
 
-  // Get learned available ceiling (already includes fallback from ModelStore.initializeStore)
-  const availableBytes = Math.max(
-    modelStore.largestSuccessfulLoad ?? 0,
-    modelStore.availableMemoryCeiling ?? 0,
-  );
+  const availableBytes = await getAvailableMemoryCeiling();
 
   // Determine status
   let status: MemoryFitStatus;

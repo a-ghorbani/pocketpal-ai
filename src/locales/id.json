@@ -197,7 +197,9 @@
       "unknownGroup": "Tidak Diketahui",
       "availableToUse": "Siap Digunakan",
       "availableToDownload": "Tersedia untuk Diunduh",
-      "useAddButtonForMore": "Gunakan tombol + untuk menemukan model lain"
+      "useAddButtonForMore": "Gunakan tombol + untuk menemukan model lain",
+      "hfMirrorModel": "Mirror HF",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "Visi",
     "mmproj": "Proyektor",
@@ -243,13 +245,18 @@
     "buttons": {
       "addFromHuggingFace": "Tambah dari Hugging Face",
       "addLocalModel": "Tambah Model Lokal",
-      "reset": "Atur Ulang"
+      "reset": "Atur Ulang",
+      "addFromModelSources": "Unduh Model"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Model Hugging Face",
       "menuTitleDownloaded": "Model yang Diunduh",
       "menuTitleGrouped": "Kelompokkan Berdasarkan Jenis Model",
-      "menuTitleReset": "Atur Ulang Daftar Model"
+      "menuTitleReset": "Atur Ulang Daftar Model",
+      "filtersGroup": "Filter",
+      "viewGroup": "Tampilan",
+      "menuTitleHfMirror": "Mirror Hugging Face",
+      "menuTitleModelScope": "Model ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Lanjutkan Atur Ulang",
@@ -298,7 +305,7 @@
     "search": {
       "noResults": "Model tidak ditemukan",
       "loadingMore": "Memuat lebih banyak...",
-      "searchPlaceholder": "Cari model Hugging Face",
+      "searchPlaceholder": "Cari repositori model",
       "modelUpdatedLong": "Diperbarui {{time}} lalu",
       "modelUpdatedShort": "{{time}} lalu",
       "modelUpdatedJustNowLong": "Diperbarui baru saja",
@@ -315,6 +322,13 @@
         "sortDownloads": "Jumlah Unduhan",
         "sortRecent": "Terbaru Diperbarui",
         "sortLikes": "Paling Disukai"
+      },
+      "source": "Sumber",
+      "sourceTitle": "Sumber Unduhan",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "Mirror HF",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -341,7 +355,8 @@
         "author": "Penulis",
         "requiresProjectionModel": "Memerlukan model proyeksi",
         "downloadProjectionModel": "Unduh model proyeksi",
-        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face"
+        "viewModelCardOnHuggingFace": "Lihat Kartu Model di Hugging Face",
+        "viewModelCardOnSource": "Lihat Sumber Model"
       },
       "accessibility": {
         "expandDetails": "Perluas detail",
@@ -668,7 +683,8 @@
       "enableAndRetry": "Aktifkan dan Coba Lagi",
       "goToSettings": "Buka Pengaturan",
       "tryAgain": "Coba Lagi",
-      "viewOnHuggingFace": "Lihat Model di HF ↗"
+      "viewOnHuggingFace": "Lihat Model di HF ↗",
+      "viewOnSource": "Lihat Sumber Model ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Hapus Obrolan",
@@ -719,7 +735,11 @@
       "menuTitleHf": "Model Hugging Face",
       "menuTitleDownloaded": "Model yang Diunduh",
       "menuTitleGrouped": "Kelompokkan Berdasarkan Jenis Model",
-      "menuTitleReset": "Atur Ulang Daftar Model"
+      "menuTitleReset": "Atur Ulang Daftar Model",
+      "filtersGroup": "Filter",
+      "viewGroup": "Tampilan",
+      "menuTitleHfMirror": "Mirror Hugging Face",
+      "menuTitleModelScope": "Model ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Lanjutkan Atur Ulang",

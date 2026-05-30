@@ -19,6 +19,7 @@ import {
   Model,
   ModelFile,
   ModelOrigin,
+  ModelSourceId,
   ModelType,
   PreviewImage,
   User,
@@ -30,6 +31,13 @@ import {
   getRecommendedProjectionModel,
   getVisionModelSizeBreakdown,
 } from './multimodalHelpers';
+import {
+  buildSourceModelId,
+  getRepoNameFromModelId,
+  getSourceScopedRepoId,
+  MODEL_SOURCE_ORIGIN,
+  stripSourceScope,
+} from './modelSources';
 
 export const L10nContext = React.createContext<
   (typeof l10n)[keyof typeof l10n]
@@ -398,8 +406,9 @@ export function extractHFModelType(modelId: string): string {
 }
 
 export function extractHFModelTitle(modelId: string): string {
+  const unscopedModelId = stripSourceScope(modelId);
   // Remove "GGUF", "-GGUF", or "_GGUF" at the end regardless of case
-  const sanitizedModelId = modelId.replace(/[-_]?[Gg][Gg][Uu][Ff]$/, '');
+  const sanitizedModelId = unscopedModelId.replace(/[-_]?[Gg][Gg][Uu][Ff]$/, '');
 
   // If there is no "/" in the modelId, ie owner is not included, return sanitizedModelId
   if (!sanitizedModelId.includes('/')) {
@@ -416,6 +425,9 @@ export function hfAsModel(
   modelFile: ModelFile,
 ): Model {
   const defaultSettings = getHFDefaultSettings(hfModel);
+  const source: ModelSourceId = hfModel.source || 'huggingface';
+  const repoId = hfModel.sourceRepoId || hfModel.id;
+  const scopedRepoId = getSourceScopedRepoId(source, repoId);
 
   // Check if this is a vision repository
   const isVision = isVisionRepo(hfModel.siblings || []);
@@ -436,7 +448,7 @@ export function hfAsModel(
 
     // Convert to model IDs
     compatibleProjectionModels = mmprojFiles.map(
-      file => `${hfModel.id}/${file.rfilename}`,
+      file => buildSourceModelId(source, repoId, file.rfilename),
     );
 
     // Set default projection model based on quantization matching
@@ -451,18 +463,22 @@ export function hfAsModel(
       );
 
       if (recommendedFile) {
-        defaultProjectionModel = `${hfModel.id}/${recommendedFile}`;
+        defaultProjectionModel = buildSourceModelId(
+          source,
+          repoId,
+          recommendedFile,
+        );
       }
     }
   }
 
-  // Extract repo from hfModel.id (format: "author/repo-name")
-  const repoParts = hfModel.id.split('/');
-  const repo = repoParts.length >= 2 ? repoParts[1] : undefined;
+  // Extract repo from the source repository id (format: "author/repo-name")
+  const repo = getRepoNameFromModelId(repoId);
+  const sourceWebUrl = hfModel.url ?? '';
 
   const _model: Model = {
-    id: hfModel.id + '/' + modelFile.rfilename,
-    type: extractHFModelType(hfModel.id),
+    id: `${scopedRepoId}/${modelFile.rfilename}`,
+    type: extractHFModelType(repoId),
     author: hfModel.author,
     repo: repo,
     name: extractHFModelTitle(modelFile.rfilename),
@@ -470,13 +486,16 @@ export function hfAsModel(
     params: hfModel.specs?.gguf?.total ?? 0,
     isDownloaded: false,
     downloadUrl: modelFile.url ?? '',
-    hfUrl: hfModel.url ?? '',
+    hfUrl: sourceWebUrl,
+    source,
+    sourceRepoId: repoId,
+    sourceWebUrl,
     progress: 0,
     filename: modelFile.rfilename,
     capabilities: isVisionLLM ? ['vision'] : undefined,
     //fullPath: '',
     isLocal: false,
-    origin: ModelOrigin.HF,
+    origin: MODEL_SOURCE_ORIGIN[source],
     defaultChatTemplate: defaultSettings.chatTemplate,
     chatTemplate: _.cloneDeep(defaultSettings.chatTemplate),
     defaultCompletionSettings: defaultSettings.completionParams,
@@ -519,8 +538,8 @@ export function inferRepoFromModelId(modelId: string): string | undefined {
   if (!modelId) {
     return undefined;
   }
-  const parts = modelId.split('/');
-  // HF model IDs should have at least 3 parts: author/repo/filename
+
+  const parts = stripSourceScope(modelId).split('/');
   return parts.length >= 3 ? parts[1] : undefined;
 }
 
@@ -552,7 +571,14 @@ export const checkModelFileIntegrity = async (
 }> => {
   try {
     // For HF models, if we don't have lfs details, fetch them
-    if (model.origin === ModelOrigin.HF && !model.hfModelFile?.lfs?.size) {
+    if (
+      [
+        ModelOrigin.HF,
+        ModelOrigin.HF_MIRROR,
+        ModelOrigin.MODELSCOPE,
+      ].includes(model.origin) &&
+      !model.hfModelFile?.lfs?.size
+    ) {
       await modelStore.fetchAndUpdateModelFileDetails(model);
     }
 

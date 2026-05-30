@@ -6,6 +6,7 @@ import androidx.work.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -34,6 +35,46 @@ class DownloadWorker(
         currentCall?.cancel()
     }
 
+    private fun applyStoredHeaders(
+        requestBuilder: Request.Builder,
+        requestHeaders: String?
+    ): Boolean {
+        if (requestHeaders.isNullOrBlank()) {
+            return false
+        }
+
+        var hasAuthorization = false
+        try {
+            val json = JSONObject(requestHeaders)
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val value = json.optString(key)
+                if (value.isNotBlank()) {
+                    requestBuilder.header(key, value)
+                    if (key.equals("Authorization", ignoreCase = true)) {
+                        hasAuthorization = true
+                    }
+                }
+            }
+        } catch (error: Exception) {
+            Log.w(TAG, "Ignoring invalid stored request headers", error)
+        }
+
+        return hasAuthorization
+    }
+
+    private suspend fun clearSensitiveHeaders(downloadId: String) {
+        downloadDao.clearSensitiveHeaders(downloadId)
+    }
+
+    private fun deletePartialFile(file: File, reason: String) {
+        if (file.exists()) {
+            Log.d(TAG, "Deleting partial download file after $reason: ${file.absolutePath}")
+            file.delete()
+        }
+    }
+
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
             val downloadId = inputData.getString(KEY_DOWNLOAD_ID) ?: return@withContext Result.failure()
@@ -43,6 +84,7 @@ class DownloadWorker(
                 Log.d(TAG, "Work was cancelled before starting for ID: $downloadId")
                 handleStopped()
                 downloadDao.updateStatus(downloadId, DownloadStatus.CANCELLED, "Download cancelled")
+                clearSensitiveHeaders(downloadId)
                 return@withContext Result.failure()
             }
 
@@ -50,7 +92,10 @@ class DownloadWorker(
             Log.d(TAG, "Progress update interval: $progressInterval ms")
 
             val download = downloadDao.getDownload(downloadId) ?: return@withContext Result.failure()
-            Log.d(TAG, "Retrieved download info: $download")
+            Log.d(
+                TAG,
+                "Retrieved download info: id=${download.id}, status=${download.status}, progress=${download.downloadedBytes}/${download.totalBytes}"
+            )
 
             if (download.status == DownloadStatus.PAUSED) {
                 Log.d(TAG, "Download is paused, returning retry for ID: $downloadId")
@@ -69,7 +114,10 @@ class DownloadWorker(
                     // Reload download info after update
                     val updatedDownload = downloadDao.getDownload(downloadId)
                     if (updatedDownload != null) {
-                        Log.d(TAG, "Updated download info: $updatedDownload")
+                        Log.d(
+                            TAG,
+                            "Updated download info: id=${updatedDownload.id}, status=${updatedDownload.status}, progress=${updatedDownload.downloadedBytes}/${updatedDownload.totalBytes}"
+                        )
                     }
                 }
             }
@@ -77,16 +125,18 @@ class DownloadWorker(
             val request = Request.Builder()
                 .url(download.url)
                 .apply {
+                    val hasAuthorizationHeader = applyStoredHeaders(this, download.requestHeaders)
+
                     if (file.exists() && file.length() > 0) {
                         val range = "bytes=${file.length()}-"
                         Log.d(TAG, "Resuming download from byte ${file.length()}")
-                        addHeader("Range", range)
+                        header("Range", range)
                     }
                     
                     // Add authorization header if token is available
-                    download.authToken?.let { token ->
+                    download.authToken?.takeIf { !hasAuthorizationHeader }?.let { token ->
                         Log.d(TAG, "Adding Authorization header for authenticated download")
-                        addHeader("Authorization", "Bearer $token")
+                        header("Authorization", "Bearer $token")
                     }
                 }
                 .build()
@@ -127,23 +177,23 @@ class DownloadWorker(
                     416 -> {
                         Log.e(TAG, "Server rejected the range request for ID: $downloadId")
                         
-                        if (file.exists()) {
-                            Log.d(TAG, "Deleting invalid partial file: ${file.absolutePath}")
-                            file.delete()
-                        }
+                        deletePartialFile(file, "range rejection")
                         
                         downloadDao.updateStatus(
                             downloadId,
                             DownloadStatus.FAILED,
                             "Download failed: The partial download was invalid or the file on server has changed"
                         )
+                        clearSensitiveHeaders(downloadId)
                         
                         return@withContext Result.failure()
                     }
                     in 400..499 -> {
                         val error = "Client error: ${response.code}"
                         Log.e(TAG, error)
+                        deletePartialFile(file, "client error")
                         downloadDao.updateStatus(downloadId, DownloadStatus.FAILED, error)
+                        clearSensitiveHeaders(downloadId)
                         return@withContext Result.failure()
                     }
                     in 500..599 -> {
@@ -155,7 +205,9 @@ class DownloadWorker(
                     else -> {
                         val error = "Unexpected response: ${response.code}"
                         Log.e(TAG, error)
+                        deletePartialFile(file, "unexpected response")
                         downloadDao.updateStatus(downloadId, DownloadStatus.FAILED, error)
+                        clearSensitiveHeaders(downloadId)
                         return@withContext Result.failure()
                     }
                 }
@@ -209,6 +261,7 @@ class DownloadWorker(
                             if (isStopped) {
                                 Log.d(TAG, "Download cancelled during transfer for ID: $downloadId")
                                 downloadDao.updateStatus(downloadId, DownloadStatus.CANCELLED, "Download cancelled")
+                                clearSensitiveHeaders(downloadId)
                                 if (file.exists()) {
                                     file.delete()
                                     Log.d(TAG, "Deleted partial download file: ${file.absolutePath}")
@@ -244,17 +297,34 @@ class DownloadWorker(
 
                 Log.d(TAG, "Download completed successfully for ID: $downloadId")
                 downloadDao.updateProgress(downloadId, bytesWritten, totalBytes, DownloadStatus.COMPLETED)
+                clearSensitiveHeaders(downloadId)
                 return@withContext Result.success()
             }
 
             Log.e(TAG, "No response body for ID: $downloadId")
+            deletePartialFile(file, "empty response body")
+            downloadDao.updateStatus(downloadId, DownloadStatus.FAILED, "Download failed: Empty response body")
+            clearSensitiveHeaders(downloadId)
             return@withContext Result.failure()
         } catch (e: Exception) {
             Log.e(TAG, "Download failed", e)
             val downloadId = inputData.getString(KEY_DOWNLOAD_ID)
             downloadId?.let {
                 Log.e(TAG, "Updating status to FAILED for ID: $it")
+                val download = downloadDao.getDownload(it)
+                if (download?.status == DownloadStatus.CANCELLED) {
+                    clearSensitiveHeaders(it)
+                    return@withContext Result.failure()
+                }
+                if (download?.status == DownloadStatus.PAUSED) {
+                    return@withContext Result.retry()
+                }
+
+                download?.destination?.let { destination ->
+                    deletePartialFile(File(destination), "download failure")
+                }
                 downloadDao.updateStatus(it, DownloadStatus.FAILED, e.message)
+                clearSensitiveHeaders(it)
             }
             return@withContext Result.failure()
         }
@@ -299,4 +369,4 @@ class ProgressInterceptor : Interceptor {
             .body(if (originalBody != null) ProgressResponseBody(originalBody) else null)
             .build()
     }
-} 
+}

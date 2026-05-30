@@ -19,6 +19,24 @@ import type {
 } from '../../specs/NativeDownloadModule';
 
 const TAG = 'DownloadManager';
+const MODELSCOPE_DOMAIN = 'https://modelscope.cn';
+
+function getDownloadHeaders(
+  model: Model,
+  authToken?: string | null,
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  if (model.source === 'modelscope') {
+    headers.Referer = `${MODELSCOPE_DOMAIN}/`;
+  }
+
+  return headers;
+}
 
 export class DownloadManager {
   private downloadJobs: DownloadMap;
@@ -280,9 +298,7 @@ export class DownloadManager {
         background: uiStore.iOSBackgroundDownloading,
         discretionary: false,
         progressInterval: 800,
-        headers: {
-          ...(authToken ? {Authorization: `Bearer ${authToken}`} : {}),
-        },
+        headers: getDownloadHeaders(model, authToken),
         begin: res => {
           console.log(`${TAG}: Download started for ID: ${model.id}`, {
             statusCode: res.statusCode,
@@ -414,6 +430,7 @@ export class DownloadManager {
         networkType: 'ANY',
         priority: 1,
         progressInterval: 1000,
+        headers: getDownloadHeaders(model, authToken),
         ...(authToken ? {authToken} : {}),
       };
       const response: DownloadResponse =

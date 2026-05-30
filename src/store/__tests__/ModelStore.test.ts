@@ -31,9 +31,9 @@ jest.mock('../../utils/deviceCapabilities', () => ({
   isHighEndDevice: jest.fn().mockResolvedValue(false),
 }));
 
-// Mock the HF API
-jest.mock('../../api/hf', () => ({
-  fetchModelFilesDetails: jest.fn(),
+// Mock the model source API
+jest.mock('../../api/modelSources', () => ({
+  fetchModelFilesDetailsFromSource: jest.fn(),
 }));
 
 // Mock the download manager
@@ -422,7 +422,7 @@ describe('ModelStore', () => {
 
     it('should automatically cleanup orphaned projection model when LLM is deleted', async () => {
       // Mock RNFS.exists to return false so backwards compat checks use new path consistently
-      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
 
       const projModel = {
         ...defaultModels[0],
@@ -873,6 +873,25 @@ describe('ModelStore', () => {
 
       expect(downloadManager.startDownload).toHaveBeenCalled();
     });
+
+    it('should not mark partial files as downloaded when size does not match', async () => {
+      const model = {
+        ...defaultModels[0],
+        id: 'partial-model',
+        filename: 'partial-model.gguf',
+        size: 1000,
+        isDownloaded: false,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      (RNFS.stat as jest.Mock).mockResolvedValue({size: 100});
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+
+      await modelStore.checkFileExists(model);
+
+      expect(model.isDownloaded).toBe(false);
+    });
   });
 
   describe('computed properties', () => {
@@ -1012,6 +1031,42 @@ describe('ModelStore', () => {
       consoleErrorSpy.mockRestore();
       alertSpy.mockRestore();
       modelStore.addHFModel = originalAddHFModel;
+    });
+
+    it('should surface download start errors from HF model downloads', async () => {
+      const hfModel = {
+        ...mockHFModel1,
+        _id: 'hf-1',
+        author: 'test',
+        id: 'test/hf-model',
+        model_id: 'test/hf-model',
+        siblings: [
+          {
+            rfilename: 'model-01.gguf',
+            size: 1000,
+            url: 'test-url',
+            oid: 'test-oid',
+          },
+        ],
+      };
+      const modelFile = hfModel.siblings[0];
+      const error = new Error('download start failed');
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      (downloadManager.startDownload as jest.Mock).mockRejectedValue(error);
+
+      await modelStore.downloadHFModel(hfModel as any, modelFile as any);
+
+      expect(downloadManager.startDownload).toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith(
+        uiStore.l10n.errors.downloadSetupFailedTitle,
+        t(uiStore.l10n.errors.downloadSetupFailedMessage, {
+          message: 'download start failed',
+        }),
+      );
+
+      alertSpy.mockRestore();
     });
   });
 
@@ -1872,6 +1927,36 @@ describe('ModelStore', () => {
       // Should fallback to 'unknown'
       expect(path).toContain('/models/hf/bartowski/unknown/model.gguf');
     });
+
+    it('should use separate directories for non-official model sources', async () => {
+      const mirrorModel = {
+        origin: ModelOrigin.HF_MIRROR,
+        source: 'hf_mirror',
+        id: 'hf_mirror:bartowski/gemma-2-2b-it-GGUF/model.gguf',
+        filename: 'model.gguf',
+        author: 'bartowski',
+        repo: 'gemma-2-2b-it-GGUF',
+      };
+      const modelScopeModel = {
+        origin: ModelOrigin.MODELSCOPE,
+        source: 'modelscope',
+        id: 'modelscope:qwen/Qwen2.5-GGUF/model.gguf',
+        filename: 'model.gguf',
+        author: 'qwen',
+        repo: 'Qwen2.5-GGUF',
+      };
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        modelStore.getModelFullPath(mirrorModel as any),
+      ).resolves.toContain(
+        '/models/hf-mirror/bartowski/gemma-2-2b-it-GGUF/model.gguf',
+      );
+      await expect(
+        modelStore.getModelFullPath(modelScopeModel as any),
+      ).resolves.toContain('/models/modelscope/qwen/Qwen2.5-GGUF/model.gguf');
+    });
   });
 
   describe('mergeModelLists - repo inference for HF models', () => {
@@ -2342,7 +2427,9 @@ describe('ModelStore', () => {
 
   // Add tests for fetchAndUpdateModelFileDetails
   describe('fetchAndUpdateModelFileDetails', () => {
-    const {fetchModelFilesDetails} = require('../../api/hf');
+    const {
+      fetchModelFilesDetailsFromSource,
+    } = require('../../api/modelSources');
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -2357,7 +2444,7 @@ describe('ModelStore', () => {
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
       // Should not throw or call any APIs
-      expect(fetchModelFilesDetails).not.toHaveBeenCalled();
+      expect(fetchModelFilesDetailsFromSource).not.toHaveBeenCalled();
     });
 
     it('should update model file details when matching file found', async () => {
@@ -2378,11 +2465,15 @@ describe('ModelStore', () => {
         },
       ];
 
-      fetchModelFilesDetails.mockResolvedValue(mockFileDetails);
+      fetchModelFilesDetailsFromSource.mockResolvedValue(mockFileDetails);
 
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith('test/model');
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId: 'test/model',
+        authToken: 'mockPass',
+      });
       expect(model.hfModelFile.lfs).toEqual({oid: 'test-oid', size: 1000});
     });
 
@@ -2393,7 +2484,9 @@ describe('ModelStore', () => {
         hfModelFile: {rfilename: 'model.gguf', lfs: undefined},
       };
 
-      fetchModelFilesDetails.mockRejectedValue(new Error('API error'));
+      fetchModelFilesDetailsFromSource.mockRejectedValue(
+        new Error('API error'),
+      );
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -2421,11 +2514,15 @@ describe('ModelStore', () => {
         },
       ];
 
-      fetchModelFilesDetails.mockResolvedValue(mockFileDetails);
+      fetchModelFilesDetailsFromSource.mockResolvedValue(mockFileDetails);
 
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith('test/model');
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId: 'test/model',
+        authToken: 'mockPass',
+      });
       expect(model.hfModelFile.lfs).toBeUndefined();
     });
 
@@ -2443,11 +2540,15 @@ describe('ModelStore', () => {
         },
       ];
 
-      fetchModelFilesDetails.mockResolvedValue(mockFileDetails);
+      fetchModelFilesDetailsFromSource.mockResolvedValue(mockFileDetails);
 
       await modelStore.fetchAndUpdateModelFileDetails(model as any);
 
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith('test/model');
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId: 'test/model',
+        authToken: 'mockPass',
+      });
       expect(model.hfModelFile.lfs).toBeUndefined();
     });
   });
@@ -2469,6 +2570,7 @@ describe('ModelStore', () => {
         modelStore.context = undefined;
         modelStore.activeModelId = undefined;
         modelStore.isContextLoading = false;
+        modelStore.modelLoadError = null;
       });
 
       // Get the mock function - use named export
@@ -2536,6 +2638,23 @@ describe('ModelStore', () => {
 
       // Flag should still be cleared
       expect(modelStore.isContextLoading).toBe(false);
+    });
+
+    it('should show a friendly error when llama JSI bindings are unavailable', async () => {
+      const model = basicModel;
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      initLlamaMock.mockReset();
+      initLlamaMock.mockRejectedValue(new Error('JSI bindings not installed'));
+
+      await expect(modelStore.initContext(model)).rejects.toThrow(
+        'JSI bindings not installed',
+      );
+
+      expect(modelStore.modelLoadError?.message).toBe(
+        uiStore.l10n.errors.modelNativeBindingError,
+      );
+      expect(modelStore.modelLoadError?.message).not.toMatch(/JSI bindings/i);
+      errorSpy.mockRestore();
     });
 
     it('should return existing context when same model is already loaded', async () => {
@@ -3187,6 +3306,27 @@ describe('ModelStore', () => {
       await modelStore.fetchAndPersistGGUFMetadata(model);
 
       expect(model.ggufMetadata).toBeUndefined();
+    });
+
+    it('should silently skip metadata when llama JSI bindings are unavailable', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockRejectedValue(
+        new Error('JSI bindings not installed'),
+      );
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeUndefined();
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
     });
 
     it('should handle null response gracefully', async () => {

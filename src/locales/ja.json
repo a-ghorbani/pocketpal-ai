@@ -160,7 +160,9 @@
       "unknownGroup": "不明",
       "availableToUse": "使用可能",
       "availableToDownload": "ダウンロード可能",
-      "useAddButtonForMore": "+ ボタンを他のモデルを探す"
+      "useAddButtonForMore": "+ ボタンを他のモデルを探す",
+      "hfMirrorModel": "HFミラー",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "ビジョン",
     "mmproj": "プロジェクター",
@@ -206,13 +208,18 @@
     "buttons": {
       "addFromHuggingFace": "Hugging Faceから追加",
       "addLocalModel": "ローカルモデルを追加",
-      "reset": "リセット"
+      "reset": "リセット",
+      "addFromModelSources": "モデルをダウンロード"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Faceモデル",
       "menuTitleDownloaded": "ダウンロード済みモデル",
       "menuTitleGrouped": "モデルタイプでグループ化",
-      "menuTitleReset": "モデルリストをリセット"
+      "menuTitleReset": "モデルリストをリセット",
+      "filtersGroup": "フィルター",
+      "viewGroup": "表示",
+      "menuTitleHfMirror": "Hugging Faceミラー",
+      "menuTitleModelScope": "ModelScopeモデル"
     },
     "modelsResetDialog": {
       "proceedWithReset": "リセットを続行",
@@ -261,7 +268,7 @@
     "search": {
       "noResults": "モデルが見つかりません",
       "loadingMore": "読み込み中...",
-      "searchPlaceholder": "Hugging Faceモデルを検索",
+      "searchPlaceholder": "モデルリポジトリを検索",
       "modelUpdatedLong": "{{time}}前に更新",
       "modelUpdatedShort": "{{time}}前",
       "modelUpdatedJustNowLong": "たった今更新",
@@ -278,6 +285,13 @@
         "sortDownloads": "ダウンロード数",
         "sortRecent": "最近更新",
         "sortLikes": "いいね数"
+      },
+      "source": "ソース",
+      "sourceTitle": "ダウンロード元",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HFミラー",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -304,7 +318,8 @@
         "author": "作者",
         "requiresProjectionModel": "投影モデルが必要",
         "downloadProjectionModel": "投影モデルをダウンロード",
-        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示"
+        "viewModelCardOnHuggingFace": "Hugging Faceでモデルカードを表示",
+        "viewModelCardOnSource": "モデルのソースを表示"
       },
       "accessibility": {
         "expandDetails": "詳細を展開",
@@ -629,7 +644,8 @@
       "enableAndRetry": "トークンを有効にして再試行",
       "goToSettings": "設定へ移動",
       "tryAgain": "再試行",
-      "viewOnHuggingFace": "HFでモデルを表示 ↗"
+      "viewOnHuggingFace": "HFでモデルを表示 ↗",
+      "viewOnSource": "モデルのソースを表示 ↗"
     },
     "headerRight": {
       "deleteChatTitle": "チャットを削除",
@@ -680,7 +696,11 @@
       "menuTitleHf": "Hugging Faceモデル",
       "menuTitleDownloaded": "ダウンロード済みモデル",
       "menuTitleGrouped": "モデルタイプでグループ化",
-      "menuTitleReset": "モデルリストをリセット"
+      "menuTitleReset": "モデルリストをリセット",
+      "filtersGroup": "フィルター",
+      "viewGroup": "表示",
+      "menuTitleHfMirror": "Hugging Faceミラー",
+      "menuTitleModelScope": "ModelScopeモデル"
     },
     "modelsResetDialog": {
       "proceedWithReset": "リセットする",

@@ -1,6 +1,6 @@
 // Track deleted files for stateful behavior in tests
 const deletedFiles = new Set();
-export const stat = jest.fn();
+export const stat = jest.fn(() => Promise.resolve({size: 2 * 10 ** 9}));
 export const mkdir = jest.fn();
 export const unlink = jest.fn().mockImplementation(path => {
   deletedFiles.add(path);

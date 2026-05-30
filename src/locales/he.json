@@ -197,7 +197,9 @@
       "unknownGroup": "לא ידוע",
       "availableToUse": "מוכן לשימוש",
       "availableToDownload": "זמין להורדה",
-      "useAddButtonForMore": "השתמש בכפתור + כדי להוסיף מודלים נוספים"
+      "useAddButtonForMore": "השתמש בכפתור + כדי להוסיף מודלים נוספים",
+      "hfMirrorModel": "מראת HF",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "ראיה",
     "mmproj": "שכבת התאמה",
@@ -243,13 +245,18 @@
     "buttons": {
       "addFromHuggingFace": "הוסף מ-Hugging Face",
       "addLocalModel": "הוסף מודל מקומי",
-      "reset": "איפוס"
+      "reset": "איפוס",
+      "addFromModelSources": "הורד מודל"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "מודלי Hugging Face",
       "menuTitleDownloaded": "מודלים שהורדו",
       "menuTitleGrouped": "קיבוץ לפי סוג מודל",
-      "menuTitleReset": "איפוס רשימת מודלים"
+      "menuTitleReset": "איפוס רשימת מודלים",
+      "filtersGroup": "מסננים",
+      "viewGroup": "תצוגה",
+      "menuTitleHfMirror": "מראת Hugging Face",
+      "menuTitleModelScope": "מודלי ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "המשך עם איפוס",
@@ -298,7 +305,7 @@
     "search": {
       "noResults": "לא נמצאו מודלים",
       "loadingMore": "טוען עוד...",
-      "searchPlaceholder": "חפש מודלי Hugging Face",
+      "searchPlaceholder": "חפש מאגרי מודלים",
       "modelUpdatedLong": "עודכן לפני {{time}}",
       "modelUpdatedShort": "לפני {{time}}",
       "modelUpdatedJustNowLong": "עודכן עכשיו",
@@ -315,6 +322,13 @@
         "sortDownloads": "הורדות",
         "sortRecent": "עודכן לאחרונה",
         "sortLikes": "הכי אהוב"
+      },
+      "source": "מקור",
+      "sourceTitle": "מקור הורדה",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "מראת HF",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -341,7 +355,8 @@
         "author": "בעלים",
         "requiresProjectionModel": "דורש מודל שכבת התאמה",
         "downloadProjectionModel": "הורד מודל שכבת התאמה",
-        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face"
+        "viewModelCardOnHuggingFace": "הצג כרטיס מודל ב-Hugging Face",
+        "viewModelCardOnSource": "הצג מקור מודל"
       },
       "accessibility": {
         "expandDetails": "הרחב פרטים",
@@ -667,7 +682,8 @@
       "enableAndRetry": "הפעלה וניסיון חוזר",
       "goToSettings": "עבור אל ההגדרות",
       "tryAgain": "נסה שוב",
-      "viewOnHuggingFace": "הצג מודל ב-HF ↖"
+      "viewOnHuggingFace": "הצג מודל ב-HF ↖",
+      "viewOnSource": "הצג מקור מודל ↗"
     },
     "headerRight": {
       "deleteChatTitle": "מחק צ'אט",
@@ -718,7 +734,11 @@
       "menuTitleHf": "מודלי Hugging Face",
       "menuTitleDownloaded": "מודלים שהורדו",
       "menuTitleGrouped": "קיבוץ לפי סוג מודל",
-      "menuTitleReset": "איפוס רשימת מודלים"
+      "menuTitleReset": "איפוס רשימת מודלים",
+      "filtersGroup": "מסננים",
+      "viewGroup": "תצוגה",
+      "menuTitleHfMirror": "מראת Hugging Face",
+      "menuTitleModelScope": "מודלי ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "המשך עם האיפוס",

@@ -74,7 +74,10 @@ export const ModelsHeaderRight = observer(() => {
         }
         anchorPosition="bottom">
         {/* Filter section */}
-        <Menu.Item label="Filters" isGroupLabel />
+        <Menu.Item
+          label={l10n.components.modelsHeaderRight.filtersGroup}
+          isGroupLabel
+        />
         <Menu.Item
           icon={({size}) => (
             <Image
@@ -87,6 +90,18 @@ export const ModelsHeaderRight = observer(() => {
           selected={filters.includes('hf')}
         />
         <Menu.Item
+          icon={filters.includes('hf_mirror') ? 'mirror' : 'mirror-variant'}
+          onPress={() => toggleFilter('hf_mirror')}
+          label={l10n.components.modelsHeaderRight.menuTitleHfMirror}
+          selected={filters.includes('hf_mirror')}
+        />
+        <Menu.Item
+          icon={filters.includes('modelscope') ? 'cloud-check' : 'cloud-outline'}
+          onPress={() => toggleFilter('modelscope')}
+          label={l10n.components.modelsHeaderRight.menuTitleModelScope}
+          selected={filters.includes('modelscope')}
+        />
+        <Menu.Item
           icon={filters.includes('downloaded') ? 'download-circle' : 'download'}
           onPress={() => toggleFilter('downloaded')}
           label={l10n.components.modelsHeaderRight.menuTitleDownloaded}
@@ -94,7 +109,10 @@ export const ModelsHeaderRight = observer(() => {
         />
 
         {/* View section */}
-        <Menu.Item label="View" isGroupLabel />
+        <Menu.Item
+          label={l10n.components.modelsHeaderRight.viewGroup}
+          isGroupLabel
+        />
         <Menu.Item
           icon={filters.includes('grouped') ? 'layers' : 'layers-outline'}
           onPress={() => toggleFilter('grouped')}

@@ -4,6 +4,7 @@ import {Platform, TurboModuleRegistry} from 'react-native';
 export interface DownloadConfig {
   destination: string;
   authToken?: string;
+  headers?: {[key: string]: string};
   networkType?: 'WIFI' | 'ANY';
   progressInterval?: number;
   priority?: number;

@@ -1,5 +1,6 @@
 import {Platform} from 'react-native';
 import {loadLlamaModelInfo} from 'llama.rn';
+import {isLlamaJsiBindingsError} from './llamaErrors';
 
 /**
  * Quantization types that are repackable and should use use_mmap=false
@@ -80,6 +81,10 @@ export async function isRepackableQuantization(
 
     return false;
   } catch (error) {
+    if (isLlamaJsiBindingsError(error)) {
+      return false;
+    }
+
     console.warn(
       'Failed to detect quantization type, defaulting to false:',
       error,
