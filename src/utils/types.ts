@@ -287,6 +287,8 @@ export interface SemanticColors {
   placeholder: string;
   // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
   mutedLight: string;
+  // Figma `Color/Secondary/Default` — small DS button surface.
+  secondaryDefault: string;
 
   // Interactive states
   stateLayerOpacity: number;

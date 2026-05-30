@@ -40,6 +40,8 @@ export interface TokenColors {
   outlineVariant: string;
   // Subtle border / divider colour. Maps to design-system muted/light.
   mutedLight: string;
+  // Design-system `Color/Secondary/Default` — small DS button surface.
+  secondaryDefault: string;
 
   // MD3 extras
   surfaceDisabled: string;

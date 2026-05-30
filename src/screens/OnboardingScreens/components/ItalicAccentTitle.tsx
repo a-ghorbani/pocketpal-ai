@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {Text} from 'react-native-paper';
 
 import {useTheme} from '../../../hooks';
@@ -29,6 +29,12 @@ const createStyles = (theme: Theme, align: 'left' | 'center') => {
   const isFraunces =
     theme.typography.headlineH1.fontFamily === FONT_FAMILIES.FRAUNCES_MEDIUM;
   return StyleSheet.create({
+    // Stack one Text per line inside a centered column so each line
+    // centers independently — RN's wrapped-Text centering anchors
+    // shorter lines to the longest line's width, not the parent.
+    root: {
+      alignItems: align === 'center' ? 'center' : 'flex-start',
+    },
     title: {
       ...theme.typography.headlineH1,
       color: theme.colors.onBackground,
@@ -43,8 +49,8 @@ const createStyles = (theme: Theme, align: 'left' | 'center') => {
 /**
  * Splits a title string into a plain run and a Fraunces-italic accent
  * run. When `accent` is omitted (or missing) the whole title renders
- * italic. Matches the design contract for the per-screen italic
- * accent.
+ * italic. `title` may contain `\n` — each line renders as its own
+ * Text so they center independently of each other's widths.
  */
 export const ItalicAccentTitle: React.FC<ItalicAccentTitleProps> = ({
   title,
@@ -53,21 +59,38 @@ export const ItalicAccentTitle: React.FC<ItalicAccentTitleProps> = ({
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme, align);
-  if (!accent) {
-    return <Text style={[styles.title, styles.italic]}>{title}</Text>;
-  }
-  const idx = title.indexOf(accent);
-  if (idx === -1) {
-    // Translator drift — render plain title.
-    return <Text style={styles.title}>{title}</Text>;
-  }
-  const before = title.slice(0, idx);
-  const after = title.slice(idx + accent.length);
+  const lines = title.split('\n');
+  const accentLineIdx = accent
+    ? lines.findIndex(line => line.includes(accent))
+    : -1;
   return (
-    <Text style={styles.title}>
-      {before}
-      <Text style={styles.italic}>{accent}</Text>
-      {after}
-    </Text>
+    <View style={styles.root}>
+      {lines.map((line, i) => {
+        if (!accent) {
+          return (
+            <Text key={i} style={[styles.title, styles.italic]}>
+              {line}
+            </Text>
+          );
+        }
+        if (i !== accentLineIdx) {
+          return (
+            <Text key={i} style={styles.title}>
+              {line}
+            </Text>
+          );
+        }
+        const idx = line.indexOf(accent);
+        const before = line.slice(0, idx);
+        const after = line.slice(idx + accent.length);
+        return (
+          <Text key={i} style={styles.title}>
+            {before}
+            <Text style={styles.italic}>{accent}</Text>
+            {after}
+          </Text>
+        );
+      })}
+    </View>
   );
 };

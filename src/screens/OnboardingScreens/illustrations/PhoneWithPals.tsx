@@ -55,10 +55,13 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
   //   [3] lower-left = pale blue
   //   [4] bottom     = coral / salmon
   const palFills = ['#EAB06C', '#94A3A0', '#ECBFB6', '#D0DBE1', '#F1A184'];
+  // Geometric centers in viewBox space. Shifted ~5 units right vs the
+  // earlier port so the cluster centers in the phone interior (phone
+  // mid-x ≈ 42.5) instead of skewing left.
   const pals: Pal[] = [
     // Top-left pal (smaller).
     {
-      cx: 28,
+      cx: 33,
       cy: 43,
       rot: 0,
       size: 20.7,
@@ -68,7 +71,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
     },
     // Upper-right (rotated slightly).
     {
-      cx: 51,
+      cx: 56,
       cy: 47,
       rot: 9.8,
       size: 20.7,
@@ -78,7 +81,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
     },
     // Mid-right (rotated more).
     {
-      cx: 51,
+      cx: 56,
       cy: 75,
       rot: 13.4,
       size: 20.7,
@@ -88,7 +91,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
     },
     // Lower-left (rotated negative).
     {
-      cx: 18,
+      cx: 23,
       cy: 65,
       rot: -23.2,
       size: 20.7,
@@ -98,7 +101,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
     },
     // Bottom-mid (rotated negative).
     {
-      cx: 38,
+      cx: 43,
       cy: 100,
       rot: -14.4,
       size: 20.7,
@@ -121,10 +124,11 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
         stroke={theme.colors.onBackground}
         strokeWidth={6.83}
       />
-      {/* Speech notch (top center). */}
+      {/* Speech notch (top center). Y offset matches the Figma layout
+          where the pill sits slightly inset from the phone's top edge. */}
       <Rect
         x={(viewBoxW - 22) / 2}
-        y={2.3}
+        y={5}
         width={22}
         height={6}
         rx={3}
@@ -145,8 +149,8 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
             y={p.cy - p.size / 2}
             width={p.size}
             height={p.size}
-            rx={6}
-            ry={6}
+            rx={p.size / 2}
+            ry={p.size / 2}
             fill={p.fill}
           />
           {/* Left + right eyes. */}

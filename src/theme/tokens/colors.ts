@@ -62,6 +62,9 @@ export const lightColors: TokenColors = {
   outline: withOpacity(LIGHT_PRIMARY, 0.05),
   outlineVariant: '#a1a1a1',
   mutedLight: '#e5e3e1',
+  // Figma `Color/Secondary/Default` — the secondary surface used by
+  // small DS buttons (back chevron, audio glyph) over the muted canvas.
+  secondaryDefault: '#f3f2f2',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -195,6 +198,8 @@ export const darkColors: TokenColors = {
   outline: '#444444',
   outlineVariant: '#a1a1a1',
   mutedLight: '#3a3937',
+  // Figma `Color/Secondary/Default` — dark binding from canonical file.
+  secondaryDefault: '#2a2928',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),
