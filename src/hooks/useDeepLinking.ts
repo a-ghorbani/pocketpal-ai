@@ -9,12 +9,7 @@ import {useEffect, useCallback} from 'react';
 import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
-import {
-  chatSessionStore,
-  palStore,
-  deepLinkStore,
-  checkoutFlowStore,
-} from '../store';
+import {chatSessionStore, palStore, deepLinkStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
 import {
   isBenchmarkRunnerUrl,
@@ -82,23 +77,6 @@ export const useDeepLinking = () => {
         if (await dispatchAutomationDeepLink(params, navigation)) {
           return;
         }
-      }
-
-      // Handle checkout return links by PATH (host is the shared <HOST>, so
-      // it cannot discriminate). The active flow's palId lives in the store;
-      // the return URL carries none. Stale/closed flows are ignored there.
-      let returnPath: string | null = null;
-      try {
-        returnPath = new URL(params.url).pathname;
-      } catch {
-        returnPath = null;
-      }
-      if (returnPath?.startsWith('/app-return/')) {
-        const segment = returnPath.slice('/app-return/'.length);
-        if (segment === 'success' || segment === 'cancel') {
-          checkoutFlowStore.onReturn(checkoutFlowStore.palId, segment);
-        }
-        return;
       }
 
       // Handle chat deep links

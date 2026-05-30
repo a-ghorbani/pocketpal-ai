@@ -66,19 +66,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     continue userActivity: NSUserActivity,
     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
   ) -> Bool {
-    // Forward Universal-Link web URLs (e.g. the PalsHub checkout return)
-    // through the same notification path used for custom-scheme deep links,
-    // so DeepLinkModule emits onDeepLink to JS.
-    if userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-       let url = userActivity.webpageURL {
-      NotificationCenter.default.post(
-        name: NSNotification.Name("RCTOpenURLNotification"),
-        object: nil,
-        userInfo: ["url": url]
-      )
-      return true
-    }
-
     return false
   }
 }

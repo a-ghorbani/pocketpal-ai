@@ -37,8 +37,6 @@ module.exports = {
     'llama.rn': '<rootDir>/__mocks__/external/llama.rn.ts',
     'react-native-webview':
       '<rootDir>/__mocks__/external/react-native-webview.ts',
-    'react-native-inappbrowser-reborn':
-      '<rootDir>/__mocks__/external/react-native-inappbrowser-reborn.ts',
     'react-dom': '<rootDir>/__mocks__/external/react-dom.js',
     'react-native-device-info':
       '<rootDir>/__mocks__/external/react-native-device-info.js',

@@ -40,19 +40,5 @@
 	-->
 	<key>com.apple.developer.kernel.extended-virtual-addressing</key>
 	<true/>
-
-	<!--
-		Associated Domains: Universal Links for the PalsHub checkout return.
-
-		After a Stripe-hosted checkout, PalsHub redirects to
-		https://<HOST>/app-return/{success|cancel}, which the OS hands back to
-		the app as a Universal Link. The host below is a PLACEHOLDER pending
-		confirmation of the canonical apex-vs-www host and MUST match
-		RETURN_HOST in src/store/CheckoutFlowStore.ts.
-	-->
-	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>applinks:palshub.ai</string>
-	</array>
 </dict>
 </plist>
