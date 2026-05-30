@@ -34,25 +34,11 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
   </View>
@@ -93,25 +79,11 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
   </View>
@@ -152,36 +124,15 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-3"
     />
   </View>
@@ -222,36 +173,15 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-3"
     />
   </View>
@@ -292,47 +222,19 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-3"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-4"
     />
   </View>
@@ -373,47 +275,19 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-3"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-4"
     />
   </View>
@@ -454,58 +328,23 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-3"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-4"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-5"
     />
   </View>
@@ -546,58 +385,23 @@ exports[`Stepper — snapshot matrix baseline (variant x size x {default,disable
     testID="ui-stepper"
   >
     <View
-      style={
-        {
-          "backgroundColor": "#333333",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 48,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-1"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-2"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-3"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-4"
     />
     <View
-      style={
-        {
-          "backgroundColor": "#e5e3e1",
-          "borderRadius": 4,
-          "height": 4,
-          "width": 20,
-        }
-      }
+      style={{}}
       testID="ui-stepper-dot-5"
     />
   </View>
