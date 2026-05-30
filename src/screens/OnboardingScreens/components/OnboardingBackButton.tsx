@@ -1,7 +1,7 @@
 import React from 'react';
 import {Pressable, StyleSheet} from 'react-native';
 
-import {ChevronLeftGlyph} from '../../../assets/onboarding/illustrations';
+import {ChevronLeftLgIcon} from '../../../assets/icons';
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
 
@@ -14,13 +14,14 @@ const createStyles = (theme: Theme) =>
   StyleSheet.create({
     root: {
       // Figma `888:33641` Buttons (Back): 48×48, radius ml=16,
-      // bg secondary/default, border 0.5 light-grey.
+      // bg Color/Secondary/Default (#f3f2f2), border 0.5 Color/Border/
+      // Light-grey (#e5e3e1).
       width: 48,
       height: 48,
       borderRadius: theme.radius.ml,
       borderWidth: theme.stroke.sm,
-      borderColor: theme.colors.outlineVariant,
-      backgroundColor: theme.colors.secondaryContainer,
+      borderColor: theme.colors.mutedLight,
+      backgroundColor: theme.colors.secondaryDefault,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -44,11 +45,8 @@ export const OnboardingBackButton: React.FC<OnboardingBackButtonProps> = ({
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       style={styles.root}>
-      <ChevronLeftGlyph
-        width={12}
-        height={20}
-        fill={theme.colors.onBackground}
-      />
+      {/* Figma chevron-left lg — native 6.5×11.5. */}
+      <ChevronLeftLgIcon width={6.5} height={11.5} />
     </Pressable>
   );
 };

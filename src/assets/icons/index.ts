@@ -7,6 +7,12 @@ export {default as CameraIcon} from './camera.svg';
 export {default as ChatIcon} from './chat.svg';
 export {default as CheckCircleIcon} from './check-circle.svg';
 export {default as ChevronDownIcon} from './chevron-down.svg';
+// Design-system chevron-left exported directly from the canonical Figma
+// icon library (`746:26281`). Three stroke weights — pick the one Figma
+// uses for the specific component. Native viewBox preserves aspect ratio.
+export {default as ChevronLeftSmIcon} from './chevron-left-sm.svg';
+export {default as ChevronLeftMdIcon} from './chevron-left-md.svg';
+export {default as ChevronLeftLgIcon} from './chevron-left-lg.svg';
 export {default as ChevronRightIcon} from './chevron-right.svg';
 export {default as ChevronSelectorVerticalIcon} from './chevron-selector-vertical.svg';
 export {default as ChevronSelectorExpandedVerticalIcon} from './chevron-selector-expanded-vertical.svg';

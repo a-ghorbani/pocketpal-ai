@@ -25,7 +25,6 @@ import SplashMark from './splash-mark.svg';
 import ShieldGlyph from './shield.svg';
 import ArrowRightGlyph from './arrow-right.svg';
 import HeadphonesGlyph from './headphones.svg';
-import ChevronLeftGlyph from './chevron-left.svg';
 
 import SmartChatChip from './chip-icons/smart-chat.svg';
 import CodingChip from './chip-icons/coding.svg';
@@ -35,13 +34,7 @@ import CreativeWritingChip from './chip-icons/creative-writing.svg';
 
 import type {TopicKey} from '../../store/onboarding/types';
 
-export {
-  SplashMark,
-  ShieldGlyph,
-  ArrowRightGlyph,
-  HeadphonesGlyph,
-  ChevronLeftGlyph,
-};
+export {SplashMark, ShieldGlyph, ArrowRightGlyph, HeadphonesGlyph};
 
 // Screen 1 hero is the same flat SVG as the splash mark — verified
 // against Figma node equality (`884:28352` interior matches
