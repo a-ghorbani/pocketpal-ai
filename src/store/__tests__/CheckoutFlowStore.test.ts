@@ -19,11 +19,13 @@ jest.mock('../../specs/NativeAuthSession', () => ({
 
 import {palsHubApiService} from '../../services/palshub/PalsHubApiService';
 import {palsHubService} from '../../services';
+import {getStorefrontCountryCode} from '../../utils/region';
 import NativeAuthSession from '../../specs/NativeAuthSession';
 import {checkoutFlowStore} from '../CheckoutFlowStore';
 
 const createSession = palsHubApiService.createCheckoutSession as jest.Mock;
 const checkPalOwnership = palsHubService.checkPalOwnership as jest.Mock;
+const storefrontCountryCode = getStorefrontCountryCode as jest.Mock;
 const openAuth = (NativeAuthSession as unknown as {openAuth: jest.Mock})
   .openAuth;
 
@@ -74,6 +76,17 @@ describe('CheckoutFlowStore', () => {
     expect(openAuth).toHaveBeenCalledWith(session.checkout_url, 'pocketpal');
     expect(checkoutFlowStore.status).toBe('browser_open');
     expect(checkoutFlowStore.purchaseId).toBe('pur_1');
+  });
+
+  it('a country-code lookup failure omits the code and still creates the session', async () => {
+    storefrontCountryCode.mockRejectedValueOnce(new Error('region unavailable'));
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(createSession).toHaveBeenCalledWith(
+      'pal-1',
+      expect.objectContaining({selectedCountryCode: undefined}),
+    );
+    expect(checkoutFlowStore.status).toBe('browser_open');
   });
 
   it('400 already owned -> owned without opening the auth session', async () => {
@@ -188,6 +201,49 @@ describe('CheckoutFlowStore', () => {
     expect(checkoutFlowStore.status).toBe('cancelled');
   });
 
+  it('openAuth resolves a malformed callback URL -> cancelled, silent', async () => {
+    // URL parsing throws; the defensive catch treats it as a cancel.
+    openAuth.mockResolvedValue('not a valid url');
+    await checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('cancelled');
+  });
+
+  it('openAuth resolves an unexpected path -> cancelled, silent', async () => {
+    // Well-formed URL whose trailing segment is neither success nor cancel
+    // falls through to the cancel default — no reconcile, no error.
+    openAuth.mockResolvedValue('pocketpal://app-return/unexpected');
+    await checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('cancelled');
+  });
+
+  it('aborts the success reconcile when reset lands after the ownership check resolves', async () => {
+    // Drive the epoch guard that sits AFTER the awaited checkPalOwnership:
+    // resolve ownership only once the poll is parked on the first attempt,
+    // then reset before the resolution is observed. Status must not flip.
+    let resolveOwnership!: (v: {owned: boolean}) => void;
+    checkPalOwnership.mockReturnValue(
+      new Promise(resolve => {
+        resolveOwnership = resolve;
+      }),
+    );
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    checkoutFlowStore.onReturn('pal-1', 'success');
+    expect(checkoutFlowStore.status).toBe('finalizing');
+
+    // Advance past the first backoff so the attempt issues the ownership call.
+    await jest.advanceTimersByTimeAsync(1000);
+    // Reset bumps the epoch while the ownership promise is still pending.
+    checkoutFlowStore.reset();
+    // Now let the stale ownership resolve as owned; the epoch guard must drop it.
+    resolveOwnership({owned: true});
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('idle');
+    expect(checkoutFlowStore.status).not.toBe('owned');
+  });
+
   it('return with no active flow is ignored', () => {
     checkoutFlowStore.onReturn('pal-1', 'success');
     expect(checkoutFlowStore.status).toBe('idle');
@@ -199,5 +255,40 @@ describe('CheckoutFlowStore', () => {
     checkoutFlowStore.reset();
     expect(checkoutFlowStore.status).toBe('idle');
     expect(checkoutFlowStore.palId).toBeNull();
+  });
+});
+
+describe('CheckoutFlowStore — auth-session spec unavailable', () => {
+  // The spec is TurboModuleRegistry.get(...), which is null when the native
+  // module is absent. The iOS-only branch should never hit this, but the guard
+  // must degrade to a silent cancel rather than crash on a null .openAuth.
+  it('null NativeAuthSession -> silent cancel, no crash', async () => {
+    jest.resetModules();
+    jest.doMock('../../services/palshub/PalsHubApiService', () => ({
+      palsHubApiService: {
+        createCheckoutSession: jest.fn().mockResolvedValue({
+          checkout_url: 'https://stripe.test/c/1',
+          session_url: 'https://stripe.test/c/1',
+          session_id: 'cs_1',
+          purchase_id: 'pur_1',
+          platform_fee_cents: 50,
+        }),
+      },
+    }));
+    jest.doMock('../../services', () => ({
+      palsHubService: {checkPalOwnership: jest.fn()},
+    }));
+    jest.doMock('../../utils/region', () => ({
+      getStorefrontCountryCode: jest.fn().mockResolvedValue('US'),
+    }));
+    jest.doMock('../../specs/NativeAuthSession', () => ({
+      __esModule: true,
+      default: null,
+    }));
+
+    const {checkoutFlowStore: store} = require('../CheckoutFlowStore');
+
+    await expect(store.start('pal-1')).resolves.toBeUndefined();
+    expect(store.status).toBe('cancelled');
   });
 });
