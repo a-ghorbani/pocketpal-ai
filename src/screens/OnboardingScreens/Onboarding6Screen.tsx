@@ -9,7 +9,6 @@ import {RECOMMENDED_PAL_MODEL_SET} from '../../store/onboarding/recommendedPalMo
 import {defaultModels} from '../../store/defaultModels';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
-import {OnboardingAudioButton} from './components/OnboardingAudioButton';
 import {ItalicAccentTitle} from './components/ItalicAccentTitle';
 import {DeviceInfoChip} from './components/DeviceInfoChip';
 import {ModelRadioGroup, type ModelOption} from './components/ModelRadioGroup';
@@ -79,15 +78,7 @@ export const Onboarding6Screen: React.FC = observer(() => {
   return (
     <OnboardingScaffold
       step={6}
-      showStepper={false}
       layout="top"
-      topRight={
-        <OnboardingAudioButton
-          titleText={t.screen6.title}
-          bodyText={t.screen6.body}
-          accessibilityLabel={t.audio}
-        />
-      }
       content={
         <>
           <View style={styles.header}>

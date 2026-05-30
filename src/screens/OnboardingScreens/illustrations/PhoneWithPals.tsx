@@ -112,7 +112,7 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
         height={viewBoxH - 6.8}
         rx={16}
         ry={16}
-        fill={theme.colors.surface}
+        fill={theme.colors.background}
         stroke={theme.colors.onBackground}
         strokeWidth={6.83}
       />

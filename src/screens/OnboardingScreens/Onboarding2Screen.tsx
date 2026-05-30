@@ -3,7 +3,6 @@ import {observer} from 'mobx-react';
 
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
-import {OnboardingSkipButton} from './components/OnboardingSkipButton';
 import {OnboardingContent} from './components/OnboardingContent';
 import {ItalicAccentTitle} from './components/ItalicAccentTitle';
 import {HighlightText} from './components/HighlightText';
@@ -11,13 +10,11 @@ import {PhoneWithPals} from './illustrations/PhoneWithPals';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
 export const Onboarding2Screen: React.FC = observer(() => {
-  const {l10n, next, goBack, skip} = useOnboardingHandlers(2);
+  const {l10n, next, goBack} = useOnboardingHandlers(2);
   const t = l10n.onboarding;
   return (
     <OnboardingScaffold
       step={2}
-      showStepper
-      topRight={<OnboardingSkipButton label={t.skip} onPress={skip} />}
       illustration={<PhoneWithPals width={120} />}
       content={
         <OnboardingContent

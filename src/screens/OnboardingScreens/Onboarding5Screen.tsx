@@ -9,7 +9,6 @@ import type {Theme} from '../../utils/types';
 import type {TopicKey} from '../../store/onboarding/types';
 import {FONT_FAMILIES} from '../../theme/tokens/typography';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
-import {OnboardingAudioButton} from './components/OnboardingAudioButton';
 import {OnboardingBackButton} from './components/OnboardingBackButton';
 import {TopicChipGrid} from './components/TopicChipGrid';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
@@ -53,17 +52,9 @@ export const Onboarding5Screen: React.FC = observer(() => {
   return (
     <OnboardingScaffold
       step={5}
-      showStepper={false}
       layout="top"
       topLeft={
         <OnboardingBackButton onPress={goBack} accessibilityLabel={t.back} />
-      }
-      topRight={
-        <OnboardingAudioButton
-          titleText={t.screen5.title}
-          bodyText={t.screen5.body}
-          accessibilityLabel={t.audio}
-        />
       }
       content={
         <>

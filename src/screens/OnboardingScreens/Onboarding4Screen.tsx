@@ -4,7 +4,6 @@ import {observer} from 'mobx-react';
 
 import {OnboardingScaffold} from './components/OnboardingScaffold';
 import {OnboardingBottomBar} from './components/OnboardingBottomBar';
-import {OnboardingSkipButton} from './components/OnboardingSkipButton';
 import {OnboardingContent} from './components/OnboardingContent';
 import {ItalicAccentTitle} from './components/ItalicAccentTitle';
 import {HighlightText} from './components/HighlightText';
@@ -21,13 +20,11 @@ const styles = StyleSheet.create({
 });
 
 export const Onboarding4Screen: React.FC = observer(() => {
-  const {l10n, next, goBack, skip} = useOnboardingHandlers(4);
+  const {l10n, next, goBack} = useOnboardingHandlers(4);
   const t = l10n.onboarding;
   return (
     <OnboardingScaffold
       step={4}
-      showStepper
-      topRight={<OnboardingSkipButton label={t.skip} onPress={skip} />}
       illustration={
         <View style={styles.illustrationWrap}>
           <PhoneWithShield width={120} />

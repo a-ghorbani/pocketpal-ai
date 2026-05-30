@@ -2,18 +2,13 @@ import React from 'react';
 import {StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
-import {Stepper} from '../../../components/ui';
 import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
 
 export type OnboardingScaffoldProps = {
-  /** 1-based screen index used for the testID and Stepper. */
+  /** 1-based screen index used for the testID. */
   step: 1 | 2 | 3 | 4 | 5 | 6;
-  /** Show the 4-dot Stepper (screens 1–4 only). */
-  showStepper: boolean;
-  /** Top-right slot — Skip (1–4) or AudioButton (5+6). */
-  topRight?: React.ReactNode;
-  /** Top-left slot — typically the screen-5 in-header Back chevron. */
+  /** Top-left slot — screen-5 in-header Back chevron (only consumer). */
   topLeft?: React.ReactNode;
   /**
    * Hero visual block rendered between the header band and the
@@ -40,9 +35,11 @@ const createStyles = (theme: Theme) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      // Figma `Color/Background/Muted` (#fafafa) is the canvas. Maps
-      // to `colors.surfaceVariant` per the WHAT §4h binding.
-      backgroundColor: theme.colors.surfaceVariant,
+      // Figma `Color/Background/Muted` (#fafafa) is the canvas. Our
+      // closest token is `surface` (#F9FAFB). The previous binding to
+      // `surfaceVariant` (#e4e4e6) was too dark and caused the muted
+      // stepper dots (#e5e3e1) to blend into the background.
+      backgroundColor: theme.colors.surface,
     },
     body: {
       flex: 1,
@@ -60,29 +57,6 @@ const createStyles = (theme: Theme) =>
       paddingTop: theme.spacing.xxl,
       gap: theme.spacing.ml,
     },
-    // Figma positions the Stepper at `x=137, y=30, w=120` — horizontally
-    // centered on a 393pt frame, 30pt from the body top.
-    stepperSlot: {
-      position: 'absolute',
-      top: 30,
-      left: 0,
-      right: 0,
-      alignItems: 'center',
-      zIndex: 1,
-    },
-    stepperOverride: {
-      // Override the Stepper DS's `alignSelf: 'flex-start'` default —
-      // Figma positions the dot row horizontally centered on a 393pt
-      // frame. Wrapping in a centered slot isn't enough because the
-      // child's alignSelf wins over the parent's alignItems.
-      alignSelf: 'center',
-    },
-    topRightSlot: {
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      zIndex: 2,
-    },
     topLeftSlot: {
       position: 'absolute',
       top: 16,
@@ -96,8 +70,6 @@ const createStyles = (theme: Theme) =>
 
 export const OnboardingScaffold: React.FC<OnboardingScaffoldProps> = ({
   step,
-  showStepper,
-  topRight,
   topLeft,
   illustration,
   content,
@@ -116,13 +88,7 @@ export const OnboardingScaffold: React.FC<OnboardingScaffoldProps> = ({
           styles.body,
           layout === 'centered' ? styles.bodyCentered : styles.bodyTop,
         ]}>
-        {showStepper ? (
-          <View pointerEvents="none" style={styles.stepperSlot}>
-            <Stepper total={4} current={step} style={styles.stepperOverride} />
-          </View>
-        ) : null}
         {topLeft ? <View style={styles.topLeftSlot}>{topLeft}</View> : null}
-        {topRight ? <View style={styles.topRightSlot}>{topRight}</View> : null}
         {illustration}
         {content}
       </View>
