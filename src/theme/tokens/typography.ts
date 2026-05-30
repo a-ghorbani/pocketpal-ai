@@ -21,6 +21,11 @@ import {type AvailableLanguage} from '../../locales';
 import {TokenTypography, TypographyStyle} from './types';
 
 // Family-name constants. Match the PostScript names of the bundled TTFs.
+// The Fraunces cuts under src/assets/fonts/ are static instances of the
+// variable Fraunces pinned at SOFT=0, WONK=1, opsz=36 — WONK=1 selects
+// the design system's eccentric letterforms (single-storey `a`, swooshier
+// italics, alt `g`). PostScript names match the original family so RN
+// font lookup is unchanged.
 export const FONT_FAMILIES = {
   INTER_REGULAR: 'Inter-Regular',
   INTER_MEDIUM: 'Inter-Medium',
