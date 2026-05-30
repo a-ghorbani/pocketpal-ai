@@ -27,8 +27,12 @@ export type CheckoutStatus =
 export type CheckoutErrorKind = '401' | '404' | '500' | 'network';
 
 // Host for the https success/cancel URLs Stripe redirects through; carries no
-// entitlement coupling. PLACEHOLDER pending apex-vs-www confirmation.
+// entitlement coupling.
 const RETURN_HOST = 'palshub.ai';
+
+// Host segment of the custom-scheme callback the auth session captures, namespacing
+// the checkout return under the shared pocketpal:// scheme.
+const CALLBACK_HOST = 'checkout';
 
 const CALLBACK_SCHEME = 'pocketpal';
 
@@ -70,8 +74,8 @@ class CheckoutFlowStore {
       this.errorKind = undefined;
     });
 
-    const successUrl = `https://${RETURN_HOST}/app-return/success`;
-    const cancelUrl = `https://${RETURN_HOST}/app-return/cancel`;
+    const successUrl = `https://${RETURN_HOST}/app-return/checkout/success`;
+    const cancelUrl = `https://${RETURN_HOST}/app-return/checkout/cancel`;
 
     let selectedCountryCode: string | undefined;
     try {
@@ -118,8 +122,8 @@ class CheckoutFlowStore {
   }
 
   // Open the checkout page in ASWebAuthenticationSession and consume the
-  // captured callback. A reject (user-dismiss / session error) is a silent
-  // cancel (matches an explicit /app-return/cancel callback).
+  // captured pocketpal://checkout/{success|cancel} callback. A reject
+  // (user-dismiss / session error) is a silent cancel (matches a cancel callback).
   private async openAuthAndHandle(
     authSession: NonNullable<typeof NativeAuthSession>,
     palId: string,
@@ -134,11 +138,9 @@ class CheckoutFlowStore {
     }
     let kind: 'success' | 'cancel' = 'cancel';
     try {
-      const segment = new URL(callback).pathname
-        .split('/')
-        .filter(Boolean)
-        .pop();
-      if (segment === 'success') {
+      const url = new URL(callback);
+      const action = url.pathname.split('/').filter(Boolean).pop();
+      if (url.hostname === CALLBACK_HOST && action === 'success') {
         kind = 'success';
       }
     } catch {
