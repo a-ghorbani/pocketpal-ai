@@ -79,7 +79,9 @@ describe('CheckoutFlowStore', () => {
   });
 
   it('a country-code lookup failure omits the code and still creates the session', async () => {
-    storefrontCountryCode.mockRejectedValueOnce(new Error('region unavailable'));
+    storefrontCountryCode.mockRejectedValueOnce(
+      new Error('region unavailable'),
+    );
     checkoutFlowStore.start('pal-1');
     await flushMicrotasks();
     expect(createSession).toHaveBeenCalledWith(
