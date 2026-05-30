@@ -1,6 +1,6 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import InAppBrowser from 'react-native-inappbrowser-reborn';
 
+import NativeAuthSession from '../specs/NativeAuthSession';
 import {palsHubApiService} from '../services/palshub/PalsHubApiService';
 import {palsHubService} from '../services';
 import {getStorefrontCountryCode} from '../utils/region';
@@ -8,10 +8,10 @@ import {getStorefrontCountryCode} from '../utils/region';
 /**
  * CheckoutFlowStore
  *
- * App-global owner of the PalsHub in-app checkout state (iOS). Lives for the
- * app process so a Universal-Link return (warm or cold) can drive it even when
- * the originating PalDetailSheet is unmounted. Sole writer of checkout state;
- * ownership is never written here (read live from the server).
+ * App-global owner of the PalsHub in-app checkout state (iOS). Sole writer of
+ * checkout state; ownership is never written here (read live from the server).
+ * The checkout page is opened via ASWebAuthenticationSession; its success/cancel
+ * callback arrives on the session promise and is consumed inline here.
  */
 
 export type CheckoutStatus =
@@ -26,10 +26,11 @@ export type CheckoutStatus =
 
 export type CheckoutErrorKind = '401' | '404' | '500' | 'network';
 
-// TODO(checkout-host): PLACEHOLDER Universal-Link host pending confirmation of
-// the canonical apex-vs-www host PalsHub serves the association file on. Must
-// stay identical to the applinks entitlement host in PocketPal.entitlements.
-export const RETURN_HOST = 'palshub.ai';
+// Host for the https success/cancel URLs Stripe redirects through; carries no
+// entitlement coupling. PLACEHOLDER pending apex-vs-www confirmation.
+const RETURN_HOST = 'palshub.ai';
+
+const CALLBACK_SCHEME = 'pocketpal';
 
 const RECONCILE_BACKOFFS_MS = [1000, 2000, 3000, 4000, 4000, 4000];
 
@@ -57,7 +58,7 @@ class CheckoutFlowStore {
     });
   }
 
-  // Create a session and open the Stripe-hosted page in the system browser.
+  // Create a session and open the Stripe-hosted page via the auth session.
   async start(palId: string): Promise<void> {
     if (this.isInFlight) {
       return;
@@ -89,7 +90,13 @@ class CheckoutFlowStore {
         this.purchaseId = session.purchase_id;
         this.status = 'browser_open';
       });
-      await InAppBrowser.open(session.checkout_url);
+      // iOS-only flow; the spec is never null here, but guard rather than assert.
+      const authSession = NativeAuthSession;
+      if (!authSession) {
+        this.onReturn(palId, 'cancel');
+        return;
+      }
+      await this.openAuthAndHandle(authSession, palId, session.checkout_url);
     } catch (error) {
       const status = (error as {details?: {status?: unknown}})?.details?.status;
       if (status === 'already_owned') {
@@ -110,8 +117,38 @@ class CheckoutFlowStore {
     }
   }
 
-  // Handle a Universal-Link return. Ignored when it targets a stale/closed
-  // flow. Success runs the ownership reconcile; cancel returns silently.
+  // Open the checkout page in ASWebAuthenticationSession and consume the
+  // captured callback. A reject (user-dismiss / session error) is a silent
+  // cancel (matches an explicit /app-return/cancel callback).
+  private async openAuthAndHandle(
+    authSession: NonNullable<typeof NativeAuthSession>,
+    palId: string,
+    checkoutUrl: string,
+  ) {
+    let callback: string;
+    try {
+      callback = await authSession.openAuth(checkoutUrl, CALLBACK_SCHEME);
+    } catch {
+      this.onReturn(palId, 'cancel');
+      return;
+    }
+    let kind: 'success' | 'cancel' = 'cancel';
+    try {
+      const segment = new URL(callback).pathname
+        .split('/')
+        .filter(Boolean)
+        .pop();
+      if (segment === 'success') {
+        kind = 'success';
+      }
+    } catch {
+      kind = 'cancel';
+    }
+    this.onReturn(palId, kind);
+  }
+
+  // Drive the flow from a captured callback. Ignored when it targets a
+  // stale/closed flow. Success runs the ownership reconcile; cancel is silent.
   onReturn(palId: string | null, kind: 'success' | 'cancel') {
     if (this.status === 'idle' || !this.palId || this.palId !== palId) {
       return;
