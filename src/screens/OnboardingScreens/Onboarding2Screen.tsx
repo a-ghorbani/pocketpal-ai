@@ -15,7 +15,7 @@ export const Onboarding2Screen: React.FC = observer(() => {
   return (
     <OnboardingScaffold
       step={2}
-      illustration={<PhoneWithPals width={120} />}
+      illustration={<PhoneWithPals width={85} />}
       content={
         <OnboardingContent
           eyebrow={t.screen2.eyebrow}

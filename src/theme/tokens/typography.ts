@@ -137,13 +137,15 @@ export const typography: TokenTypography = {
   },
 
   // Headlines (Fraunces — bundled subset is Latin-only; non-Latin and
-  // Cyrillic locales swap to Inter via `typographyForLocale`)
+  // Cyrillic locales swap to Inter via `typographyForLocale`). Canonical
+  // Headline/H1 uses Fraunces-Regular family at font-medium (500); we
+  // pick the bundled `Fraunces-Medium` static cut to match.
   headlineH1: {
-    fontFamily: FONT_FAMILIES.FRAUNCES_REGULAR,
+    fontFamily: FONT_FAMILIES.FRAUNCES_MEDIUM,
     fontSize: 36,
     // 36 × 1.4 = 50.4 → 50 (absolute px; canonical multiplier resolved)
     lineHeight: 50,
-    fontWeight: '400',
+    fontWeight: '500',
   },
 
   // Accent italic (Fraunces italic). lineHeight === fontSize per the

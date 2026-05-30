@@ -46,10 +46,15 @@ export const PhoneWithPals: React.FC<PhoneWithPalsProps> = ({width = 170}) => {
   const viewBoxW = 85;
   const viewBoxH = 143;
   const height = (width * viewBoxH) / viewBoxW;
-  // Pal palette — sourced from the canonical Figma file's
-  // illustration band: warm pastel + cool pastel mix. Kept inline
-  // because these are illustration fills, not screen-level styling.
-  const palFills = ['#F5DBBC', '#E9D7F8', '#D6E4FD', '#FCE7CF', '#D3EBD2'];
+  // Pal palette — sampled per-pal from the canonical Figma illustration
+  // (`884:32584`). Kept inline because these are illustration fills, not
+  // screen-level styling; positions match `pals[]` below.
+  //   [0] top-left   = warm tan-peach
+  //   [1] upper-right = sage / blue-grey
+  //   [2] mid-right  = pink-peach
+  //   [3] lower-left = pale blue
+  //   [4] bottom     = coral / salmon
+  const palFills = ['#EAB06C', '#94A3A0', '#ECBFB6', '#D0DBE1', '#F1A184'];
   const pals: Pal[] = [
     // Top-left pal (smaller).
     {

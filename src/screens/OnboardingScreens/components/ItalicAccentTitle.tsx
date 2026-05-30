@@ -22,12 +22,12 @@ export type ItalicAccentTitleProps = {
 };
 
 const createStyles = (theme: Theme, align: 'left' | 'center') => {
-  // If the locale fell back to Inter (typography.headlineH1.fontFamily
-  // != Fraunces-Regular), use Inter-Medium + fontStyle:'italic' for
-  // the italic run. Otherwise use Fraunces-Italic explicitly so iOS
-  // picks the bundled italic cut.
+  // headlineH1 binds to Fraunces-Medium on Latin locales; non-Latin
+  // locales fall back to Inter-Medium via `typographyForLocale`. Use
+  // family identity to pick the right italic-run cut (Fraunces-Italic
+  // for Latin, Inter-Medium + fontStyle:'italic' for non-Latin).
   const isFraunces =
-    theme.typography.headlineH1.fontFamily === FONT_FAMILIES.FRAUNCES_REGULAR;
+    theme.typography.headlineH1.fontFamily === FONT_FAMILIES.FRAUNCES_MEDIUM;
   return StyleSheet.create({
     title: {
       ...theme.typography.headlineH1,
