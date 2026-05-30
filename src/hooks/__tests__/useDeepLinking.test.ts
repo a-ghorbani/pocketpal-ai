@@ -293,33 +293,6 @@ describe('useDeepLinking — deep-link routing', () => {
     jest.clearAllMocks();
     (global as any).__E2E__ = false;
     jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(null);
-    (checkoutFlowStore as any).palId = 'pal-active';
-  });
-
-  it('routes /app-return/success to onReturn(...,"success")', async () => {
-    renderHook(() => useDeepLinking());
-    await getHandler()({
-      url: 'https://palshub.ai/app-return/success',
-      scheme: 'https',
-      host: 'palshub.ai',
-    });
-    expect(checkoutFlowStore.onReturn).toHaveBeenCalledWith(
-      'pal-active',
-      'success',
-    );
-  });
-
-  it('routes /app-return/cancel to onReturn(...,"cancel")', async () => {
-    renderHook(() => useDeepLinking());
-    await getHandler()({
-      url: 'https://palshub.ai/app-return/cancel',
-      scheme: 'https',
-      host: 'palshub.ai',
-    });
-    expect(checkoutFlowStore.onReturn).toHaveBeenCalledWith(
-      'pal-active',
-      'cancel',
-    );
   });
 
   it('does not route checkout for the chat host link (no regression)', async () => {

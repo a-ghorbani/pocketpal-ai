@@ -11,20 +11,21 @@ jest.mock('../../services', () => ({
 jest.mock('../../utils/region', () => ({
   getStorefrontCountryCode: jest.fn().mockResolvedValue('US'),
 }));
-jest.mock('react-native-inappbrowser-reborn', () => ({
-  __esModule: true,
-  default: {open: jest.fn().mockResolvedValue({type: 'dismiss'})},
-}));
 
-import InAppBrowser from 'react-native-inappbrowser-reborn';
+jest.mock('../../specs/NativeAuthSession', () => ({
+  __esModule: true,
+  default: {openAuth: jest.fn()},
+}));
 
 import {palsHubApiService} from '../../services/palshub/PalsHubApiService';
 import {palsHubService} from '../../services';
+import NativeAuthSession from '../../specs/NativeAuthSession';
 import {checkoutFlowStore} from '../CheckoutFlowStore';
 
 const createSession = palsHubApiService.createCheckoutSession as jest.Mock;
 const checkPalOwnership = palsHubService.checkPalOwnership as jest.Mock;
-const openBrowser = (InAppBrowser as unknown as {open: jest.Mock}).open;
+const openAuth = (NativeAuthSession as unknown as {openAuth: jest.Mock})
+  .openAuth;
 
 const session = {
   checkout_url: 'https://stripe.test/c/1',
@@ -46,6 +47,9 @@ describe('CheckoutFlowStore', () => {
     checkoutFlowStore.reset();
     createSession.mockResolvedValue(session);
     checkPalOwnership.mockResolvedValue({owned: false});
+    // Default: the session never resolves, so start() parks in browser_open
+    // and tests that drive onReturn directly stay deterministic.
+    openAuth.mockReturnValue(new Promise(() => {}));
   });
 
   afterEach(() => {
@@ -56,8 +60,9 @@ describe('CheckoutFlowStore', () => {
     expect(checkoutFlowStore.status).toBe('idle');
   });
 
-  it('200 -> browser_open and opens the system browser', async () => {
-    await checkoutFlowStore.start('pal-1');
+  it('200 -> browser_open and opens the auth session', async () => {
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
     expect(createSession).toHaveBeenCalledWith(
       'pal-1',
       expect.objectContaining({
@@ -66,15 +71,15 @@ describe('CheckoutFlowStore', () => {
         selectedCountryCode: 'US',
       }),
     );
-    expect(openBrowser).toHaveBeenCalledWith(session.checkout_url);
+    expect(openAuth).toHaveBeenCalledWith(session.checkout_url, 'pocketpal');
     expect(checkoutFlowStore.status).toBe('browser_open');
     expect(checkoutFlowStore.purchaseId).toBe('pur_1');
   });
 
-  it('400 already owned -> owned without opening a browser', async () => {
+  it('400 already owned -> owned without opening the auth session', async () => {
     createSession.mockRejectedValue({details: {status: 'already_owned'}});
     await checkoutFlowStore.start('pal-1');
-    expect(openBrowser).not.toHaveBeenCalled();
+    expect(openAuth).not.toHaveBeenCalled();
     expect(checkoutFlowStore.status).toBe('owned');
   });
 
@@ -107,7 +112,8 @@ describe('CheckoutFlowStore', () => {
 
   describe('reconcile on success return', () => {
     beforeEach(async () => {
-      await checkoutFlowStore.start('pal-1'); // -> browser_open
+      checkoutFlowStore.start('pal-1'); // -> browser_open (session pending)
+      await flushMicrotasks();
     });
 
     it('owned on attempt 1 -> owned', async () => {
@@ -143,15 +149,43 @@ describe('CheckoutFlowStore', () => {
   });
 
   it('cancel return -> cancelled, silent', async () => {
-    await checkoutFlowStore.start('pal-1');
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
     checkoutFlowStore.onReturn('pal-1', 'cancel');
     expect(checkoutFlowStore.status).toBe('cancelled');
   });
 
   it('stale return for a different pal is ignored', async () => {
-    await checkoutFlowStore.start('pal-1');
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
     checkoutFlowStore.onReturn('pal-OTHER', 'success');
     expect(checkoutFlowStore.status).toBe('browser_open');
+  });
+
+  it('openAuth resolves a success callback -> reconcile -> owned', async () => {
+    openAuth.mockResolvedValue(
+      'pocketpal://app-return/success?purchase_id=pur_1',
+    );
+    checkPalOwnership.mockResolvedValueOnce({owned: true});
+    await checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('finalizing');
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(checkoutFlowStore.status).toBe('owned');
+  });
+
+  it('openAuth resolves a cancel callback -> cancelled, silent', async () => {
+    openAuth.mockResolvedValue('pocketpal://app-return/cancel');
+    await checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('cancelled');
+  });
+
+  it('openAuth rejects (user dismiss) -> cancelled, silent', async () => {
+    openAuth.mockRejectedValue(new Error('auth_cancelled'));
+    await checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('cancelled');
   });
 
   it('return with no active flow is ignored', () => {
@@ -160,7 +194,8 @@ describe('CheckoutFlowStore', () => {
   });
 
   it('reset returns to idle', async () => {
-    await checkoutFlowStore.start('pal-1');
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
     checkoutFlowStore.reset();
     expect(checkoutFlowStore.status).toBe('idle');
     expect(checkoutFlowStore.palId).toBeNull();
