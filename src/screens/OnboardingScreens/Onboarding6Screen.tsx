@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
@@ -58,6 +58,17 @@ export const Onboarding6Screen: React.FC = observer(() => {
   const styles = createStyles(theme);
   const t = l10n.onboarding;
   const selectedId = uiStore.onboardingState.selectedModelId;
+  // Figma `887:30011` shows Balanced (the recommended tier) pre-selected
+  // on first arrival so the Download CTA is enabled immediately. Only
+  // seed when nothing is selected — user choices override on revisit.
+  useEffect(() => {
+    if (uiStore.onboardingState.selectedModelId === null) {
+      const recommended = RECOMMENDED_PAL_MODEL_SET.find(e => e.recommended);
+      if (recommended) {
+        uiStore.setOnboardingModelId(recommended.modelId);
+      }
+    }
+  }, []);
   const canFinish = selectedId !== null;
   const options: ModelOption[] = RECOMMENDED_PAL_MODEL_SET.map(entry => {
     const card = t.screen6.model[entry.tier];
