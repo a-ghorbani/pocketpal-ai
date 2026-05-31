@@ -37,13 +37,15 @@ export const PhoneWithShield: React.FC<PhoneWithShieldProps> = ({
           height={viewBoxH - 6.8}
           rx={16}
           ry={16}
-          fill={theme.colors.surface}
+          fill={theme.colors.background}
           stroke={theme.colors.onBackground}
           strokeWidth={6.83}
         />
+        {/* Speech notch — y offset matches the Figma layout where the
+            pill sits slightly inset from the phone's top edge. */}
         <Rect
           x={(viewBoxW - 22) / 2}
-          y={2.3}
+          y={5}
           width={22}
           height={6}
           rx={3}

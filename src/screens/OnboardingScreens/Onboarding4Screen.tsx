@@ -11,9 +11,10 @@ import {PhoneWithShield} from './illustrations/PhoneWithShield';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
 const styles = StyleSheet.create({
+  // Figma `885:29601` Visual frame — 85×142.67 natural width.
   illustrationWrap: {
-    width: 120,
-    height: 202,
+    width: 85,
+    height: 143,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -27,7 +28,7 @@ export const Onboarding4Screen: React.FC = observer(() => {
       step={4}
       illustration={
         <View style={styles.illustrationWrap}>
-          <PhoneWithShield width={120} />
+          <PhoneWithShield width={85} />
         </View>
       }
       content={
