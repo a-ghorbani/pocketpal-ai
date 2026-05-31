@@ -9,7 +9,11 @@ import {
   fetchModelsFromSource,
 } from '../api/modelSources';
 
-import {hasEnoughSpace, hfAsModel} from '../utils';
+import {
+  createSiblingsFromFileDetails,
+  hasEnoughSpace,
+  hfAsModel,
+} from '../utils';
 import {ErrorState, createErrorState} from '../utils/errors';
 
 import {HuggingFaceModel, ModelSourceId} from '../utils/types';
@@ -218,10 +222,7 @@ class HFStore {
     );
   }
 
-  private isCurrentModelDetailsRequest(
-    requestId?: number,
-    modelId?: string,
-  ) {
+  private isCurrentModelDetailsRequest(requestId?: number, modelId?: string) {
     return (
       requestId === undefined ||
       (requestId === this.modelDetailsRequestId &&
@@ -284,6 +285,7 @@ class HFStore {
           size: details.size,
           oid: details.oid,
           lfs: details.lfs,
+          split: details.split || file.split,
         };
 
         return {
@@ -313,6 +315,25 @@ class HFStore {
       const model = this.models.find(m => m.id === modelId);
 
       if (!model) {
+        return;
+      }
+
+      if (model.siblings.length === 0 && fileDetails.length > 0) {
+        const source = this.getSourceForModelId(modelId);
+        const updatedSiblings = await Promise.all(
+          createSiblingsFromFileDetails(
+            model.sourceRepoId || model.id,
+            fileDetails,
+          ).map(async file => ({
+            ...file,
+            canFitInStorage: await hasEnoughSpace(hfAsModel(model, file)),
+          })),
+        );
+
+        runInAction(() => {
+          model.source = source;
+          model.siblings = updatedSiblings;
+        });
         return;
       }
 

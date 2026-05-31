@@ -1,6 +1,7 @@
 import {NativeModules, Platform, NativeEventEmitter} from 'react-native';
 
 import * as RNFS from '@dr.pogodin/react-native-fs';
+import {waitFor} from '@testing-library/react-native';
 
 import {basicModel} from '../../../../jest/fixtures/models';
 
@@ -410,5 +411,137 @@ describe('DownloadManager', () => {
     );
 
     expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
+  });
+
+  it('downloads all GGUF split parts on Android before completing the model', async () => {
+    const splitModel = {
+      ...basicModel,
+      id: 'owner/repo/Q2_K/model.gguf-00001-of-00002.gguf',
+      filename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+      size: 300,
+      hfModelFile: {
+        rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+        size: 300,
+        split: {
+          entryRFilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+          displayRFilename: 'Q2_K/model.gguf',
+          totalSize: 300,
+          totalParts: 2,
+          parts: [
+            {
+              rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+              index: 1,
+              total: 2,
+              size: 100,
+              url: 'https://example.com/Q2_K/model.gguf-00001-of-00002.gguf',
+            },
+            {
+              rfilename: 'Q2_K/model.gguf-00002-of-00002.gguf',
+              index: 2,
+              total: 2,
+              size: 200,
+              url: 'https://example.com/Q2_K/model.gguf-00002-of-00002.gguf',
+            },
+          ],
+        },
+      },
+      splitDownload: {
+        entryRFilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+        displayRFilename: 'Q2_K/model.gguf',
+        totalSize: 300,
+        totalParts: 2,
+        parts: [
+          {
+            rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf',
+            index: 1,
+            total: 2,
+            size: 100,
+            url: 'https://example.com/Q2_K/model.gguf-00001-of-00002.gguf',
+          },
+          {
+            rfilename: 'Q2_K/model.gguf-00002-of-00002.gguf',
+            index: 2,
+            total: 2,
+            size: 200,
+            url: 'https://example.com/Q2_K/model.gguf-00002-of-00002.gguf',
+          },
+        ],
+      },
+    };
+    NativeModules.DownloadModule.startDownload
+      .mockResolvedValueOnce({downloadId: 'split-1'})
+      .mockResolvedValueOnce({downloadId: 'split-2'});
+    (RNFS.stat as jest.Mock)
+      .mockResolvedValueOnce({size: 100})
+      .mockResolvedValueOnce({size: 200});
+    const movedFiles = new Set<string>();
+    (RNFS.moveFile as jest.Mock).mockImplementation(
+      (_from: string, to: string) => {
+        movedFiles.add(to);
+        return Promise.resolve();
+      },
+    );
+    (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+      Promise.resolve(movedFiles.has(path)),
+    );
+
+    const callbacks = {
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    };
+    downloadManager.setCallbacks(callbacks);
+
+    const completeListener = mockEventEmitter.addListener.mock.calls.find(
+      call => call[0] === 'onDownloadComplete',
+    )[1];
+
+    const promise = downloadManager.startDownload(
+      splitModel as any,
+      '/models/owner/repo/Q2_K/model.gguf-00001-of-00002.gguf',
+    );
+
+    await waitFor(() =>
+      expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalledTimes(
+        1,
+      ),
+    );
+    completeListener({downloadId: 'split-1'});
+    await waitFor(() =>
+      expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    completeListener({downloadId: 'split-2'});
+    await promise;
+
+    expect(NativeModules.DownloadModule.startDownload).toHaveBeenCalledTimes(2);
+    expect(NativeModules.DownloadModule.startDownload).toHaveBeenNthCalledWith(
+      1,
+      'https://example.com/Q2_K/model.gguf-00001-of-00002.gguf',
+      expect.objectContaining({
+        destination:
+          '/models/owner/repo/.partial-Q2_K%2Fmodel.gguf-00001-of-00002.gguf/Q2_K__model.gguf-00001-of-00002.gguf',
+      }),
+    );
+    expect(NativeModules.DownloadModule.startDownload).toHaveBeenNthCalledWith(
+      2,
+      'https://example.com/Q2_K/model.gguf-00002-of-00002.gguf',
+      expect.objectContaining({
+        destination:
+          '/models/owner/repo/.partial-Q2_K%2Fmodel.gguf-00001-of-00002.gguf/Q2_K__model.gguf-00002-of-00002.gguf',
+      }),
+    );
+    expect(RNFS.moveFile).toHaveBeenCalledWith(
+      '/models/owner/repo/.partial-Q2_K%2Fmodel.gguf-00001-of-00002.gguf/Q2_K__model.gguf-00001-of-00002.gguf',
+      '/models/owner/repo/Q2_K/model.gguf-00001-of-00002.gguf',
+    );
+    expect(RNFS.moveFile).toHaveBeenCalledWith(
+      '/models/owner/repo/.partial-Q2_K%2Fmodel.gguf-00001-of-00002.gguf/Q2_K__model.gguf-00002-of-00002.gguf',
+      '/models/owner/repo/Q2_K/model.gguf-00002-of-00002.gguf',
+    );
+    expect(callbacks.onComplete).toHaveBeenCalledWith(splitModel.id);
+    expect(downloadManager.isDownloading(splitModel.id)).toBe(false);
   });
 });

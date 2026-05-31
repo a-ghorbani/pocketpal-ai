@@ -13,6 +13,7 @@ import {Model} from '../../utils/types';
 import {formatBytes, hasEnoughSpace} from '../../utils';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
+import {expandSplitModelFile} from '../../utils/hf';
 import type {
   DownloadConfig,
   DownloadResponse,
@@ -38,10 +39,29 @@ function getDownloadHeaders(
   return headers;
 }
 
+function getSplitStorageRoot(destinationPath: string, entryRFilename: string) {
+  const fallbackDir = destinationPath.substring(
+    0,
+    destinationPath.lastIndexOf('/'),
+  );
+  if (!entryRFilename.includes('/')) {
+    return fallbackDir;
+  }
+
+  const entrySuffix = `/${entryRFilename}`;
+  return destinationPath.endsWith(entrySuffix)
+    ? destinationPath.slice(0, -entrySuffix.length)
+    : fallbackDir;
+}
+
 export class DownloadManager {
   private downloadJobs: DownloadMap;
   private callbacks: DownloadEventCallbacks = {};
   private eventEmitter: NativeEventEmitter | null = null;
+  private androidSplitWaiters = new Map<
+    string,
+    {resolve: () => void; reject: (error: Error) => void}
+  >();
 
   constructor() {
     console.log(`${TAG}: Initializing DownloadManager`);
@@ -97,10 +117,18 @@ export class DownloadManager {
             ? `${etaMinutes} ${l10nData.common.minutes}`
             : `${Math.ceil(etaSeconds)} ${l10nData.common.seconds}`;
 
+        const aggregateBase = job.aggregateBytesWritten || 0;
+        const aggregateTotal = job.aggregateBytesTotal || event.totalBytes;
+        const aggregateWritten = aggregateBase + event.bytesWritten;
+        const aggregateProgress =
+          aggregateTotal > 0
+            ? (aggregateWritten / aggregateTotal) * 100
+            : event.progress;
+
         const progress: DownloadProgress = {
-          bytesDownloaded: event.bytesWritten,
-          bytesTotal: event.totalBytes,
-          progress: event.progress,
+          bytesDownloaded: aggregateWritten,
+          bytesTotal: aggregateTotal,
+          progress: aggregateProgress,
           speed: `${formatBytes(event.bytesWritten)} (${speedMBps} MB/s)`,
           eta: etaText,
           rawSpeed: speedBps,
@@ -122,6 +150,13 @@ export class DownloadManager {
 
       this.eventEmitter.addListener('onDownloadComplete', event => {
         console.log(`${TAG}: Download completed for ID: ${event.downloadId}`);
+        const waiter = this.androidSplitWaiters.get(event.downloadId);
+        if (waiter) {
+          this.androidSplitWaiters.delete(event.downloadId);
+          waiter.resolve();
+          return;
+        }
+
         // Find the job by download ID
         const job = Array.from(this.downloadJobs.values()).find(
           _job => _job.downloadId === event.downloadId,
@@ -155,6 +190,13 @@ export class DownloadManager {
           `${TAG}: (js) Download failed for ID: ${event.downloadId}`,
           event.error,
         );
+        const waiter = this.androidSplitWaiters.get(event.downloadId);
+        if (waiter) {
+          this.androidSplitWaiters.delete(event.downloadId);
+          waiter.reject(new Error(event.error));
+          return;
+        }
+
         // Find the job by download ID
         const job = Array.from(this.downloadJobs.values()).find(
           _job => _job.downloadId === event.downloadId,
@@ -261,6 +303,11 @@ export class DownloadManager {
     } catch (err) {
       console.error(`${TAG}: Failed to create directory:`, err);
       throw err;
+    }
+
+    if (model.splitDownload) {
+      await this.startSplitDownload(model, destinationPath, authToken);
+      return;
     }
 
     if (Platform.OS === 'ios') {
@@ -401,6 +448,346 @@ export class DownloadManager {
     }
   }
 
+  private async startSplitDownload(
+    model: Model,
+    destinationPath: string,
+    authToken?: string | null,
+  ): Promise<void> {
+    const split = model.splitDownload;
+    if (!split || !model.hfModelFile) {
+      throw new Error('Model split metadata is missing');
+    }
+
+    const parts = expandSplitModelFile(model.hfModelFile);
+    if (parts.length !== split.totalParts) {
+      throw new Error('Model split file list is incomplete');
+    }
+
+    const dirPath = getSplitStorageRoot(destinationPath, split.entryRFilename);
+    const tempDir = `${dirPath}/.partial-${encodeURIComponent(model.filename)}`;
+    const totalBytes =
+      split.totalSize ||
+      parts.reduce((sum, part) => sum + (part.size || part.lfs?.size || 0), 0);
+    let completedBytes = 0;
+
+    const downloadJob: DownloadJob = {
+      model,
+      state: {
+        isDownloading: true,
+        progress: null,
+        error: null,
+      },
+      destination: destinationPath,
+      lastBytesWritten: 0,
+      lastUpdateTime: Date.now(),
+      tempPaths: [],
+      aggregateBytesWritten: 0,
+      aggregateBytesTotal: totalBytes,
+    };
+
+    this.downloadJobs.set(model.id, downloadJob);
+    this.callbacks.onStart?.(model.id);
+
+    try {
+      await RNFS.mkdir(tempDir);
+
+      for (const part of parts) {
+        if (downloadJob.cancelRequested) {
+          throw new Error('Download cancelled');
+        }
+        if (!part.url) {
+          throw new Error(`Split file has no download URL: ${part.rfilename}`);
+        }
+
+        const partPath = `${tempDir}/${part.rfilename.replace(/[\\/]/g, '__')}`;
+        downloadJob.tempPaths!.push(partPath);
+        downloadJob.lastBytesWritten = 0;
+        downloadJob.lastUpdateTime = Date.now();
+        downloadJob.aggregateBytesWritten = completedBytes;
+
+        await this.downloadSplitPart(
+          model,
+          part.url,
+          partPath,
+          part.size || part.lfs?.size || 0,
+          downloadJob,
+          authToken,
+        );
+
+        const stat = await RNFS.stat(partPath);
+        completedBytes += Number(stat.size || part.size || 0);
+      }
+
+      await this.moveSplitPartsIntoPlace(
+        model,
+        tempDir,
+        dirPath,
+        destinationPath,
+        parts.map(part => part.rfilename),
+      );
+
+      if (downloadJob.cancelRequested) {
+        throw new Error('Download cancelled');
+      }
+
+      downloadJob.state.isDownloading = false;
+      downloadJob.state.progress = {
+        bytesDownloaded: totalBytes,
+        bytesTotal: totalBytes,
+        progress: 100,
+        speed: '0 B/s',
+        eta: '0 sec',
+        rawSpeed: 0,
+        rawEta: 0,
+      };
+      this.callbacks.onComplete?.(model.id);
+      this.downloadJobs.delete(model.id);
+    } catch (error) {
+      downloadJob.state.error =
+        error instanceof Error ? error : new Error(String(error));
+      downloadJob.state.isDownloading = false;
+      await this.cleanupSplitTempFiles(downloadJob);
+      this.downloadJobs.delete(model.id);
+      this.callbacks.onError?.(model.id, downloadJob.state.error);
+      throw error;
+    }
+  }
+
+  private async downloadSplitPart(
+    model: Model,
+    url: string,
+    destinationPath: string,
+    expectedBytes: number,
+    downloadJob: DownloadJob,
+    authToken?: string | null,
+  ): Promise<void> {
+    if (Platform.OS === 'ios') {
+      await this.downloadSplitPartIOS(
+        model,
+        url,
+        destinationPath,
+        expectedBytes,
+        downloadJob,
+        authToken,
+      );
+      return;
+    }
+
+    await this.downloadSplitPartAndroid(
+      model,
+      url,
+      destinationPath,
+      expectedBytes,
+      downloadJob,
+      authToken,
+    );
+  }
+
+  private async downloadSplitPartIOS(
+    model: Model,
+    url: string,
+    destinationPath: string,
+    expectedBytes: number,
+    downloadJob: DownloadJob,
+    authToken?: string | null,
+  ): Promise<void> {
+    const downloadResult = RNFS.downloadFile({
+      fromUrl: url,
+      toFile: destinationPath,
+      background: uiStore.iOSBackgroundDownloading,
+      discretionary: false,
+      progressInterval: 800,
+      headers: getDownloadHeaders(model, authToken),
+      begin: res => {
+        const totalBytes =
+          downloadJob.aggregateBytesTotal ||
+          downloadJob.aggregateBytesWritten! + res.contentLength;
+        const progress: DownloadProgress = {
+          bytesDownloaded: downloadJob.aggregateBytesWritten || 0,
+          bytesTotal: totalBytes,
+          progress:
+            totalBytes > 0
+              ? ((downloadJob.aggregateBytesWritten || 0) / totalBytes) * 100
+              : 0,
+          speed: '0 B/s',
+          eta: uiStore.l10n.common.calculating,
+          rawSpeed: 0,
+          rawEta: 0,
+        };
+
+        downloadJob.state.progress = progress;
+        this.callbacks.onProgress?.(model.id, progress);
+      },
+      progress: res => {
+        if (!this.downloadJobs.has(model.id) || downloadJob.cancelRequested) {
+          return;
+        }
+
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - downloadJob.lastUpdateTime) / 1000 || 1;
+        const bytesDiff = res.bytesWritten - downloadJob.lastBytesWritten;
+        const speedBps = bytesDiff / timeDiff;
+        const speedMBps = (speedBps / (1024 * 1024)).toFixed(2);
+        const totalBytes =
+          downloadJob.aggregateBytesTotal ||
+          (downloadJob.aggregateBytesWritten || 0) + expectedBytes;
+        const aggregateWritten =
+          (downloadJob.aggregateBytesWritten || 0) + res.bytesWritten;
+        const remainingBytes = totalBytes - aggregateWritten;
+        const etaSeconds = speedBps > 0 ? remainingBytes / speedBps : 0;
+        const etaMinutes = Math.ceil(etaSeconds / 60);
+        const l10nData = uiStore.l10n;
+        const etaText =
+          etaSeconds >= 60
+            ? `${etaMinutes} ${l10nData.common.minutes}`
+            : `${Math.ceil(etaSeconds)} ${l10nData.common.seconds}`;
+
+        const progress: DownloadProgress = {
+          bytesDownloaded: aggregateWritten,
+          bytesTotal: totalBytes,
+          progress: totalBytes > 0 ? (aggregateWritten / totalBytes) * 100 : 0,
+          speed: `${formatBytes(res.bytesWritten)} (${speedMBps} MB/s)`,
+          eta: etaText,
+          rawSpeed: speedBps,
+          rawEta: etaSeconds,
+        };
+
+        downloadJob.state.progress = progress;
+        downloadJob.lastBytesWritten = res.bytesWritten;
+        downloadJob.lastUpdateTime = currentTime;
+        this.callbacks.onProgress?.(model.id, progress);
+      },
+    });
+
+    downloadJob.jobId = downloadResult.jobId;
+    downloadJob.activeJobId = downloadResult.jobId;
+    let result;
+    try {
+      result = await downloadResult.promise;
+    } finally {
+      downloadJob.activeJobId = undefined;
+    }
+
+    if (downloadJob.cancelRequested) {
+      throw new Error('Download cancelled');
+    }
+    if (result.statusCode !== 200) {
+      throw new Error(`Download failed with status: ${result.statusCode}`);
+    }
+  }
+
+  private async downloadSplitPartAndroid(
+    model: Model,
+    url: string,
+    destinationPath: string,
+    _expectedBytes: number,
+    downloadJob: DownloadJob,
+    authToken?: string | null,
+  ): Promise<void> {
+    const config: DownloadConfig = {
+      destination: destinationPath,
+      networkType: 'ANY',
+      priority: 1,
+      progressInterval: 1000,
+      headers: getDownloadHeaders(model, authToken),
+      ...(authToken ? {authToken} : {}),
+    };
+    const response: DownloadResponse = await NativeDownloadModule.startDownload(
+      url,
+      config,
+    );
+    downloadJob.downloadId = response.downloadId;
+    downloadJob.activeDownloadId = response.downloadId;
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.androidSplitWaiters.set(response.downloadId, {
+          resolve,
+          reject,
+        });
+      });
+    } finally {
+      this.androidSplitWaiters.delete(response.downloadId);
+      downloadJob.activeDownloadId = undefined;
+    }
+  }
+
+  private async moveSplitPartsIntoPlace(
+    model: Model,
+    tempDir: string,
+    dirPath: string,
+    destinationPath: string,
+    rfilenames: string[],
+  ) {
+    for (const rfilename of rfilenames) {
+      const tempPath = `${tempDir}/${rfilename.replace(/[\\/]/g, '__')}`;
+      const finalPath = `${dirPath}/${rfilename}`;
+      const slashIndex = finalPath.lastIndexOf('/');
+      if (slashIndex > 0) {
+        const finalDir = finalPath.substring(0, slashIndex);
+        await RNFS.mkdir(finalDir);
+      }
+
+      const exists = await RNFS.exists(finalPath);
+      if (exists) {
+        await RNFS.unlink(finalPath);
+      }
+      await RNFS.moveFile(tempPath, finalPath);
+    }
+
+    const entryExists = await RNFS.exists(destinationPath);
+    if (!entryExists) {
+      throw new Error(`Split entry file was not downloaded for ${model.id}`);
+    }
+  }
+
+  private async cleanupSplitTempFiles(job: DownloadJob) {
+    for (const path of job.tempPaths || []) {
+      try {
+        if (await RNFS.exists(path)) {
+          await RNFS.unlink(path);
+        }
+      } catch (error) {
+        console.warn(`${TAG}: Failed to clean up split temp file`, {
+          path,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    try {
+      const exists = await RNFS.exists(job.destination);
+      if (exists) {
+        await RNFS.unlink(job.destination);
+      }
+    } catch (error) {
+      console.warn(`${TAG}: Failed to clean up split entry file`, {
+        path: job.destination,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    if (job.model.splitDownload && job.model.hfModelFile) {
+      const dirPath = getSplitStorageRoot(
+        job.destination,
+        job.model.splitDownload.entryRFilename,
+      );
+      for (const part of expandSplitModelFile(job.model.hfModelFile)) {
+        const finalPath = `${dirPath}/${part.rfilename}`;
+        try {
+          if (await RNFS.exists(finalPath)) {
+            await RNFS.unlink(finalPath);
+          }
+        } catch (error) {
+          console.warn(`${TAG}: Failed to clean up split final file`, {
+            path: finalPath,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+  }
+
   private async startAndroidDownload(
     model: Model,
     destinationPath: string,
@@ -469,20 +856,27 @@ export class DownloadManager {
     const job = this.downloadJobs.get(modelId);
     if (job) {
       try {
+        job.cancelRequested = true;
         if (Platform.OS === 'ios') {
           console.log(
             `${TAG}: Cancelling iOS download for ID: ${modelId}, jobId: ${job.jobId}`,
           );
-          if (job.jobId) {
-            RNFS.stopDownload(job.jobId); // job.jobId is now correctly typed as number
+          if (job.activeJobId || job.jobId) {
+            RNFS.stopDownload(job.activeJobId || job.jobId!);
           }
         } else if (
           Platform.OS === 'android' &&
           NativeDownloadModule &&
-          job.downloadId
+          (job.activeDownloadId || job.downloadId)
         ) {
           console.log(`${TAG}: Cancelling Android download:`, modelId);
-          await NativeDownloadModule.cancelDownload(job.downloadId);
+          const activeDownloadId = job.activeDownloadId || job.downloadId!;
+          const waiter = this.androidSplitWaiters.get(activeDownloadId);
+          if (waiter) {
+            this.androidSplitWaiters.delete(activeDownloadId);
+            waiter.reject(new Error('Download cancelled'));
+          }
+          await NativeDownloadModule.cancelDownload(activeDownloadId);
         }
 
         // Clean up the partial download file
@@ -512,6 +906,10 @@ export class DownloadManager {
               });
             }
           }
+        }
+
+        if (job.model.splitDownload) {
+          await this.cleanupSplitTempFiles(job);
         }
 
         // Update state and remove job

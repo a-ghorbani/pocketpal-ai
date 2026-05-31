@@ -28,6 +28,12 @@ export interface DownloadJob {
   destination: string;
   lastBytesWritten: number;
   lastUpdateTime: number;
+  cancelRequested?: boolean;
+  tempPaths?: string[];
+  activeJobId?: number;
+  activeDownloadId?: string;
+  aggregateBytesWritten?: number;
+  aggregateBytesTotal?: number;
 }
 
 export type DownloadMap = Map<string, DownloadJob>;

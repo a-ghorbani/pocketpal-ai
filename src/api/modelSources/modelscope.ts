@@ -123,7 +123,9 @@ function getPageSize(data: any, fallback: number): number {
 
 function buildQueryString(params: Record<string, any>): string {
   return Object.entries(params)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .filter(
+      ([, value]) => value !== undefined && value !== null && value !== '',
+    )
     .map(
       ([key, value]) =>
         `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
@@ -131,7 +133,10 @@ function buildQueryString(params: Record<string, any>): string {
     .join('&');
 }
 
-function getQueryParam(url: string | undefined, key: string): string | undefined {
+function getQueryParam(
+  url: string | undefined,
+  key: string,
+): string | undefined {
   if (!url) {
     return undefined;
   }
@@ -260,12 +265,7 @@ function normalizeRepoId(raw: any): string {
   }
 
   const name = String(
-    firstDefined(
-      raw?.Name,
-      raw?.name,
-      raw?.ModelName,
-      raw?.modelName,
-    ) || '',
+    firstDefined(raw?.Name, raw?.name, raw?.ModelName, raw?.modelName) || '',
   );
   if (path && name) {
     return cleanRepoId(`${path}/${name}`);
@@ -358,8 +358,9 @@ function extractFiles(repoId: string, data: any): ModelFile[] {
         }),
       )
       .filter((file): file is ModelFile => Boolean(file));
-    if (files.length > 0) {
-      return filterValidGGUFFiles(files) as ModelFile[];
+    const validFiles = filterValidGGUFFiles(files) as ModelFile[];
+    if (validFiles.length > 0) {
+      return validFiles;
     }
   }
 
@@ -383,8 +384,9 @@ function extractFiles(repoId: string, data: any): ModelFile[] {
     const files = asArray(candidate)
       .map(file => normalizeModelScopeFile(repoId, file))
       .filter((file): file is ModelFile => Boolean(file));
-    if (files.length > 0) {
-      return filterValidGGUFFiles(files) as ModelFile[];
+    const validFiles = filterValidGGUFFiles(files) as ModelFile[];
+    if (validFiles.length > 0) {
+      return validFiles;
     }
   }
 
@@ -528,6 +530,7 @@ function toFileDetails(files: ModelFile[]): ModelFileDetails[] {
     size: file.size || file.lfs?.size || 0,
     lfs: file.lfs,
     path: file.rfilename,
+    split: file.split,
   }));
 }
 
@@ -657,10 +660,8 @@ async function fetchModelScopeDirectModel(
     );
   }
 
-  const files =
-    normalized.siblings.length > 0
-      ? normalized.siblings
-      : await fetchModelScopeFiles(sourceConfig, repoId, authToken);
+  const repoFiles = await fetchModelScopeFiles(sourceConfig, repoId, authToken);
+  const files = repoFiles.length > 0 ? repoFiles : normalized.siblings;
 
   return {
     ...normalized,
@@ -751,20 +752,23 @@ export async function fetchModelScopeModelFilesDetails({
   modelId: string;
   authToken?: string | null;
 }): Promise<ModelFileDetails[]> {
-  const detail = await fetchModelScopeDetail(sourceConfig, modelId, authToken);
-  const detailFiles = detail ? extractFiles(modelId, detail) : [];
-  const files =
-    detailFiles.length > 0
-      ? detailFiles
-      : await fetchModelScopeFiles(sourceConfig, modelId, authToken);
+  const files = await fetchModelScopeFiles(sourceConfig, modelId, authToken);
+  const detailFiles =
+    files.length > 0
+      ? []
+      : extractFiles(
+          modelId,
+          await fetchModelScopeDetail(sourceConfig, modelId, authToken),
+        );
+  const resolvedFiles = files.length > 0 ? files : detailFiles;
 
-  if (files.length === 0) {
+  if (resolvedFiles.length === 0) {
     throw new ModelScopeResponseError(
       `No GGUF files found for ModelScope model: ${modelId}`,
     );
   }
 
-  return toFileDetails(files);
+  return toFileDetails(resolvedFiles);
 }
 
 export async function fetchModelScopeGGUFSpecs({

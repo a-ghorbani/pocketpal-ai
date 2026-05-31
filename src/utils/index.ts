@@ -38,6 +38,7 @@ import {
   MODEL_SOURCE_ORIGIN,
   stripSourceScope,
 } from './modelSources';
+import {firstSplitPartFilename, getSplitDownloadRequiredSpace} from './hf';
 
 export const L10nContext = React.createContext<
   (typeof l10n)[keyof typeof l10n]
@@ -344,7 +345,15 @@ export const getModelDescription = (
 
 export async function hasEnoughSpace(model: Model): Promise<boolean> {
   try {
-    let requiredSpaceBytes = model.size;
+    let requiredSpaceBytes = model.splitDownload
+      ? getSplitDownloadRequiredSpace(
+          model.hfModelFile || {
+            rfilename: model.filename,
+            size: model.size,
+            split: model.splitDownload,
+          },
+        )
+      : model.size;
 
     // For vision models, consider the total size including projection model
     if (model.supportsMultimodal && model.hfModelFile && model.hfModel) {
@@ -408,7 +417,10 @@ export function extractHFModelType(modelId: string): string {
 export function extractHFModelTitle(modelId: string): string {
   const unscopedModelId = stripSourceScope(modelId);
   // Remove "GGUF", "-GGUF", or "_GGUF" at the end regardless of case
-  const sanitizedModelId = unscopedModelId.replace(/[-_]?[Gg][Gg][Uu][Ff]$/, '');
+  const sanitizedModelId = unscopedModelId.replace(
+    /(?:[-_.]?[Gg][Gg][Uu][Ff])$/,
+    '',
+  );
 
   // If there is no "/" in the modelId, ie owner is not included, return sanitizedModelId
   if (!sanitizedModelId.includes('/')) {
@@ -447,8 +459,8 @@ export function hfAsModel(
     const mmprojFiles = getMmprojFiles(hfModel.siblings || []);
 
     // Convert to model IDs
-    compatibleProjectionModels = mmprojFiles.map(
-      file => buildSourceModelId(source, repoId, file.rfilename),
+    compatibleProjectionModels = mmprojFiles.map(file =>
+      buildSourceModelId(source, repoId, file.rfilename),
     );
 
     // Set default projection model based on quantization matching
@@ -477,11 +489,13 @@ export function hfAsModel(
   const sourceWebUrl = hfModel.url ?? '';
 
   const _model: Model = {
-    id: `${scopedRepoId}/${modelFile.rfilename}`,
+    id: `${scopedRepoId}/${firstSplitPartFilename(modelFile)}`,
     type: extractHFModelType(repoId),
     author: hfModel.author,
     repo: repo,
-    name: extractHFModelTitle(modelFile.rfilename),
+    name: extractHFModelTitle(
+      modelFile.split?.displayRFilename || modelFile.rfilename,
+    ),
     size: modelFile.size ?? 0,
     params: hfModel.specs?.gguf?.total ?? 0,
     isDownloaded: false,
@@ -491,7 +505,7 @@ export function hfAsModel(
     sourceRepoId: repoId,
     sourceWebUrl,
     progress: 0,
-    filename: modelFile.rfilename,
+    filename: firstSplitPartFilename(modelFile),
     capabilities: isVisionLLM ? ['vision'] : undefined,
     //fullPath: '',
     isLocal: false,
@@ -504,6 +518,7 @@ export function hfAsModel(
     stopWords: defaultSettings.completionParams.stop,
     hfModelFile: modelFile,
     hfModel: hfModel,
+    splitDownload: modelFile.split,
 
     // Set multimodal fields
     supportsMultimodal: isVisionLLM,
@@ -572,11 +587,9 @@ export const checkModelFileIntegrity = async (
   try {
     // For HF models, if we don't have lfs details, fetch them
     if (
-      [
-        ModelOrigin.HF,
-        ModelOrigin.HF_MIRROR,
-        ModelOrigin.MODELSCOPE,
-      ].includes(model.origin) &&
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      ) &&
       !model.hfModelFile?.lfs?.size
     ) {
       await modelStore.fetchAndUpdateModelFileDetails(model);

@@ -33,6 +33,7 @@ import {
   inferRepoFromModelId,
   parseSizeLabel,
 } from '../utils';
+import {expandSplitModelFile} from '../utils/hf';
 import {
   buildSourceModelId,
   getModelSource,
@@ -81,6 +82,18 @@ import {
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
+
+function getSplitStorageRoot(entryPath: string, entryRFilename: string) {
+  const fallbackDir = entryPath.substring(0, entryPath.lastIndexOf('/'));
+  if (!entryRFilename.includes('/')) {
+    return fallbackDir;
+  }
+
+  const entrySuffix = `/${entryRFilename}`;
+  return entryPath.endsWith(entrySuffix)
+    ? entryPath.slice(0, -entrySuffix.length)
+    : fallbackDir;
+}
 
 /**
  * Factory function to create a Model object for a remote model from an OpenAI-compatible server.
@@ -907,11 +920,9 @@ class ModelStore {
 
     // For repository-backed source models, use author/repo/model structure.
     if (
-      [
-        ModelOrigin.HF,
-        ModelOrigin.HF_MIRROR,
-        ModelOrigin.MODELSCOPE,
-      ].includes(model.origin)
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      )
     ) {
       const author = model.author || 'unknown';
       const source = getModelSource(model);
@@ -954,18 +965,52 @@ class ModelStore {
 
   async checkFileExists(model: Model) {
     const filePath = await this.getModelFullPath(model);
-    const exists = await RNFS.exists(filePath);
+    let exists = await RNFS.exists(filePath);
     let sizeMatches = true;
+
+    if (exists && model.splitDownload && model.hfModelFile) {
+      try {
+        const dirPath = getSplitStorageRoot(
+          filePath,
+          model.splitDownload.entryRFilename,
+        );
+        let totalSize = 0;
+        for (const part of expandSplitModelFile(model.hfModelFile)) {
+          const partPath = `${dirPath}/${part.rfilename}`;
+          const partExists = await RNFS.exists(partPath);
+          if (!partExists) {
+            exists = false;
+            sizeMatches = false;
+            break;
+          }
+          const partStats = await RNFS.stat(partPath);
+          totalSize += Number(partStats.size || 0);
+        }
+
+        if (exists && model.size && model.size > 0) {
+          sizeMatches =
+            totalSize > 0 &&
+            Math.abs(totalSize - Number(model.size)) / Number(model.size) <=
+              0.001;
+        }
+      } catch (err) {
+        console.log('Error checking split model file size:', err);
+        exists = false;
+        sizeMatches = false;
+      }
+    }
 
     if (exists && model.size && model.size > 0) {
       try {
-        const fileStats = await RNFS.stat(filePath);
-        const expectedSize = Number(model.size);
-        const actualSize = Number(fileStats.size);
-        sizeMatches =
-          expectedSize > 0 &&
-          actualSize > 0 &&
-          Math.abs(actualSize - expectedSize) / expectedSize <= 0.001;
+        if (!model.splitDownload) {
+          const fileStats = await RNFS.stat(filePath);
+          const expectedSize = Number(model.size);
+          const actualSize = Number(fileStats.size);
+          sizeMatches =
+            expectedSize > 0 &&
+            actualSize > 0 &&
+            Math.abs(actualSize - expectedSize) / expectedSize <= 0.001;
+        }
       } catch (err) {
         console.log('Error checking model file size:', err);
         sizeMatches = false;
@@ -998,6 +1043,21 @@ class ModelStore {
 
   initializeDownloadStatus = async () => {
     await this.refreshDownloadStatuses();
+  };
+
+  private getSplitModelFilePaths = async (model: Model): Promise<string[]> => {
+    if (!model.splitDownload || !model.hfModelFile) {
+      return [await this.getModelFullPath(model)];
+    }
+
+    const entryPath = await this.getModelFullPath(model);
+    const dirPath = getSplitStorageRoot(
+      entryPath,
+      model.splitDownload.entryRFilename,
+    );
+    return expandSplitModelFile(model.hfModelFile).map(
+      part => `${dirPath}/${part.rfilename}`,
+    );
   };
 
   removeInvalidLocalModels = () => {
@@ -1191,7 +1251,8 @@ class ModelStore {
       }
     }
 
-    const filePath = await this.getModelFullPath(_model);
+    const filePaths = await this.getSplitModelFilePaths(_model);
+    const filePath = filePaths[0];
     if (_model.isLocal || _model.origin === ModelOrigin.LOCAL) {
       // Local models are always removed from the list, when the file is deleted.
 
@@ -1210,7 +1271,13 @@ class ModelStore {
 
       // Delete the file from internal storage
       try {
-        await RNFS.unlink(filePath);
+        await Promise.all(
+          filePaths.map(async path => {
+            if (await RNFS.exists(path)) {
+              await RNFS.unlink(path);
+            }
+          }),
+        );
       } catch (err) {
         console.error('Failed to delete local model file:', err);
       }
@@ -1220,7 +1287,13 @@ class ModelStore {
 
       try {
         if (filePath) {
-          await RNFS.unlink(filePath);
+          await Promise.all(
+            filePaths.map(async path => {
+              if (await RNFS.exists(path)) {
+                await RNFS.unlink(path);
+              }
+            }),
+          );
 
           // Check if we need to release context (if this model is currently active)
           const needsContextRelease = this.activeModelId === _model.id;
@@ -2197,8 +2270,8 @@ class ModelStore {
       // If we're working with an existing model, update its projection model references
       // to ensure they're current with what's now in the store
       if (storeModel) {
-        const updatedCompatibleModels = mmprojFiles.map(
-          file => buildSourceModelId(source, repoId, file.rfilename),
+        const updatedCompatibleModels = mmprojFiles.map(file =>
+          buildSourceModelId(source, repoId, file.rfilename),
         );
 
         runInAction(() => {
@@ -2379,11 +2452,9 @@ class ModelStore {
     });
 
     const hfModels = this.models.filter(model =>
-      [
-        ModelOrigin.HF,
-        ModelOrigin.HF_MIRROR,
-        ModelOrigin.MODELSCOPE,
-      ].includes(model.origin),
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      ),
     );
     hfModels.forEach(model => {
       const defaultSettings = getHFDefaultSettings(
