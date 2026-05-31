@@ -1,5 +1,7 @@
 import {makeAutoObservable, runInAction} from 'mobx';
 
+import {PALSHUB_API_BASE_URL} from '@env';
+
 import NativeAuthSession from '../specs/NativeAuthSession';
 import {palsHubApiService} from '../services/palshub/PalsHubApiService';
 import {palsHubService} from '../services';
@@ -25,10 +27,6 @@ export type CheckoutStatus =
   | 'error';
 
 export type CheckoutErrorKind = '401' | '404' | '500' | 'network';
-
-// Host for the https success/cancel URLs Stripe redirects through; carries no
-// entitlement coupling.
-const RETURN_HOST = 'palshub.ai';
 
 // Host segment of the custom-scheme callback the auth session captures, namespacing
 // the checkout return under the shared pocketpal:// scheme.
@@ -74,8 +72,8 @@ class CheckoutFlowStore {
       this.errorKind = undefined;
     });
 
-    const successUrl = `https://${RETURN_HOST}/app-return/checkout/success`;
-    const cancelUrl = `https://${RETURN_HOST}/app-return/checkout/cancel`;
+    const successUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/success`;
+    const cancelUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/cancel`;
 
     let selectedCountryCode: string | undefined;
     try {
