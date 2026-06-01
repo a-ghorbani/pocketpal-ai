@@ -3,7 +3,7 @@ import {chatTemplates} from '../utils/chat';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {Platform} from 'react-native';
 
-export const MODEL_LIST_VERSION = 14;
+export const MODEL_LIST_VERSION = 15;
 
 const iosOnlyModels: Model[] = [];
 
@@ -235,6 +235,142 @@ const crossPlatformModels: Model[] = [
       lfs: {
         oid: '2c63dde5f2c9ab1fd64d47dee2d34dade6ba9ff62442d1d20b5342310c982081',
         size: 2438740384,
+        pointerSize: 135,
+      },
+      canFitInStorage: true,
+    },
+  },
+  // -------- Qwen Coder --------
+  {
+    id: 'Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/qwen2.5-coder-0.5b-instruct-q8_0.gguf',
+    author: 'Qwen',
+    repo: 'Qwen2.5-Coder-0.5B-Instruct-GGUF',
+    name: 'Qwen2.5-Coder-0.5B-Instruct (Q8_0)',
+    type: 'Qwen',
+    capabilities: ['instructions', 'code'],
+    size: 675710848,
+    params: 494032768,
+    isDownloaded: false,
+    downloadUrl:
+      'https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q8_0.gguf',
+    hfUrl: 'https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF',
+    progress: 0,
+    filename: 'qwen2.5-coder-0.5b-instruct-q8_0.gguf',
+    isLocal: false,
+    origin: ModelOrigin.PRESET,
+    defaultChatTemplate: {...chatTemplates.qwen25},
+    chatTemplate: chatTemplates.qwen25,
+    defaultCompletionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.3,
+    },
+    completionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.3,
+    },
+    defaultStopWords: ['<|im_end|>'],
+    stopWords: ['<|im_end|>'],
+    supportsThinking: false,
+    hfModelFile: {
+      rfilename: 'qwen2.5-coder-0.5b-instruct-q8_0.gguf',
+      url: 'https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q8_0.gguf',
+      size: 675710848,
+      oid: '8d6ea6a9a45aa38362e60facd58a4e251419ef19',
+      lfs: {
+        oid: 'e1a77721fa97d412f121878223eec81fb4ae6f271e18f922d746711f67b344d1',
+        size: 675710848,
+        pointerSize: 134,
+      },
+      canFitInStorage: true,
+    },
+  },
+  {
+    id: 'Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q8_0.gguf',
+    author: 'Qwen',
+    repo: 'Qwen2.5-Coder-1.5B-Instruct-GGUF',
+    name: 'Qwen2.5-Coder-1.5B-Instruct (Q8_0)',
+    type: 'Qwen',
+    capabilities: ['instructions', 'code'],
+    size: 1894532160,
+    params: 1543714304,
+    isDownloaded: false,
+    downloadUrl:
+      'https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q8_0.gguf',
+    hfUrl: 'https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF',
+    progress: 0,
+    filename: 'qwen2.5-coder-1.5b-instruct-q8_0.gguf',
+    isLocal: false,
+    origin: ModelOrigin.PRESET,
+    defaultChatTemplate: {...chatTemplates.qwen25},
+    chatTemplate: chatTemplates.qwen25,
+    defaultCompletionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.3,
+    },
+    completionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.3,
+    },
+    defaultStopWords: ['<|im_end|>'],
+    stopWords: ['<|im_end|>'],
+    supportsThinking: false,
+    hfModelFile: {
+      rfilename: 'qwen2.5-coder-1.5b-instruct-q8_0.gguf',
+      url: 'https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q8_0.gguf',
+      size: 1894532160,
+      oid: '4b0553265a9c7c6d1554ec944c109b3802bcf91b',
+      lfs: {
+        oid: '507de59046601282ba768a9789900e6ccf60ed93ddf346730b7c68eb0715bc47',
+        size: 1894532160,
+        pointerSize: 135,
+      },
+      canFitInStorage: true,
+    },
+  },
+  {
+    id: 'Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/qwen2.5-coder-3b-instruct-q5_k_m.gguf',
+    author: 'Qwen',
+    repo: 'Qwen2.5-Coder-3B-Instruct-GGUF',
+    name: 'Qwen2.5-Coder-3B-Instruct (Q5_K_M)',
+    type: 'Qwen',
+    capabilities: ['instructions', 'code'],
+    size: 2438740416,
+    params: 3085938688,
+    isDownloaded: false,
+    downloadUrl:
+      'https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/qwen2.5-coder-3b-instruct-q5_k_m.gguf',
+    hfUrl: 'https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF',
+    progress: 0,
+    filename: 'qwen2.5-coder-3b-instruct-q5_k_m.gguf',
+    isLocal: false,
+    origin: ModelOrigin.PRESET,
+    defaultChatTemplate: {...chatTemplates.qwen25},
+    chatTemplate: chatTemplates.qwen25,
+    defaultCompletionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.3,
+    },
+    completionSettings: {
+      ...defaultCompletionParams,
+      n_predict: 500,
+      temperature: 0.3,
+    },
+    defaultStopWords: ['<|im_end|>'],
+    stopWords: ['<|im_end|>'],
+    supportsThinking: false,
+    hfModelFile: {
+      rfilename: 'qwen2.5-coder-3b-instruct-q5_k_m.gguf',
+      url: 'https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/qwen2.5-coder-3b-instruct-q5_k_m.gguf',
+      size: 2438740416,
+      oid: '0b3e4b0faac7ca7244914fad3a4b95d76281ff3b',
+      lfs: {
+        oid: 'eb863f2a1a9b67e33bbf2dad98ea09c03b71c8052aeb4835171cf6f7a7a12db4',
+        size: 2438740416,
         pointerSize: 135,
       },
       canFitInStorage: true,
