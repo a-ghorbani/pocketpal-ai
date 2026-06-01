@@ -182,5 +182,19 @@ describe('UIStore', () => {
         selectedModelId: null,
       });
     });
+
+    it('replayOnboarding re-enters the flow but keeps the topic snapshot', () => {
+      uiStore.completeOnboarding({topic: 'coding', modelId: 'm'});
+      uiStore.replayOnboarding();
+      expect(uiStore.hasCompletedOnboarding).toBe(false);
+      // Snapshot from prior completion survives so a Skip mid-replay
+      // doesn't wipe the user's existing topic preference.
+      expect(uiStore.onboardingTopicsSnapshot).toEqual(['coding']);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopic: null,
+        selectedModelId: null,
+      });
+    });
   });
 });

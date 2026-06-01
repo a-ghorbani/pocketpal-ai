@@ -226,6 +226,16 @@ export class UIStore {
       this.onboardingState = {...INITIAL_ONBOARDING_STATE};
     });
   }
+
+  // User-triggered replay (About → Show intro again). Re-enters the flow
+  // without nuking the persisted topic snapshot; the user's next finish
+  // will overwrite it. Distinct from `resetOnboarding` (dev/E2E nuke).
+  replayOnboarding() {
+    runInAction(() => {
+      this.hasCompletedOnboarding = false;
+      this.onboardingState = {...INITIAL_ONBOARDING_STATE};
+    });
+  }
 }
 
 export const uiStore = new UIStore();

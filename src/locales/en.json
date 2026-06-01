@@ -449,6 +449,9 @@
     "sponsorButton": "Become a Sponsor",
     "versionCopiedTitle": "Version copied",
     "versionCopiedDescription": "Version information has been copied to clipboard",
+    "tour": "Tour",
+    "tourDescription": "Replay the welcome screens to see what PocketPal AI offers.",
+    "showIntroButton": "Show intro again",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
   },
