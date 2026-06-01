@@ -19,16 +19,16 @@ const mockAuthService = {
   isInitialized: true,
 
   // Methods
-  signInWithEmail: jest.fn().mockResolvedValue(undefined),
+  signInWithEmail: jest.fn().mockResolvedValue(true),
 
-  signUpWithEmail: jest.fn().mockResolvedValue(undefined),
+  signUpWithEmail: jest.fn().mockResolvedValue(true),
 
   signInWithGoogle: jest.fn().mockResolvedValue({
     success: true,
     user: mockProfile,
   }),
 
-  resetPassword: jest.fn().mockResolvedValue(undefined),
+  resetPassword: jest.fn().mockResolvedValue(true),
 
   signOut: jest.fn().mockResolvedValue({
     success: true,
