@@ -29,6 +29,19 @@ export type OnboardingPalKey = 'pip' | 'codie' | 'sage' | 'echo' | 'muse';
 
 export interface OnboardingPalDef {
   key: OnboardingPalKey;
+  /**
+   * English proper-noun name, baked in code (not l10n'd). Used as
+   * `Pal.name` when the local pal is materialised on Finish, and as
+   * the lookup key for the marketing body copy under
+   * `onboarding.screen6.pal.<key>.body`.
+   */
+  name: string;
+  /**
+   * English description copied into `Pal.description` on materialise.
+   * Shown on PalsScreen / detail sheet. Not l10n'd for now — iterate
+   * once the pal set stabilises.
+   */
+  description: string;
   systemPrompt: string;
   /** Avatar gradient stops, dark→light. Matches the existing pal color contract. */
   color: [string, string];
@@ -37,6 +50,8 @@ export interface OnboardingPalDef {
 
 const PAL_PIP: OnboardingPalDef = {
   key: 'pip',
+  name: 'Pip',
+  description: 'A friendly general-purpose pal that runs entirely on your phone.',
   systemPrompt:
     "You are Pip, a friendly and helpful assistant who runs locally on the user's phone. Keep replies concise and warm.",
   color: ['#0E0D0C', '#FAFAFA'],
@@ -64,6 +79,8 @@ const PAL_PIP: OnboardingPalDef = {
 
 const PAL_CODIE: OnboardingPalDef = {
   key: 'codie',
+  name: 'Codie',
+  description: 'A coding-focused pal who helps with writing, debugging, and explaining code.',
   systemPrompt:
     'You are Codie, a coding-focused pal. Help write, debug, and explain code. Prefer working code in fenced blocks and keep explanations short.',
   color: ['#0F3D5E', '#7BB9D7'],
@@ -91,6 +108,8 @@ const PAL_CODIE: OnboardingPalDef = {
 
 const PAL_SAGE: OnboardingPalDef = {
   key: 'sage',
+  name: 'Sage',
+  description: 'A patient tutor pal who walks you through ideas step by step.',
   systemPrompt:
     'You are Sage, a patient tutor. Explain step-by-step, encourage the learner, and check understanding with brief follow-up questions.',
   color: ['#3B2E0E', '#E8C97B'],
@@ -118,6 +137,8 @@ const PAL_SAGE: OnboardingPalDef = {
 
 const PAL_ECHO: OnboardingPalDef = {
   key: 'echo',
+  name: 'Echo',
+  description: 'A versatile roleplay companion pal who stays in character.',
   systemPrompt:
     "You are Echo, a versatile roleplay companion. Stay in character, describe scenes vividly, and follow the user's narrative cues.",
   color: ['#3B0E5E', '#C99BE0'],
@@ -145,6 +166,8 @@ const PAL_ECHO: OnboardingPalDef = {
 
 const PAL_MUSE: OnboardingPalDef = {
   key: 'muse',
+  name: 'Muse',
+  description: 'A creative writing pal who helps with prose, rhythm, and tone.',
   systemPrompt:
     "You are Muse, a creative writing pal. Offer vivid prose, varied rhythm, and constructive suggestions. Match the user's tone.",
   color: ['#5E0E3D', '#E0A0C9'],

@@ -2,11 +2,10 @@ import {renderHook, act} from '@testing-library/react-hooks';
 
 import {uiStore, palStore, modelStore} from '../../../store';
 import {defaultModels} from '../../../store/defaultModels';
-import {RECOMMENDED_PAL_MODEL_SET} from '../../../store/onboarding/recommendedPalModelSet';
+import {TOPIC_TO_PAL} from '../../../store/onboarding/onboardingPals';
 import {ROUTES} from '../../../utils/navigationConstants';
 import {useOnboardingHandlers} from '../useOnboardingHandlers';
 
-// Navigation mock — captured per test so each assertion sees a fresh spy set.
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
@@ -19,12 +18,14 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-const PICKED_ID = RECOMMENDED_PAL_MODEL_SET[0].modelId;
+const PIP_BALANCED_ID = TOPIC_TO_PAL.smartchat.models.find(m => m.recommended)!
+  .modelId;
+const CODIE_BALANCED_ID = TOPIC_TO_PAL.coding.models.find(m => m.recommended)!
+  .modelId;
 
 describe('useOnboardingHandlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset shared store state between tests.
     uiStore.hasCompletedOnboarding = false;
     uiStore.onboardingTopicsSnapshot = [];
     uiStore.onboardingState = {
@@ -32,15 +33,14 @@ describe('useOnboardingHandlers', () => {
       selectedTopic: null,
       selectedModelId: null,
     };
-    // Mock store mutators back to jest.fn() since some specs replace them.
     (uiStore.completeOnboarding as jest.Mock) = jest.fn();
     (uiStore.setOnboardingStep as jest.Mock) = jest.fn();
     (uiStore.setOnboardingTopic as jest.Mock) = jest.fn(key => {
       uiStore.onboardingState.selectedTopic = key;
     });
-    // Reset palStore.pals + spies.
     palStore.pals = [];
     (palStore.updatePal as jest.Mock).mockClear();
+    (palStore.createPal as jest.Mock).mockClear();
     (modelStore.checkSpaceAndDownload as jest.Mock).mockClear();
   });
 
@@ -87,7 +87,6 @@ describe('useOnboardingHandlers', () => {
     it('writes the picked topic and navigates to Onboarding6 in one handler', () => {
       const {result} = renderHook(() => useOnboardingHandlers(5));
       act(() => result.current.selectTopic('smartchat'));
-
       expect(uiStore.setOnboardingTopic).toHaveBeenCalledWith('smartchat');
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ONBOARDING.STEP_6);
     });
@@ -95,7 +94,6 @@ describe('useOnboardingHandlers', () => {
     it("the 'else' escape-hatch tap writes null but still navigates", () => {
       const {result} = renderHook(() => useOnboardingHandlers(5));
       act(() => result.current.selectTopic(null));
-
       expect(uiStore.setOnboardingTopic).toHaveBeenCalledWith(null);
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ONBOARDING.STEP_6);
     });
@@ -104,7 +102,7 @@ describe('useOnboardingHandlers', () => {
   describe('skip', () => {
     it('completeOnboarding with current topic + modelId=null; no pal/model writes', () => {
       uiStore.onboardingState.selectedTopic = 'smartchat';
-      uiStore.onboardingState.selectedModelId = PICKED_ID; // user picked but tapped Skip
+      uiStore.onboardingState.selectedModelId = PIP_BALANCED_ID;
       const {result} = renderHook(() => useOnboardingHandlers(4));
       act(() => result.current.skip());
 
@@ -113,26 +111,14 @@ describe('useOnboardingHandlers', () => {
         topic: 'smartchat',
         modelId: null,
       });
-      // Skip path does NOT bind a model or enqueue a download.
       expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
-    });
-
-    it('with no topic picked yet, passes null (default Skip on a Skip-able screen)', () => {
-      uiStore.onboardingState.selectedTopic = null;
-      const {result} = renderHook(() => useOnboardingHandlers(3));
-      act(() => result.current.skip());
-
-      expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topic: null,
-        modelId: null,
-      });
     });
   });
 
   describe('finish', () => {
-    it('binds Pip.defaultModel, completes onboarding, then enqueues download', () => {
-      // Seed Pip directly so finish() can find it.
+    it('topic=smartchat with existing Pip pal: rebinds defaultModel, then completes + downloads', async () => {
       palStore.pals = [
         {
           id: 'pip-id',
@@ -144,69 +130,83 @@ describe('useOnboardingHandlers', () => {
           capabilities: {},
         } as any,
       ];
-      uiStore.onboardingState.selectedModelId = PICKED_ID;
+      uiStore.onboardingState.selectedModelId = PIP_BALANCED_ID;
+      uiStore.onboardingState.selectedTopic = 'smartchat';
+
+      const {result} = renderHook(() => useOnboardingHandlers(6));
+      await act(async () => {
+        await result.current.finish();
+      });
+
+      expect(palStore.createPal).not.toHaveBeenCalled();
+      expect(palStore.updatePal).toHaveBeenCalledTimes(1);
+      const [palId, patch] = (palStore.updatePal as jest.Mock).mock.calls[0];
+      expect(palId).toBe('pip-id');
+      expect(patch.defaultModel?.id).toBe(PIP_BALANCED_ID);
+
+      expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
+        topic: 'smartchat',
+        modelId: PIP_BALANCED_ID,
+      });
+      expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
+        PIP_BALANCED_ID,
+      );
+    });
+
+    it('topic=coding with no Codie yet: materialises Codie from the pal def and binds the picked model', async () => {
+      palStore.pals = [];
+      uiStore.onboardingState.selectedModelId = CODIE_BALANCED_ID;
       uiStore.onboardingState.selectedTopic = 'coding';
 
       const {result} = renderHook(() => useOnboardingHandlers(6));
-      act(() => result.current.finish());
-
-      // Pip is bound to the picked model via PalStore.updatePal — the
-      // single writer for the Pip-defaultModel binding.
-      expect(palStore.updatePal).toHaveBeenCalledTimes(1);
-      const [palId, palPatch] = (palStore.updatePal as jest.Mock).mock.calls[0];
-      expect(palId).toBe('pip-id');
-      expect(palPatch.defaultModel?.id).toBe(PICKED_ID);
-
-      // 2. completeOnboarding runs with the picked modelId.
-      expect(uiStore.completeOnboarding).toHaveBeenCalledTimes(1);
-      expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topic: 'coding',
-        modelId: PICKED_ID,
+      await act(async () => {
+        await result.current.finish();
       });
 
-      // 3. Download is enqueued via the existing ModelStore API.
-      expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledTimes(1);
-      expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(PICKED_ID);
-
-      // Ordering invariant: updatePal must precede completeOnboarding
-      // (Pip-defaultModel persists before the flag flips), and
-      // completeOnboarding must precede checkSpaceAndDownload (download
-      // never starts on an in-flight onboarding state).
-      const updateOrder = (palStore.updatePal as jest.Mock).mock
-        .invocationCallOrder[0];
-      const completeOrder = (uiStore.completeOnboarding as jest.Mock).mock
-        .invocationCallOrder[0];
-      const downloadOrder = (modelStore.checkSpaceAndDownload as jest.Mock).mock
-        .invocationCallOrder[0];
-      expect(updateOrder).toBeLessThan(completeOrder);
-      expect(completeOrder).toBeLessThan(downloadOrder);
-    });
-
-    it('with no Pip pal seeded, still completes onboarding and enqueues download (Pip seed runs on next launch via PalStore.initialize)', () => {
-      palStore.pals = [];
-      uiStore.onboardingState.selectedModelId = PICKED_ID;
-      uiStore.onboardingState.selectedTopic = null;
-
-      const {result} = renderHook(() => useOnboardingHandlers(6));
-      act(() => result.current.finish());
+      expect(palStore.createPal).toHaveBeenCalledTimes(1);
+      const palData = (palStore.createPal as jest.Mock).mock.calls[0][0];
+      expect(palData.name).toBe('Codie');
+      expect(palData.systemPrompt).toBe(TOPIC_TO_PAL.coding.systemPrompt);
+      expect(palData.defaultModel?.id).toBe(CODIE_BALANCED_ID);
+      expect(palData.source).toBe('local');
 
       expect(palStore.updatePal).not.toHaveBeenCalled();
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topic: null,
-        modelId: PICKED_ID,
+        topic: 'coding',
+        modelId: CODIE_BALANCED_ID,
       });
-      expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(PICKED_ID);
+      expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
+        CODIE_BALANCED_ID,
+      );
     });
 
-    it('with selectedModelId=null, falls through to completeOnboarding(modelId:null) and skips download', () => {
+    it('topic=null falls back to Pip (the else→pip mapping)', async () => {
+      palStore.pals = [];
+      uiStore.onboardingState.selectedModelId = PIP_BALANCED_ID;
+      uiStore.onboardingState.selectedTopic = null;
+
+      const {result} = renderHook(() => useOnboardingHandlers(6));
+      await act(async () => {
+        await result.current.finish();
+      });
+
+      expect(palStore.createPal).toHaveBeenCalledTimes(1);
+      const palData = (palStore.createPal as jest.Mock).mock.calls[0][0];
+      expect(palData.name).toBe('Pip');
+    });
+
+    it('with selectedModelId=null, completes onboarding without touching the pal store or download queue', async () => {
       palStore.pals = [{id: 'pip-id', name: 'Pip', source: 'local'} as any];
       uiStore.onboardingState.selectedModelId = null;
       uiStore.onboardingState.selectedTopic = 'smartchat';
 
       const {result} = renderHook(() => useOnboardingHandlers(6));
-      act(() => result.current.finish());
+      await act(async () => {
+        await result.current.finish();
+      });
 
       expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
       expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
         topic: 'smartchat',
         modelId: null,
@@ -214,28 +214,12 @@ describe('useOnboardingHandlers', () => {
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
     });
 
-    it('with a selectedModelId that does NOT resolve in defaultModels, does not bind Pip and does not enqueue a download (defensive against catalogue drift)', () => {
-      palStore.pals = [{id: 'pip-id', name: 'Pip', source: 'local'} as any];
-      uiStore.onboardingState.selectedModelId = 'totally-unknown-id';
-      uiStore.onboardingState.selectedTopic = null;
-
-      const {result} = renderHook(() => useOnboardingHandlers(6));
-      act(() => result.current.finish());
-
-      expect(palStore.updatePal).not.toHaveBeenCalled();
-      // completeOnboarding sees modelId:null when picked is undefined
-      // (per `picked?.id ?? null` in finish()).
-      expect(uiStore.completeOnboarding).toHaveBeenCalledWith({
-        topic: null,
-        modelId: null,
-      });
-      expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
-    });
-
-    it('every RECOMMENDED_PAL_MODEL_SET id resolves in defaultModels (sanity guard for the finish path)', () => {
-      RECOMMENDED_PAL_MODEL_SET.forEach(entry => {
-        expect(defaultModels.find(m => m.id === entry.modelId)).toBeDefined();
-      });
+    it('every topic-pal modelId resolves in defaultModels (sanity guard against catalogue drift)', () => {
+      for (const pal of Object.values(TOPIC_TO_PAL)) {
+        for (const entry of pal.models) {
+          expect(defaultModels.find(m => m.id === entry.modelId)).toBeDefined();
+        }
+      }
     });
   });
 });

@@ -5,13 +5,16 @@ import {uiStore, palStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
 import {defaultModels} from '../../store/defaultModels';
+import {resolvePalForTopic} from '../../store/onboarding/onboardingPals';
+import type {Pal} from '../../types/pal';
 import type {OnboardingStep, TopicKey} from '../../store/onboarding/types';
 
 /**
  * Per-screen onboarding helpers: mark `currentStep` on mount, expose
  * `goNext` / `goBack` / `skip` / `finish` / `selectTopic` that route through
- * the single-writer methods on `uiStore` (and, on finish, bind the picked
- * model to the Pip pal and kick off the download via `modelStore`).
+ * the single-writer methods on `uiStore` (and, on finish, materialise the
+ * topic-matched local pal, bind the picked model, and kick off the download
+ * via `modelStore`).
  */
 export const useOnboardingHandlers = (step: OnboardingStep) => {
   const navigation = useNavigation<any>();
@@ -66,26 +69,47 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
     [goTo],
   );
 
-  const finish = useCallback(() => {
+  const finish = useCallback(async () => {
     const modelId = uiStore.onboardingState.selectedModelId;
     const topic = uiStore.onboardingState.selectedTopic;
-    if (modelId) {
-      const picked = defaultModels.find(m => m.id === modelId);
-      const pip = palStore.pals.find(
-        p => p.name === 'Pip' && p.source === 'local',
-      );
-      if (pip && picked) {
-        // Bind the picked model to Pip — survives restart per the
-        // idempotent-no-overwrite contract on initializePipPal.
-        palStore.updatePal(pip.id, {defaultModel: picked});
-      }
-      uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
+    if (!modelId) {
+      uiStore.completeOnboarding({topic, modelId: null});
+      return;
+    }
+    const picked = defaultModels.find(m => m.id === modelId);
+    const palDef = resolvePalForTopic(topic);
+    const existing = palStore.pals.find(
+      p => p.name === palDef.name && p.source === 'local',
+    );
+    if (existing) {
+      // Pip is auto-created at boot (back-compat); other topic pals
+      // may already exist if the user replays onboarding. In both
+      // cases, just rebind the picked model.
       if (picked) {
-        // Fire-and-forget; downloads surface via the existing Models screen.
-        modelStore.checkSpaceAndDownload(picked.id);
+        await palStore.updatePal(existing.id, {defaultModel: picked});
       }
     } else {
-      uiStore.completeOnboarding({topic, modelId: null});
+      // First time finishing with this topic — materialise the pal.
+      const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
+        type: 'local',
+        name: palDef.name,
+        description: palDef.description,
+        systemPrompt: palDef.systemPrompt,
+        isSystemPromptChanged: false,
+        useAIPrompt: false,
+        defaultModel: picked,
+        parameters: {},
+        parameterSchema: [],
+        capabilities: {},
+        color: palDef.color,
+        source: 'local',
+      };
+      await palStore.createPal(palData);
+    }
+    uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
+    if (picked) {
+      // Fire-and-forget; downloads surface via the existing Models screen.
+      modelStore.checkSpaceAndDownload(picked.id);
     }
   }, []);
 

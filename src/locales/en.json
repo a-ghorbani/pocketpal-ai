@@ -1374,28 +1374,34 @@
       "subtitle": "Pick what you’d like to discuss - we’ll match a pal that fits your phone."
     },
     "screen6": {
-      "title": "Pip",
-      "body": "We found perfect pal for you - a friendly everyday companion. Smart enough for most things, light enough for any phone.",
-      "cta": "Download Pip",
-      "ctaTemplate": "Download Pip ({{size}})",
+      "cta": "Download {{name}}",
+      "ctaTemplate": "Download {{name}} ({{size}})",
       "deviceRamSuffix": "GB RAM",
       "deviceFreeSuffix": "GB free",
       "recommended": "Recommended",
-      "model": {
-        "quick": {
-          "title": "Quick",
-          "subtitle": "Llama 3.2 1B · Q2_K"
-        },
-        "balanced": {
-          "title": "Balanced",
-          "subtitle": "Llama 3.2 1B · Q4_K_M"
-        },
-        "best": {
-          "title": "Best",
-          "subtitle": "Llama 3.2 1B · Q8_0"
-        }
+      "modelTier": {
+        "quick": "Quick",
+        "balanced": "Balanced",
+        "best": "Best"
       },
-      "subtitle": "Pip thinks using a small AI model on your phone - pick one that fits."
+      "subtitleTemplate": "{{name}} thinks using a small AI model on your phone - pick one that fits.",
+      "pal": {
+        "pip": {
+          "body": "We found a perfect pal for you - a friendly everyday companion. Smart enough for most things, light enough for any phone."
+        },
+        "codie": {
+          "body": "Meet Codie - your local pair-programmer. Reads code, writes code, explains tricky bits without ever leaving your phone."
+        },
+        "sage": {
+          "body": "Sage is patient, curious, and walks you through ideas step by step. A study buddy you keep in your pocket."
+        },
+        "echo": {
+          "body": "Echo is a versatile roleplay companion - stays in character, paints scenes, follows wherever your story leads."
+        },
+        "muse": {
+          "body": "Muse helps you write. Suggests phrasing, finds the rhythm, and keeps your tone intact."
+        }
+      }
     }
   }
 }
