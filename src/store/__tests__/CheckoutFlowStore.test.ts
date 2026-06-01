@@ -106,6 +106,22 @@ describe('CheckoutFlowStore', () => {
     expect(createSession).toHaveBeenCalledTimes(1);
   });
 
+  it('a press while browser_open is a no-op', async () => {
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('browser_open');
+    await checkoutFlowStore.start('pal-2');
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(openAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('non-https checkout_url -> error, auth session not opened', async () => {
+    createSession.mockResolvedValue({...session, checkout_url: 'http://x/c'});
+    await checkoutFlowStore.start('pal-1');
+    expect(openAuth).not.toHaveBeenCalled();
+    expect(checkoutFlowStore.status).toBe('error');
+  });
+
   describe('reconcile on success return', () => {
     beforeEach(async () => {
       checkoutFlowStore.start('pal-1'); // -> browser_open (session pending)

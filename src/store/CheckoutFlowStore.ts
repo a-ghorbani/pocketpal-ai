@@ -35,6 +35,15 @@ const CALLBACK_SCHEME = 'pocketpal';
 
 const RECONCILE_BACKOFFS_MS = [1000, 2000, 3000, 4000, 4000, 4000];
 
+// Defense-in-depth: only an https URL is ever handed to the auth session.
+const isHttpsUrl = (value: string): boolean => {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 class CheckoutFlowStore {
   status: CheckoutStatus = 'idle';
   palId: string | null = null;
@@ -49,8 +58,14 @@ class CheckoutFlowStore {
   }
 
   // True while a checkout is in flight; a new press is a no-op then.
+  // Includes browser_open so a second start cannot run while the auth
+  // session is presented.
   get isInFlight(): boolean {
-    return this.status === 'creating' || this.status === 'finalizing';
+    return (
+      this.status === 'creating' ||
+      this.status === 'browser_open' ||
+      this.status === 'finalizing'
+    );
   }
 
   private setStatus(status: CheckoutStatus) {
@@ -79,6 +94,9 @@ class CheckoutFlowStore {
         successUrl,
         cancelUrl,
       });
+      if (!isHttpsUrl(session.checkout_url)) {
+        throw new Error('checkout_url is not https');
+      }
       runInAction(() => {
         this.purchaseId = session.purchase_id;
         this.status = 'browser_open';

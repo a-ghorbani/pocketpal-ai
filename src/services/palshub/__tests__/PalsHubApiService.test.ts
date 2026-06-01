@@ -137,32 +137,47 @@ describe('PalsHubApiService', () => {
       });
     });
 
-    it.each([
-      [400, 'already_owned'],
-      [401, 401],
-      [404, 404],
-      [500, 500],
-    ])('maps HTTP %s to checkout error status %s', async (http, expected) => {
+    const mapStatus = async (http: number, body: object) => {
       const {palsHubApiService, PalsHubError} = loadService();
       // @ts-ignore
       global.fetch = jest.fn().mockResolvedValue({
         ok: false,
         status: http,
         statusText: 'err',
-        json: async () => ({error: 'nope'}),
+        json: async () => body,
       });
-
       const err = await palsHubApiService
         .createCheckoutSession('pal-1', {
           successUrl: 'https://host.test/app-return/success',
           cancelUrl: 'https://host.test/app-return/cancel',
         })
         .catch((e: unknown) => e);
-
       expect(err).toBeInstanceOf(PalsHubError);
-      expect((err as {details: {status: unknown}}).details.status).toBe(
-        expected,
+      return (err as {details: {status: unknown}}).details.status;
+    };
+
+    it.each([
+      [401, 401],
+      [404, 404],
+      [500, 500],
+    ])('maps HTTP %s to checkout error status %s', async (http, expected) => {
+      expect(await mapStatus(http, {error: 'nope'})).toBe(expected);
+    });
+
+    it('maps a 400 "already own" message to already_owned', async () => {
+      expect(await mapStatus(400, {error: 'You already own this pal'})).toBe(
+        'already_owned',
       );
+    });
+
+    it('maps a 400 with explicit already_owned code to already_owned', async () => {
+      expect(await mapStatus(400, {code: 'already_owned'})).toBe(
+        'already_owned',
+      );
+    });
+
+    it('maps an unrelated 400 to network, not already_owned', async () => {
+      expect(await mapStatus(400, {error: 'invalid request'})).toBe('network');
     });
 
     it('maps a fetch throw to network', async () => {

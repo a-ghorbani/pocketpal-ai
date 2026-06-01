@@ -397,12 +397,21 @@ class PalsHubApiService {
       });
     } catch (error) {
       if (error instanceof PalsHubError) {
-        const status = (error.details as {status?: number} | undefined)?.status;
+        const details = error.details as
+          | {status?: number; code?: string}
+          | undefined;
+        const status = details?.status;
         let errorStatus: CheckoutErrorStatus = 'network';
-        if (status === 400) {
-          errorStatus = 'already_owned';
-        } else if (status === 401 || status === 404 || status === 500) {
+        if (status === 401 || status === 404 || status === 500) {
           errorStatus = status;
+        } else if (
+          status === 400 &&
+          (details?.code === 'already_owned' ||
+            /already own/i.test(error.message ?? ''))
+        ) {
+          // Only an explicit "already own" 400 is success; other 400s
+          // (validation/contract errors) stay real checkout errors.
+          errorStatus = 'already_owned';
         }
         throw new PalsHubError(error.message, {status: errorStatus});
       }
