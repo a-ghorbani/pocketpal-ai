@@ -10,7 +10,6 @@ import type {Theme} from '../../../utils/types';
 import {uiStore} from '../../../store';
 import {L10nContext} from '../../../utils';
 import {OnboardingSkipButton} from './OnboardingSkipButton';
-import {OnboardingAudioButton} from './OnboardingAudioButton';
 
 export type OnboardingChromeStep =
   | 'splash'
@@ -64,11 +63,7 @@ const createStyles = (theme: Theme, topInset: number) =>
  * Per-step contract:
  *   - splash / unknown → hidden
  *   - 1..4             → Stepper(current=N) + Skip
- *   - 5                → no Stepper + Audio(screen5 text)
- *   - 6                → no Stepper + Audio(screen6 text)
- *
- * Screen-5's in-header Back chevron is NOT part of chrome — it stays
- * per-screen since it only appears on one screen.
+ *   - 5, 6             → no Stepper, no top-right action (audio not shipped yet)
  */
 export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
   observer(({step}) => {
@@ -94,22 +89,6 @@ export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
     let topRight: React.ReactNode = null;
     if (step >= 1 && step <= 4) {
       topRight = <OnboardingSkipButton label={t.skip} onPress={onSkip} />;
-    } else if (step === 5) {
-      topRight = (
-        <OnboardingAudioButton
-          titleText={t.screen5.title}
-          bodyText={t.screen5.body}
-          accessibilityLabel={t.audio}
-        />
-      );
-    } else if (step === 6) {
-      topRight = (
-        <OnboardingAudioButton
-          titleText={t.screen6.title}
-          bodyText={t.screen6.body}
-          accessibilityLabel={t.audio}
-        />
-      );
     }
 
     return (
