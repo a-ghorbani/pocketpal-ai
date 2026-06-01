@@ -58,21 +58,25 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
         authService.clearError();
 
         if (isSignUp) {
-          await authService.signUpWithEmail(
+          const ok = await authService.signUpWithEmail(
             email.trim(),
             password,
             fullName.trim(),
           );
-          Alert.alert(
-            'Account Created',
-            'Please check your email to verify your account.',
-            [{text: 'OK', onPress: onClose}],
-          );
+          if (ok) {
+            Alert.alert(
+              'Account Created',
+              'Please check your email to verify your account.',
+              [{text: 'OK', onPress: onClose}],
+            );
+          }
         } else {
-          await authService.signInWithEmail(email.trim(), password);
-          Alert.alert('Welcome Back!', 'You have successfully signed in.', [
-            {text: 'OK', onPress: onClose},
-          ]);
+          const ok = await authService.signInWithEmail(email.trim(), password);
+          if (ok) {
+            Alert.alert('Welcome Back!', 'You have successfully signed in.', [
+              {text: 'OK', onPress: onClose},
+            ]);
+          }
         }
       } catch (error) {
         const errorInfo = PalsHubErrorHandler.handle(error);
@@ -105,12 +109,14 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
 
       try {
         setIsLoading(true);
-        await authService.resetPassword(email.trim());
-        Alert.alert(
-          'Password Reset',
-          'Check your email for password reset instructions.',
-          [{text: 'OK'}],
-        );
+        const ok = await authService.resetPassword(email.trim());
+        if (ok) {
+          Alert.alert(
+            'Password Reset',
+            'Check your email for password reset instructions.',
+            [{text: 'OK'}],
+          );
+        }
       } catch (error) {
         const errorInfo = PalsHubErrorHandler.handle(error);
         Alert.alert('Error', errorInfo.userMessage);
