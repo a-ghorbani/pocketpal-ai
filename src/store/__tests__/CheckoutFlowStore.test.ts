@@ -8,9 +8,6 @@ jest.mock('../../services/palshub/PalsHubApiService', () => ({
 jest.mock('../../services', () => ({
   palsHubService: {checkPalOwnership: jest.fn()},
 }));
-jest.mock('../../utils/region', () => ({
-  getStorefrontCountryCode: jest.fn().mockResolvedValue('US'),
-}));
 
 jest.mock('../../specs/NativeAuthSession', () => ({
   __esModule: true,
@@ -19,13 +16,11 @@ jest.mock('../../specs/NativeAuthSession', () => ({
 
 import {palsHubApiService} from '../../services/palshub/PalsHubApiService';
 import {palsHubService} from '../../services';
-import {getStorefrontCountryCode} from '../../utils/region';
 import NativeAuthSession from '../../specs/NativeAuthSession';
 import {checkoutFlowStore} from '../CheckoutFlowStore';
 
 const createSession = palsHubApiService.createCheckoutSession as jest.Mock;
 const checkPalOwnership = palsHubService.checkPalOwnership as jest.Mock;
-const storefrontCountryCode = getStorefrontCountryCode as jest.Mock;
 const openAuth = (NativeAuthSession as unknown as {openAuth: jest.Mock})
   .openAuth;
 
@@ -70,25 +65,11 @@ describe('CheckoutFlowStore', () => {
       expect.objectContaining({
         successUrl: expect.stringContaining('/app-return/checkout/success'),
         cancelUrl: expect.stringContaining('/app-return/checkout/cancel'),
-        selectedCountryCode: 'US',
       }),
     );
     expect(openAuth).toHaveBeenCalledWith(session.checkout_url, 'pocketpal');
     expect(checkoutFlowStore.status).toBe('browser_open');
     expect(checkoutFlowStore.purchaseId).toBe('pur_1');
-  });
-
-  it('a country-code lookup failure omits the code and still creates the session', async () => {
-    storefrontCountryCode.mockRejectedValueOnce(
-      new Error('region unavailable'),
-    );
-    checkoutFlowStore.start('pal-1');
-    await flushMicrotasks();
-    expect(createSession).toHaveBeenCalledWith(
-      'pal-1',
-      expect.objectContaining({selectedCountryCode: undefined}),
-    );
-    expect(checkoutFlowStore.status).toBe('browser_open');
   });
 
   it('400 already owned -> owned without opening the auth session', async () => {
@@ -279,9 +260,6 @@ describe('CheckoutFlowStore — auth-session spec unavailable', () => {
     }));
     jest.doMock('../../services', () => ({
       palsHubService: {checkPalOwnership: jest.fn()},
-    }));
-    jest.doMock('../../utils/region', () => ({
-      getStorefrontCountryCode: jest.fn().mockResolvedValue('US'),
     }));
     jest.doMock('../../specs/NativeAuthSession', () => ({
       __esModule: true,

@@ -133,7 +133,6 @@ interface ApiMyPalsResponse {
 export interface CheckoutSessionRequest {
   successUrl: string;
   cancelUrl: string;
-  selectedCountryCode?: string;
 }
 
 export interface CheckoutSession {
@@ -381,18 +380,15 @@ class PalsHubApiService {
   // owned") is surfaced as a non-network error the caller treats as success.
   async createCheckoutSession(
     palId: string,
-    {successUrl, cancelUrl, selectedCountryCode}: CheckoutSessionRequest,
+    {successUrl, cancelUrl}: CheckoutSessionRequest,
   ): Promise<CheckoutSession> {
+    // Tax location is derived server-side from the billing address Stripe
+    // collects at checkout; the app sends no country hint.
     const body: Record<string, string> = {
       pal_id: palId,
       success_url: successUrl,
       cancel_url: cancelUrl,
     };
-    // Tax hint only; send alpha-2 codes, omit alpha-3 / null (server IP
-    // fallback handles those).
-    if (selectedCountryCode?.length === 2) {
-      body.selected_country_code = selectedCountryCode;
-    }
 
     try {
       return await this.apiRequest<CheckoutSession>('/api/mobile/purchases', {

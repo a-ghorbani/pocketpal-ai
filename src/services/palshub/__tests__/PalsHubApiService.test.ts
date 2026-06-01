@@ -137,52 +137,6 @@ describe('PalsHubApiService', () => {
       });
     });
 
-    it('includes selected_country_code only for alpha-2 codes', async () => {
-      const {palsHubApiService} = loadService();
-      // @ts-ignore
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ok: true, json: async () => session});
-
-      await palsHubApiService.createCheckoutSession('pal-1', {
-        successUrl: 'https://host.test/app-return/success',
-        cancelUrl: 'https://host.test/app-return/cancel',
-        selectedCountryCode: 'US',
-      });
-
-      const body = JSON.parse(
-        (global.fetch as jest.Mock).mock.calls[0][1].body,
-      );
-      expect(body.selected_country_code).toBe('US');
-    });
-
-    it('omits selected_country_code for alpha-3 ("USA") and undefined', async () => {
-      const {palsHubApiService} = loadService();
-      // @ts-ignore
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue({ok: true, json: async () => session});
-
-      await palsHubApiService.createCheckoutSession('pal-1', {
-        successUrl: 'https://host.test/app-return/success',
-        cancelUrl: 'https://host.test/app-return/cancel',
-        selectedCountryCode: 'USA',
-      });
-      await palsHubApiService.createCheckoutSession('pal-1', {
-        successUrl: 'https://host.test/app-return/success',
-        cancelUrl: 'https://host.test/app-return/cancel',
-      });
-
-      const body1 = JSON.parse(
-        (global.fetch as jest.Mock).mock.calls[0][1].body,
-      );
-      const body2 = JSON.parse(
-        (global.fetch as jest.Mock).mock.calls[1][1].body,
-      );
-      expect(body1.selected_country_code).toBeUndefined();
-      expect(body2.selected_country_code).toBeUndefined();
-    });
-
     it.each([
       [400, 'already_owned'],
       [401, 401],

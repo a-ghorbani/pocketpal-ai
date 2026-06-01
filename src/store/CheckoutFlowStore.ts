@@ -5,7 +5,6 @@ import {PALSHUB_API_BASE_URL} from '@env';
 import NativeAuthSession from '../specs/NativeAuthSession';
 import {palsHubApiService} from '../services/palshub/PalsHubApiService';
 import {palsHubService} from '../services';
-import {getStorefrontCountryCode} from '../utils/region';
 
 /**
  * CheckoutFlowStore
@@ -75,18 +74,10 @@ class CheckoutFlowStore {
     const successUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/success`;
     const cancelUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/cancel`;
 
-    let selectedCountryCode: string | undefined;
-    try {
-      selectedCountryCode = (await getStorefrontCountryCode()) ?? undefined;
-    } catch {
-      selectedCountryCode = undefined;
-    }
-
     try {
       const session = await palsHubApiService.createCheckoutSession(palId, {
         successUrl,
         cancelUrl,
-        selectedCountryCode,
       });
       runInAction(() => {
         this.purchaseId = session.purchase_id;
