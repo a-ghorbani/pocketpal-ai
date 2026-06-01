@@ -14,7 +14,7 @@ import {getFullThumbnailUri} from '../../../utils/imageUtils';
 import {Sheet} from '../../Sheet';
 import {createStyles} from './styles';
 
-import {palsHubService} from '../../../services';
+import {authService, palsHubService} from '../../../services';
 
 import {palStore, checkoutFlowStore} from '../../../store';
 
@@ -125,6 +125,11 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
         Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {});
         return;
       }
+      // Send the user to sign-in rather than a 401 error when logged out.
+      if (!authService.isAuthenticated) {
+        onSignInPress?.();
+        return;
+      }
       checkoutFlowStore.start(displayPal.id);
     };
 
@@ -167,7 +172,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
                 testID="checkout-signin-button"
                 mode="contained"
                 onPress={() => onSignInPress?.()}
-                style={styles.primaryButton}>
+                style={styles.errorButton}>
                 {l10n.palsScreen.palDetailSheet.signInAgain}
               </Button>
             )}

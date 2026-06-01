@@ -4,7 +4,7 @@ import {runInAction} from 'mobx';
 import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
-import {palsHubService} from '../../../../services';
+import {authService, palsHubService} from '../../../../services';
 import {palStore, checkoutFlowStore} from '../../../../store';
 import {
   createPalsHubPal,
@@ -75,6 +75,8 @@ describe('PalDetailSheet', () => {
     (palStore.downloadPalsHubPal as jest.Mock).mockResolvedValue(undefined);
     // Reset isUSRegion to false (default non-US)
     (palStore as any).isUSRegion = false;
+    // Default to logged-out; authenticated tests opt in explicitly.
+    (authService as any).isAuthenticated = false;
     // Reset checkout flow state between tests
     runInAction(() => {
       checkoutFlowStore.status = 'idle';
@@ -583,6 +585,7 @@ describe('PalDetailSheet', () => {
 
     it('starts the in-app checkout on iOS when buy button is pressed', async () => {
       (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
 
       const {getByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
@@ -600,6 +603,29 @@ describe('PalDetailSheet', () => {
         mockPremiumPalsHubPal.id,
       );
       expect(Linking.openURL).not.toHaveBeenCalled();
+    });
+
+    it('opens sign-in instead of checkout when logged out', async () => {
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = false;
+      const onSignInPress = jest.fn();
+
+      const {getByTestId} = render(
+        <PalDetailSheet
+          {...defaultProps}
+          pal={mockPremiumPalsHubPal}
+          onSignInPress={onSignInPress}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      expect(onSignInPress).toHaveBeenCalled();
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
     });
 
     it('does not show buy button for owned premium pals', async () => {

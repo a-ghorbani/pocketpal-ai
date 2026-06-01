@@ -174,6 +174,10 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       marginBottom: 12,
     },
+    errorButton: {
+      alignSelf: 'stretch',
+      marginTop: 8,
+    },
     errorContainer: {
       backgroundColor: theme.colors.errorContainer,
       borderRadius: 8,
