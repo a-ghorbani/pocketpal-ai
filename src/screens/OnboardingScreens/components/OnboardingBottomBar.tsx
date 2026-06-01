@@ -7,14 +7,14 @@ import {useTheme} from '../../../hooks';
 import type {Theme} from '../../../utils/types';
 
 export type OnboardingBottomBarProps = {
-  /** Visible label on the primary button. */
-  primaryLabel: string;
+  /** Visible label on the primary button. Omit for back-only bars. */
+  primaryLabel?: string;
   /** Trailing glyph appended to the primary label. Default: arrow. */
   primaryGlyph?: 'arrow-right' | 'download';
   /** Glyph position: 'leading' (left of label) or 'trailing' (right). */
   primaryGlyphPosition?: 'leading' | 'trailing';
   primaryDisabled?: boolean;
-  onPrimary: () => void;
+  onPrimary?: () => void;
   showBack?: boolean;
   onBack?: () => void;
   backAccessibilityLabel: string;
@@ -127,6 +127,7 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
         <ArrowRightGlyph width={13} height={13} fill={glyphColor} />
       </View>
     );
+  const hasPrimary = primaryLabel !== undefined && onPrimary !== undefined;
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
@@ -143,26 +144,28 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
             <ChevronLeftLgIcon width={6.5} height={11.5} />
           </Pressable>
         ) : null}
-        <Pressable
-          testID="onboarding-primary"
-          accessibilityRole="button"
-          accessibilityLabel={primaryLabel}
-          disabled={primaryDisabled}
-          onPress={onPrimary}
-          style={[
-            styles.primaryBtn,
-            primaryDisabled ? styles.primaryBtnDisabled : null,
-          ]}>
-          {primaryGlyphPosition === 'leading' ? glyph : null}
-          <Text
+        {hasPrimary ? (
+          <Pressable
+            testID="onboarding-primary"
+            accessibilityRole="button"
+            accessibilityLabel={primaryLabel}
+            disabled={primaryDisabled}
+            onPress={onPrimary}
             style={[
-              styles.primaryLabel,
-              primaryDisabled ? styles.primaryLabelDisabled : null,
+              styles.primaryBtn,
+              primaryDisabled ? styles.primaryBtnDisabled : null,
             ]}>
-            {primaryLabel}
-          </Text>
-          {primaryGlyphPosition === 'trailing' ? glyph : null}
-        </Pressable>
+            {primaryGlyphPosition === 'leading' ? glyph : null}
+            <Text
+              style={[
+                styles.primaryLabel,
+                primaryDisabled ? styles.primaryLabelDisabled : null,
+              ]}>
+              {primaryLabel}
+            </Text>
+            {primaryGlyphPosition === 'trailing' ? glyph : null}
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

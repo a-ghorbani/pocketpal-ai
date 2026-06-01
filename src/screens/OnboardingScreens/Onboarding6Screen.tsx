@@ -116,7 +116,6 @@ export const Onboarding6Screen: React.FC = observer(() => {
       }
       bottomBar={
         <OnboardingBottomBar
-          elevated
           primaryLabel={primaryLabel}
           primaryGlyph="download"
           primaryGlyphPosition="leading"

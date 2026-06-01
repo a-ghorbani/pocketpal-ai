@@ -9,6 +9,7 @@ import type {Theme} from '../../utils/types';
 import type {TopicKey} from '../../store/onboarding/types';
 import {FONT_FAMILIES} from '../../theme/tokens/typography';
 import {OnboardingScaffold} from './components/OnboardingScaffold';
+import {OnboardingBottomBar} from './components/OnboardingBottomBar';
 import {TopicChipGrid} from './components/TopicChipGrid';
 import {useOnboardingHandlers} from './useOnboardingHandlers';
 
@@ -41,16 +42,16 @@ const createStyles = (theme: Theme) => {
 };
 
 export const Onboarding5Screen: React.FC = observer(() => {
-  const {l10n, selectTopic} = useOnboardingHandlers(5);
+  const {l10n, selectTopic, goBack} = useOnboardingHandlers(5);
   const theme = useTheme();
   const styles = createStyles(theme);
   const t = l10n.onboarding;
   const selected = uiStore.onboardingState.selectedTopic;
   const labels = t.screen5.topic as Record<TopicKey, string>;
   const descriptions = t.screen5.topicDescription as Record<TopicKey, string>;
-  // Figma `884:28282` has no back button on screen 5 — the screen is
-  // dead-end forward (chip tap advances to screen 6). User can still
-  // exit via Skip in the persistent top chrome.
+  // Figma `884:28282` omits a back affordance, but the screen sits
+  // mid-flow — users need to be able to retreat to screens 2–4. Render
+  // a back-only bottom bar (no primary CTA: chips auto-advance).
   return (
     <OnboardingScaffold
       step={5}
@@ -69,7 +70,12 @@ export const Onboarding5Screen: React.FC = observer(() => {
           />
         </>
       }
-      bottomBar={null}
+      bottomBar={
+        <OnboardingBottomBar
+          onBack={goBack}
+          backAccessibilityLabel={t.back}
+        />
+      }
     />
   );
 });
