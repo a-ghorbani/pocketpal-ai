@@ -625,6 +625,15 @@
         "render_html": "Отображать HTML-документы встроенно в чате",
         "calculate": "Вычисление математических выражений",
         "datetime": "Получить текущую дату и время"
+      },
+      "greeting": {
+        "sectionLabel": "Приветствие",
+        "textLabel": "Приветственное сообщение",
+        "textPlaceholder": "Что должен сказать этот Pal в пустом чате?",
+        "suggestedPromptsLabel": "Предлагаемые промпты",
+        "addPromptButton": "Добавить промпт",
+        "promptPlaceholder": "Краткий промпт для чипа",
+        "removePromptLabel": "Удалить промпт"
       }
     },
     "lookiePalSheet": {
