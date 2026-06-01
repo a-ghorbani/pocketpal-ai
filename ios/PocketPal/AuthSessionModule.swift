@@ -66,7 +66,19 @@ class AuthSessionModule: NSObject, RCTBridgeModule {
 
             self.session = session
             self.contextProvider = contextProvider
-            session.start()
+
+            // start() returns false when the session cannot be presented
+            // (no anchor / already presenting). Without this the completion
+            // handler never fires and the JS promise hangs forever.
+            if !session.start() {
+                self.session = nil
+                self.contextProvider = nil
+                reject(
+                    "auth_start_failed",
+                    "ASWebAuthenticationSession failed to start",
+                    nil
+                )
+            }
         }
     }
 }
