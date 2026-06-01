@@ -1,7 +1,7 @@
 import React from 'react';
 import {Alert, Linking, Platform} from 'react-native';
 import {runInAction} from 'mobx';
-import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
+import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
 import {authService, palsHubService} from '../../../../services';
@@ -626,6 +626,37 @@ describe('PalDetailSheet', () => {
 
       expect(onSignInPress).toHaveBeenCalled();
       expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+    });
+
+    it('flips Buy to Download after the purchase reconciles to owned', async () => {
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
+      // Initially not owned -> buy button shows.
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId, queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      // Purchase reconciles to owned; the sheet re-reads ownership from the server.
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockOwnedPremiumPal,
+      );
+      await act(async () => {
+        runInAction(() => {
+          checkoutFlowStore.status = 'owned';
+        });
+      });
+
+      await waitFor(() => {
+        expect(queryByTestId('buy-button')).toBeNull();
+        expect(getByTestId('download-button')).toBeTruthy();
+      });
     });
 
     it('does not show buy button for owned premium pals', async () => {

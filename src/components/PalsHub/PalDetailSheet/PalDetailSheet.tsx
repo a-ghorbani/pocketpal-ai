@@ -47,6 +47,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
 
     // Use detailed pal information if available, otherwise fall back to basic pal
     const displayPal = detailedPal || pal;
+    const checkoutStatus = checkoutFlowStore.status;
 
     // Fetch detailed pal information when sheet opens
     useEffect(() => {
@@ -77,6 +78,17 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       fetchPalDetails();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pal, isVisible]);
+
+    // After a purchase reconciles to owned, re-read the pal so the Buy button
+    // flips to Download. Ownership stays server-derived (re-fetched, not written).
+    useEffect(() => {
+      if (checkoutStatus === 'owned' && pal) {
+        palsHubService
+          .getPal(pal.id)
+          .then(setDetailedPal)
+          .catch(() => {});
+      }
+    }, [checkoutStatus, pal]);
 
     if (!displayPal) {
       return null;
@@ -133,7 +145,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       checkoutFlowStore.start(displayPal.id);
     };
 
-    const checkoutStatus = checkoutFlowStore.status;
     const isCheckoutInFlight =
       checkoutStatus === 'creating' || checkoutStatus === 'finalizing';
 
