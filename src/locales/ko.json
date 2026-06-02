@@ -625,6 +625,15 @@
         "render_html": "채팅 내 HTML 문서 인라인 렌더링",
         "calculate": "수학 표현식 계산",
         "datetime": "현재 날짜와 시간 가져오기"
+      },
+      "greeting": {
+        "removePromptLabel": "프롬프트 제거",
+        "sectionLabel": "환영합니다",
+        "textLabel": "환영 메시지",
+        "textPlaceholder": "채팅 시작 전 이 Pal이 뭐라고 말해야 할까요?",
+        "suggestedPromptsLabel": "제안된 프롬프트",
+        "addPromptButton": "프롬프트 추가",
+        "promptPlaceholder": "칩에 대한 짧은 프롬프트"
       }
     },
     "lookiePalSheet": {
