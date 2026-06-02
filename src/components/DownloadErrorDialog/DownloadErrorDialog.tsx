@@ -36,15 +36,19 @@ export const DownloadErrorDialog: React.FC<DownloadErrorDialogProps> = ({
   const theme = useTheme();
   const l10n = React.useContext(L10nContext);
   const alerts = l10n.components.downloadErrorDialog;
+  const isHFCompatibleError =
+    error?.service === 'huggingface' || error?.service === 'hf_mirror';
 
   // Check if this is the case where token exists but is disabled
   const isTokenDisabledWhenAuthError =
     error?.code === 'authentication' &&
+    isHFCompatibleError &&
     hfStore.isTokenPresent &&
     !hfStore.useHfToken;
 
   const isTokenPresentWhenAuthError =
     error?.code === 'authentication' &&
+    isHFCompatibleError &&
     hfStore.isTokenPresent &&
     hfStore.useHfToken;
 
@@ -60,6 +64,9 @@ export const DownloadErrorDialog: React.FC<DownloadErrorDialogProps> = ({
     }
 
     if (error.code === 'authentication') {
+      if (!isHFCompatibleError) {
+        return 'other';
+      }
       if (error.message?.includes('Token is missing')) {
         return 'noToken';
       }
@@ -146,12 +153,13 @@ export const DownloadErrorDialog: React.FC<DownloadErrorDialogProps> = ({
 
   const getActions = () => {
     const actions: DialogAction[] = [];
+    const sourceUrl = model?.sourceWebUrl || model?.hfUrl;
 
-    if (model?.hfUrl && !isTokenDisabledWhenAuthError && !notEnoughSpace) {
+    if (sourceUrl && !isTokenDisabledWhenAuthError && !notEnoughSpace) {
       actions.push({
-        label: alerts.viewOnHuggingFace,
+        label: alerts.viewOnSource,
         onPress: () => {
-          Linking.openURL(model.hfUrl);
+          Linking.openURL(sourceUrl);
         },
         mode: 'text' as const,
       });

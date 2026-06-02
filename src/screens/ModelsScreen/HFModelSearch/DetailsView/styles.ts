@@ -35,8 +35,29 @@ export const createStyles = (theme: Theme) =>
       marginBottom: 6,
       gap: 8,
     },
+    avatarContainer: {
+      width: 34,
+      height: 34,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.colors.outline,
+    },
+    avatar: {
+      width: 34,
+      height: 34,
+    },
+    avatarText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.onSurfaceVariant,
+    },
     modelAuthor: {
       marginBottom: 0,
+      flexShrink: 1,
     },
     titleContainer: {
       marginBottom: 10,
@@ -48,6 +69,11 @@ export const createStyles = (theme: Theme) =>
     },
     modelTitle: {
       fontWeight: 'bold',
+    },
+    modelDescription: {
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: 10,
+      lineHeight: 18,
     },
     modelStats: {
       flexDirection: 'row',
@@ -76,5 +102,20 @@ export const createStyles = (theme: Theme) =>
       marginTop: 12,
       marginBottom: 4,
       color: theme.colors.onSurfaceVariant,
+    },
+    emptyStateContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 32,
+      paddingHorizontal: 16,
+      gap: 8,
+    },
+    emptyStateText: {
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    errorText: {
+      color: theme.colors.error,
+      textAlign: 'center',
     },
   });

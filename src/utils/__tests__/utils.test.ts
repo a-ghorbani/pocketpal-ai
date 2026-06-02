@@ -345,4 +345,178 @@ describe('hfAsModel', () => {
 
     expect(model.repo).toBe('');
   });
+
+  it('should preserve official HF ids and scope mirror ids', () => {
+    const mirrorModel = {
+      ...mockHFModel1,
+      source: 'hf_mirror',
+      sourceRepoId: mockHFModel1.id,
+    };
+
+    const official = hfAsModel(mockHFModel1, mockHFModelFiles1[0]);
+    const mirror = hfAsModel(mirrorModel, mockHFModelFiles1[0]);
+
+    expect(official.id).toBe(
+      `${mockHFModel1.id}/${mockHFModelFiles1[0].rfilename}`,
+    );
+    expect(mirror.id).toBe(
+      `hf_mirror:${mockHFModel1.id}/${mockHFModelFiles1[0].rfilename}`,
+    );
+    expect(mirror.source).toBe('hf_mirror');
+    expect(mirror.origin).toBe('hf_mirror');
+  });
+
+  it('should use the first GGUF split as the loadable model entry', () => {
+    const splitFile = {
+      rfilename: 'model-Q2_K.gguf-00001-of-00002.gguf',
+      size: 300,
+      url: 'https://example.com/model-Q2_K.gguf-00001-of-00002.gguf',
+      split: {
+        entryRFilename: 'model-Q2_K.gguf-00001-of-00002.gguf',
+        displayRFilename: 'model-Q2_K.gguf',
+        totalSize: 300,
+        totalParts: 2,
+        parts: [
+          {
+            rfilename: 'model-Q2_K.gguf-00001-of-00002.gguf',
+            index: 1,
+            total: 2,
+            size: 100,
+            url: 'https://example.com/model-Q2_K.gguf-00001-of-00002.gguf',
+          },
+          {
+            rfilename: 'model-Q2_K.gguf-00002-of-00002.gguf',
+            index: 2,
+            total: 2,
+            size: 200,
+            url: 'https://example.com/model-Q2_K.gguf-00002-of-00002.gguf',
+          },
+        ],
+      },
+    };
+
+    const model = hfAsModel(mockHFModel1, splitFile);
+
+    expect(model.id).toBe(
+      `${mockHFModel1.id}/model-Q2_K.gguf-00001-of-00002.gguf`,
+    );
+    expect(model.filename).toBe('model-Q2_K.gguf-00001-of-00002.gguf');
+    expect(model.name).toBe('model-Q2_K');
+    expect(model.splitDownload?.parts).toHaveLength(2);
+  });
+});
+
+describe('normalizeGGUFModelFiles', () => {
+  const {
+    normalizeGGUFModelFiles,
+    normalizeModelSiblings,
+    isShardedGGUFFile,
+    isValidGGUFFile,
+  } = require('../hf');
+
+  it('aggregates complete GGUF split sets into one logical file', () => {
+    const files = normalizeGGUFModelFiles([
+      {rfilename: 'Q2_K/model.gguf-00002-of-00002.gguf', size: 20},
+      {rfilename: 'Q2_K/model.gguf-00001-of-00002.gguf', size: 10},
+      {rfilename: 'README.md', size: 1},
+    ]);
+
+    expect(files).toHaveLength(1);
+    expect(files[0].rfilename).toBe('Q2_K/model.gguf-00001-of-00002.gguf');
+    expect(files[0].size).toBe(30);
+    expect(files[0].split.displayRFilename).toBe('Q2_K/model.gguf');
+    expect(files[0].split.parts.map((part: any) => part.index)).toEqual([1, 2]);
+  });
+
+  it('does not expose incomplete GGUF split sets', () => {
+    const files = normalizeGGUFModelFiles([
+      {rfilename: 'model.gguf-00001-of-00002.gguf', size: 10},
+    ]);
+
+    expect(files).toEqual([]);
+  });
+
+  it('adds source URLs to each split part', () => {
+    const files = normalizeModelSiblings('owner/repo', [
+      {rfilename: 'model.gguf-00001-of-00002.gguf', size: 10},
+      {rfilename: 'model.gguf-00002-of-00002.gguf', size: 20},
+    ]);
+
+    expect(files).toHaveLength(1);
+    expect(files[0].url).toContain('model.gguf-00001-of-00002.gguf');
+    expect(files[0].split.parts[1].url).toContain(
+      'model.gguf-00002-of-00002.gguf',
+    );
+  });
+
+  it('preserves already aggregated split metadata when normalizing again', () => {
+    const files = normalizeGGUFModelFiles([
+      {
+        rfilename: 'model.gguf-00001-of-00002.gguf',
+        size: 30,
+        split: {
+          entryRFilename: 'model.gguf-00001-of-00002.gguf',
+          displayRFilename: 'model.gguf',
+          totalSize: 30,
+          totalParts: 2,
+          parts: [
+            {
+              rfilename: 'model.gguf-00001-of-00002.gguf',
+              index: 1,
+              total: 2,
+              size: 10,
+            },
+            {
+              rfilename: 'model.gguf-00002-of-00002.gguf',
+              index: 2,
+              total: 2,
+              size: 20,
+            },
+          ],
+        },
+      },
+    ]);
+
+    expect(files).toHaveLength(1);
+    expect(files[0].rfilename).toBe('model.gguf-00001-of-00002.gguf');
+    expect(files[0].size).toBe(30);
+    expect(files[0].split.parts).toHaveLength(2);
+  });
+
+  it('recognizes split GGUF files without treating individual parts as single-file models', () => {
+    expect(isShardedGGUFFile('model.gguf-00001-of-00002.gguf')).toBe(true);
+    expect(isValidGGUFFile('model.gguf-00001-of-00002.gguf')).toBe(false);
+    expect(isValidGGUFFile('model.Q4_K_M.gguf')).toBe(true);
+  });
+
+  it('uses final split model size for required download space', () => {
+    const {getSplitDownloadRequiredSpace} = require('../hf');
+
+    expect(
+      getSplitDownloadRequiredSpace({
+        rfilename: 'model.gguf-00001-of-00002.gguf',
+        size: 300,
+        split: {
+          entryRFilename: 'model.gguf-00001-of-00002.gguf',
+          displayRFilename: 'model.gguf',
+          totalSize: 300,
+          totalParts: 2,
+          parts: [
+            {
+              rfilename: 'model.gguf-00001-of-00002.gguf',
+              index: 1,
+              total: 2,
+              size: 100,
+            },
+            {
+              rfilename: 'model.gguf-00002-of-00002.gguf',
+              index: 2,
+              total: 2,
+              size: 200,
+            },
+          ],
+        },
+      }),
+    ).toBe(300);
+  });
 });

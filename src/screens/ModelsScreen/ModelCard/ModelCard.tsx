@@ -122,7 +122,10 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     const isActiveModel = activeModelId === model.id;
     const isDownloaded = model.isDownloaded;
     const isDownloading = modelStore.isDownloading(model.id);
-    const isHfModel = model.origin === ModelOrigin.HF;
+    const isHfModel =
+      model.origin === ModelOrigin.HF ||
+      model.origin === ModelOrigin.HF_MIRROR ||
+      model.origin === ModelOrigin.MODELSCOPE;
     const isRemoteModel = model.origin === ModelOrigin.REMOTE;
 
     // Check projection model status for downloaded vision models
@@ -221,14 +224,15 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       }
     }, [model, l10n]);
 
-    const openHuggingFaceUrl = useCallback(() => {
-      if (model.hfUrl) {
-        Linking.openURL(model.hfUrl).catch(err => {
+    const openSourceUrl = useCallback(() => {
+      const sourceUrl = model.sourceWebUrl || model.hfUrl;
+      if (sourceUrl) {
+        Linking.openURL(sourceUrl).catch(err => {
           console.error('Failed to open URL:', err);
           setSnackbarVisible(true);
         });
       }
-    }, [model.hfUrl]);
+    }, [model.hfUrl, model.sourceWebUrl]);
 
     const handleRemove = useCallback(() => {
       Alert.alert(
@@ -905,11 +909,11 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   </TouchableOpacity>
                 )}
 
-                {/* HuggingFace Link */}
-                {model.hfUrl && (
+                {/* Source Link */}
+                {(model.sourceWebUrl || model.hfUrl) && (
                   <TouchableOpacity
                     testID="open-huggingface-url"
-                    onPress={openHuggingFaceUrl}
+                    onPress={openSourceUrl}
                     style={styles.hfLinkButton}
                     activeOpacity={0.7}>
                     <View style={styles.hfLinkContent}>
@@ -919,10 +923,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                         stroke={theme.colors.primary}
                       />
                       <Text style={styles.hfLinkText}>
-                        {
-                          l10n.models.modelCard.labels
-                            .viewModelCardOnHuggingFace
-                        }
+                        {l10n.models.modelCard.labels.viewModelCardOnSource}
                       </Text>
                     </View>
                   </TouchableOpacity>

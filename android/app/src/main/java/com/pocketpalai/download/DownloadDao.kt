@@ -25,4 +25,7 @@ interface DownloadDao {
 
     @Query("UPDATE downloads SET status = :status, error = :error WHERE id = :downloadId")
     suspend fun updateStatus(downloadId: String, status: DownloadStatus, error: String? = null)
-} 
+
+    @Query("UPDATE downloads SET authToken = NULL, requestHeaders = NULL WHERE id = :downloadId")
+    suspend fun clearSensitiveHeaders(downloadId: String)
+}

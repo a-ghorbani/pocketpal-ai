@@ -4,6 +4,10 @@
 
 import axios from 'axios';
 import {uiStore} from '../store/UIStore';
+import {
+  LLAMA_NATIVE_BINDINGS_UNAVAILABLE_MESSAGE,
+  isLlamaJsiBindingsError,
+} from './llamaErrors';
 /**
  * NetworkError - Used for connectivity-related errors
  * Examples: No internet connection, timeout, etc.
@@ -49,7 +53,7 @@ export interface ErrorState {
     | 'server'
     | 'multimodal'
     | 'unknown';
-  service?: 'huggingface' | 'firebase' | 'localapi';
+  service?: 'huggingface' | 'hf_mirror' | 'modelscope' | 'firebase' | 'localapi';
   message: string;
   context: 'search' | 'download' | 'modelDetails' | 'chat' | 'modelInit';
   recoverable: boolean;
@@ -75,8 +79,17 @@ export function createErrorState(
   let message = l10nObject.errors.unexpectedError;
   let recoverable = true;
   let errorService = service;
+  const isModelSourceService = () =>
+    errorService === 'huggingface' ||
+    errorService === 'hf_mirror' ||
+    errorService === 'modelscope';
 
-  if (axios.isAxiosError(error)) {
+  if (isLlamaJsiBindingsError(error)) {
+    message =
+      l10nObject.errors.modelNativeBindingError ||
+      LLAMA_NATIVE_BINDINGS_UNAVAILABLE_MESSAGE;
+    recoverable = false;
+  } else if (axios.isAxiosError(error)) {
     const statusCode = error.response?.status;
 
     // Check URL to determine service if not explicitly provided
@@ -84,13 +97,16 @@ export function createErrorState(
       const url = error.config?.url || '';
       if (url.includes('huggingface.co') || url.includes('hf.co')) {
         errorService = 'huggingface';
+      } else if (url.includes('hf-mirror.com')) {
+        errorService = 'hf_mirror';
+      } else if (url.includes('modelscope.cn')) {
+        errorService = 'modelscope';
       }
     }
-
     if (statusCode === 401) {
       code = 'authentication';
       message =
-        errorService === 'huggingface'
+        isModelSourceService()
           ? context === 'search'
             ? l10nObject.errors.hfAuthenticationErrorSearch
             : l10nObject.errors.hfAuthenticationError
@@ -98,25 +114,25 @@ export function createErrorState(
     } else if (statusCode === 403) {
       code = 'authorization';
       message =
-        errorService === 'huggingface'
+        isModelSourceService()
           ? l10nObject.errors.hfAuthorizationError
           : l10nObject.errors.authorizationError;
     } else if (statusCode && statusCode >= 500) {
       code = 'server';
       message =
-        errorService === 'huggingface'
+        isModelSourceService()
           ? l10nObject.errors.hfServerError
           : l10nObject.errors.serverError;
     } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
       code = 'network';
       message =
-        errorService === 'huggingface'
+        isModelSourceService()
           ? l10nObject.errors.hfNetworkTimeout
           : l10nObject.errors.networkTimeout;
     } else if (error.code === 'ERR_NETWORK') {
       code = 'network';
       message =
-        errorService === 'huggingface'
+        isModelSourceService()
           ? l10nObject.errors.hfNetworkError
           : l10nObject.errors.networkError;
     }
@@ -138,19 +154,19 @@ export function createErrorState(
         if (statusCode === 401) {
           code = 'authentication';
           message =
-            errorService === 'huggingface'
+            isModelSourceService()
               ? l10nObject.errors.hfAuthenticationError
               : l10nObject.errors.authenticationError;
         } else if (statusCode === 403) {
           code = 'authorization';
           message =
-            errorService === 'huggingface'
+            isModelSourceService()
               ? l10nObject.errors.hfAuthorizationError
               : l10nObject.errors.authorizationError;
         } else if (statusCode >= 500) {
           code = 'server';
           message =
-            errorService === 'huggingface'
+            isModelSourceService()
               ? l10nObject.errors.hfServerError
               : l10nObject.errors.serverError;
         } else {

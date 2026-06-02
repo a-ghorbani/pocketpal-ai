@@ -197,7 +197,9 @@
       "unknownGroup": "Unbekannt",
       "availableToUse": "Startklar",
       "availableToDownload": "Download verfügbar",
-      "useAddButtonForMore": "Nutze + Taste um weitere Modelle zu finden"
+      "useAddButtonForMore": "Nutze + Taste um weitere Modelle zu finden",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "Bilderfassung",
     "mmproj": "Projector",
@@ -243,13 +245,18 @@
     "buttons": {
       "addFromHuggingFace": "Von Hugging Face hinzufügen",
       "addLocalModel": "Lokales Modell hinzufügen",
-      "reset": "Zurücksetzen"
+      "reset": "Zurücksetzen",
+      "addFromModelSources": "Modell herunterladen"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face Modelle",
       "menuTitleDownloaded": "Heruntergeladene Modelle",
       "menuTitleGrouped": "Nach Modelltyp gruppieren",
-      "menuTitleReset": "Modellliste zurücksetzen"
+      "menuTitleReset": "Modellliste zurücksetzen",
+      "filtersGroup": "Filter",
+      "viewGroup": "Ansicht",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Modelle"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Zurücksetzen ausführen",
@@ -298,7 +305,7 @@
     "search": {
       "noResults": "Keine Modelle gefunden",
       "loadingMore": "Mehr laden...",
-      "searchPlaceholder": "Suche Hugging Face Modelle",
+      "searchPlaceholder": "Modell-Repositories suchen",
       "modelUpdatedLong": "Vor {{time}} geupdated",
       "modelUpdatedShort": "vor {{time}}",
       "modelUpdatedJustNowLong": "Soeben geupdated",
@@ -315,6 +322,13 @@
         "sortDownloads": "Downloads",
         "sortRecent": "Kürzlich aktualisiert",
         "sortLikes": "Am beliebtesten"
+      },
+      "source": "Quelle",
+      "sourceTitle": "Download-Quelle",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -341,7 +355,8 @@
         "author": "Autor",
         "requiresProjectionModel": "Benötigt Projection Modell",
         "downloadProjectionModel": "Projection Modell herunterladen",
-        "viewModelCardOnHuggingFace": "Model Card auf Hugging Face anschauen"
+        "viewModelCardOnHuggingFace": "Model Card auf Hugging Face anschauen",
+        "viewModelCardOnSource": "Modellquelle anzeigen"
       },
       "accessibility": {
         "expandDetails": "Details erweitern",
@@ -671,7 +686,8 @@
       "enableAndRetry": "Aktivieren und erneut versuchen",
       "goToSettings": "Gehen Sie zu Einstellungen",
       "tryAgain": "Erneut versuchen",
-      "viewOnHuggingFace": "Modell auf HF anzeigen ↗"
+      "viewOnHuggingFace": "Modell auf HF anzeigen ↗",
+      "viewOnSource": "Modellquelle anzeigen ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Löschen des Chat",
@@ -722,7 +738,11 @@
       "menuTitleHf": "Hugging Face Modelle",
       "menuTitleDownloaded": "Heruntergeladene Modelle",
       "menuTitleGrouped": "Nach Modelltyp gruppieren",
-      "menuTitleReset": "Modellliste zurücksetzen"
+      "menuTitleReset": "Modellliste zurücksetzen",
+      "filtersGroup": "Filter",
+      "viewGroup": "Ansicht",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Modelle"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Zurücksetzen ausführen",

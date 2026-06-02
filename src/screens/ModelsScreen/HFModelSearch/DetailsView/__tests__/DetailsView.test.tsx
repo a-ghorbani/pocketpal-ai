@@ -7,11 +7,17 @@ import {
 } from '../../../../../../jest/fixtures/models';
 import {formatNumber, timeAgo} from '../../../../../utils';
 import {l10n} from '../../../../../locales';
+import {hfStore} from '../../../../../store';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});
 
 describe('DetailsView', () => {
+  beforeEach(() => {
+    hfStore.error = null;
+    hfStore.modelDetailsLoading = false;
+  });
+
   it('renders basic model information', () => {
     const {getByText} = render(<DetailsView hfModel={mockHFModel1} />);
 
@@ -51,5 +57,15 @@ describe('DetailsView', () => {
       expect(getByTestId(`model-file-card-${file.rfilename}`)).toBeDefined();
       expect(getByTestId(`model-file-name-${file.rfilename}`)).toBeDefined();
     });
+  });
+
+  it('renders loading state while model file details are loading', () => {
+    hfStore.modelDetailsLoading = true;
+
+    const {getByText} = render(
+      <DetailsView hfModel={{...mockHFModel1, siblings: []}} />,
+    );
+
+    expect(getByText(l10n.en.models.search.loadingMore)).toBeDefined();
   });
 });

@@ -18,6 +18,7 @@ import {ModelFileCard} from '../ModelFileCard';
 import {downloadManager} from '../../../../../../services/downloads';
 
 import {modelStore} from '../../../../../../store';
+import {hfAsModel} from '../../../../../../utils';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});
@@ -164,6 +165,65 @@ describe('ModelFileCard', () => {
       'Delete Model',
       'Are you sure you want to delete this downloaded model?',
       expect.any(Array),
+    );
+  });
+
+  it('does not treat another source file with the same oid as bookmarked', async () => {
+    const mirrorModel = hfAsModel(
+      {
+        ...mockHFModel1,
+        source: 'hf_mirror',
+        sourceRepoId: mockHFModel1.id,
+        url: 'https://hf-mirror.com/owner/hf-model-name-1',
+      },
+      mockHFModel1.siblings[0],
+    );
+    modelStore.models = [mirrorModel];
+
+    const {getByTestId} = render(
+      <ModelFileCard
+        modelFile={mockHFModel1.siblings[0]}
+        hfModel={mockHFModel1}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('bookmark-button'));
+    });
+
+    expect(modelStore.removeModelFromList).not.toHaveBeenCalled();
+    expect(modelStore.addHFModel).toHaveBeenCalledWith(
+      mockHFModel1,
+      mockHFModel1.siblings[0],
+    );
+  });
+
+  it('does not treat different files without oid as the same model', async () => {
+    const firstFile = {
+      rfilename: 'model-a.gguf',
+      size: 1000,
+      canFitInStorage: true,
+    };
+    const secondFile = {
+      rfilename: 'model-b.gguf',
+      size: 1000,
+      canFitInStorage: true,
+    };
+    const storeModel = hfAsModel(mockHFModel1, firstFile);
+    modelStore.models = [storeModel];
+
+    const {getByTestId} = render(
+      <ModelFileCard modelFile={secondFile} hfModel={mockHFModel1} />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('bookmark-button'));
+    });
+
+    expect(modelStore.removeModelFromList).not.toHaveBeenCalled();
+    expect(modelStore.addHFModel).toHaveBeenCalledWith(
+      mockHFModel1,
+      secondFile,
     );
   });
 });

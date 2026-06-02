@@ -3,13 +3,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
-import {fetchGGUFSpecs, fetchModelFilesDetails, fetchModels} from '../api/hf';
+import {
+  fetchGGUFSpecsFromSource,
+  fetchModelFilesDetailsFromSource,
+  fetchModelsFromSource,
+} from '../api/modelSources';
 
-import {hasEnoughSpace, hfAsModel} from '../utils';
-import {processHFSearchResults} from '../utils/hf';
+import {
+  createSiblingsFromFileDetails,
+  hasEnoughSpace,
+  hfAsModel,
+} from '../utils';
 import {ErrorState, createErrorState} from '../utils/errors';
 
-import {HuggingFaceModel} from '../utils/types';
+import {HuggingFaceModel, ModelSourceId} from '../utils/types';
 
 // Service name for keychain storage
 const HF_TOKEN_SERVICE = 'hf_token_service';
@@ -30,12 +37,20 @@ class HFStore {
   private lastFetchedNextLink: string | null = null;
   private lastFetchMoreAttempt: number = 0;
   private consecutiveSmallResults: number = 0;
+  private searchRequestId = 0;
+  private fetchMoreRequestId = 0;
+  private activeSearchRequestId = 0;
+  private activeFetchMoreRequestId = 0;
+  private modelDetailsRequestId = 0;
+  modelDetailsLoading = false;
+  private activeModelDetailsId: string | null = null;
   searchQuery = '';
   queryFilter = 'gguf,conversational';
   queryFull = true;
   queryConfig = true;
   hfToken: string | null = null;
   useHfToken: boolean = true; // Only applies when token is set
+  selectedSource: ModelSourceId = 'huggingface';
 
   // search filters
   searchFilters: SearchFilters = {
@@ -48,7 +63,7 @@ class HFStore {
 
     makePersistable(this, {
       name: 'HFStore',
-      properties: ['useHfToken'],
+      properties: ['useHfToken', 'selectedSource'],
       storage: AsyncStorage,
     });
 
@@ -79,6 +94,27 @@ class HFStore {
 
   get shouldUseToken(): boolean {
     return this.isTokenPresent && this.useHfToken;
+  }
+
+  get shouldUseTokenForSelectedSource(): boolean {
+    return this.shouldUseTokenForSource(this.selectedSource);
+  }
+
+  setSelectedSource(source: ModelSourceId) {
+    runInAction(() => {
+      this.selectedSource = source;
+      this.models = [];
+      this.nextPageLink = null;
+      this.error = null;
+      this.lastFetchedNextLink = null;
+      this.consecutiveSmallResults = 0;
+      this.lastFetchMoreAttempt = 0;
+      this.searchRequestId++;
+      this.fetchMoreRequestId++;
+      this.isLoading = false;
+      this.activeModelDetailsId = null;
+      this.modelDetailsLoading = false;
+    });
   }
 
   setUseHfToken(useToken: boolean) {
@@ -159,12 +195,57 @@ class HFStore {
     this.error = null;
   }
 
+  private isCurrentSearchRequest(
+    requestId: number,
+    source: ModelSourceId,
+    searchQuery: string,
+    filters: SearchFilters,
+  ) {
+    return (
+      requestId === this.searchRequestId &&
+      source === this.selectedSource &&
+      searchQuery === this.searchQuery &&
+      filters.author === this.searchFilters.author &&
+      filters.sortBy === this.searchFilters.sortBy
+    );
+  }
+
+  private isCurrentFetchMoreRequest(
+    requestId: number,
+    source: ModelSourceId,
+    nextPageLink: string,
+  ) {
+    return (
+      requestId === this.fetchMoreRequestId &&
+      source === this.selectedSource &&
+      nextPageLink === this.lastFetchedNextLink
+    );
+  }
+
+  private isCurrentModelDetailsRequest(requestId?: number, modelId?: string) {
+    return (
+      requestId === undefined ||
+      (requestId === this.modelDetailsRequestId &&
+        (!modelId || modelId === this.activeModelDetailsId))
+    );
+  }
+
   // Fetch the GGUF specs for a specific model,
   // such as number of parameters, context length, chat template, etc.
-  async fetchAndSetGGUFSpecs(modelId: string) {
+  async fetchAndSetGGUFSpecs(modelId: string, requestId?: number) {
     try {
-      const authToken = this.shouldUseToken ? this.hfToken : null;
-      const specs = await fetchGGUFSpecs(modelId, authToken);
+      const source = this.getSourceForModelId(modelId);
+      const authToken = this.shouldUseTokenForSource(source)
+        ? this.hfToken
+        : null;
+      const specs = await fetchGGUFSpecsFromSource({
+        source,
+        modelId,
+        authToken,
+      });
+      if (!this.isCurrentModelDetailsRequest(requestId, modelId)) {
+        return;
+      }
       const model = this.models.find(m => m.id === modelId);
       if (model) {
         runInAction(() => {
@@ -172,9 +253,16 @@ class HFStore {
         });
       }
     } catch (error) {
+      if (!this.isCurrentModelDetailsRequest(requestId, modelId)) {
+        return;
+      }
       console.error('Failed to fetch GGUF specs:', error);
       runInAction(() => {
-        this.error = createErrorState(error, 'modelDetails', 'huggingface');
+        this.error = createErrorState(
+          error,
+          'modelDetails',
+          this.getSourceForModelId(modelId),
+        );
       });
     }
   }
@@ -197,6 +285,7 @@ class HFStore {
           size: details.size,
           oid: details.oid,
           lfs: details.lfs,
+          split: details.split || file.split,
         };
 
         return {
@@ -208,14 +297,43 @@ class HFStore {
   }
 
   // Fetch the details (sizes, oid, lfs, ...) of the model files
-  async fetchModelFileDetails(modelId: string) {
+  async fetchModelFileDetails(modelId: string, requestId?: number) {
     try {
       console.log('Fetching model file details for', modelId);
-      const authToken = this.shouldUseToken ? this.hfToken : null;
-      const fileDetails = await fetchModelFilesDetails(modelId, authToken);
+      const source = this.getSourceForModelId(modelId);
+      const authToken = this.shouldUseTokenForSource(source)
+        ? this.hfToken
+        : null;
+      const fileDetails = await fetchModelFilesDetailsFromSource({
+        source,
+        modelId,
+        authToken,
+      });
+      if (!this.isCurrentModelDetailsRequest(requestId, modelId)) {
+        return;
+      }
       const model = this.models.find(m => m.id === modelId);
 
       if (!model) {
+        return;
+      }
+
+      if (model.siblings.length === 0 && fileDetails.length > 0) {
+        const source = this.getSourceForModelId(modelId);
+        const updatedSiblings = await Promise.all(
+          createSiblingsFromFileDetails(
+            model.sourceRepoId || model.id,
+            fileDetails,
+          ).map(async file => ({
+            ...file,
+            canFitInStorage: await hasEnoughSpace(hfAsModel(model, file)),
+          })),
+        );
+
+        runInAction(() => {
+          model.source = source;
+          model.siblings = updatedSiblings;
+        });
         return;
       }
 
@@ -228,9 +346,16 @@ class HFStore {
         model.siblings = updatedSiblings;
       });
     } catch (error) {
+      if (!this.isCurrentModelDetailsRequest(requestId, modelId)) {
+        return;
+      }
       console.error('Error fetching model file sizes:', error);
       runInAction(() => {
-        this.error = createErrorState(error, 'modelDetails', 'huggingface');
+        this.error = createErrorState(
+          error,
+          'modelDetails',
+          this.getSourceForModelId(modelId),
+        );
       });
     }
   }
@@ -240,15 +365,46 @@ class HFStore {
   }
 
   async fetchModelData(modelId: string) {
+    const requestId = ++this.modelDetailsRequestId;
+    runInAction(() => {
+      this.modelDetailsLoading = true;
+      this.activeModelDetailsId = modelId;
+      this.error = null;
+    });
+
     try {
-      await this.fetchAndSetGGUFSpecs(modelId);
-      await this.fetchModelFileDetails(modelId);
+      await this.fetchAndSetGGUFSpecs(modelId, requestId);
+      await this.fetchModelFileDetails(modelId, requestId);
     } catch (error) {
+      if (!this.isCurrentModelDetailsRequest(requestId, modelId)) {
+        return;
+      }
       console.error('Error fetching model data:', error);
       runInAction(() => {
-        this.error = createErrorState(error, 'modelDetails', 'huggingface');
+        this.error = createErrorState(
+          error,
+          'modelDetails',
+          this.getSourceForModelId(modelId),
+        );
       });
+    } finally {
+      if (this.isCurrentModelDetailsRequest(requestId, modelId)) {
+        runInAction(() => {
+          this.modelDetailsLoading = false;
+        });
+      }
     }
+  }
+
+  private shouldUseTokenForSource(source: ModelSourceId): boolean {
+    return this.shouldUseToken;
+  }
+
+  private getSourceForModelId(modelId: string): ModelSourceId {
+    return (
+      this.models.find(model => model.id === modelId)?.source ||
+      this.selectedSource
+    );
   }
 
   get hasMoreResults() {
@@ -299,6 +455,17 @@ class HFStore {
 
   // Fetch the models from the Hugging Face API
   async fetchModels() {
+    const requestId = ++this.searchRequestId;
+    const source = this.selectedSource;
+    const searchQuery = this.searchQuery;
+    const searchFilters = {...this.searchFilters};
+    const filter = this.buildFilterString();
+    const sortParams = this.getSortParams();
+    const authToken = this.shouldUseTokenForSelectedSource
+      ? this.hfToken
+      : null;
+
+    this.activeSearchRequestId = requestId;
     this.isLoading = true;
     this.error = null;
 
@@ -308,28 +475,46 @@ class HFStore {
     this.lastFetchMoreAttempt = 0;
 
     try {
-      const authToken = this.shouldUseToken ? this.hfToken : null;
-      const sortParams = this.getSortParams();
-
-      const {models, nextLink} = await fetchModels({
-        search: this.searchQuery,
-        author: this.searchFilters.author || undefined,
+      const {models, nextLink} = await fetchModelsFromSource({
+        source,
+        search: searchQuery,
+        author: searchFilters.author || undefined,
         limit: 10,
         sort: sortParams?.sort,
         direction: sortParams?.direction,
-        filter: this.buildFilterString(),
+        filter,
         full: this.queryFull,
         config: this.queryConfig,
         authToken: authToken,
       });
 
-      let processedModels = processHFSearchResults(models);
+      if (
+        !this.isCurrentSearchRequest(
+          requestId,
+          source,
+          searchQuery,
+          searchFilters,
+        )
+      ) {
+        return;
+      }
 
       runInAction(() => {
-        this.models = processedModels;
+        this.models = models;
         this.nextPageLink = nextLink;
       });
     } catch (error) {
+      if (
+        !this.isCurrentSearchRequest(
+          requestId,
+          source,
+          searchQuery,
+          searchFilters,
+        )
+      ) {
+        return;
+      }
+
       runInAction(() => {
         this.isLoading = false;
         this.nextPageLink = null;
@@ -337,12 +522,14 @@ class HFStore {
       });
       // this need to be in a separate runInAction for the ui to render properly.
       runInAction(() => {
-        this.error = createErrorState(error, 'search', 'huggingface');
+        this.error = createErrorState(error, 'search', source);
       });
     } finally {
-      runInAction(() => {
-        this.isLoading = false;
-      });
+      if (requestId === this.activeSearchRequestId) {
+        runInAction(() => {
+          this.isLoading = false;
+        });
+      }
     }
   }
 
@@ -366,42 +553,55 @@ class HFStore {
       );
       return;
     }
-    this.lastFetchedNextLink = this.nextPageLink;
+    const requestId = ++this.fetchMoreRequestId;
+    const source = this.selectedSource;
+    const nextPageLink = this.nextPageLink;
+    this.activeFetchMoreRequestId = requestId;
+    this.lastFetchedNextLink = nextPageLink;
     this.lastFetchMoreAttempt = Date.now();
 
     this.isLoading = true;
     this.error = null;
 
     try {
-      const authToken = this.shouldUseToken ? this.hfToken : null;
-      const {models, nextLink} = await fetchModels({
-        nextPageUrl: this.nextPageLink,
+      const authToken = this.shouldUseTokenForSelectedSource
+        ? this.hfToken
+        : null;
+      const {models, nextLink} = await fetchModelsFromSource({
+        source,
+        nextPageUrl: nextPageLink,
         authToken: authToken,
       });
 
-      let processedModels = processHFSearchResults(models);
+      if (!this.isCurrentFetchMoreRequest(requestId, source, nextPageLink)) {
+        return;
+      }
 
       runInAction(() => {
         // Track consecutive small results for pagination protection
-        if (processedModels.length < 3) {
+        if (models.length < 3) {
           this.consecutiveSmallResults++;
         } else {
           this.consecutiveSmallResults = 0;
         }
 
-        processedModels.forEach((model: HuggingFaceModel) =>
-          this.models.push(model),
-        );
+        models.forEach((model: HuggingFaceModel) => this.models.push(model));
         this.nextPageLink = nextLink;
       });
     } catch (error) {
+      if (!this.isCurrentFetchMoreRequest(requestId, source, nextPageLink)) {
+        return;
+      }
+
       runInAction(() => {
-        this.error = createErrorState(error, 'search', 'huggingface');
+        this.error = createErrorState(error, 'search', source);
       });
     } finally {
-      runInAction(() => {
-        this.isLoading = false;
-      });
+      if (requestId === this.activeFetchMoreRequestId) {
+        runInAction(() => {
+          this.isLoading = false;
+        });
+      }
     }
   }
 }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import java.io.File
 import java.util.*
 import androidx.concurrent.futures.await
+import org.json.JSONObject
 
 @ReactModule(name = NativeDownloadModuleSpec.NAME)
 class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModuleSpec(reactContext) {
@@ -54,8 +55,26 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         }
     }
 
+    private fun readableHeadersToJson(headers: ReadableMap?): String? {
+        if (headers == null) {
+            return null
+        }
+
+        val json = JSONObject()
+        val iterator = headers.keySetIterator()
+        while (iterator.hasNextKey()) {
+            val key = iterator.nextKey()
+            val value = headers.getString(key)
+            if (value != null) {
+                json.put(key, value)
+            }
+        }
+
+        return if (json.length() > 0) json.toString() else null
+    }
+
     override fun startDownload(url: String, config: ReadableMap, promise: Promise) {
-        Log.d(TAG, "Starting download with config: $config")
+        Log.d(TAG, "Starting download")
         scope.launch {
             try {
                 val downloadId = UUID.randomUUID().toString()
@@ -69,6 +88,11 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                 val authToken = if (config.hasKey("authToken")) config.getString("authToken") else null
                 if (authToken != null) {
                     Log.d(TAG, "Authorization token provided for download")
+                }
+                val requestHeaders = if (config.hasKey("headers")) {
+                    readableHeadersToJson(config.getMap("headers"))
+                } else {
+                    null
                 }
 
                 val networkType = when (config.getString("networkType")) {
@@ -98,11 +122,15 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                     priority = priority,
                     networkType = networkType,
                     createdAt = System.currentTimeMillis(),
-                    authToken = authToken
+                    authToken = authToken,
+                    requestHeaders = requestHeaders
                 )
 
                 withContext(Dispatchers.IO) {
-                    Log.d(TAG, "Inserting download into database: $download")
+                    Log.d(
+                        TAG,
+                        "Inserting download into database: id=$downloadId, destination=$destination, networkType=$networkType, hasAuthToken=${authToken != null}, hasHeaders=${requestHeaders != null}"
+                    )
                     downloadDao.insertDownload(download)
                 }
 
@@ -293,6 +321,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                     if (download != null) {
                         Log.d(TAG, "Updating status to CANCELLED for download: $downloadId")
                         downloadDao.updateStatus(downloadId, DownloadStatus.CANCELLED, "Download cancelled by user")
+                        downloadDao.clearSensitiveHeaders(downloadId)
                         
                         // Clean up the partial download file
                         val file = File(download.destination)
@@ -470,6 +499,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                         if (downloadInfo != null) {
                             Log.e(TAG, "Error details for ID $downloadId: ${downloadInfo.error}")
                             sendFailureEvent(downloadId, downloadInfo.error ?: "Unknown error")
+                            downloadDao.clearSensitiveHeaders(downloadId)
                         } else {
                             Log.w(TAG, "Download info not found for failed download: $downloadId")
                         }
@@ -485,6 +515,7 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
                     
                     // Log final database state after cancellation
                     scope.launch {
+                        downloadDao.clearSensitiveHeaders(downloadId)
                         logEntireDownloadDatabase()
                         removeWorkObserver(downloadId)
                     }
@@ -516,4 +547,4 @@ class DownloadModule(reactContext: ReactApplicationContext) : NativeDownloadModu
         private const val TAG = "DownloadModule"
         private fun getWorkName(downloadId: String) = "download_$downloadId"
     }
-} 
+}

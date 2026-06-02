@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [DownloadEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class DownloadDatabase : RoomDatabase() {
@@ -24,6 +24,12 @@ abstract class DownloadDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE downloads ADD COLUMN requestHeaders TEXT")
+            }
+        }
+
         @Volatile
         private var INSTANCE: DownloadDatabase? = null
 
@@ -34,10 +40,10 @@ abstract class DownloadDatabase : RoomDatabase() {
                     DownloadDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 .also { INSTANCE = it }
             }
         }
     }
-} 
+}

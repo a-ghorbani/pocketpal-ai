@@ -10,5 +10,46 @@
     "error": "Viga",
     "export": "Ekspordi",
     "networkError": "Võrguühenduse viga. Palun proovi uuesti."
+  },
+  "models": {
+    "labels": {
+      "hfMirrorModel": "HF peegel",
+      "modelScopeModel": "ModelScope"
+    },
+    "buttons": {
+      "addFromModelSources": "Laadi mudel alla"
+    },
+    "modelsHeaderRight": {
+      "filtersGroup": "Filtrid",
+      "viewGroup": "Vaade",
+      "menuTitleHfMirror": "Hugging Face peegel",
+      "menuTitleModelScope": "ModelScope mudelid"
+    },
+    "search": {
+      "searchPlaceholder": "Otsi mudelihoidlaid",
+      "source": "Allikas",
+      "sourceTitle": "Allalaadimise allikas",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF peegel",
+        "modelscope": "ModelScope"
+      }
+    },
+    "modelCard": {
+      "labels": {
+        "viewModelCardOnSource": "Vaata mudeli allikat"
+      }
+    }
+  },
+  "components": {
+    "downloadErrorDialog": {
+      "viewOnSource": "Vaata mudeli allikat ↗"
+    },
+    "modelsHeaderRight": {
+      "filtersGroup": "Filtrid",
+      "viewGroup": "Vaade",
+      "menuTitleHfMirror": "Hugging Face peegel",
+      "menuTitleModelScope": "ModelScope mudelid"
+    }
   }
 }

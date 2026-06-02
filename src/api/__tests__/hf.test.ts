@@ -21,7 +21,12 @@ describe('fetchModels', () => {
       }),
     );
     expect(result).toEqual({
-      models: [{id: 'model1'}],
+      models: [
+        expect.objectContaining({
+          id: 'model1',
+          source: 'huggingface',
+        }),
+      ],
       nextLink: 'next-page-link',
     });
   });

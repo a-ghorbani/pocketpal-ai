@@ -24,6 +24,7 @@ jest.mock('../../store/UIStore', () => ({
         networkTimeout: 'Network timeout',
         hfNetworkError: 'HF network error',
         networkError: 'Network error',
+        modelNativeBindingError: 'Native model runtime unavailable',
       },
     },
   },
@@ -204,6 +205,17 @@ describe('errors.ts', () => {
       expect(errorState.code).toBe('unknown');
       expect(errorState.message).toBe('Native error: out of memory');
       expect(errorState.context).toBe('modelInit');
+    });
+
+    it('should map llama JSI binding failures to a user-friendly model init error', () => {
+      const error = new Error('JSI bindings not installed');
+
+      const errorState = createErrorState(error, 'modelInit');
+
+      expect(errorState.code).toBe('unknown');
+      expect(errorState.message).toBe('Native model runtime unavailable');
+      expect(errorState.message).not.toMatch(/JSI bindings/i);
+      expect(errorState.recoverable).toBe(false);
     });
 
     it('should use default message for null/undefined errors', () => {

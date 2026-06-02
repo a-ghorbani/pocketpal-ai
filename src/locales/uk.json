@@ -200,7 +200,9 @@
       "hfModel": "HF",
       "availableToUse": "Готовий до використання",
       "availableToDownload": "Доступно для завантаження",
-      "useAddButtonForMore": "Натисніть кнопку «+», щоб переглянути інші моделі"
+      "useAddButtonForMore": "Натисніть кнопку «+», щоб переглянути інші моделі",
+      "hfMirrorModel": "Дзеркало HF",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "Бачення",
     "mmproj": "Проектор",
@@ -246,13 +248,18 @@
     "buttons": {
       "addFromHuggingFace": "Додати з Hugging Face",
       "addLocalModel": "Додати локальну модель",
-      "reset": "Скинути"
+      "reset": "Скинути",
+      "addFromModelSources": "Завантажити модель"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Моделі Hugging Face",
       "menuTitleDownloaded": "Завантажені моделі",
       "menuTitleGrouped": "Групувати за типом моделі",
-      "menuTitleReset": "Оновити список моделей"
+      "menuTitleReset": "Оновити список моделей",
+      "filtersGroup": "Фільтри",
+      "viewGroup": "Вигляд",
+      "menuTitleHfMirror": "Дзеркало Hugging Face",
+      "menuTitleModelScope": "Моделі ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Продовжити скидання",
@@ -301,7 +308,7 @@
     "search": {
       "noResults": "Моделей не знайдено",
       "loadingMore": "Завантажується...",
-      "searchPlaceholder": "Пошук моделей Hugging Face",
+      "searchPlaceholder": "Пошук репозиторіїв моделей",
       "modelUpdatedLong": "Оновлено {{time}} тому",
       "modelUpdatedShort": "{{time}} тому",
       "modelUpdatedJustNowLong": "Щойно оновлено",
@@ -318,6 +325,13 @@
         "sortDownloads": "Завантажень",
         "sortRecent": "Нещодавно оновлено",
         "sortLikes": "Найпопулярніша"
+      },
+      "source": "Джерело",
+      "sourceTitle": "Джерело завантаження",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "Дзеркало HF",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -344,7 +358,8 @@
         "author": "Автор",
         "requiresProjectionModel": "Потрібна модель проекції",
         "downloadProjectionModel": "Завантажити модель прогнозування",
-        "viewModelCardOnHuggingFace": "Переглянути картку моделі на Hugging Face"
+        "viewModelCardOnHuggingFace": "Переглянути картку моделі на Hugging Face",
+        "viewModelCardOnSource": "Переглянути джерело моделі"
       },
       "accessibility": {
         "expandDetails": "Розгорнути детальну інформацію",
@@ -676,7 +691,8 @@
       "enableAndRetry": "Увімкнути та спробувати ще раз",
       "goToSettings": "Перейти до налаштувань",
       "tryAgain": "Спробувати ще Рфаз",
-      "viewOnHuggingFace": "Переглянути модель на HF ↗"
+      "viewOnHuggingFace": "Переглянути модель на HF ↗",
+      "viewOnSource": "Переглянути джерело моделі ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Видалити чат",
@@ -727,7 +743,11 @@
       "menuTitleHf": "Моделі Hugging Face",
       "menuTitleDownloaded": "Завантажені моделі",
       "menuTitleGrouped": "Групувати за типом моделі",
-      "menuTitleReset": "Оновити список моделей"
+      "menuTitleReset": "Оновити список моделей",
+      "filtersGroup": "Фільтри",
+      "viewGroup": "Вигляд",
+      "menuTitleHfMirror": "Дзеркало Hugging Face",
+      "menuTitleModelScope": "Моделі ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Продовжити скидання",

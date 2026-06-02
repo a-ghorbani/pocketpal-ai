@@ -197,6 +197,8 @@
     "labels": {
       "localModel": "Local",
       "hfModel": "HF",
+      "hfMirrorModel": "HF Mirror",
+      "modelScopeModel": "ModelScope",
       "unknownGroup": "Unknown",
       "availableToUse": "Ready to Use",
       "availableToDownload": "Available to Download",
@@ -245,11 +247,16 @@
     },
     "buttons": {
       "addFromHuggingFace": "Add from Hugging Face",
+      "addFromModelSources": "Download Model",
       "addLocalModel": "Add Local Model",
       "reset": "Reset"
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Hugging Face Models",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Downloaded Models",
       "menuTitleGrouped": "Group by Model Type",
       "menuTitleReset": "Reset Models List"
@@ -301,7 +308,14 @@
     "search": {
       "noResults": "No models found",
       "loadingMore": "Loading more...",
-      "searchPlaceholder": "Search Hugging Face models",
+      "searchPlaceholder": "Search model repositories",
+      "source": "Source",
+      "sourceTitle": "Download Source",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF Mirror",
+        "modelscope": "ModelScope"
+      },
       "modelUpdatedLong": "Updated {{time}} ago",
       "modelUpdatedShort": "{{time}} ago",
       "modelUpdatedJustNowLong": "Updated just now",
@@ -344,7 +358,8 @@
         "author": "Author",
         "requiresProjectionModel": "Requires projection model",
         "downloadProjectionModel": "Download projection model",
-        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
+        "viewModelCardOnHuggingFace": "View Model Card on Hugging Face",
+        "viewModelCardOnSource": "View Model Source"
       },
       "accessibility": {
         "expandDetails": "Expand details",
@@ -689,7 +704,8 @@
       "enableAndRetry": "Enable and Retry",
       "goToSettings": "Go to Settings",
       "tryAgain": "Try Again",
-      "viewOnHuggingFace": "View Model on HF ↗"
+      "viewOnHuggingFace": "View Model on HF ↗",
+      "viewOnSource": "View Model Source ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Delete Chat",
@@ -737,7 +753,11 @@
       "saveChanges": "Save Changes"
     },
     "modelsHeaderRight": {
+      "filtersGroup": "Filters",
+      "viewGroup": "View",
       "menuTitleHf": "Hugging Face Models",
+      "menuTitleHfMirror": "Hugging Face Mirror",
+      "menuTitleModelScope": "ModelScope Models",
       "menuTitleDownloaded": "Downloaded Models",
       "menuTitleGrouped": "Group by Model Type",
       "menuTitleReset": "Reset Models List"
@@ -1259,6 +1279,7 @@
     "networkTimeout": "Network timeout: Request took too long to complete",
     "hfNetworkError": "Network error: Unable to connect to Hugging Face API",
     "networkError": "Network error: Unable to connect to API",
+    "modelNativeBindingError": "The native model runtime is unavailable. Update or reinstall the app, then try again.",
     "downloadSetupFailedTitle": "Download Setup Failed",
     "downloadSetupFailedMessage": "Failed to prepare model for download: {{message}}",
     "cameraErrorTitle": "Camera Error",

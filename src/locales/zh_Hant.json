@@ -265,7 +265,11 @@
       "menuTitleHf": "Hugging Face 模型",
       "menuTitleDownloaded": "已下載模型",
       "menuTitleGrouped": "按模型類型分組",
-      "menuTitleReset": "重置模型列表"
+      "menuTitleReset": "重置模型列表",
+      "filtersGroup": "篩選",
+      "viewGroup": "檢視",
+      "menuTitleHfMirror": "Hugging Face 鏡像",
+      "menuTitleModelScope": "ModelScope 模型"
     },
     "modelsResetDialog": {
       "proceedWithReset": "繼續重置",
@@ -528,7 +532,8 @@
       "enableAndRetry": "啟用並重試",
       "goToSettings": "前往設定",
       "tryAgain": "再試一次",
-      "viewOnHuggingFace": "在 HF 上查看模型 ↗"
+      "viewOnHuggingFace": "在 HF 上查看模型 ↗",
+      "viewOnSource": "查看模型來源 ↗"
     },
     "hfTokenSheet": {
       "save": "儲存 Token",
@@ -719,18 +724,25 @@
       "unknownGroup": "未知",
       "availableToUse": "準備使用",
       "availableToDownload": "可用下載",
-      "useAddButtonForMore": "點擊「+」按鈕即可搜尋更多模型"
+      "useAddButtonForMore": "點擊「+」按鈕即可搜尋更多模型",
+      "hfMirrorModel": "HF 鏡像",
+      "modelScopeModel": "ModelScope"
     },
     "buttons": {
       "addFromHuggingFace": "從 Hugging Face 新增",
       "addLocalModel": "新增本地模型",
-      "reset": "重置"
+      "reset": "重置",
+      "addFromModelSources": "下載模型"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face 模型",
       "menuTitleDownloaded": "已下載模型",
       "menuTitleGrouped": "按模型類型分組",
-      "menuTitleReset": "重置模型列表"
+      "menuTitleReset": "重置模型列表",
+      "filtersGroup": "篩選",
+      "viewGroup": "檢視",
+      "menuTitleHfMirror": "Hugging Face 鏡像",
+      "menuTitleModelScope": "ModelScope 模型"
     },
     "modelsResetDialog": {
       "proceedWithReset": "執行重置",
@@ -779,7 +791,7 @@
     "search": {
       "noResults": "未找到模型",
       "loadingMore": "正在載入更多…",
-      "searchPlaceholder": "搜尋 Hugging Face 模型",
+      "searchPlaceholder": "搜尋模型倉庫",
       "modelUpdatedLong": "更新於 {{time}} 之前",
       "modelUpdatedShort": "{{time}} 之前",
       "modelUpdatedJustNowLong": "剛剛更新",
@@ -796,6 +808,13 @@
         "sortDownloads": "下載",
         "sortRecent": "最近更新",
         "sortLikes": "最受歡迎"
+      },
+      "source": "來源",
+      "sourceTitle": "下載來源",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "HF 鏡像",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -822,7 +841,8 @@
         "author": "作者",
         "requiresProjectionModel": "需要投影模型",
         "downloadProjectionModel": "下載投影模型",
-        "viewModelCardOnHuggingFace": "在 Hugging Face 觀看模型卡"
+        "viewModelCardOnHuggingFace": "在 Hugging Face 觀看模型卡",
+        "viewModelCardOnSource": "查看模型來源"
       },
       "accessibility": {
         "loadingIndicator": "正在載入",

@@ -50,6 +50,9 @@ react {
     //   A list of extra flags to pass to the 'bundle' commands.
     //   See https://github.com/react-native-community/cli/blob/main/docs/commands.md#bundle
     // extraPackagerArgs = []
+    if (project.hasProperty("metroMaxWorkers")) {
+        extraPackagerArgs = ["--max-workers", project.property("metroMaxWorkers").toString()]
+    }
 
     /* Hermes Commands */
     //   The hermes compiler command to run. By default it is 'hermesc'
@@ -80,6 +83,11 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def reactNativeArchitectures() {
+    def value = project.getProperties().get("reactNativeArchitectures")
+    return value ? value.split(",") : ["arm64-v8a", "x86_64"]
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -93,7 +101,7 @@ android {
         versionCode 140
         versionName "1.15.1"
         ndk {
-            abiFilters "arm64-v8a", "x86_64"
+            abiFilters (*reactNativeArchitectures())
         }
     }
     externalNativeBuild {
@@ -103,6 +111,11 @@ android {
             // shim) into libappmodules.so. The replacement file must
             // include ReactNative-application.cmake — see jni/CMakeLists.txt.
             path file("src/main/jni/CMakeLists.txt")
+        }
+    }
+    packaging {
+        jniLibs {
+            pickFirsts += ['lib/**/libworklets.so']
         }
     }
     signingConfigs {
@@ -230,6 +243,9 @@ dependencies {
 
     // OkHttp for DownloadModule (network requests)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // WatermelonDB JSI is not autolinked by the package's default Android config.
+    implementation project(':watermelondb-jsi')
 }
 
 project.ext.vectoricons = [
@@ -237,4 +253,3 @@ project.ext.vectoricons = [
 ]
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
-

@@ -103,18 +103,25 @@
       "unknownGroup": "Inconnu",
       "availableToUse": "Prêt à utiliser",
       "availableToDownload": "Disponible au téléchargement",
-      "useAddButtonForMore": "Utilisez le bouton + pour trouver plus de modèles"
+      "useAddButtonForMore": "Utilisez le bouton + pour trouver plus de modèles",
+      "hfMirrorModel": "Miroir HF",
+      "modelScopeModel": "ModelScope"
     },
     "buttons": {
       "addFromHuggingFace": "Ajouter depuis Hugging Face",
       "addLocalModel": "Ajouter un modèle local",
-      "reset": "Réinitialiser"
+      "reset": "Réinitialiser",
+      "addFromModelSources": "Télécharger un modèle"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Modèles Hugging Face",
       "menuTitleDownloaded": "Modèles téléchargés",
       "menuTitleGrouped": "Grouper par type de modèle",
-      "menuTitleReset": "Réinitialiser la liste des modèles"
+      "menuTitleReset": "Réinitialiser la liste des modèles",
+      "filtersGroup": "Filtres",
+      "viewGroup": "Affichage",
+      "menuTitleHfMirror": "Miroir Hugging Face",
+      "menuTitleModelScope": "Modèles ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Procéder à la réinitialisation",
@@ -163,12 +170,19 @@
     "search": {
       "noResults": "Aucun modèle trouvé",
       "loadingMore": "Chargement...",
-      "searchPlaceholder": "Rechercher des modèles Hugging Face",
+      "searchPlaceholder": "Rechercher des dépôts de modèles",
       "modelUpdatedLong": "Mis à jour il y a {{time}}",
       "modelUpdatedShort": "il y a {{time}}",
       "modelUpdatedJustNowLong": "Mis à jour à l'instant",
       "modelUpdatedJustNowShort": "à l'instant",
-      "errorOccurred": "Impossible de charger les modèles. Veuillez réessayer."
+      "errorOccurred": "Impossible de charger les modèles. Veuillez réessayer.",
+      "source": "Source",
+      "sourceTitle": "Source de téléchargement",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "Miroir HF",
+        "modelscope": "ModelScope"
+      }
     },
     "modelCard": {
       "alerts": {
@@ -185,7 +199,8 @@
         "offload": "Décharger"
       },
       "labels": {
-        "skills": "Compétences : "
+        "skills": "Compétences : ",
+        "viewModelCardOnSource": "Voir la source du modèle"
       }
     },
     "modelSettings": {
@@ -408,7 +423,8 @@
       "enableAndRetry": "Activer et réessayer",
       "goToSettings": "Aller aux paramètres",
       "tryAgain": "Réessayer",
-      "viewOnHuggingFace": "Voir le modèle sur HF ↗"
+      "viewOnHuggingFace": "Voir le modèle sur HF ↗",
+      "viewOnSource": "Voir la source du modèle ↗"
     },
     "headerRight": {
       "deleteChatTitle": "Supprimer la discussion",
@@ -459,7 +475,11 @@
       "menuTitleHf": "Modèles Hugging Face",
       "menuTitleDownloaded": "Modèles téléchargés",
       "menuTitleGrouped": "Grouper par type de modèle",
-      "menuTitleReset": "Réinitialiser la liste des modèles"
+      "menuTitleReset": "Réinitialiser la liste des modèles",
+      "filtersGroup": "Filtres",
+      "viewGroup": "Affichage",
+      "menuTitleHfMirror": "Miroir Hugging Face",
+      "menuTitleModelScope": "Modèles ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "Procéder à la réinitialisation",

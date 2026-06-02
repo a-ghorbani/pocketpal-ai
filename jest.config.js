@@ -11,7 +11,10 @@ module.exports = {
     '!**/ImageView.ios.ts',
     '!**/ImageView.tsx',
   ],
-  coveragePathIgnorePatterns: ['/src/screens/DevToolsScreen/'],
+  coveragePathIgnorePatterns: [
+    '/src/screens/DevToolsScreen/',
+    '<rootDir>/pr-work/',
+  ],
   coverageThreshold: {
     global: {
       branches: 60,
@@ -30,7 +33,8 @@ module.exports = {
     '**/__tests__/**/*.test.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)',
   ],
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '<rootDir>/pr-work/'],
+  modulePathIgnorePatterns: ['<rootDir>/pr-work/'],
   moduleNameMapper: {
     '@react-native-async-storage/async-storage':
       '<rootDir>/__mocks__/external/@react-native-async-storage/async-storage.js',

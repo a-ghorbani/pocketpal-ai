@@ -200,7 +200,9 @@
       "unknownGroup": "نامشخص",
       "availableToUse": "آماده استفاده",
       "availableToDownload": "قابل دانلود",
-      "useAddButtonForMore": "برای یافتن مدل‌های بیشتر از دکمه + استفاده کنید"
+      "useAddButtonForMore": "برای یافتن مدل‌های بیشتر از دکمه + استفاده کنید",
+      "hfMirrorModel": "آینه HF",
+      "modelScopeModel": "ModelScope"
     },
     "vision": "بینایی",
     "mmproj": "پروجکتور",
@@ -246,13 +248,18 @@
     "buttons": {
       "addFromHuggingFace": "افزودن از Hugging Face",
       "addLocalModel": "افزودن مدل محلی",
-      "reset": "بازنشانی"
+      "reset": "بازنشانی",
+      "addFromModelSources": "دانلود مدل"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "مدل‌های Hugging Face",
       "menuTitleDownloaded": "مدل‌های دانلود شده",
       "menuTitleGrouped": "گروه‌بندی بر اساس نوع مدل",
-      "menuTitleReset": "بازنشانی لیست مدل‌ها"
+      "menuTitleReset": "بازنشانی لیست مدل‌ها",
+      "filtersGroup": "فیلترها",
+      "viewGroup": "نما",
+      "menuTitleHfMirror": "آینه Hugging Face",
+      "menuTitleModelScope": "مدل‌های ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "ادامه بازنشانی",
@@ -301,7 +308,7 @@
     "search": {
       "noResults": "مدلی یافت نشد",
       "loadingMore": "بارگذاری بیشتر...",
-      "searchPlaceholder": "جستجوی مدل‌های Hugging Face",
+      "searchPlaceholder": "جستجوی مخزن‌های مدل",
       "modelUpdatedLong": "{{time}} پیش به‌روزرسانی شده",
       "modelUpdatedShort": "{{time}} پیش",
       "modelUpdatedJustNowLong": "همین الان به‌روزرسانی شده",
@@ -318,6 +325,13 @@
         "sortDownloads": "دانلودها",
         "sortRecent": "آخرین به‌روزرسانی",
         "sortLikes": "محبوب‌ترین"
+      },
+      "source": "منبع",
+      "sourceTitle": "منبع دانلود",
+      "sources": {
+        "huggingface": "Hugging Face",
+        "hf_mirror": "آینه HF",
+        "modelscope": "ModelScope"
       }
     },
     "modelCard": {
@@ -344,7 +358,8 @@
         "author": "نویسنده",
         "requiresProjectionModel": "نیاز به مدل پروجکشن",
         "downloadProjectionModel": "دانلود مدل پروجکشن",
-        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face"
+        "viewModelCardOnHuggingFace": "مشاهده کارت مدل در Hugging Face",
+        "viewModelCardOnSource": "مشاهده منبع مدل"
       },
       "accessibility": {
         "expandDetails": "نمایش جزئیات",
@@ -671,7 +686,8 @@
       "enableAndRetry": "فعال‌سازی و تلاش مجدد",
       "goToSettings": "رفتن به تنظیمات",
       "tryAgain": "تلاش مجدد",
-      "viewOnHuggingFace": "مشاهده مدل در HF ↗"
+      "viewOnHuggingFace": "مشاهده مدل در HF ↗",
+      "viewOnSource": "مشاهده منبع مدل ↗"
     },
     "headerRight": {
       "deleteChatTitle": "حذف چت",
@@ -722,7 +738,11 @@
       "menuTitleHf": "مدل‌های Hugging Face",
       "menuTitleDownloaded": "مدل‌های دانلود شده",
       "menuTitleGrouped": "گروه‌بندی بر اساس نوع مدل",
-      "menuTitleReset": "بازنشانی لیست مدل‌ها"
+      "menuTitleReset": "بازنشانی لیست مدل‌ها",
+      "filtersGroup": "فیلترها",
+      "viewGroup": "نما",
+      "menuTitleHfMirror": "آینه Hugging Face",
+      "menuTitleModelScope": "مدل‌های ModelScope"
     },
     "modelsResetDialog": {
       "proceedWithReset": "ادامه بازنشانی",

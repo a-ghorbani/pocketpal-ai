@@ -14,7 +14,7 @@ import {
   toApiCompletionParams,
 } from '../utils/completionTypes';
 
-import {fetchModelFilesDetails} from '../api/hf';
+import {fetchModelFilesDetailsFromSource} from '../api/modelSources';
 import {
   LocalCompletionEngine,
   OpenAICompletionEngine,
@@ -33,6 +33,14 @@ import {
   inferRepoFromModelId,
   parseSizeLabel,
 } from '../utils';
+import {expandSplitModelFile} from '../utils/hf';
+import {
+  buildSourceModelId,
+  getModelSource,
+  getRepoIdFromModelId,
+  getSourceStorageDir,
+  MODEL_SOURCE_ORIGIN,
+} from '../utils/modelSources';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
@@ -56,6 +64,7 @@ import {
 } from '../utils/types';
 
 import {ErrorState, createErrorState} from '../utils/errors';
+import {isLlamaJsiBindingsError} from '../utils/llamaErrors';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {hasEnoughMemory} from '../hooks/useMemoryCheck';
 import {
@@ -73,6 +82,18 @@ import {
 import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
+
+function getSplitStorageRoot(entryPath: string, entryRFilename: string) {
+  const fallbackDir = entryPath.substring(0, entryPath.lastIndexOf('/'));
+  if (!entryRFilename.includes('/')) {
+    return fallbackDir;
+  }
+
+  const entrySuffix = `/${entryRFilename}`;
+  return entryPath.endsWith(entrySuffix)
+    ? entryPath.slice(0, -entrySuffix.length)
+    : fallbackDir;
+}
 
 /**
  * Factory function to create a Model object for a remote model from an OpenAI-compatible server.
@@ -256,9 +277,14 @@ class ModelStore {
           });
         }
 
-        const errorState = createErrorState(error, 'download', 'huggingface', {
-          modelId,
-        });
+        const errorState = createErrorState(
+          error,
+          'download',
+          getModelSource(model),
+          {
+            modelId,
+          },
+        );
 
         runInAction(() => {
           this.downloadError = errorState;
@@ -618,10 +644,14 @@ class ModelStore {
       }
     });
 
-    // Handle HF and LOCAL models
+    // Handle repository-backed source models and LOCAL models
     mergedModels.forEach(model => {
       if (
-        model.origin === ModelOrigin.HF ||
+        [
+          ModelOrigin.HF,
+          ModelOrigin.HF_MIRROR,
+          ModelOrigin.MODELSCOPE,
+        ].includes(model.origin) ||
         model.origin === ModelOrigin.LOCAL ||
         model.isLocal
       ) {
@@ -630,7 +660,13 @@ class ModelStore {
           const defaultSettings = getLocalModelDefaultSettings();
           model.defaultChatTemplate = {...defaultSettings.chatTemplate};
           model.defaultStopWords = defaultSettings.completionParams.stop;
-        } else if (model.origin === ModelOrigin.HF) {
+        } else if (
+          [
+            ModelOrigin.HF,
+            ModelOrigin.HF_MIRROR,
+            ModelOrigin.MODELSCOPE,
+          ].includes(model.origin)
+        ) {
           const defaultSettings = getHFDefaultSettings(
             model.hfModel as HuggingFaceModel,
           );
@@ -648,8 +684,15 @@ class ModelStore {
           ...(model.defaultStopWords || []),
         ];
 
-        // Infer repo from model.id if missing (for existing HF models)
-        if (model.origin === ModelOrigin.HF && !model.repo) {
+        // Infer repo from model.id if missing (for existing source models)
+        if (
+          [
+            ModelOrigin.HF,
+            ModelOrigin.HF_MIRROR,
+            ModelOrigin.MODELSCOPE,
+          ].includes(model.origin) &&
+          !model.repo
+        ) {
           const inferredRepo = inferRepoFromModelId(model.id);
           if (inferredRepo) {
             model.repo = inferredRepo;
@@ -657,6 +700,21 @@ class ModelStore {
               `[ModelStore] Inferred repo "${inferredRepo}" from model.id: ${model.id}`,
             );
           }
+        }
+
+        if (!model.source) {
+          model.source = getModelSource(model);
+        }
+
+        if (!model.sourceRepoId) {
+          model.sourceRepoId =
+            model.hfModel?.sourceRepoId ||
+            model.hfModel?.id ||
+            getRepoIdFromModelId(model.id);
+        }
+
+        if (!model.sourceWebUrl && model.hfUrl) {
+          model.sourceWebUrl = model.hfUrl;
         }
       }
     });
@@ -801,7 +859,7 @@ class ModelStore {
    * - LOCAL: Uses the model's fullPath property
    * - PRESET: Checks both legacy path (DocumentDirectoryPath/filename) and
    *          new path (DocumentDirectoryPath/models/preset/author/filename)
-   * - HF: Uses DocumentDirectoryPath/models/hf/author/filename
+   * - HF/HF mirror/ModelScope: Uses DocumentDirectoryPath/models/<source>/author/repo/filename
    *
    * IMPORTANT: This logic is duplicated in native Swift code for iOS Shortcuts
    * See: ios/PocketPal/AppIntents/PalDataProvider.swift - parseModelPath() method
@@ -860,9 +918,15 @@ class ModelStore {
       return newPath;
     }
 
-    // For HF models, use author/repo/model structure with backwards compatibility
-    if (model.origin === ModelOrigin.HF) {
+    // For repository-backed source models, use author/repo/model structure.
+    if (
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      )
+    ) {
       const author = model.author || 'unknown';
+      const source = getModelSource(model);
+      const sourceDir = getSourceStorageDir(source);
 
       // Try to get repo from model, or infer from model.id, or fallback to 'unknown'
       let repo = model.repo;
@@ -870,20 +934,24 @@ class ModelStore {
         repo = inferRepoFromModelId(model.id) || 'unknown';
       }
 
-      // Old path structure (for backwards compatibility)
-      const oldPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`;
+      const oldPath =
+        source === 'huggingface'
+          ? `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${model.filename}`
+          : '';
 
       // New path structure includes repository name
-      const newPath = `${RNFS.DocumentDirectoryPath}/models/hf/${author}/${repo}/${model.filename}`;
+      const newPath = `${RNFS.DocumentDirectoryPath}/models/${sourceDir}/${author}/${repo}/${model.filename}`;
 
-      // Check if file exists at old path (backwards compatibility)
-      // This handles: existing downloads, models after reset, models after app update
-      try {
-        if (await RNFS.exists(oldPath)) {
-          return oldPath;
+      if (oldPath) {
+        // Check if file exists at old path (backwards compatibility)
+        // This handles: existing downloads, models after reset, models after app update
+        try {
+          if (await RNFS.exists(oldPath)) {
+            return oldPath;
+          }
+        } catch (err) {
+          console.log('Error checking old HF model path:', err);
         }
-      } catch (err) {
-        console.log('Error checking old HF model path:', err);
       }
 
       // Otherwise use new path
@@ -897,10 +965,60 @@ class ModelStore {
 
   async checkFileExists(model: Model) {
     const filePath = await this.getModelFullPath(model);
-    const exists = await RNFS.exists(filePath);
+    let exists = await RNFS.exists(filePath);
+    let sizeMatches = true;
+
+    if (exists && model.splitDownload && model.hfModelFile) {
+      try {
+        const dirPath = getSplitStorageRoot(
+          filePath,
+          model.splitDownload.entryRFilename,
+        );
+        let totalSize = 0;
+        for (const part of expandSplitModelFile(model.hfModelFile)) {
+          const partPath = `${dirPath}/${part.rfilename}`;
+          const partExists = await RNFS.exists(partPath);
+          if (!partExists) {
+            exists = false;
+            sizeMatches = false;
+            break;
+          }
+          const partStats = await RNFS.stat(partPath);
+          totalSize += Number(partStats.size || 0);
+        }
+
+        if (exists && model.size && model.size > 0) {
+          sizeMatches =
+            totalSize > 0 &&
+            Math.abs(totalSize - Number(model.size)) / Number(model.size) <=
+              0.001;
+        }
+      } catch (err) {
+        console.log('Error checking split model file size:', err);
+        exists = false;
+        sizeMatches = false;
+      }
+    }
+
+    if (exists && model.size && model.size > 0) {
+      try {
+        if (!model.splitDownload) {
+          const fileStats = await RNFS.stat(filePath);
+          const expectedSize = Number(model.size);
+          const actualSize = Number(fileStats.size);
+          sizeMatches =
+            expectedSize > 0 &&
+            actualSize > 0 &&
+            Math.abs(actualSize - expectedSize) / expectedSize <= 0.001;
+        }
+      } catch (err) {
+        console.log('Error checking model file size:', err);
+        sizeMatches = false;
+      }
+    }
 
     // Don't mark as downloaded if currently downloading
-    if (exists && !downloadManager.isDownloading(model.id)) {
+    if (exists && sizeMatches && !downloadManager.isDownloading(model.id)) {
       if (!model.isDownloaded) {
         console.log(
           'checkFileExists: marking as downloaded - this should not happen:',
@@ -925,6 +1043,21 @@ class ModelStore {
 
   initializeDownloadStatus = async () => {
     await this.refreshDownloadStatuses();
+  };
+
+  private getSplitModelFilePaths = async (model: Model): Promise<string[]> => {
+    if (!model.splitDownload || !model.hfModelFile) {
+      return [await this.getModelFullPath(model)];
+    }
+
+    const entryPath = await this.getModelFullPath(model);
+    const dirPath = getSplitStorageRoot(
+      entryPath,
+      model.splitDownload.entryRFilename,
+    );
+    return expandSplitModelFile(model.hfModelFile).map(
+      part => `${dirPath}/${part.rfilename}`,
+    );
   };
 
   removeInvalidLocalModels = () => {
@@ -1001,6 +1134,8 @@ class ModelStore {
       return;
     }
 
+    const source = getModelSource(model);
+
     try {
       const destinationPath = await this.getModelFullPath(model);
       const authToken = hfStore.shouldUseToken ? hfStore.hfToken : null;
@@ -1012,7 +1147,7 @@ class ModelStore {
       console.error('Failed to start download:', err);
 
       // Create proper error state for the snackbar system
-      const errorState = createErrorState(err, 'download', 'huggingface', {
+      const errorState = createErrorState(err, 'download', source, {
         modelId,
       });
 
@@ -1116,7 +1251,8 @@ class ModelStore {
       }
     }
 
-    const filePath = await this.getModelFullPath(_model);
+    const filePaths = await this.getSplitModelFilePaths(_model);
+    const filePath = filePaths[0];
     if (_model.isLocal || _model.origin === ModelOrigin.LOCAL) {
       // Local models are always removed from the list, when the file is deleted.
 
@@ -1135,7 +1271,13 @@ class ModelStore {
 
       // Delete the file from internal storage
       try {
-        await RNFS.unlink(filePath);
+        await Promise.all(
+          filePaths.map(async path => {
+            if (await RNFS.exists(path)) {
+              await RNFS.unlink(path);
+            }
+          }),
+        );
       } catch (err) {
         console.error('Failed to delete local model file:', err);
       }
@@ -1145,7 +1287,13 @@ class ModelStore {
 
       try {
         if (filePath) {
-          await RNFS.unlink(filePath);
+          await Promise.all(
+            filePaths.map(async path => {
+              if (await RNFS.exists(path)) {
+                await RNFS.unlink(path);
+              }
+            }),
+          );
 
           // Check if we need to release context (if this model is currently active)
           const needsContextRelease = this.activeModelId === _model.id;
@@ -1291,6 +1439,10 @@ class ModelStore {
         }
       });
     } catch (error) {
+      if (isLlamaJsiBindingsError(error)) {
+        return;
+      }
+
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
     }
   };
@@ -1714,16 +1866,22 @@ class ModelStore {
 
       return ctx;
     } catch (error) {
-      console.error(
-        `Failed to initialize model context for "${model.name}" (${model.id}):`,
-        error,
-      );
+      if (isLlamaJsiBindingsError(error)) {
+        console.error(
+          `Failed to initialize model context for "${model.name}" (${model.id}): native llama runtime unavailable`,
+        );
+      } else {
+        console.error(
+          `Failed to initialize model context for "${model.name}" (${model.id}):`,
+          error,
+        );
+      }
 
       // Set error state for UI feedback - include model info and context params for error reporting
       const errorState = createErrorState(error, 'modelInit', undefined, {
         modelId: model.id,
         modelName: model.name,
-        modelUrl: model.hfUrl,
+        modelUrl: model.sourceWebUrl || model.hfUrl,
         modelSize: model.size,
         contextParams: effectiveSettings,
       });
@@ -2017,9 +2175,12 @@ class ModelStore {
       if (newModel.supportsMultimodal && options?.projectionModelId) {
         // Validate that selected projection model exists in repository
         const mmprojFiles = getMmprojFiles(hfModel.siblings || []);
+        const source = hfModel.source || 'huggingface';
+        const repoId = hfModel.sourceRepoId || hfModel.id;
         const selectedExists = mmprojFiles.some(
           file =>
-            `${hfModel.id}/${file.rfilename}` === options.projectionModelId,
+            buildSourceModelId(source, repoId, file.rfilename) ===
+            options.projectionModelId,
         );
 
         if (selectedExists) {
@@ -2038,7 +2199,7 @@ class ModelStore {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Use the centralized download method which handles mmproj automatically
-      this.checkSpaceAndDownload(newModel.id);
+      await this.checkSpaceAndDownload(newModel.id);
 
       // The error handling is now done in the downloadManager callbacks
     } catch (error) {
@@ -2083,12 +2244,18 @@ class ModelStore {
       newModel.supportsMultimodal &&
       newModel.compatibleProjectionModels?.length
     ) {
+      const source = hfModel.source || 'huggingface';
+      const repoId = hfModel.sourceRepoId || hfModel.id;
       // Get the mmproj files from the repository
       const mmprojFiles = getMmprojFiles(hfModel.siblings || []);
 
       // Add each projection model to the store if it doesn't exist
       for (const mmprojFile of mmprojFiles) {
-        const projModelId = `${hfModel.id}/${mmprojFile.rfilename}`;
+        const projModelId = buildSourceModelId(
+          source,
+          repoId,
+          mmprojFile.rfilename,
+        );
         const existingProjModel = this.models.find(m => m.id === projModelId);
 
         if (!existingProjModel) {
@@ -2103,8 +2270,8 @@ class ModelStore {
       // If we're working with an existing model, update its projection model references
       // to ensure they're current with what's now in the store
       if (storeModel) {
-        const updatedCompatibleModels = mmprojFiles.map(
-          file => `${hfModel.id}/${file.rfilename}`,
+        const updatedCompatibleModels = mmprojFiles.map(file =>
+          buildSourceModelId(source, repoId, file.rfilename),
         );
 
         runInAction(() => {
@@ -2123,7 +2290,11 @@ class ModelStore {
               mmprojFilenames,
             );
             if (recommendedFile) {
-              storeModel.defaultProjectionModel = `${hfModel.id}/${recommendedFile}`;
+              storeModel.defaultProjectionModel = buildSourceModelId(
+                source,
+                repoId,
+                recommendedFile,
+              );
             }
           }
         });
@@ -2133,13 +2304,13 @@ class ModelStore {
     // If this is a projection model, check if we need to update any vision models
     if (newModel.modelType === ModelType.PROJECTION) {
       // Get the repository ID from the model ID
-      const repoId = newModel.id.split('/').slice(0, 2).join('/');
+      const repoId = getRepoIdFromModelId(newModel.id);
 
       // Find vision models from the same repository
       const visionModels = this.models.filter(
         m =>
           m.supportsMultimodal &&
-          m.id.startsWith(repoId) &&
+          (!repoId || getRepoIdFromModelId(m.id) === repoId) &&
           m.id !== newModel.id,
       );
 
@@ -2280,8 +2451,10 @@ class ModelStore {
       model.ggufMetadata = undefined;
     });
 
-    const hfModels = this.models.filter(
-      model => model.origin === ModelOrigin.HF,
+    const hfModels = this.models.filter(model =>
+      [ModelOrigin.HF, ModelOrigin.HF_MIRROR, ModelOrigin.MODELSCOPE].includes(
+        model.origin,
+      ),
     );
     hfModels.forEach(model => {
       const defaultSettings = getHFDefaultSettings(
@@ -3074,7 +3247,7 @@ class ModelStore {
   };
 
   /**
-   * Fetches and updates model file details from HuggingFace.
+   * Fetches and updates source model file details.
    * This is used when we need to get the lfs.oid for integrity checks.
    * @param model - The model to update
    * @returns Promise<void>
@@ -3085,7 +3258,13 @@ class ModelStore {
     }
 
     try {
-      const fileDetails = await fetchModelFilesDetails(model.hfModel.id);
+      const source = getModelSource(model);
+      const authToken = hfStore.shouldUseToken ? hfStore.hfToken : null;
+      const fileDetails = await fetchModelFilesDetailsFromSource({
+        source,
+        modelId: model.hfModel.sourceRepoId || model.hfModel.id,
+        authToken,
+      });
       const matchingFile = fileDetails.find(
         file => file.path === model.hfModelFile?.rfilename,
       );

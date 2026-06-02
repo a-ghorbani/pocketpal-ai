@@ -102,6 +102,31 @@ describe('useMemoryCheck', () => {
     });
   });
 
+  it('uses total-memory fallback when no calibration is available', async () => {
+    runInAction(() => {
+      modelStore.availableMemoryCeiling = undefined;
+      modelStore.largestSuccessfulLoad = undefined;
+    });
+    (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8 * 1e9);
+
+    const {result, waitForNextUpdate} = renderHook(() =>
+      useMemoryCheck(localModel),
+    );
+
+    try {
+      await waitForNextUpdate();
+    } catch {
+      // Ignoring timeout
+    }
+
+    expect(result.current).toEqual({
+      memoryWarning: '',
+      shortMemoryWarning: '',
+      multimodalWarning: '',
+      fitStatus: 'fits',
+    });
+  });
+
   it('uses maximum of largestSuccessfulLoad and availableMemoryCeiling', async () => {
     // Set largestSuccessfulLoad higher than availableMemoryCeiling
     runInAction(() => {

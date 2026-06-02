@@ -64,6 +64,19 @@ describe('memorySettings', () => {
       expect(result).toBe(false);
     });
 
+    it('should not warn when llama JSI bindings are unavailable', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      mockLoadLlamaModelInfo.mockRejectedValue(
+        new Error('JSI bindings not installed'),
+      );
+
+      const result = await isRepackableQuantization('/path/to/model.gguf');
+
+      expect(result).toBe(false);
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
     it('should handle case-insensitive matching', async () => {
       mockLoadLlamaModelInfo.mockResolvedValue({
         'general.file_type': 'q4_0',

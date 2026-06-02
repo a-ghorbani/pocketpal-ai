@@ -7,13 +7,13 @@ import {
 } from '../../../jest/fixtures/models';
 import {hfStore} from '../../store/HFStore';
 import {
-  fetchGGUFSpecs,
-  fetchModelFilesDetails,
-  fetchModels,
-} from '../../api/hf';
+  fetchGGUFSpecsFromSource,
+  fetchModelFilesDetailsFromSource,
+  fetchModelsFromSource,
+} from '../../api/modelSources';
 
 // Mock the API calls
-jest.mock('../../api/hf');
+jest.mock('../../api/modelSources');
 
 describe('HFStore', () => {
   beforeEach(() => {
@@ -25,6 +25,8 @@ describe('HFStore', () => {
     hfStore.error = null;
     hfStore.nextPageLink = null;
     hfStore.searchQuery = '';
+    hfStore.selectedSource = 'huggingface';
+    hfStore.modelDetailsLoading = false;
     // Clear the token to ensure tests start with no authentication
     hfStore.hfToken = null;
     hfStore.useHfToken = true;
@@ -32,6 +34,12 @@ describe('HFStore', () => {
     (hfStore as any).lastFetchMoreAttempt = 0;
     (hfStore as any).consecutiveSmallResults = 0;
     (hfStore as any).lastFetchedNextLink = null;
+    (hfStore as any).searchRequestId = 0;
+    (hfStore as any).fetchMoreRequestId = 0;
+    (hfStore as any).activeSearchRequestId = 0;
+    (hfStore as any).activeFetchMoreRequestId = 0;
+    (hfStore as any).modelDetailsRequestId = 0;
+    (hfStore as any).activeModelDetailsId = null;
   });
 
   describe('fetchModels', () => {
@@ -40,7 +48,7 @@ describe('HFStore', () => {
         models: [mockHFModel1, mockHFModel2],
         nextLink: 'next-page-url',
       };
-      (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+      (fetchModelsFromSource as jest.Mock).mockResolvedValueOnce(mockResponse);
 
       await hfStore.fetchModels();
 
@@ -54,7 +62,7 @@ describe('HFStore', () => {
     });
 
     it('should handle fetch error', async () => {
-      (fetchModels as jest.Mock).mockRejectedValueOnce(
+      (fetchModelsFromSource as jest.Mock).mockRejectedValueOnce(
         new Error('Network error'),
       );
 
@@ -71,6 +79,58 @@ describe('HFStore', () => {
       );
       expect(hfStore.isLoading).toBe(false);
     });
+
+    it('passes the configured token to ModelScope searches', async () => {
+      const mockResponse = {
+        models: [mockHFModel1],
+        nextLink: null,
+      };
+      hfStore.setSelectedSource('modelscope');
+      hfStore.hfToken = 'modelscope-token';
+      hfStore.useHfToken = true;
+      (fetchModelsFromSource as jest.Mock).mockResolvedValueOnce(mockResponse);
+
+      await hfStore.fetchModels();
+
+      expect(fetchModelsFromSource).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: 'modelscope',
+          authToken: 'modelscope-token',
+        }),
+      );
+    });
+
+    it('ignores stale search results when a newer query completes first', async () => {
+      let resolveFirstSearch: (value: any) => void = () => {};
+      const firstSearch = new Promise(resolve => {
+        resolveFirstSearch = resolve;
+      });
+      const secondResponse = {
+        models: [mockHFModel2],
+        nextLink: null,
+      };
+
+      (fetchModelsFromSource as jest.Mock)
+        .mockReturnValueOnce(firstSearch)
+        .mockResolvedValueOnce(secondResponse);
+
+      hfStore.setSearchQuery('old');
+      const firstRequest = hfStore.fetchModels();
+      hfStore.setSearchQuery('new');
+      const secondRequest = hfStore.fetchModels();
+
+      await secondRequest;
+
+      resolveFirstSearch({
+        models: [mockHFModel1],
+        nextLink: 'stale-next',
+      });
+      await firstRequest;
+
+      expect(hfStore.models).toHaveLength(1);
+      expect(hfStore.models[0].id).toBe(mockHFModel2.id);
+      expect(hfStore.nextPageLink).toBeNull();
+    });
   });
 
   describe('fetchMoreModels', () => {
@@ -78,7 +138,7 @@ describe('HFStore', () => {
       hfStore.nextPageLink = null;
       await hfStore.fetchMoreModels();
 
-      expect(fetchModels).not.toHaveBeenCalled();
+      expect(fetchModelsFromSource).not.toHaveBeenCalled();
     });
 
     it('should append new models to existing ones', async () => {
@@ -90,7 +150,7 @@ describe('HFStore', () => {
         models: [mockHFModel2],
         nextLink: null,
       };
-      (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+      (fetchModelsFromSource as jest.Mock).mockResolvedValueOnce(mockResponse);
 
       await hfStore.fetchMoreModels();
 
@@ -109,14 +169,14 @@ describe('HFStore', () => {
         models: [mockHFModel2],
         nextLink: 'next-page-url-2',
       };
-      (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+      (fetchModelsFromSource as jest.Mock).mockResolvedValueOnce(mockResponse);
 
       await hfStore.fetchMoreModels();
-      expect(fetchModels).toHaveBeenCalledTimes(1);
+      expect(fetchModelsFromSource).toHaveBeenCalledTimes(1);
 
       // Immediate second call should be prevented due to debouncing
       await hfStore.fetchMoreModels();
-      expect(fetchModels).toHaveBeenCalledTimes(1); // Still only 1 call
+      expect(fetchModelsFromSource).toHaveBeenCalledTimes(1); // Still only 1 call
     });
 
     it('should track consecutive small results', async () => {
@@ -129,7 +189,7 @@ describe('HFStore', () => {
         nextLink: 'next-page-url-2',
       };
 
-      (fetchModels as jest.Mock)
+      (fetchModelsFromSource as jest.Mock)
         .mockResolvedValueOnce(smallResponse)
         .mockResolvedValueOnce(smallResponse)
         .mockResolvedValueOnce(smallResponse);
@@ -150,15 +210,99 @@ describe('HFStore', () => {
     it('should fetch both GGUF specs and file sizes', async () => {
       const modelId = 'owner/hf-model-name-1';
 
-      (fetchGGUFSpecs as jest.Mock).mockResolvedValueOnce(mockGGUFSpecs1);
-      (fetchModelFilesDetails as jest.Mock).mockResolvedValueOnce(
+      (fetchGGUFSpecsFromSource as jest.Mock).mockResolvedValueOnce(
+        mockGGUFSpecs1,
+      );
+      (fetchModelFilesDetailsFromSource as jest.Mock).mockResolvedValueOnce(
         mockHFModelFiles1,
       );
 
       await hfStore.fetchModelData(modelId);
 
-      expect(fetchGGUFSpecs).toHaveBeenCalledWith(modelId, null);
-      expect(fetchModelFilesDetails).toHaveBeenCalledWith(modelId, null);
+      expect(fetchGGUFSpecsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId,
+        authToken: null,
+      });
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'huggingface',
+        modelId,
+        authToken: null,
+      });
+    });
+
+    it('passes the configured token to ModelScope model detail requests', async () => {
+      const modelId = 'Qwen/Qwen2.5-GGUF';
+      hfStore.models = [
+        {
+          ...mockHFModel1,
+          id: modelId,
+          source: 'modelscope',
+        },
+      ];
+      hfStore.hfToken = 'modelscope-token';
+      hfStore.useHfToken = true;
+      (fetchGGUFSpecsFromSource as jest.Mock).mockResolvedValueOnce(
+        mockGGUFSpecs1,
+      );
+      (fetchModelFilesDetailsFromSource as jest.Mock).mockResolvedValueOnce(
+        mockHFModelFiles1,
+      );
+
+      await hfStore.fetchModelData(modelId);
+
+      expect(fetchGGUFSpecsFromSource).toHaveBeenCalledWith({
+        source: 'modelscope',
+        modelId,
+        authToken: 'modelscope-token',
+      });
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalledWith({
+        source: 'modelscope',
+        modelId,
+        authToken: 'modelscope-token',
+      });
+    });
+
+    it('keeps details loading until the current detail request completes', async () => {
+      hfStore.models = [mockHFModel1];
+      let resolveSpecs: (value: any) => void = () => {};
+
+      (fetchGGUFSpecsFromSource as jest.Mock).mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveSpecs = resolve;
+        }),
+      );
+      (fetchModelFilesDetailsFromSource as jest.Mock).mockResolvedValueOnce(
+        mockHFModelFiles1,
+      );
+
+      const request = hfStore.fetchModelData(mockHFModel1.id);
+      expect(hfStore.modelDetailsLoading).toBe(true);
+
+      resolveSpecs(mockGGUFSpecs1);
+      await request;
+
+      expect(hfStore.modelDetailsLoading).toBe(false);
+    });
+  });
+
+  describe('setSelectedSource', () => {
+    it('updates source and clears existing search results', () => {
+      hfStore.models = [mockHFModel1];
+      hfStore.nextPageLink = 'next-page-url';
+      hfStore.error = {
+        code: 'network',
+        context: 'search',
+        message: 'failed',
+        recoverable: true,
+      };
+
+      hfStore.setSelectedSource('modelscope');
+
+      expect(hfStore.selectedSource).toBe('modelscope');
+      expect(hfStore.models).toHaveLength(0);
+      expect(hfStore.nextPageLink).toBeNull();
+      expect(hfStore.error).toBeNull();
     });
   });
 
@@ -201,7 +345,7 @@ describe('HFStore', () => {
         models: [mockHFModel1],
         nextLink: null,
       };
-      (fetchModels as jest.Mock).mockResolvedValueOnce(mockResponse);
+      (fetchModelsFromSource as jest.Mock).mockResolvedValueOnce(mockResponse);
 
       await hfStore.fetchModels();
 
@@ -236,7 +380,9 @@ describe('HFStore', () => {
   describe('fetchAndSetGGUFSpecs', () => {
     it('should update model specs when successful', async () => {
       hfStore.models = [mockHFModel1];
-      (fetchGGUFSpecs as jest.Mock).mockResolvedValueOnce(mockGGUFSpecs2);
+      (fetchGGUFSpecsFromSource as jest.Mock).mockResolvedValueOnce(
+        mockGGUFSpecs2,
+      );
 
       await hfStore.fetchAndSetGGUFSpecs(mockHFModel1.id);
 
@@ -245,11 +391,13 @@ describe('HFStore', () => {
 
     it('should handle non-existent model', async () => {
       hfStore.models = [];
-      (fetchGGUFSpecs as jest.Mock).mockResolvedValueOnce(mockGGUFSpecs1);
+      (fetchGGUFSpecsFromSource as jest.Mock).mockResolvedValueOnce(
+        mockGGUFSpecs1,
+      );
 
       await hfStore.fetchAndSetGGUFSpecs('non-existent-id');
 
-      expect(fetchGGUFSpecs).toHaveBeenCalled();
+      expect(fetchGGUFSpecsFromSource).toHaveBeenCalled();
       // Should not throw error
     });
   });
@@ -261,7 +409,9 @@ describe('HFStore', () => {
         {path: 'hf-model-name-1.Q4_K_M.gguf', size: 1111, oid: 'abc123'},
       ];
 
-      (fetchModelFilesDetails as jest.Mock).mockResolvedValueOnce(fileDetails);
+      (fetchModelFilesDetailsFromSource as jest.Mock).mockResolvedValueOnce(
+        fileDetails,
+      );
 
       await hfStore.fetchModelFileDetails(mockHFModel1.id);
 
@@ -271,11 +421,11 @@ describe('HFStore', () => {
 
     it('should handle non-existent model', async () => {
       hfStore.models = [];
-      (fetchModelFilesDetails as jest.Mock).mockResolvedValueOnce([]);
+      (fetchModelFilesDetailsFromSource as jest.Mock).mockResolvedValueOnce([]);
 
       await hfStore.fetchModelFileDetails('non-existent-id');
 
-      expect(fetchModelFilesDetails).toHaveBeenCalled();
+      expect(fetchModelFilesDetailsFromSource).toHaveBeenCalled();
       // Should not throw error
     });
   });
