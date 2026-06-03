@@ -353,4 +353,31 @@ describe('DownloadManager', () => {
 
     expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
   });
+
+  it('sends the attribution User-Agent on the iOS RNFS download', async () => {
+    (Platform as any).OS = 'ios';
+
+    const iosDownloadManager = new DownloadManager();
+    iosDownloadManager.setCallbacks({
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    });
+
+    (RNFS.downloadFile as jest.Mock).mockReturnValue({
+      jobId: 999,
+      promise: Promise.resolve({statusCode: 200}),
+    });
+
+    await iosDownloadManager.startDownload(basicModel, '/path/to/model.bin');
+
+    expect(RNFS.downloadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'User-Agent': 'PocketPal/1.0.0 (ai.pocketpal)',
+        }),
+      }),
+    );
+  });
 });
