@@ -5,32 +5,78 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       padding: 16,
-      gap: 16,
+      gap: 14,
     },
     body: {
-      color: theme.colors.onSurface,
-    },
-    tierRow: {
-      flexDirection: 'row',
-      gap: 16,
-    },
-    tierColumn: {
-      flex: 1,
-      padding: 12,
-      borderRadius: 12,
-      backgroundColor: theme.colors.surfaceVariant,
-      alignItems: 'center',
-    },
-    tierLabel: {
       color: theme.colors.onSurfaceVariant,
-      marginBottom: 4,
     },
-    tierValue: {
+    pickHead: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      marginTop: 4,
+    },
+    pickVal: {
       color: theme.colors.onSurface,
       fontVariant: ['tabular-nums'],
     },
-    hint: {
+    pickUnit: {
       color: theme.colors.onSurfaceVariant,
+    },
+    pickSub: {
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 4,
+    },
+    fitChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+    },
+    fitChipText: {
+      fontSize: 11,
+      fontWeight: '700' as const,
+      letterSpacing: 0.2,
+    },
+    sliderWrap: {
+      marginTop: 4,
+    },
+    slider: {
+      width: '100%',
+      height: 36,
+    },
+    sliderEnds: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 4,
+    },
+    sliderEndsText: {
+      color: theme.colors.onSurfaceVariant,
+      fontVariant: ['tabular-nums'],
+    },
+    statusLine: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 8,
+      minHeight: 40,
+      justifyContent: 'center',
+    },
+    statusText: {
+      color: theme.colors.onSurfaceVariant,
+    },
+    hedge: {
+      color: theme.colors.onSurfaceVariant,
+      fontStyle: 'italic' as const,
+    },
+    advancedToggle: {
+      paddingVertical: 6,
+    },
+    advancedToggleText: {
+      color: theme.colors.onSurfaceVariant,
+      fontWeight: '600' as const,
+    },
+    advancedBody: {
+      color: theme.colors.onSurfaceVariant,
+      lineHeight: 18,
     },
     actions: {
       flexDirection: 'row',

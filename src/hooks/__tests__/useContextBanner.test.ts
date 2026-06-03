@@ -81,7 +81,7 @@ describe('useContextBanner', () => {
     (chatSessionStore as any).isStopping = true;
 
     await act(async () => {
-      await result.current.handleConfirmIncrease();
+      await result.current.handleConfirmIncrease(4096);
     });
 
     expect(chatSessionStore.setSessionContextOverride).not.toHaveBeenCalled();

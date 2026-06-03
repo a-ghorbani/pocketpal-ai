@@ -3,8 +3,28 @@ import React from 'react';
 import {fireEvent, render} from '../../../../jest/test-utils';
 import {L10nContext} from '../../../utils';
 import {l10n} from '../../../locales';
+import {downloadedModel} from '../../../../jest/fixtures/models';
+import type {Model} from '../../../utils/types';
 
 import {IncreaseContextSheet} from '../IncreaseContextSheet';
+
+// Inject a generous trained context length so the slider has many stops
+// to choose from regardless of the rest of the fixture.
+const baseModel: Model = {
+  ...(downloadedModel as Model),
+  ggufMetadata: {
+    architecture: 'llama',
+    n_layers: 32,
+    n_embd: 4096,
+    n_head: 32,
+    n_head_kv: 32,
+    n_vocab: 128256,
+    n_embd_head_k: 128,
+    n_embd_head_v: 128,
+    sliding_window: undefined,
+    context_length: 131072,
+  } as any,
+};
 
 const renderSheet = (
   overrides: Partial<React.ComponentProps<typeof IncreaseContextSheet>> = {},
@@ -14,7 +34,7 @@ const renderSheet = (
     onClose: jest.fn(),
     onConfirm: jest.fn(),
     currentNCtx: 2048,
-    nextTierTokens: 4096,
+    model: baseModel,
     isReloading: false,
     ...overrides,
   };
@@ -32,61 +52,46 @@ describe('IncreaseContextSheet', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the current and next tier values', () => {
-    const {getByText} = renderSheet({currentNCtx: 2048, nextTierTokens: 4096});
-    expect(getByText('2048')).toBeTruthy();
-    expect(getByText('4096')).toBeTruthy();
-  });
-
-  it('renders the friendly body and reload hint copy', () => {
+  it('renders the friendly body and the reload hedge', () => {
     const {getByText} = renderSheet();
     expect(getByText(l10n.en.chat.contextWarning.sheet.body)).toBeTruthy();
-    expect(
-      getByText(l10n.en.chat.contextWarning.sheet.reloadHint),
-    ).toBeTruthy();
+    expect(getByText(l10n.en.chat.contextWarning.sheet.hedge)).toBeTruthy();
   });
 
-  it('calls onConfirm when the confirm button is pressed', () => {
-    const {getByTestId, props} = renderSheet();
+  it('renders the slider', () => {
+    const {getByTestId} = renderSheet();
+    expect(getByTestId('increase-context-slider')).toBeTruthy();
+  });
+
+  it('passes the chosen tokens to onConfirm', () => {
+    const onConfirm = jest.fn();
+    const {getByTestId} = renderSheet({onConfirm});
     fireEvent.press(getByTestId('increase-context-confirm'));
-    expect(props.onConfirm).toHaveBeenCalledTimes(1);
-    expect(props.onClose).not.toHaveBeenCalled();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    // The recommended default is the largest fitting stop above the
+    // current 2048 — the exact value depends on memory mocks, but it
+    // must be a positive number above the current.
+    const [chosen] = onConfirm.mock.calls[0];
+    expect(typeof chosen).toBe('number');
+    expect(chosen).toBeGreaterThan(2048);
   });
 
   it('calls onClose when the cancel button is pressed', () => {
-    const {getByTestId, props} = renderSheet();
+    const onClose = jest.fn();
+    const {getByTestId} = renderSheet({onClose});
     fireEvent.press(getByTestId('increase-context-cancel'));
-    expect(props.onClose).toHaveBeenCalledTimes(1);
-    expect(props.onConfirm).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('disables both buttons while a reload is in flight', () => {
-    const {getByTestId, props} = renderSheet({isReloading: true});
+    const onConfirm = jest.fn();
+    const onClose = jest.fn();
+    const {getByTestId} = renderSheet({onConfirm, onClose, isReloading: true});
 
-    // Disabled Paper buttons swallow press events, so the handlers must not
-    // be invoked even if the touchable surface receives a press.
     fireEvent.press(getByTestId('increase-context-confirm'));
     fireEvent.press(getByTestId('increase-context-cancel'));
 
-    expect(props.onConfirm).not.toHaveBeenCalled();
-    expect(props.onClose).not.toHaveBeenCalled();
-  });
-
-  it('renders the new tier value when the next tier changes', () => {
-    const {getByText, rerender} = renderSheet({nextTierTokens: 4096});
-    expect(getByText('4096')).toBeTruthy();
-
-    rerender(
-      <L10nContext.Provider value={l10n.en}>
-        <IncreaseContextSheet
-          isVisible
-          onClose={jest.fn()}
-          onConfirm={jest.fn()}
-          currentNCtx={2048}
-          nextTierTokens={8192}
-        />
-      </L10nContext.Provider>,
-    );
-    expect(getByText('8192')).toBeTruthy();
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -1054,7 +1054,6 @@ export const ChatView = observer(
       isRunActive,
       activeModel,
       effectiveNCtxForSession,
-      nextTierTokens,
       increaseSheetVisible,
       isReloading,
       reloadSnackbar,
@@ -1195,13 +1194,13 @@ export const ChatView = observer(
           />
 
           {/* Increase-context sheet (banner CTA) */}
-          {activeModel && nextTierTokens !== null ? (
+          {activeModel ? (
             <IncreaseContextSheet
               isVisible={increaseSheetVisible}
               onClose={handleCloseIncreaseSheet}
               onConfirm={handleConfirmIncrease}
               currentNCtx={effectiveNCtxForSession}
-              nextTierTokens={nextTierTokens}
+              model={activeModel}
               isReloading={isReloading}
             />
           ) : null}

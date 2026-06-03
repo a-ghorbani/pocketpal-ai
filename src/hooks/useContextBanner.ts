@@ -10,8 +10,14 @@ import {
   type BannerVariant,
 } from '../utils/bannerVariantResolver';
 import {derivedText} from '../utils/chat';
+import {t} from '../locales';
 import {hasEnoughMemoryWithNCtx} from './useMemoryCheck';
 import {usePalLoadHint} from './usePalLoadHint';
+
+const formatKLabel = (tokens: number): string => {
+  const k = tokens / 1024;
+  return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}K`;
+};
 
 interface UseContextBannerArgs {
   activePal: Pal | undefined;
@@ -132,55 +138,67 @@ export const useContextBanner = ({
     [activeSessionId],
   );
 
-  const handleConfirmIncrease = React.useCallback(async () => {
-    if (!activeSessionId || !activeModel || nextTierTokens === null) {
-      return;
-    }
-    // Defense-in-depth: reachable via the pal-load-hint snackbar even
-    // when the in-banner button is disabled.
-    if (chatSessionStore.isGenerating || chatSessionStore.isStopping) {
-      return;
-    }
-    const target = nextTierTokens;
-    const priorOverride = sessionOverrides.get(activeSessionId);
-    chatSessionStore.setSessionContextOverride(activeSessionId, target);
-    setIsReloading(true);
-    setReloadSnackbar({
-      message: l10n.chat.contextWarning.reloadingSubcopy,
-      visible: true,
-      // RNP Snackbar treats only Infinity as indefinite; large finite
-      // values overflow setTimeout and fire immediately.
-      duration: Infinity,
-      phase: 'reloading',
-    });
-    setIncreaseSheetVisible(false);
-    try {
-      await modelStore.releaseContext();
-      await modelStore.initContext(activeModel);
-      setReloadSnackbar({
-        message: l10n.chat.contextWarning.sheet.successSnackbar,
-        visible: true,
-        phase: 'success',
-      });
-    } catch (err) {
-      if (priorOverride === undefined) {
-        chatSessionStore.clearSessionContextOverride(activeSessionId);
-      } else {
-        chatSessionStore.setSessionContextOverride(
-          activeSessionId,
-          priorOverride,
-        );
+  const handleConfirmIncrease = React.useCallback(
+    async (target: number) => {
+      if (!activeSessionId || !activeModel || !Number.isFinite(target)) {
+        return;
       }
-      console.warn('[ChatView] increase context failed:', err);
+      // Defense-in-depth: reachable via the pal-load-hint snackbar even
+      // when the in-banner button is disabled.
+      if (chatSessionStore.isGenerating || chatSessionStore.isStopping) {
+        return;
+      }
+      const priorOverride = sessionOverrides.get(activeSessionId);
+      chatSessionStore.setSessionContextOverride(activeSessionId, target);
+      setIsReloading(true);
       setReloadSnackbar({
-        message: l10n.chat.contextWarning.sheet.failureSnackbar,
+        message: l10n.chat.contextWarning.reloadingSubcopy,
         visible: true,
-        phase: 'failure',
+        // RNP Snackbar treats only Infinity as indefinite; large finite
+        // values overflow setTimeout and fire immediately.
+        duration: Infinity,
+        phase: 'reloading',
       });
-    } finally {
-      setIsReloading(false);
-    }
-  }, [activeSessionId, activeModel, nextTierTokens, sessionOverrides, l10n]);
+      setIncreaseSheetVisible(false);
+      try {
+        await modelStore.releaseContext();
+        await modelStore.initContext(activeModel);
+        const sizeLabel = formatKLabel(target);
+        const palName = activePal?.name;
+        const successMsg = palName
+          ? t(l10n.chat.contextWarning.sheet.successSnackbar, {
+              size: sizeLabel,
+              palName,
+            })
+          : t(l10n.chat.contextWarning.sheet.successSnackbarNoPal, {
+              size: sizeLabel,
+            });
+        setReloadSnackbar({
+          message: successMsg,
+          visible: true,
+          phase: 'success',
+        });
+      } catch (err) {
+        if (priorOverride === undefined) {
+          chatSessionStore.clearSessionContextOverride(activeSessionId);
+        } else {
+          chatSessionStore.setSessionContextOverride(
+            activeSessionId,
+            priorOverride,
+          );
+        }
+        console.warn('[ChatView] increase context failed:', err);
+        setReloadSnackbar({
+          message: l10n.chat.contextWarning.sheet.failureSnackbar,
+          visible: true,
+          phase: 'failure',
+        });
+      } finally {
+        setIsReloading(false);
+      }
+    },
+    [activeSessionId, activeModel, activePal, sessionOverrides, l10n],
+  );
 
   const handleNewChat = React.useCallback(() => {
     chatSessionStore.resetActiveSession();
