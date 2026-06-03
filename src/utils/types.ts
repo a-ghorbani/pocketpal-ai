@@ -7,12 +7,74 @@ import {ContextParams, TokenData} from 'llama.rn';
 import {CompletionParams} from './completionTypes';
 import {PreviewData} from '@flyerhq/react-native-link-preview';
 import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
+import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
+import type {TalentResult} from '../services/talents/types';
+
+/**
+ * One model-emitted tool call within an `AgentStep`. The `arguments` field
+ * is `string` on the wire (what the OpenAI/llama.rn API expects) but
+ * llama.rn may return a parsed object on output, so we accept both shapes
+ * in memory and serialize back to string at the wire boundary in
+ * `convertToChatMessages`.
+ */
+/**
+ * Generation-side metrics for a tool call: how much work the model
+ * did to produce the call's `arguments` JSON, NOT how long the
+ * engine took to execute it. Surfaced post-hoc by the chip / preview
+ * footer so the user can see the "cost" of a tool call after it
+ * lands. Optional — older persisted calls (or steps where multi-tool
+ * accounting isn't useful) may carry no metrics.
+ */
+export interface AgentToolCallMetrics {
+  /** Streaming token events the runner counted while this call was being generated. */
+  tokens: number;
+  /** Wall-clock ms between the first generation token and step finalisation. */
+  durationMs: number;
+}
+
+export interface AgentToolCall {
+  id: string;
+  type?: 'function';
+  function: {name: string; arguments: string};
+  metrics?: AgentToolCallMetrics;
+}
+
+/**
+ * The execution outcome of a single tool call. `responseContent` is what
+ * gets fed back to the model as the `{role: 'tool', content}` payload on
+ * the next iteration.
+ */
+export interface AgentToolOutcome {
+  callId: string;
+  toolName: string;
+  result: TalentResult;
+  responseContent: string;
+}
+
+/**
+ * One model invocation within an `AssistantTurn`. A single-step no-tool
+ * turn is the degenerate case `{content: '...'}`; a multi-step turn (e.g.
+ * preamble → tool call → final answer) carries multiple steps.
+ */
+export interface AgentStep {
+  /** Visible text emitted during this turn (preamble / final answer). */
+  content?: string;
+  /** Reasoning / thinking content, if the model emitted any. */
+  reasoningContent?: string;
+  /** Model-emitted tool calls in this turn. */
+  toolCalls?: AgentToolCall[];
+  /** Execution outcomes for the calls, in invocation order. */
+  toolOutcomes?: AgentToolOutcome[];
+  /** True while this step is still streaming. Cleared on step_finished. */
+  partial?: boolean;
+}
 
 export namespace MessageType {
-  export type Any = Custom | File | Image | Text | Unsupported;
+  export type Any = AssistantTurn | Custom | File | Image | Text | Unsupported;
 
   export type DerivedMessage =
+    | DerivedAssistantTurn
     | DerivedCustom
     | DerivedFile
     | DerivedImage
@@ -33,7 +95,13 @@ export namespace MessageType {
     metadata?: Record<string, any>;
     roomId?: string;
     status?: 'delivered' | 'error' | 'seen' | 'sending' | 'sent';
-    type: 'custom' | 'file' | 'image' | 'text' | 'unsupported';
+    type:
+      | 'assistant_turn'
+      | 'custom'
+      | 'file'
+      | 'image'
+      | 'text'
+      | 'unsupported';
     updatedAt?: number;
   }
 
@@ -43,6 +111,12 @@ export namespace MessageType {
     offset: number;
     showName: boolean;
     showStatus: boolean;
+  }
+
+  export interface DerivedAssistantTurn
+    extends DerivedMessageProps,
+      AssistantTurn {
+    type: AssistantTurn['type'];
   }
 
   export interface DerivedCustom extends DerivedMessageProps, Custom {
@@ -111,6 +185,19 @@ export namespace MessageType {
 
   export interface Text extends Base, PartialText {
     type: 'text';
+  }
+
+  /**
+   * One assistant reply represented as an ordered list of `AgentStep`s.
+   * Single-step no-tool turns are the degenerate case `steps: [{content}]`.
+   * `steps` is the in-memory top-level field; on disk it is JSON-serialized
+   * into `metadata.steps` (lift handled by `Message.toMessageObject()` and
+   * `ChatSessionRepository`). Consumers MUST read `steps` and never
+   * `metadata.steps`.
+   */
+  export interface AssistantTurn extends Base {
+    type: 'assistant_turn';
+    steps: AgentStep[];
   }
 
   export interface Unsupported extends Base {
@@ -282,10 +369,35 @@ export interface ThemeInsets {
   messageInsetsVertical: number;
 }
 
+/**
+ * Spacing on the consumed Theme is a superset of the new token scale and
+ * the legacy `default` key (preserved verbatim for consumers like
+ * `theme.spacing.default` used in 4 files today; removed in a later
+ * cleanup phase).
+ */
 export interface ThemeSpacing {
   default: number;
+  none: 0;
+  xxs: 2;
+  xs: 4;
+  s: 8;
+  sm: 12;
+  m: 16;
+  ml: 20;
+  l: 24;
 }
 
+/**
+ * The Theme consumed via `useTheme()`. Superset of:
+ *   - resolved tokens (typography, radius, stroke) — the new surface that
+ *     per-screen restyle work migrates consumers onto.
+ *   - the legacy MD3 alias surface (colors keys + MD3 typescale on
+ *     `fonts`) — pinned to today's values to avoid visual regression.
+ *
+ * The two surfaces do NOT cross-feed: the legacy `fonts` block is
+ * preserved verbatim and is not derived from `theme.typography.*`. This
+ * is the migration window contract.
+ */
 export interface Theme extends MD3Theme {
   colors: MD3BaseColors & SemanticColors;
   borders: ThemeBorders;
@@ -293,6 +405,9 @@ export interface Theme extends MD3Theme {
   fonts: ThemeFonts;
   insets: ThemeInsets;
   icons?: ThemeIcons;
+  typography: TokenTypography;
+  radius: TokenRadius;
+  stroke: TokenStroke;
 }
 
 export interface User {
@@ -314,7 +429,7 @@ export interface ChatTemplateConfig extends TemplateConfig {
 }
 
 export type ChatMessage = {
-  role: 'system' | 'assistant' | 'user';
+  role: 'system' | 'assistant' | 'user' | 'tool';
   content:
     | string
     | Array<{
@@ -322,12 +437,23 @@ export type ChatMessage = {
         text?: string;
         image_url?: {url: string};
       }>;
+  reasoning_content?: string;
+  tool_calls?: Array<import('llama.rn').ToolCall>;
+  tool_call_id?: string;
 };
 
 export enum ModelOrigin {
   PRESET = 'preset',
   LOCAL = 'local',
   HF = 'hf',
+  REMOTE = 'remote',
+}
+
+export interface ServerConfig {
+  id: string;
+  name: string;
+  url: string; // Base URL e.g. "http://192.168.1.100:1234"
+  lastConnected?: number; // Timestamp
 }
 
 export enum ModelType {
@@ -350,6 +476,7 @@ export interface GGUFMetadata {
   n_embd_head_k: number; // Key head dimension
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
+  context_length?: number; // Native context length from GGUF
 }
 
 export interface Model {
@@ -383,6 +510,8 @@ export interface Model {
 
   // Thinking capabilities
   supportsThinking?: boolean; // Whether this model supports thinking/reasoning mode
+  thinkingStartTag?: string; // Thinking start tag from getFormattedChat (e.g., '<think>')
+  thinkingEndTag?: string; // Thinking end tag from getFormattedChat (e.g., '</think>')
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;
@@ -396,6 +525,11 @@ export interface Model {
   hfModelFile?: ModelFile;
   hfModel?: HuggingFaceModel;
   hash?: string;
+
+  // Remote model fields (for models from OpenAI-compatible servers)
+  serverId?: string; // Reference to ServerConfig.id for remote models
+  serverName?: string; // Denormalized for display convenience
+  remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
 export type RootDrawerParamList = {
@@ -516,6 +650,11 @@ export interface ContextInitParams
   // v2.1+
   /** Maximum number of tokens for image input (for dynamic resolution VLMs). Default: 512 */
   image_max_tokens?: number;
+
+  // v2.2+
+  /** Disable extra buffer types for weight repacking (CPU_REPACK). Android only.
+   * Reduces memory usage at the cost of slower prompt processing. Default: false */
+  no_extra_bufts?: boolean;
 
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */

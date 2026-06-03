@@ -164,6 +164,9 @@ describe('ModelsScreen', () => {
       expect(RNFS.unlink).toHaveBeenCalledWith(
         '/path/to/documents/models/local/mockModelFile.bin',
       );
+      expect(modelStore.removeModelByFullPath).toHaveBeenCalledWith(
+        '/path/to/documents/models/local/mockModelFile.bin',
+      );
       expect(RNFS.copyFile).toHaveBeenCalled();
       expect(modelStore.addLocalModel).toHaveBeenCalled();
     });
@@ -261,6 +264,132 @@ describe('ModelsScreen', () => {
         `/path/to/documents/models/local/mockModelFile_${counter}.bin`,
       );
     });
+  });
+
+  it('shows a copying snackbar while file is being copied', async () => {
+    let resolveCopy!: () => void;
+    (RNFS.copyFile as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          resolveCopy = resolve;
+        }),
+    );
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+      if (path.includes('models/local')) {
+        return false;
+      }
+      return true;
+    });
+    (pick as jest.Mock).mockResolvedValue([
+      {uri: '/mock/file/path', name: 'mockModelFile.bin'},
+    ]);
+
+    const {getByTestId} = render(<ModelsScreen />);
+
+    // Open FAB, press local
+    const fabGroup = getByTestId('fab-group');
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    // Snackbar should be visible while copy is pending
+    await waitFor(() => {
+      expect(getByTestId('copy-model-snackbar')).toBeTruthy();
+    });
+
+    // Resolve the copy
+    await act(async () => {
+      resolveCopy();
+    });
+  });
+
+  it('shows an error alert when copy fails', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    (RNFS.copyFile as jest.Mock).mockRejectedValue(new Error('Disk full'));
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+      if (path.includes('models/local')) {
+        return false;
+      }
+      return true;
+    });
+    (pick as jest.Mock).mockResolvedValue([
+      {uri: '/mock/file/path', name: 'mockModelFile.bin'},
+    ]);
+
+    const {getByTestId} = render(<ModelsScreen />);
+
+    const fabGroup = getByTestId('fab-group');
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(expect.any(String), 'Disk full');
+    });
+  });
+
+  it('prevents double-tap by ignoring second add while copy is in progress', async () => {
+    // First call: copy never resolves so isCopyingModel stays true
+    (RNFS.copyFile as jest.Mock).mockImplementation(
+      () => new Promise<void>(() => {}),
+    );
+    (RNFS.exists as jest.Mock).mockImplementation(async (path: string) => {
+      if (path.includes('models/local')) {
+        return false;
+      }
+      return true;
+    });
+    (pick as jest.Mock).mockResolvedValue([
+      {uri: '/mock/file/path', name: 'mockModelFile.bin'},
+    ]);
+
+    const {getByTestId} = render(<ModelsScreen />);
+
+    // Open FAB and press local to start the first copy
+    const fabGroup = getByTestId('fab-group');
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    // Verify first copy started
+    await waitFor(() => {
+      expect(pick).toHaveBeenCalledTimes(1);
+    });
+
+    // Reset pick mock to detect if it gets called again
+    (pick as jest.Mock).mockClear();
+
+    // Try to press local FAB again while copy is in progress
+    fireEvent.press(fabGroup);
+    await waitFor(() => {
+      expect(
+        getByTestId('local-fab', {includeHiddenElements: true}),
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('local-fab', {includeHiddenElements: true}));
+    });
+
+    // pick should NOT have been called again — the early return guard blocks it
+    expect(pick).not.toHaveBeenCalled();
   });
 
   // Add tests for model filtering and grouping

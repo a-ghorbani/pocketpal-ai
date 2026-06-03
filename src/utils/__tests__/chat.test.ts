@@ -2,10 +2,16 @@ import {Templates} from 'chat-formatter';
 import {
   applyChatTemplate,
   convertToChatMessages,
+  derivedText,
   user,
   assistant,
 } from '../chat';
-import {ChatMessage, ChatTemplateConfig, MessageType} from '../types';
+import {
+  AgentStep,
+  ChatMessage,
+  ChatTemplateConfig,
+  MessageType,
+} from '../types';
 import {createModel} from '../../../jest/fixtures/models';
 
 const conversationWSystem: ChatMessage[] = [
@@ -230,6 +236,405 @@ describe('convertToChatMessages', () => {
         content: 'Hello',
       },
     ] as ChatMessage[]);
+  });
+});
+
+// ---------- AssistantTurn coverage ----------
+
+const makeUserText = (text: string, id = String(Math.random())) =>
+  ({
+    id,
+    author: user,
+    text,
+    type: 'text',
+    createdAt: 0,
+  }) as MessageType.Text;
+
+const makeAssistantTurn = (
+  steps: AgentStep[],
+  id = 'turn-' + Math.random(),
+): MessageType.AssistantTurn => ({
+  id,
+  type: 'assistant_turn',
+  author: assistant,
+  createdAt: 0,
+  steps,
+  metadata: {},
+});
+
+describe('convertToChatMessages — AssistantTurn', () => {
+  // Reminder: convertToChatMessages reverses message groups (chronological
+  // input is the order the chat list keeps — newest first). User-then-
+  // assistant order in the input becomes assistant-then-user in the output.
+
+  it('#1 AssistantTurn with one step (no tools) → one assistant API message', () => {
+    const result = convertToChatMessages(
+      [makeAssistantTurn([{content: 'Hi there!'}])],
+      true,
+    );
+    expect(result).toEqual([{role: 'assistant', content: 'Hi there!'}]);
+  });
+
+  it('#2 [preamble+toolCall, followup] → assistant(content, tool_calls) + tool + assistant(content) — three API messages', () => {
+    const turn = makeAssistantTurn([
+      {
+        content: 'Let me calculate',
+        toolCalls: [
+          {
+            id: 'c0',
+            function: {name: 'calculate', arguments: '{"expr":"2+2"}'},
+          },
+        ],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'calculate',
+            result: {type: 'text', summary: '4'},
+            responseContent: '4',
+          },
+        ],
+      },
+      {content: 'The answer is 4'},
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: 'Let me calculate',
+        tool_calls: [
+          {
+            id: 'c0',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{"expr":"2+2"}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'c0', content: '4'},
+      {role: 'assistant', content: 'The answer is 4'},
+    ]);
+  });
+
+  it('#3 step with empty content but tool_calls → assistant message with empty content + tool_calls + sentinel "aborted" tool response (orphan-pair guard)', () => {
+    // A persisted step with toolCalls and no toolOutcomes is the
+    // abort/crash recovery shape. The orphan-pair guard in
+    // stepToApiMessages synthesizes a sentinel tool response so the
+    // next-turn Jinja template doesn't see an unmatched tool_call_id.
+    const turn = makeAssistantTurn([
+      {
+        content: '',
+        toolCalls: [{id: 'c0', function: {name: 'datetime', arguments: '{}'}}],
+      },
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: '',
+        tool_calls: [
+          {
+            id: 'c0',
+            type: 'function',
+            function: {name: 'datetime', arguments: '{}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'c0', content: 'aborted'},
+    ]);
+  });
+
+  // Abort/crash recovery scenarios. Without these guards a strict-Jinja
+  // template throws on the next turn because every `tool_call_id` must
+  // have a matching role:'tool' response.
+  it('abort after step_finished, before tool_call_finished → synthesizes "aborted" sentinel for the orphan call', () => {
+    // Simulates the canonical race: step_finished landed (so
+    // step.toolCalls is persisted), the user tapped Stop, and the
+    // tool_call_finished event never reached the store.
+    const turn = makeAssistantTurn([
+      {
+        content: 'Let me look that up',
+        toolCalls: [
+          {id: 'call_42_0', function: {name: 'datetime', arguments: '{}'}},
+        ],
+        toolOutcomes: [],
+      },
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: 'Let me look that up',
+        tool_calls: [
+          {
+            id: 'call_42_0',
+            type: 'function',
+            function: {name: 'datetime', arguments: '{}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'call_42_0', content: 'aborted'},
+    ]);
+  });
+
+  it('B7b mid-step crash with multiple tool_calls and partial outcomes → synthesizes sentinel only for the unmatched call', () => {
+    // Two tool_calls on one step, only the first finished before the
+    // process crashed. On reload the second must be filled in with the
+    // sentinel so the assistant.tool_calls[i] ↔ role:'tool' invariant
+    // is satisfied for both ids.
+    const turn = makeAssistantTurn([
+      {
+        content: '',
+        toolCalls: [
+          {id: 'c0', function: {name: 'calculate', arguments: '{"expr":"1"}'}},
+          {id: 'c1', function: {name: 'datetime', arguments: '{}'}},
+        ],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'calculate',
+            result: {type: 'text', summary: '1'},
+            responseContent: '1',
+          },
+        ],
+      },
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: '',
+        tool_calls: [
+          {
+            id: 'c0',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{"expr":"1"}'},
+          },
+          {
+            id: 'c1',
+            type: 'function',
+            function: {name: 'datetime', arguments: '{}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'c0', content: '1'},
+      {role: 'tool', tool_call_id: 'c1', content: 'aborted'},
+    ]);
+  });
+
+  it('#4 legacy Text assistant message → unchanged behavior', () => {
+    const result = convertToChatMessages(
+      [
+        {
+          id: '1',
+          author: assistant,
+          text: 'classic',
+          type: 'text',
+          createdAt: 0,
+        } as MessageType.Text,
+      ],
+      true,
+    );
+    expect(result).toEqual([{role: 'assistant', content: 'classic'}]);
+  });
+
+  it('#5 does NOT read metadata.talentCalls / toolMessages / talentResults (fixtures with empty metadata except metadata.steps)', () => {
+    // Construct a turn with empty top-level metadata. If conversion
+    // were still reading legacy metadata-bag fields, it would pull in
+    // calls from the wrong place.
+    const turn = makeAssistantTurn([
+      {
+        content: '',
+        toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'calculate',
+            result: {type: 'text', summary: '7'},
+            responseContent: '7',
+          },
+        ],
+      },
+    ]);
+    // Sanity: metadata is empty.
+    turn.metadata = {};
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([
+      {
+        role: 'assistant',
+        content: '',
+        tool_calls: [
+          {
+            id: 'c0',
+            type: 'function',
+            function: {name: 'calculate', arguments: '{}'},
+          },
+        ],
+      },
+      {role: 'tool', tool_call_id: 'c0', content: '7'},
+    ]);
+  });
+
+  it('#6 history filter: AssistantTurn with empty content but non-empty toolCalls is INCLUDED (with B7 orphan-pair sentinel)', () => {
+    const turn = makeAssistantTurn([
+      {toolCalls: [{id: 'c0', function: {name: 'calculate', arguments: '{}'}}]},
+    ]);
+    const result = convertToChatMessages([turn]);
+    // Two messages: the assistant message with tool_calls, plus the
+    // synthesized "aborted" sentinel tool response (orphan-pair guard).
+    expect(result).toHaveLength(2);
+    expect(result[0].tool_calls).toBeDefined();
+    expect(result[1]).toEqual({
+      role: 'tool',
+      tool_call_id: 'c0',
+      content: 'aborted',
+    });
+  });
+
+  it('AssistantTurn with steps:[] is excluded (filter rule)', () => {
+    const turn = makeAssistantTurn([]);
+    const result = convertToChatMessages([turn]);
+    expect(result).toEqual([]);
+  });
+
+  it('passes JSON-encoded AgentToolCall.arguments through to the wire verbatim', () => {
+    const turn = makeAssistantTurn([
+      {
+        content: '',
+        toolCalls: [
+          {
+            id: 'c0',
+            function: {name: 'calculate', arguments: '{"expr":"2+2"}'},
+          },
+        ],
+      },
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect(result[0].tool_calls?.[0].function.arguments).toBe('{"expr":"2+2"}');
+  });
+
+  it('preserves step.reasoningContent on the wire as assistant.reasoning_content', () => {
+    const turn = makeAssistantTurn([
+      {content: 'final', reasoningContent: 'thinking out loud'},
+    ]);
+    const result = convertToChatMessages([turn]);
+    expect((result[0] as any).reasoning_content).toBe('thinking out loud');
+  });
+
+  it('multi-step turn produces N steps × (assistant [+ tool*]) preserving inner order', () => {
+    const turn = makeAssistantTurn([
+      {
+        content: 'A',
+        toolCalls: [{id: 'c0', function: {name: 'x', arguments: '{}'}}],
+        toolOutcomes: [
+          {
+            callId: 'c0',
+            toolName: 'x',
+            result: {type: 'text', summary: 'r0'},
+            responseContent: 'r0',
+          },
+        ],
+      },
+      {
+        content: 'B',
+        toolCalls: [{id: 'c1', function: {name: 'y', arguments: '{}'}}],
+        toolOutcomes: [
+          {
+            callId: 'c1',
+            toolName: 'y',
+            result: {type: 'text', summary: 'r1'},
+            responseContent: 'r1',
+          },
+        ],
+      },
+      {content: 'C'},
+    ]);
+    const result = convertToChatMessages([turn]);
+    // Roles in order: assistant(A,calls)+tool(c0)+assistant(B,calls)+tool(c1)+assistant(C)
+    const roles = result.map(m => m.role);
+    expect(roles).toEqual([
+      'assistant',
+      'tool',
+      'assistant',
+      'tool',
+      'assistant',
+    ]);
+    expect((result[0] as any).tool_calls?.[0].id).toBe('c0');
+    expect((result[1] as any).tool_call_id).toBe('c0');
+    expect((result[2] as any).tool_calls?.[0].id).toBe('c1');
+  });
+
+  it('mixed history: user → assistant_turn → user round-trips correctly (and reverses to API order)', () => {
+    const userMsg = makeUserText('What is 2+2?', 'u1');
+    const turn = makeAssistantTurn([{content: 'It is 4'}], 't1');
+    const userMsg2 = makeUserText('thanks', 'u2');
+    // The chat list passes newest-first; convertToChatMessages reverses.
+    const result = convertToChatMessages([userMsg2, turn, userMsg]);
+    expect(result.map(m => m.role)).toEqual(['user', 'assistant', 'user']);
+    expect((result[0] as any).content).toBe('What is 2+2?');
+    expect((result[1] as any).content).toBe('It is 4');
+    expect((result[2] as any).content).toBe('thanks');
+  });
+});
+
+describe('derivedText', () => {
+  it('#7a Text → returns text', () => {
+    const msg: MessageType.Text = {
+      id: '1',
+      author: user,
+      text: 'hello',
+      type: 'text',
+    };
+    expect(derivedText(msg)).toBe('hello');
+  });
+
+  it('#7b AssistantTurn → joins step.content with \\n\\n, skips empty', () => {
+    const turn: MessageType.AssistantTurn = {
+      id: 't',
+      type: 'assistant_turn',
+      author: assistant,
+      steps: [
+        {content: 'preamble'},
+        {content: ''}, // skipped
+        {toolCalls: [{id: 'c', function: {name: 'x', arguments: '{}'}}]}, // no content — skipped
+        {content: 'final answer'},
+      ],
+    };
+    expect(derivedText(turn)).toBe('preamble\n\nfinal answer');
+  });
+
+  it('AssistantTurn with no steps returns ""', () => {
+    const turn: MessageType.AssistantTurn = {
+      id: 't',
+      type: 'assistant_turn',
+      author: assistant,
+      steps: [],
+    };
+    expect(derivedText(turn)).toBe('');
+  });
+
+  it('Image / File / Unsupported messages return ""', () => {
+    expect(
+      derivedText({
+        id: '1',
+        type: 'image',
+        author: user,
+        uri: 'x',
+        name: 'x',
+        size: 0,
+      } as any),
+    ).toBe('');
+    expect(
+      derivedText({
+        id: '1',
+        type: 'file',
+        author: user,
+        uri: 'x',
+        name: 'x',
+        size: 0,
+      } as any),
+    ).toBe('');
+    expect(
+      derivedText({id: '1', type: 'unsupported', author: user} as any),
+    ).toBe('');
   });
 });
 

@@ -83,11 +83,8 @@
     "useMmapDescription": "メモリマップファイルを使用してモデルの読み込みを高速化",
     "useMmapTrue": "有効",
     "useMmapFalse": "無効",
-    "useMmapSmart": "スマート",
     "useMmapTrueDescription": "常にメモリマッピングを使用して高速読み込み",
     "useMmapFalseDescription": "メモリマッピングを使用しない（読み込みは遅くなりますがメモリ使用量を削減する可能性があります）",
-    "useMmapSmartDescription": "モデルタイプに基づいて自動選択（Androidのみ）",
-    "useMmapRecommended": "パフォーマンス推奨 - ロックされたページでメモリマップ。高速読み込みと一貫したパフォーマンスを組み合わせます",
     "modelLoadingSettings": "モデル読み込み設定",
     "autoOffloadLoad": "自動オフロード/ロード",
     "autoOffloadLoadDescription": "アプリがバックグラウンドにあるときにモデルをオフロードします",
@@ -454,9 +451,6 @@
   "components": {
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "メディアを送信"
-    },
-    "bubble": {
-      "timingsString": "トークンあたり{{predictedMs}}ms、1秒あたり{{predictedPerSecond}}トークン"
     },
     "exportUtils": {
       "fileSaved": "ファイル保存完了",

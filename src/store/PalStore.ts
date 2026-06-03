@@ -26,7 +26,9 @@ import {HF_DOMAIN} from '../config/urls';
 import {palRepository} from '../repositories/PalRepository';
 
 import {hfAsModel} from '../utils';
+import {isUSStorefront} from '../utils/region';
 import {palsHubService} from '../services';
+import {registerDefaultTalents} from '../services/talents';
 import {defaultModels} from './defaultModels';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
@@ -56,6 +58,9 @@ class PalStore {
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
 
+  // Region state
+  isUSRegion: boolean = false;
+
   // Migration state
   isMigrating: boolean = false;
   migrationComplete: boolean = false;
@@ -83,6 +88,12 @@ class PalStore {
       // Initialize Lookie pal after database is loaded
       await this.initializeLookiePal();
 
+      // Register talent engines (idempotent)
+      registerDefaultTalents();
+
+      // Check storefront region for buy button gating
+      this.checkRegion();
+
       console.log('Pal store initialization completed');
 
       runInAction(() => {
@@ -95,6 +106,17 @@ class PalStore {
         this.isMigrating = false;
         this.migrationComplete = false;
       });
+    }
+  }
+
+  private async checkRegion() {
+    try {
+      const isUS = await isUSStorefront();
+      runInAction(() => {
+        this.isUSRegion = isUS;
+      });
+    } catch (error) {
+      console.warn('Failed to check storefront region:', error);
     }
   }
 
@@ -175,7 +197,6 @@ class PalStore {
         // Clean up local thumbnail image if it exists
         if (pal?.thumbnail_url) {
           try {
-            // deletePalThumbnail now handles all path formats (relative, absolute, file://)
             await deletePalThumbnail(pal.thumbnail_url);
           } catch (imageError) {
             console.warn('Failed to delete thumbnail image:', imageError);
@@ -436,6 +457,48 @@ class PalStore {
       ? await this.createLocalModelFromPHModel(palsHubPal.model_reference)
       : undefined;
 
+    // Strict-`=== true` so stringly-typed `required` becomes optional.
+    // Drop talents that aren't objects with a non-empty string name.
+    const wireTalents = palsHubPal.pact?.talents;
+    const validTalents = Array.isArray(wireTalents)
+      ? wireTalents.filter(
+          t =>
+            t != null &&
+            typeof t === 'object' &&
+            typeof t.name === 'string' &&
+            t.name.length > 0,
+        )
+      : [];
+    const pact =
+      validTalents.length > 0
+        ? {
+            talents: validTalents.map(t => ({
+              name: t.name,
+              necessity: (t.required === true ? 'required' : 'optional') as
+                | 'required'
+                | 'optional',
+            })),
+          }
+        : undefined;
+
+    const wireGreeting = palsHubPal.greeting;
+    const wireText = wireGreeting?.text;
+    const wirePrompts = wireGreeting?.suggested_prompts;
+    const validPrompts = Array.isArray(wirePrompts)
+      ? wirePrompts.filter(
+          (p): p is string => typeof p === 'string' && p.length > 0,
+        )
+      : [];
+    const hasText = typeof wireText === 'string' && wireText.length > 0;
+    const hasPrompts = validPrompts.length > 0;
+    const greeting =
+      hasText || hasPrompts
+        ? {
+            text: typeof wireText === 'string' ? wireText : '',
+            ...(hasPrompts ? {suggestedPrompts: validPrompts} : {}),
+          }
+        : undefined;
+
     return {
       type: 'local',
       id: uuidv4(),
@@ -449,6 +512,8 @@ class PalStore {
       defaultModel,
       parameters,
       parameterSchema,
+      ...(pact ? {pact} : {}),
+      ...(greeting ? {greeting} : {}),
       source: 'palshub',
       palshub_id: palsHubPal.id,
       creator_info: {

@@ -7,7 +7,7 @@ import {defaultModels} from '../defaultModels';
 
 import {downloadManager} from '../../services/downloads';
 
-import {ModelOrigin, ModelType} from '../../utils/types';
+import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
 import {
   basicModel,
   mockLlamaContextParams,
@@ -15,8 +15,21 @@ import {
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
-import {modelStore, uiStore} from '..';
+import {modelStore, uiStore, serverStore} from '..';
 import {t} from '../../locales';
+import {
+  getCpuCoreCount,
+  getRecommendedThreadCount,
+} from '../../utils/deviceCapabilities';
+
+// Mock deviceCapabilities
+jest.mock('../../utils/deviceCapabilities', () => ({
+  ...jest.requireActual('../../utils/deviceCapabilities'),
+  getCpuCoreCount: jest.fn().mockResolvedValue(8),
+  getRecommendedThreadCount: jest.fn().mockResolvedValue(6),
+  checkGpuSupport: jest.fn().mockResolvedValue({isSupported: false}),
+  isHighEndDevice: jest.fn().mockResolvedValue(false),
+}));
 
 // Mock the HF API
 jest.mock('../../api/hf', () => ({
@@ -702,6 +715,77 @@ describe('ModelStore', () => {
       await modelStore.handleAppStateChange('active');
 
       expect(mockInitContext).toHaveBeenCalledWith(model);
+    });
+  });
+
+  describe('benchmark mode', () => {
+    // The pre-existing 'context management → should reinitialize context'
+    // test (~line 711) reassigns `modelStore.initContext` to a `jest.fn()`
+    // and never restores it. That mocked replacement bypasses our
+    // `if (this.benchmarkActive) throw ...` gate, so we capture the
+    // original method once and restore it before each gate test.
+    const originalInitContext = modelStore.initContext;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      modelStore.models = [];
+      modelStore.context = undefined;
+      modelStore.activeModelId = undefined;
+      modelStore.benchmarkActive = false;
+      modelStore.initContext = originalInitContext;
+    });
+
+    it('benchmarkActive defaults to false', () => {
+      expect(modelStore.benchmarkActive).toBe(false);
+    });
+
+    it('enterBenchmarkMode sets benchmarkActive=true synchronously (before awaiting the mutex)', async () => {
+      const promise = modelStore.enterBenchmarkMode();
+      // Synchronous side-effect: any auto-load `useEffect` that fires now
+      // will see the gate and skip. The promise still represents the
+      // release of any in-flight context.
+      expect(modelStore.benchmarkActive).toBe(true);
+      await promise;
+      expect(modelStore.benchmarkActive).toBe(true);
+    });
+
+    it('enterBenchmarkMode releases any existing context (cold-launch auto-load gets unwound)', async () => {
+      const release = jest.fn().mockResolvedValue(undefined);
+      modelStore.context = {release} as any;
+      modelStore.activeModelId = 'auto-loaded-model';
+      await modelStore.enterBenchmarkMode();
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(modelStore.context).toBeUndefined();
+      expect(modelStore.activeModelId).toBeUndefined();
+    });
+
+    it('exitBenchmarkMode flips benchmarkActive back to false', () => {
+      modelStore.benchmarkActive = true;
+      modelStore.exitBenchmarkMode();
+      expect(modelStore.benchmarkActive).toBe(false);
+    });
+
+    it('initContext throws when benchmark mode is active', async () => {
+      modelStore.benchmarkActive = true;
+      const model = {...defaultModels[0], isDownloaded: true};
+      await expect(modelStore.initContext(model)).rejects.toThrow(
+        /benchmark mode is active/i,
+      );
+    });
+
+    it('initContext succeeds again after exitBenchmarkMode', async () => {
+      modelStore.benchmarkActive = true;
+      const model = {...defaultModels[0], isDownloaded: true};
+      modelStore.exitBenchmarkMode();
+      // After exit, the synchronous gate is gone — initContext proceeds
+      // to its normal pre-flight (memory check, etc.). The model isn't
+      // downloaded in this test fixture so the call may resolve to null
+      // or throw a non-benchmark error; we only care that the
+      // benchmark-mode rejection is gone.
+      const result = await modelStore.initContext(model).catch((e: Error) => e);
+      if (result instanceof Error) {
+        expect(result.message).not.toMatch(/benchmark mode is active/i);
+      }
     });
   });
 
@@ -2923,6 +3007,228 @@ describe('ModelStore', () => {
         expect.any(String),
         expect.any(String),
       );
+    });
+  });
+
+  describe('initializeThreadCount', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should always update max_threads from hardware', async () => {
+      (getCpuCoreCount as jest.Mock).mockResolvedValue(10);
+      (getRecommendedThreadCount as jest.Mock).mockResolvedValue(8);
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.max_threads).toBe(10);
+    });
+
+    it('should set recommended n_threads on first launch (version === undefined)', async () => {
+      runInAction(() => {
+        modelStore.version = undefined;
+      });
+      (getCpuCoreCount as jest.Mock).mockResolvedValue(8);
+      (getRecommendedThreadCount as jest.Mock).mockResolvedValue(6);
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.contextInitParams.n_threads).toBe(6);
+    });
+
+    it('should preserve user-set n_threads on subsequent launches (version !== undefined)', async () => {
+      runInAction(() => {
+        modelStore.version = 1;
+        modelStore.contextInitParams = {
+          ...modelStore.contextInitParams,
+          n_threads: 4,
+        };
+      });
+      (getCpuCoreCount as jest.Mock).mockResolvedValue(8);
+      (getRecommendedThreadCount as jest.Mock).mockResolvedValue(6);
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.contextInitParams.n_threads).toBe(4);
+      expect(modelStore.max_threads).toBe(8);
+    });
+
+    it('should fallback max_threads to 4 on error without touching n_threads', async () => {
+      runInAction(() => {
+        modelStore.version = 1;
+        modelStore.contextInitParams = {
+          ...modelStore.contextInitParams,
+          n_threads: 3,
+        };
+      });
+      (getCpuCoreCount as jest.Mock).mockRejectedValue(new Error('fail'));
+
+      await (modelStore as any).initializeThreadCount();
+
+      expect(modelStore.max_threads).toBe(4);
+      expect(modelStore.contextInitParams.n_threads).toBe(3);
+    });
+  });
+
+  describe('remoteModels computed', () => {
+    beforeEach(() => {
+      // Reset serverStore state for remote model tests
+      runInAction(() => {
+        serverStore.servers = [];
+        serverStore.serverModels.clear();
+        serverStore.userSelectedModels = [];
+      });
+    });
+
+    it('returns only user-selected models', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+          {id: 'codellama', object: 'model', owned_by: 'system'},
+        ]);
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+      });
+
+      const remoteModels = modelStore.remoteModels;
+
+      expect(remoteModels).toHaveLength(1);
+      expect(remoteModels[0].name).toBe('llama-7b');
+      expect(remoteModels[0].origin).toBe(ModelOrigin.REMOTE);
+      expect(remoteModels[0].serverId).toBe('srv-1');
+      expect(remoteModels[0].serverName).toBe('LM Studio');
+    });
+
+    it('returns empty array when no models are user-selected', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+        serverStore.serverModels.set('srv-1', [
+          {id: 'llama-7b', object: 'model', owned_by: 'system'},
+        ]);
+        // No userSelectedModels
+      });
+
+      expect(modelStore.remoteModels).toHaveLength(0);
+    });
+
+    it('skips models for non-existent servers', () => {
+      runInAction(() => {
+        // Server does not exist in servers array
+        serverStore.userSelectedModels = [
+          {serverId: 'non-existent', remoteModelId: 'model-a'},
+        ];
+      });
+
+      expect(modelStore.remoteModels).toHaveLength(0);
+    });
+
+    it('returns models from multiple servers', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+          {id: 'srv-2', name: 'Ollama', url: 'http://localhost:11434'},
+        ];
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+          {serverId: 'srv-2', remoteModelId: 'mistral'},
+        ];
+      });
+
+      const remoteModels = modelStore.remoteModels;
+
+      expect(remoteModels).toHaveLength(2);
+      expect(remoteModels[0].serverName).toBe('LM Studio');
+      expect(remoteModels[1].serverName).toBe('Ollama');
+    });
+
+    it('generates correct model id from serverId and remoteModelId', () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'LM Studio', url: 'http://localhost:1234'},
+        ];
+        serverStore.userSelectedModels = [
+          {serverId: 'srv-1', remoteModelId: 'llama-7b'},
+        ];
+      });
+
+      const remoteModels = modelStore.remoteModels;
+
+      expect(remoteModels[0].id).toBe('srv-1/llama-7b');
+    });
+  });
+
+  describe('fetchAndPersistGGUFMetadata error handling', () => {
+    const {loadLlamaModelInfo} = require('llama.rn');
+
+    beforeEach(() => {
+      (loadLlamaModelInfo as jest.Mock).mockReset();
+    });
+
+    it('should not crash when loadLlamaModelInfo rejects', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockRejectedValue(
+        new Error('std::runtime_error'),
+      );
+
+      // Should not throw — error is caught internally
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeUndefined();
+    });
+
+    it('should handle null response gracefully', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue(null);
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeUndefined();
+    });
+
+    it('should populate ggufMetadata on success', async () => {
+      const model = {
+        ...defaultModels[0],
+        isDownloaded: true,
+        ggufMetadata: undefined,
+      };
+      modelStore.models = [model];
+
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (loadLlamaModelInfo as jest.Mock).mockResolvedValue({
+        'general.architecture': 'llama',
+        'llama.block_count': 32,
+        'llama.embedding_length': 4096,
+        'llama.attention.head_count': 32,
+        'llama.attention.head_count_kv': 8,
+        'llama.vocab_size': 32000,
+      });
+
+      await modelStore.fetchAndPersistGGUFMetadata(model);
+
+      expect(model.ggufMetadata).toBeDefined();
+      const metadata = model.ggufMetadata as unknown as GGUFMetadata;
+      expect(metadata.architecture).toBe('llama');
+      expect(metadata.n_layers).toBe(32);
     });
   });
 });

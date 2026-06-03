@@ -1,4 +1,4 @@
-import {computed, makeAutoObservable} from 'mobx';
+import {computed, makeAutoObservable, observable} from 'mobx';
 
 import {modelsList} from '../../jest/fixtures/models';
 
@@ -6,6 +6,7 @@ import {downloadManager} from '../services/downloads';
 
 import {Model, ContextInitParams} from '../../src/utils/types';
 import {LlamaContext} from 'llama.rn';
+import {CompletionEngine} from '../../src/utils/completionTypes';
 import {createDefaultContextInitParams} from '../../src/utils/contextInitParamsVersions';
 
 class MockModelStore {
@@ -18,6 +19,7 @@ class MockModelStore {
   inferencing = false;
   isStreaming = false;
   context: LlamaContext | undefined = undefined;
+  engine: CompletionEngine | undefined = undefined;
 
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling
@@ -25,6 +27,7 @@ class MockModelStore {
 
   refreshDownloadStatuses: jest.Mock;
   addLocalModel: jest.Mock;
+  removeModelByFullPath: jest.Mock;
   setNContext: jest.Mock;
   updateUseAutoRelease: jest.Mock;
   setNoGpuDevices: jest.Mock;
@@ -33,6 +36,8 @@ class MockModelStore {
   setNGPULayers: jest.Mock;
   resetModels: jest.Mock;
   initContext: jest.Mock;
+  selectModel: jest.Mock;
+  setRemoteModel: jest.Mock;
   lastUsedModelId: any;
   checkSpaceAndDownload: jest.Mock;
   getDownloadProgress: jest.Mock;
@@ -56,19 +61,30 @@ class MockModelStore {
   setNThreads: jest.Mock;
   setNBatch: jest.Mock;
   setNUBatch: jest.Mock;
+  setCacheTypeK: jest.Mock;
+  setCacheTypeV: jest.Mock;
+  setUseMmap: jest.Mock;
+  setNoExtraBufts: jest.Mock;
+  enterBenchmarkMode: jest.Mock;
+  exitBenchmarkMode: jest.Mock;
+  benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
 
   constructor() {
     makeAutoObservable(this, {
+      engine: observable.ref,
       refreshDownloadStatuses: false,
       addLocalModel: false,
+      removeModelByFullPath: false,
       setNContext: false,
       updateUseAutoRelease: false,
 
       setNGPULayers: false,
       resetModels: false,
       initContext: false,
+      selectModel: false,
+      setRemoteModel: false,
       checkSpaceAndDownload: false,
       getDownloadProgress: false,
       manualReleaseContext: false,
@@ -91,6 +107,13 @@ class MockModelStore {
       setNThreads: false,
       setNBatch: false,
       setNUBatch: false,
+      setCacheTypeK: false,
+      setCacheTypeV: false,
+      setUseMmap: false,
+      setNoExtraBufts: false,
+      enterBenchmarkMode: false,
+      exitBenchmarkMode: false,
+      contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
       displayModels: computed,
@@ -99,6 +122,7 @@ class MockModelStore {
     });
     this.refreshDownloadStatuses = jest.fn();
     this.addLocalModel = jest.fn();
+    this.removeModelByFullPath = jest.fn();
     this.setNContext = jest.fn();
     this.updateUseAutoRelease = jest.fn();
     this.setNoGpuDevices = jest.fn();
@@ -107,6 +131,8 @@ class MockModelStore {
     this.setNGPULayers = jest.fn();
     this.resetModels = jest.fn();
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
+    this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
+    this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.checkSpaceAndDownload = jest.fn();
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
@@ -133,6 +159,12 @@ class MockModelStore {
     this.setNThreads = jest.fn();
     this.setNBatch = jest.fn();
     this.setNUBatch = jest.fn();
+    this.setCacheTypeK = jest.fn();
+    this.setCacheTypeV = jest.fn();
+    this.setUseMmap = jest.fn();
+    this.setNoExtraBufts = jest.fn();
+    this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
+    this.exitBenchmarkMode = jest.fn();
   }
 
   setActiveModel = (modelId: string) => {
@@ -150,6 +182,13 @@ class MockModelStore {
   // Safe context release methods
   registerCompletionPromise = jest.fn();
   clearCompletionPromise = jest.fn();
+
+  get contextId(): string | undefined {
+    if (this.context) {
+      return String(this.context.id);
+    }
+    return undefined;
+  }
 
   get lastUsedModel(): Model | undefined {
     return this.lastUsedModelId
@@ -188,6 +227,15 @@ class MockModelStore {
   async getModelFullPath(model: Model): Promise<string> {
     // Mock implementation - return a simple path for tests
     return `/mock/path/${model.filename || model.name}`;
+  }
+
+  async getEffectiveContextInitParams(
+    _filePath: string,
+  ): Promise<Record<string, unknown>> {
+    // Mock returns the current contextInitParams as the resolved view.
+    // Tests can spy on this if they need to assert what got passed to
+    // initLlama.
+    return JSON.parse(JSON.stringify(this.contextInitParams));
   }
 
   getCompatibleProjectionModels = jest.fn().mockReturnValue([]);

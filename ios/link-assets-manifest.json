@@ -2,6 +2,22 @@
   "migIndex": 1,
   "data": [
     {
+      "path": "src/assets/fonts/Fraunces-Italic.ttf",
+      "sha1": "39bc510ede9c481d8abb8df53ca857c18e26831a"
+    },
+    {
+      "path": "src/assets/fonts/Fraunces-Medium.ttf",
+      "sha1": "0685587d0da105bf370bd5b5ba12c4a20c9bbf45"
+    },
+    {
+      "path": "src/assets/fonts/Fraunces-MediumItalic.ttf",
+      "sha1": "62c3ddbbf5b7edae7193b5fd006d220d89c2d7e9"
+    },
+    {
+      "path": "src/assets/fonts/Fraunces-Regular.ttf",
+      "sha1": "647b215bdccb61f5bec8bd69b5b8b2b69c179e5a"
+    },
+    {
       "path": "src/assets/fonts/Inter-Bold.ttf",
       "sha1": "518a0361a245a66b49bc24ae0137f38328197bdc"
     },
@@ -28,6 +44,14 @@
     {
       "path": "src/assets/fonts/Inter-Thin.ttf",
       "sha1": "4f2b3c3c97e618166627b4d3fff9322fa5198e81"
+    },
+    {
+      "path": "src/assets/fonts/JetBrainsMono-Medium.ttf",
+      "sha1": "5bb746d908e3232ddd35b7d5d77e4e71c8cd2a14"
+    },
+    {
+      "path": "src/assets/fonts/JetBrainsMono-Regular.ttf",
+      "sha1": "afeb914988937070b8b212cf74c8794161bc7998"
     }
   ]
 }

@@ -91,30 +91,20 @@ describe('memorySettings', () => {
       expect(result).toBe(true);
     });
 
-    it('should return true for "smart" setting without model path', async () => {
+    it('should return false for legacy "smart" setting on Android (treated as mmap OFF)', async () => {
       (Platform as any).OS = 'android';
       const result = await resolveUseMmap('smart', '');
-      expect(result).toBe(true);
-    });
-
-    it('should return false for "smart" setting with repackable quantization on Android', async () => {
-      (Platform as any).OS = 'android';
-      mockLoadLlamaModelInfo.mockResolvedValue({
-        'general.file_type': 'Q4_0',
-      });
-
-      const result = await resolveUseMmap('smart', '/path/to/model.gguf');
       expect(result).toBe(false);
     });
 
-    it('should return true for "smart" setting with non-repackable quantization on Android', async () => {
+    it('should return false for legacy "smart" setting with any quantization on Android', async () => {
       (Platform as any).OS = 'android';
       mockLoadLlamaModelInfo.mockResolvedValue({
         'general.file_type': 'Q8_0',
       });
 
       const result = await resolveUseMmap('smart', '/path/to/model.gguf');
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 });

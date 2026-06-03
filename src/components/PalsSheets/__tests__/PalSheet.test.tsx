@@ -61,6 +61,12 @@ jest.mock('../../../hooks/useStructuredOutput', () => ({
 // Import the mocked palStore (already mocked globally in jest/setup.ts)
 import {palStore} from '../../../store';
 
+import {
+  talentRegistry,
+  registerDefaultTalents,
+  resetRegisteredFlag,
+} from '../../../services/talents';
+
 describe('PalSheet', () => {
   const mockOnClose = jest.fn();
 
@@ -668,6 +674,393 @@ describe('PalSheet', () => {
           'test-pal-id',
           expect.objectContaining({
             completionSettings,
+          }),
+        );
+      });
+    });
+  });
+
+  describe('Talent Integration', () => {
+    beforeEach(() => {
+      // Ensure talents are registered for integration tests
+      talentRegistry.reset();
+      resetRegisteredFlag();
+      registerDefaultTalents();
+    });
+
+    afterAll(() => {
+      talentRegistry.reset();
+      resetRegisteredFlag();
+    });
+
+    it('renders talent section in PalSheet', () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      expect(getByTestId('talent-section')).toBeTruthy();
+    });
+
+    it('creates a pal with talents selected and correct pact', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      // Fill required name field
+      const nameInput = getByTestId('form-field-name');
+      await act(async () => {
+        fireEvent.changeText(nameInput, 'Pal With Talents');
+      });
+
+      // Toggle calculate and datetime talents on
+      await act(async () => {
+        fireEvent(getByTestId('talent-switch-calculate'), 'valueChange', true);
+      });
+      await act(async () => {
+        fireEvent(getByTestId('talent-switch-datetime'), 'valueChange', true);
+      });
+
+      // Submit the form
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Pal With Talents',
+            pact: {
+              talents: expect.arrayContaining([
+                {name: 'calculate', necessity: 'required'},
+                {name: 'datetime', necessity: 'required'},
+              ]),
+            },
+          }),
+        );
+      });
+    });
+
+    it('edits a pal with existing pact.talents and pre-selects switches', () => {
+      const {getByTestId} = renderPalSheet(
+        createExistingPal({
+          pact: {
+            talents: [
+              {name: 'render_html', necessity: 'required'},
+              {name: 'calculate', necessity: 'required'},
+            ],
+          },
+        }),
+      );
+
+      // render_html and calculate should be on
+      expect(getByTestId('talent-switch-render_html').props.value).toBe(true);
+      expect(getByTestId('talent-switch-calculate').props.value).toBe(true);
+
+      // datetime should be off
+      expect(getByTestId('talent-switch-datetime').props.value).toBe(false);
+    });
+
+    it('removing all talents results in pact with empty talents array', async () => {
+      const {getByTestId, getByText} = renderPalSheet(
+        createExistingPal({
+          pact: {
+            talents: [{name: 'calculate', necessity: 'required'}],
+          },
+        }),
+      );
+
+      // Verify calculate is initially on
+      expect(getByTestId('talent-switch-calculate').props.value).toBe(true);
+
+      // Toggle calculate off
+      await act(async () => {
+        fireEvent(getByTestId('talent-switch-calculate'), 'valueChange', false);
+      });
+
+      // Submit the form
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.updatePal).toHaveBeenCalledWith(
+          'test-pal-id',
+          expect.objectContaining({
+            pact: {talents: []},
+          }),
+        );
+      });
+    });
+
+    it('creates a pal with no talents selected and pact has empty talents', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      const nameInput = getByTestId('form-field-name');
+      await act(async () => {
+        fireEvent.changeText(nameInput, 'No Talents Pal');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'No Talents Pal',
+            pact: {talents: []},
+          }),
+        );
+      });
+    });
+  });
+
+  describe('Greeting save predicate', () => {
+    it('creates a pal with greeting text and two suggested prompts', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      const nameInput = getByTestId('form-field-name');
+      await act(async () => {
+        fireEvent.changeText(nameInput, 'Friendly Greeter');
+      });
+
+      const greetingInput = getByTestId('form-field-greetingText');
+      await act(async () => {
+        fireEvent.changeText(greetingInput, 'Hi! What can I help with today?');
+      });
+
+      // Add two prompt rows and fill each.
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+      await act(async () => {
+        fireEvent.changeText(
+          getByTestId('suggested-prompt-input-0'),
+          'Summarize a webpage',
+        );
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+      await act(async () => {
+        fireEvent.changeText(
+          getByTestId('suggested-prompt-input-1'),
+          'Brainstorm a name',
+        );
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Friendly Greeter',
+            greeting: {
+              text: 'Hi! What can I help with today?',
+              suggestedPrompts: ['Summarize a webpage', 'Brainstorm a name'],
+            },
+          }),
+        );
+      });
+    });
+
+    it('clears greeting on save by writing the empty-object sentinel', async () => {
+      const {getByTestId, getByText} = renderPalSheet(
+        createExistingPal({
+          greeting: {
+            text: 'Old greeting',
+            suggestedPrompts: ['Old prompt'],
+          },
+        }),
+      );
+
+      // Form seeds with existing values.
+      await waitFor(() => {
+        expect(getByTestId('form-field-greetingText').props.value).toBe(
+          'Old greeting',
+        );
+        expect(getByTestId('suggested-prompt-input-0').props.value).toBe(
+          'Old prompt',
+        );
+      });
+
+      // Clear the greeting text.
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-greetingText'), '');
+      });
+
+      // Remove the only prompt row.
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-remove-0'));
+      });
+
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.updatePal).toHaveBeenCalledWith(
+          'test-pal-id',
+          expect.objectContaining({
+            greeting: {text: '', suggestedPrompts: []},
+          }),
+        );
+      });
+    });
+
+    it('emits greeting with raw whitespace text when prompts are present', async () => {
+      // Whitespace-only text has length > 0, so the predicate is true and the
+      // text is saved verbatim (no trim) — mirror of the PalsHub wire-side
+      // predicate.
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-name'), 'Whitespace Pal');
+      });
+
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-greetingText'), '   ');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+      await act(async () => {
+        fireEvent.changeText(
+          getByTestId('suggested-prompt-input-0'),
+          'Tell me a joke',
+        );
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            greeting: {
+              text: '   ',
+              suggestedPrompts: ['Tell me a joke'],
+            },
+          }),
+        );
+      });
+    });
+
+    it('emits greeting with empty text when only prompts are filled', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-name'), 'Prompts Only');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+      await act(async () => {
+        fireEvent.changeText(getByTestId('suggested-prompt-input-0'), 'Hello');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            greeting: {
+              text: '',
+              suggestedPrompts: ['Hello'],
+            },
+          }),
+        );
+      });
+    });
+
+    it('writes the sentinel when editing a greetingless pal and leaving fields blank', async () => {
+      // No-op symmetry case: a pal with no greeting today, no greeting edits
+      // made, still saves with the sentinel. Observable behaviour: nothing.
+      const {getByTestId, getByText} = renderPalSheet(createExistingPal());
+
+      await act(async () => {
+        fireEvent.changeText(
+          getByTestId('form-field-description'),
+          'Updated description only',
+        );
+      });
+
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.updatePal).toHaveBeenCalledWith(
+          'test-pal-id',
+          expect.objectContaining({
+            description: 'Updated description only',
+            greeting: {text: '', suggestedPrompts: []},
+          }),
+        );
+      });
+    });
+
+    it('seeds editor fields from an existing pal greeting on open', () => {
+      const {getByTestId} = renderPalSheet(
+        createExistingPal({
+          greeting: {
+            text: 'Hello',
+            suggestedPrompts: ['x', 'y'],
+          },
+        }),
+      );
+
+      expect(getByTestId('form-field-greetingText').props.value).toBe('Hello');
+      expect(getByTestId('suggested-prompt-input-0').props.value).toBe('x');
+      expect(getByTestId('suggested-prompt-input-1').props.value).toBe('y');
+    });
+
+    it('trims each prompt and drops empty rows before saving', async () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
+
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-name'), 'Trim Pal');
+      });
+
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-greetingText'), 'Hi');
+      });
+
+      // Row 0: '  a  ' (whitespace around content — should be trimmed to 'a')
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+      await act(async () => {
+        fireEvent.changeText(getByTestId('suggested-prompt-input-0'), '  a  ');
+      });
+
+      // Row 1: '' (empty — should be dropped)
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+
+      // Row 2: '   ' (whitespace-only — should be dropped)
+      await act(async () => {
+        fireEvent.press(getByTestId('suggested-prompt-add-button'));
+      });
+      await act(async () => {
+        fireEvent.changeText(getByTestId('suggested-prompt-input-2'), '   ');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            greeting: {
+              text: 'Hi',
+              suggestedPrompts: ['a'],
+            },
           }),
         );
       });

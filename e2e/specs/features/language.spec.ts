@@ -14,7 +14,7 @@ import * as path from 'path';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {SettingsPage} from '../../pages/SettingsPage';
-import {byText, byStaticText} from '../../helpers/selectors';
+import {byStaticText} from '../../helpers/selectors';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
@@ -61,14 +61,22 @@ const LANGUAGE_ASSERTIONS: Record<
     screenTitle: 'Настройки',
     firstCardTitle: 'Настройки инициализации модели',
   },
+  uk: {
+    screenTitle: 'Налаштування',
+    firstCardTitle: 'Налаштування ініціалізації моделі',
+  },
   zh: {
     screenTitle: '设置',
     firstCardTitle: '模型初始化设置',
   },
+  zh_Hant: {
+    screenTitle: '設定',
+    firstCardTitle: '模型初始化設定',
+  },
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'zh', 'en'];
+const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;
@@ -131,8 +139,9 @@ describe('Language Switching', () => {
 
       // After language change, screen re-renders and scrolls to top.
       // Assert the navigation header title changed.
-      // Use byStaticText to target the nav bar title (XCUIElementTypeStaticText)
-      // and avoid matching the hidden drawer button (XCUIElementTypeButton).
+      // Use byStaticText to target text elements only (excludes buttons).
+      // On iOS this avoids matching hidden drawer buttons.
+      // On Android this matches both TextView and View (React Navigation header).
       const titleElement = browser.$(byStaticText(expected.screenTitle));
       await titleElement.waitForDisplayed({timeout: 5000});
       console.log(`  Screen title: "${expected.screenTitle}" - OK`);

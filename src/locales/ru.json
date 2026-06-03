@@ -6,15 +6,17 @@
     "supportProjectDescription": "Если вам нравится PocketPal AI, поддержите разработчиков:",
     "githubButton": "Поставьте звезду на GitHub",
     "orText": "или",
-    "sponsorButton": "Стать спонсором",
+    "sponsorButton": "Станьте спонсором",
     "versionCopiedTitle": "Версия скопирована",
     "versionCopiedDescription": "Информация о версии скопирована в буфер обмена",
-    "orBy": "или через"
+    "orBy": "или через",
+    "privacyPolicy": "Конфиденциальность",
+    "termsOfService": "Соглашение"
   },
   "benchmark": {
     "title": "Бенчмарк",
     "modelSelector": {
-      "prompt": "Выбор модели",
+      "prompt": "Выбрать модель",
       "noModels": "Не загружено ни одной модели"
     },
     "buttons": {
@@ -191,7 +193,7 @@
   "completionParams": {
     "grammar": "Принудительное соблюдение грамматических правил, чтобы текст следовал строгой структуре или формату",
     "stop": "Определить фразы, при появлении которых генерация текста прекратится",
-    "n_predict": "Задать максимальную длину ответа (в токенах)",
+    "n_predict": "Максимальное количество генерируемых токенов. Выберите 'Unlimited', чтобы снять ограничение, или 'Custom', чтобы указать лимит вручную.",
     "n_probs": "Показать вероятности для альтернативных вариантов слов.",
     "top_k": "Контроль креативности, ограничить выбор K наиболее вероятными словами. Низкие значения делают ответы более логичными",
     "top_p": "Баланс креативности и связности. Высокие значения (близкие к 1.0) делают ответы более разнообразными",
@@ -222,9 +224,6 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Отправить медиа"
     },
-    "bubble": {
-      "timingsString": "{{predictedMs}}мс/токен, {{predictedPerSecond}} токенов/сек"
-    },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Нет доступных моделей",
       "noModelsDescription": "Загрузите модель, чтобы начать общение с PocketPal",
@@ -246,7 +245,7 @@
     },
     "chatGenerationSettingsSheet": {
       "invalidValues": "Неверные значения",
-      "invalidNumericValuesMessage": "Должно быть числом",
+      "invalidNumericValuesMessage": "Должно быть действительным числом",
       "pleaseCorrect": "Исправьте следующее:",
       "ok": "ОК",
       "saveChanges": "Сохранить изменения",
@@ -258,7 +257,7 @@
         "message": "Эти настройки будут применяться ко всем будущим сессиям"
       },
       "title_session": "Настройки генерации чата (Сессия)",
-      "resetToSystemDefaults": "Сброс к системным настройкам по умолчанию",
+      "resetToSystemDefaults": "Сброс к системным",
       "palSettings": "Настройки Pal",
       "settingsSource": "Источник настроек"
     },
@@ -533,7 +532,7 @@
       "error": "Ошибка",
       "failedToSave": "Не удалось сохранить настройки Pal",
       "resetToGlobal": "Сброс к глобальным настройкам",
-      "resetToSystem": "Сброс к системным настройкам",
+      "resetToSystem": "Сброс к системным",
       "clearPalSettings": "Очистить настройки Pal",
       "customSettingsFor": "Пользовательские настройки для {{palName}}",
       "inheritedSettingsFor": "Унаследованные настройки для {{palName}}"
@@ -638,6 +637,11 @@
       "importPals": "Импорт Pal",
       "importSuccess": "Успешно импортировано Pal: {{count}}.",
       "importError": "Не удалось импортировать Pal. Проверьте формат файла."
+    },
+    "bubble": {
+      "msPerToken": "{{value}} мс/ток",
+      "tokensPerSec": "{{value}} ток/сек",
+      "ttft": "{{value}} мс TTFT"
     }
   },
   "feedback": {
@@ -712,7 +716,7 @@
         "alreadyDownloadedTitle": "Модель уже загружена",
         "alreadyDownloadedMessage": "Эта модель уже загружена на устройство.",
         "deleteTitle": "Удалить модель",
-        "deleteMessage": "Вы уверены, что хотите безвозвратно удалить файл этой модели?"
+        "deleteMessage": "Вы уверены, что хотите удалить эту загруженную модель?"
       },
       "buttons": {
         "remove": "Удалить"
@@ -749,7 +753,9 @@
       "fileAlreadyExists": "Файл уже существует",
       "fileAlreadyExistsMessage": "Файл с таким именем уже существует. Что вы хотите сделать?",
       "replace": "Заменить",
-      "keepBoth": "Сохранить оба"
+      "keepBoth": "Сохранить оба",
+      "copyingModel": "Копирование файла модели...",
+      "copyFailed": "Ошибка копирования файла модели"
     },
     "labels": {
       "localModel": "Локальная",
@@ -991,11 +997,8 @@
     "useMmapDescription": "Использовать файлы, отображаемые в память, для более быстрой загрузки модели",
     "useMmapTrue": "Включено",
     "useMmapFalse": "Отключено",
-    "useMmapSmart": "Авто",
     "useMmapTrueDescription": "Всегда использовать отображение в память для быстрой загрузки",
-    "useMmapFalseDescription": "Никогда не использовать отображение в память (загрузка медленнее, но может снизить потребление памяти)",
-    "useMmapSmartDescription": "Выбирать автоматически в зависимости от типа модели (только Android)",
-    "useMmapRecommended": "Рекомендуется для производительности - отображение в память с блокировкой страниц. Совмещает быструю загрузку и стабильную работу",
+    "useMmapFalseDescription": "Рекомендуется отключать эту функцию, если включена функция повторной упаковки весов, чтобы избежать удвоения объема используемой памяти",
     "exportOptions": "Параметры экспорта",
     "exportLegacyChats": "Экспорт старых чатов",
     "exportLegacyChatsDescription": "Используйте, если миграция не удалась или нужно восстановить старые сессии чата.",
@@ -1020,7 +1023,42 @@
     "clearCachesConfirmMessage": "Это удалит все кэшированные данные сессий ({{fileCount}} файлов, {{size}}). При первом запуске после очистки ярлыки могут работать медленнее. Это не затронет ваших помощников (Pals) или историю чатов.",
     "clearCachesSuccess": "Успешно удалено {{count}} файлов кэша.",
     "clearCachesError": "Не удалось очистить кэш. Попробуйте ещё раз.",
-    "noCachesToClear": "Нет данных для очистки."
+    "noCachesToClear": "Нет данных для очистки.",
+    "weightRepacking": "Включить функцию повторной упаковки весов",
+    "weightRepackingDescription": "Более быстрая обработка запросов при минимальной нагрузке на память, когда функция сопоставления памяти отключена. Генерация токенов не изменится.",
+    "serverName": "Имя сервера",
+    "serverUrl": "URL сервера",
+    "serverUrlPlaceholder": "Наприм., http://192.168.1.100:1234",
+    "apiKey": "API-ключ",
+    "apiKeyPlaceholder": "Дополнительно - необходимо для использования с OpenAI/Groq",
+    "apiKeyDescription": "Надежно сохранено на устройстве.",
+    "remoteModel": "Удалённая",
+    "remotePrivacyNotice": "Сообщения, отправленные на удаленные серверы, покидают ваше устройство. Подключайтесь только к тем серверам, которым доверяете.",
+    "remoteIndicator": "Удалённая",
+    "serverUrlRequired": "Требуется URL сервера",
+    "serverUrlInvalid": "Неверный формат URL",
+    "serverUrlHttpWarning": "В iOS для нелокальных серверов требуется протокол HTTPS. Используйте протокол https:// или адрес локальной сети.",
+    "addRemoteModel": "Добавить удалённую модель",
+    "yourServers": "Ваши серверы",
+    "orConnectNewServer": "или подключите новый сервер",
+    "selectModel": "Выбрать модель",
+    "addModel": "Добавить модель",
+    "connected": "Подключено",
+    "connectionFailed": "Подключение не удалось: {{error}}",
+    "connecting": "Подключение...",
+    "noModelsAvailable": "На данном сервере нет доступных моделей.",
+    "alreadyAdded": "Уже добавлено",
+    "connectedServers": "Подключенные серверы",
+    "modelsCount": "Моделей: {{count}}",
+    "serverDetails": "Информация о сервере",
+    "modelsUsingServer": "Модели, использующие данный сервер:",
+    "saveChanges": "Сохранить изменения",
+    "removeServer": "Удалить сервер",
+    "removeServerMessage": "Удалить {{serverName}} и его {{count}} модели?",
+    "removeRemoteModel": "Удалить {{modelName}} ({{serverName}})?",
+    "retryConnection": "Повторить",
+    "enterUrlManually": "Введите URL вручную",
+    "manageServers": "Управление серверами"
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
@@ -1113,7 +1151,8 @@
       "failedToLoadDetails": "Не удалось загрузить сведения о Pal",
       "failedToDownload": "Не удалось загрузить Pal",
       "premiumPalMessage": "Это Премиум Pal.\n• Если вы уже разблокировали его с помощью своей учетной записи Palshub, просто войдите в систему, чтобы получить полную информацию.\n• Ещё не разблокировали? Посетите приложение palshub.ai, чтобы узнать больше.",
-      "notAvailable": "Н/Д"
+      "notAvailable": "Н/Д",
+      "buyOnPalshub": "Купить на Palshub"
     }
   },
   "camera": {
@@ -1178,5 +1217,48 @@
   },
   "simulator": {
     "cameraNotAvailable": "Камера недоступна в симуляторе. Пожалуйста, используйте физическое устройство."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Голос и речь",
+    "voiceRowTitle": "Голос",
+    "notSet": "Не установлено",
+    "previewButton": "Предпросмотр",
+    "stopPreviewButton": "Остановить предпросмотр",
+    "voicesTitle": "Голоса",
+    "voicesEmptyHint": "Нажмите на любой голос, чтобы установить и использовать его. Или выберите системный голос - они доступны всегда.",
+    "supertonicStepsLabel": "Качество (шаги диффузии)",
+    "toggleAutoSpeakLabel": "Переключить автоозвучивание",
+    "openSettingsLabel": "Настройки TTS",
+    "playMessageLabel": "Воспроизвести сообщение",
+    "stopMessageLabel": "Остановить сообщение",
+    "autoSpeakLabel": "Автоозвучивание ответов",
+    "autoSpeakDescription": "Озвучивать новые ответы по мере их поступления.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "Система",
+    "stepsCount": "{{steps}} шаг(ов)",
+    "engineKittenTagline": "Минимум ресурсов. Надежно. Подходит для старых устройств.",
+    "engineKokoroTagline": "Высокое качество. Медленный запуск. Некоторые голоса могут быть недоступны на вашем устройстве.",
+    "engineSupertonicTagline": "Быстрый запуск. Использует больше ОЗУ. Возможны пропуски слов.",
+    "engineSystemTagline": "Системные голоса ОС. Всегда доступны, установка не требуется.",
+    "engineSystemTitleIos": "Голоса iOS",
+    "engineSystemTitleAndroid": "Голоса Android",
+    "engineSystemTier": "всегда доступны",
+    "engineTierLightest": "самые легкие",
+    "engineTierBestQuality": "макс. качество",
+    "engineTierFastestStart": "быстрый запуск",
+    "engineSpecsLine": "{{voices}} голосов · {{sizeMb}} МБ · ~{{ramMb}} МБ ОЗУ",
+    "engineSystemSpecsLine": "{{voices}} голосов",
+    "engineRemoveTitle": "Удалить {{engineTitle}}?",
+    "engineRemoveBody": "Освободит ~{{sizeMb}} МБ на этом устройстве.",
+    "engineRemoveCancel": "Отмена",
+    "engineRemoveConfirm": "Удалить",
+    "engineInstallCta": "Установить · {{sizeMb}} МБ",
+    "engineDownloadingLabel": "Загрузка… {{pct}}% · {{mbDone}} / {{sizeMb}} МБ",
+    "engineRetryCta": "Ещё раз",
+    "voicesEmptyState": "Голоса не найдены.",
+    "kokoroDeviceNote": "Некоторые голоса могут быть недоступны на вашем устройстве.",
+    "insufficientStorage": "Недостаточно места - освободите {{requiredMb}} МБ для установки этого движка (доступно {{freeMb}} МБ)."
   }
 }

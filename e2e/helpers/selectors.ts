@@ -41,10 +41,11 @@ export const byText = (text: string): string => {
 /**
  * Create selector targeting only static text elements (excludes buttons).
  * Useful when a text appears both in a hidden drawer button and a visible nav title.
+ * On Android, also matches View elements (React Navigation renders header titles as Views).
  */
 export const byStaticText = (text: string): string => {
   if (isAndroid()) {
-    return `//android.widget.TextView[@text="${text}"]`;
+    return `//*[self::android.widget.TextView or self::android.view.View][@text="${text}"]`;
   }
   return `-ios class chain:**/XCUIElementTypeStaticText[\`label == "${text}"\`]`;
 };
@@ -170,6 +171,14 @@ export const Selectors = {
     get markdownContent(): string {
       return byTestId('markdown-content');
     },
+    get greetingBubble(): string {
+      return byTestId('greeting-bubble');
+    },
+    get suggestedPromptsRow(): string {
+      return byTestId('suggested-prompts-row');
+    },
+    suggestedPromptChip: (idx: number): string =>
+      byTestId(`suggested-prompt-chip-${idx}`),
     /**
      * Selector for detecting inference completion.
      * Matches any element with "tokens/sec" in its accessibility label/content-desc.
@@ -192,12 +201,20 @@ export const Selectors = {
     get fabGroupClose(): string {
       return byAccessibilityLabel('Close menu');
     },
-    // FAB actions - use accessibilityLabel (react-native-paper uses label as accessibility label)
+    // FAB actions — react-native-paper FAB.Group renders actions as buttons
+    // with accessibilityLabel as the name; testID gets suffixed with
+    // "-container-outer-layer" so byTestId won't match the tappable element.
     get hfFab(): string {
       return byAccessibilityLabel('Add from Hugging Face');
     },
     get localFab(): string {
       return byAccessibilityLabel('Add Local Model');
+    },
+    get remoteFab(): string {
+      return byAccessibilityLabel('Add Remote Model');
+    },
+    get manageServersFab(): string {
+      return byAccessibilityLabel('Manage Servers');
     },
     get flatList(): string {
       return byTestId('flat-list');
@@ -330,8 +347,69 @@ export const Selectors = {
     get languageSelectorButton(): string {
       return byTestId('language-selector-button');
     },
+    get displayMemoryUsageSwitch(): string {
+      return byTestId('display-memory-usage-switch');
+    },
     languageOption: (lang: string): string =>
       byTestId(`language-option-${lang}`),
+    /**
+     * Device-tier SegmentedButton option. `tier` is the option id rendered
+     * by SettingsScreen (`cpu`, `gpu`, `hexagon`); matches the testID at
+     * src/screens/SettingsScreen/SettingsScreen.tsx:317.
+     */
+    deviceOption: (tier: 'cpu' | 'gpu' | 'hexagon'): string =>
+      byTestId(`device-option-${tier}`),
+  },
+
+  // BenchmarkResultTrigger — hidden E2E trigger for the benchmark-matrix spec.
+  // Testids mirror MemorySnapshotTrigger's set.
+  benchmarkResult: {
+    get container(): string {
+      return byTestId('benchmark-result-container');
+    },
+    get label(): string {
+      return byTestId('benchmark-result-label');
+    },
+    get value(): string {
+      return byTestId('benchmark-result-value');
+    },
+  },
+
+  // Pals screen
+  palsScreen: {
+    get addButton(): string {
+      return byTestId('bottom-action-add');
+    },
+  },
+
+  // Pal sheet (create/edit pal)
+  palSheet: {
+    get nameInput(): string {
+      return byTestId('form-field-name');
+    },
+    get systemPromptInput(): string {
+      return byTestId('form-field-systemPrompt');
+    },
+    get submitButton(): string {
+      return byTestId('submit-button');
+    },
+    get talentSection(): string {
+      return byTestId('talent-section');
+    },
+    talentSwitch: (name: string): string => byTestId(`talent-switch-${name}`),
+    get greetingSection(): string {
+      return byTestId('greeting-section');
+    },
+    get greetingTextInput(): string {
+      return byTestId('form-field-greetingText');
+    },
+    get suggestedPromptAddButton(): string {
+      return byTestId('suggested-prompt-add-button');
+    },
+    suggestedPromptInput: (idx: number): string =>
+      byTestId(`suggested-prompt-input-${idx}`),
+    suggestedPromptRemove: (idx: number): string =>
+      byTestId(`suggested-prompt-remove-${idx}`),
   },
 
   // Common dialogs and sheets
@@ -457,6 +535,38 @@ export const Selectors = {
     },
     get clearAllButton(): string {
       return byTestId('clear-all-button');
+    },
+  },
+
+  // Remote model sheet (add model from server)
+  remoteModel: {
+    get urlInput(): string {
+      return byTestId('remote-url-input');
+    },
+    get nameInput(): string {
+      return byTestId('remote-name-input');
+    },
+    get apiKeyInput(): string {
+      return byTestId('remote-apikey-input');
+    },
+    get addModelButton(): string {
+      return byTestId('add-model-button');
+    },
+  },
+
+  // Server details sheet (edit/delete server)
+  serverDetails: {
+    get urlInput(): string {
+      return byTestId('server-details-url-input');
+    },
+    get apiKeyInput(): string {
+      return byTestId('server-details-apikey-input');
+    },
+    get removeButton(): string {
+      return byTestId('remove-server-button');
+    },
+    get saveButton(): string {
+      return byTestId('save-server-button');
     },
   },
 };

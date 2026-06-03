@@ -1,0 +1,3676 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FF653F",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FF653F",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-l-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FF653F",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FF653F",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FF653F",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FF653F",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) destructive-s-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-l-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) primary-s-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#424242",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#424242",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-l-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#424242",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#424242",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#424242",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#E0E0E0",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#424242",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) secondary-s-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#333333",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#333333",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-l-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 12,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 24,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#333333",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#333333",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-m-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 8,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 14,
+          "fontWeight": "500",
+          "lineHeight": 20,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#333333",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "transparent",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#333333",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-disabled-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix baseline (variant x size x {default,disabled} x modes) tertiary-s-disabled-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": true,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "rgba(51, 51, 51, 0.01)",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#646466",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`Button — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) primary-s-default-light-fa 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityLabel="Save"
+    accessibilityRole="button"
+    accessibilityState={
+      {
+        "busy": undefined,
+        "checked": undefined,
+        "disabled": false,
+        "expanded": undefined,
+        "selected": undefined,
+      }
+    }
+    accessibilityValue={
+      {
+        "max": undefined,
+        "min": undefined,
+        "now": undefined,
+        "text": undefined,
+      }
+    }
+    accessible={true}
+    collapsable={false}
+    focusable={true}
+    onBlur={[Function]}
+    onClick={[Function]}
+    onFocus={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderRelease={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    style={
+      [
+        {
+          "alignItems": "center",
+          "backgroundColor": "#333333",
+          "borderRadius": 8,
+          "flexDirection": "row",
+          "justifyContent": "center",
+          "paddingHorizontal": 16,
+          "paddingVertical": 4,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-button"
+  >
+    <Text
+      style={
+        {
+          "color": "#FFFFFF",
+          "fontFamily": "Inter-Medium",
+          "fontSize": 12,
+          "fontWeight": "500",
+          "lineHeight": 16,
+        }
+      }
+    >
+      Save
+    </Text>
+  </View>
+</View>
+`;

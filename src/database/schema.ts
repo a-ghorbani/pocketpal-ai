@@ -1,7 +1,7 @@
 import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export default appSchema({
-  version: 5,
+  version: 7,
   tables: [
     tableSchema({
       name: 'chat_sessions',
@@ -9,6 +9,7 @@ export default appSchema({
         {name: 'title', type: 'string'},
         {name: 'date', type: 'string'},
         {name: 'active_pal_id', type: 'string', isOptional: true},
+        {name: 'settings_source', type: 'string', isOptional: true},
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
       ],
@@ -123,6 +124,8 @@ export default appSchema({
         {name: 'price_cents', type: 'number', isOptional: true},
         {name: 'is_owned', type: 'boolean', isOptional: true},
         {name: 'generation_settings', type: 'string', isOptional: true}, // JSON stringified
+        {name: 'pact', type: 'string', isOptional: true}, // JSON stringified { talents: TalentRef[] }
+        {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified Pal['greeting']
         {name: 'created_at', type: 'number'},
         {name: 'updated_at', type: 'number'},
       ],

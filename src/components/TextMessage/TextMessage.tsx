@@ -21,7 +21,7 @@ import {useTheme} from '../../hooks';
 import {styles} from './styles';
 import {MarkdownView} from '../MarkdownView';
 
-import {MessageType} from '../../utils/types';
+import {AgentStep, MessageType} from '../../utils/types';
 import {
   excludeDerivedMessageProps,
   getUserName,
@@ -43,9 +43,22 @@ export interface TextMessageTopLevelProps {
 
 export interface TextMessageProps extends TextMessageTopLevelProps {
   enableAnimation?: boolean;
-  message: MessageType.DerivedText;
+  /**
+   * Either a legacy `Text` row, or an `AssistantTurn` row when paired
+   * with a `step`. The component reads `author` / `previewData` /
+   * `metadata` from `message` regardless; `text` is only consulted
+   * when `step` is undefined.
+   */
+  message: MessageType.DerivedText | MessageType.DerivedAssistantTurn;
   messageWidth: number;
   showName: boolean;
+  /**
+   * When provided, the component renders this step's `content` in
+   * place of `message.text`. Set by the AssistantTurn renderer for
+   * each step within a turn — same component, per-step content.
+   * Reasoning is rendered separately via ReasoningBlock.
+   */
+  step?: AgentStep;
 }
 
 export const TextMessage = ({
@@ -55,10 +68,22 @@ export const TextMessage = ({
   onPreviewDataFetched,
   showName,
   usePreviewData,
+  step,
 }: TextMessageProps) => {
+  // For AssistantTurn rendering, the per-step `content` is the
+  // authoritative source. For legacy `Text` messages, fall back to
+  // `message.text`. Reasoning is rendered separately via
+  // ReasoningBlock — TextMessage only owns the content side.
+  const visibleText: string = step
+    ? (step.content ?? '')
+    : 'text' in message
+      ? message.text
+      : '';
   const theme = useTheme();
   const user = React.useContext(UserContext);
-  const [previewData, setPreviewData] = React.useState(message.previewData);
+  const [previewData, setPreviewData] = React.useState(
+    'previewData' in message ? message.previewData : undefined,
+  );
   const [selectedImageIndex, setSelectedImageIndex] = React.useState<
     number | null
   >(null);
@@ -203,11 +228,19 @@ export const TextMessage = ({
     );
   };
 
+  // Link preview only meaningful for legacy Text messages (image-bearing
+  // user messages, multimodal). AssistantTurn rendering uses the inline
+  // markdown path below.
+  const linkPreviewEligible =
+    !step &&
+    usePreviewData &&
+    !!onPreviewDataFetched &&
+    visibleText.length > 0 &&
+    REGEX_LINK.test(visibleText.toLowerCase());
+
   return (
     <>
-      {usePreviewData &&
-      !!onPreviewDataFetched &&
-      REGEX_LINK.test(message.text.toLowerCase()) ? (
+      {linkPreviewEligible ? (
         <LinkPreview
           containerStyle={{
             width: previewData?.image ? messageWidth : undefined,
@@ -220,7 +253,7 @@ export const TextMessage = ({
           renderHeader={renderPreviewHeader}
           renderText={renderPreviewText}
           renderTitle={renderPreviewTitle}
-          text={message.text}
+          text={visibleText}
           textContainerStyle={textContainer}
           touchableWithoutFeedbackProps={{
             accessibilityRole: undefined,
@@ -237,41 +270,19 @@ export const TextMessage = ({
               : null
           }
 
-          {/* Render images above the text */}
-          {renderImages()}
+          {/* Render images above the text — legacy Text path only. */}
+          {!step && renderImages()}
 
           <MarkdownView
-            markdownText={message.text.trim()}
+            markdownText={visibleText.trim()}
             maxMessageWidth={messageWidth}
             selectable={false}
-            reasoningContent={
-              message.metadata?.completionResult?.reasoning_content ||
-              message.metadata?.partialCompletionResult?.reasoning_content
-            }
           />
-
-          {/*Platform.OS === 'ios' ? (
-            <TextInput
-              multiline
-              editable={false}
-              style={[
-                text,
-                {
-                  lineHeight: undefined,
-                },
-              ]}>
-              {message.text.trim()}
-            </TextInput>
-          ) : (
-            <Text selectable={true} style={text}>
-              {message.text}
-            </Text>
-          )*/}
         </View>
       )}
 
-      {/* Image preview modal */}
-      {renderImagePreview()}
+      {/* Image preview modal — legacy Text path only. */}
+      {!step && renderImagePreview()}
     </>
   );
 };

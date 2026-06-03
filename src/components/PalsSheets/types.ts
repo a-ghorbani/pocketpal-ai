@@ -13,6 +13,9 @@ export interface PalFormData {
   promptGenerationModel?: Model;
   generatingPrompt?: string;
   completionSettings?: Record<string, any>;
+  talents?: string[];
+  greetingText?: string;
+  suggestedPrompts?: string[];
   // Dynamic parameters will be added based on schema
   [key: string]: any;
 }

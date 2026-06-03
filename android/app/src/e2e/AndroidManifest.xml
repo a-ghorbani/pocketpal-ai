@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  E2E flavor manifest overlay.
+
+  Adds a pocketpal:// scheme intent-filter to MainActivity so the E2E
+  spec can launch BenchmarkRunnerScreen via 'mobile: deepLink' (which
+  ends up as `adb shell am start -a android.intent.action.VIEW
+  -d pocketpal://e2e/benchmark`). The prod flavor's manifest does NOT
+  declare this scheme — defence-in-depth alongside the babel
+  __E2E__-stripped JS.
+
+  tools:node="merge" instructs AGP's manifest merger to ADD the new
+  intent-filter to the existing <activity> block from main rather than
+  replacing it.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <activity
+            android:name=".MainActivity"
+            tools:node="merge">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pocketpal" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

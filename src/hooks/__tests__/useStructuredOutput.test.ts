@@ -2,27 +2,29 @@ import {renderHook, act} from '@testing-library/react-hooks';
 import {useStructuredOutput} from '../useStructuredOutput';
 import {modelStore} from '../../store';
 
-// Mock the modelStore
 jest.mock('../../store', () => ({
   modelStore: {
-    context: {
+    engine: {
       completion: jest.fn(),
+      stopCompletion: jest.fn(),
     },
+    activeModel: undefined,
   },
 }));
 
 describe('useStructuredOutput', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset modelStore.context for each test
-    (modelStore as any).context = {
+    (modelStore as any).engine = {
       completion: jest.fn(),
+      stopCompletion: jest.fn(),
     };
+    (modelStore as any).activeModel = undefined;
   });
 
   it('should generate structured output successfully', async () => {
     const mockResponse = {text: '{"key": "value"}'};
-    (modelStore.context!.completion as jest.Mock).mockResolvedValueOnce(
+    (modelStore.engine!.completion as jest.Mock).mockResolvedValueOnce(
       mockResponse,
     );
 
@@ -39,7 +41,7 @@ describe('useStructuredOutput', () => {
     expect(output).toEqual({key: 'value'});
     expect(result.current.isGenerating).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(modelStore.context?.completion).toHaveBeenCalledWith({
+    expect(modelStore.engine!.completion).toHaveBeenCalledWith({
       messages: [{role: 'user', content: prompt}],
       response_format: {
         type: 'json_schema',
@@ -48,16 +50,18 @@ describe('useStructuredOutput', () => {
           schema,
         },
       },
-      temperature: 0.7,
+      temperature: 0.2,
       top_p: 0.9,
       top_k: 40,
       n_predict: 2000,
+      stop: undefined,
+      enable_thinking: false,
     });
   });
 
   it('should handle custom options', async () => {
     const mockResponse = {text: '{"key": "value"}'};
-    (modelStore.context!.completion as jest.Mock).mockResolvedValueOnce(
+    (modelStore.engine!.completion as jest.Mock).mockResolvedValueOnce(
       mockResponse,
     );
 
@@ -74,7 +78,7 @@ describe('useStructuredOutput', () => {
       await result.current.generate('test', {}, options);
     });
 
-    expect(modelStore.context?.completion).toHaveBeenCalledWith(
+    expect(modelStore.engine!.completion).toHaveBeenCalledWith(
       expect.objectContaining({
         temperature: options.temperature,
         top_p: options.top_p,
@@ -85,7 +89,7 @@ describe('useStructuredOutput', () => {
 
   it('should handle invalid JSON response', async () => {
     const mockResponse = {text: 'invalid json'};
-    (modelStore.context!.completion as jest.Mock).mockResolvedValueOnce(
+    (modelStore.engine!.completion as jest.Mock).mockResolvedValueOnce(
       mockResponse,
     );
 
@@ -100,9 +104,8 @@ describe('useStructuredOutput', () => {
     expect(result.current.isGenerating).toBe(false);
   });
 
-  it('should handle uninitialized model context', async () => {
-    // Mock modelStore with undefined context
-    (modelStore as any).context = undefined;
+  it('should handle uninitialized completion engine', async () => {
+    (modelStore as any).engine = undefined;
 
     const {result} = renderHook(() => useStructuredOutput());
 
@@ -122,7 +125,7 @@ describe('useStructuredOutput', () => {
 
   it('should handle completion error', async () => {
     const errorMessage = 'Completion failed';
-    (modelStore.context!.completion as jest.Mock).mockRejectedValueOnce(
+    (modelStore.engine!.completion as jest.Mock).mockRejectedValueOnce(
       new Error(errorMessage),
     );
 

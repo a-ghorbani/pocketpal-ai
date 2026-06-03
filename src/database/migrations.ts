@@ -118,5 +118,30 @@ export default schemaMigrations({
         }),
       ],
     },
+    // Migration to version 6: Add settings_source column to chat_sessions
+    {
+      toVersion: 6,
+      steps: [
+        addColumns({
+          table: 'chat_sessions',
+          columns: [
+            {name: 'settings_source', type: 'string', isOptional: true},
+          ],
+        }),
+      ],
+    },
+    // Migration to version 7: Add pact and greeting columns to local_pals
+    {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'local_pals',
+          columns: [
+            {name: 'pact', type: 'string', isOptional: true}, // JSON stringified { talents: TalentRef[] }
+            {name: 'greeting', type: 'string', isOptional: true}, // JSON stringified Pal['greeting']
+          ],
+        }),
+      ],
+    },
   ],
 });

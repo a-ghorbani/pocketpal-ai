@@ -1,0 +1,109 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Divider — snapshot matrix baseline (variant x size x {default,disabled} x modes) horizontal-default-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "alignSelf": "stretch",
+          "backgroundColor": "#a1a1a1",
+          "height": 1,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-divider"
+  />
+</View>
+`;
+
+exports[`Divider — snapshot matrix baseline (variant x size x {default,disabled} x modes) horizontal-default-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "alignSelf": "stretch",
+          "backgroundColor": "#a1a1a1",
+          "height": 1,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-divider"
+  />
+</View>
+`;
+
+exports[`Divider — snapshot matrix baseline (variant x size x {default,disabled} x modes) vertical-default-default-dark 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "alignSelf": "stretch",
+          "backgroundColor": "#a1a1a1",
+          "width": 1,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-divider"
+  />
+</View>
+`;
+
+exports[`Divider — snapshot matrix baseline (variant x size x {default,disabled} x modes) vertical-default-default-light 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    accessibilityRole="none"
+    style={
+      [
+        {
+          "alignSelf": "stretch",
+          "backgroundColor": "#a1a1a1",
+          "width": 1,
+        },
+        undefined,
+      ]
+    }
+    testID="ui-divider"
+  />
+</View>
+`;

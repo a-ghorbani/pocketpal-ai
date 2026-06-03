@@ -1,25 +1,19 @@
 import type {ReactNode} from 'react';
 import React, {useContext} from 'react';
-import {View, TouchableOpacity, Animated} from 'react-native';
-
-import {Text} from 'react-native-paper';
-import Clipboard from '@react-native-clipboard/clipboard';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import {Animated} from 'react-native';
 
 import {useTheme} from '../../hooks';
 
 import {styles} from './styles';
 
-import {UserContext, L10nContext} from '../../utils';
+import {UserContext} from '../../utils';
 import {MessageType} from '../../utils/types';
-import {t} from '../../locales';
 
-const hapticOptions = {
-  enableVibrateFallback: true,
-  ignoreAndroidSystemSettings: false,
-};
-
+/**
+ * Pure shape primitive (border, background, scale animation). Chrome —
+ * timing, copy, and any other turn-level slots — is owned by
+ * `AssistantTurnFooter` rendered adjacent to the Bubble by `Message`.
+ */
 export const Bubble = ({
   child,
   message,
@@ -34,59 +28,20 @@ export const Bubble = ({
 }) => {
   const theme = useTheme();
   const user = useContext(UserContext);
-  const l10n = useContext(L10nContext);
   const currentUserIsAuthor = user?.id === message.author.id;
-  const {copyable, timings} = message.metadata || {};
 
-  const timingsString = t(l10n.components.bubble.timingsString, {
-    predictedMs: timings?.predicted_per_token_ms?.toFixed() ?? '',
-    predictedPerSecond: timings?.predicted_per_second?.toFixed(2) ?? '',
+  const {contentContainer} = styles({
+    currentUserIsAuthor,
+    message,
+    roundBorder: true,
+    theme,
   });
-
-  // Add time to first token if available
-  const timeToFirstTokenString =
-    timings?.time_to_first_token_ms !== undefined &&
-    timings?.time_to_first_token_ms !== null
-      ? `, ${timings.time_to_first_token_ms}ms TTFT`
-      : '';
-
-  const fullTimingsString = timingsString + timeToFirstTokenString;
-
-  const {contentContainer, dateHeaderContainer, dateHeader, iconContainer} =
-    styles({
-      currentUserIsAuthor,
-      message,
-      roundBorder: true,
-      theme,
-    });
-
-  const copyToClipboard = () => {
-    if (message.type === 'text') {
-      ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-      Clipboard.setString(message.text.trim());
-    }
-  };
 
   return (
     <Animated.View
       testID={currentUserIsAuthor ? 'user-message' : 'ai-message'}
-      style={[
-        contentContainer,
-        {
-          transform: [{scale}],
-        },
-      ]}>
+      style={[contentContainer, {transform: [{scale}]}]}>
       {child}
-      {timings && (
-        <View style={dateHeaderContainer} testID="message-timing">
-          {copyable && (
-            <TouchableOpacity onPress={copyToClipboard}>
-              <Icon name="content-copy" style={iconContainer} />
-            </TouchableOpacity>
-          )}
-          {timings && <Text style={dateHeader}>{fullTimingsString}</Text>}
-        </View>
-      )}
     </Animated.View>
   );
 };

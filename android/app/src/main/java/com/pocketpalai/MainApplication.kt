@@ -1,6 +1,7 @@
 package com.pocketpal
 
 import android.app.Application
+import android.system.Os
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
@@ -13,6 +14,7 @@ import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 import com.pocketpal.KeepAwakePackage
 import com.pocketpal.HardwareInfoPackage
+import com.pocketpal.StorefrontPackage
 import com.pocketpal.download.DownloadPackage
 
 class MainApplication : Application(), ReactApplication {
@@ -25,12 +27,16 @@ class MainApplication : Application(), ReactApplication {
               // add(MyReactNativePackage())
               add(KeepAwakePackage())
               add(HardwareInfoPackage())
+              add(StorefrontPackage())
               add(DownloadPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"
 
-        override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
+        // Independent of BuildConfig.DEBUG: releaseE2e is `debuggable=true`
+        // for `adb run-as` but must still load the baked bundle, not from
+        // a locally-running Metro server.
+        override fun getUseDeveloperSupport(): Boolean = BuildConfig.USE_DEV_SUPPORT
 
         override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
         override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
@@ -41,6 +47,12 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // Enable Adreno large buffer support on Qualcomm A7X/A8X GPUs.
+    // The OpenCL backend in llama.rn self-gates on GPU family and the
+    // cl_qcom_large_buffer extension — this is a no-op on non-Adreno devices.
+    // Must be set before SoLoader.init so the native library picks it up.
+    // See: https://github.com/ggml-org/llama.cpp/pull/20997
+    Os.setenv("LM_GGML_OPENCL_ADRENO_USE_LARGE_BUFFER", "1", true)
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.

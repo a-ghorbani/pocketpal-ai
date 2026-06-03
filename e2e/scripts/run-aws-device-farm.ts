@@ -52,7 +52,7 @@ const DEVICE_POOL_ARN_IOS = process.env.AWS_DEVICE_POOL_ARN_IOS;
 // Default app paths
 // Note: iOS requires an IPA built for real devices (not simulator)
 // The simulator .app from yarn ios:build:e2e will NOT work on Device Farm
-const DEFAULT_ANDROID_APP = '../android/app/build/outputs/apk/release/app-release.apk';
+const DEFAULT_ANDROID_APP = '../android/app/build/outputs/apk/e2e/releaseE2e/app-e2e-releaseE2e.apk';
 const DEFAULT_IOS_APP = '../ios/build/PocketPal.ipa';
 
 // Parse command line arguments

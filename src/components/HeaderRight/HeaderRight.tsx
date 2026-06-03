@@ -2,7 +2,7 @@ import React, {useContext} from 'react';
 import {Alert, Keyboard, View} from 'react-native';
 
 import {observer} from 'mobx-react';
-import {IconButton, useTheme} from 'react-native-paper';
+import {Icon, IconButton, useTheme} from 'react-native-paper';
 
 import {
   // ClockFastForwardIcon,
@@ -22,7 +22,7 @@ import {styles} from './styles';
 import {chatSessionStore, modelStore, uiStore} from '../../store';
 
 import {L10nContext} from '../../utils';
-import {Model} from '../../utils/types';
+import {Model, ModelOrigin} from '../../utils/types';
 import {t} from '../../locales';
 import {importChatSessions} from '../../utils/importUtils';
 import {
@@ -56,7 +56,7 @@ export const HeaderRight: React.FC = observer(() => {
   );
 
   const onSelectModel = (model: Model) => {
-    modelStore.initContext(model);
+    modelStore.selectModel(model);
     closeMenu();
   };
 
@@ -174,11 +174,26 @@ export const HeaderRight: React.FC = observer(() => {
           disabled={models.length === 0}
           submenu={models.map(model => (
             <Menu.Item
-              label={model.name}
+              label={
+                model.origin === ModelOrigin.REMOTE
+                  ? `${model.name} (${model.serverName})`
+                  : model.name
+              }
               onPress={() => onSelectModel(model)}
               key={model.id}
               selectable
               selected={model.id === activeModelId}
+              leadingIcon={
+                model.origin === ModelOrigin.REMOTE
+                  ? () => (
+                      <Icon
+                        source="cloud-outline"
+                        size={16}
+                        color={theme.colors.secondary}
+                      />
+                    )
+                  : undefined
+              }
             />
           ))}
           label={l10n.components.headerRight.model}

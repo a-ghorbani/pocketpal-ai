@@ -4,6 +4,7 @@ import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.pocketpal.specs.NativeHardwareInfoSpec
 import android.os.Build
+import android.os.Debug
 import java.io.File
 import java.util.regex.Pattern
 import android.opengl.GLES20
@@ -13,10 +14,18 @@ import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
 import android.app.ActivityManager
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 
 @ReactModule(name = NativeHardwareInfoSpec.NAME)
 class HardwareInfoModule(reactContext: ReactApplicationContext) :
     NativeHardwareInfoSpec(reactContext) {
+
+  // The JNI implementation lives in jni/src/hardware_info.cpp; our
+  // CMakeLists.txt links it into libappmodules.so, which SoLoader has
+  // already mapped by the time this is called. No System.loadLibrary
+  // needed.
+  private external fun nativePurgeAll(): Boolean
 
   override fun getName(): String = NativeHardwareInfoSpec.NAME
 
@@ -207,6 +216,87 @@ class HardwareInfoModule(reactContext: ReactApplicationContext) :
 
       // availMem is already in bytes
       promise.resolve(memInfo.availMem.toDouble())
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  // Best-effort: a failing JNI/symbol-resolution path still resolves
+  // with purged=false rather than rejecting, so callers don't have to
+  // handle platform-availability cases themselves.
+  override fun purgeNativeAllocator(promise: Promise) {
+    try {
+      val rssBefore = readVmRssKb()
+      val purged = try {
+        nativePurgeAll()
+      } catch (_: Throwable) {
+        // UnsatisfiedLinkError on a build where libappmodules lacks
+        // the symbol; report purged=false and let the caller continue.
+        false
+      }
+      val rssAfter = readVmRssKb()
+      promise.resolve(Arguments.createMap().apply {
+        putBoolean("purged", purged)
+        // RN bridge has no long; doubles round-trip cleanly to JS number.
+        putDouble("rss_kb_before", rssBefore.toDouble())
+        putDouble("rss_kb_after", rssAfter.toDouble())
+      })
+    } catch (e: Exception) {
+      promise.reject("ERROR", e.message)
+    }
+  }
+
+  private fun readVmRssKb(): Long {
+    return try {
+      File("/proc/self/status").bufferedReader().useLines { lines ->
+        for (line in lines) {
+          if (line.startsWith("VmRSS:")) {
+            // Format: "VmRSS:  <whitespace>  12345 kB"
+            return line.substringAfter("VmRSS:").trim().substringBefore(" ").toLong()
+          }
+        }
+        0L
+      }
+    } catch (e: Throwable) {
+      0L
+    }
+  }
+
+  override fun writeMemorySnapshot(label: String, promise: Promise) {
+    try {
+      // Collect memory metrics
+      val pssKb = Debug.getPss()
+      val nativeHeap = Debug.getNativeHeapAllocatedSize()
+      val activityManager = reactApplicationContext
+          .getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+      val memInfo = ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memInfo)
+
+      val snapshot = JSONObject().apply {
+        put("label", label)
+        put("timestamp", java.time.Instant.now().toString())
+        put("native", JSONObject().apply {
+          put("pss_total", pssKb * 1024.0)
+          put("native_heap_allocated", nativeHeap.toDouble())
+          put("available_memory", memInfo.availMem.toDouble())
+        })
+      }
+
+      // Write to external files dir so adb pull works without root on real devices
+      val dir = reactApplicationContext.getExternalFilesDir(null) ?: reactApplicationContext.filesDir
+      val file = File(dir, "memory-snapshots.json")
+      val snapshots = if (file.exists()) {
+        JSONArray(file.readText())
+      } else {
+        JSONArray()
+      }
+      snapshots.put(snapshot)
+      file.writeText(snapshots.toString(2))
+
+      promise.resolve(Arguments.createMap().apply {
+        putString("label", label)
+        putString("status", "written")
+      })
     } catch (e: Exception) {
       promise.reject("ERROR", e.message)
     }

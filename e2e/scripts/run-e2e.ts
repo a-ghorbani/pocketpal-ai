@@ -35,6 +35,7 @@
  *   npx ts-node scripts/run-e2e.ts --help
  */
 
+import {config} from 'dotenv';
 import {execSync} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -120,6 +121,10 @@ const DEVICES_FILE = path.join(E2E_DIR, 'devices.json');
 const DEVICES_TEMPLATE = path.join(E2E_DIR, 'devices.template.json');
 const REPORTS_DIR = path.join(E2E_DIR, 'reports');
 const BASE_APPIUM_PORT = 4723;
+const ENV_FILE = path.join(E2E_DIR, '.env');
+
+// Load environment variables from e2e/.env (secrets, server URLs, etc.)
+config({path: ENV_FILE});
 
 // ---------------------------------------------------------------------------
 // CLI Parsing
@@ -135,7 +140,8 @@ USAGE:
 OPTIONS:
   --platform <platform>    Platform: 'ios', 'android', or 'both' (required)
   --spec <spec>            Test spec: 'quick-smoke', 'load-stress', 'diagnostic',
-                           'language', 'visual-capture', or 'all' (default: 'quick-smoke')
+                           'language', 'visual-capture', 'memory-profile',
+                           'benchmark-matrix', or 'all' (default: 'quick-smoke')
   --models <ids>           Comma-separated model IDs to test
   --each-model             Iterate spec once per model (isolated WDIO process each)
   --all-models             Include crash-repro models in the model pool
@@ -175,6 +181,12 @@ EXAMPLES:
 
   # Dry run to see what would execute
   yarn e2e --platform both --each-device --each-model --dry-run
+
+  # Benchmark matrix (Android only)
+  yarn e2e --platform android --spec benchmark-matrix --skip-build
+  BENCH_MODELS=qwen3-1.7b BENCH_QUANTS=q4_0 BENCH_BACKENDS=cpu \\
+    yarn e2e --platform android --spec benchmark-matrix --skip-build
+  MODELS_PRESEEDED=1 yarn e2e --platform android --spec benchmark-matrix --skip-build
 `);
 }
 
@@ -500,11 +512,14 @@ function buildApps(
     }
   }
   if (platform === 'android' || platform === 'both') {
-    const cmd = 'cd android && ./gradlew assembleRelease';
+    // E2E runs must target the e2e flavor (com.pocketpalai.e2e) so the
+    // automation bridge is present. The prod flavor's APK has the
+    // bridge DCE-stripped and specs would silently fail.
+    const cmd = 'cd android && E2E_BUILD=true ./gradlew assembleE2eReleaseE2e';
     if (dryRun) {
       console.log(`[DRY RUN] Would run: ${cmd} (cwd: ${REPO_ROOT})`);
     } else {
-      console.log('Building Android release APK...');
+      console.log('Building Android E2E APK (e2e flavor, releaseE2e buildType)...');
       execSync(cmd, {stdio: 'inherit', cwd: REPO_ROOT});
     }
   }
@@ -931,7 +946,7 @@ function printDryRun(
     }
     if (args.platform === 'android' || args.platform === 'both') {
       console.log(
-        `  cd android && ./gradlew assembleRelease (cwd: ${REPO_ROOT})`,
+        `  cd android && E2E_BUILD=true ./gradlew assembleE2eReleaseE2e (cwd: ${REPO_ROOT})`,
       );
     }
   }

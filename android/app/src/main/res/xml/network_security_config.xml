@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext (HTTP) traffic.
+         PocketPal connects to local LLM servers (LM Studio, Ollama, llama.cpp)
+         on the user's LAN via HTTP. Users enter the server URL themselves. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -3,6 +3,12 @@ import mockClipboard from '@react-native-clipboard/clipboard/jest/clipboard-mock
 
 import 'react-native-gesture-handler/jestSetup';
 
+// __E2E__ is a build-time constant in prod/e2e builds (see babel.config.js),
+// but in Jest the transform-define plugin is disabled so it stays a runtime
+// global. Default to true so adapter tests render their components; tests
+// that assert the DCE gate override with `(global as any).__E2E__ = false`.
+(global as any).__E2E__ = true;
+
 jest.mock('react-native-haptic-feedback');
 
 jest.mock('react-native-keyboard-controller', () => {
@@ -48,6 +54,8 @@ import {
 import {benchmarkStore as mockBenchmarkStore} from '../__mocks__/stores/benchmarkStore';
 import {mockPalStore} from '../__mocks__/stores/palStore';
 import {deepLinkStore as mockDeepLinkStore} from '../__mocks__/stores/deepLinkStore';
+import {mockServerStore} from '../__mocks__/stores/serverStore';
+import {mockTTSStore} from '../__mocks__/stores/ttsStore';
 
 jest.mock('@react-native-clipboard/clipboard', () => mockClipboard);
 
@@ -72,6 +80,12 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
     ),
     getChipset: jest.fn(() => Promise.resolve('Mock Chipset')),
     getAvailableMemory: jest.fn(() => Promise.resolve(3 * 1000 * 1000 * 1000)), // 3GB
+    writeMemorySnapshot: jest.fn((label: string) =>
+      Promise.resolve({label, status: 'written'}),
+    ),
+    purgeNativeAllocator: jest.fn(() =>
+      Promise.resolve({purged: true, rss_kb_before: 0, rss_kb_after: 0}),
+    ),
   },
 }));
 
@@ -97,6 +111,8 @@ jest.mock('../src/store', () => {
     benchmarkStore: mockBenchmarkStore,
     palStore: mockPalStore,
     deepLinkStore: mockDeepLinkStore,
+    serverStore: mockServerStore,
+    ttsStore: mockTTSStore,
     defaultCompletionSettings: mockDefaultCompletionSettings,
   };
 });

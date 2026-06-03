@@ -7,6 +7,7 @@ import {
   downloadedModel,
   downloadingModel,
   largeMemoryModel,
+  remoteModel,
 } from '../../../../../jest/fixtures/models';
 
 // Unmock useMemoryCheck for memory warning tests
@@ -16,7 +17,7 @@ import {ModelCard} from '../ModelCard';
 
 import {downloadManager} from '../../../../services/downloads';
 
-import {modelStore, uiStore} from '../../../../store';
+import {modelStore, uiStore, serverStore} from '../../../../store';
 import {ModelType} from '../../../../utils/types';
 
 import {l10n} from '../../../../locales';
@@ -159,7 +160,7 @@ describe('ModelCard', () => {
       fireEvent.press(getByTestId('load-button'));
     });
 
-    expect(modelStore.initContext).toHaveBeenCalledWith(downloadedModel);
+    expect(modelStore.selectModel).toHaveBeenCalledWith(downloadedModel);
     expect(mockNavigate).not.toHaveBeenCalled();
 
     uiStore.autoNavigatetoChat = true;
@@ -318,7 +319,7 @@ describe('ModelCard', () => {
       // Reset modelStore to a clean state
       modelStore.isContextLoading = false;
       modelStore.loadingModel = undefined;
-      modelStore.initContext = jest.fn(); // optional: re-mock if necessary
+      modelStore.selectModel = jest.fn(); // optional: re-mock if necessary
 
       // Reset downloadManager mock to ensure models are not downloading
       (downloadManager.isDownloading as jest.Mock).mockImplementation(
@@ -341,7 +342,7 @@ describe('ModelCard', () => {
 
     it('handles model loading errors', async () => {
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      (modelStore.initContext as jest.Mock).mockRejectedValue(
+      (modelStore.selectModel as jest.Mock).mockRejectedValue(
         new Error('Loading failed'),
       );
 
@@ -497,6 +498,111 @@ describe('ModelCard', () => {
 
       expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
         'missing/projection-model',
+      );
+    });
+  });
+
+  describe('Remote model functionality', () => {
+    const mockOnOpenServerDetails = jest.fn();
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('renders server name link for remote models', async () => {
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('server-link')).toBeTruthy();
+      });
+    });
+
+    it('calls onOpenServerDetails when server link is pressed', async () => {
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      await waitFor(() => {
+        const serverLink = getByTestId('server-link');
+        fireEvent.press(serverLink);
+      });
+
+      expect(mockOnOpenServerDetails).toHaveBeenCalledWith(
+        remoteModel.serverId,
+      );
+    });
+
+    it('shows delete button for remote models', async () => {
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('delete-button')).toBeTruthy();
+      });
+    });
+
+    it('shows delete confirmation dialog for remote models', async () => {
+      jest.spyOn(Alert, 'alert').mockImplementation();
+
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      const deleteButton = getByTestId('delete-button');
+      fireEvent.press(deleteButton);
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining(remoteModel.name),
+        expect.arrayContaining([
+          expect.objectContaining({style: 'cancel'}),
+          expect.objectContaining({style: 'destructive'}),
+        ]),
+      );
+    });
+
+    it('calls removeUserSelectedModel on delete confirmation', async () => {
+      (Alert.alert as jest.Mock) = jest
+        .fn()
+        .mockImplementation((title, message, buttons) => {
+          // Simulate pressing the destructive "Delete" button
+          const destructiveButton = buttons.find(
+            (b: any) => b.style === 'destructive',
+          );
+          destructiveButton?.onPress();
+        });
+
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      const deleteButton = getByTestId('delete-button');
+      fireEvent.press(deleteButton);
+
+      expect(serverStore.removeUserSelectedModel).toHaveBeenCalledWith(
+        remoteModel.serverId,
+        remoteModel.remoteModelId,
+      );
+      expect(serverStore.removeServerIfOrphaned).toHaveBeenCalledWith(
+        remoteModel.serverId,
       );
     });
   });

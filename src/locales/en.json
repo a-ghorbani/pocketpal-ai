@@ -83,11 +83,13 @@
     "useMmapDescription": "Use memory-mapped files for faster model loading",
     "useMmapTrue": "Enabled",
     "useMmapFalse": "Disabled",
-    "useMmapSmart": "Smart",
     "useMmapTrueDescription": "Always use memory mapping for faster loading",
-    "useMmapFalseDescription": "Never use memory mapping (slower loading but may reduce memory usage)",
-    "useMmapSmartDescription": "Automatically choose based on model type (Android only)",
-    "useMmapRecommended": "Recommended for performance - Memory-mapped with locked pages. Combines fast loading with consistent performance",
+    "useMmapFalseDescription": "Disabled is recommended when weight repacking is enabled to avoid doubling memory usage",
+    "weightRepacking": "Enable Weight Repacking",
+    "weightRepackingDescription": "Faster prompt processing with minimal memory overhead when memory mapping is disabled. Token generation is unaffected.",
+    "ttsAvailability": "Text-to-speech",
+    "ttsAvailabilityDescription": "Read assistant replies aloud.",
+    "ttsAvailabilityLowMemoryWarning": "Your device's memory is low — this may not work reliably.",
     "modelLoadingSettings": "Model Loading Settings",
     "autoOffloadLoad": "Auto Offload/Load",
     "autoOffloadLoadDescription": "Offload model when app is in background.",
@@ -122,7 +124,40 @@
     "clearCachesConfirmMessage": "This will clear all cached session data ({{fileCount}} files, {{size}}). Shortcuts may be slower on first use after clearing. This won't affect your Pals or chat history.",
     "clearCachesSuccess": "Successfully cleared {{count}} cache file(s).",
     "clearCachesError": "Failed to clear caches. Please try again.",
-    "noCachesToClear": "No caches to clear."
+    "noCachesToClear": "No caches to clear.",
+    "serverName": "Server Name",
+    "serverUrl": "Server URL",
+    "serverUrlPlaceholder": "e.g., http://192.168.1.100:1234",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "Optional - required for OpenAI/Groq",
+    "apiKeyDescription": "Stored securely on device.",
+    "remoteModel": "Remote",
+    "remotePrivacyNotice": "Messages sent to remote servers leave your device. Only connect to servers you trust.",
+    "remoteIndicator": "Remote",
+    "serverUrlRequired": "Server URL is required",
+    "serverUrlInvalid": "Invalid URL format",
+    "serverUrlHttpWarning": "iOS requires HTTPS for non-local servers. Use https:// or a local network address.",
+    "addRemoteModel": "Add Remote Model",
+    "yourServers": "Your Servers",
+    "orConnectNewServer": "or connect new server",
+    "selectModel": "Select Model",
+    "addModel": "Add Model",
+    "connected": "Connected",
+    "connectionFailed": "Connection failed: {{error}}",
+    "connecting": "Connecting...",
+    "noModelsAvailable": "No models available on this server.",
+    "alreadyAdded": "Already added",
+    "connectedServers": "Connected Servers",
+    "modelsCount": "{{count}} models",
+    "serverDetails": "Server Details",
+    "modelsUsingServer": "Models using this server:",
+    "saveChanges": "Save Changes",
+    "removeServer": "Remove Server",
+    "removeServerMessage": "Remove {{serverName}} and its {{count}} models?",
+    "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
+    "retryConnection": "Retry",
+    "enterUrlManually": "Enter URL manually",
+    "manageServers": "Manage Servers"
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -155,7 +190,9 @@
       "fileAlreadyExists": "File already exists",
       "fileAlreadyExistsMessage": "A file with this name already exists. What would you like to do?",
       "replace": "Replace",
-      "keepBoth": "Keep Both"
+      "keepBoth": "Keep Both",
+      "copyingModel": "Copying model file...",
+      "copyFailed": "Failed to copy model file"
     },
     "labels": {
       "localModel": "Local",
@@ -376,7 +413,7 @@
     "jinja": "Enable Jinja templating for chat formatting. When enabled, uses Jinja-based chat template processing for better compatibility with modern models.",
     "grammar": "Enforce specific grammar rules to ensure the generated text follows a particular structure or format",
     "stop": "Define specific phrases that will stop text generation",
-    "n_predict": "Set how long the generated response should be (in tokens)",
+    "n_predict": "Maximum number of tokens to generate. Set to Unlimited for no limit, or Custom to specify a value.",
     "n_probs": "Show probability scores for alternative words.",
     "top_k": "Control creativity by limiting word choices to the K most likely options. Lower values make responses more focused",
     "top_p": "Balance creativity and coherence. Higher values (near 1.0) allow more creative but potentially less focused responses",
@@ -411,7 +448,9 @@
     "orBy": "or by",
     "sponsorButton": "Become a Sponsor",
     "versionCopiedTitle": "Version copied",
-    "versionCopiedDescription": "Version information has been copied to clipboard"
+    "versionCopiedDescription": "Version information has been copied to clipboard",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
   },
   "feedback": {
     "title": "Send Feedback",
@@ -456,7 +495,11 @@
       "attachmentButtonAccessibilityLabel": "Send media"
     },
     "bubble": {
-      "timingsString": "{{predictedMs}}ms/token, {{predictedPerSecond}} tokens/sec"
+      "msPerToken": "{{value}}ms/token",
+      "tokensPerSec": "{{value}} tokens/sec",
+      "ttft": "{{value}}ms TTFT",
+      "interrupted": "Interrupted",
+      "truncated": "Cut off — likely context full"
     },
     "exportUtils": {
       "fileSaved": "File Saved",
@@ -480,6 +523,17 @@
     },
     "thinkingBubble": {
       "reasoning": "Reasoning"
+    },
+    "pendingIndicator": {
+      "preparingTool": "Preparing tool",
+      "buildingPage": "Building page",
+      "calculating": "Calculating",
+      "lookingUpTime": "Looking up time",
+      "stopping": "Stopping…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} tokens",
+      "elapsed": "{{seconds}}s"
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "No Models Available",
@@ -707,6 +761,26 @@
         "nameRequired": "Name is required",
         "generatingPromptRequired": "Generating prompt is required when using AI prompt",
         "promptModelRequired": "Prompt generation model is required when using AI prompt"
+      },
+      "talents": "Talents",
+      "talentNames": {
+        "render_html": "HTML preview",
+        "calculate": "Math expressions",
+        "datetime": "Date & time"
+      },
+      "talentDescriptions": {
+        "render_html": "Render HTML documents inline in chat",
+        "calculate": "Evaluate mathematical expressions",
+        "datetime": "Get the current date and time"
+      },
+      "greeting": {
+        "sectionLabel": "Greeting",
+        "textLabel": "Greeting message",
+        "textPlaceholder": "What should this pal say on an empty chat?",
+        "suggestedPromptsLabel": "Suggested prompts",
+        "addPromptButton": "Add prompt",
+        "promptPlaceholder": "A short prompt for the chip",
+        "removePromptLabel": "Remove prompt"
       }
     },
     "assistantPalSheet": {
@@ -950,7 +1024,8 @@
       "failedToLoadDetails": "Failed to load pal details",
       "failedToDownload": "Failed to download pal",
       "premiumPalMessage": "This is a Premium Pal.\n• If you've already unlocked it with your Palshub account, simply sign in to access the full details.\n• Haven't unlocked it yet? Visit palshub.ai app to learn more.",
-      "notAvailable": "N/A"
+      "notAvailable": "N/A",
+      "buyOnPalshub": "Buy on Palshub"
     }
   },
   "validation": {
@@ -1016,6 +1091,7 @@
     "conversationReset": "Conversation reset!",
     "modelNotLoaded": "Model not loaded. Please initialize the model.",
     "completionFailed": "Completion failed: ",
+    "toolCallTruncated": "Tool call cut off — the model likely ran out of room. Try a larger context or a smaller request.",
     "loadingModel": "Loading model ...",
     "typeYourMessage": "Type your message here",
     "load": "Load",
@@ -1023,7 +1099,21 @@
     "readyToChat": "Ready to chat? Load the last used model.",
     "pleaseLoadModel": "Load a model to chat.",
     "multimodalNotEnabled": "Multimodal is not enabled for this model. Images will be displayed but not processed by the AI.",
-    "cannotSendWithoutModel": "Load a model first"
+    "cannotSendWithoutModel": "Load a model first",
+    "toolCompatWarning": "This model may not support tool calling. Results may be unreliable.",
+    "softCapWarning": "Start a new chat for best performance.",
+    "generatingPreview": "Generating preview… ({{tokens}} tokens)",
+    "generatingPreviewPending": "Generating preview…",
+    "toolUsedChip": "used {{name}}",
+    "toolErrorBlock": "{{name}} failed"
+  },
+  "htmlPreview": {
+    "defaultTitle": "Preview",
+    "showPreview": "Show rendered preview",
+    "showCode": "Show HTML code",
+    "copyHtml": "Copy HTML",
+    "closePreview": "Close preview",
+    "openFullscreen": "Open fullscreen: {{title}}"
   },
   "benchmark": {
     "title": "Benchmark",
@@ -1178,5 +1268,48 @@
   },
   "simulator": {
     "cameraNotAvailable": "Camera not available in simulator. Please use a physical device."
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Voice & Speech",
+    "voiceRowTitle": "Voice",
+    "notSet": "Not set",
+    "previewButton": "Preview",
+    "stopPreviewButton": "Stop preview",
+    "voicesTitle": "Voices",
+    "voicesEmptyHint": "Tap any voice to install it and use it. Or pick a system voice — those are always available.",
+    "supertonicStepsLabel": "Quality (diffusion steps)",
+    "toggleAutoSpeakLabel": "Toggle auto-speak",
+    "openSettingsLabel": "TTS settings",
+    "playMessageLabel": "Play message",
+    "stopMessageLabel": "Stop message",
+    "autoSpeakLabel": "Auto-speak responses",
+    "autoSpeakDescription": "Read new replies aloud as they arrive.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "System",
+    "stepsCount": "{{steps}} steps",
+    "engineKittenTagline": "Smallest footprint. Reliable. Best on older devices.",
+    "engineKokoroTagline": "Highest quality. Slower to start. Some voices may not work on all devices.",
+    "engineSupertonicTagline": "Fastest to start. Uses more RAM. May occasionally drop words.",
+    "engineSystemTagline": "Built-in OS voices. Always available, zero install.",
+    "engineSystemTitleIos": "iOS Voices",
+    "engineSystemTitleAndroid": "Android Voices",
+    "engineSystemTier": "always available",
+    "engineTierLightest": "lightest",
+    "engineTierBestQuality": "best quality",
+    "engineTierFastestStart": "fastest start",
+    "engineSpecsLine": "{{voices}} voices  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} voices",
+    "engineRemoveTitle": "Remove {{engineTitle}}?",
+    "engineRemoveBody": "Frees ~{{sizeMb}} MB on this device.",
+    "engineRemoveCancel": "Cancel",
+    "engineRemoveConfirm": "Remove",
+    "engineInstallCta": "Install · {{sizeMb}} MB",
+    "engineDownloadingLabel": "Downloading…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "Try again",
+    "voicesEmptyState": "No voices found.",
+    "kokoroDeviceNote": "Some voices may not work on all devices.",
+    "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
   }
 }

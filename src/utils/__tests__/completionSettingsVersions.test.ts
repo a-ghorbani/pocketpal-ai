@@ -103,6 +103,38 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.top_p).toBe(0.9);
   });
 
+  it('should migrate from v0 to v4 applying all migrations including conditional n_predict', () => {
+    const settings = {
+      version: 0,
+      temperature: 0.5,
+      n_predict: 1024,
+    };
+    const migrated = migrateCompletionSettings(settings);
+
+    expect(migrated.version).toBe(4);
+    expect(migrated.include_thinking_in_context).toBe(
+      defaultCompletionParams.include_thinking_in_context,
+    );
+    expect(migrated.jinja).toBe(defaultCompletionParams.jinja);
+    expect(migrated.enable_thinking).toBe(
+      defaultCompletionParams.enable_thinking,
+    );
+    expect(migrated.n_predict).toBe(-1);
+    expect(migrated.temperature).toBe(0.5);
+  });
+
+  it('should migrate from v0 to v4 preserving custom n_predict', () => {
+    const settings = {
+      version: 0,
+      temperature: 0.5,
+      n_predict: 2048,
+    };
+    const migrated = migrateCompletionSettings(settings);
+
+    expect(migrated.version).toBe(4);
+    expect(migrated.n_predict).toBe(2048);
+  });
+
   it('should not modify settings that are already current version', () => {
     const settings = {
       version: CURRENT_COMPLETION_SETTINGS_VERSION,
@@ -110,10 +142,22 @@ describe('migrateCompletionSettings', () => {
       include_thinking_in_context: false,
       jinja: false,
       enable_thinking: false,
+      n_predict: 2048,
     };
     const migrated = migrateCompletionSettings(settings);
 
     expect(migrated).toEqual(settings);
+  });
+
+  it('should not modify n_predict when already at version 4', () => {
+    const settings = {
+      version: 4,
+      n_predict: 1024,
+    };
+    const migrated = migrateCompletionSettings(settings);
+
+    expect(migrated.version).toBe(4);
+    expect(migrated.n_predict).toBe(1024);
   });
 
   it('should preserve existing values during migration', () => {
@@ -183,5 +227,13 @@ describe('defaultCompletionParams', () => {
 
   it('should have jinja set to true by default', () => {
     expect(defaultCompletionParams.jinja).toBe(true);
+  });
+
+  it('should have n_predict set to -1 (unlimited) by default', () => {
+    expect(defaultCompletionParams.n_predict).toBe(-1);
+  });
+
+  it('should have CURRENT_COMPLETION_SETTINGS_VERSION equal to 4', () => {
+    expect(CURRENT_COMPLETION_SETTINGS_VERSION).toBe(4);
   });
 });

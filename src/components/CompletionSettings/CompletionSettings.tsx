@@ -140,9 +140,66 @@ export const CompletionSettings: React.FC<Props> = ({
     );
   };
 
+  const isUnlimited = settings.n_predict === -1;
+
+  const renderNPredictField = () => {
+    const metadata = COMPLETION_PARAMS_METADATA.n_predict;
+    const value = settings.n_predict?.toString() ?? '';
+    const validation = metadata
+      ? validateNumericField(value, metadata.validation)
+      : {isValid: true};
+
+    return (
+      <View style={styles.settingItem}>
+        <Text variant="labelSmall" style={styles.settingLabel}>
+          N PREDICT
+        </Text>
+        <Text style={styles.description}>
+          {l10n.completionParams.n_predict}
+        </Text>
+        <SegmentedButtons
+          value={isUnlimited ? 'unlimited' : 'custom'}
+          onValueChange={
+            disabled
+              ? () => {}
+              : selected =>
+                  onChange('n_predict', selected === 'unlimited' ? -1 : 1024)
+          }
+          density="high"
+          buttons={[
+            {
+              value: 'unlimited',
+              label: 'Unlimited',
+              testID: 'n_predict-unlimited-btn',
+            },
+            {
+              value: 'custom',
+              label: 'Custom',
+              testID: 'n_predict-custom-btn',
+            },
+          ]}
+          style={styles.segmentedButtons}
+        />
+        {!isUnlimited && (
+          <TextInput
+            value={value}
+            onChangeText={
+              disabled ? () => {} : _value => onChange('n_predict', _value)
+            }
+            keyboardType="numeric"
+            error={!validation.isValid}
+            helperText={validation.errorMessage}
+            editable={!disabled}
+            testID="n_predict-input"
+          />
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container} testID="completion-settings">
-      {renderIntegerInput({name: 'n_predict'})}
+      {renderNPredictField()}
       {renderSwitch('include_thinking_in_context')}
       {renderSlider({name: 'temperature'})}
       {renderSlider({name: 'top_k', step: 1})}

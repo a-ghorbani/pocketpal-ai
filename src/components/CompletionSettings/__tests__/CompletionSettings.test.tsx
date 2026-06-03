@@ -108,6 +108,51 @@ describe('CompletionSettings', () => {
     expect(mockOnChange).toHaveBeenCalledWith('n_predict', '1024');
   });
 
+  it('hides text input when n_predict is -1 (unlimited)', () => {
+    const {getByTestId, queryByTestId} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, n_predict: -1}}
+        onChange={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId('n_predict-unlimited-btn')).toBeTruthy();
+    expect(getByTestId('n_predict-custom-btn')).toBeTruthy();
+    expect(queryByTestId('n_predict-input')).toBeNull();
+  });
+
+  it('shows text input when n_predict is a custom value', () => {
+    const {getByTestId} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, n_predict: 500}}
+        onChange={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId('n_predict-unlimited-btn')).toBeTruthy();
+    expect(getByTestId('n_predict-custom-btn')).toBeTruthy();
+    expect(getByTestId('n_predict-input')).toBeTruthy();
+  });
+
+  it('switches n_predict between unlimited and custom via segmented buttons', () => {
+    const mockOnChange = jest.fn();
+    const {getByText} = render(
+      <CompletionSettings
+        settings={{...mockCompletionParams, n_predict: 500}}
+        onChange={mockOnChange}
+      />,
+    );
+
+    // Select Unlimited → should set to -1
+    fireEvent.press(getByText('Unlimited'));
+    expect(mockOnChange).toHaveBeenCalledWith('n_predict', -1);
+
+    // Select Custom → should set to 1024
+    mockOnChange.mockClear();
+    fireEvent.press(getByText('Custom'));
+    expect(mockOnChange).toHaveBeenCalledWith('n_predict', 1024);
+  });
+
   it('handles chip selection', () => {
     const mockOnChange = jest.fn();
     const {getByText} = render(

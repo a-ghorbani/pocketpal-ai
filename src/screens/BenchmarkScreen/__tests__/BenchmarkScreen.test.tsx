@@ -120,8 +120,8 @@ describe('BenchmarkScreen', () => {
       fireEvent.press(getByText('Select Model'));
       fireEvent.press(getByText(modelToSelect.name));
 
-      // Verify initContext was called
-      expect(modelStore.initContext).toHaveBeenCalledWith(modelToSelect);
+      // Verify selectModel was called
+      expect(modelStore.selectModel).toHaveBeenCalledWith(modelToSelect);
     });
   });
 

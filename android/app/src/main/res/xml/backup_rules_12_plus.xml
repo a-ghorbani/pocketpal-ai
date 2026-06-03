@@ -2,6 +2,8 @@
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <exclude domain="file" path="models/"/>
+        <!-- Neural TTS model files (Supertonic, ~265 MB) live under files/tts/ -->
+        <exclude domain="file" path="tts/"/>
         <!-- only created in debuggable builds, but can be large and exceed
          25mb cloud backup limit which makes dev testing difficult -->
         <exclude domain="file" path="BridgeReactNativeDevBundle.js"/>
@@ -11,6 +13,7 @@
 
     <device-transfer>
         <exclude domain="file" path="models/"/>
+        <exclude domain="file" path="tts/"/>
         <exclude domain="file" path="BridgeReactNativeDevBundle.js"/>
         <exclude domain="file" path="ReactNativeDevBundle.js"/>
         <exclude domain="root" path="code_cache/"/>

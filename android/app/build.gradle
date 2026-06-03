@@ -90,10 +90,19 @@ android {
         applicationId "com.pocketpalai"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 132 
-        versionName "1.12.2"
+        versionCode 140
+        versionName "1.15.1"
         ndk {
             abiFilters "arm64-v8a", "x86_64"
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            // Replace RN's auto-injected default-app-setup CMakeLists so
+            // we can link `hardware_info.cpp` (HardwareInfoModule's JNI
+            // shim) into libappmodules.so. The replacement file must
+            // include ReactNative-application.cmake — see jni/CMakeLists.txt.
+            path file("src/main/jni/CMakeLists.txt")
         }
     }
     signingConfigs {
@@ -119,6 +128,10 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // RN dev menu + Metro-served JS. Mirrors BuildConfig.DEBUG but
+            // is independent of `debuggable`, so `releaseE2e` (which sets
+            // debuggable=true for `adb run-as`) can still pin to false.
+            buildConfigField "boolean", "USE_DEV_SUPPORT", "true"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -133,6 +146,52 @@ android {
             }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            buildConfigField "boolean", "USE_DEV_SUPPORT", "false"
+        }
+        releaseE2e {
+            // E2E buildType: inherits 95% of release (Hermes, minify toggle,
+            // proguard rules), then overrides:
+            //   1. debuggable=true so `adb shell run-as com.pocketpalai.e2e`
+            //      works for the benchmark-matrix preseed workflow.
+            //   2. Debug signing — E2E builds are never shipped to stores.
+            //   3. matchingFallbacks so dependencies resolve to their release
+            //      variant (they don't publish a releaseE2e variant).
+            initWith release
+            debuggable true
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
+    }
+
+    flavorDimensions "distribution"
+    productFlavors {
+        prod {
+            dimension "distribution"
+            // applicationId stays as defaultConfig: com.pocketpalai
+        }
+        e2e {
+            dimension "distribution"
+            applicationIdSuffix ".e2e"
+            // Effective applicationId: com.pocketpalai.e2e
+            // Separate sandbox; installs side-by-side with prod.
+        }
+    }
+
+    // Keep the variant matrix narrow: only prodDebug, prodRelease,
+    // e2eDebug, and e2eReleaseE2e are valid combinations.
+    //   - e2e + release  → unsigned E2E APK nobody asked for; drop it
+    //   - prod + releaseE2e → debuggable prod APK that would ship via the
+    //     prod applicationId; drop it
+    // Without this filter, a bare `./gradlew assembleRelease` or
+    // `assembleReleaseE2e` would build extra, confusing variants.
+    variantFilter { variant ->
+        def flavors = variant.flavors*.name
+        def buildType = variant.buildType.name
+        if (flavors.contains('e2e') && buildType == 'release') {
+            setIgnore(true)
+        }
+        if (flavors.contains('prod') && buildType == 'releaseE2e') {
+            setIgnore(true)
         }
     }
 }

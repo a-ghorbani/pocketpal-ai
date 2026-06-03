@@ -41,6 +41,23 @@ export interface Spec extends TurboModule {
    * @returns Promise<number> Available memory in bytes
    */
   getAvailableMemory(): Promise<number>;
+  /**
+   * Collect memory metrics and write a snapshot entry to disk.
+   * Appends to Documents/memory-snapshots.json (iOS) or externalFilesDir/memory-snapshots.json (Android).
+   */
+  writeMemorySnapshot(label: string): Promise<{label: string; status: string}>;
+  /**
+   * Hint the native allocator to release fully-free pages back to the
+   * kernel. Best-effort: resolves with `purged: false` on platforms
+   * without an underlying mechanism (iOS, Android < API 28).
+   * `rss_kb_before`/`after` are sampled from /proc/self/status so
+   * callers can record actual reclaim per call.
+   */
+  purgeNativeAllocator(): Promise<{
+    purged: boolean;
+    rss_kb_before: number;
+    rss_kb_after: number;
+  }>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('HardwareInfo');

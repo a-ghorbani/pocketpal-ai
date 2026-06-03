@@ -1,1 +1,1 @@
-PocketPal is an app for secure and private conversation with open source LLMs
+Private AI on your phone. No cloud. No internet. Run LLMs offline, on-device.

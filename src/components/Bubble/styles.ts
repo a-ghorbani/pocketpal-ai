@@ -43,8 +43,9 @@ export const styles = ({
       paddingBottom: 12,
       marginTop: -8,
       marginLeft: 20,
-      flexDirection: 'row', // Added to align items horizontally
-      alignItems: 'center', // Align items vertically centered
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
     },
     dateHeader: {
       //textAlign: 'right',
@@ -52,7 +53,6 @@ export const styles = ({
       fontSize: 10,
     },
     iconContainer: {
-      marginRight: 5,
       color: theme.colors.textSecondary,
       fontSize: 16,
     },

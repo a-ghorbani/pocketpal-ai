@@ -141,6 +141,41 @@ Remember to stay true to your character's nature.`;
       });
     });
 
+    it('should parse a combobox type with options from template schema', () => {
+      const template = `{{! json-schema-start
+{
+  "language": {
+    "label": "Language",
+    "type": "combobox",
+    "required": true,
+    "options": ["English", "French", "German", "Spanish"],
+    "placeholder": "Type or select a language",
+    "description": "Choose or type a language",
+    "default": "English"
+  }
+}
+json-schema-end }}
+
+Translate to {{language}}.`;
+
+      const result = parsePalsHubTemplate(template);
+
+      expect(result.cleanSystemPrompt).toBe('Translate to {{language}}.');
+      expect(result.parameterSchema).toHaveLength(1);
+      expect(result.parameterSchema[0]).toEqual({
+        key: 'language',
+        type: 'combobox',
+        label: 'Language',
+        required: true,
+        placeholder: 'Type or select a language',
+        description: 'Choose or type a language',
+        options: ['English', 'French', 'German', 'Spanish'],
+      });
+      expect(result.defaultParameters).toEqual({
+        language: 'English',
+      });
+    });
+
     it('should handle templates without JSON schema', () => {
       const template = 'You are {{name}}, a helpful assistant.';
       const result = parsePalsHubTemplate(template);

@@ -1,11 +1,41 @@
-Unlock the power of AI with Private AI Chat, the ultimate app for secure and private conversations with LLMs. The app brings the sophistication of cutting-edge AI directly to your device, ensuring your chats remain confidential and offline.
+Your AI. No one else's.
 
-Key Features:
-- Offline Chatting: Interact with advanced AI models directly on your device without the need for an internet connection.
-- The app supports GGUF formats, allowing you to either load models locally or search directly in Hugging Face.
-- Secure & Private: Your data never leaves your device. All conversations are processed locally, providing security and peace of mind.
+PocketPal runs large language models directly on your phone. No servers. No internet. No data leaves your device. Ever.
 
-How It Works:
-- Download & Install: Get the app from the App store (or) Play store (or) F-Droid and install it on your device.
-- Download Model Weights: Connect to the Internet to download the required model weights (in GGUF format, e.g., from Huggingface).
-- Chat Offline: Once setup is complete, enjoy private, offline conversations with the model anytime, anywhere.
+This is AI you own — not AI you rent.
+
+WHAT YOUR PHONE NEEDS
+
+Modern phones are powerful enough to run real AI. PocketPal uses that power.
+
+You'll need 6GB+ RAM for smaller models, 8GB+ for the good stuff. Flagship and recent mid-range phones from the last 2-3 years run models well. Older or budget devices won't cut it — this is real inference, not a cloud wrapper.
+
+Not sure? Download a small model and benchmark it. The app will show you exactly what your device can handle.
+
+WHAT YOU GET
+
+- Hundreds of open-source models from HuggingFace, downloaded directly to your device
+- Complete offline operation — airplane mode, no signal, underground, anywhere
+- Zero data transmission. Zero telemetry. Verify it yourself: we're open source
+- Full control over model parameters — temperature, context length, system prompts
+- Built-in benchmarking to test model performance on your hardware
+- Metal acceleration on iOS, NNAPI on Android
+- Pals — AI personas from Palshub.ai that give models personality and purpose
+
+WHAT THIS IS NOT
+
+This is not ChatGPT. Cloud AI has trillion-parameter models running on server farms. Your phone runs smaller models locally. The trade-off is real — and it's one we're proud of.
+
+You get something no cloud service can offer: conversations that exist only on your device, AI that works without internet, and complete freedom to run any model you choose. No content policies imposed by us. No behavioral guardrails we decided for you. Your rules.
+
+WHO THIS IS FOR
+
+People who stopped trusting the cloud with their conversations. People who want AI that works on a plane, in a tunnel, off the grid. People who care about what runs on their own hardware.
+
+If you're looking for the "best" AI at any cost and don't care about privacy — use ChatGPT. It's great at what it does.
+
+If you want AI that's yours, PocketPal is how you get it.
+
+OPEN SOURCE
+
+Every line of code is public on GitHub. Our privacy claims aren't marketing — they're verifiable. If you don't trust us, read the source. That's the point.

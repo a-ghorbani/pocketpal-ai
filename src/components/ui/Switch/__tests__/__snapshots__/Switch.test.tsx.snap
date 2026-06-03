@@ -1,0 +1,379 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark-off 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={false}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={false}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-dark-on 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={false}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={true}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light-off 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={false}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={false}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-default-light-on 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={false}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={true}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark-off 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={true}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={false}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-dark-on 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={true}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={true}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light-off 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={true}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={false}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled} x modes) default-default-disabled-light-on 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={true}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={true}
+    />
+  </View>
+</View>
+`;
+
+exports[`Switch — snapshot matrix non-Latin font-fallback canary (canaryVariant x size=default x default x light x lang) default-default-default-light-fa 1`] = `
+<View
+  collapsable={false}
+  pointerEvents="box-none"
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+        },
+        undefined,
+      ]
+    }
+    testID="ui-switch"
+  >
+    <RCTSwitch
+      accessibilityLabel="x"
+      accessibilityRole="switch"
+      disabled={false}
+      onChange={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onTintColor="#333333"
+      style={
+        {
+          "alignSelf": "flex-start",
+        }
+      }
+      tintColor="#333333"
+      value={false}
+    />
+  </View>
+</View>
+`;

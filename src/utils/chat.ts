@@ -4,6 +4,8 @@ import {CompletionParams} from './completionTypes';
 import {defaultCompletionParams} from './completionSettingsVersions';
 
 import {
+  AgentStep,
+  AgentToolCall,
   ChatMessage,
   ChatTemplateConfig,
   HuggingFaceModel,
@@ -16,42 +18,138 @@ export const assistantId = 'h3o3lc5xj';
 export const user = {id: userId};
 export const assistant = {id: assistantId};
 
+/**
+ * Returns the visible textual content of a message in a single string.
+ * Used by every `.text`-style consumer that should observe "final
+ * visible content" — Bubble copy, drawer preview, exports, session
+ * titles — so the type bifurcation between `Text` and `AssistantTurn`
+ * is contained to one helper.
+ *
+ * For `AssistantTurn`, joins each step's `content` with a blank line
+ * (matching the visible block-per-step rendering). Steps with no content
+ * (e.g. tool-call-only steps) are skipped.
+ */
+export function derivedText(message: MessageType.Any): string {
+  if (message.type === 'assistant_turn') {
+    return ((message as MessageType.AssistantTurn).steps ?? [])
+      .map(s => s.content)
+      .filter((c): c is string => !!c && c.length > 0)
+      .join('\n\n');
+  }
+  return 'text' in message && message.text ? message.text : '';
+}
+
+/**
+ * Serialize an in-memory `AgentToolCall` into the wire shape llama.rn /
+ * OpenAI accept. `function.arguments` is stored as a JSON-encoded
+ * string throughout the runner; this just lifts it onto a ChatMessage.
+ */
+function toWireToolCall(
+  call: AgentToolCall,
+): NonNullable<ChatMessage['tool_calls']>[number] {
+  return {
+    id: call.id,
+    type: 'function',
+    function: {
+      name: call.function?.name ?? '',
+      arguments: call.function?.arguments ?? '',
+    },
+  } as NonNullable<ChatMessage['tool_calls']>[number];
+}
+
+/**
+ * Build the API messages for one `AgentStep`. Emits an assistant message
+ * (with `tool_calls` if present) followed by one role:'tool' message per
+ * outcome. The OpenAI spec requires assistant-with-tool_calls to PRECEDE
+ * its tool responses so `tool_call_id` back-refs resolve — preserved
+ * by the inner ordering here (OUTER reverse below does not reorder inner
+ * arrays).
+ *
+ * Orphan-pair guard: a step persisted with `tool_calls` but no matching
+ * `tool_outcomes` (user abort fired between `step_finished` and
+ * `tool_call_finished`, or process crash mid-step) would otherwise emit
+ * `assistant.tool_calls` with zero matching `role:'tool'` responses.
+ * Strict-Jinja chat templates reject that ("every tool_call_id must
+ * have a matching tool response") and the next turn's prompt becomes
+ * malformed. Synthesize an "aborted" sentinel response for every
+ * unmatched call so the invariant holds on reload.
+ */
+function stepToApiMessages(step: AgentStep): ChatMessage[] {
+  const assistantMsg: ChatMessage = {
+    role: 'assistant',
+    content: step.content ?? '',
+  };
+  if (step.toolCalls && step.toolCalls.length > 0) {
+    assistantMsg.tool_calls = step.toolCalls.map(toWireToolCall);
+  }
+  if (step.reasoningContent) {
+    assistantMsg.reasoning_content = step.reasoningContent;
+  }
+  const outcomes = step.toolOutcomes ?? [];
+  const outcomeIds = new Set(outcomes.map(o => o.callId));
+  const toolMsgs: ChatMessage[] = outcomes.map(o => ({
+    role: 'tool',
+    tool_call_id: o.callId,
+    content: o.responseContent,
+  }));
+  // Orphan-pair guard (see fn doc): for any toolCall that lacks a
+  // matching outcome, synthesize a sentinel response. Order matches the
+  // toolCalls order so the assistant_msg.tool_calls[i] ↔ toolMsgs[i]
+  // back-ref resolution stays stable for any consumer that relies on it.
+  if (step.toolCalls) {
+    for (const call of step.toolCalls) {
+      if (!outcomeIds.has(call.id)) {
+        toolMsgs.push({
+          role: 'tool',
+          tool_call_id: call.id,
+          content: 'aborted',
+        });
+      }
+    }
+  }
+  return [assistantMsg, ...toolMsgs];
+}
+
 export function convertToChatMessages(
   messages: MessageType.Any[],
   isMultimodalEnabled: boolean = true,
 ): ChatMessage[] {
-  return messages
+  const groups: ChatMessage[][] = messages
     .filter(message => {
-      // Filter out non-text messages
-      if (message.type !== 'text') return false;
-
-      // Filter out messages with null, undefined, or empty text
-      const text = (message as MessageType.Text).text;
-      return text !== undefined && text !== null && text.trim() !== '';
+      if (message.type === 'assistant_turn') {
+        // Include any AssistantTurn whose steps array is non-empty.
+        // Filter rule preserves turns where a step has only tool_calls
+        // (empty content) — the model still needs to see those plus
+        // their tool responses on the next iteration so tool_call_id
+        // back-refs resolve.
+        return ((message as MessageType.AssistantTurn).steps ?? []).length > 0;
+      }
+      if (message.type === 'text') {
+        const text = (message as MessageType.Text).text;
+        return text !== undefined && text !== null && text.trim() !== '';
+      }
+      return false;
     })
     .map(message => {
+      if (message.type === 'assistant_turn') {
+        const turn = message as MessageType.AssistantTurn;
+        // Each step → assistant message (+ tool messages). All steps for
+        // one turn are emitted as one inner group so the OUTER reverse
+        // keeps them adjacent in chronological order.
+        return (turn.steps ?? []).flatMap(stepToApiMessages);
+      }
+
       const textMessage = message as MessageType.Text;
       const role: 'assistant' | 'user' =
         message.author.id === assistant.id ? 'assistant' : 'user';
-
-      // Ensure text is a non-null string
       const messageText = textMessage.text || '';
 
-      // For assistant messages, get reasoning_content from metadata if available
-      // llama.rn already extracts this for us during completion
-      const reasoningContent =
-        role === 'assistant'
-          ? textMessage.metadata?.completionResult?.reasoning_content ||
-            textMessage.metadata?.partialCompletionResult?.reasoning_content
-          : undefined;
-
-      // Check if this message has images (multimodal) and if multimodal is enabled
+      // Multimodal user messages keep their existing shape.
       if (
         textMessage.imageUris &&
         textMessage.imageUris.length > 0 &&
         isMultimodalEnabled
       ) {
-        // Create multimodal content with text and images
         const contentArray: Array<{
           type: 'text' | 'image_url';
           text?: string;
@@ -63,7 +161,6 @@ export function convertToChatMessages(
           },
         ];
 
-        // Add images to content
         contentArray.push(
           ...textMessage.imageUris.map(path => ({
             type: 'image_url' as const,
@@ -71,33 +168,22 @@ export function convertToChatMessages(
           })),
         );
 
-        const chatMessage: any = {
-          role,
-          content: contentArray,
-        };
+        return [
+          {
+            role,
+            content: contentArray,
+          } as ChatMessage,
+        ];
+      }
 
-        // Add reasoning_content if present (for chat context)
-        if (reasoningContent) {
-          chatMessage.reasoning_content = reasoningContent;
-        }
-
-        return chatMessage as ChatMessage;
-      } else {
-        // Text-only message (backward compatibility)
-        const chatMessage: any = {
+      return [
+        {
           role,
           content: messageText,
-        };
-
-        // Add reasoning_content if present (for chat context)
-        if (reasoningContent) {
-          chatMessage.reasoning_content = reasoningContent;
-        }
-
-        return chatMessage as ChatMessage;
-      }
-    })
-    .reverse();
+        } as ChatMessage,
+      ];
+    });
+  return groups.reverse().flat();
 }
 
 /**
@@ -321,6 +407,7 @@ export const stops = [
   '<end_of_turn>',
   '<|endoftext|>',
   '<|return|>', // gpt-oss
+  '<|END_RESPONSE|>', // cohere (tiny-aya)
 ];
 
 /**

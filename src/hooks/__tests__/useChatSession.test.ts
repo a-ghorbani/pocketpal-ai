@@ -12,7 +12,13 @@ import {
 
 import {useChatSession} from '../useChatSession';
 
-import {chatSessionStore, modelStore, palStore} from '../../store';
+import {
+  chatSessionStore,
+  modelStore,
+  palStore,
+  ttsStore,
+  uiStore,
+} from '../../store';
 
 import {l10n} from '../../locales';
 import {assistant} from '../../utils/chat';
@@ -36,6 +42,16 @@ beforeEach(() => {
 
   // Fresh mocked context each test
   modelStore.context = new LlamaContext(mockLlamaContextParams);
+
+  // Set up a mock engine that delegates to context.completion
+  modelStore.engine = {
+    completion: jest.fn((params, onData) => {
+      return modelStore.context!.completion(params, onData);
+    }),
+    stopCompletion: jest.fn(async () => {
+      await modelStore.context?.stopCompletion();
+    }),
+  };
 });
 
 // Mock the applyChatTemplate function from utils/chat
@@ -63,6 +79,7 @@ describe('useChatSession', () => {
 
   it('should handle model not loaded scenario', async () => {
     modelStore.context = undefined;
+    modelStore.engine = undefined;
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, assistant),
     );
@@ -129,6 +146,27 @@ describe('useChatSession', () => {
     result.current.handleStopPress();
 
     expect(modelStore.context?.stopCompletion).not.toHaveBeenCalled();
+  });
+
+  it('handleStopPress sets isStopping immediately so the UI can gate sends', async () => {
+    // Simulate a real in-flight chat: inferencing is true and the
+    // engine has been wired (mock above). The stop press should:
+    //   - flip isStopping to true (UI feedback + send-button gate)
+    //   - leave inferencing alone (cleared later by the runner exit)
+    // The cleanup of isStopping happens in the for-await loop, so it
+    // is exercised in `should set inferencing correctly during send`.
+    modelStore.setInferencing(true);
+    const {result} = renderHook(() =>
+      useChatSession({current: null}, textMessage.author, mockAssistant),
+    );
+
+    await result.current.handleStopPress();
+
+    expect(chatSessionStore.setIsStopping).toHaveBeenCalledWith(true);
+    // inferencing flag is NOT cleared by handleStopPress anymore — the
+    // runner's for-await cleanup is the single owner of that.
+    const calls = (chatSessionStore.setIsGenerating as jest.Mock).mock.calls;
+    expect(calls.find(c => c[0] === false)).toBeUndefined();
   });
 
   it('should set inferencing correctly during send', async () => {
@@ -293,50 +331,29 @@ describe('useChatSession', () => {
     );
   });
 
-  it('should save completionResult with reasoning_content after completion', async () => {
-    const mockReasoningContent = 'Let me think step by step...';
-    const mockContent = 'The answer is 42.';
-
+  it('emits multimodal warning when user sends an image but multimodal is disabled', async () => {
+    // modelStore.isMultimodalEnabled is mocked to return false by default
+    // (see __mocks__/stores/modelStore.ts). The hook should call
+    // uiStore.setChatWarning with the multimodal-not-enabled message.
     if (modelStore.context) {
       modelStore.context.completion = jest
         .fn()
-        .mockImplementation((_params, onData) => {
-          // Simulate streaming with reasoning content
-          onData({
-            token: 'tok',
-            content: mockContent,
-            reasoning_content: mockReasoningContent,
-          });
-          return Promise.resolve({
-            text: mockContent,
-            reasoning_content: mockReasoningContent,
-            timings: {total: 100},
-            usage: {},
-          });
-        });
+        .mockResolvedValue({text: 'ok', content: 'ok', timings: {}});
     }
-
     const {result} = renderHook(() =>
       useChatSession({current: null}, textMessage.author, mockAssistant),
     );
-
     await act(async () => {
-      await result.current.handleSendPress(textMessage);
+      await result.current.handleSendPress({
+        text: 'look at this',
+        type: 'text',
+        imageUris: ['file:///photo.jpg'],
+      });
     });
-
-    // Verify the final updateMessage call includes completionResult
-    expect(chatSessionStore.updateMessage).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.objectContaining({
-        metadata: expect.objectContaining({
-          completionResult: {
-            reasoning_content: mockReasoningContent,
-            content: mockContent,
-          },
-        }),
-      }),
-    );
+    expect(uiStore.setChatWarning).toHaveBeenCalled();
+    const arg = (uiStore.setChatWarning as jest.Mock).mock.calls[0][0];
+    // The warning carries the multimodalNotEnabled message text.
+    expect(JSON.stringify(arg)).toContain(l10n.en.chat.multimodalNotEnabled);
   });
 
   it('should use system prompt as-is when pal has no parameters', async () => {
@@ -394,5 +411,304 @@ describe('useChatSession', () => {
     expect(capturedMessages.some(msg => msg.role === 'system')).toBe(true);
     const systemMessage = capturedMessages.find(msg => msg.role === 'system');
     expect(systemMessage.content).toBe('You are a helpful assistant.');
+  });
+
+  describe('TTS streaming wiring', () => {
+    beforeEach(() => {
+      // Hook is gated on autoSpeakEnabled (default false in the mock);
+      // opt in for tests that assert it fires.
+      (ttsStore as any).autoSpeakEnabled = true;
+    });
+
+    afterEach(() => {
+      (ttsStore as any).autoSpeakEnabled = false;
+    });
+
+    it('fires onAssistantMessageStart on first token and onAssistantMessageChunk per delta', async () => {
+      const finalText = 'Hello world.';
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              // First chunk — should trigger start + first chunk
+              onData({token: 'tok', content: 'Hello '});
+              // Second chunk — cumulative content; delta is "world."
+              onData({token: 'tok', content: 'Hello world.'});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageStart).toHaveBeenCalledTimes(1);
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        'Hello ',
+        undefined,
+      );
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        'world.',
+        undefined,
+      );
+    });
+
+    it('Case A: forwards reasoning_content deltas and hadReasoning on complete', async () => {
+      const finalText = 'Final answer.';
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              // Reasoning-only chunks (model thinking).
+              onData({token: 'tok', content: '', reasoning_content: 'Let me '});
+              onData({
+                token: 'tok',
+                content: '',
+                reasoning_content: 'Let me think.',
+              });
+              // Real content begins.
+              onData({
+                token: 'tok',
+                content: 'Final answer.',
+                reasoning_content: 'Let me think.',
+              });
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: 'Let me think.',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // Reasoning deltas arrive as the 3rd arg with empty content delta.
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        '',
+        'Let me ',
+      );
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        '',
+        'think.',
+      );
+      expect(ttsStore.onAssistantMessageChunk).toHaveBeenNthCalledWith(
+        3,
+        expect.any(String),
+        'Final answer.',
+        undefined,
+      );
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
+        expect.any(String),
+        finalText,
+        {hadReasoning: true},
+      );
+    });
+
+    it('fires ttsStore.onAssistantMessageComplete exactly once after completion', async () => {
+      const finalText = 'the-final-text';
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'partial', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledTimes(1);
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
+        expect.any(String),
+        finalText,
+        {hadReasoning: false},
+      );
+    });
+
+    it('a throwing onAssistantMessageStart/Chunk does NOT kill the completion stream', async () => {
+      const finalText = 'All good, final text.';
+
+      (ttsStore.onAssistantMessageStart as jest.Mock).mockImplementationOnce(
+        () => {
+          throw new Error('tts start boom');
+        },
+      );
+      (ttsStore.onAssistantMessageChunk as jest.Mock).mockImplementation(() => {
+        throw new Error('tts chunk boom');
+      });
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'tok', content: 'All good, '});
+              onData({token: 'tok', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      // No throw expected — try/catch wraps the TTS hooks.
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // Stream completed normally despite the TTS exceptions.
+      expect(modelStore.context?.completion).toHaveBeenCalled();
+      expect(ttsStore.onAssistantMessageComplete).toHaveBeenCalledWith(
+        expect.any(String),
+        finalText,
+        {hadReasoning: false},
+      );
+    });
+
+    it('a throwing onAssistantMessageComplete does NOT bubble out of handleSendPress', async () => {
+      const finalText = 'done';
+
+      (ttsStore.onAssistantMessageComplete as jest.Mock).mockImplementationOnce(
+        () => {
+          throw new Error('tts complete boom');
+        },
+      );
+
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'tok', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await expect(
+        act(async () => {
+          await result.current.handleSendPress(textMessage);
+        }),
+      ).resolves.not.toThrow();
+    });
+
+    it('does NOT fire onAssistantMessageComplete on error paths', async () => {
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(new Error('boom'));
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageComplete).not.toHaveBeenCalled();
+    });
+
+    it('skips per-chunk TTS hooks entirely when autoSpeakEnabled is off', async () => {
+      // Override the beforeEach default for this single test.
+      (ttsStore as any).autoSpeakEnabled = false;
+
+      const finalText = 'one two three';
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            if (onData) {
+              onData({token: 'tok', content: 'one '});
+              onData({token: 'tok', content: 'one two '});
+              onData({token: 'tok', content: finalText});
+            }
+            return {
+              timings: {total: 100},
+              usage: {},
+              text: finalText,
+              content: finalText,
+              reasoning_content: '',
+            };
+          });
+      }
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      expect(ttsStore.onAssistantMessageStart).not.toHaveBeenCalled();
+      expect(ttsStore.onAssistantMessageChunk).not.toHaveBeenCalled();
+    });
   });
 });

@@ -197,7 +197,7 @@ describe('useMessageActions', () => {
         await result.current.handleTryAgainWith('model-1', messages[0]);
       });
 
-      expect(modelStore.initContext).not.toHaveBeenCalled();
+      expect(modelStore.selectModel).not.toHaveBeenCalled();
       expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalled();
       expect(mockHandleSendPress).toHaveBeenCalled();
     });
@@ -213,15 +213,161 @@ describe('useMessageActions', () => {
       );
 
       modelStore.activeModelId = 'model-1';
-      modelStore.models = [createModel({id: 'model-2', name: 'Model 2'})];
+      modelStore.models = [
+        createModel({id: 'model-2', name: 'Model 2', isDownloaded: true}),
+      ];
 
       await act(async () => {
         await result.current.handleTryAgainWith('model-2', messages[0]);
       });
 
-      expect(modelStore.initContext).toHaveBeenCalled();
+      expect(modelStore.selectModel).toHaveBeenCalled();
       expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalled();
       expect(mockHandleSendPress).toHaveBeenCalled();
+    });
+  });
+
+  // ---------- Story Test Requirements (Interaction) #1–#6 on AssistantTurn ----------
+
+  describe('AssistantTurn interactions', () => {
+    const assistantId = 'assistant';
+    const userMsg = {
+      id: 'u-1',
+      type: 'text' as const,
+      text: 'What is 2+2?',
+      author: user,
+      createdAt: 0,
+    };
+    const turnSingle = {
+      id: 't-1',
+      type: 'assistant_turn' as const,
+      author: {id: assistantId},
+      createdAt: 1,
+      steps: [{content: 'It is 4'}],
+    };
+    const turnMulti = {
+      id: 't-2',
+      type: 'assistant_turn' as const,
+      author: {id: assistantId},
+      createdAt: 2,
+      steps: [{content: 'Let me calculate that'}, {content: 'The answer is 4'}],
+    };
+
+    it('#1 handleCopy(legacy Text) → clipboard contains message.text (regression guard)', () => {
+      const {result} = renderHook(() =>
+        useMessageActions({
+          user,
+          messages: [userMsg, turnSingle],
+          handleSendPress: mockHandleSendPress,
+          setInputText: mockSetInputText,
+        }),
+      );
+      act(() => {
+        result.current.handleCopy({
+          ...textMessage,
+          text: 'classic',
+          type: 'text',
+        });
+      });
+      expect(Clipboard.setString).toHaveBeenCalledWith('classic');
+    });
+
+    it('#2 handleCopy(single-step AssistantTurn) → clipboard contains step[0].content', () => {
+      const {result} = renderHook(() =>
+        useMessageActions({
+          user,
+          messages: [userMsg, turnSingle],
+          handleSendPress: mockHandleSendPress,
+          setInputText: mockSetInputText,
+        }),
+      );
+      act(() => {
+        result.current.handleCopy(turnSingle);
+      });
+      expect(Clipboard.setString).toHaveBeenCalledWith('It is 4');
+    });
+
+    it('#3 handleCopy(multi-step AssistantTurn) → clipboard contains preamble + final answer joined', () => {
+      const {result} = renderHook(() =>
+        useMessageActions({
+          user,
+          messages: [userMsg, turnMulti],
+          handleSendPress: mockHandleSendPress,
+          setInputText: mockSetInputText,
+        }),
+      );
+      act(() => {
+        result.current.handleCopy(turnMulti);
+      });
+      expect(Clipboard.setString).toHaveBeenCalledWith(
+        'Let me calculate that\n\nThe answer is 4',
+      );
+    });
+
+    it('#4 handleEdit(AssistantTurn) → no-op (single source of truth: type === text early return)', () => {
+      const {result} = renderHook(() =>
+        useMessageActions({
+          user,
+          messages: [turnSingle],
+          handleSendPress: mockHandleSendPress,
+          setInputText: mockSetInputText,
+        }),
+      );
+      act(() => {
+        result.current.handleEdit(turnSingle);
+      });
+      expect(chatSessionStore.enterEditMode).not.toHaveBeenCalled();
+      expect(mockSetInputText).not.toHaveBeenCalled();
+    });
+
+    it('#5 handleTryAgain(AssistantTurn) → walks back to previous user message and resends', async () => {
+      // Newer messages first per the chat list convention. The
+      // assistant turn id is 't-2'; the user message that triggered it
+      // is at a later index.
+      const messageList = [turnMulti, userMsg];
+      const {result} = renderHook(() =>
+        useMessageActions({
+          user,
+          messages: messageList,
+          handleSendPress: mockHandleSendPress,
+          setInputText: mockSetInputText,
+        }),
+      );
+      await act(async () => {
+        await result.current.handleTryAgain(turnMulti);
+      });
+      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+        'u-1',
+        true,
+      );
+      expect(mockHandleSendPress).toHaveBeenCalledWith({
+        text: 'What is 2+2?',
+        type: 'text',
+      });
+    });
+
+    it('#6 handleTryAgainWith(AssistantTurn) → parameter accepted, same walk-back behavior', async () => {
+      const messageList = [turnMulti, userMsg];
+      modelStore.activeModelId = 'model-1';
+      const {result} = renderHook(() =>
+        useMessageActions({
+          user,
+          messages: messageList,
+          handleSendPress: mockHandleSendPress,
+          setInputText: mockSetInputText,
+        }),
+      );
+      await act(async () => {
+        await result.current.handleTryAgainWith('model-1', turnMulti);
+      });
+      expect(chatSessionStore.removeMessagesFromId).toHaveBeenCalledWith(
+        'u-1',
+        true,
+      );
+      expect(mockHandleSendPress).toHaveBeenCalledWith({
+        text: 'What is 2+2?',
+        type: 'text',
+      });
     });
   });
 });

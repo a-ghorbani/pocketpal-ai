@@ -10,12 +10,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ContextParams, LlamaContext, initLlama} from 'llama.rn';
 import {
   CompletionParams,
+  CompletionEngine,
   toApiCompletionParams,
 } from '../utils/completionTypes';
 
 import {fetchModelFilesDetails} from '../api/hf';
+import {
+  LocalCompletionEngine,
+  OpenAICompletionEngine,
+} from '../api/completionEngines';
 
 import {uiStore, hfStore} from '.';
+import {serverStore} from './ServerStore';
 import {chatSessionStore} from './ChatSessionStore';
 import {checkGpuSupport} from '../utils/deviceCapabilities';
 import {
@@ -25,6 +31,7 @@ import {
   getMmprojFiles,
   filterProjectionModels,
   inferRepoFromModelId,
+  parseSizeLabel,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -56,7 +63,7 @@ import {
   getRecommendedThreadCount,
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
-import {supportsThinking} from '../utils/thinkingCapabilityDetection';
+import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -67,6 +74,50 @@ import NativeHardwareInfo from '../specs/NativeHardwareInfo';
 import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {loadLlamaModelInfo} from 'llama.rn';
 
+/**
+ * Factory function to create a Model object for a remote model from an OpenAI-compatible server.
+ * Fills all required Model fields with sensible defaults.
+ */
+function createRemoteModel(params: {
+  serverId: string;
+  serverName: string;
+  remoteModelId: string;
+  modelName: string;
+}): Model {
+  const emptyChatTemplate = {
+    name: '',
+    addBosToken: false,
+    addEosToken: false,
+    bosToken: '',
+    eosToken: '',
+    chatTemplate: '',
+    addGenerationPrompt: false,
+  };
+  return {
+    id: `${params.serverId}/${params.remoteModelId}`,
+    name: params.modelName,
+    author: params.serverName,
+    origin: ModelOrigin.REMOTE,
+    isDownloaded: true,
+    isLocal: false,
+    size: 0,
+    params: 0,
+    downloadUrl: '',
+    hfUrl: '',
+    progress: 0,
+    filename: '',
+    defaultChatTemplate: emptyChatTemplate,
+    chatTemplate: emptyChatTemplate,
+    defaultStopWords: [],
+    stopWords: [],
+    defaultCompletionSettings: {} as CompletionParams,
+    completionSettings: {} as CompletionParams,
+    serverId: params.serverId,
+    serverName: params.serverName,
+    remoteModelId: params.remoteModelId,
+  };
+}
+
 class ModelStore {
   models: Model[] = [];
   version: number | undefined = undefined; // Persisted version
@@ -75,7 +126,7 @@ class ModelStore {
    * Returns models with projection models filtered out for display purposes
    */
   get displayModels(): Model[] {
-    return filterProjectionModels(this.models);
+    return [...filterProjectionModels(this.models), ...this.remoteModels];
   }
 
   appState: AppStateStatus = AppState.currentState;
@@ -99,6 +150,8 @@ class ModelStore {
   activeContextSettings: ContextInitParams | undefined = undefined;
 
   context: LlamaContext | undefined = undefined;
+
+  engine: CompletionEngine | undefined = undefined;
 
   lastUsedModelId: string | undefined = undefined;
 
@@ -124,6 +177,13 @@ class ModelStore {
   // Last requested model ID - enables "last one wins" during rapid switching
   private pendingModelId: string | null = null;
 
+  // When true, the e2e benchmark runner owns the native context lifecycle.
+  // Other callers (ChatView auto-load, selectModel, initContext) must defer
+  // to keep the matrix's per-cell devices/n_gpu_layers from being shadowed
+  // by an in-flight init that started before the matrix could configure them.
+  // Runtime-only; not persisted.
+  benchmarkActive: boolean = false;
+
   downloadError: ErrorState | null = null;
   modelLoadError: ErrorState | null = null;
 
@@ -134,8 +194,11 @@ class ModelStore {
   largestSuccessfulLoad: number | undefined = undefined;
 
   constructor() {
-    makeAutoObservable(this, {activeModel: computed});
-    this.initializeThreadCount();
+    makeAutoObservable(this, {
+      activeModel: computed,
+      contextId: computed,
+      remoteModels: computed,
+    });
     makePersistable(this, {
       name: 'ModelStore',
       properties: [
@@ -151,6 +214,7 @@ class ModelStore {
       ],
       storage: AsyncStorage,
     }).then(async () => {
+      await this.initializeThreadCount();
       this.initializeStore();
     });
 
@@ -206,24 +270,27 @@ class ModelStore {
   private async initializeThreadCount() {
     try {
       const cores = await getCpuCoreCount();
-      this.max_threads = cores;
-
-      const threads = await getRecommendedThreadCount();
       runInAction(() => {
-        this.contextInitParams = {
-          ...this.contextInitParams,
-          n_threads: threads,
-        };
+        this.max_threads = cores;
       });
+
+      // Only set recommended thread count on first launch.
+      // After hydration, this.version is set if the store was previously persisted.
+      // On fresh install, this.version is undefined (default).
+      const isFirstLaunch = this.version === undefined;
+      if (isFirstLaunch) {
+        const threads = await getRecommendedThreadCount();
+        runInAction(() => {
+          this.contextInitParams = {
+            ...this.contextInitParams,
+            n_threads: threads,
+          };
+        });
+      }
     } catch (error) {
       console.error('Failed to initialize thread count:', error);
-      // Fallback to 4 threads if we can't get the CPU info
       runInAction(() => {
         this.max_threads = 4;
-        this.contextInitParams = {
-          ...this.contextInitParams,
-          n_threads: 4,
-        };
       });
     }
   }
@@ -336,6 +403,15 @@ class ModelStore {
     });
   };
 
+  setNoExtraBufts = (no_extra_bufts: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        no_extra_bufts,
+      };
+    });
+  };
+
   /**
    * Get effective context initialization parameters with constraints applied
    * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
@@ -392,6 +468,7 @@ class ModelStore {
       n_parallel: this.contextInitParams.n_parallel ?? 1, // NEW (1 for blocking mode only)
       use_mlock: this.contextInitParams.use_mlock,
       use_mmap: effectiveUseMmap,
+      no_extra_bufts: this.contextInitParams.no_extra_bufts,
     };
 
     // Remove undefined values from the params object
@@ -617,6 +694,11 @@ class ModelStore {
   }
 
   private markAutoReleased = (modelId: string) => {
+    // Skip auto-release for remote models (no native context to release)
+    const model = this.activeModel;
+    if (model?.origin === ModelOrigin.REMOTE) {
+      return;
+    }
     console.log('Marking auto-released: ', modelId);
     runInAction(() => {
       this.wasAutoReleased = true;
@@ -634,6 +716,16 @@ class ModelStore {
 
   checkAndReloadAutoReleasedModel = async () => {
     if (this.wasAutoReleased && this.lastAutoReleasedModelId) {
+      // Skip if the auto-released model ID refers to a remote model
+      if (this.lastAutoReleasedModelId.includes('/')) {
+        const remoteModel = this.remoteModels.find(
+          m => m.id === this.lastAutoReleasedModelId,
+        );
+        if (remoteModel) {
+          this.clearAutoReleaseFlags();
+          return;
+        }
+      }
       const model = this.models.find(
         m => m.id === this.lastAutoReleasedModelId && m.isDownloaded,
       );
@@ -659,14 +751,25 @@ class ModelStore {
       console.log('Active → Inactive: No auto-release action');
     } else if (this.appState === 'inactive' && nextAppState === 'background') {
       // inactive → background: release if enabled
-      if (this.isAutoReleaseEnabled && this.activeModelId) {
+      // Skip for remote models — no native context to release, and
+      // releaseContext() would clear the engine with no reload path.
+      if (
+        this.isAutoReleaseEnabled &&
+        this.activeModelId &&
+        this.activeModel?.origin !== ModelOrigin.REMOTE
+      ) {
         console.log('Inactive → Background: Auto-releasing context');
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
       }
     } else if (this.appState === 'active' && nextAppState === 'background') {
       // active → background: release if enabled (direct transition)
-      if (this.isAutoReleaseEnabled && this.activeModelId) {
+      // Skip for remote models — same reason as above.
+      if (
+        this.isAutoReleaseEnabled &&
+        this.activeModelId &&
+        this.activeModel?.origin !== ModelOrigin.REMOTE
+      ) {
         console.log('Active → Background: Auto-releasing context');
         this.markAutoReleased(this.activeModelId);
         await this.releaseContext();
@@ -1161,6 +1264,9 @@ class ModelStore {
       // SWA (Sliding Window Attention) - optional
       const sliding_window = getArchValue('attention.sliding_window');
 
+      // Context length from GGUF
+      const context_length = getArchValue('context_length');
+
       const metadata = {
         architecture,
         n_layers,
@@ -1171,10 +1277,18 @@ class ModelStore {
         n_embd_head_k,
         n_embd_head_v,
         sliding_window,
+        context_length,
       };
+
+      const paramCount = parseSizeLabel(
+        (modelInfo as any)['general.size_label'],
+      );
 
       runInAction(() => {
         model.ggufMetadata = metadata;
+        if (!model.params && paramCount) {
+          model.params = paramCount;
+        }
       });
     } catch (error) {
       console.warn('[ModelStore] Failed to fetch GGUF metadata:', error);
@@ -1325,6 +1439,41 @@ class ModelStore {
   };
 
   /**
+   * Take exclusive ownership of the native context for the e2e benchmark
+   * runner. Sets `benchmarkActive` synchronously so any new auto-load is
+   * gated, then drains the mutex (in case one is already in flight) and
+   * releases whatever context exists. After this resolves, the runner can
+   * safely call `initLlama` directly without racing the rest of the app.
+   *
+   * Pairs with `exitBenchmarkMode()`. The runner MUST call exit even on
+   * failure paths or chat / header / sheet inits will stay rejected.
+   */
+  enterBenchmarkMode = async (): Promise<void> => {
+    runInAction(() => {
+      this.benchmarkActive = true;
+    });
+
+    const op = this.contextOperationMutex.then(async () => {
+      // Release any context the rest of the app loaded (e.g. ChatView's
+      // auto-load on cold launch). clearActiveModel:true so the queued
+      // post-mutex callers see a clean slate if they ever run.
+      await this._releaseContextInternal(true);
+    });
+    this.contextOperationMutex = op.then(() => {}).catch(() => {});
+    await op;
+  };
+
+  /**
+   * Hand context ownership back to the rest of the app. Intentionally
+   * trivial — no native work — so it's safe to call from a `finally` block.
+   */
+  exitBenchmarkMode = (): void => {
+    runInAction(() => {
+      this.benchmarkActive = false;
+    });
+  };
+
+  /**
    * Initialize a model context, optionally with multimodal support.
    *
    * Architecture:
@@ -1341,6 +1490,16 @@ class ModelStore {
    * @returns The initialized LlamaContext, or null if cancelled/skipped
    */
   initContext = async (model: Model, mmProjPath?: string) => {
+    // Benchmark mode owns the native context lifecycle end-to-end.
+    // Reject synchronously so any racing caller (ChatView auto-load, header,
+    // sheet) fails fast instead of silently shadowing the matrix's per-cell
+    // devices / n_gpu_layers via the "already loaded → skip" path.
+    if (this.benchmarkActive) {
+      throw new Error(
+        '[ModelStore] initContext rejected: benchmark mode is active',
+      );
+    }
+
     // === Phase 1: Pre-flight checks OUTSIDE mutex ===
 
     // Mark intent immediately - this is the "last-one-wins" tracking
@@ -1382,6 +1541,16 @@ class ModelStore {
       // === Phase 2: Execute context operations WITH mutex ===
 
       const operationPromise = this.contextOperationMutex.then(async () => {
+        // A benchmark may have started while this load sat in the mutex
+        // queue (cold-launch deep-link race). Bail before doing native work
+        // — enterBenchmarkMode will release any context we leave behind.
+        if (this.benchmarkActive) {
+          console.log(
+            `[ModelStore] Skipping queued load for "${model.name}" - benchmark mode is active`,
+          );
+          return null;
+        }
+
         // Final check if this request is still current (last-one-wins)
         // This catches race conditions where another request queued while we waited
         if (this.pendingModelId !== model.id) {
@@ -1515,6 +1684,7 @@ class ModelStore {
 
       runInAction(() => {
         this.context = ctx;
+        this.engine = new LocalCompletionEngine(ctx);
         this.activeContextSettings = contextInitParams;
         this.setActiveModel(model.id);
         this.pendingModelId = null;
@@ -1576,15 +1746,29 @@ class ModelStore {
     console.log('attempt to release');
     chatSessionStore.exitEditMode();
     if (!this.context) {
-      // Even if no context exists, clear state if requested (for deletion scenarios)
-      if (clearActiveModel) {
+      // For remote models or deletion scenarios, clear engine and state
+      if (this.engine || clearActiveModel) {
+        // Stop any active remote completion
+        if (this.engine) {
+          try {
+            await this.engine.stopCompletion();
+          } catch {
+            // Ignore errors from stopping remote completion
+          }
+        }
         runInAction(() => {
-          this.activeModelId = undefined;
+          this.engine = undefined;
+          if (clearActiveModel) {
+            this.activeModelId = undefined;
+          }
           this.isMultimodalActive = false;
           this.activeProjectionModelId = undefined;
         });
       }
-      return 'No context to release';
+      if (!this.engine && !clearActiveModel) {
+        return 'No context to release';
+      }
+      return 'Remote engine cleared';
     }
 
     try {
@@ -1656,6 +1840,7 @@ class ModelStore {
     } finally {
       runInAction(() => {
         this.context = undefined;
+        this.engine = undefined;
         this.activeContextSettings = undefined;
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
@@ -1706,7 +1891,11 @@ class ModelStore {
   };
 
   get activeModel(): Model | undefined {
-    return this.models.find(model => model.id === this.activeModelId);
+    // Look in local models first, then remote models
+    return (
+      this.models.find(model => model.id === this.activeModelId) ||
+      this.remoteModels.find(model => model.id === this.activeModelId)
+    );
   }
 
   get lastUsedModel(): Model | undefined {
@@ -1715,9 +1904,92 @@ class ModelStore {
       : undefined;
   }
 
+  /**
+   * Returns a string context identifier for the active model.
+   * For local models: the numeric native context ID as a string.
+   * For remote models: "remote-{serverId}" string.
+   */
+  get contextId(): string | undefined {
+    if (this.context) {
+      return String(this.context.id);
+    }
+    const model = this.activeModel;
+    if (model?.origin === ModelOrigin.REMOTE && model.serverId) {
+      return `remote-${model.serverId}`;
+    }
+    return undefined;
+  }
+
+  /**
+   * Computed property that derives remote models from serverStore.serverModels.
+   * Remote models are never stored in the models array (which is persisted).
+   */
+  get remoteModels(): Model[] {
+    const models: Model[] = [];
+    for (const selected of serverStore.userSelectedModels) {
+      const server = serverStore.servers.find(s => s.id === selected.serverId);
+      if (!server) {
+        continue;
+      }
+      // Use the remote model ID as the display name
+      models.push(
+        createRemoteModel({
+          serverId: selected.serverId,
+          serverName: server.name,
+          remoteModelId: selected.remoteModelId,
+          modelName: selected.remoteModelId,
+        }),
+      );
+    }
+    return models;
+  }
+
   setActiveModel(modelId: string) {
     this.activeModelId = modelId;
   }
+
+  /**
+   * Set a remote model as the active model and create an OpenAI completion engine.
+   * Releases any active local context first.
+   */
+  setRemoteModel = async (model: Model): Promise<void> => {
+    if (!model.serverId || !model.remoteModelId) {
+      throw new Error('Model is missing remote configuration');
+    }
+
+    // Release any existing context (local or remote)
+    await this.releaseContext();
+
+    const apiKey = await serverStore.getApiKey(model.serverId);
+    const server = serverStore.servers.find(s => s.id === model.serverId);
+    if (!server) {
+      throw new Error('Server not found');
+    }
+
+    runInAction(() => {
+      this.engine = new OpenAICompletionEngine(
+        server.url,
+        model.remoteModelId!,
+        apiKey,
+      );
+      this.setActiveModel(model.id);
+      // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
+    });
+  };
+
+  /**
+   * Public method that routes model selection to the appropriate handler.
+   * All callsites should use selectModel() instead of initContext() directly.
+   * - Remote models: calls setRemoteModel()
+   * - Local models: calls initContext()
+   */
+  selectModel = async (model: Model): Promise<void> => {
+    if (model.origin === ModelOrigin.REMOTE) {
+      await this.setRemoteModel(model);
+    } else {
+      await this.initContext(model);
+    }
+  };
 
   downloadHFModel = async (
     hfModel: HuggingFaceModel,
@@ -1893,10 +2165,30 @@ class ModelStore {
     return modelToReturn;
   };
 
+  removeModelByFullPath = (fullPath: string) => {
+    const index = this.models.findIndex(
+      m =>
+        (m.isLocal || m.origin === ModelOrigin.LOCAL) &&
+        m.fullPath === fullPath,
+    );
+    if (index !== -1) {
+      this.models.splice(index, 1);
+    }
+  };
+
   addLocalModel = async (localFilePath: string) => {
     const filename = localFilePath.split('/').pop(); // Extract filename from path
     if (!filename) {
       throw new Error('Invalid local file path');
+    }
+
+    // Read file size from disk
+    let fileSize = 0;
+    try {
+      const stat = await RNFS.stat(localFilePath);
+      fileSize = Number(stat.size) || 0;
+    } catch (e) {
+      console.warn('[ModelStore] Failed to read file size:', e);
     }
 
     const defaultSettings = getLocalModelDefaultSettings();
@@ -1905,8 +2197,8 @@ class ModelStore {
       id: uuidv4(), // Generate a unique ID
       author: '',
       name: filename,
-      size: 0, // Placeholder for UI to ignore
-      params: 0, // Placeholder for UI to ignore
+      size: fileSize,
+      params: 0, // Will be updated after GGUF metadata read
       isDownloaded: true,
       downloadUrl: '',
       hfUrl: '',
@@ -1927,6 +2219,14 @@ class ModelStore {
       this.models.push(model);
       this.refreshDownloadStatuses();
     });
+
+    // Get the MobX observable version — the plain `model` object was wrapped
+    // in a proxy when pushed into the observable array. We must pass the proxy
+    // so that mutations inside fetchAndPersistGGUFMetadata trigger reactivity.
+    const observableModel = this.models.find(m => m.id === model.id);
+    if (observableModel) {
+      await this.fetchAndPersistGGUFMetadata(observableModel);
+    }
   };
 
   updateModelChatTemplate = (
@@ -2200,10 +2500,16 @@ class ModelStore {
 
       // Only check if supportsThinking is not already explicitly set
       if (storeModel.supportsThinking === undefined) {
-        const thinkingSupported = await supportsThinking(storeModel, ctx);
+        const result = await detectThinkingCapability(ctx);
 
         runInAction(() => {
-          storeModel.supportsThinking = thinkingSupported;
+          storeModel.supportsThinking = result.supported;
+          if (result.thinkingStartTag) {
+            storeModel.thinkingStartTag = result.thinkingStartTag;
+          }
+          if (result.thinkingEndTag) {
+            storeModel.thinkingEndTag = result.thinkingEndTag;
+          }
         });
       }
     } catch (error) {
@@ -2213,10 +2519,11 @@ class ModelStore {
   }
 
   /**
-   * Returns available (i.e. downloaded models) models with projection models filtered out
+   * Returns available (i.e. downloaded models) models with projection models filtered out,
+   * plus remote models from configured servers.
    */
   get availableModels(): Model[] {
-    return filterProjectionModels(
+    const localAvailable = filterProjectionModels(
       this.models.filter(
         model =>
           // Include models that are either local or downloaded
@@ -2225,6 +2532,7 @@ class ModelStore {
           model.isDownloaded,
       ),
     );
+    return [...localAvailable, ...this.remoteModels];
   }
 
   setInferencing(value: boolean) {

@@ -83,6 +83,11 @@ jobs:
       - name: Validate l10n files
         run: node scripts/validate-l10n.js
 
+      # Step 4b: Verify font registration (I8 — every fontFamily must
+      # be bundled on iOS + Android + listed in Info.plist UIAppFonts).
+      - name: Verify font registration
+        run: node scripts/verify-fonts.js
+
       # Step 5: Run linters (ESLint)
       - name: Run ESLint
         run: yarn lint
@@ -197,19 +202,54 @@ jobs:
         env:
           APP_RELEASE_STORE_PASSWORD: dummy-ci-password
           APP_RELEASE_KEY_PASSWORD: dummy-ci-password
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleProdRelease
+
+      - name: Verify prod APK has no automation-bridge code (DCE sanity check)
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/prod/release/app-prod-release.apk
+          echo "Checking bundle inside $APK for E2E markers..."
+          WORK=$(mktemp -d)
+          unzip -p "$APK" assets/index.android.bundle > "$WORK/bundle" || {
+            echo "FAIL: could not extract assets/index.android.bundle from APK"
+            exit 1
+          }
+          MARKERS=(
+            'AUTOMATION_BRIDGE'
+            'memory-snapshot-label'
+            'memory-snapshot-result'
+            'BENCH_RUN_MATRIX'
+            'bench-runner-screen-status'
+          )
+          FAIL=0
+          for m in "${MARKERS[@]}"; do
+            if grep -q -F "$m" "$WORK/bundle"; then
+              echo "FAIL: prod bundle contains automation marker: $m"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -ne 0 ]; then
+            echo ""
+            echo "The automation bridge was not DCE-stripped from the prod build."
+            echo "Check that __E2E__ is being replaced at build time by babel-plugin-transform-define."
+            echo "See src/__automation__/README.md for the DCE contract."
+            exit 1
+          fi
+          echo "OK: prod bundle contains zero automation markers."
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/prod/release/app-prod-release.apk
 
   # Job for iOS build
   build-ios:
-    runs-on: macos-15  # macOS 15 with Xcode 16
+    runs-on: macos-26  # Keep CI on the same Xcode major as the release workflow
     needs: [build-and-test, detect-changes]
     if: needs.detect-changes.outputs.translation_only != 'true'
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -312,15 +352,17 @@ jobs:
           pod install
           cd ..
 
-      - name: Install xcpretty
-        run: gem install xcpretty
+      - name: Select default Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
 
       - name: Build iOS Release
         run: |
           cd ios
           # List available simulators for debugging
           xcrun simctl list devices available
-          set -o pipefail && xcodebuild \
+          xcodebuild \
             -workspace PocketPal.xcworkspace \
             -scheme PocketPal \
             -configuration Release \
@@ -330,4 +372,12 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            | xcpretty
+            2>&1 | tee ../ios-build.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::iOS build failed (exit $EXIT_CODE)"
+            echo "::group::Error context"
+            grep -B 5 -A 20 "error:" ../ios-build.log | tail -200 || tail -100 ../ios-build.log
+            echo "::endgroup::"
+            exit $EXIT_CODE
+          fi

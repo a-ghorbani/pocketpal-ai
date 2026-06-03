@@ -24,6 +24,7 @@ jest.spyOn(chatSessionRepository, 'updateSessionCompletionSettings');
 jest.spyOn(chatSessionRepository, 'getGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'saveGlobalCompletionSettings');
 jest.spyOn(chatSessionRepository, 'setSessionActivePal');
+jest.spyOn(chatSessionRepository, 'setSessionSettingsSource');
 
 describe('chatSessionStore', () => {
   const mockMessage = {
@@ -141,6 +142,28 @@ describe('chatSessionStore', () => {
       );
       // Session should still be in the store if deletion failed
       expect(chatSessionStore.sessions.length).toBe(1);
+    });
+
+    it('cleans up draft for deleted session', async () => {
+      const mockSessionId = 'session1';
+      chatSessionStore.sessions = [
+        {
+          id: mockSessionId,
+          title: 'Session 1',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+        },
+      ];
+      chatSessionStore.saveDraft(mockSessionId, 'unsent text');
+      (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.deleteSession(mockSessionId);
+
+      expect(chatSessionStore.sessionDrafts.has(mockSessionId)).toBe(false);
     });
   });
 
@@ -286,6 +309,58 @@ describe('chatSessionStore', () => {
       );
     });
 
+    it('should preserve talentResults and talent metadata across subsequent updates (PR #578 hazard)', async () => {
+      // Simulates the talent-call flow: first update writes talentCalls/talentResults,
+      // a later update (e.g. post-regen timing refresh) must NOT wipe them.
+      const messageWithTalentMeta = {
+        ...mockMessage,
+        metadata: {
+          talentCalls: [
+            {id: 'c1', type: 'function', function: {name: 'render_html'}},
+          ],
+          toolMessages: [{tool_call_id: 'c1', content: 'ok'}],
+          talentResults: {
+            c1: {
+              type: 'html',
+              html: '<p>hi</p>',
+              title: 'Greeting',
+              summary: 'Rendered HTML preview: "Greeting"',
+            },
+          },
+          completionResult: {reasoning_content: '', content: ''},
+        },
+      };
+
+      const mockSession = {
+        id: 'session1',
+        title: 'Session 1',
+        date: new Date().toISOString(),
+        messages: [messageWithTalentMeta],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+      };
+      chatSessionStore.sessions = [mockSession];
+      chatSessionStore.activeSessionId = mockSession.id;
+
+      (chatSessionRepository.updateMessage as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      // Simulate a later refresh that only touches `timings`.
+      await chatSessionStore.updateMessage(mockMessage.id, mockSession.id, {
+        metadata: {timings: {total: 200}},
+      });
+
+      const md = (chatSessionStore.sessions[0].messages[0] as MessageType.Text)
+        .metadata;
+      expect(md?.timings).toEqual({total: 200});
+      expect((md as any)?.talentCalls).toHaveLength(1);
+      expect((md as any)?.toolMessages).toHaveLength(1);
+      expect((md as any)?.talentResults).toEqual({
+        c1: expect.objectContaining({type: 'html', html: '<p>hi</p>'}),
+      });
+    });
+
     it('should handle updateMessage when existing message has no metadata', async () => {
       const messageWithoutMetadata = {
         ...mockMessage,
@@ -404,6 +479,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         defaultCompletionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionRepository.getSessionById).toHaveBeenCalledWith(
         mockNewSession.id,
@@ -467,6 +543,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         originalSession.completionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions.length).toBe(2);
       expect(chatSessionStore.sessions[1].completionSettings.temperature).toBe(
@@ -604,6 +681,7 @@ describe('chatSessionStore', () => {
         [mockMessage],
         originalSession.completionSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions.length).toBe(2);
       expect(chatSessionStore.sessions[1].title).toBe(
@@ -737,12 +815,18 @@ describe('chatSessionStore', () => {
       (
         chatSessionRepository.updateSessionCompletionSettings as jest.Mock
       ).mockResolvedValue(undefined);
+      (
+        chatSessionRepository.setSessionSettingsSource as jest.Mock
+      ).mockResolvedValue(undefined);
 
       await chatSessionStore.updateSessionCompletionSettings(newSettings);
 
       expect(
         chatSessionRepository.updateSessionCompletionSettings,
       ).toHaveBeenCalledWith(session.id, newSettings);
+      expect(
+        chatSessionRepository.setSessionSettingsSource,
+      ).toHaveBeenCalledWith(session.id, 'custom');
       expect(chatSessionStore.sessions[0].completionSettings).toEqual(
         newSettings,
       );
@@ -825,6 +909,7 @@ describe('chatSessionStore', () => {
         [],
         customSettings,
         undefined,
+        'pal',
       );
       expect(chatSessionStore.sessions[0].completionSettings).toEqual(
         customSettings,
@@ -1285,6 +1370,106 @@ describe('chatSessionStore', () => {
 
       expect(chatSessionStore.sessions[0].activePalId).toBe('pal1');
       expect(chatSessionStore.newChatPalId).toBeUndefined();
+    });
+  });
+
+  describe('newChatThinkingOverride — session-creation handoff & clears', () => {
+    beforeEach(() => {
+      chatSessionStore.newChatPalId = undefined;
+      chatSessionStore.newChatThinkingOverride = undefined;
+      chatSessionStore.newChatSettingsSource = 'pal';
+    });
+
+    it("births session as 'custom' when override is staged (overrides 'pal' source) — memory + DB", async () => {
+      const mockNewSession = {
+        id: 'new-session-override',
+        title: 'With Override',
+        date: new Date().toISOString(),
+      };
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
+        mockNewSession,
+      );
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      });
+
+      chatSessionStore.newChatPalId = 'palX';
+      chatSessionStore.newChatSettingsSource = 'pal';
+      chatSessionStore.newChatThinkingOverride = false;
+
+      await chatSessionStore.createNewSession('With Override');
+
+      // Memory-side: session.settingsSource is 'custom' at birth.
+      expect(chatSessionStore.sessions[0].settingsSource).toBe('custom');
+      // DB-side: repo received 'custom' too.
+      expect(chatSessionRepository.createSession).toHaveBeenCalledWith(
+        'With Override',
+        [],
+        defaultCompletionSettings,
+        'palX',
+        'custom',
+      );
+      // Override is one-shot — cleared in the same code block as newChatPalId.
+      expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
+      expect(chatSessionStore.newChatPalId).toBeUndefined();
+    });
+
+    it('births session with newChatSettingsSource when override is undefined (regression guard)', async () => {
+      const mockNewSession = {
+        id: 'new-session-default',
+        title: 'No Override',
+        date: new Date().toISOString(),
+      };
+      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
+        mockNewSession,
+      );
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
+        messages: [],
+        completionSettings: {getSettings: () => defaultCompletionSettings},
+      });
+
+      chatSessionStore.newChatPalId = 'palX';
+      chatSessionStore.newChatSettingsSource = 'pal';
+      chatSessionStore.newChatThinkingOverride = undefined;
+
+      await chatSessionStore.createNewSession('No Override');
+
+      expect(chatSessionStore.sessions[0].settingsSource).toBe('pal');
+      expect(chatSessionRepository.createSession).toHaveBeenCalledWith(
+        'No Override',
+        [],
+        defaultCompletionSettings,
+        'palX',
+        'pal',
+      );
+    });
+
+    it('clears override on resetActiveSession', () => {
+      chatSessionStore.newChatThinkingOverride = false;
+      chatSessionStore.activeSessionId = 'session1';
+
+      chatSessionStore.resetActiveSession();
+
+      expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
+    });
+
+    it('clears override on setActiveSession (session switch)', async () => {
+      const existing = {
+        id: 'session1',
+        title: 'Existing',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [existing];
+      chatSessionStore.newChatThinkingOverride = true;
+
+      await chatSessionStore.setActiveSession('session1');
+
+      expect(chatSessionStore.newChatThinkingOverride).toBeUndefined();
     });
   });
 
@@ -1897,6 +2082,25 @@ describe('chatSessionStore', () => {
         expect(chatSessionRepository.deleteSessions).toHaveBeenCalledWith([]);
         expect(chatSessionStore.sessions.length).toBe(3);
       });
+
+      it('cleans up drafts for all deleted sessions while preserving others', async () => {
+        chatSessionStore.saveDraft('session1', 'draft A');
+        chatSessionStore.saveDraft('session2', 'draft B');
+        chatSessionStore.saveDraft('session3', 'draft C');
+
+        chatSessionStore.selectedSessionIds.add('session1');
+        chatSessionStore.selectedSessionIds.add('session3');
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+        expect(chatSessionStore.sessionDrafts.has('session3')).toBe(false);
+        // Draft for non-deleted session is preserved
+        expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+      });
     });
 
     describe('bulkExportSessions', () => {
@@ -1952,6 +2156,46 @@ describe('chatSessionStore', () => {
 
         expect(chatSessionRepository.exportSessions).toHaveBeenCalledWith([]);
       });
+    });
+  });
+
+  describe('Draft autosave', () => {
+    it('saves and retrieves a draft', () => {
+      chatSessionStore.saveDraft('session1', 'Hello world');
+      expect(chatSessionStore.getDraft('session1')).toBe('Hello world');
+    });
+
+    it('returns empty string for non-existent draft', () => {
+      expect(chatSessionStore.getDraft('no-such-session')).toBe('');
+    });
+
+    it('clears a draft', () => {
+      chatSessionStore.saveDraft('session1', 'draft text');
+      chatSessionStore.clearDraft('session1');
+      expect(chatSessionStore.getDraft('session1')).toBe('');
+    });
+
+    it('does not store empty/whitespace-only drafts', () => {
+      chatSessionStore.saveDraft('session1', '   ');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+    });
+
+    it('removes draft when saving empty text', () => {
+      chatSessionStore.saveDraft('session1', 'some text');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(true);
+      chatSessionStore.saveDraft('session1', '');
+      expect(chatSessionStore.sessionDrafts.has('session1')).toBe(false);
+    });
+
+    it('handles multiple session drafts independently', () => {
+      chatSessionStore.saveDraft('session1', 'draft A');
+      chatSessionStore.saveDraft('session2', 'draft B');
+      expect(chatSessionStore.getDraft('session1')).toBe('draft A');
+      expect(chatSessionStore.getDraft('session2')).toBe('draft B');
+
+      chatSessionStore.clearDraft('session1');
+      expect(chatSessionStore.getDraft('session1')).toBe('');
+      expect(chatSessionStore.getDraft('session2')).toBe('draft B');
     });
   });
 });

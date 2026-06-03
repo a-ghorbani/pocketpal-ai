@@ -2,18 +2,9 @@ import React from 'react';
 
 import {Text} from 'react-native-paper';
 
-import {render, fireEvent} from '../../../../jest/test-utils';
+import {render} from '../../../../jest/test-utils';
 
 import {Bubble} from '../Bubble';
-
-jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
-  const {Text: PaperText} = require('react-native-paper');
-  return props => <PaperText>{props.name}</PaperText>;
-});
-
-jest.mock('@react-native-clipboard/clipboard', () => ({
-  setString: jest.fn(),
-}));
 
 describe('Bubble', () => {
   let mockMessage;
@@ -26,13 +17,7 @@ describe('Bubble', () => {
       id: 'uuidv4',
       text: 'Hello, world!',
       type: 'text',
-      metadata: {
-        copyable: true,
-        timings: {
-          predicted_per_token_ms: 10,
-          predicted_per_second: 100,
-        },
-      },
+      metadata: {},
     };
   });
 
@@ -46,28 +31,18 @@ describe('Bubble', () => {
     );
   };
 
-  it('renders correctly with all props', () => {
-    const {getByText, getByTestId} = renderBubble(mockMessage);
+  // Bubble is a pure shape primitive — chrome lives on
+  // AssistantTurnFooter. Tests assert shape behaviour only.
+
+  it('renders the child content', () => {
+    const {getByTestId} = renderBubble(mockMessage);
     expect(getByTestId('child')).toBeTruthy();
-    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
-    expect(getByText('content-copy')).toBeTruthy();
   });
 
-  it('does not render copy icon when message is not copyable', () => {
-    const nonCopyableMessage = {
-      ...mockMessage,
-      metadata: {...mockMessage.metadata, copyable: false},
-    };
-    const {queryByText} = renderBubble(nonCopyableMessage);
-    expect(queryByText('content-copy')).toBeNull();
-  });
-
-  it('calls Clipboard.setString when copy icon is pressed', () => {
-    const {getByText} = renderBubble(mockMessage);
-    fireEvent.press(getByText('content-copy'));
-    expect(
-      require('@react-native-clipboard/clipboard').setString,
-    ).toHaveBeenCalledWith('Hello, world!');
+  it('renders an ai-message testID for non-current-user authors', () => {
+    const aiMessage = {...mockMessage, author: {id: 'assistant'}};
+    const {getByTestId} = renderBubble(aiMessage);
+    expect(getByTestId('ai-message')).toBeTruthy();
   });
 
   it('does not crash when message.metadata is undefined', () => {
@@ -76,60 +51,17 @@ describe('Bubble', () => {
     expect(getByText('Child content')).toBeTruthy();
   });
 
-  it('displays time to first token when available', () => {
-    const messageWithTimeToFirstToken = {
+  it('does NOT render timing or copy chrome (chrome lives in AssistantTurnFooter now)', () => {
+    const messageWithTimings = {
       ...mockMessage,
       metadata: {
         copyable: true,
-        timings: {
-          predicted_per_token_ms: 10,
-          predicted_per_second: 100,
-          time_to_first_token_ms: 250,
-        },
+        timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
       },
     };
-
-    const {getByText} = renderBubble(messageWithTimeToFirstToken);
-
-    // Should display the time to first token in addition to the regular timing info
-    expect(getByText(/250ms TTF/)).toBeTruthy();
-  });
-
-  it('does not display time to first token when null', () => {
-    const messageWithNullTimeToFirstToken = {
-      ...mockMessage,
-      metadata: {
-        copyable: true,
-        timings: {
-          predicted_per_token_ms: 10,
-          predicted_per_second: 100,
-          time_to_first_token_ms: null,
-        },
-      },
-    };
-
-    const {queryByText} = renderBubble(messageWithNullTimeToFirstToken);
-
-    // Should not display time to first token when it's null
-    expect(queryByText(/to first token/)).toBeNull();
-  });
-
-  it('does not display time to first token when undefined', () => {
-    const messageWithoutTimeToFirstToken = {
-      ...mockMessage,
-      metadata: {
-        copyable: true,
-        timings: {
-          predicted_per_token_ms: 10,
-          predicted_per_second: 100,
-          // time_to_first_token_ms is undefined
-        },
-      },
-    };
-
-    const {queryByText} = renderBubble(messageWithoutTimeToFirstToken);
-
-    // Should not display time to first token when it's undefined
-    expect(queryByText(/to first token/)).toBeNull();
+    const {queryByText, queryByTestId} = renderBubble(messageWithTimings);
+    expect(queryByTestId('message-timing')).toBeNull();
+    expect(queryByText('content-copy')).toBeNull();
+    expect(queryByText('10ms/token, 100.00 tokens/sec')).toBeNull();
   });
 });

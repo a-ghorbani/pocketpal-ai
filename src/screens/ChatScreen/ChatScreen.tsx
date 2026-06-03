@@ -1,6 +1,7 @@
 import React, {useRef, ReactNode, useState} from 'react';
 
 import {observer} from 'mobx-react';
+import {runInAction} from 'mobx';
 
 import {
   Bubble,
@@ -169,7 +170,6 @@ export const ChatScreen: React.FC = observer(() => {
         onPalSettingsSelect={handleOpenPalSheet}
         user={user}
         isStopVisible={modelStore.inferencing}
-        isThinking={isThinking}
         isStreaming={modelStore.isStreaming}
         sendButtonVisibilityMode="always"
         showImageUpload={true}
@@ -185,7 +185,7 @@ export const ChatScreen: React.FC = observer(() => {
           onSearchToggle: handleSearchToggle,
         }}
         textInputProps={{
-          placeholder: !modelStore.context
+          placeholder: !modelStore.engine
             ? modelStore.isContextLoading
               ? l10n.chat.loadingModel
               : l10n.chat.modelNotLoaded

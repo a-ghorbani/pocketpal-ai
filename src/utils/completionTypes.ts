@@ -1,5 +1,8 @@
 import {CompletionParams as LlamaRNCompletionParams} from 'llama.rn';
 
+export type {ToolCall} from 'llama.rn';
+import type {ToolCall} from 'llama.rn';
+
 // Alias allows flexibility to switch API providers later
 // We should move towards OpenAI Compatible API Params
 export type ApiCompletionParams = LlamaRNCompletionParams;
@@ -60,4 +63,56 @@ export function toApiCompletionParams(
   }
 
   return apiParams as ApiCompletionParams;
+}
+
+/**
+ * Streaming callback data shape for CompletionEngine.
+ * Matches the fields consumed by useChatSession streaming handler.
+ */
+export interface CompletionStreamData {
+  token?: string;
+  content?: string;
+  reasoning_content?: string;
+  tool_calls?: ToolCall[];
+  accumulated_text?: string;
+}
+
+/**
+ * Completion result shape for CompletionEngine.
+ * Mirrors NativeCompletionResult from llama.rn, excluding local-only fields
+ * (chat_format, tokens_cached, completion_probabilities).
+ */
+export interface CompletionResult {
+  text: string;
+  content: string;
+  reasoning_content?: string;
+  tool_calls?: ToolCall[];
+  timings?: {
+    predicted_per_second?: number;
+    predicted_ms?: number;
+    prompt_per_second?: number;
+    prompt_ms?: number;
+    [key: string]: number | undefined;
+  };
+  tokens_predicted?: number;
+  tokens_evaluated?: number;
+  truncated?: boolean;
+  stopped_eos?: boolean;
+  stopped_limit?: number;
+  stopped_word?: string;
+  stopping_word?: string;
+  context_full?: boolean;
+  interrupted?: boolean;
+}
+
+/**
+ * CompletionEngine interface formalizes the completion contract.
+ * Both LocalCompletionEngine and OpenAICompletionEngine implement this.
+ */
+export interface CompletionEngine {
+  completion(
+    params: ApiCompletionParams,
+    callback?: (data: CompletionStreamData) => void,
+  ): Promise<CompletionResult>;
+  stopCompletion(): Promise<void>;
 }

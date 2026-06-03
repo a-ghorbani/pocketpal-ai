@@ -158,8 +158,9 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20Params);
 
-      expect(migrated.version).toBe('2.1');
+      expect(migrated.version).toBe('2.2');
       expect(migrated.image_max_tokens).toBe(512);
+      expect(migrated.no_extra_bufts).toBe(false);
     });
 
     it('should preserve existing image_max_tokens when migrating from v2.0 to v2.1', () => {
@@ -181,7 +182,7 @@ describe('contextInitParamsVersions', () => {
 
       const migrated = migrateContextInitParams(v20ParamsWithTokens);
 
-      expect(migrated.version).toBe('2.1');
+      expect(migrated.version).toBe('2.2');
       expect(migrated.image_max_tokens).toBe(1024); // Should preserve custom value
     });
   });

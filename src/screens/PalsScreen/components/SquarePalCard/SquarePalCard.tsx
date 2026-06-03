@@ -159,9 +159,6 @@ const PalThumbnail: React.FC<{
   const thumbnailUrl = pal.thumbnail_url
     ? getFullThumbnailUri(pal.thumbnail_url)
     : undefined;
-  const creatorAvatarUrl = isPalsHubPal(pal)
-    ? pal.creator?.avatar_url
-    : pal.creator_info?.avatar_url;
 
   // Get pal colors for gradient background (local pals only)
   const palColors = isLocalPal(pal) ? pal.color : null;
@@ -201,27 +198,15 @@ const PalThumbnail: React.FC<{
   return (
     <View style={thumbnailStyle}>
       {thumbnailUrl ? (
-        <>
-          <Image
-            source={{uri: thumbnailUrl}}
-            style={styles.thumbnailImage}
-            resizeMode="cover"
-          />
-        </>
-      ) : creatorAvatarUrl ? (
-        <>
-          <Image
-            source={{uri: creatorAvatarUrl}}
-            style={styles.thumbnailImage}
-            resizeMode="cover"
-          />
-        </>
+        <Image
+          source={{uri: thumbnailUrl}}
+          style={styles.thumbnailImage}
+          resizeMode="cover"
+        />
       ) : (
-        <>
-          <Text style={[styles.thumbnailText, {color: textColor}]}>
-            {firstLetter}
-          </Text>
-        </>
+        <Text style={[styles.thumbnailText, {color: textColor}]}>
+          {firstLetter}
+        </Text>
       )}
 
       {/* Chat Navigation Button (only for downloaded/local pals) */}
@@ -321,7 +306,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
             m => m.id === localPal.defaultModel?.id,
           );
           if (palDefaultModel) {
-            await modelStore.initContext(palDefaultModel);
+            await modelStore.selectModel(palDefaultModel);
           }
         } else if (localPal.defaultModel.id !== modelStore.activeModelId) {
           // Step 3: Different model loaded, ask user
@@ -337,7 +322,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
                 {
                   text: 'Switch',
                   onPress: () => {
-                    modelStore.initContext(palDefaultModel);
+                    modelStore.selectModel(palDefaultModel);
                   },
                 },
               ],
@@ -407,6 +392,7 @@ export const SquarePalCard: React.FC<SquarePalCardProps> = observer(
     return (
       <View>
         <TouchableOpacity
+          testID={`${isPalsHubPal(pal) ? 'palshub' : 'local'}-pal-card-${pal.id}`}
           style={[styles.container, {width: cardWidth}]}
           onPress={onPress}
           activeOpacity={0.7}>

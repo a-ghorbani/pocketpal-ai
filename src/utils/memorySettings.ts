@@ -97,7 +97,7 @@ export async function isRepackableQuantization(
  */
 export async function resolveUseMmap(
   setting: 'true' | 'false' | 'smart',
-  modelPath: string,
+  _modelPath: string,
 ): Promise<boolean> {
   switch (setting) {
     case 'true':
@@ -105,19 +105,9 @@ export async function resolveUseMmap(
     case 'false':
       return false;
     case 'smart':
-      // Smart mode: only available on Android
-      if (Platform.OS !== 'android') {
-        return true; // Default to true on non-Android platforms
-      }
-
-      if (!modelPath) {
-        console.log('No model path provided, defaulting to use_mmap=true');
-        return true; // Default to true if no model path provided
-      }
-
-      // For Android: use mmap=false for repackable quants, true otherwise
-      const isRepackable = await isRepackableQuantization(modelPath);
-      return !isRepackable;
+      // Legacy: 'smart' is now treated as 'false' on Android (mmap OFF + repack ON is optimal)
+      // On other platforms, default to true
+      return Platform.OS !== 'android';
     default:
       return true;
   }
