@@ -21,16 +21,21 @@ export type AppOnlyCompletionParams = {
    * When false, thinking parts are removed from the context to save context space.
    */
   include_thinking_in_context?: boolean;
+  /**
+   * Whether internet search via DuckDuckGo is enabled for this chat.
+   */
+  enable_internet_search?: boolean;
   // Add other PocketPal-only fields here
 };
 
 /**
  * List of keys that are app-specific and should be stripped before
- * sending to the llama.rn API.
+ * passing to the llama.rn API.
  */
 const APP_ONLY_KEYS: (keyof AppOnlyCompletionParams)[] = [
   'version',
   'include_thinking_in_context',
+  'enable_internet_search',
 ];
 
 /**

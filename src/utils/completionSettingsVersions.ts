@@ -14,7 +14,7 @@ import {CompletionParams} from './completionTypes';
 
 // Current version of the completion settings schema
 // Increment this when adding new settings or changing existing ones
-export const CURRENT_COMPLETION_SETTINGS_VERSION = 3;
+export const CURRENT_COMPLETION_SETTINGS_VERSION = 4;
 
 /**
  * Default completion parameters used throughout the app
@@ -46,6 +46,7 @@ export const defaultCompletionParams: CompletionParams = {
   stop: ['</s>'],
   jinja: true, // Whether to use Jinja templating for chat formatting
   enable_thinking: true, // Whether to enable thinking mode for compatible models
+  enable_internet_search: false, // Whether to include DuckDuckGo search context in chat
   // emit_partial_completion: true, // This is not used in the current version of llama.rn
 };
 
@@ -84,11 +85,17 @@ export function migrateCompletionSettings(settings: any): any {
     migratedSettings.version = 3;
   }
 
+  if (migratedSettings.version < 4) {
+    // Migration to version 4: Add enable_internet_search parameter
+    migratedSettings.enable_internet_search = defaultCompletionParams.enable_internet_search;
+    migratedSettings.version = 4;
+  }
+
   // Add future migrations here as needed
-  // if (migratedSettings.version < 4) {
-  //   // Migration to version 4
+  // if (migratedSettings.version < 5) {
+  //   // Migration to version 5
   //   migratedSettings.new_field = defaultCompletionParams.new_field;
-  //   migratedSettings.version = 4;
+  //   migratedSettings.version = 5;
   // }
 
   return migratedSettings;

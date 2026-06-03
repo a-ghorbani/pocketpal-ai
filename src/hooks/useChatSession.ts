@@ -17,6 +17,7 @@ import {
   toApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
+import {fetchDuckDuckGoSearchResults} from '../utils/duckDuckGo';
 
 // Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
@@ -96,6 +97,29 @@ const prepareCompletion = async ({
       }
       return msg;
     });
+  }
+
+  if ((sessionCompletionSettings as CompletionParams)?.enable_internet_search) {
+    try {
+      const query = message.text?.trim();
+      if (query) {
+        const searchResults = await fetchDuckDuckGoSearchResults(query, 3);
+        if (searchResults.length > 0) {
+          const searchSummary = searchResults
+            .map(
+              (result, index) =>
+                `${index + 1}. ${result.title}\n${result.snippet}\n${result.url}`,
+            )
+            .join('\n\n');
+          systemMessages.unshift({
+            role: 'system',
+            content: `DuckDuckGo top ${searchResults.length} results for "${query}":\n\n${searchSummary}`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Internet search integration failed:', error);
+    }
   }
 
   // Create the messages array for llama.rn - same format for all cases

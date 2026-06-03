@@ -107,39 +107,49 @@ export const ChatScreen: React.FC = observer(() => {
 
   const thinkingSupported = modelStore.activeModel?.supportsThinking ?? false;
 
-  const thinkingEnabled = (() => {
+  const chatSettings = (() => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
-    const settings =
-      currentSession?.completionSettings ??
+    return currentSession?.completionSettings ??
       chatSessionStore.newChatCompletionSettings;
-    return settings.enable_thinking ?? true;
   })();
+
+  const thinkingEnabled = chatSettings.enable_thinking ?? true;
+  const internetSearchEnabled = chatSettings.enable_internet_search ?? false;
 
   // Show loading bubble only during the thinking phase (inferencing but not streaming)
   const isThinking = modelStore.inferencing && !modelStore.isStreaming;
 
-  const handleThinkingToggle = async (enabled: boolean) => {
+  const updateChatSetting = async (
+    field: 'enable_thinking' | 'enable_internet_search',
+    enabled: boolean,
+  ) => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
 
     if (currentSession) {
-      // Update session-specific settings
       const updatedSettings = {
         ...currentSession.completionSettings,
-        enable_thinking: enabled,
+        [field]: enabled,
       };
       await chatSessionStore.updateSessionCompletionSettings(updatedSettings);
     } else {
-      // Update global settings for new chats
       const updatedSettings = {
         ...chatSessionStore.newChatCompletionSettings,
-        enable_thinking: enabled,
+        [field]: enabled,
       };
       await chatSessionStore.setNewChatCompletionSettings(updatedSettings);
     }
+  };
+
+  const handleThinkingToggle = async (enabled: boolean) => {
+    await updateChatSetting('enable_thinking', enabled);
+  };
+
+  const handleSearchToggle = async (enabled: boolean) => {
+    await updateChatSetting('enable_internet_search', enabled);
   };
 
   // If the active pal is a video pal, show the video pal screen
@@ -170,6 +180,9 @@ export const ChatScreen: React.FC = observer(() => {
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
+          showSearchToggle: true,
+          isSearchEnabled: internetSearchEnabled,
+          onSearchToggle: handleSearchToggle,
         }}
         textInputProps={{
           placeholder: !modelStore.context
