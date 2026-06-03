@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {Text, View} from 'react-native';
-import {Button as PaperButton} from 'react-native-paper';
+import {Button as PaperButton, useTheme} from 'react-native-paper';
 
 import {t} from '../../locales';
 import type {BannerVariant} from '../../utils/bannerVariantResolver';
@@ -15,6 +15,28 @@ export interface BannerRowProps {
   onNewChat: () => void;
   styles: ReturnType<typeof createStyles>;
 }
+
+/**
+ * Thin fullness meter — appears only on warning / full variants so the
+ * user has a non-numeric signal of "how full" without surfacing tokens.
+ */
+const Meter: React.FC<{ratio: number; tint: string; styles: any}> = ({
+  ratio,
+  tint,
+  styles,
+}) => (
+  <View style={styles.bannerMeter} testID="banner-meter">
+    <View
+      style={[
+        styles.bannerMeterFill,
+        {
+          width: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
+          backgroundColor: tint,
+        },
+      ]}
+    />
+  </View>
+);
 
 /**
  * Inline banner row that renders one of the four visible variants
@@ -32,6 +54,10 @@ export const BannerRow: React.FC<BannerRowProps> = ({
   styles,
 }) => {
   const copy = l10n.chat.contextWarning;
+  const theme = useTheme();
+  // Tertiary (amber-ish) for warning, error for full.
+  const warningTint = (theme.colors as any).tertiary ?? theme.colors.primary;
+  const errorTint = theme.colors.error;
 
   if (variant.kind === 'html-soft-cap') {
     return (
@@ -54,6 +80,7 @@ export const BannerRow: React.FC<BannerRowProps> = ({
       <View testID="context-warning-banner" style={styles.softCapBanner}>
         <Text style={styles.bannerTitle}>{copy.warning.title}</Text>
         <Text style={styles.softCapBannerText}>{copy.warning.message}</Text>
+        <Meter ratio={variant.ratio} tint={warningTint} styles={styles} />
         <View style={styles.bannerActions}>
           {variant.nextTierTokens !== null ? (
             <PaperButton
@@ -95,6 +122,9 @@ export const BannerRow: React.FC<BannerRowProps> = ({
       <View testID="context-full-banner" style={styles.softCapBanner}>
         <Text style={styles.bannerTitle}>{titleCopy}</Text>
         <Text style={styles.softCapBannerText}>{messageCopy}</Text>
+        {variant.ratio > 0 ? (
+          <Meter ratio={variant.ratio} tint={errorTint} styles={styles} />
+        ) : null}
         <View style={styles.bannerActions}>
           {variant.nextTierTokens !== null ? (
             <PaperButton

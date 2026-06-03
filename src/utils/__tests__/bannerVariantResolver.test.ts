@@ -136,7 +136,11 @@ describe('resolveBannerVariant', () => {
       tokensPredicted: 200,
     });
     const v = resolveBannerVariant({...baseContext, snapshot: snap});
-    expect(v).toEqual({kind: 'context-warning', nextTierTokens: 4096});
+    expect(v.kind).toBe('context-warning');
+    if (v.kind === 'context-warning') {
+      expect(v.nextTierTokens).toBe(4096);
+      expect(v.ratio).toBeCloseTo(1700 / 2048, 2);
+    }
   });
 
   it('stays at none when local ratio is below threshold', () => {
@@ -158,6 +162,7 @@ describe('resolveBannerVariant', () => {
       escalated: false,
       nextTierTokens: 4096,
       heavyTalent: null,
+      ratio: 1,
     });
   });
 

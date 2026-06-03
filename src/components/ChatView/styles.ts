@@ -106,4 +106,15 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       gap: 8,
       justifyContent: 'flex-end',
     },
+    bannerMeter: {
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.surfaceDisabled,
+      overflow: 'hidden' as const,
+      marginVertical: 4,
+    },
+    bannerMeterFill: {
+      height: 4,
+      borderRadius: 2,
+    },
   });

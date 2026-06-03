@@ -15,6 +15,8 @@ const styles = {
   softCapBannerText: {},
   bannerTitle: {},
   bannerActions: {},
+  bannerMeter: {},
+  bannerMeterFill: {},
 } as any;
 
 const renderBannerRow = (variant: BannerVariant) => {
@@ -40,6 +42,7 @@ describe('BannerRow heavy-talent message', () => {
       escalated: false,
       nextTierTokens: 4096,
       heavyTalent: {name: 'render_html'},
+      ratio: 1,
     });
 
     expect(getByText(/HTML preview/)).toBeTruthy();
@@ -53,9 +56,21 @@ describe('BannerRow heavy-talent message', () => {
       escalated: false,
       nextTierTokens: 4096,
       heavyTalent: {name: 'made_up_engine_v9'},
+      ratio: 1,
     });
 
     expect(getByText(/This pal/)).toBeTruthy();
     expect(queryByText(/made_up_engine_v9/)).toBeNull();
+  });
+
+  it('renders the fullness meter for context-warning with the right ratio', () => {
+    const {getByTestId} = renderBannerRow({
+      kind: 'context-warning',
+      nextTierTokens: 4096,
+      ratio: 0.83,
+    });
+
+    const meter = getByTestId('banner-meter');
+    expect(meter).toBeTruthy();
   });
 });

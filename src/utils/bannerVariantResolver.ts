@@ -90,8 +90,14 @@ export type BannerVariant =
       escalated: boolean;
       nextTierTokens: number | null;
       heavyTalent: {name: string} | null;
+      /** Used/n_ctx ratio clamped to [0, 1] for the fullness meter. */
+      ratio: number;
     }
-  | {kind: 'context-warning'; nextTierTokens: number | null}
+  | {
+      kind: 'context-warning';
+      nextTierTokens: number | null;
+      ratio: number;
+    }
   | {kind: 'context-remote-hedged'}
   | {kind: 'html-soft-cap'}
   | {kind: 'none'};
@@ -142,6 +148,14 @@ export interface BannerVariantContext {
 export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
   const snap = ctx.snapshot;
 
+  // Fullness ratio used by both the warning and full variants for the
+  // banner meter. Remote sessions don't surface a meter.
+  const used = snap
+    ? snap.tokensCached + snap.tokensEvaluated + snap.tokensPredicted
+    : 0;
+  const ratio =
+    ctx.effectiveNCtx > 0 ? Math.min(1, used / ctx.effectiveNCtx) : 0;
+
   if (snap !== null && snap.contextFull) {
     // Sticky variant — no dismiss affordance, no Set lookup.
     return {
@@ -149,13 +163,11 @@ export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
       escalated: ctx.consecutiveFullFailures >= ESCALATION_THRESHOLD,
       nextTierTokens: ctx.isRemote ? null : ctx.nextTierTokens,
       heavyTalent: ctx.isRemote ? null : findHeavyTalent(ctx.lastAssistantTurn),
+      ratio: ctx.isRemote ? 0 : 1,
     };
   }
 
   if (snap !== null && !ctx.isRemote) {
-    const used =
-      snap.tokensCached + snap.tokensEvaluated + snap.tokensPredicted;
-    const ratio = ctx.effectiveNCtx > 0 ? used / ctx.effectiveNCtx : 0;
     const warning = ratio >= WARNING_THRESHOLD;
     if (
       warning &&
@@ -164,7 +176,11 @@ export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
         ctx.dismissedKeys.has(`${ctx.sessionId}:context-warning`)
       )
     ) {
-      return {kind: 'context-warning', nextTierTokens: ctx.nextTierTokens};
+      return {
+        kind: 'context-warning',
+        nextTierTokens: ctx.nextTierTokens,
+        ratio,
+      };
     }
   }
 
@@ -264,6 +280,16 @@ export function effectiveNCtx(
  * without exposing every llama.cpp valid value.
  */
 export const CONTEXT_TIERS = [2048, 4096, 8192, 16384, 32768] as const;
+
+/**
+ * Finer-grained ladder used by the IncreaseContextSheet slider — gives
+ * the user agency beyond the doubling banner-CTA tiers. The slider clamps
+ * to `min(CONTEXT_LADDER[last], model.ggufMetadata.context_length)`.
+ */
+export const CONTEXT_LADDER = [
+  2048, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536, 98304,
+  131072,
+] as const;
 
 /**
  * Find the smallest tier strictly greater than `currentNCtx` that the
