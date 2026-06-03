@@ -98,33 +98,21 @@ export const useContextBanner = ({
       ? (lastAssistantMsg as MessageType.AssistantTurn)
       : undefined;
 
-  const bannerVariant: BannerVariant = React.useMemo(
-    () =>
-      resolveBannerVariant({
-        snapshot: snap,
-        effectiveNCtx: effectiveNCtxForSession,
-        isRemote: !!isRemoteSession,
-        htmlPreviewCount,
-        consecutiveFullFailures,
-        dismissedKeys,
-        sessionId: activeSessionId,
-        nextTierTokens,
-        lastAssistantText,
-        lastAssistantTurn,
-      }),
-    [
-      snap,
-      effectiveNCtxForSession,
-      isRemoteSession,
-      htmlPreviewCount,
-      consecutiveFullFailures,
-      dismissedKeys,
-      activeSessionId,
-      nextTierTokens,
-      lastAssistantText,
-      lastAssistantTurn,
-    ],
-  );
+  // Direct call — resolveBannerVariant is pure and cheap. useMemo with
+  // a MobX-wrapped Set as a dep doesn't recompute on dismiss because the
+  // set's reference is stable across .add()/.delete() mutations.
+  const bannerVariant: BannerVariant = resolveBannerVariant({
+    snapshot: snap,
+    effectiveNCtx: effectiveNCtxForSession,
+    isRemote: !!isRemoteSession,
+    htmlPreviewCount,
+    consecutiveFullFailures,
+    dismissedKeys,
+    sessionId: activeSessionId,
+    nextTierTokens,
+    lastAssistantText,
+    lastAssistantTurn,
+  });
 
   const [increaseSheetVisible, setIncreaseSheetVisible] = React.useState(false);
   const [isReloading, setIsReloading] = React.useState(false);
@@ -145,6 +133,11 @@ export const useContextBanner = ({
     if (!activeSessionId || !activeModel || nextTierTokens === null) {
       return;
     }
+    // Defense-in-depth: reachable via the pal-load-hint snackbar even
+    // when the in-banner button is disabled.
+    if (chatSessionStore.isGenerating || chatSessionStore.isStopping) {
+      return;
+    }
     const target = nextTierTokens;
     const priorOverride = sessionOverrides.get(activeSessionId);
     chatSessionStore.setSessionContextOverride(activeSessionId, target);
@@ -152,8 +145,9 @@ export const useContextBanner = ({
     setReloadSnackbar({
       message: l10n.chat.contextWarning.reloadingSubcopy,
       visible: true,
-      // Stay visible until success / failure dismisses it explicitly.
-      duration: Number.MAX_SAFE_INTEGER,
+      // RNP Snackbar treats only Infinity as indefinite; large finite
+      // values overflow setTimeout and fire immediately.
+      duration: Infinity,
     });
     setIncreaseSheetVisible(false);
     try {
