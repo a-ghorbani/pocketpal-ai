@@ -834,5 +834,6 @@ export * from './multimodalHelpers';
 export * from './network';
 export * from './types';
 export * from './hf';
+export * from './hfResolve';
 export * from './hfUserAgent';
 export * from './safeAlert';
