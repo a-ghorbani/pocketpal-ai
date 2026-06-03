@@ -4,6 +4,7 @@ import {chatSessionStore, modelStore} from '../store';
 import {talentRegistry} from '../services/talents';
 import type {Pal} from '../types/pal';
 import {L10nContext} from '../utils';
+import {t} from '../locales';
 import {ModelOrigin} from '../utils/types';
 import {hasEnoughMemoryWithNCtx} from './useMemoryCheck';
 import {pickNextTier} from '../utils/bannerVariantResolver';
@@ -100,7 +101,9 @@ export function usePalLoadHint(activePal: Pal | undefined): {
         const fits = tier !== null;
         setState({
           visible: true,
-          message: l10n.chat.contextWarning.palLoadHint.message,
+          message: t(l10n.chat.contextWarning.palLoadHint.message, {
+            palName: activePal.name,
+          }),
           actionLabel: fits
             ? l10n.chat.contextWarning.palLoadHint.increase
             : l10n.chat.contextWarning.palLoadHint.newChat,
@@ -124,7 +127,9 @@ export function usePalLoadHint(activePal: Pal | undefined): {
         }
         setState({
           visible: true,
-          message: l10n.chat.contextWarning.palLoadHint.message,
+          message: t(l10n.chat.contextWarning.palLoadHint.message, {
+            palName: activePal.name,
+          }),
           actionLabel: l10n.chat.contextWarning.palLoadHint.newChat,
           action: 'newChat',
           palId: activePal.id,

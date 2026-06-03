@@ -499,7 +499,7 @@
       "tokensPerSec": "{{value}} tokens/sec",
       "ttft": "{{value}}ms TTFT",
       "interrupted": "Interrupted",
-      "truncated": "Cut off — likely context full"
+      "truncated": "Reply cut off — out of room"
     },
     "exportUtils": {
       "fileSaved": "File Saved",
@@ -1108,50 +1108,64 @@
     "toolErrorBlock": "{{name}} failed",
     "contextWarning": {
       "warning": {
-        "title": "This chat is filling up.",
+        "title": "Running low on room",
         "message": "Replies may start getting cut off.",
-        "increase": "Increase context",
+        "increase": "More room",
         "dismiss": "Dismiss"
       },
       "full": {
-        "title": "Chat reached its memory limit.",
-        "message": "The model can't fit any more of this conversation. Increase context or start a new chat.",
-        "increase": "Increase context",
+        "title": "Out of room",
+        "message": "That reply got cut off — there's no space left for more of this conversation.",
+        "increase": "More room",
         "newChat": "New chat"
       },
       "fullEscalated": {
-        "title": "Still at the memory limit.",
-        "message": "Recent replies have been truncated. Try a larger context or start a new chat with a shorter prompt."
+        "title": "Still out of room",
+        "message": "More room or a fresh chat will fix this for good."
       },
       "fullHeavyTalent": {
-        "title": "Chat reached its memory limit.",
-        "message": "{{talentName}} needs more room than this chat has. Increase context or start a new chat."
+        "title": "Out of room",
+        "message": "{{talentName}} needs more room than this chat has — that reply got cut off."
       },
       "talentLabels": {
         "render_html": "HTML preview",
         "fallback": "This pal"
       },
       "remoteHedged": {
-        "title": "Reply may be cut off.",
-        "message": "You may be near the model's context limit on the server.",
+        "title": "Reply may be cut off",
+        "message": "That reply looked like it stopped early — the model may be running low on room.",
         "dismiss": "Dismiss"
       },
+      "cutMarker": "reply cut off here",
       "sheet": {
-        "title": "Increase context size",
-        "body": "We'll reload the model with a larger context so this chat has more room.",
-        "currentLabel": "Current context",
-        "nextLabel": "New context",
-        "reloadHint": "Reloading the model takes a few seconds.",
-        "confirm": "Increase",
-        "cancel": "Cancel",
-        "successSnackbar": "Context increased.",
-        "failureSnackbar": "Couldn't increase context. Reverted."
+        "title": "Give this chat more room",
+        "body": "Room is the model's working memory — how much of this chat it can keep in mind at once. More room means longer chats before replies get cut off.",
+        "wordsRamReadout": "~{{words}} words of working memory · ≈{{ram}} RAM",
+        "fitsChip": "Fits",
+        "tightChip": "Tight",
+        "wontFitChip": "Won't fit",
+        "fitsStatus": "Comfortable for this device.",
+        "fitsUnconstrainedStatus": "Plenty of RAM — limited only by the model.",
+        "tightStatus": "Past ~{{tokens}}, this device may run low on memory and slow down. It can still try.",
+        "wontFitStatus": "~{{tokens}} likely won't fit in this device's memory. Pick a smaller size.",
+        "tickNow": "now",
+        "tickDeviceLimit": "device limit ~{{tokens}}",
+        "modelMaxLabel": "{{tokens}} · model max",
+        "hedge": "Reloading takes a few seconds. Nothing in your chat is lost.",
+        "advanced": "Advanced",
+        "advancedBody": "Context for this chat: {{from}} → {{to}} tokens (model max {{max}}). The device limit is an estimate and rises as larger contexts load successfully. Applies to this chat only.",
+        "confirm": "Set to {{size}}",
+        "confirmGeneric": "Set",
+        "cancel": "Not now",
+        "successSnackbar": "Set to {{size}}. {{palName}} can hold a longer chat now.",
+        "successSnackbarNoPal": "Set to {{size}}. The chat has more room now.",
+        "failureSnackbar": "Couldn't set the new size. Reverted."
       },
-      "reloadingSubcopy": "Reloading with a larger context…",
+      "reloadingSubcopy": "Making more room…",
       "palLoadHint": {
-        "message": "This pal works better with more context.",
-        "increase": "Increase context",
-        "newChat": "Start new chat"
+        "message": "{{palName}} works best with more room.",
+        "increase": "More room",
+        "newChat": "Start fresh chat"
       }
     }
   },

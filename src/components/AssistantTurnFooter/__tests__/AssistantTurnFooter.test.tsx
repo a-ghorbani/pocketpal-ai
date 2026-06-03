@@ -135,7 +135,7 @@ describe('AssistantTurnFooter', () => {
     expect(getByText('Interrupted')).toBeTruthy();
   });
 
-  it('upgrades the status to "Cut off — likely context full" when truncationLikely is set', () => {
+  it('upgrades the status to "Reply cut off — out of room" when truncationLikely is set', () => {
     const message = baseTurn({
       metadata: {copyable: true, interrupted: true, truncationLikely: true},
     });
@@ -143,7 +143,7 @@ describe('AssistantTurnFooter', () => {
       <AssistantTurnFooter message={message} />,
     );
     expect(getByTestId('footer-interrupted-status')).toBeTruthy();
-    expect(getByText('Cut off — likely context full')).toBeTruthy();
+    expect(getByText('Reply cut off — out of room')).toBeTruthy();
   });
 
   it('renders the footer for interrupted-only turns (no copyable, no timings)', () => {
