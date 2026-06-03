@@ -9,7 +9,8 @@ import {useEffect, useCallback} from 'react';
 import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
-import {chatSessionStore, palStore, deepLinkStore} from '../store';
+import {parseHubRunURL} from '../services/hubRunLink';
+import {chatSessionStore, palStore, deepLinkStore, uiStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
 import {
   isBenchmarkRunnerUrl,
@@ -65,6 +66,23 @@ export const useDeepLinking = () => {
     [navigation],
   );
 
+  // Validates a raw hub/run URL and, if valid, parks it for the sheet host to
+  // present. Shared by the iOS native-emitter and Android prod Linking paths.
+  // An invalid link surfaces a message and writes nothing (validation precedes
+  // side effects).
+  const handleHubRunLink = useCallback((url: string) => {
+    const request = parseHubRunURL(url);
+    if (!request) {
+      Alert.alert(
+        uiStore.l10n.models.hubRun.invalidLinkTitle,
+        uiStore.l10n.models.hubRun.invalidLinkMessage,
+        [{text: 'OK'}],
+      );
+      return;
+    }
+    deepLinkStore.setPendingHubRun(request);
+  }, []);
+
   const handleDeepLink = useCallback(
     async (params: DeepLinkParams) => {
       console.log('Handling deep link:', params);
@@ -87,8 +105,13 @@ export const useDeepLinking = () => {
           await handleChatDeepLink(palId, palName, message);
         }
       }
+
+      // Handle hub/run download deep links (iOS native-emitter path)
+      if (params.host === 'hub') {
+        handleHubRunLink(params.url);
+      }
     },
-    [handleChatDeepLink, navigation],
+    [handleChatDeepLink, handleHubRunLink, navigation],
   );
 
   // E2E-only routing for the BenchmarkRunnerScreen. Two paths:
@@ -152,6 +175,53 @@ export const useDeepLinking = () => {
       deepLinkService.cleanup();
     };
   }, [handleDeepLink]);
+
+  // Prod, always-on delivery for the hub/run route. iOS arrives via the native
+  // emitter above; Android prod has no native deep-link bridge, so this RN
+  // Linking path (cold getInitialURL + warm 'url' event) is the only delivery.
+  // Separate from the __E2E__ benchmark Linking effect; parseHubRunURL returns
+  // null for benchmark URLs, so the two never overlap.
+  useEffect(() => {
+    Linking.getInitialURL()
+      .then(url => {
+        if (url) {
+          handleHubRunLink(url);
+        }
+      })
+      .catch(() => {
+        // getInitialURL rejects on some surfaces; the warm listener still runs.
+      });
+
+    // addEventListener is at the RN native bridge edge; contain a synchronous
+    // throw so it can't tear down the rest of the hook's lifecycle.
+    let sub: {remove: () => void} | null = null;
+    try {
+      sub = Linking.addEventListener('url', ({url}) => {
+        if (url) {
+          handleHubRunLink(url);
+        }
+      });
+    } catch {
+      sub = null;
+    }
+
+    return () => {
+      sub?.remove();
+    };
+  }, [handleHubRunLink]);
+};
+
+/**
+ * Hook for the hub/run landing-sheet host. Reads the parked request and clears
+ * it once the sheet is dismissed (single-writer clear / consumed-once).
+ */
+export const useHubRunSheet = () => {
+  return {
+    pendingHubRun: deepLinkStore.pendingHubRun,
+    clearPendingHubRun: () => {
+      deepLinkStore.clearPendingHubRun();
+    },
+  };
 };
 
 /**

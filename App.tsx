@@ -16,7 +16,7 @@ import {
 
 import {ttsStore, uiStore} from './src/store';
 import {useTheme} from './src/hooks';
-import {useDeepLinking} from './src/hooks/useDeepLinking';
+import {useDeepLinking, useHubRunSheet} from './src/hooks/useDeepLinking';
 import {Theme} from './src/utils/types';
 
 import {l10n, initLocale} from './src/locales';
@@ -30,6 +30,7 @@ import {
   HeaderLeft,
   AppWithMigration,
   TTSSetupSheet,
+  HubRunDownloadSheet,
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
 import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
@@ -57,6 +58,15 @@ const DeepLinkHandler = () => {
   useDeepLinking();
   return null;
 };
+
+// Hosts the hub/run download sheet. Must sit inside BottomSheetModalProvider so
+// the sheet can present. Reads the parked request and clears it on dismiss.
+const HubRunSheetHost = observer(() => {
+  const {pendingHubRun, clearPendingHubRun} = useHubRunSheet();
+  return (
+    <HubRunDownloadSheet request={pendingHubRun} onClose={clearPendingHubRun} />
+  );
+});
 
 const App = observer(() => {
   const theme = useTheme();
@@ -185,6 +195,7 @@ const App = observer(() => {
                       )}
                     </Drawer.Navigator>
                     <TTSSetupSheet />
+                    <HubRunSheetHost />
                   </BottomSheetModalProvider>
                 </NavigationContainer>
               </MarkdownProvider>
