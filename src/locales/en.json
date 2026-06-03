@@ -1127,6 +1127,10 @@
         "title": "Chat reached its memory limit.",
         "message": "{{talentName}} needs more room than this chat has. Increase context or start a new chat."
       },
+      "talentLabels": {
+        "render_html": "HTML preview",
+        "fallback": "This pal"
+      },
       "remoteHedged": {
         "title": "Reply may be cut off.",
         "message": "You may be near the model's context limit on the server.",

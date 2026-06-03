@@ -81,12 +81,15 @@ export const BannerRow: React.FC<BannerRowProps> = ({
       : variant.heavyTalent
         ? copy.fullHeavyTalent.title
         : copy.full.title;
+    const friendlyTalent = variant.heavyTalent
+      ? (copy.talentLabels?.[variant.heavyTalent.name] ??
+        copy.talentLabels?.fallback ??
+        variant.heavyTalent.name)
+      : null;
     const messageCopy = variant.escalated
       ? copy.fullEscalated.message
-      : variant.heavyTalent
-        ? t(copy.fullHeavyTalent.message, {
-            talentName: variant.heavyTalent.name,
-          })
+      : friendlyTalent
+        ? t(copy.fullHeavyTalent.message, {talentName: friendlyTalent})
         : copy.full.message;
     return (
       <View testID="context-full-banner" style={styles.softCapBanner}>
