@@ -25,8 +25,8 @@ const openAuth = (NativeAuthSession as unknown as {openAuth: jest.Mock})
   .openAuth;
 
 const session = {
-  checkout_url: 'https://stripe.test/c/1',
-  session_url: 'https://stripe.test/c/1',
+  checkout_url: 'https://checkout.stripe.com/c/pay/cs_1',
+  session_url: 'https://checkout.stripe.com/c/pay/cs_1',
   session_id: 'cs_1',
   purchase_id: 'pur_1',
   platform_fee_cents: 50,
@@ -115,11 +115,42 @@ describe('CheckoutFlowStore', () => {
     expect(openAuth).toHaveBeenCalledTimes(1);
   });
 
-  it('non-https checkout_url -> error, auth session not opened', async () => {
-    createSession.mockResolvedValue({...session, checkout_url: 'http://x/c'});
-    await checkoutFlowStore.start('pal-1');
-    expect(openAuth).not.toHaveBeenCalled();
-    expect(checkoutFlowStore.status).toBe('error');
+  it.each([
+    ['non-https', 'http://checkout.stripe.com/c/1'],
+    ['unexpected host', 'https://evil.example/c/1'],
+  ])(
+    'rejects a %s checkout_url -> error, auth session not opened',
+    async (_label, checkout_url) => {
+      createSession.mockResolvedValue({...session, checkout_url});
+      await checkoutFlowStore.start('pal-1');
+      expect(openAuth).not.toHaveBeenCalled();
+      expect(checkoutFlowStore.status).toBe('error');
+    },
+  );
+
+  it('a stale same-pal callback does not mutate a newer flow', async () => {
+    // First flow parks in browser_open with a controllable auth promise.
+    let resolveOld!: (value: string) => void;
+    openAuth.mockReturnValueOnce(
+      new Promise<string>(resolve => {
+        resolveOld = resolve;
+      }),
+    );
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('browser_open');
+
+    // Reset, then a new checkout for the same pal parks again.
+    checkoutFlowStore.reset();
+    openAuth.mockReturnValueOnce(new Promise(() => {}));
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('browser_open');
+
+    // The OLD session now resolves a cancel callback; it must be ignored.
+    resolveOld('pocketpal://checkout/cancel');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('browser_open');
   });
 
   describe('reconcile on success return', () => {
@@ -266,8 +297,8 @@ describe('CheckoutFlowStore — auth-session spec unavailable', () => {
     jest.doMock('../../services/palshub/PalsHubApiService', () => ({
       palsHubApiService: {
         createCheckoutSession: jest.fn().mockResolvedValue({
-          checkout_url: 'https://stripe.test/c/1',
-          session_url: 'https://stripe.test/c/1',
+          checkout_url: 'https://checkout.stripe.com/c/pay/cs_1',
+          session_url: 'https://checkout.stripe.com/c/pay/cs_1',
           session_id: 'cs_1',
           purchase_id: 'pur_1',
           platform_fee_cents: 50,

@@ -146,7 +146,9 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     };
 
     const isCheckoutInFlight =
-      checkoutStatus === 'creating' || checkoutStatus === 'finalizing';
+      checkoutStatus === 'creating' ||
+      checkoutStatus === 'browser_open' ||
+      checkoutStatus === 'finalizing';
 
     const renderCheckoutFeedback = () => {
       if (checkoutStatus === 'finalizing') {

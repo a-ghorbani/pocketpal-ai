@@ -35,10 +35,20 @@ const CALLBACK_SCHEME = 'pocketpal';
 
 const RECONCILE_BACKOFFS_MS = [1000, 2000, 3000, 4000, 4000, 4000];
 
-// Defense-in-depth: only an https URL is ever handed to the auth session.
-const isHttpsUrl = (value: string): boolean => {
+// Defense-in-depth: only an https URL on a known checkout host is ever handed
+// to the auth/payment surface. The contract is a Stripe-hosted checkout_url;
+// the PalsHub host is allowed too in case it serves/redirects the page itself.
+const isAllowedCheckoutUrl = (value: string): boolean => {
   try {
-    return new URL(value).protocol === 'https:';
+    const url = new URL(value);
+    if (url.protocol !== 'https:') {
+      return false;
+    }
+    const host = url.hostname.toLowerCase();
+    if (host === 'stripe.com' || host.endsWith('.stripe.com')) {
+      return true;
+    }
+    return host === new URL(PALSHUB_API_BASE_URL).hostname.toLowerCase();
   } catch {
     return false;
   }
@@ -94,8 +104,8 @@ class CheckoutFlowStore {
         successUrl,
         cancelUrl,
       });
-      if (!isHttpsUrl(session.checkout_url)) {
-        throw new Error('checkout_url is not https');
+      if (!isAllowedCheckoutUrl(session.checkout_url)) {
+        throw new Error('checkout_url is not an allowed checkout host');
       }
       runInAction(() => {
         this.purchaseId = session.purchase_id;
@@ -136,11 +146,21 @@ class CheckoutFlowStore {
     palId: string,
     checkoutUrl: string,
   ) {
+    // Pin this auth session to the current epoch. A reset (and any newer
+    // checkout it allows) bumps the epoch, so a late callback from this
+    // session is dropped rather than mutating the newer flow.
+    const myEpoch = this.epoch;
     let callback: string;
     try {
       callback = await authSession.openAuth(checkoutUrl, CALLBACK_SCHEME);
     } catch {
+      if (this.epoch !== myEpoch) {
+        return;
+      }
       this.onReturn(palId, 'cancel');
+      return;
+    }
+    if (this.epoch !== myEpoch) {
       return;
     }
     let kind: 'success' | 'cancel' = 'cancel';
