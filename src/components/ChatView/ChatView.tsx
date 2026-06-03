@@ -1206,13 +1206,26 @@ export const ChatView = observer(
             />
           ) : null}
 
-          {/* Reload / success / failure snackbar */}
+          {/* Reload / success / failure snackbar. The `key` on phase
+              forces a remount on each transition so RNP Snackbar's
+              internal auto-dismiss timer effect re-fires with the new
+              duration — otherwise the timer set for the reloading
+              phase (Infinity) sticks around. */}
           {reloadSnackbar !== null ? (
             <Portal>
               <Snackbar
+                key={reloadSnackbar.phase}
                 visible={reloadSnackbar.visible}
                 onDismiss={dismissReloadSnackbar}
                 duration={reloadSnackbar.duration ?? 4000}
+                action={
+                  reloadSnackbar.phase === 'reloading'
+                    ? undefined
+                    : {
+                        label: l10n.chat.contextWarning.warning.dismiss,
+                        onPress: dismissReloadSnackbar,
+                      }
+                }
                 testID="increase-context-snackbar">
                 {reloadSnackbar.message}
               </Snackbar>

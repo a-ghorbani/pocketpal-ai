@@ -20,10 +20,13 @@ interface UseContextBannerArgs {
   l10n: any;
 }
 
+type ReloadPhase = 'reloading' | 'success' | 'failure';
+
 interface ReloadSnackbarState {
   message: string;
   visible: boolean;
   duration?: number;
+  phase: ReloadPhase;
 }
 
 /**
@@ -148,6 +151,7 @@ export const useContextBanner = ({
       // RNP Snackbar treats only Infinity as indefinite; large finite
       // values overflow setTimeout and fire immediately.
       duration: Infinity,
+      phase: 'reloading',
     });
     setIncreaseSheetVisible(false);
     try {
@@ -156,6 +160,7 @@ export const useContextBanner = ({
       setReloadSnackbar({
         message: l10n.chat.contextWarning.sheet.successSnackbar,
         visible: true,
+        phase: 'success',
       });
     } catch (err) {
       if (priorOverride === undefined) {
@@ -170,6 +175,7 @@ export const useContextBanner = ({
       setReloadSnackbar({
         message: l10n.chat.contextWarning.sheet.failureSnackbar,
         visible: true,
+        phase: 'failure',
       });
     } finally {
       setIsReloading(false);
