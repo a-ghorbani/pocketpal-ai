@@ -43,6 +43,14 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- Host-scoped deep link for the Hugging Face "Use this model" flow.
+             Scoped to host=hub so this is not a bare-scheme handler. -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="pocketpal" android:host="hub" />
+        </intent-filter>
       </activity>
 
         <!-- Optional native library for OpenCL (GPU acceleration) -->
