@@ -1139,4 +1139,187 @@ describe('useChatSession — AssistantTurn integration', () => {
       errSpy.mockRestore();
     });
   });
+
+  // Abort-catch routing: a generic abort (network/native) must NOT touch
+  // the snapshot writer or the escalation counter. Only the tool-args
+  // parse error (n_ctx-exhaustion smoking gun) flips contextFull and owns
+  // the snapshot write. Without this guard, a network blip after a sticky
+  // -full turn would silently clear the banner state.
+  describe('abort-catch — non-parse failures preserve prior state', () => {
+    it('does not write a snapshot on a generic abort with partial content', async () => {
+      const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockRejectedValueOnce(new Error('Network failure'));
+      }
+      const ref: {
+        current: {createdAt: number; id: string; sessionId: string} | null;
+      } = {current: null};
+      const turnId = 'turn-generic-abort';
+      chatSessionStore.sessions = [
+        {
+          id: 'session-1',
+          title: '',
+          date: '',
+          messages: [
+            {
+              id: turnId,
+              type: 'assistant_turn',
+              author: assistant,
+              createdAt: Date.now(),
+              steps: [{content: 'partial'}],
+              metadata: {copyable: true},
+            } as MessageType.AssistantTurn,
+          ],
+          completionSettings: {},
+          settingsSource: 'pal',
+        },
+      ] as any;
+      (
+        chatSessionStore.addMessageToCurrentSession as jest.Mock
+      ).mockImplementation(async (msg: any) => {
+        msg.id = turnId;
+      });
+
+      // Pretend a previous turn left the session in sticky-full.
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 2000,
+        tokensPredicted: 40,
+        contextFull: true,
+        finishReason: 'length',
+      };
+      chatSessionStore.consecutiveFullFailures = 2;
+
+      const setSnapSpy = chatSessionStore.setLastCompletionResult as jest.Mock;
+      const incrSpy =
+        chatSessionStore.incrementConsecutiveFullFailures as jest.Mock;
+      const resetSpy =
+        chatSessionStore.resetConsecutiveFullFailures as jest.Mock;
+      const clearDismissSpy =
+        chatSessionStore.clearBannerDismissalsForSession as jest.Mock;
+      const updateMessageSpy = chatSessionStore.updateMessage as jest.Mock;
+      setSnapSpy.mockClear();
+      incrSpy.mockClear();
+      resetSpy.mockClear();
+      clearDismissSpy.mockClear();
+      updateMessageSpy.mockClear();
+
+      const {result} = renderHook(() =>
+        useChatSession(ref, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      // A generic abort must NOT touch any of these.
+      expect(setSnapSpy).not.toHaveBeenCalled();
+      expect(incrSpy).not.toHaveBeenCalled();
+      expect(resetSpy).not.toHaveBeenCalled();
+      expect(clearDismissSpy).not.toHaveBeenCalled();
+
+      // But the message itself is still tagged interrupted, and no
+      // completionResult is written for this turn.
+      const interruptCall = updateMessageSpy.mock.calls.find(
+        c => c[2]?.metadata?.interrupted === true,
+      );
+      expect(interruptCall).toBeDefined();
+      expect(interruptCall![2].metadata.completionResult).toBeUndefined();
+
+      errSpy.mockRestore();
+    });
+  });
+
+  // Sticky-full runway: when the prior turn was contextFull, a follow-up
+  // turn that still occupies within AUTOCLEAR_RUNWAY (32) tokens of n_ctx
+  // must keep contextFull=true so the banner doesn't flicker out on a
+  // marginal-recovery turn.
+  describe('run_finished — AUTOCLEAR_RUNWAY sticky-full', () => {
+    beforeEach(() => {
+      chatSessionStore.lastCompletionResult = null;
+    });
+
+    it('preserves contextFull when used > n_ctx - 32 after a prior full turn', async () => {
+      modelStore.contextInitParams.n_ctx = 2048;
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 2010,
+        tokensPredicted: 30,
+        contextFull: true,
+        finishReason: 'length',
+      };
+
+      // Follow-up turn: total used = 2020 > 2048 - 32 = 2016 → sticky.
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            onData?.({content: 'ok'});
+            return {
+              text: 'ok',
+              content: 'ok',
+              tokens_cached: 0,
+              tokens_evaluated: 2000,
+              tokens_predicted: 20,
+              timings: {predicted_per_second: 100},
+            };
+          });
+      }
+
+      const setSnapSpy = chatSessionStore.setLastCompletionResult as jest.Mock;
+      setSnapSpy.mockClear();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const writtenSnap = setSnapSpy.mock.calls[0]?.[0];
+      expect(writtenSnap?.contextFull).toBe(true);
+    });
+
+    it('clears contextFull when used falls below the runway', async () => {
+      modelStore.contextInitParams.n_ctx = 2048;
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 2010,
+        tokensPredicted: 30,
+        contextFull: true,
+        finishReason: 'length',
+      };
+
+      // Follow-up turn: total used = 1000 < 2016 → drops to false.
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            onData?.({content: 'ok'});
+            return {
+              text: 'ok',
+              content: 'ok',
+              tokens_cached: 0,
+              tokens_evaluated: 900,
+              tokens_predicted: 100,
+              timings: {predicted_per_second: 100},
+            };
+          });
+      }
+
+      const setSnapSpy = chatSessionStore.setLastCompletionResult as jest.Mock;
+      setSnapSpy.mockClear();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const writtenSnap = setSnapSpy.mock.calls[0]?.[0];
+      expect(writtenSnap?.contextFull).toBe(false);
+    });
+  });
 });

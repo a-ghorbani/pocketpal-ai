@@ -25,7 +25,12 @@ import {
   ApiCompletionParams,
   CompletionParams,
 } from '../utils/completionTypes';
-import {deriveSnapshotFromResult} from '../utils/bannerVariantResolver';
+import {
+  AUTOCLEAR_RUNWAY,
+  deriveSnapshotFromResult,
+  effectiveNCtx,
+  type CompletionResultSnapshot,
+} from '../utils/bannerVariantResolver';
 import {talentRegistry} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
 import {
@@ -36,6 +41,34 @@ import {
   type AgentEvent,
   type AgentUiState,
 } from '../services/agent';
+
+/**
+ * Sticky-full guard: when the prior turn was contextFull and the new
+ * turn still occupies within AUTOCLEAR_RUNWAY tokens of the effective
+ * n_ctx, preserve contextFull=true. Prevents the banner from flickering
+ * out on a marginal-recovery turn.
+ */
+const applyStickyFull = (
+  rawSnap: CompletionResultSnapshot,
+  priorSnap: CompletionResultSnapshot | null,
+  sessionId: string,
+): CompletionResultSnapshot => {
+  if (rawSnap.contextFull || !priorSnap?.contextFull) {
+    return rawSnap;
+  }
+  const used =
+    rawSnap.tokensCached + rawSnap.tokensEvaluated + rawSnap.tokensPredicted;
+  const nCtx = effectiveNCtx(
+    chatSessionStore.sessionContextOverrides,
+    sessionId,
+    modelStore.contextInitParams.n_ctx,
+  );
+  if (used > nCtx - AUTOCLEAR_RUNWAY) {
+    return {...rawSnap, contextFull: true};
+  }
+  return rawSnap;
+};
+
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
 // active-vs-persisted predicate sees the right "last message" before the
@@ -326,7 +359,15 @@ async function applyEventToStore(
       // (not in the runner) because timings are an observability
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
-      const snapshot = deriveSnapshotFromResult(finalResult, false);
+      const rawSnap = deriveSnapshotFromResult(finalResult, false);
+      // Sticky-full: if prior turn was full and this turn still sits
+      // within the runway (n_ctx − 32), keep contextFull=true so the
+      // banner doesn't flicker out on a marginal-recovery turn.
+      const snapshot = applyStickyFull(
+        rawSnap,
+        chatSessionStore.lastCompletionResult,
+        ctx.sessionId,
+      );
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
@@ -692,48 +733,56 @@ export const useChatSession = (
         const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
         if (hasPartialContent) {
-          // Synthesise a partial-data CompletionResult so the snapshot
-          // helper still produces a consistent shape on the abort path.
-          // The tool-args parse failure is the n_ctx-exhaustion smoking
-          // gun, so `isToolArgsParseError` flips `contextFull` true.
-          const abortSnapshot = deriveSnapshotFromResult(
-            {
-              text: '',
-              content: '',
-              interrupted: true,
-            },
-            isToolArgsParseError,
-          );
-          await chatSessionStore.updateMessage(
-            currentMessageInfo.current.id,
-            currentMessageInfo.current.sessionId,
-            {
-              metadata: {
-                interrupted: true,
-                copyable: true,
-                ...(isToolArgsParseError ? {truncationLikely: true} : {}),
-                completionResult: {
-                  content: '',
-                  tokensCached: abortSnapshot.tokensCached,
-                  tokensEvaluated: abortSnapshot.tokensEvaluated,
-                  tokensPredicted: abortSnapshot.tokensPredicted,
-                  contextFull: abortSnapshot.contextFull,
-                  finishReason: abortSnapshot.finishReason,
+          if (isToolArgsParseError) {
+            // Tool-args parse failure is the n_ctx-exhaustion smoking
+            // gun: synthesise a partial CompletionResult, flip
+            // contextFull, and own the snapshot write.
+            const abortSnapshot = deriveSnapshotFromResult(
+              {text: '', content: '', interrupted: true},
+              true,
+            );
+            await chatSessionStore.updateMessage(
+              currentMessageInfo.current.id,
+              currentMessageInfo.current.sessionId,
+              {
+                metadata: {
+                  interrupted: true,
+                  copyable: true,
+                  truncationLikely: true,
+                  completionResult: {
+                    content: '',
+                    tokensCached: abortSnapshot.tokensCached,
+                    tokensEvaluated: abortSnapshot.tokensEvaluated,
+                    tokensPredicted: abortSnapshot.tokensPredicted,
+                    contextFull: abortSnapshot.contextFull,
+                    finishReason: abortSnapshot.finishReason,
+                  },
                 },
               },
-            },
-          );
-          runInAction(() => {
-            chatSessionStore.setLastCompletionResult(abortSnapshot);
-            if (abortSnapshot.contextFull) {
-              chatSessionStore.incrementConsecutiveFullFailures();
-            } else {
-              chatSessionStore.resetConsecutiveFullFailures();
-            }
-            chatSessionStore.clearBannerDismissalsForSession(
-              currentMessageInfo.current!.sessionId,
             );
-          });
+            runInAction(() => {
+              chatSessionStore.setLastCompletionResult(abortSnapshot);
+              chatSessionStore.incrementConsecutiveFullFailures();
+              chatSessionStore.clearBannerDismissalsForSession(
+                currentMessageInfo.current!.sessionId,
+              );
+            });
+          } else {
+            // Generic abort (network/native failure). Mark the turn
+            // interrupted but preserve the prior sticky-full snapshot
+            // and escalation counter — a network blip is not evidence
+            // that context drained.
+            await chatSessionStore.updateMessage(
+              currentMessageInfo.current.id,
+              currentMessageInfo.current.sessionId,
+              {
+                metadata: {
+                  interrupted: true,
+                  copyable: true,
+                },
+              },
+            );
+          }
           // The turn now carries the failure context; suppress the
           // duplicate `Completion failed: …` system message dump.
           turnAbsorbedError = true;
