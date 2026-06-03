@@ -2,6 +2,7 @@ package com.pocketpal.download
 
 import android.content.Context
 import android.util.Log
+import com.pocketpal.BuildConfig
 import androidx.work.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -76,6 +77,7 @@ class DownloadWorker(
             
             val request = Request.Builder()
                 .url(download.url)
+                .addHeader("User-Agent", "PocketPal/${BuildConfig.VERSION_NAME} (ai.pocketpal)")
                 .apply {
                     if (file.exists() && file.length() > 0) {
                         val range = "bytes=${file.length()}-"
