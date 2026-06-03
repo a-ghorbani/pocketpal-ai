@@ -427,6 +427,7 @@ class ChatSessionStore {
       this.activeSessionId = null;
       this.lastCompletionResult = null;
       this.consecutiveFullFailures = 0;
+      this.dismissedBannerVariants.clear();
       this.palLoadHintSeen.clear();
     });
   }

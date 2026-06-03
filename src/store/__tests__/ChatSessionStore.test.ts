@@ -2324,6 +2324,16 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.lastCompletionResult).toBeNull();
       expect(chatSessionStore.consecutiveFullFailures).toBe(0);
     });
+
+    it('resetActiveSession clears dismissed banner variants', () => {
+      chatSessionStore.activeSessionId = 'sess-A';
+      chatSessionStore.setBannerDismissed('sess-A', 'context-warning');
+      chatSessionStore.setBannerDismissed('sess-A', 'html-soft-cap');
+
+      chatSessionStore.resetActiveSession();
+
+      expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+    });
   });
 
   describe('setActiveSession hydration of lastCompletionResult', () => {
