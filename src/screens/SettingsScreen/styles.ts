@@ -66,6 +66,29 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.error,
       marginTop: 4,
     },
+    contextMismatchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginTop: 8,
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant ?? theme.colors.outline,
+    },
+    contextMismatchTextBlock: {
+      flexShrink: 1,
+    },
+    contextMismatchTitle: {
+      color: theme.colors.onSurface,
+      fontWeight: '600',
+    },
+    contextMismatchBody: {
+      color: theme.colors.onSurfaceVariant,
+      marginTop: 2,
+    },
     menuContainer: {
       position: 'relative',
     },

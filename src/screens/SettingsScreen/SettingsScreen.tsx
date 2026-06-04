@@ -101,6 +101,10 @@ export const SettingsScreen: React.FC = observer(() => {
   const [currentBackend, setCurrentBackend] = useState<
     'metal' | 'opencl' | 'hexagon' | 'cpu' | 'blas'
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
+  const [isReloadingForCtx, setIsReloadingForCtx] = useState(false);
+  const [reloadErrorMessage, setReloadErrorMessage] = useState<string | null>(
+    null,
+  );
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
@@ -166,6 +170,37 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
     setShowLanguageMenu(false);
+  };
+
+  // Live LlamaContext n_ctx vs. configured n_ctx — drives the
+  // "reload to apply" indicator. Mismatch means the user changed
+  // Settings but the model is still running with the old value.
+  const loadedNCtx = modelStore.activeContextSettings?.n_ctx;
+  const configuredNCtx = modelStore.contextInitParams.n_ctx;
+  const contextSizeMismatch =
+    loadedNCtx !== undefined && loadedNCtx !== configuredNCtx;
+
+  const handleReloadForContextSize = async () => {
+    const activeModel = modelStore.activeModel;
+    if (!activeModel) {
+      return;
+    }
+    setIsReloadingForCtx(true);
+    setReloadErrorMessage(null);
+    try {
+      await modelStore.releaseContext();
+      await modelStore.initContext(activeModel);
+    } catch (err) {
+      const loaded =
+        modelStore.activeContextSettings?.n_ctx?.toString() ??
+        configuredNCtx.toString();
+      setReloadErrorMessage(
+        t(l10n.settings.contextSizeMismatchFailed, {loaded}),
+      );
+      console.warn('[Settings] reload for context size failed:', err);
+    } finally {
+      setIsReloadingForCtx(false);
+    }
   };
 
   const handleContextSizeChange = (text: string) => {
@@ -410,6 +445,46 @@ export const SettingsScreen: React.FC = observer(() => {
                 <Text variant="labelSmall" style={styles.textDescription}>
                   {l10n.settings.modelReloadNotice}
                 </Text>
+                {contextSizeMismatch && (
+                  <View
+                    testID="context-size-mismatch-indicator"
+                    style={styles.contextMismatchContainer}>
+                    <View style={styles.contextMismatchTextBlock}>
+                      <Text
+                        variant="labelMedium"
+                        style={styles.contextMismatchTitle}>
+                        {l10n.settings.contextSizeMismatchTitle}
+                      </Text>
+                      <Text
+                        variant="labelSmall"
+                        style={styles.contextMismatchBody}>
+                        {t(l10n.settings.contextSizeMismatchBody, {
+                          configured: configuredNCtx.toString(),
+                          loaded: (loadedNCtx ?? configuredNCtx).toString(),
+                        })}
+                      </Text>
+                    </View>
+                    <Button
+                      mode="contained-tonal"
+                      compact
+                      loading={isReloadingForCtx}
+                      disabled={isReloadingForCtx}
+                      onPress={handleReloadForContextSize}
+                      testID="context-size-reload-button">
+                      {isReloadingForCtx
+                        ? l10n.settings.contextSizeMismatchReloading
+                        : l10n.settings.contextSizeMismatchAction}
+                    </Button>
+                  </View>
+                )}
+                {reloadErrorMessage && (
+                  <Text
+                    variant="labelSmall"
+                    style={styles.errorText}
+                    testID="context-size-reload-error">
+                    {reloadErrorMessage}
+                  </Text>
+                )}
               </View>
 
               {/* Advanced Settings */}

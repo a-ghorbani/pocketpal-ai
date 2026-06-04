@@ -332,6 +332,63 @@ describe('SettingsScreen', () => {
     });
   });
 
+  // Settings ⇄ live LlamaContext mismatch surface: when the user
+  // changes n_ctx in Settings but the model is still running with the
+  // old value, an inline "Reload to apply" affordance appears below
+  // the context-size input. This was the discoverability gap that
+  // left users wondering why Settings changes didn't take effect.
+  describe('context-size mismatch indicator', () => {
+    beforeEach(() => {
+      (modelStore as any).activeContextSettings = undefined;
+    });
+    afterEach(() => {
+      (modelStore as any).activeContextSettings = undefined;
+    });
+
+    it('is hidden when loaded n_ctx matches configured n_ctx', () => {
+      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      const {queryByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(queryByTestId('context-size-mismatch-indicator')).toBeNull();
+    });
+
+    it('is hidden when no context is loaded yet', () => {
+      (modelStore as any).activeContextSettings = undefined;
+      const {queryByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(queryByTestId('context-size-mismatch-indicator')).toBeNull();
+    });
+
+    it('appears with both values when configured drifts from loaded', () => {
+      // Loaded at 2048, configured at 8192 (Settings was changed
+      // without a reload). The indicator should call out the gap and
+      // expose a Reload button.
+      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      runInAction(() => {
+        modelStore.contextInitParams.n_ctx = 8192;
+      });
+
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      expect(getByTestId('context-size-mismatch-indicator')).toBeTruthy();
+      expect(getByText(/8192/)).toBeTruthy();
+      expect(getByText(/2048/)).toBeTruthy();
+      expect(getByTestId('context-size-reload-button')).toBeTruthy();
+
+      // Reset configured for the rest of the suite.
+      runInAction(() => {
+        modelStore.contextInitParams.n_ctx = 2048;
+      });
+    });
+  });
+
   it('shows effective value when image_max_tokens exceeds n_ctx', async () => {
     jest.useFakeTimers();
     const {getByText, queryByText} = render(<SettingsScreen />, {
