@@ -82,7 +82,7 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> = ({
   // the slider's visible range matches the labelled model-max end.
   const ladder = useMemo<number[]>(() => {
     const filtered: number[] = CONTEXT_LADDER.filter(
-      t => t > currentNCtx && t <= modelMaxCtx,
+      tier => tier > currentNCtx && tier <= modelMaxCtx,
     );
     if (modelMaxCtx > (filtered[filtered.length - 1] ?? 0)) {
       filtered.push(modelMaxCtx);

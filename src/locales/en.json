@@ -1136,7 +1136,6 @@
         "message": "That reply looked like it stopped early — the model may be running low on room.",
         "dismiss": "Dismiss"
       },
-      "cutMarker": "reply cut off here",
       "sheet": {
         "title": "Give this chat more room",
         "body": "Room is the model's working memory — how much of this chat it can keep in mind at once. More room means longer chats before replies get cut off.",
@@ -1148,8 +1147,6 @@
         "fitsUnconstrainedStatus": "Plenty of RAM — limited only by the model.",
         "tightStatus": "Past ~{{tokens}}, this device may run low on memory and slow down. It can still try.",
         "wontFitStatus": "~{{tokens}} likely won't fit in this device's memory. Pick a smaller size.",
-        "tickNow": "now",
-        "tickDeviceLimit": "device limit ~{{tokens}}",
         "modelMaxLabel": "{{tokens}} · model max",
         "hedge": "Reloading takes a few seconds. Nothing in your chat is lost — though the first reply after will be a bit slower while the model rereads the conversation.",
         "advanced": "Advanced",
