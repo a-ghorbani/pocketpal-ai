@@ -127,6 +127,7 @@ export const mockChatSessionStore = {
   sessionContextOverrides: new Map<string, number>(),
   pendingContextOverride: undefined as number | undefined,
   palLoadHintSeen: new Set<string>(),
+  silentRevertAcknowledged: new Set<string>(),
   setLastCompletionResult: jest.fn(function (this: any, snap: any) {
     this.lastCompletionResult = snap;
   }),
@@ -183,6 +184,20 @@ export const mockChatSessionStore = {
     nCtx: number,
   ) {
     return this.palLoadHintSeen.has(`${palId}:${nCtx}`);
+  }),
+  markSilentRevertAcknowledged: jest.fn(function (
+    this: any,
+    sessionId: string,
+    loadedNCtx: number,
+  ) {
+    this.silentRevertAcknowledged.add(`${sessionId}:${loadedNCtx}`);
+  }),
+  hasSilentRevertAcknowledged: jest.fn(function (
+    this: any,
+    sessionId: string,
+    loadedNCtx: number,
+  ) {
+    return this.silentRevertAcknowledged.has(`${sessionId}:${loadedNCtx}`);
   }),
 };
 

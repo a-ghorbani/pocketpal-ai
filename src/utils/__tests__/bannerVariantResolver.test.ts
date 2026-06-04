@@ -31,6 +31,7 @@ const baseContext = {
   snapshot: null as CompletionResultSnapshot | null,
   effectiveNCtx: 2048,
   isRemote: false,
+  hasLoadedContext: true,
   htmlPreviewCount: 0,
   consecutiveFullFailures: 0,
   dismissedKeys: new Set<string>(),
@@ -500,6 +501,66 @@ describe('effectiveNCtx', () => {
       const overrides = new Map<string, number>([['sess-1', 8192]]);
       expect(effectiveNCtx(overrides, 'sess-1', 2048, undefined, 0)).toBe(8192);
     });
+  });
+});
+
+// When no LlamaContext is loaded (and the session isn't remote), the
+// resolver must not surface a context-warning/full variant derived
+// from a possibly-hydrated snapshot — the user can't act on it. The
+// independent html-soft-cap variant still fires.
+describe('resolveBannerVariant gating on hasLoadedContext', () => {
+  it('suppresses context-warning when no LlamaContext is loaded', () => {
+    const snap = snapshot({
+      contextFull: false,
+      tokensEvaluated: 1700,
+      tokensPredicted: 0,
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: snap,
+      hasLoadedContext: false,
+    });
+    expect(v.kind).toBe('none');
+  });
+
+  it('suppresses sticky context-full when no LlamaContext is loaded', () => {
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 1900,
+      tokensPredicted: 130,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: snap,
+      hasLoadedContext: false,
+    });
+    expect(v.kind).toBe('none');
+  });
+
+  it('still surfaces html-soft-cap when no LlamaContext is loaded', () => {
+    // Image attachments soft-cap doesn't depend on n_ctx or the
+    // completion snapshot.
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: null,
+      hasLoadedContext: false,
+      htmlPreviewCount: 5,
+    });
+    expect(v.kind).toBe('html-soft-cap');
+  });
+
+  it('surfaces context-* normally when hasLoadedContext is true', () => {
+    const snap = snapshot({
+      tokensEvaluated: 1700,
+      tokensPredicted: 0,
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: snap,
+      hasLoadedContext: true,
+    });
+    expect(v.kind).toBe('context-warning');
   });
 });
 

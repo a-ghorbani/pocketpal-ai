@@ -35,6 +35,11 @@ interface ReloadSnackbarState {
   phase: ReloadPhase;
 }
 
+interface SilentRevertSnackbarState {
+  message: string;
+  visible: boolean;
+}
+
 /**
  * Owns the per-session context-warning banner: snapshot reads, the
  * memory-aware next-tier probe, dismiss/increase/new-chat handlers, the
@@ -118,38 +123,88 @@ export const useContextBanner = ({
       ? (lastAssistantMsg as MessageType.AssistantTurn)
       : undefined;
 
-  // Without an active LlamaContext, banner variants are inactionable:
-  // the user can't increase context, the snapshot (potentially
-  // hydrated from session metadata) is stale relative to whatever
-  // model loads next, and the existing "Increase context" /
-  // "New chat" controls would target nothing. Suppress to 'none'
-  // and let model-load surfaces drive the user back to a working
-  // state. Remote sessions don't need a local LlamaContext, so we
-  // leave them alone.
   const hasLoadedContext = !!loadedCtx;
   // Direct call — resolveBannerVariant is pure and cheap. useMemo with
   // a MobX-wrapped Set as a dep doesn't recompute on dismiss because the
-  // set's reference is stable across .add()/.delete() mutations.
-  const bannerVariant: BannerVariant =
-    hasLoadedContext || isRemoteSession
-      ? resolveBannerVariant({
-          snapshot: snap,
-          effectiveNCtx: effectiveNCtxForSession,
-          isRemote: !!isRemoteSession,
-          htmlPreviewCount,
-          consecutiveFullFailures,
-          dismissedKeys,
-          sessionId: activeSessionId,
-          nextTierTokens,
-          lastAssistantText,
-          lastAssistantTurn,
-        })
-      : {kind: 'none'};
+  // set's reference is stable across .add()/.delete() mutations. The
+  // resolver itself suppresses context-* variants when no LlamaContext
+  // is loaded; html-soft-cap remains independent.
+  const bannerVariant: BannerVariant = resolveBannerVariant({
+    snapshot: snap,
+    effectiveNCtx: effectiveNCtxForSession,
+    isRemote: !!isRemoteSession,
+    hasLoadedContext,
+    htmlPreviewCount,
+    consecutiveFullFailures,
+    dismissedKeys,
+    sessionId: activeSessionId,
+    nextTierTokens,
+    lastAssistantText,
+    lastAssistantTurn,
+  });
 
   const [increaseSheetVisible, setIncreaseSheetVisible] = React.useState(false);
   const [isReloading, setIsReloading] = React.useState(false);
   const [reloadSnackbar, setReloadSnackbar] =
     React.useState<ReloadSnackbarState | null>(null);
+  const [silentRevertSnackbar, setSilentRevertSnackbar] =
+    React.useState<SilentRevertSnackbarState | null>(null);
+
+  // Silent-revert advisory: a previously confirmed session
+  // override outlives the LlamaContext (e.g. OS evict +
+  // auto-reload while activeSessionId was null), so the user
+  // lands back in the session with override > loaded. The
+  // resolver already caps the banner at the smaller real
+  // capacity; this snackbar tells the user their saved larger
+  // context was downgraded — one-shot per (sessionId, current
+  // loaded n_ctx).
+  const sessionOverrideForActive = activeSessionId
+    ? sessionOverrides.get(activeSessionId)
+    : undefined;
+  const silentRevertDetected =
+    !!activeSessionId &&
+    !!loadedCtx &&
+    sessionOverrideForActive !== undefined &&
+    sessionOverrideForActive > loadedCtx.n_ctx;
+  const silentRevertKey =
+    activeSessionId && loadedCtx
+      ? `${activeSessionId}:${loadedCtx.n_ctx}`
+      : null;
+  React.useEffect(() => {
+    if (
+      silentRevertDetected &&
+      activeSessionId &&
+      loadedCtx &&
+      sessionOverrideForActive !== undefined &&
+      silentRevertKey &&
+      !chatSessionStore.hasSilentRevertAcknowledged(
+        activeSessionId,
+        loadedCtx.n_ctx,
+      )
+    ) {
+      setSilentRevertSnackbar({
+        message: t(l10n.chat.contextWarning.silentRevertAdvisory, {
+          requested: formatKLabel(sessionOverrideForActive),
+          running: formatKLabel(loadedCtx.n_ctx),
+        }),
+        visible: true,
+      });
+      chatSessionStore.markSilentRevertAcknowledged(
+        activeSessionId,
+        loadedCtx.n_ctx,
+      );
+    }
+  }, [
+    silentRevertDetected,
+    silentRevertKey,
+    activeSessionId,
+    loadedCtx,
+    sessionOverrideForActive,
+    l10n,
+  ]);
+  const dismissSilentRevertSnackbar = React.useCallback(() => {
+    setSilentRevertSnackbar(prev => (prev ? {...prev, visible: false} : null));
+  }, []);
 
   // One-shot per (palId, n_ctx) per session. Declared before the
   // confirm-increase callback so the latter can synchronously dismiss
@@ -291,6 +346,8 @@ export const useContextBanner = ({
     increaseSheetVisible,
     isReloading,
     reloadSnackbar,
+    silentRevertSnackbar,
+    dismissSilentRevertSnackbar,
     handleIncrease,
     handleCloseIncreaseSheet,
     handleConfirmIncrease,

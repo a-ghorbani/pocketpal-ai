@@ -62,10 +62,11 @@ describe('useContextBanner', () => {
     (chatSessionStore as any).isStopping = false;
     modelStore.activeModelId = downloadedModel.id;
     modelStore.contextInitParams.n_ctx = 2048;
-    // Banner pipeline now gates on a loaded LlamaContext (Phase 3).
-    // Tests run without a real context, so we stand in
-    // `activeContextSettings` for the n_ctx the resolver reads.
+    // Banner pipeline gates on a loaded LlamaContext. Tests run
+    // without a real context, so we stand in `activeContextSettings`
+    // for the n_ctx the resolver reads.
     (modelStore as any).activeContextSettings = {n_ctx: 2048};
+    chatSessionStore.silentRevertAcknowledged.clear();
     (hasEnoughMemoryWithNCtx as jest.Mock).mockResolvedValue(true);
   });
 
@@ -303,7 +304,75 @@ describe('useContextBanner', () => {
       expect(result.current.bannerVariant.kind).toBe('context-warning');
     });
 
-    it('hides banner entirely when no LlamaContext is loaded (D1)', () => {
+    // Silent-revert advisory: when a stored override exceeds the
+    // loaded n_ctx, a reload silently downgraded the user's
+    // consented capacity. The banner stays honest via the min-cap;
+    // the snackbar lets the user know so they can re-confirm.
+    describe('silent revert advisory snackbar', () => {
+      it('fires once per (session, loadedNCtx) when override > loaded', () => {
+        (modelStore as any).activeContextSettings = {n_ctx: 2048};
+        chatSessionStore.sessionContextOverrides.set('session-1', 4096);
+
+        const {result, rerender} = renderHook(() =>
+          useContextBanner({
+            activePal: undefined,
+            htmlPreviewCount: 0,
+            messages: [],
+            l10n: l10n.en,
+          }),
+        );
+
+        expect(result.current.silentRevertSnackbar?.visible).toBe(true);
+        expect(result.current.silentRevertSnackbar?.message).toMatch(
+          /Currently running at 2K/,
+        );
+        expect(
+          chatSessionStore.hasSilentRevertAcknowledged('session-1', 2048),
+        ).toBe(true);
+
+        // Re-render without changing the (session, loadedNCtx) pair —
+        // suppressor prevents another fire.
+        act(() => {
+          result.current.dismissSilentRevertSnackbar();
+        });
+        rerender({});
+        expect(result.current.silentRevertSnackbar?.visible).toBe(false);
+      });
+
+      it('does not fire when override fits within loaded', () => {
+        (modelStore as any).activeContextSettings = {n_ctx: 8192};
+        chatSessionStore.sessionContextOverrides.set('session-1', 4096);
+
+        const {result} = renderHook(() =>
+          useContextBanner({
+            activePal: undefined,
+            htmlPreviewCount: 0,
+            messages: [],
+            l10n: l10n.en,
+          }),
+        );
+
+        expect(result.current.silentRevertSnackbar).toBeNull();
+      });
+
+      it('does not fire when no LlamaContext is loaded', () => {
+        (modelStore as any).activeContextSettings = undefined;
+        chatSessionStore.sessionContextOverrides.set('session-1', 4096);
+
+        const {result} = renderHook(() =>
+          useContextBanner({
+            activePal: undefined,
+            htmlPreviewCount: 0,
+            messages: [],
+            l10n: l10n.en,
+          }),
+        );
+
+        expect(result.current.silentRevertSnackbar).toBeNull();
+      });
+    });
+
+    it('hides banner entirely when no LlamaContext is loaded', () => {
       // Snapshot hydrated from session metadata says "near full" — but
       // no context is loaded. Acting on the banner (Increase / New chat)
       // would target nothing. Suppress.

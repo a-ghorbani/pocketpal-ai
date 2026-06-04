@@ -1061,6 +1061,8 @@ export const ChatView = observer(
       increaseSheetVisible,
       isReloading,
       reloadSnackbar,
+      silentRevertSnackbar,
+      dismissSilentRevertSnackbar,
       handleIncrease,
       handleCloseIncreaseSheet,
       handleConfirmIncrease,
@@ -1251,6 +1253,29 @@ export const ChatView = observer(
                 }}
                 testID="pal-load-hint-snackbar">
                 {palLoadHint.state.message}
+              </Snackbar>
+            </Portal>
+          ) : null}
+
+          {/* Informational snackbar when a previously consented
+              larger context didn't survive a model reload — one-shot
+              per (session, loaded n_ctx). The action routes to the
+              increase-context sheet so the user can re-confirm. */}
+          {isFocused && silentRevertSnackbar !== null ? (
+            <Portal>
+              <Snackbar
+                visible={silentRevertSnackbar.visible}
+                onDismiss={dismissSilentRevertSnackbar}
+                duration={8000}
+                action={{
+                  label: l10n.chat.contextWarning.warning.increase,
+                  onPress: () => {
+                    dismissSilentRevertSnackbar();
+                    handleIncrease();
+                  },
+                }}
+                testID="silent-revert-snackbar">
+                {silentRevertSnackbar.message}
               </Snackbar>
             </Portal>
           ) : null}

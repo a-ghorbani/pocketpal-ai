@@ -185,6 +185,12 @@ class ChatSessionStore {
   // current session; cleared on `resetActiveSession`.
   palLoadHintSeen: Set<string> = new Set();
 
+  // Silent-revert advisory suppressor keyed by `${sessionId}:${loadedNCtx}`.
+  // Records (session, current loaded n_ctx) pairs for which the
+  // "your saved larger context was reset" snackbar already fired,
+  // so it only appears once per landing. In-memory only.
+  silentRevertAcknowledged: Set<string> = new Set();
+
   constructor() {
     makeAutoObservable(this);
     this.initialize();
@@ -328,6 +334,14 @@ class ChatSessionStore {
 
   clearPendingContextOverride() {
     this.pendingContextOverride = undefined;
+  }
+
+  markSilentRevertAcknowledged(sessionId: string, loadedNCtx: number) {
+    this.silentRevertAcknowledged.add(`${sessionId}:${loadedNCtx}`);
+  }
+
+  hasSilentRevertAcknowledged(sessionId: string, loadedNCtx: number): boolean {
+    return this.silentRevertAcknowledged.has(`${sessionId}:${loadedNCtx}`);
   }
 
   markPalLoadHintSeen(palId: string, nCtx: number) {

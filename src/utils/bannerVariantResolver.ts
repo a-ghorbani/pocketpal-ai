@@ -121,6 +121,13 @@ export interface BannerVariantContext {
   snapshot: CompletionResultSnapshot | null;
   effectiveNCtx: number;
   isRemote: boolean;
+  /** True when a LlamaContext is alive (or the session is remote);
+   *  false otherwise. Context-warning / context-full / remote-hedged
+   *  variants are suppressed when false because the snapshot may be
+   *  hydrated from session metadata and the user has no model to act
+   *  against. The html-soft-cap variant is independent of model
+   *  state and still fires. */
+  hasLoadedContext: boolean;
   htmlPreviewCount: number;
   consecutiveFullFailures: number;
   /** `${sessionId}:${variant}` keys; resolver returns 'none' when the
@@ -162,7 +169,14 @@ export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
   // confirm) the new effectiveNCtx makes the old snapshot stale —
   // fall through to the warning/none path instead of pinning the
   // banner until the next inference rewrites the snapshot.
+  // Context-* variants require a live LlamaContext (or a remote
+  // session). Without one, the snapshot may be hydrated from session
+  // metadata and the user has nothing to act against — skip and let
+  // html-soft-cap have a chance, since it's independent of n_ctx.
+  const allowContextVariants = ctx.hasLoadedContext || ctx.isRemote;
+
   if (
+    allowContextVariants &&
     snap !== null &&
     snap.contextFull &&
     used >= ctx.effectiveNCtx - AUTOCLEAR_RUNWAY
@@ -177,7 +191,7 @@ export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
     };
   }
 
-  if (snap !== null && !ctx.isRemote) {
+  if (allowContextVariants && snap !== null && !ctx.isRemote) {
     const warning = ratio >= WARNING_THRESHOLD;
     if (
       warning &&
@@ -195,6 +209,7 @@ export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
   }
 
   if (
+    allowContextVariants &&
     snap !== null &&
     ctx.isRemote &&
     shouldHedgeRemote(snap, ctx.lastAssistantText)
@@ -273,7 +288,7 @@ function findHeavyTalent(
  * provided (banner path), an override that exceeds the cap is
  * clamped down — this protects the banner against silent
  * reload-to-default cases where the in-memory override outlives a
- * LlamaContext that came back with a smaller capacity (D3). Callers
+ * LlamaContext that came back with a smaller capacity. Callers
  * computing "what to load NEXT" (loader path) omit `cap` so the
  * configured value is honoured verbatim.
  *

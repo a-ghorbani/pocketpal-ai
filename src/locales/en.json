@@ -1164,6 +1164,7 @@
         "failureSnackbar": "Couldn't set the new size. Reverted."
       },
       "reloadingSubcopy": "Making more room…",
+      "silentRevertAdvisory": "You'd asked for {{requested}} room here. Currently running at {{running}} — tap More room to restore.",
       "palLoadHint": {
         "message": "{{palName}} tends to need more room than this chat has — at this size, replies may get cut off.",
         "increase": "More room",
