@@ -2,6 +2,7 @@ import * as React from 'react';
 import {Text, View} from 'react-native';
 import {Button as PaperButton, useTheme} from 'react-native-paper';
 
+import {AlertIcon} from '../../assets/icons';
 import {t} from '../../locales';
 import type {BannerVariant} from '../../utils/bannerVariantResolver';
 import type {createStyles} from './styles';
@@ -16,10 +17,21 @@ export interface BannerRowProps {
   styles: ReturnType<typeof createStyles>;
 }
 
-/**
- * Thin fullness meter — appears only on warning / full variants so the
- * user has a non-numeric signal of "how full" without surfacing tokens.
- */
+interface Tints {
+  bg: string;
+  border: string;
+  fg: string;
+  meter: string;
+}
+
+const withAlpha = (hex: string, alphaHex: string): string => {
+  // Accept #RRGGBB or #RRGGBBAA — last two hex chars are alpha if 9 chars.
+  if (hex.length === 9) {
+    return hex.slice(0, 7) + alphaHex;
+  }
+  return hex + alphaHex;
+};
+
 const Meter: React.FC<{ratio: number; tint: string; styles: any}> = ({
   ratio,
   tint,
@@ -40,9 +52,9 @@ const Meter: React.FC<{ratio: number; tint: string; styles: any}> = ({
 
 /**
  * Inline banner row that renders one of the four visible variants
- * resolved by `resolveBannerVariant`. The shell (chrome, padding,
- * background) is shared via `softCapBanner` styles; only the inner
- * content changes per variant.
+ * resolved by `resolveBannerVariant`. Each variant gets a tinted
+ * background / border / title so the user perceives the severity at a
+ * glance, paired with a leading icon.
  */
 export const BannerRow: React.FC<BannerRowProps> = ({
   variant,
@@ -55,13 +67,52 @@ export const BannerRow: React.FC<BannerRowProps> = ({
 }) => {
   const copy = l10n.chat.contextWarning;
   const theme = useTheme();
-  // Tertiary (amber-ish) for warning, error for full.
-  const warningTint = (theme.colors as any).tertiary ?? theme.colors.primary;
-  const errorTint = theme.colors.error;
+  const error = theme.colors.error;
+  const onSurface = theme.colors.onSurface;
+  const outline = theme.colors.outline;
+
+  const variantTints: Record<BannerVariant['kind'], Tints> = {
+    'context-warning': {
+      bg: withAlpha(error, '14'),
+      border: withAlpha(error, '40'),
+      fg: error,
+      meter: error,
+    },
+    'context-full': {
+      bg: withAlpha(error, '22'),
+      border: withAlpha(error, '66'),
+      fg: error,
+      meter: error,
+    },
+    'context-remote-hedged': {
+      bg: theme.colors.surfaceVariant,
+      border: outline,
+      fg: theme.colors.onSurfaceVariant,
+      meter: error,
+    },
+    'html-soft-cap': {
+      bg: theme.colors.surfaceVariant,
+      border: outline,
+      fg: onSurface,
+      meter: error,
+    },
+    none: {
+      bg: 'transparent',
+      border: 'transparent',
+      fg: onSurface,
+      meter: error,
+    },
+  };
 
   if (variant.kind === 'html-soft-cap') {
+    const tint = variantTints['html-soft-cap'];
     return (
-      <View testID="soft-cap-warning" style={styles.softCapBanner}>
+      <View
+        testID="soft-cap-warning"
+        style={[
+          styles.softCapBanner,
+          {backgroundColor: tint.bg, borderColor: tint.border},
+        ]}>
         <Text style={styles.softCapBannerText}>{l10n.chat.softCapWarning}</Text>
         <View style={styles.bannerActions}>
           <PaperButton
@@ -76,11 +127,22 @@ export const BannerRow: React.FC<BannerRowProps> = ({
   }
 
   if (variant.kind === 'context-warning') {
+    const tint = variantTints['context-warning'];
     return (
-      <View testID="context-warning-banner" style={styles.softCapBanner}>
-        <Text style={styles.bannerTitle}>{copy.warning.title}</Text>
+      <View
+        testID="context-warning-banner"
+        style={[
+          styles.softCapBanner,
+          {backgroundColor: tint.bg, borderColor: tint.border},
+        ]}>
+        <View style={styles.bannerHeader}>
+          <AlertIcon width={14} height={14} stroke={tint.fg} />
+          <Text style={[styles.bannerTitle, {color: tint.fg}]}>
+            {copy.warning.title}
+          </Text>
+        </View>
         <Text style={styles.softCapBannerText}>{copy.warning.message}</Text>
-        <Meter ratio={variant.ratio} tint={warningTint} styles={styles} />
+        <Meter ratio={variant.ratio} tint={tint.meter} styles={styles} />
         <View style={styles.bannerActions}>
           {variant.nextTierTokens !== null ? (
             <PaperButton
@@ -103,6 +165,7 @@ export const BannerRow: React.FC<BannerRowProps> = ({
   }
 
   if (variant.kind === 'context-full') {
+    const tint = variantTints['context-full'];
     const titleCopy = variant.escalated
       ? copy.fullEscalated.title
       : variant.heavyTalent
@@ -119,11 +182,21 @@ export const BannerRow: React.FC<BannerRowProps> = ({
         ? t(copy.fullHeavyTalent.message, {talentName: friendlyTalent})
         : copy.full.message;
     return (
-      <View testID="context-full-banner" style={styles.softCapBanner}>
-        <Text style={styles.bannerTitle}>{titleCopy}</Text>
+      <View
+        testID="context-full-banner"
+        style={[
+          styles.softCapBanner,
+          {backgroundColor: tint.bg, borderColor: tint.border},
+        ]}>
+        <View style={styles.bannerHeader}>
+          <AlertIcon width={14} height={14} stroke={tint.fg} />
+          <Text style={[styles.bannerTitle, {color: tint.fg}]}>
+            {titleCopy}
+          </Text>
+        </View>
         <Text style={styles.softCapBannerText}>{messageCopy}</Text>
         {variant.ratio > 0 ? (
-          <Meter ratio={variant.ratio} tint={errorTint} styles={styles} />
+          <Meter ratio={variant.ratio} tint={tint.meter} styles={styles} />
         ) : null}
         <View style={styles.bannerActions}>
           {variant.nextTierTokens !== null ? (
@@ -143,10 +216,18 @@ export const BannerRow: React.FC<BannerRowProps> = ({
     );
   }
 
-  // context-remote-hedged
+  // context-remote-hedged — quieter, no meter, no alert icon (weak signal).
+  const tint = variantTints['context-remote-hedged'];
   return (
-    <View testID="context-remote-hedged-banner" style={styles.softCapBanner}>
-      <Text style={styles.bannerTitle}>{copy.remoteHedged.title}</Text>
+    <View
+      testID="context-remote-hedged-banner"
+      style={[
+        styles.softCapBanner,
+        {backgroundColor: tint.bg, borderColor: tint.border},
+      ]}>
+      <Text style={[styles.bannerTitle, {color: tint.fg}]}>
+        {copy.remoteHedged.title}
+      </Text>
       <Text style={styles.softCapBannerText}>{copy.remoteHedged.message}</Text>
       <View style={styles.bannerActions}>
         <PaperButton

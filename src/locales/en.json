@@ -1151,7 +1151,7 @@
         "tickNow": "now",
         "tickDeviceLimit": "device limit ~{{tokens}}",
         "modelMaxLabel": "{{tokens}} · model max",
-        "hedge": "Reloading takes a few seconds. Nothing in your chat is lost.",
+        "hedge": "Reloading takes a few seconds. Nothing in your chat is lost — though the first reply after will be a bit slower while the model rereads the conversation.",
         "advanced": "Advanced",
         "advancedBody": "Context for this chat: {{from}} → {{to}} tokens (model max {{max}}). The device limit is an estimate and rises as larger contexts load successfully. Applies to this chat only.",
         "confirm": "Set to {{size}}",

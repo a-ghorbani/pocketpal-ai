@@ -84,22 +84,29 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     },
     softCapBanner: {
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 8,
       backgroundColor: theme.colors.surfaceVariant,
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: theme.colors.outline,
     },
+    bannerHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    bannerIcon: {
+      width: 14,
+      height: 14,
+    },
     softCapBannerText: {
       fontSize: 12,
       color: theme.colors.onSurfaceVariant,
-      textAlign: 'center' as const,
     },
     bannerTitle: {
-      fontSize: 12,
+      fontSize: 12.5,
       fontWeight: '600' as const,
       color: theme.colors.onSurfaceVariant,
-      textAlign: 'center' as const,
     },
     bannerActions: {
       flexDirection: 'row',

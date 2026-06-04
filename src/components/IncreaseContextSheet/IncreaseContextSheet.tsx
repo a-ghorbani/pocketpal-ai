@@ -205,7 +205,11 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> = ({
       title={copy.title}
       isVisible={isVisible}
       onClose={handleClose}
-      displayFullHeight={false}>
+      // Fixed tall snap-point — Sheet.ScrollView's dynamic sizing measures
+      // its own intrinsic height as zero when nested, so without a snap
+      // point the sheet collapses and the bottom of the content (status
+      // line, hedge, advanced, action row) gets clipped.
+      snapPoints={['85%']}>
       <Sheet.ScrollView contentContainerStyle={styles.container}>
         <Text variant="bodyMedium" style={styles.body}>
           {copy.body}
