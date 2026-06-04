@@ -156,7 +156,17 @@ export function resolveBannerVariant(ctx: BannerVariantContext): BannerVariant {
   const ratio =
     ctx.effectiveNCtx > 0 ? Math.min(1, used / ctx.effectiveNCtx) : 0;
 
-  if (snap !== null && snap.contextFull) {
+  // Reader-side freshness gate: only return the sticky context-full
+  // variant when the snapshot's persisted flag is corroborated by
+  // current fullness. If the user lifted n_ctx (via the in-banner
+  // confirm) the new effectiveNCtx makes the old snapshot stale —
+  // fall through to the warning/none path instead of pinning the
+  // banner until the next inference rewrites the snapshot.
+  if (
+    snap !== null &&
+    snap.contextFull &&
+    used >= ctx.effectiveNCtx - AUTOCLEAR_RUNWAY
+  ) {
     // Sticky variant — no dismiss affordance, no Set lookup.
     return {
       kind: 'context-full',
