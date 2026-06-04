@@ -150,9 +150,10 @@ describe('resolveBannerVariant', () => {
   });
 
   it('returns context-full when snapshot.contextFull is true (local)', () => {
+    // used = 2020; nCtx = 2048; freshness gate requires used >= nCtx - 32 = 2016.
     const snap = snapshot({
       contextFull: true,
-      tokensEvaluated: 1900,
+      tokensEvaluated: 1920,
       tokensPredicted: 100,
       finishReason: 'length',
     });
@@ -166,10 +167,18 @@ describe('resolveBannerVariant', () => {
     });
   });
 
-  // truncationLikely propagates via deriveSnapshotFromResult
+  // truncationLikely propagates via deriveSnapshotFromResult. The freshness
+  // gate also has to be satisfied for the sticky variant to short-circuit.
   it('resolves context-full when the catch path forces contextFull via truncationLikely', () => {
     const snap = deriveSnapshotFromResult(
-      {text: '', content: '', interrupted: true},
+      {
+        text: '',
+        content: '',
+        interrupted: true,
+        tokens_cached: 0,
+        tokens_evaluated: 2000,
+        tokens_predicted: 20,
+      },
       true,
     );
     const v = resolveBannerVariant({...baseContext, snapshot: snap});
@@ -189,7 +198,14 @@ describe('resolveBannerVariant', () => {
   });
 
   it('returns context-full on remote when finishReason is length', () => {
-    const snap = snapshot({contextFull: true, finishReason: 'length'});
+    // Freshness gate fires for remote sessions too — used is compared
+    // against local effectiveNCtx. Stage the snapshot to satisfy it.
+    const snap = snapshot({
+      contextFull: true,
+      finishReason: 'length',
+      tokensEvaluated: 2000,
+      tokensPredicted: 20,
+    });
     const v = resolveBannerVariant({
       ...baseContext,
       snapshot: snap,
@@ -289,7 +305,11 @@ describe('resolveBannerVariant', () => {
 
   // Escalation — copy flag flips at the second consecutive full turn.
   it('flags escalated=true when consecutiveFullFailures >= 2', () => {
-    const snap = snapshot({contextFull: true});
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 2000,
+      tokensPredicted: 20,
+    });
     const v = resolveBannerVariant({
       ...baseContext,
       snapshot: snap,
@@ -302,7 +322,11 @@ describe('resolveBannerVariant', () => {
   });
 
   it('keeps escalated=false at one consecutive full turn', () => {
-    const snap = snapshot({contextFull: true});
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 2000,
+      tokensPredicted: 20,
+    });
     const v = resolveBannerVariant({
       ...baseContext,
       snapshot: snap,
@@ -336,7 +360,11 @@ describe('resolveBannerVariant', () => {
         },
       ],
     } as any;
-    const snap = snapshot({contextFull: true});
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 2000,
+      tokensPredicted: 20,
+    });
     const v = resolveBannerVariant({
       ...baseContext,
       snapshot: snap,
@@ -374,7 +402,12 @@ describe('resolveBannerVariant', () => {
         },
       ],
     } as any;
-    const snap = snapshot({contextFull: true, finishReason: 'length'});
+    const snap = snapshot({
+      contextFull: true,
+      finishReason: 'length',
+      tokensEvaluated: 2000,
+      tokensPredicted: 20,
+    });
     const v = resolveBannerVariant({
       ...baseContext,
       snapshot: snap,
@@ -407,6 +440,168 @@ describe('effectiveNCtx', () => {
   it('falls back to baseNCtx when activeSessionId is null', () => {
     const overrides = new Map<string, number>([['sess-1', 8192]]);
     expect(effectiveNCtx(overrides, null, 2048)).toBe(2048);
+  });
+
+  // Pending-override slot: consulted only when no session override exists for
+  // the active id. Powers the no-session "Increase context" path so the
+  // first inference after createNewSession picks up the lifted n_ctx.
+  it('uses the pending override when activeSessionId is null and no map entry applies', () => {
+    expect(effectiveNCtx(new Map(), null, 2048, 4096)).toBe(4096);
+  });
+
+  it('prefers the session override over a pending override', () => {
+    const overrides = new Map<string, number>([['sess-1', 8192]]);
+    expect(effectiveNCtx(overrides, 'sess-1', 2048, 4096)).toBe(8192);
+  });
+
+  it('uses the pending override when the map has no entry for the active session', () => {
+    expect(effectiveNCtx(new Map(), 'sess-1', 2048, 4096)).toBe(4096);
+  });
+
+  it('ignores undefined pending override (falls back to baseNCtx)', () => {
+    expect(effectiveNCtx(new Map(), null, 2048, undefined)).toBe(2048);
+  });
+});
+
+// Reader-side freshness gate: the sticky context-full variant only fires
+// when current fullness still corroborates the snapshot's persisted flag.
+// External n_ctx growth (Settings change, override CTA, app restart) drops
+// the variant at the next render without waiting for a writer pass.
+describe('resolveBannerVariant freshness gate on sticky context-full', () => {
+  it('downgrades to none when the snapshot is full but used dropped below the runway', () => {
+    // used = 1000; effectiveNCtx grew to 8192; 1000 < 8192 - 32 = 8160 → stale.
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 800,
+      tokensPredicted: 200,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: snap,
+      effectiveNCtx: 8192,
+    });
+    expect(v.kind).toBe('none');
+  });
+
+  it('downgrades to context-warning when stale full meets the warning ratio at the new n_ctx', () => {
+    // used = 1700; effectiveNCtx = 2048 (unchanged) but contextFull is true on a
+    // snapshot whose used now satisfies the freshness gate boundary exactly —
+    // pick used just below the runway to force the downgrade.
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 1500,
+      tokensPredicted: 200,
+      finishReason: 'length',
+    });
+    // 1700 < 2048 - 32 = 2016 → stale. Ratio = 1700/2048 = 0.83 ≥ 0.80 → warning.
+    const v = resolveBannerVariant({...baseContext, snapshot: snap});
+    expect(v.kind).toBe('context-warning');
+  });
+
+  it('preserves sticky context-full when used is still within the runway', () => {
+    // used = 2020; 2020 >= 2048 - 32 = 2016 → gate satisfied.
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 1900,
+      tokensPredicted: 120,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({...baseContext, snapshot: snap});
+    expect(v.kind).toBe('context-full');
+  });
+
+  it('does not attach a heavy-talent payload when the freshness gate downgrades', () => {
+    const heavyTurn: MessageType.AssistantTurn = {
+      id: 'asst-stale',
+      author: {id: 'asst'},
+      createdAt: 0,
+      type: 'assistant_turn',
+      steps: [
+        {
+          content: '',
+          partial: false,
+          toolCalls: [
+            {
+              id: 'tc-1',
+              type: 'function',
+              function: {name: 'render_html', arguments: '{}'},
+            },
+          ],
+        },
+      ],
+    } as any;
+    const snap = snapshot({
+      contextFull: true,
+      tokensEvaluated: 800,
+      tokensPredicted: 200,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: snap,
+      effectiveNCtx: 8192,
+      lastAssistantTurn: heavyTurn,
+    });
+    // Heavy-talent metadata only travels on the sticky variant; freshness
+    // downgrade falls through entirely.
+    expect(v.kind).toBe('none');
+  });
+});
+
+// Hydration scenarios (post-restart / post-session-switch) — verify the
+// freshness gate handles disk-restored snapshots gracefully when current
+// effectiveNCtx already provides headroom.
+describe('resolveBannerVariant hydration freshness', () => {
+  it('does not pin the banner on a hydrated full snapshot once n_ctx has grown', () => {
+    // Mimic "user returns to a session whose last finished turn persisted
+    // contextFull=true, but they have since raised Settings → Context Size."
+    const hydrated = snapshot({
+      contextFull: true,
+      tokensCached: 0,
+      tokensEvaluated: 1800,
+      tokensPredicted: 200,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: hydrated,
+      effectiveNCtx: 8192,
+    });
+    expect(v.kind).toBe('none');
+  });
+
+  it('cold launch with persisted full and higher current n_ctx returns no banner', () => {
+    // Boot-time hydration replays the disk-stored snapshot; effectiveNCtx now
+    // reflects the new contextInitParams.n_ctx value the user picked.
+    const hydrated = snapshot({
+      contextFull: true,
+      tokensCached: 200,
+      tokensEvaluated: 1600,
+      tokensPredicted: 100,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({
+      ...baseContext,
+      snapshot: hydrated,
+      effectiveNCtx: 4096,
+      sessionId: 'sess-restored',
+    });
+    expect(v.kind).toBe('none');
+  });
+
+  it('hydrated full snapshot still wins when current n_ctx has not changed', () => {
+    // Same disk shape, but the user has not changed Settings — the gate is
+    // satisfied and the sticky banner survives the session switch.
+    const hydrated = snapshot({
+      contextFull: true,
+      tokensCached: 100,
+      tokensEvaluated: 1900,
+      tokensPredicted: 50,
+      finishReason: 'length',
+    });
+    const v = resolveBannerVariant({...baseContext, snapshot: hydrated});
+    expect(v.kind).toBe('context-full');
   });
 });
 

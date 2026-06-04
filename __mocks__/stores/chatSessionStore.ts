@@ -125,6 +125,7 @@ export const mockChatSessionStore = {
   dismissedBannerVariants: new Set<string>(),
   consecutiveFullFailures: 0,
   sessionContextOverrides: new Map<string, number>(),
+  pendingContextOverride: undefined as number | undefined,
   palLoadHintSeen: new Set<string>(),
   setLastCompletionResult: jest.fn(function (this: any, snap: any) {
     this.lastCompletionResult = snap;
@@ -162,6 +163,12 @@ export const mockChatSessionStore = {
   }),
   clearSessionContextOverride: jest.fn(function (this: any, sessionId: string) {
     this.sessionContextOverrides.delete(sessionId);
+  }),
+  setPendingContextOverride: jest.fn(function (this: any, nCtx: number) {
+    this.pendingContextOverride = nCtx;
+  }),
+  clearPendingContextOverride: jest.fn(function (this: any) {
+    this.pendingContextOverride = undefined;
   }),
   markPalLoadHintSeen: jest.fn(function (
     this: any,

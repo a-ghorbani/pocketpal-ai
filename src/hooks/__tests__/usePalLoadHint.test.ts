@@ -217,4 +217,81 @@ describe('usePalLoadHint', () => {
     expect(resolved).toBe('increase');
     expect(result.current.state!.visible).toBe(false);
   });
+
+  // Focus gate: while the chat surface is not focused the effect must
+  // early-return so the snackbar can't appear over Settings / Pals /
+  // Models screens. The suppressor key is also NOT marked off-focus, so
+  // the same signature can still fire on the next focused render.
+  describe('focus gate', () => {
+    const nav = require('@react-navigation/native');
+
+    afterEach(() => {
+      // Default jest setup mocks useIsFocused -> true; restore for the
+      // sibling tests that depend on the default.
+      (nav.useIsFocused as jest.Mock).mockReturnValue(true);
+    });
+
+    it('does not raise the snackbar and does not mark the suppressor when chat is unfocused', async () => {
+      jest.spyOn(nav, 'useIsFocused').mockReturnValue(false);
+
+      const {result} = renderHook(() => usePalLoadHint(heavyPal));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(result.current.state).toBeNull();
+      // Critical: the one-shot opportunity must survive an off-focus
+      // signature pass.
+      expect(chatSessionStore.hasPalLoadHintSeen(heavyPal.id, 2048)).toBe(
+        false,
+      );
+    });
+
+    it('fires once after refocus when the predicate still holds', async () => {
+      const useIsFocusedSpy = jest.spyOn(nav, 'useIsFocused');
+      useIsFocusedSpy.mockReturnValue(false);
+
+      const {result, rerender} = renderHook(() => usePalLoadHint(heavyPal));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(result.current.state).toBeNull();
+      expect(chatSessionStore.hasPalLoadHintSeen(heavyPal.id, 2048)).toBe(
+        false,
+      );
+
+      // Simulate the user navigating back to chat.
+      useIsFocusedSpy.mockReturnValue(true);
+      rerender(undefined);
+
+      await waitFor(() => {
+        expect(result.current.state).not.toBeNull();
+      });
+      expect(result.current.state!.visible).toBe(true);
+      expect(chatSessionStore.hasPalLoadHintSeen(heavyPal.id, 2048)).toBe(
+        true,
+      );
+    });
+
+    it('keeps a visible snackbar state through an off-focus render gate', async () => {
+      // First fire happens while focused.
+      const {result, rerender} = renderHook(() => usePalLoadHint(heavyPal));
+      await waitFor(() => {
+        expect(result.current.state?.visible).toBe(true);
+      });
+
+      // User navigates away. The JSX gate (in ChatView) suppresses the
+      // render, but hook state must survive the off-focus pass.
+      jest.spyOn(nav, 'useIsFocused').mockReturnValue(false);
+      rerender(undefined);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(result.current.state).not.toBeNull();
+      expect(result.current.state!.visible).toBe(true);
+    });
+  });
 });
