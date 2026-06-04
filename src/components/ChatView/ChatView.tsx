@@ -14,12 +14,7 @@ import {
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
-import {
-  IconButton,
-  Portal,
-  Snackbar,
-  Text as PaperText,
-} from 'react-native-paper';
+import {Portal, Snackbar, Text as PaperText} from 'react-native-paper';
 import calendar from 'dayjs/plugin/calendar';
 import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -1254,28 +1249,28 @@ export const ChatView = observer(
                 onDismiss={palLoadHint.dismiss}
                 duration={8000}
                 testID="pal-load-hint-snackbar">
-                <View style={styles.palHintRow}>
+                <View style={styles.palHintColumn}>
                   <PaperText style={styles.palHintText}>
                     {palLoadHint.state.message}
                   </PaperText>
-                  <Pressable
-                    onPress={handlePalLoadHintAction}
-                    style={styles.palHintActionButton}
-                    testID="pal-load-hint-action">
-                    <PaperText style={styles.palHintActionLabel}>
-                      {palLoadHint.state.actionLabel}
-                    </PaperText>
-                  </Pressable>
-                  <IconButton
-                    icon="close"
-                    size={16}
-                    iconColor={
-                      theme.colors.inverseOnSurface ?? theme.colors.background
-                    }
-                    onPress={palLoadHint.dismiss}
-                    style={styles.palHintDismiss}
-                    testID="pal-load-hint-dismiss"
-                  />
+                  <View style={styles.palHintActionsRow}>
+                    <Pressable
+                      onPress={handlePalLoadHintAction}
+                      style={styles.palHintActionButton}
+                      testID="pal-load-hint-action">
+                      <PaperText style={styles.palHintActionLabel}>
+                        {palLoadHint.state.actionLabel}
+                      </PaperText>
+                    </Pressable>
+                    <Pressable
+                      onPress={palLoadHint.dismiss}
+                      style={styles.palHintActionButton}
+                      testID="pal-load-hint-dismiss">
+                      <PaperText style={styles.palHintActionLabel}>
+                        {l10n.chat.contextWarning.warning.dismiss}
+                      </PaperText>
+                    </Pressable>
+                  </View>
                 </View>
               </Snackbar>
             </Portal>

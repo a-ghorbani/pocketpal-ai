@@ -132,19 +132,21 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       height: 4,
       borderRadius: 2,
     },
-    palHintRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    palHintColumn: {
       flex: 1,
     },
     palHintText: {
       color: theme.colors.inverseOnSurface,
-      flex: 1,
+    },
+    palHintActionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 6,
+      gap: 4,
     },
     palHintActionButton: {
       paddingHorizontal: 8,
       paddingVertical: 6,
-      marginLeft: 4,
     },
     palHintActionLabel: {
       color: theme.colors.inversePrimary ?? theme.colors.primary,
@@ -152,9 +154,5 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       textTransform: 'uppercase' as const,
       fontSize: 13,
       letterSpacing: 0.5,
-    },
-    palHintDismiss: {
-      margin: 0,
-      marginLeft: 0,
     },
   });
