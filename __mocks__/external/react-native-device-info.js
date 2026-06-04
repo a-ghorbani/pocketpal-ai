@@ -5,7 +5,9 @@ export default {
   getManufacturer: jest.fn(() => 'Apple'),
   getModel: jest.fn(() => 'iPhone 12'),
   getSystemVersion: jest.fn(() => '14.5'),
-  getFreeDiskStorage: jest.fn(() => Promise.resolve(deviceInfo.freeDiskStorage)),
+  getFreeDiskStorage: jest.fn(() =>
+    Promise.resolve(deviceInfo.freeDiskStorage),
+  ),
   getTotalMemory: jest.fn(() => Promise.resolve(deviceInfo.totalMemory)),
   getUsedMemory: jest.fn(() => Promise.resolve(deviceInfo.usedMemory)),
   getVersion: jest.fn(() => deviceInfo.version),

@@ -76,10 +76,19 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> = ({
   const modelMaxCtx =
     model.ggufMetadata?.context_length ??
     CONTEXT_LADDER[CONTEXT_LADDER.length - 1];
-  const ladder = useMemo(
-    () => CONTEXT_LADDER.filter(t => t <= modelMaxCtx),
-    [modelMaxCtx],
-  );
+  // Only stops STRICTLY above the current value are offered — the sheet is
+  // an upgrade affordance, not a context picker. The model max is appended
+  // as the rightmost stop even if it lies beyond CONTEXT_LADDER's top, so
+  // the slider's visible range matches the labelled model-max end.
+  const ladder = useMemo<number[]>(() => {
+    const filtered: number[] = CONTEXT_LADDER.filter(
+      t => t > currentNCtx && t <= modelMaxCtx,
+    );
+    if (modelMaxCtx > (filtered[filtered.length - 1] ?? 0)) {
+      filtered.push(modelMaxCtx);
+    }
+    return filtered;
+  }, [modelMaxCtx, currentNCtx]);
 
   // Available ceiling (calibrated) and total RAM define the fits/tight
   // boundary, same semantics as useMemoryCheck.ts.
@@ -105,24 +114,16 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> = ({
     return 'wont_fit';
   };
 
-  // Default: largest "fits" stop above current, falling back to the next
-  // ladder index when no stop fits cleanly.
+  // Default: SMALLEST fitting stop on the ladder. The ladder is already
+  // filtered to stops above current, so ladder[0] is the minimum upgrade.
+  // If no stop fits, default to ladder[0] anyway and let the fit chip /
+  // status line guide the user toward a smaller pick (here the smallest
+  // upgrade is the closest-to-fitting option).
   const recommendedIdx = useMemo(() => {
-    let idx = -1;
-    for (let i = 0; i < ladder.length; i++) {
-      if (ladder[i] > currentNCtx && fitStatusFor(ladder[i]) === 'fits') {
-        idx = i;
-      }
-    }
-    if (idx < 0) {
-      // No fitting stop above current — point to the next ladder step so the
-      // user lands somewhere intentional.
-      const nextAbove = ladder.findIndex(v => v > currentNCtx);
-      idx = nextAbove >= 0 ? nextAbove : ladder.length - 1;
-    }
-    return Math.max(idx, 0);
+    const fittingIdx = ladder.findIndex(v => fitStatusFor(v) === 'fits');
+    return fittingIdx >= 0 ? fittingIdx : 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ladder, currentNCtx, ceiling, totalMemory, projectionModel]);
+  }, [ladder, ceiling, totalMemory, projectionModel]);
 
   const [pickIdx, setPickIdx] = useState(0);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -291,25 +292,23 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> = ({
       </Sheet.ScrollView>
 
       <Sheet.Actions>
-        <View style={styles.actions}>
-          <Button
-            mode="outlined"
-            onPress={handleClose}
-            disabled={isReloading}
-            style={styles.button}
-            testID="increase-context-cancel">
-            {copy.cancel}
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleConfirm}
-            disabled={confirmDisabled}
-            loading={isReloading}
-            style={styles.button}
-            testID="increase-context-confirm">
-            {confirmLabel}
-          </Button>
-        </View>
+        <Button
+          mode="outlined"
+          onPress={handleClose}
+          disabled={isReloading}
+          style={styles.button}
+          testID="increase-context-cancel">
+          {copy.cancel}
+        </Button>
+        <Button
+          mode="contained"
+          onPress={handleConfirm}
+          disabled={confirmDisabled}
+          loading={isReloading}
+          style={styles.button}
+          testID="increase-context-confirm">
+          {confirmLabel}
+        </Button>
       </Sheet.Actions>
     </Sheet>
   );
