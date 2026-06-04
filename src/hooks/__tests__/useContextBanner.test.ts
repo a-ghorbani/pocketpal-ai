@@ -70,9 +70,9 @@ describe('useContextBanner', () => {
     (hasEnoughMemoryWithNCtx as jest.Mock).mockResolvedValue(true);
   });
 
-  // B1 regression: dismissing a warning must flip the banner away. Before
-  // dropping the useMemo around resolveBannerVariant, the MobX-wrapped Set
-  // ref was stable across .add() so the memo never recomputed.
+  // Guards against the MobX-Set + useMemo trap: the wrapped Set's
+  // reference is stable across mutations, so any memo over it would
+  // never recompute on dismiss.
   it('drops to "none" after the warning is dismissed', () => {
     chatSessionStore.lastCompletionResult = warningSnap;
 
@@ -95,10 +95,6 @@ describe('useContextBanner', () => {
     expect(result.current.bannerVariant.kind).toBe('none');
   });
 
-  // C5: handleConfirmIncrease must no-op while a run is in flight, even
-  // when reachable via the pal-load-hint snackbar. We assert the
-  // chatSessionStore side-effect did not fire — the modelStore reload
-  // calls (releaseContext / initContext) are gated behind the same check.
   it('handleConfirmIncrease no-ops while a run is active', async () => {
     chatSessionStore.lastCompletionResult = warningSnap;
 
@@ -130,10 +126,6 @@ describe('useContextBanner', () => {
     expect(result.current.isReloading).toBe(false);
   });
 
-  // No-session confirm path: the user accepts the increase before sending
-  // a first message. The override has nowhere to live in the
-  // session-keyed Map, so it lands on the pending slot until
-  // createNewSession copies it over.
   describe('handleConfirmIncrease with no active session', () => {
     beforeEach(() => {
       chatSessionStore.activeSessionId = null;
@@ -219,11 +211,7 @@ describe('useContextBanner', () => {
     });
   });
 
-  // Banner reflects the LOADED LlamaContext, not the configured n_ctx
-  // the user set in Settings. This is the core correctness fix for
-  // the long-standing bug where raising n_ctx in Settings without
-  // reload silently suppressed the warning at the real cap.
-  describe('reads loaded n_ctx (not configured)', () => {
+  describe('reads runtime n_ctx (not configured)', () => {
     it('fires warning relative to loaded n_ctx when Settings was raised without reload', () => {
       // Configured 8192 (Settings change), loaded 2048 (no reload), used 1700.
       // Ratio over configured = 0.21 (silent — the bug). Ratio over loaded
@@ -304,10 +292,6 @@ describe('useContextBanner', () => {
       expect(result.current.bannerVariant.kind).toBe('context-warning');
     });
 
-    // Silent-revert advisory: when a stored override exceeds the
-    // loaded n_ctx, a reload silently downgraded the user's
-    // consented capacity. The banner stays honest via the min-cap;
-    // the snackbar lets the user know so they can re-confirm.
     describe('silent revert advisory snackbar', () => {
       it('fires once per (session, loadedNCtx) when override > loaded', () => {
         (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
@@ -393,10 +377,8 @@ describe('useContextBanner', () => {
     });
   });
 
-  // Single-surface invariant: when the confirm handler raises the reload
-  // snackbar it must also dismiss the pal-load hint, so a render never
-  // commits two snackbars at once. We assert the FINAL committed state
-  // after act() resolves, not commit timing — per the design note in HOW.
+  // Confirm must dismiss the pal-load hint as it raises the reload
+  // snackbar — never two snackbars on screen at once.
   describe('single-surface invariant on confirm', () => {
     beforeEach(() => {
       (modelStore as any).releaseContext = jest

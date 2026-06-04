@@ -59,11 +59,6 @@ export const useContextBanner = ({
   const sessionOverrides = chatSessionStore.sessionContextOverrides;
   const pendingOverride = chatSessionStore.pendingContextOverride;
   const activeModel = modelStore.activeModel;
-  // The banner reflects the running LlamaContext, not Settings.
-  // `runtimeNCtx` is undefined when no context is loaded; we fall
-  // back to configured only as a placeholder for the no-context
-  // case (the resolver suppresses context-* variants anyway via
-  // `hasLoadedContext`, so the value here is just for the slot).
   const runtimeNCtx =
     modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
   const effectiveNCtxForSession = runtimeNCtxFor(
@@ -112,10 +107,6 @@ export const useContextBanner = ({
         | undefined,
     [messages],
   );
-  // The remote weak-signal heuristic walks the assistant text to
-  // check its terminator and length — pure derivation over the
-  // memoised lastAssistantMsg. Memoise so streaming tokens (~33×/s)
-  // don't re-allocate the joined string on every render.
   const lastAssistantText = React.useMemo(
     () => (lastAssistantMsg ? derivedText(lastAssistantMsg) : ''),
     [lastAssistantMsg],
@@ -126,11 +117,8 @@ export const useContextBanner = ({
       : undefined;
 
   const hasLoadedContext = modelStore.runtimeNCtx !== undefined;
-  // Direct call — resolveBannerVariant is pure and cheap. useMemo with
-  // a MobX-wrapped Set as a dep doesn't recompute on dismiss because the
-  // set's reference is stable across .add()/.delete() mutations. The
-  // resolver itself suppresses context-* variants when no LlamaContext
-  // is loaded; html-soft-cap remains independent.
+  // Not memoised: a MobX-wrapped Set keeps the same reference across
+  // add/delete, so useMemo wouldn't recompute on dismiss.
   const bannerVariant: BannerVariant = resolveBannerVariant({
     snapshot: snap,
     effectiveNCtx: effectiveNCtxForSession,
@@ -152,14 +140,8 @@ export const useContextBanner = ({
   const [silentRevertSnackbar, setSilentRevertSnackbar] =
     React.useState<SilentRevertSnackbarState | null>(null);
 
-  // Silent-revert advisory: a previously confirmed session
-  // override outlives the LlamaContext (e.g. OS evict +
-  // auto-reload while activeSessionId was null), so the user
-  // lands back in the session with override > loaded. The
-  // resolver already caps the banner at the smaller real
-  // capacity; this snackbar tells the user their saved larger
-  // context was downgraded — one-shot per (sessionId, current
-  // loaded n_ctx).
+  // One-shot per (sessionId, current runtime n_ctx) — fires when a
+  // stored override no longer fits the running context.
   const loadedRuntimeNCtx = modelStore.runtimeNCtx;
   const sessionOverrideForActive = activeSessionId
     ? sessionOverrides.get(activeSessionId)

@@ -75,11 +75,6 @@ describe('BannerRow heavy-talent message', () => {
     expect(meter).toBeTruthy();
   });
 
-  // Screen-reader announcement: Android picks up
-  // accessibilityLiveRegion="polite" automatically; iOS requires
-  // AccessibilityInfo.announceForAccessibility on mount. The container
-  // also carries accessibilityRole="alert" so VoiceOver/TalkBack know
-  // it's a high-priority message rather than ambient text.
   describe('accessibility', () => {
     let announceSpy: jest.SpyInstance;
     beforeEach(() => {

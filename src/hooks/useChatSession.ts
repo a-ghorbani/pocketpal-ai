@@ -332,10 +332,6 @@ async function applyEventToStore(
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
       const rawSnap = deriveSnapshotFromResult(finalResult, false);
-      // Sticky-full: keep contextFull=true on a marginal-recovery
-      // turn so the banner doesn't flicker. Same boundary the
-      // resolver uses for its freshness gate (single source of
-      // truth in `applyStickyFull`).
       const runtimeNCtx =
         modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
       const nCtxForSession = runtimeNCtxFor(

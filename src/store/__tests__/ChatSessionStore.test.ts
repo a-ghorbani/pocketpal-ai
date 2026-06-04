@@ -2545,10 +2545,7 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.pendingContextOverride).toBeUndefined();
     });
 
-    // Cross-session leak guard: a staged override on the no-session screen
-    // must not silently become the effective n_ctx of an existing session
-    // tapped from the drawer.
-    it('setActiveSession clears the pending override (drawer-switch leak guard)', async () => {
+    it('setActiveSession clears the pending override', async () => {
       const existing = {
         id: 'session-existing',
         title: 'Existing',
@@ -2564,7 +2561,6 @@ describe('chatSessionStore', () => {
       await chatSessionStore.setActiveSession('session-existing');
 
       expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-      // And it must NOT have leaked into the session-keyed Map either.
       expect(
         chatSessionStore.sessionContextOverrides.has('session-existing'),
       ).toBe(false);

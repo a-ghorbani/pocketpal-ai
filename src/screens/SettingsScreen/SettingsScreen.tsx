@@ -172,14 +172,8 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowLanguageMenu(false);
   };
 
-  // Configured vs running params drift — derived getter on
-  // ModelStore so any future surface (chat header, header chip)
-  // can subscribe to the same signal. The indicator opens when ANY
-  // init param has changed without a reload, not just n_ctx.
   const reloadRequired = modelStore.pendingReloadRequired;
   const changedFieldNames = modelStore.pendingReloadDiff;
-  // Field-name labels for the body copy. Falls back to the raw key
-  // when no friendly label is registered.
   const fieldLabels: Partial<Record<string, string>> =
     l10n.settings.reloadRequiredFieldLabels ?? {};
   const changedFieldLabels = changedFieldNames

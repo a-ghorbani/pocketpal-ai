@@ -147,30 +147,18 @@ class ModelStore {
   isMultimodalActive: boolean = false;
   activeProjectionModelId: string | undefined = undefined;
 
-  // Snapshot of the params the LIVE LlamaContext was initialised
-  // with. Distinct from `contextInitParams`, which is the configured
-  // intent for the NEXT initContext. Lives in memory only — set in
-  // initContext on success, cleared in releaseContext. Banner /
-  // sticky-full / pal-load hint read this; the loader path reads
-  // `contextInitParams`.
+  // Params the live LlamaContext was initialised with; cleared on
+  // release. Distinct from `contextInitParams` (next-init intent).
   runtimeContextSettings: ContextInitParams | undefined = undefined;
 
-  /** n_ctx the running context was loaded with, or `undefined` when
-   *  nothing is loaded. Ergonomic shortcut over the full snapshot. */
   get runtimeNCtx(): number | undefined {
     return this.runtimeContextSettings?.n_ctx;
   }
 
-  /** True when the user has changed any context-init setting after
-   *  the model was loaded. Drives "Reload to apply" affordances —
-   *  Settings indicator today, future surfaces can read the same
-   *  signal. */
   get pendingReloadRequired(): boolean {
     return this.pendingReloadDiff.length > 0;
   }
 
-  /** Field names that differ between the configured and the running
-   *  context. Empty when nothing is loaded or everything agrees. */
   get pendingReloadDiff(): Array<keyof ContextInitParams> {
     const live = this.runtimeContextSettings;
     if (!live) {
@@ -182,8 +170,6 @@ class ModelStore {
     return keys.filter(key => {
       const configured = this.contextInitParams[key];
       const running = live[key];
-      // Treat `devices` (array) and any nested object via structural
-      // equality. Primitives compared directly.
       if (
         typeof configured === 'object' &&
         configured !== null &&

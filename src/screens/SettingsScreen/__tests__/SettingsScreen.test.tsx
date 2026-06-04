@@ -332,10 +332,6 @@ describe('SettingsScreen', () => {
     });
   });
 
-  // Settings ⇄ live LlamaContext mismatch surface: when the user
-  // changes ANY init param without a reload, an inline "Reload to
-  // apply" affordance appears below the context-size input. The
-  // indicator is generic over the whole `contextInitParams` struct.
   describe('reload-required indicator', () => {
     const baselineConfigured = {
       n_ctx: modelStore.contextInitParams.n_ctx,
@@ -384,12 +380,11 @@ describe('SettingsScreen', () => {
         withNavigation: true,
       });
       expect(getByTestId('reload-required-indicator')).toBeTruthy();
-      // Friendly field label, not the raw key.
       expect(getByText(/context size/)).toBeTruthy();
       expect(getByTestId('reload-required-button')).toBeTruthy();
     });
 
-    it('generalises: also fires when n_threads (non-n_ctx field) changes', () => {
+    it('fires for non-n_ctx field changes too (e.g. n_threads)', () => {
       (modelStore as any).runtimeContextSettings = {
         ...(modelStore as any).contextInitParams,
       };

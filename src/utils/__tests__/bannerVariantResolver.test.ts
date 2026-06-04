@@ -430,8 +430,6 @@ describe('resolveBannerVariant', () => {
   });
 });
 
-// Loader-side resolver: "what n_ctx does the next initContext use?"
-// No cap — the consented override is honoured verbatim.
 describe('nextInitNCtxFor', () => {
   it('returns the session override when present', () => {
     const overrides = new Map<string, number>([['sess-1', 8192]]);
@@ -447,10 +445,6 @@ describe('nextInitNCtxFor', () => {
     expect(nextInitNCtxFor(overrides, null, 2048)).toBe(2048);
   });
 
-  // Pending-override slot: consulted only when no session override
-  // exists for the active id. Powers the no-session "Increase context"
-  // path so the first inference after createNewSession picks up the
-  // lifted n_ctx.
   it('uses the pending override when activeSessionId is null and no map entry applies', () => {
     expect(nextInitNCtxFor(new Map(), null, 2048, 4096)).toBe(4096);
   });
@@ -476,10 +470,6 @@ describe('nextInitNCtxFor', () => {
   });
 });
 
-// Banner-side resolver: "what's the live context window for this
-// session right now?" Same precedence as the loader, but the result
-// is capped at the loaded n_ctx so the banner can never under-warn
-// against a shrunken-after-silent-reload context.
 describe('runtimeNCtxFor', () => {
   it('returns the session override when present and within capacity', () => {
     const overrides = new Map<string, number>([['sess-1', 4096]]);
@@ -508,9 +498,6 @@ describe('runtimeNCtxFor', () => {
   });
 });
 
-// Sticky-full normalizer: single source of truth for "is this
-// follow-up turn still effectively full?" Same boundary the reader-
-// side freshness gate uses (used >= nCtx - AUTOCLEAR_RUNWAY).
 describe('applyStickyFull', () => {
   const base: CompletionResultSnapshot = {
     tokensCached: 0,
@@ -554,10 +541,6 @@ describe('applyStickyFull', () => {
   });
 });
 
-// When no LlamaContext is loaded (and the session isn't remote), the
-// resolver must not surface a context-warning/full variant derived
-// from a possibly-hydrated snapshot — the user can't act on it. The
-// independent html-soft-cap variant still fires.
 describe('resolveBannerVariant gating on hasLoadedContext', () => {
   it('suppresses context-warning when no LlamaContext is loaded', () => {
     const snap = snapshot({

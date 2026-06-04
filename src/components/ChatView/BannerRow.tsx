@@ -71,10 +71,7 @@ export const BannerRow: React.FC<BannerRowProps> = ({
   const onSurface = theme.colors.onSurface;
   const outline = theme.colors.outline;
 
-  // iOS parity for screen-reader announcement: accessibilityLiveRegion is
-  // Android-only, so we also fire AccessibilityInfo when the variant
-  // becomes visible. Fires on kind change so re-renders within a
-  // single visible variant don't re-announce.
+  // iOS parity — accessibilityLiveRegion is Android-only.
   const announcement = React.useMemo(() => {
     if (variant.kind === 'none') {
       return '';

@@ -48,8 +48,6 @@ export function usePalLoadHint(activePal: Pal | undefined): {
 
   const activeModelId = modelStore.activeModelId;
   const activeModel = modelStore.activeModel;
-  // Compares pal needs to the live LlamaContext, matching the
-  // banner and sticky-full readers.
   const runtimeNCtx =
     modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
   const activeSessionId = chatSessionStore.activeSessionId;

@@ -79,17 +79,8 @@ export function deriveSnapshotFromResult(
   };
 }
 
-/**
- * Sticky-full normalizer. When the prior turn was contextFull and
- * the new turn still occupies within `AUTOCLEAR_RUNWAY` tokens of
- * the runtime n_ctx, force `contextFull: true` so the banner
- * doesn't flicker out on a marginal-recovery turn. Pure — callers
- * supply the runtime n_ctx (via `runtimeNCtxFor`) and the prior
- * snapshot, and the result is stored as the new
- * `lastCompletionResult`. The reader-side freshness gate in
- * `resolveBannerVariant` is its mirror: both use the same
- * `>= n_ctx − AUTOCLEAR_RUNWAY` boundary by construction.
- */
+/** Carry `contextFull` forward on a marginal-recovery turn so the
+ *  banner doesn't flicker. Mirror of the reader-side freshness gate. */
 export function applyStickyFull(
   snap: CompletionResultSnapshot,
   priorSnap: CompletionResultSnapshot | null,
@@ -308,18 +299,9 @@ function findHeavyTalent(
   return null;
 }
 
-/**
- * "What's the live context window for this session right now?"
- * Read by the banner resolver, the sticky-full normalizer, and the
- * pal-load hint. Caps intrinsically at `runtimeNCtx` so an override
- * that no longer fits the running LlamaContext (e.g. after a silent
- * reload-to-default) can't under-warn against the smaller real
- * capacity. The override is preserved in the Map regardless — only
- * the read is clamped.
- *
- * Precedence (pre-cap): session override > pending (no-session) >
- * runtimeNCtx.
- */
+/** Banner-side reader: override > pending > runtimeNCtx, capped at
+ *  runtimeNCtx so a stored override can never claim more capacity
+ *  than the running context actually has. */
 export function runtimeNCtxFor(
   overrides: Map<string, number>,
   activeSessionId: string | null,
@@ -333,15 +315,7 @@ export function runtimeNCtxFor(
   return runtimeNCtx > 0 ? Math.min(target, runtimeNCtx) : target;
 }
 
-/**
- * "What n_ctx will the next initContext use for this session?"
- * Read only by `ModelStore.getEffectiveContextInitParams`. No cap —
- * the loader honours the consented override verbatim (memory gating
- * happens upstream in the increase-context sheet).
- *
- * Precedence: session override > pending (no-session) >
- * configuredNCtx.
- */
+/** Loader-side reader: override > pending > configuredNCtx, no cap. */
 export function nextInitNCtxFor(
   overrides: Map<string, number>,
   activeSessionId: string | null,

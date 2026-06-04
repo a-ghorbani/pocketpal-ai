@@ -1281,9 +1281,6 @@ describe('useChatSession — AssistantTurn integration', () => {
       expect(writtenSnap?.contextFull).toBe(true);
     });
 
-    // Boundary case: sticky-full writer must agree with the resolver gate
-    // (bannerVariantResolver:168 is `used >= effectiveNCtx - AUTOCLEAR_RUNWAY`).
-    // At used == n_ctx - 32, both paths must say "still full".
     it('preserves contextFull at exact runway boundary (used == n_ctx - 32)', async () => {
       modelStore.contextInitParams.n_ctx = 2048;
       chatSessionStore.lastCompletionResult = {
