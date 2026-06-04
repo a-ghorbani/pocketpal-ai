@@ -13,7 +13,12 @@ import {
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
-import {Portal, Snackbar} from 'react-native-paper';
+import {
+  IconButton,
+  Portal,
+  Snackbar,
+  Text as PaperText,
+} from 'react-native-paper';
 import calendar from 'dayjs/plugin/calendar';
 import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -1252,7 +1257,18 @@ export const ChatView = observer(
                   onPress: handlePalLoadHintAction,
                 }}
                 testID="pal-load-hint-snackbar">
-                {palLoadHint.state.message}
+                <View style={styles.palHintRow}>
+                  <PaperText style={styles.palHintText}>
+                    {palLoadHint.state.message}
+                  </PaperText>
+                  <IconButton
+                    icon="close"
+                    size={16}
+                    onPress={palLoadHint.dismiss}
+                    style={styles.palHintDismiss}
+                    testID="pal-load-hint-dismiss"
+                  />
+                </View>
               </Snackbar>
             </Portal>
           ) : null}

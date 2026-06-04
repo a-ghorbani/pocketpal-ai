@@ -132,4 +132,17 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       height: 4,
       borderRadius: 2,
     },
+    palHintRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    palHintText: {
+      color: theme.colors.inverseOnSurface,
+      flex: 1,
+    },
+    palHintDismiss: {
+      margin: 0,
+      marginLeft: 4,
+    },
   });
