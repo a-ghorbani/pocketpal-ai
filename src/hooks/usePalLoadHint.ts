@@ -176,6 +176,9 @@ export function usePalLoadHint(activePal: Pal | undefined): {
     if (!state) {
       return null;
     }
+    // Dismiss synchronously so the React 18 auto-batched setState in
+    // the caller (raising the reload snackbar) commits a single frame
+    // — never two snackbars at once.
     dismiss();
     return state.action;
   };
