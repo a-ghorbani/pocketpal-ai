@@ -44,6 +44,13 @@ jest.mock('@react-navigation/elements', () => ({
   useHeaderHeight: jest.fn().mockReturnValue(56), // Provide a mock return value
 }));
 
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  // Default true so existing render-hook tests see the chat surface as
+  // focused; tests can override with jest.spyOn when needed.
+  useIsFocused: jest.fn().mockReturnValue(true),
+}));
+
 import {mockUiStore} from '../__mocks__/stores/uiStore';
 import {mockHFStore} from '../__mocks__/stores/hfStore';
 import {mockModelStore} from '../__mocks__/stores/modelStore';
