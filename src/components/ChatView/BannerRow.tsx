@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Text, View} from 'react-native';
+import {AccessibilityInfo, Text, View} from 'react-native';
 import {Button as PaperButton, useTheme} from 'react-native-paper';
 
 import {AlertIcon} from '../../assets/icons';
@@ -71,6 +71,46 @@ export const BannerRow: React.FC<BannerRowProps> = ({
   const onSurface = theme.colors.onSurface;
   const outline = theme.colors.outline;
 
+  // iOS parity for screen-reader announcement: accessibilityLiveRegion is
+  // Android-only, so we also fire AccessibilityInfo when the variant
+  // becomes visible. Fires on kind change so re-renders within a
+  // single visible variant don't re-announce.
+  const announcement = React.useMemo(() => {
+    if (variant.kind === 'none') {
+      return '';
+    }
+    if (variant.kind === 'html-soft-cap') {
+      return l10n.chat.softCapWarning;
+    }
+    if (variant.kind === 'context-warning') {
+      return `${copy.warning.title}. ${copy.warning.message}`;
+    }
+    if (variant.kind === 'context-full') {
+      const titleCopy = variant.escalated
+        ? copy.fullEscalated.title
+        : variant.heavyTalent
+          ? copy.fullHeavyTalent.title
+          : copy.full.title;
+      const friendlyTalent = variant.heavyTalent
+        ? (copy.talentLabels?.[variant.heavyTalent.name] ??
+          copy.talentLabels?.fallback ??
+          variant.heavyTalent.name)
+        : null;
+      const messageCopy = variant.escalated
+        ? copy.fullEscalated.message
+        : friendlyTalent
+          ? t(copy.fullHeavyTalent.message, {talentName: friendlyTalent})
+          : copy.full.message;
+      return `${titleCopy}. ${messageCopy}`;
+    }
+    return `${copy.remoteHedged.title}. ${copy.remoteHedged.message}`;
+  }, [variant, copy, l10n]);
+  React.useEffect(() => {
+    if (announcement) {
+      AccessibilityInfo.announceForAccessibility(announcement);
+    }
+  }, [announcement, variant.kind]);
+
   const variantTints: Record<BannerVariant['kind'], Tints> = {
     'context-warning': {
       bg: withAlpha(error, '14'),
@@ -109,6 +149,8 @@ export const BannerRow: React.FC<BannerRowProps> = ({
     return (
       <View
         testID="soft-cap-warning"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
         style={[
           styles.softCapBanner,
           {backgroundColor: tint.bg, borderColor: tint.border},
@@ -132,6 +174,8 @@ export const BannerRow: React.FC<BannerRowProps> = ({
     return (
       <View
         testID="context-warning-banner"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
         style={[
           styles.softCapBanner,
           {backgroundColor: tint.bg, borderColor: tint.border},
@@ -195,6 +239,8 @@ export const BannerRow: React.FC<BannerRowProps> = ({
     return (
       <View
         testID="context-full-banner"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
         style={[
           styles.softCapBanner,
           {backgroundColor: tint.bg, borderColor: tint.border},
@@ -232,6 +278,8 @@ export const BannerRow: React.FC<BannerRowProps> = ({
   return (
     <View
       testID="context-remote-hedged-banner"
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
       style={[
         styles.softCapBanner,
         {backgroundColor: tint.bg, borderColor: tint.border},
