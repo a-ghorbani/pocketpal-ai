@@ -80,6 +80,32 @@ export function deriveSnapshotFromResult(
 }
 
 /**
+ * Sticky-full normalizer. When the prior turn was contextFull and
+ * the new turn still occupies within `AUTOCLEAR_RUNWAY` tokens of
+ * the runtime n_ctx, force `contextFull: true` so the banner
+ * doesn't flicker out on a marginal-recovery turn. Pure — callers
+ * supply the runtime n_ctx (via `runtimeNCtxFor`) and the prior
+ * snapshot, and the result is stored as the new
+ * `lastCompletionResult`. The reader-side freshness gate in
+ * `resolveBannerVariant` is its mirror: both use the same
+ * `>= n_ctx − AUTOCLEAR_RUNWAY` boundary by construction.
+ */
+export function applyStickyFull(
+  snap: CompletionResultSnapshot,
+  priorSnap: CompletionResultSnapshot | null,
+  runtimeNCtx: number,
+): CompletionResultSnapshot {
+  if (snap.contextFull || !priorSnap?.contextFull) {
+    return snap;
+  }
+  const used = snap.tokensCached + snap.tokensEvaluated + snap.tokensPredicted;
+  if (used >= runtimeNCtx - AUTOCLEAR_RUNWAY) {
+    return {...snap, contextFull: true};
+  }
+  return snap;
+}
+
+/**
  * Banner-variant value returned by the resolver. Exactly one variant
  * renders per chat frame. `kind: 'none'` means the banner shell is
  * hidden entirely.
@@ -283,39 +309,52 @@ function findHeavyTalent(
 }
 
 /**
- * Resolves the effective n_ctx according to the precedence:
- * session override > pending (no-session) > base. When `cap` is
- * provided (banner path), an override that exceeds the cap is
- * clamped down — this protects the banner against silent
- * reload-to-default cases where the in-memory override outlives a
- * LlamaContext that came back with a smaller capacity. Callers
- * computing "what to load NEXT" (loader path) omit `cap` so the
- * configured value is honoured verbatim.
+ * "What's the live context window for this session right now?"
+ * Read by the banner resolver, the sticky-full normalizer, and the
+ * pal-load hint. Caps intrinsically at `runtimeNCtx` so an override
+ * that no longer fits the running LlamaContext (e.g. after a silent
+ * reload-to-default) can't under-warn against the smaller real
+ * capacity. The override is preserved in the Map regardless — only
+ * the read is clamped.
  *
- * Two distinct base values flow in here:
- *   - banner / sticky-full / pal-load hint pass
- *     `activeContextSettings.n_ctx` — the n_ctx the running
- *     LlamaContext was actually initialised with.
- *   - `ModelStore.getEffectiveContextInitParams` passes
- *     `contextInitParams.n_ctx` — the configured value the next
- *     `initContext` will use.
+ * Precedence (pre-cap): session override > pending (no-session) >
+ * runtimeNCtx.
  */
-export function effectiveNCtx(
+export function runtimeNCtxFor(
   overrides: Map<string, number>,
   activeSessionId: string | null,
-  baseNCtx: number,
+  runtimeNCtx: number,
   pendingOverride?: number | undefined,
-  cap?: number | undefined,
 ): number {
-  const clamp = (value: number): number =>
-    cap !== undefined && cap > 0 ? Math.min(value, cap) : value;
+  const target =
+    (activeSessionId ? overrides.get(activeSessionId) : undefined) ??
+    pendingOverride ??
+    runtimeNCtx;
+  return runtimeNCtx > 0 ? Math.min(target, runtimeNCtx) : target;
+}
+
+/**
+ * "What n_ctx will the next initContext use for this session?"
+ * Read only by `ModelStore.getEffectiveContextInitParams`. No cap —
+ * the loader honours the consented override verbatim (memory gating
+ * happens upstream in the increase-context sheet).
+ *
+ * Precedence: session override > pending (no-session) >
+ * configuredNCtx.
+ */
+export function nextInitNCtxFor(
+  overrides: Map<string, number>,
+  activeSessionId: string | null,
+  configuredNCtx: number,
+  pendingOverride?: number | undefined,
+): number {
   if (activeSessionId && overrides.has(activeSessionId)) {
-    return clamp(overrides.get(activeSessionId)!);
+    return overrides.get(activeSessionId)!;
   }
   if (pendingOverride !== undefined) {
-    return clamp(pendingOverride);
+    return pendingOverride;
   }
-  return baseNCtx;
+  return configuredNCtx;
 }
 
 /**

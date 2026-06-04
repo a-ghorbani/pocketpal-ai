@@ -4,7 +4,7 @@ import {chatSessionStore, modelStore} from '../store';
 import {Pal} from '../types/pal';
 import {MessageType, ModelOrigin} from '../utils/types';
 import {
-  effectiveNCtx,
+  runtimeNCtxFor,
   pickNextTier,
   resolveBannerVariant,
   type BannerVariant,
@@ -59,21 +59,18 @@ export const useContextBanner = ({
   const sessionOverrides = chatSessionStore.sessionContextOverrides;
   const pendingOverride = chatSessionStore.pendingContextOverride;
   const activeModel = modelStore.activeModel;
-  // The banner reflects the LIVE LlamaContext, not Settings. Reading
-  // `contextInitParams.n_ctx` would misreport whenever the user
-  // changed Settings without reloading (e.g. raised 2048 → 8192
-  // before tapping reload — banner would dilute the ratio and stay
-  // silent at the real cap). `activeContextSettings` is the n_ctx
-  // the running context was actually loaded with; falls back to
-  // configured only when no context is live yet.
-  const loadedCtx = modelStore.activeContextSettings;
-  const loadedNCtx = loadedCtx?.n_ctx ?? modelStore.contextInitParams.n_ctx;
-  const effectiveNCtxForSession = effectiveNCtx(
+  // The banner reflects the running LlamaContext, not Settings.
+  // `runtimeNCtx` is undefined when no context is loaded; we fall
+  // back to configured only as a placeholder for the no-context
+  // case (the resolver suppresses context-* variants anyway via
+  // `hasLoadedContext`, so the value here is just for the slot).
+  const runtimeNCtx =
+    modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
+  const effectiveNCtxForSession = runtimeNCtxFor(
     sessionOverrides,
     activeSessionId,
-    loadedNCtx,
+    runtimeNCtx,
     pendingOverride,
-    loadedNCtx,
   );
   const isRemoteSession = activeModel?.origin === ModelOrigin.REMOTE;
   const isRunActive =
@@ -115,15 +112,20 @@ export const useContextBanner = ({
         | undefined,
     [messages],
   );
-  const lastAssistantText = lastAssistantMsg
-    ? derivedText(lastAssistantMsg)
-    : '';
+  // The remote weak-signal heuristic walks the assistant text to
+  // check its terminator and length — pure derivation over the
+  // memoised lastAssistantMsg. Memoise so streaming tokens (~33×/s)
+  // don't re-allocate the joined string on every render.
+  const lastAssistantText = React.useMemo(
+    () => (lastAssistantMsg ? derivedText(lastAssistantMsg) : ''),
+    [lastAssistantMsg],
+  );
   const lastAssistantTurn =
     lastAssistantMsg?.type === 'assistant_turn'
       ? (lastAssistantMsg as MessageType.AssistantTurn)
       : undefined;
 
-  const hasLoadedContext = !!loadedCtx;
+  const hasLoadedContext = modelStore.runtimeNCtx !== undefined;
   // Direct call — resolveBannerVariant is pure and cheap. useMemo with
   // a MobX-wrapped Set as a dep doesn't recompute on dismiss because the
   // set's reference is stable across .add()/.delete() mutations. The
@@ -158,47 +160,48 @@ export const useContextBanner = ({
   // capacity; this snackbar tells the user their saved larger
   // context was downgraded — one-shot per (sessionId, current
   // loaded n_ctx).
+  const loadedRuntimeNCtx = modelStore.runtimeNCtx;
   const sessionOverrideForActive = activeSessionId
     ? sessionOverrides.get(activeSessionId)
     : undefined;
   const silentRevertDetected =
     !!activeSessionId &&
-    !!loadedCtx &&
+    loadedRuntimeNCtx !== undefined &&
     sessionOverrideForActive !== undefined &&
-    sessionOverrideForActive > loadedCtx.n_ctx;
+    sessionOverrideForActive > loadedRuntimeNCtx;
   const silentRevertKey =
-    activeSessionId && loadedCtx
-      ? `${activeSessionId}:${loadedCtx.n_ctx}`
+    activeSessionId && loadedRuntimeNCtx !== undefined
+      ? `${activeSessionId}:${loadedRuntimeNCtx}`
       : null;
   React.useEffect(() => {
     if (
       silentRevertDetected &&
       activeSessionId &&
-      loadedCtx &&
+      loadedRuntimeNCtx !== undefined &&
       sessionOverrideForActive !== undefined &&
       silentRevertKey &&
       !chatSessionStore.hasSilentRevertAcknowledged(
         activeSessionId,
-        loadedCtx.n_ctx,
+        loadedRuntimeNCtx,
       )
     ) {
       setSilentRevertSnackbar({
         message: t(l10n.chat.contextWarning.silentRevertAdvisory, {
           requested: formatKLabel(sessionOverrideForActive),
-          running: formatKLabel(loadedCtx.n_ctx),
+          running: formatKLabel(loadedRuntimeNCtx),
         }),
         visible: true,
       });
       chatSessionStore.markSilentRevertAcknowledged(
         activeSessionId,
-        loadedCtx.n_ctx,
+        loadedRuntimeNCtx,
       );
     }
   }, [
     silentRevertDetected,
     silentRevertKey,
     activeSessionId,
-    loadedCtx,
+    loadedRuntimeNCtx,
     sessionOverrideForActive,
     l10n,
   ]);

@@ -5,10 +5,12 @@ import {
   AUTOCLEAR_RUNWAY,
   CONTEXT_TIERS,
   WARNING_THRESHOLD,
+  applyStickyFull,
   deriveSnapshotFromResult,
-  effectiveNCtx,
+  nextInitNCtxFor,
   pickNextTier,
   resolveBannerVariant,
+  runtimeNCtxFor,
 } from '../bannerVariantResolver';
 import {talentRegistry} from '../../services/talents';
 
@@ -428,79 +430,127 @@ describe('resolveBannerVariant', () => {
   });
 });
 
-describe('effectiveNCtx', () => {
+// Loader-side resolver: "what n_ctx does the next initContext use?"
+// No cap — the consented override is honoured verbatim.
+describe('nextInitNCtxFor', () => {
   it('returns the session override when present', () => {
     const overrides = new Map<string, number>([['sess-1', 8192]]);
-    expect(effectiveNCtx(overrides, 'sess-1', 2048)).toBe(8192);
+    expect(nextInitNCtxFor(overrides, 'sess-1', 2048)).toBe(8192);
   });
 
-  it('falls back to baseNCtx when no override is set', () => {
-    expect(effectiveNCtx(new Map(), 'sess-1', 2048)).toBe(2048);
+  it('falls back to configuredNCtx when no override is set', () => {
+    expect(nextInitNCtxFor(new Map(), 'sess-1', 2048)).toBe(2048);
   });
 
-  it('falls back to baseNCtx when activeSessionId is null', () => {
+  it('falls back to configuredNCtx when activeSessionId is null', () => {
     const overrides = new Map<string, number>([['sess-1', 8192]]);
-    expect(effectiveNCtx(overrides, null, 2048)).toBe(2048);
+    expect(nextInitNCtxFor(overrides, null, 2048)).toBe(2048);
   });
 
-  // Pending-override slot: consulted only when no session override exists for
-  // the active id. Powers the no-session "Increase context" path so the
-  // first inference after createNewSession picks up the lifted n_ctx.
+  // Pending-override slot: consulted only when no session override
+  // exists for the active id. Powers the no-session "Increase context"
+  // path so the first inference after createNewSession picks up the
+  // lifted n_ctx.
   it('uses the pending override when activeSessionId is null and no map entry applies', () => {
-    expect(effectiveNCtx(new Map(), null, 2048, 4096)).toBe(4096);
+    expect(nextInitNCtxFor(new Map(), null, 2048, 4096)).toBe(4096);
   });
 
   it('prefers the session override over a pending override', () => {
     const overrides = new Map<string, number>([['sess-1', 8192]]);
-    expect(effectiveNCtx(overrides, 'sess-1', 2048, 4096)).toBe(8192);
+    expect(nextInitNCtxFor(overrides, 'sess-1', 2048, 4096)).toBe(8192);
   });
 
   it('uses the pending override when the map has no entry for the active session', () => {
-    expect(effectiveNCtx(new Map(), 'sess-1', 2048, 4096)).toBe(4096);
+    expect(nextInitNCtxFor(new Map(), 'sess-1', 2048, 4096)).toBe(4096);
   });
 
-  it('ignores undefined pending override (falls back to baseNCtx)', () => {
-    expect(effectiveNCtx(new Map(), null, 2048, undefined)).toBe(2048);
+  it('ignores undefined pending override (falls back to configuredNCtx)', () => {
+    expect(nextInitNCtxFor(new Map(), null, 2048, undefined)).toBe(2048);
   });
 
-  // `cap` is the banner-path safety net: when a silent reload-to-default
-  // shrinks the LlamaContext below a previously-confirmed override, the
-  // user's intent (`override`) is preserved in the map but the banner
-  // must reflect the reduced actual capacity rather than under-warning
-  // against a context that no longer has the room the override promised.
-  describe('with cap argument (banner path)', () => {
-    it('clamps a session override that exceeds the cap', () => {
-      const overrides = new Map<string, number>([['sess-1', 8192]]);
-      // Override 8192 but only 2048 actually loaded → cap to 2048.
-      expect(effectiveNCtx(overrides, 'sess-1', 2048, undefined, 2048)).toBe(
-        2048,
-      );
-    });
+  it('returns the override even when larger than the configured base', () => {
+    const overrides = new Map<string, number>([['sess-1', 32768]]);
+    // No cap — the loader will faithfully request 32768 even if
+    // configuredNCtx is 2048.
+    expect(nextInitNCtxFor(overrides, 'sess-1', 2048)).toBe(32768);
+  });
+});
 
-    it('clamps a pending override that exceeds the cap', () => {
-      expect(effectiveNCtx(new Map(), null, 2048, 8192, 2048)).toBe(2048);
-    });
+// Banner-side resolver: "what's the live context window for this
+// session right now?" Same precedence as the loader, but the result
+// is capped at the loaded n_ctx so the banner can never under-warn
+// against a shrunken-after-silent-reload context.
+describe('runtimeNCtxFor', () => {
+  it('returns the session override when present and within capacity', () => {
+    const overrides = new Map<string, number>([['sess-1', 4096]]);
+    expect(runtimeNCtxFor(overrides, 'sess-1', 8192)).toBe(4096);
+  });
 
-    it('returns the override when it is below the cap', () => {
-      const overrides = new Map<string, number>([['sess-1', 4096]]);
-      // Override 4096, cap 8192 — user-consented value is honoured.
-      expect(effectiveNCtx(overrides, 'sess-1', 8192, undefined, 8192)).toBe(
-        4096,
-      );
-    });
+  it('caps a session override that exceeds the runtime capacity', () => {
+    const overrides = new Map<string, number>([['sess-1', 8192]]);
+    // Override 8192 but only 2048 actually loaded → cap to 2048.
+    expect(runtimeNCtxFor(overrides, 'sess-1', 2048)).toBe(2048);
+  });
 
-    it('passes through baseNCtx when no override and no pending', () => {
-      // baseNCtx is the loaded n_ctx in the banner path — passes through
-      // even if cap equals it (no override to clamp).
-      expect(effectiveNCtx(new Map(), 'sess-1', 4096, undefined, 4096)).toBe(
-        4096,
-      );
-    });
+  it('caps a pending override that exceeds the runtime capacity', () => {
+    expect(runtimeNCtxFor(new Map(), null, 2048, 8192)).toBe(2048);
+  });
 
-    it('ignores a zero or negative cap', () => {
-      const overrides = new Map<string, number>([['sess-1', 8192]]);
-      expect(effectiveNCtx(overrides, 'sess-1', 2048, undefined, 0)).toBe(8192);
-    });
+  it('falls back to runtimeNCtx when no override / no pending', () => {
+    expect(runtimeNCtxFor(new Map(), 'sess-1', 4096)).toBe(4096);
+  });
+
+  it('handles runtimeNCtx == 0 by returning the unclamped target', () => {
+    // Defensive: no model loaded edge case where caller substituted
+    // 0 — we surface the override/pending so the rest of the
+    // pipeline can decide what to render rather than collapsing to 0.
+    expect(runtimeNCtxFor(new Map(), null, 0, 4096)).toBe(4096);
+  });
+});
+
+// Sticky-full normalizer: single source of truth for "is this
+// follow-up turn still effectively full?" Same boundary the reader-
+// side freshness gate uses (used >= nCtx - AUTOCLEAR_RUNWAY).
+describe('applyStickyFull', () => {
+  const base: CompletionResultSnapshot = {
+    tokensCached: 0,
+    tokensEvaluated: 0,
+    tokensPredicted: 0,
+    contextFull: false,
+    finishReason: 'eos',
+  };
+
+  it('passes through when prior was not full', () => {
+    const snap = {...base, tokensEvaluated: 1900};
+    expect(applyStickyFull(snap, null, 2048)).toBe(snap);
+  });
+
+  it('passes through when current is already full', () => {
+    const snap = {...base, tokensEvaluated: 2000, contextFull: true};
+    expect(applyStickyFull(snap, {...base, contextFull: true}, 2048)).toBe(
+      snap,
+    );
+  });
+
+  it('forces contextFull when prior was full and used is within the runway', () => {
+    // used = 2020 >= 2048 - 32 = 2016 → sticky.
+    const snap = {...base, tokensEvaluated: 1900, tokensPredicted: 120};
+    const out = applyStickyFull(snap, {...base, contextFull: true}, 2048);
+    expect(out.contextFull).toBe(true);
+  });
+
+  it('clears contextFull when prior was full and used has fallen below the runway', () => {
+    // used = 1000 < 2016 → drops.
+    const snap = {...base, tokensEvaluated: 900, tokensPredicted: 100};
+    const out = applyStickyFull(snap, {...base, contextFull: true}, 2048);
+    expect(out.contextFull).toBe(false);
+  });
+
+  it('uses inclusive boundary — used == nCtx - AUTOCLEAR_RUNWAY still sticks', () => {
+    // used = 2016 == 2048 - 32 → inclusive gate fires.
+    const snap = {...base, tokensEvaluated: 2000, tokensPredicted: 16};
+    const out = applyStickyFull(snap, {...base, contextFull: true}, 2048);
+    expect(out.contextFull).toBe(true);
   });
 });
 

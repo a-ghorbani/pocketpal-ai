@@ -333,59 +333,75 @@ describe('SettingsScreen', () => {
   });
 
   // Settings ⇄ live LlamaContext mismatch surface: when the user
-  // changes n_ctx in Settings but the model is still running with the
-  // old value, an inline "Reload to apply" affordance appears below
-  // the context-size input. This was the discoverability gap that
-  // left users wondering why Settings changes didn't take effect.
-  describe('context-size mismatch indicator', () => {
+  // changes ANY init param without a reload, an inline "Reload to
+  // apply" affordance appears below the context-size input. The
+  // indicator is generic over the whole `contextInitParams` struct.
+  describe('reload-required indicator', () => {
+    const baselineConfigured = {
+      n_ctx: modelStore.contextInitParams.n_ctx,
+      n_threads: modelStore.contextInitParams.n_threads,
+    };
     beforeEach(() => {
-      (modelStore as any).activeContextSettings = undefined;
+      (modelStore as any).runtimeContextSettings = undefined;
     });
     afterEach(() => {
-      (modelStore as any).activeContextSettings = undefined;
+      (modelStore as any).runtimeContextSettings = undefined;
+      runInAction(() => {
+        modelStore.contextInitParams.n_ctx = baselineConfigured.n_ctx;
+        modelStore.contextInitParams.n_threads = baselineConfigured.n_threads;
+      });
     });
 
-    it('is hidden when loaded n_ctx matches configured n_ctx', () => {
-      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+    it('is hidden when configured matches running params', () => {
+      (modelStore as any).runtimeContextSettings = {
+        ...(modelStore as any).contextInitParams,
+      };
       const {queryByTestId} = render(<SettingsScreen />, {
         withSafeArea: true,
         withNavigation: true,
       });
-      expect(queryByTestId('context-size-mismatch-indicator')).toBeNull();
+      expect(queryByTestId('reload-required-indicator')).toBeNull();
     });
 
     it('is hidden when no context is loaded yet', () => {
-      (modelStore as any).activeContextSettings = undefined;
+      (modelStore as any).runtimeContextSettings = undefined;
       const {queryByTestId} = render(<SettingsScreen />, {
         withSafeArea: true,
         withNavigation: true,
       });
-      expect(queryByTestId('context-size-mismatch-indicator')).toBeNull();
+      expect(queryByTestId('reload-required-indicator')).toBeNull();
     });
 
-    it('appears with both values when configured drifts from loaded', () => {
-      // Loaded at 2048, configured at 8192 (Settings was changed
-      // without a reload). The indicator should call out the gap and
-      // expose a Reload button.
-      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+    it('appears with the field label when n_ctx drifts from running', () => {
+      (modelStore as any).runtimeContextSettings = {
+        ...(modelStore as any).contextInitParams,
+      };
       runInAction(() => {
         modelStore.contextInitParams.n_ctx = 8192;
       });
-
       const {getByTestId, getByText} = render(<SettingsScreen />, {
         withSafeArea: true,
         withNavigation: true,
       });
+      expect(getByTestId('reload-required-indicator')).toBeTruthy();
+      // Friendly field label, not the raw key.
+      expect(getByText(/context size/)).toBeTruthy();
+      expect(getByTestId('reload-required-button')).toBeTruthy();
+    });
 
-      expect(getByTestId('context-size-mismatch-indicator')).toBeTruthy();
-      expect(getByText(/8192/)).toBeTruthy();
-      expect(getByText(/2048/)).toBeTruthy();
-      expect(getByTestId('context-size-reload-button')).toBeTruthy();
-
-      // Reset configured for the rest of the suite.
+    it('generalises: also fires when n_threads (non-n_ctx field) changes', () => {
+      (modelStore as any).runtimeContextSettings = {
+        ...(modelStore as any).contextInitParams,
+      };
       runInAction(() => {
-        modelStore.contextInitParams.n_ctx = 2048;
+        modelStore.contextInitParams.n_threads = 999;
       });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      expect(getByTestId('reload-required-indicator')).toBeTruthy();
+      expect(getByText(/CPU threads/)).toBeTruthy();
     });
   });
 

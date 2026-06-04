@@ -172,13 +172,19 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowLanguageMenu(false);
   };
 
-  // Live LlamaContext n_ctx vs. configured n_ctx — drives the
-  // "reload to apply" indicator. Mismatch means the user changed
-  // Settings but the model is still running with the old value.
-  const loadedNCtx = modelStore.activeContextSettings?.n_ctx;
-  const configuredNCtx = modelStore.contextInitParams.n_ctx;
-  const contextSizeMismatch =
-    loadedNCtx !== undefined && loadedNCtx !== configuredNCtx;
+  // Configured vs running params drift — derived getter on
+  // ModelStore so any future surface (chat header, header chip)
+  // can subscribe to the same signal. The indicator opens when ANY
+  // init param has changed without a reload, not just n_ctx.
+  const reloadRequired = modelStore.pendingReloadRequired;
+  const changedFieldNames = modelStore.pendingReloadDiff;
+  // Field-name labels for the body copy. Falls back to the raw key
+  // when no friendly label is registered.
+  const fieldLabels: Partial<Record<string, string>> =
+    l10n.settings.reloadRequiredFieldLabels ?? {};
+  const changedFieldLabels = changedFieldNames
+    .map(key => fieldLabels[key as string] ?? (key as string))
+    .join(', ');
 
   const handleReloadForContextSize = async () => {
     const activeModel = modelStore.activeModel;
@@ -191,13 +197,8 @@ export const SettingsScreen: React.FC = observer(() => {
       await modelStore.releaseContext();
       await modelStore.initContext(activeModel);
     } catch (err) {
-      const loaded =
-        modelStore.activeContextSettings?.n_ctx?.toString() ??
-        configuredNCtx.toString();
-      setReloadErrorMessage(
-        t(l10n.settings.contextSizeMismatchFailed, {loaded}),
-      );
-      console.warn('[Settings] reload for context size failed:', err);
+      setReloadErrorMessage(l10n.settings.reloadRequiredFailed);
+      console.warn('[Settings] reload for settings change failed:', err);
     } finally {
       setIsReloadingForCtx(false);
     }
@@ -445,22 +446,21 @@ export const SettingsScreen: React.FC = observer(() => {
                 <Text variant="labelSmall" style={styles.textDescription}>
                   {l10n.settings.modelReloadNotice}
                 </Text>
-                {contextSizeMismatch && (
+                {reloadRequired && (
                   <View
-                    testID="context-size-mismatch-indicator"
+                    testID="reload-required-indicator"
                     style={styles.contextMismatchContainer}>
                     <View style={styles.contextMismatchTextBlock}>
                       <Text
                         variant="labelMedium"
                         style={styles.contextMismatchTitle}>
-                        {l10n.settings.contextSizeMismatchTitle}
+                        {l10n.settings.reloadRequiredTitle}
                       </Text>
                       <Text
                         variant="labelSmall"
                         style={styles.contextMismatchBody}>
-                        {t(l10n.settings.contextSizeMismatchBody, {
-                          configured: configuredNCtx.toString(),
-                          loaded: (loadedNCtx ?? configuredNCtx).toString(),
+                        {t(l10n.settings.reloadRequiredBody, {
+                          settings: changedFieldLabels,
                         })}
                       </Text>
                     </View>
@@ -470,10 +470,10 @@ export const SettingsScreen: React.FC = observer(() => {
                       loading={isReloadingForCtx}
                       disabled={isReloadingForCtx}
                       onPress={handleReloadForContextSize}
-                      testID="context-size-reload-button">
+                      testID="reload-required-button">
                       {isReloadingForCtx
-                        ? l10n.settings.contextSizeMismatchReloading
-                        : l10n.settings.contextSizeMismatchAction}
+                        ? l10n.settings.reloadRequiredReloading
+                        : l10n.settings.reloadRequiredAction}
                     </Button>
                   </View>
                 )}

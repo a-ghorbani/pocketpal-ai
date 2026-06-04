@@ -193,7 +193,7 @@ export const BenchmarkScreen: React.FC = observer(() => {
         peakMemoryUsage: peakMemoryUsage || undefined,
         wallTimeMs,
         uuid: uuidv4(),
-        initSettings: modelStore.activeContextSettings,
+        initSettings: modelStore.runtimeContextSettings,
       };
 
       benchmarkStore.addResult(result);
@@ -284,11 +284,11 @@ export const BenchmarkScreen: React.FC = observer(() => {
   };
 
   const getMaxPPValue = () => {
-    if (!modelStore.activeContextSettings) {
+    if (!modelStore.runtimeContextSettings) {
       return BENCHMARK_PARAMS_METADATA.pp.validation.max;
     }
     return Math.min(
-      modelStore.activeContextSettings.n_ubatch,
+      modelStore.runtimeContextSettings.n_ubatch,
       BENCHMARK_PARAMS_METADATA.pp.validation.max,
     );
   };
@@ -376,7 +376,7 @@ export const BenchmarkScreen: React.FC = observer(() => {
         <View style={styles.sliderDescriptionContainer}>
           <Text style={styles.description}>
             {metadata.descriptionKey}
-            {name === 'pp' && modelStore.activeContextSettings && (
+            {name === 'pp' && modelStore.runtimeContextSettings && (
               <Text style={styles.maxValueHint}>
                 {' '}
                 {t(l10n.benchmark.messages.modelMaxValue, {

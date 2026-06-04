@@ -26,10 +26,9 @@ import {
   CompletionParams,
 } from '../utils/completionTypes';
 import {
-  AUTOCLEAR_RUNWAY,
+  applyStickyFull,
   deriveSnapshotFromResult,
-  effectiveNCtx,
-  type CompletionResultSnapshot,
+  runtimeNCtxFor,
 } from '../utils/bannerVariantResolver';
 import {talentRegistry} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
@@ -41,41 +40,6 @@ import {
   type AgentEvent,
   type AgentUiState,
 } from '../services/agent';
-
-/**
- * Sticky-full guard: when the prior turn was contextFull and the new
- * turn still occupies within AUTOCLEAR_RUNWAY tokens of the effective
- * n_ctx, preserve contextFull=true. Prevents the banner from flickering
- * out on a marginal-recovery turn.
- */
-const applyStickyFull = (
-  rawSnap: CompletionResultSnapshot,
-  priorSnap: CompletionResultSnapshot | null,
-  sessionId: string,
-): CompletionResultSnapshot => {
-  if (rawSnap.contextFull || !priorSnap?.contextFull) {
-    return rawSnap;
-  }
-  const used =
-    rawSnap.tokensCached + rawSnap.tokensEvaluated + rawSnap.tokensPredicted;
-  // Sticky-full agrees with the resolver: both read the LOADED n_ctx,
-  // not the configured one, so a Settings tweak without reload can't
-  // flicker the banner off mid-conversation.
-  const loadedNCtx =
-    modelStore.activeContextSettings?.n_ctx ??
-    modelStore.contextInitParams.n_ctx;
-  const nCtx = effectiveNCtx(
-    chatSessionStore.sessionContextOverrides,
-    sessionId,
-    loadedNCtx,
-    chatSessionStore.pendingContextOverride,
-    loadedNCtx,
-  );
-  if (used >= nCtx - AUTOCLEAR_RUNWAY) {
-    return {...rawSnap, contextFull: true};
-  }
-  return rawSnap;
-};
 
 // Helper function to prepare completion parameters using OpenAI-compatible
 // messages API. Creates the empty `assistant_turn` row up-front so the
@@ -368,13 +332,22 @@ async function applyEventToStore(
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
       const rawSnap = deriveSnapshotFromResult(finalResult, false);
-      // Sticky-full: if prior turn was full and this turn still sits
-      // within the runway (n_ctx − 32), keep contextFull=true so the
-      // banner doesn't flicker out on a marginal-recovery turn.
+      // Sticky-full: keep contextFull=true on a marginal-recovery
+      // turn so the banner doesn't flicker. Same boundary the
+      // resolver uses for its freshness gate (single source of
+      // truth in `applyStickyFull`).
+      const runtimeNCtx =
+        modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
+      const nCtxForSession = runtimeNCtxFor(
+        chatSessionStore.sessionContextOverrides,
+        ctx.sessionId,
+        runtimeNCtx,
+        chatSessionStore.pendingContextOverride,
+      );
       const snapshot = applyStickyFull(
         rawSnap,
         chatSessionStore.lastCompletionResult,
-        ctx.sessionId,
+        nCtxForSession,
       );
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {

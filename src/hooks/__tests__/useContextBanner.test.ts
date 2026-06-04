@@ -63,9 +63,9 @@ describe('useContextBanner', () => {
     modelStore.activeModelId = downloadedModel.id;
     modelStore.contextInitParams.n_ctx = 2048;
     // Banner pipeline gates on a loaded LlamaContext. Tests run
-    // without a real context, so we stand in `activeContextSettings`
+    // without a real context, so we stand in `runtimeContextSettings`
     // for the n_ctx the resolver reads.
-    (modelStore as any).activeContextSettings = {n_ctx: 2048};
+    (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
     chatSessionStore.silentRevertAcknowledged.clear();
     (hasEnoughMemoryWithNCtx as jest.Mock).mockResolvedValue(true);
   });
@@ -229,7 +229,7 @@ describe('useContextBanner', () => {
       // Ratio over configured = 0.21 (silent — the bug). Ratio over loaded
       // = 0.83 ≥ 0.80 → warning. Banner must fire.
       modelStore.contextInitParams.n_ctx = 8192;
-      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
       chatSessionStore.lastCompletionResult = {
         tokensCached: 0,
         tokensEvaluated: 1500,
@@ -255,7 +255,7 @@ describe('useContextBanner', () => {
       // Ratio over configured = 1.47 → would falsely look FULL.
       // Ratio over loaded = 0.37 → NONE. Loaded wins.
       modelStore.contextInitParams.n_ctx = 2048;
-      (modelStore as any).activeContextSettings = {n_ctx: 8192};
+      (modelStore as any).runtimeContextSettings = {n_ctx: 8192};
       chatSessionStore.lastCompletionResult = {
         tokensCached: 0,
         tokensEvaluated: 2800,
@@ -282,7 +282,7 @@ describe('useContextBanner', () => {
       // Override-uncapped would show ratio 0.21 → silent (wrong);
       // capped → ratio 0.83 over 2048 → warning.
       modelStore.contextInitParams.n_ctx = 2048;
-      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
       chatSessionStore.sessionContextOverrides.set('session-1', 8192);
       chatSessionStore.lastCompletionResult = {
         tokensCached: 0,
@@ -310,7 +310,7 @@ describe('useContextBanner', () => {
     // the snackbar lets the user know so they can re-confirm.
     describe('silent revert advisory snackbar', () => {
       it('fires once per (session, loadedNCtx) when override > loaded', () => {
-        (modelStore as any).activeContextSettings = {n_ctx: 2048};
+        (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
         chatSessionStore.sessionContextOverrides.set('session-1', 4096);
 
         const {result, rerender} = renderHook(() =>
@@ -340,7 +340,7 @@ describe('useContextBanner', () => {
       });
 
       it('does not fire when override fits within loaded', () => {
-        (modelStore as any).activeContextSettings = {n_ctx: 8192};
+        (modelStore as any).runtimeContextSettings = {n_ctx: 8192};
         chatSessionStore.sessionContextOverrides.set('session-1', 4096);
 
         const {result} = renderHook(() =>
@@ -356,7 +356,7 @@ describe('useContextBanner', () => {
       });
 
       it('does not fire when no LlamaContext is loaded', () => {
-        (modelStore as any).activeContextSettings = undefined;
+        (modelStore as any).runtimeContextSettings = undefined;
         chatSessionStore.sessionContextOverrides.set('session-1', 4096);
 
         const {result} = renderHook(() =>
@@ -377,7 +377,7 @@ describe('useContextBanner', () => {
       // no context is loaded. Acting on the banner (Increase / New chat)
       // would target nothing. Suppress.
       modelStore.contextInitParams.n_ctx = 2048;
-      (modelStore as any).activeContextSettings = undefined;
+      (modelStore as any).runtimeContextSettings = undefined;
       chatSessionStore.lastCompletionResult = warningSnap;
 
       const {result} = renderHook(() =>

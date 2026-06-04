@@ -20,6 +20,38 @@ class MockModelStore {
   isStreaming = false;
   context: LlamaContext | undefined = undefined;
   engine: CompletionEngine | undefined = undefined;
+  runtimeContextSettings: ContextInitParams | undefined = undefined;
+
+  get runtimeNCtx(): number | undefined {
+    return this.runtimeContextSettings?.n_ctx;
+  }
+
+  get pendingReloadDiff(): Array<keyof ContextInitParams> {
+    const live = this.runtimeContextSettings;
+    if (!live) {
+      return [];
+    }
+    const keys = Object.keys(this.contextInitParams) as Array<
+      keyof ContextInitParams
+    >;
+    return keys.filter(key => {
+      const c = this.contextInitParams[key];
+      const r = live[key];
+      if (
+        typeof c === 'object' &&
+        c !== null &&
+        typeof r === 'object' &&
+        r !== null
+      ) {
+        return JSON.stringify(c) !== JSON.stringify(r);
+      }
+      return c !== r;
+    });
+  }
+
+  get pendingReloadRequired(): boolean {
+    return this.pendingReloadDiff.length > 0;
+  }
 
   // Memory calibration variables
   availableMemoryCeiling: number | undefined = 5 * 1e9; // 5GB ceiling

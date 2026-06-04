@@ -8,7 +8,7 @@ import {L10nContext} from '../utils';
 import {t} from '../locales';
 import {ModelOrigin} from '../utils/types';
 import {hasEnoughMemoryWithNCtx} from './useMemoryCheck';
-import {effectiveNCtx, pickNextTier} from '../utils/bannerVariantResolver';
+import {runtimeNCtxFor, pickNextTier} from '../utils/bannerVariantResolver';
 
 export type PalLoadHintAction = 'increase' | 'newChat';
 
@@ -48,21 +48,18 @@ export function usePalLoadHint(activePal: Pal | undefined): {
 
   const activeModelId = modelStore.activeModelId;
   const activeModel = modelStore.activeModel;
-  // The hint compares pal needs to the LIVE context, not what
-  // Settings will use on the next reload. Matches the banner /
-  // sticky-full readers.
-  const loadedNCtx =
-    modelStore.activeContextSettings?.n_ctx ??
-    modelStore.contextInitParams.n_ctx;
+  // Compares pal needs to the live LlamaContext, matching the
+  // banner and sticky-full readers.
+  const runtimeNCtx =
+    modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
   const activeSessionId = chatSessionStore.activeSessionId;
   const overrides = chatSessionStore.sessionContextOverrides;
   const pendingOverride = chatSessionStore.pendingContextOverride;
-  const effectiveNCtxForSession = effectiveNCtx(
+  const effectiveNCtxForSession = runtimeNCtxFor(
     overrides,
     activeSessionId,
-    loadedNCtx,
+    runtimeNCtx,
     pendingOverride,
-    loadedNCtx,
   );
   const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
 
