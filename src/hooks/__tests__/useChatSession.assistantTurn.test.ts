@@ -1281,6 +1281,50 @@ describe('useChatSession — AssistantTurn integration', () => {
       expect(writtenSnap?.contextFull).toBe(true);
     });
 
+    // Boundary case: sticky-full writer must agree with the resolver gate
+    // (bannerVariantResolver:168 is `used >= effectiveNCtx - AUTOCLEAR_RUNWAY`).
+    // At used == n_ctx - 32, both paths must say "still full".
+    it('preserves contextFull at exact runway boundary (used == n_ctx - 32)', async () => {
+      modelStore.contextInitParams.n_ctx = 2048;
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 2010,
+        tokensPredicted: 30,
+        contextFull: true,
+        finishReason: 'length',
+      };
+
+      // Follow-up turn: total used = 2016 == 2048 - 32 → sticky (inclusive).
+      if (modelStore.context) {
+        modelStore.context.completion = jest
+          .fn()
+          .mockImplementation(async (_params, onData) => {
+            onData?.({content: 'ok'});
+            return {
+              text: 'ok',
+              content: 'ok',
+              tokens_cached: 0,
+              tokens_evaluated: 2000,
+              tokens_predicted: 16,
+              timings: {predicted_per_second: 100},
+            };
+          });
+      }
+
+      const setSnapSpy = chatSessionStore.setLastCompletionResult as jest.Mock;
+      setSnapSpy.mockClear();
+
+      const {result} = renderHook(() =>
+        useChatSession({current: null}, textMessage.author, mockAssistant),
+      );
+      await act(async () => {
+        await result.current.handleSendPress(textMessage);
+      });
+
+      const writtenSnap = setSnapSpy.mock.calls[0]?.[0];
+      expect(writtenSnap?.contextFull).toBe(true);
+    });
+
     it('clears contextFull when used falls below the runway', async () => {
       modelStore.contextInitParams.n_ctx = 2048;
       chatSessionStore.lastCompletionResult = {
