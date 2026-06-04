@@ -4,6 +4,7 @@ import {
   FlatListProps,
   InteractionManager,
   LayoutAnimation,
+  Pressable,
   StatusBar,
   StatusBarProps,
   View,
@@ -1252,18 +1253,25 @@ export const ChatView = observer(
                 visible={palLoadHint.state.visible}
                 onDismiss={palLoadHint.dismiss}
                 duration={8000}
-                action={{
-                  label: palLoadHint.state.actionLabel,
-                  onPress: handlePalLoadHintAction,
-                }}
                 testID="pal-load-hint-snackbar">
                 <View style={styles.palHintRow}>
                   <PaperText style={styles.palHintText}>
                     {palLoadHint.state.message}
                   </PaperText>
+                  <Pressable
+                    onPress={handlePalLoadHintAction}
+                    style={styles.palHintActionButton}
+                    testID="pal-load-hint-action">
+                    <PaperText style={styles.palHintActionLabel}>
+                      {palLoadHint.state.actionLabel}
+                    </PaperText>
+                  </Pressable>
                   <IconButton
                     icon="close"
                     size={16}
+                    iconColor={
+                      theme.colors.inverseOnSurface ?? theme.colors.background
+                    }
                     onPress={palLoadHint.dismiss}
                     style={styles.palHintDismiss}
                     testID="pal-load-hint-dismiss"
