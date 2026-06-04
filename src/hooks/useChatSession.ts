@@ -62,6 +62,7 @@ const applyStickyFull = (
     chatSessionStore.sessionContextOverrides,
     sessionId,
     modelStore.contextInitParams.n_ctx,
+    chatSessionStore.pendingContextOverride,
   );
   if (used > nCtx - AUTOCLEAR_RUNWAY) {
     return {...rawSnap, contextFull: true};

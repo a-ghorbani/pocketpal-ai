@@ -52,12 +52,14 @@ export const useContextBanner = ({
   const consecutiveFullFailures = chatSessionStore.consecutiveFullFailures;
   const activeSessionId = chatSessionStore.activeSessionId;
   const sessionOverrides = chatSessionStore.sessionContextOverrides;
+  const pendingOverride = chatSessionStore.pendingContextOverride;
   const activeModel = modelStore.activeModel;
   const baseNCtx = modelStore.contextInitParams.n_ctx;
   const effectiveNCtxForSession = effectiveNCtx(
     sessionOverrides,
     activeSessionId,
     baseNCtx,
+    pendingOverride,
   );
   const isRemoteSession = activeModel?.origin === ModelOrigin.REMOTE;
   const isRunActive =
@@ -128,6 +130,11 @@ export const useContextBanner = ({
   const [reloadSnackbar, setReloadSnackbar] =
     React.useState<ReloadSnackbarState | null>(null);
 
+  // One-shot per (palId, n_ctx) per session. Declared before the
+  // confirm-increase callback so the latter can synchronously dismiss
+  // the hint to preserve the single-surface invariant.
+  const palLoadHint = usePalLoadHint(activePal);
+
   const handleDismissBanner = React.useCallback(
     (kind: BannerVariant['kind']) => {
       if (!activeSessionId) {
@@ -140,7 +147,7 @@ export const useContextBanner = ({
 
   const handleConfirmIncrease = React.useCallback(
     async (target: number) => {
-      if (!activeSessionId || !activeModel || !Number.isFinite(target)) {
+      if (!activeModel || !Number.isFinite(target)) {
         return;
       }
       // Defense-in-depth: reachable via the pal-load-hint snackbar even
@@ -148,8 +155,24 @@ export const useContextBanner = ({
       if (chatSessionStore.isGenerating || chatSessionStore.isStopping) {
         return;
       }
-      const priorOverride = sessionOverrides.get(activeSessionId);
-      chatSessionStore.setSessionContextOverride(activeSessionId, target);
+      // No-session branch: stage the override on the pending slot so
+      // the next initContext picks it up; `createNewSession` will copy
+      // it onto the new id. Session branch: write directly to the
+      // session-keyed Map.
+      const isNoSession = !activeSessionId;
+      const priorSessionOverride = activeSessionId
+        ? sessionOverrides.get(activeSessionId)
+        : undefined;
+      const priorPending = chatSessionStore.pendingContextOverride;
+      if (isNoSession) {
+        chatSessionStore.setPendingContextOverride(target);
+      } else {
+        chatSessionStore.setSessionContextOverride(activeSessionId, target);
+      }
+      // Single-surface invariant: dismiss the pal-load hint snackbar
+      // synchronously (batched with the reload setter) so we never
+      // commit a frame with two coexisting snackbars.
+      palLoadHint.dismiss();
       setIsReloading(true);
       setReloadSnackbar({
         message: l10n.chat.contextWarning.reloadingSubcopy,
@@ -179,12 +202,18 @@ export const useContextBanner = ({
           phase: 'success',
         });
       } catch (err) {
-        if (priorOverride === undefined) {
+        if (isNoSession) {
+          if (priorPending === undefined) {
+            chatSessionStore.clearPendingContextOverride();
+          } else {
+            chatSessionStore.setPendingContextOverride(priorPending);
+          }
+        } else if (priorSessionOverride === undefined) {
           chatSessionStore.clearSessionContextOverride(activeSessionId);
         } else {
           chatSessionStore.setSessionContextOverride(
             activeSessionId,
-            priorOverride,
+            priorSessionOverride,
           );
         }
         console.warn('[ChatView] increase context failed:', err);
@@ -197,7 +226,14 @@ export const useContextBanner = ({
         setIsReloading(false);
       }
     },
-    [activeSessionId, activeModel, activePal, sessionOverrides, l10n],
+    [
+      activeSessionId,
+      activeModel,
+      activePal,
+      sessionOverrides,
+      l10n,
+      palLoadHint,
+    ],
   );
 
   const handleNewChat = React.useCallback(() => {
@@ -216,9 +252,6 @@ export const useContextBanner = ({
     setReloadSnackbar(prev => (prev ? {...prev, visible: false} : null));
   }, []);
 
-  // One-shot per (palId, n_ctx) per session.
-  // Lives on the snackbar surface so the one-banner invariant is preserved.
-  const palLoadHint = usePalLoadHint(activePal);
   const handlePalLoadHintAction = React.useCallback(async () => {
     const action = await palLoadHint.onAction();
     if (action === 'increase') {

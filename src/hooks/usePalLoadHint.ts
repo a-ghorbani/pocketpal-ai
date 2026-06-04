@@ -7,7 +7,7 @@ import {L10nContext} from '../utils';
 import {t} from '../locales';
 import {ModelOrigin} from '../utils/types';
 import {hasEnoughMemoryWithNCtx} from './useMemoryCheck';
-import {pickNextTier} from '../utils/bannerVariantResolver';
+import {effectiveNCtx, pickNextTier} from '../utils/bannerVariantResolver';
 
 export type PalLoadHintAction = 'increase' | 'newChat';
 
@@ -49,10 +49,13 @@ export function usePalLoadHint(activePal: Pal | undefined): {
   const baseNCtx = modelStore.contextInitParams.n_ctx;
   const activeSessionId = chatSessionStore.activeSessionId;
   const overrides = chatSessionStore.sessionContextOverrides;
-  const effectiveNCtxForSession =
-    activeSessionId && overrides.has(activeSessionId)
-      ? overrides.get(activeSessionId)!
-      : baseNCtx;
+  const pendingOverride = chatSessionStore.pendingContextOverride;
+  const effectiveNCtxForSession = effectiveNCtx(
+    overrides,
+    activeSessionId,
+    baseNCtx,
+    pendingOverride,
+  );
   const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
 
   // Stable signature so the effect only fires at the edges (pal load,

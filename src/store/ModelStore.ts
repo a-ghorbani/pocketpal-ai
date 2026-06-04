@@ -427,6 +427,7 @@ class ModelStore {
       chatSessionStore.sessionContextOverrides,
       chatSessionStore.activeSessionId,
       this.contextInitParams.n_ctx,
+      chatSessionStore.pendingContextOverride,
     );
     const effectiveBatch = Math.min(
       this.contextInitParams.n_batch,

@@ -173,6 +173,13 @@ class ChatSessionStore {
   // default — the user reverts to a clean slate).
   sessionContextOverrides: Map<string, number> = new Map();
 
+  // Staging slot for an override applied via the no-session "Increase
+  // context" sheet (the user hasn't sent the first turn yet, so there's
+  // no `activeSessionId` to key under). Consumed by `createNewSession`
+  // and copied into `sessionContextOverrides` for the new id. Cleared
+  // on `resetActiveSession`.
+  pendingContextOverride: number | undefined = undefined;
+
   // Pal-load hint suppressor keyed by `${palId}:${n_ctx}`. Records
   // (pal, n_ctx) pairs for which the snackbar already fired in the
   // current session; cleared on `resetActiveSession`.
@@ -315,6 +322,14 @@ class ChatSessionStore {
     this.sessionContextOverrides.delete(sessionId);
   }
 
+  setPendingContextOverride(nCtx: number) {
+    this.pendingContextOverride = nCtx;
+  }
+
+  clearPendingContextOverride() {
+    this.pendingContextOverride = undefined;
+  }
+
   markPalLoadHintSeen(palId: string, nCtx: number) {
     this.palLoadHintSeen.add(`${palId}:${nCtx}`);
   }
@@ -429,6 +444,7 @@ class ChatSessionStore {
       this.consecutiveFullFailures = 0;
       this.dismissedBannerVariants.clear();
       this.palLoadHintSeen.clear();
+      this.pendingContextOverride = undefined;
     });
   }
 
@@ -653,6 +669,13 @@ class ChatSessionStore {
         this.activeSessionId = newSession.id;
         this.newChatPalId = undefined;
         this.newChatThinkingOverride = undefined;
+        if (this.pendingContextOverride !== undefined) {
+          this.sessionContextOverrides.set(
+            newSession.id,
+            this.pendingContextOverride,
+          );
+          this.pendingContextOverride = undefined;
+        }
       });
     } catch (error) {
       console.error('Failed to create new session:', error);

@@ -259,17 +259,23 @@ function findHeavyTalent(
 
 /**
  * Single source of truth for the precedence rule between
- * session-scoped overrides and the global `contextInitParams.n_ctx`.
- * Both the banner resolver and `ModelStore.getEffectiveContextInitParams`
- * call this with the same Map so the two never disagree.
+ * session-scoped overrides, the no-session staging slot, and the
+ * global `contextInitParams.n_ctx`. Precedence: session override >
+ * pending (no-session) override > base. Both the banner resolver and
+ * `ModelStore.getEffectiveContextInitParams` call this with the same
+ * Map + slot so the read-side never disagrees.
  */
 export function effectiveNCtx(
   overrides: Map<string, number>,
   activeSessionId: string | null,
   baseNCtx: number,
+  pendingOverride?: number | undefined,
 ): number {
   if (activeSessionId && overrides.has(activeSessionId)) {
     return overrides.get(activeSessionId)!;
+  }
+  if (pendingOverride !== undefined) {
+    return pendingOverride;
   }
   return baseNCtx;
 }
