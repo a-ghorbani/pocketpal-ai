@@ -492,6 +492,7 @@ class ChatSessionStore {
       this.clearBannerDismissalsForSession(sessionId);
       this.lastCompletionResult = hydrateLastCompletionResult(session);
       this.palLoadHintSeen.clear();
+      this.pendingContextOverride = undefined;
     });
   }
 
@@ -1432,7 +1433,11 @@ class ChatSessionStore {
 
       // Update local state and exit selection mode
       runInAction(() => {
-        idsToDelete.forEach(deletedId => this.sessionDrafts.delete(deletedId));
+        idsToDelete.forEach(deletedId => {
+          this.sessionDrafts.delete(deletedId);
+          this.sessionContextOverrides.delete(deletedId);
+          this.clearBannerDismissalsForSession(deletedId);
+        });
         this.sessions = this.sessions.filter(
           session => !idsToDelete.includes(session.id),
         );

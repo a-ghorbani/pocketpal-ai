@@ -2545,6 +2545,69 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.pendingContextOverride).toBeUndefined();
     });
 
+    // Cross-session leak guard: a staged override on the no-session screen
+    // must not silently become the effective n_ctx of an existing session
+    // tapped from the drawer.
+    it('setActiveSession clears the pending override (drawer-switch leak guard)', async () => {
+      const existing = {
+        id: 'session-existing',
+        title: 'Existing',
+        date: new Date().toISOString(),
+        messages: [],
+        completionSettings: defaultCompletionSettings,
+        settingsSource: 'pal' as 'pal' | 'custom',
+        messagesLoaded: true,
+      };
+      chatSessionStore.sessions = [existing];
+      chatSessionStore.setPendingContextOverride(4096);
+
+      await chatSessionStore.setActiveSession('session-existing');
+
+      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
+      // And it must NOT have leaked into the session-keyed Map either.
+      expect(
+        chatSessionStore.sessionContextOverrides.has('session-existing'),
+      ).toBe(false);
+    });
+
+    it('bulkDeleteSessions clears per-id override entries and dismissals', async () => {
+      chatSessionStore.sessions = [
+        {
+          id: 'sA',
+          title: 'A',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+          messagesLoaded: true,
+        },
+        {
+          id: 'sB',
+          title: 'B',
+          date: new Date().toISOString(),
+          messages: [],
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal',
+          messagesLoaded: true,
+        },
+      ];
+      chatSessionStore.setSessionContextOverride('sA', 4096);
+      chatSessionStore.setSessionContextOverride('sB', 8192);
+      chatSessionStore.setBannerDismissed('sA', 'context-warning');
+      chatSessionStore.selectedSessionIds = new Set(['sA', 'sB']);
+      (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+
+      await chatSessionStore.bulkDeleteSessions();
+
+      expect(chatSessionStore.sessionContextOverrides.has('sA')).toBe(false);
+      expect(chatSessionStore.sessionContextOverrides.has('sB')).toBe(false);
+      expect(
+        chatSessionStore.dismissedBannerVariants.has('sA:context-warning'),
+      ).toBe(false);
+    });
+
     it('pendingContextOverride does not leak into the override Map by itself', () => {
       chatSessionStore.setPendingContextOverride(4096);
       // The map should be untouched — the slot is the only mutation.
