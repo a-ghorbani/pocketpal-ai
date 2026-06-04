@@ -270,9 +270,7 @@ describe('usePalLoadHint', () => {
         expect(result.current.state).not.toBeNull();
       });
       expect(result.current.state!.visible).toBe(true);
-      expect(chatSessionStore.hasPalLoadHintSeen(heavyPal.id, 2048)).toBe(
-        true,
-      );
+      expect(chatSessionStore.hasPalLoadHintSeen(heavyPal.id, 2048)).toBe(true);
     });
 
     it('keeps a visible snackbar state through an off-focus render gate', async () => {

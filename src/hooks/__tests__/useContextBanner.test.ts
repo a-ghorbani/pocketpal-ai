@@ -156,9 +156,7 @@ describe('useContextBanner', () => {
       );
       expect(chatSessionStore.pendingContextOverride).toBe(4096);
       // Session-keyed write must NOT happen on the no-session branch.
-      expect(
-        chatSessionStore.setSessionContextOverride,
-      ).not.toHaveBeenCalled();
+      expect(chatSessionStore.setSessionContextOverride).not.toHaveBeenCalled();
       expect(chatSessionStore.sessionContextOverrides.size).toBe(0);
       // Native reload still runs so the next initContext picks up the
       // lifted n_ctx via the pending slot.
