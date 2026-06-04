@@ -152,9 +152,12 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> = ({
   const memConstrained =
     deviceLimitIdx >= 0 && deviceLimitIdx < ladder.length - 1;
 
-  // Theme tints
-  const fitsTint = (theme.colors as any).primary ?? theme.colors.onSurface;
-  const tightTint = (theme.colors as any).tertiary ?? theme.colors.onSurface;
+  // Semantic fit-zone tints. Hardcoded warm hues because the theme
+  // tokens (primary / tertiary) skew brand-neutral and don't read as
+  // "this is a memory warning" — see src/theme/tokens/colors.ts. The
+  // sage / amber / red triplet matches the lab's three-zone palette.
+  const fitsTint = '#5C8E73';
+  const tightTint = '#E08A5F';
   const wontTint = theme.colors.error;
   const chipTint =
     chosenFit === 'fits'

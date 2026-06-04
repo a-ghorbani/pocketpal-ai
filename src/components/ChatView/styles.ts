@@ -95,6 +95,14 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       alignItems: 'center',
       gap: 6,
     },
+    bannerHeaderTitle: {
+      flex: 1,
+    },
+    bannerPercent: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      fontVariant: ['tabular-nums'],
+    },
     bannerIcon: {
       width: 14,
       height: 14,

@@ -1163,7 +1163,7 @@
       },
       "reloadingSubcopy": "Making more room…",
       "palLoadHint": {
-        "message": "{{palName}} works best with more room.",
+        "message": "{{palName}} tends to need more room than this chat has — at this size, replies may get cut off.",
         "increase": "More room",
         "newChat": "Start fresh chat"
       }

@@ -128,6 +128,7 @@ export const BannerRow: React.FC<BannerRowProps> = ({
 
   if (variant.kind === 'context-warning') {
     const tint = variantTints['context-warning'];
+    const percent = Math.round(variant.ratio * 100);
     return (
       <View
         testID="context-warning-banner"
@@ -137,8 +138,18 @@ export const BannerRow: React.FC<BannerRowProps> = ({
         ]}>
         <View style={styles.bannerHeader}>
           <AlertIcon width={14} height={14} stroke={tint.fg} />
-          <Text style={[styles.bannerTitle, {color: tint.fg}]}>
+          <Text
+            style={[
+              styles.bannerTitle,
+              styles.bannerHeaderTitle,
+              {color: tint.fg},
+            ]}>
             {copy.warning.title}
+          </Text>
+          <Text
+            style={[styles.bannerPercent, {color: tint.fg}]}
+            testID="banner-percent">
+            {`${percent}%`}
           </Text>
         </View>
         <Text style={styles.softCapBannerText}>{copy.warning.message}</Text>
