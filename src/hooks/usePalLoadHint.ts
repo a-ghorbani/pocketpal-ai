@@ -1,4 +1,5 @@
 import {useContext, useEffect, useRef, useState} from 'react';
+import {useIsFocused} from '@react-navigation/native';
 
 import {chatSessionStore, modelStore} from '../store';
 import {talentRegistry} from '../services/talents';
@@ -41,6 +42,7 @@ export function usePalLoadHint(activePal: Pal | undefined): {
   // `L10nContext` is consumed only to resolve copy at the action
   // moment; we don't react to language changes mid-snackbar.
   const l10n = useContext(L10nContext);
+  const isFocused = useIsFocused();
   const [state, setState] = useState<PalLoadHintState | null>(null);
   const lastSignatureRef = useRef<string | null>(null);
 
@@ -70,6 +72,14 @@ export function usePalLoadHint(activePal: Pal | undefined): {
 
   useEffect(() => {
     if (lastSignatureRef.current === signature) {
+      return;
+    }
+    // Focus gate: only let the chat screen raise this hint. Drawer /
+    // model picker / settings stay clear so the snackbar doesn't
+    // surface over an unrelated surface. Marker is set only after the
+    // predicate actually evaluated, so the hint can still fire on the
+    // next focus event with the same signature.
+    if (!isFocused) {
       return;
     }
     lastSignatureRef.current = signature;
@@ -154,6 +164,7 @@ export function usePalLoadHint(activePal: Pal | undefined): {
     activeModel,
     isRemote,
     effectiveNCtxForSession,
+    isFocused,
     l10n,
   ]);
 

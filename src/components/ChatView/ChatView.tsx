@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import {Portal, Snackbar} from 'react-native-paper';
 import calendar from 'dayjs/plugin/calendar';
+import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -231,6 +232,9 @@ export const ChatView = observer(
     const theme = useTheme();
     const styles = createStyles({theme});
     const insets = useSafeAreaInsets();
+    // Focus gate for snackbar surfaces — keeps them off-screen when
+    // the user has navigated away from the chat.
+    const isFocused = useIsFocused();
 
     // ============ REFS ============
     const animationRef = React.useRef(false);
@@ -1209,8 +1213,10 @@ export const ChatView = observer(
               forces a remount on each transition so RNP Snackbar's
               internal auto-dismiss timer effect re-fires with the new
               duration — otherwise the timer set for the reloading
-              phase (Infinity) sticks around. */}
-          {reloadSnackbar !== null ? (
+              phase (Infinity) sticks around. Focus-gated: snackbar
+              state persists across navigation but the surface is
+              suppressed when the chat screen isn't focused. */}
+          {isFocused && reloadSnackbar !== null ? (
             <Portal>
               <Snackbar
                 key={reloadSnackbar.phase}
@@ -1231,8 +1237,9 @@ export const ChatView = observer(
             </Portal>
           ) : null}
 
-          {/* One-shot pal-load hint */}
-          {palLoadHint.state !== null ? (
+          {/* One-shot pal-load hint — focus-gated alongside the reload
+              snackbar so off-screen surfaces stay clean. */}
+          {isFocused && palLoadHint.state !== null ? (
             <Portal>
               <Snackbar
                 visible={palLoadHint.state.visible}
