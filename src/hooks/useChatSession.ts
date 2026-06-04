@@ -58,11 +58,18 @@ const applyStickyFull = (
   }
   const used =
     rawSnap.tokensCached + rawSnap.tokensEvaluated + rawSnap.tokensPredicted;
+  // Sticky-full agrees with the resolver: both read the LOADED n_ctx,
+  // not the configured one, so a Settings tweak without reload can't
+  // flicker the banner off mid-conversation.
+  const loadedNCtx =
+    modelStore.activeContextSettings?.n_ctx ??
+    modelStore.contextInitParams.n_ctx;
   const nCtx = effectiveNCtx(
     chatSessionStore.sessionContextOverrides,
     sessionId,
-    modelStore.contextInitParams.n_ctx,
+    loadedNCtx,
     chatSessionStore.pendingContextOverride,
+    loadedNCtx,
   );
   if (used >= nCtx - AUTOCLEAR_RUNWAY) {
     return {...rawSnap, contextFull: true};

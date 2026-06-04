@@ -62,6 +62,10 @@ describe('useContextBanner', () => {
     (chatSessionStore as any).isStopping = false;
     modelStore.activeModelId = downloadedModel.id;
     modelStore.contextInitParams.n_ctx = 2048;
+    // Banner pipeline now gates on a loaded LlamaContext (Phase 3).
+    // Tests run without a real context, so we stand in
+    // `activeContextSettings` for the n_ctx the resolver reads.
+    (modelStore as any).activeContextSettings = {n_ctx: 2048};
     (hasEnoughMemoryWithNCtx as jest.Mock).mockResolvedValue(true);
   });
 
@@ -211,6 +215,112 @@ describe('useContextBanner', () => {
       // The hook set 8192 then reverted to the prior 4096; the user
       // keeps the override they originally consented to.
       expect(chatSessionStore.pendingContextOverride).toBe(4096);
+    });
+  });
+
+  // Banner reflects the LOADED LlamaContext, not the configured n_ctx
+  // the user set in Settings. This is the core correctness fix for
+  // the long-standing bug where raising n_ctx in Settings without
+  // reload silently suppressed the warning at the real cap.
+  describe('reads loaded n_ctx (not configured)', () => {
+    it('fires warning relative to loaded n_ctx when Settings was raised without reload', () => {
+      // Configured 8192 (Settings change), loaded 2048 (no reload), used 1700.
+      // Ratio over configured = 0.21 (silent — the bug). Ratio over loaded
+      // = 0.83 ≥ 0.80 → warning. Banner must fire.
+      modelStore.contextInitParams.n_ctx = 8192;
+      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 1500,
+        tokensPredicted: 200,
+        contextFull: false,
+        finishReason: 'eos' as const,
+      };
+
+      const {result} = renderHook(() =>
+        useContextBanner({
+          activePal: undefined,
+          htmlPreviewCount: 0,
+          messages: [],
+          l10n: l10n.en,
+        }),
+      );
+
+      expect(result.current.bannerVariant.kind).toBe('context-warning');
+    });
+
+    it('does not falsely fire FULL when Settings was lowered below used (loaded is still large)', () => {
+      // Configured 2048 (Settings lowered), loaded 8192, used 3000.
+      // Ratio over configured = 1.47 → would falsely look FULL.
+      // Ratio over loaded = 0.37 → NONE. Loaded wins.
+      modelStore.contextInitParams.n_ctx = 2048;
+      (modelStore as any).activeContextSettings = {n_ctx: 8192};
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 2800,
+        tokensPredicted: 200,
+        contextFull: false,
+        finishReason: 'eos' as const,
+      };
+
+      const {result} = renderHook(() =>
+        useContextBanner({
+          activePal: undefined,
+          htmlPreviewCount: 0,
+          messages: [],
+          l10n: l10n.en,
+        }),
+      );
+
+      expect(result.current.bannerVariant.kind).toBe('none');
+    });
+
+    it('uses session override when set, capped to loaded n_ctx', () => {
+      // Override 8192 staged for session-1 (e.g. confirmed before a
+      // silent OS-evict reload). Loaded came back at 2048. Used 1700.
+      // Override-uncapped would show ratio 0.21 → silent (wrong);
+      // capped → ratio 0.83 over 2048 → warning.
+      modelStore.contextInitParams.n_ctx = 2048;
+      (modelStore as any).activeContextSettings = {n_ctx: 2048};
+      chatSessionStore.sessionContextOverrides.set('session-1', 8192);
+      chatSessionStore.lastCompletionResult = {
+        tokensCached: 0,
+        tokensEvaluated: 1500,
+        tokensPredicted: 200,
+        contextFull: false,
+        finishReason: 'eos' as const,
+      };
+
+      const {result} = renderHook(() =>
+        useContextBanner({
+          activePal: undefined,
+          htmlPreviewCount: 0,
+          messages: [],
+          l10n: l10n.en,
+        }),
+      );
+
+      expect(result.current.bannerVariant.kind).toBe('context-warning');
+    });
+
+    it('hides banner entirely when no LlamaContext is loaded (D1)', () => {
+      // Snapshot hydrated from session metadata says "near full" — but
+      // no context is loaded. Acting on the banner (Increase / New chat)
+      // would target nothing. Suppress.
+      modelStore.contextInitParams.n_ctx = 2048;
+      (modelStore as any).activeContextSettings = undefined;
+      chatSessionStore.lastCompletionResult = warningSnap;
+
+      const {result} = renderHook(() =>
+        useContextBanner({
+          activePal: undefined,
+          htmlPreviewCount: 0,
+          messages: [],
+          l10n: l10n.en,
+        }),
+      );
+
+      expect(result.current.bannerVariant.kind).toBe('none');
     });
   });
 

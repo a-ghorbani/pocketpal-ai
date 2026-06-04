@@ -461,6 +461,46 @@ describe('effectiveNCtx', () => {
   it('ignores undefined pending override (falls back to baseNCtx)', () => {
     expect(effectiveNCtx(new Map(), null, 2048, undefined)).toBe(2048);
   });
+
+  // `cap` is the banner-path safety net: when a silent reload-to-default
+  // shrinks the LlamaContext below a previously-confirmed override, the
+  // user's intent (`override`) is preserved in the map but the banner
+  // must reflect the reduced actual capacity rather than under-warning
+  // against a context that no longer has the room the override promised.
+  describe('with cap argument (banner path)', () => {
+    it('clamps a session override that exceeds the cap', () => {
+      const overrides = new Map<string, number>([['sess-1', 8192]]);
+      // Override 8192 but only 2048 actually loaded → cap to 2048.
+      expect(effectiveNCtx(overrides, 'sess-1', 2048, undefined, 2048)).toBe(
+        2048,
+      );
+    });
+
+    it('clamps a pending override that exceeds the cap', () => {
+      expect(effectiveNCtx(new Map(), null, 2048, 8192, 2048)).toBe(2048);
+    });
+
+    it('returns the override when it is below the cap', () => {
+      const overrides = new Map<string, number>([['sess-1', 4096]]);
+      // Override 4096, cap 8192 — user-consented value is honoured.
+      expect(effectiveNCtx(overrides, 'sess-1', 8192, undefined, 8192)).toBe(
+        4096,
+      );
+    });
+
+    it('passes through baseNCtx when no override and no pending', () => {
+      // baseNCtx is the loaded n_ctx in the banner path — passes through
+      // even if cap equals it (no override to clamp).
+      expect(effectiveNCtx(new Map(), 'sess-1', 4096, undefined, 4096)).toBe(
+        4096,
+      );
+    });
+
+    it('ignores a zero or negative cap', () => {
+      const overrides = new Map<string, number>([['sess-1', 8192]]);
+      expect(effectiveNCtx(overrides, 'sess-1', 2048, undefined, 0)).toBe(8192);
+    });
+  });
 });
 
 // Reader-side freshness gate: the sticky context-full variant only fires

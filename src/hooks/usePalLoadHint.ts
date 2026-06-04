@@ -48,15 +48,21 @@ export function usePalLoadHint(activePal: Pal | undefined): {
 
   const activeModelId = modelStore.activeModelId;
   const activeModel = modelStore.activeModel;
-  const baseNCtx = modelStore.contextInitParams.n_ctx;
+  // The hint compares pal needs to the LIVE context, not what
+  // Settings will use on the next reload. Matches the banner /
+  // sticky-full readers.
+  const loadedNCtx =
+    modelStore.activeContextSettings?.n_ctx ??
+    modelStore.contextInitParams.n_ctx;
   const activeSessionId = chatSessionStore.activeSessionId;
   const overrides = chatSessionStore.sessionContextOverrides;
   const pendingOverride = chatSessionStore.pendingContextOverride;
   const effectiveNCtxForSession = effectiveNCtx(
     overrides,
     activeSessionId,
-    baseNCtx,
+    loadedNCtx,
     pendingOverride,
+    loadedNCtx,
   );
   const isRemote = activeModel?.origin === ModelOrigin.REMOTE;
 

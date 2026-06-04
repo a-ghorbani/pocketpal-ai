@@ -54,12 +54,21 @@ export const useContextBanner = ({
   const sessionOverrides = chatSessionStore.sessionContextOverrides;
   const pendingOverride = chatSessionStore.pendingContextOverride;
   const activeModel = modelStore.activeModel;
-  const baseNCtx = modelStore.contextInitParams.n_ctx;
+  // The banner reflects the LIVE LlamaContext, not Settings. Reading
+  // `contextInitParams.n_ctx` would misreport whenever the user
+  // changed Settings without reloading (e.g. raised 2048 → 8192
+  // before tapping reload — banner would dilute the ratio and stay
+  // silent at the real cap). `activeContextSettings` is the n_ctx
+  // the running context was actually loaded with; falls back to
+  // configured only when no context is live yet.
+  const loadedCtx = modelStore.activeContextSettings;
+  const loadedNCtx = loadedCtx?.n_ctx ?? modelStore.contextInitParams.n_ctx;
   const effectiveNCtxForSession = effectiveNCtx(
     sessionOverrides,
     activeSessionId,
-    baseNCtx,
+    loadedNCtx,
     pendingOverride,
+    loadedNCtx,
   );
   const isRemoteSession = activeModel?.origin === ModelOrigin.REMOTE;
   const isRunActive =
@@ -109,21 +118,33 @@ export const useContextBanner = ({
       ? (lastAssistantMsg as MessageType.AssistantTurn)
       : undefined;
 
+  // Without an active LlamaContext, banner variants are inactionable:
+  // the user can't increase context, the snapshot (potentially
+  // hydrated from session metadata) is stale relative to whatever
+  // model loads next, and the existing "Increase context" /
+  // "New chat" controls would target nothing. Suppress to 'none'
+  // and let model-load surfaces drive the user back to a working
+  // state. Remote sessions don't need a local LlamaContext, so we
+  // leave them alone.
+  const hasLoadedContext = !!loadedCtx;
   // Direct call — resolveBannerVariant is pure and cheap. useMemo with
   // a MobX-wrapped Set as a dep doesn't recompute on dismiss because the
   // set's reference is stable across .add()/.delete() mutations.
-  const bannerVariant: BannerVariant = resolveBannerVariant({
-    snapshot: snap,
-    effectiveNCtx: effectiveNCtxForSession,
-    isRemote: !!isRemoteSession,
-    htmlPreviewCount,
-    consecutiveFullFailures,
-    dismissedKeys,
-    sessionId: activeSessionId,
-    nextTierTokens,
-    lastAssistantText,
-    lastAssistantTurn,
-  });
+  const bannerVariant: BannerVariant =
+    hasLoadedContext || isRemoteSession
+      ? resolveBannerVariant({
+          snapshot: snap,
+          effectiveNCtx: effectiveNCtxForSession,
+          isRemote: !!isRemoteSession,
+          htmlPreviewCount,
+          consecutiveFullFailures,
+          dismissedKeys,
+          sessionId: activeSessionId,
+          nextTierTokens,
+          lastAssistantText,
+          lastAssistantTurn,
+        })
+      : {kind: 'none'};
 
   const [increaseSheetVisible, setIncreaseSheetVisible] = React.useState(false);
   const [isReloading, setIsReloading] = React.useState(false);

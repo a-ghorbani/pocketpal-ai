@@ -268,24 +268,37 @@ function findHeavyTalent(
 }
 
 /**
- * Single source of truth for the precedence rule between
- * session-scoped overrides, the no-session staging slot, and the
- * global `contextInitParams.n_ctx`. Precedence: session override >
- * pending (no-session) override > base. Both the banner resolver and
- * `ModelStore.getEffectiveContextInitParams` call this with the same
- * Map + slot so the read-side never disagrees.
+ * Resolves the effective n_ctx according to the precedence:
+ * session override > pending (no-session) > base. When `cap` is
+ * provided (banner path), an override that exceeds the cap is
+ * clamped down — this protects the banner against silent
+ * reload-to-default cases where the in-memory override outlives a
+ * LlamaContext that came back with a smaller capacity (D3). Callers
+ * computing "what to load NEXT" (loader path) omit `cap` so the
+ * configured value is honoured verbatim.
+ *
+ * Two distinct base values flow in here:
+ *   - banner / sticky-full / pal-load hint pass
+ *     `activeContextSettings.n_ctx` — the n_ctx the running
+ *     LlamaContext was actually initialised with.
+ *   - `ModelStore.getEffectiveContextInitParams` passes
+ *     `contextInitParams.n_ctx` — the configured value the next
+ *     `initContext` will use.
  */
 export function effectiveNCtx(
   overrides: Map<string, number>,
   activeSessionId: string | null,
   baseNCtx: number,
   pendingOverride?: number | undefined,
+  cap?: number | undefined,
 ): number {
+  const clamp = (value: number): number =>
+    cap !== undefined && cap > 0 ? Math.min(value, cap) : value;
   if (activeSessionId && overrides.has(activeSessionId)) {
-    return overrides.get(activeSessionId)!;
+    return clamp(overrides.get(activeSessionId)!);
   }
   if (pendingOverride !== undefined) {
-    return pendingOverride;
+    return clamp(pendingOverride);
   }
   return baseNCtx;
 }
