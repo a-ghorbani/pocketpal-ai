@@ -1,17 +1,20 @@
 /**
- * resolveHFModelForDownload — the single canonical HF repo+filename resolver.
+ * HF repo resolvers.
  *
- * Strict mode (no fallback): used by the hub/run landing sheet — throws when a
- * fetch fails or no sibling matches the filename.
+ * resolveHFRepo — strict, repo-level core: assembles the full HuggingFaceModel
+ * with populated /resolve/ sibling URLs; throws on any fetch failure.
+ *
+ * resolveHFModelForDownload — repo + single-filename resolver built on the core.
+ * Strict mode (no fallback): throws when a fetch fails or no sibling matches.
  * Tolerant mode (fallback provided): used by the PalsHub flow — fills gaps and
- * never throws on fetch failure / unmatched filename.
+ * never throws, keeping per-fetch independence on partial responses.
  *
- * Guards the silent-no-op regression: the resolved modelFile.url must be a
- * non-empty /resolve/ URL (the whole point of routing through
+ * Both guard the silent-no-op regression: resolved URLs must be non-empty
+ * /resolve/ URLs (the whole point of routing through
  * createSiblingsFromFileDetails rather than a hand-built ModelFile).
  */
 
-import {resolveHFModelForDownload} from '../hfResolve';
+import {resolveHFModelForDownload, resolveHFRepo} from '../hfResolve';
 import {fetchModelInfo, fetchModelFilesDetails} from '../../api/hf';
 
 jest.mock('../../api/hf', () => ({
@@ -38,6 +41,53 @@ const fileDetails = [
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe('resolveHFRepo — strict repo-level core', () => {
+  it('assembles the full model with populated /resolve/ sibling urls', async () => {
+    mockFetchModelInfo.mockResolvedValue(modelInfoResponse);
+    mockFetchModelFilesDetails.mockResolvedValue(fileDetails);
+
+    const hfModel = await resolveHFRepo(REPO);
+
+    expect(hfModel.id).toBe(REPO);
+    expect(hfModel.author).toBe('author');
+    expect(hfModel.siblings.length).toBe(fileDetails.length);
+    // Every sibling must carry a real download URL, else a tap no-ops.
+    expect(hfModel.siblings.every(s => !!s.url)).toBe(true);
+    expect(hfModel.siblings.every(s => s.url!.includes('/resolve/'))).toBe(
+      true,
+    );
+  });
+
+  it('throws when fetchModelInfo fails', async () => {
+    mockFetchModelInfo.mockRejectedValue(new Error('network 404'));
+    mockFetchModelFilesDetails.mockResolvedValue(fileDetails);
+
+    await expect(resolveHFRepo(REPO)).rejects.toThrow();
+  });
+
+  it('throws when fetchModelFilesDetails fails', async () => {
+    mockFetchModelInfo.mockResolvedValue(modelInfoResponse);
+    mockFetchModelFilesDetails.mockRejectedValue(new Error('network 500'));
+
+    await expect(resolveHFRepo(REPO)).rejects.toThrow();
+  });
+
+  it('passes the auth token through to both HF calls', async () => {
+    mockFetchModelInfo.mockResolvedValue(modelInfoResponse);
+    mockFetchModelFilesDetails.mockResolvedValue(fileDetails);
+
+    await resolveHFRepo(REPO, 'hf_token_123');
+
+    expect(mockFetchModelInfo).toHaveBeenCalledWith(
+      expect.objectContaining({repoId: REPO, authToken: 'hf_token_123'}),
+    );
+    expect(mockFetchModelFilesDetails).toHaveBeenCalledWith(
+      REPO,
+      'hf_token_123',
+    );
+  });
 });
 
 describe('resolveHFModelForDownload — strict mode (no fallback)', () => {
@@ -155,5 +205,24 @@ describe('resolveHFModelForDownload — tolerant mode (fallback)', () => {
 
     expect(modelFile.url).toContain('/resolve/');
     expect(modelFile.url).not.toBe(fallback.downloadUrl);
+  });
+
+  it('keeps the real sibling url when only model info fails (partial)', async () => {
+    // PalsHub tolerance: a partial response (file details succeed, model info
+    // fails) must still yield the real /resolve/ URL, not collapse to fallback.
+    mockFetchModelInfo.mockRejectedValue(new Error('network'));
+    mockFetchModelFilesDetails.mockResolvedValue(fileDetails);
+
+    const {hfModel, modelFile} = await resolveHFModelForDownload(
+      REPO,
+      FILE,
+      undefined,
+      fallback,
+    );
+
+    expect(modelFile.url).toContain('/resolve/');
+    expect(modelFile.url).not.toBe(fallback.downloadUrl);
+    // model info missing -> author falls back.
+    expect(hfModel.author).toBe('fallback-author');
   });
 });
