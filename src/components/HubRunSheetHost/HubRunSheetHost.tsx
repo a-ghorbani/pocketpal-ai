@@ -1,4 +1,10 @@
-import React, {useCallback, useContext, useEffect, useState} from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {View} from 'react-native';
 
 import {observer} from 'mobx-react';
@@ -38,28 +44,49 @@ export const HubRunSheetHost: React.FC = observer(() => {
 
   const repoId = pendingHubRun?.repoId;
 
+  // Per-request sequence guard: a stale resolve (after dismiss/retry/repo
+  // change) must not update state.
+  const resolveSeq = useRef(0);
+
   const resolve = useCallback(async () => {
     if (!repoId) {
       return;
     }
+    const seq = ++resolveSeq.current;
     setIsResolving(true);
     setError(null);
     setResolved(null);
     try {
       const authToken = hfStore.shouldUseToken ? hfStore.hfToken : undefined;
       const hfModel = await resolveHFRepo(repoId, authToken);
+      if (seq !== resolveSeq.current) {
+        return;
+      }
       // Compute per-file storage availability so DetailsView's download button
       // gate (canFitInStorage) is set, mirroring the HF search path.
       const siblings = await enrichSiblingsWithStorage(
         hfModel,
         hfModel.siblings,
       );
+      if (seq !== resolveSeq.current) {
+        return;
+      }
       setResolved({...hfModel, siblings});
     } catch (e) {
-      console.error('Failed to resolve hub/run repo:', e);
+      if (seq !== resolveSeq.current) {
+        return;
+      }
+      // Log only a sanitized message; axios errors can carry the HF bearer token
+      // in config.headers.Authorization.
+      console.error(
+        'Failed to resolve hub/run repo:',
+        e instanceof Error ? e.message : String(e),
+      );
       setError(l10n.models.hubRun.resolveError);
     } finally {
-      setIsResolving(false);
+      if (seq === resolveSeq.current) {
+        setIsResolving(false);
+      }
     }
   }, [repoId, l10n]);
 
@@ -71,6 +98,13 @@ export const HubRunSheetHost: React.FC = observer(() => {
       setError(null);
       setIsResolving(false);
     }
+    // Invalidate any in-flight resolve when the repo changes or the host
+    // unmounts, so a late completion can't update state. resolveSeq is a plain
+    // counter (not a node ref), so reading .current in cleanup is intentional.
+    const seqRef = resolveSeq;
+    return () => {
+      seqRef.current++;
+    };
   }, [repoId, resolve]);
 
   return (
