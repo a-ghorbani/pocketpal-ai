@@ -329,6 +329,17 @@ export const ChatView = observer(
       indefinite: boolean;
     } | null>(null);
 
+    // The snackbar stays mounted across the reloading→result transition, so
+    // Paper's auto-hide timer never re-arms for the timed result. Own the
+    // result dismissal here.
+    React.useEffect(() => {
+      if (!reloadSnackbar || reloadSnackbar.indefinite) {
+        return;
+      }
+      const timer = setTimeout(() => setReloadSnackbar(null), 4000);
+      return () => clearTimeout(timer);
+    }, [reloadSnackbar]);
+
     // One-shot pal-load hint snackbar (separate surface from the banner).
     const palLoadHint = usePalLoadHint({activePal, isFocused});
 
