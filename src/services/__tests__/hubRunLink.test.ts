@@ -6,7 +6,7 @@
  * passthrough/absent, whitespace trimming.
  */
 
-import {parseHubRunURL} from '../hubRunLink';
+import {isHubLink, parseHubRunURL} from '../hubRunLink';
 
 describe('parseHubRunURL', () => {
   it('parses a valid hub/run link with all params', () => {
@@ -45,6 +45,21 @@ describe('parseHubRunURL', () => {
   it('returns null when repo_id has an empty half', () => {
     expect(
       parseHubRunURL('pocketpal://hub/run?repo_id=author/&filename=x.gguf'),
+    ).toBeNull();
+  });
+
+  it('returns null when repo_id contains path-traversal segments', () => {
+    expect(
+      parseHubRunURL('pocketpal://hub/run?repo_id=../x&filename=x.gguf'),
+    ).toBeNull();
+    expect(
+      parseHubRunURL('pocketpal://hub/run?repo_id=a/..&filename=x.gguf'),
+    ).toBeNull();
+  });
+
+  it('returns null when repo_id has more than two segments', () => {
+    expect(
+      parseHubRunURL('pocketpal://hub/run?repo_id=a/b/c&filename=x.gguf'),
     ).toBeNull();
   });
 
@@ -121,5 +136,23 @@ describe('parseHubRunURL', () => {
       filename: 'model.gguf',
       source: undefined,
     });
+  });
+});
+
+describe('isHubLink', () => {
+  it('is true for any host=hub URL regardless of path', () => {
+    expect(isHubLink('pocketpal://hub/run?repo_id=a/b')).toBe(true);
+    expect(isHubLink('pocketpal://hub/foo')).toBe(true);
+    expect(isHubLink('pocketpal://hub')).toBe(true);
+  });
+
+  it('is false for non-hub hosts', () => {
+    expect(isHubLink('pocketpal://chat?palId=x')).toBe(false);
+    expect(isHubLink('pocketpal://memory')).toBe(false);
+    expect(isHubLink('pocketpal://e2e/benchmark')).toBe(false);
+  });
+
+  it('is false for an unparseable URL', () => {
+    expect(isHubLink('not a url at all')).toBe(false);
   });
 });

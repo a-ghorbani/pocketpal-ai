@@ -158,13 +158,43 @@ describe('useDeepLinking — hub/run dispatch', () => {
     );
   });
 
-  it('does not write for a non-hub link on the prod Linking path', async () => {
+  it('ignores a non-hub link on the prod Linking path without alerting', async () => {
     getInitialURLSpy.mockResolvedValue('pocketpal://chat?palId=foo');
 
     renderHook(() => useDeepLinking());
     await Promise.resolve();
     await Promise.resolve();
 
+    expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('ignores a non-hub link via the prod Linking url event without alerting', async () => {
+    const handlers: Array<(evt: {url: string}) => void> = [];
+    addEventListenerSpy.mockImplementation((event: string, cb: any) => {
+      if (event === 'url') {
+        handlers.push(cb);
+      }
+      return {remove: jest.fn()} as any;
+    });
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+
+    handlers.forEach(h => h({url: 'pocketpal://chat?palId=foo'}));
+
+    expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('alerts on a malformed hub link via the prod Linking path', async () => {
+    getInitialURLSpy.mockResolvedValue('pocketpal://hub/run'); // no repo_id
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(alertSpy).toHaveBeenCalled();
     expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
   });
 });

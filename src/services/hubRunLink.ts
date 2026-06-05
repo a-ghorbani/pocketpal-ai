@@ -17,9 +17,30 @@ export interface HubRunRequest {
   source: string | undefined; // optional attribution tag, e.g. "hf"
 }
 
+// Hugging Face repo-id grammar: exactly `org/name`, each segment limited to
+// safe chars. Rejects path-traversal and unsafe input at parse time.
+const REPO_ID_RE = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+
 const isValidRepoId = (value: string): boolean => {
-  const parts = value.split('/');
-  return parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
+  if (!REPO_ID_RE.test(value)) {
+    return false;
+  }
+  // Reject dot-only segments (`.`, `..`) that survive the char class but are
+  // path-traversal.
+  return value.split('/').every(seg => seg !== '.' && seg !== '..');
+};
+
+/**
+ * True when the URL is addressed to the hub host (host only — any
+ * `pocketpal://hub/<path>` is meant for us, even if malformed). Used to gate the
+ * RN Linking delivery path so non-hub URLs are ignored silently. Never throws.
+ */
+export const isHubLink = (url: string): boolean => {
+  try {
+    return new URL(url).hostname === 'hub';
+  } catch {
+    return false;
+  }
 };
 
 /**

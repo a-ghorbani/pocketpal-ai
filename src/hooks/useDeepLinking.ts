@@ -9,7 +9,7 @@ import {useEffect, useCallback} from 'react';
 import {Alert, Linking} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {deepLinkService, DeepLinkParams} from '../services/DeepLinkService';
-import {parseHubRunURL} from '../services/hubRunLink';
+import {isHubLink, parseHubRunURL} from '../services/hubRunLink';
 import {chatSessionStore, palStore, deepLinkStore, uiStore} from '../store';
 import {ROUTES} from '../utils/navigationConstants';
 import {
@@ -179,12 +179,13 @@ export const useDeepLinking = () => {
   // Prod, always-on delivery for the hub/run route. iOS arrives via the native
   // emitter above; Android prod has no native deep-link bridge, so this RN
   // Linking path (cold getInitialURL + warm 'url' event) is the only delivery.
-  // Separate from the __E2E__ benchmark Linking effect; parseHubRunURL returns
-  // null for benchmark URLs, so the two never overlap.
+  // Gated by isHubLink so non-hub URLs (chat, e2e/benchmark, memory) are ignored
+  // silently — only host=hub URLs reach handleHubRunLink, matching the native
+  // emitter path. A malformed hub link still alerts.
   useEffect(() => {
     Linking.getInitialURL()
       .then(url => {
-        if (url) {
+        if (url && isHubLink(url)) {
           handleHubRunLink(url);
         }
       })
@@ -197,7 +198,7 @@ export const useDeepLinking = () => {
     let sub: {remove: () => void} | null = null;
     try {
       sub = Linking.addEventListener('url', ({url}) => {
-        if (url) {
+        if (url && isHubLink(url)) {
           handleHubRunLink(url);
         }
       });
