@@ -45,7 +45,10 @@ import {BannerRow} from './BannerRow';
 import {createStyles} from './styles';
 
 import {IncreaseContextSheet} from '../IncreaseContextSheet';
+import {makeFitStatusFor} from '../IncreaseContextSheet/fitStatus';
 import {t} from '../../locales';
+import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
+import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
 import {chatSessionStore, modelStore} from '../../store';
 
@@ -271,10 +274,44 @@ export const ChatView = observer(
     // Pagination state
     const [isNextPageLoading, setNextPageLoading] = React.useState(false);
 
-    // Increase-context confirm target (n_ctx) from the context-full banner.
-    const [increaseContextTarget, setIncreaseContextTarget] = React.useState<
-      number | null
-    >(null);
+    // Increase-context sheet visibility. The sheet owns the chosen target.
+    const [increaseSheetOpen, setIncreaseSheetOpen] = React.useState(false);
+
+    const activeModel = modelStore.activeModel;
+    const projectionModel = modelStore.models.find(
+      m => m.id === modelStore.activeProjectionModelId,
+    );
+    const currentNCtx = modelStore.activeContextSettings?.n_ctx;
+
+    // The increase CTA is shown only when at least one larger context tier
+    // fits the device — same OOM-safe intent the sheet enforces per stop.
+    // Computed inline so the observer re-renders when the store reads change.
+    const canIncreaseContext = (() => {
+      if (!activeModel || currentNCtx === undefined) {
+        return false;
+      }
+      const ceiling = Math.max(
+        modelStore.largestSuccessfulLoad ?? 0,
+        modelStore.availableMemoryCeiling ?? 0,
+      );
+      const fitStatusFor = makeFitStatusFor({
+        memBytesFor: nCtx => {
+          try {
+            return getModelMemoryRequirement(activeModel, projectionModel, {
+              ...modelStore.contextInitParams,
+              n_ctx: nCtx,
+            });
+          } catch {
+            return Number.POSITIVE_INFINITY;
+          }
+        },
+        ceiling,
+        totalMemory: 0,
+      });
+      return CONTEXT_LADDER.some(
+        tier => tier > currentNCtx && fitStatusFor(tier) === 'fits',
+      );
+    })();
     // Reload-feedback snackbar: indefinite while reloading, timed on result.
     const [reloadSnackbar, setReloadSnackbar] = React.useState<{
       message: string;
@@ -1095,8 +1132,9 @@ export const ChatView = observer(
               <BannerRow
                 messages={messages}
                 htmlPreviewCount={htmlPreviewCount}
+                canIncrease={canIncreaseContext}
                 onNewChat={() => chatSessionStore.resetActiveSession()}
-                onIncreaseContext={setIncreaseContextTarget}
+                onIncreaseContext={() => setIncreaseSheetOpen(true)}
               />
               <ChatInput
                 {...{
@@ -1189,27 +1227,36 @@ export const ChatView = observer(
             onClose={() => setIsReportSheetVisible(false)}
           />
 
-          <IncreaseContextSheet
-            target={increaseContextTarget}
-            onClose={() => setIncreaseContextTarget(null)}
-            onReloadStart={() => {
-              // Single advisory surface: dismiss the pal-load hint in the
-              // same handler so no frame shows two snackbars at once.
-              palLoadHint.dismiss();
-              setReloadSnackbar({
-                message: l10n.chat.increaseContextReloading,
-                indefinite: true,
-              });
-            }}
-            onReloadResult={(success, target) =>
-              setReloadSnackbar({
-                message: success
-                  ? t(l10n.chat.increaseContextSuccess, {target})
-                  : l10n.chat.increaseContextFailure,
-                indefinite: false,
-              })
-            }
-          />
+          {increaseSheetOpen && activeModel && currentNCtx !== undefined ? (
+            <IncreaseContextSheet
+              isVisible={increaseSheetOpen}
+              model={activeModel}
+              projectionModel={projectionModel}
+              currentNCtx={currentNCtx}
+              onClose={() => setIncreaseSheetOpen(false)}
+              onNewChat={() => {
+                chatSessionStore.resetActiveSession();
+                setIncreaseSheetOpen(false);
+              }}
+              onReloadStart={() => {
+                // Single advisory surface: dismiss the pal-load hint in the
+                // same handler so no frame shows two snackbars at once.
+                palLoadHint.dismiss();
+                setReloadSnackbar({
+                  message: l10n.chat.increaseContextReloading,
+                  indefinite: true,
+                });
+              }}
+              onReloadResult={(success, target) =>
+                setReloadSnackbar({
+                  message: success
+                    ? t(l10n.chat.increaseContextSuccess, {target})
+                    : l10n.chat.increaseContextFailure,
+                  indefinite: false,
+                })
+              }
+            />
+          ) : null}
 
           <Snackbar
             visible={isFocused && reloadSnackbar !== null}
@@ -1225,6 +1272,13 @@ export const ChatView = observer(
             visible={isFocused && palLoadHint.hintVisible && !reloadSnackbar}
             onDismiss={palLoadHint.dismiss}
             duration={6000}
+            action={{
+              label: l10n.chat.contextMoreRoom,
+              onPress: () => {
+                palLoadHint.dismiss();
+                setIncreaseSheetOpen(true);
+              },
+            }}
             testID="pal-load-hint-snackbar">
             {l10n.chat.palLoadHint}
           </Snackbar>
