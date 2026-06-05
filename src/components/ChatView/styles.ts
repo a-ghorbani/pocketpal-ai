@@ -98,13 +98,18 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     contextBanner: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
       paddingHorizontal: 12,
       paddingVertical: 6,
       backgroundColor: theme.colors.surfaceVariant,
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: theme.colors.outline,
+    },
+    contextBannerText: {
+      flex: 1,
+      flexShrink: 1,
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
     },
     contextFullBanner: {
       paddingHorizontal: 12,

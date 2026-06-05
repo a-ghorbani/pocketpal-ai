@@ -106,7 +106,7 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     if (variant === 'context-warning') {
       return (
         <View testID="context-warning-banner" style={styles.contextBanner}>
-          <Text style={styles.softCapBannerText}>
+          <Text style={styles.contextBannerText}>
             {l10n.chat.contextWarning}
           </Text>
           <Button
@@ -127,7 +127,7 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
         <View
           testID="context-remote-hedged-banner"
           style={styles.contextBanner}>
-          <Text style={styles.softCapBannerText}>
+          <Text style={styles.contextBannerText}>
             {l10n.chat.contextRemoteHedged}
           </Text>
           <Button
@@ -144,8 +144,13 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     }
 
     // context-full (sticky; no dismiss).
-    const fullText = heavyTalentName
-      ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentName})
+    const talentNames = l10n.components.palSheet.talentNames;
+    const heavyTalentLabel = heavyTalentName
+      ? (talentNames[heavyTalentName as keyof typeof talentNames] ??
+        heavyTalentName)
+      : undefined;
+    const fullText = heavyTalentLabel
+      ? t(l10n.chat.contextFullHeavyTalent, {talent: heavyTalentLabel})
       : chatSessionStore.consecutiveFullFailures >= 2
         ? l10n.chat.contextFullEscalated
         : l10n.chat.contextFull;
