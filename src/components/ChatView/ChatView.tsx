@@ -45,7 +45,10 @@ import {BannerRow} from './BannerRow';
 import {createStyles} from './styles';
 
 import {IncreaseContextSheet} from '../IncreaseContextSheet';
-import {makeFitStatusFor} from '../IncreaseContextSheet/fitStatus';
+import {
+  makeFitStatusFor,
+  hasFittingUpgrade,
+} from '../IncreaseContextSheet/fitStatus';
 import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
@@ -290,6 +293,11 @@ export const ChatView = observer(
       if (!activeModel || currentNCtx === undefined) {
         return false;
       }
+      // Match the sheet's cap so the CTA never opens a sheet whose only stop
+      // equals the current size.
+      const modelMaxCtx =
+        activeModel.ggufMetadata?.context_length ??
+        CONTEXT_LADDER[CONTEXT_LADDER.length - 1];
       const ceiling = Math.max(
         modelStore.largestSuccessfulLoad ?? 0,
         modelStore.availableMemoryCeiling ?? 0,
@@ -308,8 +316,11 @@ export const ChatView = observer(
         ceiling,
         totalMemory: 0,
       });
-      return CONTEXT_LADDER.some(
-        tier => tier > currentNCtx && fitStatusFor(tier) === 'fits',
+      return hasFittingUpgrade(
+        CONTEXT_LADDER,
+        currentNCtx,
+        modelMaxCtx,
+        fitStatusFor,
       );
     })();
     // Reload-feedback snackbar: indefinite while reloading, timed on result.

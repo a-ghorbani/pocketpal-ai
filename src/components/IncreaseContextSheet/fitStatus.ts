@@ -24,3 +24,19 @@ export const makeFitStatusFor =
     }
     return 'wont_fit';
   };
+
+// Gate for the banner's increase CTA: true iff at least one ladder tier above
+// the current size, within the model's trained cap, fits the device. Mirrors
+// the sheet's ladder filter so the CTA never opens a sheet with no real stop.
+export const hasFittingUpgrade = (
+  ladder: readonly number[],
+  currentNCtx: number,
+  modelMaxCtx: number,
+  fitStatusFor: (nCtx: number) => FitStatus,
+): boolean =>
+  ladder.some(
+    tier =>
+      tier > currentNCtx &&
+      tier <= modelMaxCtx &&
+      fitStatusFor(tier) === 'fits',
+  );
