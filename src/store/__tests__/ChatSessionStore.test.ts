@@ -1091,6 +1091,33 @@ describe('chatSessionStore', () => {
 
       expect(chatSessionStore.sessions[0].messages.length).toBe(3);
     });
+
+    it('clears the stale context-banner state when messages are removed', async () => {
+      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValueOnce(
+        {
+          session: {
+            id: 'session1',
+            title: 'Session 1',
+            date: new Date().toISOString(),
+          },
+          messages: [{toMessageObject: () => mockMessage}],
+          completionSettings: {getSettings: () => defaultCompletionSettings},
+        },
+      );
+      chatSessionStore.lastCompletionResult = {
+        used: 4096,
+        contextFull: true,
+        isRemote: false,
+      };
+      chatSessionStore.setBannerDismissed('context-warning');
+      chatSessionStore.consecutiveFullFailures = 2;
+
+      await chatSessionStore.removeMessagesFromId(mockMessage2.id, true);
+
+      expect(chatSessionStore.lastCompletionResult).toBeUndefined();
+      expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+      expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+    });
   });
 
   describe('updateMessageStreaming', () => {

@@ -1273,6 +1273,12 @@ class ChatSessionStore {
           runInAction(() => {
             session.messages =
               updatedSession?.messages?.map(msg => msg.toMessageObject()) || [];
+            // The frozen completion snapshot described the pre-edit
+            // conversation; editing/regenerating shortens the context, so the
+            // banner state is stale. Clear it and let the next turn re-evaluate.
+            this.lastCompletionResult = undefined;
+            this.dismissedBannerVariants = new Set();
+            this.consecutiveFullFailures = 0;
           });
         }
       }
