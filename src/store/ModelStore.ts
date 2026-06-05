@@ -1892,11 +1892,7 @@ class ModelStore {
         }
       });
 
-      // Update availableMemoryCeiling after release (clean state).
-      // os_proc_available_memory() returns 0 on iOS Simulator, which
-      // the native module surfaces as a reject. Match the startup
-      // path's fallback (60% RAM / RAM − 1.2GB heuristic) instead of
-      // logging a warning on every release.
+      // Update availableMemoryCeiling after release (clean state)
       try {
         const availableBytes = await NativeHardwareInfo.getAvailableMemory();
         runInAction(() => {
@@ -1907,24 +1903,11 @@ class ModelStore {
             this.availableMemoryCeiling = availableBytes;
           }
         });
-      } catch {
-        try {
-          const totalMemory = await DeviceInfo.getTotalMemory();
-          const fallback = Math.max(
-            Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9),
-            0,
-          );
-          runInAction(() => {
-            if (
-              this.availableMemoryCeiling === undefined ||
-              fallback > this.availableMemoryCeiling
-            ) {
-              this.availableMemoryCeiling = fallback;
-            }
-          });
-        } catch {
-          // Both calls failed; keep the prior ceiling value.
-        }
+      } catch (error) {
+        console.warn(
+          '[ModelStore] Failed to update availableMemoryCeiling:',
+          error,
+        );
       }
     }
     return 'Context released successfully';
