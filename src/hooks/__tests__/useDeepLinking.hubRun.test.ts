@@ -98,12 +98,29 @@ describe('useDeepLinking — hub/run dispatch', () => {
 
     await registeredHandler!({
       host: 'hub',
-      url: 'pocketpal://hub/run?repo_id=author/model', // no filename
+      url: 'pocketpal://hub/run?filename=x.gguf', // missing repo_id
     });
 
     expect(alertSpy).toHaveBeenCalled();
     expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
     expect(deepLinkStore.pendingHubRun).toBeNull();
+  });
+
+  it('parks a valid link with no filename without alerting', async () => {
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+
+    await registeredHandler!({
+      host: 'hub',
+      url: 'pocketpal://hub/run?repo_id=author/model&source=hf',
+    });
+
+    expect(deepLinkStore.setPendingHubRun).toHaveBeenCalledWith({
+      repoId: 'author/model',
+      filename: undefined,
+      source: 'hf',
+    });
+    expect(alertSpy).not.toHaveBeenCalled();
   });
 
   it('parks a valid link arriving cold via the prod Linking path', async () => {
