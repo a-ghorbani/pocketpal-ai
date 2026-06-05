@@ -52,7 +52,15 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
         await modelStore.initContext(model);
         onReloadResult(true, target);
       } catch {
+        // releaseContext already unloaded the model. Restore the prior n_ctx
+        // and re-init so the model is actually loaded again, not just the
+        // setting restored.
         modelStore.setNContext(previousNCtx);
+        try {
+          await modelStore.initContext(model);
+        } catch {
+          // Re-init also failed; the banner's New-chat CTA stays reachable.
+        }
         onReloadResult(false, target);
       } finally {
         setIsReloading(false);
