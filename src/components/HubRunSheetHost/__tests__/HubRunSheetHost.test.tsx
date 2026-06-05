@@ -38,8 +38,12 @@ jest.mock('../../../utils', () => {
 });
 
 // Stub DetailsView so the test asserts the host presents it, not its internals.
+// Captures the model it receives so tests can assert the host enriched siblings
+// (canFitInStorage) before handing off.
+let lastDetailsViewModel: any = null;
 jest.mock('../../../screens/ModelsScreen/HFModelSearch/DetailsView', () => ({
   DetailsView: ({hfModel}: {hfModel: {id: string}}) => {
+    lastDetailsViewModel = hfModel;
     const ReactStub = require('react');
     const {Text: RNText} = require('react-native');
     return ReactStub.createElement(
@@ -75,6 +79,7 @@ const resolvedModel = {
 describe('HubRunSheetHost', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    lastDetailsViewModel = null;
     runInAction(() => {
       deepLinkStore.pendingHubRun = null;
     });
@@ -95,6 +100,25 @@ describe('HubRunSheetHost', () => {
     });
     expect(getByTestId('details-view')).toHaveTextContent('author/model');
     expect(mockResolveRepo).toHaveBeenCalledWith('author/model', undefined);
+  });
+
+  it('enriches resolved siblings with canFitInStorage before DetailsView', async () => {
+    mockResolveRepo.mockResolvedValue(resolvedModel);
+    runInAction(() => {
+      deepLinkStore.pendingHubRun = request;
+    });
+
+    const {getByTestId} = render(<HubRunSheetHost />, {
+      withBottomSheetProvider: true,
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('details-view')).toBeTruthy();
+    });
+
+    // Without this the download button stays permanently disabled.
+    expect(lastDetailsViewModel.siblings[0].canFitInStorage).toBeDefined();
+    expect(lastDetailsViewModel.siblings[0].canFitInStorage).toBe(true);
   });
 
   it('shows the error state with Retry when resolve fails', async () => {

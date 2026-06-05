@@ -346,3 +346,26 @@ describe('hfAsModel', () => {
     expect(model.repo).toBe('');
   });
 });
+
+describe('enrichSiblingsWithStorage', () => {
+  const {enrichSiblingsWithStorage} = require('..');
+  const {
+    mockHFModel1,
+    mockHFModelFiles1,
+  } = require('../../../jest/fixtures/models');
+
+  it('sets canFitInStorage on every sibling per free-disk check', async () => {
+    const enriched = await enrichSiblingsWithStorage(
+      mockHFModel1,
+      mockHFModelFiles1,
+    );
+
+    // Fixtures: index 0 fits free disk (0.5x), index 1 does not (1.5x).
+    expect(enriched).toHaveLength(mockHFModelFiles1.length);
+    enriched.forEach((file: {canFitInStorage?: boolean}) => {
+      expect(file.canFitInStorage).toBeDefined();
+    });
+    expect(enriched[0].canFitInStorage).toBe(true);
+    expect(enriched[1].canFitInStorage).toBe(false);
+  });
+});

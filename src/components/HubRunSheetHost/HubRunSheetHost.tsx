@@ -8,7 +8,11 @@ import {Sheet} from '../Sheet';
 import {useTheme} from '../../hooks';
 import {hfStore} from '../../store';
 import {useHubRunSheet} from '../../hooks/useDeepLinking';
-import {L10nContext, resolveHFRepo} from '../../utils';
+import {
+  L10nContext,
+  enrichSiblingsWithStorage,
+  resolveHFRepo,
+} from '../../utils';
 import {HuggingFaceModel} from '../../utils/types';
 import {DetailsView} from '../../screens/ModelsScreen/HFModelSearch/DetailsView';
 
@@ -44,7 +48,13 @@ export const HubRunSheetHost: React.FC = observer(() => {
     try {
       const authToken = hfStore.shouldUseToken ? hfStore.hfToken : undefined;
       const hfModel = await resolveHFRepo(repoId, authToken);
-      setResolved(hfModel);
+      // Compute per-file storage availability so DetailsView's download button
+      // gate (canFitInStorage) is set, mirroring the HF search path.
+      const siblings = await enrichSiblingsWithStorage(
+        hfModel,
+        hfModel.siblings,
+      );
+      setResolved({...hfModel, siblings});
     } catch (e) {
       console.error('Failed to resolve hub/run repo:', e);
       setError(l10n.models.hubRun.resolveError);
