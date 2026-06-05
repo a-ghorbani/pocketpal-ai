@@ -322,14 +322,11 @@
     },
     "hubRun": {
       "title": "Download model",
-      "download": "Download",
       "cancel": "Cancel",
       "retry": "Retry",
-      "quantLabel": "Quantization",
       "invalidLinkTitle": "Invalid link",
       "invalidLinkMessage": "This Hugging Face link is missing or has an invalid model or file.",
-      "resolveError": "Couldn't load model details. Check your connection and try again.",
-      "fileNotFound": "That file wasn't found in the repository."
+      "resolveError": "Couldn't load model details. Check your connection and try again."
     },
     "modelCard": {
       "alerts": {
