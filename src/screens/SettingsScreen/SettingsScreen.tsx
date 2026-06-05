@@ -15,6 +15,7 @@ import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
 import {toJS} from 'mobx';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useIsFocused} from '@react-navigation/native';
 import {
   Switch,
   Text,
@@ -74,6 +75,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const l10n = useContext(L10nContext);
   const theme = useTheme();
   const styles = createStyles(theme);
+  const isFocused = useIsFocused();
   const [contextSize, setContextSize] = useState(
     modelStore.contextInitParams.n_ctx.toString(),
   );
@@ -136,6 +138,17 @@ export const SettingsScreen: React.FC = observer(() => {
 
     loadDeviceOptions();
   }, []);
+
+  // Re-sync the displayed context size when the screen regains focus or the
+  // global n_ctx changes elsewhere (e.g. the chat banner's increase-context
+  // flow). Skipped while the input is actively edited so it never fights typing.
+  const configuredNCtx = modelStore.contextInitParams.n_ctx;
+  useEffect(() => {
+    if (isFocused && !inputRef.current?.isFocused()) {
+      setContextSize(configuredNCtx.toString());
+      setIsValidInput(true);
+    }
+  }, [isFocused, configuredNCtx]);
 
   // Compute current backend type based on device selection
   // Convert MobX observable to plain JS for dependency tracking
