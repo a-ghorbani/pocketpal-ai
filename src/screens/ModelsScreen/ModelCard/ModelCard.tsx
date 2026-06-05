@@ -865,6 +865,22 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                     </View>
                   )}
 
+                  {/* Loaded Context — only shown for the active model
+                      so users can spot when runtime n_ctx diverges from
+                      the Settings value (e.g. after a banner Increase
+                      that hasn't been reflected back into Settings). */}
+                  {model.id === modelStore.activeModelId &&
+                    modelStore.runtimeNCtx !== undefined && (
+                      <View style={styles.technicalDetailCard}>
+                        <Text style={styles.technicalDetailLabel}>
+                          {l10n.models.modelCard.labels.loadedContext}
+                        </Text>
+                        <Text style={styles.technicalDetailValue}>
+                          {modelStore.runtimeNCtx.toLocaleString()}
+                        </Text>
+                      </View>
+                    )}
+
                   {/* Architecture */}
                   {(model.hfModel?.specs?.gguf?.architecture ||
                     model.ggufMetadata?.architecture) && (
