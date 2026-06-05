@@ -2198,4 +2198,244 @@ describe('chatSessionStore', () => {
       expect(chatSessionStore.getDraft('session2')).toBe('draft B');
     });
   });
+
+  describe('context-limit banner state', () => {
+    beforeEach(() => {
+      chatSessionStore.lastCompletionResult = undefined;
+      chatSessionStore.dismissedBannerVariants = new Set();
+      chatSessionStore.consecutiveFullFailures = 0;
+      chatSessionStore.palLoadHintSeen = new Set();
+    });
+
+    describe('recordCompletionSnapshot', () => {
+      it('mirrors the snapshot into lastCompletionResult', () => {
+        const snap = {used: 3000, contextFull: false, isRemote: false};
+        chatSessionStore.recordCompletionSnapshot(snap);
+        expect(chatSessionStore.lastCompletionResult).toEqual(snap);
+      });
+
+      it('clears per-draft dismissals on a fresh finished turn', () => {
+        chatSessionStore.setBannerDismissed('context-warning');
+        expect(
+          chatSessionStore.dismissedBannerVariants.has('context-warning'),
+        ).toBe(true);
+        chatSessionStore.recordCompletionSnapshot({
+          used: 3000,
+          contextFull: false,
+          isRemote: false,
+        });
+        expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+      });
+
+      it('increments consecutiveFullFailures on a contextFull turn', () => {
+        chatSessionStore.recordCompletionSnapshot({
+          used: 4096,
+          contextFull: true,
+          isRemote: false,
+        });
+        expect(chatSessionStore.consecutiveFullFailures).toBe(1);
+        chatSessionStore.recordCompletionSnapshot({
+          used: 4096,
+          contextFull: true,
+          isRemote: false,
+        });
+        expect(chatSessionStore.consecutiveFullFailures).toBe(2);
+      });
+
+      it('resets consecutiveFullFailures when a turn is not contextFull', () => {
+        chatSessionStore.recordCompletionSnapshot({
+          used: 4096,
+          contextFull: true,
+          isRemote: false,
+        });
+        expect(chatSessionStore.consecutiveFullFailures).toBe(1);
+        chatSessionStore.recordCompletionSnapshot({
+          used: 2000,
+          contextFull: false,
+          isRemote: false,
+        });
+        expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+      });
+    });
+
+    describe('setBannerDismissed', () => {
+      it('adds a variant to the dismissed set', () => {
+        chatSessionStore.setBannerDismissed('context-warning');
+        expect(
+          chatSessionStore.dismissedBannerVariants.has('context-warning'),
+        ).toBe(true);
+      });
+
+      it('is idempotent for an already-dismissed variant', () => {
+        chatSessionStore.setBannerDismissed('context-warning');
+        const first = chatSessionStore.dismissedBannerVariants;
+        chatSessionStore.setBannerDismissed('context-warning');
+        expect(chatSessionStore.dismissedBannerVariants).toBe(first);
+        expect(chatSessionStore.dismissedBannerVariants.size).toBe(1);
+      });
+    });
+
+    describe('markPalLoadHintSeen', () => {
+      it('records a signature once', () => {
+        chatSessionStore.markPalLoadHintSeen('pal-1|2048|render_html');
+        expect(
+          chatSessionStore.palLoadHintSeen.has('pal-1|2048|render_html'),
+        ).toBe(true);
+      });
+
+      it('is idempotent for an already-seen signature', () => {
+        chatSessionStore.markPalLoadHintSeen('sig');
+        const first = chatSessionStore.palLoadHintSeen;
+        chatSessionStore.markPalLoadHintSeen('sig');
+        expect(chatSessionStore.palLoadHintSeen).toBe(first);
+        expect(chatSessionStore.palLoadHintSeen.size).toBe(1);
+      });
+    });
+
+    describe('clear triggers', () => {
+      it('resetActiveSession clears all four ephemeral banner fields', () => {
+        chatSessionStore.lastCompletionResult = {
+          used: 4096,
+          contextFull: true,
+          isRemote: false,
+        };
+        chatSessionStore.setBannerDismissed('context-warning');
+        chatSessionStore.consecutiveFullFailures = 3;
+        chatSessionStore.markPalLoadHintSeen('sig');
+
+        chatSessionStore.resetActiveSession();
+
+        expect(chatSessionStore.lastCompletionResult).toBeUndefined();
+        expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+        expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+        expect(chatSessionStore.palLoadHintSeen.size).toBe(0);
+      });
+
+      it('deleteSession clears dismissedBannerVariants', async () => {
+        chatSessionStore.sessions = [
+          {
+            id: 'session-keep',
+            title: 'Keep',
+            date: new Date().toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal',
+          },
+        ];
+        chatSessionStore.activeSessionId = 'session-keep';
+        chatSessionStore.setBannerDismissed('context-warning');
+        (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.deleteSession('other-session');
+
+        expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+      });
+
+      it('setActiveSession resets dismissals and counter, hydrates snapshot from disk', async () => {
+        const persistedSnapshot = {
+          content: 'reply',
+          used: 4096,
+          contextFull: true,
+          isRemote: false,
+        };
+        const mockSession = {
+          id: 'session1',
+          title: 'Session 1',
+          date: new Date().toISOString(),
+          messages: [
+            {
+              id: 'm1',
+              type: 'text',
+              author: {id: 'assistant'},
+              createdAt: Date.now(),
+              metadata: {completionResult: persistedSnapshot},
+            },
+          ] as any,
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal' as 'pal' | 'custom',
+          messagesLoaded: true,
+        };
+        chatSessionStore.sessions = [mockSession];
+        chatSessionStore.setBannerDismissed('context-warning');
+        chatSessionStore.consecutiveFullFailures = 2;
+
+        await chatSessionStore.setActiveSession('session1');
+
+        expect(chatSessionStore.lastCompletionResult).toEqual(
+          persistedSnapshot,
+        );
+        expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+        expect(chatSessionStore.consecutiveFullFailures).toBe(0);
+      });
+
+      it('setActiveSession hydrates to undefined for a session whose snapshot predates the feature', async () => {
+        const mockSession = {
+          id: 'session1',
+          title: 'Session 1',
+          date: new Date().toISOString(),
+          messages: [
+            {
+              id: 'm1',
+              type: 'text',
+              author: {id: 'assistant'},
+              createdAt: Date.now(),
+              metadata: {timings: {predicted_per_second: 10}},
+            },
+          ] as any,
+          completionSettings: defaultCompletionSettings,
+          settingsSource: 'pal' as 'pal' | 'custom',
+          messagesLoaded: true,
+        };
+        chatSessionStore.sessions = [mockSession];
+
+        await chatSessionStore.setActiveSession('session1');
+
+        expect(chatSessionStore.lastCompletionResult).toBeUndefined();
+      });
+
+      it('bulkDeleteSessions clears dismissedBannerVariants unconditionally (active session NOT deleted)', async () => {
+        chatSessionStore.sessions = [
+          {
+            id: 'active-keep',
+            title: 'Keep',
+            date: new Date().toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal',
+          },
+          {
+            id: 'to-delete',
+            title: 'Delete',
+            date: new Date().toISOString(),
+            messages: [],
+            completionSettings: defaultCompletionSettings,
+            settingsSource: 'pal',
+          },
+        ];
+        chatSessionStore.activeSessionId = 'active-keep';
+        chatSessionStore.selectedSessionIds.add('to-delete');
+        chatSessionStore.setBannerDismissed('context-warning');
+        chatSessionStore.lastCompletionResult = {
+          used: 100,
+          contextFull: false,
+          isRemote: false,
+        };
+        const resetSpy = jest.spyOn(chatSessionStore, 'resetActiveSession');
+        (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
+          undefined,
+        );
+
+        await chatSessionStore.bulkDeleteSessions();
+
+        // resetActiveSession is NOT called (active session survived), so the
+        // dismissal clear must come from the unconditional bulk-op clear.
+        expect(resetSpy).not.toHaveBeenCalled();
+        expect(chatSessionStore.dismissedBannerVariants.size).toBe(0);
+        // The active session's live snapshot is untouched by the bulk op.
+        expect(chatSessionStore.lastCompletionResult).toBeDefined();
+      });
+    });
+  });
 });
