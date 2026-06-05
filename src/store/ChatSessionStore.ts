@@ -8,7 +8,11 @@ import {
   AgentToolOutcome,
   MessageType,
 } from '../utils/types';
-import {CompletionParams} from '../utils/completionTypes';
+import {
+  BannerVariant,
+  CompletionParams,
+  CompletionResultSnapshot,
+} from '../utils/completionTypes';
 import {chatSessionRepository} from '../repositories/ChatSessionRepository';
 import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {derivedText} from '../utils/chat';
@@ -115,6 +119,15 @@ class ChatSessionStore {
   // reads it.
   toolCallTokenCount: number = 0;
 
+  // Banner state for the context-limit warning. All ephemeral (MobX-only,
+  // no DB column). The snapshot is mirrored from the newest finished turn's
+  // metadata.completionResult; the rest track per-draft dismissals, the run
+  // of back-to-back full turns, and which pal-load hints have already shown.
+  lastCompletionResult: CompletionResultSnapshot | undefined = undefined;
+  dismissedBannerVariants: Set<BannerVariant> = new Set();
+  consecutiveFullFailures: number = 0;
+  palLoadHintSeen: Set<string> = new Set();
+
   constructor() {
     makeAutoObservable(this);
     this.initialize();
@@ -211,6 +224,35 @@ class ChatSessionStore {
     this.toolCallTokenCount = value;
   }
 
+  // Mirror a finished turn's snapshot into the store and advance banner
+  // bookkeeping: a fresh finished turn clears per-draft dismissals, and the
+  // full-turn run either increments or resets.
+  recordCompletionSnapshot(snapshot: CompletionResultSnapshot) {
+    this.lastCompletionResult = snapshot;
+    this.dismissedBannerVariants = new Set();
+    this.consecutiveFullFailures = snapshot.contextFull
+      ? this.consecutiveFullFailures + 1
+      : 0;
+  }
+
+  setBannerDismissed(variant: BannerVariant) {
+    if (this.dismissedBannerVariants.has(variant)) {
+      return;
+    }
+    const next = new Set(this.dismissedBannerVariants);
+    next.add(variant);
+    this.dismissedBannerVariants = next;
+  }
+
+  markPalLoadHintSeen(signature: string) {
+    if (this.palLoadHintSeen.has(signature)) {
+      return;
+    }
+    const next = new Set(this.palLoadHintSeen);
+    next.add(signature);
+    this.palLoadHintSeen = next;
+  }
+
   /**
    * Convenience derived flag for renderers that previously consulted a
    * boolean. Single source of truth: `agentUiState.status`.
@@ -293,6 +335,7 @@ class ChatSessionStore {
       runInAction(() => {
         this.sessions = this.sessions.filter(session => session.id !== id);
         this.sessionDrafts.delete(id);
+        this.dismissedBannerVariants = new Set();
       });
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -319,6 +362,10 @@ class ChatSessionStore {
       // Instead, preserve global settings as they are
       this.exitEditMode();
       this.activeSessionId = null;
+      this.lastCompletionResult = undefined;
+      this.dismissedBannerVariants = new Set();
+      this.consecutiveFullFailures = 0;
+      this.palLoadHintSeen = new Set();
     });
   }
 
@@ -362,7 +409,23 @@ class ChatSessionStore {
       this.newChatPalId = undefined;
       this.newChatSettingsSource = 'pal'; // Reset for consistency
       this.newChatThinkingOverride = undefined;
+      this.lastCompletionResult = this.hydrateCompletionSnapshot(session);
+      this.dismissedBannerVariants = new Set();
+      this.consecutiveFullFailures = 0;
     });
+  }
+
+  // Read the newest assistant turn's persisted snapshot so the banner
+  // reflects the loaded chat without waiting for a new turn. Messages are
+  // unshift-ordered ([0] newest); snapshots predating this feature lack the
+  // fields and resolve to not-full.
+  private hydrateCompletionSnapshot(
+    session: SessionMetaData | undefined,
+  ): CompletionResultSnapshot | undefined {
+    const snapshot = session?.messages.find(
+      msg => msg.metadata?.completionResult,
+    )?.metadata?.completionResult;
+    return snapshot as CompletionResultSnapshot | undefined;
   }
 
   // Update session title by session ID
@@ -1300,6 +1363,7 @@ class ChatSessionStore {
           session => !idsToDelete.includes(session.id),
         );
         this.exitSelectionMode();
+        this.dismissedBannerVariants = new Set();
       });
     } catch (error) {
       console.error('Failed to bulk delete sessions:', error);
