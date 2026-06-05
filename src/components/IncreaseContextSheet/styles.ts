@@ -84,10 +84,6 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurfaceVariant,
       lineHeight: 20,
     },
-    actions: {
-      flexDirection: 'row',
-      gap: 8,
-    },
     button: {
       flex: 1,
     },

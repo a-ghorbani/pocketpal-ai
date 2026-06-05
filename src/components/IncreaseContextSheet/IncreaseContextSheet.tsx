@@ -354,35 +354,33 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
           </Sheet.ScrollView>
 
           <Sheet.Actions>
-            <View style={styles.actions}>
+            <Button
+              mode="outlined"
+              onPress={onClose}
+              disabled={isReloading}
+              style={styles.button}
+              testID="increase-context-cancel">
+              {l10n.chat.increaseContextCancel}
+            </Button>
+            {anyFits ? (
               <Button
-                mode="outlined"
-                onPress={onClose}
-                disabled={isReloading}
+                mode="contained"
+                onPress={handleConfirm}
+                disabled={confirmDisabled}
+                loading={isReloading}
                 style={styles.button}
-                testID="increase-context-cancel">
-                {l10n.chat.increaseContextCancel}
+                testID="increase-context-confirm">
+                {confirmLabel}
               </Button>
-              {anyFits ? (
-                <Button
-                  mode="contained"
-                  onPress={handleConfirm}
-                  disabled={confirmDisabled}
-                  loading={isReloading}
-                  style={styles.button}
-                  testID="increase-context-confirm">
-                  {confirmLabel}
-                </Button>
-              ) : (
-                <Button
-                  mode="contained"
-                  onPress={handleNewChat}
-                  style={styles.button}
-                  testID="increase-context-new-chat">
-                  {l10n.chat.contextNewChat}
-                </Button>
-              )}
-            </View>
+            ) : (
+              <Button
+                mode="contained"
+                onPress={handleNewChat}
+                style={styles.button}
+                testID="increase-context-new-chat">
+                {l10n.chat.contextNewChat}
+              </Button>
+            )}
           </Sheet.Actions>
         </Sheet>
       );
