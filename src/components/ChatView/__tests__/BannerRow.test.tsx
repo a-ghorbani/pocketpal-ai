@@ -83,6 +83,9 @@ describe('BannerRow', () => {
     expect(getByTestId('context-full-banner')).toBeTruthy();
     expect(getByTestId('context-full-new-chat')).toBeTruthy();
     expect(getByTestId('context-full-increase')).toBeTruthy();
+    // The fullness meter renders on the full variant too (resolver emits ratio
+    // on both nCtx-reading branches).
+    expect(getByTestId('banner-meter')).toBeTruthy();
     // Sticky: no dismiss button on the full banner.
     expect(queryByTestId('context-banner-dismiss')).toBeNull();
   });
@@ -157,9 +160,13 @@ describe('BannerRow', () => {
         content: 'this reply was cut off',
       };
     });
-    const {getByTestId, getByText} = renderBanner();
+    const {getByTestId, queryByTestId, getByText} = renderBanner();
     expect(getByTestId('context-remote-hedged-banner')).toBeTruthy();
     expect(getByText(l10n.en.chat.contextRemoteHedged)).toBeTruthy();
+    // No fullness meter on the remote-hedged branch: the resolver emits no
+    // ratio there, so the meter cannot render (reinforces the remote no-meter
+    // rule, not just relying on it).
+    expect(queryByTestId('banner-meter')).toBeNull();
 
     fireEvent.press(getByTestId('context-banner-dismiss'));
     expect(chatSessionStore.setBannerDismissed).toHaveBeenCalledWith(
