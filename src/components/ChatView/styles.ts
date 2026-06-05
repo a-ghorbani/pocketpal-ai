@@ -105,6 +105,14 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       borderBottomWidth: 1,
       borderColor: theme.colors.outline,
     },
+    contextWarningBanner: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.colors.outline,
+    },
     contextBannerText: {
       flex: 1,
       flexShrink: 1,
@@ -150,6 +158,8 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       backgroundColor: theme.colors.surfaceDisabled,
       overflow: 'hidden' as const,
       marginTop: 6,
+      alignSelf: 'stretch' as const,
+      width: '100%' as const,
     },
     bannerMeterFill: {
       height: 4,

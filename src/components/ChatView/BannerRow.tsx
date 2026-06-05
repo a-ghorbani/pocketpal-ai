@@ -106,7 +106,9 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     if (variant === 'context-warning') {
       const percent = Math.round((ratio ?? 0) * 100);
       return (
-        <View testID="context-warning-banner" style={styles.contextBanner}>
+        <View
+          testID="context-warning-banner"
+          style={styles.contextWarningBanner}>
           <View style={styles.bannerHeader}>
             <AlertIcon width={14} height={14} stroke={theme.colors.error} />
             <Text style={[styles.contextBannerText, styles.bannerHeaderText]}>

@@ -133,6 +133,32 @@ describe('BannerRow', () => {
     expect(getByTestId('banner-percent')).toHaveTextContent('81%');
   });
 
+  it('stacks the warning banner in a column so the meter spans full width', () => {
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: 3300,
+        contextFull: false,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    // A row container would collapse the meter to ~0 width. The warning banner
+    // must stack (default column) so the meter's percentage fill measures
+    // against a full-width parent.
+    const container = getByTestId('context-warning-banner');
+    const flat = Array.isArray(container.props.style)
+      ? Object.assign({}, ...container.props.style.filter(Boolean))
+      : container.props.style;
+    expect(flat.flexDirection).not.toBe('row');
+
+    const meter = getByTestId('banner-meter');
+    const meterFlat = Array.isArray(meter.props.style)
+      ? Object.assign({}, ...meter.props.style.filter(Boolean))
+      : meter.props.style;
+    expect(meterFlat.alignSelf).toBe('stretch');
+    expect(meterFlat.width).toBe('100%');
+  });
+
   it('shows the escalated full copy after consecutive full failures', () => {
     runInAction(() => {
       chatSessionStore.consecutiveFullFailures = 2;
