@@ -167,6 +167,9 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     },
     bannerOr: {
       fontSize: 11.5,
-      color: theme.colors.onSurfaceVariant,
+      color: theme.colors.onErrorContainer,
+    },
+    contextFullSecondaryButton: {
+      borderColor: theme.colors.onErrorContainer,
     },
   });

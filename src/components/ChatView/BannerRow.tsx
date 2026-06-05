@@ -131,7 +131,9 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
             {canIncrease ? (
               <Button
                 compact
-                mode="contained-tonal"
+                mode="contained"
+                buttonColor={theme.colors.error}
+                textColor={theme.colors.onError}
                 testID="context-warning-increase"
                 onPress={onIncreaseContext}>
                 {l10n.chat.contextMoreRoom}
@@ -200,7 +202,9 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
             <>
               <Button
                 compact
-                mode="contained-tonal"
+                mode="contained"
+                buttonColor={theme.colors.error}
+                textColor={theme.colors.onError}
                 testID="context-full-increase"
                 onPress={onIncreaseContext}>
                 {l10n.chat.contextMoreRoom}
@@ -210,7 +214,9 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
           ) : null}
           <Button
             compact
-            mode="contained-tonal"
+            mode="outlined"
+            textColor={theme.colors.onErrorContainer}
+            style={styles.contextFullSecondaryButton}
             testID="context-full-new-chat"
             onPress={onNewChat}>
             {l10n.chat.contextNewChat}
