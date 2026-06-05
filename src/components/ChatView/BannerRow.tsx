@@ -6,19 +6,22 @@ import {Button, Text} from 'react-native-paper';
 
 import {createStyles} from './styles';
 
+import {AlertIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {chatSessionStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {MessageType, ModelOrigin} from '../../utils/types';
 import {resolveBannerVariant} from '../../utils/bannerVariantResolver';
-import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {talentRegistry} from '../../services/talents';
 import {t} from '../../locales';
 
 interface BannerRowProps {
   messages: MessageType.Any[];
   htmlPreviewCount: number;
-  onIncreaseContext: (target: number) => void;
+  // True when at least one larger context tier fits the device. Gates the
+  // increase CTA's visibility (the sheet owns the actual target).
+  canIncrease: boolean;
+  onIncreaseContext: () => void;
   onNewChat: () => void;
 }
 
@@ -42,6 +45,24 @@ function deriveHeavyTalentName(
   return undefined;
 }
 
+const Meter: React.FC<{
+  ratio: number;
+  tint: string;
+  styles: ReturnType<typeof createStyles>;
+}> = ({ratio, tint, styles}) => (
+  <View style={styles.bannerMeter} testID="banner-meter">
+    <View
+      style={[
+        styles.bannerMeterFill,
+        {
+          width: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
+          backgroundColor: tint,
+        },
+      ]}
+    />
+  </View>
+);
+
 /**
  * The single chat-input banner slot. Renders the one variant resolved from the
  * completion snapshot and current model state, or the existing HTML soft-cap
@@ -49,34 +70,14 @@ function deriveHeavyTalentName(
  * host.
  */
 export const BannerRow: React.FC<BannerRowProps> = observer(
-  ({messages, htmlPreviewCount, onIncreaseContext, onNewChat}) => {
+  ({messages, htmlPreviewCount, canIncrease, onIncreaseContext, onNewChat}) => {
     const theme = useTheme();
     const styles = createStyles({theme});
     const l10n = useContext(L10nContext);
 
     const activeModel = modelStore.activeModel;
-    const projectionModel = modelStore.models.find(
-      m => m.id === modelStore.activeProjectionModelId,
-    );
-    const ceiling = modelStore.availableMemoryCeiling;
 
-    const canFitNCtx =
-      activeModel && ceiling !== undefined
-        ? (candidate: number) => {
-            try {
-              const required = getModelMemoryRequirement(
-                activeModel,
-                projectionModel,
-                {...modelStore.contextInitParams, n_ctx: candidate},
-              );
-              return required <= ceiling;
-            } catch {
-              return false;
-            }
-          }
-        : undefined;
-
-    const {variant, nextNCtx, heavyTalentName} = resolveBannerVariant(
+    const {variant, heavyTalentName, ratio} = resolveBannerVariant(
       chatSessionStore.lastCompletionResult,
       {
         effectiveNCtx: modelStore.activeContextSettings?.n_ctx,
@@ -85,7 +86,6 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
         activeModelId: modelStore.activeModelId,
         dismissed: chatSessionStore.dismissedBannerVariants,
         heavyTalentName: deriveHeavyTalentName(messages),
-        canFitNCtx,
       },
     );
 
@@ -104,20 +104,43 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     }
 
     if (variant === 'context-warning') {
+      const percent = Math.round((ratio ?? 0) * 100);
       return (
         <View testID="context-warning-banner" style={styles.contextBanner}>
-          <Text style={styles.contextBannerText}>
-            {l10n.chat.contextWarning}
-          </Text>
-          <Button
-            compact
-            mode="text"
-            testID="context-banner-dismiss"
-            onPress={() =>
-              chatSessionStore.setBannerDismissed('context-warning')
-            }>
-            {l10n.chat.contextBannerDismiss}
-          </Button>
+          <View style={styles.bannerHeader}>
+            <AlertIcon width={14} height={14} stroke={theme.colors.error} />
+            <Text style={[styles.contextBannerText, styles.bannerHeaderText]}>
+              {l10n.chat.contextWarning}
+            </Text>
+            <Text
+              style={[styles.bannerPercent, {color: theme.colors.error}]}
+              testID="banner-percent">
+              {`${percent}%`}
+            </Text>
+          </View>
+          {ratio != null ? (
+            <Meter ratio={ratio} tint={theme.colors.error} styles={styles} />
+          ) : null}
+          <View style={styles.contextBannerActions}>
+            {canIncrease ? (
+              <Button
+                compact
+                mode="contained-tonal"
+                testID="context-warning-increase"
+                onPress={onIncreaseContext}>
+                {l10n.chat.contextMoreRoom}
+              </Button>
+            ) : null}
+            <Button
+              compact
+              mode="text"
+              testID="context-banner-dismiss"
+              onPress={() =>
+                chatSessionStore.setBannerDismissed('context-warning')
+              }>
+              {l10n.chat.contextBannerDismiss}
+            </Button>
+          </View>
         </View>
       );
     }
@@ -157,8 +180,28 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
 
     return (
       <View testID="context-full-banner" style={styles.contextFullBanner}>
-        <Text style={styles.contextFullBannerText}>{fullText}</Text>
+        <View style={styles.bannerHeader}>
+          <AlertIcon width={14} height={14} stroke={theme.colors.error} />
+          <Text style={[styles.contextFullBannerText, styles.bannerHeaderText]}>
+            {fullText}
+          </Text>
+        </View>
+        {ratio != null ? (
+          <Meter ratio={ratio} tint={theme.colors.error} styles={styles} />
+        ) : null}
         <View style={styles.contextBannerActions}>
+          {canIncrease ? (
+            <>
+              <Button
+                compact
+                mode="contained-tonal"
+                testID="context-full-increase"
+                onPress={onIncreaseContext}>
+                {l10n.chat.contextMoreRoom}
+              </Button>
+              <Text style={styles.bannerOr}>{l10n.chat.contextOr}</Text>
+            </>
+          ) : null}
           <Button
             compact
             mode="contained-tonal"
@@ -166,15 +209,6 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
             onPress={onNewChat}>
             {l10n.chat.contextNewChat}
           </Button>
-          {nextNCtx !== undefined ? (
-            <Button
-              compact
-              mode="contained-tonal"
-              testID="context-full-increase"
-              onPress={() => onIncreaseContext(nextNCtx)}>
-              {l10n.chat.contextIncrease}
-            </Button>
-          ) : null}
         </View>
       </View>
     );

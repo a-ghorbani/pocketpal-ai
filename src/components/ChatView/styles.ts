@@ -126,7 +126,37 @@ export const createStyles = ({theme}: {theme: Theme}) =>
     contextBannerActions: {
       flexDirection: 'row' as const,
       flexWrap: 'wrap' as const,
+      alignItems: 'center' as const,
       gap: 8,
       marginTop: 6,
+    },
+    bannerHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+    },
+    bannerHeaderText: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    bannerPercent: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      fontVariant: ['tabular-nums'],
+    },
+    bannerMeter: {
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.surfaceDisabled,
+      overflow: 'hidden' as const,
+      marginTop: 6,
+    },
+    bannerMeterFill: {
+      height: 4,
+      borderRadius: 2,
+    },
+    bannerOr: {
+      fontSize: 11.5,
+      color: theme.colors.onSurfaceVariant,
     },
   });

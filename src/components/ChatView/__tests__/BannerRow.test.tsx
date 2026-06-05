@@ -18,6 +18,7 @@ const renderBanner = (
       <BannerRow
         messages={[]}
         htmlPreviewCount={0}
+        canIncrease={true}
         onIncreaseContext={jest.fn()}
         onNewChat={jest.fn()}
         {...props}
@@ -70,7 +71,7 @@ describe('BannerRow', () => {
     );
   });
 
-  it('renders the sticky full banner with the increase CTA when a larger n_ctx fits', () => {
+  it('renders the sticky full banner with the increase CTA when an upgrade fits', () => {
     runInAction(() => {
       chatSessionStore.lastCompletionResult = {
         used: 4096,
@@ -78,7 +79,7 @@ describe('BannerRow', () => {
         isRemote: false,
       };
     });
-    const {getByTestId, queryByTestId} = renderBanner();
+    const {getByTestId, queryByTestId} = renderBanner({canIncrease: true});
     expect(getByTestId('context-full-banner')).toBeTruthy();
     expect(getByTestId('context-full-new-chat')).toBeTruthy();
     expect(getByTestId('context-full-increase')).toBeTruthy();
@@ -86,23 +87,21 @@ describe('BannerRow', () => {
     expect(queryByTestId('context-banner-dismiss')).toBeNull();
   });
 
-  it('hides the increase CTA when no larger n_ctx fits the device (9g)', () => {
+  it('hides the increase CTA when no larger context fits the device', () => {
     runInAction(() => {
-      // Ceiling below any memory requirement → no candidate fits.
-      modelStore.availableMemoryCeiling = 1;
       chatSessionStore.lastCompletionResult = {
         used: 4096,
         contextFull: true,
         isRemote: false,
       };
     });
-    const {getByTestId, queryByTestId} = renderBanner();
+    const {getByTestId, queryByTestId} = renderBanner({canIncrease: false});
     expect(getByTestId('context-full-banner')).toBeTruthy();
     expect(getByTestId('context-full-new-chat')).toBeTruthy();
     expect(queryByTestId('context-full-increase')).toBeNull();
   });
 
-  it('passes the resolved next-fit target to onIncreaseContext', () => {
+  it('opens the sheet (no precomputed target) when the increase CTA is tapped', () => {
     const onIncreaseContext = jest.fn();
     runInAction(() => {
       chatSessionStore.lastCompletionResult = {
@@ -111,10 +110,24 @@ describe('BannerRow', () => {
         isRemote: false,
       };
     });
-    const {getByTestId} = renderBanner({onIncreaseContext});
+    const {getByTestId} = renderBanner({onIncreaseContext, canIncrease: true});
     fireEvent.press(getByTestId('context-full-increase'));
     expect(onIncreaseContext).toHaveBeenCalledTimes(1);
-    expect(onIncreaseContext.mock.calls[0][0]).toBeGreaterThan(4096);
+    expect(onIncreaseContext.mock.calls[0]).toHaveLength(0);
+  });
+
+  it('shows the meter and percent on the warning banner', () => {
+    runInAction(() => {
+      chatSessionStore.lastCompletionResult = {
+        used: 3300,
+        contextFull: false,
+        isRemote: false,
+      };
+    });
+    const {getByTestId} = renderBanner();
+    expect(getByTestId('banner-meter')).toBeTruthy();
+    // 3300 / 4096 ≈ 80.6% → rounds to 81%.
+    expect(getByTestId('banner-percent')).toHaveTextContent('81%');
   });
 
   it('shows the escalated full copy after consecutive full failures', () => {
