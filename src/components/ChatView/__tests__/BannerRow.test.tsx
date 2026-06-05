@@ -4,6 +4,7 @@ import {runInAction} from 'mobx';
 import {fireEvent, render} from '../../../../jest/test-utils';
 
 import {L10nContext} from '../../../utils';
+import {ModelOrigin} from '../../../utils/types';
 import {l10n} from '../../../locales';
 import {chatSessionStore, modelStore} from '../../../store';
 
@@ -129,7 +130,37 @@ describe('BannerRow', () => {
     expect(getByText(l10n.en.chat.contextFullEscalated)).toBeTruthy();
   });
 
-  it('suppresses context-* banners when no model is loaded (I5)', () => {
+  it('renders the remote hedged advisory for a remote model with no runtime n_ctx', () => {
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-1';
+      modelStore.models = [
+        {id: 'remote-1', origin: ModelOrigin.REMOTE} as any,
+      ];
+      // Remote models never set activeContextSettings.n_ctx.
+      (modelStore as any).activeContextSettings = undefined;
+      chatSessionStore.lastCompletionResult = {
+        used: 0,
+        contextFull: false,
+        isRemote: true,
+        tokensPredicted: 600,
+        content: 'this reply was cut off',
+      };
+    });
+    const {getByTestId, getByText} = renderBanner();
+    expect(getByTestId('context-remote-hedged-banner')).toBeTruthy();
+    expect(getByText(l10n.en.chat.contextRemoteHedged)).toBeTruthy();
+
+    fireEvent.press(getByTestId('context-banner-dismiss'));
+    expect(chatSessionStore.setBannerDismissed).toHaveBeenCalledWith(
+      'context-remote-hedged',
+    );
+
+    runInAction(() => {
+      modelStore.models = [];
+    });
+  });
+
+  it('suppresses context-* banners when no model is loaded', () => {
     runInAction(() => {
       modelStore.activeModelId = undefined;
       chatSessionStore.lastCompletionResult = {

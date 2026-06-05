@@ -76,6 +76,20 @@ describe('resolveBannerVariant', () => {
       );
       expect(result.heavyTalentName).toBe('render_html');
     });
+
+    it('clears once a raised effectiveNCtx makes the snapshot stale', () => {
+      // Same persisted full snapshot, but the user lifted n_ctx; the higher
+      // effectiveNCtx pushes used below the freshness boundary so the sticky
+      // banner falls through without a new inference.
+      const staleSnap = snap({contextFull: true, used: 4096});
+      const sticky = resolveBannerVariant(staleSnap, baseInput());
+      expect(sticky.variant).toBe('context-full');
+      const cleared = resolveBannerVariant(
+        staleSnap,
+        baseInput({effectiveNCtx: 8192}),
+      );
+      expect(cleared.variant).toBe('none');
+    });
   });
 
   describe('context-warning (precedence 2)', () => {
@@ -87,6 +101,14 @@ describe('resolveBannerVariant', () => {
     it('does not fire below the ratio', () => {
       const result = resolveBannerVariant(snap({used: 3000}), baseInput());
       expect(result.variant).toBe('none');
+    });
+
+    it('does not fire one token below the 0.80 edge', () => {
+      // 3276 / 4096 = 0.7998 < 0.80; 3277 / 4096 = 0.8001 >= 0.80.
+      const below = resolveBannerVariant(snap({used: 3276}), baseInput());
+      expect(below.variant).toBe('none');
+      const at = resolveBannerVariant(snap({used: 3277}), baseInput());
+      expect(at.variant).toBe('context-warning');
     });
 
     it('is suppressed when dismissed for the draft', () => {
@@ -150,6 +172,28 @@ describe('resolveBannerVariant', () => {
         baseInput({
           isRemote: true,
           dismissed: new Set(['context-remote-hedged']),
+        }),
+      );
+      expect(result.variant).toBe('none');
+    });
+
+    it('fires for remote models even when effectiveNCtx is undefined', () => {
+      // Remote models never set activeContextSettings.n_ctx, so the hedged
+      // advisory must not depend on a known runtime n_ctx.
+      const result = resolveBannerVariant(
+        snap({isRemote: true, tokensPredicted: 600, content: 'cut off here'}),
+        baseInput({isRemote: true, effectiveNCtx: undefined}),
+      );
+      expect(result.variant).toBe('context-remote-hedged');
+    });
+
+    it('is suppressed when no model is loaded', () => {
+      const result = resolveBannerVariant(
+        snap({isRemote: true, tokensPredicted: 600, content: 'cut off here'}),
+        baseInput({
+          isRemote: true,
+          effectiveNCtx: undefined,
+          activeModelId: undefined,
         }),
       );
       expect(result.variant).toBe('none');

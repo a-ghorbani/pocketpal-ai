@@ -67,32 +67,38 @@ export function resolveBannerVariant(
     canFitNCtx,
   } = input;
 
-  const contextActionable =
-    activeModelId !== undefined && effectiveNCtx !== undefined;
+  // context-* variants require a loaded model. The nCtx-reading variants
+  // (full, warning) additionally need a known runtime n_ctx; the remote
+  // hedged advisory does not read n_ctx and only needs a loaded model.
+  const modelLoaded = activeModelId !== undefined;
 
-  if (snapshot && contextActionable) {
-    const nCtx = effectiveNCtx as number;
+  if (snapshot && modelLoaded) {
+    if (effectiveNCtx !== undefined) {
+      const nCtx = effectiveNCtx;
 
-    // 1. context-full — sticky; freshness gate corroborates the frozen flag.
-    if (snapshot.contextFull && snapshot.used >= nCtx - AUTOCLEAR_RUNWAY) {
-      return {
-        variant: 'context-full',
-        nextNCtx: computeNextFitNCtx(nCtx, canFitNCtx),
-        heavyTalentName,
-      };
-    }
+      // 1. context-full — sticky; freshness gate corroborates the frozen flag.
+      if (snapshot.contextFull && snapshot.used >= nCtx - AUTOCLEAR_RUNWAY) {
+        return {
+          variant: 'context-full',
+          nextNCtx: computeNextFitNCtx(nCtx, canFitNCtx),
+          heavyTalentName,
+        };
+      }
 
-    // 2. context-warning — local, near the limit, dismissable per draft.
-    if (
-      !isRemote &&
-      !snapshot.contextFull &&
-      snapshot.used / nCtx >= WARNING_THRESHOLD &&
-      !dismissed.has('context-warning')
-    ) {
-      return {variant: 'context-warning'};
+      // 2. context-warning — local, near the limit, dismissable per draft.
+      if (
+        !isRemote &&
+        !snapshot.contextFull &&
+        snapshot.used / nCtx >= WARNING_THRESHOLD &&
+        !dismissed.has('context-warning')
+      ) {
+        return {variant: 'context-warning'};
+      }
     }
 
     // 3. context-remote-hedged — remote weak-signal truncation, dismissable.
+    // Remote models never set activeContextSettings.n_ctx, so this branch
+    // must not depend on effectiveNCtx.
     if (
       isRemote &&
       snapshot.finishReason !== 'length' &&
