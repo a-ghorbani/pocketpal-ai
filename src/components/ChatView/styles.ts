@@ -95,48 +95,16 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center' as const,
     },
-    contextBanner: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: theme.colors.surfaceVariant,
-      borderTopWidth: 1,
-      borderBottomWidth: 1,
-      borderColor: theme.colors.outline,
-    },
-    contextWarningBanner: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: theme.colors.surfaceVariant,
-      borderTopWidth: 1,
-      borderBottomWidth: 1,
-      borderColor: theme.colors.outline,
-    },
-    contextBannerText: {
-      flex: 1,
-      flexShrink: 1,
-      fontSize: 12,
-      color: theme.colors.onSurfaceVariant,
-    },
-    contextFullBanner: {
+    banner: {
       paddingHorizontal: 12,
       paddingVertical: 8,
-      backgroundColor: theme.colors.errorContainer,
       borderTopWidth: 1,
       borderBottomWidth: 1,
-      borderColor: theme.colors.error,
     },
-    contextFullBannerText: {
+    bannerText: {
       fontSize: 12,
-      color: theme.colors.onErrorContainer,
-    },
-    contextBannerActions: {
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      alignItems: 'center' as const,
-      gap: 8,
-      marginTop: 6,
+      lineHeight: 17,
+      color: theme.colors.onSurfaceVariant,
     },
     bannerHeader: {
       flexDirection: 'row' as const,
@@ -157,7 +125,7 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       borderRadius: 2,
       backgroundColor: theme.colors.surfaceDisabled,
       overflow: 'hidden' as const,
-      marginTop: 6,
+      marginTop: 8,
       alignSelf: 'stretch' as const,
       width: '100%' as const,
     },
@@ -165,11 +133,11 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       height: 4,
       borderRadius: 2,
     },
-    bannerOr: {
-      fontSize: 11.5,
-      color: theme.colors.onErrorContainer,
-    },
-    contextFullSecondaryButton: {
-      borderColor: theme.colors.onErrorContainer,
+    bannerActions: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'flex-end' as const,
+      marginTop: 2,
     },
   });

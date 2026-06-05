@@ -79,7 +79,7 @@ describe('BannerRow', () => {
         isRemote: false,
       };
     });
-    const {getByTestId, queryByTestId} = renderBanner({canIncrease: true});
+    const {getByTestId} = renderBanner({canIncrease: true});
     expect(getByTestId('context-full-banner')).toBeTruthy();
     expect(getByTestId('context-full-new-chat')).toBeTruthy();
     expect(getByTestId('context-full-increase')).toBeTruthy();
@@ -88,8 +88,9 @@ describe('BannerRow', () => {
     expect(
       getByTestId('banner-meter', {includeHiddenElements: true}),
     ).toBeTruthy();
-    // Sticky: no dismiss button on the full banner.
-    expect(queryByTestId('context-banner-dismiss')).toBeNull();
+    // The full banner is dismissable for the current draft (the dismissal
+    // clears on the next finished turn).
+    expect(getByTestId('context-banner-dismiss')).toBeTruthy();
   });
 
   it('hides the increase CTA when no larger context fits the device', () => {

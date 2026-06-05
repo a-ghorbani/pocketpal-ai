@@ -68,8 +68,13 @@ export function resolveBannerVariant(
 
       const ratio = Math.min(1, Math.max(0, snapshot.used / nCtx));
 
-      // 1. context-full — sticky; freshness gate corroborates the frozen flag.
-      if (snapshot.contextFull && snapshot.used >= nCtx - AUTOCLEAR_RUNWAY) {
+      // 1. context-full — freshness gate corroborates the frozen flag;
+      // dismissable per draft (the dismissal clears on the next finished turn).
+      if (
+        snapshot.contextFull &&
+        snapshot.used >= nCtx - AUTOCLEAR_RUNWAY &&
+        !dismissed.has('context-full')
+      ) {
         return {
           variant: 'context-full',
           heavyTalentName,

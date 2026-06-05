@@ -25,6 +25,11 @@ interface BannerRowProps {
   onNewChat: () => void;
 }
 
+// Append an 8-bit alpha to a theme hex color (#RRGGBB or #RRGGBBAA) so the
+// banner sits as a soft wash of the accent rather than a saturated fill.
+const withAlpha = (hex: string, alphaHex: string): string =>
+  (hex.length === 9 ? hex.slice(0, 7) : hex) + alphaHex;
+
 // Heavy-talent name for the full-banner sub-copy: the newest assistant turn's
 // first tool call whose engine declares a recommended context. Declarative
 // only — never moves the banner trigger.
@@ -79,6 +84,22 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
     const styles = createStyles({theme});
     const l10n = useContext(L10nContext);
 
+    const error = theme.colors.error;
+    const tint = {
+      warning: {
+        backgroundColor: withAlpha(error, '14'),
+        borderColor: withAlpha(error, '40'),
+      },
+      full: {
+        backgroundColor: withAlpha(error, '22'),
+        borderColor: withAlpha(error, '66'),
+      },
+      neutral: {
+        backgroundColor: theme.colors.surfaceVariant,
+        borderColor: theme.colors.outline,
+      },
+    };
+
     const activeModel = modelStore.activeModel;
 
     const {variant, heavyTalentName, ratio} = resolveBannerVariant(
@@ -112,28 +133,28 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       return (
         <View
           testID="context-warning-banner"
-          style={styles.contextWarningBanner}>
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={[styles.banner, tint.warning]}>
           <View style={styles.bannerHeader}>
-            <AlertIcon width={14} height={14} stroke={theme.colors.error} />
-            <Text style={[styles.contextBannerText, styles.bannerHeaderText]}>
+            <AlertIcon width={14} height={14} stroke={error} />
+            <Text style={[styles.bannerText, styles.bannerHeaderText]}>
               {l10n.chat.contextWarning}
             </Text>
             <Text
-              style={[styles.bannerPercent, {color: theme.colors.error}]}
+              style={[styles.bannerPercent, {color: error}]}
               testID="banner-percent">
               {`${percent}%`}
             </Text>
           </View>
           {ratio != null ? (
-            <Meter ratio={ratio} tint={theme.colors.error} styles={styles} />
+            <Meter ratio={ratio} tint={error} styles={styles} />
           ) : null}
-          <View style={styles.contextBannerActions}>
+          <View style={styles.bannerActions}>
             {canIncrease ? (
               <Button
                 compact
-                mode="contained"
-                buttonColor={theme.colors.error}
-                textColor={theme.colors.onError}
+                mode="text"
                 testID="context-warning-increase"
                 onPress={onIncreaseContext}>
                 {l10n.chat.contextMoreRoom}
@@ -157,19 +178,21 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       return (
         <View
           testID="context-remote-hedged-banner"
-          style={styles.contextBanner}>
-          <Text style={styles.contextBannerText}>
-            {l10n.chat.contextRemoteHedged}
-          </Text>
-          <Button
-            compact
-            mode="text"
-            testID="context-banner-dismiss"
-            onPress={() =>
-              chatSessionStore.setBannerDismissed('context-remote-hedged')
-            }>
-            {l10n.chat.contextBannerDismiss}
-          </Button>
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={[styles.banner, tint.neutral]}>
+          <Text style={styles.bannerText}>{l10n.chat.contextRemoteHedged}</Text>
+          <View style={styles.bannerActions}>
+            <Button
+              compact
+              mode="text"
+              testID="context-banner-dismiss"
+              onPress={() =>
+                chatSessionStore.setBannerDismissed('context-remote-hedged')
+              }>
+              {l10n.chat.contextBannerDismiss}
+            </Button>
+          </View>
         </View>
       );
     }
@@ -187,39 +210,43 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
         : l10n.chat.contextFull;
 
     return (
-      <View testID="context-full-banner" style={styles.contextFullBanner}>
+      <View
+        testID="context-full-banner"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
+        style={[styles.banner, tint.full]}>
         <View style={styles.bannerHeader}>
-          <AlertIcon width={14} height={14} stroke={theme.colors.error} />
-          <Text style={[styles.contextFullBannerText, styles.bannerHeaderText]}>
+          <AlertIcon width={14} height={14} stroke={error} />
+          <Text style={[styles.bannerText, styles.bannerHeaderText]}>
             {fullText}
           </Text>
         </View>
         {ratio != null ? (
-          <Meter ratio={ratio} tint={theme.colors.error} styles={styles} />
+          <Meter ratio={ratio} tint={error} styles={styles} />
         ) : null}
-        <View style={styles.contextBannerActions}>
+        <View style={styles.bannerActions}>
           {canIncrease ? (
-            <>
-              <Button
-                compact
-                mode="contained"
-                buttonColor={theme.colors.error}
-                textColor={theme.colors.onError}
-                testID="context-full-increase"
-                onPress={onIncreaseContext}>
-                {l10n.chat.contextMoreRoom}
-              </Button>
-              <Text style={styles.bannerOr}>{l10n.chat.contextOr}</Text>
-            </>
+            <Button
+              compact
+              mode="text"
+              testID="context-full-increase"
+              onPress={onIncreaseContext}>
+              {l10n.chat.contextMoreRoom}
+            </Button>
           ) : null}
           <Button
             compact
-            mode="outlined"
-            textColor={theme.colors.onErrorContainer}
-            style={styles.contextFullSecondaryButton}
+            mode="text"
             testID="context-full-new-chat"
             onPress={onNewChat}>
             {l10n.chat.contextNewChat}
+          </Button>
+          <Button
+            compact
+            mode="text"
+            testID="context-banner-dismiss"
+            onPress={() => chatSessionStore.setBannerDismissed('context-full')}>
+            {l10n.chat.contextBannerDismiss}
           </Button>
         </View>
       </View>
