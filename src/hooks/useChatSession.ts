@@ -199,8 +199,7 @@ function deriveSnapshotFromResult(
   effectiveNCtx: number | undefined,
   isRemote: boolean,
 ): CompletionResultSnapshot {
-  const used =
-    (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
+  const used = (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
   const finishReason =
     isRemote && result.stopped_limit === 1 ? 'length' : undefined;
   const contextFull =
@@ -712,7 +711,7 @@ export const useChatSession = (
             modelStore.activeModel?.origin === ModelOrigin.REMOTE;
           const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
           const abortSnapshot: CompletionResultSnapshot = {
-            used: isToolArgsParseError ? effectiveNCtx ?? 0 : 0,
+            used: isToolArgsParseError ? (effectiveNCtx ?? 0) : 0,
             contextFull: isToolArgsParseError,
             isRemote,
           };
