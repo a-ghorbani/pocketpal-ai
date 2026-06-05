@@ -8,6 +8,13 @@ export const AUTOCLEAR_RUNWAY = 256;
 // Remote replies shorter than this are never flagged as hedged-truncated.
 export const MIN_REMOTE_TOKENS = 500;
 
+// Context-size stops offered by the IncreaseContextSheet slider. The slider
+// clamps to min(CONTEXT_LADDER[last], model.ggufMetadata.context_length).
+export const CONTEXT_LADDER = [
+  2048, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536, 98304,
+  131072,
+] as const;
+
 export interface BannerResolverInput {
   effectiveNCtx: number | undefined;
   isRemote: boolean;
@@ -15,30 +22,14 @@ export interface BannerResolverInput {
   activeModelId: string | undefined;
   dismissed: Set<BannerVariant>;
   heavyTalentName?: string;
-  // Returns whether the device can fit a candidate n_ctx, using the same
-  // estimator the load path uses. Supplied by the caller so this module
-  // stays pure and store-free.
-  canFitNCtx?: (candidate: number) => boolean;
 }
 
 export interface BannerResolution {
   variant: BannerVariant;
-  nextNCtx?: number;
   heavyTalentName?: string;
-}
-
-// Next larger n_ctx (doubling) whose memory requirement still fits, or
-// undefined when nothing larger fits. The only upper bound is the device's
-// memory ceiling — there is no n_ctx slider max.
-function computeNextFitNCtx(
-  effectiveNCtx: number,
-  canFitNCtx: ((candidate: number) => boolean) | undefined,
-): number | undefined {
-  if (!canFitNCtx) {
-    return undefined;
-  }
-  const candidate = effectiveNCtx * 2;
-  return canFitNCtx(candidate) ? candidate : undefined;
+  // used/effectiveNCtx clamped to [0, 1], driving the fullness meter. Present
+  // only on context-full and context-warning (the nCtx-reading branches).
+  ratio?: number;
 }
 
 function endsWithTerminalPunctuation(text: string | undefined): boolean {
@@ -64,7 +55,6 @@ export function resolveBannerVariant(
     activeModelId,
     dismissed,
     heavyTalentName,
-    canFitNCtx,
   } = input;
 
   // context-* variants require a loaded model. The nCtx-reading variants
@@ -76,12 +66,14 @@ export function resolveBannerVariant(
     if (effectiveNCtx !== undefined) {
       const nCtx = effectiveNCtx;
 
+      const ratio = Math.min(1, Math.max(0, snapshot.used / nCtx));
+
       // 1. context-full — sticky; freshness gate corroborates the frozen flag.
       if (snapshot.contextFull && snapshot.used >= nCtx - AUTOCLEAR_RUNWAY) {
         return {
           variant: 'context-full',
-          nextNCtx: computeNextFitNCtx(nCtx, canFitNCtx),
           heavyTalentName,
+          ratio,
         };
       }
 
@@ -92,7 +84,7 @@ export function resolveBannerVariant(
         snapshot.used / nCtx >= WARNING_THRESHOLD &&
         !dismissed.has('context-warning')
       ) {
-        return {variant: 'context-warning'};
+        return {variant: 'context-warning', ratio};
       }
     }
 

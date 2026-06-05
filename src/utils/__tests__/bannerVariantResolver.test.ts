@@ -51,24 +51,6 @@ describe('resolveBannerVariant', () => {
       expect(result.variant).toBe('context-full');
     });
 
-    it('offers nextNCtx when a larger n_ctx fits', () => {
-      const result = resolveBannerVariant(
-        snap({contextFull: true, used: 4096}),
-        baseInput({canFitNCtx: candidate => candidate <= 8192}),
-      );
-      expect(result.variant).toBe('context-full');
-      expect(result.nextNCtx).toBe(8192);
-    });
-
-    it('hides the CTA (nextNCtx undefined) when nothing larger fits', () => {
-      const result = resolveBannerVariant(
-        snap({contextFull: true, used: 4096}),
-        baseInput({canFitNCtx: () => false}),
-      );
-      expect(result.variant).toBe('context-full');
-      expect(result.nextNCtx).toBeUndefined();
-    });
-
     it('passes heavy-talent name through on the full variant', () => {
       const result = resolveBannerVariant(
         snap({contextFull: true, used: 4096}),
@@ -215,6 +197,38 @@ describe('resolveBannerVariant', () => {
         baseInput({htmlPreviewCount: 4, activeModelId: undefined}),
       );
       expect(result.variant).toBe('html-soft-cap');
+    });
+  });
+
+  describe('ratio (fullness meter)', () => {
+    it('emits used/effectiveNCtx on the warning variant', () => {
+      const result = resolveBannerVariant(snap({used: 3300}), baseInput());
+      expect(result.variant).toBe('context-warning');
+      expect(result.ratio).toBeCloseTo(3300 / 4096, 3);
+    });
+
+    it('clamps to 1 on the full variant when used exceeds n_ctx', () => {
+      const result = resolveBannerVariant(
+        snap({contextFull: true, used: 5000}),
+        baseInput(),
+      );
+      expect(result.variant).toBe('context-full');
+      expect(result.ratio).toBe(1);
+    });
+
+    it('is undefined on the remote-hedged variant', () => {
+      const result = resolveBannerVariant(
+        snap({isRemote: true, tokensPredicted: 600, content: 'cut off here'}),
+        baseInput({isRemote: true}),
+      );
+      expect(result.variant).toBe('context-remote-hedged');
+      expect(result.ratio).toBeUndefined();
+    });
+
+    it('is undefined on the none variant', () => {
+      const result = resolveBannerVariant(snap({used: 100}), baseInput());
+      expect(result.variant).toBe('none');
+      expect(result.ratio).toBeUndefined();
     });
   });
 
