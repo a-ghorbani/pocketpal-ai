@@ -15,6 +15,7 @@ import {TalentEngine, TalentResult, ToolDefinition} from './types';
  */
 export class RenderHtmlEngine implements TalentEngine {
   readonly name = 'render_html';
+  readonly recommendedContextTokens = 4096;
 
   async execute(args: Record<string, any>): Promise<TalentResult> {
     const html = typeof args.html === 'string' ? args.html : '';

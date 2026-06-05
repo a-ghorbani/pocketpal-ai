@@ -25,6 +25,12 @@ export interface ToolDefinition {
 
 export interface TalentEngine {
   readonly name: string;
+  /**
+   * Optional hint for the n_ctx this talent tends to need room for. Read only
+   * by the pal-load hint and the heavy-talent banner sub-copy; never moves a
+   * banner trigger threshold.
+   */
+  readonly recommendedContextTokens?: number;
   execute(args: Record<string, any>): Promise<TalentResult>;
   toToolDefinition(): ToolDefinition;
 }
