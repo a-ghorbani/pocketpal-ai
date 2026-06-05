@@ -95,4 +95,33 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center' as const,
     },
+    contextBanner: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.colors.outline,
+    },
+    contextFullBanner: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: theme.colors.errorContainer,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.colors.error,
+    },
+    contextFullBannerText: {
+      fontSize: 12,
+      color: theme.colors.onErrorContainer,
+    },
+    contextBannerActions: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 8,
+      marginTop: 6,
+    },
   });

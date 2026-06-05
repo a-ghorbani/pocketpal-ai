@@ -9,12 +9,13 @@ import {
   View,
   TouchableOpacity,
   Keyboard,
-  Text,
 } from 'react-native';
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import calendar from 'dayjs/plugin/calendar';
+import {Snackbar} from 'react-native-paper';
+import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -32,10 +33,19 @@ import Reanimated, {
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
 
-import {useTheme, useMessageActions, usePrevious} from '../../hooks';
+import {
+  useTheme,
+  useMessageActions,
+  usePrevious,
+  usePalLoadHint,
+} from '../../hooks';
 
 import ImageView from './ImageView';
+import {BannerRow} from './BannerRow';
 import {createStyles} from './styles';
+
+import {IncreaseContextSheet} from '../IncreaseContextSheet';
+import {t} from '../../locales';
 
 import {chatSessionStore, modelStore} from '../../store';
 
@@ -227,6 +237,7 @@ export const ChatView = observer(
     const theme = useTheme();
     const styles = createStyles({theme});
     const insets = useSafeAreaInsets();
+    const isFocused = useIsFocused();
 
     // ============ REFS ============
     const animationRef = React.useRef(false);
@@ -259,6 +270,19 @@ export const ChatView = observer(
 
     // Pagination state
     const [isNextPageLoading, setNextPageLoading] = React.useState(false);
+
+    // Increase-context confirm target (n_ctx) from the context-full banner.
+    const [increaseContextTarget, setIncreaseContextTarget] = React.useState<
+      number | null
+    >(null);
+    // Reload-feedback snackbar: indefinite while reloading, timed on result.
+    const [reloadSnackbar, setReloadSnackbar] = React.useState<{
+      message: string;
+      indefinite: boolean;
+    } | null>(null);
+
+    // One-shot pal-load hint snackbar (separate surface from the banner).
+    const palLoadHint = usePalLoadHint({activePal, isFocused});
 
     // ============ COMPONENT SIZE TRACKING ============
     const {onLayout, size} = useComponentSize();
@@ -1044,8 +1068,6 @@ export const ChatView = observer(
         }, 0),
       [messages],
     );
-    const showSoftCapWarning = htmlPreviewCount >= 4;
-
     // ============ COMPONENT RENDER ============
     return (
       <UserContext.Provider value={user}>
@@ -1070,13 +1092,12 @@ export const ChatView = observer(
                 inputContainerAnimatedStyle,
                 {backgroundColor: inputBackgroundColor},
               ]}>
-              {showSoftCapWarning ? (
-                <View testID="soft-cap-warning" style={styles.softCapBanner}>
-                  <Text style={styles.softCapBannerText}>
-                    {l10n.chat.softCapWarning}
-                  </Text>
-                </View>
-              ) : null}
+              <BannerRow
+                messages={messages}
+                htmlPreviewCount={htmlPreviewCount}
+                onNewChat={() => chatSessionStore.resetActiveSession()}
+                onIncreaseContext={setIncreaseContextTarget}
+              />
               <ChatInput
                 {...{
                   ...unwrap(inputProps),
@@ -1167,6 +1188,46 @@ export const ChatView = observer(
             isVisible={isReportSheetVisible}
             onClose={() => setIsReportSheetVisible(false)}
           />
+
+          <IncreaseContextSheet
+            target={increaseContextTarget}
+            onClose={() => setIncreaseContextTarget(null)}
+            onReloadStart={() => {
+              // Single advisory surface: dismiss the pal-load hint in the
+              // same handler so no frame shows two snackbars at once.
+              palLoadHint.dismiss();
+              setReloadSnackbar({
+                message: l10n.chat.increaseContextReloading,
+                indefinite: true,
+              });
+            }}
+            onReloadResult={(success, target) =>
+              setReloadSnackbar({
+                message: success
+                  ? t(l10n.chat.increaseContextSuccess, {target})
+                  : l10n.chat.increaseContextFailure,
+                indefinite: false,
+              })
+            }
+          />
+
+          <Snackbar
+            visible={isFocused && reloadSnackbar !== null}
+            onDismiss={() => setReloadSnackbar(null)}
+            duration={
+              reloadSnackbar?.indefinite ? Snackbar.DURATION_LONG * 1000 : 4000
+            }
+            testID="context-reload-snackbar">
+            {reloadSnackbar?.message ?? ''}
+          </Snackbar>
+
+          <Snackbar
+            visible={isFocused && palLoadHint.hintVisible && !reloadSnackbar}
+            onDismiss={palLoadHint.dismiss}
+            duration={6000}
+            testID="pal-load-hint-snackbar">
+            {l10n.chat.palLoadHint}
+          </Snackbar>
         </View>
       </UserContext.Provider>
     );
