@@ -15,7 +15,7 @@ import {
   uiStore,
 } from '../store';
 
-import {MessageType, User} from '../utils/types';
+import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
 import {resolveSystemMessages} from '../utils/systemPromptResolver';
 import {convertToChatMessages, removeThinkingParts} from '../utils/chat';
@@ -24,6 +24,8 @@ import {
   toApiCompletionParams,
   ApiCompletionParams,
   CompletionParams,
+  CompletionResult,
+  CompletionResultSnapshot,
 } from '../utils/completionTypes';
 import {talentRegistry} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
@@ -189,6 +191,33 @@ type TtsRunState = {
   prevReasoning: string;
 };
 
+// Normalise a finished turn's result into the snapshot the banner reads.
+// `contextFull` is frozen here as the OR of the native full/truncated flags
+// and (remote only) a 'length' finish reason derived from `stopped_limit`.
+function deriveSnapshotFromResult(
+  result: CompletionResult,
+  effectiveNCtx: number | undefined,
+  isRemote: boolean,
+): CompletionResultSnapshot {
+  const used =
+    (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
+  const finishReason =
+    isRemote && result.stopped_limit === 1 ? 'length' : undefined;
+  const contextFull =
+    result.context_full === true ||
+    result.truncated === true ||
+    finishReason === 'length';
+  return {
+    content: result.content,
+    reasoning_content: result.reasoning_content,
+    used,
+    contextFull,
+    tokensPredicted: result.tokens_predicted,
+    finishReason,
+    isRemote,
+  };
+}
+
 /**
  * Map a single AgentEvent into the corresponding store mutation(s).
  * Free of business logic — every event maps to a known action surface
@@ -325,6 +354,11 @@ async function applyEventToStore(
       // (not in the runner) because timings are an observability
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
+      const snapshot = deriveSnapshotFromResult(
+        finalResult,
+        modelStore.activeContextSettings?.n_ctx,
+        modelStore.activeModel?.origin === ModelOrigin.REMOTE,
+      );
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
@@ -333,9 +367,11 @@ async function applyEventToStore(
           },
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
+          completionResult: snapshot,
           ...(event.result.hitMaxTurns ? {hitMaxTurns: true} : {}),
         },
       });
+      chatSessionStore.recordCompletionSnapshot(snapshot);
       if (event.result.hitMaxTurns) {
         console.warn(
           '[useChatSession] agent run hit maxTurns; surfacing last available content',
@@ -668,6 +704,18 @@ export const useChatSession = (
         const hasPartialContent = hasAnyStepContent || hasLegacyText;
 
         if (hasPartialContent) {
+          // No finalResult on the abort path. truncationLikely is the
+          // n_ctx-exhaustion signal; when set, treat the turn as full and
+          // pin `used` to the loaded n_ctx so the sticky banner's freshness
+          // gate holds.
+          const isRemote =
+            modelStore.activeModel?.origin === ModelOrigin.REMOTE;
+          const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
+          const abortSnapshot: CompletionResultSnapshot = {
+            used: isToolArgsParseError ? effectiveNCtx ?? 0 : 0,
+            contextFull: isToolArgsParseError,
+            isRemote,
+          };
           await chatSessionStore.updateMessage(
             currentMessageInfo.current.id,
             currentMessageInfo.current.sessionId,
@@ -675,10 +723,12 @@ export const useChatSession = (
               metadata: {
                 interrupted: true,
                 copyable: true,
+                completionResult: abortSnapshot,
                 ...(isToolArgsParseError ? {truncationLikely: true} : {}),
               },
             },
           );
+          chatSessionStore.recordCompletionSnapshot(abortSnapshot);
           // The turn now carries the failure context; suppress the
           // duplicate `Completion failed: …` system message dump.
           turnAbsorbedError = true;
