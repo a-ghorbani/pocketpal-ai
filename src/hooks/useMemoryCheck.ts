@@ -12,108 +12,68 @@ import {getModelMemoryRequirement} from '../utils/memoryEstimator';
 import {modelStore} from '../store';
 import {MemoryFitStatus} from '../utils/memoryDisplay';
 
-/**
- * Check if there's enough memory to load a model.
- *
- * Uses calibrated ceiling from ModelStore (max of largestSuccessfulLoad, availableMemoryCeiling).
- *
- * @param model - The model to check
- * @param projectionModel - Optional mmproj model for multimodal
- * @returns true if device has enough memory
- */
-export const hasEnoughMemory = async (
+/** Cold-start fallback when no calibration is available: min(60% of
+ *  RAM, RAM − 1.2GB), clamped non-negative. */
+const coldStartCeiling = async (): Promise<number> => {
+  const totalMemory = await DeviceInfo.getTotalMemory();
+  return Math.max(Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9), 0);
+};
+
+/** Hydrate the model's GGUF metadata (if missing) and compute the
+ *  available-memory ceiling from calibration data, with cold-start
+ *  fallback. Shared by both hasEnoughMemory variants. */
+const fetchModelAndCeiling = async (
   model: Model,
-  projectionModel?: Model,
-): Promise<boolean> => {
-  // Try to fetch GGUF metadata if not available but model is downloaded
-  // After fetching, get the updated model from store (if it exists there)
+): Promise<{modelForCalc: Model; ceiling: number}> => {
   let modelForCalc = model;
   if (!model.ggufMetadata && model.isDownloaded) {
     try {
       await modelStore.fetchAndPersistGGUFMetadata(model);
-      // Get updated model from store (metadata is persisted there)
-      const updatedModel = modelStore.models.find(m => m.id === model.id);
-      if (updatedModel) {
-        modelForCalc = updatedModel;
+      const updated = modelStore.models.find(m => m.id === model.id);
+      if (updated) {
+        modelForCalc = updated;
       }
     } catch {
       // Continue with fallback estimation
     }
   }
-
-  // Get calibration data from ModelStore
   const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
-
-  // Calculate ceiling from calibration data
-  let ceiling: number;
-  if (
-    largestSuccessfulLoad !== undefined ||
-    availableMemoryCeiling !== undefined
-  ) {
-    // Use the maximum of both calibration signals
-    ceiling = Math.max(largestSuccessfulLoad ?? 0, availableMemoryCeiling ?? 0);
-  } else {
-    // Cold start: no calibration data yet, use conservative fallback
-    const totalMemory = await DeviceInfo.getTotalMemory();
-    // Use heuristic: min(60% of RAM, RAM - 1.2GB)
-    ceiling = Math.max(
-      Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9),
-      0, // Ensure non-negative
-    );
-  }
-
-  const memoryRequirement = getModelMemoryRequirement(
-    modelForCalc,
-    projectionModel,
-    modelStore.contextInitParams,
-  );
-
-  return memoryRequirement <= ceiling;
+  const ceiling =
+    largestSuccessfulLoad !== undefined || availableMemoryCeiling !== undefined
+      ? Math.max(largestSuccessfulLoad ?? 0, availableMemoryCeiling ?? 0)
+      : await coldStartCeiling();
+  return {modelForCalc, ceiling};
 };
 
-/**
- * Check whether the device has enough memory to load `model` with an
- * explicit `n_ctx` (instead of reading the global default off the store).
- * Used by the banner's tier picker to ask "does the next higher tier
- * fit?" without mutating `modelStore.contextInitParams`.
- */
+/** Does the device fit `model` at the currently configured n_ctx? */
+export const hasEnoughMemory = async (
+  model: Model,
+  projectionModel?: Model,
+): Promise<boolean> => {
+  const {modelForCalc, ceiling} = await fetchModelAndCeiling(model);
+  return (
+    getModelMemoryRequirement(
+      modelForCalc,
+      projectionModel,
+      modelStore.contextInitParams,
+    ) <= ceiling
+  );
+};
+
+/** Does the device fit `model` at a hypothetical `nCtx`? Used by the
+ *  tier picker without mutating modelStore.contextInitParams. */
 export const hasEnoughMemoryWithNCtx = async (
   model: Model,
   nCtx: number,
   projectionModel?: Model,
 ): Promise<boolean> => {
-  let modelForCalc = model;
-  if (!model.ggufMetadata && model.isDownloaded) {
-    try {
-      await modelStore.fetchAndPersistGGUFMetadata(model);
-      const updatedModel = modelStore.models.find(m => m.id === model.id);
-      if (updatedModel) {
-        modelForCalc = updatedModel;
-      }
-    } catch {
-      // Continue with fallback estimation
-    }
-  }
-
-  const {largestSuccessfulLoad, availableMemoryCeiling} = modelStore;
-  let ceiling: number;
-  if (
-    largestSuccessfulLoad !== undefined ||
-    availableMemoryCeiling !== undefined
-  ) {
-    ceiling = Math.max(largestSuccessfulLoad ?? 0, availableMemoryCeiling ?? 0);
-  } else {
-    const totalMemory = await DeviceInfo.getTotalMemory();
-    ceiling = Math.max(Math.min(totalMemory * 0.6, totalMemory - 1.2 * 1e9), 0);
-  }
-
-  const memoryRequirement = getModelMemoryRequirement(
-    modelForCalc,
-    projectionModel,
-    {...modelStore.contextInitParams, n_ctx: nCtx},
+  const {modelForCalc, ceiling} = await fetchModelAndCeiling(model);
+  return (
+    getModelMemoryRequirement(modelForCalc, projectionModel, {
+      ...modelStore.contextInitParams,
+      n_ctx: nCtx,
+    }) <= ceiling
   );
-
-  return memoryRequirement <= ceiling;
 };
 
 /**
