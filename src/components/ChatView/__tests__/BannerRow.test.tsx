@@ -133,9 +133,7 @@ describe('BannerRow', () => {
   it('renders the remote hedged advisory for a remote model with no runtime n_ctx', () => {
     runInAction(() => {
       modelStore.activeModelId = 'remote-1';
-      modelStore.models = [
-        {id: 'remote-1', origin: ModelOrigin.REMOTE} as any,
-      ];
+      modelStore.models = [{id: 'remote-1', origin: ModelOrigin.REMOTE} as any];
       // Remote models never set activeContextSettings.n_ctx.
       (modelStore as any).activeContextSettings = undefined;
       chatSessionStore.lastCompletionResult = {

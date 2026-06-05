@@ -54,7 +54,9 @@ describe('IncreaseContextSheet', () => {
     const onReloadResult = jest.fn();
     const {getByTestId} = renderSheet({onReloadResult});
     fireEvent.press(getByTestId('increase-context-confirm'));
-    await waitFor(() => expect(onReloadResult).toHaveBeenCalledWith(true, 8192));
+    await waitFor(() =>
+      expect(onReloadResult).toHaveBeenCalledWith(true, 8192),
+    );
     expect(modelStore.setNContext).toHaveBeenCalledWith(8192);
     expect(modelStore.initContext).toHaveBeenCalledTimes(1);
   });
