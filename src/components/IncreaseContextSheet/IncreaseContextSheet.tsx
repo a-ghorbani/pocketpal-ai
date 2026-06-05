@@ -138,7 +138,8 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
       const chosenFit = fitStatusFor(chosen);
       const chosenMem = memBytes(chosen);
 
-      // Furthest "fits" stop on the ladder — draws the device-limit tick.
+      // Furthest "fits" stop on the ladder — drives the device-limit status
+      // copy and the no-fit / memory-constrained state.
       const deviceLimitIdx = useMemo(() => {
         let idx = -1;
         for (let i = 0; i < ladder.length; i++) {
@@ -278,6 +279,14 @@ export const IncreaseContextSheet: React.FC<IncreaseContextSheetProps> =
                     value={pickIdx}
                     onValueChange={setPickIdx}
                     disabled={isReloading || ladder.length <= 1}
+                    accessibilityLabel={
+                      l10n.chat.increaseContextSliderA11yLabel
+                    }
+                    accessibilityValue={{
+                      text: t(l10n.chat.increaseContextSliderA11yValue, {
+                        tokens: kLabel(chosen),
+                      }),
+                    }}
                     minimumTrackTintColor={chipTint}
                     maximumTrackTintColor={theme.colors.surfaceDisabled}
                     thumbTintColor={theme.colors.primary}

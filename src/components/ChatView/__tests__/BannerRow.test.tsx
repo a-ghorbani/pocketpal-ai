@@ -84,8 +84,10 @@ describe('BannerRow', () => {
     expect(getByTestId('context-full-new-chat')).toBeTruthy();
     expect(getByTestId('context-full-increase')).toBeTruthy();
     // The fullness meter renders on the full variant too (resolver emits ratio
-    // on both nCtx-reading branches).
-    expect(getByTestId('banner-meter')).toBeTruthy();
+    // on both nCtx-reading branches). It is decorative, so hidden from a11y.
+    expect(
+      getByTestId('banner-meter', {includeHiddenElements: true}),
+    ).toBeTruthy();
     // Sticky: no dismiss button on the full banner.
     expect(queryByTestId('context-banner-dismiss')).toBeNull();
   });
@@ -128,7 +130,9 @@ describe('BannerRow', () => {
       };
     });
     const {getByTestId} = renderBanner();
-    expect(getByTestId('banner-meter')).toBeTruthy();
+    expect(
+      getByTestId('banner-meter', {includeHiddenElements: true}),
+    ).toBeTruthy();
     // 3300 / 4096 ≈ 80.6% → rounds to 81%.
     expect(getByTestId('banner-percent')).toHaveTextContent('81%');
   });
@@ -151,7 +155,7 @@ describe('BannerRow', () => {
       : container.props.style;
     expect(flat.flexDirection).not.toBe('row');
 
-    const meter = getByTestId('banner-meter');
+    const meter = getByTestId('banner-meter', {includeHiddenElements: true});
     const meterFlat = Array.isArray(meter.props.style)
       ? Object.assign({}, ...meter.props.style.filter(Boolean))
       : meter.props.style;

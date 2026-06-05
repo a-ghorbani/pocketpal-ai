@@ -36,8 +36,18 @@ jest.mock('../../Sheet', () => {
 
 jest.mock('@react-native-community/slider', () => {
   const {View} = require('react-native');
-  return ({onValueChange, testID}: any) => (
-    <View testID={testID} onValueChange={onValueChange} />
+  return ({
+    onValueChange,
+    testID,
+    accessibilityLabel,
+    accessibilityValue,
+  }: any) => (
+    <View
+      testID={testID}
+      onValueChange={onValueChange}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityValue={accessibilityValue}
+    />
   );
 });
 
@@ -146,6 +156,16 @@ describe('IncreaseContextSheet', () => {
       // Top stop is the model max (32768 → "32K · model max").
       const {findByText} = renderSheet();
       expect(await findByText('32K · model max')).toBeTruthy();
+    });
+
+    it('announces the chosen size to screen readers', () => {
+      const {getByTestId} = renderSheet();
+      const slider = getByTestId('increase-context-slider');
+      expect(slider.props.accessibilityLabel).toBe(
+        l10n.en.chat.increaseContextSliderA11yLabel,
+      );
+      // Default pick is 6144 → "6K tokens", not the raw ladder index.
+      expect(slider.props.accessibilityValue.text).toBe('6K tokens');
     });
   });
 

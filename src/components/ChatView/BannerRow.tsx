@@ -50,7 +50,11 @@ const Meter: React.FC<{
   tint: string;
   styles: ReturnType<typeof createStyles>;
 }> = ({ratio, tint, styles}) => (
-  <View style={styles.bannerMeter} testID="banner-meter">
+  <View
+    style={styles.bannerMeter}
+    testID="banner-meter"
+    accessibilityElementsHidden
+    importantForAccessibility="no">
     <View
       style={[
         styles.bannerMeterFill,
