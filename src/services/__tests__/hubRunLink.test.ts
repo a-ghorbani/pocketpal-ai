@@ -1,8 +1,9 @@
 /**
  * parseHubRunURL — the single parse/validate site for the hub/run deep link.
  *
- * Covers: valid link, wrong host, wrong path, malformed repo_id, non-.gguf
- * filename, missing filename, missing repo_id, source passthrough/absent.
+ * Covers: valid link, wrong host, wrong path, malformed/missing repo_id,
+ * optional filename (absent / non-.gguf are normal successes), source
+ * passthrough/absent, whitespace trimming.
  */
 
 import {parseHubRunURL} from '../hubRunLink';
@@ -47,20 +48,6 @@ describe('parseHubRunURL', () => {
     ).toBeNull();
   });
 
-  it('returns null when the filename is not a .gguf', () => {
-    expect(
-      parseHubRunURL(
-        'pocketpal://hub/run?repo_id=author/model&filename=model.bin',
-      ),
-    ).toBeNull();
-  });
-
-  it('returns null when filename is missing', () => {
-    expect(
-      parseHubRunURL('pocketpal://hub/run?repo_id=author/model'),
-    ).toBeNull();
-  });
-
   it('returns null when repo_id is missing', () => {
     expect(
       parseHubRunURL('pocketpal://hub/run?filename=model.gguf'),
@@ -71,12 +58,40 @@ describe('parseHubRunURL', () => {
     expect(parseHubRunURL('not a url at all')).toBeNull();
   });
 
-  it('accepts a .GGUF filename case-insensitively', () => {
+  it('accepts a link with no filename (filename is optional)', () => {
+    const result = parseHubRunURL(
+      'pocketpal://hub/run?repo_id=author/model&source=hf',
+    );
+    expect(result).toEqual({
+      repoId: 'author/model',
+      filename: undefined,
+      source: 'hf',
+    });
+  });
+
+  it('accepts a non-.gguf filename and keeps it verbatim', () => {
+    const result = parseHubRunURL(
+      'pocketpal://hub/run?repo_id=author/model&filename=model.bin',
+    );
+    expect(result).toEqual({
+      repoId: 'author/model',
+      filename: 'model.bin',
+      source: undefined,
+    });
+  });
+
+  it('keeps a present filename verbatim', () => {
     const result = parseHubRunURL(
       'pocketpal://hub/run?repo_id=author/model&filename=model.GGUF',
     );
-    expect(result).not.toBeNull();
     expect(result?.filename).toBe('model.GGUF');
+  });
+
+  it('treats a blank filename param as absent', () => {
+    const result = parseHubRunURL(
+      'pocketpal://hub/run?repo_id=author/model&filename=%20%20',
+    );
+    expect(result?.filename).toBeUndefined();
   });
 
   it('leaves source undefined when the source param is absent', () => {
