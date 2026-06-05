@@ -28,7 +28,6 @@ import {
 import {
   applyStickyFull,
   deriveSnapshotFromResult,
-  runtimeNCtxFor,
 } from '../utils/bannerVariantResolver';
 import {talentRegistry} from '../services/talents';
 import type {ToolDefinition} from '../services/talents/types';
@@ -332,18 +331,12 @@ async function applyEventToStore(
       // concern of the hook, not the runner.
       const finalResult = event.result.finalResult;
       const rawSnap = deriveSnapshotFromResult(finalResult, false);
-      const runtimeNCtx =
+      const effectiveNCtx =
         modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
-      const nCtxForSession = runtimeNCtxFor(
-        chatSessionStore.sessionContextOverrides,
-        ctx.sessionId,
-        runtimeNCtx,
-        chatSessionStore.pendingContextOverride,
-      );
       const snapshot = applyStickyFull(
         rawSnap,
         chatSessionStore.lastCompletionResult,
-        nCtxForSession,
+        effectiveNCtx,
       );
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {

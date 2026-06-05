@@ -7,10 +7,8 @@ import {
   WARNING_THRESHOLD,
   applyStickyFull,
   deriveSnapshotFromResult,
-  nextInitNCtxFor,
   pickNextTier,
   resolveBannerVariant,
-  runtimeNCtxFor,
 } from '../bannerVariantResolver';
 import {talentRegistry} from '../../services/talents';
 
@@ -427,74 +425,6 @@ describe('resolveBannerVariant', () => {
   // shift the user-visible trigger point without breaking this assertion.
   it('exports WARNING_THRESHOLD = 0.80', () => {
     expect(WARNING_THRESHOLD).toBe(0.8);
-  });
-});
-
-describe('nextInitNCtxFor', () => {
-  it('returns the session override when present', () => {
-    const overrides = new Map<string, number>([['sess-1', 8192]]);
-    expect(nextInitNCtxFor(overrides, 'sess-1', 2048)).toBe(8192);
-  });
-
-  it('falls back to configuredNCtx when no override is set', () => {
-    expect(nextInitNCtxFor(new Map(), 'sess-1', 2048)).toBe(2048);
-  });
-
-  it('falls back to configuredNCtx when activeSessionId is null', () => {
-    const overrides = new Map<string, number>([['sess-1', 8192]]);
-    expect(nextInitNCtxFor(overrides, null, 2048)).toBe(2048);
-  });
-
-  it('uses the pending override when activeSessionId is null and no map entry applies', () => {
-    expect(nextInitNCtxFor(new Map(), null, 2048, 4096)).toBe(4096);
-  });
-
-  it('prefers the session override over a pending override', () => {
-    const overrides = new Map<string, number>([['sess-1', 8192]]);
-    expect(nextInitNCtxFor(overrides, 'sess-1', 2048, 4096)).toBe(8192);
-  });
-
-  it('uses the pending override when the map has no entry for the active session', () => {
-    expect(nextInitNCtxFor(new Map(), 'sess-1', 2048, 4096)).toBe(4096);
-  });
-
-  it('ignores undefined pending override (falls back to configuredNCtx)', () => {
-    expect(nextInitNCtxFor(new Map(), null, 2048, undefined)).toBe(2048);
-  });
-
-  it('returns the override even when larger than the configured base', () => {
-    const overrides = new Map<string, number>([['sess-1', 32768]]);
-    // No cap — the loader will faithfully request 32768 even if
-    // configuredNCtx is 2048.
-    expect(nextInitNCtxFor(overrides, 'sess-1', 2048)).toBe(32768);
-  });
-});
-
-describe('runtimeNCtxFor', () => {
-  it('returns the session override when present and within capacity', () => {
-    const overrides = new Map<string, number>([['sess-1', 4096]]);
-    expect(runtimeNCtxFor(overrides, 'sess-1', 8192)).toBe(4096);
-  });
-
-  it('caps a session override that exceeds the runtime capacity', () => {
-    const overrides = new Map<string, number>([['sess-1', 8192]]);
-    // Override 8192 but only 2048 actually loaded → cap to 2048.
-    expect(runtimeNCtxFor(overrides, 'sess-1', 2048)).toBe(2048);
-  });
-
-  it('caps a pending override that exceeds the runtime capacity', () => {
-    expect(runtimeNCtxFor(new Map(), null, 2048, 8192)).toBe(2048);
-  });
-
-  it('falls back to runtimeNCtx when no override / no pending', () => {
-    expect(runtimeNCtxFor(new Map(), 'sess-1', 4096)).toBe(4096);
-  });
-
-  it('handles runtimeNCtx == 0 by returning the unclamped target', () => {
-    // Defensive: no model loaded edge case where caller substituted
-    // 0 — we surface the override/pending so the rest of the
-    // pipeline can decide what to render rather than collapsing to 0.
-    expect(runtimeNCtxFor(new Map(), null, 0, 4096)).toBe(4096);
   });
 });
 

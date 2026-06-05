@@ -4,7 +4,6 @@ import {chatSessionStore, modelStore} from '../store';
 import {Pal} from '../types/pal';
 import {MessageType, ModelOrigin} from '../utils/types';
 import {
-  runtimeNCtxFor,
   pickNextTier,
   resolveBannerVariant,
   type BannerVariant,
@@ -35,11 +34,6 @@ interface ReloadSnackbarState {
   phase: ReloadPhase;
 }
 
-interface SilentRevertSnackbarState {
-  message: string;
-  visible: boolean;
-}
-
 /**
  * Owns the per-session context-warning banner: snapshot reads, the
  * memory-aware next-tier probe, dismiss/increase/new-chat handlers, the
@@ -56,17 +50,9 @@ export const useContextBanner = ({
   const dismissedKeys = chatSessionStore.dismissedBannerVariants;
   const consecutiveFullFailures = chatSessionStore.consecutiveFullFailures;
   const activeSessionId = chatSessionStore.activeSessionId;
-  const sessionOverrides = chatSessionStore.sessionContextOverrides;
-  const pendingOverride = chatSessionStore.pendingContextOverride;
   const activeModel = modelStore.activeModel;
-  const runtimeNCtx =
+  const effectiveNCtxForSession =
     modelStore.runtimeNCtx ?? modelStore.contextInitParams.n_ctx;
-  const effectiveNCtxForSession = runtimeNCtxFor(
-    sessionOverrides,
-    activeSessionId,
-    runtimeNCtx,
-    pendingOverride,
-  );
   const isRemoteSession = activeModel?.origin === ModelOrigin.REMOTE;
   const isRunActive =
     chatSessionStore.isGenerating || chatSessionStore.isStopping;
@@ -137,59 +123,6 @@ export const useContextBanner = ({
   const [isReloading, setIsReloading] = React.useState(false);
   const [reloadSnackbar, setReloadSnackbar] =
     React.useState<ReloadSnackbarState | null>(null);
-  const [silentRevertSnackbar, setSilentRevertSnackbar] =
-    React.useState<SilentRevertSnackbarState | null>(null);
-
-  // One-shot per (sessionId, current runtime n_ctx) — fires when a
-  // stored override no longer fits the running context.
-  const loadedRuntimeNCtx = modelStore.runtimeNCtx;
-  const sessionOverrideForActive = activeSessionId
-    ? sessionOverrides.get(activeSessionId)
-    : undefined;
-  const silentRevertDetected =
-    !!activeSessionId &&
-    loadedRuntimeNCtx !== undefined &&
-    sessionOverrideForActive !== undefined &&
-    sessionOverrideForActive > loadedRuntimeNCtx;
-  const silentRevertKey =
-    activeSessionId && loadedRuntimeNCtx !== undefined
-      ? `${activeSessionId}:${loadedRuntimeNCtx}`
-      : null;
-  React.useEffect(() => {
-    if (
-      silentRevertDetected &&
-      activeSessionId &&
-      loadedRuntimeNCtx !== undefined &&
-      sessionOverrideForActive !== undefined &&
-      silentRevertKey &&
-      !chatSessionStore.hasSilentRevertAcknowledged(
-        activeSessionId,
-        loadedRuntimeNCtx,
-      )
-    ) {
-      setSilentRevertSnackbar({
-        message: t(l10n.chat.contextWarning.silentRevertAdvisory, {
-          requested: formatKLabel(sessionOverrideForActive),
-          running: formatKLabel(loadedRuntimeNCtx),
-        }),
-        visible: true,
-      });
-      chatSessionStore.markSilentRevertAcknowledged(
-        activeSessionId,
-        loadedRuntimeNCtx,
-      );
-    }
-  }, [
-    silentRevertDetected,
-    silentRevertKey,
-    activeSessionId,
-    loadedRuntimeNCtx,
-    sessionOverrideForActive,
-    l10n,
-  ]);
-  const dismissSilentRevertSnackbar = React.useCallback(() => {
-    setSilentRevertSnackbar(prev => (prev ? {...prev, visible: false} : null));
-  }, []);
 
   // One-shot per (palId, n_ctx) per session. Declared before the
   // confirm-increase callback so the latter can synchronously dismiss
@@ -216,20 +149,8 @@ export const useContextBanner = ({
       if (chatSessionStore.isGenerating || chatSessionStore.isStopping) {
         return;
       }
-      // No-session branch: stage the override on the pending slot so
-      // the next initContext picks it up; `createNewSession` will copy
-      // it onto the new id. Session branch: write directly to the
-      // session-keyed Map.
-      const isNoSession = !activeSessionId;
-      const priorSessionOverride = activeSessionId
-        ? sessionOverrides.get(activeSessionId)
-        : undefined;
-      const priorPending = chatSessionStore.pendingContextOverride;
-      if (isNoSession) {
-        chatSessionStore.setPendingContextOverride(target);
-      } else {
-        chatSessionStore.setSessionContextOverride(activeSessionId, target);
-      }
+      const priorNCtx = modelStore.contextInitParams.n_ctx;
+      modelStore.setNContext(target);
       // Single-surface invariant: dismiss the pal-load hint snackbar
       // synchronously (batched with the reload setter) so we never
       // commit a frame with two coexisting snackbars.
@@ -263,20 +184,7 @@ export const useContextBanner = ({
           phase: 'success',
         });
       } catch (err) {
-        if (isNoSession) {
-          if (priorPending === undefined) {
-            chatSessionStore.clearPendingContextOverride();
-          } else {
-            chatSessionStore.setPendingContextOverride(priorPending);
-          }
-        } else if (priorSessionOverride === undefined) {
-          chatSessionStore.clearSessionContextOverride(activeSessionId);
-        } else {
-          chatSessionStore.setSessionContextOverride(
-            activeSessionId,
-            priorSessionOverride,
-          );
-        }
+        modelStore.setNContext(priorNCtx);
         console.warn('[ChatView] increase context failed:', err);
         setReloadSnackbar({
           message: l10n.chat.contextWarning.sheet.failureSnackbar,
@@ -287,14 +195,7 @@ export const useContextBanner = ({
         setIsReloading(false);
       }
     },
-    [
-      activeSessionId,
-      activeModel,
-      activePal,
-      sessionOverrides,
-      l10n,
-      palLoadHint,
-    ],
+    [activeModel, activePal, l10n, palLoadHint],
   );
 
   const handleNewChat = React.useCallback(() => {
@@ -331,8 +232,6 @@ export const useContextBanner = ({
     increaseSheetVisible,
     isReloading,
     reloadSnackbar,
-    silentRevertSnackbar,
-    dismissSilentRevertSnackbar,
     handleIncrease,
     handleCloseIncreaseSheet,
     handleConfirmIncrease,

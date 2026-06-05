@@ -59,10 +59,10 @@ describe('usePalLoadHint', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     chatSessionStore.palLoadHintSeen.clear();
-    chatSessionStore.sessionContextOverrides.clear();
     chatSessionStore.activeSessionId = 'session-1';
     modelStore.activeModelId = downloadedModel.id;
     modelStore.contextInitParams.n_ctx = 2048;
+    (modelStore as any).runtimeContextSettings = undefined;
     // Default: memory probe says yes — hint will offer "Increase context".
     (hasEnoughMemoryWithNCtx as jest.Mock).mockResolvedValue(true);
   });
@@ -169,7 +169,7 @@ describe('usePalLoadHint', () => {
     expect(result.current.state).toBeNull();
   });
 
-  it('stops firing once the override raises effective n_ctx to the recommendation', async () => {
+  it('stops firing once a reload raises runtime n_ctx to the recommendation', async () => {
     chatSessionStore.markPalLoadHintSeen(heavyPal.id, 2048);
 
     const {result, rerender} = renderHook(() => usePalLoadHint(heavyPal));
@@ -179,10 +179,10 @@ describe('usePalLoadHint', () => {
     });
     expect(result.current.state).toBeNull();
 
-    // User accepts an Increase Context CTA elsewhere; resolver now reads
-    // a higher tier. The hint must NOT fire at the new n_ctx because the
-    // talent recommendation (4096) is satisfied by the override (4096).
-    chatSessionStore.setSessionContextOverride('session-1', 4096);
+    // Banner Increase CTA fires elsewhere: it writes the global setting
+    // and reloads. Runtime n_ctx is now 4096, which satisfies the
+    // talent recommendation — hint must NOT re-fire at the new size.
+    (modelStore as any).runtimeContextSettings = {n_ctx: 4096};
     rerender(undefined);
     await act(async () => {
       await Promise.resolve();

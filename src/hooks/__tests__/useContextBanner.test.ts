@@ -54,9 +54,7 @@ describe('useContextBanner', () => {
     chatSessionStore.activeSessionId = 'session-1';
     chatSessionStore.lastCompletionResult = null;
     chatSessionStore.dismissedBannerVariants.clear();
-    chatSessionStore.sessionContextOverrides.clear();
     chatSessionStore.palLoadHintSeen.clear();
-    chatSessionStore.pendingContextOverride = undefined;
     chatSessionStore.consecutiveFullFailures = 0;
     (chatSessionStore as any).isGenerating = false;
     (chatSessionStore as any).isStopping = false;
@@ -66,7 +64,6 @@ describe('useContextBanner', () => {
     // without a real context, so we stand in `runtimeContextSettings`
     // for the n_ctx the resolver reads.
     (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
-    chatSessionStore.silentRevertAcknowledged.clear();
     (hasEnoughMemoryWithNCtx as jest.Mock).mockResolvedValue(true);
   });
 
@@ -120,21 +117,21 @@ describe('useContextBanner', () => {
       await result.current.handleConfirmIncrease(4096);
     });
 
-    expect(chatSessionStore.setSessionContextOverride).not.toHaveBeenCalled();
-    // Reload-in-progress snackbar must NOT appear.
+    // Reload-in-progress snackbar must NOT appear, and the global
+    // n_ctx setter must not be invoked while a run is active.
+    expect(modelStore.setNContext).not.toHaveBeenCalled();
     expect(result.current.reloadSnackbar).toBeNull();
     expect(result.current.isReloading).toBe(false);
   });
 
-  describe('handleConfirmIncrease with no active session', () => {
+  describe('handleConfirmIncrease writes the global n_ctx', () => {
     beforeEach(() => {
-      chatSessionStore.activeSessionId = null;
       (modelStore as any).releaseContext = jest
         .fn()
         .mockResolvedValue(undefined);
     });
 
-    it('writes the target to pendingContextOverride and does not touch sessionContextOverrides', async () => {
+    it('calls setNContext(target) and runs releaseContext + initContext', async () => {
       const {result} = renderHook(() =>
         useContextBanner({
           activePal: undefined,
@@ -148,46 +145,14 @@ describe('useContextBanner', () => {
         await result.current.handleConfirmIncrease(4096);
       });
 
-      expect(chatSessionStore.setPendingContextOverride).toHaveBeenCalledWith(
-        4096,
-      );
-      expect(chatSessionStore.pendingContextOverride).toBe(4096);
-      // Session-keyed write must NOT happen on the no-session branch.
-      expect(chatSessionStore.setSessionContextOverride).not.toHaveBeenCalled();
-      expect(chatSessionStore.sessionContextOverrides.size).toBe(0);
-      // Native reload still runs so the next initContext picks up the
-      // lifted n_ctx via the pending slot.
+      expect(modelStore.setNContext).toHaveBeenCalledWith(4096);
       expect((modelStore as any).releaseContext).toHaveBeenCalled();
       expect(modelStore.initContext).toHaveBeenCalled();
+      expect(result.current.reloadSnackbar?.phase).toBe('success');
     });
 
-    it('reverts the pending slot when initContext rejects', async () => {
-      (modelStore.initContext as jest.Mock).mockRejectedValueOnce(
-        new Error('OOM'),
-      );
-
-      const {result} = renderHook(() =>
-        useContextBanner({
-          activePal: undefined,
-          htmlPreviewCount: 0,
-          messages: [],
-          l10n: l10n.en,
-        }),
-      );
-
-      await act(async () => {
-        await result.current.handleConfirmIncrease(4096);
-      });
-
-      // Failure clears the slot (no prior value to restore) so the
-      // user's clean slate stays clean and they can retry.
-      expect(chatSessionStore.clearPendingContextOverride).toHaveBeenCalled();
-      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-      expect(result.current.reloadSnackbar?.phase).toBe('failure');
-    });
-
-    it('restores a prior pending value when a second attempt fails', async () => {
-      chatSessionStore.pendingContextOverride = 4096;
+    it('restores the prior n_ctx when initContext rejects', async () => {
+      modelStore.contextInitParams.n_ctx = 2048;
       (modelStore.initContext as jest.Mock).mockRejectedValueOnce(
         new Error('OOM'),
       );
@@ -205,9 +170,29 @@ describe('useContextBanner', () => {
         await result.current.handleConfirmIncrease(8192);
       });
 
-      // The hook set 8192 then reverted to the prior 4096; the user
-      // keeps the override they originally consented to.
-      expect(chatSessionStore.pendingContextOverride).toBe(4096);
+      // First call set 8192 (target), second call restored 2048 (prior).
+      expect(modelStore.setNContext).toHaveBeenNthCalledWith(1, 8192);
+      expect(modelStore.setNContext).toHaveBeenNthCalledWith(2, 2048);
+      expect(result.current.reloadSnackbar?.phase).toBe('failure');
+    });
+
+    it('works the same on the no-session branch', async () => {
+      chatSessionStore.activeSessionId = null;
+      const {result} = renderHook(() =>
+        useContextBanner({
+          activePal: undefined,
+          htmlPreviewCount: 0,
+          messages: [],
+          l10n: l10n.en,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleConfirmIncrease(4096);
+      });
+
+      expect(modelStore.setNContext).toHaveBeenCalledWith(4096);
+      expect(modelStore.initContext).toHaveBeenCalled();
     });
   });
 
@@ -262,98 +247,6 @@ describe('useContextBanner', () => {
       );
 
       expect(result.current.bannerVariant.kind).toBe('none');
-    });
-
-    it('uses session override when set, capped to loaded n_ctx', () => {
-      // Override 8192 staged for session-1 (e.g. confirmed before a
-      // silent OS-evict reload). Loaded came back at 2048. Used 1700.
-      // Override-uncapped would show ratio 0.21 → silent (wrong);
-      // capped → ratio 0.83 over 2048 → warning.
-      modelStore.contextInitParams.n_ctx = 2048;
-      (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
-      chatSessionStore.sessionContextOverrides.set('session-1', 8192);
-      chatSessionStore.lastCompletionResult = {
-        tokensCached: 0,
-        tokensEvaluated: 1500,
-        tokensPredicted: 200,
-        contextFull: false,
-        finishReason: 'eos' as const,
-      };
-
-      const {result} = renderHook(() =>
-        useContextBanner({
-          activePal: undefined,
-          htmlPreviewCount: 0,
-          messages: [],
-          l10n: l10n.en,
-        }),
-      );
-
-      expect(result.current.bannerVariant.kind).toBe('context-warning');
-    });
-
-    describe('silent revert advisory snackbar', () => {
-      it('fires once per (session, loadedNCtx) when override > loaded', () => {
-        (modelStore as any).runtimeContextSettings = {n_ctx: 2048};
-        chatSessionStore.sessionContextOverrides.set('session-1', 4096);
-
-        const {result, rerender} = renderHook(() =>
-          useContextBanner({
-            activePal: undefined,
-            htmlPreviewCount: 0,
-            messages: [],
-            l10n: l10n.en,
-          }),
-        );
-
-        expect(result.current.silentRevertSnackbar?.visible).toBe(true);
-        expect(result.current.silentRevertSnackbar?.message).toMatch(
-          /Currently running at 2K/,
-        );
-        expect(
-          chatSessionStore.hasSilentRevertAcknowledged('session-1', 2048),
-        ).toBe(true);
-
-        // Re-render without changing the (session, loadedNCtx) pair —
-        // suppressor prevents another fire.
-        act(() => {
-          result.current.dismissSilentRevertSnackbar();
-        });
-        rerender({});
-        expect(result.current.silentRevertSnackbar?.visible).toBe(false);
-      });
-
-      it('does not fire when override fits within loaded', () => {
-        (modelStore as any).runtimeContextSettings = {n_ctx: 8192};
-        chatSessionStore.sessionContextOverrides.set('session-1', 4096);
-
-        const {result} = renderHook(() =>
-          useContextBanner({
-            activePal: undefined,
-            htmlPreviewCount: 0,
-            messages: [],
-            l10n: l10n.en,
-          }),
-        );
-
-        expect(result.current.silentRevertSnackbar).toBeNull();
-      });
-
-      it('does not fire when no LlamaContext is loaded', () => {
-        (modelStore as any).runtimeContextSettings = undefined;
-        chatSessionStore.sessionContextOverrides.set('session-1', 4096);
-
-        const {result} = renderHook(() =>
-          useContextBanner({
-            activePal: undefined,
-            htmlPreviewCount: 0,
-            messages: [],
-            l10n: l10n.en,
-          }),
-        );
-
-        expect(result.current.silentRevertSnackbar).toBeNull();
-      });
     });
 
     it('hides banner entirely when no LlamaContext is loaded', () => {

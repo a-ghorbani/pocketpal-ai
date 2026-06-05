@@ -114,10 +114,15 @@ export const SettingsScreen: React.FC = observer(() => {
     }, 500),
   ).current;
 
+  // Mirror the store into the local input whenever the global n_ctx
+  // changes from outside this screen — most commonly the banner
+  // "Increase context" CTA in chat.
+  const storeNCtx = modelStore.contextInitParams.n_ctx;
   useEffect(() => {
-    setContextSize(modelStore.contextInitParams.n_ctx.toString());
+    setContextSize(storeNCtx.toString());
+  }, [storeNCtx]);
 
-    // Check for GPU support (Metal on iOS 18+, OpenCL on Android with Adreno + CPU features)
+  useEffect(() => {
     const checkGpuCapabilities = async () => {
       const gpuCapabilities = await checkGpuSupport();
       setGpuSupported(gpuCapabilities.isSupported);
@@ -128,7 +133,6 @@ export const SettingsScreen: React.FC = observer(() => {
       setGpuSupported(false);
     });
 
-    // Load available device options
     const loadDeviceOptions = async () => {
       try {
         const options = await getDeviceOptions();

@@ -299,38 +299,6 @@ function findHeavyTalent(
   return null;
 }
 
-/** Banner-side reader: override > pending > runtimeNCtx, capped at
- *  runtimeNCtx so a stored override can never claim more capacity
- *  than the running context actually has. */
-export function runtimeNCtxFor(
-  overrides: Map<string, number>,
-  activeSessionId: string | null,
-  runtimeNCtx: number,
-  pendingOverride?: number | undefined,
-): number {
-  const target =
-    (activeSessionId ? overrides.get(activeSessionId) : undefined) ??
-    pendingOverride ??
-    runtimeNCtx;
-  return runtimeNCtx > 0 ? Math.min(target, runtimeNCtx) : target;
-}
-
-/** Loader-side reader: override > pending > configuredNCtx, no cap. */
-export function nextInitNCtxFor(
-  overrides: Map<string, number>,
-  activeSessionId: string | null,
-  configuredNCtx: number,
-  pendingOverride?: number | undefined,
-): number {
-  if (activeSessionId && overrides.has(activeSessionId)) {
-    return overrides.get(activeSessionId)!;
-  }
-  if (pendingOverride !== undefined) {
-    return pendingOverride;
-  }
-  return configuredNCtx;
-}
-
 /**
  * Quantised n_ctx steps offered by the "Increase context" CTA. Tiers
  * grow by 2x so the UX matches user mental models of "double the room"

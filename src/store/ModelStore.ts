@@ -64,7 +64,6 @@ import {
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
-import {nextInitNCtxFor} from '../utils/bannerVariantResolver';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -164,11 +163,27 @@ class ModelStore {
     if (!live) {
       return [];
     }
-    const keys = Object.keys(this.contextInitParams) as Array<
-      keyof ContextInitParams
-    >;
-    return keys.filter(key => {
-      const configured = this.contextInitParams[key];
+    // Compare the params the loader would request now against what was
+    // last loaded. Without this normalisation, clamps (n_batch /
+    // n_ubatch ≤ n_ctx) and ?? defaults (n_gpu_layers, kv_unified,
+    // n_parallel, flash_attn_type) make the banner report a phantom
+    // mismatch that survives every reload.
+    const effective = this.getSyncEffectiveContextInitParams();
+    const isSmartMmap = this.contextInitParams.use_mmap === 'smart';
+    const keys = new Set<keyof ContextInitParams>([
+      ...(Object.keys(effective) as Array<keyof ContextInitParams>),
+      ...(Object.keys(live) as Array<keyof ContextInitParams>),
+    ]);
+    return Array.from(keys).filter(key => {
+      // use_mmap='smart' resolves asynchronously at load time; we
+      // can't synchronously predict the boolean it would produce, so
+      // exclude it from the diff. Changing the dropdown to true/false
+      // still triggers a diff because effective[use_mmap] becomes a
+      // concrete boolean.
+      if (key === 'use_mmap' && isSmartMmap) {
+        return false;
+      }
+      const configured = effective[key];
       const running = live[key];
       if (
         typeof configured === 'object' &&
@@ -449,19 +464,18 @@ class ModelStore {
    * Get effective context initialization parameters with constraints applied
    * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
    */
-  getEffectiveContextInitParams = async (
-    filePath?: string,
-  ): Promise<Omit<ContextParams, 'model'>> => {
-    // Per-session override (set via the "Increase context" banner CTA)
-    // wins over the global default. Reads from the same precedence
-    // helper as the runtime path, but with no cap — the loader
-    // honours the consented override verbatim.
-    const effectiveContext = nextInitNCtxFor(
-      chatSessionStore.sessionContextOverrides,
-      chatSessionStore.activeSessionId,
-      this.contextInitParams.n_ctx,
-      chatSessionStore.pendingContextOverride,
-    );
+  /**
+   * Sync version of the effective-params computation. Mirrors every
+   * clamp and ?? default that `getEffectiveContextInitParams` applies
+   * except the async `use_mmap='smart'` resolution. Used by
+   * `pendingReloadDiff` so the banner doesn't report phantom diffs
+   * for params the loader would have normalised identically.
+   */
+  private getSyncEffectiveContextInitParams = (): Omit<
+    ContextParams,
+    'model' | 'use_mmap'
+  > & {use_mmap?: boolean} => {
+    const effectiveContext = this.contextInitParams.n_ctx;
     const effectiveBatch = Math.min(
       this.contextInitParams.n_batch,
       effectiveContext,
@@ -470,13 +484,46 @@ class ModelStore {
       this.contextInitParams.n_ubatch,
       effectiveBatch,
     );
+    const currentUseMmap = this.contextInitParams.use_mmap;
+    const use_mmap =
+      currentUseMmap === 'true'
+        ? true
+        : currentUseMmap === 'false'
+          ? false
+          : currentUseMmap === 'smart'
+            ? undefined // resolved at load time via filePath
+            : true;
+    const flash_attn_type =
+      this.contextInitParams.flash_attn_type ??
+      (Platform.OS === 'ios' ? 'auto' : 'off');
+    const params: Partial<Omit<ContextParams, 'model'>> = {
+      n_ctx: effectiveContext,
+      n_batch: effectiveBatch,
+      n_ubatch: effectiveUBatch,
+      n_threads: this.contextInitParams.n_threads,
+      flash_attn_type,
+      cache_type_k: this.contextInitParams.cache_type_k,
+      cache_type_v: this.contextInitParams.cache_type_v,
+      n_gpu_layers: this.contextInitParams.n_gpu_layers ?? 99,
+      devices: this.contextInitParams.devices,
+      kv_unified: this.contextInitParams.kv_unified ?? true,
+      n_parallel: this.contextInitParams.n_parallel ?? 1,
+      use_mlock: this.contextInitParams.use_mlock,
+      use_mmap,
+      no_extra_bufts: this.contextInitParams.no_extra_bufts,
+    };
+    return Object.fromEntries(
+      Object.entries(params).filter(([_, value]) => value !== undefined),
+    ) as Omit<ContextParams, 'model' | 'use_mmap'> & {use_mmap?: boolean};
+  };
 
-    // Resolve the effective use_mmap value based on the setting
+  getEffectiveContextInitParams = async (
+    filePath?: string,
+  ): Promise<Omit<ContextParams, 'model'>> => {
+    const sync = this.getSyncEffectiveContextInitParams();
     const currentUseMmap = this.contextInitParams.use_mmap;
     let effectiveUseMmap: boolean;
-
     if (currentUseMmap === 'smart') {
-      // Handle 'smart' option
       effectiveUseMmap = filePath
         ? await resolveUseMmap('smart', filePath)
         : true;
@@ -485,37 +532,9 @@ class ModelStore {
     } else if (currentUseMmap === 'false') {
       effectiveUseMmap = false;
     } else {
-      // Default fallback
       effectiveUseMmap = true;
     }
-
-    // Handle flash_attn_type (v2.0) - platform-specific default
-    const flash_attn_type =
-      this.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
-
-    // Build the params object, filtering out undefined values
-    const params: Partial<Omit<ContextParams, 'model'>> = {
-      n_ctx: effectiveContext,
-      n_batch: effectiveBatch,
-      n_ubatch: effectiveUBatch,
-      n_threads: this.contextInitParams.n_threads,
-      flash_attn_type, // NEW: replaces flash_attn boolean
-      cache_type_k: this.contextInitParams.cache_type_k,
-      cache_type_v: this.contextInitParams.cache_type_v,
-      n_gpu_layers: this.contextInitParams.n_gpu_layers ?? 99,
-      devices: this.contextInitParams.devices, // NEW
-      kv_unified: this.contextInitParams.kv_unified ?? true, // NEW (default true!)
-      n_parallel: this.contextInitParams.n_parallel ?? 1, // NEW (1 for blocking mode only)
-      use_mlock: this.contextInitParams.use_mlock,
-      use_mmap: effectiveUseMmap,
-      no_extra_bufts: this.contextInitParams.no_extra_bufts,
-    };
-
-    // Remove undefined values from the params object
-    return Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => value !== undefined),
-    ) as Omit<ContextParams, 'model'>;
+    return {...sync, use_mmap: effectiveUseMmap} as Omit<ContextParams, 'model'>;
   };
 
   // Legacy methods for backward compatibility

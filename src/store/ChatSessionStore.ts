@@ -166,30 +166,10 @@ class ChatSessionStore {
   // on any non-full turn.
   consecutiveFullFailures: number = 0;
 
-  // Session-keyed n_ctx override applied silently inside
-  // `ModelStore.getEffectiveContextInitParams`. Survives
-  // `releaseContext` -> `initContext` cycles within one app run;
-  // intentionally not persisted (process death resets to the global
-  // default — the user reverts to a clean slate).
-  sessionContextOverrides: Map<string, number> = new Map();
-
-  // Staging slot for an override applied via the no-session "Increase
-  // context" sheet (the user hasn't sent the first turn yet, so there's
-  // no `activeSessionId` to key under). Consumed by `createNewSession`
-  // and copied into `sessionContextOverrides` for the new id. Cleared
-  // on `resetActiveSession`.
-  pendingContextOverride: number | undefined = undefined;
-
   // Pal-load hint suppressor keyed by `${palId}:${n_ctx}`. Records
   // (pal, n_ctx) pairs for which the snackbar already fired in the
   // current session; cleared on `resetActiveSession`.
   palLoadHintSeen: Set<string> = new Set();
-
-  // Silent-revert advisory suppressor keyed by `${sessionId}:${loadedNCtx}`.
-  // Records (session, current loaded n_ctx) pairs for which the
-  // "your saved larger context was reset" snackbar already fired,
-  // so it only appears once per landing. In-memory only.
-  silentRevertAcknowledged: Set<string> = new Set();
 
   constructor() {
     makeAutoObservable(this);
@@ -320,30 +300,6 @@ class ChatSessionStore {
     this.consecutiveFullFailures = 0;
   }
 
-  setSessionContextOverride(sessionId: string, nCtx: number) {
-    this.sessionContextOverrides.set(sessionId, nCtx);
-  }
-
-  clearSessionContextOverride(sessionId: string) {
-    this.sessionContextOverrides.delete(sessionId);
-  }
-
-  setPendingContextOverride(nCtx: number) {
-    this.pendingContextOverride = nCtx;
-  }
-
-  clearPendingContextOverride() {
-    this.pendingContextOverride = undefined;
-  }
-
-  markSilentRevertAcknowledged(sessionId: string, loadedNCtx: number) {
-    this.silentRevertAcknowledged.add(`${sessionId}:${loadedNCtx}`);
-  }
-
-  hasSilentRevertAcknowledged(sessionId: string, loadedNCtx: number): boolean {
-    return this.silentRevertAcknowledged.has(`${sessionId}:${loadedNCtx}`);
-  }
-
   markPalLoadHintSeen(palId: string, nCtx: number) {
     this.palLoadHintSeen.add(`${palId}:${nCtx}`);
   }
@@ -426,7 +382,6 @@ class ChatSessionStore {
       runInAction(() => {
         this.sessions = this.sessions.filter(session => session.id !== id);
         this.sessionDrafts.delete(id);
-        this.sessionContextOverrides.delete(id);
         this.clearBannerDismissalsForSession(id);
       });
     } catch (error) {
@@ -458,7 +413,6 @@ class ChatSessionStore {
       this.consecutiveFullFailures = 0;
       this.dismissedBannerVariants.clear();
       this.palLoadHintSeen.clear();
-      this.pendingContextOverride = undefined;
     });
   }
 
@@ -506,7 +460,6 @@ class ChatSessionStore {
       this.clearBannerDismissalsForSession(sessionId);
       this.lastCompletionResult = hydrateLastCompletionResult(session);
       this.palLoadHintSeen.clear();
-      this.pendingContextOverride = undefined;
     });
   }
 
@@ -684,13 +637,6 @@ class ChatSessionStore {
         this.activeSessionId = newSession.id;
         this.newChatPalId = undefined;
         this.newChatThinkingOverride = undefined;
-        if (this.pendingContextOverride !== undefined) {
-          this.sessionContextOverrides.set(
-            newSession.id,
-            this.pendingContextOverride,
-          );
-          this.pendingContextOverride = undefined;
-        }
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -1449,7 +1395,6 @@ class ChatSessionStore {
       runInAction(() => {
         idsToDelete.forEach(deletedId => {
           this.sessionDrafts.delete(deletedId);
-          this.sessionContextOverrides.delete(deletedId);
           this.clearBannerDismissalsForSession(deletedId);
         });
         this.sessions = this.sessions.filter(

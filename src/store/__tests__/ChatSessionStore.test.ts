@@ -2205,7 +2205,6 @@ describe('chatSessionStore', () => {
       chatSessionStore.lastCompletionResult = null;
       chatSessionStore.consecutiveFullFailures = 0;
       chatSessionStore.dismissedBannerVariants.clear();
-      chatSessionStore.sessionContextOverrides.clear();
       chatSessionStore.palLoadHintSeen.clear();
     });
 
@@ -2261,20 +2260,9 @@ describe('chatSessionStore', () => {
     });
   });
 
-  describe('sessionContextOverrides Map', () => {
-    beforeEach(() => {
-      chatSessionStore.sessionContextOverrides.clear();
-    });
-
-    it('set/clear lifecycle on the override Map', () => {
-      chatSessionStore.setSessionContextOverride('sA', 4096);
-      expect(chatSessionStore.sessionContextOverrides.get('sA')).toBe(4096);
-      chatSessionStore.clearSessionContextOverride('sA');
-      expect(chatSessionStore.sessionContextOverrides.has('sA')).toBe(false);
-    });
-
-    it('deleteSession also clears the per-session override entry', async () => {
-      const id = 'session-with-override';
+  describe('deleteSession clears banner dismissals', () => {
+    it('also clears the banner-dismissal set for the deleted id', async () => {
+      const id = 'session-with-dismiss';
       chatSessionStore.sessions = [
         {
           id,
@@ -2285,7 +2273,6 @@ describe('chatSessionStore', () => {
           settingsSource: 'pal',
         },
       ];
-      chatSessionStore.setSessionContextOverride(id, 8192);
       chatSessionStore.setBannerDismissed(id, 'context-warning');
 
       (chatSessionRepository.deleteSession as jest.Mock).mockResolvedValueOnce(
@@ -2293,7 +2280,6 @@ describe('chatSessionStore', () => {
       );
       await chatSessionStore.deleteSession(id);
 
-      expect(chatSessionStore.sessionContextOverrides.has(id)).toBe(false);
       expect(
         chatSessionStore.dismissedBannerVariants.has(`${id}:context-warning`),
       ).toBe(false);
@@ -2460,113 +2446,8 @@ describe('chatSessionStore', () => {
     });
   });
 
-  // Pending-override slot covers the path where the user accepts an
-  // "Increase context" CTA before sending the first message. There is no
-  // active session id to key the override Map under, so the override sits
-  // on a staging slot and is consumed by createNewSession.
-  describe('pendingContextOverride lifecycle', () => {
-    beforeEach(() => {
-      chatSessionStore.pendingContextOverride = undefined;
-      chatSessionStore.sessionContextOverrides.clear();
-      chatSessionStore.activeSessionId = null;
-      chatSessionStore.sessions = [];
-    });
-
-    it('setPendingContextOverride writes the slot and read-back agrees', () => {
-      chatSessionStore.setPendingContextOverride(4096);
-      expect(chatSessionStore.pendingContextOverride).toBe(4096);
-    });
-
-    it('clearPendingContextOverride wipes the slot', () => {
-      chatSessionStore.setPendingContextOverride(4096);
-      chatSessionStore.clearPendingContextOverride();
-      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-    });
-
-    it('createNewSession copies the pending override onto the new session id and clears the slot', async () => {
-      const mockNewSession = {
-        id: 'new-session-with-pending',
-        title: 'First chat',
-        date: new Date().toISOString(),
-      };
-      const mockSessionData = {
-        messages: [],
-        completionSettings: {
-          getSettings: () => defaultCompletionSettings,
-        },
-      };
-      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
-        mockNewSession,
-      );
-      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue(
-        mockSessionData,
-      );
-
-      chatSessionStore.setPendingContextOverride(4096);
-      await chatSessionStore.createNewSession('First chat');
-
-      // Transferred under the new session id.
-      expect(
-        chatSessionStore.sessionContextOverrides.get(mockNewSession.id),
-      ).toBe(4096);
-      // Slot is wiped — next createNewSession (with no fresh override) must
-      // not inherit it.
-      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-    });
-
-    it('createNewSession with no pending leaves sessionContextOverrides untouched', async () => {
-      const mockNewSession = {
-        id: 'new-session-no-pending',
-        title: 'Clean chat',
-        date: new Date().toISOString(),
-      };
-      (chatSessionRepository.createSession as jest.Mock).mockResolvedValue(
-        mockNewSession,
-      );
-      (chatSessionRepository.getSessionById as jest.Mock).mockResolvedValue({
-        messages: [],
-        completionSettings: {getSettings: () => defaultCompletionSettings},
-      });
-
-      await chatSessionStore.createNewSession('Clean chat');
-
-      expect(
-        chatSessionStore.sessionContextOverrides.has(mockNewSession.id),
-      ).toBe(false);
-      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-    });
-
-    it('resetActiveSession clears the pending override', () => {
-      chatSessionStore.setPendingContextOverride(8192);
-      chatSessionStore.activeSessionId = 'session1';
-
-      chatSessionStore.resetActiveSession();
-
-      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-    });
-
-    it('setActiveSession clears the pending override', async () => {
-      const existing = {
-        id: 'session-existing',
-        title: 'Existing',
-        date: new Date().toISOString(),
-        messages: [],
-        completionSettings: defaultCompletionSettings,
-        settingsSource: 'pal' as 'pal' | 'custom',
-        messagesLoaded: true,
-      };
-      chatSessionStore.sessions = [existing];
-      chatSessionStore.setPendingContextOverride(4096);
-
-      await chatSessionStore.setActiveSession('session-existing');
-
-      expect(chatSessionStore.pendingContextOverride).toBeUndefined();
-      expect(
-        chatSessionStore.sessionContextOverrides.has('session-existing'),
-      ).toBe(false);
-    });
-
-    it('bulkDeleteSessions clears per-id override entries and dismissals', async () => {
+  describe('bulkDeleteSessions clears banner dismissals for deleted ids', () => {
+    it('removes dismissal markers for each deleted session', async () => {
       chatSessionStore.sessions = [
         {
           id: 'sA',
@@ -2587,9 +2468,8 @@ describe('chatSessionStore', () => {
           messagesLoaded: true,
         },
       ];
-      chatSessionStore.setSessionContextOverride('sA', 4096);
-      chatSessionStore.setSessionContextOverride('sB', 8192);
       chatSessionStore.setBannerDismissed('sA', 'context-warning');
+      chatSessionStore.setBannerDismissed('sB', 'html-soft-cap');
       chatSessionStore.selectedSessionIds = new Set(['sA', 'sB']);
       (chatSessionRepository.deleteSessions as jest.Mock).mockResolvedValue(
         undefined,
@@ -2597,17 +2477,12 @@ describe('chatSessionStore', () => {
 
       await chatSessionStore.bulkDeleteSessions();
 
-      expect(chatSessionStore.sessionContextOverrides.has('sA')).toBe(false);
-      expect(chatSessionStore.sessionContextOverrides.has('sB')).toBe(false);
       expect(
         chatSessionStore.dismissedBannerVariants.has('sA:context-warning'),
       ).toBe(false);
-    });
-
-    it('pendingContextOverride does not leak into the override Map by itself', () => {
-      chatSessionStore.setPendingContextOverride(4096);
-      // The map should be untouched — the slot is the only mutation.
-      expect(chatSessionStore.sessionContextOverrides.size).toBe(0);
+      expect(
+        chatSessionStore.dismissedBannerVariants.has('sB:html-soft-cap'),
+      ).toBe(false);
     });
   });
 });

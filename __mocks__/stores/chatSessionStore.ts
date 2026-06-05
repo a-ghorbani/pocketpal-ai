@@ -124,10 +124,7 @@ export const mockChatSessionStore = {
     | null,
   dismissedBannerVariants: new Set<string>(),
   consecutiveFullFailures: 0,
-  sessionContextOverrides: new Map<string, number>(),
-  pendingContextOverride: undefined as number | undefined,
   palLoadHintSeen: new Set<string>(),
-  silentRevertAcknowledged: new Set<string>(),
   setLastCompletionResult: jest.fn(function (this: any, snap: any) {
     this.lastCompletionResult = snap;
   }),
@@ -155,22 +152,6 @@ export const mockChatSessionStore = {
   resetConsecutiveFullFailures: jest.fn(function (this: any) {
     this.consecutiveFullFailures = 0;
   }),
-  setSessionContextOverride: jest.fn(function (
-    this: any,
-    sessionId: string,
-    nCtx: number,
-  ) {
-    this.sessionContextOverrides.set(sessionId, nCtx);
-  }),
-  clearSessionContextOverride: jest.fn(function (this: any, sessionId: string) {
-    this.sessionContextOverrides.delete(sessionId);
-  }),
-  setPendingContextOverride: jest.fn(function (this: any, nCtx: number) {
-    this.pendingContextOverride = nCtx;
-  }),
-  clearPendingContextOverride: jest.fn(function (this: any) {
-    this.pendingContextOverride = undefined;
-  }),
   markPalLoadHintSeen: jest.fn(function (
     this: any,
     palId: string,
@@ -184,20 +165,6 @@ export const mockChatSessionStore = {
     nCtx: number,
   ) {
     return this.palLoadHintSeen.has(`${palId}:${nCtx}`);
-  }),
-  markSilentRevertAcknowledged: jest.fn(function (
-    this: any,
-    sessionId: string,
-    loadedNCtx: number,
-  ) {
-    this.silentRevertAcknowledged.add(`${sessionId}:${loadedNCtx}`);
-  }),
-  hasSilentRevertAcknowledged: jest.fn(function (
-    this: any,
-    sessionId: string,
-    loadedNCtx: number,
-  ) {
-    return this.silentRevertAcknowledged.has(`${sessionId}:${loadedNCtx}`);
   }),
 };
 
