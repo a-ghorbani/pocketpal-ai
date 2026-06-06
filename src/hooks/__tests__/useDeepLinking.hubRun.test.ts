@@ -187,7 +187,18 @@ describe('useDeepLinking — hub/run dispatch', () => {
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
-  it('alerts on a malformed hub link via the prod Linking path', async () => {
+  it('ignores an unknown hub path on the prod Linking path without alerting', async () => {
+    getInitialURLSpy.mockResolvedValue('pocketpal://hub/foo');
+
+    renderHook(() => useDeepLinking());
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(deepLinkStore.setPendingHubRun).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('alerts on a malformed hub/run link via the prod Linking path', async () => {
     getInitialURLSpy.mockResolvedValue('pocketpal://hub/run'); // no repo_id
 
     renderHook(() => useDeepLinking());

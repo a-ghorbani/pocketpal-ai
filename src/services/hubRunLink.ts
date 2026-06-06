@@ -31,13 +31,17 @@ const isValidRepoId = (value: string): boolean => {
 };
 
 /**
- * True when the URL is addressed to the hub host (host only — any
- * `pocketpal://hub/<path>` is meant for us, even if malformed). Used to gate the
- * RN Linking delivery path so non-hub URLs are ignored silently. Never throws.
+ * True only for the exact `pocketpal://hub/run` route (host=hub, path=run),
+ * regardless of query payload. Gates the delivery paths so non-hub URLs and
+ * unknown hub paths are ignored silently; a malformed `hub/run` payload still
+ * reaches the handler (and alerts). Never throws.
  */
 export const isHubLink = (url: string): boolean => {
   try {
-    return new URL(url).hostname === 'hub';
+    const parsed = new URL(url);
+    return (
+      parsed.hostname === 'hub' && parsed.pathname.replace(/^\/+/, '') === 'run'
+    );
   } catch {
     return false;
   }

@@ -76,7 +76,7 @@ export const useDeepLinking = () => {
       Alert.alert(
         uiStore.l10n.models.hubRun.invalidLinkTitle,
         uiStore.l10n.models.hubRun.invalidLinkMessage,
-        [{text: 'OK'}],
+        [{text: uiStore.l10n.common.ok}],
       );
       return;
     }
@@ -106,8 +106,10 @@ export const useDeepLinking = () => {
         }
       }
 
-      // Handle hub/run download deep links (iOS native-emitter path)
-      if (params.host === 'hub') {
+      // Handle hub/run download deep links (iOS native-emitter path). Only the
+      // exact hub/run route is handled; unknown hub paths are ignored silently,
+      // matching the prod Linking path.
+      if (isHubLink(params.url)) {
         handleHubRunLink(params.url);
       }
     },
@@ -179,9 +181,10 @@ export const useDeepLinking = () => {
   // Prod, always-on delivery for the hub/run route. iOS arrives via the native
   // emitter above; Android prod has no native deep-link bridge, so this RN
   // Linking path (cold getInitialURL + warm 'url' event) is the only delivery.
-  // Gated by isHubLink so non-hub URLs (chat, e2e/benchmark, memory) are ignored
-  // silently — only host=hub URLs reach handleHubRunLink, matching the native
-  // emitter path. A malformed hub link still alerts.
+  // Gated by isHubLink so non-hub URLs (chat, e2e/benchmark, memory) and unknown
+  // hub paths are ignored silently — only the exact hub/run route reaches
+  // handleHubRunLink, matching the native emitter path. A malformed hub/run
+  // payload still alerts.
   useEffect(() => {
     Linking.getInitialURL()
       .then(url => {

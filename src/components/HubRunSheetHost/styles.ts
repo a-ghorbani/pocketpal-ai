@@ -13,6 +13,11 @@ export const createStyles = (theme: Theme) =>
       paddingHorizontal: 24,
       gap: 16,
     },
+    resolvingText: {
+      fontSize: 14,
+      color: theme.colors.onSurface,
+      textAlign: 'center',
+    },
     repoId: {
       fontSize: 14,
       color: theme.colors.onSurfaceVariant,

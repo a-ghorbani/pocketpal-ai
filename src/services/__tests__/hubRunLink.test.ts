@@ -140,10 +140,14 @@ describe('parseHubRunURL', () => {
 });
 
 describe('isHubLink', () => {
-  it('is true for any host=hub URL regardless of path', () => {
+  it('is true for the exact hub/run route regardless of query', () => {
+    expect(isHubLink('pocketpal://hub/run')).toBe(true);
     expect(isHubLink('pocketpal://hub/run?repo_id=a/b')).toBe(true);
-    expect(isHubLink('pocketpal://hub/foo')).toBe(true);
-    expect(isHubLink('pocketpal://hub')).toBe(true);
+  });
+
+  it('is false for unknown hub paths', () => {
+    expect(isHubLink('pocketpal://hub/foo')).toBe(false);
+    expect(isHubLink('pocketpal://hub')).toBe(false);
   });
 
   it('is false for non-hub hosts', () => {

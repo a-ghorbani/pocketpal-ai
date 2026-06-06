@@ -119,8 +119,14 @@ export const HubRunSheetHost: React.FC = observer(() => {
       enableContentPanningGesture={false}
       showCloseButton={true}>
       {isResolving && (
-        <View style={styles.centered} testID="hub-run-resolving">
+        <View
+          style={styles.centered}
+          testID="hub-run-resolving"
+          accessibilityRole="progressbar">
           <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={styles.resolvingText}>
+            {l10n.models.hubRun.resolving}
+          </Text>
           <Text style={styles.repoId}>{repoId}</Text>
         </View>
       )}

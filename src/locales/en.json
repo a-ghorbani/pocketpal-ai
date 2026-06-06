@@ -322,6 +322,7 @@
     },
     "hubRun": {
       "title": "Download model",
+      "resolving": "Loading model details…",
       "cancel": "Cancel",
       "retry": "Retry",
       "invalidLinkTitle": "Invalid link",
