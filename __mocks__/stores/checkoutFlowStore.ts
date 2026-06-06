@@ -34,7 +34,11 @@ class MockCheckoutFlowStore {
   }
 
   get isInFlight(): boolean {
-    return this.status === 'creating' || this.status === 'finalizing';
+    return (
+      this.status === 'creating' ||
+      this.status === 'browser_open' ||
+      this.status === 'finalizing'
+    );
   }
 }
 
