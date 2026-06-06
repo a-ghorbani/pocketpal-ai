@@ -676,6 +676,13 @@ export const useChatSession = (
       // instead of a multi-KB raw error dump.
       const isToolArgsParseError =
         /Failed to parse tool call arguments as JSON/i.test(errorMessage);
+      // Prompt-processing overflow: when the prompt itself exceeds n_ctx
+      // (ctx_shift is off — the llama.rn default), the native layer throws
+      // "Context is full" before any token is generated, so it never reaches
+      // run_finished. Treat it as an n_ctx-exhaustion signal so the banner
+      // surfaces instead of a raw error dump. (llama.rn RNLlamaJSI.cpp.)
+      const isContextFullError = /context is full/i.test(errorMessage);
+      const treatAsContextFull = isToolArgsParseError || isContextFullError;
 
       // Error rollback path. The empty/in-flight AssistantTurn row
       // already exists; preserve any partial steps and tag with
@@ -711,8 +718,8 @@ export const useChatSession = (
             modelStore.activeModel?.origin === ModelOrigin.REMOTE;
           const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
           const abortSnapshot: CompletionResultSnapshot = {
-            used: isToolArgsParseError ? (effectiveNCtx ?? 0) : 0,
-            contextFull: isToolArgsParseError,
+            used: treatAsContextFull ? (effectiveNCtx ?? 0) : 0,
+            contextFull: treatAsContextFull,
             isRemote,
           };
           await chatSessionStore.updateMessage(
@@ -732,6 +739,21 @@ export const useChatSession = (
           // duplicate `Completion failed: …` system message dump.
           turnAbsorbedError = true;
         } else {
+          // A prompt that overflows n_ctx throws before any token, so there
+          // is no content to keep — but still record the snapshot so the
+          // banner surfaces the full state. The empty turn is cleaned up
+          // below; the store snapshot drives the banner independently.
+          if (isContextFullError) {
+            const isRemote =
+              modelStore.activeModel?.origin === ModelOrigin.REMOTE;
+            const effectiveNCtx = modelStore.activeContextSettings?.n_ctx;
+            chatSessionStore.recordCompletionSnapshot({
+              used: effectiveNCtx ?? 0,
+              contextFull: true,
+              isRemote,
+            });
+            turnAbsorbedError = true;
+          }
           try {
             await chatSessionRepository.deleteMessage(
               currentMessageInfo.current.id,
@@ -761,6 +783,14 @@ export const useChatSession = (
         // No turn content to attach the hint to — fall back to a
         // friendly system message instead of the raw native error dump.
         await addSystemMessage(l10n.chat.toolCallTruncated);
+      } else if (isContextFullError) {
+        // No turn to attach to; surface the banner via a store snapshot
+        // rather than dumping the raw "Context is full" native error.
+        chatSessionStore.recordCompletionSnapshot({
+          used: modelStore.activeContextSettings?.n_ctx ?? 0,
+          contextFull: true,
+          isRemote: modelStore.activeModel?.origin === ModelOrigin.REMOTE,
+        });
       } else {
         await addSystemMessage(`${l10n.chat.completionFailed}${errorMessage}`);
       }
