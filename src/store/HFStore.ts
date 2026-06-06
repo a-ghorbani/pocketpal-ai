@@ -5,7 +5,7 @@ import * as Keychain from 'react-native-keychain';
 
 import {fetchGGUFSpecs, fetchModelFilesDetails, fetchModels} from '../api/hf';
 
-import {hasEnoughSpace, hfAsModel} from '../utils';
+import {enrichSiblingsWithStorage} from '../utils';
 import {processHFSearchResults} from '../utils/hf';
 import {ErrorState, createErrorState} from '../utils/errors';
 
@@ -183,28 +183,22 @@ class HFStore {
     model: HuggingFaceModel,
     fileDetails: any[],
   ) {
-    return Promise.all(
-      model.siblings.map(async file => {
-        const details = fileDetails.find(
-          detail => detail.path === file.rfilename,
-        );
-        if (!details) {
-          return {...file};
-        }
+    const mergedSiblings = model.siblings.map(file => {
+      const details = fileDetails.find(
+        detail => detail.path === file.rfilename,
+      );
+      if (!details) {
+        return {...file};
+      }
+      return {
+        ...file,
+        size: details.size,
+        oid: details.oid,
+        lfs: details.lfs,
+      };
+    });
 
-        const enrichedFile = {
-          ...file,
-          size: details.size,
-          oid: details.oid,
-          lfs: details.lfs,
-        };
-
-        return {
-          ...enrichedFile,
-          canFitInStorage: await hasEnoughSpace(hfAsModel(model, enrichedFile)),
-        };
-      }),
-    );
+    return enrichSiblingsWithStorage(model, mergedSiblings);
   }
 
   // Fetch the details (sizes, oid, lfs, ...) of the model files

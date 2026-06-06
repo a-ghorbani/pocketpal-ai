@@ -30,6 +30,7 @@ import {
   HeaderLeft,
   AppWithMigration,
   TTSSetupSheet,
+  HubRunSheetHost,
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
 import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
@@ -185,6 +186,7 @@ const App = observer(() => {
                       )}
                     </Drawer.Navigator>
                     <TTSSetupSheet />
+                    <HubRunSheetHost />
                   </BottomSheetModalProvider>
                 </NavigationContainer>
               </MarkdownProvider>

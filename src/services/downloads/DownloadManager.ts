@@ -10,7 +10,7 @@ import {
 } from './types';
 
 import {Model} from '../../utils/types';
-import {formatBytes, hasEnoughSpace} from '../../utils';
+import {formatBytes, hasEnoughSpace, hfUserAgent} from '../../utils';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
 import type {
@@ -281,6 +281,7 @@ export class DownloadManager {
         discretionary: false,
         progressInterval: 800,
         headers: {
+          'User-Agent': hfUserAgent(),
           ...(authToken ? {Authorization: `Bearer ${authToken}`} : {}),
         },
         begin: res => {

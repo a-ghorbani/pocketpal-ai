@@ -45,6 +45,12 @@ describe('Draft Autosave', () => {
     drawerPage = new DrawerPage();
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
+    // Cap generation length so the small model can't loop forever on the
+    // off-distribution session-marker prompts and stall waitForInferenceComplete.
+    await chatPage.openGenerationSettings();
+    await chatPage.setNPredict('200');
+    await chatPage.saveGenerationSettings();
+
     // Download and load model (needed to create sessions by sending messages)
     console.log(`Loading model: ${model.id}`);
     await downloadAndLoadModel(model);

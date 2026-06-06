@@ -26,6 +26,7 @@ export * from './HeaderLeft';
 export * from './HFTokenSheet';
 export * from './GreetingBubble';
 export * from './HtmlPreviewBubble';
+export * from './HubRunSheetHost';
 export * from './SuggestedPromptsRow';
 export * from './ImageMessage';
 export * from './KeyboardAccessoryView';

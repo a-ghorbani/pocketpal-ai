@@ -6,6 +6,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.uimanager.DisplayMetricsHolder
 import androidx.core.view.WindowCompat   // for edge-to-edge pre API 35
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 
@@ -41,6 +42,17 @@ class MainActivity : ReactActivity() {
   override fun onConfigurationChanged(newConfig: Configuration) {
       super.onConfigurationChanged(newConfig)
       fixExternalDisplayDensity()
+  }
+
+  /**
+   * Forward warm-launch deep-link intents to React Native. Under
+   * launchMode="singleTask" the OS reuses this activity instance, so without
+   * setIntent(intent) RN's Linking 'url' event never fires for the hub/run
+   * deep link.
+   */
+  override fun onNewIntent(intent: Intent) {
+      super.onNewIntent(intent)
+      setIntent(intent)
   }
 
   /**
