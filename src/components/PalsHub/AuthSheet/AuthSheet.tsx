@@ -202,6 +202,7 @@ export const AuthSheet: React.FC<AuthSheetProps> = observer(
             />
 
             <Button
+              testID="auth-submit-button"
               mode="contained"
               onPress={handleEmailAuth}
               loading={isLoading}

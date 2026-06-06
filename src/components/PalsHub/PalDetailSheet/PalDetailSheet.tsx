@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useContext} from 'react';
-import {View, Image, Alert, Linking} from 'react-native';
+import {View, Image, Alert, Linking, Platform} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {Text, Button, Divider} from 'react-native-paper';
@@ -14,9 +14,9 @@ import {getFullThumbnailUri} from '../../../utils/imageUtils';
 import {Sheet} from '../../Sheet';
 import {createStyles} from './styles';
 
-import {palsHubService} from '../../../services';
+import {authService, palsHubService} from '../../../services';
 
-import {palStore} from '../../../store';
+import {palStore, checkoutFlowStore} from '../../../store';
 
 import type {PalsHubPal} from '../../../types/palshub';
 
@@ -32,10 +32,11 @@ interface PalDetailSheetProps {
   pal: PalsHubPal | null;
   isVisible: boolean;
   onClose: () => void;
+  onSignInPress?: () => void;
 }
 
 export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
-  ({pal, isVisible, onClose}) => {
+  ({pal, isVisible, onClose, onSignInPress}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const styles = createStyles(theme);
@@ -46,6 +47,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
 
     // Use detailed pal information if available, otherwise fall back to basic pal
     const displayPal = detailedPal || pal;
+    const checkoutStatus = checkoutFlowStore.status;
 
     // Fetch detailed pal information when sheet opens
     useEffect(() => {
@@ -76,6 +78,17 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       fetchPalDetails();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pal, isVisible]);
+
+    // After a purchase reconciles to owned, re-read the pal so the Buy button
+    // flips to Download. Ownership stays server-derived (re-fetched, not written).
+    useEffect(() => {
+      if (checkoutStatus === 'owned' && pal) {
+        palsHubService
+          .getPal(pal.id)
+          .then(setDetailedPal)
+          .catch(() => {});
+      }
+    }, [checkoutStatus, pal]);
 
     if (!displayPal) {
       return null;
@@ -112,6 +125,74 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
       } finally {
         setIsLoading(false);
       }
+    };
+
+    const handleClose = () => {
+      checkoutFlowStore.reset();
+      onClose();
+    };
+
+    const handleBuyPress = () => {
+      if (Platform.OS !== 'ios') {
+        Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {});
+        return;
+      }
+      // Send the user to sign-in rather than a 401 error when logged out.
+      if (!authService.isAuthenticated) {
+        onSignInPress?.();
+        return;
+      }
+      checkoutFlowStore.start(displayPal.id);
+    };
+
+    const isCheckoutInFlight =
+      checkoutStatus === 'creating' ||
+      checkoutStatus === 'browser_open' ||
+      checkoutStatus === 'finalizing';
+
+    const renderCheckoutFeedback = () => {
+      if (checkoutStatus === 'finalizing') {
+        return (
+          <View style={styles.infoTextContainer}>
+            <Text style={styles.infoText}>
+              {l10n.palsScreen.palDetailSheet.finalizingPurchase}
+            </Text>
+          </View>
+        );
+      }
+      if (checkoutStatus === 'processing_deferred') {
+        return (
+          <View style={styles.infoTextContainer}>
+            <Text style={styles.infoText}>
+              {l10n.palsScreen.palDetailSheet.processingPurchase}
+            </Text>
+          </View>
+        );
+      }
+      if (checkoutStatus === 'error') {
+        const kind = checkoutFlowStore.errorKind;
+        const message =
+          kind === '401'
+            ? l10n.palsScreen.palDetailSheet.checkoutSessionExpired
+            : kind === '404'
+              ? l10n.palsScreen.palDetailSheet.palNotAvailable
+              : l10n.palsScreen.palDetailSheet.checkoutFailed;
+        return (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{message}</Text>
+            {kind === '401' && (
+              <Button
+                testID="checkout-signin-button"
+                mode="contained"
+                onPress={() => onSignInPress?.()}
+                style={styles.errorButton}>
+                {l10n.palsScreen.palDetailSheet.signInAgain}
+              </Button>
+            )}
+          </View>
+        );
+      }
+      return null;
     };
 
     const formatDate = (dateString: string) => {
@@ -209,7 +290,7 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     return (
       <Sheet
         isVisible={isVisible}
-        onClose={onClose}
+        onClose={handleClose}
         title={displayPal.title}
         snapPoints={['85%']}>
         <Sheet.ScrollView contentContainerStyle={styles.scrollContent}>
@@ -325,15 +406,18 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
           {palLabel.type === 'premium' &&
             !displayPal.is_owned &&
             (palStore.isUSRegion ? (
-              <Button
-                testID="buy-button"
-                mode="contained"
-                onPress={() =>
-                  Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {})
-                }
-                style={styles.primaryButton}>
-                {l10n.palsScreen.palDetailSheet.buyOnPalshub}
-              </Button>
+              <View style={styles.buyActionColumn}>
+                <Button
+                  testID="buy-button"
+                  mode="contained"
+                  onPress={handleBuyPress}
+                  loading={checkoutStatus === 'creating'}
+                  disabled={isCheckoutInFlight}
+                  style={styles.buyButton}>
+                  {l10n.palsScreen.palDetailSheet.buyOnPalshub}
+                </Button>
+                {renderCheckoutFeedback()}
+              </View>
             ) : (
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoText}>{getPremiumInfoText()}</Text>

@@ -1,10 +1,11 @@
 import React from 'react';
-import {Alert, Linking} from 'react-native';
-import {render, fireEvent, waitFor} from '../../../../../jest/test-utils';
+import {Alert, Linking, Platform} from 'react-native';
+import {runInAction} from 'mobx';
+import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
 
 import {PalDetailSheet} from '../PalDetailSheet';
-import {palsHubService} from '../../../../services';
-import {palStore} from '../../../../store';
+import {authService, palsHubService} from '../../../../services';
+import {palStore, checkoutFlowStore} from '../../../../store';
 import {
   createPalsHubPal,
   mockPalsHubPal,
@@ -74,6 +75,14 @@ describe('PalDetailSheet', () => {
     (palStore.downloadPalsHubPal as jest.Mock).mockResolvedValue(undefined);
     // Reset isUSRegion to false (default non-US)
     (palStore as any).isUSRegion = false;
+    // Default to logged-out; authenticated tests opt in explicitly.
+    (authService as any).isAuthenticated = false;
+    // Reset checkout flow state between tests
+    runInAction(() => {
+      checkoutFlowStore.status = 'idle';
+      checkoutFlowStore.palId = null;
+      checkoutFlowStore.errorKind = undefined;
+    });
     // Reset defaultProps with a fresh mock for each test
     defaultProps = {
       pal: mockPalsHubPal,
@@ -574,8 +583,9 @@ describe('PalDetailSheet', () => {
       });
     });
 
-    it('opens correct palshub URL when buy button is pressed', async () => {
+    it('starts the in-app checkout on iOS when buy button is pressed', async () => {
       (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
 
       const {getByTestId} = render(
         <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
@@ -587,9 +597,66 @@ describe('PalDetailSheet', () => {
 
       fireEvent.press(getByTestId('buy-button'));
 
-      expect(Linking.openURL).toHaveBeenCalledWith(
-        expect.stringContaining(`/pals/${mockPremiumPalsHubPal.id}`),
+      // iOS (default Platform.OS in jest) drives the authenticated checkout
+      // flow, not the anonymous web URL.
+      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
+        mockPremiumPalsHubPal.id,
       );
+      expect(Linking.openURL).not.toHaveBeenCalled();
+    });
+
+    it('opens sign-in instead of checkout when logged out', async () => {
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = false;
+      const onSignInPress = jest.fn();
+
+      const {getByTestId} = render(
+        <PalDetailSheet
+          {...defaultProps}
+          pal={mockPremiumPalsHubPal}
+          onSignInPress={onSignInPress}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      expect(onSignInPress).toHaveBeenCalled();
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+    });
+
+    it('flips Buy to Download after the purchase reconciles to owned', async () => {
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
+      // Initially not owned -> buy button shows.
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId, queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      // Purchase reconciles to owned; the sheet re-reads ownership from the server.
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockOwnedPremiumPal,
+      );
+      await act(async () => {
+        runInAction(() => {
+          checkoutFlowStore.status = 'owned';
+        });
+      });
+
+      await waitFor(() => {
+        expect(queryByTestId('buy-button')).toBeNull();
+        expect(getByTestId('download-button')).toBeTruthy();
+      });
     });
 
     it('does not show buy button for owned premium pals', async () => {
@@ -618,6 +685,148 @@ describe('PalDetailSheet', () => {
       await waitFor(() => {
         expect(queryByTestId('buy-button')).toBeNull();
       });
+    });
+
+    it('uses the web URL on non-iOS, keeping the catch', async () => {
+      const original = Platform.OS;
+      Platform.OS = 'android';
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      expect(Linking.openURL).toHaveBeenCalledWith(
+        expect.stringContaining(`/pals/${mockPremiumPalsHubPal.id}`),
+      );
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+
+      Platform.OS = original;
+    });
+
+    it('shows the finalizing indicator while the purchase settles', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'finalizing';
+        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+      });
+
+      const {getByText} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByText('Finalizing your purchase…')).toBeTruthy();
+      });
+    });
+
+    it('shows the processing-deferred message after webhook lag', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'processing_deferred';
+        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+      });
+
+      const {getByText} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByText('Processing — will unlock shortly.')).toBeTruthy();
+      });
+    });
+
+    it('shows the not-available message on a 404 error without a sign-in control', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'error';
+        checkoutFlowStore.errorKind = '404';
+      });
+
+      const {getByText, queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(
+          getByText('This pal is not available for purchase right now.'),
+        ).toBeTruthy();
+      });
+      expect(queryByTestId('checkout-signin-button')).toBeNull();
+    });
+
+    it('disables the buy button while a checkout is creating', async () => {
+      (palStore as any).isUSRegion = true;
+      runInAction(() => {
+        checkoutFlowStore.status = 'creating';
+        checkoutFlowStore.palId = mockPremiumPalsHubPal.id;
+      });
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      let buyButton: ReturnType<typeof getByTestId>;
+      await waitFor(() => {
+        buyButton = getByTestId('buy-button');
+        expect(buyButton).toBeTruthy();
+      });
+
+      fireEvent.press(buyButton!);
+      // A second press while in flight must not start another checkout.
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+    });
+
+    it('resets the checkout flow when the sheet is closed', async () => {
+      (palStore as any).isUSRegion = true;
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('sheet-close-button'));
+      expect(checkoutFlowStore.reset).toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('renders "Sign in again" on a 401 error and calls onSignInPress', async () => {
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+      runInAction(() => {
+        checkoutFlowStore.status = 'error';
+        checkoutFlowStore.errorKind = '401';
+      });
+      const onSignInPress = jest.fn();
+
+      const {getByTestId} = render(
+        <PalDetailSheet
+          {...defaultProps}
+          pal={mockPremiumPalsHubPal}
+          onSignInPress={onSignInPress}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('checkout-signin-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('checkout-signin-button'));
+      expect(onSignInPress).toHaveBeenCalled();
     });
   });
 });

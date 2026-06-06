@@ -25,7 +25,7 @@ class StorefrontModule: NSObject, RCTBridgeModule {
     @objc
     func getCountryCode(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         if #available(iOS 16.0, *) {
-            // StoreKit 2: returns ISO 3166-1 alpha-2 (e.g., 'US', 'GB')
+            // StoreKit 2: returns ISO 3166-1 alpha-3 (e.g., 'USA', 'GBR')
             Task {
                 let storefront = await Storefront.current
                 let code = storefront?.countryCode

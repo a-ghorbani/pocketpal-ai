@@ -453,6 +453,7 @@ export const PalsScreen: React.FC = observer(() => {
         <PalDetailSheet
           isVisible={showPalDetail}
           pal={selectedPal}
+          onSignInPress={() => setShowAuth(true)}
           onClose={() => {
             setShowPalDetail(false);
             setSelectedPal(null);
