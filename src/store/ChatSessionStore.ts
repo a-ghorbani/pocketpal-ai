@@ -412,6 +412,9 @@ class ChatSessionStore {
       this.lastCompletionResult = this.hydrateCompletionSnapshot(session);
       this.dismissedBannerVariants = new Set();
       this.consecutiveFullFailures = 0;
+      // palLoadHintSeen is intentionally NOT cleared here: it's an
+      // app-lifetime, per-(pal,n_ctx,talents) one-shot suppressor, so it must
+      // survive session switches. Only resetActiveSession clears it.
     });
   }
 

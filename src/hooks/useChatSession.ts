@@ -200,6 +200,9 @@ function deriveSnapshotFromResult(
   isRemote: boolean,
 ): CompletionResultSnapshot {
   const used = (result.tokens_evaluated ?? 0) + (result.tokens_predicted ?? 0);
+  // Local turns set context_full/truncated directly; finishReason only bridges
+  // the remote engine's signal (stopped_limit) into the OR predicate below, so
+  // it is intentionally remote-only.
   const finishReason =
     isRemote && result.stopped_limit === 1 ? 'length' : undefined;
   const contextFull =
@@ -680,7 +683,11 @@ export const useChatSession = (
       // (ctx_shift is off — the llama.rn default), the native layer throws
       // "Context is full" before any token is generated, so it never reaches
       // run_finished. Treat it as an n_ctx-exhaustion signal so the banner
-      // surfaces instead of a raw error dump. (llama.rn RNLlamaJSI.cpp.)
+      // surfaces instead of a raw error dump.
+      // LLAMARN-DEP: string-coupled to the native throw in RNLlamaJSI.cpp.
+      // No typed flag exists yet; a llama.rn reword would silently stop the
+      // prompt-overflow banner. Re-verify on upgrade; prefer a typed
+      // CompletionResult flag upstream when available.
       const isContextFullError = /context is full/i.test(errorMessage);
       const treatAsContextFull = isToolArgsParseError || isContextFullError;
 
@@ -743,6 +750,9 @@ export const useChatSession = (
           // is no content to keep — but still record the snapshot so the
           // banner surfaces the full state. The empty turn is cleaned up
           // below; the store snapshot drives the banner independently.
+          // Per-process for this draft: with no message persisted, the banner
+          // does not rehydrate after a session switch / restart (it re-fires
+          // on the next overflowing send).
           if (isContextFullError) {
             const isRemote =
               modelStore.activeModel?.origin === ModelOrigin.REMOTE;

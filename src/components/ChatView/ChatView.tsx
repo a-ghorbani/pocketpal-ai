@@ -285,11 +285,18 @@ export const ChatView = observer(
       m => m.id === modelStore.activeProjectionModelId,
     );
     const currentNCtx = modelStore.activeContextSettings?.n_ctx;
+    const memoryCeiling = Math.max(
+      modelStore.largestSuccessfulLoad ?? 0,
+      modelStore.availableMemoryCeiling ?? 0,
+    );
 
     // The increase CTA is shown only when at least one larger context tier
     // fits the device — same OOM-safe intent the sheet enforces per stop.
-    // Computed inline so the observer re-renders when the store reads change.
-    const canIncreaseContext = (() => {
+    // Memoized: hasFittingUpgrade walks the tier ladder calling the GGUF
+    // memory estimator per stop, and ChatView re-renders on every streamed
+    // token. Non-n_ctx contextInitParams (devices/cache) change rarely and
+    // self-heal on the next ceiling/n_ctx update, so they're left out of deps.
+    const canIncreaseContext = React.useMemo(() => {
       if (!activeModel || currentNCtx === undefined) {
         return false;
       }
@@ -298,10 +305,6 @@ export const ChatView = observer(
       const modelMaxCtx =
         activeModel.ggufMetadata?.context_length ??
         CONTEXT_LADDER[CONTEXT_LADDER.length - 1];
-      const ceiling = Math.max(
-        modelStore.largestSuccessfulLoad ?? 0,
-        modelStore.availableMemoryCeiling ?? 0,
-      );
       const fitStatusFor = makeFitStatusFor({
         memBytesFor: nCtx => {
           try {
@@ -313,7 +316,7 @@ export const ChatView = observer(
             return Number.POSITIVE_INFINITY;
           }
         },
-        ceiling,
+        ceiling: memoryCeiling,
         totalMemory: 0,
       });
       return hasFittingUpgrade(
@@ -322,7 +325,8 @@ export const ChatView = observer(
         modelMaxCtx,
         fitStatusFor,
       );
-    })();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeModel?.id, projectionModel?.id, currentNCtx, memoryCeiling]);
     // Reload-feedback snackbar: indefinite while reloading, timed on result.
     const [reloadSnackbar, setReloadSnackbar] = React.useState<{
       message: string;
@@ -1284,7 +1288,9 @@ export const ChatView = observer(
             visible={isFocused && reloadSnackbar !== null}
             onDismiss={() => setReloadSnackbar(null)}
             duration={
-              reloadSnackbar?.indefinite ? Snackbar.DURATION_LONG * 1000 : 4000
+              // RNP treats POSITIVE_INFINITY as "no auto-hide timer"; the
+              // reloading snackbar stays until the result replaces it.
+              reloadSnackbar?.indefinite ? Number.POSITIVE_INFINITY : 4000
             }
             testID="context-reload-snackbar">
             {reloadSnackbar?.message ?? ''}
