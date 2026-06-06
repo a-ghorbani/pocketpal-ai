@@ -1,0 +1,1 @@
+export {SplashScreen} from './SplashScreen';
