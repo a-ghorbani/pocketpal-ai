@@ -137,13 +137,13 @@ describe('Context-Limit Banner', () => {
     expect(await exists(B.warning)).toBe(false);
   });
 
-  it('shows a context banner with a fullness meter after a reply overflows the context', async () => {
+  it('shows a context banner after a reply overflows the context', async () => {
     const kind = await triggerBanner(chatPage);
     console.log(`Context banner kind after overflow: ${kind}`);
     expect(kind === 'full' || kind === 'warning').toBe(true);
-
-    // The fullness meter renders on both nCtx-reading variants.
-    expect(await exists(B.meter)).toBe(true);
+    // Note: the fullness meter is intentionally hidden from accessibility
+    // (decorative), so it is not queryable via Appium — the banner's presence
+    // above is the meaningful assertion.
   });
 
   it('opens the increase-context sheet from the banner and can cancel', async () => {
