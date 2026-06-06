@@ -41,14 +41,22 @@ const RECONCILE_BACKOFFS_MS = [1000, 2000, 3000, 4000, 4000, 4000];
 const isAllowedCheckoutUrl = (value: string): boolean => {
   try {
     const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const palsHubHost = new URL(PALSHUB_API_BASE_URL).hostname.toLowerCase();
+
+    // E2E: the test-complete page is served by the LAN test server over http.
+    // Compiled out of prod (`__E2E__` is false), which stays https-only.
+    if (__E2E__ && host === palsHubHost) {
+      return true;
+    }
+
     if (url.protocol !== 'https:') {
       return false;
     }
-    const host = url.hostname.toLowerCase();
     if (host === 'stripe.com' || host.endsWith('.stripe.com')) {
       return true;
     }
-    return host === new URL(PALSHUB_API_BASE_URL).hostname.toLowerCase();
+    return host === palsHubHost;
   } catch {
     return false;
   }

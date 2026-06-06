@@ -110,6 +110,15 @@ class PalStore {
   }
 
   private async checkRegion() {
+    // E2E builds have no App Store storefront, so force the US branch to
+    // exercise the buy button. Compiled out of prod (`__E2E__` is false).
+    if (__E2E__) {
+      runInAction(() => {
+        this.isUSRegion = true;
+      });
+      return;
+    }
+
     try {
       const isUS = await isUSStorefront();
       runInAction(() => {
