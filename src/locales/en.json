@@ -1111,7 +1111,6 @@
     "contextNewChat": "New chat",
     "contextIncrease": "Increase context",
     "contextMoreRoom": "More room",
-    "contextOr": "or",
     "increaseContextTitle": "Give this chat more room",
     "increaseContextBody": "Room is the model's working memory — how much of this chat it can keep in mind at once. More room means longer chats before replies get cut off.",
     "increaseContextTokensUnit": "tokens",

@@ -197,7 +197,7 @@ export const BannerRow: React.FC<BannerRowProps> = observer(
       );
     }
 
-    // context-full (sticky; no dismiss).
+    // context-full (dismissable per draft).
     const talentNames = l10n.components.palSheet.talentNames;
     const heavyTalentLabel = heavyTalentName
       ? (talentNames[heavyTalentName as keyof typeof talentNames] ??

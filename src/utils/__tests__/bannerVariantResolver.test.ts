@@ -26,7 +26,7 @@ const snap = (
 });
 
 describe('resolveBannerVariant', () => {
-  describe('context-full (precedence 1, sticky)', () => {
+  describe('context-full (precedence 1)', () => {
     it('returns context-full when contextFull and freshness gate holds', () => {
       const result = resolveBannerVariant(
         snap({contextFull: true, used: 4096}),
@@ -57,6 +57,29 @@ describe('resolveBannerVariant', () => {
         baseInput({heavyTalentName: 'render_html'}),
       );
       expect(result.heavyTalentName).toBe('render_html');
+    });
+
+    it('is suppressed when dismissed for the draft, and does not fall back to the warning', () => {
+      const result = resolveBannerVariant(
+        snap({contextFull: true, used: 4096}),
+        baseInput({dismissed: new Set(['context-full'])}),
+      );
+      // Falls through to none (or html-soft-cap), NEVER to context-warning,
+      // since the warning branch requires !contextFull.
+      expect(result.variant).not.toBe('context-full');
+      expect(result.variant).not.toBe('context-warning');
+      expect(result.variant).toBe('none');
+    });
+
+    it('dismissed full still yields html-soft-cap when previews are open', () => {
+      const result = resolveBannerVariant(
+        snap({contextFull: true, used: 4096}),
+        baseInput({
+          dismissed: new Set(['context-full']),
+          htmlPreviewCount: 4,
+        }),
+      );
+      expect(result.variant).toBe('html-soft-cap');
     });
 
     it('clears once a raised effectiveNCtx makes the snapshot stale', () => {

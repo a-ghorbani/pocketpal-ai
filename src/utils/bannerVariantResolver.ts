@@ -2,7 +2,7 @@ import {BannerVariant, CompletionResultSnapshot} from './completionTypes';
 
 // Used / n_ctx ratio at which the soft "getting tight" warning fires.
 export const WARNING_THRESHOLD = 0.8;
-// Headroom below n_ctx; the sticky full banner clears once a later turn's
+// Headroom below n_ctx; the full banner auto-clears once a later turn's
 // `used` drops below `effectiveNCtx - AUTOCLEAR_RUNWAY`.
 export const AUTOCLEAR_RUNWAY = 256;
 // Remote replies shorter than this are never flagged as hedged-truncated.

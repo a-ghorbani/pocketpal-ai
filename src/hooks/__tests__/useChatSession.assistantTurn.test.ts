@@ -352,6 +352,66 @@ describe('useChatSession — AssistantTurn integration', () => {
     errSpy.mockRestore();
   });
 
+  it('#3d "Context is full" WITH partial content → turn tagged contextFull (no truncationLikely)', async () => {
+    // Defensive branch: if a context-full error arrives after some content
+    // was produced, the partial turn is preserved and tagged contextFull via
+    // treatAsContextFull — but without truncationLikely (that flag is reserved
+    // for the tool-args parse case).
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Context is full'));
+    }
+    const ref: {
+      current: {createdAt: number; id: string; sessionId: string} | null;
+    } = {current: null};
+    const {result} = renderHook(() =>
+      useChatSession(ref, textMessage.author, mockAssistant),
+    );
+
+    const turnId = 'turn-context-full-partial-test';
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [
+          {
+            id: turnId,
+            type: 'assistant_turn',
+            author: assistant,
+            createdAt: Date.now(),
+            steps: [{content: 'partial'}],
+            metadata: {copyable: true},
+          } as MessageType.AssistantTurn,
+        ],
+        completionSettings: {},
+        settingsSource: 'pal',
+      },
+    ] as any;
+    (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mockImplementation(async (msg: any) => {
+      msg.id = turnId;
+    });
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const interruptedCall = (
+      chatSessionStore.updateMessage as jest.Mock
+    ).mock.calls.find(c => c[2]?.metadata?.interrupted === true);
+    expect(interruptedCall).toBeDefined();
+    expect(interruptedCall![2].metadata.completionResult?.contextFull).toBe(
+      true,
+    );
+    expect(interruptedCall![2].metadata.truncationLikely).toBeUndefined();
+
+    errSpy.mockRestore();
+  });
+
   it('#hookTest1 multi-step run with tool_call_finished: appendToolOutcome called for the active step', async () => {
     // Wire a fake talent into the registry so the runner's executeOne()
     // path finds it. Restore at end so other tests are not affected.
