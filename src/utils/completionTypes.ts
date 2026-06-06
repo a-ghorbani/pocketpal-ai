@@ -101,6 +101,38 @@ export interface CompletionResult {
 }
 
 /**
+ * Normalised snapshot of a finished turn, written once at the completion
+ * boundary. Mirrored on the message metadata and on the session store so the
+ * banner resolver reads it without recomputing.
+ *
+ * `used` is `tokens_evaluated + tokens_predicted` — `tokens_cached` is not
+ * exposed at the engine boundary, so on prompt-cache-reuse turns this
+ * under-counts KV occupancy.
+ *
+ * `contextFull` is the OR of context_full / truncated / truncationLikely /
+ * (remote) finishReason === 'length', frozen at write time.
+ */
+export interface CompletionResultSnapshot {
+  content?: string;
+  reasoning_content?: string;
+  used: number;
+  contextFull: boolean;
+  tokensPredicted?: number;
+  finishReason?: string;
+  isRemote: boolean;
+}
+
+/**
+ * Variants the chat banner slot can resolve to, in precedence order.
+ */
+export type BannerVariant =
+  | 'context-full'
+  | 'context-warning'
+  | 'context-remote-hedged'
+  | 'html-soft-cap'
+  | 'none';
+
+/**
  * CompletionEngine interface formalizes the completion contract.
  * Both LocalCompletionEngine and OpenAICompletionEngine implement this.
  */

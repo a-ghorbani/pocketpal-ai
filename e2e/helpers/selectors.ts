@@ -502,6 +502,59 @@ export const Selectors = {
     },
   },
 
+  // Context-limit banner + increase-context sheet
+  contextBanner: {
+    get warning(): string {
+      return byTestId('context-warning-banner');
+    },
+    get full(): string {
+      return byTestId('context-full-banner');
+    },
+    get remoteHedged(): string {
+      return byTestId('context-remote-hedged-banner');
+    },
+    get softCap(): string {
+      return byTestId('soft-cap-warning');
+    },
+    get meter(): string {
+      return byTestId('banner-meter');
+    },
+    get percent(): string {
+      return byTestId('banner-percent');
+    },
+    get dismiss(): string {
+      return byTestId('context-banner-dismiss');
+    },
+    get warningIncrease(): string {
+      return byTestId('context-warning-increase');
+    },
+    get fullIncrease(): string {
+      return byTestId('context-full-increase');
+    },
+    get fullNewChat(): string {
+      return byTestId('context-full-new-chat');
+    },
+    get palLoadHint(): string {
+      return byTestId('pal-load-hint-snackbar');
+    },
+    // Increase-context sheet
+    get sheetConfirm(): string {
+      return byTestId('increase-context-confirm');
+    },
+    get sheetCancel(): string {
+      return byTestId('increase-context-cancel');
+    },
+    get sheetSlider(): string {
+      return byTestId('increase-context-slider');
+    },
+    get sheetNoFit(): string {
+      return byTestId('increase-context-no-fit');
+    },
+    get sheetNewChat(): string {
+      return byTestId('increase-context-new-chat');
+    },
+  },
+
   // Generation settings sheet
   generationSettings: {
     get completionSettings(): string {

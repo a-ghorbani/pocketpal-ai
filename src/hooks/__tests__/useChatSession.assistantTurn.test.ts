@@ -288,6 +288,130 @@ describe('useChatSession — AssistantTurn integration', () => {
     errSpy.mockRestore();
   });
 
+  it('#3c prompt overflow ("Context is full") with no content → records contextFull snapshot, no error dump', async () => {
+    // When the prompt itself exceeds n_ctx (ctx_shift off, the llama.rn
+    // default), the native layer throws "Context is full" before any token,
+    // so it never reaches run_finished and the turn has no content. The catch
+    // path must still record a contextFull snapshot so the banner surfaces,
+    // instead of dumping the raw native error.
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Context is full'));
+    }
+    const ref: {
+      current: {createdAt: number; id: string; sessionId: string} | null;
+    } = {current: null};
+    const {result} = renderHook(() =>
+      useChatSession(ref, textMessage.author, mockAssistant),
+    );
+
+    const turnId = 'turn-context-full-test';
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [
+          {
+            id: turnId,
+            type: 'assistant_turn',
+            author: assistant,
+            createdAt: Date.now(),
+            steps: [], // no generated content — prompt overflowed
+            metadata: {copyable: true},
+          } as MessageType.AssistantTurn,
+        ],
+        completionSettings: {},
+        settingsSource: 'pal',
+      },
+    ] as any;
+    (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mockImplementation(async (msg: any) => {
+      msg.id = turnId;
+    });
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    // A contextFull snapshot is recorded so the banner can surface.
+    const snapCall = (
+      chatSessionStore.recordCompletionSnapshot as jest.Mock
+    ).mock.calls.find(c => c[0]?.contextFull === true);
+    expect(snapCall).toBeDefined();
+
+    // No raw "Completion failed: …" system-message dump.
+    const sysCall = (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mock.calls.find(c => c[0]?.metadata?.system === true);
+    expect(sysCall).toBeUndefined();
+
+    errSpy.mockRestore();
+  });
+
+  it('#3d "Context is full" WITH partial content → turn tagged contextFull (no truncationLikely)', async () => {
+    // Defensive branch: if a context-full error arrives after some content
+    // was produced, the partial turn is preserved and tagged contextFull via
+    // treatAsContextFull — but without truncationLikely (that flag is reserved
+    // for the tool-args parse case).
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    if (modelStore.context) {
+      modelStore.context.completion = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Context is full'));
+    }
+    const ref: {
+      current: {createdAt: number; id: string; sessionId: string} | null;
+    } = {current: null};
+    const {result} = renderHook(() =>
+      useChatSession(ref, textMessage.author, mockAssistant),
+    );
+
+    const turnId = 'turn-context-full-partial-test';
+    chatSessionStore.sessions = [
+      {
+        id: 'session-1',
+        title: '',
+        date: '',
+        messages: [
+          {
+            id: turnId,
+            type: 'assistant_turn',
+            author: assistant,
+            createdAt: Date.now(),
+            steps: [{content: 'partial'}],
+            metadata: {copyable: true},
+          } as MessageType.AssistantTurn,
+        ],
+        completionSettings: {},
+        settingsSource: 'pal',
+      },
+    ] as any;
+    (
+      chatSessionStore.addMessageToCurrentSession as jest.Mock
+    ).mockImplementation(async (msg: any) => {
+      msg.id = turnId;
+    });
+
+    await act(async () => {
+      await result.current.handleSendPress(textMessage);
+    });
+
+    const interruptedCall = (
+      chatSessionStore.updateMessage as jest.Mock
+    ).mock.calls.find(c => c[2]?.metadata?.interrupted === true);
+    expect(interruptedCall).toBeDefined();
+    expect(interruptedCall![2].metadata.completionResult?.contextFull).toBe(
+      true,
+    );
+    expect(interruptedCall![2].metadata.truncationLikely).toBeUndefined();
+
+    errSpy.mockRestore();
+  });
+
   it('#hookTest1 multi-step run with tool_call_finished: appendToolOutcome called for the active step', async () => {
     // Wire a fake talent into the registry so the runner's executeOne()
     // path finds it. Restore at end so other tests are not affected.

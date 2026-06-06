@@ -9,12 +9,13 @@ import {
   View,
   TouchableOpacity,
   Keyboard,
-  Text,
 } from 'react-native';
 
 import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import calendar from 'dayjs/plugin/calendar';
+import {Snackbar} from 'react-native-paper';
+import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -32,10 +33,25 @@ import Reanimated, {
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
 
-import {useTheme, useMessageActions, usePrevious} from '../../hooks';
+import {
+  useTheme,
+  useMessageActions,
+  usePrevious,
+  usePalLoadHint,
+} from '../../hooks';
 
 import ImageView from './ImageView';
+import {BannerRow} from './BannerRow';
 import {createStyles} from './styles';
+
+import {IncreaseContextSheet} from '../IncreaseContextSheet';
+import {
+  makeFitStatusFor,
+  hasFittingUpgrade,
+} from '../IncreaseContextSheet/fitStatus';
+import {t} from '../../locales';
+import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
+import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
 import {chatSessionStore, modelStore} from '../../store';
 
@@ -227,6 +243,7 @@ export const ChatView = observer(
     const theme = useTheme();
     const styles = createStyles({theme});
     const insets = useSafeAreaInsets();
+    const isFocused = useIsFocused();
 
     // ============ REFS ============
     const animationRef = React.useRef(false);
@@ -259,6 +276,76 @@ export const ChatView = observer(
 
     // Pagination state
     const [isNextPageLoading, setNextPageLoading] = React.useState(false);
+
+    // Increase-context sheet visibility. The sheet owns the chosen target.
+    const [increaseSheetOpen, setIncreaseSheetOpen] = React.useState(false);
+
+    const activeModel = modelStore.activeModel;
+    const projectionModel = modelStore.models.find(
+      m => m.id === modelStore.activeProjectionModelId,
+    );
+    const currentNCtx = modelStore.activeContextSettings?.n_ctx;
+    const memoryCeiling = Math.max(
+      modelStore.largestSuccessfulLoad ?? 0,
+      modelStore.availableMemoryCeiling ?? 0,
+    );
+
+    // The increase CTA is shown only when at least one larger context tier
+    // fits the device — same OOM-safe intent the sheet enforces per stop.
+    // Memoized: hasFittingUpgrade walks the tier ladder calling the GGUF
+    // memory estimator per stop, and ChatView re-renders on every streamed
+    // token. Non-n_ctx contextInitParams (devices/cache) change rarely and
+    // self-heal on the next ceiling/n_ctx update, so they're left out of deps.
+    const canIncreaseContext = React.useMemo(() => {
+      if (!activeModel || currentNCtx === undefined) {
+        return false;
+      }
+      // Match the sheet's cap so the CTA never opens a sheet whose only stop
+      // equals the current size.
+      const modelMaxCtx =
+        activeModel.ggufMetadata?.context_length ??
+        CONTEXT_LADDER[CONTEXT_LADDER.length - 1];
+      const fitStatusFor = makeFitStatusFor({
+        memBytesFor: nCtx => {
+          try {
+            return getModelMemoryRequirement(activeModel, projectionModel, {
+              ...modelStore.contextInitParams,
+              n_ctx: nCtx,
+            });
+          } catch {
+            return Number.POSITIVE_INFINITY;
+          }
+        },
+        ceiling: memoryCeiling,
+        totalMemory: 0,
+      });
+      return hasFittingUpgrade(
+        CONTEXT_LADDER,
+        currentNCtx,
+        modelMaxCtx,
+        fitStatusFor,
+      );
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeModel?.id, projectionModel?.id, currentNCtx, memoryCeiling]);
+    // Reload-feedback snackbar: indefinite while reloading, timed on result.
+    const [reloadSnackbar, setReloadSnackbar] = React.useState<{
+      message: string;
+      indefinite: boolean;
+    } | null>(null);
+
+    // The snackbar stays mounted across the reloading→result transition, so
+    // Paper's auto-hide timer never re-arms for the timed result. Own the
+    // result dismissal here.
+    React.useEffect(() => {
+      if (!reloadSnackbar || reloadSnackbar.indefinite) {
+        return;
+      }
+      const timer = setTimeout(() => setReloadSnackbar(null), 4000);
+      return () => clearTimeout(timer);
+    }, [reloadSnackbar]);
+
+    // One-shot pal-load hint snackbar (separate surface from the banner).
+    const palLoadHint = usePalLoadHint({activePal, isFocused});
 
     // ============ COMPONENT SIZE TRACKING ============
     const {onLayout, size} = useComponentSize();
@@ -1044,8 +1131,6 @@ export const ChatView = observer(
         }, 0),
       [messages],
     );
-    const showSoftCapWarning = htmlPreviewCount >= 4;
-
     // ============ COMPONENT RENDER ============
     return (
       <UserContext.Provider value={user}>
@@ -1070,13 +1155,13 @@ export const ChatView = observer(
                 inputContainerAnimatedStyle,
                 {backgroundColor: inputBackgroundColor},
               ]}>
-              {showSoftCapWarning ? (
-                <View testID="soft-cap-warning" style={styles.softCapBanner}>
-                  <Text style={styles.softCapBannerText}>
-                    {l10n.chat.softCapWarning}
-                  </Text>
-                </View>
-              ) : null}
+              <BannerRow
+                messages={messages}
+                htmlPreviewCount={htmlPreviewCount}
+                canIncrease={canIncreaseContext}
+                onNewChat={() => chatSessionStore.resetActiveSession()}
+                onIncreaseContext={() => setIncreaseSheetOpen(true)}
+              />
               <ChatInput
                 {...{
                   ...unwrap(inputProps),
@@ -1167,6 +1252,64 @@ export const ChatView = observer(
             isVisible={isReportSheetVisible}
             onClose={() => setIsReportSheetVisible(false)}
           />
+
+          {increaseSheetOpen && activeModel && currentNCtx !== undefined ? (
+            <IncreaseContextSheet
+              isVisible={increaseSheetOpen}
+              model={activeModel}
+              projectionModel={projectionModel}
+              currentNCtx={currentNCtx}
+              onClose={() => setIncreaseSheetOpen(false)}
+              onNewChat={() => {
+                chatSessionStore.resetActiveSession();
+                setIncreaseSheetOpen(false);
+              }}
+              onReloadStart={() => {
+                // Single advisory surface: dismiss the pal-load hint in the
+                // same handler so no frame shows two snackbars at once.
+                palLoadHint.dismiss();
+                setReloadSnackbar({
+                  message: l10n.chat.increaseContextReloading,
+                  indefinite: true,
+                });
+              }}
+              onReloadResult={(success, target) =>
+                setReloadSnackbar({
+                  message: success
+                    ? t(l10n.chat.increaseContextSuccess, {target})
+                    : l10n.chat.increaseContextFailure,
+                  indefinite: false,
+                })
+              }
+            />
+          ) : null}
+
+          <Snackbar
+            visible={isFocused && reloadSnackbar !== null}
+            onDismiss={() => setReloadSnackbar(null)}
+            duration={
+              // RNP treats POSITIVE_INFINITY as "no auto-hide timer"; the
+              // reloading snackbar stays until the result replaces it.
+              reloadSnackbar?.indefinite ? Number.POSITIVE_INFINITY : 4000
+            }
+            testID="context-reload-snackbar">
+            {reloadSnackbar?.message ?? ''}
+          </Snackbar>
+
+          <Snackbar
+            visible={isFocused && palLoadHint.hintVisible && !reloadSnackbar}
+            onDismiss={palLoadHint.dismiss}
+            duration={6000}
+            action={{
+              label: l10n.chat.contextMoreRoom,
+              onPress: () => {
+                palLoadHint.dismiss();
+                setIncreaseSheetOpen(true);
+              },
+            }}
+            testID="pal-load-hint-snackbar">
+            {l10n.chat.palLoadHint}
+          </Snackbar>
         </View>
       </UserContext.Provider>
     );

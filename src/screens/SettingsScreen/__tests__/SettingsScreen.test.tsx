@@ -100,6 +100,29 @@ describe('SettingsScreen', () => {
     });
   });
 
+  it('re-syncs the displayed context size when n_ctx changes externally', async () => {
+    const {getByDisplayValue, rerender} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+    expect(getByDisplayValue('2048')).toBeTruthy();
+
+    const original = modelStore.contextInitParams.n_ctx;
+    // Simulate the chat banner's increase-context flow raising the global n_ctx.
+    runInAction(() => {
+      modelStore.contextInitParams.n_ctx = 8192;
+    });
+    rerender(<SettingsScreen />);
+
+    await waitFor(() => {
+      expect(getByDisplayValue('8192')).toBeTruthy();
+    });
+
+    runInAction(() => {
+      modelStore.contextInitParams.n_ctx = original;
+    });
+  });
+
   it('toggles Auto Offload/Load switch', async () => {
     const {getByTestId} = render(<SettingsScreen />, {
       withSafeArea: true,

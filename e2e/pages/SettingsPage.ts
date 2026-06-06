@@ -43,6 +43,17 @@ export class SettingsPage extends BasePage {
   }
 
   /**
+   * Set the global model context size (n_ctx). Must be on the Settings screen.
+   * The value is debounced into the store, so we wait briefly for it to commit.
+   */
+  async setContextSize(value: string): Promise<void> {
+    await this.waitForReady();
+    await this.typeText(Selectors.settings.contextSizeInput, value);
+    await this.dismissKeyboard();
+    await browser.pause(700);
+  }
+
+  /**
    * Scroll down to the language selector button.
    * The language selector is in the "App Settings" card, which is the 4th card
    * on the Settings screen. Needs multiple swipes to reach.
