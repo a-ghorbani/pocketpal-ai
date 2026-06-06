@@ -406,18 +406,18 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
           {palLabel.type === 'premium' &&
             !displayPal.is_owned &&
             (palStore.isUSRegion ? (
-              <>
+              <View style={styles.buyActionColumn}>
                 <Button
                   testID="buy-button"
                   mode="contained"
                   onPress={handleBuyPress}
                   loading={checkoutStatus === 'creating'}
                   disabled={isCheckoutInFlight}
-                  style={styles.primaryButton}>
+                  style={styles.buyButton}>
                   {l10n.palsScreen.palDetailSheet.buyOnPalshub}
                 </Button>
                 {renderCheckoutFeedback()}
-              </>
+              </View>
             ) : (
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoText}>{getPremiumInfoText()}</Text>

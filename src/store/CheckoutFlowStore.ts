@@ -44,8 +44,9 @@ const isAllowedCheckoutUrl = (value: string): boolean => {
     const host = url.hostname.toLowerCase();
     const palsHubHost = new URL(PALSHUB_API_BASE_URL).hostname.toLowerCase();
 
-    // E2E: the test-complete page is served by the LAN test server over http.
-    // Compiled out of prod (`__E2E__` is false), which stays https-only.
+    // E2E only: the automated harness's test-complete page is served by the
+    // LAN test server over http. Dev and prod stay https-only (`__E2E__` is
+    // false in both), so dev exercises the real Stripe checkout.
     if (__E2E__ && host === palsHubHost) {
       return true;
     }
