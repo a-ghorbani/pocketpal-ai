@@ -3,6 +3,7 @@ import {makeAutoObservable, runInAction} from 'mobx';
 import {PALSHUB_API_BASE_URL} from '@env';
 
 import NativeAuthSession from '../specs/NativeAuthSession';
+import NativeExternalOffer from '../specs/NativeExternalOffer';
 import {palsHubApiService} from '../services/palshub/PalsHubApiService';
 import {palsHubService} from '../services';
 
@@ -220,6 +221,7 @@ class CheckoutFlowStore {
         }
         if (owned) {
           this.setStatus('owned');
+          this.reportExternalOffer();
           return;
         }
       } catch {
@@ -230,6 +232,18 @@ class CheckoutFlowStore {
     if (this.epoch === myEpoch) {
       this.setStatus('processing_deferred');
     }
+  }
+
+  // Best-effort External Offers report, fired once after reconcile confirms
+  // ownership (Android only — the spec is null on iOS). Never gates, blocks,
+  // or fails the checkout: a rejection is swallowed and the state is untouched.
+  // Not fired on the already-owned (400) path: no external transaction occurred.
+  private reportExternalOffer() {
+    const purchaseId = this.purchaseId;
+    if (!NativeExternalOffer || !purchaseId) {
+      return;
+    }
+    NativeExternalOffer.reportTransaction(purchaseId).catch(() => {});
   }
 
   reset() {

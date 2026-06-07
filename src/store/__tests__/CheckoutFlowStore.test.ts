@@ -14,15 +14,24 @@ jest.mock('../../specs/NativeAuthSession', () => ({
   default: {openAuth: jest.fn()},
 }));
 
+jest.mock('../../specs/NativeExternalOffer', () => ({
+  __esModule: true,
+  default: {reportTransaction: jest.fn()},
+}));
+
 import {palsHubApiService} from '../../services/palshub/PalsHubApiService';
 import {palsHubService} from '../../services';
 import NativeAuthSession from '../../specs/NativeAuthSession';
+import NativeExternalOffer from '../../specs/NativeExternalOffer';
 import {checkoutFlowStore} from '../CheckoutFlowStore';
 
 const createSession = palsHubApiService.createCheckoutSession as jest.Mock;
 const checkPalOwnership = palsHubService.checkPalOwnership as jest.Mock;
 const openAuth = (NativeAuthSession as unknown as {openAuth: jest.Mock})
   .openAuth;
+const reportTransaction = (
+  NativeExternalOffer as unknown as {reportTransaction: jest.Mock}
+).reportTransaction;
 
 const session = {
   checkout_url: 'https://checkout.stripe.com/c/pay/cs_1',
@@ -44,6 +53,7 @@ describe('CheckoutFlowStore', () => {
     checkoutFlowStore.reset();
     createSession.mockResolvedValue(session);
     checkPalOwnership.mockResolvedValue({owned: false});
+    reportTransaction.mockResolvedValue(undefined);
     // Default: the session never resolves, so start() parks in browser_open
     // and tests that drive onReturn directly stay deterministic.
     openAuth.mockReturnValue(new Promise(() => {}));
@@ -72,11 +82,13 @@ describe('CheckoutFlowStore', () => {
     expect(checkoutFlowStore.purchaseId).toBe('pur_1');
   });
 
-  it('400 already owned -> owned without opening the auth session', async () => {
+  it('400 already owned -> owned without opening the auth session or reporting', async () => {
     createSession.mockRejectedValue({details: {status: 'already_owned'}});
     await checkoutFlowStore.start('pal-1');
     expect(openAuth).not.toHaveBeenCalled();
     expect(checkoutFlowStore.status).toBe('owned');
+    // No external transaction occurred via this flow.
+    expect(reportTransaction).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -188,6 +200,45 @@ describe('CheckoutFlowStore', () => {
       checkoutFlowStore.reset();
       await jest.advanceTimersByTimeAsync(30000);
       expect(checkoutFlowStore.status).toBe('idle');
+    });
+  });
+
+  describe('external offer reporting', () => {
+    beforeEach(async () => {
+      checkoutFlowStore.start('pal-1'); // -> browser_open (session pending)
+      await flushMicrotasks();
+    });
+
+    it('reports once with the purchase id on reconcile-success owned', async () => {
+      checkPalOwnership.mockResolvedValueOnce({owned: true});
+      checkoutFlowStore.onReturn('pal-1', 'success');
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(checkoutFlowStore.status).toBe('owned');
+      expect(reportTransaction).toHaveBeenCalledTimes(1);
+      expect(reportTransaction).toHaveBeenCalledWith('pur_1');
+    });
+
+    it('does not report on cancel', async () => {
+      checkoutFlowStore.onReturn('pal-1', 'cancel');
+      expect(checkoutFlowStore.status).toBe('cancelled');
+      expect(reportTransaction).not.toHaveBeenCalled();
+    });
+
+    it('does not report on processing_deferred (webhook lag)', async () => {
+      checkPalOwnership.mockResolvedValue({owned: false});
+      checkoutFlowStore.onReturn('pal-1', 'success');
+      await jest.advanceTimersByTimeAsync(30000);
+      expect(checkoutFlowStore.status).toBe('processing_deferred');
+      expect(reportTransaction).not.toHaveBeenCalled();
+    });
+
+    it('a rejected report leaves the status owned (best-effort, swallowed)', async () => {
+      reportTransaction.mockRejectedValueOnce(new Error('reporting failed'));
+      checkPalOwnership.mockResolvedValueOnce({owned: true});
+      checkoutFlowStore.onReturn('pal-1', 'success');
+      await jest.advanceTimersByTimeAsync(1000);
+      await flushMicrotasks();
+      expect(checkoutFlowStore.status).toBe('owned');
     });
   });
 
@@ -309,6 +360,10 @@ describe('CheckoutFlowStore — auth-session spec unavailable', () => {
       palsHubService: {checkPalOwnership: jest.fn()},
     }));
     jest.doMock('../../specs/NativeAuthSession', () => ({
+      __esModule: true,
+      default: null,
+    }));
+    jest.doMock('../../specs/NativeExternalOffer', () => ({
       __esModule: true,
       default: null,
     }));
