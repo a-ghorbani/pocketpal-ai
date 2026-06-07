@@ -130,17 +130,55 @@ export class ChatPage extends BasePage {
   }
 
   /**
-   * Tap the thinking toggle to switch its state
+   * Dismiss the TTS "Voices" setup sheet if it is open.
+   * The VoiceChip (TTS control) sits in the chat input's right controls,
+   * immediately right of the thinking toggle. When no voice is configured the
+   * chip is expanded and can overlap the toggle's tap point; a tap there opens
+   * this sheet instead of flipping the toggle (#764). No-op when absent.
+   */
+  async dismissVoicesSheetIfPresent(): Promise<void> {
+    try {
+      const closeBtn = browser.$(Selectors.common.sheetCloseButton);
+      if ((await closeBtn.isExisting()) && (await closeBtn.isDisplayed())) {
+        await closeBtn.click();
+        await browser.pause(400);
+      }
+    } catch {
+      // No sheet open - continue
+    }
+  }
+
+  /**
+   * Tap the thinking toggle to switch its state.
+   *
+   * Taps the toggle's left portion via coordinates rather than the element
+   * centre: the TTS VoiceChip sits immediately to the right and can overlap the
+   * toggle's centre/right, so a centre tap lands on the chip and opens the
+   * "Voices" sheet instead of flipping the toggle (#764). The left quarter
+   * stays clear of the chip. A Voices sheet is dismissed before and after as a
+   * safety net.
    */
   async tapThinkingToggle(): Promise<void> {
-    // Try the enabled state first, then disabled
-    const enabledEl = browser.$(Selectors.thinking.toggleEnabled);
-    if (await enabledEl.isExisting()) {
-      await enabledEl.click();
-    } else {
-      await this.tap(Selectors.thinking.toggleDisabled);
-    }
+    await this.dismissVoicesSheetIfPresent();
+    const sel = (await browser
+      .$(Selectors.thinking.toggleEnabled)
+      .isExisting())
+      ? Selectors.thinking.toggleEnabled
+      : Selectors.thinking.toggleDisabled;
+    const el = browser.$(sel);
+    const loc = await el.getLocation();
+    const size = await el.getSize();
+    const x = Math.round(loc.x + size.width * 0.2);
+    const y = Math.round(loc.y + size.height / 2);
+    await browser
+      .action('pointer', {parameters: {pointerType: 'touch'}})
+      .move({x, y})
+      .down()
+      .pause(60)
+      .up()
+      .perform();
     await browser.pause(300);
+    await this.dismissVoicesSheetIfPresent();
   }
 
   /**
