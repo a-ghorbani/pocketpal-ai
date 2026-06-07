@@ -27,6 +27,12 @@ export class PalPurchasePage extends BasePage {
   private get authSubmit(): string {
     return byTestId('auth-submit-button');
   }
+  private get disclosureContinue(): string {
+    return byTestId('disclosure-continue-button');
+  }
+  private get disclosureCancel(): string {
+    return byTestId('disclosure-cancel-button');
+  }
 
   /** Open the premium pal's detail sheet from the browse list. */
   async openPalDetail(palId: string, timeout = 20000): Promise<void> {
@@ -104,6 +110,25 @@ export class PalPurchasePage extends BasePage {
     } catch {
       // No consent prompt surfaced — proceed.
     }
+  }
+
+  /**
+   * Android shows a required pre-purchase external-offers disclosure before the
+   * Custom Tab opens. Consent to it; a no-op on iOS (no gate) or if absent.
+   * Reaching this consent button proves the buy press routed into the in-app
+   * checkout flow (the native auth-session module is registered).
+   */
+  async acceptDisclosureIfPresent(timeout = 8000): Promise<void> {
+    const shown = await this.isElementDisplayed(this.disclosureContinue, timeout);
+    if (!shown) {
+      return;
+    }
+    await this.tap(this.disclosureContinue);
+  }
+
+  /** Decline the Android disclosure gate (cancel = no checkout). */
+  async declineDisclosure(timeout = 8000): Promise<void> {
+    await this.tap(this.disclosureCancel, timeout);
   }
 
   /** The reconcile poll flips Buy -> Download once ownership is granted. */

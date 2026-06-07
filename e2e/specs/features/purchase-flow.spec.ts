@@ -1,10 +1,15 @@
 /**
- * PalsHub authenticated purchase flow (iOS).
+ * PalsHub authenticated purchase flow (iOS + US Android).
  *
- * Drives the real create-session -> ASWebAuthenticationSession -> success
- * return -> reconcile loop against the palshub e2e test harness, which returns
- * a deterministic test-complete checkout (no Stripe / Apple Pay UI). The server
+ * Drives the real create-session -> in-app browser (ASWebAuthenticationSession
+ * on iOS, Chrome Custom Tab on Android) -> success return -> reconcile loop
+ * against the palshub e2e test harness, which returns a deterministic
+ * test-complete checkout (no Stripe / Google Pay / Apple Pay UI). The server
  * helpers run from the test host to seed a clean pre-purchase state each run.
+ *
+ * Android shows a required pre-purchase disclosure gate before the Custom Tab;
+ * reaching it proves the buy press routed into the in-app flow (the native
+ * auth-session module is registered, not a silent dead-end).
  *
  * Requires an E2E build (E2E_BUILD=true) pointed at the test server, and these
  * env vars (see e2e/helpers/palshubTestApi.ts):
@@ -29,7 +34,7 @@ import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
-describe('PalsHub authenticated purchase (iOS)', () => {
+describe('PalsHub authenticated purchase', () => {
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
   let purchasePage: PalPurchasePage;
@@ -75,9 +80,31 @@ describe('PalsHub authenticated purchase (iOS)', () => {
       palshubTestConfig.email,
       palshubTestConfig.password,
     );
+    // Android: consent the pre-purchase disclosure gate (no-op on iOS).
+    await purchasePage.acceptDisclosureIfPresent();
     await purchasePage.acceptAuthConsentIfPresent();
 
     // test-complete grants ownership; reconcile flips Buy -> Download.
     await purchasePage.waitForDownloadButton();
+  });
+
+  it('does not start checkout when the Android disclosure is declined', async function (this: Mocha.Context) {
+    if (!driver.isAndroid) {
+      this.skip();
+      return;
+    }
+
+    await chatPage.openDrawer();
+    await drawerPage.navigateToPals();
+    await purchasePage.openPalDetail(palshubTestConfig.palId);
+
+    await purchasePage.signInAndStartCheckout(
+      palshubTestConfig.email,
+      palshubTestConfig.password,
+    );
+    // Decline the gate: no Custom Tab, no checkout, the Buy button remains.
+    await purchasePage.declineDisclosure();
+    await purchasePage.tapBuy();
+    await purchasePage.acceptDisclosureIfPresent();
   });
 });
