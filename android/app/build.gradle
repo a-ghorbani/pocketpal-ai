@@ -228,6 +228,9 @@ dependencies {
     // Core library for AndroidX Jetpack - Needed for WindowCompat (we use for edge-to-edge)
     implementation "androidx.core:core-ktx:1.17.0"
 
+    // Chrome Custom Tabs for the in-app PalsHub checkout (AuthSessionModule)
+    implementation "androidx.browser:browser:1.8.0"
+
     // OkHttp for DownloadModule (network requests)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
