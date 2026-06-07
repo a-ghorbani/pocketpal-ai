@@ -628,6 +628,34 @@ describe('PalDetailSheet', () => {
       expect(checkoutFlowStore.start).not.toHaveBeenCalled();
     });
 
+    it('opens sign-in (not the disclosure gate) on Android when logged out', async () => {
+      const original = Platform.OS;
+      Platform.OS = 'android';
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = false;
+      const onSignInPress = jest.fn();
+
+      const {getByTestId, queryByTestId} = render(
+        <PalDetailSheet
+          {...defaultProps}
+          pal={mockPremiumPalsHubPal}
+          onSignInPress={onSignInPress}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      expect(onSignInPress).toHaveBeenCalled();
+      expect(queryByTestId('disclosure-continue-button')).toBeNull();
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+
+      Platform.OS = original;
+    });
+
     it('flips Buy to Download after the purchase reconciles to owned', async () => {
       (palStore as any).isUSRegion = true;
       (authService as any).isAuthenticated = true;
@@ -687,10 +715,11 @@ describe('PalDetailSheet', () => {
       });
     });
 
-    it('uses the web URL on non-iOS, keeping the catch', async () => {
+    it('shows the disclosure gate (not the web URL) on Android before checkout', async () => {
       const original = Platform.OS;
       Platform.OS = 'android';
       (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
       (palsHubService.getPal as jest.Mock).mockResolvedValue(
         mockPremiumPalsHubPal,
       );
@@ -705,12 +734,97 @@ describe('PalDetailSheet', () => {
 
       fireEvent.press(getByTestId('buy-button'));
 
-      expect(Linking.openURL).toHaveBeenCalledWith(
-        expect.stringContaining(`/pals/${mockPremiumPalsHubPal.id}`),
-      );
+      // The consent gate is shown; no web URL, no checkout yet.
+      await waitFor(() => {
+        expect(getByTestId('disclosure-continue-button')).toBeTruthy();
+      });
+      expect(Linking.openURL).not.toHaveBeenCalled();
       expect(checkoutFlowStore.start).not.toHaveBeenCalled();
 
       Platform.OS = original;
+    });
+
+    it('starts checkout on Android only after the disclosure is accepted', async () => {
+      const original = Platform.OS;
+      Platform.OS = 'android';
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+      await waitFor(() => {
+        expect(getByTestId('disclosure-continue-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('disclosure-continue-button'));
+      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
+        mockPremiumPalsHubPal.id,
+      );
+
+      Platform.OS = original;
+    });
+
+    it('does not start checkout when the Android disclosure is declined', async () => {
+      const original = Platform.OS;
+      Platform.OS = 'android';
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+      await waitFor(() => {
+        expect(getByTestId('disclosure-cancel-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('disclosure-cancel-button'));
+      expect(checkoutFlowStore.start).not.toHaveBeenCalled();
+      expect(Linking.openURL).not.toHaveBeenCalled();
+
+      Platform.OS = original;
+    });
+
+    it('does not show the disclosure gate on iOS (starts checkout directly)', async () => {
+      (palStore as any).isUSRegion = true;
+      (authService as any).isAuthenticated = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+
+      const {getByTestId, queryByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('buy-button'));
+
+      // iOS reaches start with no disclosure gate.
+      expect(queryByTestId('disclosure-continue-button')).toBeNull();
+      expect(checkoutFlowStore.start).toHaveBeenCalledWith(
+        mockPremiumPalsHubPal.id,
+      );
     });
 
     it('shows the finalizing indicator while the purchase settles', async () => {

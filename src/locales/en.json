@@ -1065,7 +1065,11 @@
       "checkoutSessionExpired": "Your session expired. Sign in again to continue.",
       "signInAgain": "Sign in again",
       "palNotAvailable": "This pal is not available for purchase right now.",
-      "checkoutFailed": "Something went wrong. Please try again."
+      "checkoutFailed": "Something went wrong. Please try again.",
+      "disclosureTitle": "Continue to Palshub",
+      "disclosureBody": "You're about to complete this purchase on Palshub, outside of Google Play. Google Play's billing and protections don't apply, and the purchase is handled by Palshub.",
+      "disclosureContinue": "Continue",
+      "disclosureCancel": "Cancel"
     }
   },
   "validation": {
