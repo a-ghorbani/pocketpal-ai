@@ -31,10 +31,6 @@ export class OnboardingPage extends BasePage {
     return browser.$(byTestId('onboarding-skip'));
   }
 
-  get audio(): ChainableElement {
-    return browser.$(byTestId('onboarding-audio'));
-  }
-
   get back(): ChainableElement {
     return browser.$(byTestId('onboarding-back'));
   }
@@ -47,7 +43,13 @@ export class OnboardingPage extends BasePage {
     return browser.$(byTestId(`onboarding-topic-${key}`));
   }
 
-  pipModel(modelId: string): ChainableElement {
+  /**
+   * Locator for a model radio on screen 6. The on-device testID is
+   * `onboarding-pip-model-<id>` for historical reasons (it predates the
+   * pal-per-topic resolver). The testID surface is frozen for E2E, so
+   * we keep the on-wire name and expose a topic-neutral helper name.
+   */
+  palModel(modelId: string): ChainableElement {
     return browser.$(byTestId(`onboarding-pip-model-${modelId}`));
   }
 
@@ -78,7 +80,7 @@ export class OnboardingPage extends BasePage {
     await this.topicChip(key).click();
   }
 
-  async tapPipModel(modelId: string): Promise<void> {
-    await this.pipModel(modelId).click();
+  async tapPalModel(modelId: string): Promise<void> {
+    await this.palModel(modelId).click();
   }
 }

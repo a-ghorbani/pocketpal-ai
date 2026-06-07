@@ -1,10 +1,17 @@
 /**
  * Onboarding flow E2E spec.
  *
- * Covers the canonical scenarios A, B, C, G, G'', H. Runs against a
- * fresh-install state; the onboarding-bypass capability (see
- * AutomationBridge `__E2E_SKIP_ONBOARDING__`) is left UNSET for this
+ * Runs against a fresh-install state; the onboarding-bypass capability
+ * (see AutomationBridge `__E2E_SKIP_ONBOARDING__`) is left UNSET for this
  * spec so the OnboardingStack actually mounts.
+ *
+ * Per-screen chrome contract this spec encodes:
+ *   - Screens 1..4: Stepper + Skip top-right, back inside the bottom bar.
+ *   - Screen 5:     no Skip, no primary, back-only bottom bar; chip-tap
+ *                   auto-advances to screen 6.
+ *   - Screen 6:     no Skip, back + primary in the bottom bar, models
+ *                   resolved from the pal mapped to the topic chosen
+ *                   on screen 5 (`else` and null both fall back to Pip).
  *
  * Usage:
  *   yarn e2e:ios --spec onboarding --skip-build
@@ -19,11 +26,23 @@ declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 const TIMEOUT = 15000;
-const BALANCED_MODEL_ID =
+
+// Pal-balanced model IDs come from src/store/onboarding/onboardingPals.ts.
+// Picked by topic on screen 5; the matching model is the one ModelRadioGroup
+// renders on screen 6 with the Recommended badge.
+const PIP_BALANCED_MODEL_ID =
   'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf';
+const CODIE_BALANCED_MODEL_ID =
+  'Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q8_0.gguf';
 
 const getAppId = (): string =>
   (driver as any).isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
+
+const isDisplayedSafe = async (testId: string): Promise<boolean> =>
+  browser
+    .$(byTestId(testId))
+    .isDisplayed()
+    .catch(() => false);
 
 describe('Onboarding flow', () => {
   let onboarding: OnboardingPage;
@@ -34,17 +53,14 @@ describe('Onboarding flow', () => {
     chat = new ChatPage();
   });
 
-  it('walks Splash → 1..6, picks topic + model, lands on Chat', async () => {
-    // Splash appears for the dwell time, then auto-advances to step 1.
+  it('walks Splash → 1..6 (topic=smartchat → Pip), picks balanced, lands on Chat', async () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
 
-    // Step 1: no back, Skip top-right, single primary CTA.
+    // Screens 1..4: Skip visible, primary advances.
     expect(await onboarding.skip.isDisplayed()).toBe(true);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(2);
-
-    // Steps 2..4: Continue forward. Skip remains visible on each.
     expect(await onboarding.skip.isDisplayed()).toBe(true);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(3);
@@ -53,29 +69,21 @@ describe('Onboarding flow', () => {
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(5);
 
-    // Step 5: no primary button, no Skip; Audio top-right; chip-tap
-    // auto-advances to step 6.
-    expect(await onboarding.audio.isDisplayed()).toBe(true);
-    const primaryOn5 = await browser
-      .$(byTestId('onboarding-primary'))
-      .isDisplayed()
-      .catch(() => false);
-    expect(primaryOn5).toBe(false);
+    // Screen 5: no primary, no Skip; back-only bottom bar visible.
+    expect(await isDisplayedSafe('onboarding-primary')).toBe(false);
+    expect(await isDisplayedSafe('onboarding-skip')).toBe(false);
+    expect(await onboarding.back.isDisplayed()).toBe(true);
     await onboarding.tapTopic('smartchat');
     await onboarding.waitForScreen(6);
 
-    // Step 6: Audio top-right (no Skip). Download primary disabled
-    // until a quant tier is picked.
-    expect(await onboarding.audio.isDisplayed()).toBe(true);
-    const skipOn6 = await browser
-      .$(byTestId('onboarding-skip'))
-      .isDisplayed()
-      .catch(() => false);
-    expect(skipOn6).toBe(false);
-    await onboarding.tapPipModel(BALANCED_MODEL_ID);
+    // Screen 6: no Skip, primary present (pre-seeded with the recommended
+    // tier so it's enabled on arrival), back present in the bottom bar.
+    expect(await isDisplayedSafe('onboarding-skip')).toBe(false);
+    expect(await onboarding.primary.isDisplayed()).toBe(true);
+    expect(await onboarding.back.isDisplayed()).toBe(true);
+    await onboarding.tapPalModel(PIP_BALANCED_MODEL_ID);
     await onboarding.tapPrimary();
 
-    // Drawer mounts → Chat empty state visible.
     await chat.waitForReady(TIMEOUT);
   });
 
@@ -84,20 +92,11 @@ describe('Onboarding flow', () => {
     await (driver as any).terminateApp(appId);
     await (driver as any).activateApp(appId);
 
-    // Chat empty state is visible immediately; the onboarding splash
-    // should NOT appear (persisted hasCompletedOnboarding survives).
     await chat.waitForReady(TIMEOUT);
-    const splashVisible = await browser
-      .$(byTestId('onboarding-splash'))
-      .isDisplayed()
-      .catch(() => false);
-    expect(splashVisible).toBe(false);
+    expect(await isDisplayedSafe('onboarding-splash')).toBe(false);
   });
 
   it('Skip on screen 3 lands on Chat without a model bound', async () => {
-    // This test depends on a fresh-onboarding state. The harness is
-    // expected to clear app data between specs; if that contract is
-    // ever broken the test will fail loudly (no splash → no screen 3).
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
@@ -108,7 +107,7 @@ describe('Onboarding flow', () => {
     await chat.waitForReady(TIMEOUT);
   });
 
-  it("'else' chip on screen 5 auto-advances to step 6 with no topic recorded", async () => {
+  it("'else' chip on screen 5 auto-advances to screen 6 with Pip as the fallback pal", async () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
@@ -121,12 +120,60 @@ describe('Onboarding flow', () => {
     await onboarding.waitForScreen(5);
     await onboarding.tapTopic('else');
     await onboarding.waitForScreen(6);
-    await onboarding.tapPipModel(BALANCED_MODEL_ID);
+    // 'else' falls back to Pip — Pip's balanced model is on screen 6.
+    expect(
+      await onboarding.palModel(PIP_BALANCED_MODEL_ID).isExisting(),
+    ).toBe(true);
+    await onboarding.tapPalModel(PIP_BALANCED_MODEL_ID);
     await onboarding.tapPrimary();
     await chat.waitForReady(TIMEOUT);
   });
 
-  it('Stepper renders 4 dots across screens 1..4', async () => {
+  it('topic=coding renders Codie pal models (Qwen 2.5 Coder set)', async () => {
+    await onboarding.waitForSplash(TIMEOUT);
+    await onboarding.waitForScreen(1, TIMEOUT);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(2);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(3);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(4);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(5);
+    await onboarding.tapTopic('coding');
+    await onboarding.waitForScreen(6);
+
+    // Screen 6 must show Codie's balanced model (Qwen 2.5 Coder 1.5B),
+    // not Pip's Llama. This is the pal-per-topic guarantee.
+    expect(
+      await onboarding.palModel(CODIE_BALANCED_MODEL_ID).isExisting(),
+    ).toBe(true);
+    expect(
+      await onboarding.palModel(PIP_BALANCED_MODEL_ID).isExisting(),
+    ).toBe(false);
+
+    await onboarding.tapPalModel(CODIE_BALANCED_MODEL_ID);
+    await onboarding.tapPrimary();
+    await chat.waitForReady(TIMEOUT);
+  });
+
+  it('back on screen 5 returns to screen 4 (mid-flow retreat affordance)', async () => {
+    await onboarding.waitForSplash(TIMEOUT);
+    await onboarding.waitForScreen(1, TIMEOUT);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(2);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(3);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(4);
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(5);
+
+    await onboarding.tapBack();
+    await onboarding.waitForScreen(4);
+  });
+
+  it('Stepper renders 4 dots on screens 1..4 and is hidden on 5..6', async () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     for (let i = 1; i <= 4; i++) {
@@ -141,5 +188,13 @@ describe('Onboarding flow', () => {
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(4);
     expect(await onboarding.stepperDot(4).isExisting()).toBe(true);
+
+    // Persistent chrome hides the stepper on screens 5 and 6.
+    await onboarding.tapPrimary();
+    await onboarding.waitForScreen(5);
+    expect(await isDisplayedSafe('ui-stepper')).toBe(false);
+    await onboarding.tapTopic('else');
+    await onboarding.waitForScreen(6);
+    expect(await isDisplayedSafe('ui-stepper')).toBe(false);
   });
 });
