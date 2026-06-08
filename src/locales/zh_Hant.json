@@ -162,7 +162,41 @@
     "generatingPreview": "正在生成預覽... ({{tokens}} 個詞元)",
     "generatingPreviewPending": "正在生成預覽…",
     "toolUsedChip": "使用了 {{name}}",
-    "toolErrorBlock": "{{name}} 失敗"
+    "toolErrorBlock": "{{name}} 失敗",
+    "contextWarning": "此對話內容過長，可能很快就會達到上限。",
+    "contextRemoteHedged": "此回覆可能被截斷。請嘗試重新發送或縮短請求。",
+    "contextFull": "對話內容已達上限。請開始新對話或增加內容長度。",
+    "contextFullEscalated": "內容仍已達上限。請開始新對話，或增加內容長度以繼續進行。",
+    "contextFullHeavyTalent": "對話內容已達上限 — {{talent}} 傾向於需要更多內容。請開始新對話或增加內容長度。",
+    "contextBannerDismiss": "略過",
+    "contextNewChat": "新對話",
+    "contextIncrease": "增加內容長度",
+    "contextMoreRoom": "更多空間",
+    "increaseContextTitle": "給此對話更多空間",
+    "increaseContextBody": "空間是模型的運作記憶 — 指它一次能記住此對話的內容量。更多的空間代表在回覆被截斷前可以進行更長的對話。",
+    "increaseContextTokensUnit": "Token",
+    "increaseContextWordsRam": "約 {{words}} 字 · 約 {{ram}} RAM",
+    "increaseContextFitsChip": "符合要求",
+    "increaseContextTightChip": "空間不足",
+    "increaseContextWontFitChip": "無法容納",
+    "increaseContextFitsStatus": "此裝置運行順暢。",
+    "increaseContextFitsUnconstrainedStatus": "充足的 RAM — 僅受限於模型。",
+    "increaseContextTightStatus": "超過 ~{{tokens}} 後，此裝置可能會記憶不足並變慢。系統仍可嘗試執行。",
+    "increaseContextWontFitStatus": "約 {{tokens}} 可能無法容納於此裝置的記憶體中。請選擇較小的尺寸。",
+    "increaseContextModelMax": "{{tokens}} · 模型最大值",
+    "increaseContextHedge": "重新載入需要幾秒鐘。您的對話內容不會遺失。",
+    "increaseContextAdvanced": "進階",
+    "increaseContextAdvancedBody": "此對話的內容長度：{{from}} → {{to}} tokens（模型最大值 {{max}}）。裝置限制僅為預估值，且隨著較大的內容成功載入時會增加。",
+    "increaseContextSliderA11yLabel": "內容長度",
+    "increaseContextSliderA11yValue": "{{tokens}} 詞元",
+    "increaseContextConfirmSize": "設為 {{size}}",
+    "increaseContextReloadingShort": "重新載入中…",
+    "increaseContextNoFitBody": "此裝置無法容納該模型的較大內容長度。請開始新對話以繼續。",
+    "increaseContextCancel": "現在不用",
+    "increaseContextReloading": "正在以較大的內容長度重新載入模型…",
+    "increaseContextSuccess": "內容長度已增加至 {{target}} 詞元。",
+    "increaseContextFailure": "無法增加內容長度。您的先前設定已恢復。",
+    "palLoadHint": "此夥伴傾向於需要超過目前內容長度所允許的空間。"
   },
   "common": {
     "cancel": "取消",
@@ -528,9 +562,9 @@
         "前往 huggingface.co 並登入",
         "前往設定 > 存取 Token",
         "新建一個具有「讀取」權限的新 token",
-        "複製詞元並將其貼到詞元欄位中"
+        "複製 token 並將其貼到 token 欄位中"
       ],
-      "tokenDisabledTitle": "詞元已停用",
+      "tokenDisabledTitle": "Token 已停用",
       "tokenDisabledMessage": "您設定了 Hugging Face token，但目前已停用。此模型需要一個 token 才能下載。請啟用您的 token 以繼續。",
       "enableAndRetry": "啟用並重試",
       "goToSettings": "前往設定",
@@ -551,7 +585,7 @@
         "前往 huggingface.co 並登入",
         "前往設定 > 存取 Token",
         "新建一個具有「讀取」權限的新 token",
-        "複製詞元並將其貼到下方"
+        "複製 token 並將其貼到下方"
       ],
       "getTokenLink": "從 huggingface.co 取得 token ↗",
       "error": {
@@ -901,8 +935,8 @@
         "bos": "BOS",
         "eos": "EOS",
         "addGenerationPrompt": "新增生成提示詞",
-        "bosTokenPlaceholder": "BOS 詞元",
-        "eosTokenPlaceholder": "EOS 詞元",
+        "bosTokenPlaceholder": "BOS Token",
+        "eosTokenPlaceholder": "EOS Token",
         "systemPrompt": "系統提示詞"
       }
     },
@@ -965,6 +999,15 @@
       "cannotDeleteInUse": "此投影模型用於下載的 LLM 模型：",
       "dependentModels": "依賴模型：",
       "visionWillBeDisabled": "這些模型的視覺能力將被停用。"
+    },
+    "hubRun": {
+      "title": "下載模型",
+      "resolving": "載入模型詳情…",
+      "cancel": "取消",
+      "retry": "重試",
+      "invalidLinkTitle": "無效的連結",
+      "invalidLinkMessage": "此 Hugging Face 連結缺失，或模型/檔案無效。",
+      "resolveError": "無法載入模型詳情。請檢查您的網路連線並重試。"
     }
   },
   "screenTitles": {
@@ -1200,7 +1243,13 @@
       "failedToDownload": "下載 pal 失敗",
       "premiumPalMessage": "這是高級 Pal。\n• 如果您已使用您的 Palshub 帳戶解鎖它，只需登入即可存取完整詳細資訊。\n• 還未解鎖？請前往 palshub.ai 應用程式了解更多。",
       "notAvailable": "不適用",
-      "buyOnPalshub": "在 Palshub 上購買"
+      "buyOnPalshub": "在 Palshub 上購買",
+      "finalizingPurchase": "正在完成您的購買…",
+      "processingPurchase": "處理中 — 稍後將解鎖。",
+      "checkoutSessionExpired": "您的連線已過期。請重新登入以繼續。",
+      "signInAgain": "重新登入",
+      "palNotAvailable": "此夥伴目前無法購買。",
+      "checkoutFailed": "發生錯誤。請重試。"
     },
     "filters": {
       "myPals": "我的 Pal",
