@@ -24,7 +24,6 @@ class AuthSessionModule(reactContext: ReactApplicationContext) :
 
   private var pendingPromise: Promise? = null
   private var callbackScheme: String? = null
-  private var awaitingReturn = false
   private val mainHandler = Handler(Looper.getMainLooper())
 
   init {
@@ -53,7 +52,6 @@ class AuthSessionModule(reactContext: ReactApplicationContext) :
 
     pendingPromise = promise
     this.callbackScheme = callbackScheme
-    awaitingReturn = false
 
     activity.runOnUiThread {
       try {
@@ -67,8 +65,10 @@ class AuthSessionModule(reactContext: ReactApplicationContext) :
 
   /**
    * Forwarded by MainActivity.onNewIntent for the warm-launch callback intent.
-   * Resolves the in-flight promise when the intent carries a matching
-   * custom-scheme URL. Returns true when consumed.
+   * Consumes only the checkout return (matching scheme + host=checkout) for the
+   * in-flight promise; any other pocketpal:// intent (e.g. host=hub) falls
+   * through so MainActivity routes it to RN Linking / DeepLinkService. Returns
+   * true when consumed.
    */
   fun handleIntent(intent: Intent?): Boolean {
     val data = intent?.data ?: return false
@@ -76,24 +76,23 @@ class AuthSessionModule(reactContext: ReactApplicationContext) :
     if (!scheme.equals(data.scheme, ignoreCase = true)) {
       return false
     }
+    if (!CALLBACK_HOST.equals(data.host, ignoreCase = true)) {
+      return false
+    }
     val promise = pendingPromise ?: return false
     pendingPromise = null
     callbackScheme = null
-    awaitingReturn = false
     promise.resolve(data.toString())
     return true
   }
 
   override fun onHostResume() {
-    // First resume after launching the tab arms the dismiss check; the next
-    // resume (user backed out of the tab) with no callback captured is a
-    // silent cancel. The callback intent resolves the promise via handleIntent
-    // before this fires, so a resolved flow has no pendingPromise left.
+    // The tab launch pauses the activity; a single resume here means the user
+    // returned to the app. A captured callback already resolved and nulled the
+    // promise via handleIntent (onNewIntent runs before onResume on a singleTask
+    // warm launch), so a still-pending promise is a back-out: silent cancel. The
+    // post defers the check one tick so a racing onNewIntent resolve still wins.
     if (pendingPromise == null) {
-      return
-    }
-    if (!awaitingReturn) {
-      awaitingReturn = true
       return
     }
     mainHandler.post {
@@ -113,7 +112,12 @@ class AuthSessionModule(reactContext: ReactApplicationContext) :
     val promise = pendingPromise ?: return
     pendingPromise = null
     callbackScheme = null
-    awaitingReturn = false
     promise.reject(code, message, throwable)
+  }
+
+  private companion object {
+    // Host segment of the checkout callback (pocketpal://checkout/*). Other
+    // pocketpal:// hosts (e.g. hub) are not the checkout return.
+    const val CALLBACK_HOST = "checkout"
   }
 }
