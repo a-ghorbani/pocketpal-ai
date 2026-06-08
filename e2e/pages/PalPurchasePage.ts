@@ -3,21 +3,17 @@
  * browse card -> detail sheet -> Buy -> AuthSheet sign-in -> Download flip.
  */
 
-import {execSync} from 'child_process';
-
 import {BasePage} from './BasePage';
+import {adb as runAdb} from '../helpers/bench-runner';
 import {byTestId, isAndroid} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
 
-// Host-side adb against the device under test (mirrors the bench/memory
-// helpers). E2E_DEVICE_UDID targets a specific device; otherwise the sole
-// attached device is used.
-const adb = (cmd: string): string => {
-  const udid = process.env.E2E_DEVICE_UDID;
-  const target = udid ? `-s ${udid} ` : '';
-  return execSync(`adb ${target}${cmd}`, {encoding: 'utf8', timeout: 10000});
-};
+// Host-side adb against the device under test, via the shared argv-based
+// helper (shell-metacharacter injection is structurally impossible).
+// E2E_DEVICE_UDID targets a specific device; otherwise the sole attached one.
+const adb = (...args: string[]): string =>
+  runAdb(process.env.E2E_DEVICE_UDID, ...args);
 
 export class PalPurchasePage extends BasePage {
   private palCard(palId: string): string {
@@ -166,7 +162,9 @@ export class PalPurchasePage extends BasePage {
   /** Resumed-activity line from the activity stack (host-side adb). */
   private resumedActivityLine(): string {
     return (
-      adb('shell dumpsys activity activities').match(/ResumedActivity.*$/m)?.[0] ??
+      adb('shell', 'dumpsys', 'activity', 'activities').match(
+        /ResumedActivity.*$/m,
+      )?.[0] ??
       ''
     );
   }
@@ -193,7 +191,7 @@ export class PalPurchasePage extends BasePage {
         PalPurchasePage.CHROME_FG.test(line) &&
         !PalPurchasePage.APP_FG.test(line)
       ) {
-        adb('shell input keyevent 4');
+        adb('shell', 'input', 'keyevent', '4');
         fired = true;
         break;
       }
