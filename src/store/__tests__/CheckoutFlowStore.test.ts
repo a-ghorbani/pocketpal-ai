@@ -356,12 +356,55 @@ describe('CheckoutFlowStore', () => {
     expect(checkoutFlowStore.status).toBe('idle');
     expect(checkoutFlowStore.palId).toBeNull();
   });
+
+  it('drops a create that resolves after reset -> idle, opens no tab', async () => {
+    // Close the sheet (reset bumps the epoch) while createCheckoutSession is
+    // still in flight; the resolved session must not reopen a tab or flip back
+    // to browser_open.
+    let resolveCreate!: (v: typeof session) => void;
+    createSession.mockReturnValue(
+      new Promise(resolve => {
+        resolveCreate = resolve;
+      }),
+    );
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('creating');
+
+    checkoutFlowStore.reset();
+    resolveCreate(session);
+    await flushMicrotasks();
+
+    expect(checkoutFlowStore.status).toBe('idle');
+    expect(openAuth).not.toHaveBeenCalled();
+  });
+
+  it('drops an openAuth rejection that lands after reset -> idle, not cancelled', async () => {
+    // The browser_open epoch guard: dismiss arrives (openAuth rejects) after
+    // the sheet was already closed; the stale reject must not flip to cancelled.
+    let rejectAuth!: (e: unknown) => void;
+    openAuth.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectAuth = reject;
+      }),
+    );
+    checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('browser_open');
+
+    checkoutFlowStore.reset();
+    rejectAuth(new Error('dismissed'));
+    await flushMicrotasks();
+
+    expect(checkoutFlowStore.status).toBe('idle');
+  });
 });
 
 describe('CheckoutFlowStore — auth-session spec unavailable', () => {
   // The spec is TurboModuleRegistry.get(...), which is null when the native
-  // module is absent. The iOS-only branch should never hit this, but the guard
-  // must degrade to a silent cancel rather than crash on a null .openAuth.
+  // module is absent — reachable only on Android if the module is not added to
+  // getPackages(). The guard must degrade to a silent cancel rather than crash
+  // on a null .openAuth.
   it('null NativeAuthSession -> silent cancel, no crash', async () => {
     jest.resetModules();
     jest.doMock('../../services/palshub/PalsHubApiService', () => ({

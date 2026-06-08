@@ -106,6 +106,10 @@ class CheckoutFlowStore {
       this.purchaseId = undefined;
       this.errorKind = undefined;
     });
+    // Pin to the current epoch: a reset() during the create network window
+    // bumps the epoch, so a resolved (or rejected) session must not reopen a
+    // stray tab or clobber the now-idle flow.
+    const myEpoch = this.epoch;
 
     const successUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/success`;
     const cancelUrl = `${PALSHUB_API_BASE_URL}/app-return/checkout/cancel`;
@@ -115,6 +119,9 @@ class CheckoutFlowStore {
         successUrl,
         cancelUrl,
       });
+      if (this.epoch !== myEpoch) {
+        return;
+      }
       if (!isAllowedCheckoutUrl(session.checkout_url)) {
         throw new Error('checkout_url is not an allowed checkout host');
       }
@@ -132,6 +139,9 @@ class CheckoutFlowStore {
       }
       await this.openAuthAndHandle(authSession, palId, session.checkout_url);
     } catch (error) {
+      if (this.epoch !== myEpoch) {
+        return;
+      }
       const status = (error as {details?: {status?: unknown}})?.details?.status;
       if (status === 'already_owned') {
         this.setStatus('owned');
