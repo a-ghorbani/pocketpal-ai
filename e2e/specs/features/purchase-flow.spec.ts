@@ -34,6 +34,9 @@ import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
+const getAppBundleId = (): string =>
+  driver.isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
+
 describe('PalsHub authenticated purchase', () => {
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
@@ -50,6 +53,12 @@ describe('PalsHub authenticated purchase', () => {
     // Clean slate on the server so the pal is unowned and the Buy button shows.
     await ensureTestUser();
     await resetPalOwnership();
+    // Relaunch to a clean Chat screen so a prior test's open sheet/tab doesn't
+    // leak into this one (each test navigates drawer -> Pals from scratch).
+    await driver.terminateApp(getAppBundleId());
+    await browser.pause(800);
+    await driver.activateApp(getAppBundleId());
+    await chatPage.waitForReady(TIMEOUTS.appReady);
   });
 
   afterEach(async function (this: Mocha.Context) {

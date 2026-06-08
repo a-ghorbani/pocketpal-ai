@@ -4,7 +4,7 @@
  */
 
 import {BasePage} from './BasePage';
-import {byTestId} from '../helpers/selectors';
+import {byTestId, isAndroid} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
 
@@ -18,11 +18,25 @@ export class PalPurchasePage extends BasePage {
   private get downloadButton(): string {
     return byTestId('download-button');
   }
+  // Paper's outlined TextInput puts the testID resource-id on a container View;
+  // the editable node is an inner EditText. Target it directly on Android so
+  // setValue lands on the field, not the non-editable wrapper.
+  private editableInput(testId: string): string {
+    if (isAndroid()) {
+      return `//*[contains(@resource-id, "${testId}")]//android.widget.EditText | //android.widget.EditText[contains(@resource-id, "${testId}")]`;
+    }
+    return byTestId(testId);
+  }
   private get emailInput(): string {
-    return byTestId('email-input');
+    return this.editableInput('email-input');
   }
   private get passwordInput(): string {
-    return byTestId('password-input');
+    return this.editableInput('password-input');
+  }
+  // The AuthSheet visibility probe can match the container; keep a plain
+  // resource-id match for the "is the sheet open?" check.
+  private get emailInputProbe(): string {
+    return byTestId('email-input');
   }
   private get authSubmit(): string {
     return byTestId('auth-submit-button');
@@ -59,9 +73,11 @@ export class PalPurchasePage extends BasePage {
 
   /** Dismiss the post-submit confirmation alert ("OK") if one appears. */
   async dismissAlertIfPresent(timeout = 4000): Promise<void> {
-    const ok = browser.$(
-      '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "OK" OR label == "Ok")',
-    );
+    const ok = isAndroid()
+      ? browser.$('//*[@resource-id="android:id/button1" or @text="OK" or @text="Ok"]')
+      : browser.$(
+          '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "OK" OR label == "Ok")',
+        );
     try {
       await ok.waitForDisplayed({timeout});
       await ok.click();
@@ -82,13 +98,13 @@ export class PalPurchasePage extends BasePage {
   ): Promise<void> {
     for (let i = 0; i < attempts; i++) {
       await this.tapBuy();
-      const authOpened = await this.isElementDisplayed(this.emailInput, 4000);
+      const authOpened = await this.isElementDisplayed(this.emailInputProbe, 4000);
       if (!authOpened) {
         return; // checkout started
       }
       await this.fillAndSubmitSignIn(email, password);
       await this.dismissAlertIfPresent();
-      await this.waitForElementToDisappear(this.emailInput, 15000).catch(
+      await this.waitForElementToDisappear(this.emailInputProbe, 15000).catch(
         () => {},
       );
       await browser.pause(2500); // let the session + observable state settle
