@@ -406,6 +406,15 @@
       "rewriting": "Menulis Ulang",
       "creativity": "Penulisan Kreatif",
       "vision": "Visi"
+    },
+    "hubRun": {
+      "title": "Unduh Model",
+      "resolving": "Memuat detail model…",
+      "cancel": "Batal",
+      "retry": "Coba Lagi",
+      "invalidLinkTitle": "Tautan Tidak Valid",
+      "invalidLinkMessage": "Tautan Hugging Face ini tidak ada atau memiliki model atau file yang tidak valid.",
+      "resolveError": "Gagal memuat detail model. Periksa koneksi Anda dan coba lagi."
     }
   },
   "completionParams": {
@@ -1025,7 +1034,13 @@
       "failedToDownload": "Gagal mengunduh pal",
       "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika Anda sudah membukanya dengan akun Palshub, cukup masuk untuk mengakses detail lengkapnya.\n• Belum membukanya? Kunjungi aplikasi palshub.ai untuk informasi lebih lanjut.",
       "notAvailable": "T/A",
-      "buyOnPalshub": "Beli di Palshub"
+      "buyOnPalshub": "Beli di Palshub",
+      "finalizingPurchase": "Menyelesaikan pembelian Anda…",
+      "processingPurchase": "Memproses — akan segera terbuka.",
+      "checkoutSessionExpired": "Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.",
+      "signInAgain": "Masuk Lagi",
+      "palNotAvailable": "Pal ini sedang tidak tersedia untuk dibeli saat ini.",
+      "checkoutFailed": "Terjadi kesalahan. Silakan coba lagi."
     }
   },
   "validation": {
@@ -1105,7 +1120,41 @@
     "generatingPreview": "Membuat pratinjau… ({{tokens}} token)",
     "generatingPreviewPending": "Membuat pratinjau…",
     "toolUsedChip": "menggunakan {{name}}",
-    "toolErrorBlock": "{{name}} gagal"
+    "toolErrorBlock": "{{name}} gagal",
+    "contextWarning": "Percakapan ini semakin panjang dan ruangnya mungkin akan segera habis.",
+    "contextRemoteHedged": "Balasan ini mungkin terpotong. Coba kirim ulang atau persingkat permintaan.",
+    "contextFull": "Ruang percakapan telah habis. Mulai obrolan baru atau tingkatkan ukuran konteks.",
+    "contextFullEscalated": "Ruang masih habis. Mulai obrolan baru, atau tingkatkan ukuran konteks untuk melanjutkan.",
+    "contextFullHeavyTalent": "Ruang percakapan telah habis — {{talent}} cenderung membutuhkan lebih banyak. Mulai obrolan baru atau tingkatkan ukuran konteks.",
+    "contextBannerDismiss": "Tutup",
+    "contextNewChat": "Obrolan Baru",
+    "contextIncrease": "Tingkatkan Konteks",
+    "contextMoreRoom": "Lebih Banyak Ruang",
+    "increaseContextTitle": "Beri obrolan ini lebih banyak ruang",
+    "increaseContextBody": "Ruang adalah memori kerja model — seberapa banyak obrolan ini yang dapat diingatnya sekaligus. Lebih banyak ruang berarti obrolan lebih panjang sebelum balasan terpotong.",
+    "increaseContextTokensUnit": "token",
+    "increaseContextWordsRam": "~{{words}} kata · ≈{{ram}} RAM",
+    "increaseContextFitsChip": "Muat",
+    "increaseContextTightChip": "Terbatas",
+    "increaseContextWontFitChip": "Tidak Muat",
+    "increaseContextFitsStatus": "Nyaman untuk perangkat ini.",
+    "increaseContextFitsUnconstrainedStatus": "RAM melimpah — hanya dibatasi oleh model.",
+    "increaseContextTightStatus": "Melebihi ~{{tokens}}, perangkat ini mungkin kehabisan memori dan melambat. Tetap bisa dicoba.",
+    "increaseContextWontFitStatus": "~{{tokens}} kemungkinan tidak muat di memori perangkat ini. Pilih ukuran yang lebih kecil.",
+    "increaseContextModelMax": "{{tokens}} · maks model",
+    "increaseContextHedge": "Pemuatan ulang memerlukan beberapa detik. Tidak ada isi obrolan Anda yang hilang.",
+    "increaseContextAdvanced": "Lanjutan",
+    "increaseContextAdvancedBody": "Ukuran konteks untuk obrolan ini: {{from}} → {{to}} token (maks model {{max}}). Batas perangkat adalah perkiraan dan meningkat saat konteks yang lebih besar berhasil dimuat.",
+    "increaseContextSliderA11yLabel": "Ukuran konteks",
+    "increaseContextSliderA11yValue": "{{tokens}} token",
+    "increaseContextConfirmSize": "Atur ke {{size}}",
+    "increaseContextReloadingShort": "Memuat ulang…",
+    "increaseContextNoFitBody": "Perangkat ini tidak dapat memuat konteks yang lebih besar untuk model ini. Mulai obrolan baru untuk melanjutkan.",
+    "increaseContextCancel": "Nanti Saja",
+    "increaseContextReloading": "Memuat ulang model dengan konteks yang lebih besar…",
+    "increaseContextSuccess": "Konteks ditingkatkan menjadi {{target}} token.",
+    "increaseContextFailure": "Gagal meningkatkan ukuran konteks. Pengaturan sebelumnya telah dipulihkan.",
+    "palLoadHint": "Pal ini cenderung membutuhkan lebih banyak ruang daripada yang diizinkan ukuran konteks saat ini."
   },
   "benchmark": {
     "title": "Benchmark",
