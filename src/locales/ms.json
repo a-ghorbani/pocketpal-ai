@@ -119,7 +119,45 @@
     "clearCachesConfirmMessage": "Ini akan memadam semua data sesi cache ({{fileCount}} fail, {{size}}). Shortcut mungkin lebih perlahan apabila digunakan buat pertama kali selepas dikosongkan. Tidak memberi kesan kepada Pal atau sejarah sembang anda.",
     "clearCachesSuccess": "Berjaya mengosongkan {{count}} fail cache.",
     "clearCachesError": "Gagal mengosongkan cache. Sila cuba lagi.",
-    "noCachesToClear": "Tiada cache untuk dikosongkan."
+    "noCachesToClear": "Tiada cache untuk dikosongkan.",
+    "weightRepacking": "Dayakan Pembungkusan Semula Pemberat",
+    "weightRepackingDescription": "Pemprosesan prompt yang lebih pantas dengan overhed memori yang minimum apabila pemetaan memori dilumpuhkan. Penjanaan token tidak terjejas.",
+    "ttsAvailability": "Teks-ke-pertuturan",
+    "ttsAvailabilityDescription": "Bacakan balasan pembantu dengan kuat.",
+    "ttsAvailabilityLowMemoryWarning": "Memori peranti anda rendah — ini mungkin tidak berfungsi dengan baik.",
+    "serverName": "Nama Pelayan",
+    "serverUrl": "URL Pelayan",
+    "serverUrlPlaceholder": "cth., http://192.168.1.100:1234",
+    "apiKey": "Kunci API",
+    "apiKeyPlaceholder": "Pilihan - diperlukan untuk OpenAI/Groq",
+    "apiKeyDescription": "Disimpan dengan selamat pada peranti.",
+    "remoteModel": "Jauh",
+    "remotePrivacyNotice": "Mesej yang dihantar ke pelayan jauh akan meninggalkan peranti anda. Hanya sambung ke pelayan yang anda percayai.",
+    "remoteIndicator": "Jauh",
+    "serverUrlRequired": "URL pelayan diperlukan",
+    "serverUrlInvalid": "Format URL tidak sah",
+    "serverUrlHttpWarning": "iOS memerlukan HTTPS untuk pelayan bukan tempatan. Guna https:// atau alamat rangkaian tempatan.",
+    "addRemoteModel": "Tambah Model Jauh",
+    "yourServers": "Pelayan Anda",
+    "orConnectNewServer": "atau sambung pelayan baharu",
+    "selectModel": "Pilih Model",
+    "addModel": "Tambah Model",
+    "connected": "Bersambung",
+    "connectionFailed": "Sambungan gagal: {{error}}",
+    "connecting": "Menyambung...",
+    "noModelsAvailable": "Tiada model tersedia pada pelayan ini.",
+    "alreadyAdded": "Sudah ditambah",
+    "connectedServers": "Pelayan Bersambung",
+    "modelsCount": "{{count}} model",
+    "serverDetails": "Butiran Pelayan",
+    "modelsUsingServer": "Model yang menggunakan pelayan ini:",
+    "saveChanges": "Simpan Perubahan",
+    "removeServer": "Buang Pelayan",
+    "removeServerMessage": "Buang {{serverName}} dan {{count}} modelnya?",
+    "removeRemoteModel": "Buang {{modelName}} ({{serverName}})?",
+    "retryConnection": "Cuba Lagi",
+    "enterUrlManually": "Masukkan URL secara manual",
+    "manageServers": "Urus Pelayan"
   },
   "memory": {
     "shortWarning": "Amaran Memori",
@@ -152,7 +190,9 @@
       "fileAlreadyExists": "Fail sudah wujud",
       "fileAlreadyExistsMessage": "Fail dengan nama ini sudah wujud. Apa yang anda mahu lakukan?",
       "replace": "Gantikan",
-      "keepBoth": "Simpan Kedua-duanya"
+      "keepBoth": "Simpan Kedua-duanya",
+      "copyingModel": "Menyalin fail model...",
+      "copyFailed": "Gagal menyalin fail model"
     },
     "labels": {
       "localModel": "Tempatan",
@@ -366,6 +406,15 @@
       "rewriting": "Menulis Semula",
       "creativity": "Penulisan Kreatif",
       "vision": "Penglihatan"
+    },
+    "hubRun": {
+      "title": "Muat turun model",
+      "resolving": "Memuatkan butiran model…",
+      "cancel": "Batal",
+      "retry": "Cuba Lagi",
+      "invalidLinkTitle": "Pautan tidak sah",
+      "invalidLinkMessage": "Pautan Hugging Face ini tiada atau mempunyai model atau fail yang tidak sah.",
+      "resolveError": "Tidak dapat memuatkan butiran model. Semak sambungan anda dan cuba lagi."
     }
   },
   "completionParams": {
@@ -408,7 +457,9 @@
     "orBy": "atau dengan",
     "sponsorButton": "Jadi Penaja",
     "versionCopiedTitle": "Versi Disalin",
-    "versionCopiedDescription": "Maklumat versi telah disalin ke papan klip"
+    "versionCopiedDescription": "Maklumat versi telah disalin ke papan klip",
+    "privacyPolicy": "Dasar Privasi",
+    "termsOfService": "Terma Perkhidmatan"
   },
   "feedback": {
     "title": "Hantar Maklum Balas",
@@ -701,6 +752,26 @@
         "nameRequired": "Nama diperlukan",
         "generatingPromptRequired": "Prompt penjanaan diperlukan apabila menggunakan prompt AI",
         "promptModelRequired": "Model penjanaan prompt diperlukan apabila menggunakan prompt AI"
+      },
+      "talents": "Bakat",
+      "talentNames": {
+        "render_html": "Pratonton HTML",
+        "calculate": "Ungkapan matematik",
+        "datetime": "Tarikh & masa"
+      },
+      "talentDescriptions": {
+        "render_html": "Paparkan dokumen HTML secara sebaris dalam sembang",
+        "calculate": "Nilaikan ungkapan matematik",
+        "datetime": "Dapatkan tarikh dan masa semasa"
+      },
+      "greeting": {
+        "sectionLabel": "Sapaan",
+        "textLabel": "Mesej sapaan",
+        "textPlaceholder": "Apa yang patut pal ini katakan pada sembang kosong?",
+        "suggestedPromptsLabel": "Prompt yang dicadangkan",
+        "addPromptButton": "Tambah prompt",
+        "promptPlaceholder": "Prompt ringkas untuk cip",
+        "removePromptLabel": "Buang prompt"
       }
     },
     "assistantPalSheet": {
@@ -865,6 +936,24 @@
       "importPals": "Import pal",
       "importSuccess": "Berjaya mengimport {{count}} pal.",
       "importError": "Gagal mengimport pal. Sila semak format fail."
+    },
+    "bubble": {
+      "msPerToken": "{{value}}ms/token",
+      "tokensPerSec": "{{value}} token/saat",
+      "ttft": "{{value}}ms TTFT",
+      "interrupted": "Terganggu",
+      "truncated": "Terpotong — kemungkinan konteks penuh"
+    },
+    "pendingIndicator": {
+      "preparingTool": "Menyediakan alat",
+      "buildingPage": "Membina halaman",
+      "calculating": "Mengira",
+      "lookingUpTime": "Mencari masa",
+      "stopping": "Menghentikan…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} token",
+      "elapsed": "{{seconds}}s"
     }
   },
   "palsScreen": {
@@ -944,7 +1033,14 @@
       "failedToLoadDetails": "Gagal memuatkan butiran pal",
       "failedToDownload": "Gagal memuat turun pal",
       "premiumPalMessage": "Ini adalah Pal Premium.\n• Jika anda sudah membukanya dengan akaun Palshub, hanya log masuk untuk mengakses butiran penuhnya.\n• Belum membukanya? Lawati aplikasi palshub.ai untuk maklumat lanjut.",
-      "notAvailable": "T/A"
+      "notAvailable": "T/A",
+      "buyOnPalshub": "Beli di Palshub",
+      "finalizingPurchase": "Memuktamadkan pembelian anda…",
+      "processingPurchase": "Memproses — akan dibuka sebentar lagi.",
+      "checkoutSessionExpired": "Sesi anda telah tamat tempoh. Log masuk semula untuk meneruskan.",
+      "signInAgain": "Log masuk semula",
+      "palNotAvailable": "Pal ini tidak tersedia untuk dibeli buat masa ini.",
+      "checkoutFailed": "Sesuatu telah berlaku. Sila cuba lagi."
     }
   },
   "validation": {
@@ -1017,12 +1113,54 @@
     "readyToChat": "Sedia bersembang? Muat model yang terakhir digunakan.",
     "pleaseLoadModel": "Muat model untuk bersembang.",
     "multimodalNotEnabled": "Multimodal tidak didayakan untuk model ini. Imej akan dipaparkan tetapi tidak diproses oleh AI.",
-    "cannotSendWithoutModel": "Muat model terlebih dahulu"
+    "cannotSendWithoutModel": "Muat model terlebih dahulu",
+    "toolCallTruncated": "Panggilan alat terpotong — model berkemungkinan kehabisan ruang. Cuba konteks lebih besar atau permintaan lebih kecil.",
+    "toolCompatWarning": "Model ini mungkin tidak menyokong panggilan alat. Hasil mungkin tidak boleh dipercayai.",
+    "softCapWarning": "Mulakan sembang baharu untuk prestasi terbaik.",
+    "contextWarning": "Perbualan ini semakin panjang dan mungkin akan kehabisan ruang tidak lama lagi.",
+    "contextRemoteHedged": "Balasan ini mungkin terpotong. Cuba hantar semula atau pendekkan permintaan anda.",
+    "contextFull": "Perbualan ini sudah kehabisan ruang. Mulakan sembang baharu atau tingkatkan saiz konteks.",
+    "contextFullEscalated": "Masih kehabisan ruang. Mulakan sembang baharu, atau tingkatkan saiz konteks untuk meneruskan.",
+    "contextFullHeavyTalent": "Perbualan ini sudah kehabisan ruang — {{talent}} cenderung memerlukan lebih banyak. Mulakan sembang baharu atau tingkatkan saiz konteks.",
+    "contextBannerDismiss": "Tutup",
+    "contextNewChat": "Sembang baharu",
+    "contextIncrease": "Tingkatkan konteks",
+    "contextMoreRoom": "Lebih ruang",
+    "increaseContextTitle": "Beri sembang ini lebih ruang",
+    "increaseContextBody": "Ruang ialah memori kerja model — sebanyak mana sembang ini boleh diingatinya pada satu masa. Lebih ruang bermakna sembang lebih panjang sebelum balasan terpotong.",
+    "increaseContextTokensUnit": "token",
+    "increaseContextWordsRam": "~{{words}} perkataan · ≈{{ram}} RAM",
+    "increaseContextFitsChip": "Muat",
+    "increaseContextTightChip": "Terhad",
+    "increaseContextWontFitChip": "Tidak muat",
+    "increaseContextFitsStatus": "Selesa untuk peranti ini.",
+    "increaseContextFitsUnconstrainedStatus": "RAM mencukupi — hanya dihadkan oleh model.",
+    "increaseContextTightStatus": "Melepasi ~{{tokens}}, peranti ini mungkin kehabisan memori dan menjadi perlahan. Ia masih boleh mencuba.",
+    "increaseContextWontFitStatus": "~{{tokens}} berkemungkinan tidak muat dalam memori peranti ini. Pilih saiz yang lebih kecil.",
+    "increaseContextModelMax": "{{tokens}} · maks model",
+    "increaseContextHedge": "Pemuatan semula mengambil masa beberapa saat. Tiada apa-apa dalam sembang anda yang hilang.",
+    "increaseContextAdvanced": "Lanjutan",
+    "increaseContextAdvancedBody": "Saiz konteks untuk sembang ini: {{from}} → {{to}} token (maks model {{max}}). Had peranti ialah anggaran dan akan meningkat apabila konteks lebih besar berjaya dimuat.",
+    "increaseContextSliderA11yLabel": "Saiz konteks",
+    "increaseContextSliderA11yValue": "{{tokens}} token",
+    "increaseContextConfirmSize": "Tetapkan kepada {{size}}",
+    "increaseContextReloadingShort": "Memuat semula…",
+    "increaseContextNoFitBody": "Peranti ini tidak dapat memuatkan konteks yang lebih besar untuk model ini. Mulakan sembang baharu untuk meneruskan.",
+    "increaseContextCancel": "Bukan sekarang",
+    "increaseContextReloading": "Memuat semula model dengan konteks yang lebih besar…",
+    "increaseContextSuccess": "Konteks ditingkatkan kepada {{target}} token.",
+    "increaseContextFailure": "Tidak dapat meningkatkan saiz konteks. Tetapan sebelumnya telah dipulihkan.",
+    "palLoadHint": "Pal ini cenderung memerlukan lebih ruang daripada yang dibenarkan oleh saiz konteks semasa.",
+    "generatingPreview": "Menjana pratonton… ({{tokens}} token)",
+    "generatingPreviewPending": "Menjana pratonton…",
+    "toolUsedChip": "menggunakan {{name}}",
+    "toolErrorBlock": "{{name}} gagal"
   },
   "benchmark": {
     "title": "Tolok Ukur",
     "modelSelector": {
-      "prompt": "Pilih Model"
+      "prompt": "Pilih Model",
+      "noModels": "Tiada model dimuat turun"
     },
     "buttons": {
       "advancedSettings": "Tetapan Lanjutan",
@@ -1171,5 +1309,56 @@
   },
   "simulator": {
     "cameraNotAvailable": "Kamera tidak tersedia dalam simulator. Sila gunakan peranti fizikal."
+  },
+  "htmlPreview": {
+    "defaultTitle": "Pratonton",
+    "showPreview": "Papar pratonton terpapar",
+    "showCode": "Papar kod HTML",
+    "copyHtml": "Salin HTML",
+    "closePreview": "Tutup pratonton",
+    "openFullscreen": "Buka skrin penuh: {{title}}"
+  },
+  "voiceAndSpeech": {
+    "sectionTitle": "Suara & Pertuturan",
+    "voiceRowTitle": "Suara",
+    "notSet": "Belum ditetapkan",
+    "previewButton": "Pratonton",
+    "stopPreviewButton": "Hentikan pratonton",
+    "voicesTitle": "Suara",
+    "voicesEmptyHint": "Ketik mana-mana suara untuk memasang dan menggunakannya. Atau pilih suara sistem — yang sentiasa tersedia.",
+    "supertonicStepsLabel": "Kualiti (langkah penyebaran)",
+    "toggleAutoSpeakLabel": "Togol sebut automatik",
+    "openSettingsLabel": "Tetapan TTS",
+    "playMessageLabel": "Mainkan mesej",
+    "stopMessageLabel": "Hentikan mesej",
+    "autoSpeakLabel": "Sebut respons secara automatik",
+    "autoSpeakDescription": "Baca balasan baharu dengan kuat sebaik sahaja tiba.",
+    "engineChipKitten": "Kitten",
+    "engineChipKokoro": "Kokoro",
+    "engineChipSupertonic": "Supertonic",
+    "engineChipSystem": "Sistem",
+    "stepsCount": "{{steps}} langkah",
+    "engineKittenTagline": "Jejak terkecil. Boleh dipercayai. Terbaik pada peranti lama.",
+    "engineKokoroTagline": "Kualiti tertinggi. Lebih lambat dimulakan. Sesetengah suara mungkin tidak berfungsi pada semua peranti.",
+    "engineSupertonicTagline": "Paling pantas dimulakan. Menggunakan lebih banyak RAM. Mungkin sesekali tertinggal perkataan.",
+    "engineSystemTagline": "Suara OS terbina dalam. Sentiasa tersedia, tanpa pemasangan.",
+    "engineSystemTitleIos": "Suara iOS",
+    "engineSystemTitleAndroid": "Suara Android",
+    "engineSystemTier": "sentiasa tersedia",
+    "engineTierLightest": "paling ringan",
+    "engineTierBestQuality": "kualiti terbaik",
+    "engineTierFastestStart": "permulaan terpantas",
+    "engineSpecsLine": "{{voices}} suara  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB RAM",
+    "engineSystemSpecsLine": "{{voices}} suara",
+    "engineRemoveTitle": "Buang {{engineTitle}}?",
+    "engineRemoveBody": "Membebaskan ~{{sizeMb}} MB pada peranti ini.",
+    "engineRemoveCancel": "Batal",
+    "engineRemoveConfirm": "Buang",
+    "engineInstallCta": "Pasang · {{sizeMb}} MB",
+    "engineDownloadingLabel": "Memuat turun…  {{pct}}%  ·  {{mbDone}} / {{sizeMb}} MB",
+    "engineRetryCta": "Cuba lagi",
+    "voicesEmptyState": "Tiada suara ditemui.",
+    "kokoroDeviceNote": "Sesetengah suara mungkin tidak berfungsi pada semua peranti.",
+    "insufficientStorage": "Ruang tidak mencukupi — bebaskan {{requiredMb}} MB untuk memasang enjin ini ({{freeMb}} MB tersedia)."
   }
 }
