@@ -131,10 +131,10 @@ export class ChatPage extends BasePage {
 
   /**
    * Dismiss the TTS "Voices" setup sheet if it is open.
-   * The VoiceChip (TTS control) sits in the chat input's right controls,
-   * immediately right of the thinking toggle. When no voice is configured the
-   * chip is expanded and can overlap the toggle's tap point; a tap there opens
-   * this sheet instead of flipping the toggle (#764). No-op when absent.
+   * The VoiceChip (TTS control) sits next to the thinking toggle in the chat
+   * input. When no voice is configured the chip is expanded and can overlap the
+   * toggle; a tap on the overlap opens this sheet instead of flipping the
+   * toggle (#764). No-op when absent.
    */
   async dismissVoicesSheetIfPresent(): Promise<void> {
     try {
@@ -151,34 +151,59 @@ export class ChatPage extends BasePage {
   /**
    * Tap the thinking toggle to switch its state.
    *
-   * Taps the toggle's left portion via coordinates rather than the element
-   * centre: the TTS VoiceChip sits immediately to the right and can overlap the
-   * toggle's centre/right, so a centre tap lands on the chip and opens the
-   * "Voices" sheet instead of flipping the toggle (#764). The left quarter
-   * stays clear of the chip. A Voices sheet is dismissed before and after as a
-   * safety net.
+   * The TTS VoiceChip can overlap the thinking toggle on EITHER side depending
+   * on pal-name length and screen geometry (confirmed across the device fleet,
+   * #764). A tap on the overlap hits the chip and opens the "Voices" sheet
+   * instead of flipping the toggle. So: measure both elements, tap the part of
+   * the toggle the chip does NOT cover, dismiss any sheet that still slips
+   * open, and verify the toggle actually flipped — retrying the other clear
+   * side if it did not.
    */
   async tapThinkingToggle(): Promise<void> {
-    await this.dismissVoicesSheetIfPresent();
-    const sel = (await browser
-      .$(Selectors.thinking.toggleEnabled)
-      .isExisting())
-      ? Selectors.thinking.toggleEnabled
-      : Selectors.thinking.toggleDisabled;
-    const el = browser.$(sel);
-    const loc = await el.getLocation();
-    const size = await el.getSize();
-    const x = Math.round(loc.x + size.width * 0.2);
-    const y = Math.round(loc.y + size.height / 2);
-    await browser
-      .action('pointer', {parameters: {pointerType: 'touch'}})
-      .move({x, y})
-      .down()
-      .pause(60)
-      .up()
-      .perform();
-    await browser.pause(300);
-    await this.dismissVoicesSheetIfPresent();
+    const before = await this.isThinkingEnabled();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await this.dismissVoicesSheetIfPresent();
+      const sel = (await browser
+        .$(Selectors.thinking.toggleEnabled)
+        .isExisting())
+        ? Selectors.thinking.toggleEnabled
+        : Selectors.thinking.toggleDisabled;
+      const el = browser.$(sel);
+      if (!(await el.isExisting())) {
+        return;
+      }
+      const loc = await el.getLocation();
+      const size = await el.getSize();
+      let x = Math.round(loc.x + size.width / 2);
+      const y = Math.round(loc.y + size.height / 2);
+      const chip = browser.$(byTestId('voicechip'));
+      if (await chip.isExisting().catch(() => false)) {
+        const cloc = await chip.getLocation();
+        const csize = await chip.getSize();
+        const leftClear = cloc.x - loc.x;
+        const rightClear = loc.x + size.width - (cloc.x + csize.width);
+        if (Math.max(leftClear, rightClear) > 4) {
+          // attempt 0 → widest clear side; attempt 1 → the other side.
+          const useLeft =
+            attempt === 0 ? leftClear >= rightClear : leftClear < rightClear;
+          x = useLeft
+            ? Math.round(loc.x + Math.max(4, leftClear / 2))
+            : Math.round(cloc.x + csize.width + Math.max(4, rightClear / 2));
+        }
+      }
+      await browser
+        .action('pointer', {parameters: {pointerType: 'touch'}})
+        .move({x, y})
+        .down()
+        .pause(60)
+        .up()
+        .perform();
+      await browser.pause(400);
+      await this.dismissVoicesSheetIfPresent();
+      if ((await this.isThinkingEnabled()) !== before) {
+        return; // toggle flipped
+      }
+    }
   }
 
   /**
