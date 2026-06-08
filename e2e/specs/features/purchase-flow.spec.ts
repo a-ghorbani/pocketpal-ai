@@ -116,4 +116,39 @@ describe('PalsHub authenticated purchase', () => {
     await purchasePage.tapBuy();
     await purchasePage.acceptDisclosureIfPresent();
   });
+
+  it('settles the checkout after backing out of the Android Custom Tab (never wedges in browser_open)', async function (this: Mocha.Context) {
+    if (!driver.isAndroid) {
+      this.skip();
+      return;
+    }
+
+    await chatPage.openDrawer();
+    await drawerPage.navigateToPals();
+    await purchasePage.openPalDetail(palshubTestConfig.palId);
+
+    // Start checkout up to the Custom Tab, then dismiss it with hardware BACK.
+    // The native auth-session settles the openAuth promise on the single
+    // post-launch resume (a back-out is a silent cancel). The store must reach
+    // a terminal state -- Download (the test-complete grant landed) OR Buy
+    // re-enabled (the dismiss won) -- and must NOT stay stuck in browser_open
+    // with a disabled Buy and no Download. A wedged promise (the pre-fix bug)
+    // would leave neither terminal control reachable.
+    await purchasePage.signInAndStartCheckout(
+      palshubTestConfig.email,
+      palshubTestConfig.password,
+    );
+    await purchasePage.acceptDisclosureIfPresent();
+    await purchasePage.backOutOfCustomTabWhenItOpens();
+
+    const settled = await purchasePage.waitForCheckoutSettled();
+
+    // Whichever branch we landed in, a fresh Buy press must work -- the
+    // auth-in-flight guard must not wedge retries (the core R1 regression).
+    if (settled === 'buy') {
+      await purchasePage.tapBuy();
+      await purchasePage.acceptDisclosureIfPresent();
+      await purchasePage.waitForCheckoutSettled();
+    }
+  });
 });
