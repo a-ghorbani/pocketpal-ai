@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useContext} from 'react';
-import {View, Image, Alert, Platform} from 'react-native';
+import {View, Image, Alert} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {Text, Button, Divider} from 'react-native-paper';
@@ -43,8 +43,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     const [error, setError] = useState<string | null>(null);
     const [detailedPal, setDetailedPal] = useState<PalsHubPal | null>(null);
     const [_isFetchingDetails, setIsFetchingDetails] = useState(false);
-    // Android-only pre-purchase consent gate (Google External Offers).
-    const [showDisclosure, setShowDisclosure] = useState(false);
 
     // Use detailed pal information if available, otherwise fall back to basic pal
     const displayPal = detailedPal || pal;
@@ -129,7 +127,6 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     };
 
     const handleClose = () => {
-      setShowDisclosure(false);
       checkoutFlowStore.reset();
       onClose();
     };
@@ -140,26 +137,14 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
         onSignInPress?.();
         return;
       }
-      // Android requires a pre-purchase external-offers disclosure before the
-      // Custom Tab opens; iOS has no such requirement and starts directly.
-      if (Platform.OS === 'android') {
-        setShowDisclosure(true);
-        return;
-      }
+      // Both platforms start directly. On Android the store runs the Play
+      // link-out prep (Play renders its own disclosure); there is no app sheet.
       checkoutFlowStore.start(displayPal.id);
-    };
-
-    const handleDisclosureContinue = () => {
-      setShowDisclosure(false);
-      checkoutFlowStore.start(displayPal.id);
-    };
-
-    const handleDisclosureCancel = () => {
-      setShowDisclosure(false);
     };
 
     const isCheckoutInFlight =
       checkoutStatus === 'creating' ||
+      checkoutStatus === 'linking' ||
       checkoutStatus === 'browser_open' ||
       checkoutStatus === 'finalizing';
 
@@ -301,174 +286,143 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     );
 
     return (
-      <>
-        <Sheet
-          isVisible={isVisible}
-          onClose={handleClose}
-          title={displayPal.title}
-          snapPoints={['85%']}>
-          <Sheet.ScrollView contentContainerStyle={styles.scrollContent}>
-            {renderHeader()}
-            <Divider style={styles.divider} />
-            {renderStats()}
-            <Divider style={styles.divider} />
+      <Sheet
+        isVisible={isVisible}
+        onClose={handleClose}
+        title={displayPal.title}
+        snapPoints={['85%']}>
+        <Sheet.ScrollView contentContainerStyle={styles.scrollContent}>
+          {renderHeader()}
+          <Divider style={styles.divider} />
+          {renderStats()}
+          <Divider style={styles.divider} />
 
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {l10n.palsScreen.palDetailSheet.description}
+            </Text>
+            <Text style={styles.description}>
+              {displayPal.description ||
+                l10n.palsScreen.palDetailSheet.noDescriptionAvailable}
+            </Text>
+          </View>
+
+          {displayPal.categories && displayPal.categories.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                {l10n.palsScreen.palDetailSheet.description}
+                {l10n.palsScreen.palDetailSheet.categories}
               </Text>
-              <Text style={styles.description}>
-                {displayPal.description ||
-                  l10n.palsScreen.palDetailSheet.noDescriptionAvailable}
-              </Text>
+              <View style={styles.categoriesContainer}>
+                {displayPal.categories.map((category, index) => (
+                  <View key={index} style={styles.category}>
+                    <Text style={styles.categoryText}>{category.name}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
+          )}
 
-            {displayPal.categories && displayPal.categories.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {l10n.palsScreen.palDetailSheet.categories}
-                </Text>
-                <View style={styles.categoriesContainer}>
-                  {displayPal.categories.map((category, index) => (
-                    <View key={index} style={styles.category}>
-                      <Text style={styles.categoryText}>{category.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {displayPal.tags && displayPal.tags.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {l10n.palsScreen.palDetailSheet.tags}
-                </Text>
-                <View style={styles.tagsContainer}>
-                  {displayPal.tags.map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {canViewContent && displayPal.system_prompt && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {l10n.palsScreen.palDetailSheet.systemPrompt}
-                </Text>
-                <View style={styles.systemPromptContainer}>
-                  <Text style={styles.systemPrompt}>
-                    {displayPal.system_prompt}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {!canViewContent && (
-              <View style={styles.section}>
-                <View style={styles.protectedContent}>
-                  <Text style={styles.protectedText}>
-                    {l10n.palsScreen.palDetailSheet.premiumPalMessage}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Sheet.ScrollView>
-
-          <Sheet.Actions>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {/* Show action button for free pals (regardless of ownership) or owned premium pals */}
-            {actionText &&
-              (displayPal.price_cents === 0 ||
-                (displayPal.price_cents > 0 && displayPal.is_owned)) && (
-                <>
-                  {isDownloaded ? (
-                    <Button
-                      testID="downloaded-button"
-                      mode="contained"
-                      disabled
-                      icon={() => (
-                        <DownloadIcon stroke={theme.colors.onPrimary} />
-                      )}
-                      style={styles.primaryButton}>
-                      {l10n.palsScreen.palDetailSheet.downloaded}
-                    </Button>
-                  ) : (
-                    <Button
-                      testID="download-button"
-                      mode="contained"
-                      onPress={handleAction}
-                      loading={isLoading}
-                      icon={() => (
-                        <DownloadIcon stroke={theme.colors.onPrimary} />
-                      )}
-                      style={styles.primaryButton}>
-                      {actionText}
-                    </Button>
-                  )}
-                </>
-              )}
-
-            {/* Show buy button (US) or informational text (non-US) for premium pals */}
-            {palLabel.type === 'premium' &&
-              !displayPal.is_owned &&
-              (palStore.isUSRegion ? (
-                <View style={styles.buyActionColumn}>
-                  <Button
-                    testID="buy-button"
-                    mode="contained"
-                    onPress={handleBuyPress}
-                    loading={checkoutStatus === 'creating'}
-                    disabled={isCheckoutInFlight}
-                    style={styles.buyButton}>
-                    {l10n.palsScreen.palDetailSheet.buyOnPalshub}
-                  </Button>
-                  {renderCheckoutFeedback()}
-                </View>
-              ) : (
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
-                </View>
-              ))}
-          </Sheet.Actions>
-        </Sheet>
-
-        <Sheet
-          isVisible={showDisclosure}
-          onClose={handleDisclosureCancel}
-          title={l10n.palsScreen.palDetailSheet.disclosureTitle}
-          snapPoints={['45%']}>
-          <Sheet.ScrollView contentContainerStyle={styles.scrollContent}>
+          {displayPal.tags && displayPal.tags.length > 0 && (
             <View style={styles.section}>
-              <Text testID="disclosure-body" style={styles.description}>
-                {l10n.palsScreen.palDetailSheet.disclosureBody}
+              <Text style={styles.sectionTitle}>
+                {l10n.palsScreen.palDetailSheet.tags}
               </Text>
+              <View style={styles.tagsContainer}>
+                {displayPal.tags.map((tag, index) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag.name}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </Sheet.ScrollView>
-          <Sheet.Actions>
-            <Button
-              testID="disclosure-continue-button"
-              mode="contained"
-              onPress={handleDisclosureContinue}
-              style={styles.primaryButton}>
-              {l10n.palsScreen.palDetailSheet.disclosureContinue}
-            </Button>
-            <Button
-              testID="disclosure-cancel-button"
-              mode="text"
-              onPress={handleDisclosureCancel}>
-              {l10n.palsScreen.palDetailSheet.disclosureCancel}
-            </Button>
-          </Sheet.Actions>
-        </Sheet>
-      </>
+          )}
+
+          {canViewContent && displayPal.system_prompt && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                {l10n.palsScreen.palDetailSheet.systemPrompt}
+              </Text>
+              <View style={styles.systemPromptContainer}>
+                <Text style={styles.systemPrompt}>
+                  {displayPal.system_prompt}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {!canViewContent && (
+            <View style={styles.section}>
+              <View style={styles.protectedContent}>
+                <Text style={styles.protectedText}>
+                  {l10n.palsScreen.palDetailSheet.premiumPalMessage}
+                </Text>
+              </View>
+            </View>
+          )}
+        </Sheet.ScrollView>
+
+        <Sheet.Actions>
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Show action button for free pals (regardless of ownership) or owned premium pals */}
+          {actionText &&
+            (displayPal.price_cents === 0 ||
+              (displayPal.price_cents > 0 && displayPal.is_owned)) && (
+              <>
+                {isDownloaded ? (
+                  <Button
+                    testID="downloaded-button"
+                    mode="contained"
+                    disabled
+                    icon={() => (
+                      <DownloadIcon stroke={theme.colors.onPrimary} />
+                    )}
+                    style={styles.primaryButton}>
+                    {l10n.palsScreen.palDetailSheet.downloaded}
+                  </Button>
+                ) : (
+                  <Button
+                    testID="download-button"
+                    mode="contained"
+                    onPress={handleAction}
+                    loading={isLoading}
+                    icon={() => (
+                      <DownloadIcon stroke={theme.colors.onPrimary} />
+                    )}
+                    style={styles.primaryButton}>
+                    {actionText}
+                  </Button>
+                )}
+              </>
+            )}
+
+          {/* Show buy button (US) or informational text (non-US) for premium pals */}
+          {palLabel.type === 'premium' &&
+            !displayPal.is_owned &&
+            (palStore.isUSRegion ? (
+              <View style={styles.buyActionColumn}>
+                <Button
+                  testID="buy-button"
+                  mode="contained"
+                  onPress={handleBuyPress}
+                  loading={checkoutStatus === 'creating'}
+                  disabled={isCheckoutInFlight}
+                  style={styles.buyButton}>
+                  {l10n.palsScreen.palDetailSheet.buyOnPalshub}
+                </Button>
+                {renderCheckoutFeedback()}
+              </View>
+            ) : (
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoText}>{getPremiumInfoText()}</Text>
+              </View>
+            ))}
+        </Sheet.Actions>
+      </Sheet>
     );
   },
 );
