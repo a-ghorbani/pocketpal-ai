@@ -231,8 +231,8 @@ dependencies {
     // Chrome Custom Tabs for the in-app PalsHub checkout (AuthSessionModule)
     implementation "androidx.browser:browser:1.8.0"
 
-    // Google Play Billing — External Offers reporting API (ExternalOfferModule)
-    implementation "com.android.billingclient:billing:7.1.1"
+    // Google Play Billing — External Content Links program (ExternalContentLinkModule)
+    implementation "com.android.billingclient:billing:8.2.1"
 
     // OkHttp for DownloadModule (network requests)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
