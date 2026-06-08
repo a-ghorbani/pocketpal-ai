@@ -81,8 +81,8 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
       settled: AtomicBoolean
   ) {
     client.isBillingProgramAvailableAsync(BillingProgram.EXTERNAL_CONTENT_LINK) {
-        _,
-        result ->
+        result,
+        _ ->
       if (result.responseCode != BillingClient.BillingResponseCode.OK) {
         endAndResolve(client, promise, settled, OUTCOME_INELIGIBLE)
         return@isBillingProgramAvailableAsync
