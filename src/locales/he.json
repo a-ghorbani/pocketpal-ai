@@ -406,6 +406,15 @@
       "rewriting": "שכתוב",
       "creativity": "כתיבה יצירתית",
       "vision": "ראייה"
+    },
+    "hubRun": {
+      "title": "הורד מודל",
+      "resolving": "טוען פרטי מודל…",
+      "cancel": "ביטול",
+      "retry": "נסה שוב",
+      "invalidLinkTitle": "קישור לא תקין",
+      "invalidLinkMessage": "קישור Hugging Face זה חסר או מכיל מודל או קובץ לא תקין.",
+      "resolveError": "טעינת פרטי המודל נכשלה. בדוק את החיבור ונסה שוב."
     }
   },
   "completionParams": {
@@ -754,6 +763,15 @@
         "render_html": "הצג מסמכי HTML ישירות בצ'אט",
         "calculate": "הערך ביטויים מתמטיים",
         "datetime": "הצג את התאריך והשעה הנוכחיים"
+      },
+      "greeting": {
+        "sectionLabel": "ברכה",
+        "textLabel": "הודעת ברכה",
+        "textPlaceholder": "מה ה-Pal הזה יאמר בצ'אט ריק?",
+        "suggestedPromptsLabel": "הנחיות מוצעות",
+        "addPromptButton": "הוסף הנחיה",
+        "promptPlaceholder": "הנחיה קצרה עבור הצ'יפ",
+        "removePromptLabel": "הסר הנחיה"
       }
     },
     "assistantPalSheet": {
@@ -923,7 +941,7 @@
       "msPerToken": "{{value}}מ.ש./טוקן",
       "tokensPerSec": "{{value}} טוקנים/שנ'",
       "ttft": "{{value}}מ.ש. TTFT",
-      "interrupted": "מופרע",
+      "interrupted": "הופסק",
       "truncated": "קטיעה — ככל הנראה ההקשר מלא"
     },
     "pendingIndicator": {
@@ -1016,7 +1034,13 @@
       "failedToDownload": "הורדת Pal נכשלה",
       "premiumPalMessage": "זהו Pal פרימיום. \n• אם כבר פתחת את הנעילה שלו באמצעות חשבון Palshub שלך, פשוט היכנס כדי לגשת לפרטים המלאים. \n• עדיין לא פתחת את הנעילה? בקר באפליקציית palshub.ai למידע נוסף.",
       "notAvailable": "N/A",
-      "buyOnPalshub": "קנה ב-Palshub"
+      "buyOnPalshub": "קנה ב-Palshub",
+      "finalizingPurchase": "משלים את הרכישה שלך…",
+      "processingPurchase": "מעבד — ייפתח בקרוב.",
+      "checkoutSessionExpired": "הסשן שלך פג. התחבר שוב כדי להמשיך.",
+      "signInAgain": "התחבר שוב",
+      "palNotAvailable": "ה-Pal הזה אינו זמין לרכישה כעת.",
+      "checkoutFailed": "משהו השתבש. אנא נסה שוב."
     }
   },
   "validation": {
@@ -1090,13 +1114,47 @@
     "pleaseLoadModel": "טען מודל כדי לשוחח.",
     "multimodalNotEnabled": "רב-מודאליות אינה מופעלת עבור מודל זה. תמונות יוצגו אך לא יעובדו על ידי ה-AI.",
     "cannotSendWithoutModel": "טען מודל תחילה",
-    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה אזל המקום בזיכרון של המודל. נסה להשתמש בהקשר (Context) גדול יותר או שלח בקשה קטנה יותר.",
+    "toolCallTruncated": "קריאת הכלי נקטעה — ככל הנראה אזל המקום בהקשר של המודל. נסה להשתמש בהקשר (Context) גדול יותר או שלח בקשה קטנה יותר.",
     "toolCompatWarning": "מודל זה עשוי שלא לתמוך בקריאה לכלי. התוצאות עלולות להיות לא אמינות.",
     "softCapWarning": "פתח צ'אט חדש לביצועים מיטביים.",
     "generatingPreview": "מייצר תצוגה מקדימה... ({{tokens}} טוקנים)",
     "generatingPreviewPending": "מייצר תצוגה מקדימה…",
     "toolUsedChip": "נעשה שימוש ב-{{name}}",
-    "toolErrorBlock": "{{name}} נכשל"
+    "toolErrorBlock": "{{name}} נכשל",
+    "contextWarning": "השיחה הזו מתארכת ועלולה בקרוב להיגמר במקום.",
+    "contextRemoteHedged": "ייתכן שתשובה זו נקטעה. נסה לשלוח שוב או לקצר את הבקשה.",
+    "contextFull": "נגמר המקום בשיחה. פתח צ'אט חדש או הגדל את אורך ההקשר.",
+    "contextFullEscalated": "עדיין אין מקום. פתח צ'אט חדש, או הגדל את אורך ההקשר כדי להמשיך.",
+    "contextFullHeavyTalent": "נגמר המקום בשיחה — {{talent}} בדרך כלל זקוק ליותר. פתח צ'אט חדש או הגדל את אורך ההקשר.",
+    "contextBannerDismiss": "הסתר",
+    "contextNewChat": "צ'אט חדש",
+    "contextIncrease": "הגדל הקשר",
+    "contextMoreRoom": "יותר מקום",
+    "increaseContextTitle": "תן לצ'אט הזה יותר מקום",
+    "increaseContextBody": "המקום הוא זיכרון העבודה של המודל — כמה מהצ'אט הזה הוא יכול להחזיק בו-זמנית. יותר מקום משמעו צ'אטים ארוכים יותר לפני שהתשובות נקטעות.",
+    "increaseContextTokensUnit": "טוקנים",
+    "increaseContextWordsRam": "~{{words}} מילים · ‏≈{{ram}} RAM",
+    "increaseContextFitsChip": "מתאים",
+    "increaseContextTightChip": "צפוף",
+    "increaseContextWontFitChip": "לא יתאים",
+    "increaseContextFitsStatus": "נוח עבור המכשיר הזה.",
+    "increaseContextFitsUnconstrainedStatus": "הרבה RAM — מוגבל רק על ידי המודל.",
+    "increaseContextTightStatus": "מעבר ל-~{{tokens}}, המכשיר הזה עלול להגיע לזיכרון נמוך ולהאט. הוא עדיין יכול לנסות.",
+    "increaseContextWontFitStatus": "~{{tokens}} כנראה לא יתאימו לזיכרון של המכשיר הזה. בחר גודל קטן יותר.",
+    "increaseContextModelMax": "{{tokens}} · מקסימום המודל",
+    "increaseContextHedge": "הטעינה מחדש אורכת כמה שניות. שום דבר בצ'אט שלך לא יאבד.",
+    "increaseContextAdvanced": "מתקדם",
+    "increaseContextAdvancedBody": "אורך ההקשר עבור צ'אט זה: {{from}} ← {{to}} טוקנים (מקסימום המודל {{max}}). מגבלת המכשיר היא הערכה והיא עולה ככל שהקשרים גדולים יותר נטענים בהצלחה.",
+    "increaseContextSliderA11yLabel": "אורך הקשר",
+    "increaseContextSliderA11yValue": "{{tokens}} טוקנים",
+    "increaseContextConfirmSize": "הגדר ל-{{size}}",
+    "increaseContextReloadingShort": "טוען מחדש…",
+    "increaseContextNoFitBody": "המכשיר הזה לא יכול להכיל הקשר גדול יותר עבור מודל זה. פתח צ'אט חדש כדי להמשיך.",
+    "increaseContextCancel": "לא עכשיו",
+    "increaseContextReloading": "טוען מחדש את המודל עם הקשר גדול יותר…",
+    "increaseContextSuccess": "ההקשר הוגדל ל-{{target}} טוקנים.",
+    "increaseContextFailure": "לא ניתן להגדיל את אורך ההקשר. ההגדרה הקודמת שלך שוחזרה.",
+    "palLoadHint": "ה-Pal הזה בדרך כלל זקוק ליותר מקום ממה שאורך ההקשר הנוכחי מאפשר."
   },
   "benchmark": {
     "title": "מבחן ביצועים",
@@ -1254,7 +1312,7 @@
   },
   "htmlPreview": {
     "defaultTitle": "תצוגה מקדימה",
-    "showPreview": "הצג תצוגה מקדימה מוכנה",
+    "showPreview": "הצג תצוגה מקדימה מעובדת",
     "showCode": "הצג קוד HTML",
     "copyHtml": "העתק HTML",
     "closePreview": "סגור תצוגה מקדימה",
