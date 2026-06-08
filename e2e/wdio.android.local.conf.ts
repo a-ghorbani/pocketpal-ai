@@ -8,6 +8,13 @@
  *   E2E_DEVICE_UDID       - Device UDID (default: undefined = emulator auto-selection)
  *   E2E_APP_PATH           - Path to APK (default: release APK build)
  *   E2E_APPIUM_PORT        - Appium server port (default: 4723)
+ *   E2E_NO_RESET           - Keep app data/install between sessions when 'true'
+ *                            (default: false = reset). Set 'true' on MIUI/HyperOS
+ *                            devices that reject reinstall with
+ *                            INSTALL_FAILED_USER_RESTRICTED.
+ *   E2E_FULL_RESET         - Reinstall the app for a clean state unless 'false'
+ *                            (default: true). Set 'false' alongside
+ *                            E2E_NO_RESET=true on restricted devices.
  */
 
 import {config as sharedConfig} from './wdio.shared.conf';
@@ -35,9 +42,11 @@ export const config: Options.Testrunner = {
       'appium:app': APP_PATH,
       'appium:appPackage': 'com.pocketpalai.e2e',
       'appium:appActivity': 'com.pocketpal.MainActivity',
-      // Force fresh install to ensure clean state
-      'appium:noReset': false,
-      'appium:fullReset': true,
+      // Force fresh install to ensure clean state. Env-overridable so
+      // MIUI/HyperOS devices that hit INSTALL_FAILED_USER_RESTRICTED can keep
+      // the existing install (E2E_NO_RESET=true E2E_FULL_RESET=false).
+      'appium:noReset': process.env.E2E_NO_RESET === 'true',
+      'appium:fullReset': process.env.E2E_FULL_RESET !== 'false',
       'appium:newCommandTimeout': 300,
       'appium:autoGrantPermissions': true,
       // Skip lock handling - emulator should be unlocked manually or have no lock

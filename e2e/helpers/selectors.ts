@@ -118,8 +118,12 @@ export const Selectors = {
     get modelsTab(): string {
       return byText('Models');
     },
+    // Pals tab doubles as the drawer-open indicator (DrawerPage.isOpen /
+    // waitForOpen / waitForClose), so it must survive a language switch.
+    // Match the app's stable testID (SidebarContent drawer-item-pals) instead
+    // of the English label.
     get palsTab(): string {
-      return byText('Pals');
+      return byTestId('drawer-item-pals');
     },
     get benchmarkTab(): string {
       return byText('Benchmark');

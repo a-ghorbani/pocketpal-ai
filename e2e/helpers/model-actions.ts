@@ -40,6 +40,55 @@ export async function dismissPerformanceWarningIfPresent(): Promise<void> {
 }
 
 /**
+ * Dismiss the "Give this chat more room" sheet (IncreaseContextSheet, #763) if
+ * it is open over the chat. With a pal active the pal-load-hint snackbar can
+ * auto-pop ("This pal tends to need more room…"); its "More room" action opens
+ * this sheet, which then overlays the chat and stalls the inference-wait path
+ * (talent-tool-use times out on `ai-message`). Taps Cancel to close it without
+ * changing the context size. No-op when the sheet is absent.
+ */
+export async function dismissContextRoomSheetIfPresent(): Promise<void> {
+  try {
+    const cancelButton = browser.$(Selectors.contextBanner.sheetCancel);
+    const exists = await cancelButton.isExisting();
+    if (exists) {
+      const isDisplayed = await cancelButton.isDisplayed();
+      if (isDisplayed) {
+        console.log('Increase-context sheet detected, tapping Cancel...');
+        await cancelButton.click();
+        await browser.pause(500);
+      }
+    }
+  } catch {
+    // No sheet appeared - just continue
+  }
+}
+
+/**
+ * Wait for the first AI message bubble to appear, dismissing the "Give this
+ * chat more room" sheet on each poll. With a pal that needs more room than the
+ * current context, that sheet can surface over the chat right after sending and
+ * block the AI bubble from being seen — a plain waitForExist then times out
+ * (talent-tool-use, #764). Polling + dismissing clears the overlay so the
+ * bubble becomes visible.
+ */
+export async function waitForAiMessage(
+  maxWaitMs = 60000,
+  pollIntervalMs = 1000,
+): Promise<void> {
+  const startTime = Date.now();
+  while (Date.now() - startTime < maxWaitMs) {
+    await dismissContextRoomSheetIfPresent();
+    const aiMessage = browser.$(Selectors.chat.aiMessage);
+    if (await aiMessage.isExisting().catch(() => false)) {
+      return;
+    }
+    await browser.pause(pollIntervalMs);
+  }
+  throw new Error('AI message did not appear within timeout');
+}
+
+/**
  * Download a model from HuggingFace and load it.
  * After completion, the app auto-navigates to the Chat screen.
  *
@@ -172,6 +221,10 @@ export async function waitForInferenceComplete(
   const startTime = Date.now();
 
   while (Date.now() - startTime < maxWaitMs) {
+    // A "Give this chat more room" sheet can overlay the chat and stall
+    // generation; clear it before polling so inference can proceed.
+    await dismissContextRoomSheetIfPresent();
+
     const timingElement = browser.$(Selectors.chat.inferenceComplete);
     const exists = await timingElement.isExisting().catch(() => false);
 
