@@ -251,6 +251,27 @@ describe('CheckoutFlowStore', () => {
       expect(checkoutFlowStore.status).toBe('idle');
       expect(openAuth).not.toHaveBeenCalled();
     });
+
+    it('prep rejecting -> error(network), no tab, no report', async () => {
+      prepareExternalLink.mockRejectedValue(new Error('native failure'));
+      await checkoutFlowStore.start('pal-1');
+      await flushMicrotasks();
+      expect(checkoutFlowStore.status).toBe('error');
+      expect(checkoutFlowStore.errorKind).toBe('network');
+      expect(openAuth).not.toHaveBeenCalled();
+      expect(reportExternalContentLink).not.toHaveBeenCalled();
+    });
+
+    it("'launched' without a token -> opens the tab; later owned does not report", async () => {
+      prepareExternalLink.mockResolvedValue({outcome: 'launched'});
+      checkPalOwnership.mockResolvedValueOnce({owned: true});
+      openAuth.mockResolvedValueOnce('pocketpal://checkout/success');
+      await checkoutFlowStore.start('pal-1');
+      await flushMicrotasks();
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(checkoutFlowStore.status).toBe('owned');
+      expect(reportExternalContentLink).not.toHaveBeenCalled();
+    });
   });
 
   describe('reconcile on success return', () => {

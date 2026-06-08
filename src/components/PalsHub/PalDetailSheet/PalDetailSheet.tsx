@@ -409,7 +409,9 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
                   testID="buy-button"
                   mode="contained"
                   onPress={handleBuyPress}
-                  loading={checkoutStatus === 'creating'}
+                  loading={
+                    checkoutStatus === 'creating' || checkoutStatus === 'linking'
+                  }
                   disabled={isCheckoutInFlight}
                   style={styles.buyButton}>
                   {l10n.palsScreen.palDetailSheet.buyOnPalshub}
