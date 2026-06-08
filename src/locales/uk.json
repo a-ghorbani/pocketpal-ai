@@ -406,6 +406,15 @@
       "rewriting": "Переписання",
       "creativity": "Творче письмо",
       "vision": "Бачення"
+    },
+    "hubRun": {
+      "title": "Завантажити модель",
+      "resolving": "Завантаження деталей моделі…",
+      "cancel": "Скасувати",
+      "retry": "Спробувати ще раз",
+      "invalidLinkTitle": "Недійсне посилання",
+      "invalidLinkMessage": "Це посилання Hugging Face відсутнє або містить недійсну модель чи файл.",
+      "resolveError": "Не вдалося завантажити деталі моделі. Перевірте з'єднання та спробуйте ще раз."
     }
   },
   "completionParams": {
@@ -768,7 +777,7 @@
         "textPlaceholder": "Що б сказав цей приятель у порожньому чаті?",
         "suggestedPromptsLabel": "Рекомендовані запити",
         "addPromptButton": "Додати підказку",
-        "promptPlaceholder": "Короткий опис мікросхеми",
+        "promptPlaceholder": "Короткий запит для чипа",
         "removePromptLabel": "Прибрати підказку"
       }
     },
@@ -939,7 +948,7 @@
       "preparingTool": "Підготовка інструмента",
       "buildingPage": "Створення сторінки",
       "calculating": "Обчислення",
-      "lookingUpTime": "Час пошуку",
+      "lookingUpTime": "Пошук часу",
       "stopping": "Зупинення…"
     },
     "toolMetrics": {
@@ -1025,7 +1034,13 @@
       "failedToDownload": "Не вдалося завантажити pal",
       "premiumPalMessage": "Це Преміум-Pal.\n• Якщо ви вже розблокували його за допомогою свого облікового запису Palshub, просто увійдіть, щоб переглянути повну інформацію.\n• Ще не розблокували? Зайдіть у додаток palshub.ai, щоб дізнатися більше.",
       "notAvailable": "Н/Д",
-      "buyOnPalshub": "Купити на Palshub"
+      "buyOnPalshub": "Купити на Palshub",
+      "finalizingPurchase": "Завершення покупки…",
+      "processingPurchase": "Обробка — невдовзі буде розблоковано.",
+      "checkoutSessionExpired": "Термін дії сеансу минув. Увійдіть знову, щоб продовжити.",
+      "signInAgain": "Увійти знову",
+      "palNotAvailable": "Цей pal наразі недоступний для покупки.",
+      "checkoutFailed": "Щось пішло не так. Спробуйте ще раз."
     }
   },
   "validation": {
@@ -1105,7 +1120,41 @@
     "generatingPreview": "Створення попереднього перегляду… ({{tokens}} ток.)",
     "generatingPreviewPending": "Створення попереднього перегляду…",
     "toolUsedChip": "використав {{name}}",
-    "toolErrorBlock": "{{name}} завершилося з помилкою"
+    "toolErrorBlock": "{{name}} завершилося з помилкою",
+    "contextWarning": "Ця розмова стає довгою й невдовзі може вичерпати вільне місце.",
+    "contextRemoteHedged": "Цю відповідь могло бути обрізано. Спробуйте надіслати ще раз або скоротити запит.",
+    "contextFull": "У розмові закінчилося місце. Почніть новий чат або збільшіть розмір контексту.",
+    "contextFullEscalated": "Місця досі немає. Почніть новий чат або збільшіть розмір контексту, щоб продовжити.",
+    "contextFullHeavyTalent": "У розмові закінчилося місце — {{talent}} зазвичай потребує більше. Почніть новий чат або збільшіть розмір контексту.",
+    "contextBannerDismiss": "Відхилити",
+    "contextNewChat": "Новий чат",
+    "contextIncrease": "Збільшити контекст",
+    "contextMoreRoom": "Більше місця",
+    "increaseContextTitle": "Дайте цьому чату більше місця",
+    "increaseContextBody": "Місце — це робоча пам'ять моделі: скільки чату вона здатна тримати в пам'яті одночасно. Більше місця означає довші чати, перш ніж відповіді почнуть обрізатися.",
+    "increaseContextTokensUnit": "токенів",
+    "increaseContextWordsRam": "~{{words}} слів · ≈{{ram}} ОЗП",
+    "increaseContextFitsChip": "Вміщається",
+    "increaseContextTightChip": "Впритул",
+    "increaseContextWontFitChip": "Не вміститься",
+    "increaseContextFitsStatus": "Комфортно для цього пристрою.",
+    "increaseContextFitsUnconstrainedStatus": "Достатньо ОЗП — обмежено лише можливостями моделі.",
+    "increaseContextTightStatus": "Після ~{{tokens}} цьому пристрою може забракнути пам'яті, і він сповільниться. Спробувати все одно можна.",
+    "increaseContextWontFitStatus": "~{{tokens}} навряд чи вміститься в пам'ять цього пристрою. Виберіть менший розмір.",
+    "increaseContextModelMax": "{{tokens}} · максимум моделі",
+    "increaseContextHedge": "Перезавантаження триває кілька секунд. Нічого з вашого чату не втрачається.",
+    "increaseContextAdvanced": "Розширені",
+    "increaseContextAdvancedBody": "Розмір контексту для цього чату: {{from}} → {{to}} токенів (максимум моделі {{max}}). Ліміт пристрою є приблизним і зростає в міру успішного завантаження більших контекстів.",
+    "increaseContextSliderA11yLabel": "Розмір контексту",
+    "increaseContextSliderA11yValue": "{{tokens}} токенів",
+    "increaseContextConfirmSize": "Встановити {{size}}",
+    "increaseContextReloadingShort": "Перезавантаження…",
+    "increaseContextNoFitBody": "Цей пристрій не вмістить більший контекст для цієї моделі. Почніть новий чат, щоб продовжити.",
+    "increaseContextCancel": "Не зараз",
+    "increaseContextReloading": "Перезавантаження моделі з більшим контекстом…",
+    "increaseContextSuccess": "Контекст збільшено до {{target}} токенів.",
+    "increaseContextFailure": "Не вдалося збільшити розмір контексту. Ваше попереднє налаштування відновлено.",
+    "palLoadHint": "Цей pal зазвичай потребує більше місця, ніж дозволяє поточний розмір контексту."
   },
   "benchmark": {
     "title": "Бенчмарк",
@@ -1274,7 +1323,7 @@
     "openSettingsLabel": "Налаштування TTS",
     "playMessageLabel": "Відтворити повідомлення",
     "stopMessageLabel": "Зупинити повідомлення",
-    "autoSpeakLabel": "Автоматичні відповіді",
+    "autoSpeakLabel": "Автоматично озвучувати відповіді",
     "autoSpeakDescription": "Читайте нові відповіді вголос, коли вони прибувають.",
     "engineChipKitten": "Кошеня",
     "engineChipKokoro": "Кокоро",
