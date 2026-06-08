@@ -282,6 +282,25 @@ describe('CheckoutFlowStore', () => {
     expect(checkoutFlowStore.status).toBe('cancelled');
   });
 
+  it('recovers after a dismiss: not in flight, and a fresh start works', async () => {
+    // A tab back-out rejects openAuth -> cancelled. Buy must re-enable
+    // (isInFlight false), and reset -> a second start must run, not be blocked.
+    openAuth.mockRejectedValueOnce(new Error('auth_cancelled'));
+    await checkoutFlowStore.start('pal-1');
+    await flushMicrotasks();
+    expect(checkoutFlowStore.status).toBe('cancelled');
+    expect(checkoutFlowStore.isInFlight).toBe(false);
+
+    checkoutFlowStore.reset();
+    expect(checkoutFlowStore.status).toBe('idle');
+
+    openAuth.mockReturnValueOnce(new Promise(() => {}));
+    checkoutFlowStore.start('pal-2');
+    await flushMicrotasks();
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(checkoutFlowStore.status).toBe('browser_open');
+  });
+
   it('openAuth resolves a malformed callback URL -> cancelled, silent', async () => {
     // URL parsing throws; the defensive catch treats it as a cancel.
     openAuth.mockResolvedValue('not a valid url');
