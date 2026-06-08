@@ -10,10 +10,11 @@ import {palsHubService} from '../services';
 /**
  * CheckoutFlowStore
  *
- * App-global owner of the PalsHub in-app checkout state (iOS). Sole writer of
- * checkout state; ownership is never written here (read live from the server).
- * The checkout page is opened via ASWebAuthenticationSession; its success/cancel
- * callback arrives on the session promise and is consumed inline here.
+ * App-global owner of the PalsHub in-app checkout state on both platforms. Sole
+ * writer of checkout state; ownership is never written here (read live from the
+ * server). The checkout page is opened via the native auth session
+ * (ASWebAuthenticationSession on iOS, Chrome Custom Tab on Android); its
+ * success/cancel callback arrives on the session promise and is consumed inline.
  */
 
 export type CheckoutStatus =
@@ -121,7 +122,9 @@ class CheckoutFlowStore {
         this.purchaseId = session.purchase_id;
         this.status = 'browser_open';
       });
-      // iOS-only flow; the spec is never null here, but guard rather than assert.
+      // The spec is null only as an Android build/registration defect (the
+      // module not added to getPackages); that maps to a silent cancel here
+      // rather than crashing on a null openAuth. On iOS it is always present.
       const authSession = NativeAuthSession;
       if (!authSession) {
         this.onReturn(palId, 'cancel');
@@ -148,9 +151,10 @@ class CheckoutFlowStore {
     }
   }
 
-  // Open the checkout page in ASWebAuthenticationSession and consume the
-  // captured pocketpal://checkout/{success|cancel} callback. A reject
-  // (user-dismiss / session error) is a silent cancel (matches a cancel callback).
+  // Open the checkout page in the native auth session (ASWebAuthenticationSession
+  // on iOS, Chrome Custom Tab on Android) and consume the captured
+  // pocketpal://checkout/{success|cancel} callback. A reject (user-dismiss /
+  // session error) is a silent cancel (matches a cancel callback).
   private async openAuthAndHandle(
     authSession: NonNullable<typeof NativeAuthSession>,
     palId: string,
