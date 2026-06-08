@@ -177,10 +177,10 @@
     "increaseContextTokensUnit": "токены",
     "increaseContextWordsRam": "~{{words}} слов · ≈{{ram}} ОЗУ",
     "increaseContextFitsChip": "Подходит",
-    "increaseContextTightChip": "Точный",
+    "increaseContextTightChip": "Впритык",
     "increaseContextWontFitChip": "Не поместится",
     "increaseContextFitsStatus": "Подходит для этого устройства.",
-    "increaseContextFitsUnconstrainedStatus": "Объем ОЗУ достаточен – ограничивается только моделью устройства.",
+    "increaseContextFitsUnconstrainedStatus": "Объём ОЗУ достаточен – ограничивается только моделью.",
     "increaseContextTightStatus": "При превышении ~{{tokens}}, у этого устройства может закончиться память, что приведет к замедлению его работы. Всё ещё можно попробовать.",
     "increaseContextWontFitStatus": "~{{tokens}}, вероятно, не поместятся в памяти этого устройства. Выберите размер поменьше.",
     "increaseContextModelMax": "{{tokens}} · макс. модель",
@@ -710,7 +710,7 @@
       "preparingTool": "Подготовка инструмента",
       "buildingPage": "Создание страницы",
       "calculating": "Вычисление",
-      "lookingUpTime": "Время поиска",
+      "lookingUpTime": "Определение времени",
       "stopping": "Остановка…"
     },
     "toolMetrics": {
