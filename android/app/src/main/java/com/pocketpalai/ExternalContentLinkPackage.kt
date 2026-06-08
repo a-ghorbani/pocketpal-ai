@@ -5,12 +5,12 @@ import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
-import com.pocketpal.specs.NativeExternalOfferSpec
+import com.pocketpal.specs.NativeExternalContentLinkSpec
 
-class ExternalOfferPackage : TurboReactPackage() {
+class ExternalContentLinkPackage : TurboReactPackage() {
   override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {
-    return if (name == NativeExternalOfferSpec.NAME) {
-      ExternalOfferModule(reactContext)
+    return if (name == NativeExternalContentLinkSpec.NAME) {
+      ExternalContentLinkModule(reactContext)
     } else {
       null
     }
@@ -19,9 +19,9 @@ class ExternalOfferPackage : TurboReactPackage() {
   override fun getReactModuleInfoProvider(): ReactModuleInfoProvider {
     return ReactModuleInfoProvider {
       mapOf(
-        NativeExternalOfferSpec.NAME to ReactModuleInfo(
-          NativeExternalOfferSpec.NAME,
-          NativeExternalOfferSpec.NAME,
+        NativeExternalContentLinkSpec.NAME to ReactModuleInfo(
+          NativeExternalContentLinkSpec.NAME,
+          NativeExternalContentLinkSpec.NAME,
           false, // canOverrideExistingModule
           false, // needsEagerInit
           false, // hasConstants
