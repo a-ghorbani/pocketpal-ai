@@ -406,6 +406,15 @@
       "rewriting": "بازنویسی",
       "creativity": "نوشتن خلاقانه",
       "vision": "بینایی"
+    },
+    "hubRun": {
+      "title": "دانلود مدل",
+      "resolving": "در حال بارگذاری جزئیات مدل…",
+      "cancel": "لغو",
+      "retry": "تلاش مجدد",
+      "invalidLinkTitle": "لینک نامعتبر",
+      "invalidLinkMessage": "این لینک Hugging Face ناقص است یا مدل یا فایل نامعتبری دارد.",
+      "resolveError": "بارگذاری جزئیات مدل ممکن نشد. اتصال خود را بررسی کرده و دوباره تلاش کنید."
     }
   },
   "completionParams": {
@@ -743,6 +752,26 @@
         "nameRequired": "نام الزامی است",
         "generatingPromptRequired": "هنگام استفاده از پرامپت هوش مصنوعی، پرامپت تولید الزامی است",
         "promptModelRequired": "هنگام استفاده از پرامپت هوش مصنوعی، مدل تولید پرامپت الزامی است"
+      },
+      "talents": "توانایی‌ها",
+      "talentNames": {
+        "render_html": "پیش‌نمایش HTML",
+        "calculate": "عبارت‌های ریاضی",
+        "datetime": "تاریخ و زمان"
+      },
+      "talentDescriptions": {
+        "render_html": "نمایش اسناد HTML به‌صورت درون‌خطی در چت",
+        "calculate": "محاسبه عبارت‌های ریاضی",
+        "datetime": "دریافت تاریخ و زمان فعلی"
+      },
+      "greeting": {
+        "sectionLabel": "خوش‌آمدگویی",
+        "textLabel": "پیام خوش‌آمدگویی",
+        "textPlaceholder": "این پَل در چت خالی چه بگوید؟",
+        "suggestedPromptsLabel": "پرامپت‌های پیشنهادی",
+        "addPromptButton": "افزودن پرامپت",
+        "promptPlaceholder": "یک پرامپت کوتاه برای چیپ",
+        "removePromptLabel": "حذف پرامپت"
       }
     },
     "assistantPalSheet": {
@@ -911,7 +940,20 @@
     "bubble": {
       "msPerToken": "{{value}}ms/توکن",
       "tokensPerSec": "{{value}} توکن/ثانیه",
-      "ttft": "{{value}}ms TTFT"
+      "ttft": "{{value}}ms TTFT",
+      "interrupted": "متوقف شد",
+      "truncated": "قطع شد — احتمالاً context پر شده"
+    },
+    "pendingIndicator": {
+      "preparingTool": "در حال آماده‌سازی ابزار",
+      "buildingPage": "در حال ساخت صفحه",
+      "calculating": "در حال محاسبه",
+      "lookingUpTime": "در حال یافتن زمان",
+      "stopping": "در حال توقف…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} توکن",
+      "elapsed": "{{seconds}} ثانیه"
     }
   },
   "palsScreen": {
@@ -992,7 +1034,13 @@
       "failedToDownload": "دانلود پَل با مشکل مواجه شد",
       "premiumPalMessage": "این یک پَل ویژه است.\n• اگر قبلاً با حساب Palshub خود آن را فعال کرده‌اید، کافی است وارد شوید تا به جزئیات کامل دسترسی پیدا کنید.\n• هنوز فعال نکرده‌اید؟ برای اطلاعات بیشتر به برنامه palshub.ai مراجعه کنید.",
       "notAvailable": "ندارد",
-      "buyOnPalshub": "خرید در Palshub"
+      "buyOnPalshub": "خرید در Palshub",
+      "finalizingPurchase": "در حال نهایی‌سازی خرید شما…",
+      "processingPurchase": "در حال پردازش — به‌زودی فعال می‌شود.",
+      "checkoutSessionExpired": "نشست شما منقضی شد. برای ادامه دوباره وارد شوید.",
+      "signInAgain": "ورود مجدد",
+      "palNotAvailable": "این پَل در حال حاضر برای خرید در دسترس نیست.",
+      "checkoutFailed": "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
     }
   },
   "validation": {
@@ -1065,7 +1113,48 @@
     "readyToChat": "آماده چت هستید؟ آخرین مدل استفاده‌شده را بارگذاری کنید.",
     "pleaseLoadModel": "برای چت یک مدل بارگذاری کنید.",
     "multimodalNotEnabled": "قابلیت چندرسانه‌ای برای این مدل فعال نیست. تصاویر نمایش داده می‌شوند اما توسط هوش مصنوعی پردازش نمی‌شوند.",
-    "cannotSendWithoutModel": "ابتدا یک مدل بارگذاری کنید"
+    "cannotSendWithoutModel": "ابتدا یک مدل بارگذاری کنید",
+    "toolCallTruncated": "فراخوانی ابزار قطع شد — احتمالاً فضای مدل تمام شده. context بزرگ‌تری امتحان کنید یا درخواست کوچک‌تری بدهید.",
+    "toolCompatWarning": "ممکن است این مدل از فراخوانی ابزار پشتیبانی نکند. نتایج ممکن است قابل اعتماد نباشند.",
+    "softCapWarning": "برای بهترین عملکرد، یک چت جدید شروع کنید.",
+    "contextWarning": "این مکالمه طولانی شده و ممکن است به‌زودی فضایش تمام شود.",
+    "contextRemoteHedged": "ممکن است این پاسخ قطع شده باشد. دوباره ارسال کنید یا درخواست را کوتاه‌تر کنید.",
+    "contextFull": "فضای مکالمه تمام شد. یک چت جدید شروع کنید یا اندازه context را افزایش دهید.",
+    "contextFullEscalated": "هنوز فضا کافی نیست. یک چت جدید شروع کنید یا برای ادامه اندازه context را افزایش دهید.",
+    "contextFullHeavyTalent": "فضای مکالمه تمام شد — {{talent}} معمولاً به فضای بیشتری نیاز دارد. یک چت جدید شروع کنید یا اندازه context را افزایش دهید.",
+    "contextBannerDismiss": "بستن",
+    "contextNewChat": "چت جدید",
+    "contextIncrease": "افزایش context",
+    "contextMoreRoom": "فضای بیشتر",
+    "increaseContextTitle": "به این چت فضای بیشتری بدهید",
+    "increaseContextBody": "فضا همان حافظه کاری مدل است — اینکه چه مقدار از این چت را همزمان می‌تواند به‌خاطر بسپارد. فضای بیشتر یعنی چت‌های طولانی‌تر قبل از اینکه پاسخ‌ها قطع شوند.",
+    "increaseContextTokensUnit": "توکن",
+    "increaseContextWordsRam": "~{{words}} کلمه · ≈{{ram}} RAM",
+    "increaseContextFitsChip": "جا می‌شود",
+    "increaseContextTightChip": "محدود",
+    "increaseContextWontFitChip": "جا نمی‌شود",
+    "increaseContextFitsStatus": "برای این دستگاه مناسب است.",
+    "increaseContextFitsUnconstrainedStatus": "RAM فراوان است — تنها محدودیت از سمت مدل است.",
+    "increaseContextTightStatus": "فراتر از ~{{tokens}}، ممکن است حافظه این دستگاه کم بیاید و کند شود. با این حال می‌تواند تلاش کند.",
+    "increaseContextWontFitStatus": "~{{tokens}} احتمالاً در حافظه این دستگاه جا نمی‌شود. اندازه کوچک‌تری انتخاب کنید.",
+    "increaseContextModelMax": "{{tokens}} · حداکثر مدل",
+    "increaseContextHedge": "بارگذاری مجدد چند ثانیه طول می‌کشد. چیزی از چت شما از بین نمی‌رود.",
+    "increaseContextAdvanced": "پیشرفته",
+    "increaseContextAdvancedBody": "اندازه context برای این چت: {{from}} ← {{to}} توکن (حداکثر مدل {{max}}). محدودیت دستگاه یک تخمین است و با بارگذاری موفق context‌های بزرگ‌تر افزایش می‌یابد.",
+    "increaseContextSliderA11yLabel": "اندازه context",
+    "increaseContextSliderA11yValue": "{{tokens}} توکن",
+    "increaseContextConfirmSize": "تنظیم روی {{size}}",
+    "increaseContextReloadingShort": "در حال بارگذاری مجدد…",
+    "increaseContextNoFitBody": "این دستگاه نمی‌تواند context بزرگ‌تری برای این مدل جا دهد. برای ادامه یک چت جدید شروع کنید.",
+    "increaseContextCancel": "الان نه",
+    "increaseContextReloading": "در حال بارگذاری مجدد مدل با context بزرگ‌تر…",
+    "increaseContextSuccess": "context به {{target}} توکن افزایش یافت.",
+    "increaseContextFailure": "افزایش اندازه context ممکن نشد. تنظیم قبلی شما بازگردانده شد.",
+    "palLoadHint": "این پَل معمولاً به فضای بیشتری از اندازه context فعلی نیاز دارد.",
+    "generatingPreview": "در حال تولید پیش‌نمایش… ({{tokens}} توکن)",
+    "generatingPreviewPending": "در حال تولید پیش‌نمایش…",
+    "toolUsedChip": "از {{name}} استفاده شد",
+    "toolErrorBlock": "{{name}} ناموفق بود"
   },
   "benchmark": {
     "title": "بنچمارک",
@@ -1263,5 +1352,13 @@
     "voicesEmptyState": "هیچ صدایی یافت نشد.",
     "kokoroDeviceNote": "ممکن است برخی صداها روی همه دستگاه‌ها کار نکنند.",
     "insufficientStorage": "فضای کافی نیست — برای نصب این موتور {{requiredMb}} MB فضا آزاد کنید ({{freeMb}} MB در دسترس است)."
+  },
+  "htmlPreview": {
+    "defaultTitle": "پیش‌نمایش",
+    "showPreview": "نمایش پیش‌نمایش رندرشده",
+    "showCode": "نمایش کد HTML",
+    "copyHtml": "کپی HTML",
+    "closePreview": "بستن پیش‌نمایش",
+    "openFullscreen": "باز کردن تمام‌صفحه: {{title}}"
   }
 }
