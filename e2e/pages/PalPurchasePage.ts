@@ -48,12 +48,6 @@ export class PalPurchasePage extends BasePage {
   private get authSubmit(): string {
     return byTestId('auth-submit-button');
   }
-  private get disclosureContinue(): string {
-    return byTestId('disclosure-continue-button');
-  }
-  private get disclosureCancel(): string {
-    return byTestId('disclosure-cancel-button');
-  }
 
   /** Open the premium pal's detail sheet from the browse list. */
   async openPalDetail(palId: string, timeout = 20000): Promise<void> {
@@ -81,7 +75,9 @@ export class PalPurchasePage extends BasePage {
   /** Dismiss the post-submit confirmation alert ("OK") if one appears. */
   async dismissAlertIfPresent(timeout = 4000): Promise<void> {
     const ok = isAndroid()
-      ? browser.$('//*[@resource-id="android:id/button1" or @text="OK" or @text="Ok"]')
+      ? browser.$(
+          '//*[@resource-id="android:id/button1" or @text="OK" or @text="Ok"]',
+        )
       : browser.$(
           '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "OK" OR label == "Ok")',
         );
@@ -105,7 +101,10 @@ export class PalPurchasePage extends BasePage {
   ): Promise<void> {
     for (let i = 0; i < attempts; i++) {
       await this.tapBuy();
-      const authOpened = await this.isElementDisplayed(this.emailInputProbe, 4000);
+      const authOpened = await this.isElementDisplayed(
+        this.emailInputProbe,
+        4000,
+      );
       if (!authOpened) {
         return; // checkout started
       }
@@ -116,7 +115,9 @@ export class PalPurchasePage extends BasePage {
       );
       await browser.pause(2500); // let the session + observable state settle
     }
-    throw new Error('Buy kept routing to sign-in; authentication never settled');
+    throw new Error(
+      'Buy kept routing to sign-in; authentication never settled',
+    );
   }
 
   /**
@@ -135,25 +136,6 @@ export class PalPurchasePage extends BasePage {
     }
   }
 
-  /**
-   * Android shows a required pre-purchase external-offers disclosure before the
-   * Custom Tab opens. Consent to it; a no-op on iOS (no gate) or if absent.
-   * Reaching this consent button proves the buy press routed into the in-app
-   * checkout flow (the native auth-session module is registered).
-   */
-  async acceptDisclosureIfPresent(timeout = 8000): Promise<void> {
-    const shown = await this.isElementDisplayed(this.disclosureContinue, timeout);
-    if (!shown) {
-      return;
-    }
-    await this.tap(this.disclosureContinue);
-  }
-
-  /** Decline the Android disclosure gate (cancel = no checkout). */
-  async declineDisclosure(timeout = 8000): Promise<void> {
-    await this.tap(this.disclosureCancel, timeout);
-  }
-
   /** The reconcile poll flips Buy -> Download once ownership is granted. */
   async waitForDownloadButton(timeout = 30000): Promise<void> {
     await this.waitForElement(this.downloadButton, timeout);
@@ -164,8 +146,7 @@ export class PalPurchasePage extends BasePage {
     return (
       adb('shell', 'dumpsys', 'activity', 'activities').match(
         /ResumedActivity.*$/m,
-      )?.[0] ??
-      ''
+      )?.[0] ?? ''
     );
   }
 
