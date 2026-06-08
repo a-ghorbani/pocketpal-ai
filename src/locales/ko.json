@@ -162,7 +162,41 @@
     "generatingPreview": "미리보기 생성 중… ({{tokens}} 토큰)",
     "generatingPreviewPending": "미리보기 생성 중…",
     "toolUsedChip": "{{name}} 사용됨",
-    "toolErrorBlock": "{{name}} 실패함"
+    "toolErrorBlock": "{{name}} 실패함",
+    "contextWarning": "대화가 길어지고 있어 곧 공간이 부족해질 수 있습니다.",
+    "contextRemoteHedged": "이 응답이 중간에 끊겼을 수 있습니다. 다시 보내거나 요청을 줄여 보세요.",
+    "contextFull": "대화 공간이 가득 찼습니다. 새 채팅을 시작하거나 컨텍스트 크기를 늘려 주세요.",
+    "contextFullEscalated": "여전히 공간이 부족합니다. 새 채팅을 시작하거나, 계속하려면 컨텍스트 크기를 늘려 주세요.",
+    "contextFullHeavyTalent": "대화 공간이 가득 찼습니다 — {{talent}}은(는) 더 많은 공간이 필요한 편입니다. 새 채팅을 시작하거나 컨텍스트 크기를 늘려 주세요.",
+    "contextBannerDismiss": "닫기",
+    "contextNewChat": "새 채팅",
+    "contextIncrease": "컨텍스트 늘리기",
+    "contextMoreRoom": "공간 늘리기",
+    "increaseContextTitle": "이 채팅에 더 많은 공간 주기",
+    "increaseContextBody": "공간은 모델의 작업 메모리로, 이 채팅을 한 번에 얼마나 기억할 수 있는지를 나타냅니다. 공간이 많을수록 응답이 끊기기 전까지 더 긴 대화를 이어갈 수 있습니다.",
+    "increaseContextTokensUnit": "토큰",
+    "increaseContextWordsRam": "약 {{words}} 단어 · 약 {{ram}} RAM",
+    "increaseContextFitsChip": "충분함",
+    "increaseContextTightChip": "빠듯함",
+    "increaseContextWontFitChip": "부족함",
+    "increaseContextFitsStatus": "이 기기에서 충분히 여유롭습니다.",
+    "increaseContextFitsUnconstrainedStatus": "RAM이 충분합니다 — 모델 자체에 의해서만 제한됩니다.",
+    "increaseContextTightStatus": "약 {{tokens}}을(를) 넘으면 이 기기의 메모리가 부족해 느려질 수 있습니다. 그래도 시도해 볼 수는 있습니다.",
+    "increaseContextWontFitStatus": "약 {{tokens}}은(는) 이 기기의 메모리에 맞지 않을 가능성이 높습니다. 더 작은 크기를 선택해 주세요.",
+    "increaseContextModelMax": "{{tokens}} · 모델 최대",
+    "increaseContextHedge": "다시 불러오는 데 몇 초가 걸립니다. 채팅 내용은 사라지지 않습니다.",
+    "increaseContextAdvanced": "고급",
+    "increaseContextAdvancedBody": "이 채팅의 컨텍스트 크기: {{from}} → {{to}} 토큰 (모델 최대 {{max}}). 기기 한도는 추정치이며, 더 큰 컨텍스트가 성공적으로 로드될수록 높아집니다.",
+    "increaseContextSliderA11yLabel": "컨텍스트 크기",
+    "increaseContextSliderA11yValue": "{{tokens}} 토큰",
+    "increaseContextConfirmSize": "{{size}}(으)로 설정",
+    "increaseContextReloadingShort": "다시 불러오는 중…",
+    "increaseContextNoFitBody": "이 기기는 이 모델에 더 큰 컨텍스트를 적용할 수 없습니다. 계속하려면 새 채팅을 시작해 주세요.",
+    "increaseContextCancel": "나중에",
+    "increaseContextReloading": "더 큰 컨텍스트로 모델을 다시 불러오는 중…",
+    "increaseContextSuccess": "컨텍스트가 {{target}} 토큰으로 늘어났습니다.",
+    "increaseContextFailure": "컨텍스트 크기를 늘릴 수 없습니다. 이전 설정으로 복원되었습니다.",
+    "palLoadHint": "이 Pal은 현재 컨텍스트 크기보다 더 많은 공간이 필요한 편입니다."
   },
   "common": {
     "cancel": "취소",
@@ -628,7 +662,7 @@
       },
       "greeting": {
         "removePromptLabel": "프롬프트 제거",
-        "sectionLabel": "환영합니다",
+        "sectionLabel": "인사말",
         "textLabel": "환영 메시지",
         "textPlaceholder": "채팅 시작 전 이 Pal이 뭐라고 말해야 할까요?",
         "suggestedPromptsLabel": "제안된 프롬프트",
@@ -965,6 +999,15 @@
       "cannotDeleteInUse": "이 프로젝션 모델은 다운로드된 LLM 모델에서 사용됩니다:",
       "dependentModels": "종속된 모델:",
       "visionWillBeDisabled": "이 모델들의 시각 기능이 비활성화됩니다."
+    },
+    "hubRun": {
+      "title": "모델 다운로드",
+      "resolving": "모델 정보 불러오는 중…",
+      "cancel": "취소",
+      "retry": "다시 시도",
+      "invalidLinkTitle": "유효하지 않은 링크",
+      "invalidLinkMessage": "이 Hugging Face 링크에 모델이나 파일이 없거나 유효하지 않습니다.",
+      "resolveError": "모델 정보를 불러올 수 없습니다. 연결 상태를 확인하고 다시 시도해 주세요."
     }
   },
   "screenTitles": {
@@ -1195,7 +1238,13 @@
       "failedToDownload": "Pal 다운로드 실패",
       "premiumPalMessage": "이 Pal은 프리미엄입니다.\n• 이미 Palshub 계정으로 잠금을 해제하셨다면, 간단히 로그인하여 접근할 수 있습니다.\n• 아직 잠금 해제하지 않으셨나요? palshub.ai 앱을 방문하여 자세히 알아보세요.",
       "notAvailable": "비어있음",
-      "buyOnPalshub": "Palshub에서 구매하기"
+      "buyOnPalshub": "Palshub에서 구매하기",
+      "finalizingPurchase": "구매를 마무리하는 중…",
+      "processingPurchase": "처리 중 — 곧 잠금이 해제됩니다.",
+      "checkoutSessionExpired": "세션이 만료되었습니다. 계속하려면 다시 로그인해 주세요.",
+      "signInAgain": "다시 로그인",
+      "palNotAvailable": "이 Pal은 현재 구매할 수 없습니다.",
+      "checkoutFailed": "문제가 발생했습니다. 다시 시도해 주세요."
     }
   },
   "video": {
