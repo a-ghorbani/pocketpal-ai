@@ -4,9 +4,9 @@
     "description": "Приложение, которое приносит языковые модели прямо в ваш телефон. Работает на базе llama.cpp и llama.rn.",
     "supportProject": "Поддержать проект",
     "supportProjectDescription": "Если вам нравится PocketPal AI, поддержите разработчиков:",
-    "githubButton": "Поставьте звезду на GitHub",
+    "githubButton": "Поставить звезду на GitHub",
     "orText": "или",
-    "sponsorButton": "Станьте спонсором",
+    "sponsorButton": "Стать спонсором",
     "versionCopiedTitle": "Версия скопирована",
     "versionCopiedDescription": "Информация о версии скопирована в буфер обмена",
     "orBy": "или через",
@@ -104,7 +104,7 @@
       "errors": {
         "networkRetry": "Проверить соединение и повторить",
         "appCheckRetry": "Отправить повторно",
-        "serverRetry": "Повторить попытку позже",
+        "serverRetry": "Попробуйте ещё раз позже",
         "genericRetry": "Повторить",
         "failedToSubmit": "Не удалось отправить результаты тестирования"
       }
@@ -151,11 +151,52 @@
     "goToModels": "Перейти к моделям",
     "readyToChat": "Хотите начать общение? Загрузите последнюю использованную модель.",
     "pleaseLoadModel": "Загрузите модель, чтобы начать общение.",
-    "conversationReset": "Диалог сброшен!",
+    "conversationReset": "Контекст диалога сброшен!",
     "modelNotLoaded": "Модель не загружена. Пожалуйста, инициализируйте модель.",
     "completionFailed": "Завершение не удалось: ",
     "multimodalNotEnabled": "Мультимодальность для этой модели не включена. Изображения будут отображаться, но не будут обрабатываться ИИ.",
-    "cannotSendWithoutModel": "Загрузите модель перед началом работы"
+    "cannotSendWithoutModel": "Загрузите модель перед началом работы",
+    "toolCallTruncated": "Вызов инструмента прерван – вероятно, у модели закончилась рабочая память. Попробуйте использовать более широкий контекст или более короткий запрос.",
+    "toolCompatWarning": "Эта модель может не поддерживать вызовы инструментов. Результаты могут быть недостоверными.",
+    "softCapWarning": "Начните новый чат для лучшей производительности.",
+    "generatingPreview": "Генерация предпросмотра… ({{tokens}} ток.)",
+    "generatingPreviewPending": "Генерация предпросмотра…",
+    "toolUsedChip": "использовал {{name}}",
+    "toolErrorBlock": "{{name}} завершилось с ошибкой",
+    "contextWarning": "Этот контекст диалога становится слишком длинным, и в рабочей памяти модели может скоро закончиться место.",
+    "contextRemoteHedged": "Этот ответ мог быть обрезан. Попробуйте отправить запрос еще раз или сократите его.",
+    "contextFull": "В рабочей памяти модели не хватило места для контекста диалога. Начните новый чат или увеличьте размер контекста.",
+    "contextFullEscalated": "Всё ещё не хватает рабочей памяти модели. Начните новый чат или увеличьте размер контекста, чтобы продолжить работу.",
+    "contextFullHeavyTalent": "В рабочей памяти модели не хватило места для контекста диалога – {{talent}} обычно требует больше. Начните новый чат или увеличьте размер контекста.",
+    "contextBannerDismiss": "Отклонить",
+    "contextNewChat": "Новый чат",
+    "contextIncrease": "Увеличить контекст",
+    "contextMoreRoom": "Больше рабочей памяти",
+    "increaseContextTitle": "Дать чату больше рабочей памяти",
+    "increaseContextBody": "Рабочая память модели – это объем информации данного чата, который она может сохранять в памяти одновременно. Больше рабочей памяти означает более длинные чаты, прежде чем сообщения будут обрезаны.",
+    "increaseContextTokensUnit": "токены",
+    "increaseContextWordsRam": "~{{words}} слов · ≈{{ram}} ОЗУ",
+    "increaseContextFitsChip": "Подходит",
+    "increaseContextTightChip": "Впритык",
+    "increaseContextWontFitChip": "Не поместится",
+    "increaseContextFitsStatus": "Подходит для этого устройства.",
+    "increaseContextFitsUnconstrainedStatus": "Объём ОЗУ достаточен – ограничивается только моделью.",
+    "increaseContextTightStatus": "При превышении ~{{tokens}}, у этого устройства может закончиться память, что приведет к замедлению его работы. Всё ещё можно попробовать.",
+    "increaseContextWontFitStatus": "~{{tokens}}, вероятно, не поместятся в памяти этого устройства. Выберите размер поменьше.",
+    "increaseContextModelMax": "{{tokens}} · макс. модель",
+    "increaseContextHedge": "Перезагрузка займёт несколько секунд. Ничего из вашего чата не потеряется.",
+    "increaseContextAdvanced": "Дополнительно",
+    "increaseContextAdvancedBody": "Размер контекста для этого чата: {{from}} → {{to}} токенов (макс. модель {{max}}). Лимит устройства является оценочным показателем и увеличивается по мере успешной загрузки более объёмных контекстов.",
+    "increaseContextSliderA11yLabel": "Размер контекста",
+    "increaseContextSliderA11yValue": "{{tokens}} токенов",
+    "increaseContextConfirmSize": "Установлено на {{size}}",
+    "increaseContextReloadingShort": "Загружается…",
+    "increaseContextNoFitBody": "Это устройство не может вместить более широкий контекст для данной модели. Начните новый чат, чтобы продолжить.",
+    "increaseContextCancel": "Не сейчас",
+    "increaseContextReloading": "Перезагрузка модели с увеличенным контекстом…",
+    "increaseContextSuccess": "Контекст увеличен до {{target}} токенов.",
+    "increaseContextFailure": "Не удалось увеличить размер контекста. Предыдущие настройки были восстановлены.",
+    "palLoadHint": "Этому Pal обычно требуется больше рабочей памяти модели, чем позволяет текущий размер контекста."
   },
   "common": {
     "cancel": "Отмена",
@@ -226,7 +267,7 @@
     },
     "chatEmptyPlaceholder": {
       "noModelsTitle": "Нет доступных моделей",
-      "noModelsDescription": "Загрузите модель, чтобы начать общение с PocketPal",
+      "noModelsDescription": "Загрузите модель, чтобы начать общение в PocketPal",
       "noModelsButton": "Загрузить модель",
       "activateModelTitle": "Активируйте модель",
       "activateModelDescription": "Выберите и загрузите модель. После этого, нажмите 'Загрузить' рядом с моделью и начните общение.",
@@ -467,7 +508,7 @@
     },
     "contentReportSheet": {
       "title": "Жалоба на контент",
-      "privacyNote": "Мы не передаем содержимое ваших сообщений или детали беседы. Пожалуйста, опишите конкретную проблему, с которой вы столкнулись.",
+      "privacyNote": "Мы не передаем содержимое сообщений или детали контекста диалога. Пожалуйста, опишите конкретную проблему, с которой вы столкнулись.",
       "categoryLabel": "Категория",
       "selectCategory": "Выберите категорию",
       "categories": {
@@ -482,18 +523,18 @@
       "includeModelInfo": "Включить данные о модели",
       "includeModelInfoDescription": "Добавить название и ID модели для помощи в расследовании",
       "noActiveModelNote": "Нет активной модели",
-      "submit": "Отправить жалобу",
+      "submit": "Отправить отчёт",
       "validation": {
         "title": "Недостаточно данных",
         "message": "Пожалуйста, выберите категорию и добавьте описание."
       },
       "success": {
-        "title": "Жалоба отправлена",
+        "title": "Отчёт отправлен",
         "message": "Спасибо. Мы рассмотрим ваше сообщение и примем меры."
       },
       "error": {
         "title": "Ошибка",
-        "message": "Не удалось отправить жалобу. Попробуйте ещё раз."
+        "message": "Не удалось отправить отчёт. Попробуйте ещё раз."
       }
     },
     "modelErrorReportSheet": {
@@ -561,7 +602,7 @@
       "tokenDisabledMessage": "У вас задан токен Hugging Face, но он отключен в настройках. Для загрузки этой модели требуется токен. Включите токен, чтобы продолжить.",
       "enableAndRetry": "Включить и повторить",
       "goToSettings": "В настройки",
-      "tryAgain": "Ещё раз",
+      "tryAgain": "Повторить",
       "viewOnHuggingFace": "Открыть на HF ↗"
     },
     "hfTokenSheet": {
@@ -607,6 +648,26 @@
         "nameRequired": "Требуется имя",
         "generatingPromptRequired": "Требуется генерирующий промпт при использовании ИИ-промпта.",
         "promptModelRequired": "Требуется модель генерации промпта при использовании ИИ-промпта"
+      },
+      "talents": "Таланты",
+      "talentNames": {
+        "render_html": "Предпросмотр HTML",
+        "calculate": "Математические выражения",
+        "datetime": "Дата и время"
+      },
+      "talentDescriptions": {
+        "render_html": "Отображать HTML-документы встроенно в чате",
+        "calculate": "Вычисление математических выражений",
+        "datetime": "Получить текущую дату и время"
+      },
+      "greeting": {
+        "sectionLabel": "Приветствие",
+        "textLabel": "Приветственное сообщение",
+        "textPlaceholder": "Что должен написать этот Pal в пустом чате?",
+        "suggestedPromptsLabel": "Рекомендуемые промпты",
+        "addPromptButton": "Добавить промпт",
+        "promptPlaceholder": "Короткий промпт для быстрой команды",
+        "removePromptLabel": "Удалить промпт"
       }
     },
     "lookiePalSheet": {
@@ -641,13 +702,26 @@
     "bubble": {
       "msPerToken": "{{value}} мс/ток",
       "tokensPerSec": "{{value}} ток/сек",
-      "ttft": "{{value}} мс TTFT"
+      "ttft": "{{value}} мс TTFT",
+      "interrupted": "Прервано",
+      "truncated": "Прервано – вероятно, контекст исчерпан"
+    },
+    "pendingIndicator": {
+      "preparingTool": "Подготовка инструмента",
+      "buildingPage": "Создание страницы",
+      "calculating": "Вычисление",
+      "lookingUpTime": "Определение времени",
+      "stopping": "Остановка…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} ток.",
+      "elapsed": "{{seconds}} сек."
     }
   },
   "feedback": {
     "title": "Оставить отзыв",
     "description": "Ваш голос важен! Расскажите, как PocketPal AI помогает вам и что мы можем улучшить, чтобы сделать его ещё более полезным.",
-    "shareThoughtsButton": "Поделиться мнением",
+    "shareThoughtsButton": "Поделитесь мнением",
     "useCase": {
       "label": "Для чего вы используете PocketPal AI?",
       "placeholder": "например: саммаризация, ролевые игры, код и т.д."
@@ -925,6 +999,15 @@
       "cannotDeleteInUse": "Эта модель проекции используется загруженными LLM-моделями:",
       "dependentModels": "Зависимые модели:",
       "visionWillBeDisabled": "Поддержка зрения будет отключена для этих моделей."
+    },
+    "hubRun": {
+      "title": "Загрузить модель",
+      "resolving": "Загрузка сведений о модели…",
+      "cancel": "Отмена",
+      "retry": "Повторить",
+      "invalidLinkTitle": "Недействительная ссылка",
+      "invalidLinkMessage": "Эта ссылка на Hugging Face отсутствует или содержит неверную модель или файл.",
+      "resolveError": "Не удалось загрузить сведения о модели. Проверьте подключение и попробуйте ещё раз."
     }
   },
   "screenTitles": {
@@ -1058,7 +1141,10 @@
     "removeRemoteModel": "Удалить {{modelName}} ({{serverName}})?",
     "retryConnection": "Повторить",
     "enterUrlManually": "Введите URL вручную",
-    "manageServers": "Управление серверами"
+    "manageServers": "Управление серверами",
+    "ttsAvailability": "Голосовой синтез",
+    "ttsAvailabilityDescription": "Озвучивать ответы ассистента.",
+    "ttsAvailabilityLowMemoryWarning": "Недостаточно памяти на вашем устройстве – может работать нестабильно."
   },
   "storage": {
     "checkFailed": "Не удалось проверить хранилище",
@@ -1152,7 +1238,13 @@
       "failedToDownload": "Не удалось загрузить Pal",
       "premiumPalMessage": "Это Премиум Pal.\n• Если вы уже разблокировали его с помощью своей учетной записи Palshub, просто войдите в систему, чтобы получить полную информацию.\n• Ещё не разблокировали? Посетите приложение palshub.ai, чтобы узнать больше.",
       "notAvailable": "Н/Д",
-      "buyOnPalshub": "Купить на Palshub"
+      "buyOnPalshub": "Купить на Palshub",
+      "finalizingPurchase": "Завершение покупки…",
+      "processingPurchase": "Обработка – доступ будет открыт в ближайшее время.",
+      "checkoutSessionExpired": "Ваша сессия истекла. Войдите снова, чтобы продолжить.",
+      "signInAgain": "Войти снова",
+      "palNotAvailable": "Этот Pal сейчас недоступен для покупки.",
+      "checkoutFailed": "Что-то пошло не так. Попробуйте ещё раз."
     }
   },
   "camera": {
@@ -1221,11 +1313,11 @@
   "voiceAndSpeech": {
     "sectionTitle": "Голос и речь",
     "voiceRowTitle": "Голос",
-    "notSet": "Не установлено",
+    "notSet": "Не задан",
     "previewButton": "Предпросмотр",
     "stopPreviewButton": "Остановить предпросмотр",
     "voicesTitle": "Голоса",
-    "voicesEmptyHint": "Нажмите на любой голос, чтобы установить и использовать его. Или выберите системный голос - они доступны всегда.",
+    "voicesEmptyHint": "Нажмите на любой голос, чтобы установить и использовать его. Или выберите системный голос – они доступны всегда.",
     "supertonicStepsLabel": "Качество (шаги диффузии)",
     "toggleAutoSpeakLabel": "Переключить автоозвучивание",
     "openSettingsLabel": "Настройки TTS",
@@ -1238,14 +1330,14 @@
     "engineChipSupertonic": "Supertonic",
     "engineChipSystem": "Система",
     "stepsCount": "{{steps}} шаг(ов)",
-    "engineKittenTagline": "Минимум ресурсов. Надежно. Подходит для старых устройств.",
+    "engineKittenTagline": "Минимум ресурсов. Надёжно. Подходит для старых устройств.",
     "engineKokoroTagline": "Высокое качество. Медленный запуск. Некоторые голоса могут быть недоступны на вашем устройстве.",
     "engineSupertonicTagline": "Быстрый запуск. Использует больше ОЗУ. Возможны пропуски слов.",
     "engineSystemTagline": "Системные голоса ОС. Всегда доступны, установка не требуется.",
     "engineSystemTitleIos": "Голоса iOS",
     "engineSystemTitleAndroid": "Голоса Android",
     "engineSystemTier": "всегда доступны",
-    "engineTierLightest": "самые легкие",
+    "engineTierLightest": "лёгкие",
     "engineTierBestQuality": "макс. качество",
     "engineTierFastestStart": "быстрый запуск",
     "engineSpecsLine": "{{voices}} голосов · {{sizeMb}} МБ · ~{{ramMb}} МБ ОЗУ",
@@ -1256,9 +1348,17 @@
     "engineRemoveConfirm": "Удалить",
     "engineInstallCta": "Установить · {{sizeMb}} МБ",
     "engineDownloadingLabel": "Загрузка… {{pct}}% · {{mbDone}} / {{sizeMb}} МБ",
-    "engineRetryCta": "Ещё раз",
+    "engineRetryCta": "Повторить",
     "voicesEmptyState": "Голоса не найдены.",
     "kokoroDeviceNote": "Некоторые голоса могут быть недоступны на вашем устройстве.",
-    "insufficientStorage": "Недостаточно места - освободите {{requiredMb}} МБ для установки этого движка (доступно {{freeMb}} МБ)."
+    "insufficientStorage": "Недостаточно места – освободите {{requiredMb}} МБ для установки этого движка (доступно {{freeMb}} МБ)."
+  },
+  "htmlPreview": {
+    "defaultTitle": "Предпросмотр",
+    "showPreview": "Показать рендеринг предпросмотра",
+    "showCode": "Показать HTML-код",
+    "copyHtml": "Копировать HTML",
+    "closePreview": "Закрыть предпросмотр",
+    "openFullscreen": "Открыть во весь экран: {{title}}"
   }
 }

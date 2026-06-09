@@ -155,7 +155,48 @@
     "readyToChat": "準備聊天？載入上一次使用的模型。",
     "pleaseLoadModel": "載入模型以聊天。",
     "multimodalNotEnabled": "此模型未啟用多模態功能。圖片將會顯示，但不會被 AI 處理。",
-    "cannotSendWithoutModel": "請先載入模型"
+    "cannotSendWithoutModel": "請先載入模型",
+    "toolCallTruncated": "工具呼叫中斷 — 模型可能已達到空間限制。請嘗試使用更大的上下文或更小的請求。",
+    "toolCompatWarning": "本模型可能不支援工具呼叫。結果可能不可靠。",
+    "softCapWarning": "為獲得最佳表現，請開始一個新的聊天室。",
+    "generatingPreview": "正在生成預覽... ({{tokens}} 個詞元)",
+    "generatingPreviewPending": "正在生成預覽…",
+    "toolUsedChip": "使用了 {{name}}",
+    "toolErrorBlock": "{{name}} 失敗",
+    "contextWarning": "此對話內容過長，可能很快就會達到上限。",
+    "contextRemoteHedged": "此回覆可能被截斷。請嘗試重新發送或縮短請求。",
+    "contextFull": "對話內容已達上限。請開始新對話或增加內容長度。",
+    "contextFullEscalated": "內容仍已達上限。請開始新對話，或增加內容長度以繼續進行。",
+    "contextFullHeavyTalent": "對話內容已達上限 — {{talent}} 傾向於需要更多內容。請開始新對話或增加內容長度。",
+    "contextBannerDismiss": "略過",
+    "contextNewChat": "新對話",
+    "contextIncrease": "增加內容長度",
+    "contextMoreRoom": "更多空間",
+    "increaseContextTitle": "給此對話更多空間",
+    "increaseContextBody": "空間是模型的運作記憶 — 指它一次能記住此對話的內容量。更多的空間代表在回覆被截斷前可以進行更長的對話。",
+    "increaseContextTokensUnit": "Token",
+    "increaseContextWordsRam": "約 {{words}} 字 · 約 {{ram}} RAM",
+    "increaseContextFitsChip": "符合要求",
+    "increaseContextTightChip": "空間不足",
+    "increaseContextWontFitChip": "無法容納",
+    "increaseContextFitsStatus": "此裝置運行順暢。",
+    "increaseContextFitsUnconstrainedStatus": "充足的 RAM — 僅受限於模型。",
+    "increaseContextTightStatus": "超過 ~{{tokens}} 後，此裝置可能會記憶不足並變慢。系統仍可嘗試執行。",
+    "increaseContextWontFitStatus": "約 {{tokens}} 可能無法容納於此裝置的記憶體中。請選擇較小的尺寸。",
+    "increaseContextModelMax": "{{tokens}} · 模型最大值",
+    "increaseContextHedge": "重新載入需要幾秒鐘。您的對話內容不會遺失。",
+    "increaseContextAdvanced": "進階",
+    "increaseContextAdvancedBody": "此對話的內容長度：{{from}} → {{to}} tokens（模型最大值 {{max}}）。裝置限制僅為預估值，且隨著較大的內容成功載入時會增加。",
+    "increaseContextSliderA11yLabel": "內容長度",
+    "increaseContextSliderA11yValue": "{{tokens}} 詞元",
+    "increaseContextConfirmSize": "設為 {{size}}",
+    "increaseContextReloadingShort": "重新載入中…",
+    "increaseContextNoFitBody": "此裝置無法容納該模型的較大內容長度。請開始新對話以繼續。",
+    "increaseContextCancel": "現在不用",
+    "increaseContextReloading": "正在以較大的內容長度重新載入模型…",
+    "increaseContextSuccess": "內容長度已增加至 {{target}} 詞元。",
+    "increaseContextFailure": "無法增加內容長度。您的先前設定已恢復。",
+    "palLoadHint": "此夥伴傾向於需要超過目前內容長度所允許的空間。"
   },
   "common": {
     "cancel": "取消",
@@ -521,9 +562,9 @@
         "前往 huggingface.co 並登入",
         "前往設定 > 存取 Token",
         "新建一個具有「讀取」權限的新 token",
-        "複製詞元並將其貼到詞元欄位中"
+        "複製 token 並將其貼到 token 欄位中"
       ],
-      "tokenDisabledTitle": "詞元已停用",
+      "tokenDisabledTitle": "Token 已停用",
       "tokenDisabledMessage": "您設定了 Hugging Face token，但目前已停用。此模型需要一個 token 才能下載。請啟用您的 token 以繼續。",
       "enableAndRetry": "啟用並重試",
       "goToSettings": "前往設定",
@@ -544,7 +585,7 @@
         "前往 huggingface.co 並登入",
         "前往設定 > 存取 Token",
         "新建一個具有「讀取」權限的新 token",
-        "複製詞元並將其貼到下方"
+        "複製 token 並將其貼到下方"
       ],
       "getTokenLink": "從 huggingface.co 取得 token ↗",
       "error": {
@@ -573,6 +614,26 @@
         "nameRequired": "名稱是必要的",
         "generatingPromptRequired": "使用 AI 提示詞時需要生成提示詞",
         "promptModelRequired": "使用 AI 提示詞時需要提示詞生成模型"
+      },
+      "talents": "才華",
+      "talentNames": {
+        "render_html": "HTML 預覽",
+        "calculate": "數學式子",
+        "datetime": "日期與時間"
+      },
+      "talentDescriptions": {
+        "render_html": "在聊天室內行內渲染 HTML 文件",
+        "calculate": "評估數學表達式",
+        "datetime": "取得目前的日期與時間"
+      },
+      "greeting": {
+        "sectionLabel": "問候語",
+        "textLabel": "問候訊息",
+        "textPlaceholder": "此 pal 在空聊天室中該說什麼？",
+        "suggestedPromptsLabel": "建議提示詞",
+        "addPromptButton": "新增提示詞",
+        "promptPlaceholder": "用於提示按鈕的簡短提示詞",
+        "removePromptLabel": "移除提示詞"
       }
     },
     "chatView": {
@@ -601,7 +662,9 @@
     "bubble": {
       "msPerToken": "{{value}}毫秒/詞元",
       "tokensPerSec": "{{value}} 詞元/秒",
-      "ttft": "{{value}}毫秒 TTFT"
+      "ttft": "{{value}}毫秒 TTFT",
+      "interrupted": "被打斷",
+      "truncated": "中斷 — 可能為上下文容量已滿載"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -642,6 +705,17 @@
       "importPals": "匯入 pal",
       "importSuccess": "已成功匯入 {{count}} 個 pal。",
       "importError": "匯入 pal 失敗。請檢查檔案格式。"
+    },
+    "pendingIndicator": {
+      "preparingTool": "正在準備工具",
+      "buildingPage": "建置頁面",
+      "calculating": "計算中",
+      "lookingUpTime": "檢索時間",
+      "stopping": "停止…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} 個詞元",
+      "elapsed": "{{seconds}} 秒"
     }
   },
   "feedback": {
@@ -861,8 +935,8 @@
         "bos": "BOS",
         "eos": "EOS",
         "addGenerationPrompt": "新增生成提示詞",
-        "bosTokenPlaceholder": "BOS 詞元",
-        "eosTokenPlaceholder": "EOS 詞元",
+        "bosTokenPlaceholder": "BOS Token",
+        "eosTokenPlaceholder": "EOS Token",
         "systemPrompt": "系統提示詞"
       }
     },
@@ -925,6 +999,15 @@
       "cannotDeleteInUse": "此投影模型用於下載的 LLM 模型：",
       "dependentModels": "依賴模型：",
       "visionWillBeDisabled": "這些模型的視覺能力將被停用。"
+    },
+    "hubRun": {
+      "title": "下載模型",
+      "resolving": "載入模型詳情…",
+      "cancel": "取消",
+      "retry": "重試",
+      "invalidLinkTitle": "無效的連結",
+      "invalidLinkMessage": "此 Hugging Face 連結缺失，或模型/檔案無效。",
+      "resolveError": "無法載入模型詳情。請檢查您的網路連線並重試。"
     }
   },
   "screenTitles": {
@@ -1160,7 +1243,13 @@
       "failedToDownload": "下載 pal 失敗",
       "premiumPalMessage": "這是高級 Pal。\n• 如果您已使用您的 Palshub 帳戶解鎖它，只需登入即可存取完整詳細資訊。\n• 還未解鎖？請前往 palshub.ai 應用程式了解更多。",
       "notAvailable": "不適用",
-      "buyOnPalshub": "在 Palshub 上購買"
+      "buyOnPalshub": "在 Palshub 上購買",
+      "finalizingPurchase": "正在完成您的購買…",
+      "processingPurchase": "處理中 — 稍後將解鎖。",
+      "checkoutSessionExpired": "您的連線已過期。請重新登入以繼續。",
+      "signInAgain": "重新登入",
+      "palNotAvailable": "此夥伴目前無法購買。",
+      "checkoutFailed": "發生錯誤。請重試。"
     },
     "filters": {
       "myPals": "我的 Pal",
@@ -1263,5 +1352,13 @@
     "voicesEmptyState": "找不到任何語音。",
     "kokoroDeviceNote": "部分語音可能無法在所有裝置上運作。",
     "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此引擎（目前剩餘 {{freeMb}} MB）。"
+  },
+  "htmlPreview": {
+    "defaultTitle": "預覽",
+    "showPreview": "顯示渲染的預覽",
+    "showCode": "顯示 HTML 程式碼",
+    "copyHtml": "複製 HTML",
+    "closePreview": "關閉預覽",
+    "openFullscreen": "全螢幕開啟：{{title}}"
   }
 }
