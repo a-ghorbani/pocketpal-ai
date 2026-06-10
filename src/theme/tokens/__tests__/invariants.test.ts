@@ -115,6 +115,11 @@ describe('design-token grep invariants', () => {
       // screens land alongside; do not relax this allow-list without a
       // matching architecture-doc note.
       'screens/OnboardingScreens',
+      // Download overlay (banner + sheet + progress card) introduces the
+      // pal-facing "in flight" surface using the same Figma token set as
+      // onboarding; lives at app-level above the navigator.
+      'components/DownloadOverlay',
+      'components/DownloadProgressCard',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

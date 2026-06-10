@@ -128,8 +128,10 @@ export interface TokenColors {
 
   // Accent — peach pill / recommended-tier highlight (canonical Figma
   // `Color/Accent/Peach`; see `accent.peach` consumers in onboarding).
+  // `accent.greenStrong` powers the download progress-bar fill.
   accent: {
     peach: string;
+    greenStrong: string;
   };
 }
 

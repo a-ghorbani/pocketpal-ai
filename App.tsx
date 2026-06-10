@@ -30,6 +30,7 @@ import {
   HeaderLeft,
   AppWithMigration,
   TTSSetupSheet,
+  DownloadOverlay,
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
 import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
@@ -204,6 +205,7 @@ const App = observer(() => {
                       }
                     />
                     <TTSSetupSheet />
+                    <DownloadOverlay />
                   </BottomSheetModalProvider>
                 </NavigationContainer>
               </MarkdownProvider>

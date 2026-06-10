@@ -119,6 +119,7 @@ class MockModelStore {
       displayModels: computed,
       availableModels: computed,
       isDownloading: computed,
+      activeDownloads: computed,
     });
     this.refreshDownloadStatuses = jest.fn();
     this.addLocalModel = jest.fn();
@@ -209,6 +210,10 @@ class MockModelStore {
   get displayModels(): Model[] {
     // Filter out projection models for display purposes
     return this.models.filter(model => model.modelType !== 'projection');
+  }
+
+  get activeDownloads() {
+    return [];
   }
 
   get availableModels() {

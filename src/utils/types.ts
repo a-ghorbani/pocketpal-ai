@@ -344,9 +344,11 @@ export interface SemanticColors {
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
 
-  // Accent — peach pill / Recommended-tier card highlight.
+  // Accent — peach pill / Recommended-tier card highlight; greenStrong
+  // powers the download progress-bar fill.
   accent: {
     peach: string;
+    greenStrong: string;
   };
 }
 

@@ -196,6 +196,13 @@ export class DownloadManager {
     return isDownloading;
   }
 
+  /** Reactive read of the in-flight download jobs. UI surfaces depend on this. */
+  get activeJobs(): DownloadJob[] {
+    return Array.from(this.downloadJobs.values()).filter(
+      j => j.state.isDownloading,
+    );
+  }
+
   getDownloadProgress(modelId: string): number {
     const progress =
       this.downloadJobs.get(modelId)?.state.progress?.progress || 0;

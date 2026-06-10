@@ -155,6 +155,8 @@ export const lightColors: TokenColors = {
   // Accent — peach pill background (canonical Figma `Color/Accent/Peach`).
   accent: {
     peach: '#FCE7CF',
+    // Progress-bar fill (canonical Figma `Color/Green/Strong`).
+    greenStrong: '#7c8e8a',
   },
 };
 
@@ -291,5 +293,7 @@ export const darkColors: TokenColors = {
   // Accent — peach pill background (dark binding from canonical Figma).
   accent: {
     peach: '#7A4A1F',
+    // Progress-bar fill — dark binding mirrors the light token (same hue).
+    greenStrong: '#7c8e8a',
   },
 };

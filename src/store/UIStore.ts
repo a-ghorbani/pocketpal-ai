@@ -74,6 +74,11 @@ export class UIStore {
   // Per-session, in-memory only. Reset on completion. Not persisted.
   onboardingState: OnboardingState = {...INITIAL_ONBOARDING_STATE};
 
+  // Per-modelId dismissal of the download banner. Per-session — once the
+  // download completes, the entry can be cleared so a fresh ready-to-load
+  // state isn't pre-dismissed.
+  dismissedDownloadIds: string[] = [];
+
   hasWarnedToolCompat(modelId: string): boolean {
     return this.toolCompatWarnedModels.includes(modelId);
   }
@@ -234,6 +239,26 @@ export class UIStore {
     runInAction(() => {
       this.hasCompletedOnboarding = false;
       this.onboardingState = {...INITIAL_ONBOARDING_STATE};
+    });
+  }
+
+  isDownloadBannerDismissed(modelId: string): boolean {
+    return this.dismissedDownloadIds.includes(modelId);
+  }
+
+  dismissDownloadBanner(modelId: string) {
+    runInAction(() => {
+      if (!this.dismissedDownloadIds.includes(modelId)) {
+        this.dismissedDownloadIds.push(modelId);
+      }
+    });
+  }
+
+  clearDownloadBannerDismissal(modelId: string) {
+    runInAction(() => {
+      this.dismissedDownloadIds = this.dismissedDownloadIds.filter(
+        id => id !== modelId,
+      );
     });
   }
 }

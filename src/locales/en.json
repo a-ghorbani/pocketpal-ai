@@ -545,7 +545,9 @@
       "activateModelTitle": "Activate Model To Get Started",
       "activateModelDescription": "Select the model and download it. After downloading, tap Load next to the model and start chatting.",
       "activateModelButton": "Select Model",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "gettingReadyTitle": "{{name}} is getting ready",
+      "gettingReadyDescription": "We’ll let you know the moment your pal can chat. Tap the banner up top to see how it’s going."
     },
     "chatInput": {
       "inputPlaceholder": "Message",
@@ -1318,6 +1320,7 @@
   "onboarding": {
     "back": "Back",
     "skip": "Skip",
+    "skipForNow": "Skip for now",
     "splash": {
       "title": ""
     },

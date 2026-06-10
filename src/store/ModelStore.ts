@@ -198,6 +198,7 @@ class ModelStore {
       activeModel: computed,
       contextId: computed,
       remoteModels: computed,
+      activeDownloads: computed,
     });
     makePersistable(this, {
       name: 'ModelStore',
@@ -1044,6 +1045,31 @@ class ModelStore {
   getDownloadProgress = (modelId: string) => {
     return downloadManager.getDownloadProgress(modelId);
   };
+
+  /**
+   * Reactive list of in-flight downloads. Each entry carries the Model object
+   * plus the latest formatted progress strings so observers can render a
+   * banner / sheet / list row without re-deriving anything per frame.
+   */
+  get activeDownloads(): Array<{
+    modelId: string;
+    model: Model;
+    progress: number;
+    bytesDownloaded: number;
+    bytesTotal: number;
+    speedLabel: string;
+    etaLabel: string;
+  }> {
+    return downloadManager.activeJobs.map(job => ({
+      modelId: job.model.id,
+      model: job.model,
+      progress: job.state.progress?.progress ?? 0,
+      bytesDownloaded: job.state.progress?.bytesDownloaded ?? 0,
+      bytesTotal: job.state.progress?.bytesTotal ?? 0,
+      speedLabel: job.state.progress?.speed ?? '',
+      etaLabel: job.state.progress?.eta ?? '',
+    }));
+  }
 
   /**
    * Removes a model from the models list if it is not downloaded.

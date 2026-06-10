@@ -30,7 +30,9 @@ export type OnboardingChromeStep =
  * Per-step contract:
  *   - splash / unknown → hidden
  *   - 1..4             → Stepper(current=N) + Skip
- *   - 5, 6             → no Stepper, no top-right action (audio not shipped yet)
+ *   - 5                → no Stepper + Skip (matches the topic-pick screens)
+ *   - 6                → no Stepper + "Skip for now" (telegraphs that the
+ *                        deferred action is downloading, not browsing copy)
  */
 export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
   observer(({step}) => {
@@ -54,8 +56,12 @@ export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
 
     const showStepper = step >= 1 && step <= 4;
     let topRight: React.ReactNode = null;
-    if (step >= 1 && step <= 4) {
+    if (step >= 1 && step <= 5) {
       topRight = <OnboardingSkipButton label={t.skip} onPress={onSkip} />;
+    } else if (step === 6) {
+      topRight = (
+        <OnboardingSkipButton label={t.skipForNow} onPress={onSkip} />
+      );
     }
 
     return (
