@@ -88,7 +88,7 @@ export const DownloadBanner: React.FC<DownloadBannerProps> = observer(
           onPress={() => uiStore.dismissDownloadBanner(visible.modelId)}
           style={styles.dismiss}
           hitSlop={8}>
-          <XIcon width={16} height={16} stroke={theme.colors.onSurfaceVariant} />
+          <XIcon width={14} height={14} stroke={theme.colors.onSurfaceVariant} />
         </Pressable>
       </Pressable>
     );

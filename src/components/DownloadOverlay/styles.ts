@@ -6,7 +6,7 @@ export const overlayStyles = (theme: Theme, topInset: number) =>
   StyleSheet.create({
     root: {
       position: 'absolute',
-      top: topInset + 8,
+      top: topInset + 4,
       left: 16,
       right: 16,
       zIndex: 100,
@@ -18,13 +18,13 @@ export const bannerStyles = (theme: Theme) =>
     root: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: theme.spacing.sm,
+      gap: theme.spacing.s,
       backgroundColor: theme.colors.background,
       borderRadius: theme.radius.m,
       borderWidth: theme.stroke.xs,
       borderColor: theme.colors.mutedLight,
-      paddingVertical: 10,
-      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
       shadowColor: theme.colors.shadow,
       shadowOffset: {width: 0, height: 2},
       shadowOpacity: 0.06,
@@ -32,16 +32,16 @@ export const bannerStyles = (theme: Theme) =>
       elevation: 4,
     },
     avatar: {
-      width: 36,
-      height: 36,
-      borderRadius: theme.radius.s,
+      width: 26,
+      height: 26,
+      borderRadius: theme.radius.xs,
       backgroundColor: theme.colors.secondaryDefault,
       borderWidth: theme.stroke.xs,
       borderColor: theme.colors.mutedLight,
     },
     content: {
       flex: 1,
-      gap: theme.spacing.xs,
+      gap: 2,
     },
     titleRow: {
       flexDirection: 'row',
@@ -49,7 +49,7 @@ export const bannerStyles = (theme: Theme) =>
       gap: theme.spacing.s,
     },
     title: {
-      ...theme.typography.titleS,
+      ...theme.typography.uiS,
       flex: 1,
       color: theme.colors.onBackground,
     },
@@ -60,17 +60,17 @@ export const bannerStyles = (theme: Theme) =>
     track: {
       backgroundColor: theme.colors.secondaryDefault,
       borderRadius: theme.radius.xxl,
-      padding: 2,
+      padding: 1,
       overflow: 'hidden',
     },
     fill: {
-      height: 4,
+      height: 3,
       borderRadius: theme.radius.xxl,
       backgroundColor: theme.colors.accent.greenStrong,
     },
     dismiss: {
-      width: 28,
-      height: 28,
+      width: 22,
+      height: 22,
       alignItems: 'center',
       justifyContent: 'center',
     },
