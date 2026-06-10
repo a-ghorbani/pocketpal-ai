@@ -1,5 +1,5 @@
 import * as RNFS from '@dr.pogodin/react-native-fs';
-import {makeAutoObservable, observable} from 'mobx';
+import {makeAutoObservable, observable, runInAction} from 'mobx';
 import {NativeEventEmitter, Platform} from 'react-native';
 
 import {
@@ -95,9 +95,11 @@ export class DownloadManager {
         // );
 
         // Update job state
-        job.state.progress = progress;
-        job.lastBytesWritten = event.bytesWritten;
-        job.lastUpdateTime = currentTime;
+        runInAction(() => {
+          job.state.progress = progress;
+          job.lastBytesWritten = event.bytesWritten;
+          job.lastUpdateTime = currentTime;
+        });
 
         this.callbacks.onProgress?.(job.model.id, progress);
       });
@@ -111,19 +113,23 @@ export class DownloadManager {
 
         if (job) {
           // Set final state before removing
-          job.state.isDownloading = false;
-          job.state.progress = {
-            bytesDownloaded: job.state.progress?.bytesTotal || 0,
-            bytesTotal: job.state.progress?.bytesTotal || 0,
-            progress: 100,
-            speed: '0 B/s',
-            eta: '0 sec',
-            rawSpeed: 0,
-            rawEta: 0,
-          };
+          runInAction(() => {
+            job.state.isDownloading = false;
+            job.state.progress = {
+              bytesDownloaded: job.state.progress?.bytesTotal || 0,
+              bytesTotal: job.state.progress?.bytesTotal || 0,
+              progress: 100,
+              speed: '0 B/s',
+              eta: '0 sec',
+              rawSpeed: 0,
+              rawEta: 0,
+            };
+          });
           // Ensure callback is called before removing the job
           this.callbacks.onComplete?.(job.model.id);
-          this.downloadJobs.delete(job.model.id);
+          runInAction(() => {
+            this.downloadJobs.delete(job.model.id);
+          });
           console.log(`${TAG}: Removed completed job: ${job.model.id}`);
         } else {
           console.warn(
@@ -143,11 +149,15 @@ export class DownloadManager {
         );
 
         if (job) {
-          job.state.error = new Error(event.error);
-          job.state.isDownloading = false;
+          runInAction(() => {
+            job.state.error = new Error(event.error);
+            job.state.isDownloading = false;
+          });
           // Ensure callback is called before removing the job
           this.callbacks.onError?.(job.model.id, new Error(event.error));
-          this.downloadJobs.delete(job.model.id);
+          runInAction(() => {
+            this.downloadJobs.delete(job.model.id);
+          });
           console.log(`${TAG}: Removed failed job: ${job.model.id}`);
         } else {
           console.warn(
@@ -277,7 +287,9 @@ export class DownloadManager {
         lastUpdateTime: Date.now(),
       };
 
-      this.downloadJobs.set(model.id, downloadJob);
+      runInAction(() => {
+        this.downloadJobs.set(model.id, downloadJob);
+      });
       this.callbacks.onStart?.(model.id);
 
       // Create the download task
@@ -309,7 +321,9 @@ export class DownloadManager {
             rawEta: 0,
           };
 
-          downloadJob.state.progress = progress;
+          runInAction(() => {
+            downloadJob.state.progress = progress;
+          });
           this.callbacks.onProgress?.(model.id, progress);
         },
         progress: res => {
@@ -343,9 +357,11 @@ export class DownloadManager {
             rawEta: etaSeconds,
           };
 
-          job.state.progress = progress;
-          job.lastBytesWritten = res.bytesWritten;
-          job.lastUpdateTime = currentTime;
+          runInAction(() => {
+            job.state.progress = progress;
+            job.lastBytesWritten = res.bytesWritten;
+            job.lastUpdateTime = currentTime;
+          });
 
           this.callbacks.onProgress?.(model.id, progress);
         },
@@ -358,7 +374,9 @@ export class DownloadManager {
       );
 
       // Add job to map after setting jobId
-      this.downloadJobs.set(model.id, downloadJob);
+      runInAction(() => {
+        this.downloadJobs.set(model.id, downloadJob);
+      });
 
       // Wait for the download to complete
       const result = await downloadResult.promise;
@@ -368,7 +386,9 @@ export class DownloadManager {
           `${TAG}: Download completed successfully for ID: ${model.id}`,
         );
         this.callbacks.onComplete?.(model.id);
-        this.downloadJobs.delete(model.id);
+        runInAction(() => {
+          this.downloadJobs.delete(model.id);
+        });
       } else {
         console.error(
           `${TAG}: Download failed with status: ${result.statusCode} for ID: ${model.id}`,
@@ -377,13 +397,15 @@ export class DownloadManager {
       }
     } catch (error) {
       console.error(`${TAG}: Download failed for ID: ${model.id}:`, error);
-      const job = this.downloadJobs.get(model.id);
-      if (job) {
-        job.state.error =
-          error instanceof Error ? error : new Error(String(error));
-        job.state.isDownloading = false;
-      }
-      this.downloadJobs.delete(model.id);
+      runInAction(() => {
+        const job = this.downloadJobs.get(model.id);
+        if (job) {
+          job.state.error =
+            error instanceof Error ? error : new Error(String(error));
+          job.state.isDownloading = false;
+        }
+        this.downloadJobs.delete(model.id);
+      });
       this.callbacks.onError?.(
         model.id,
         error instanceof Error ? error : new Error(String(error)),
@@ -431,7 +453,9 @@ export class DownloadManager {
       console.log(`${TAG}: Download started with ID: ${response.downloadId}`);
 
       // Add job to map after getting download ID
-      this.downloadJobs.set(model.id, downloadJob);
+      runInAction(() => {
+        this.downloadJobs.set(model.id, downloadJob);
+      });
       this.callbacks.onStart?.(model.id);
     } catch (error) {
       console.error(`${TAG}: Failed to start Android download:`, {
@@ -439,13 +463,15 @@ export class DownloadManager {
         error: error instanceof Error ? error.message : String(error),
       });
 
-      const job = this.downloadJobs.get(model.id);
-      if (job) {
-        job.state.error =
-          error instanceof Error ? error : new Error(String(error));
-        job.state.isDownloading = false;
-      }
-      this.downloadJobs.delete(model.id);
+      runInAction(() => {
+        const job = this.downloadJobs.get(model.id);
+        if (job) {
+          job.state.error =
+            error instanceof Error ? error : new Error(String(error));
+          job.state.isDownloading = false;
+        }
+        this.downloadJobs.delete(model.id);
+      });
       this.callbacks.onError?.(
         model.id,
         error instanceof Error ? error : new Error(String(error)),
@@ -505,8 +531,10 @@ export class DownloadManager {
         }
 
         // Update state and remove job
-        job.state.isDownloading = false;
-        this.downloadJobs.delete(modelId);
+        runInAction(() => {
+          job.state.isDownloading = false;
+          this.downloadJobs.delete(modelId);
+        });
         console.log(`${TAG}: Removed cancelled job:`, modelId);
       } catch (err) {
         console.error(`${TAG}: Error cancelling download:`, {
@@ -599,7 +627,9 @@ export class DownloadManager {
         };
 
         // Add to downloadJobs map
-        this.downloadJobs.set(model.id, downloadJob);
+        runInAction(() => {
+          this.downloadJobs.set(model.id, downloadJob);
+        });
         console.log(
           `${TAG}: Restored download job for model: ${model.id}, progress: ${progress}%`,
         );

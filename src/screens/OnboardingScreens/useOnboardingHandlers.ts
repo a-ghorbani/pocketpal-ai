@@ -108,8 +108,13 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
     }
     uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
     if (picked) {
-      // Fire-and-forget; downloads surface via the existing Models screen.
-      modelStore.checkSpaceAndDownload(picked.id);
+      // Fire-and-forget. checkSpaceAndDownload rethrows (its caller is
+      // meant to handle failures via the snackbar); we catch here because
+      // the surface displays errors through `modelStore.downloadError`
+      // already and we'd otherwise leak an unhandled rejection on cancel.
+      modelStore.checkSpaceAndDownload(picked.id).catch(() => {
+        // intentionally swallowed — downloadError surfaces the failure.
+      });
     }
   }, []);
 

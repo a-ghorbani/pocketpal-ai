@@ -134,7 +134,7 @@ class MockModelStore {
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
     this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
-    this.checkSpaceAndDownload = jest.fn();
+    this.checkSpaceAndDownload = jest.fn().mockResolvedValue(undefined);
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
     this.addHFModel = jest.fn();
