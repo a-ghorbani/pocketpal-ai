@@ -615,10 +615,10 @@
         "generatingPromptRequired": "使用 AI 提示詞時需要生成提示詞",
         "promptModelRequired": "使用 AI 提示詞時需要提示詞生成模型"
       },
-      "talents": "才華",
+      "talents": "技能",
       "talentNames": {
         "render_html": "HTML 預覽",
-        "calculate": "數學式子",
+        "calculate": "數學算式",
         "datetime": "日期與時間"
       },
       "talentDescriptions": {
@@ -632,7 +632,7 @@
         "textPlaceholder": "此 pal 在空聊天室中該說什麼？",
         "suggestedPromptsLabel": "建議提示詞",
         "addPromptButton": "新增提示詞",
-        "promptPlaceholder": "用於提示按鈕的簡短提示詞",
+        "promptPlaceholder": "針對此建議指令（Chip）編寫簡短提示詞",
         "removePromptLabel": "移除提示詞"
       }
     },
@@ -664,7 +664,7 @@
       "tokensPerSec": "{{value}} 詞元/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
-      "truncated": "中斷 — 可能為上下文容量已滿載"
+      "truncated": "已截斷 — 可能超過顯示長度"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -720,7 +720,7 @@
   },
   "feedback": {
     "title": "送出反饋",
-    "description": "您的意見對我們非常重要！請告訴我們 PocketPal AI 如何對您有所幫助，以及我們還可以做些什麼來讓它變得更好用。",
+    "description": "請讓我們聽見您的心聲！告訴我們 PocketPal AI 對您的幫助，以及我們該如何進一步提升實用性。",
     "shareThoughtsButton": "分享您的想法",
     "useCase": {
       "label": "您正在使用 PocketPal AI 做什麼？",
