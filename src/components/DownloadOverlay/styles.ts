@@ -6,9 +6,9 @@ export const overlayStyles = (theme: Theme, topInset: number) =>
   StyleSheet.create({
     root: {
       position: 'absolute',
-      top: topInset + 4,
-      left: 16,
-      right: 16,
+      top: topInset - 4,
+      left: 50,
+      right: 45,
       zIndex: 100,
     },
   });
@@ -74,23 +74,34 @@ export const bannerStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-  });
-
-export const sheetStyles = (theme: Theme) =>
-  StyleSheet.create({
-    container: {
-      paddingHorizontal: theme.spacing.m,
-      paddingBottom: theme.spacing.l,
-      gap: theme.spacing.m,
-    },
-    row: {
+    body: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: theme.spacing.s,
     },
-    rowTitle: {
-      ...theme.typography.titleS,
-      color: theme.colors.onBackground,
+    badge: {
+      paddingHorizontal: theme.spacing.s,
+      paddingVertical: 1,
+      borderRadius: theme.radius.xxl,
+      backgroundColor: theme.colors.secondaryDefault,
     },
-    cancel: {
+    badgeText: {
+      ...theme.typography.captionS,
+      color: theme.colors.onSurfaceVariant,
+    },
+    stop: {
+      paddingHorizontal: theme.spacing.s,
+      height: 24,
+      borderRadius: theme.radius.s,
+      borderWidth: theme.stroke.xs,
       borderColor: theme.colors.mutedLight,
+      backgroundColor: theme.colors.secondaryDefault,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stopText: {
+      ...theme.typography.captionS,
+      color: theme.colors.onBackground,
     },
   });
