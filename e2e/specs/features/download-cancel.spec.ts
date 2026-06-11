@@ -9,6 +9,11 @@
  * modelStore.downloadError and pop the DownloadErrorDialog ("Download has been
  * aborted" + "Try again").
  *
+ * Flow: download a default model straight from the Models screen and cancel on
+ * the same card. Download + cancel happen on one card with no navigation, so
+ * the in-progress window is caught reliably, and the card's cancel control is a
+ * Paper Button that resolves on both platforms.
+ *
  * Usage:
  *   yarn test:ios:local --spec specs/features/download-cancel.spec.ts
  *   yarn test:android:local --spec specs/features/download-cancel.spec.ts
@@ -20,34 +25,30 @@ import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
-import {HFSearchSheet} from '../../pages/HFSearchSheet';
-import {ModelDetailsSheet} from '../../pages/ModelDetailsSheet';
 import {Selectors} from '../../helpers/selectors';
-import {TEST_MODELS, TIMEOUTS, ModelTestConfig} from '../../fixtures/models';
+import {TIMEOUTS} from '../../fixtures/models';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
-// A mid-sized model so the download stays in progress long enough to cancel
-// (the cancel happens within ~1s of the cancel button appearing, so only a
-// small fraction is ever fetched before it is aborted).
-const CANCEL_TEST_MODEL: ModelTestConfig =
-  TEST_MODELS.find(m => m.id === 'qwen3-0.6b') ?? TEST_MODELS[0];
+// First default model on the Models screen — large enough (~2.15 GB) that the
+// download stays in progress through the cancel tap. The download is aborted
+// almost immediately, so only a small fraction is ever fetched.
+const TARGET_FILE = 'gemma-2-2b-it-Q6_K.gguf';
+// Default "Available to Download" group is collapsed on first load; its
+// accordion testID uses the localized display name.
+const AVAILABLE_GROUP = 'Available to Download';
 
 describe('Download cancel', () => {
   let chatPage: ChatPage;
   let drawerPage: DrawerPage;
   let modelsPage: ModelsPage;
-  let hfSearchSheet: HFSearchSheet;
-  let modelDetailsSheet: ModelDetailsSheet;
 
   beforeEach(async () => {
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
     modelsPage = new ModelsPage();
-    hfSearchSheet = new HFSearchSheet();
-    modelDetailsSheet = new ModelDetailsSheet();
 
     await chatPage.waitForReady(TIMEOUTS.appReady);
   });
@@ -70,33 +71,41 @@ describe('Download cancel', () => {
   });
 
   it('stopping an in-progress download shows no error dialog', async () => {
-    const model = CANCEL_TEST_MODEL;
-
-    // Navigate to Models screen
+    // Navigate to the Models screen
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
     await drawerPage.navigateToModels();
     await modelsPage.waitForReady();
 
-    // Open HuggingFace search and select the model
-    await modelsPage.openHuggingFaceSearch();
-    await hfSearchSheet.waitForReady();
-    await hfSearchSheet.search(model.searchQuery);
-    await hfSearchSheet.selectModel(model.selectorText);
-    await modelDetailsSheet.waitForReady();
+    // Expand the "Available to Download" group (collapsed by default) to reveal
+    // the bundled default models.
+    const accordion = browser.$(
+      Selectors.models.modelAccordion(AVAILABLE_GROUP),
+    );
+    await accordion.waitForDisplayed({timeout: 10000});
+    await accordion.click();
 
-    // Start the download for the target file
-    await modelDetailsSheet.scrollToFile(model.downloadFile);
-    await modelDetailsSheet.tapDownloadForFile(model.downloadFile);
+    // Locate the target model card and start its download.
+    const cardContainer = browser.$(
+      Selectors.modelCard.cardContainer(TARGET_FILE),
+    );
+    await cardContainer.waitForDisplayed({timeout: 10000});
+    const downloadButton = cardContainer.$(
+      Selectors.modelCard.downloadButtonElement,
+    );
+    await downloadButton.waitForDisplayed({timeout: 10000});
+    await downloadButton.click();
 
-    // Download started → the file card swaps its download button for a cancel
-    // button. Only one download is active in this test, so the testID is
-    // unambiguous on screen.
-    const cancelButton = browser.$(Selectors.modelDetails.cancelButton);
+    // Download started → the same card swaps its download button for a cancel
+    // button. Scope to the card and the Button class so we target the clickable
+    // control, not the surrounding "cancel-button-container" wrapper.
+    const cancelButton = cardContainer.$(
+      Selectors.modelCard.cancelButtonElement,
+    );
     await cancelButton.waitForDisplayed({timeout: 15000});
     console.log('[download-cancel] download in progress, tapping cancel');
 
-    // Tap Stop/Cancel — this is the user-initiated cancellation under test.
+    // Tap Stop/Cancel — the user-initiated cancellation under test.
     await cancelButton.click();
 
     // Core assertion: NO "Download Failed" dialog appears after cancelling.
@@ -118,12 +127,13 @@ describe('Download cancel', () => {
 
     expect(dialogSeen).toBe(false);
 
-    // The cancel must actually take effect: the cancel button disappears once
-    // the download is torn down (card reverts to the idle download state).
-    await cancelButton.waitForDisplayed({
-      reverse: true,
-      timeout: 10000,
-    });
+    // The cancel must actually take effect: the card reverts to the idle
+    // download state, so the cancel control goes away. Re-query from the root
+    // each poll (a chained element would hold a stale handle once the card
+    // re-renders) and assert no cancel control remains anywhere.
+    await browser
+      .$(Selectors.modelCard.cancelButton)
+      .waitForExist({reverse: true, timeout: 15000});
 
     console.log('[download-cancel] PASS — cancel silent, no error dialog');
   });

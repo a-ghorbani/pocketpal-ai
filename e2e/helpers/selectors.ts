@@ -252,7 +252,8 @@ export const Selectors = {
     // Dynamic: model item by ID
     modelItem: (id: string): string => byTestId(`hf-model-item-${id}`),
     // Find model item by partial accessibilityLabel match (targets the TouchableOpacity)
-    modelItemByText: (text: string): string => byAccessibilityLabelContains(text),
+    modelItemByText: (text: string): string =>
+      byAccessibilityLabelContains(text),
   },
 
   // Model details/file cards
@@ -322,6 +323,22 @@ export const Selectors = {
       }
       // iOS: Use predicate string for nested element search
       return `-ios predicate string:name == "load-button"`;
+    },
+    // Download button element selector for use within a model card context
+    get downloadButtonElement(): string {
+      if (isAndroid()) {
+        return `.//android.widget.Button[contains(@resource-id, "download-button")]`;
+      }
+      return `-ios predicate string:name == "download-button"`;
+    },
+    // Cancel button element selector for use within a model card context.
+    // Filters to the Button class so it targets the clickable control rather
+    // than the surrounding "cancel-button-container" wrapper.
+    get cancelButtonElement(): string {
+      if (isAndroid()) {
+        return `.//android.widget.Button[contains(@resource-id, "cancel-button")]`;
+      }
+      return `-ios predicate string:name == "cancel-button"`;
     },
     get offloadButton(): string {
       return byTestId('offload-button');
