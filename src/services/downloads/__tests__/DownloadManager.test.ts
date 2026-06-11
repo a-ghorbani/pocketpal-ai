@@ -354,6 +354,81 @@ describe('DownloadManager', () => {
     expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
   });
 
+  it('does not surface an error when an iOS download is cancelled', async () => {
+    (Platform as any).OS = 'ios';
+
+    const iosDownloadManager = new DownloadManager();
+
+    const callbacks = {
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    };
+
+    iosDownloadManager.setCallbacks(callbacks);
+
+    // A cancel aborts the RNFS task, rejecting the download promise.
+    let rejectDownload: (reason: Error) => void = () => {};
+    const downloadPromise = new Promise((_resolve, reject) => {
+      rejectDownload = reject;
+    });
+
+    (RNFS.downloadFile as jest.Mock).mockReturnValue({
+      jobId: 321,
+      promise: downloadPromise,
+    });
+
+    const startPromise = iosDownloadManager.startDownload(
+      basicModel,
+      '/path/to/model.bin',
+    );
+
+    // Let the async setup (mkdir, job registration) settle before cancelling.
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(iosDownloadManager.isDownloading('model-1')).toBe(true);
+
+    // User taps Stop, then the aborted task rejects the download promise.
+    await iosDownloadManager.cancelDownload('model-1');
+    rejectDownload(new Error('Download has been aborted'));
+
+    await expect(startPromise).resolves.toBeUndefined();
+
+    expect(callbacks.onError).not.toHaveBeenCalled();
+    expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
+  });
+
+  it('still surfaces an error for a genuine iOS download failure', async () => {
+    (Platform as any).OS = 'ios';
+
+    const iosDownloadManager = new DownloadManager();
+
+    const callbacks = {
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    };
+
+    iosDownloadManager.setCallbacks(callbacks);
+
+    (RNFS.downloadFile as jest.Mock).mockReturnValue({
+      jobId: 654,
+      promise: Promise.reject(new Error('Network connection lost')),
+    });
+
+    await expect(
+      iosDownloadManager.startDownload(basicModel, '/path/to/model.bin'),
+    ).rejects.toThrow('Network connection lost');
+
+    expect(callbacks.onError).toHaveBeenCalledWith(
+      'model-1',
+      expect.any(Error),
+    );
+    expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
+  });
+
   it('sends the attribution User-Agent on the iOS RNFS download', async () => {
     (Platform as any).OS = 'ios';
 

@@ -852,6 +852,29 @@ describe('ModelStore', () => {
       expect(model.isDownloaded).toBe(false);
     });
 
+    it('should not set downloadError when a download is cancelled', async () => {
+      const model = {
+        ...defaultModels[0],
+        downloadUrl: 'https://example.com/model.gguf',
+        isDownloaded: false,
+        isLocal: false,
+        origin: ModelOrigin.PRESET,
+      };
+      modelStore.models = [model];
+      runInAction(() => {
+        modelStore.downloadError = null;
+      });
+
+      // A user-initiated cancel resolves startDownload without throwing, so
+      // the error surface must stay clean.
+      (downloadManager.startDownload as jest.Mock).mockResolvedValue(undefined);
+
+      await modelStore.checkSpaceAndDownload(model.id);
+
+      expect(downloadManager.startDownload).toHaveBeenCalled();
+      expect(modelStore.downloadError).toBeNull();
+    });
+
     it('should handle download failure due to insufficient space', async () => {
       const model = {
         ...defaultModels[0],
