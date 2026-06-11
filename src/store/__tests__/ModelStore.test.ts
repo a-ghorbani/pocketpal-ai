@@ -5,7 +5,10 @@ import {Alert} from 'react-native';
 
 import {defaultModels} from '../defaultModels';
 
-import {downloadManager} from '../../services/downloads';
+import {
+  downloadManager,
+  DownloadCancelledError,
+} from '../../services/downloads';
 
 import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
 import {
@@ -37,15 +40,26 @@ jest.mock('../../api/hf', () => ({
 }));
 
 // Mock the download manager
-jest.mock('../../services/downloads', () => ({
-  downloadManager: {
-    isDownloading: jest.fn(),
-    startDownload: jest.fn(),
-    cancelDownload: jest.fn(),
-    setCallbacks: jest.fn(),
-    syncWithActiveDownloads: jest.fn().mockResolvedValue(undefined),
-  },
-}));
+jest.mock('../../services/downloads', () => {
+  class MockDownloadCancelledError extends Error {
+    modelId: string;
+    constructor(modelId: string) {
+      super(`Download cancelled for ${modelId}`);
+      this.name = 'DownloadCancelledError';
+      this.modelId = modelId;
+    }
+  }
+  return {
+    DownloadCancelledError: MockDownloadCancelledError,
+    downloadManager: {
+      isDownloading: jest.fn(),
+      startDownload: jest.fn(),
+      cancelDownload: jest.fn(),
+      setCallbacks: jest.fn(),
+      syncWithActiveDownloads: jest.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 // Mock the HF store
 // jest.mock('../HFStore', () => ({
@@ -852,6 +866,75 @@ describe('ModelStore', () => {
       expect(model.isDownloaded).toBe(false);
     });
 
+    it('should not set downloadError when a download is cancelled', async () => {
+      const model = {
+        ...defaultModels[0],
+        downloadUrl: 'https://example.com/model.gguf',
+        isDownloaded: false,
+        isLocal: false,
+        origin: ModelOrigin.PRESET,
+      };
+      modelStore.models = [model];
+      runInAction(() => {
+        modelStore.downloadError = null;
+      });
+
+      // A user-initiated cancel rejects startDownload with a DownloadCancelledError;
+      // checkSpaceAndDownload must recognise it, keep the error surface clean,
+      // and not re-throw.
+      (downloadManager.startDownload as jest.Mock).mockRejectedValue(
+        new DownloadCancelledError(model.id),
+      );
+
+      await expect(
+        modelStore.checkSpaceAndDownload(model.id),
+      ).resolves.toBeUndefined();
+
+      expect(downloadManager.startDownload).toHaveBeenCalled();
+      expect(modelStore.downloadError).toBeNull();
+    });
+
+    it('does not auto-download the projection model when a vision model download is cancelled', async () => {
+      const projModel = {
+        ...defaultModels[0],
+        id: 'proj-model',
+        modelType: ModelType.PROJECTION,
+        isDownloaded: false,
+        isLocal: false,
+        origin: ModelOrigin.PRESET,
+        downloadUrl: 'https://example.com/proj.gguf',
+      };
+      const visionModel = {
+        ...defaultModels[0],
+        id: 'vision-model',
+        downloadUrl: 'https://example.com/vision.gguf',
+        isDownloaded: false,
+        isLocal: false,
+        origin: ModelOrigin.PRESET,
+        supportsMultimodal: true,
+        defaultProjectionModel: 'proj-model',
+      };
+      modelStore.models = [visionModel, projModel];
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+
+      // The main model download is cancelled by the user.
+      (downloadManager.startDownload as jest.Mock).mockRejectedValue(
+        new DownloadCancelledError(visionModel.id),
+      );
+
+      await modelStore.checkSpaceAndDownload(visionModel.id);
+
+      // Only the (cancelled) main model download was attempted — the projection
+      // model must NOT be chained off a user cancel.
+      expect(downloadManager.startDownload).toHaveBeenCalledTimes(1);
+      expect(downloadManager.startDownload).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'vision-model'}),
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(modelStore.downloadError).toBeNull();
+    });
+
     it('should handle download failure due to insufficient space', async () => {
       const model = {
         ...defaultModels[0],
@@ -872,6 +955,8 @@ describe('ModelStore', () => {
       );
 
       expect(downloadManager.startDownload).toHaveBeenCalled();
+      // Contrast with the cancel case: a genuine failure DOES surface an error.
+      expect(modelStore.downloadError).not.toBeNull();
     });
   });
 
