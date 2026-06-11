@@ -21,9 +21,8 @@ import type {
 const TAG = 'DownloadManager';
 
 /**
- * Thrown when a download promise rejects because the user cancelled it, as
- * opposed to a genuine failure. Callers use this to distinguish a user cancel
- * (no error surface, no follow-on work) from a real download error.
+ * Signals a user-cancelled download (vs. a genuine failure) so callers can
+ * suppress it: no error surface, no follow-on work.
  */
 export class DownloadCancelledError extends Error {
   constructor(public readonly modelId: string) {
@@ -386,10 +385,8 @@ export class DownloadManager {
         throw new Error(`Download failed with status: ${result.statusCode}`);
       }
     } catch (error) {
-      // A user-initiated cancel rejects this promise (RNFS.stopDownload aborts
-      // the task). That is not a failure — signal it as a distinct cancellation
-      // so callers neither surface an error nor chain follow-on work (e.g. the
-      // projection-model download for multimodal models).
+      // RNFS.stopDownload aborts the task, rejecting this promise. A user
+      // cancel is not a failure — surface it as a distinct cancellation.
       if (this.cancelledModelIds.delete(model.id)) {
         console.log(`${TAG}: Download cancelled by user for ID: ${model.id}`);
         this.downloadJobs.delete(model.id);
