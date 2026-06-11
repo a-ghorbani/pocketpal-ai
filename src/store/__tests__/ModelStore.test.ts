@@ -5,7 +5,10 @@ import {Alert} from 'react-native';
 
 import {defaultModels} from '../defaultModels';
 
-import {downloadManager, DownloadCancelledError} from '../../services/downloads';
+import {
+  downloadManager,
+  DownloadCancelledError,
+} from '../../services/downloads';
 
 import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
 import {
@@ -38,7 +41,7 @@ jest.mock('../../api/hf', () => ({
 
 // Mock the download manager
 jest.mock('../../services/downloads', () => {
-  class DownloadCancelledError extends Error {
+  class MockDownloadCancelledError extends Error {
     modelId: string;
     constructor(modelId: string) {
       super(`Download cancelled for ${modelId}`);
@@ -47,7 +50,7 @@ jest.mock('../../services/downloads', () => {
     }
   }
   return {
-    DownloadCancelledError,
+    DownloadCancelledError: MockDownloadCancelledError,
     downloadManager: {
       isDownloading: jest.fn(),
       startDownload: jest.fn(),
