@@ -364,6 +364,9 @@ export class DownloadManager {
         );
         this.callbacks.onComplete?.(model.id);
         this.downloadJobs.delete(model.id);
+        // Cancel may race with a download that already completed; clear any
+        // stale marker so it can't suppress a later genuine failure.
+        this.cancelledModelIds.delete(model.id);
       } else {
         console.error(
           `${TAG}: Download failed with status: ${result.statusCode} for ID: ${model.id}`,
