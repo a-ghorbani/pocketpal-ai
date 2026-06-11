@@ -5,7 +5,7 @@ import {Alert} from 'react-native';
 
 import {defaultModels} from '../defaultModels';
 
-import {downloadManager} from '../../services/downloads';
+import {downloadManager, DownloadCancelledError} from '../../services/downloads';
 
 import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
 import {
@@ -37,15 +37,26 @@ jest.mock('../../api/hf', () => ({
 }));
 
 // Mock the download manager
-jest.mock('../../services/downloads', () => ({
-  downloadManager: {
-    isDownloading: jest.fn(),
-    startDownload: jest.fn(),
-    cancelDownload: jest.fn(),
-    setCallbacks: jest.fn(),
-    syncWithActiveDownloads: jest.fn().mockResolvedValue(undefined),
-  },
-}));
+jest.mock('../../services/downloads', () => {
+  class DownloadCancelledError extends Error {
+    modelId: string;
+    constructor(modelId: string) {
+      super(`Download cancelled for ${modelId}`);
+      this.name = 'DownloadCancelledError';
+      this.modelId = modelId;
+    }
+  }
+  return {
+    DownloadCancelledError,
+    downloadManager: {
+      isDownloading: jest.fn(),
+      startDownload: jest.fn(),
+      cancelDownload: jest.fn(),
+      setCallbacks: jest.fn(),
+      syncWithActiveDownloads: jest.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 // Mock the HF store
 // jest.mock('../HFStore', () => ({
@@ -865,13 +876,59 @@ describe('ModelStore', () => {
         modelStore.downloadError = null;
       });
 
-      // A user-initiated cancel resolves startDownload without throwing, so
-      // the error surface must stay clean.
-      (downloadManager.startDownload as jest.Mock).mockResolvedValue(undefined);
+      // A user-initiated cancel rejects startDownload with a DownloadCancelledError;
+      // checkSpaceAndDownload must recognise it, keep the error surface clean,
+      // and not re-throw.
+      (downloadManager.startDownload as jest.Mock).mockRejectedValue(
+        new DownloadCancelledError(model.id),
+      );
 
-      await modelStore.checkSpaceAndDownload(model.id);
+      await expect(
+        modelStore.checkSpaceAndDownload(model.id),
+      ).resolves.toBeUndefined();
 
       expect(downloadManager.startDownload).toHaveBeenCalled();
+      expect(modelStore.downloadError).toBeNull();
+    });
+
+    it('does not auto-download the projection model when a vision model download is cancelled', async () => {
+      const projModel = {
+        ...defaultModels[0],
+        id: 'proj-model',
+        modelType: ModelType.PROJECTION,
+        isDownloaded: false,
+        isLocal: false,
+        origin: ModelOrigin.PRESET,
+        downloadUrl: 'https://example.com/proj.gguf',
+      };
+      const visionModel = {
+        ...defaultModels[0],
+        id: 'vision-model',
+        downloadUrl: 'https://example.com/vision.gguf',
+        isDownloaded: false,
+        isLocal: false,
+        origin: ModelOrigin.PRESET,
+        supportsMultimodal: true,
+        defaultProjectionModel: 'proj-model',
+      };
+      modelStore.models = [visionModel, projModel];
+      (downloadManager.isDownloading as jest.Mock).mockReturnValue(false);
+
+      // The main model download is cancelled by the user.
+      (downloadManager.startDownload as jest.Mock).mockRejectedValue(
+        new DownloadCancelledError(visionModel.id),
+      );
+
+      await modelStore.checkSpaceAndDownload(visionModel.id);
+
+      // Only the (cancelled) main model download was attempted — the projection
+      // model must NOT be chained off a user cancel.
+      expect(downloadManager.startDownload).toHaveBeenCalledTimes(1);
+      expect(downloadManager.startDownload).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'vision-model'}),
+        expect.anything(),
+        expect.anything(),
+      );
       expect(modelStore.downloadError).toBeNull();
     });
 

@@ -37,7 +37,7 @@ import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
-import {downloadManager} from '../services/downloads';
+import {downloadManager, DownloadCancelledError} from '../services/downloads';
 
 import {
   getHFDefaultSettings,
@@ -1009,6 +1009,12 @@ class ModelStore {
       // For vision models, automatically download the projection model
       await this._downloadProjectionModelIfNeeded(model);
     } catch (err) {
+      if (err instanceof DownloadCancelledError) {
+        // User cancelled — not a failure. Don't surface an error and don't
+        // chain the projection-model download for multimodal models.
+        return;
+      }
+
       console.error('Failed to start download:', err);
 
       // Create proper error state for the snackbar system

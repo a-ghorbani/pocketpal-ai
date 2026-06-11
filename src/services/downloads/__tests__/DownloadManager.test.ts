@@ -4,7 +4,7 @@ import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {basicModel} from '../../../../jest/fixtures/models';
 
-import {DownloadManager} from '../DownloadManager';
+import {DownloadManager, DownloadCancelledError} from '../DownloadManager';
 
 jest.mock('react-native', () => {
   // Create a shared mock for DownloadModule inside the factory
@@ -393,7 +393,9 @@ describe('DownloadManager', () => {
     await iosDownloadManager.cancelDownload('model-1');
     rejectDownload(new Error('Download has been aborted'));
 
-    await expect(startPromise).resolves.toBeUndefined();
+    // The cancel surfaces as a distinct DownloadCancelledError (not a generic
+    // failure), so onError is never called and callers can special-case it.
+    await expect(startPromise).rejects.toBeInstanceOf(DownloadCancelledError);
 
     expect(callbacks.onError).not.toHaveBeenCalled();
     expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
@@ -460,7 +462,7 @@ describe('DownloadManager', () => {
     await new Promise(resolve => setImmediate(resolve));
     await iosDownloadManager.cancelDownload('model-1');
     rejectFirst(new Error('Download has been aborted'));
-    await expect(firstStart).resolves.toBeUndefined();
+    await expect(firstStart).rejects.toBeInstanceOf(DownloadCancelledError);
     expect(callbacks.onError).not.toHaveBeenCalled();
 
     // Second attempt for the SAME model genuinely fails. The cancelled-id
