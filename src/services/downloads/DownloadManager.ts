@@ -24,6 +24,7 @@ export class DownloadManager {
   private downloadJobs: DownloadMap;
   private callbacks: DownloadEventCallbacks = {};
   private eventEmitter: NativeEventEmitter | null = null;
+  private cancelledModelIds = new Set<string>();
 
   constructor() {
     console.log(`${TAG}: Initializing DownloadManager`);
@@ -370,6 +371,17 @@ export class DownloadManager {
         throw new Error(`Download failed with status: ${result.statusCode}`);
       }
     } catch (error) {
+      // A user-initiated cancel rejects this promise (RNFS.stopDownload aborts
+      // the task). That is not a failure — swallow it silently so it never
+      // reaches the user-facing download error surface.
+      if (this.cancelledModelIds.delete(model.id)) {
+        console.log(
+          `${TAG}: Download cancelled by user for ID: ${model.id}, suppressing error`,
+        );
+        this.downloadJobs.delete(model.id);
+        return;
+      }
+
       console.error(`${TAG}: Download failed for ID: ${model.id}:`, error);
       const job = this.downloadJobs.get(model.id);
       if (job) {
@@ -452,6 +464,9 @@ export class DownloadManager {
     console.log(`${TAG}: Attempting to cancel download:`, modelId);
     const job = this.downloadJobs.get(modelId);
     if (job) {
+      // Mark as user-cancelled so the iOS download promise rejection is
+      // recognised as a cancel, not surfaced as a "Download Failed" error.
+      this.cancelledModelIds.add(modelId);
       try {
         if (Platform.OS === 'ios') {
           console.log(
@@ -467,6 +482,9 @@ export class DownloadManager {
         ) {
           console.log(`${TAG}: Cancelling Android download:`, modelId);
           await NativeDownloadModule.cancelDownload(job.downloadId);
+          // Android cancel emits no failure event, so nothing consumes the
+          // cancelled-id marker — clear it here to avoid leaking entries.
+          this.cancelledModelIds.delete(modelId);
         }
 
         // Clean up the partial download file
@@ -507,6 +525,7 @@ export class DownloadManager {
           modelId,
           error: err instanceof Error ? err.message : String(err),
         });
+        this.cancelledModelIds.delete(modelId);
       }
     } else {
       console.warn(`${TAG}: No download job found to cancel:`, modelId);
@@ -522,6 +541,7 @@ export class DownloadManager {
       this.eventEmitter.removeAllListeners('onDownloadFailed');
     }
     this.downloadJobs.clear();
+    this.cancelledModelIds.clear();
     console.log(`${TAG}: Download jobs cleared`);
   }
 
