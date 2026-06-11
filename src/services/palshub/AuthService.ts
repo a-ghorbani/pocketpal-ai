@@ -288,12 +288,12 @@ class AuthService {
     }
   }
 
-  async signInWithEmail(email: string, password: string) {
+  async signInWithEmail(email: string, password: string): Promise<boolean> {
     if (!this.isSupabaseConfigured()) {
       runInAction(() => {
         this.error = 'Authentication not configured';
       });
-      return;
+      return false;
     }
 
     try {
@@ -312,12 +312,15 @@ class AuthService {
           this.error = error.message;
         });
         console.error('Email sign-in error:', error);
+        return false;
       }
+      return true;
     } catch (error) {
       runInAction(() => {
         this.error = 'Failed to sign in with email';
       });
       console.error('Email sign-in error:', error);
+      return false;
     } finally {
       runInAction(() => {
         this.isLoading = false;
@@ -325,12 +328,16 @@ class AuthService {
     }
   }
 
-  async signUpWithEmail(email: string, password: string, fullName?: string) {
+  async signUpWithEmail(
+    email: string,
+    password: string,
+    fullName?: string,
+  ): Promise<boolean> {
     if (!this.isSupabaseConfigured()) {
       runInAction(() => {
         this.error = 'Authentication not configured';
       });
-      return;
+      return false;
     }
 
     try {
@@ -354,12 +361,15 @@ class AuthService {
           this.error = error.message;
         });
         console.error('Email sign-up error:', error);
+        return false;
       }
+      return true;
     } catch (error) {
       runInAction(() => {
         this.error = 'Failed to sign up with email';
       });
       console.error('Email sign-up error:', error);
+      return false;
     } finally {
       runInAction(() => {
         this.isLoading = false;
@@ -401,12 +411,12 @@ class AuthService {
     }
   }
 
-  async resetPassword(email: string) {
+  async resetPassword(email: string): Promise<boolean> {
     if (!this.isSupabaseConfigured()) {
       runInAction(() => {
         this.error = 'Authentication not configured';
       });
-      return;
+      return false;
     }
 
     try {
@@ -424,12 +434,15 @@ class AuthService {
           this.error = error.message;
         });
         console.error('Password reset error:', error);
+        return false;
       }
+      return true;
     } catch (error) {
       runInAction(() => {
         this.error = 'Failed to send password reset email';
       });
       console.error('Password reset error:', error);
+      return false;
     } finally {
       runInAction(() => {
         this.isLoading = false;

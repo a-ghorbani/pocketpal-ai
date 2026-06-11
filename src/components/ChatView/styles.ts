@@ -95,4 +95,49 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center' as const,
     },
+    banner: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+    },
+    bannerText: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.colors.onSurfaceVariant,
+    },
+    bannerHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+    },
+    bannerHeaderText: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    bannerPercent: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      fontVariant: ['tabular-nums'],
+    },
+    bannerMeter: {
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.surfaceDisabled,
+      overflow: 'hidden' as const,
+      marginTop: 8,
+      alignSelf: 'stretch' as const,
+      width: '100%' as const,
+    },
+    bannerMeterFill: {
+      height: 4,
+      borderRadius: 2,
+    },
+    bannerActions: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'flex-end' as const,
+      marginTop: 2,
+    },
   });

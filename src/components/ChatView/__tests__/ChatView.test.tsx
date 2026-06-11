@@ -13,7 +13,14 @@ import {MessageType} from '../../../utils/types';
 import {ChatView} from '../ChatView';
 import {fireEvent, render} from '../../../../jest/test-utils';
 import {ChatEmptyPlaceholder} from '../../ChatEmptyPlaceholder';
-import {modelStore} from '../../../store';
+import {chatSessionStore, modelStore} from '../../../store';
+import {registerDefaultTalents} from '../../../services/talents';
+import DeviceInfo from 'react-native-device-info';
+
+// talentRegistry (src/services/talents) is the real singleton in Jest; register
+// the built-in engines so render_html (recommendedContextTokens=4096) drives the
+// pal-load hint.
+registerDefaultTalents();
 
 jest.useFakeTimers();
 
@@ -266,6 +273,91 @@ describe('chat', () => {
         {withNavigation: true, withBottomSheetProvider: true},
       );
       expect(modelStore.selectModel).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Pal-load hint "More room" action → opens the IncreaseContextSheet.
+  //
+  // The hint snackbar is a separate advisory surface from the banner; its
+  // action must reach the same sheet even when the banner increase CTA would
+  // be hidden, so the sheet is never a dead-end from this entry point. The
+  // sheet's content (its testIDs) only mounts once the host opens it.
+  // ---------------------------------------------------------------------------
+  describe('pal-load hint "More room" action', () => {
+    const heavyPal = {
+      id: 'heavy-pal',
+      name: 'Heavy',
+      type: 'roleplay',
+      pact: {talents: [{name: 'render_html', required: true}]},
+    } as any;
+
+    beforeEach(() => {
+      chatSessionStore.palLoadHintSeen = new Set();
+      (chatSessionStore.markPalLoadHintSeen as jest.Mock).mockImplementation(
+        (sig: string) => chatSessionStore.palLoadHintSeen.add(sig),
+      );
+      (chatSessionStore.resetActiveSession as jest.Mock).mockClear();
+      // The sheet's mount effect awaits getTotalMemory(); the central mock
+      // returns a number, so make it Promise-returning for the sheet path.
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(12 * 1e9);
+      runInAction(() => {
+        modelStore.activeModelId = 'heavy-model';
+        modelStore.models = [
+          {id: 'heavy-model', name: 'heavy', isDownloaded: true} as any,
+        ];
+        // Below render_html's 4096 recommendation → hint fires; a value the
+        // sheet can also offer larger ladder stops above.
+        (modelStore as any).activeContextSettings = {n_ctx: 2048};
+        modelStore.contextInitParams = {
+          ...modelStore.contextInitParams,
+          n_ctx: 2048,
+        };
+      });
+    });
+
+    afterEach(() => {
+      runInAction(() => {
+        (modelStore as any).activeContextSettings = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.models = [];
+      });
+      (chatSessionStore.markPalLoadHintSeen as jest.Mock).mockReset();
+      (DeviceInfo.getTotalMemory as jest.Mock).mockReset();
+    });
+
+    it('opens the increase-context sheet when the hint action is tapped, reaching the no-fit state when nothing larger fits', () => {
+      // The mocked memory ceiling (4–5 GB) is below the model's requirement at
+      // any larger ladder tier, so the sheet resolves to its no-fit state. That
+      // is exactly the dead-end risk the hint action must avoid: the sheet stays
+      // reachable and offers New chat rather than a permanently disabled confirm.
+      const {getByTestId, queryByTestId, getAllByText} = render(
+        <ChatView
+          messages={[]}
+          onSendPress={jest.fn()}
+          user={user}
+          activePal={heavyPal}
+        />,
+        {withNavigation: true, withBottomSheetProvider: true},
+      );
+
+      // The hint snackbar is shown; the sheet content has not mounted yet.
+      expect(getByTestId('pal-load-hint-snackbar')).toBeTruthy();
+      expect(queryByTestId('increase-context-no-fit')).toBeNull();
+      expect(queryByTestId('increase-context-new-chat')).toBeNull();
+
+      // Tap the snackbar's "More room" action (label === contextMoreRoom).
+      const action = getAllByText(l10n.en.chat.contextMoreRoom)[0];
+      fireEvent.press(action);
+
+      // The sheet is now open and reachable from the hint. In the no-fit state
+      // confirm is hidden and New chat is offered — not a dead-end.
+      expect(getByTestId('increase-context-no-fit')).toBeTruthy();
+      expect(queryByTestId('increase-context-confirm')).toBeNull();
+
+      const newChat = getByTestId('increase-context-new-chat');
+      fireEvent.press(newChat);
+      expect(chatSessionStore.resetActiveSession).toHaveBeenCalledTimes(1);
     });
   });
 });

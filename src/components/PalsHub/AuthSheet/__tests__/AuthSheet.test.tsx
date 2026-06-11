@@ -136,6 +136,25 @@ describe('AuthSheet', () => {
       });
     });
 
+    it('does not show "Welcome Back!" when sign-in fails', async () => {
+      (authService.signInWithEmail as jest.Mock).mockResolvedValueOnce(false);
+
+      const {getByTestId, getByText} = render(<AuthSheet {...defaultProps} />);
+
+      fireEvent.changeText(getByTestId('email-input'), 'test@example.com');
+      fireEvent.changeText(getByTestId('password-input'), 'wrongpass');
+      fireEvent.press(getByText('Sign In'));
+
+      await waitFor(() => {
+        expect(authService.signInWithEmail).toHaveBeenCalled();
+      });
+      expect(Alert.alert).not.toHaveBeenCalledWith(
+        'Welcome Back!',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
     it('shows error alert when email is empty', async () => {
       const {getByTestId, getByText} = render(<AuthSheet {...defaultProps} />);
 
@@ -263,6 +282,27 @@ describe('AuthSheet', () => {
           expect.any(Array),
         );
       });
+    });
+
+    it('does not show "Account Created" when sign-up fails', async () => {
+      (authService.signUpWithEmail as jest.Mock).mockResolvedValueOnce(false);
+
+      const {getByTestId, getByText} = render(<AuthSheet {...defaultProps} />);
+      fireEvent.press(getByText('Sign Up'));
+
+      fireEvent.changeText(getByTestId('full-name-input'), 'Test User');
+      fireEvent.changeText(getByTestId('email-input'), 'test@example.com');
+      fireEvent.changeText(getByTestId('password-input'), '123');
+      fireEvent.press(getByText('Create Account'));
+
+      await waitFor(() => {
+        expect(authService.signUpWithEmail).toHaveBeenCalled();
+      });
+      expect(Alert.alert).not.toHaveBeenCalledWith(
+        'Account Created',
+        expect.anything(),
+        expect.anything(),
+      );
     });
 
     it('shows error alert when full name is empty during sign up', async () => {

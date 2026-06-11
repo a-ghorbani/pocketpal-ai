@@ -5,3 +5,4 @@ export * from './useMemoryCheck';
 export * from './useMessageActions';
 export * from './useStorageCheck';
 export * from './useDeepLinking';
+export * from './usePalLoadHint';

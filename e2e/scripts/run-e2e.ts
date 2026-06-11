@@ -81,6 +81,7 @@ interface RunArgs {
   dryRun: boolean;
   listModels: boolean;
   reportDir?: string;
+  appiumBasePort: number;
   help: boolean;
 }
 
@@ -120,7 +121,9 @@ const REPO_ROOT = path.join(E2E_DIR, '..');
 const DEVICES_FILE = path.join(E2E_DIR, 'devices.json');
 const DEVICES_TEMPLATE = path.join(E2E_DIR, 'devices.template.json');
 const REPORTS_DIR = path.join(E2E_DIR, 'reports');
-const BASE_APPIUM_PORT = 4723;
+// Default base Appium port. Override per-run with --appium-port or the
+// E2E_BASE_APPIUM_PORT env var (e.g. when another E2E run already holds 4723).
+const DEFAULT_BASE_APPIUM_PORT = 4723;
 const ENV_FILE = path.join(E2E_DIR, '.env');
 
 // Load environment variables from e2e/.env (secrets, server URLs, etc.)
@@ -153,6 +156,9 @@ OPTIONS:
   --dry-run                Print matched targets and commands without executing
   --list-models            List all available models
   --report-dir <path>      Custom report directory (default: e2e/reports/<timestamp>)
+  --appium-port <n>        Base Appium port (default: 4723, or E2E_BASE_APPIUM_PORT).
+                           Per-device runs increment from this. Use a free port
+                           when another E2E run already holds the default.
   --help                   Show this help message
 
 EXAMPLES:
@@ -190,6 +196,14 @@ EXAMPLES:
 `);
 }
 
+function parsePort(value: string | undefined, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 function parseArgs(): RunArgs {
   const args = process.argv.slice(2);
   const result: RunArgs = {
@@ -203,6 +217,10 @@ function parseArgs(): RunArgs {
     skipBuild: false,
     dryRun: false,
     listModels: false,
+    appiumBasePort: parsePort(
+      process.env.E2E_BASE_APPIUM_PORT,
+      DEFAULT_BASE_APPIUM_PORT,
+    ),
     help: false,
   };
 
@@ -271,6 +289,12 @@ function parseArgs(): RunArgs {
       case '--report-dir':
         if (nextArg) {
           result.reportDir = nextArg;
+          i++;
+        }
+        break;
+      case '--appium-port':
+        if (nextArg) {
+          result.appiumBasePort = parsePort(nextArg, result.appiumBasePort);
           i++;
         }
         break;
@@ -964,7 +988,7 @@ function printDryRun(
         const configFile = getWdioConfig(platform, args.mode);
         const specArg =
           args.spec === 'all' ? '' : `--spec ${resolveSpecPath(args.spec)}`;
-        const port = BASE_APPIUM_PORT + portIndex;
+        const port = args.appiumBasePort + portIndex;
         const label = getRunLabel(device, model, platform);
 
         console.log(`\n  ${runIndex}. ${label}`);
@@ -1093,7 +1117,7 @@ async function main(): Promise<void> {
   let portIndex = 0;
 
   for (const device of devices) {
-    const appiumPort = BASE_APPIUM_PORT + portIndex;
+    const appiumPort = args.appiumBasePort + portIndex;
     const runPlatforms = device ? [device.platform] : platforms;
 
     for (const platform of runPlatforms) {

@@ -13,11 +13,13 @@
  *   `useNavigation()` without a full screen tree.
  */
 
-import {Linking} from 'react-native';
+import {Alert, Linking} from 'react-native';
 import {renderHook} from '@testing-library/react-native';
 
 import {useDeepLinking} from '../useDeepLinking';
 import {ROUTES} from '../../utils/navigationConstants';
+import {deepLinkService} from '../../services/DeepLinkService';
+import {checkoutFlowStore, chatSessionStore, palStore} from '../../store';
 
 // Stable navigate spy that we re-assert across the file. The hook reads
 // `useNavigation()` once per render, so capturing the function from a
@@ -50,10 +52,14 @@ jest.mock('../../services/DeepLinkService', () => ({
 
 describe('useDeepLinking — cold-launch routing', () => {
   let getInitialURLSpy: jest.SpyInstance;
+  let alertSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     getInitialURLSpy = jest.spyOn(Linking, 'getInitialURL');
+    // The prod hub/run Linking effect surfaces an Alert on invalid links.
+    // Benchmark URLs are invalid hub links, so silence the Alert here.
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     // Default: __E2E__ is true via jest/setup.ts; individual tests flip
     // it to false to assert the gate.
     (global as any).__E2E__ = true;
@@ -61,6 +67,7 @@ describe('useDeepLinking — cold-launch routing', () => {
 
   afterEach(() => {
     getInitialURLSpy.mockRestore();
+    alertSpy.mockRestore();
   });
 
   it('navigates to BenchmarkRunner with autostart:false for the bare bench URL on cold launch', async () => {
@@ -72,7 +79,9 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(getInitialURLSpy).toHaveBeenCalledTimes(1);
+    // Both the __E2E__ benchmark effect and the always-on prod hub/run effect
+    // read getInitialURL on cold launch.
+    expect(getInitialURLSpy).toHaveBeenCalledTimes(2);
     // Bare URL still routes; autostart resolves false so the screen stays
     // idle and waits for a tap — current behaviour preserved.
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
@@ -102,9 +111,10 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    // The effect's `if (!__E2E__) return;` guard means we never even ask
-    // for the initial URL when E2E is off.
-    expect(getInitialURLSpy).not.toHaveBeenCalled();
+    // The benchmark effect's `if (!__E2E__) return;` guard keeps it from
+    // navigating. The prod hub/run effect still reads getInitialURL, but a
+    // benchmark URL is not a valid hub link, so it never navigates.
+    expect(getInitialURLSpy).toHaveBeenCalledTimes(1);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -116,7 +126,8 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(getInitialURLSpy).toHaveBeenCalledTimes(1);
+    // Both the benchmark and prod hub/run effects read getInitialURL.
+    expect(getInitialURLSpy).toHaveBeenCalledTimes(2);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -146,17 +157,15 @@ describe('useDeepLinking — cold-launch routing', () => {
     // Cold launch returns null — this app start was a regular launch.
     getInitialURLSpy.mockResolvedValue(null);
 
-    // Capture the listener callback so we can fire it ourselves. Holder
-    // object dodges TS's narrowing of a `let` to `null`.
-    const captured: {handler: ((evt: {url: string}) => void) | null} = {
-      handler: null,
-    };
+    // Both the benchmark and prod hub/run effects register a 'url' listener;
+    // capture all of them and fire each so the benchmark handler is exercised.
+    const handlers: Array<(evt: {url: string}) => void> = [];
     const removeSpy = jest.fn();
     const addEventListenerSpy = jest
       .spyOn(Linking, 'addEventListener')
       .mockImplementation((event: string, cb: any) => {
         if (event === 'url') {
-          captured.handler = cb;
+          handlers.push(cb);
         }
         return {remove: removeSpy} as any;
       });
@@ -172,8 +181,8 @@ describe('useDeepLinking — cold-launch routing', () => {
     expect(mockNavigate).not.toHaveBeenCalled(); // no cold-launch URL
 
     // Simulate WDIO firing `mobile: deepLink` after the app started.
-    expect(captured.handler).not.toBeNull();
-    captured.handler!({url: 'pocketpal://e2e/benchmark'});
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers.forEach(h => h({url: 'pocketpal://e2e/benchmark'}));
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
       autostart: false,
     });
@@ -184,14 +193,12 @@ describe('useDeepLinking — cold-launch routing', () => {
   it('navigates with autostart:true on a warm-state autostart url event', async () => {
     getInitialURLSpy.mockResolvedValue(null);
 
-    const captured: {handler: ((evt: {url: string}) => void) | null} = {
-      handler: null,
-    };
+    const handlers: Array<(evt: {url: string}) => void> = [];
     const addEventListenerSpy = jest
       .spyOn(Linking, 'addEventListener')
       .mockImplementation((event: string, cb: any) => {
         if (event === 'url') {
-          captured.handler = cb;
+          handlers.push(cb);
         }
         return {remove: jest.fn()} as any;
       });
@@ -200,8 +207,8 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(captured.handler).not.toBeNull();
-    captured.handler!({url: 'pocketpal://e2e/benchmark?autostart=1'});
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers.forEach(h => h({url: 'pocketpal://e2e/benchmark?autostart=1'}));
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
       autostart: true,
     });
@@ -212,14 +219,12 @@ describe('useDeepLinking — cold-launch routing', () => {
   it('navigates with autostart:false for autostart=0 on a warm-state url event', async () => {
     getInitialURLSpy.mockResolvedValue(null);
 
-    const captured: {handler: ((evt: {url: string}) => void) | null} = {
-      handler: null,
-    };
+    const handlers: Array<(evt: {url: string}) => void> = [];
     const addEventListenerSpy = jest
       .spyOn(Linking, 'addEventListener')
       .mockImplementation((event: string, cb: any) => {
         if (event === 'url') {
-          captured.handler = cb;
+          handlers.push(cb);
         }
         return {remove: jest.fn()} as any;
       });
@@ -228,8 +233,8 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(captured.handler).not.toBeNull();
-    captured.handler!({url: 'pocketpal://e2e/benchmark?autostart=0'});
+    expect(handlers.length).toBeGreaterThan(0);
+    handlers.forEach(h => h({url: 'pocketpal://e2e/benchmark?autostart=0'}));
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK_RUNNER, {
       autostart: false,
     });
@@ -248,18 +253,28 @@ describe('useDeepLinking — cold-launch routing', () => {
     await Promise.resolve();
     unmount();
 
-    expect(removeSpy).toHaveBeenCalledTimes(1);
+    // Both the benchmark and prod hub/run 'url' listeners are removed.
+    expect(removeSpy).toHaveBeenCalledTimes(2);
     addEventListenerSpy.mockRestore();
   });
 
-  it('does NOT register the warm-state listener when __E2E__=false', async () => {
+  it('still registers the prod hub/run url listener when __E2E__=false', async () => {
     (global as any).__E2E__ = false;
-    const addEventListenerSpy = jest.spyOn(Linking, 'addEventListener');
+    getInitialURLSpy.mockResolvedValue(null);
+    const addEventListenerSpy = jest
+      .spyOn(Linking, 'addEventListener')
+      .mockImplementation(() => ({remove: jest.fn()}) as any);
 
     renderHook(() => useDeepLinking());
     await Promise.resolve();
 
-    expect(addEventListenerSpy).not.toHaveBeenCalled();
+    // The benchmark listener is gated off, but the prod hub/run effect is
+    // always on, so a 'url' listener is still registered.
+    expect(addEventListenerSpy).toHaveBeenCalledWith(
+      'url',
+      expect.any(Function),
+    );
+    expect(addEventListenerSpy).toHaveBeenCalledTimes(1);
     addEventListenerSpy.mockRestore();
   });
 
@@ -277,5 +292,32 @@ describe('useDeepLinking — cold-launch routing', () => {
     expect(() => unmount()).not.toThrow();
 
     addEventListenerSpy.mockRestore();
+  });
+});
+
+describe('useDeepLinking — deep-link routing', () => {
+  // The registered deep-link handler, captured from deepLinkService.addListener.
+  const getHandler = (): ((params: any) => Promise<void>) => {
+    const addListener = deepLinkService.addListener as jest.Mock;
+    return addListener.mock.calls[addListener.mock.calls.length - 1][0];
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (global as any).__E2E__ = false;
+    jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(null);
+  });
+
+  it('does not route checkout for the chat host link (no regression)', async () => {
+    (palStore as any).pals = [{id: 'p1'}];
+    renderHook(() => useDeepLinking());
+    await getHandler()({
+      url: 'pocketpal://chat?palId=p1',
+      scheme: 'pocketpal',
+      host: 'chat',
+      queryParams: {palId: 'p1'},
+    });
+    expect(checkoutFlowStore.onReturn).not.toHaveBeenCalled();
+    expect(chatSessionStore.setActivePal).toHaveBeenCalledWith('p1');
   });
 });

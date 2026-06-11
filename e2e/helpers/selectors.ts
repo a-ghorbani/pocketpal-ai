@@ -118,8 +118,12 @@ export const Selectors = {
     get modelsTab(): string {
       return byText('Models');
     },
+    // Pals tab doubles as the drawer-open indicator (DrawerPage.isOpen /
+    // waitForOpen / waitForClose), so it must survive a language switch.
+    // Match the app's stable testID (SidebarContent drawer-item-pals) instead
+    // of the English label.
     get palsTab(): string {
-      return byText('Pals');
+      return byTestId('drawer-item-pals');
     },
     get benchmarkTab(): string {
       return byText('Benchmark');
@@ -248,7 +252,8 @@ export const Selectors = {
     // Dynamic: model item by ID
     modelItem: (id: string): string => byTestId(`hf-model-item-${id}`),
     // Find model item by partial accessibilityLabel match (targets the TouchableOpacity)
-    modelItemByText: (text: string): string => byAccessibilityLabelContains(text),
+    modelItemByText: (text: string): string =>
+      byAccessibilityLabelContains(text),
   },
 
   // Model details/file cards
@@ -318,6 +323,22 @@ export const Selectors = {
       }
       // iOS: Use predicate string for nested element search
       return `-ios predicate string:name == "load-button"`;
+    },
+    // Download button element selector for use within a model card context
+    get downloadButtonElement(): string {
+      if (isAndroid()) {
+        return `.//android.widget.Button[contains(@resource-id, "download-button")]`;
+      }
+      return `-ios predicate string:name == "download-button"`;
+    },
+    // Cancel button element selector for use within a model card context.
+    // Filters to the Button class so it targets the clickable control rather
+    // than the surrounding "cancel-button-container" wrapper.
+    get cancelButtonElement(): string {
+      if (isAndroid()) {
+        return `.//android.widget.Button[contains(@resource-id, "cancel-button")]`;
+      }
+      return `-ios predicate string:name == "cancel-button"`;
     },
     get offloadButton(): string {
       return byTestId('offload-button');
@@ -499,6 +520,59 @@ export const Selectors = {
     /** Chevron icon inside the ThinkingBubble */
     get chevronIcon(): string {
       return byTestId('chevron-icon');
+    },
+  },
+
+  // Context-limit banner + increase-context sheet
+  contextBanner: {
+    get warning(): string {
+      return byTestId('context-warning-banner');
+    },
+    get full(): string {
+      return byTestId('context-full-banner');
+    },
+    get remoteHedged(): string {
+      return byTestId('context-remote-hedged-banner');
+    },
+    get softCap(): string {
+      return byTestId('soft-cap-warning');
+    },
+    get meter(): string {
+      return byTestId('banner-meter');
+    },
+    get percent(): string {
+      return byTestId('banner-percent');
+    },
+    get dismiss(): string {
+      return byTestId('context-banner-dismiss');
+    },
+    get warningIncrease(): string {
+      return byTestId('context-warning-increase');
+    },
+    get fullIncrease(): string {
+      return byTestId('context-full-increase');
+    },
+    get fullNewChat(): string {
+      return byTestId('context-full-new-chat');
+    },
+    get palLoadHint(): string {
+      return byTestId('pal-load-hint-snackbar');
+    },
+    // Increase-context sheet
+    get sheetConfirm(): string {
+      return byTestId('increase-context-confirm');
+    },
+    get sheetCancel(): string {
+      return byTestId('increase-context-cancel');
+    },
+    get sheetSlider(): string {
+      return byTestId('increase-context-slider');
+    },
+    get sheetNoFit(): string {
+      return byTestId('increase-context-no-fit');
+    },
+    get sheetNewChat(): string {
+      return byTestId('increase-context-new-chat');
     },
   },
 

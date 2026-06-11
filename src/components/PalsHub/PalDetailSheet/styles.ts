@@ -174,6 +174,18 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       marginBottom: 12,
     },
+    // Buy button + its checkout feedback stack vertically and fill the row,
+    // so a wide error/finalizing message never squeezes the button.
+    buyActionColumn: {
+      flex: 1,
+    },
+    buyButton: {
+      alignSelf: 'stretch',
+    },
+    errorButton: {
+      alignSelf: 'stretch',
+      marginTop: 8,
+    },
     errorContainer: {
       backgroundColor: theme.colors.errorContainer,
       borderRadius: 8,

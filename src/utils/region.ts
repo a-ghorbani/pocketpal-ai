@@ -4,8 +4,7 @@ let cachedCountryCode: string | null | undefined; // undefined = not yet fetched
 
 /**
  * Get the storefront/locale country code from the native module.
- * iOS 16+: StoreKit 2 returns ISO 3166-1 alpha-2 (e.g., 'US', 'GB').
- * iOS 15: SK1 returns ISO 3166-1 alpha-3 (e.g., 'USA', 'GBR').
+ * iOS (StoreKit 2 and SK1): returns ISO 3166-1 alpha-3 (e.g., 'USA', 'GBR').
  * Android: Locale returns ISO 3166-1 alpha-2 (e.g., 'US', 'GB').
  * Returns null if unavailable.
  */

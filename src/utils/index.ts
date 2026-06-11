@@ -505,6 +505,23 @@ export function hfAsModel(
 }
 
 /**
+ * Returns a copy of each sibling with `canFitInStorage` set from a free-disk
+ * check. Pure (no store access); shared by the HF search and deep-link paths so
+ * the download-button storage gate is computed the same way on both.
+ */
+export async function enrichSiblingsWithStorage(
+  hfModel: HuggingFaceModel,
+  siblings: ModelFile[],
+): Promise<ModelFile[]> {
+  return Promise.all(
+    siblings.map(async sibling => ({
+      ...sibling,
+      canFitInStorage: await hasEnoughSpace(hfAsModel(hfModel, sibling)),
+    })),
+  );
+}
+
+/**
  * Infers the repository name from a HuggingFace model ID.
  * HF model IDs have format: "author/repo/filename"
  *
@@ -834,4 +851,6 @@ export * from './multimodalHelpers';
 export * from './network';
 export * from './types';
 export * from './hf';
+export * from './hfResolve';
+export * from './hfUserAgent';
 export * from './safeAlert';

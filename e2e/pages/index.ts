@@ -6,3 +6,4 @@ export {SettingsPage} from './SettingsPage';
 export {HFSearchSheet} from './HFSearchSheet';
 export {ModelDetailsSheet} from './ModelDetailsSheet';
 export {PalSheetPage} from './PalSheetPage';
+export {PalPurchasePage} from './PalPurchasePage';

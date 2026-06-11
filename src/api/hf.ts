@@ -2,6 +2,7 @@ import axios from 'axios';
 
 import {urls} from '../config';
 
+import {hfUserAgent} from '../utils/hfUserAgent';
 import {
   GGUFSpecs,
   HuggingFaceModel,
@@ -48,7 +49,7 @@ export async function fetchModels({
   authToken?: string | null;
 }): Promise<HuggingFaceModelsResponse> {
   try {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {'User-Agent': hfUserAgent()};
 
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`;
@@ -101,7 +102,7 @@ export const fetchModelFilesDetails = async (
   const url = `${urls.modelTree(modelId)}?recursive=true`;
 
   try {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {'User-Agent': hfUserAgent()};
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`;
     }
@@ -133,7 +134,7 @@ export const fetchGGUFSpecs = async (
   const url = `${urls.modelSpecs(modelId)}?expand[]=gguf`;
 
   try {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {'User-Agent': hfUserAgent()};
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`;
     }
@@ -174,7 +175,7 @@ export async function fetchModelInfo({
   authToken?: string | null;
   stripFields?: string[];
 }): Promise<Partial<HuggingFaceModel>> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {'User-Agent': hfUserAgent()};
   if (authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }

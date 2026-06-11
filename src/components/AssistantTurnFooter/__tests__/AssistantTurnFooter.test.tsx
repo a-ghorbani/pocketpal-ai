@@ -1,6 +1,9 @@
 import React from 'react';
+import {runInAction} from 'mobx';
 
 import {render, fireEvent} from '../../../../jest/test-utils';
+
+import {chatSessionStore} from '../../../store';
 
 import {AssistantTurnFooter} from '../AssistantTurnFooter';
 
@@ -155,5 +158,94 @@ describe('AssistantTurnFooter', () => {
     expect(queryByTestId('footer-interrupted-status')).toBeTruthy();
     expect(queryByTestId('footer-copy')).toBeNull();
     expect(queryByTestId('footer-timing')).toBeNull();
+  });
+
+  describe('context-full banner / footer non-duplication', () => {
+    afterEach(() => {
+      runInAction(() => {
+        chatSessionStore.lastCompletionResult = undefined;
+      });
+    });
+
+    it('suppresses the "cut off" footer text when the context-full banner owns this turn', () => {
+      // The turn's snapshot is the store's live one AND it is contextFull,
+      // so the sticky banner is the single surface — footer drops "cut off"
+      // and shows plain "Interrupted" instead.
+      const snapshot = {used: 4096, contextFull: true, isRemote: false};
+      runInAction(() => {
+        chatSessionStore.lastCompletionResult = snapshot;
+      });
+      const message = baseTurn({
+        metadata: {
+          copyable: true,
+          interrupted: true,
+          truncationLikely: true,
+          completionResult: snapshot,
+        },
+      });
+      const {getByTestId, getByText, queryByText} = render(
+        <AssistantTurnFooter message={message} />,
+      );
+      expect(getByTestId('footer-interrupted-status')).toBeTruthy();
+      expect(getByText('Interrupted')).toBeTruthy();
+      expect(queryByText('Cut off — likely context full')).toBeNull();
+    });
+
+    it('still shows "cut off" when the turn snapshot is not the live banner snapshot', () => {
+      // An older truncated turn whose snapshot is not the store's live one
+      // keeps its own "cut off" footer.
+      runInAction(() => {
+        chatSessionStore.lastCompletionResult = {
+          used: 1000,
+          contextFull: false,
+          isRemote: false,
+        };
+      });
+      const message = baseTurn({
+        metadata: {
+          copyable: true,
+          interrupted: true,
+          truncationLikely: true,
+          completionResult: {used: 4096, contextFull: true, isRemote: false},
+        },
+      });
+      const {getByText} = render(<AssistantTurnFooter message={message} />);
+      expect(getByText('Cut off — likely context full')).toBeTruthy();
+    });
+
+    it('shows "cut off" when the live snapshot is not contextFull even if it matches', () => {
+      const snapshot = {used: 1000, contextFull: false, isRemote: false};
+      runInAction(() => {
+        chatSessionStore.lastCompletionResult = snapshot;
+      });
+      const message = baseTurn({
+        metadata: {
+          copyable: true,
+          interrupted: true,
+          truncationLikely: true,
+          completionResult: snapshot,
+        },
+      });
+      const {getByText} = render(<AssistantTurnFooter message={message} />);
+      expect(getByText('Cut off — likely context full')).toBeTruthy();
+    });
+
+    it('shows plain "Interrupted" for an interrupted-but-not-truncated turn regardless of banner state', () => {
+      runInAction(() => {
+        chatSessionStore.lastCompletionResult = {
+          used: 4096,
+          contextFull: true,
+          isRemote: false,
+        };
+      });
+      const message = baseTurn({
+        metadata: {copyable: true, interrupted: true},
+      });
+      const {getByText, queryByText} = render(
+        <AssistantTurnFooter message={message} />,
+      );
+      expect(getByText('Interrupted')).toBeTruthy();
+      expect(queryByText('Cut off — likely context full')).toBeNull();
+    });
   });
 });

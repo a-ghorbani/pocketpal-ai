@@ -108,12 +108,13 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
     }
     uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
     if (picked) {
-      // Fire-and-forget. checkSpaceAndDownload rethrows (its caller is
-      // meant to handle failures via the snackbar); we catch here because
-      // the surface displays errors through `modelStore.downloadError`
-      // already and we'd otherwise leak an unhandled rejection on cancel.
+      // Fire-and-forget. checkSpaceAndDownload returns cleanly on user
+      // cancel (DownloadCancelledError is swallowed there) and re-throws
+      // genuine failures, which surface through `modelStore.downloadError`
+      // for the dialog. We catch defensively to keep the rejection from
+      // becoming an unhandled promise from this no-await call site.
       modelStore.checkSpaceAndDownload(picked.id).catch(() => {
-        // intentionally swallowed — downloadError surfaces the failure.
+        // intentionally swallowed — downloadError already drives the UI.
       });
     }
   }, []);

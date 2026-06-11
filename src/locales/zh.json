@@ -120,16 +120,16 @@
     "clearCachesSuccess": "成功清除{{count}}个缓存文件。",
     "clearCachesError": "清除缓存失败，请重试。",
     "noCachesToClear": "没有可清除的缓存。",
-    "weightRepacking": "启用权重重新分配",
+    "weightRepacking": "启用权重 重新打包",
     "weightRepackingDescription": "禁用内存映射时，Prompt处理速度更快，内存开销极小；Token生成不受影响",
     "serverName": "服务器名称",
     "serverUrl": "服务器URL",
     "serverUrlPlaceholder": "例如：http://192.168.1.100:1234",
-    "apiKey": "API Key",
+    "apiKey": "API 密钥",
     "apiKeyPlaceholder": "可选（使用OpenAI/Groq时必填）",
     "apiKeyDescription": "安全存储在设备上",
-    "remoteModel": "远端模型",
-    "remotePrivacyNotice": "发送至远端服务器的消息将离开本设备，请永远确保仅连接可信任的服务器！",
+    "remoteModel": "远程",
+    "remotePrivacyNotice": "发送至远程服务器的消息将离开本设备，请仅连接你信任的服务器",
     "remoteIndicator": "远程",
     "serverUrlRequired": "服务器URL为必填项",
     "serverUrlInvalid": "URL格式错误",
@@ -147,14 +147,17 @@
     "connectedServers": "已连接的服务器",
     "modelsCount": "{{count}} 个模型",
     "serverDetails": "服务器信息",
-    "modelsUsingServer": "使用此服务器模型：",
+    "modelsUsingServer": "使用此服务器的模型：",
     "saveChanges": "保存更改",
     "removeServer": "移除服务器",
     "removeServerMessage": "删除 {{serverName}} 及其 {{count}} 个模型？",
     "removeRemoteModel": "删除 {{modelName}} ({{serverName}})？",
     "retryConnection": "重试",
     "enterUrlManually": "手动输入URL",
-    "manageServers": "管理服务器"
+    "manageServers": "管理服务器",
+    "ttsAvailability": "文本转语音",
+    "ttsAvailabilityDescription": "朗读 助手回复",
+    "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行"
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -403,6 +406,15 @@
       "rewriting": "重写文章",
       "creativity": "创造性写作",
       "vision": "视觉"
+    },
+    "hubRun": {
+      "title": "下载模型",
+      "resolving": "正在加载模型详情…",
+      "cancel": "取消",
+      "retry": "重试",
+      "invalidLinkTitle": "链接无效",
+      "invalidLinkMessage": "此Hugging Face链接缺失，或其模型或文件无效。",
+      "resolveError": "无法加载模型详情，请检查网络连接后重试。"
     }
   },
   "completionParams": {
@@ -740,6 +752,26 @@
         "nameRequired": "名称为必填项",
         "generatingPromptRequired": "使用AI Prompt时需要生成Prompt",
         "promptModelRequired": "使用AI Prompt时需要Prompt生成模型"
+      },
+      "talents": "技能",
+      "talentNames": {
+        "render_html": "HTML预览",
+        "calculate": "数学表达式",
+        "datetime": "日期和时间"
+      },
+      "talentDescriptions": {
+        "render_html": "在聊天中内联渲染HTML文档",
+        "calculate": "计算数学表达式",
+        "datetime": "获取当前日期和时间"
+      },
+      "greeting": {
+        "sectionLabel": "问候语",
+        "textLabel": "问候消息",
+        "textPlaceholder": "在空白聊天时这个Pal该说些什么？",
+        "suggestedPromptsLabel": "建议提示词",
+        "addPromptButton": "添加提示词",
+        "promptPlaceholder": "用于快捷标签的简短提示词",
+        "removePromptLabel": "删除提示词"
       }
     },
     "assistantPalSheet": {
@@ -908,7 +940,20 @@
     "bubble": {
       "msPerToken": "{{value}}毫秒/token",
       "tokensPerSec": "{{value}} tokens/秒",
-      "ttft": "{{value}}毫秒 TTFT"
+      "ttft": "{{value}}毫秒 TTFT",
+      "interrupted": "已中断",
+      "truncated": "已截断——可能是上下文已满"
+    },
+    "pendingIndicator": {
+      "preparingTool": "正在准备工具",
+      "buildingPage": "正在构建页面",
+      "calculating": "正在计算",
+      "lookingUpTime": "正在查询时间",
+      "stopping": "正在停止…"
+    },
+    "toolMetrics": {
+      "tokens": "{{count}} 个token",
+      "elapsed": "{{seconds}}秒"
     }
   },
   "palsScreen": {
@@ -989,7 +1034,13 @@
       "failedToDownload": "下载Pal失败",
       "premiumPalMessage": "这是一个高级Pal。\n• 如果您已经通过Palshub账户解锁，请登录以访问完整详情。\n• 还没有解锁？请访问palshub.ai应用了解更多。",
       "notAvailable": "N/A",
-      "buyOnPalshub": "在Palshub购买"
+      "buyOnPalshub": "在Palshub购买",
+      "finalizingPurchase": "正在完成购买…",
+      "processingPurchase": "处理中——即将解锁。",
+      "checkoutSessionExpired": "你的会话已过期，请重新登录以继续。",
+      "signInAgain": "重新登录",
+      "palNotAvailable": "此Pal目前无法购买。",
+      "checkoutFailed": "出现问题，请重试。"
     }
   },
   "validation": {
@@ -1062,7 +1113,48 @@
     "readyToChat": "准备好聊天了吗？加载上次使用的模型",
     "pleaseLoadModel": "在你聊天前，请先加载模型",
     "multimodalNotEnabled": "此模型未启用多模态功能，图片将显示但不会被AI处理",
-    "cannotSendWithoutModel": "请先加载模型"
+    "cannotSendWithoutModel": "请先加载模型",
+    "toolCallTruncated": "工具调用被截断——模型可能空间不足，请尝试增大上下文或缩减请求。",
+    "toolCompatWarning": "此模型可能不支持工具调用，结果可能不可靠。",
+    "softCapWarning": "新建聊天以获得最佳性能。",
+    "contextWarning": "此对话已经很长，可能很快就会空间不足。",
+    "contextRemoteHedged": "此回复可能已被截断，请重新发送或缩短请求。",
+    "contextFull": "对话空间已满，请新建聊天或增大上下文长度。",
+    "contextFullEscalated": "空间仍然不足，请新建聊天或增大上下文长度以继续。",
+    "contextFullHeavyTalent": "对话空间已满——{{talent}}通常需要更多空间，请新建聊天或增大上下文长度。",
+    "contextBannerDismiss": "关闭",
+    "contextNewChat": "新建聊天",
+    "contextIncrease": "增大上下文",
+    "contextMoreRoom": "更多空间",
+    "increaseContextTitle": "为此聊天提供更多空间",
+    "increaseContextBody": "空间是模型的工作记忆——决定它一次能记住多少聊天内容。空间越大，回复被截断前的聊天就越长。",
+    "increaseContextTokensUnit": "token",
+    "increaseContextWordsRam": "约{{words}}词 · ≈{{ram}} 内存",
+    "increaseContextFitsChip": "可容纳",
+    "increaseContextTightChip": "紧张",
+    "increaseContextWontFitChip": "无法容纳",
+    "increaseContextFitsStatus": "此设备可轻松运行。",
+    "increaseContextFitsUnconstrainedStatus": "内存充足——仅受模型限制。",
+    "increaseContextTightStatus": "超过约{{tokens}}后，此设备可能内存不足并变慢，但仍可尝试。",
+    "increaseContextWontFitStatus": "约{{tokens}}可能无法容纳于此设备的内存中，请选择更小的长度。",
+    "increaseContextModelMax": "{{tokens}} · 模型上限",
+    "increaseContextHedge": "重新加载需要几秒钟，你的聊天内容不会丢失。",
+    "increaseContextAdvanced": "高级",
+    "increaseContextAdvancedBody": "此聊天的上下文长度：{{from}} → {{to}} token（模型上限{{max}}）。设备限制为估算值，随着更大上下文成功加载会相应提高。",
+    "increaseContextSliderA11yLabel": "上下文长度",
+    "increaseContextSliderA11yValue": "{{tokens}} 个token",
+    "increaseContextConfirmSize": "设为{{size}}",
+    "increaseContextReloadingShort": "正在重新加载…",
+    "increaseContextNoFitBody": "此设备无法为该模型容纳更大的上下文，请新建聊天以继续。",
+    "increaseContextCancel": "暂不",
+    "increaseContextReloading": "正在以更大的上下文重新加载模型…",
+    "increaseContextSuccess": "上下文已增大至{{target}} token。",
+    "increaseContextFailure": "无法增大上下文长度，已恢复你之前的设置。",
+    "palLoadHint": "此Pal通常需要的空间超出当前上下文长度的限制。",
+    "generatingPreview": "正在生成预览…（{{tokens}} 个token）",
+    "generatingPreviewPending": "正在生成预览…",
+    "toolUsedChip": "已使用{{name}}",
+    "toolErrorBlock": "{{name}}失败"
   },
   "benchmark": {
     "title": "基准测试",
@@ -1225,7 +1317,7 @@
     "previewButton": "预览",
     "stopPreviewButton": "停止预览",
     "voicesTitle": "语音",
-    "voicesEmptyHint": "轻点任意语音即可安装并使用，或选择系统语音——这些始终可用",
+    "voicesEmptyHint": "轻点任意语音即可安装并使用，或选择系统语音——系统语音始终可用",
     "supertonicStepsLabel": "质量（扩散步数）",
     "toggleAutoSpeakLabel": "切换自动朗读",
     "openSettingsLabel": "TTS设置",
@@ -1246,7 +1338,7 @@
     "engineSystemTitleAndroid": "安卓语音",
     "engineSystemTier": "始终可用",
     "engineTierLightest": "最轻量",
-    "engineTierBestQuality": "最佳品质",
+    "engineTierBestQuality": "最佳质量",
     "engineTierFastestStart": "启动最快",
     "engineSpecsLine": "{{voices}} 个语音  ·  {{sizeMb}} MB  ·  ~{{ramMb}} MB 内存",
     "engineSystemSpecsLine": "{{voices}} 个语音",
@@ -1259,6 +1351,14 @@
     "engineRetryCta": "再试一次",
     "voicesEmptyState": "未找到语音",
     "kokoroDeviceNote": "某些语音可能不兼容所有设备",
-    "insufficientStorage": "空间不足——请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）"
+    "insufficientStorage": "存储空间不足，请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）"
+  },
+  "htmlPreview": {
+    "defaultTitle": "预览",
+    "showPreview": "显示渲染预览",
+    "showCode": "显示HTML代码",
+    "copyHtml": "复制HTML",
+    "closePreview": "关闭预览",
+    "openFullscreen": "全屏打开：{{title}}"
   }
 }

@@ -10,7 +10,7 @@ import {
 } from './types';
 
 import {Model} from '../../utils/types';
-import {formatBytes, hasEnoughSpace} from '../../utils';
+import {formatBytes, hasEnoughSpace, hfUserAgent} from '../../utils';
 import {uiStore} from '../../store';
 import NativeDownloadModule from '../../specs/NativeDownloadModule';
 import type {
@@ -20,10 +20,22 @@ import type {
 
 const TAG = 'DownloadManager';
 
+/**
+ * Signals a user-cancelled download (vs. a genuine failure) so callers can
+ * suppress it: no error surface, no follow-on work.
+ */
+export class DownloadCancelledError extends Error {
+  constructor(public readonly modelId: string) {
+    super(`Download cancelled for ${modelId}`);
+    this.name = 'DownloadCancelledError';
+  }
+}
+
 export class DownloadManager {
   private downloadJobs: DownloadMap;
   private callbacks: DownloadEventCallbacks = {};
   private eventEmitter: NativeEventEmitter | null = null;
+  private cancelledModelIds = new Set<string>();
 
   constructor() {
     console.log(`${TAG}: Initializing DownloadManager`);
@@ -300,6 +312,7 @@ export class DownloadManager {
         discretionary: false,
         progressInterval: 800,
         headers: {
+          'User-Agent': hfUserAgent(),
           ...(authToken ? {Authorization: `Bearer ${authToken}`} : {}),
         },
         begin: res => {
@@ -389,6 +402,9 @@ export class DownloadManager {
         runInAction(() => {
           this.downloadJobs.delete(model.id);
         });
+        // Cancel may race with a download that already completed; clear any
+        // stale marker so it can't suppress a later genuine failure.
+        this.cancelledModelIds.delete(model.id);
       } else {
         console.error(
           `${TAG}: Download failed with status: ${result.statusCode} for ID: ${model.id}`,
@@ -396,6 +412,16 @@ export class DownloadManager {
         throw new Error(`Download failed with status: ${result.statusCode}`);
       }
     } catch (error) {
+      // RNFS.stopDownload aborts the task, rejecting this promise. A user
+      // cancel is not a failure — surface it as a distinct cancellation.
+      if (this.cancelledModelIds.delete(model.id)) {
+        console.log(`${TAG}: Download cancelled by user for ID: ${model.id}`);
+        runInAction(() => {
+          this.downloadJobs.delete(model.id);
+        });
+        throw new DownloadCancelledError(model.id);
+      }
+
       console.error(`${TAG}: Download failed for ID: ${model.id}:`, error);
       runInAction(() => {
         const job = this.downloadJobs.get(model.id);
@@ -484,6 +510,9 @@ export class DownloadManager {
     console.log(`${TAG}: Attempting to cancel download:`, modelId);
     const job = this.downloadJobs.get(modelId);
     if (job) {
+      // Mark as user-cancelled so the iOS download promise rejection is
+      // recognised as a cancel, not surfaced as a "Download Failed" error.
+      this.cancelledModelIds.add(modelId);
       try {
         if (Platform.OS === 'ios') {
           console.log(
@@ -499,6 +528,9 @@ export class DownloadManager {
         ) {
           console.log(`${TAG}: Cancelling Android download:`, modelId);
           await NativeDownloadModule.cancelDownload(job.downloadId);
+          // Android cancel emits no failure event, so nothing consumes the
+          // cancelled-id marker — clear it here to avoid leaking entries.
+          this.cancelledModelIds.delete(modelId);
         }
 
         // Clean up the partial download file
@@ -541,6 +573,7 @@ export class DownloadManager {
           modelId,
           error: err instanceof Error ? err.message : String(err),
         });
+        this.cancelledModelIds.delete(modelId);
       }
     } else {
       console.warn(`${TAG}: No download job found to cancel:`, modelId);
@@ -556,6 +589,7 @@ export class DownloadManager {
       this.eventEmitter.removeAllListeners('onDownloadFailed');
     }
     this.downloadJobs.clear();
+    this.cancelledModelIds.clear();
     console.log(`${TAG}: Download jobs cleared`);
   }
 

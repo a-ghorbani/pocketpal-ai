@@ -39,6 +39,8 @@
 		A8B4FFD92EA5731700CD3B4C /* PalEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFD12EA5731700CD3B4C /* PalEntity.swift */; };
 		A8B4FFDC2EA5736100CD3B4C /* DeepLinkModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */; };
 		A8B4FFDD2EA5736100CD3B4C /* DeepLinkModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */; };
+		AB1001010000000000000001 /* AuthSessionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1001010000000000000003 /* AuthSessionModule.swift */; };
+		AB1001010000000000000002 /* AuthSessionModule.m in Sources */ = {isa = PBXBuildFile; fileRef = AB1001010000000000000004 /* AuthSessionModule.m */; };
 		B70FB28C50CE468DAF8D023A /* JetBrainsMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FF9D2CC3DF0F4073AB223CC1 /* JetBrainsMono-Regular.ttf */; };
 		C0270FB5CD74463CA3FF5284 /* Inter-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */; };
 		C12BD91DEBF24C6F8A87DF6E /* JetBrainsMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FFFE5CF13C04970AB5BF8BF /* JetBrainsMono-Medium.ttf */; };
@@ -97,6 +99,8 @@
 		A8B4FFDA2EA5736100CD3B4C /* DeepLinkModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DeepLinkModule.m; path = PocketPal/DeepLinkModule.m; sourceTree = "<group>"; };
 		A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeepLinkModule.swift; path = PocketPal/DeepLinkModule.swift; sourceTree = "<group>"; };
 		A8D9D0A86B69377BF32D2540 /* Pods-PocketPal.profiling.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PocketPal.profiling.xcconfig"; path = "Target Support Files/Pods-PocketPal/Pods-PocketPal.profiling.xcconfig"; sourceTree = "<group>"; };
+		AB1001010000000000000003 /* AuthSessionModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthSessionModule.swift; path = PocketPal/AuthSessionModule.swift; sourceTree = "<group>"; };
+		AB1001010000000000000004 /* AuthSessionModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AuthSessionModule.m; path = PocketPal/AuthSessionModule.m; sourceTree = "<group>"; };
 		AE37F4EB27084262BAE95F85 /* Inter-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Light.ttf"; path = "../src/assets/fonts/Inter-Light.ttf"; sourceTree = "<group>"; };
 		B033E4AC2D8E41719BF5142F /* Inter-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-ExtraBold.ttf"; path = "../src/assets/fonts/Inter-ExtraBold.ttf"; sourceTree = "<group>"; };
 		BB20B47BBDAD48C3B5711DA7 /* StorefrontModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = StorefrontModule.m; path = PocketPal/StorefrontModule.m; sourceTree = "<group>"; };
@@ -159,6 +163,8 @@
 				A8B4FFDB2EA5736100CD3B4C /* DeepLinkModule.swift */,
 				BB20B47BBDAD48C3B5711DA7 /* StorefrontModule.m */,
 				5EDB347C521A41619835CAD9 /* StorefrontModule.swift */,
+				AB1001010000000000000004 /* AuthSessionModule.m */,
+				AB1001010000000000000003 /* AuthSessionModule.swift */,
 				A8B4FFCC2EA5731700CD3B4C /* AskPalIntent.swift */,
 				A8B4FFCD2EA5731700CD3B4C /* LlamaInferenceEngine.swift */,
 				A8B4FFCF2EA5731700CD3B4C /* OpenPalChatIntent.swift */,
@@ -514,6 +520,8 @@
 				A8B4FFDD2EA5736100CD3B4C /* DeepLinkModule.m in Sources */,
 				0D85337A512F432695A638E3 /* StorefrontModule.swift in Sources */,
 				C75985DD3D2E4F2083261F4B /* StorefrontModule.m in Sources */,
+				AB1001010000000000000001 /* AuthSessionModule.swift in Sources */,
+				AB1001010000000000000002 /* AuthSessionModule.m in Sources */,
 				A86CF0D42EA57BE100BFFCEE /* LlamaContextWrapper.mm in Sources */,
 				A8B4FFD52EA5731700CD3B4C /* PalDataProvider.swift in Sources */,
 				A8B4FFD62EA5731700CD3B4C /* PocketPalShortcuts.swift in Sources */,
@@ -549,7 +557,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 141;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = PocketPal/Info.plist;
@@ -558,7 +566,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.15.0;
+				MARKETING_VERSION = 1.15.2;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -588,7 +596,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 141;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -596,7 +604,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.15.0;
+				MARKETING_VERSION = 1.15.2;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -816,14 +824,14 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 141;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.15.0;
+				MARKETING_VERSION = 1.15.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
@@ -849,14 +857,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 141;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.15.0;
+				MARKETING_VERSION = 1.15.2;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -966,7 +974,7 @@
 				CODE_SIGN_ENTITLEMENTS = PocketPal/PocketPal.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 141;
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = MYXGXY23Y6;
 				INFOPLIST_FILE = PocketPal/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -974,7 +982,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.15.0;
+				MARKETING_VERSION = 1.15.2;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -1008,14 +1016,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 141;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.15.0;
+				MARKETING_VERSION = 1.15.2;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.PocketPalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
