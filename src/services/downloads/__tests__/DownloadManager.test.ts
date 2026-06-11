@@ -429,6 +429,58 @@ describe('DownloadManager', () => {
     expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
   });
 
+  it('still surfaces a later genuine failure after the same model was cancelled', async () => {
+    (Platform as any).OS = 'ios';
+
+    const iosDownloadManager = new DownloadManager();
+
+    const callbacks = {
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    };
+
+    iosDownloadManager.setCallbacks(callbacks);
+
+    // First attempt: user cancels mid-download.
+    let rejectFirst: (reason: Error) => void = () => {};
+    const firstPromise = new Promise((_resolve, reject) => {
+      rejectFirst = reject;
+    });
+    (RNFS.downloadFile as jest.Mock).mockReturnValueOnce({
+      jobId: 111,
+      promise: firstPromise,
+    });
+
+    const firstStart = iosDownloadManager.startDownload(
+      basicModel,
+      '/path/to/model.bin',
+    );
+    await new Promise(resolve => setImmediate(resolve));
+    await iosDownloadManager.cancelDownload('model-1');
+    rejectFirst(new Error('Download has been aborted'));
+    await expect(firstStart).resolves.toBeUndefined();
+    expect(callbacks.onError).not.toHaveBeenCalled();
+
+    // Second attempt for the SAME model genuinely fails. The cancelled-id
+    // marker from the first attempt must not swallow this real failure.
+    (RNFS.downloadFile as jest.Mock).mockReturnValueOnce({
+      jobId: 222,
+      promise: Promise.reject(new Error('Network connection lost')),
+    });
+
+    await expect(
+      iosDownloadManager.startDownload(basicModel, '/path/to/model.bin'),
+    ).rejects.toThrow('Network connection lost');
+
+    expect(callbacks.onError).toHaveBeenCalledWith(
+      'model-1',
+      expect.any(Error),
+    );
+    expect(iosDownloadManager.isDownloading('model-1')).toBe(false);
+  });
+
   it('sends the attribution User-Agent on the iOS RNFS download', async () => {
     (Platform as any).OS = 'ios';
 

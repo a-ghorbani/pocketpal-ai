@@ -895,6 +895,8 @@ describe('ModelStore', () => {
       );
 
       expect(downloadManager.startDownload).toHaveBeenCalled();
+      // Contrast with the cancel case: a genuine failure DOES surface an error.
+      expect(modelStore.downloadError).not.toBeNull();
     });
   });
 
