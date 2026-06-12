@@ -252,12 +252,14 @@ describe('useOnboardingHandlers', () => {
       );
     });
 
-    it('codie quick (PRESET) goes through defaultModels.find, never registerOnboardingPalModel (D7 invariant)', async () => {
+    it('codie quick (PRESET) goes through defaultModels.find, never registerOnboardingPalModel', async () => {
       // Codie quick stays PRESET (qwen2.5-coder-0.5b-instruct-q8_0). The
       // entry-level params=630167424 diverges from the PRESET row's 494032768;
       // since the PRESET branch resolves via defaultModels.find, that entry-
-      // level value MUST stay inert at runtime. This guards the D7 invariant.
-      const codieQuick = TOPIC_TO_PAL.coding.models.find(m => m.tier === 'quick')!;
+      // level value MUST stay inert at runtime.
+      const codieQuick = TOPIC_TO_PAL.coding.models.find(
+        m => m.tier === 'quick',
+      )!;
       expect(codieQuick.origin).toBe('preset');
       const codieQuickId = entryId(codieQuick);
       const presetRow = defaultModels.find(m => m.id === codieQuickId);
@@ -284,9 +286,9 @@ describe('useOnboardingHandlers', () => {
     });
 
     it('replay with a different tier on the same pal: synth runs on the new entry; previous Pal is rebound', async () => {
-      // Scenario D (production has no replay UI, but the underlying state
+      // Production has no replay UI today, but the underlying state
       // transitions are exercisable; this asserts the single-writer contract
-      // holds when finish() fires twice with different selectedModelIds).
+      // holds when finish() fires twice with different selectedModelIds.
       palStore.pals = [
         {
           id: 'sage-id',
@@ -324,10 +326,10 @@ describe('useOnboardingHandlers', () => {
     });
 
     it('checkSpaceAndDownload rejection (cancel mid-download) is swallowed; finish resolves cleanly', async () => {
-      // Scenario F: the user taps Stop on the download banner during the
-      // post-finish fire-and-forget. The handler MUST NOT propagate the
-      // rejection (it has its own .catch); finish() resolves cleanly and
-      // the registered Model + Pal binding both stay in place.
+      // The user taps Stop on the download banner during the post-finish
+      // fire-and-forget. The handler MUST NOT propagate the rejection (it
+      // has its own .catch); finish() resolves cleanly and the registered
+      // Model + Pal binding both stay in place.
       palStore.pals = [];
       uiStore.onboardingState.selectedModelId = CODIE_BALANCED_ID;
       uiStore.onboardingState.selectedTopic = 'coding';
@@ -354,11 +356,11 @@ describe('useOnboardingHandlers', () => {
       expect(uiStore.completeOnboarding).toHaveBeenCalled();
     });
 
-    it('skip on screen 6 after selecting a model: no register, no pal write, no download (I2 / Scenario G)', async () => {
+    it('skip on screen 6 after selecting a model: no register, no pal write, no download', async () => {
       // The user selected Codie/Balanced (HF) and then tapped Skip
       // instead of Download. selectedModelId is non-null but skip() must
-      // NOT register the HF entry — I2 says only finish() is the boundary
-      // site, and skip() doesn't trigger it.
+      // NOT register the HF entry — only finish() is the boundary site
+      // for registration, and skip() doesn't trigger it.
       palStore.pals = [];
       uiStore.onboardingState.selectedModelId = CODIE_BALANCED_ID;
       uiStore.onboardingState.selectedTopic = 'coding';

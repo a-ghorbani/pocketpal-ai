@@ -42,10 +42,7 @@ export const Onboarding5Screen: React.FC = observer(() => {
         </>
       }
       bottomBar={
-        <OnboardingBottomBar
-          onBack={goBack}
-          backAccessibilityLabel={t.back}
-        />
+        <OnboardingBottomBar onBack={goBack} backAccessibilityLabel={t.back} />
       }
     />
   );

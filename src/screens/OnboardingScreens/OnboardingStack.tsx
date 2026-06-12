@@ -43,7 +43,10 @@ export const OnboardingStack: React.FC = () => {
             setChromeStep(chromeStepFromRouteName(active, ROUTES.ONBOARDING));
           },
         }}>
-        <Stack.Screen name={ROUTES.ONBOARDING.SPLASH} component={SplashScreen} />
+        <Stack.Screen
+          name={ROUTES.ONBOARDING.SPLASH}
+          component={SplashScreen}
+        />
         <Stack.Screen
           name={ROUTES.ONBOARDING.STEP_1}
           component={Onboarding1Screen}

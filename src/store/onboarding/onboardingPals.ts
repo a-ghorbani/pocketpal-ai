@@ -114,9 +114,9 @@ export interface OnboardingPalDef {
   color: [string, string];
   models: readonly OnboardingPalModelEntry[];
   /**
-   * Staged greeting + chip prompts from POC-24. The local-pal schema does
-   * not surface these yet — POC-26 wires the chat-greeting path. Held as
-   * data here so the curated copy lives next to the rest of the pal.
+   * Staged greeting + chip prompts. The local-pal schema does not surface
+   * these yet — the chat-greeting path is wired separately. Held as data
+   * here so the curated copy lives next to the rest of the pal.
    */
   greeting?: OnboardingPalGreeting;
 }

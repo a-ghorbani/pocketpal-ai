@@ -6,8 +6,7 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      // Figma `Color/Background/Muted` (#fafafa) — maps to
-      // `colors.surfaceVariant` per WHAT §4h.
+      // Figma `Color/Background/Muted` (#fafafa) — maps to `colors.surfaceVariant`.
       backgroundColor: theme.colors.surfaceVariant,
       alignItems: 'center',
       justifyContent: 'center',

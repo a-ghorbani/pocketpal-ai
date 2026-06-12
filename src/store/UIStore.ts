@@ -216,8 +216,8 @@ export class UIStore {
   }) {
     runInAction(() => {
       this.hasCompletedOnboarding = true;
-      // Persisted snapshot stays as `TopicKey[]` (FOU-117 multi-tag
-      // headroom). Derive from the new scalar: null → [], else [topic].
+      // Persisted snapshot stays as `TopicKey[]` for multi-tag headroom.
+      // Derive from the new scalar: null → [], else [topic].
       this.onboardingTopicsSnapshot = topic === null ? [] : [topic];
       this.onboardingState = {...INITIAL_ONBOARDING_STATE};
     });

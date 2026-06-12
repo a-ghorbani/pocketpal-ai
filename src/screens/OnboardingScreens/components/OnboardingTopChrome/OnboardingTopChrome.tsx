@@ -1,7 +1,6 @@
 import React, {useCallback, useContext} from 'react';
 import {View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
 import {observer} from 'mobx-react';
 
 import {Stepper} from '../../../../components/ui';
@@ -11,15 +10,7 @@ import {L10nContext} from '../../../../utils';
 import {OnboardingSkipButton} from '../OnboardingSkipButton';
 import {createStyles} from './styles';
 
-export type OnboardingChromeStep =
-  | 'splash'
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | null;
+export type OnboardingChromeStep = 'splash' | 1 | 2 | 3 | 4 | 5 | 6 | null;
 
 /**
  * Persistent onboarding top chrome — Stepper + top-right action — rendered
@@ -39,7 +30,6 @@ export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const styles = createStyles(theme, insets.top);
-    const navigation = useNavigation<any>();
     const l10n = useContext(L10nContext);
     const t = l10n.onboarding;
 
@@ -59,9 +49,7 @@ export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
     if (step >= 1 && step <= 5) {
       topRight = <OnboardingSkipButton label={t.skip} onPress={onSkip} />;
     } else if (step === 6) {
-      topRight = (
-        <OnboardingSkipButton label={t.skipForNow} onPress={onSkip} />
-      );
+      topRight = <OnboardingSkipButton label={t.skipForNow} onPress={onSkip} />;
     }
 
     return (
@@ -76,7 +64,9 @@ export const OnboardingTopChrome: React.FC<{step: OnboardingChromeStep}> =
               />
             </View>
           ) : null}
-          {topRight ? <View style={styles.topRightSlot}>{topRight}</View> : null}
+          {topRight ? (
+            <View style={styles.topRightSlot}>{topRight}</View>
+          ) : null}
         </View>
       </View>
     );

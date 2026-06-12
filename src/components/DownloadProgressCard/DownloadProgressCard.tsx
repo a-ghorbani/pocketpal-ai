@@ -41,10 +41,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
   return (
     <View testID="download-progress-card" style={styles.card}>
       <View style={styles.headerRow}>
-        <Text
-          style={styles.title}
-          numberOfLines={1}
-          ellipsizeMode="tail">
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
           {modelName}
         </Text>
         {sizeLabel ? <Text style={styles.size}>{sizeLabel}</Text> : null}
