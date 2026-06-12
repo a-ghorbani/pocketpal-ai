@@ -99,3 +99,8 @@ e2e/reports/
 # single PR review (pre/post diff against main), never committed. They die
 # with the worktree.
 e2e/specs/visual-capture/TASK-*.spec.ts
+
+# Dev-team workflow control-plane artefacts (story docs, designer asks,
+# screenshot inventories). Live in the dev-team repo and are sometimes
+# synced into the worktree for local reference; never committed here.
+workflows/
