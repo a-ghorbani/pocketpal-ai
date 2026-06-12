@@ -8,6 +8,12 @@ import {
 } from '../onboardingPals';
 import {TOPIC_KEYS} from '../types';
 
+const ID_PATTERN = /^[^/]+\/[^/]+\/[^/]+\.gguf$/;
+
+const allEntries = ONBOARDING_PALS.flatMap(p =>
+  p.models.map(m => [p.key, m.tier, m] as const),
+);
+
 describe('onboardingPals', () => {
   it('exposes five pals (pip/codie/sage/echo/muse)', () => {
     expect(ONBOARDING_PALS.map(p => p.key)).toEqual([
@@ -46,15 +52,50 @@ describe('onboardingPals', () => {
     },
   );
 
-  it.each(
-    ONBOARDING_PALS.flatMap(p =>
-      p.models
-        .filter(m => m.origin === 'preset')
-        .map(m => [p.key, m.tier, entryId(m)] as const),
-    ),
-  )('%s/%s references PRESET model %s', (_palKey, _tier, modelId) => {
-    const model = defaultModels.find(m => m.id === modelId);
-    expect(model).toBeDefined();
-    expect(model?.origin).toBe(ModelOrigin.PRESET);
-  });
+  it.each(allEntries)(
+    '%s/%s entry has non-empty repo/filename and id matches the canonical shape',
+    (_palKey, _tier, entry) => {
+      expect(entry.repo.length).toBeGreaterThan(0);
+      expect(entry.filename.length).toBeGreaterThan(0);
+      expect(entryId(entry)).toMatch(ID_PATTERN);
+    },
+  );
+
+  it.each(allEntries)(
+    '%s/%s entry downloadUrl equals huggingface.co/<repo>/resolve/main/<filename>',
+    (_palKey, _tier, entry) => {
+      expect(entry.downloadUrl).toBe(
+        `https://huggingface.co/${entry.repo}/resolve/main/${entry.filename}`,
+      );
+    },
+  );
+
+  it.each(allEntries)(
+    '%s/%s entry has populated picker fields (sizeBytes, params, displayName, author, origin)',
+    (_palKey, _tier, entry) => {
+      expect(entry.sizeBytes).toBeGreaterThan(0);
+      expect(entry.params).toBeGreaterThan(0);
+      expect(entry.displayName.length).toBeGreaterThan(0);
+      expect(entry.author.length).toBeGreaterThan(0);
+      expect(['preset', 'hf']).toContain(entry.origin);
+    },
+  );
+
+  it.each(allEntries.filter(([, , m]) => m.origin === 'preset'))(
+    '%s/%s preset-origin entry id exists in defaultModels with origin PRESET',
+    (_palKey, _tier, entry) => {
+      const id = entryId(entry);
+      const model = defaultModels.find(m => m.id === id);
+      expect(model).toBeDefined();
+      expect(model?.origin).toBe(ModelOrigin.PRESET);
+    },
+  );
+
+  it.each(allEntries.filter(([, , m]) => m.origin === 'hf'))(
+    '%s/%s hf-origin entry id does NOT appear in defaultModels',
+    (_palKey, _tier, entry) => {
+      const id = entryId(entry);
+      expect(defaultModels.find(m => m.id === id)).toBeUndefined();
+    },
+  );
 });

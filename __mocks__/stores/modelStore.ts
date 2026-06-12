@@ -43,6 +43,7 @@ class MockModelStore {
   getDownloadProgress: jest.Mock;
   manualReleaseContext: jest.Mock;
   addHFModel: jest.Mock;
+  registerOnboardingPalModel: jest.Mock;
   downloadHFModel: jest.Mock;
   cancelDownload: jest.Mock;
   disableAutoRelease: jest.Mock;
@@ -89,6 +90,7 @@ class MockModelStore {
       getDownloadProgress: false,
       manualReleaseContext: false,
       addHFModel: false,
+      registerOnboardingPalModel: false,
       downloadHFModel: false,
       cancelDownload: false,
       disableAutoRelease: false,
@@ -138,6 +140,25 @@ class MockModelStore {
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
     this.addHFModel = jest.fn();
+    this.registerOnboardingPalModel = jest
+      .fn()
+      .mockImplementation(
+        async (entry: {
+          repo: string;
+          filename: string;
+          displayName: string;
+          sizeBytes: number;
+          params: number;
+        }) =>
+          ({
+            id: `${entry.repo}/${entry.filename}`,
+            name: entry.displayName,
+            size: entry.sizeBytes,
+            params: entry.params,
+            origin: 'HF',
+            isDownloaded: false,
+          } as any),
+      );
     this.downloadHFModel = jest.fn();
     this.cancelDownload = jest.fn();
     this.disableAutoRelease = jest.fn();
