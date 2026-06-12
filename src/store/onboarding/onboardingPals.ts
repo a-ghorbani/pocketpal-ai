@@ -11,8 +11,9 @@
  * display name, size, and params used by the screen-6 picker pre-
  * registration. HF-origin entries are lazy-registered into
  * `modelStore.models` at Finish via `ModelStore.registerOnboardingPalModel`;
- * PRESET entries (Pip + Codie quick) still resolve via `defaultModels`.
- * The accompanying unit test pins the per-origin contract.
+ * PRESET entries (Pip tier triple + Codie quick) still resolve via
+ * `defaultModels`. The accompanying unit test pins the per-origin
+ * contract.
  *
  * Two pals MAY share an `entry.id` (e.g. Echo and Sage both reference
  * `gemma-3-1b-it-Q8_0`); `addHFModel` idempotency collapses them to a
@@ -142,24 +143,36 @@ const PAL_PIP: OnboardingPalDef = {
     "You are Pip, a friendly and helpful assistant who runs locally on the user's phone. Keep replies concise and warm.",
   color: ['#0E0D0C', '#FAFAFA'],
   models: [
-    {
+    palEntry({
       tier: 'quick',
-      modelId:
-        'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q2_K.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      repo: 'bartowski/Llama-3.2-1B-Instruct-GGUF',
+      filename: 'Llama-3.2-1B-Instruct-Q2_K.gguf',
+      params: 1235814432,
+      displayName: 'Llama 3.2 1B (Q2_K)',
+      sizeBytes: 580873408,
+      origin: 'preset',
+    }),
+    palEntry({
       tier: 'balanced',
-      modelId:
-        'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: true,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      repo: 'bartowski/Llama-3.2-1B-Instruct-GGUF',
+      filename: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf',
+      params: 1235814432,
+      displayName: 'Llama 3.2 1B (Q4_K_M)',
+      sizeBytes: 807694464,
+      origin: 'preset',
+    }),
+    palEntry({
       tier: 'best',
-      modelId:
-        'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
+      repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF',
+      filename: 'Llama-3.2-3B-Instruct-Q6_K.gguf',
+      params: 3212749888,
+      displayName: 'Llama 3.2 3B (Q6_K)',
+      sizeBytes: 2643853856,
+      origin: 'preset',
+    }),
   ],
 };
 
@@ -181,24 +194,37 @@ const PAL_CODIE: OnboardingPalDef = {
     ],
   },
   models: [
-    {
+    palEntry({
       tier: 'quick',
-      modelId:
-        'Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/qwen2.5-coder-0.5b-instruct-q8_0.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      // PRESET — entryId matches `defaultModels.ts:245` byte-for-byte.
+      repo: 'Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF',
+      filename: 'qwen2.5-coder-0.5b-instruct-q8_0.gguf',
+      params: 630167424,
+      displayName: 'Qwen2.5 Coder 0.5B',
+      sizeBytes: 675710848,
+      origin: 'preset',
+    }),
+    palEntry({
       tier: 'balanced',
-      modelId:
-        'Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q8_0.gguf',
       recommended: true,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      repo: 'lmstudio-community/Qwen3.5-2B-GGUF',
+      filename: 'Qwen3.5-2B-Q4_K_M.gguf',
+      params: 1881825088,
+      displayName: 'Qwen3.5 2B',
+      sizeBytes: 1270808032,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'best',
-      modelId:
-        'Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/qwen2.5-coder-3b-instruct-q5_k_m.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
+      repo: 'lmstudio-community/Qwen3.5-4B-GGUF',
+      filename: 'Qwen3.5-4B-Q4_K_M.gguf',
+      params: 4205751296,
+      displayName: 'Qwen3.5 4B',
+      sizeBytes: 2707513696,
+      origin: 'hf',
+    }),
   ],
 };
 
@@ -219,24 +245,39 @@ const PAL_SAGE: OnboardingPalDef = {
     ],
   },
   models: [
-    {
+    palEntry({
       tier: 'quick',
-      modelId:
-        'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      repo: 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF',
+      filename: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
+      params: 1170340608,
+      displayName: 'LFM2.5 1.2B',
+      sizeBytes: 730895168,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'balanced',
-      modelId:
-        'MaziyarPanahi/Phi-3.5-mini-instruct-GGUF/Phi-3.5-mini-instruct.Q4_K_M.gguf',
       recommended: true,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      // Shared with Echo balanced — `addHFModel` idempotency collapses
+      // duplicates into one `modelStore.models` row.
+      repo: 'lmstudio-community/gemma-3-1b-it-GGUF',
+      filename: 'gemma-3-1b-it-Q8_0.gguf',
+      params: 999885952,
+      displayName: 'Gemma 3 1B',
+      sizeBytes: 1069306368,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'best',
-      modelId:
-        'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
+      // Shared with Echo best.
+      repo: 'lmstudio-community/gemma-3-4b-it-GGUF',
+      filename: 'gemma-3-4b-it-Q4_K_M.gguf',
+      params: 3880263168,
+      displayName: 'Gemma 3 4B',
+      sizeBytes: 2489757856,
+      origin: 'hf',
+    }),
   ],
 };
 
@@ -258,24 +299,38 @@ const PAL_ECHO: OnboardingPalDef = {
     ],
   },
   models: [
-    {
+    palEntry({
       tier: 'quick',
-      modelId:
-        'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      repo: 'lmstudio-community/gemma-3-1b-it-GGUF',
+      filename: 'gemma-3-1b-it-Q4_K_M.gguf',
+      params: 999885952,
+      displayName: 'Gemma 3 1B',
+      sizeBytes: 806058240,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'balanced',
-      modelId:
-        'TheDrummer/Gemmasutra-Mini-2B-v1-GGUF/Gemmasutra-Mini-2B-v1-Q6_K.gguf',
       recommended: true,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      // Shared with Sage balanced — idempotent dedupe at register time.
+      repo: 'lmstudio-community/gemma-3-1b-it-GGUF',
+      filename: 'gemma-3-1b-it-Q8_0.gguf',
+      params: 999885952,
+      displayName: 'Gemma 3 1B',
+      sizeBytes: 1069306368,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'best',
-      modelId:
-        'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
+      // Shared with Sage best.
+      repo: 'lmstudio-community/gemma-3-4b-it-GGUF',
+      filename: 'gemma-3-4b-it-Q4_K_M.gguf',
+      params: 3880263168,
+      displayName: 'Gemma 3 4B',
+      sizeBytes: 2489757856,
+      origin: 'hf',
+    }),
   ],
 };
 
@@ -297,29 +352,41 @@ const PAL_MUSE: OnboardingPalDef = {
     ],
   },
   models: [
-    {
+    palEntry({
       tier: 'quick',
-      modelId:
-        'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      // Shared with Sage quick.
+      repo: 'LiquidAI/LFM2.5-1.2B-Instruct-GGUF',
+      filename: 'LFM2.5-1.2B-Instruct-Q4_K_M.gguf',
+      params: 1170340608,
+      displayName: 'LFM2.5 1.2B',
+      sizeBytes: 730895168,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'balanced',
-      modelId: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
       recommended: true,
-    } as unknown as OnboardingPalModelEntry,
-    {
+      // Shared with Codie balanced.
+      repo: 'lmstudio-community/Qwen3.5-2B-GGUF',
+      filename: 'Qwen3.5-2B-Q4_K_M.gguf',
+      params: 1881825088,
+      displayName: 'Qwen3.5 2B',
+      sizeBytes: 1270808032,
+      origin: 'hf',
+    }),
+    palEntry({
       tier: 'best',
-      modelId:
-        'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    } as unknown as OnboardingPalModelEntry,
+      // Shared with Codie best.
+      repo: 'lmstudio-community/Qwen3.5-4B-GGUF',
+      filename: 'Qwen3.5-4B-Q4_K_M.gguf',
+      params: 4205751296,
+      displayName: 'Qwen3.5 4B',
+      sizeBytes: 2707513696,
+      origin: 'hf',
+    }),
   ],
 };
-
-// `palEntry` is used by Step 2 once data is transcribed. Reference here
-// to keep the helper from being unused before the data swap.
-void palEntry;
 
 export const ONBOARDING_PALS: readonly OnboardingPalDef[] = [
   PAL_PIP,
