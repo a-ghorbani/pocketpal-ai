@@ -7,8 +7,16 @@
  * this per phone. Until then, the same tier is pre-selected on every
  * device.
  *
- * Each `modelId` MUST exist in `ModelStore.defaultModels` with origin
- * PRESET. The accompanying unit test pins that contract.
+ * Each entry is self-describing: it carries the HF repo / filename,
+ * display name, size, and params used by the screen-6 picker pre-
+ * registration. HF-origin entries are lazy-registered into
+ * `modelStore.models` at Finish via `ModelStore.registerOnboardingPalModel`;
+ * PRESET entries (Pip + Codie quick) still resolve via `defaultModels`.
+ * The accompanying unit test pins the per-origin contract.
+ *
+ * Two pals MAY share an `entry.id` (e.g. Echo and Sage both reference
+ * `gemma-3-1b-it-Q8_0`); `addHFModel` idempotency collapses them to a
+ * single `modelStore.models` row.
  *
  * The pal-facing copy (display name, body text shown on screen 6) is
  * l10n-keyed at `onboarding.screen6.pal.<key>`; system prompts stay
@@ -19,11 +27,78 @@ import type {TopicKey} from './types';
 
 export type OnboardingModelTier = 'quick' | 'balanced' | 'best';
 
+export type OnboardingPalModelOrigin = 'preset' | 'hf';
+
 export interface OnboardingPalModelEntry {
   tier: OnboardingModelTier;
-  modelId: string;
   recommended: boolean;
+  /** `author/repo-name` (HF repo identifier). */
+  repo: string;
+  /** GGUF filename within the repo. */
+  filename: string;
+  /** Derived from `repo.split('/')[0]` at module load. */
+  author: string;
+  /** Deterministic `huggingface.co/<repo>/resolve/main/<filename>`. */
+  downloadUrl: string;
+  /** Shown on the screen-6 radio subtitle. */
+  displayName: string;
+  /** Drives the screen-6 CTA size suffix + space-fit pre-check. */
+  sizeBytes: number;
+  /** Model parameter count → `Model.params`. */
+  params: number;
+  /**
+   * `preset` = entry id MUST exist in `defaultModels.ts` with origin
+   * PRESET; resolved via `defaultModels.find`. `hf` = entry is lazy-
+   * registered at Finish via `ModelStore.registerOnboardingPalModel`.
+   */
+  origin: OnboardingPalModelOrigin;
+  /**
+   * Transitional shim: returns the derived entry id (`${repo}/${filename}`)
+   * so the rest of the codebase keeps compiling step-by-step. Deleted in
+   * Step 5 once the picker + handlers read entry fields directly.
+   */
+  readonly modelId: string;
 }
+
+/**
+ * Derived entry id — matches `Model.id` shape from both `hfAsModel`
+ * (`${hfModel.id}/${modelFile.rfilename}`) and `defaultModels.ts`
+ * preset ids. `entry.id` is never persisted as a separate field.
+ */
+export const entryId = (entry: {repo: string; filename: string}): string =>
+  `${entry.repo}/${entry.filename}`;
+
+interface PalEntryInput {
+  tier: OnboardingModelTier;
+  recommended: boolean;
+  repo: string;
+  filename: string;
+  params: number;
+  displayName: string;
+  sizeBytes: number;
+  origin: OnboardingPalModelOrigin;
+}
+
+const palEntry = (input: PalEntryInput): OnboardingPalModelEntry => {
+  const repo = input.repo;
+  const filename = input.filename;
+  const author = repo.split('/')[0];
+  return {
+    tier: input.tier,
+    recommended: input.recommended,
+    repo,
+    filename,
+    author,
+    downloadUrl: `https://huggingface.co/${repo}/resolve/main/${filename}`,
+    displayName: input.displayName,
+    sizeBytes: input.sizeBytes,
+    params: input.params,
+    origin: input.origin,
+    get modelId() {
+      return `${repo}/${filename}`;
+    },
+  };
+};
 
 export type OnboardingPalKey = 'pip' | 'codie' | 'sage' | 'echo' | 'muse';
 
@@ -72,19 +147,19 @@ const PAL_PIP: OnboardingPalDef = {
       modelId:
         'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q2_K.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'balanced',
       modelId:
         'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: true,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'best',
       modelId:
         'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
   ],
 };
 
@@ -111,19 +186,19 @@ const PAL_CODIE: OnboardingPalDef = {
       modelId:
         'Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/qwen2.5-coder-0.5b-instruct-q8_0.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'balanced',
       modelId:
         'Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q8_0.gguf',
       recommended: true,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'best',
       modelId:
         'Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/qwen2.5-coder-3b-instruct-q5_k_m.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
   ],
 };
 
@@ -149,19 +224,19 @@ const PAL_SAGE: OnboardingPalDef = {
       modelId:
         'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'balanced',
       modelId:
         'MaziyarPanahi/Phi-3.5-mini-instruct-GGUF/Phi-3.5-mini-instruct.Q4_K_M.gguf',
       recommended: true,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'best',
       modelId:
         'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
   ],
 };
 
@@ -188,19 +263,19 @@ const PAL_ECHO: OnboardingPalDef = {
       modelId:
         'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'balanced',
       modelId:
         'TheDrummer/Gemmasutra-Mini-2B-v1-GGUF/Gemmasutra-Mini-2B-v1-Q6_K.gguf',
       recommended: true,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'best',
       modelId:
         'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
   ],
 };
 
@@ -227,20 +302,24 @@ const PAL_MUSE: OnboardingPalDef = {
       modelId:
         'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'balanced',
       modelId: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
       recommended: true,
-    },
+    } as unknown as OnboardingPalModelEntry,
     {
       tier: 'best',
       modelId:
         'bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q6_K.gguf',
       recommended: false,
-    },
+    } as unknown as OnboardingPalModelEntry,
   ],
 };
+
+// `palEntry` is used by Step 2 once data is transcribed. Reference here
+// to keep the helper from being unused before the data swap.
+void palEntry;
 
 export const ONBOARDING_PALS: readonly OnboardingPalDef[] = [
   PAL_PIP,
