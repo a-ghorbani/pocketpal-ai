@@ -27,13 +27,14 @@ declare const browser: WebdriverIO.Browser;
 
 const TIMEOUT = 15000;
 
-// Pal-balanced model IDs come from src/store/onboarding/onboardingPals.ts.
-// Picked by topic on screen 5; the matching model is the one ModelRadioGroup
-// renders on screen 6 with the Recommended badge.
+// Pal-balanced model IDs come from src/store/onboarding/onboardingPals.ts;
+// each entry id is `${repo}/${filename}`. Picked by topic on screen 5;
+// the matching model is the one ModelRadioGroup renders on screen 6 with
+// the Recommended badge.
 const PIP_BALANCED_MODEL_ID =
   'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf';
 const CODIE_BALANCED_MODEL_ID =
-  'Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/qwen2.5-coder-1.5b-instruct-q8_0.gguf';
+  'lmstudio-community/Qwen3.5-2B-GGUF/Qwen3.5-2B-Q4_K_M.gguf';
 
 const getAppId = (): string =>
   (driver as any).isAndroid ? 'com.pocketpalai.e2e' : 'ai.pocketpal';
@@ -129,7 +130,7 @@ describe('Onboarding flow', () => {
     await chat.waitForReady(TIMEOUT);
   });
 
-  it('topic=coding renders Codie pal models (Qwen 2.5 Coder set)', async () => {
+  it('topic=coding renders Codie pal models (Qwen3.5 2B set)', async () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
@@ -143,8 +144,8 @@ describe('Onboarding flow', () => {
     await onboarding.tapTopic('coding');
     await onboarding.waitForScreen(6);
 
-    // Screen 6 must show Codie's balanced model (Qwen 2.5 Coder 1.5B),
-    // not Pip's Llama. This is the pal-per-topic guarantee.
+    // Screen 6 must show Codie's balanced model (Qwen3.5 2B), not
+    // Pip's Llama. This is the pal-per-topic guarantee.
     expect(
       await onboarding.palModel(CODIE_BALANCED_MODEL_ID).isExisting(),
     ).toBe(true);
