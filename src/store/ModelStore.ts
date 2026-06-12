@@ -36,6 +36,7 @@ import {
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
 import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
+import type {OnboardingPalModelEntry} from './onboarding/onboardingPals';
 
 import {downloadManager, DownloadCancelledError} from '../services/downloads';
 
@@ -2195,6 +2196,32 @@ class ModelStore {
 
     await this.refreshDownloadStatuses();
     return modelToReturn;
+  };
+
+  /**
+   * Lazy-register a curated onboarding-pal HF entry into `models`.
+   * Single writer for HF-origin onboarding picks; only call site is
+   * `useOnboardingHandlers.finish`. Synthesizes the minimal
+   * `{hfModel, modelFile}` pair and delegates to `addHFModel`, which
+   * provides idempotency. `siblings: undefined` keeps `isVisionRepo`
+   * false so no projection model materializes (text-only by design).
+   */
+  registerOnboardingPalModel = async (
+    entry: OnboardingPalModelEntry,
+  ): Promise<Model | undefined> => {
+    const modelFile: ModelFile = {
+      rfilename: entry.filename,
+      url: entry.downloadUrl,
+      size: entry.sizeBytes,
+    } as ModelFile;
+    const hfModel: HuggingFaceModel = {
+      id: entry.repo,
+      author: entry.author,
+      url: `https://huggingface.co/${entry.repo}`,
+      specs: {gguf: {total: entry.params}},
+      siblings: undefined as unknown as HuggingFaceModel['siblings'],
+    } as HuggingFaceModel;
+    return this.addHFModel(hfModel, modelFile);
   };
 
   removeModelByFullPath = (fullPath: string) => {
