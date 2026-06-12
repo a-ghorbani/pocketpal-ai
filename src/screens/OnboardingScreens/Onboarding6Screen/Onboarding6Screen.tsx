@@ -4,8 +4,10 @@ import {observer} from 'mobx-react';
 
 import {uiStore} from '../../../store';
 import {useTheme} from '../../../hooks';
-import {resolvePalForTopic} from '../../../store/onboarding/onboardingPals';
-import {defaultModels} from '../../../store/defaultModels';
+import {
+  entryId,
+  resolvePalForTopic,
+} from '../../../store/onboarding/onboardingPals';
 import {OnboardingScaffold} from '../components/OnboardingScaffold';
 import {OnboardingBottomBar} from '../components/OnboardingBottomBar';
 import {ItalicAccentTitle} from '../components/ItalicAccentTitle';
@@ -41,30 +43,27 @@ export const Onboarding6Screen: React.FC = observer(() => {
   // different pal's list and would otherwise leave the radio in an
   // unselectable state. User taps after that override the seed.
   useEffect(() => {
-    const inPalList = pal.models.some(m => m.modelId === selectedId);
+    const inPalList = pal.models.some(m => entryId(m) === selectedId);
     if (!inPalList) {
       const recommended = pal.models.find(m => m.recommended);
       if (recommended) {
-        uiStore.setOnboardingModelId(recommended.modelId);
+        uiStore.setOnboardingModelId(entryId(recommended));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pal.key]);
 
   const canFinish = selectedId !== null;
-  const options: ModelOption[] = pal.models.map(entry => {
-    const model = defaultModels.find(m => m.id === entry.modelId);
-    return {
-      id: entry.modelId,
-      title: t.screen6.modelTier[entry.tier],
-      subtitle: model?.name ?? entry.modelId,
-      recommended: entry.recommended,
-    };
-  });
-  const pickedModel = selectedId
-    ? defaultModels.find(m => m.id === selectedId)
+  const options: ModelOption[] = pal.models.map(entry => ({
+    id: entryId(entry),
+    title: t.screen6.modelTier[entry.tier],
+    subtitle: entry.displayName,
+    recommended: entry.recommended,
+  }));
+  const pickedEntry = selectedId
+    ? pal.models.find(m => entryId(m) === selectedId)
     : undefined;
-  const sizeLabel = formatSize(pickedModel?.size);
+  const sizeLabel = formatSize(pickedEntry?.sizeBytes);
   const palBody = t.screen6.pal[pal.key].body;
   const primaryLabel = sizeLabel
     ? t.screen6.ctaTemplate

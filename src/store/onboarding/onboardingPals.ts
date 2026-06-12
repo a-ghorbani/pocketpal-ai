@@ -53,12 +53,6 @@ export interface OnboardingPalModelEntry {
    * registered at Finish via `ModelStore.registerOnboardingPalModel`.
    */
   origin: OnboardingPalModelOrigin;
-  /**
-   * Transitional shim: returns the derived entry id (`${repo}/${filename}`)
-   * so the rest of the codebase keeps compiling step-by-step. Deleted in
-   * Step 5 once the picker + handlers read entry fields directly.
-   */
-  readonly modelId: string;
 }
 
 /**
@@ -80,26 +74,18 @@ interface PalEntryInput {
   origin: OnboardingPalModelOrigin;
 }
 
-const palEntry = (input: PalEntryInput): OnboardingPalModelEntry => {
-  const repo = input.repo;
-  const filename = input.filename;
-  const author = repo.split('/')[0];
-  return {
-    tier: input.tier,
-    recommended: input.recommended,
-    repo,
-    filename,
-    author,
-    downloadUrl: `https://huggingface.co/${repo}/resolve/main/${filename}`,
-    displayName: input.displayName,
-    sizeBytes: input.sizeBytes,
-    params: input.params,
-    origin: input.origin,
-    get modelId() {
-      return `${repo}/${filename}`;
-    },
-  };
-};
+const palEntry = (input: PalEntryInput): OnboardingPalModelEntry => ({
+  tier: input.tier,
+  recommended: input.recommended,
+  repo: input.repo,
+  filename: input.filename,
+  author: input.repo.split('/')[0],
+  downloadUrl: `https://huggingface.co/${input.repo}/resolve/main/${input.filename}`,
+  displayName: input.displayName,
+  sizeBytes: input.sizeBytes,
+  params: input.params,
+  origin: input.origin,
+});
 
 export type OnboardingPalKey = 'pip' | 'codie' | 'sage' | 'echo' | 'muse';
 

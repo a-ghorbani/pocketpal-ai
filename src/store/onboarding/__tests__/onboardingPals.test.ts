@@ -3,6 +3,7 @@ import {ModelOrigin} from '../../../utils/types';
 import {
   ONBOARDING_PALS,
   TOPIC_TO_PAL,
+  entryId,
   resolvePalForTopic,
 } from '../onboardingPals';
 import {TOPIC_KEYS} from '../types';
@@ -47,7 +48,9 @@ describe('onboardingPals', () => {
 
   it.each(
     ONBOARDING_PALS.flatMap(p =>
-      p.models.map(m => [p.key, m.tier, m.modelId] as const),
+      p.models
+        .filter(m => m.origin === 'preset')
+        .map(m => [p.key, m.tier, entryId(m)] as const),
     ),
   )('%s/%s references PRESET model %s', (_palKey, _tier, modelId) => {
     const model = defaultModels.find(m => m.id === modelId);

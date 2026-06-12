@@ -2,7 +2,10 @@ import {renderHook, act} from '@testing-library/react-hooks';
 
 import {uiStore, palStore, modelStore} from '../../../store';
 import {defaultModels} from '../../../store/defaultModels';
-import {TOPIC_TO_PAL} from '../../../store/onboarding/onboardingPals';
+import {
+  TOPIC_TO_PAL,
+  entryId,
+} from '../../../store/onboarding/onboardingPals';
 import {ROUTES} from '../../../utils/navigationConstants';
 import {useOnboardingHandlers} from '../useOnboardingHandlers';
 
@@ -18,10 +21,12 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-const PIP_BALANCED_ID = TOPIC_TO_PAL.smartchat.models.find(m => m.recommended)!
-  .modelId;
-const CODIE_BALANCED_ID = TOPIC_TO_PAL.coding.models.find(m => m.recommended)!
-  .modelId;
+const PIP_BALANCED_ID = entryId(
+  TOPIC_TO_PAL.smartchat.models.find(m => m.recommended)!,
+);
+const CODIE_BALANCED_ID = entryId(
+  TOPIC_TO_PAL.coding.models.find(m => m.recommended)!,
+);
 
 describe('useOnboardingHandlers', () => {
   beforeEach(() => {
@@ -214,10 +219,14 @@ describe('useOnboardingHandlers', () => {
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
     });
 
-    it('every topic-pal modelId resolves in defaultModels (sanity guard against catalogue drift)', () => {
+    it('every preset-origin entry resolves in defaultModels (sanity guard against catalogue drift)', () => {
       for (const pal of Object.values(TOPIC_TO_PAL)) {
         for (const entry of pal.models) {
-          expect(defaultModels.find(m => m.id === entry.modelId)).toBeDefined();
+          if (entry.origin === 'preset') {
+            expect(
+              defaultModels.find(m => m.id === entryId(entry)),
+            ).toBeDefined();
+          }
         }
       }
     });
