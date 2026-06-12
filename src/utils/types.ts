@@ -194,10 +194,14 @@ export namespace MessageType {
    * into `metadata.steps` (lift handled by `Message.toMessageObject()` and
    * `ChatSessionRepository`). Consumers MUST read `steps` and never
    * `metadata.steps`.
+   *
+   * FIX #755: Added `modelId` to track which model generated this response.
    */
   export interface AssistantTurn extends Base {
     type: 'assistant_turn';
     steps: AgentStep[];
+    /** ID of the model that generated this response. Added for #755. */
+    modelId?: string;
   }
 
   export interface Unsupported extends Base {

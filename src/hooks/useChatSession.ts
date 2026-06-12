@@ -154,6 +154,8 @@ const prepareCompletion = async ({
     id: '', // populated by addMessageToCurrentSession
     type: 'assistant_turn',
     steps: [],
+    // FIX #755: Record which model generated this response
+    modelId: modelStore.activeModel?.id ?? undefined,
     metadata: {
       contextId,
       conversationId: conversationIdRef,

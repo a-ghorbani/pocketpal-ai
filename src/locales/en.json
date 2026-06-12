@@ -116,6 +116,8 @@
     "setTokenButton": "Set Token",
     "useHfTokenLabel": "Use HF Token",
     "useHfTokenDescription": "Enable to use token for API requests. Disable if token is causing authentication issues.",
+    "useHfMirrorLabel": "Use HF-Mirror (China)",
+    "useHfMirrorDescription": "Use hf-mirror.com instead of huggingface.co. Enable this if you are in mainland China and have trouble accessing Hugging Face.",
     "cacheStorageTitle": "Cache & Storage",
     "clearPalCaches": "Clear Shortcuts Caches",
     "clearPalCachesDescription": "Clears cached data used to speed up Shortcuts. This won't affect your Pals or chat history.",

@@ -14,6 +14,12 @@ export const styles = ({theme}: {theme: Theme}) =>
       color: theme.colors.textSecondary,
       fontSize: 10,
     },
+    // FIX #755: Style for model name display
+    modelName: {
+      color: theme.colors.primary,
+      fontSize: 10,
+      fontWeight: '500',
+    },
     interruptedStatus: {
       color: theme.colors.error,
       fontSize: 10,

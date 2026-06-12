@@ -1066,6 +1066,24 @@ export const SettingsScreen: React.FC = observer(() => {
                     onValueChange={value => hfStore.setUseHfToken(value)}
                   />
                 </View>
+
+                {/* Use HF-Mirror Switch */}
+                <Divider style={styles.divider} />
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.useHfMirrorLabel}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.settings.useHfMirrorDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    testID="use-hf-mirror-switch"
+                    value={hfStore.useHfMirror}
+                    onValueChange={value => hfStore.setUseHfMirror(value)}
+                  />
+                </View>
               </View>
             </Card.Content>
           </Card>

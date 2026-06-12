@@ -62,6 +62,12 @@ export const createTagsStyles = (theme: Theme) => ({
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
+  // Fix #753: Style URLs to be distinguishable from regular text
+  a: {
+    color: theme.colors.primary, // Use theme's primary color for links
+    textDecorationLine: 'underline',
+    fontSize: 16,
+  },
 });
 
 export const createStyles = (theme: Theme) =>

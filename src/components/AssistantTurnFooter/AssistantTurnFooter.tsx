@@ -12,7 +12,7 @@ import {PlayButton} from '../TextMessage/PlayButton';
 
 import {styles} from './styles';
 
-import {chatSessionStore} from '../../store';
+import {chatSessionStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {derivedText} from '../../utils/chat';
 import {MessageType} from '../../utils/types';
@@ -64,6 +64,14 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
 
     const componentStyles = styles({theme});
 
+    // FIX #755: Show model name for assistant turns
+    let modelName: string | undefined;
+    if (message.type === 'assistant_turn' && message.modelId) {
+      // Look up model by ID from the models array
+      const model = modelStore.models.find(m => m.id === message.modelId);
+      modelName = model?.name ?? message.modelId;
+    }
+
     // Build timing string from whichever parts are available. Each part
     // is independent; missing parts are omitted from the joined string.
     const timingParts: string[] = [];
@@ -113,6 +121,12 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
         {timings && fullTimingsString ? (
           <Text style={componentStyles.timing} testID="footer-timing">
             {fullTimingsString}
+          </Text>
+        ) : null}
+        {/* FIX #755: Show model name */}
+        {modelName ? (
+          <Text style={componentStyles.modelName} testID="footer-model-name">
+            {modelName}
           </Text>
         ) : null}
         {interrupted ? (

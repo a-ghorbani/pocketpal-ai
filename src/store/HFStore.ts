@@ -4,6 +4,7 @@ import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
 import {fetchGGUFSpecs, fetchModelFilesDetails, fetchModels} from '../api/hf';
+import {setHFDomain} from '../config/urls';
 
 import {enrichSiblingsWithStorage} from '../utils';
 import {processHFSearchResults} from '../utils/hf';
@@ -36,6 +37,7 @@ class HFStore {
   queryConfig = true;
   hfToken: string | null = null;
   useHfToken: boolean = true; // Only applies when token is set
+  useHfMirror: boolean = false; // Use HF-Mirror for Chinese users
 
   // search filters
   searchFilters: SearchFilters = {
@@ -48,12 +50,15 @@ class HFStore {
 
     makePersistable(this, {
       name: 'HFStore',
-      properties: ['useHfToken'],
+      properties: ['useHfToken', 'useHfMirror'],
       storage: AsyncStorage,
     });
 
     // Load token from secure storage on initialization
     this.loadTokenFromSecureStorage();
+
+    // Initialize HF domain based on persisted setting
+    setHFDomain(this.useHfMirror);
   }
 
   // Load token from secure storage
@@ -85,6 +90,14 @@ class HFStore {
     runInAction(() => {
       this.useHfToken = useToken;
     });
+  }
+
+  setUseHfMirror(useMirror: boolean) {
+    runInAction(() => {
+      this.useHfMirror = useMirror;
+    });
+    // Update the HF domain immediately
+    setHFDomain(useMirror);
   }
 
   async setToken(token: string) {

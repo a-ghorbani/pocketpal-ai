@@ -111,6 +111,8 @@
     "setTokenButton": "设置令牌",
     "useHfTokenLabel": "使用HF令牌",
     "useHfTokenDescription": "使用HF令牌访问受限模型",
+    "useHfMirrorLabel": "使用HF镜像站（中国大陆）",
+    "useHfMirrorDescription": "使用 hf-mirror.com 代替 huggingface.co。如果你在中国大陆并且无法访问 Hugging Face，请启用此选项。",
     "cacheStorageTitle": "缓存与存储",
     "clearPalCaches": "清除快捷指令缓存",
     "clearPalCachesDescription": "清除用于加速快捷指令的缓存数据。这不会影响你的Pal或聊天历史记录。",
