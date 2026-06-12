@@ -2,10 +2,7 @@ import {renderHook, act} from '@testing-library/react-hooks';
 
 import {uiStore, palStore, modelStore} from '../../../store';
 import {defaultModels} from '../../../store/defaultModels';
-import {
-  TOPIC_TO_PAL,
-  entryId,
-} from '../../../store/onboarding/onboardingPals';
+import {TOPIC_TO_PAL, entryId} from '../../../store/onboarding/onboardingPals';
 import {ROUTES} from '../../../utils/navigationConstants';
 import {useOnboardingHandlers} from '../useOnboardingHandlers';
 

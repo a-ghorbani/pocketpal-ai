@@ -124,7 +124,8 @@ export interface OnboardingPalDef {
 const PAL_PIP: OnboardingPalDef = {
   key: 'pip',
   name: 'Pip',
-  description: 'A friendly general-purpose pal that runs entirely on your phone.',
+  description:
+    'A friendly general-purpose pal that runs entirely on your phone.',
   systemPrompt:
     "You are Pip, a friendly and helpful assistant who runs locally on the user's phone. Keep replies concise and warm.",
   color: ['#0E0D0C', '#FAFAFA'],
@@ -391,6 +392,5 @@ export const TOPIC_TO_PAL: Record<TopicKey, OnboardingPalDef> = {
   else: PAL_PIP,
 };
 
-export const resolvePalForTopic = (
-  topic: TopicKey | null,
-): OnboardingPalDef => TOPIC_TO_PAL[topic ?? 'else'];
+export const resolvePalForTopic = (topic: TopicKey | null): OnboardingPalDef =>
+  TOPIC_TO_PAL[topic ?? 'else'];
