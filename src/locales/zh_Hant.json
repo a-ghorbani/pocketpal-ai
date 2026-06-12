@@ -664,7 +664,7 @@
       "tokensPerSec": "{{value}} 詞元/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
-      "truncated": "已截斷 — 可能超過顯示長度"
+      "truncated": "已截斷 — 可能是上下文已滿"
     },
     "thinkingBubble": {
       "reasoning": "推理"
