@@ -5,7 +5,10 @@ import {uiStore, palStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
 import {defaultModels} from '../../store/defaultModels';
-import {resolvePalForTopic} from '../../store/onboarding/onboardingPals';
+import {
+  entryId,
+  resolvePalForTopic,
+} from '../../store/onboarding/onboardingPals';
 import type {Pal} from '../../types/pal';
 import type {OnboardingStep, TopicKey} from '../../store/onboarding/types';
 
@@ -76,8 +79,16 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
       uiStore.completeOnboarding({topic, modelId: null});
       return;
     }
-    const picked = defaultModels.find(m => m.id === modelId);
     const palDef = resolvePalForTopic(topic);
+    const entry = palDef.models.find(m => entryId(m) === modelId);
+    let picked;
+    if (entry) {
+      if (entry.origin === 'preset') {
+        picked = defaultModels.find(m => m.id === entryId(entry));
+      } else {
+        picked = await modelStore.registerOnboardingPalModel(entry);
+      }
+    }
     const existing = palStore.pals.find(
       p => p.name === palDef.name && p.source === 'local',
     );
