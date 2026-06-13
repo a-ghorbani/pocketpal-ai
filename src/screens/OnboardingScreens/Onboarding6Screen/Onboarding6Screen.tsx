@@ -54,12 +54,17 @@ export const Onboarding6Screen: React.FC = observer(() => {
   }, [pal.key]);
 
   const canFinish = selectedId !== null;
-  const options: ModelOption[] = pal.models.map(entry => ({
-    id: entryId(entry),
-    title: t.screen6.modelTier[entry.tier],
-    subtitle: entry.displayName,
-    recommended: entry.recommended,
-  }));
+  const options: ModelOption[] = pal.models.map(entry => {
+    const sizeSegment = formatSize(entry.sizeBytes);
+    return {
+      id: entryId(entry),
+      title: t.screen6.modelTier[entry.tier],
+      subtitle: sizeSegment
+        ? `${entry.displayName} · ${sizeSegment}`
+        : entry.displayName,
+      recommended: entry.recommended,
+    };
+  });
   const pickedEntry = selectedId
     ? pal.models.find(m => entryId(m) === selectedId)
     : undefined;
