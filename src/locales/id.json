@@ -86,8 +86,8 @@
     "useMmapTrueDescription": "Selalu gunakan pemetaan memori untuk pemuatan lebih cepat",
     "useMmapFalseDescription": "Disarankan untuk dinonaktifkan ketika weight repacking diaktifkan untuk mencegah penggandaan penggunaan memori",
     "modelLoadingSettings": "Pengaturan Pemuatan Model",
-    "autoOffloadLoad": "Muat/Muat-Ulang Otomatis",
-    "autoOffloadLoadDescription": "Muat-ulang model saat aplikasi berada di latar belakang.",
+    "autoOffloadLoad": "Lepas/Muat Otomatis",
+    "autoOffloadLoadDescription": "Lepas model saat aplikasi di latar belakang.",
     "autoNavigateToChat": "Arahkan Otomatis ke Obrolan",
     "autoNavigateToChatDescription": "Arahkan ke obrolan saat pemuatan dimulai.",
     "appSettings": "Pengaturan Aplikasi",
@@ -332,7 +332,7 @@
         "download": "Unduh",
         "remove": "Hapus",
         "load": "Muat",
-        "offload": "Muat-Ulang"
+        "offload": "Lepas"
       },
       "labels": {
         "skills": "Kemampuan: ",
@@ -354,7 +354,7 @@
         "downloadProgress": "Progres unduhan",
         "loadingIndicator": "Memuat",
         "loadButton": "Muat model",
-        "offloadButton": "Muat-ulang model",
+        "offloadButton": "Lepas model",
         "downloadButton": "Unduh model",
         "settingsButton": "Pengaturan model",
         "deleteButton": "Hapus model",
