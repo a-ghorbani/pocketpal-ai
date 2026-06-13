@@ -1,0 +1,454 @@
+{
+  "schema_version": "1.2.0-draft",
+  "platform": "android",
+  "rules_version": "2026-06-10.1",
+  "classifier": {
+    "ram_bands": [
+      {
+        "id": "lt-4",
+        "max_bytes": 4294967296,
+        "label": "< 4 GiB"
+      },
+      {
+        "id": "4-6",
+        "max_bytes": 6442450944,
+        "label": "4-6 GiB"
+      },
+      {
+        "id": "6-8",
+        "max_bytes": 8589934592,
+        "label": "6-8 GiB"
+      },
+      {
+        "id": "8-12",
+        "max_bytes": 12884901888,
+        "label": "8-12 GiB"
+      },
+      {
+        "id": "12-plus",
+        "max_bytes": null,
+        "label": "12+ GiB"
+      }
+    ],
+    "soc_classes": ["budget", "mid", "flagship"],
+    "soc_model_to_class": {
+      "SM8850": "flagship",
+      "SM8750": "flagship",
+      "SM8650": "flagship",
+      "SM8635": "flagship",
+      "SM8550": "flagship",
+      "SM8475": "flagship",
+      "SM8450": "flagship",
+      "SM8350": "flagship",
+      "SM8250": "flagship",
+      "SM8150": "flagship",
+      "SM7475-AB": "mid",
+      "SM7435": "mid",
+      "SM7325": "mid",
+      "SM7250": "mid",
+      "SM7225": "mid",
+      "SM6450": "budget",
+      "SM6375": "budget",
+      "SM6225": "budget",
+      "SM4350": "budget",
+      "MT6993": "flagship",
+      "MT6991": "flagship",
+      "MT6989": "flagship",
+      "MT6985": "flagship",
+      "MT6983": "flagship",
+      "MT6896": "flagship",
+      "MT6886": "flagship",
+      "MT6877": "mid",
+      "MT6875": "mid",
+      "MT6855": "mid",
+      "MT6853": "budget",
+      "MT6833": "budget",
+      "MT6789": "budget",
+      "MT6769": "budget",
+      "s5e9945": "flagship",
+      "s5e9935": "flagship",
+      "s5e9925": "flagship",
+      "s5e9855": "mid",
+      "s5e8855": "mid",
+      "s5e8845": "mid",
+      "s5e8835": "mid",
+      "s5e8825": "mid",
+      "Tensor": "mid",
+      "Tensor G2": "mid",
+      "Tensor G3": "mid",
+      "Tensor G4": "mid",
+      "Tensor G5": "mid"
+    },
+    "hardware_to_class": {
+      "sun": "flagship",
+      "pineapple": "flagship",
+      "kalama": "flagship",
+      "taro": "flagship",
+      "lahaina": "flagship",
+      "kona": "flagship",
+      "msmnile": "flagship",
+      "sdm845": "mid",
+      "tokay": "mid",
+      "shiba": "mid",
+      "komodo": "mid",
+      "caiman": "mid",
+      "akita": "mid",
+      "mustang": "mid",
+      "blazer": "mid",
+      "husky": "mid",
+      "s5e9945": "flagship",
+      "s5e9925": "flagship",
+      "exynos2100": "flagship",
+      "exynos990": "flagship",
+      "k6991v1_64": "flagship",
+      "k6989v1_64": "flagship",
+      "k6993v1_64": "flagship",
+      "houji": "flagship",
+      "duchamp": "flagship",
+      "rothko": "flagship",
+      "canoe": "flagship",
+      "rodin": "flagship",
+      "peridot": "flagship",
+      "zircon": "flagship",
+      "crow": "flagship",
+      "holi": "mid",
+      "lito": "mid",
+      "oriole": "mid",
+      "cheetah": "mid",
+      "bluejay": "mid",
+      "panther": "mid",
+      "lynx": "mid",
+      "raven": "mid",
+      "barbet": "mid",
+      "tegu": "mid",
+      "s5e8835": "mid",
+      "s5e8855": "mid",
+      "s5e8845": "mid",
+      "s5e8825": "mid",
+      "a34x": "mid",
+      "marble": "mid",
+      "garnet": "mid",
+      "vayu": "mid",
+      "sweet": "mid",
+      "pipa": "mid",
+      "Spacewar": "mid",
+      "volcano": "mid",
+      "parrot": "mid",
+      "cancunf": "mid",
+      "bangkk": "mid",
+      "bengal": "budget",
+      "a32": "budget",
+      "a15": "budget",
+      "rosemary": "budget"
+    },
+    "cpu_heuristic": {
+      "rules": [
+        {
+          "match": {
+            "features_any": ["i8mm"]
+          },
+          "class": "flagship"
+        },
+        {
+          "match": {
+            "features_any": ["sve2"]
+          },
+          "class": "flagship"
+        },
+        {
+          "match": {
+            "max_freq_mhz_min": 3000
+          },
+          "class": "flagship"
+        },
+        {
+          "match": {
+            "features_all": ["dotprod"],
+            "max_freq_mhz_min": 2400
+          },
+          "class": "mid"
+        },
+        {
+          "match": {
+            "features_all": ["dotprod"]
+          },
+          "class": "mid"
+        },
+        {
+          "match": {},
+          "class": "budget"
+        }
+      ]
+    },
+    "tier_matrix": [
+      {
+        "ram_band": "lt-4",
+        "soc_class": "budget",
+        "tier": "low"
+      },
+      {
+        "ram_band": "lt-4",
+        "soc_class": "mid",
+        "tier": "low"
+      },
+      {
+        "ram_band": "lt-4",
+        "soc_class": "flagship",
+        "tier": "low"
+      },
+      {
+        "ram_band": "4-6",
+        "soc_class": "budget",
+        "tier": "low"
+      },
+      {
+        "ram_band": "4-6",
+        "soc_class": "mid",
+        "tier": "low"
+      },
+      {
+        "ram_band": "4-6",
+        "soc_class": "flagship",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "6-8",
+        "soc_class": "budget",
+        "tier": "low"
+      },
+      {
+        "ram_band": "6-8",
+        "soc_class": "mid",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "6-8",
+        "soc_class": "flagship",
+        "tier": "high"
+      },
+      {
+        "ram_band": "8-12",
+        "soc_class": "budget",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "8-12",
+        "soc_class": "mid",
+        "tier": "high"
+      },
+      {
+        "ram_band": "8-12",
+        "soc_class": "flagship",
+        "tier": "flagship"
+      },
+      {
+        "ram_band": "12-plus",
+        "soc_class": "budget",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "12-plus",
+        "soc_class": "mid",
+        "tier": "high"
+      },
+      {
+        "ram_band": "12-plus",
+        "soc_class": "flagship",
+        "tier": "flagship"
+      }
+    ]
+  },
+  "tiers": {
+    "low": {
+      "candidates": [
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        },
+        {
+          "model": "bonsai-1.7b",
+          "hf_repo": "prism-ml/Bonsai-1.7B-gguf",
+          "hf_filename": "Bonsai-1.7B-Q1_0.gguf",
+          "params": 1720028160,
+          "size_bytes": 248302272
+        },
+        {
+          "model": "qwen_qwen3-0.6b",
+          "hf_repo": "bartowski/Qwen_Qwen3-0.6B-GGUF",
+          "hf_filename": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+          "params": 751632384,
+          "size_bytes": 484220320
+        },
+        {
+          "model": "lfm2.5-350m",
+          "hf_repo": "LiquidAI/LFM2.5-350M-GGUF",
+          "hf_filename": "LFM2.5-350M-Q4_K_M.gguf",
+          "params": 354483968,
+          "size_bytes": 229312224
+        }
+      ]
+    },
+    "mid": {
+      "candidates": [
+        {
+          "model": "huggingfacetb_smollm3-3b",
+          "hf_repo": "bartowski/HuggingFaceTB_SmolLM3-3B-GGUF",
+          "hf_filename": "HuggingFaceTB_SmolLM3-3B-Q4_0.gguf",
+          "params": 3075098624,
+          "size_bytes": 1811455808
+        },
+        {
+          "model": "lfm2-2.6b",
+          "hf_repo": "LiquidAI/LFM2-2.6B-GGUF",
+          "hf_filename": "LFM2-2.6B-Q4_K_M.gguf",
+          "params": 2569272320,
+          "size_bytes": 1563668704
+        },
+        {
+          "model": "qwen_qwen3-1.7b",
+          "hf_repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+          "hf_filename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+          "params": 2031739904,
+          "size_bytes": 1282439584
+        },
+        {
+          "model": "lfm2.5-1.2b-instruct",
+          "hf_repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+          "hf_filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+          "params": 1170340608,
+          "size_bytes": 730895168
+        },
+        {
+          "model": "bonsai-8b",
+          "hf_repo": "prism-ml/Bonsai-8B-gguf",
+          "hf_filename": "Bonsai-8B-Q1_0.gguf",
+          "params": 8188548096,
+          "size_bytes": 1158654496
+        },
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        }
+      ]
+    },
+    "high": {
+      "candidates": [
+        {
+          "model": "gemma-3-4b-it",
+          "hf_repo": "unsloth/gemma-3-4b-it-GGUF",
+          "hf_filename": "gemma-3-4b-it-Q4_0.gguf",
+          "params": 3880263168,
+          "size_bytes": 2370065536
+        },
+        {
+          "model": "gemma-4-e2b-it",
+          "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+          "hf_filename": "gemma-4-E2B-it-Q4_0.gguf",
+          "params": 4647450147,
+          "size_bytes": 3041376384,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 986833728,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "bonsai-8b",
+          "hf_repo": "prism-ml/Bonsai-8B-gguf",
+          "hf_filename": "Bonsai-8B-Q1_0.gguf",
+          "params": 8188548096,
+          "size_bytes": 1158654496
+        },
+        {
+          "model": "microsoft_phi-4-mini-instruct",
+          "hf_repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF",
+          "hf_filename": "microsoft_Phi-4-mini-instruct-Q4_0.gguf",
+          "params": 3836021856,
+          "size_bytes": 2331442560
+        },
+        {
+          "model": "bonsai-4b",
+          "hf_repo": "prism-ml/Bonsai-4B-gguf",
+          "hf_filename": "Bonsai-4B-Q1_0.gguf",
+          "params": 4021784576,
+          "size_bytes": 572270624
+        },
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        }
+      ]
+    },
+    "flagship": {
+      "candidates": [
+        {
+          "model": "gemma-3-4b-it",
+          "hf_repo": "unsloth/gemma-3-4b-it-GGUF",
+          "hf_filename": "gemma-3-4b-it-Q4_0.gguf",
+          "params": 3880263168,
+          "size_bytes": 2370065536
+        },
+        {
+          "model": "gemma-4-e4b-it",
+          "hf_repo": "unsloth/gemma-4-E4B-it-GGUF",
+          "hf_filename": "gemma-4-E4B-it-Q4_0.gguf",
+          "params": 7518069290,
+          "size_bytes": 4836000928,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E4B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 991552320,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "gemma-4-e2b-it",
+          "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+          "hf_filename": "gemma-4-E2B-it-Q4_0.gguf",
+          "params": 4647450147,
+          "size_bytes": 3041376384,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 986833728,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "lfm2.5-8b-a1b",
+          "hf_repo": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+          "hf_filename": "LFM2.5-8B-A1B-Q4_0.gguf",
+          "params": 8467856832,
+          "size_bytes": 4844678368
+        },
+        {
+          "model": "mistralai_ministral-3-3b-instruct-2512",
+          "hf_repo": "bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF",
+          "hf_filename": "mistralai_Ministral-3-3B-Instruct-2512-Q4_0.gguf",
+          "params": 3429006336,
+          "size_bytes": 2046375904
+        },
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        }
+      ]
+    }
+  }
+}

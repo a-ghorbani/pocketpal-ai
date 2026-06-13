@@ -1,0 +1,476 @@
+{
+  "schema_version": "1.2.0-draft",
+  "platform": "ios",
+  "rules_version": "2026-06-10.1",
+  "classifier": {
+    "ram_bands": [
+      {
+        "id": "lt-3",
+        "max_bytes": 3221225472,
+        "label": "< 3 GiB"
+      },
+      {
+        "id": "3-4",
+        "max_bytes": 4294967296,
+        "label": "3-4 GiB"
+      },
+      {
+        "id": "4-6",
+        "max_bytes": 6442450944,
+        "label": "4-6 GiB"
+      },
+      {
+        "id": "6-8",
+        "max_bytes": 8589934592,
+        "label": "6-8 GiB"
+      },
+      {
+        "id": "8-plus",
+        "max_bytes": null,
+        "label": "8+ GiB"
+      }
+    ],
+    "soc_classes": ["entry", "mid", "flagship"],
+    "device_id_to_chip": {
+      "iPhone10,1": "A11",
+      "iPhone10,2": "A11",
+      "iPhone10,3": "A11",
+      "iPhone10,4": "A11",
+      "iPhone10,5": "A11",
+      "iPhone10,6": "A11",
+      "iPhone11,2": "A12",
+      "iPhone11,4": "A12",
+      "iPhone11,6": "A12",
+      "iPhone11,8": "A12",
+      "iPhone12,1": "A13",
+      "iPhone12,3": "A13",
+      "iPhone12,5": "A13",
+      "iPhone12,8": "A13",
+      "iPhone13,1": "A14",
+      "iPhone13,2": "A14",
+      "iPhone13,3": "A14",
+      "iPhone13,4": "A14",
+      "iPhone14,2": "A15",
+      "iPhone14,3": "A15",
+      "iPhone14,4": "A15",
+      "iPhone14,5": "A15",
+      "iPhone14,6": "A15",
+      "iPhone14,7": "A15",
+      "iPhone14,8": "A15",
+      "iPhone15,2": "A16",
+      "iPhone15,3": "A16",
+      "iPhone15,4": "A16",
+      "iPhone15,5": "A16",
+      "iPhone16,1": "A17 Pro",
+      "iPhone16,2": "A17 Pro",
+      "iPhone17,1": "A18 Pro",
+      "iPhone17,2": "A18 Pro",
+      "iPhone17,3": "A18",
+      "iPhone17,4": "A18",
+      "iPhone17,5": "A18",
+      "iPhone18,1": "A19 Pro",
+      "iPhone18,2": "A19 Pro",
+      "iPhone18,3": "A19",
+      "iPhone18,4": "A19",
+      "iPad7,11": "A10",
+      "iPad7,12": "A10",
+      "iPad11,1": "A12",
+      "iPad11,2": "A12",
+      "iPad11,3": "A12",
+      "iPad11,4": "A12",
+      "iPad11,6": "A13",
+      "iPad11,7": "A13",
+      "iPad12,1": "A13",
+      "iPad12,2": "A13",
+      "iPad13,1": "A14",
+      "iPad13,2": "A14",
+      "iPad13,4": "M1",
+      "iPad13,5": "M1",
+      "iPad13,6": "M1",
+      "iPad13,7": "M1",
+      "iPad13,8": "M1",
+      "iPad13,9": "M1",
+      "iPad13,10": "M1",
+      "iPad13,11": "M1",
+      "iPad13,16": "M1",
+      "iPad13,17": "M1",
+      "iPad13,18": "A14",
+      "iPad13,19": "A14",
+      "iPad14,1": "A15",
+      "iPad14,2": "A15",
+      "iPad14,3": "M2",
+      "iPad14,4": "M2",
+      "iPad14,5": "M2",
+      "iPad14,6": "M2",
+      "iPad14,8": "M2",
+      "iPad14,9": "M2",
+      "iPad14,10": "M2",
+      "iPad14,11": "M2",
+      "iPad15,3": "M3",
+      "iPad15,4": "M3",
+      "iPad15,5": "M3",
+      "iPad15,6": "M3",
+      "iPad15,7": "A16",
+      "iPad15,8": "A16",
+      "iPad16,1": "A17 Pro",
+      "iPad16,2": "A17 Pro",
+      "iPad16,3": "M4",
+      "iPad16,4": "M4",
+      "iPad16,5": "M4",
+      "iPad16,6": "M4",
+      "iPad17,1": "M5",
+      "iPad17,2": "M5",
+      "iPad17,3": "M5",
+      "iPad17,4": "M5"
+    },
+    "chip_to_class": {
+      "A10": "entry",
+      "A11": "entry",
+      "A12": "entry",
+      "A12X": "entry",
+      "A12Z": "entry",
+      "A13": "entry",
+      "A14": "mid",
+      "A15": "mid",
+      "A16": "mid",
+      "A17": "mid",
+      "A17 Pro": "flagship",
+      "A18": "mid",
+      "A18 Pro": "flagship",
+      "A19": "flagship",
+      "A19 Pro": "flagship",
+      "M1": "flagship",
+      "M2": "flagship",
+      "M3": "flagship",
+      "M4": "flagship",
+      "M5": "flagship"
+    },
+    "device_family_fallback": {
+      "rules": [
+        {
+          "match": {
+            "id_prefix": "iPhone",
+            "id_major_min": 18
+          },
+          "class": "flagship"
+        },
+        {
+          "match": {
+            "id_prefix": "iPhone",
+            "id_major_min": 15
+          },
+          "class": "mid"
+        },
+        {
+          "match": {
+            "id_prefix": "iPad",
+            "id_major_min": 16,
+            "min_ram_bytes": 8589934592
+          },
+          "class": "flagship"
+        },
+        {
+          "match": {
+            "id_prefix": "iPad"
+          },
+          "class": "mid"
+        },
+        {
+          "match": {},
+          "class": "entry"
+        }
+      ]
+    },
+    "tier_matrix": [
+      {
+        "ram_band": "lt-3",
+        "soc_class": "entry",
+        "tier": "low"
+      },
+      {
+        "ram_band": "lt-3",
+        "soc_class": "mid",
+        "tier": "low"
+      },
+      {
+        "ram_band": "lt-3",
+        "soc_class": "flagship",
+        "tier": "low"
+      },
+      {
+        "ram_band": "3-4",
+        "soc_class": "entry",
+        "tier": "low"
+      },
+      {
+        "ram_band": "3-4",
+        "soc_class": "mid",
+        "tier": "low"
+      },
+      {
+        "ram_band": "3-4",
+        "soc_class": "flagship",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "4-6",
+        "soc_class": "entry",
+        "tier": "low"
+      },
+      {
+        "ram_band": "4-6",
+        "soc_class": "mid",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "4-6",
+        "soc_class": "flagship",
+        "tier": "high"
+      },
+      {
+        "ram_band": "6-8",
+        "soc_class": "entry",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "6-8",
+        "soc_class": "mid",
+        "tier": "high"
+      },
+      {
+        "ram_band": "6-8",
+        "soc_class": "flagship",
+        "tier": "high"
+      },
+      {
+        "ram_band": "8-plus",
+        "soc_class": "entry",
+        "tier": "mid"
+      },
+      {
+        "ram_band": "8-plus",
+        "soc_class": "mid",
+        "tier": "high"
+      },
+      {
+        "ram_band": "8-plus",
+        "soc_class": "flagship",
+        "tier": "flagship"
+      }
+    ]
+  },
+  "tiers": {
+    "low": {
+      "candidates": [
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        },
+        {
+          "model": "bonsai-1.7b",
+          "hf_repo": "prism-ml/Bonsai-1.7B-gguf",
+          "hf_filename": "Bonsai-1.7B-Q1_0.gguf",
+          "params": 1720028160,
+          "size_bytes": 248302272
+        },
+        {
+          "model": "qwen_qwen3-0.6b",
+          "hf_repo": "bartowski/Qwen_Qwen3-0.6B-GGUF",
+          "hf_filename": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
+          "params": 751632384,
+          "size_bytes": 484220320
+        },
+        {
+          "model": "lfm2.5-350m",
+          "hf_repo": "LiquidAI/LFM2.5-350M-GGUF",
+          "hf_filename": "LFM2.5-350M-Q4_K_M.gguf",
+          "params": 354483968,
+          "size_bytes": 229312224
+        }
+      ]
+    },
+    "mid": {
+      "candidates": [
+        {
+          "model": "huggingfacetb_smollm3-3b",
+          "hf_repo": "bartowski/HuggingFaceTB_SmolLM3-3B-GGUF",
+          "hf_filename": "HuggingFaceTB_SmolLM3-3B-Q4_K_M.gguf",
+          "params": 3075098624,
+          "size_bytes": 1915305792
+        },
+        {
+          "model": "lfm2-2.6b",
+          "hf_repo": "LiquidAI/LFM2-2.6B-GGUF",
+          "hf_filename": "LFM2-2.6B-Q4_K_M.gguf",
+          "params": 2569272320,
+          "size_bytes": 1563668704
+        },
+        {
+          "model": "qwen_qwen3-1.7b",
+          "hf_repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+          "hf_filename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+          "params": 2031739904,
+          "size_bytes": 1282439584
+        },
+        {
+          "model": "lfm2.5-1.2b-instruct",
+          "hf_repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+          "hf_filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+          "params": 1170340608,
+          "size_bytes": 730895168
+        },
+        {
+          "model": "qwen3.5-2b",
+          "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
+          "hf_filename": "Qwen3.5-2B-Q4_K_M.gguf",
+          "params": 1881825088,
+          "size_bytes": 1280835840,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 671372992,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        }
+      ]
+    },
+    "high": {
+      "candidates": [
+        {
+          "model": "gemma-3-4b-it",
+          "hf_repo": "ggml-org/gemma-3-4b-it-GGUF",
+          "hf_filename": "gemma-3-4b-it-Q4_K_M.gguf",
+          "params": 3880099328,
+          "size_bytes": 2489757856
+        },
+        {
+          "model": "gemma-4-e2b-it",
+          "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+          "hf_filename": "gemma-4-E2B-it-Q4_K_M.gguf",
+          "params": 4647450147,
+          "size_bytes": 3106736256,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 986833728,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "qwen3.5-4b",
+          "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
+          "hf_filename": "Qwen3.5-4B-Q4_K_M.gguf",
+          "params": 4205751296,
+          "size_bytes": 2740937888,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 675569344,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "mistralai_ministral-3-3b-instruct-2512",
+          "hf_repo": "bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF",
+          "hf_filename": "mistralai_Ministral-3-3B-Instruct-2512-Q4_K_M.gguf",
+          "params": 3429006336,
+          "size_bytes": 2146498528
+        },
+        {
+          "model": "bonsai-8b",
+          "hf_repo": "prism-ml/Bonsai-8B-gguf",
+          "hf_filename": "Bonsai-8B-Q1_0.gguf",
+          "params": 8188548096,
+          "size_bytes": 1158654496
+        },
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        }
+      ]
+    },
+    "flagship": {
+      "candidates": [
+        {
+          "model": "gemma-3-4b-it",
+          "hf_repo": "ggml-org/gemma-3-4b-it-GGUF",
+          "hf_filename": "gemma-3-4b-it-Q4_K_M.gguf",
+          "params": 3880099328,
+          "size_bytes": 2489757856
+        },
+        {
+          "model": "gemma-4-e4b-it",
+          "hf_repo": "ggml-org/gemma-4-E4B-it-GGUF",
+          "hf_filename": "gemma-4-E4B-it-Q4_K_M.gguf",
+          "params": 7518069290,
+          "size_bytes": 5335289824,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "ggml-org/gemma-4-E4B-it-GGUF",
+            "hf_filename": "mmproj-gemma-4-E4B-it-Q8_0.gguf",
+            "size_bytes": 559874528,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "gemma-4-e2b-it",
+          "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+          "hf_filename": "gemma-4-E2B-it-Q4_K_M.gguf",
+          "params": 4647450147,
+          "size_bytes": 3106736256,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 986833728,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "lfm2.5-8b-a1b",
+          "hf_repo": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+          "hf_filename": "LFM2.5-8B-A1B-Q4_K_M.gguf",
+          "params": 8467856832,
+          "size_bytes": 5155564768
+        },
+        {
+          "model": "qwen3.5-4b",
+          "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
+          "hf_filename": "Qwen3.5-4B-Q4_K_M.gguf",
+          "params": 4205751296,
+          "size_bytes": 2740937888,
+          "multimodal": true,
+          "mmproj": {
+            "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
+            "hf_filename": "mmproj-BF16.gguf",
+            "size_bytes": 675569344,
+            "modalities": ["vision"]
+          }
+        },
+        {
+          "model": "gemma-3-1b-it",
+          "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
+          "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
+          "params": 999885952,
+          "size_bytes": 806058240
+        }
+      ]
+    }
+  }
+}
