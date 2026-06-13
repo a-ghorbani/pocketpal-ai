@@ -6,10 +6,11 @@
  * not persisted) — see `UIStore.onboardingState`. `hasCompletedOnboarding`
  * and `onboardingTopicsSnapshot` are persisted there too.
  *
- * The `else` key is retained as the fallback index into `TOPIC_TO_PAL`
- * when `resolvePalForTopic` receives `null` (user tapped Skip). It is NOT
- * rendered as a chip; the user discovers the no-preference path via the
- * top-right Skip button + the tagline under the grid.
+ * The `else` chip is rendered in the 6th grid slot as a non-interactive
+ * outlined card — it advertises the no-preference path without competing
+ * with the real topic chips for taps. Users still reach that path via the
+ * top-right Skip button. `else` is also the fallback index into
+ * `TOPIC_TO_PAL` for `resolvePalForTopic(null)`.
  */
 
 export type TopicKey =
@@ -26,6 +27,7 @@ export const TOPIC_KEYS: readonly TopicKey[] = [
   'education',
   'roleplay',
   'creative_writing',
+  'else',
 ] as const;
 
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;

@@ -28,20 +28,5 @@ export const createStyles = (theme: Theme) => {
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center',
     },
-    elseTagline: {
-      alignItems: 'center',
-      gap: theme.spacing.xs,
-      marginTop: theme.spacing.l,
-    },
-    elseTaglineTitle: {
-      ...theme.typography.bodyM,
-      color: theme.colors.onBackground,
-      textAlign: 'center',
-    },
-    elseTaglineHint: {
-      ...theme.typography.bodyS,
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'center',
-    },
   });
 };

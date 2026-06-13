@@ -24,32 +24,48 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
   return (
     <View style={styles.grid}>
       {TOPIC_KEYS.map(key => {
+        const isElse = key === 'else';
         const isSelected = selected === key;
-        const Glyph = topicChipGlyphs[key];
+        const Glyph = isElse ? undefined : topicChipGlyphs[key];
         const description = descriptions?.[key];
+        const chipStyle = [
+          styles.chip,
+          isElse && styles.chipElse,
+          isSelected && styles.chipSelected,
+        ];
+        const chipBody = (
+          <>
+            {Glyph ? (
+              <Glyph width={40} height={40} fill={theme.colors.onBackground} />
+            ) : null}
+            <View style={styles.textBlock}>
+              <Text style={styles.label}>{labels[key]}</Text>
+              {description ? (
+                <Text style={styles.description}>{description}</Text>
+              ) : null}
+            </View>
+          </>
+        );
         return (
           <View key={key} style={styles.cell}>
-            <Pressable
-              testID={`onboarding-topic-${key}`}
-              accessibilityRole="button"
-              accessibilityLabel={labels[key]}
-              accessibilityState={{selected: isSelected}}
-              onPress={() => onSelect(key)}
-              style={[styles.chip, isSelected && styles.chipSelected]}>
-              {Glyph ? (
-                <Glyph
-                  width={40}
-                  height={40}
-                  fill={theme.colors.onBackground}
-                />
-              ) : null}
-              <View style={styles.textBlock}>
-                <Text style={styles.label}>{labels[key]}</Text>
-                {description ? (
-                  <Text style={styles.description}>{description}</Text>
-                ) : null}
+            {isElse ? (
+              <View
+                testID={`onboarding-topic-${key}`}
+                accessibilityLabel={labels[key]}
+                style={chipStyle}>
+                {chipBody}
               </View>
-            </Pressable>
+            ) : (
+              <Pressable
+                testID={`onboarding-topic-${key}`}
+                accessibilityRole="button"
+                accessibilityLabel={labels[key]}
+                accessibilityState={{selected: isSelected}}
+                onPress={() => onSelect(key)}
+                style={chipStyle}>
+                {chipBody}
+              </Pressable>
+            )}
           </View>
         );
       })}

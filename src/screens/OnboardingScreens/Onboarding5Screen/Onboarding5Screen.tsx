@@ -39,12 +39,6 @@ export const Onboarding5Screen: React.FC = observer(() => {
             labels={labels}
             descriptions={descriptions}
           />
-          <View style={styles.elseTagline}>
-            <Text style={styles.elseTaglineTitle}>{t.screen5.topic.else}</Text>
-            <Text style={styles.elseTaglineHint}>
-              {t.screen5.topicDescription.else}
-            </Text>
-          </View>
         </>
       }
       bottomBar={
