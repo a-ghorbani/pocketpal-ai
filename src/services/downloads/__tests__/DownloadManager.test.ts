@@ -509,4 +509,88 @@ describe('DownloadManager', () => {
       }),
     );
   });
+
+  it('attaches the HF auth token only for a huggingface.co download URL (iOS)', async () => {
+    (Platform as any).OS = 'ios';
+
+    const iosDownloadManager = new DownloadManager();
+    iosDownloadManager.setCallbacks({
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    });
+
+    (RNFS.downloadFile as jest.Mock).mockReturnValue({
+      jobId: 1001,
+      promise: Promise.resolve({statusCode: 200}),
+    });
+
+    await iosDownloadManager.startDownload(
+      basicModel,
+      '/path/to/model.bin',
+      'secret-token',
+    );
+
+    expect(RNFS.downloadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer secret-token',
+        }),
+      }),
+    );
+  });
+
+  it('does not attach the HF auth token for a non-huggingface.co URL (iOS)', async () => {
+    (Platform as any).OS = 'ios';
+
+    const iosDownloadManager = new DownloadManager();
+    iosDownloadManager.setCallbacks({
+      onStart: jest.fn(),
+      onProgress: jest.fn(),
+      onComplete: jest.fn(),
+      onError: jest.fn(),
+    });
+
+    (RNFS.downloadFile as jest.Mock).mockReturnValue({
+      jobId: 1002,
+      promise: Promise.resolve({statusCode: 200}),
+    });
+
+    const offHostModel = {
+      ...basicModel,
+      id: 'off-host-model',
+      downloadUrl: 'https://evil.example.com/test/test-model-1',
+    };
+
+    await iosDownloadManager.startDownload(
+      offHostModel,
+      '/path/to/model.bin',
+      'secret-token',
+    );
+
+    const headers = (RNFS.downloadFile as jest.Mock).mock.calls[0][0].headers;
+    expect(headers.Authorization).toBeUndefined();
+  });
+
+  it('does not forward the HF auth token to the native module for a non-HF URL (Android)', async () => {
+    NativeModules.DownloadModule.startDownload.mockResolvedValue({
+      downloadId: 'download-off-host',
+    });
+
+    const offHostModel = {
+      ...basicModel,
+      id: 'off-host-model',
+      downloadUrl: 'https://evil.example.com/test/test-model-1',
+    };
+
+    await downloadManager.startDownload(
+      offHostModel,
+      '/path/to/model.bin',
+      'secret-token',
+    );
+
+    const config = NativeModules.DownloadModule.startDownload.mock.calls[0][1];
+    expect(config.authToken).toBeUndefined();
+  });
 });

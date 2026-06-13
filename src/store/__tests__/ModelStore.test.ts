@@ -1,24 +1,33 @@
 jest.unmock('../../store');
 import {runInAction} from 'mobx';
 import {LlamaContext} from 'llama.rn';
-import {Alert} from 'react-native';
-
-import {defaultModels} from '../defaultModels';
+import {Alert, Platform} from 'react-native';
 
 import {
   downloadManager,
   DownloadCancelledError,
 } from '../../services/downloads';
 
-import {GGUFMetadata, ModelOrigin, ModelType} from '../../utils/types';
+import {GGUFMetadata, Model, ModelOrigin, ModelType} from '../../utils/types';
+import {getDisplayNameFromFilename} from '../../utils/formatters';
 import {
   basicModel,
+  createModel,
   mockLlamaContextParams,
   mockHFModel1,
 } from '../../../jest/fixtures/models';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 
 import {modelStore, uiStore, serverStore} from '..';
+import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
+import {classify} from '../../services/deviceRules/classify';
+import {getVisionModelSizeBreakdown} from '../../utils/multimodalHelpers';
+import {MODEL_LIST_VERSION} from '../ModelStore';
+import {parseDeviceRules} from '../../services/deviceRules/parse';
+import {fetchRules} from '../../services/deviceRules/rules';
+import {readDeviceSignals} from '../../services/deviceRules/signals';
+import androidBundledRules from '../bundledDeviceRules/rules.android.json';
+import iosBundledRules from '../bundledDeviceRules/rules.ios.json';
 import {t} from '../../locales';
 import {
   getCpuCoreCount,
@@ -61,6 +70,18 @@ jest.mock('../../services/downloads', () => {
   };
 });
 
+// Control the network rules fetch and device-signal read at the module boundary
+// while keeping the real parse/classify. Defaults: no fetched override (bundled
+// floor), mid-tier Android signals.
+jest.mock('../../services/deviceRules/rules', () => ({
+  fetchRules: jest.fn().mockResolvedValue(null),
+}));
+jest.mock('../../services/deviceRules/signals', () => ({
+  readDeviceSignals: jest
+    .fn()
+    .mockResolvedValue({ramBytes: 8 * 1e9, socModel: 'SM8850'}),
+}));
+
 // Mock the HF store
 // jest.mock('../HFStore', () => ({
 //   hfStore: {
@@ -70,6 +91,17 @@ jest.mock('../../services/downloads', () => {
 // }));
 
 // RNFS is mocked globally in jest/setup.ts
+
+// Generic PRESET-origin model fixture used across the suite.
+const presetModelFixture: Model = createModel({
+  id: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+  author: 'bartowski',
+  repo: 'gemma-2-2b-it-GGUF',
+  name: 'Gemma-2-2b-it (Q6_K)',
+  filename: 'gemma-2-2b-it-Q6_K.gguf',
+  origin: ModelOrigin.PRESET,
+  params: 2614341888,
+}) as Model;
 
 describe('ModelStore', () => {
   let showErrorSpy: jest.SpyInstance;
@@ -97,82 +129,877 @@ describe('ModelStore', () => {
   });
 
   describe('mergeModelLists', () => {
-    it('should add missing default models to the existing model list', () => {
-      modelStore.models = []; // Start with no existing models
+    it('drops non-downloaded PRESET stubs', () => {
+      modelStore.models = [{...presetModelFixture, isDownloaded: false}];
 
       runInAction(() => {
         modelStore.mergeModelLists();
       });
 
-      expect(modelStore.models.length).toBeGreaterThan(0);
-      expect(modelStore.models).toEqual(expect.arrayContaining(defaultModels));
+      expect(modelStore.models).toHaveLength(0);
     });
 
-    it('should merge existing models with default models, adding any that are missing', () => {
-      const notExistedModel = defaultModels[0];
-      modelStore.models = defaultModels.slice(1); // Start with all but the first model, so we can test if it's added back
-      expect(modelStore.models.length).toBe(defaultModels.length - 1);
-      expect(modelStore.models).not.toContainEqual(notExistedModel);
+    it('keeps a downloaded legacy PRESET model regardless of origin', () => {
+      const downloadedPreset = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [downloadedPreset];
 
       runInAction(() => {
         modelStore.mergeModelLists();
       });
 
-      expect(modelStore.models.length).toBeGreaterThan(0);
-      expect(modelStore.models).toContainEqual(notExistedModel);
+      expect(modelStore.models).toHaveLength(1);
+      expect(modelStore.models[0].id).toBe(downloadedPreset.id);
+      expect(modelStore.models[0].isDownloaded).toBe(true);
     });
 
-    it('should retain value of existing variables while merging new variables', () => {
-      const newDefaultModel = defaultModels[0];
+    it('keeps downloaded models, drops non-downloaded PRESET stubs in one pass', () => {
+      const downloadedPreset = {
+        ...presetModelFixture,
+        id: 'kept/repo/kept.gguf',
+        isDownloaded: true,
+      };
+      const stub = {
+        ...presetModelFixture,
+        id: 'stub/repo/stub.gguf',
+        isDownloaded: false,
+      };
+      modelStore.models = [downloadedPreset, stub];
 
-      // Apply changes to the existing model:
-      //  - chatTemplate.template: existing variable with a value different from the default
-      //  - stopWords: existing array with custom values
-      const existingModel = {
-        ...newDefaultModel,
+      runInAction(() => {
+        modelStore.mergeModelLists();
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('kept/repo/kept.gguf');
+      expect(ids).not.toContain('stub/repo/stub.gguf');
+    });
+
+    it('preserves HF model customizations while refreshing defaults', () => {
+      const hfModel = {
+        ...presetModelFixture,
+        id: 'hf/repo/hf.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
         chatTemplate: {
-          ...newDefaultModel.chatTemplate,
+          ...presetModelFixture.chatTemplate,
           template: 'existing',
         },
         stopWords: ['custom_stop_1', 'custom_stop_2'],
-        isDownloaded: true, // if not downloaded, it will be removed
+        hfModel: mockHFModel1,
       };
-
-      modelStore.models[0] = existingModel;
+      modelStore.models = [hfModel];
 
       runInAction(() => {
         modelStore.mergeModelLists();
       });
 
       expect(modelStore.models[0].chatTemplate).toEqual(
-        expect.objectContaining({
-          template: 'existing', // Existing value should remain
-        }),
+        expect.objectContaining({template: 'existing'}),
       );
+      expect(modelStore.models[0].stopWords).toEqual(
+        expect.arrayContaining(['custom_stop_1', 'custom_stop_2']),
+      );
+    });
+  });
 
-      // Custom stop words should be preserved
-      expect(modelStore.models[0].stopWords).toEqual([
-        'custom_stop_1',
-        'custom_stop_2',
-        ...(newDefaultModel.stopWords || []),
-      ]);
+  describe('resolvePresetModels', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
     });
 
-    it('should merge value of default to exisiting for top level variables', () => {
-      const newDefaultModel = defaultModels[0];
+    const midOnlyClassifier = {
+      ramBands: [{id: 'all', maxBytes: null}],
+      tierMatrix: [{ramBand: 'all', socClass: 'mid', tier: 'mid' as const}],
+      socModelToClass: {'Tensor G3': 'mid'},
+    };
 
-      const existingModel = {
-        ...newDefaultModel,
-        params: 101010,
-      };
+    const makeRules = (models: any[]) => ({
+      schemaVersion: '1.2.0-draft',
+      platform: 'android',
+      rulesVersion: '2026-06-10.1',
+      classifier: midOnlyClassifier,
+      tiers: {
+        low: {models: []},
+        mid: {models},
+        high: {models: []},
+        flagship: {models: []},
+      },
+    });
 
-      modelStore.models[0] = existingModel;
+    const signals = {ramBytes: 8 * 1e9, socModel: 'Tensor G3'};
+
+    const llmCandidate = {
+      model: 'gemma-3-1b-it',
+      hfRepo: 'ggml-org/gemma-3-1b-it-GGUF',
+      hfFilename: 'gemma-3-1b-it-Q4_K_M.gguf',
+      params: 999885952,
+      sizeBytes: 806058240,
+    };
+
+    const visionCandidate = {
+      model: 'smolvlm-500m',
+      hfRepo: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+      hfFilename: 'SmolVLM-500M-Instruct-Q8_0.gguf',
+      params: 500000000,
+      sizeBytes: 500,
+      multimodal: true,
+      mmproj: {
+        hfRepo: 'ggml-org/SmolVLM-500M-Instruct-GGUF',
+        hfFilename: 'mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+        sizeBytes: 100,
+        modalities: ['vision'],
+      },
+    };
+
+    it('synthesizes a tier LLM into an origin:HF Model with a derived downloadUrl', () => {
+      const presets = modelStore.resolvePresetModels(
+        makeRules([llmCandidate]) as any,
+        signals as any,
+      );
+      expect(presets).toHaveLength(1);
+      const m = presets[0];
+      expect(m.origin).toBe(ModelOrigin.HF);
+      expect(m.id).toBe(
+        'ggml-org/gemma-3-1b-it-GGUF/gemma-3-1b-it-Q4_K_M.gguf',
+      );
+      expect(m.downloadUrl).toBe(
+        'https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf',
+      );
+      expect(m.isRulePreset).toBe(true);
+      expect(m.size).toBe(806058240);
+      expect(m.params).toBe(999885952);
+      // HF-derivable data (oid/lfs) is not baked; it resolves at download.
+      expect(m.hfModelFile?.oid).toBeUndefined();
+      expect(m.hfModelFile?.lfs).toBeUndefined();
+    });
+
+    it('applies the optional display_name, else derives it', () => {
+      const named = {...llmCandidate, displayName: 'My Curated Gemma'};
+      const [withName] = modelStore.resolvePresetModels(
+        makeRules([named]) as any,
+        signals as any,
+      );
+      expect(withName.name).toBe('My Curated Gemma');
+
+      const [derived] = modelStore.resolvePresetModels(
+        makeRules([llmCandidate]) as any,
+        signals as any,
+      );
+      expect(derived.name).not.toBe('My Curated Gemma');
+      expect(derived.name).toBeTruthy();
+    });
+
+    it('expands a multimodal candidate into the LLM plus exactly one projector stub', () => {
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const ids = presets.map(m => m.id);
+      expect(ids).toContain(
+        'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      expect(ids).toContain(
+        'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      // One LLM + one projector, never the old multi-quant sibling set.
+      expect(presets).toHaveLength(2);
+      const projectors = presets.filter(m => /\/mmproj/i.test(m.id));
+      expect(projectors).toHaveLength(1);
+    });
+
+    it('dedups a repeated candidate, first wins', () => {
+      const presets = modelStore.resolvePresetModels(
+        makeRules([llmCandidate, llmCandidate]) as any,
+        signals as any,
+      );
+      expect(presets).toHaveLength(1);
+    });
+
+    it('synthesizes the projector stub as a downloadable Model (derived url)', () => {
+      // The vision LLM pairs the projection id; the synthesized sibling must put
+      // the projector Model in the store so _downloadProjectionModelIfNeeded
+      // finds it by id, with a non-empty /resolve/main/ url so
+      // checkSpaceAndDownload does not early-return on !model.downloadUrl.
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const proj = presets.find(m =>
+        m.id.endsWith('/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf'),
+      );
+      expect(proj).toBeDefined();
+      expect(proj?.downloadUrl).toBe(
+        'https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+    });
+
+    it('carries the projector size on the LLM so the fit check can add it', () => {
+      // min_ram_gb may exclude projector memory; the synthesized mmproj sibling
+      // carries its size so getVisionModelSizeBreakdown adds it to the fit check.
+      const [llm] = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const projSibling = llm.hfModel?.siblings?.find(s =>
+        /mmproj/i.test(s.rfilename),
+      );
+      expect(projSibling?.size).toBe(100);
+    });
+
+    it('pairs the LLM stub with its projector stub via defaultProjectionModel', () => {
+      // The LLM stub's defaultProjectionModel must equal the projector stub's id
+      // so the download path (this.models.find(m => m.id === projModelId))
+      // resolves and the projector downloads alongside the LLM.
+      const presets = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const llm = presets.find(
+        m =>
+          m.id ===
+          'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      const proj = presets.find(m => /\/mmproj/i.test(m.id));
+      expect(llm?.defaultProjectionModel).toBe(proj?.id);
+      expect(llm?.compatibleProjectionModels).toContain(proj?.id);
+    });
+
+    it('feeds the projector size into the fit/space breakdown', () => {
+      // hasEnoughSpace sizes a vision model via getVisionModelSizeBreakdown,
+      // which reads the synthesized mmproj sibling. The projector size must add
+      // to the total so the ~1GB projector enters the pre-download fit check.
+      const [llm] = modelStore.resolvePresetModels(
+        makeRules([visionCandidate]) as any,
+        signals as any,
+      );
+      const breakdown = getVisionModelSizeBreakdown(
+        llm.hfModelFile!,
+        llm.hfModel!,
+      );
+      expect(breakdown.hasProjection).toBe(true);
+      expect(breakdown.projectionSize).toBe(100);
+      expect(breakdown.llmSize).toBe(500);
+      expect(breakdown.totalSize).toBe(600);
+    });
+
+    it('classifies the bundled floor (non-low) when offline', () => {
+      // The bundled path must run rules through classify, not force the low
+      // floor. A mid-tier device + a mid-only tier matrix resolves mid.
+      const tier = classify(
+        signals as any,
+        makeRules([llmCandidate]).classifier as any,
+        'android',
+      );
+      expect(tier).toBe('mid');
+    });
+  });
+
+  describe('bundled offline floor (committed rules.<platform>.json)', () => {
+    let savedOS: typeof Platform.OS;
+    afterEach(() => {
+      Platform.OS = savedOS;
+    });
+    beforeEach(() => {
+      savedOS = Platform.OS;
+    });
+
+    // Projector (mmproj) Models are synthesized from the candidate's explicit
+    // mmproj into a sibling with a derived /resolve/main/ url — so EVERY resolved
+    // preset, LLM and projector alike, has a non-empty downloadUrl and is
+    // downloadable (a vision preset's projector would never download otherwise).
+    const isProjection = (id: string) => /\/mmproj/i.test(id);
+
+    it('android: parses + classifies non-low and resolves origin:HF presets', () => {
+      Platform.OS = 'android';
+      const rules = parseDeviceRules(androidBundledRules);
+      const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
+      const tier = classify(signals as any, rules.classifier, 'android');
+      expect(tier).not.toBe('low');
+      expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+
+      const presets = modelStore.resolvePresetModels(rules, signals as any);
+      expect(presets.length).toBeGreaterThan(0);
+      for (const m of presets) {
+        expect(m.origin).toBe(ModelOrigin.HF);
+        expect(m.downloadUrl).toContain('/resolve/main/');
+      }
+    });
+
+    it('ios: parses + classifies non-low and resolves origin:HF presets', () => {
+      Platform.OS = 'ios';
+      const rules = parseDeviceRules(iosBundledRules);
+      const signals = {ramBytes: 8 * 1e9, machine: 'iPhone16,1'};
+      const tier = classify(signals as any, rules.classifier, 'ios');
+      expect(tier).not.toBe('low');
+      expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+
+      const presets = modelStore.resolvePresetModels(rules, signals as any);
+      expect(presets.length).toBeGreaterThan(0);
+      for (const m of presets) {
+        expect(m.origin).toBe(ModelOrigin.HF);
+        expect(m.downloadUrl).toContain('/resolve/main/');
+      }
+    });
+
+    it('every synthesized mmproj projection carries a downloadable url', () => {
+      // Regression lock: the synthesized projector sibling must carry a derived
+      // url so the projector Model is downloadable (checkSpaceAndDownload early-
+      // returns on !downloadUrl). Walk both platforms; require at least one.
+      let sawProjection = false;
+      for (const [os, raw] of [
+        ['android', androidBundledRules],
+        ['ios', iosBundledRules],
+      ] as const) {
+        Platform.OS = os;
+        const rules = parseDeviceRules(raw);
+        const signals = {
+          ramBytes: 16 * 1e9,
+          socModel: 'SM8850',
+          machine: 'iPhone16,1',
+        };
+        // resolvePresetModels classifies internally; one call covers the device's
+        // tier. Materialized projections must each carry a downloadable url.
+        const presets = modelStore.resolvePresetModels(rules, signals as any);
+        for (const m of presets.filter(p => isProjection(p.id))) {
+          sawProjection = true;
+          expect(m.downloadUrl).toContain('/resolve/main/');
+          expect(m.downloadUrl).not.toBe('');
+        }
+      }
+      expect(sawProjection).toBe(true);
+    });
+
+    it('android: resolved LLMs defer oid/lfs to download (none baked)', () => {
+      Platform.OS = 'android';
+      const rules = parseDeviceRules(androidBundledRules);
+      const signals = {ramBytes: 16 * 1e9, socModel: 'SM8850'};
+      const presets = modelStore.resolvePresetModels(rules, signals as any);
+      const llms = presets.filter(m => !isProjection(m.id));
+      expect(llms.length).toBeGreaterThan(0);
+      for (const m of llms) {
+        // Thin stubs carry no baked oid/lfs; they self-heal at download.
+        expect(m.hfModelFile?.oid).toBeUndefined();
+        expect(m.hfModelFile?.lfs).toBeUndefined();
+      }
+    });
+
+    it('all four tiers parse to a non-empty, origin:HF model set on android', () => {
+      const rules = parseDeviceRules(androidBundledRules);
+      for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
+        expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('all four tiers parse to a non-empty, origin:HF model set on ios', () => {
+      const rules = parseDeviceRules(iosBundledRules);
+      for (const tier of ['low', 'mid', 'high', 'flagship'] as const) {
+        expect(rules.tiers[tier].models.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('preset migration / reconcile', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    // A rule preset (origin HF) sharing the legacy PRESET's {repo,filename}.
+    const rulePresetForGemma: Model = createModel({
+      id: 'bartowski/gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+      author: 'bartowski',
+      repo: 'gemma-2-2b-it-GGUF',
+      name: 'Gemma-2-2b-it (Q6_K)',
+      filename: 'gemma-2-2b-it-Q6_K.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: false,
+    }) as Model;
+
+    it('keeps a downloaded legacy PRESET and suppresses the same-{repo,filename} rule stub', () => {
+      const downloadedPreset = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [downloadedPreset];
 
       runInAction(() => {
-        modelStore.mergeModelLists();
+        modelStore.mergeModelLists([rulePresetForGemma]);
       });
 
-      expect(modelStore.models[0].params).toEqual(newDefaultModel.params);
+      const matching = modelStore.models.filter(
+        m =>
+          `${m.repo}/${m.filename}` ===
+          'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+      );
+      expect(matching).toHaveLength(1);
+      expect(matching[0].origin).toBe(ModelOrigin.PRESET);
+      expect(matching[0].isDownloaded).toBe(true);
+    });
+
+    it('suppresses a rule stub already downloaded from the HF browser', () => {
+      const downloadedHF = {
+        ...rulePresetForGemma,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+      };
+      modelStore.models = [downloadedHF];
+
+      runInAction(() => {
+        modelStore.mergeModelLists([rulePresetForGemma]);
+      });
+
+      const matching = modelStore.models.filter(
+        m =>
+          `${m.repo}/${m.filename}` ===
+          'gemma-2-2b-it-GGUF/gemma-2-2b-it-Q6_K.gguf',
+      );
+      expect(matching).toHaveLength(1);
+      expect(matching[0].isDownloaded).toBe(true);
+    });
+
+    it('adds a not-downloaded rule preset as origin HF', () => {
+      modelStore.models = [];
+
+      runInAction(() => {
+        modelStore.mergeModelLists([rulePresetForGemma]);
+      });
+
+      expect(modelStore.models).toHaveLength(1);
+      expect(modelStore.models[0].origin).toBe(ModelOrigin.HF);
+      expect(modelStore.models[0].filename).toBe('gemma-2-2b-it-Q6_K.gguf');
+    });
+
+    it('reconcilePresets is a no-op when the preset already exists at any origin', () => {
+      const downloadedPreset = {...presetModelFixture, isDownloaded: true};
+      modelStore.models = [downloadedPreset];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([rulePresetForGemma]);
+      });
+
+      expect(modelStore.models).toHaveLength(1);
+      expect(modelStore.models[0].origin).toBe(ModelOrigin.PRESET);
+    });
+  });
+
+  describe('model list version gate', () => {
+    it('pins MODEL_LIST_VERSION to the single data-driven bump', () => {
+      // The data-driven preset list is one re-merge bump (14 -> 15); a second
+      // bump would force-drop persisted user state. Lock it so it is not
+      // re-bumped silently.
+      expect(MODEL_LIST_VERSION).toBe(15);
+    });
+  });
+
+  describe('resetModels repopulates the default list', () => {
+    let savedOS: typeof Platform.OS;
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 16 * 1e9,
+        socModel: 'SM8850',
+      });
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+    });
+    afterEach(async () => {
+      // resetModels fires an un-awaited loadMissingGGUFMetadata; let it settle
+      // before clearing so it cannot bleed into the next test.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      Platform.OS = savedOS;
+      runInAction(() => {
+        modelStore.models = [];
+      });
+    });
+
+    it('re-resolves device presets while keeping local and HF models', async () => {
+      const localModel = createModel({
+        id: 'local/my-model.gguf',
+        author: 'local',
+        repo: 'local',
+        filename: 'my-model.gguf',
+        fullPath: '/tmp/my-model.gguf',
+        origin: ModelOrigin.LOCAL,
+        isLocal: true,
+        isDownloaded: true,
+      }) as Model;
+      const hfModel = createModel({
+        id: 'hf/repo/hf.gguf',
+        author: 'hf',
+        repo: 'repo',
+        filename: 'hf.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: true,
+        hfModel: mockHFModel1,
+      }) as Model;
+      modelStore.models = [localModel, hfModel];
+
+      await modelStore.resetModels();
+
+      // Local and HF models survive the reset.
+      expect(modelStore.models.some(m => m.id === 'local/my-model.gguf')).toBe(
+        true,
+      );
+      expect(modelStore.models.some(m => m.id === 'hf/repo/hf.gguf')).toBe(
+        true,
+      );
+
+      // The device-appropriate rule presets are repopulated in-session.
+      const presets = modelStore.models.filter(m => m.isRulePreset === true);
+      expect(presets.length).toBeGreaterThan(0);
+
+      // Reset stop words contain no exact duplicates (the preset reconcile
+      // re-appends defaults onto the just-reset kept models).
+      const keptLocal = modelStore.models.find(
+        m => m.id === 'local/my-model.gguf',
+      ) as Model;
+      const keptHF = modelStore.models.find(
+        m => m.id === 'hf/repo/hf.gguf',
+      ) as Model;
+      expect(keptLocal.stopWords).toEqual([...new Set(keptLocal.stopWords)]);
+      expect(keptHF.stopWords).toEqual([...new Set(keptHF.stopWords)]);
+    });
+  });
+
+  describe('migration with empty preset resolve', () => {
+    let savedOS: typeof Platform.OS;
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+      runInAction(() => {
+        modelStore.models = [];
+        modelStore.version = undefined;
+        modelStore.availableMemoryCeiling = 1;
+      });
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+    });
+    afterEach(async () => {
+      // initializeStore fires several un-awaited background tasks; let them
+      // settle before clearing state so they cannot bleed into the next test.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      Platform.OS = savedOS;
+      runInAction(() => {
+        modelStore.models = [];
+      });
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 8 * 1e9,
+        socModel: 'SM8850',
+      });
+    });
+
+    it('does not finalize the migration when presets resolve empty', async () => {
+      // A transient signal-read failure makes resolvePresets return [].
+      (readDeviceSignals as jest.Mock).mockRejectedValue(
+        new Error('signals exploded'),
+      );
+
+      await modelStore.initializeStore();
+
+      // An empty resolve must not lock in an empty default list: leave the
+      // version unbumped so the migration retries on the next launch.
+      expect(modelStore.version).toBeUndefined();
+    });
+
+    it('finalizes the migration once presets resolve non-empty', async () => {
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 16 * 1e9,
+        socModel: 'SM8850',
+      });
+
+      await modelStore.initializeStore();
+
+      // The bundled floor resolved a non-empty preset list, so the one-time
+      // migration finalizes.
+      expect(modelStore.version).toBe(MODEL_LIST_VERSION);
+      expect(modelStore.models.some(m => m.isRulePreset === true)).toBe(true);
+    });
+  });
+
+  describe('reconcilePresets pruning (steady-state drift)', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    const ruleA: Model = createModel({
+      id: 'ggml-org/repo-a/a.gguf',
+      author: 'ggml-org',
+      repo: 'repo-a',
+      filename: 'a.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: false,
+    }) as Model;
+    const ruleB: Model = createModel({
+      id: 'ggml-org/repo-b/b.gguf',
+      author: 'ggml-org',
+      repo: 'repo-b',
+      filename: 'b.gguf',
+      origin: ModelOrigin.HF,
+      isDownloaded: false,
+    }) as Model;
+
+    it('prunes a non-downloaded rule stub no longer in the fresh set', () => {
+      modelStore.models = [{...ruleA, isRulePreset: true}];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('ggml-org/repo-b/b.gguf');
+      expect(ids).not.toContain('ggml-org/repo-a/a.gguf');
+    });
+
+    it('never prunes a downloaded rule preset even if dropped from the set', () => {
+      modelStore.models = [{...ruleA, isRulePreset: true, isDownloaded: true}];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('ggml-org/repo-a/a.gguf');
+      expect(ids).toContain('ggml-org/repo-b/b.gguf');
+    });
+
+    it('never prunes a user-added HF model not in the rule set', () => {
+      const userHF: Model = createModel({
+        id: 'someone/user-repo/user.gguf',
+        author: 'someone',
+        repo: 'user-repo',
+        filename: 'user.gguf',
+        origin: ModelOrigin.HF,
+        isDownloaded: false,
+      }) as Model; // no isRulePreset marker
+
+      modelStore.models = [userHF];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('someone/user-repo/user.gguf');
+      expect(ids).toContain('ggml-org/repo-b/b.gguf');
+    });
+
+    it('never prunes a LOCAL model', () => {
+      const local: Model = createModel({
+        id: 'local-model',
+        origin: ModelOrigin.LOCAL,
+        isLocal: true,
+        isDownloaded: true,
+      }) as Model;
+
+      modelStore.models = [local];
+
+      runInAction(() => {
+        modelStore.reconcilePresets([{...ruleB, isRulePreset: true}]);
+      });
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('local-model');
+    });
+  });
+
+  describe('resolvePresets / startup integration', () => {
+    let savedOS: typeof Platform.OS;
+    beforeEach(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+      modelStore.models = [];
+      modelStore.deviceTier = null;
+      modelStore.rulesVersion = null;
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+      (readDeviceSignals as jest.Mock).mockResolvedValue({
+        ramBytes: 16 * 1e9,
+        socModel: 'SM8850',
+      });
+    });
+    afterEach(() => {
+      Platform.OS = savedOS;
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+    });
+
+    it('applies the bundled floor (no fetch) and sets deviceTier/rulesVersion', async () => {
+      const presets = await (modelStore as any).resolvePresets();
+
+      // The bundled floor populated a non-empty origin:HF preset set without the
+      // network fetch being consulted on this path.
+      expect(fetchRules).not.toHaveBeenCalled();
+      expect(presets.length).toBeGreaterThan(0);
+      expect(presets.every((m: Model) => m.origin === ModelOrigin.HF)).toBe(
+        true,
+      );
+      expect(presets.every((m: Model) => m.isRulePreset === true)).toBe(true);
+      expect(modelStore.deviceTier).not.toBeNull();
+      expect(modelStore.rulesVersion).toBeTruthy();
+    });
+
+    it('returns [] and completes when bundled parse throws (startup not bricked)', async () => {
+      (readDeviceSignals as jest.Mock).mockRejectedValue(
+        new Error('signals exploded'),
+      );
+      await expect((modelStore as any).resolvePresets()).resolves.toEqual([]);
+    });
+
+    it('upgrades to fetched rules and reconciles when newer rules arrive', async () => {
+      const fetchedRules = parseDeviceRules({
+        schema_version: '1.2.0-draft',
+        platform: 'android',
+        rules_version: '2999-01-01.1',
+        classifier: {
+          ram_bands: [{id: 'all', max_bytes: null}],
+          tier_matrix: [{ram_band: 'all', soc_class: 'mid', tier: 'mid'}],
+          soc_model_to_class: {SM8850: 'mid'},
+        },
+        tiers: {
+          mid: {
+            candidates: [
+              {
+                model: 'fetched',
+                hf_repo: 'ggml-org/fetched-repo',
+                hf_filename: 'fetched.gguf',
+              },
+            ],
+          },
+        },
+      });
+      (fetchRules as jest.Mock).mockResolvedValue(fetchedRules);
+
+      await (modelStore as any).upgradeToFetchedRules();
+
+      const ids = modelStore.models.map(m => m.id);
+      expect(ids).toContain('ggml-org/fetched-repo/fetched.gguf');
+      expect(modelStore.rulesVersion).toBe('2999-01-01.1');
+    });
+
+    it('leaves the bundled presets in place when the fetch returns null', async () => {
+      modelStore.models = [
+        {...presetModelFixture, origin: ModelOrigin.HF, isRulePreset: true},
+      ];
+      (fetchRules as jest.Mock).mockResolvedValue(null);
+
+      await (modelStore as any).upgradeToFetchedRules();
+
+      expect(modelStore.models).toHaveLength(1);
+    });
+  });
+
+  describe('legacy PRESET that is also a fresh rule entry (overlap)', () => {
+    let savedOS: typeof Platform.OS;
+    beforeAll(() => {
+      savedOS = Platform.OS;
+      Platform.OS = 'android';
+    });
+    afterAll(() => {
+      Platform.OS = savedOS;
+    });
+
+    it('collapses a non-downloaded legacy PRESET + same-id rule entry to one HF card', () => {
+      // Pre-merge state: a non-downloaded legacy PRESET stub.
+      const legacyPreset = {...presetModelFixture, isDownloaded: false};
+      modelStore.models = [legacyPreset];
+
+      // The same model now also appears in the rule set (origin HF, same id).
+      const rulePreset: Model = createModel({
+        id: presetModelFixture.id,
+        author: presetModelFixture.author,
+        repo: presetModelFixture.repo,
+        filename: presetModelFixture.filename,
+        origin: ModelOrigin.HF,
+        isDownloaded: false,
+      }) as Model;
+
+      runInAction(() => {
+        // mergeModelLists drops the non-downloaded PRESET stub, then reconcile
+        // re-adds the rule entry: exactly one card, origin HF.
+        modelStore.mergeModelLists([{...rulePreset, isRulePreset: true}]);
+      });
+
+      const matching = modelStore.models.filter(
+        m => m.id === presetModelFixture.id,
+      );
+      expect(matching).toHaveLength(1);
+      expect(matching[0].origin).toBe(ModelOrigin.HF);
+    });
+  });
+
+  describe('built-in Lookie model download', () => {
+    let originalExists: any;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (RNFS as any).__resetMockState?.();
+      modelStore.models = [];
+      (downloadManager.syncWithActiveDownloads as jest.Mock).mockResolvedValue(
+        undefined,
+      );
+      (downloadManager.startDownload as jest.Mock).mockResolvedValue(undefined);
+      // Nothing is pre-downloaded so the LLM/mmproj are not marked downloaded
+      // (which would make checkSpaceAndDownload early-return).
+      originalExists = (RNFS.exists as jest.Mock).getMockImplementation();
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+    });
+
+    afterEach(async () => {
+      // downloadHFModel leaves an unawaited checkSpaceAndDownload chain; let it
+      // settle, then clear the store and restore the RNFS.exists default so this
+      // test's state can't bleed into the next one.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      runInAction(() => {
+        modelStore.models = [];
+      });
+      if (originalExists) {
+        (RNFS.exists as jest.Mock).mockImplementation(originalExists);
+      }
+    });
+
+    // Regression: SmolVLM is in no tier and was never reconciled into the store,
+    // so the warning's download tap must route through the model's own hfModel
+    // (downloadHFModel -> addHFModel), NOT a store id lookup. No tier seeding.
+    it('materializes the LLM + mmproj into the store and downloads both', async () => {
+      expect(LOOKIE_DEFAULT_MODEL.hfModel).toBeDefined();
+
+      await modelStore.downloadHFModel(
+        LOOKIE_DEFAULT_MODEL.hfModel!,
+        LOOKIE_DEFAULT_MODEL.hfModelFile!,
+        {enableVision: true},
+      );
+      // downloadHFModel kicks off checkSpaceAndDownload without awaiting it
+      // (it waits 200ms internally for mmproj materialization first); let the
+      // download chain settle before asserting.
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const llm = modelStore.models.find(
+        m =>
+          m.id ===
+          'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+      const mmproj = modelStore.models.find(
+        m =>
+          m.id ===
+          'ggml-org/SmolVLM-500M-Instruct-GGUF/mmproj-SmolVLM-500M-Instruct-Q8_0.gguf',
+      );
+
+      expect(llm).toBeDefined();
+      expect(llm?.origin).toBe(ModelOrigin.HF);
+      expect(llm?.supportsMultimodal).toBe(true);
+      expect(mmproj).toBeDefined();
+      expect(mmproj?.downloadUrl).toContain('/resolve/main/');
+
+      // Vision-enabled, so both the LLM and its projection are downloaded.
+      expect(downloadManager.startDownload).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -193,7 +1020,7 @@ describe('ModelStore', () => {
     });
 
     it('should delete model and release context if active', async () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
       modelStore.activeModelId = model.id;
 
@@ -256,10 +1083,9 @@ describe('ModelStore', () => {
       expect(modelStore.models[0].name).toBe('my-model-file');
     });
 
-    it('should reset preset model name to original display name', () => {
-      // Use a real preset model from defaultModels
+    it('should reset preset model name to the filename-derived name', () => {
       const presetModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         name: 'User Modified Name', // User changed it
       };
       runInAction(() => {
@@ -268,11 +1094,13 @@ describe('ModelStore', () => {
 
       modelStore.resetModelName(presetModel.id);
 
-      // Should restore to original name from defaultModels
-      expect(modelStore.models[0].name).toBe(defaultModels[0].name);
+      // Display-name reset is now filename-derived for every origin.
+      expect(modelStore.models[0].name).toBe(
+        getDisplayNameFromFilename(presetModelFixture.filename),
+      );
     });
 
-    it('should handle reset when preset model not found in defaultModels', () => {
+    it('should reset any preset model name from its filename', () => {
       const orphanPresetModel = {
         ...basicModel,
         id: 'orphan-preset-id',
@@ -313,7 +1141,7 @@ describe('ModelStore', () => {
 
     it('should allow deletion of unused projection model', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -327,7 +1155,7 @@ describe('ModelStore', () => {
 
     it('should prevent deletion of active projection model', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -344,14 +1172,14 @@ describe('ModelStore', () => {
 
     it('should allow deletion of projection model used by downloaded LLM with warning', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -368,14 +1196,14 @@ describe('ModelStore', () => {
 
     it('should allow deletion of projection model used only by non-downloaded LLM', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -390,14 +1218,14 @@ describe('ModelStore', () => {
 
     it('should get LLMs using projection model', () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-1',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -405,7 +1233,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-2',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -413,7 +1241,7 @@ describe('ModelStore', () => {
       };
 
       const unrelatedModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-unrelated-model',
         supportsMultimodal: true,
         defaultProjectionModel: 'other-proj-model',
@@ -439,14 +1267,14 @@ describe('ModelStore', () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
 
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -472,14 +1300,14 @@ describe('ModelStore', () => {
 
     it('should not cleanup projection model if multiple LLMs use it', async () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-1',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -487,7 +1315,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-2',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -508,21 +1336,21 @@ describe('ModelStore', () => {
 
     it('should cleanup multiple orphaned projection models when LLM is deleted', async () => {
       const projModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-1',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const projModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-2',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel1.id,
@@ -556,7 +1384,7 @@ describe('ModelStore', () => {
 
     it('should only cleanup orphaned projection models, not ones used by other LLMs', async () => {
       const projModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-1',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -566,7 +1394,7 @@ describe('ModelStore', () => {
       };
 
       const projModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model-2',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -576,7 +1404,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel1 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-1',
         supportsMultimodal: true,
         defaultProjectionModel: projModel1.id,
@@ -588,7 +1416,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel2 = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model-2',
         supportsMultimodal: true,
         defaultProjectionModel: projModel2.id, // Uses projModel2
@@ -618,7 +1446,7 @@ describe('ModelStore', () => {
 
     it('should set isDownloaded to false after deletion to enable orphaned cleanup', async () => {
       const projModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: true,
@@ -628,7 +1456,7 @@ describe('ModelStore', () => {
       };
 
       const llmModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-llm-model',
         supportsMultimodal: true,
         defaultProjectionModel: projModel.id,
@@ -711,7 +1539,7 @@ describe('ModelStore', () => {
     it('should reinitialize context when coming back to foreground', async () => {
       // Setup
       modelStore.useAutoRelease = true;
-      const model = {...defaultModels[0], isDownloaded: true}; // Ensure model is downloaded
+      const model = {...presetModelFixture, isDownloaded: true}; // Ensure model is downloaded
       modelStore.models = [model];
       modelStore.activeModelId = model.id;
 
@@ -781,7 +1609,7 @@ describe('ModelStore', () => {
 
     it('initContext throws when benchmark mode is active', async () => {
       modelStore.benchmarkActive = true;
-      const model = {...defaultModels[0], isDownloaded: true};
+      const model = {...presetModelFixture, isDownloaded: true};
       await expect(modelStore.initContext(model)).rejects.toThrow(
         /benchmark mode is active/i,
       );
@@ -789,7 +1617,7 @@ describe('ModelStore', () => {
 
     it('initContext succeeds again after exitBenchmarkMode', async () => {
       modelStore.benchmarkActive = true;
-      const model = {...defaultModels[0], isDownloaded: true};
+      const model = {...presetModelFixture, isDownloaded: true};
       modelStore.exitBenchmarkMode();
       // After exit, the synchronous gate is gone — initContext proceeds
       // to its normal pre-flight (memory check, etc.). The model isn't
@@ -805,7 +1633,7 @@ describe('ModelStore', () => {
 
   describe('settings management', () => {
     it('should update stop words', () => {
-      const model = {...defaultModels[0]};
+      const model = {...presetModelFixture};
       modelStore.models = [model];
 
       const newStopWords = ['stop1', 'stop2'];
@@ -816,7 +1644,7 @@ describe('ModelStore', () => {
     });
 
     it('should reset model stop words to defaults', () => {
-      const model = {...defaultModels[0]};
+      const model = {...presetModelFixture};
       const originalStopWords = [...(model.defaultStopWords || [])];
       model.stopWords = ['custom1', 'custom2'];
       modelStore.models = [model];
@@ -829,7 +1657,7 @@ describe('ModelStore', () => {
 
   describe('download management', () => {
     it('should handle download cancellation', async () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
 
       // Mock isDownloading to return true initially
@@ -843,7 +1671,7 @@ describe('ModelStore', () => {
     });
 
     it('should update model state on download error', () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
 
       // Set up callbacks directly
@@ -937,7 +1765,7 @@ describe('ModelStore', () => {
 
     it('should handle download failure due to insufficient space', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         downloadUrl: 'https://example.com/model.gguf', // Ensure model has download URL
         isLocal: false,
         origin: ModelOrigin.PRESET,
@@ -962,7 +1790,7 @@ describe('ModelStore', () => {
 
   describe('computed properties', () => {
     it('should return correct active model', () => {
-      const model = defaultModels[0];
+      const model = presetModelFixture;
       modelStore.models = [model];
       modelStore.activeModelId = model.id;
 
@@ -970,7 +1798,7 @@ describe('ModelStore', () => {
     });
 
     it('should return correct last used model', () => {
-      const model = {...defaultModels[0], isDownloaded: true};
+      const model = {...presetModelFixture, isDownloaded: true};
       modelStore.models = [model];
       modelStore.lastUsedModelId = model.id;
 
@@ -1161,13 +1989,13 @@ describe('ModelStore', () => {
       modelStore.models = [localModel, hfModel] as any;
     });
 
-    it('should reset models while preserving local and HF models', () => {
+    it('should reset models while preserving local and HF models', async () => {
       // Spy on mergeModelLists
       const mockMergeModelLists = jest.fn();
       const originalMergeModelLists = modelStore.mergeModelLists;
       modelStore.mergeModelLists = mockMergeModelLists;
 
-      modelStore.resetModels();
+      await modelStore.resetModels();
 
       // Check that models were cleared and restored
       expect(mockMergeModelLists).toHaveBeenCalled();
@@ -2096,7 +2924,7 @@ describe('ModelStore', () => {
 
     it('should retry download when error has modelId', () => {
       const testModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'test-model-0-1-0',
         isDownloaded: false,
       };
@@ -2705,7 +3533,7 @@ describe('ModelStore', () => {
 
     it('should auto-download projection model for vision models', async () => {
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model-0',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2719,7 +3547,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model-0',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2739,7 +3567,7 @@ describe('ModelStore', () => {
 
     it('should not auto-download projection model for vision models that are not enabled for vision', async () => {
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model-0',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2753,7 +3581,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model-0',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2785,7 +3613,7 @@ describe('ModelStore', () => {
       });
 
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2798,7 +3626,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2834,7 +3662,7 @@ describe('ModelStore', () => {
       });
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         supportsMultimodal: true,
@@ -2873,7 +3701,7 @@ describe('ModelStore', () => {
       });
 
       const regularModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'regular-model',
         filename: 'regular.gguf',
         supportsMultimodal: false,
@@ -2911,7 +3739,7 @@ describe('ModelStore', () => {
       });
 
       const hfVisionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'hf-vision-model',
         filename: 'hf-vision.gguf',
         supportsMultimodal: true,
@@ -2925,7 +3753,7 @@ describe('ModelStore', () => {
       };
 
       const hfProjectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'hf-projection-model',
         filename: 'hf-projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -2970,7 +3798,7 @@ describe('ModelStore', () => {
       });
 
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -2984,7 +3812,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -3044,7 +3872,7 @@ describe('ModelStore', () => {
       });
 
       const visionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'vision-model',
         filename: 'vision.gguf',
         supportsMultimodal: true,
@@ -3057,7 +3885,7 @@ describe('ModelStore', () => {
       };
 
       const projectionModel = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         id: 'projection-model',
         filename: 'projection.gguf',
         modelType: ModelType.PROJECTION,
@@ -3329,7 +4157,7 @@ describe('ModelStore', () => {
 
     it('should not crash when loadLlamaModelInfo rejects', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         isDownloaded: true,
         ggufMetadata: undefined,
       };
@@ -3348,7 +4176,7 @@ describe('ModelStore', () => {
 
     it('should handle null response gracefully', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         isDownloaded: true,
         ggufMetadata: undefined,
       };
@@ -3364,7 +4192,7 @@ describe('ModelStore', () => {
 
     it('should populate ggufMetadata on success', async () => {
       const model = {
-        ...defaultModels[0],
+        ...presetModelFixture,
         isDownloaded: true,
         ggufMetadata: undefined,
       };
