@@ -1696,7 +1696,7 @@ describe('ModelStore', () => {
 
     it('should not set downloadError when a download is cancelled', async () => {
       const model = {
-        ...defaultModels[0],
+        ...basicModel,
         downloadUrl: 'https://example.com/model.gguf',
         isDownloaded: false,
         isLocal: false,
@@ -1724,7 +1724,7 @@ describe('ModelStore', () => {
 
     it('does not auto-download the projection model when a vision model download is cancelled', async () => {
       const projModel = {
-        ...defaultModels[0],
+        ...basicModel,
         id: 'proj-model',
         modelType: ModelType.PROJECTION,
         isDownloaded: false,
@@ -1733,7 +1733,7 @@ describe('ModelStore', () => {
         downloadUrl: 'https://example.com/proj.gguf',
       };
       const visionModel = {
-        ...defaultModels[0],
+        ...basicModel,
         id: 'vision-model',
         downloadUrl: 'https://example.com/vision.gguf',
         isDownloaded: false,
