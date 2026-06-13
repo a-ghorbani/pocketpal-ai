@@ -32,7 +32,7 @@ const TIMEOUT = 15000;
 // the matching model is the one ModelRadioGroup renders on screen 6 with
 // the Recommended badge.
 const PIP_BALANCED_MODEL_ID =
-  'bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf';
+  'lmstudio-community/gemma-3-1b-it-GGUF/gemma-3-1b-it-Q8_0.gguf';
 const CODIE_BALANCED_MODEL_ID =
   'lmstudio-community/Qwen3.5-2B-GGUF/Qwen3.5-2B-Q4_K_M.gguf';
 
@@ -108,7 +108,7 @@ describe('Onboarding flow', () => {
     await chat.waitForReady(TIMEOUT);
   });
 
-  it("'else' chip on screen 5 auto-advances to screen 6 with Pip as the fallback pal", async () => {
+  it('Skip on screen 5 lands on Chat with no topic or model bound', async () => {
     await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
@@ -119,14 +119,7 @@ describe('Onboarding flow', () => {
     await onboarding.waitForScreen(4);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(5);
-    await onboarding.tapTopic('else');
-    await onboarding.waitForScreen(6);
-    // 'else' falls back to Pip — Pip's balanced model is on screen 6.
-    expect(
-      await onboarding.palModel(PIP_BALANCED_MODEL_ID).isExisting(),
-    ).toBe(true);
-    await onboarding.tapPalModel(PIP_BALANCED_MODEL_ID);
-    await onboarding.tapPrimary();
+    await onboarding.tapSkip();
     await chat.waitForReady(TIMEOUT);
   });
 
@@ -194,7 +187,7 @@ describe('Onboarding flow', () => {
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(5);
     expect(await isDisplayedSafe('ui-stepper')).toBe(false);
-    await onboarding.tapTopic('else');
+    await onboarding.tapTopic('smartchat');
     await onboarding.waitForScreen(6);
     expect(await isDisplayedSafe('ui-stepper')).toBe(false);
   });

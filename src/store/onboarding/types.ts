@@ -1,14 +1,15 @@
 /**
  * Onboarding types — closed union of topic keys shown on the topic chip
- * grid (Figma `884:28282` / `890:29650`) and the in-memory state shape
- * for the onboarding flow.
+ * grid and the in-memory state shape for the onboarding flow.
  *
  * `OnboardingState` lives inside `UIStore` (single store; per-session,
  * not persisted) — see `UIStore.onboardingState`. `hasCompletedOnboarding`
  * and `onboardingTopicsSnapshot` are persisted there too.
  *
- * The 'else' chip is rendered differently (outlined, no icon) and on tap
- * writes `null` (no preference recorded) before auto-advancing to screen 6.
+ * The `else` key is retained as the fallback index into `TOPIC_TO_PAL`
+ * when `resolvePalForTopic` receives `null` (user tapped Skip). It is NOT
+ * rendered as a chip; the user discovers the no-preference path via the
+ * top-right Skip button + the tagline under the grid.
  */
 
 export type TopicKey =
@@ -25,7 +26,6 @@ export const TOPIC_KEYS: readonly TopicKey[] = [
   'education',
   'roleplay',
   'creative_writing',
-  'else',
 ] as const;
 
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;

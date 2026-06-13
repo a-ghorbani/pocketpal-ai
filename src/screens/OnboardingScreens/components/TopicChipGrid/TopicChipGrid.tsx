@@ -8,7 +8,7 @@ import {createStyles} from './styles';
 
 export type TopicChipGridProps = {
   selected: TopicKey | null;
-  onSelect: (key: TopicKey | null) => void;
+  onSelect: (key: TopicKey) => void;
   labels: Record<TopicKey, string>;
   descriptions?: Partial<Record<TopicKey, string>>;
 };
@@ -24,10 +24,8 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
   return (
     <View style={styles.grid}>
       {TOPIC_KEYS.map(key => {
-        const isElse = key === 'else';
         const isSelected = selected === key;
-        const onPress = () => onSelect(isElse ? null : key);
-        const Glyph = isElse ? undefined : topicChipGlyphs[key];
+        const Glyph = topicChipGlyphs[key];
         const description = descriptions?.[key];
         return (
           <View key={key} style={styles.cell}>
@@ -36,12 +34,8 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
               accessibilityRole="button"
               accessibilityLabel={labels[key]}
               accessibilityState={{selected: isSelected}}
-              onPress={onPress}
-              style={[
-                styles.chip,
-                isElse && styles.chipElse,
-                isSelected && styles.chipSelected,
-              ]}>
+              onPress={() => onSelect(key)}
+              style={[styles.chip, isSelected && styles.chipSelected]}>
               {Glyph ? (
                 <Glyph
                   width={40}

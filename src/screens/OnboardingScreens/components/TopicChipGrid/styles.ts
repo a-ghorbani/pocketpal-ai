@@ -26,11 +26,6 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       gap: theme.spacing.sm,
     },
-    chipElse: {
-      backgroundColor: 'transparent',
-      borderWidth: theme.stroke.sm,
-      borderColor: theme.colors.outline,
-    },
     chipSelected: {
       backgroundColor: theme.colors.secondaryContainer,
     },
