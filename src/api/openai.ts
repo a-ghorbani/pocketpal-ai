@@ -149,6 +149,22 @@ const CONNECTION_TIMEOUT_MS = 30000;
 const IDLE_TIMEOUT_MS = 60000;
 
 /**
+ * Single normalization site for a per-server timeout. An undefined, NaN,
+ * non-finite, or non-positive value falls back to the supplied default.
+ * Callers (stores, engine, sheets) forward raw values; only this layer
+ * enforces the floor.
+ */
+function resolveTimeout(
+  timeoutMs: number | undefined,
+  fallback: number,
+): number {
+  if (timeoutMs == null || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return fallback;
+  }
+  return timeoutMs;
+}
+
+/**
  * Lightweight type guard for SSE delta shape.
  * Returns true if the parsed object looks like an OpenAI chat completion chunk.
  */
@@ -197,10 +213,14 @@ export interface FetchModelsResult {
 export async function fetchModelsWithHeaders(
   serverUrl: string,
   apiKey?: string,
+  timeoutMs?: number,
 ): Promise<FetchModelsResult> {
   const url = `${normalizeUrl(serverUrl)}/v1/models`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT_MS);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS),
+  );
 
   try {
     const response = await fetch(url, {
@@ -245,8 +265,9 @@ export async function fetchModelsWithHeaders(
 export async function fetchModels(
   serverUrl: string,
   apiKey?: string,
+  timeoutMs?: number,
 ): Promise<RemoteModelInfo[]> {
-  const {models} = await fetchModelsWithHeaders(serverUrl, apiKey);
+  const {models} = await fetchModelsWithHeaders(serverUrl, apiKey, timeoutMs);
   return models;
 }
 
@@ -257,9 +278,10 @@ export async function fetchModels(
 export async function testConnection(
   serverUrl: string,
   apiKey?: string,
+  timeoutMs?: number,
 ): Promise<{ok: boolean; modelCount: number; error?: string}> {
   try {
-    const models = await fetchModels(serverUrl, apiKey);
+    const models = await fetchModels(serverUrl, apiKey, timeoutMs);
     return {ok: true, modelCount: models.length};
   } catch (error: any) {
     return {ok: false, modelCount: 0, error: error.message || 'Unknown error'};
@@ -329,8 +351,11 @@ export async function streamChatCompletion(
   apiKey?: string,
   signal?: AbortSignal,
   onToken?: (data: CompletionStreamData) => void,
+  timeoutMs?: number,
 ): Promise<CompletionResult> {
   const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
+  const connectionTimeoutMs = resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS);
+  const idleTimeoutMs = resolveTimeout(timeoutMs, IDLE_TIMEOUT_MS);
 
   return new Promise<CompletionResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -356,16 +381,16 @@ export async function streamChatCompletion(
     // callback sees a running snapshot.
     const toolCallAcc: ToolCallAccumulator = new Map();
 
-    // Connection timeout: abort if no headers received within 30s
+    // Connection timeout: abort if no headers received in time
     const connectionTimer = setTimeout(() => {
       if (!settled) {
         settled = true;
         xhr.abort();
         reject(new Error('Connection timed out'));
       }
-    }, CONNECTION_TIMEOUT_MS);
+    }, connectionTimeoutMs);
 
-    // Idle timeout: abort if no data received within 60s
+    // Idle timeout: abort if no data received between chunks
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     const resetIdleTimer = () => {
       if (idleTimer) {
@@ -378,7 +403,7 @@ export async function streamChatCompletion(
           xhr.abort();
           reject(new Error('Idle timeout: no data received'));
         }
-      }, IDLE_TIMEOUT_MS);
+      }, idleTimeoutMs);
     };
 
     // Handle external abort signal
