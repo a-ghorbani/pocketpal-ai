@@ -513,6 +513,48 @@ describe('ServerStore', () => {
       expect(mockedFetchModels).not.toHaveBeenCalled();
     });
 
+    it('forwards the server requestTimeoutMs to fetchModels', async () => {
+      const id = serverStore.addServer({
+        name: 'Slow Server',
+        url: 'http://localhost:1234',
+        requestTimeoutMs: 600000,
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValueOnce([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(mockedFetchModels).toHaveBeenCalledWith(
+        'http://localhost:1234',
+        undefined,
+        600000,
+      );
+    });
+
+    // A server persisted without requestTimeoutMs forwards undefined (raw)
+    // without crashing; defaults apply downstream in openai.ts.
+    it('forwards undefined requestTimeoutMs without crashing', async () => {
+      const id = serverStore.addServer({
+        name: 'Legacy Server',
+        url: 'http://localhost:1234',
+      });
+      jest.clearAllMocks();
+
+      mockedFetchModels.mockResolvedValueOnce([]);
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+
+      await serverStore.fetchModelsForServer(id);
+
+      expect(mockedFetchModels).toHaveBeenCalledWith(
+        'http://localhost:1234',
+        undefined,
+        undefined,
+      );
+      expect(serverStore.error).toBeNull();
+    });
+
     it('updates lastConnected timestamp on success', async () => {
       const id = serverStore.addServer({
         name: 'Server',
@@ -592,6 +634,25 @@ describe('ServerStore', () => {
         modelCount: 0,
         error: 'Server not found',
       });
+    });
+
+    it('forwards the server requestTimeoutMs to testConnection', async () => {
+      const id = serverStore.addServer({
+        name: 'Slow Server',
+        url: 'http://localhost:1234',
+        requestTimeoutMs: 600000,
+      });
+
+      (Keychain.getGenericPassword as jest.Mock).mockResolvedValueOnce(false);
+      mockedTestConnection.mockResolvedValueOnce({ok: true, modelCount: 2});
+
+      await serverStore.testServerConnection(id);
+
+      expect(mockedTestConnection).toHaveBeenCalledWith(
+        'http://localhost:1234',
+        undefined,
+        600000,
+      );
     });
 
     it('passes API key to testConnection', async () => {

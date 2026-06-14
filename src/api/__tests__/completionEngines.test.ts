@@ -276,6 +276,32 @@ describe('OpenAICompletionEngine', () => {
     await engine.stopCompletion();
   });
 
+  // The engine carries the timeoutMs it was constructed with and forwards it
+  // raw (no normalization here) to streamChatCompletion. A rebuilt engine (on
+  // the next setRemoteModel) therefore applies an edited value.
+  it('forwards the constructed timeoutMs to streamChatCompletion', async () => {
+    const timedEngine = new OpenAICompletionEngine(
+      'http://localhost:1234',
+      'test-model',
+      'sk-key',
+      600000,
+    );
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    await timedEngine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.any(Object),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object), // AbortSignal
+      undefined, // callback
+      600000, // raw timeoutMs forwarded, not normalized
+    );
+  });
+
   it('creates engine without api key', () => {
     const noKeyEngine = new OpenAICompletionEngine(
       'http://localhost:1234',
