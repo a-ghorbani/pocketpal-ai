@@ -163,7 +163,11 @@ class ServerStore {
 
     try {
       const apiKey = await this.getApiKey(serverId);
-      const models = await fetchModels(server.url, apiKey);
+      const models = await fetchModels(
+        server.url,
+        apiKey,
+        server.requestTimeoutMs,
+      );
 
       runInAction(() => {
         this.serverModels.set(serverId, models);
@@ -204,7 +208,7 @@ class ServerStore {
     }
 
     const apiKey = await this.getApiKey(serverId);
-    return testConnection(server.url, apiKey);
+    return testConnection(server.url, apiKey, server.requestTimeoutMs);
   }
 
   acknowledgePrivacyNotice(): void {

@@ -580,6 +580,7 @@ describe('ServerStore', () => {
       expect(mockedTestConnection).toHaveBeenCalledWith(
         'http://localhost:1234',
         undefined,
+        undefined,
       );
     });
 
@@ -610,6 +611,7 @@ describe('ServerStore', () => {
       expect(mockedTestConnection).toHaveBeenCalledWith(
         'http://localhost:1234',
         'sk-key',
+        undefined,
       );
     });
   });
