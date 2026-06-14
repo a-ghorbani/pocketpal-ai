@@ -145,6 +145,7 @@ describe('OpenAICompletionEngine', () => {
       'sk-key',
       expect.any(Object), // AbortSignal
       onToken,
+      undefined, // timeoutMs
     );
 
     expect(result).toEqual(mockResult);
@@ -186,6 +187,7 @@ describe('OpenAICompletionEngine', () => {
       'sk-key',
       expect.any(Object),
       undefined,
+      undefined,
     );
   });
 
@@ -215,6 +217,7 @@ describe('OpenAICompletionEngine', () => {
       'sk-key',
       expect.any(Object),
       undefined,
+      undefined,
     );
   });
 
@@ -243,6 +246,7 @@ describe('OpenAICompletionEngine', () => {
       'http://localhost:1234',
       'sk-key',
       expect.any(Object),
+      undefined,
       undefined,
     );
   });
@@ -287,6 +291,7 @@ describe('OpenAICompletionEngine', () => {
       'http://localhost:1234',
       undefined,
       expect.any(Object),
+      undefined,
       undefined,
     );
   });
