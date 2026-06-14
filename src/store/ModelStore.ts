@@ -1977,6 +1977,7 @@ class ModelStore {
         server.url,
         model.remoteModelId!,
         apiKey,
+        server.requestTimeoutMs,
       );
       this.setActiveModel(model.id);
       // Do NOT set lastUsedModelId for remote models -- server may be offline on next launch
