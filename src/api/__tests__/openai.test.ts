@@ -130,10 +130,8 @@ describe('fetchModels', () => {
     );
 
     const promise = fetchModels('http://localhost:1234', undefined, 7000);
-    const assertion = expect(promise).rejects.toThrow('Connection timed out');
-
     jest.advanceTimersByTime(7000);
-    await assertion;
+    await expect(promise).rejects.toThrow('Connection timed out');
     jest.useRealTimers();
   });
 });
@@ -195,10 +193,8 @@ describe('fetchModelsWithHeaders', () => {
       undefined,
       5000,
     );
-    const assertion = expect(promise).rejects.toThrow('Connection timed out');
-
     jest.advanceTimersByTime(5000);
-    await assertion;
+    await expect(promise).rejects.toThrow('Connection timed out');
 
     expect(abortSpy).toHaveBeenCalled();
     abortSpy.mockRestore();
@@ -360,7 +356,8 @@ describe('testConnection', () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
       headers: mockHeaders(),
-      json: () => Promise.resolve({data: [{id: 'm', object: 'model', owned_by: 'x'}]}),
+      json: () =>
+        Promise.resolve({data: [{id: 'm', object: 'model', owned_by: 'x'}]}),
     });
 
     await expect(
