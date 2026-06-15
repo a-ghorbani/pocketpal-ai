@@ -6,7 +6,7 @@
  */
 
 import {BasePage, ChainableElement} from './BasePage';
-import {Selectors, byPartialText} from '../helpers/selectors';
+import {Selectors, byPartialText, byText} from '../helpers/selectors';
 
 declare const browser: WebdriverIO.Browser;
 
@@ -83,10 +83,16 @@ export class DrawerPage extends BasePage {
 
   /**
    * Navigate to Pals screen
+   *
+   * Tap the visible label, not Selectors.drawer.palsTab. That selector is the
+   * testID (drawer-item-pals) used as the open/close indicator so it survives a
+   * language switch, but a Paper Drawer.Item does not reliably respond to a
+   * testID tap on iOS (see the selectors.ts drawer comment) — tapping the label
+   * matches the other tabs and works on both platforms.
    */
   async navigateToPals(): Promise<void> {
     await this.waitForOpen();
-    await this.tap(Selectors.drawer.palsTab);
+    await this.tap(byText('Pals'));
     await browser.pause(300);
     await this.waitForClose();
   }
