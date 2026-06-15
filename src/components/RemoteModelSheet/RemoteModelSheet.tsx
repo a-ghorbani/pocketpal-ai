@@ -25,6 +25,7 @@ import {useTheme} from '../../hooks';
 import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
+import {parseTimeoutMs} from '../../utils/timeout';
 import {ServerConfig} from '../../utils/types';
 import {
   RemoteModelInfo,
@@ -41,15 +42,6 @@ interface RemoteModelSheetProps {
   isVisible: boolean;
   onDismiss: () => void;
   onModelAdded?: () => void;
-}
-
-/** Parse a seconds field into whole ms; empty/invalid/non-positive → undefined. */
-function parseTimeoutMs(seconds: string): number | undefined {
-  const value = parseFloat(seconds.trim());
-  if (!Number.isFinite(value) || value <= 0) {
-    return undefined;
-  }
-  return Math.round(value * 1000);
 }
 
 export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(

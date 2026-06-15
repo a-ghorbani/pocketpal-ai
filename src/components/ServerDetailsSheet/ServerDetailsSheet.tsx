@@ -21,6 +21,7 @@ import {Sheet, TextInput} from '..';
 import {useTheme} from '../../hooks';
 import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
+import {parseTimeoutMs} from '../../utils/timeout';
 import {testConnection} from '../../api/openai';
 import {t} from '../../locales';
 
@@ -31,15 +32,6 @@ interface ServerDetailsSheetProps {
   isVisible: boolean;
   onDismiss: () => void;
   serverId: string | null;
-}
-
-/** Parse a seconds field into whole ms; empty/invalid/non-positive → undefined. */
-function parseTimeoutMs(seconds: string): number | undefined {
-  const value = parseFloat(seconds.trim());
-  if (!Number.isFinite(value) || value <= 0) {
-    return undefined;
-  }
-  return Math.round(value * 1000);
 }
 
 export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
