@@ -67,6 +67,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
     private serverUrl: string,
     private modelId: string,
     private apiKey?: string,
+    private timeoutMs?: number,
   ) {}
 
   async completion(
@@ -95,6 +96,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
       this.apiKey,
       this.abortController.signal,
       callback,
+      this.timeoutMs,
     );
   }
 

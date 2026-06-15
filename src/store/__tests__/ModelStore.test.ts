@@ -3248,6 +3248,78 @@ describe('ModelStore', () => {
     });
   });
 
+  // setRemoteModel builds the OpenAI engine carrying the server's
+  // requestTimeoutMs. The engine is rebuilt on each call, so an edited value
+  // takes effect on the next (re)selection.
+  describe('setRemoteModel timeout wiring', () => {
+    beforeEach(() => {
+      runInAction(() => {
+        serverStore.servers = [];
+        modelStore.context = undefined;
+      });
+    });
+
+    const remoteModel = {
+      id: 'srv-1/llama-7b',
+      name: 'llama-7b',
+      origin: ModelOrigin.REMOTE,
+      serverId: 'srv-1',
+      remoteModelId: 'llama-7b',
+    } as any;
+
+    it('builds the engine carrying the saved requestTimeoutMs', async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'Slow Server',
+            url: 'http://localhost:1234',
+            requestTimeoutMs: 600000,
+          },
+        ];
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect((modelStore.engine as any).timeoutMs).toBe(600000);
+    });
+
+    it('builds the engine with undefined timeout for a server without the field', async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {id: 'srv-1', name: 'Default Server', url: 'http://localhost:1234'},
+        ];
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect((modelStore.engine as any).timeoutMs).toBeUndefined();
+    });
+
+    it('rebuilds the engine with an updated timeout on re-selection', async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'Server',
+            url: 'http://localhost:1234',
+            requestTimeoutMs: 30000,
+          },
+        ];
+      });
+      await modelStore.setRemoteModel(remoteModel);
+      expect((modelStore.engine as any).timeoutMs).toBe(30000);
+
+      // User edits the timeout, then re-selects the model.
+      runInAction(() => {
+        serverStore.servers[0].requestTimeoutMs = 600000;
+      });
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect((modelStore.engine as any).timeoutMs).toBe(600000);
+    });
+  });
+
   describe('fetchAndPersistGGUFMetadata error handling', () => {
     const {loadLlamaModelInfo} = require('llama.rn');
 

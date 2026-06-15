@@ -623,6 +623,9 @@ export const Selectors = {
     get apiKeyInput(): string {
       return byTestId('remote-apikey-input');
     },
+    get timeoutInput(): string {
+      return byTestId('remote-timeout-input');
+    },
     get addModelButton(): string {
       return byTestId('add-model-button');
     },
@@ -635,6 +638,9 @@ export const Selectors = {
     },
     get apiKeyInput(): string {
       return byTestId('server-details-apikey-input');
+    },
+    get timeoutInput(): string {
+      return byTestId('server-details-timeout-input');
     },
     get removeButton(): string {
       return byTestId('remove-server-button');

@@ -1,7 +1,11 @@
 import React from 'react';
-import {render, fireEvent} from '../../../../jest/test-utils';
+import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 import {RemoteModelSheet} from '../RemoteModelSheet';
 import {serverStore} from '../../../store';
+import {fetchModels, fetchModelsWithHeaders} from '../../../api/openai';
+
+const mockedFetchModels = fetchModels as jest.Mock;
+const mockedFetchModelsWithHeaders = fetchModelsWithHeaders as jest.Mock;
 
 // Mock the Sheet component following HFTokenSheet test pattern
 jest.mock('../../Sheet', () => {
@@ -143,5 +147,187 @@ describe('RemoteModelSheet', () => {
 
     const addButton = getByTestId('add-model-button');
     expect(addButton.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  // Manual add path — the in-edit timeout field feeds fetchModelsWithHeaders
+  // (NOT the chip path's fetchModels). The field is rendered only after an
+  // initial probe attempt surfaces the server fields.
+  describe('manual add-path probe feed', () => {
+    beforeEach(() => {
+      serverStore.servers = [];
+    });
+
+    it('renders the timeout input after a probe attempt surfaces server fields', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({models: [], headers: {}});
+
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      // First probe surfaces the server fields (showServerFields).
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('remote-timeout-input')).toBeTruthy();
+      });
+    });
+
+    it('passes the in-edit timeout field to fetchModelsWithHeaders', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({models: [], headers: {}});
+
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      // First probe to surface the timeout field.
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+      await waitFor(() => {
+        expect(getByTestId('remote-timeout-input')).toBeTruthy();
+      });
+
+      // Enter the in-edit timeout, then re-probe via another URL change.
+      fireEvent.changeText(getByTestId('remote-timeout-input'), '600');
+      mockedFetchModelsWithHeaders.mockClear();
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:5678',
+      );
+
+      await waitFor(() => {
+        expect(mockedFetchModelsWithHeaders).toHaveBeenCalled();
+      });
+      // Assert URL (arg 0) and in-edit timeoutMs (arg 2); the chip path's
+      // fetchModels must not be used for the manual add probe.
+      const call = mockedFetchModelsWithHeaders.mock.calls.at(-1)!;
+      expect(call[0]).toBe('http://localhost:5678');
+      expect(call[2]).toBe(600000);
+      expect(mockedFetchModels).not.toHaveBeenCalled();
+    });
+
+    // Adding a model on the new-server path persists the timeout
+    // (seconds → ms) through the existing addServer call.
+    it('persists the in-edit timeout as ms when adding a new server', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [{id: 'llama-7b', object: 'model', owned_by: 'system'}],
+        headers: {},
+      });
+
+      const {getByTestId, getByText} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      // Probe surfaces the single model (auto-selected) and the timeout field.
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+      await waitFor(() => {
+        expect(getByTestId('remote-timeout-input')).toBeTruthy();
+        expect(getByText('llama-7b')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('remote-timeout-input'), '600');
+      fireEvent.press(getByTestId('add-model-button'));
+
+      await waitFor(() => {
+        expect(serverStore.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: 'http://localhost:1234',
+            requestTimeoutMs: 600000,
+          }),
+        );
+      });
+    });
+
+    it('persists requestTimeoutMs undefined when adding a server with empty timeout', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [{id: 'llama-7b', object: 'model', owned_by: 'system'}],
+        headers: {},
+      });
+
+      const {getByTestId, getByText} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+      await waitFor(() => {
+        expect(getByText('llama-7b')).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId('add-model-button'));
+
+      await waitFor(() => {
+        expect(serverStore.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({requestTimeoutMs: undefined}),
+        );
+      });
+    });
+  });
+
+  // Tapping a saved server's chip probes via fetchModels using THAT server's
+  // stored requestTimeoutMs (raw), so a saved slow server does not red-X at
+  // the 30s default.
+  describe('chip-press probe feed', () => {
+    it('passes the saved server requestTimeoutMs to fetchModels on chip press', async () => {
+      serverStore.servers = [
+        {
+          id: 'srv-1',
+          name: 'Slow Server',
+          url: 'http://localhost:1234',
+          requestTimeoutMs: 600000,
+        },
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      mockedFetchModels.mockResolvedValueOnce([
+        {id: 'llama-7b', object: 'model', owned_by: 'system'},
+      ]);
+
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      fireEvent.press(getByTestId('server-chip-srv-1'));
+
+      await waitFor(() => {
+        expect(mockedFetchModels).toHaveBeenCalledWith(
+          'http://localhost:1234',
+          undefined,
+          600000,
+        );
+      });
+      // The add-path probe must NOT be involved in the chip flow.
+      expect(mockedFetchModelsWithHeaders).not.toHaveBeenCalled();
+    });
+
+    it('forwards undefined for a saved server without requestTimeoutMs', async () => {
+      serverStore.servers = [
+        {id: 'srv-1', name: 'Default Server', url: 'http://localhost:1234'},
+      ];
+      (serverStore.getApiKey as jest.Mock).mockResolvedValue(undefined);
+      mockedFetchModels.mockResolvedValueOnce([]);
+
+      const {getByTestId} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      fireEvent.press(getByTestId('server-chip-srv-1'));
+
+      await waitFor(() => {
+        expect(mockedFetchModels).toHaveBeenCalledWith(
+          'http://localhost:1234',
+          undefined,
+          undefined,
+        );
+      });
+    });
   });
 });

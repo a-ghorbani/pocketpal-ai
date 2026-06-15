@@ -454,6 +454,7 @@ export interface ServerConfig {
   name: string;
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
   lastConnected?: number; // Timestamp
+  requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
 }
 
 export enum ModelType {
