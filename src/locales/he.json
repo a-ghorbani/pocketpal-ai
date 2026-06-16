@@ -157,7 +157,10 @@
     "manageServers": "ניהול שרתים",
     "ttsAvailability": "טקסט לדיבור",
     "ttsAvailabilityDescription": "קרא את תשובות העוזר בקול רם.",
-    "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה."
+    "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה.",
+    "requestTimeout": "זמן קצוב לבקשה (בשניות)",
+    "requestTimeoutHelp": "כמה זמן לחכות לתגובה משרת איטי. אפשר להשאיר ריק לערך ברירת המחדל.",
+    "requestTimeoutPlaceholder": "אופציונלי - אפשר להשאיר ריק לברירת המחדל"
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
