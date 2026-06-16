@@ -157,7 +157,10 @@
     "manageServers": "Kelola Server",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Bacakan balasan asisten dengan suara.",
-    "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah — fitur ini mungkin tidak bekerja dengan baik."
+    "ttsAvailabilityLowMemoryWarning": "Memori perangkat Anda rendah — fitur ini mungkin tidak bekerja dengan baik.",
+    "requestTimeout": "Batas Waktu Permintaan (detik)",
+    "requestTimeoutHelp": "Waktu tunggu maksimal untuk server yang lambat merespons. Kosongkan untuk pakai bawaan.",
+    "requestTimeoutPlaceholder": "Opsional - kosongkan untuk pakai bawaan"
   },
   "memory": {
     "shortWarning": "Peringatan Memori",
