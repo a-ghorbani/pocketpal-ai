@@ -1144,7 +1144,10 @@
     "manageServers": "管理伺服器",
     "ttsAvailability": "文字轉語音",
     "ttsAvailabilityDescription": "朗讀助理回覆。",
-    "ttsAvailabilityLowMemoryWarning": "您的裝置記憶體不足 — 這可能會影響功能運作的穩定性。"
+    "ttsAvailabilityLowMemoryWarning": "您的裝置記憶體不足 — 這可能會影響功能運作的穩定性。",
+    "requestTimeout": "請求逾時（秒）",
+    "requestTimeoutHelp": "等待較慢的伺服器回應的最長時間。留空則使用預設值。",
+    "requestTimeoutPlaceholder": "可選 – 留空則使用預設值"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
