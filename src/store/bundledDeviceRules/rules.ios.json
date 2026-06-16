@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2.0-draft",
   "platform": "ios",
-  "rules_version": "2026-06-10.1",
+  "rules_version": "2026-06-11.1",
   "classifier": {
     "ram_bands": [
       {
@@ -263,7 +263,8 @@
     "low": {
       "candidates": [
         {
-          "model": "gemma-3-1b-it",
+          "model": "gemma-3-1b",
+          "display_name": "Gemma 3 1B",
           "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
           "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
           "params": 999885952,
@@ -271,13 +272,15 @@
         },
         {
           "model": "bonsai-1.7b",
+          "display_name": "Bonsai 1.7B",
           "hf_repo": "prism-ml/Bonsai-1.7B-gguf",
           "hf_filename": "Bonsai-1.7B-Q1_0.gguf",
           "params": 1720028160,
           "size_bytes": 248302272
         },
         {
-          "model": "qwen_qwen3-0.6b",
+          "model": "qwen3-0.6b",
+          "display_name": "Qwen3 0.6B",
           "hf_repo": "bartowski/Qwen_Qwen3-0.6B-GGUF",
           "hf_filename": "Qwen_Qwen3-0.6B-Q4_K_M.gguf",
           "params": 751632384,
@@ -285,6 +288,7 @@
         },
         {
           "model": "lfm2.5-350m",
+          "display_name": "LFM2.5 350M",
           "hf_repo": "LiquidAI/LFM2.5-350M-GGUF",
           "hf_filename": "LFM2.5-350M-Q4_K_M.gguf",
           "params": 354483968,
@@ -295,7 +299,8 @@
     "mid": {
       "candidates": [
         {
-          "model": "huggingfacetb_smollm3-3b",
+          "model": "smollm3-3b",
+          "display_name": "SmolLM3 3B",
           "hf_repo": "bartowski/HuggingFaceTB_SmolLM3-3B-GGUF",
           "hf_filename": "HuggingFaceTB_SmolLM3-3B-Q4_K_M.gguf",
           "params": 3075098624,
@@ -303,20 +308,23 @@
         },
         {
           "model": "lfm2-2.6b",
+          "display_name": "LFM2 2.6B",
           "hf_repo": "LiquidAI/LFM2-2.6B-GGUF",
           "hf_filename": "LFM2-2.6B-Q4_K_M.gguf",
           "params": 2569272320,
           "size_bytes": 1563668704
         },
         {
-          "model": "qwen_qwen3-1.7b",
+          "model": "qwen3-1.7b",
+          "display_name": "Qwen3 1.7B",
           "hf_repo": "bartowski/Qwen_Qwen3-1.7B-GGUF",
           "hf_filename": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
           "params": 2031739904,
           "size_bytes": 1282439584
         },
         {
-          "model": "lfm2.5-1.2b-instruct",
+          "model": "lfm2.5-1.2b",
+          "display_name": "LFM2.5 1.2B",
           "hf_repo": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
           "hf_filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
           "params": 1170340608,
@@ -324,6 +332,7 @@
         },
         {
           "model": "qwen3.5-2b",
+          "display_name": "Qwen3.5 2B",
           "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
           "hf_filename": "Qwen3.5-2B-Q4_K_M.gguf",
           "params": 1881825088,
@@ -331,13 +340,14 @@
           "multimodal": true,
           "mmproj": {
             "hf_repo": "unsloth/Qwen3.5-2B-GGUF",
-            "hf_filename": "mmproj-BF16.gguf",
-            "size_bytes": 671372992,
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 668227264,
             "modalities": ["vision"]
           }
         },
         {
-          "model": "gemma-3-1b-it",
+          "model": "gemma-3-1b",
+          "display_name": "Gemma 3 1B",
           "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
           "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
           "params": 999885952,
@@ -348,14 +358,16 @@
     "high": {
       "candidates": [
         {
-          "model": "gemma-3-4b-it",
+          "model": "gemma-3-4b",
+          "display_name": "Gemma 3 4B",
           "hf_repo": "ggml-org/gemma-3-4b-it-GGUF",
           "hf_filename": "gemma-3-4b-it-Q4_K_M.gguf",
           "params": 3880099328,
           "size_bytes": 2489757856
         },
         {
-          "model": "gemma-4-e2b-it",
+          "model": "gemma-4-e2b",
+          "display_name": "Gemma 4 E2B",
           "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
           "hf_filename": "gemma-4-E2B-it-Q4_K_M.gguf",
           "params": 4647450147,
@@ -363,13 +375,14 @@
           "multimodal": true,
           "mmproj": {
             "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
-            "hf_filename": "mmproj-BF16.gguf",
-            "size_bytes": 986833728,
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 985654080,
             "modalities": ["vision"]
           }
         },
         {
           "model": "qwen3.5-4b",
+          "display_name": "Qwen3.5 4B",
           "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
           "hf_filename": "Qwen3.5-4B-Q4_K_M.gguf",
           "params": 4205751296,
@@ -377,13 +390,14 @@
           "multimodal": true,
           "mmproj": {
             "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
-            "hf_filename": "mmproj-BF16.gguf",
-            "size_bytes": 675569344,
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 672423616,
             "modalities": ["vision"]
           }
         },
         {
-          "model": "mistralai_ministral-3-3b-instruct-2512",
+          "model": "ministral-3-3b",
+          "display_name": "Ministral 3 3B",
           "hf_repo": "bartowski/mistralai_Ministral-3-3B-Instruct-2512-GGUF",
           "hf_filename": "mistralai_Ministral-3-3B-Instruct-2512-Q4_K_M.gguf",
           "params": 3429006336,
@@ -391,13 +405,15 @@
         },
         {
           "model": "bonsai-8b",
+          "display_name": "Bonsai 8B",
           "hf_repo": "prism-ml/Bonsai-8B-gguf",
           "hf_filename": "Bonsai-8B-Q1_0.gguf",
           "params": 8188548096,
           "size_bytes": 1158654496
         },
         {
-          "model": "gemma-3-1b-it",
+          "model": "gemma-3-1b",
+          "display_name": "Gemma 3 1B",
           "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
           "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
           "params": 999885952,
@@ -408,14 +424,16 @@
     "flagship": {
       "candidates": [
         {
-          "model": "gemma-3-4b-it",
+          "model": "gemma-3-4b",
+          "display_name": "Gemma 3 4B",
           "hf_repo": "ggml-org/gemma-3-4b-it-GGUF",
           "hf_filename": "gemma-3-4b-it-Q4_K_M.gguf",
           "params": 3880099328,
           "size_bytes": 2489757856
         },
         {
-          "model": "gemma-4-e4b-it",
+          "model": "gemma-4-e4b",
+          "display_name": "Gemma 4 E4B",
           "hf_repo": "ggml-org/gemma-4-E4B-it-GGUF",
           "hf_filename": "gemma-4-E4B-it-Q4_K_M.gguf",
           "params": 7518069290,
@@ -429,7 +447,8 @@
           }
         },
         {
-          "model": "gemma-4-e2b-it",
+          "model": "gemma-4-e2b",
+          "display_name": "Gemma 4 E2B",
           "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
           "hf_filename": "gemma-4-E2B-it-Q4_K_M.gguf",
           "params": 4647450147,
@@ -437,13 +456,14 @@
           "multimodal": true,
           "mmproj": {
             "hf_repo": "unsloth/gemma-4-E2B-it-GGUF",
-            "hf_filename": "mmproj-BF16.gguf",
-            "size_bytes": 986833728,
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 985654080,
             "modalities": ["vision"]
           }
         },
         {
           "model": "lfm2.5-8b-a1b",
+          "display_name": "LFM2.5 8B-A1B",
           "hf_repo": "LiquidAI/LFM2.5-8B-A1B-GGUF",
           "hf_filename": "LFM2.5-8B-A1B-Q4_K_M.gguf",
           "params": 8467856832,
@@ -451,6 +471,7 @@
         },
         {
           "model": "qwen3.5-4b",
+          "display_name": "Qwen3.5 4B",
           "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
           "hf_filename": "Qwen3.5-4B-Q4_K_M.gguf",
           "params": 4205751296,
@@ -458,13 +479,14 @@
           "multimodal": true,
           "mmproj": {
             "hf_repo": "unsloth/Qwen3.5-4B-GGUF",
-            "hf_filename": "mmproj-BF16.gguf",
-            "size_bytes": 675569344,
+            "hf_filename": "mmproj-F16.gguf",
+            "size_bytes": 672423616,
             "modalities": ["vision"]
           }
         },
         {
-          "model": "gemma-3-1b-it",
+          "model": "gemma-3-1b",
+          "display_name": "Gemma 3 1B",
           "hf_repo": "ggml-org/gemma-3-1b-it-GGUF",
           "hf_filename": "gemma-3-1b-it-Q4_K_M.gguf",
           "params": 999885952,
