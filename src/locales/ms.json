@@ -157,7 +157,10 @@
     "removeRemoteModel": "Buang {{modelName}} ({{serverName}})?",
     "retryConnection": "Cuba Lagi",
     "enterUrlManually": "Masukkan URL secara manual",
-    "manageServers": "Urus Pelayan"
+    "manageServers": "Urus Pelayan",
+    "requestTimeout": "Had Masa Permintaan (saat)",
+    "requestTimeoutHelp": "Tempoh maksimum menunggu pelayan yang perlahan untuk membalas. Biarkan kosong untuk nilai lalai.",
+    "requestTimeoutPlaceholder": "Pilihan - biarkan kosong untuk nilai lalai"
   },
   "memory": {
     "shortWarning": "Amaran Memori",
