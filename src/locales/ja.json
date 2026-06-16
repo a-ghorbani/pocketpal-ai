@@ -157,7 +157,10 @@
     "removeRemoteModel": "{{modelName}}（{{serverName}}）を削除しますか？",
     "retryConnection": "再試行",
     "enterUrlManually": "URLを手動で入力",
-    "manageServers": "サーバーを管理"
+    "manageServers": "サーバーを管理",
+    "requestTimeout": "リクエストのタイムアウト（秒）",
+    "requestTimeoutHelp": "応答が遅いサーバーを待つ最大時間です。空欄にするとデフォルトが使われます。",
+    "requestTimeoutPlaceholder": "任意 - 空欄でデフォルト"
   },
   "memory": {
     "shortWarning": "メモリ警告",
