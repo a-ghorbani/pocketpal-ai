@@ -157,7 +157,10 @@
     "manageServers": "管理服务器",
     "ttsAvailability": "文本转语音",
     "ttsAvailabilityDescription": "朗读 助手回复",
-    "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行"
+    "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行",
+    "requestTimeout": "请求超时（秒）",
+    "requestTimeoutHelp": "等待服务器响应的最长时间。留空则使用默认值。",
+    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值"
   },
   "memory": {
     "shortWarning": "内存警告",
