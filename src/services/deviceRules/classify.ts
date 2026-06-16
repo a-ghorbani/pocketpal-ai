@@ -102,7 +102,13 @@ const resolveSocClass = (
 
   // Android
   if (signals.socModel && classifier.socModelToClass) {
-    const cls = classifier.socModelToClass[signals.socModel];
+    // MediaTek SOC_MODEL strings carry a vendor suffix (e.g. "MT6769V/CZ"); the
+    // classifier keys are the base model ("MT6769"). Strip it on a lookup miss.
+    const cls =
+      classifier.socModelToClass[signals.socModel] ??
+      classifier.socModelToClass[
+        signals.socModel.replace(/V\/[A-Z0-9]+$/i, '')
+      ];
     if (cls) {
       return cls;
     }

@@ -10,6 +10,16 @@ import {DeviceSignals} from './types';
 // tier (a non-empty preset list) rather than producing an empty result.
 const RAM_FLOOR_BYTES = 1 * 1024 * 1024 * 1024;
 
+// /proc/cpuinfo reports the ARMv8.2 dot-product feature as "asimddp", but device
+// rules match the architectural name "dotprod". Surface both so a `dotprod` rule
+// fires on real hardware.
+const normalizeCpuFeatures = (
+  features: string[] | undefined,
+): string[] | undefined =>
+  features && features.includes('asimddp') && !features.includes('dotprod')
+    ? [...features, 'dotprod']
+    : features;
+
 // Read the device signals the classifier needs, once. Missing native fields are
 // tolerated (e.g. Android < S has no SOC_MODEL); the classifier degrades. A
 // failing RAM read degrades to the floor so presets never resolve to empty.
@@ -32,7 +42,7 @@ export async function readDeviceSignals(): Promise<DeviceSignals> {
       ramBytes,
       socModel: cpu.socModel,
       hardware: cpu.hardware,
-      cpuFeatures: cpu.features,
+      cpuFeatures: normalizeCpuFeatures(cpu.features),
       maxFreqMhz: cpu.maxFreqMhz,
     };
   } catch {

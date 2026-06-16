@@ -12,6 +12,7 @@ const androidClassifier: Classifier = {
   socModelToClass: {
     SM8650: 'flagship',
     'Tensor G3': 'mid',
+    MT6769: 'mid',
     SM4350: 'budget',
   },
   hardwareToClass: {
@@ -93,6 +94,27 @@ describe('classify', () => {
     };
     // i8mm -> flagship, ram 8GiB -> band 6-8 -> high
     expect(classify(signals, androidClassifier, 'android')).toBe('high');
+  });
+
+  it('strips a MediaTek vendor suffix to match the base socModel key', () => {
+    const signals: DeviceSignals = {
+      ramBytes: 8 * GiB,
+      socModel: 'MT6769V/CZ',
+    };
+    // exact key miss -> strip "V/CZ" -> MT6769 -> mid; ram 6-8 + mid -> mid
+    expect(classify(signals, androidClassifier, 'android')).toBe('mid');
+  });
+
+  it('matches the dotprod heuristic (alias surfaced by readDeviceSignals)', () => {
+    const signals: DeviceSignals = {
+      ramBytes: 8 * GiB,
+      socModel: 'UNKNOWN_SOC',
+      hardware: 'qcom',
+      cpuFeatures: ['asimd', 'asimddp', 'dotprod'],
+      maxFreqMhz: 2500,
+    };
+    // soc + hardware miss -> dotprod & freq>=2400 -> mid; ram 6-8 + mid -> mid
+    expect(classify(signals, androidClassifier, 'android')).toBe('mid');
   });
 
   it('classifies an iOS device by machine -> chip -> class', () => {

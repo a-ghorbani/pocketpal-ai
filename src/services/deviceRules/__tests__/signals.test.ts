@@ -47,6 +47,21 @@ describe('readDeviceSignals', () => {
     });
   });
 
+  it('aliases asimddp to the dotprod feature name the rules match', async () => {
+    Object.defineProperty(Platform, 'OS', {value: 'android'});
+    (NativeHardwareInfo.getCPUInfo as jest.Mock).mockResolvedValue({
+      cores: 8,
+      socModel: 'MT6769V/CZ',
+      hardware: 'qcom',
+      features: ['asimd', 'asimddp'],
+      maxFreqMhz: 2000,
+    });
+
+    const signals = await readDeviceSignals();
+
+    expect(signals.cpuFeatures).toEqual(['asimd', 'asimddp', 'dotprod']);
+  });
+
   it('degrades to a ram floor when the total-memory read throws', async () => {
     Object.defineProperty(Platform, 'OS', {value: 'ios'});
     (DeviceInfo.getTotalMemory as jest.Mock).mockRejectedValue(
