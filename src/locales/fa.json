@@ -157,7 +157,10 @@
     "manageServers": "مدیریت سرورها",
     "ttsAvailability": "تبدیل متن به گفتار",
     "ttsAvailabilityDescription": "خواندن پاسخ‌ها با صدای بلند.",
-    "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند."
+    "ttsAvailabilityLowMemoryWarning": "حافظه دستگاه شما کم است — ممکن است این قابلیت به‌درستی کار نکند.",
+    "requestTimeout": "مهلت درخواست (ثانیه)",
+    "requestTimeoutHelp": "حداکثر زمان انتظار برای پاسخ سرور کند. برای مقدار پیش‌فرض خالی بگذارید.",
+    "requestTimeoutPlaceholder": "اختیاری - برای مقدار پیش‌فرض خالی بگذارید"
   },
   "memory": {
     "shortWarning": "هشدار حافظه",
