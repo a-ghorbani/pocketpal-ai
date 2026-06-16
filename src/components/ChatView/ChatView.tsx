@@ -26,7 +26,6 @@ import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  useAnimatedReaction,
   useAnimatedScrollHandler,
   useDerivedValue,
 } from 'react-native-reanimated';
@@ -411,11 +410,19 @@ export const ChatView = observer(
     // ============ KEYBOARD ANIMATION SETUP ============
     // Get real-time keyboard height from the keyboard controller
     const keyboard = useReanimatedKeyboardAnimation();
-    const trackingKeyboardMovement = useSharedValue(false);
-    const bottomOffset = -insets.bottom;
 
-    // Shared value that tracks the offset to apply when keyboard is moving up
-    const keyboardOffsetBottom = useSharedValue(0);
+    // One reconciled "keyboard occlusion above the input" value. The library
+    // reports a negative `keyboard.height` while the keyboard is up; the IME
+    // inset already spans the navigation bar (KeyboardProvider is configured
+    // navigationBarTranslucent), so the space the keyboard actually steals from
+    // the chat surface is the IME inset minus the safe-area bottom inset. One
+    // expression, correct on every API level — there is no version fork (the
+    // API ≤ 29 under-reservation is handled by the clamp, not a branch). The
+    // input translate, the suggested-prompts overlay, and the inverted-list
+    // bottom spacer all derive from THIS value so they never disagree.
+    const keyboardOcclusion = useDerivedValue(() =>
+      Math.max(0, Math.abs(keyboard.height.value) - insets.bottom),
+    );
 
     // Shared value to track if keyboard is visible (height > 0)
     const isKeyboardVisible = useSharedValue(false);
@@ -423,9 +430,7 @@ export const ChatView = observer(
     // Animated style for input container padding
     // Apply bottom padding (safe area inset) only when keyboard is NOT visible
     const inputContainerAnimatedStyle = useAnimatedStyle(() => ({
-      transform: [
-        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
-      ],
+      transform: [{translateY: -keyboardOcclusion.value}],
       paddingBottom: isKeyboardVisible.value ? 0 : insets.bottom,
     }));
 
@@ -434,30 +439,8 @@ export const ChatView = observer(
     // home indicator). Applying it here would create a large empty gap
     // between the chips and the input when the keyboard is closed.
     const suggestedPromptsAnimatedStyle = useAnimatedStyle(() => ({
-      transform: [
-        {translateY: keyboard.height.value - keyboardOffsetBottom.value},
-      ],
+      transform: [{translateY: -keyboardOcclusion.value}],
     }));
-
-    // Monitor keyboard height changes and animate the offset value
-    useAnimatedReaction(
-      () => -keyboard.height.value,
-      (value, prevValue) => {
-        if (prevValue !== null && value !== prevValue) {
-          const isKeyboardMovingUp = value > prevValue;
-          if (isKeyboardMovingUp !== trackingKeyboardMovement.value) {
-            trackingKeyboardMovement.value = isKeyboardMovingUp;
-            keyboardOffsetBottom.value = withTiming(
-              isKeyboardMovingUp ? bottomOffset : 0,
-              {
-                duration: 200, // bottomOffset ? 150 : 400,
-              },
-            );
-          }
-        }
-      },
-      [keyboard, trackingKeyboardMovement, bottomOffset],
-    );
 
     // ============ SCROLL TRACKING & SCROLL-TO-BOTTOM ============
     // Shared values for tracking scroll position and content overflow
@@ -969,20 +952,15 @@ export const ChatView = observer(
     );
 
     // ListHeaderComponent as animated spacer (inverted list: header is at bottom)
-    // We use this to create a spacer at the bottom of the list to account for the keyboard height.
-    // So we can move up/down when the keyboard is shown/hidden.
-    const headerStyle = useAnimatedStyle(() => {
-      // only animate when not streaming
-      // if (isStreaming) return {height: 0};
-
-      // Only lift when keyboard is actively moving
-      const shouldLift = trackingKeyboardMovement.value;
-      return {
-        height: shouldLift
-          ? Math.abs(keyboard.height.value) - insets.bottom
-          : 0,
-      };
-    });
+    // We use this to create a spacer at the bottom of the list to account for the
+    // keyboard height, so the newest turn rises above the input when the keyboard
+    // opens. Reads the SAME reconciled occlusion value as the input translate, so
+    // the two can never disagree, and holds while the keyboard is settled-open
+    // (it returns to 0 only when the keyboard closes, not while it merely stops
+    // moving — the previous in-flight gate dropped it too early on API ≤ 29).
+    const headerStyle = useAnimatedStyle(() => ({
+      height: keyboardOcclusion.value,
+    }));
 
     // Render header (pending indicator + keyboard spacer). The
     // FlatList is `inverted={true}`, so the ListHeaderComponent renders
