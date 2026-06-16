@@ -1144,7 +1144,10 @@
     "manageServers": "서버 관리",
     "ttsAvailability": "텍스트 음성 변환 (TTS)",
     "ttsAvailabilityDescription": "어시스턴트의 답변을 음성으로 출력합니다.",
-    "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 — 신뢰성 있게 작동하지 않을 수 있습니다."
+    "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 — 신뢰성 있게 작동하지 않을 수 있습니다.",
+    "requestTimeout": "요청 제한 시간(초)",
+    "requestTimeoutHelp": "서버 응답을 기다리는 최대 시간이에요. 비워 두면 기본값이 적용돼요.",
+    "requestTimeoutPlaceholder": "선택 사항 - 비워 두면 기본값 적용"
   },
   "storage": {
     "checkFailed": "저장공간 확인 실패",
