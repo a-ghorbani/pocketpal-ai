@@ -35,7 +35,7 @@ export const ModelsHeaderRight = observer(() => {
 
   const handleReset = async () => {
     try {
-      modelStore.resetModels();
+      await modelStore.resetModels();
       setTrigger(prev => !prev); // Trigger UI refresh
     } catch (error) {
       console.error('Error resetting models:', error);

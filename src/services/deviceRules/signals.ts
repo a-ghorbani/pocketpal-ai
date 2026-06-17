@@ -1,0 +1,55 @@
+import {Platform} from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+
+import NativeHardwareInfo from '../../specs/NativeHardwareInfo';
+
+import {DeviceSignals} from './types';
+
+// Conservative RAM floor used when the native total-memory read fails. It maps
+// to the lowest band on both platforms, so the classifier degrades to the low
+// tier (a non-empty preset list) rather than producing an empty result.
+const RAM_FLOOR_BYTES = 1 * 1024 * 1024 * 1024;
+
+// /proc/cpuinfo reports the ARMv8.2 dot-product feature as "asimddp", but device
+// rules match the architectural name "dotprod". Surface both so a `dotprod` rule
+// fires on real hardware.
+const normalizeCpuFeatures = (
+  features: string[] | undefined,
+): string[] | undefined =>
+  features && features.includes('asimddp') && !features.includes('dotprod')
+    ? [...features, 'dotprod']
+    : features;
+
+// Read the device signals the classifier needs, once. Missing native fields are
+// tolerated (e.g. Android < S has no SOC_MODEL); the classifier degrades. A
+// failing RAM read degrades to the floor so presets never resolve to empty.
+export async function readDeviceSignals(): Promise<DeviceSignals> {
+  let ramBytes: number;
+  try {
+    ramBytes = await DeviceInfo.getTotalMemory();
+  } catch {
+    ramBytes = RAM_FLOOR_BYTES;
+  }
+
+  if (Platform.OS === 'ios') {
+    try {
+      const machine = await DeviceInfo.getDeviceId();
+      return {ramBytes, machine};
+    } catch {
+      return {ramBytes};
+    }
+  }
+
+  try {
+    const cpu = await NativeHardwareInfo.getCPUInfo();
+    return {
+      ramBytes,
+      socModel: cpu.socModel,
+      hardware: cpu.hardware,
+      cpuFeatures: normalizeCpuFeatures(cpu.features),
+      maxFreqMhz: cpu.maxFreqMhz,
+    };
+  } catch {
+    return {ramBytes};
+  }
+}

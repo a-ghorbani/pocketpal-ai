@@ -35,9 +35,25 @@ import {
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
-import {defaultModels, MODEL_LIST_VERSION} from './defaultModels';
 
 import {downloadManager, DownloadCancelledError} from '../services/downloads';
+import {classify, ClassifyPlatform} from '../services/deviceRules/classify';
+import {deriveUrl, parseDeviceRules} from '../services/deviceRules/parse';
+import {fetchRules} from '../services/deviceRules/rules';
+import {readDeviceSignals} from '../services/deviceRules/signals';
+import {
+  DeviceRules,
+  DeviceSignals,
+  RuleCandidate,
+  Tier,
+} from '../services/deviceRules/types';
+
+import androidRulesRaw from './bundledDeviceRules/rules.android.json';
+import iosRulesRaw from './bundledDeviceRules/rules.ios.json';
+
+// Bump when the migration logic that re-merges the persisted model list
+// changes. Crossing this version runs the one-time prune-and-reconcile.
+export const MODEL_LIST_VERSION = 15;
 
 import {
   getHFDefaultSettings,
@@ -121,6 +137,8 @@ function createRemoteModel(params: {
 class ModelStore {
   models: Model[] = [];
   version: number | undefined = undefined; // Persisted version
+  deviceTier: Tier | null = null; // resolved device classification
+  rulesVersion: string | null = null; // provenance of the preset list
 
   /**
    * Returns models with projection models filtered out for display purposes
@@ -204,6 +222,8 @@ class ModelStore {
       properties: [
         'models',
         'version',
+        'deviceTier',
+        'rulesVersion',
         'useAutoRelease',
         'contextInitParams',
         'lastUsedModelId',
@@ -517,15 +537,30 @@ class ModelStore {
     // Sync download manager with active downloads
     await downloadManager.syncWithActiveDownloads(this.models);
 
+    // Apply the bundled offline floor immediately (no network) so the list is
+    // never empty while a slow rules fetch is in flight, then merge/reconcile.
+    const presets = await this.resolvePresets();
+
     if (storedVersion < MODEL_LIST_VERSION) {
-      this.mergeModelLists();
-      runInAction(() => {
-        this.version = MODEL_LIST_VERSION;
-      });
+      this.mergeModelLists(presets);
+      // Only finalize the one-time migration once presets actually resolved.
+      // An empty result signals a transient resolve failure (e.g. the RAM read
+      // rejected); leave the version unbumped so the migration retries next
+      // launch instead of locking in an empty default list.
+      if (presets.length > 0) {
+        runInAction(() => {
+          this.version = MODEL_LIST_VERSION;
+        });
+      }
     } else {
+      this.reconcilePresets(presets);
       await this.initializeDownloadStatus();
       this.removeInvalidLocalModels();
     }
+
+    // Upgrade past the bundled floor to the online rules override in the
+    // background; reconcile (id-keyed, dedup) folds in any newer set.
+    this.upgradeToFetchedRules();
 
     await this.initializeGpuSettings(); // Should be awaited to ensure GPU settings are applied before initializing context
 
@@ -561,62 +596,175 @@ class ModelStore {
     this.checkAndReloadAutoReleasedModel();
   };
 
-  mergeModelLists = () => {
-    // Start with persisted models, but filter out non-downloaded preset models
+  // Synthesize the minimal {hfModel, modelFile} pair the unchanged hfAsModel
+  // reads from a thin candidate, with no network. The deterministic downloadUrl
+  // is set here; HF-derivable data (oid/lfs/templates) resolves at download. A
+  // multimodal candidate's explicit mmproj is synthesized into a sibling so
+  // vision detection pairs the projector and its size enters the fit check.
+  private candidateToPair = (
+    candidate: RuleCandidate,
+  ): {hfModel: HuggingFaceModel; modelFile: ModelFile} => {
+    const modelFile: ModelFile = {
+      rfilename: candidate.hfFilename,
+      url: deriveUrl(candidate.hfRepo, candidate.hfFilename),
+      size: candidate.sizeBytes,
+    };
+    const siblings: ModelFile[] | undefined = candidate.mmproj
+      ? [
+          {rfilename: candidate.hfFilename, size: candidate.sizeBytes},
+          {
+            rfilename: candidate.mmproj.hfFilename,
+            url: deriveUrl(
+              candidate.mmproj.hfRepo,
+              candidate.mmproj.hfFilename,
+            ),
+            size: candidate.mmproj.sizeBytes,
+          },
+        ]
+      : undefined;
+    const hfModel = {
+      id: candidate.hfRepo,
+      author: candidate.hfRepo.split('/')[0],
+      url: `https://huggingface.co/${candidate.hfRepo}`,
+      specs: {gguf: {total: candidate.params ?? 0}},
+      siblings,
+    } as unknown as HuggingFaceModel;
+    return {hfModel, modelFile};
+  };
+
+  // Materialize the device-tier preset list from rules. Each thin candidate is
+  // turned into the minimal pair hfAsModel reads (candidateToPair), so the
+  // result is origin:HF, identical to an HF-browser add. Multimodal candidates
+  // also push their mmproj projector stub (mirrors addHFModel) so the projection
+  // is resolvable for download. Deduped by model.id (author/repo/filename),
+  // first wins.
+  resolvePresetModels = (
+    rules: DeviceRules,
+    signals: DeviceSignals,
+  ): Model[] => {
+    const tier = classify(
+      signals,
+      rules.classifier,
+      Platform.OS as ClassifyPlatform,
+    );
+    const flat = rules.tiers[tier].models.flatMap(candidate => {
+      const {hfModel, modelFile} = this.candidateToPair(candidate);
+      const llm = hfAsModel(hfModel, modelFile);
+      const named = candidate.displayName
+        ? {...llm, name: candidate.displayName}
+        : llm;
+      if (named.supportsMultimodal) {
+        const projModels = getMmprojFiles(hfModel.siblings || []).map(file =>
+          hfAsModel(hfModel, file),
+        );
+        return [named, ...projModels];
+      }
+      return [named];
+    });
+
+    // Dedup on the full model id (author/repo/filename) so two authors sharing a
+    // repo name + filename don't collapse. The id also spans origins, matching a
+    // legacy origin:PRESET download against a new origin:HF rule entry.
+    const seen = new Set<string>();
+    const presets: Model[] = [];
+    for (const model of flat) {
+      if (seen.has(model.id)) {
+        continue;
+      }
+      seen.add(model.id);
+      presets.push({...model, isRulePreset: true});
+    }
+    return presets;
+  };
+
+  // Resolve the preset list from the bundled offline floor only — no network. This
+  // populates the model list immediately on first launch so a slow or hanging
+  // rules fetch can never leave the list empty. The fetched online override is
+  // applied afterwards by upgradeToFetchedRules (fire-and-forget).
+  private resolvePresets = async (): Promise<Model[]> => {
+    try {
+      const signals = await readDeviceSignals();
+      const bundledRaw = Platform.OS === 'ios' ? iosRulesRaw : androidRulesRaw;
+      const rules = parseDeviceRules(bundledRaw);
+      const tier = classify(
+        signals,
+        rules.classifier,
+        Platform.OS as ClassifyPlatform,
+      );
+      runInAction(() => {
+        this.deviceTier = tier;
+        this.rulesVersion = rules.rulesVersion;
+      });
+      return this.resolvePresetModels(rules, signals);
+    } catch (error) {
+      console.warn('[ModelStore] preset resolution failed:', error);
+      return [];
+    }
+  };
+
+  // Fetch the online rules override and, if it parses to a usable rule set,
+  // re-classify and reconcile so the list upgrades past the bundled floor. Runs
+  // off the first-population path (fire-and-forget); any failure leaves the
+  // already-applied bundled presets in place.
+  private upgradeToFetchedRules = async (): Promise<void> => {
+    try {
+      const fetched = await fetchRules();
+      if (!fetched) {
+        return;
+      }
+      const signals = await readDeviceSignals();
+      const tier = classify(
+        signals,
+        fetched.classifier,
+        Platform.OS as ClassifyPlatform,
+      );
+      runInAction(() => {
+        this.deviceTier = tier;
+        this.rulesVersion = fetched.rulesVersion;
+      });
+      this.reconcilePresets(this.resolvePresetModels(fetched, signals));
+    } catch (error) {
+      console.warn('[ModelStore] fetched-rules upgrade failed:', error);
+    }
+  };
+
+  // Reconcile the freshly-resolved rule presets into the model list. Keyed on the
+  // full model id (author/repo/filename), which spans origins: a downloaded
+  // legacy PRESET and a new origin:HF rule entry share it, so the kept download
+  // suppresses the rule stub (no duplicate card, no re-download).
+  //
+  // Two-sided so the list stays equal to the current rule set:
+  //  - prune non-downloaded rule-provenance stubs no longer in the fresh set
+  //    (a newer rulesVersion dropped them, or the device re-tiered). Downloaded
+  //    models of any origin and user-added HF/LOCAL models are never pruned.
+  //  - append the fresh presets not already represented by a kept model.
+  reconcilePresets = (presets: Model[]) => {
+    if (presets.length === 0) {
+      return;
+    }
+    const freshIds = new Set(presets.map(p => p.id));
+    const kept = this.models.filter(
+      m => !(m.isRulePreset && !m.isDownloaded && !freshIds.has(m.id)),
+    );
+    const existing = new Set(kept.map(m => m.id));
+    const toAdd = presets.filter(p => !existing.has(p.id));
+    if (kept.length === this.models.length && toAdd.length === 0) {
+      return;
+    }
+    runInAction(() => {
+      this.models = [...kept, ...toAdd];
+    });
+  };
+
+  mergeModelLists = (presets: Model[] = []) => {
+    // The default list is data-driven: rule-resolved origin:HF presets replace
+    // the old static PRESET array. Keep every downloaded model regardless of
+    // origin, drop non-downloaded PRESET stubs, then reconcile the resolved
+    // presets in by model.id (author/repo/filename, origin-spanning) so a kept
+    // legacy PRESET download suppresses its rule stub.
     const mergedModels = [...this.models].filter(
       model => model.origin !== ModelOrigin.PRESET || model.isDownloaded,
     );
-
-    // Handle PRESET models using defaultModels as reference
-    defaultModels.forEach(defaultModel => {
-      const existingModelIndex = mergedModels.findIndex(
-        m => m.id === defaultModel.id,
-      );
-
-      if (existingModelIndex !== -1) {
-        // Merge existing model with new defaults
-        const existingModel = mergedModels[existingModelIndex];
-
-        // For PRESET models, directly use defaultModel's default settings
-        existingModel.defaultChatTemplate = defaultModel.defaultChatTemplate;
-        existingModel.defaultStopWords = defaultModel.defaultStopWords;
-        // Deep merge chatTemplate and stopWords
-        existingModel.chatTemplate = deepMerge(
-          existingModel.chatTemplate || {},
-          defaultModel.chatTemplate || {},
-        );
-
-        existingModel.stopWords = [
-          ...(existingModel.stopWords || []),
-          ...(defaultModel.stopWords || []),
-        ];
-
-        // **Merge other attributes from defaultModel**
-
-        const {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          id,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          defaultChatTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          defaultStopWords,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          chatTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          stopWords,
-          ...attributesToMerge
-        } = defaultModel;
-
-        // Merge remaining attributes
-        Object.assign(existingModel, attributesToMerge);
-
-        // Merge other properties
-        mergedModels[existingModelIndex] = existingModel;
-      } else {
-        // Add new model if it doesn't exist
-        mergedModels.push(defaultModel);
-      }
-    });
 
     // Handle HF and LOCAL models
     mergedModels.forEach(model => {
@@ -664,6 +812,8 @@ class ModelStore {
     runInAction(() => {
       this.models = mergedModels;
     });
+
+    this.reconcilePresets(presets);
 
     this.initializeDownloadStatus();
   };
@@ -2269,7 +2419,7 @@ class ModelStore {
     }
   };
 
-  resetModels = () => {
+  resetModels = async () => {
     const localModels = this.models.filter(
       model => model.isLocal || model.origin === ModelOrigin.LOCAL,
     );
@@ -2306,12 +2456,26 @@ class ModelStore {
       model.ggufMetadata = undefined;
     });
 
-    runInAction(() => {
-      this.models = [];
-      this.version = 0;
-      this.mergeModelLists();
+    // Re-resolve the device-appropriate presets so reset repopulates the
+    // default rule list synchronously, mirroring initializeStore (rather than
+    // leaving it empty until the next launch re-migrates).
+    const presets = await this.resolvePresets();
 
-      this.models = [...this.models, ...localModels, ...hfModels];
+    runInAction(() => {
+      // Seed with the kept local/HF models so the preset reconcile dedups
+      // against them (a downloaded HF model matching a rule preset is not
+      // duplicated).
+      this.models = [...localModels, ...hfModels];
+      this.version = 0;
+      this.mergeModelLists(presets);
+
+      // mergeModelLists appends defaultStopWords onto existing stopWords to
+      // preserve user customizations; on the just-reset kept models that
+      // duplicates the seeded defaults. Dedup the affected models (distinct
+      // entries are preserved).
+      [...localModels, ...hfModels].forEach(model => {
+        model.stopWords = [...new Set(model.stopWords)];
+      });
     });
 
     // Re-fetch GGUF metadata with correct number types
