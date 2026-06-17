@@ -58,12 +58,11 @@ Most AI apps are a thin window onto someone else's server — every message you 
 - **🗣️ Text-to-speech** — give your assistant a voice with on-device neural TTS (Kokoro and other engines), no cloud calls.
 - **🎭 Pals** — create personalized assistants with their own model, system prompt, and personality (Assistant and Roleplay types).
 - **🛍️ [PalsHub](https://palshub.ai/)** — discover and install community Pals, including premium ones via in-app checkout.
-- **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering) inside an agentic loop.
+- **🛠️ Talents & tools** — let capable Pals call built-in tools (calculator, date/time, rich HTML rendering) inside a tool-use loop.
 - **📥 Hugging Face integration** — search and download GGUF models, including gated ones, directly from the HF Hub with your access token.
 - **📊 Benchmarking** — measure tokens/sec and memory, and optionally compare on the [AI Phone Leaderboard](https://pocketpal.dev/leaderboard).
 - **⚡ Hardware acceleration** — CPU, GPU (Metal on iOS, OpenCL/Adreno on Android), and NPU (Qualcomm Hexagon) inference paths, with graceful fallback.
 - **🌍 Localized** — available in 11 languages, on phones and tablets, including full iPad support.
-- **✨ Quality-of-life** — message editing & retry (optionally with a different model), markdown tables, auto memory offload, background downloads (iOS), and screen-awake during inference.
 
 ## Get the app
 
@@ -84,30 +83,13 @@ You don't need to know any of this to use PocketPal — but if you're curious ho
 
 PocketPal is a four-layer stack, from the silicon up to the chat UI. Each layer has one job, and the dependency direction is strictly top-down — the JS app talks to native bridges, bridges talk to inference engines, engines target hardware backends.
 
-```mermaid
-flowchart TB
-    subgraph UI["🖥️ UI & Agentic Layer · JS / TS"]
-        direction LR
-        A["React Native + Paper<br/>MobX · WatermelonDB"] ~~~ B["AgentRunner chat loop<br/>Pals · PalsHub · Talents"]
-    end
-    subgraph BRIDGE["🔌 Bridging Layer · native modules"]
-        direction LR
-        C["llama.rn<br/>LLM ↔ JSI"] ~~~ D["react-native-speech +<br/>onnxruntime-react-native"]
-    end
-    subgraph ENGINE["⚙️ Engine Layer · C / C++"]
-        direction LR
-        E["llama.cpp<br/>LLMs · GGUF"] ~~~ F["ONNX Runtime<br/>TTS voices · ONNX"]
-    end
-    subgraph HW["🔧 Hardware Layer"]
-        direction LR
-        G["CPU"] ~~~ H["GPU<br/>Metal · OpenCL/Adreno"] ~~~ I["NPU<br/>Qualcomm Hexagon"]
-    end
-    UI --> BRIDGE --> ENGINE --> HW
-```
+<div align="center">
+  <img src="assets/images and logos/stack-diagram-dark.png" alt="PocketPal AI on-device stack — UI & Tool Use → Bridging → Engine → Hardware" width="100%">
+</div>
 
 | Layer | What runs here |
 | --- | --- |
-| **UI & Agentic** | The React Native app (UI via React Native Paper, state via MobX, chat history in WatermelonDB). The **`AgentRunner`** drives each chat turn — streaming tokens, dispatching **Talents** (tools) when the model calls them, and feeding results back for follow-up reasoning. **Pals** are configurable personas; **PalsHub** is the in-app marketplace for sharing and buying them. |
+| **UI & Tool Use** | The React Native app (UI via React Native Paper, state via MobX, chat history in WatermelonDB). The **`AgentRunner`** drives each chat turn — streaming tokens, dispatching **Talents** (tools) when the model calls them, and feeding results back for follow-up reasoning. **Pals** are configurable personas; **PalsHub** is the in-app marketplace for sharing and buying them. |
 | **Bridging** | Native modules that connect JavaScript to the engines. [`llama.rn`](https://github.com/mybigday/llama.rn) bridges LLM inference over JSI; [`react-native-speech`](https://github.com/a-ghorbani/react-native-speech) and `onnxruntime-react-native` bridge text-to-speech. |
 | **Engine** | The inference engines. **llama.cpp** runs language models in the quantized **GGUF** format. **ONNX Runtime** runs TTS voice models in the **ONNX** format. |
 | **Hardware** | Where the math actually happens. PocketPal targets **CPU** (universal fallback), **GPU** (Metal on iOS, OpenCL on Qualcomm Adreno for Android), and **NPU** (Qualcomm Hexagon) — falling back gracefully and offloading partial layers when a full backend isn't available. |
