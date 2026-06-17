@@ -4,8 +4,7 @@
 
 import {extractModelPrecision, getQuantRank} from '.';
 import {HuggingFaceModel, ModelFile} from './types';
-
-const MMProjRegex = /[-_.]*mmproj[-_.].+\.gguf$/i;
+import {MMProjRegex} from './multimodalPatterns';
 
 /**
  * Checks if a repository contains vision models based on the presence of mmproj files

@@ -1,7 +1,5 @@
 import dayjs from 'dayjs';
 import {l10n} from '../locales';
-import {defaultModels} from '../store/defaultModels';
-import {ModelOrigin} from './types';
 
 /**
  * Formats a byte value into a human-readable string with appropriate units
@@ -177,27 +175,11 @@ export const getDisplayNameFromFilename = (filename: string): string => {
 };
 
 /**
- * Returns the original/default display name for a model.
- * - For preset models: Returns the curated display name from defaultModels
- * - For local/HF models: Returns the filename without .gguf extension
+ * Returns the original/default display name for a model: the filename without
+ * its .gguf extension, for every origin.
  * @param model - The model object
  * @returns The original display name
  */
-export const getOriginalModelName = (model: {
-  id: string;
-  filename: string;
-  origin: string;
-}): string => {
-  // For preset models, look up the original name from defaultModels
-  if (model.origin === ModelOrigin.PRESET) {
-    const defaultModel = defaultModels.find(
-      (dm: {id: string}) => dm.id === model.id,
-    );
-    if (defaultModel) {
-      return defaultModel.name;
-    }
-  }
-
-  // For local/HF models (or preset not found), strip .gguf from filename
+export const getOriginalModelName = (model: {filename: string}): string => {
   return getDisplayNameFromFilename(model.filename);
 };

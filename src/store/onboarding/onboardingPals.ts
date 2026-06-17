@@ -9,11 +9,8 @@
  *
  * Each entry is self-describing: it carries the HF repo / filename,
  * display name, size, and params used by the screen-6 picker pre-
- * registration. HF-origin entries are lazy-registered into
- * `modelStore.models` at Finish via `ModelStore.registerOnboardingPalModel`;
- * PRESET entries (Pip tier triple + Codie quick) still resolve via
- * `defaultModels`. The accompanying unit test pins the per-origin
- * contract.
+ * registration. Entries are lazy-registered into `modelStore.models`
+ * at Finish via `ModelStore.registerOnboardingPalModel`.
  *
  * Two pals MAY share an `entry.id` (e.g. Echo and Sage both reference
  * `gemma-3-1b-it-Q8_0`); `addHFModel` idempotency collapses them to a
@@ -27,8 +24,6 @@
 import type {TopicKey} from './types';
 
 export type OnboardingModelTier = 'quick' | 'balanced' | 'best';
-
-export type OnboardingPalModelOrigin = 'preset' | 'hf';
 
 export interface OnboardingPalModelEntry {
   tier: OnboardingModelTier;
@@ -47,12 +42,6 @@ export interface OnboardingPalModelEntry {
   sizeBytes: number;
   /** Model parameter count → `Model.params`. */
   params: number;
-  /**
-   * `preset` = entry id MUST exist in `defaultModels.ts` with origin
-   * PRESET; resolved via `defaultModels.find`. `hf` = entry is lazy-
-   * registered at Finish via `ModelStore.registerOnboardingPalModel`.
-   */
-  origin: OnboardingPalModelOrigin;
 }
 
 /**
@@ -71,7 +60,6 @@ interface PalEntryInput {
   params: number;
   displayName: string;
   sizeBytes: number;
-  origin: OnboardingPalModelOrigin;
 }
 
 const palEntry = (input: PalEntryInput): OnboardingPalModelEntry => ({
@@ -84,7 +72,6 @@ const palEntry = (input: PalEntryInput): OnboardingPalModelEntry => ({
   displayName: input.displayName,
   sizeBytes: input.sizeBytes,
   params: input.params,
-  origin: input.origin,
 });
 
 export type OnboardingPalKey = 'pip' | 'codie' | 'sage' | 'echo' | 'muse';
@@ -138,7 +125,6 @@ const PAL_PIP: OnboardingPalDef = {
       params: 1170340608,
       displayName: 'LFM2.5 1.2B',
       sizeBytes: 730895168,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'balanced',
@@ -148,7 +134,6 @@ const PAL_PIP: OnboardingPalDef = {
       params: 999885952,
       displayName: 'Gemma 3 1B',
       sizeBytes: 1069306368,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'best',
@@ -158,7 +143,6 @@ const PAL_PIP: OnboardingPalDef = {
       params: 4205751296,
       displayName: 'Qwen3.5 4B',
       sizeBytes: 2707513696,
-      origin: 'hf',
     }),
   ],
 };
@@ -184,13 +168,11 @@ const PAL_CODIE: OnboardingPalDef = {
     palEntry({
       tier: 'quick',
       recommended: false,
-      // PRESET — entryId matches `defaultModels.ts:245` byte-for-byte.
       repo: 'Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF',
       filename: 'qwen2.5-coder-0.5b-instruct-q8_0.gguf',
       params: 630167424,
       displayName: 'Qwen2.5 Coder 0.5B',
       sizeBytes: 675710848,
-      origin: 'preset',
     }),
     palEntry({
       tier: 'balanced',
@@ -200,7 +182,6 @@ const PAL_CODIE: OnboardingPalDef = {
       params: 1881825088,
       displayName: 'Qwen3.5 2B',
       sizeBytes: 1270808032,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'best',
@@ -210,7 +191,6 @@ const PAL_CODIE: OnboardingPalDef = {
       params: 4205751296,
       displayName: 'Qwen3.5 4B',
       sizeBytes: 2707513696,
-      origin: 'hf',
     }),
   ],
 };
@@ -240,7 +220,6 @@ const PAL_SAGE: OnboardingPalDef = {
       params: 1170340608,
       displayName: 'LFM2.5 1.2B',
       sizeBytes: 730895168,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'balanced',
@@ -252,7 +231,6 @@ const PAL_SAGE: OnboardingPalDef = {
       params: 999885952,
       displayName: 'Gemma 3 1B',
       sizeBytes: 1069306368,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'best',
@@ -263,7 +241,6 @@ const PAL_SAGE: OnboardingPalDef = {
       params: 3880263168,
       displayName: 'Gemma 3 4B',
       sizeBytes: 2489757856,
-      origin: 'hf',
     }),
   ],
 };
@@ -294,7 +271,6 @@ const PAL_ECHO: OnboardingPalDef = {
       params: 999885952,
       displayName: 'Gemma 3 1B',
       sizeBytes: 806058240,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'balanced',
@@ -305,7 +281,6 @@ const PAL_ECHO: OnboardingPalDef = {
       params: 999885952,
       displayName: 'Gemma 3 1B',
       sizeBytes: 1069306368,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'best',
@@ -316,7 +291,6 @@ const PAL_ECHO: OnboardingPalDef = {
       params: 3880263168,
       displayName: 'Gemma 3 4B',
       sizeBytes: 2489757856,
-      origin: 'hf',
     }),
   ],
 };
@@ -348,7 +322,6 @@ const PAL_MUSE: OnboardingPalDef = {
       params: 1170340608,
       displayName: 'LFM2.5 1.2B',
       sizeBytes: 730895168,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'balanced',
@@ -359,7 +332,6 @@ const PAL_MUSE: OnboardingPalDef = {
       params: 1881825088,
       displayName: 'Qwen3.5 2B',
       sizeBytes: 1270808032,
-      origin: 'hf',
     }),
     palEntry({
       tier: 'best',
@@ -370,7 +342,6 @@ const PAL_MUSE: OnboardingPalDef = {
       params: 4205751296,
       displayName: 'Qwen3.5 4B',
       sizeBytes: 2707513696,
-      origin: 'hf',
     }),
   ],
 };

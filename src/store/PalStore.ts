@@ -28,7 +28,9 @@ import {resolveHFModelForDownload} from '../utils/hfResolve';
 import {isUSStorefront} from '../utils/region';
 import {palsHubService} from '../services';
 import {registerDefaultTalents} from '../services/talents';
-import {defaultModels} from './defaultModels';
+import {LOOKIE_DEFAULT_MODEL} from './builtinPalModels';
+import {chatTemplates} from '../utils/chat';
+import {defaultCompletionParams} from '../utils/completionSettingsVersions';
 import {parsePalsHubTemplate} from '../utils/palshub-template-parser';
 import {getDisplayNameFromFilename} from '../utils/formatters';
 
@@ -345,11 +347,14 @@ class PalStore {
    * Creates a basic Model object from ModelReference (fallback when HF API fails)
    */
   private createBasicModelFromReference = (modelRef: any): Model => {
-    // Use default model as template for settings
-    const defaultModel = defaultModels[0];
-
     // Extract model name from filename (remove .gguf extension)
     const modelName = getDisplayNameFromFilename(modelRef.filename);
+
+    // Degraded fallback path: use the generic default chat template and
+    // completion params (the GGUF-embedded template is applied at load time).
+    const chatTemplate = {...chatTemplates.default};
+    const completionSettings = {...defaultCompletionParams};
+    const stopWords = completionSettings.stop ?? [];
 
     return {
       id: `${modelRef.repo_id}/${modelRef.filename}`,
@@ -364,12 +369,12 @@ class PalStore {
       filename: modelRef.filename,
       isLocal: false,
       origin: ModelOrigin.HF,
-      defaultChatTemplate: {...defaultModel.defaultChatTemplate},
-      chatTemplate: {...defaultModel.chatTemplate},
-      defaultCompletionSettings: {...defaultModel.defaultCompletionSettings},
-      completionSettings: {...defaultModel.completionSettings},
-      defaultStopWords: [...(defaultModel.defaultStopWords || [])],
-      stopWords: [...(defaultModel.stopWords || [])],
+      defaultChatTemplate: {...chatTemplate},
+      chatTemplate: {...chatTemplate},
+      defaultCompletionSettings: {...completionSettings},
+      completionSettings: {...completionSettings},
+      defaultStopWords: [...stopWords],
+      stopWords: [...stopWords],
     };
   };
 
@@ -693,13 +698,8 @@ class PalStore {
       if (!lookiePal) {
         console.log('Creating default Lookie pal...');
 
-        // Find the default SmolVLM model directly from defaultModels
-        // This avoids timing issues with ModelStore initialization
-        const defaultModelId =
-          'ggml-org/SmolVLM-500M-Instruct-GGUF/SmolVLM-500M-Instruct-Q8_0.gguf';
-        const defaultModel = defaultModels.find(
-          model => model.id === defaultModelId,
-        );
+        // Offline constant — no network resolve at pal init.
+        const defaultModel = LOOKIE_DEFAULT_MODEL;
 
         // Create the Lookie pal with all the original properties
         const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {

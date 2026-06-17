@@ -191,6 +191,13 @@ export class ChatPage extends BasePage {
             : Math.round(cloc.x + csize.width + Math.max(4, rightClear / 2));
         }
       }
+      // Clamp the tap inside the toggle bounds. The chip-avoidance offset above
+      // can otherwise compute an x just past an edge, so the tap misses the
+      // button and the toggle never flips.
+      x = Math.min(
+        loc.x + size.width - 4,
+        Math.max(loc.x + 4, x),
+      );
       await browser
         .action('pointer', {parameters: {pointerType: 'touch'}})
         .move({x, y})

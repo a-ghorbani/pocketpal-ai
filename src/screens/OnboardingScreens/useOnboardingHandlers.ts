@@ -4,7 +4,6 @@ import {useNavigation} from '@react-navigation/native';
 import {uiStore, palStore, modelStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
-import {defaultModels} from '../../store/defaultModels';
 import {
   entryId,
   resolvePalForTopic,
@@ -81,14 +80,9 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
     }
     const palDef = resolvePalForTopic(topic);
     const entry = palDef.models.find(m => entryId(m) === modelId);
-    let picked;
-    if (entry) {
-      if (entry.origin === 'preset') {
-        picked = defaultModels.find(m => m.id === entryId(entry));
-      } else {
-        picked = await modelStore.registerOnboardingPalModel(entry);
-      }
-    }
+    const picked = entry
+      ? await modelStore.registerOnboardingPalModel(entry)
+      : undefined;
     const existing = palStore.pals.find(
       p => p.name === palDef.name && p.source === 'local',
     );

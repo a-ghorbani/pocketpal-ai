@@ -44,7 +44,10 @@ describe('Onboarding6Screen picker', () => {
       for (const entry of sage.models) {
         // Subtitle composes displayName with a size segment; match a
         // substring so the size suffix can flex later.
-        const escaped = entry.displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escaped = entry.displayName.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&',
+        );
         expect(getByText(new RegExp(escaped))).toBeTruthy();
       }
     });

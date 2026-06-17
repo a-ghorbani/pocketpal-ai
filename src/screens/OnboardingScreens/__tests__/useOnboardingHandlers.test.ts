@@ -1,8 +1,6 @@
 import {renderHook, act} from '@testing-library/react-hooks';
 
 import {uiStore, palStore, modelStore} from '../../../store';
-import {defaultModels} from '../../../store/defaultModels';
-import {ModelOrigin} from '../../../utils/types';
 import {TOPIC_TO_PAL, entryId} from '../../../store/onboarding/onboardingPals';
 import {ROUTES} from '../../../utils/navigationConstants';
 import {useOnboardingHandlers} from '../useOnboardingHandlers';
@@ -217,22 +215,9 @@ describe('useOnboardingHandlers', () => {
       expect(modelStore.checkSpaceAndDownload).not.toHaveBeenCalled();
     });
 
-    it('every preset-origin entry resolves in defaultModels (sanity guard against catalogue drift)', () => {
-      for (const pal of Object.values(TOPIC_TO_PAL)) {
-        for (const entry of pal.models) {
-          if (entry.origin === 'preset') {
-            expect(
-              defaultModels.find(m => m.id === entryId(entry)),
-            ).toBeDefined();
-          }
-        }
-      }
-    });
-
-    it('hf-origin pick routes through registerOnboardingPalModel and binds the synthesised Model', async () => {
-      // Codie balanced = HF (Qwen3.5-2B-Q4_K_M). The picker should NOT
-      // consult defaultModels for HF entries; the boundary site is the
-      // single writer.
+    it('hf pick routes through registerOnboardingPalModel and binds the synthesised Model', async () => {
+      // Codie balanced is HF (Qwen3.5-2B-Q4_K_M). The picker should NOT
+      // consult any catalogue; the boundary site is the single writer.
       palStore.pals = [];
       uiStore.onboardingState.selectedModelId = CODIE_BALANCED_ID;
       uiStore.onboardingState.selectedTopic = 'coding';
@@ -245,44 +230,10 @@ describe('useOnboardingHandlers', () => {
       expect(modelStore.registerOnboardingPalModel).toHaveBeenCalledTimes(1);
       const entryArg = (modelStore.registerOnboardingPalModel as jest.Mock).mock
         .calls[0][0];
-      expect(entryArg.origin).toBe('hf');
       expect(entryId(entryArg)).toBe(CODIE_BALANCED_ID);
       expect(modelStore.checkSpaceAndDownload).toHaveBeenCalledWith(
         CODIE_BALANCED_ID,
       );
-    });
-
-    it('codie quick (PRESET) goes through defaultModels.find, never registerOnboardingPalModel', async () => {
-      // Codie quick stays PRESET (qwen2.5-coder-0.5b-instruct-q8_0). The
-      // entry-level params=630167424 diverges from the PRESET row's 494032768;
-      // since the PRESET branch resolves via defaultModels.find, that entry-
-      // level value MUST stay inert at runtime.
-      const codieQuick = TOPIC_TO_PAL.coding.models.find(
-        m => m.tier === 'quick',
-      )!;
-      expect(codieQuick.origin).toBe('preset');
-      const codieQuickId = entryId(codieQuick);
-      const presetRow = defaultModels.find(m => m.id === codieQuickId);
-      expect(presetRow).toBeDefined();
-      expect(presetRow!.origin).toBe(ModelOrigin.PRESET);
-
-      palStore.pals = [];
-      uiStore.onboardingState.selectedModelId = codieQuickId;
-      uiStore.onboardingState.selectedTopic = 'coding';
-
-      const {result} = renderHook(() => useOnboardingHandlers(6));
-      await act(async () => {
-        await result.current.finish();
-      });
-
-      // PRESET path: synthesise-and-register MUST NOT fire.
-      expect(modelStore.registerOnboardingPalModel).not.toHaveBeenCalled();
-      // Pal.defaultModel is the PRESET row, not a synthesised stub —
-      // its params is the PRESET value, not the entry value.
-      const palData = (palStore.createPal as jest.Mock).mock.calls[0][0];
-      expect(palData.defaultModel?.id).toBe(codieQuickId);
-      expect(palData.defaultModel?.params).toBe(presetRow!.params);
-      expect(palData.defaultModel?.params).not.toBe(codieQuick.params);
     });
 
     it('replay with a different tier on the same pal: synth runs on the new entry; previous Pal is rebound', async () => {

@@ -5,8 +5,13 @@ import {palRepository} from '../../repositories/PalRepository';
 import type {Pal} from '../../types/pal';
 import type {PalsHubPal} from '../../types/palshub';
 import * as imageUtils from '../../utils/imageUtils';
+import {resolveHFModelForDownload} from '../../utils/hfResolve';
+import {LOOKIE_DEFAULT_MODEL} from '../builtinPalModels';
 
 // Mock dependencies
+jest.mock('../../utils/hfResolve', () => ({
+  resolveHFModelForDownload: jest.fn(),
+}));
 jest.mock('../../repositories/PalRepository', () => ({
   palRepository: {
     getAllPals: jest.fn(),
@@ -132,6 +137,53 @@ describe('PalStore', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+
+    it('creates the Lookie pal from the offline constant without a network resolve', async () => {
+      (palRepository.getAllPals as jest.Mock).mockResolvedValue([]);
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (palData: any) => ({
+          ...palData,
+          id: 'lookie-id',
+          created_at: 'now',
+          updated_at: 'now',
+        }),
+      );
+
+      // eslint-disable-next-line no-new
+      new (palStore.constructor as any)();
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const lookieCall = (palRepository.createPal as jest.Mock).mock.calls.find(
+        call => call[0]?.name === 'Lookie',
+      );
+
+      expect(lookieCall).toBeDefined();
+      expect(lookieCall![0].defaultModel).toBe(LOOKIE_DEFAULT_MODEL);
+      // No HF resolve / network call at pal init.
+      expect(resolveHFModelForDownload).not.toHaveBeenCalled();
+    });
+
+    it('does not recreate the Lookie pal if one already exists', async () => {
+      const existingLookie: Pal = {
+        ...mockPal,
+        id: 'existing-lookie',
+        name: 'Lookie',
+        capabilities: {video: true},
+      } as Pal;
+      (palRepository.getAllPals as jest.Mock).mockResolvedValue([
+        existingLookie,
+      ]);
+
+      // eslint-disable-next-line no-new
+      new (palStore.constructor as any)();
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const lookieCreate = (
+        palRepository.createPal as jest.Mock
+      ).mock.calls.find(call => call[0]?.name === 'Lookie');
+      expect(lookieCreate).toBeUndefined();
+      expect(resolveHFModelForDownload).not.toHaveBeenCalled();
     });
   });
 

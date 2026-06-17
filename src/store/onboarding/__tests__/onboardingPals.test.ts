@@ -1,5 +1,3 @@
-import {defaultModels} from '../../defaultModels';
-import {ModelOrigin} from '../../../utils/types';
 import {
   ONBOARDING_PALS,
   TOPIC_TO_PAL,
@@ -71,31 +69,12 @@ describe('onboardingPals', () => {
   );
 
   it.each(allEntries)(
-    '%s/%s entry has populated picker fields (sizeBytes, params, displayName, author, origin)',
+    '%s/%s entry has populated picker fields (sizeBytes, params, displayName, author)',
     (_palKey, _tier, entry) => {
       expect(entry.sizeBytes).toBeGreaterThan(0);
       expect(entry.params).toBeGreaterThan(0);
       expect(entry.displayName.length).toBeGreaterThan(0);
       expect(entry.author.length).toBeGreaterThan(0);
-      expect(['preset', 'hf']).toContain(entry.origin);
-    },
-  );
-
-  it.each(allEntries.filter(([, , m]) => m.origin === 'preset'))(
-    '%s/%s preset-origin entry id exists in defaultModels with origin PRESET',
-    (_palKey, _tier, entry) => {
-      const id = entryId(entry);
-      const model = defaultModels.find(m => m.id === id);
-      expect(model).toBeDefined();
-      expect(model?.origin).toBe(ModelOrigin.PRESET);
-    },
-  );
-
-  it.each(allEntries.filter(([, , m]) => m.origin === 'hf'))(
-    '%s/%s hf-origin entry id does NOT appear in defaultModels',
-    (_palKey, _tier, entry) => {
-      const id = entryId(entry);
-      expect(defaultModels.find(m => m.id === id)).toBeUndefined();
     },
   );
 });

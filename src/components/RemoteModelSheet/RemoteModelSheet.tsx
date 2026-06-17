@@ -25,6 +25,7 @@ import {useTheme} from '../../hooks';
 import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
+import {parseTimeoutMs} from '../../utils/timeout';
 import {ServerConfig} from '../../utils/types';
 import {
   RemoteModelInfo,
@@ -53,6 +54,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const [url, setUrl] = useState('');
     const [serverName, setServerName] = useState('');
     const [apiKey, setApiKey] = useState('');
+    const [timeoutSeconds, setTimeoutSeconds] = useState('');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
 
     // Auto-probe
@@ -85,12 +87,19 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       apiKeyRef.current = apiKey;
     }, [apiKey]);
 
+    const timeoutSecondsRef = useRef(timeoutSeconds);
+    useEffect(() => {
+      timeoutSecondsRef.current = timeoutSeconds;
+    }, [timeoutSeconds]);
+
     // Reset all state when sheet reopens
     useEffect(() => {
       if (isVisible) {
         setUrl('');
         setServerName('');
         setApiKey('');
+        setTimeoutSeconds('');
+        timeoutSecondsRef.current = '';
         setSecureTextEntry(true);
         setIsProbing(false);
         setProbeResult(null);
@@ -123,9 +132,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setProbeResult(null);
         try {
           const key = apiKeyRef.current.trim() || undefined;
+          const timeoutMs = parseTimeoutMs(timeoutSecondsRef.current);
           const {models, headers} = await fetchModelsWithHeaders(
             trimmedUrl,
             key,
+            timeoutMs,
           );
           setProbeResult({ok: true});
           setAvailableModels(models);
@@ -208,7 +219,11 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         const key = await serverStore.getApiKey(server.id);
         apiKeyRef.current = key || '';
         setApiKey(key || '');
-        const models = await fetchModels(server.url, key || undefined);
+        const models = await fetchModels(
+          server.url,
+          key || undefined,
+          server.requestTimeoutMs,
+        );
         runInAction(() => {
           serverStore.serverModels.set(server.id, models);
         });
@@ -250,6 +265,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
           serverId = serverStore.addServer({
             name: serverName.trim(),
             url: url.trim(),
+            requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
           });
           if (apiKey.trim()) {
             await serverStore.setApiKey(serverId, apiKey.trim());
@@ -270,6 +286,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       serverName,
       url,
       apiKey,
+      timeoutSeconds,
       onModelAdded,
       onDismiss,
     ]);
@@ -505,6 +522,20 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 />
                 <Text style={styles.apiKeyDescription}>
                   {l10n.settings.apiKeyDescription}
+                </Text>
+              </View>
+
+              <View style={styles.inputSpacing}>
+                <TextInput
+                  testID="remote-timeout-input"
+                  label={l10n.settings.requestTimeout}
+                  value={timeoutSeconds}
+                  onChangeText={setTimeoutSeconds}
+                  placeholder={l10n.settings.requestTimeoutPlaceholder}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.apiKeyDescription}>
+                  {l10n.settings.requestTimeoutHelp}
                 </Text>
               </View>
             </>

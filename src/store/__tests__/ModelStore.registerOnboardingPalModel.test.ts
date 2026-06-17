@@ -35,7 +35,6 @@ const codieBalanced: OnboardingPalModelEntry = {
   displayName: 'Qwen3.5 2B',
   sizeBytes: 1270808032,
   params: 1881825088,
-  origin: 'hf',
 };
 
 describe('ModelStore.registerOnboardingPalModel', () => {

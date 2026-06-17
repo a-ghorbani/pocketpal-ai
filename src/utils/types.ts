@@ -467,6 +467,7 @@ export interface ServerConfig {
   name: string;
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
   lastConnected?: number; // Timestamp
+  requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
 }
 
 export enum ModelType {
@@ -538,6 +539,11 @@ export interface Model {
   hfModelFile?: ModelFile;
   hfModel?: HuggingFaceModel;
   hash?: string;
+
+  // Provenance marker: set on models materialized from the device-rule preset
+  // list. Lets reconcile prune stale, non-downloaded rule stubs without touching
+  // user-added HF/LOCAL or downloaded models.
+  isRulePreset?: boolean;
 
   // Remote model fields (for models from OpenAI-compatible servers)
   serverId?: string; // Reference to ServerConfig.id for remote models
