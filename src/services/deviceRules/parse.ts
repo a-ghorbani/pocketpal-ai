@@ -45,7 +45,10 @@ const isSafePathSegment = (v: unknown): v is string =>
   v.length > 0 &&
   !v.includes('/') &&
   !v.includes('\\') &&
-  !v.includes('..');
+  // With separators already disallowed, only an exact "."/".." segment can
+  // traverse — reject those, but allow a literal ".." inside a longer name.
+  v !== '.' &&
+  v !== '..';
 
 const asString = (v: unknown): string | undefined =>
   typeof v === 'string' ? v : undefined;
@@ -265,6 +268,13 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
   if (!guardRepoFilename(v.hf_repo, v.hf_filename)) {
     return null;
   }
+  // size_bytes is required: without it the resolved model has size 0, and
+  // hasEnoughSpace() returns false — an undownloadable card. Drop the candidate
+  // (mmproj enforces the same for the projector).
+  const sizeBytes = asNumber(v.size_bytes);
+  if (sizeBytes === undefined) {
+    return null;
+  }
   const multimodal = v.multimodal === true;
   let mmproj: RuleMmproj | undefined;
   if (multimodal) {
@@ -282,7 +292,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
     hfRepo: v.hf_repo as string,
     hfFilename: v.hf_filename as string,
     params: asNumber(v.params),
-    sizeBytes: asNumber(v.size_bytes),
+    sizeBytes,
     minRamGb: asNumber(v.min_ram_gb),
     multimodal: multimodal || undefined,
     mmproj,

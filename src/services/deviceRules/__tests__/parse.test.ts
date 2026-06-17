@@ -40,7 +40,9 @@ const validRaw = {
 
 const withCandidate = (candidate: Record<string, unknown>) => {
   const raw = JSON.parse(JSON.stringify(validRaw));
-  raw.tiers.mid.candidates = [candidate];
+  // size_bytes is required; default it so a test that targets another field
+  // isn't also dropped for a missing size (override it where size is the point).
+  raw.tiers.mid.candidates = [{size_bytes: 1, ...candidate}];
   return raw;
 };
 
@@ -226,6 +228,26 @@ describe('parseDeviceRules', () => {
       }),
     );
     expect(rules.tiers.mid.models).toEqual([]);
+  });
+
+  it('skips a candidate missing size_bytes (would be undownloadable)', () => {
+    const raw = JSON.parse(JSON.stringify(validRaw));
+    raw.tiers.mid.candidates = [
+      {model: 'x', hf_repo: 'a/b', hf_filename: 'x.gguf'},
+    ];
+    expect(parseDeviceRules(raw).tiers.mid.models).toEqual([]);
+  });
+
+  it('accepts a literal ".." inside a repo/filename (not a traversal)', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'author/repo..v2',
+        hf_filename: 'model..q4.gguf',
+      }),
+    );
+    expect(rules.tiers.mid.models).toHaveLength(1);
+    expect(rules.tiers.mid.models[0].hfRepo).toBe('author/repo..v2');
   });
 
   it('skips a candidate whose hf_filename contains a backslash separator', () => {

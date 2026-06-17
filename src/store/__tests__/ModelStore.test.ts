@@ -870,6 +870,7 @@ describe('ModelStore', () => {
                 model: 'fetched',
                 hf_repo: 'ggml-org/fetched-repo',
                 hf_filename: 'fetched.gguf',
+                size_bytes: 500,
               },
             ],
           },
