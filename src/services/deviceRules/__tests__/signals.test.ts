@@ -26,6 +26,19 @@ describe('readDeviceSignals', () => {
     expect(NativeHardwareInfo.getCPUInfo).not.toHaveBeenCalled();
   });
 
+  it('degrades to ramBytes when the iOS device-id read throws', async () => {
+    Object.defineProperty(Platform, 'OS', {value: 'ios'});
+    (DeviceInfo.getDeviceId as jest.Mock).mockRejectedValue(
+      new Error('id boom'),
+    );
+
+    // A failing device-id read must not reject — it degrades like the other
+    // native reads so the classifier falls back rather than resolving empty.
+    const signals = await readDeviceSignals();
+
+    expect(signals).toEqual({ramBytes: 8 * 1e9});
+  });
+
   it('reads ram + cpu signals on Android', async () => {
     Object.defineProperty(Platform, 'OS', {value: 'android'});
     (NativeHardwareInfo.getCPUInfo as jest.Mock).mockResolvedValue({

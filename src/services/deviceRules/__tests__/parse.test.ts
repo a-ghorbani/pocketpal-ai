@@ -217,6 +217,17 @@ describe('parseDeviceRules', () => {
     expect(rules.tiers.mid.models).toEqual([]);
   });
 
+  it('skips a candidate whose hf_filename is not a .gguf file', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'x',
+        hf_repo: 'a/b',
+        hf_filename: 'model.bin',
+      }),
+    );
+    expect(rules.tiers.mid.models).toEqual([]);
+  });
+
   it('skips a candidate whose hf_filename contains a backslash separator', () => {
     const rules = parseDeviceRules(
       withCandidate({

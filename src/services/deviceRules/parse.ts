@@ -210,6 +210,12 @@ const guardRepoFilename = (repo: unknown, filename: unknown): string | null => {
   ) {
     return null;
   }
+  // The preset list is GGUF-only; reject any other file type so a stray entry
+  // can't surface an undownloadable/non-loadable model (mmproj adds a stricter
+  // projector-name check on top of this).
+  if (!/\.gguf$/i.test(filename as string)) {
+    return null;
+  }
   // Defense-in-depth: the derived URL host is hard-coded, so this never fails.
   if (!isHuggingFaceUrl(deriveUrl(repo as string, filename as string))) {
     return null;

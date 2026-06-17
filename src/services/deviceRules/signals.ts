@@ -32,8 +32,12 @@ export async function readDeviceSignals(): Promise<DeviceSignals> {
   }
 
   if (Platform.OS === 'ios') {
-    const machine = await DeviceInfo.getDeviceId();
-    return {ramBytes, machine};
+    try {
+      const machine = await DeviceInfo.getDeviceId();
+      return {ramBytes, machine};
+    } catch {
+      return {ramBytes};
+    }
   }
 
   try {
