@@ -6,6 +6,7 @@
     "rename": "Rename",
     "reset": "Reset",
     "save": "Save",
+    "stop": "Stop",
     "update": "Update",
     "error": "Error",
     "export": "Export",
@@ -1374,7 +1375,7 @@
     "skip": "Skip",
     "skipForNow": "Skip for now",
     "splash": {
-      "title": ""
+      "brand": "PocketPal"
     },
     "screen1": {
       "title": "Meet your pals.",
@@ -1425,8 +1426,7 @@
         "roleplay": "Characters, scenarios",
         "creative_writing": "Stories, ideas, drafts",
         "else": "Browse all pals later in the app"
-      },
-      "subtitle": "Pick what you’d like to discuss - we’ll match a pal that fits your phone."
+      }
     },
     "screen6": {
       "cta": "Download {{name}}",
@@ -1458,5 +1458,10 @@
         }
       }
     }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} is downloading",
+    "titleByModel": "{{name}} is downloading",
+    "extraInProgress": "+{{count}} more in progress"
   }
 }

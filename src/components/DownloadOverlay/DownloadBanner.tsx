@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import {Pressable, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 import {useNavigation, NavigationProp} from '@react-navigation/native';
@@ -6,6 +6,7 @@ import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {XIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {modelStore, palStore, uiStore} from '../../store';
+import {L10nContext} from '../../utils';
 import {ROUTES} from '../../utils/navigationConstants';
 import {bannerStyles as createStyles} from './styles';
 
@@ -35,6 +36,7 @@ export const DownloadBanner: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const navigation = useNavigation<NavigationProp<any>>();
+  const l10n = useContext(L10nContext);
 
   const visible = modelStore.activeDownloads.find(
     d => !uiStore.isDownloadBannerDismissed(d.modelId),
@@ -53,12 +55,17 @@ export const DownloadBanner: React.FC = observer(() => {
       p.defaultModel &&
       p.defaultModel.id === visible.modelId,
   );
-  const title = pal
-    ? `${pal.name} is downloading`
-    : `${visible.model.name} is downloading`;
+  const subject = pal ? pal.name : visible.model.name;
+  const title = (
+    pal ? l10n.downloadBanner.titleByPal : l10n.downloadBanner.titleByModel
+  ).replace('{{name}}', subject);
   const eta = visible.etaLabel || formatSize(visible.bytesTotal);
   const clamped = Math.max(0, Math.min(100, visible.progress));
   const extraCount = Math.max(0, modelStore.activeDownloads.length - 1);
+  const extraLabel = l10n.downloadBanner.extraInProgress.replace(
+    '{{count}}',
+    String(extraCount),
+  );
 
   return (
     <View style={styles.root}>
@@ -67,7 +74,7 @@ export const DownloadBanner: React.FC = observer(() => {
         accessibilityRole="button"
         accessibilityLabel={
           extraCount > 0
-            ? `${title}, ${eta}, +${extraCount} more in progress`
+            ? `${title}, ${eta}, ${extraLabel}`
             : `${title}, ${eta}`
         }
         onPress={() => navigation.navigate(ROUTES.MODELS as never)}
@@ -100,16 +107,16 @@ export const DownloadBanner: React.FC = observer(() => {
       <Pressable
         testID="download-banner-stop"
         accessibilityRole="button"
-        accessibilityLabel="Stop"
+        accessibilityLabel={l10n.common.stop}
         onPress={() => modelStore.cancelDownload(visible.modelId)}
         style={styles.stop}
         hitSlop={8}>
-        <Text style={styles.stopText}>Stop</Text>
+        <Text style={styles.stopText}>{l10n.common.stop}</Text>
       </Pressable>
       <Pressable
         testID="download-banner-dismiss"
         accessibilityRole="button"
-        accessibilityLabel="Dismiss"
+        accessibilityLabel={l10n.common.dismiss}
         onPress={() => uiStore.dismissDownloadBanner(visible.modelId)}
         style={styles.dismiss}
         hitSlop={8}>

@@ -32,7 +32,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
   bytesLabel,
   etaLabel,
   onStop,
-  stopLabel = 'Stop',
+  stopLabel,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme);
@@ -56,7 +56,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
             <Text style={styles.eta}>{etaLabel}</Text>
           </View>
         </View>
-        {onStop ? (
+        {onStop && stopLabel ? (
           <Pressable
             testID="download-progress-stop"
             accessibilityRole="button"

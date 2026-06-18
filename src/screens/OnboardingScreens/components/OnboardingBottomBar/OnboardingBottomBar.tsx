@@ -72,6 +72,7 @@ export const OnboardingBottomBar: React.FC<OnboardingBottomBarProps> = ({
             testID="onboarding-primary"
             accessibilityRole="button"
             accessibilityLabel={primaryLabel}
+            accessibilityState={{disabled: !!primaryDisabled}}
             disabled={primaryDisabled}
             onPress={onPrimary}
             style={[

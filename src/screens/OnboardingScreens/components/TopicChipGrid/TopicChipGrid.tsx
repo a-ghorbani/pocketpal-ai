@@ -22,12 +22,15 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
   const theme = useTheme();
   const styles = createStyles(theme);
   return (
-    <View style={styles.grid}>
+    <View accessibilityRole="radiogroup" style={styles.grid}>
       {TOPIC_KEYS.map(key => {
         const isElse = key === 'else';
         const isSelected = selected === key;
         const Glyph = isElse ? undefined : topicChipGlyphs[key];
         const description = descriptions?.[key];
+        const announced = description
+          ? `${labels[key]}, ${description}`
+          : labels[key];
         const chipStyle = [
           styles.chip,
           isElse && styles.chipElse,
@@ -51,15 +54,16 @@ export const TopicChipGrid: React.FC<TopicChipGridProps> = ({
             {isElse ? (
               <View
                 testID={`onboarding-topic-${key}`}
-                accessibilityLabel={labels[key]}
+                accessibilityRole="text"
+                accessibilityLabel={announced}
                 style={chipStyle}>
                 {chipBody}
               </View>
             ) : (
               <Pressable
                 testID={`onboarding-topic-${key}`}
-                accessibilityRole="button"
-                accessibilityLabel={labels[key]}
+                accessibilityRole="radio"
+                accessibilityLabel={announced}
                 accessibilityState={{selected: isSelected}}
                 onPress={() => onSelect(key)}
                 style={chipStyle}>

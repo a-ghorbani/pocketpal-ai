@@ -1,9 +1,10 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import {View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 
 import {SplashMark} from '../../../assets/onboarding/illustrations';
 import {useTheme} from '../../../hooks';
+import {L10nContext} from '../../../utils';
 import {ROUTES} from '../../../utils/navigationConstants';
 import {createStyles} from './styles';
 
@@ -18,10 +19,11 @@ export const SplashScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const theme = useTheme();
   const styles = createStyles(theme);
+  const l10n = useContext(L10nContext);
 
   React.useEffect(() => {
     const t = setTimeout(() => {
-      navigation.navigate(ROUTES.ONBOARDING.STEP_1);
+      navigation.replace(ROUTES.ONBOARDING.STEP_1);
     }, SPLASH_MIN_DWELL_MS);
     return () => clearTimeout(t);
   }, [navigation]);
@@ -31,7 +33,7 @@ export const SplashScreen: React.FC = () => {
       <SplashMark
         width={112}
         height={112}
-        accessibilityLabel="Pocket Pal"
+        accessibilityLabel={l10n.onboarding.splash.brand}
         accessibilityRole="image"
       />
     </View>
