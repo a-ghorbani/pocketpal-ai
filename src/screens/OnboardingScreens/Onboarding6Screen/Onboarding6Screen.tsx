@@ -29,7 +29,7 @@ const formatSize = (bytes: number | undefined): string => {
 };
 
 export const Onboarding6Screen: React.FC = observer(() => {
-  const {l10n, goBack, finish} = useOnboardingHandlers(6);
+  const {l10n, goBack, finish, isFinishing} = useOnboardingHandlers(6);
   const theme = useTheme();
   const styles = createStyles(theme);
   const t = l10n.onboarding;
@@ -53,7 +53,7 @@ export const Onboarding6Screen: React.FC = observer(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pal.key]);
 
-  const canFinish = selectedId !== null;
+  const canFinish = selectedId !== null && !isFinishing;
   const options: ModelOption[] = pal.models.map(entry => {
     const sizeSegment = formatSize(entry.sizeBytes);
     return {

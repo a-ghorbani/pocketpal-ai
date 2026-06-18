@@ -64,8 +64,16 @@ const DeepLinkHandler = () => {
 // Branches between the OnboardingStack (first-launch flow) and the main
 // Drawer.Navigator. Both children mount under the same provider tree —
 // switching does NOT remount providers above this point.
+//
+// The hydration check is belt-and-suspenders. AppWithMigrationWrapper
+// already gates render on `isHydrated(uiStore)`, but reading the same
+// observable here keeps the contract local and survives refactors of the
+// outer gate.
 type SwitchPointProps = {drawer: React.ReactNode};
 const SwitchPoint: React.FC<SwitchPointProps> = observer(({drawer}) => {
+  if (!isHydrated(uiStore)) {
+    return null;
+  }
   if (!uiStore.hasCompletedOnboarding) {
     return <OnboardingStack />;
   }

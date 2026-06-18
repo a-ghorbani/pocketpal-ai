@@ -101,9 +101,9 @@ export interface OnboardingPalDef {
   color: [string, string];
   models: readonly OnboardingPalModelEntry[];
   /**
-   * Staged greeting + chip prompts. The local-pal schema does not surface
-   * these yet — the chat-greeting path is wired separately. Held as data
-   * here so the curated copy lives next to the rest of the pal.
+   * Optional greeting + suggested-prompt chips. `useOnboardingHandlers.finish`
+   * passes this through to `Pal.greeting` on the materialised pal, where
+   * `ChatView` renders it as the empty-state bubble + chips.
    */
   greeting?: OnboardingPalGreeting;
 }

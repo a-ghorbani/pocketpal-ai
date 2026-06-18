@@ -1,4 +1,4 @@
-import {useCallback, useContext, useEffect} from 'react';
+import {useCallback, useContext, useEffect, useRef, useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
 
 import {uiStore, palStore, modelStore} from '../../store';
@@ -21,6 +21,11 @@ import type {OnboardingStep, TopicKey} from '../../store/onboarding/types';
 export const useOnboardingHandlers = (step: OnboardingStep) => {
   const navigation = useNavigation<any>();
   const l10n = useContext(L10nContext);
+  // In-flight guard for finish(). useRef gives the synchronous early-exit
+  // (a re-entrant call before React commits the next render returns
+  // immediately); useState drives the disabled-CTA UI.
+  const finishingRef = useRef(false);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   useEffect(() => {
     uiStore.setOnboardingStep(step);
@@ -72,57 +77,78 @@ export const useOnboardingHandlers = (step: OnboardingStep) => {
   );
 
   const finish = useCallback(async () => {
-    const modelId = uiStore.onboardingState.selectedModelId;
-    const topic = uiStore.onboardingState.selectedTopic;
-    if (!modelId) {
-      uiStore.completeOnboarding({topic, modelId: null});
+    if (finishingRef.current) {
       return;
     }
-    const palDef = resolvePalForTopic(topic);
-    const entry = palDef.models.find(m => entryId(m) === modelId);
-    const picked = entry
-      ? await modelStore.registerOnboardingPalModel(entry)
-      : undefined;
-    const existing = palStore.pals.find(
-      p => p.name === palDef.name && p.source === 'local',
-    );
-    if (existing) {
-      // Pip is auto-created at boot (back-compat); other topic pals
-      // may already exist if the user replays onboarding. In both
-      // cases, just rebind the picked model.
-      if (picked) {
-        await palStore.updatePal(existing.id, {defaultModel: picked});
+    finishingRef.current = true;
+    setIsFinishing(true);
+    try {
+      const modelId = uiStore.onboardingState.selectedModelId;
+      const topic = uiStore.onboardingState.selectedTopic;
+      if (!modelId) {
+        uiStore.completeOnboarding({topic, modelId: null});
+        return;
       }
-    } else {
-      // First time finishing with this topic — materialise the pal.
-      const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
-        type: 'local',
-        name: palDef.name,
-        description: palDef.description,
-        systemPrompt: palDef.systemPrompt,
-        isSystemPromptChanged: false,
-        useAIPrompt: false,
-        defaultModel: picked,
-        parameters: {},
-        parameterSchema: [],
-        capabilities: {},
-        color: palDef.color,
-        source: 'local',
-      };
-      await palStore.createPal(palData);
-    }
-    uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
-    if (picked) {
-      // Fire-and-forget. checkSpaceAndDownload returns cleanly on user
-      // cancel (DownloadCancelledError is swallowed there) and re-throws
-      // genuine failures, which surface through `modelStore.downloadError`
-      // for the dialog. We catch defensively to keep the rejection from
-      // becoming an unhandled promise from this no-await call site.
-      modelStore.checkSpaceAndDownload(picked.id).catch(() => {
-        // intentionally swallowed — downloadError already drives the UI.
-      });
+      const palDef = resolvePalForTopic(topic);
+      const entry = palDef.models.find(m => entryId(m) === modelId);
+      const picked = entry
+        ? await modelStore.registerOnboardingPalModel(entry)
+        : undefined;
+      const greeting = palDef.greeting
+        ? {
+            text: palDef.greeting.text,
+            suggestedPrompts: [...palDef.greeting.suggestedPrompts],
+          }
+        : undefined;
+      const existing = palStore.pals.find(
+        p => p.name === palDef.name && p.source === 'local',
+      );
+      if (existing) {
+        // Pip is auto-created at boot (back-compat); other topic pals
+        // may already exist if the user replays onboarding. In both
+        // cases, rebind the picked model and refresh the curated
+        // greeting if the pal has one.
+        if (picked) {
+          await palStore.updatePal(existing.id, {
+            defaultModel: picked,
+            ...(greeting ? {greeting} : {}),
+          });
+        }
+      } else {
+        // First time finishing with this topic — materialise the pal.
+        const palData: Omit<Pal, 'id' | 'created_at' | 'updated_at'> = {
+          type: 'local',
+          name: palDef.name,
+          description: palDef.description,
+          systemPrompt: palDef.systemPrompt,
+          isSystemPromptChanged: false,
+          useAIPrompt: false,
+          defaultModel: picked,
+          parameters: {},
+          parameterSchema: [],
+          capabilities: {},
+          color: palDef.color,
+          source: 'local',
+          ...(greeting ? {greeting} : {}),
+        };
+        await palStore.createPal(palData);
+      }
+      uiStore.completeOnboarding({topic, modelId: picked?.id ?? null});
+      if (picked) {
+        // Fire-and-forget. checkSpaceAndDownload returns cleanly on user
+        // cancel (DownloadCancelledError is swallowed there) and re-throws
+        // genuine failures, which surface through `modelStore.downloadError`
+        // for the dialog. We catch defensively to keep the rejection from
+        // becoming an unhandled promise from this no-await call site.
+        modelStore.checkSpaceAndDownload(picked.id).catch(() => {
+          // intentionally swallowed — downloadError already drives the UI.
+        });
+      }
+    } finally {
+      finishingRef.current = false;
+      setIsFinishing(false);
     }
   }, []);
 
-  return {l10n, next, goBack, skip, finish, selectTopic};
+  return {l10n, next, goBack, skip, finish, selectTopic, isFinishing};
 };
