@@ -3,19 +3,19 @@
   "data": [
     {
       "path": "src/assets/fonts/Fraunces-Italic.ttf",
-      "sha1": "950dbb4b4fd0737a65f57cdc5163bd56b4ba1710"
+      "sha1": "6416e4d463635f22db923bd85e9adb285708ebcf"
     },
     {
       "path": "src/assets/fonts/Fraunces-Medium.ttf",
-      "sha1": "49127f604cdfadd7f1833788f2053378f31c5942"
+      "sha1": "d3a21562399f5420088bd9c004c8cc9cad6ffe66"
     },
     {
       "path": "src/assets/fonts/Fraunces-MediumItalic.ttf",
-      "sha1": "44bf3bf405b4977133a382b3820b40e50c365ffa"
+      "sha1": "dcd21072a4b93c9c1e00a3f666a732bd6000578c"
     },
     {
       "path": "src/assets/fonts/Fraunces-Regular.ttf",
-      "sha1": "9372e146d8f2117557b7976aa1ff3dbff70b60a8"
+      "sha1": "744158405d1219d0eed56f09d58e266c2098ad62"
     },
     {
       "path": "src/assets/fonts/Inter-Bold.ttf",
