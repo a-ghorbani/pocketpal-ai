@@ -54,8 +54,7 @@ describe('Onboarding flow', () => {
     chat = new ChatPage();
   });
 
-  it('walks Splash → 1..6 (topic=smartchat → Pip), picks balanced, lands on Chat', async () => {
-    await onboarding.waitForSplash(TIMEOUT);
+  it('walks screens 1..6 (topic=smartchat → Pip), picks balanced, lands on Chat', async () => {
     await onboarding.waitForScreen(1, TIMEOUT);
 
     // Screens 1..4: Skip visible, primary advances.
@@ -70,16 +69,17 @@ describe('Onboarding flow', () => {
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(5);
 
-    // Screen 5: no primary, no Skip; back-only bottom bar visible.
+    // Screen 5: Skip top-right ("Skip"), no primary, back-only bottom bar.
     expect(await isDisplayedSafe('onboarding-primary')).toBe(false);
-    expect(await isDisplayedSafe('onboarding-skip')).toBe(false);
+    expect(await onboarding.skip.isDisplayed()).toBe(true);
     expect(await onboarding.back.isDisplayed()).toBe(true);
     await onboarding.tapTopic('smartchat');
     await onboarding.waitForScreen(6);
 
-    // Screen 6: no Skip, primary present (pre-seeded with the recommended
-    // tier so it's enabled on arrival), back present in the bottom bar.
-    expect(await isDisplayedSafe('onboarding-skip')).toBe(false);
+    // Screen 6: Skip top-right ("Skip for now"), primary present
+    // (pre-seeded with the recommended tier so it's enabled on arrival),
+    // back present in the bottom bar.
+    expect(await onboarding.skip.isDisplayed()).toBe(true);
     expect(await onboarding.primary.isDisplayed()).toBe(true);
     expect(await onboarding.back.isDisplayed()).toBe(true);
     await onboarding.tapPalModel(PIP_BALANCED_MODEL_ID);
@@ -98,7 +98,6 @@ describe('Onboarding flow', () => {
   });
 
   it('Skip on screen 3 lands on Chat without a model bound', async () => {
-    await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(2);
@@ -109,7 +108,6 @@ describe('Onboarding flow', () => {
   });
 
   it('Skip on screen 5 lands on Chat with no topic or model bound', async () => {
-    await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(2);
@@ -124,7 +122,6 @@ describe('Onboarding flow', () => {
   });
 
   it('topic=coding renders Codie pal models (Qwen3.5 2B set)', async () => {
-    await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(2);
@@ -152,7 +149,6 @@ describe('Onboarding flow', () => {
   });
 
   it('back on screen 5 returns to screen 4 (mid-flow retreat affordance)', async () => {
-    await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     await onboarding.tapPrimary();
     await onboarding.waitForScreen(2);
@@ -168,7 +164,6 @@ describe('Onboarding flow', () => {
   });
 
   it('Stepper renders 4 dots on screens 1..4 and is hidden on 5..6', async () => {
-    await onboarding.waitForSplash(TIMEOUT);
     await onboarding.waitForScreen(1, TIMEOUT);
     for (let i = 1; i <= 4; i++) {
       expect(await onboarding.stepperDot(i).isExisting()).toBe(true);
