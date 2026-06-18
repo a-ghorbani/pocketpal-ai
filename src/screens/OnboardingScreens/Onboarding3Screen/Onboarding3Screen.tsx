@@ -10,11 +10,11 @@ import {HighlightText} from '../components/HighlightText';
 import {useOnboardingHandlers} from '../useOnboardingHandlers';
 import {styles} from './styles';
 
-// Screen 3 "Cads" composition is a flat illustration in Figma
-// (`989:167380`). The asset was re-exported at 1572×925 (~4× density
+// Screen 3 "Cards" composition is a flat illustration in Figma
+// (`3699:23649`). The asset was re-exported at 1572×925 (~4× density
 // of the natural 369×217 layout slot).
 
-const cadsImage = require('../../../assets/onboarding/screen-3-cards.png');
+const cardsImage = require('../../../assets/onboarding/screen-3-cards.png');
 
 export const Onboarding3Screen: React.FC = observer(() => {
   const {l10n, next, goBack} = useOnboardingHandlers(3);
@@ -24,7 +24,7 @@ export const Onboarding3Screen: React.FC = observer(() => {
       step={3}
       illustration={
         <Image
-          source={cadsImage}
+          source={cardsImage}
           style={styles.cards}
           resizeMode="contain"
           accessibilityElementsHidden
