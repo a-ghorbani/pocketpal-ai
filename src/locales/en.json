@@ -1431,9 +1431,11 @@
     "screen6": {
       "cta": "Download {{name}}",
       "ctaTemplate": "Download {{name}} ({{size}})",
+      "useTemplate": "Use {{name}}",
       "deviceRamSuffix": "GB RAM",
       "deviceFreeSuffix": "GB free",
       "recommended": "Recommended",
+      "downloaded": "Downloaded",
       "modelTier": {
         "quick": "Quick",
         "balanced": "Balanced",

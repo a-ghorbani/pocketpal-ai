@@ -2,7 +2,7 @@ import React, {useEffect} from 'react';
 import {Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
-import {uiStore} from '../../../store';
+import {modelStore, uiStore} from '../../../store';
 import {useTheme} from '../../../hooks';
 import {
   entryId,
@@ -54,27 +54,39 @@ export const Onboarding6Screen: React.FC = observer(() => {
   }, [pal.key]);
 
   const canFinish = selectedId !== null && !isFinishing;
+  const isDownloaded = (id: string): boolean =>
+    !!modelStore.models.find(m => m.id === id)?.isDownloaded;
   const options: ModelOption[] = pal.models.map(entry => {
+    const id = entryId(entry);
     const sizeSegment = formatSize(entry.sizeBytes);
+    const downloaded = isDownloaded(id);
+    const segments = [entry.displayName];
+    if (sizeSegment) {
+      segments.push(sizeSegment);
+    }
+    if (downloaded) {
+      segments.push(t.screen6.downloaded);
+    }
     return {
-      id: entryId(entry),
+      id,
       title: t.screen6.modelTier[entry.tier],
-      subtitle: sizeSegment
-        ? `${entry.displayName} · ${sizeSegment}`
-        : entry.displayName,
+      subtitle: segments.join(' · '),
       recommended: entry.recommended,
     };
   });
   const pickedEntry = selectedId
     ? pal.models.find(m => entryId(m) === selectedId)
     : undefined;
+  const pickedDownloaded = selectedId ? isDownloaded(selectedId) : false;
   const sizeLabel = formatSize(pickedEntry?.sizeBytes);
   const palBody = t.screen6.pal[pal.key].body;
-  const primaryLabel = sizeLabel
-    ? t.screen6.ctaTemplate
-        .replace('{{name}}', pal.name)
-        .replace('{{size}}', sizeLabel)
-    : t.screen6.cta.replace('{{name}}', pal.name);
+  const primaryLabel = pickedDownloaded
+    ? t.screen6.useTemplate.replace('{{name}}', pal.name)
+    : sizeLabel
+      ? t.screen6.ctaTemplate
+          .replace('{{name}}', pal.name)
+          .replace('{{size}}', sizeLabel)
+      : t.screen6.cta.replace('{{name}}', pal.name);
   const subtitle = t.screen6.subtitleTemplate.replace('{{name}}', pal.name);
   return (
     <OnboardingScaffold
@@ -105,8 +117,8 @@ export const Onboarding6Screen: React.FC = observer(() => {
       bottomBar={
         <OnboardingBottomBar
           primaryLabel={primaryLabel}
-          primaryGlyph="download"
-          primaryGlyphPosition="leading"
+          primaryGlyph={pickedDownloaded ? 'arrow-right' : 'download'}
+          primaryGlyphPosition={pickedDownloaded ? 'trailing' : 'leading'}
           primaryDisabled={!canFinish}
           onPrimary={finish}
           onBack={goBack}
