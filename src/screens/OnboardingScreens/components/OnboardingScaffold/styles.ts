@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native';
+import {I18nManager, StyleSheet} from 'react-native';
 
 import type {Theme} from '../../../../utils/types';
 
@@ -31,7 +31,8 @@ export const createStyles = (theme: Theme) =>
     topLeftSlot: {
       position: 'absolute',
       top: 16,
-      left: 16,
+      // Logical start edge: physical left in LTR, physical right in RTL.
+      ...(I18nManager.isRTL ? {right: 16} : {left: 16}),
       zIndex: 2,
     },
     bottom: {

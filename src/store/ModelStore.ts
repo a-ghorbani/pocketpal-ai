@@ -2354,8 +2354,8 @@ class ModelStore {
    * Single writer for HF-origin onboarding picks; only call site is
    * `useOnboardingHandlers.finish`. Synthesizes the minimal
    * `{hfModel, modelFile}` pair and delegates to `addHFModel`, which
-   * provides idempotency. `siblings: undefined` keeps `isVisionRepo`
-   * false so no projection model materializes (text-only by design).
+   * provides idempotency. `siblings: []` keeps `isVisionRepo` false so
+   * no projection model materializes (text-only by design).
    */
   registerOnboardingPalModel = async (
     entry: OnboardingPalModelEntry,
@@ -2370,7 +2370,7 @@ class ModelStore {
       author: entry.author,
       url: `https://huggingface.co/${entry.repo}`,
       specs: {gguf: {total: entry.params}},
-      siblings: undefined as unknown as HuggingFaceModel['siblings'],
+      siblings: [] as ModelFile[],
     } as HuggingFaceModel;
     return this.addHFModel(hfModel, modelFile);
   };
