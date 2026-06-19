@@ -386,6 +386,7 @@ describe('TTSStore', () => {
           'autoSpeakEnabled',
           'currentVoice',
           'supertonicSteps',
+          'supertonicLanguage',
           'userTTSOverride',
         ]),
       );
@@ -1204,7 +1205,7 @@ describe('TTSStore', () => {
       expect(mockSupertonicPlay).toHaveBeenCalledWith(
         'hello',
         SUPERTONIC_VOICE,
-        {inferenceSteps: 3},
+        {language: 'na', inferenceSteps: 3},
       );
     });
 
@@ -1230,8 +1231,75 @@ describe('TTSStore', () => {
       expect(mockSupertonicPlayStreaming).toHaveBeenCalledWith(
         SUPERTONIC_VOICE,
         expect.anything(),
-        {inferenceSteps: 10},
+        {language: 'na', inferenceSteps: 10},
       );
+    });
+  });
+
+  describe('supertonicLanguage', () => {
+    it('defaults to na ("Auto")', () => {
+      const store = new TTSStore();
+      expect(store.supertonicLanguage).toBe('na');
+    });
+
+    it('setSupertonicLanguage updates the observable', () => {
+      const store = new TTSStore();
+      store.setSupertonicLanguage('ja');
+      expect(store.supertonicLanguage).toBe('ja');
+    });
+
+    it('play() forwards the selected language to the Supertonic engine', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setSupertonicLanguage('ja');
+      mockSupertonicPlay.mockResolvedValueOnce(undefined);
+
+      await store.play('msg-1', 'hello');
+
+      expect(mockSupertonicPlay).toHaveBeenCalledWith(
+        'hello',
+        SUPERTONIC_VOICE,
+        expect.objectContaining({language: 'ja'}),
+      );
+    });
+
+    it('preview() forwards the selected language to the Supertonic engine', async () => {
+      const store = await makeStore();
+      store.setSupertonicLanguage('fr');
+      mockSupertonicPlay.mockResolvedValueOnce(undefined);
+
+      await store.preview(SUPERTONIC_VOICE);
+
+      expect(mockSupertonicPlay).toHaveBeenCalledWith(
+        expect.any(String),
+        SUPERTONIC_VOICE,
+        expect.objectContaining({language: 'fr'}),
+      );
+    });
+
+    it('streaming forwards the selected language to playStreaming', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      store.setAutoSpeak(true);
+      store.setSupertonicLanguage('de');
+
+      store.onAssistantMessageStart('msg-1');
+
+      expect(mockSupertonicPlayStreaming).toHaveBeenCalledWith(
+        SUPERTONIC_VOICE,
+        expect.anything(),
+        expect.objectContaining({language: 'de'}),
+      );
+    });
+
+    it('non-Supertonic play() never receives a language option', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SYSTEM_VOICE);
+      store.setSupertonicLanguage('ja');
+
+      await store.play('msg-1', 'hello');
+
+      expect(mockSystemPlay).toHaveBeenCalledWith('hello', SYSTEM_VOICE);
     });
   });
 
