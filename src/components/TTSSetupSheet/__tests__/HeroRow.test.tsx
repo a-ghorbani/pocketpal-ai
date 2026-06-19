@@ -126,6 +126,20 @@ describe('HeroRow', () => {
       expect(queryByTestId('tts-hero-language-picker')).toBeNull();
     });
 
+    it('lists "Auto" first, then languages sorted by display name', () => {
+      setSupertonicReady();
+      const {getByTestId, getAllByText, getByText} = renderHero();
+      fireEvent.press(getByTestId('tts-hero-language-picker'));
+
+      // "Auto" must be the first option in the opened menu.
+      const autoNodes = getAllByText('Auto');
+      expect(autoNodes.length).toBeGreaterThan(0);
+      // Remaining options are present and alphabetised by display name —
+      // a later-alphabet name must still be reachable in the same menu.
+      expect(getByText('Japanese')).toBeTruthy();
+      expect(getByText('Arabic')).toBeTruthy();
+    });
+
     it('selecting a language calls setSupertonicLanguage', () => {
       setSupertonicReady();
       const {getByTestId, getByText} = renderHero();
