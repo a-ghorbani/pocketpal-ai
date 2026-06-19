@@ -3,7 +3,7 @@ import {View} from 'react-native';
 
 import {Snackbar} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
-import {DrawerNavigationProp} from '@react-navigation/drawer';
+import {StackNavigationProp} from '@react-navigation/stack';
 
 import {useTheme} from '../../../hooks';
 
@@ -12,10 +12,10 @@ import {styles} from './styles';
 import {modelStore} from '../../../store';
 
 import {L10nContext} from '../../../utils';
-import {Model, RootDrawerParamList} from '../../../utils/types';
+import {Model, RootStackParamList} from '../../../utils/types';
 
 type ModelNotLoadedScreenNavigationProp =
-  DrawerNavigationProp<RootDrawerParamList>;
+  StackNavigationProp<RootStackParamList>;
 
 export const ModelNotLoadedMessage: React.FC = () => {
   const l10n = React.useContext(L10nContext);

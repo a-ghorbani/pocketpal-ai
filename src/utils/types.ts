@@ -551,10 +551,22 @@ export interface Model {
   remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
-export type RootDrawerParamList = {
+export type MainTabParamList = {
+  ChatsTab: undefined;
+  ExploreTab: undefined;
+  SettingsTab: undefined;
+};
+
+export type RootStackParamList = {
+  MainTabs: undefined;
   Chat: undefined;
   Models: undefined;
+  'Pals (experimental)': undefined;
+  Benchmark: undefined;
   Settings: undefined;
+  'App Info': undefined;
+  'Dev Tools': undefined;
+  BenchmarkRunner: undefined;
 };
 
 export type TokenNativeEvent = {

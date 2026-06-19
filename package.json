@@ -43,7 +43,7 @@
     "@react-native-google-signin/google-signin": "^16.0.0",
     "@react-native-masked-view/masked-view": "^0.3.2",
     "@react-native-picker/picker": "^2.11.4",
-    "@react-navigation/bottom-tabs": "^7",
+    "@react-navigation/bottom-tabs": "7.4.9",
     "@react-navigation/drawer": "^7.7.10",
     "@react-navigation/native": "^7.1.26",
     "@react-navigation/stack": "^7.6.13",

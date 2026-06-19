@@ -2606,14 +2606,13 @@
     invariant "^2.2.4"
     nullthrows "^1.1.1"
 
-"@react-navigation/bottom-tabs@^7":
-  version "7.18.2"
-  resolved "https://registry.yarnpkg.com/@react-navigation/bottom-tabs/-/bottom-tabs-7.18.2.tgz#0d3c9debb74f15f1a0b98ffa37e085ec22ce6a2b"
-  integrity sha512-ZzeBTo0HPyqMQfbX7PIPm6z5lDS+UM+cHWxP/0I1RlzCAJnUa+MELWOHGTo/IVsajsnfs8h4laFoQaeXZRX5WA==
+"@react-navigation/bottom-tabs@7.4.9":
+  version "7.4.9"
+  resolved "https://registry.yarnpkg.com/@react-navigation/bottom-tabs/-/bottom-tabs-7.4.9.tgz#464351385350e2c80d1f0665bed07310c5e19202"
+  integrity sha512-Q7oUEB3YjwGyY/OLzkq+tv0STe2d9m8NAJOtKsd6GtN/LtrHmG7LdpOm5qitL60+gdY1zY7SWUD4am5c33RssA==
   dependencies:
-    "@react-navigation/elements" "^2.9.25"
+    "@react-navigation/elements" "^2.6.5"
     color "^4.2.3"
-    sf-symbols-typescript "^2.1.0"
 
 "@react-navigation/core@^7.13.7":
   version "7.13.7"
@@ -2639,7 +2638,7 @@
     react-native-drawer-layout "^4.2.1"
     use-latest-callback "^0.2.4"
 
-"@react-navigation/elements@^2.9.25":
+"@react-navigation/elements@^2.6.5":
   version "2.9.25"
   resolved "https://registry.yarnpkg.com/@react-navigation/elements/-/elements-2.9.25.tgz#b42e6080a77cf06bc69de95a1936cbabca43abee"
   integrity sha512-cV7Hny55aE/uge6f4UB0pbGQbFl3XjXLMW+lTBNuJs8P7a9tuf7dkkPHxxgnLIvxE+KJVI2K8CGabfDk4Ht0Sg==
@@ -8330,11 +8329,6 @@ setprototypeof@1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/setprototypeof/-/setprototypeof-1.2.0.tgz#66c9a24a73f9fc28cbe66b09fed3d33dcaf1b424"
   integrity sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==
-
-sf-symbols-typescript@^2.1.0:
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/sf-symbols-typescript/-/sf-symbols-typescript-2.2.0.tgz#926d6e0715e3d8784cadf7658431e36581254208"
-  integrity sha512-TPbeg0b7ylrswdGCji8FRGFAKuqbpQlLbL8SOle3j1iHSs5Ob5mhvMAxWN2UItOjgALAB5Zp3fmMfj8mbWvXKw==
 
 shebang-command@^2.0.0:
   version "2.0.0"
