@@ -20,6 +20,7 @@ export {default as ChevronUpIcon} from './chevron-up.svg';
 export {default as ClockFastForwardIcon} from './clock-fast-forward.svg';
 export {default as CloseIcon} from './close.svg';
 export {default as CodeIcon} from './code.svg';
+export {default as CompassIcon} from './compass.svg';
 export {default as CopyIcon} from './copy.svg';
 export {default as CloudIcon} from './cloud.svg';
 export {default as CloudPlusIcon} from './cloud-plus.svg';
