@@ -129,10 +129,19 @@ export interface TokenColors {
   // Accent — peach pill / recommended-tier highlight (canonical Figma
   // `Color/Accent/Peach`; see `accent.peach` consumers in onboarding).
   // `accent.greenStrong` powers the download progress-bar fill.
+  // `yellowSubtle`/`yellowMute` are the floating-tab active-pill fill +
+  // border (canonical `Color/Yellow/Subtle` + `Color/Yellow/Mute`).
   accent: {
     peach: string;
     greenStrong: string;
+    yellowSubtle: string;
+    yellowMute: string;
   };
+
+  // Yellow accent ramp — pal-carousel active-card border + label
+  // (canonical `Color/Yellow/Accent` + `Color/Yellow/Highest Contrast`).
+  yellowAccent: string;
+  yellowHighestContrast: string;
 }
 
 /**

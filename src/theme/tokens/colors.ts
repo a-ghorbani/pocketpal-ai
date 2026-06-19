@@ -157,7 +157,14 @@ export const lightColors: TokenColors = {
     peach: '#FCE7CF',
     // Progress-bar fill (canonical Figma `Color/Green/Strong`).
     greenStrong: '#7c8e8a',
+    // Floating-tab active pill (canonical `Color/Yellow/Subtle` + `/Mute`).
+    yellowSubtle: '#f5dbbc',
+    yellowMute: '#f8f1e2',
   },
+  // Pal-carousel active card (canonical `Color/Yellow/Accent` border +
+  // `Color/Yellow/Highest Contrast` label).
+  yellowAccent: '#c58334',
+  yellowHighestContrast: '#a86c34',
 };
 
 // Dark base values from canonical Figma. Where the canonical dark binding
@@ -295,5 +302,11 @@ export const darkColors: TokenColors = {
     peach: '#7A4A1F',
     // Progress-bar fill — dark binding mirrors the light token (same hue).
     greenStrong: '#7c8e8a',
+    // Yellow accents — dark binding mirrors the light hue (no canonical
+    // dark band yet; home parity is a light-mode round).
+    yellowSubtle: '#f5dbbc',
+    yellowMute: '#f8f1e2',
   },
+  yellowAccent: '#c58334',
+  yellowHighestContrast: '#a86c34',
 };

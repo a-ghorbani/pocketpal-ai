@@ -345,11 +345,18 @@ export interface SemanticColors {
   iconModelTypeAudio: string;
 
   // Accent — peach pill / Recommended-tier card highlight; greenStrong
-  // powers the download progress-bar fill.
+  // powers the download progress-bar fill. yellowSubtle/yellowMute are the
+  // floating-tab active-pill fill + border.
   accent: {
     peach: string;
     greenStrong: string;
+    yellowSubtle: string;
+    yellowMute: string;
   };
+
+  // Yellow accent ramp — pal-carousel active-card border + label.
+  yellowAccent: string;
+  yellowHighestContrast: string;
 }
 
 export interface ThemeBorders {
