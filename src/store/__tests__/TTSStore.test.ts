@@ -30,6 +30,8 @@ const mockSupertonicStop = jest.fn().mockResolvedValue(undefined);
 const mockSupertonicIsInstalled = jest.fn().mockResolvedValue(false);
 const mockSupertonicDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockSupertonicDeleteModel = jest.fn().mockResolvedValue(undefined);
+const mockSupertonicReclaimLegacySpace = jest.fn().mockResolvedValue(undefined);
+const mockSupertonicGetVoices = jest.fn().mockResolvedValue([]);
 const mockKokoroIsInstalled = jest.fn().mockResolvedValue(false);
 const mockKokoroDownloadModel = jest.fn().mockResolvedValue(undefined);
 const mockKokoroDeleteModel = jest.fn().mockResolvedValue(undefined);
@@ -128,12 +130,13 @@ jest.mock('../../services/tts', () => {
       return {
         id: 'supertonic',
         isInstalled: mockSupertonicIsInstalled,
-        getVoices: jest.fn().mockResolvedValue([]),
+        getVoices: mockSupertonicGetVoices,
         play: mockSupertonicPlay,
         playStreaming: mockSupertonicPlayStreaming,
         stop: mockSupertonicStop,
         downloadModel: mockSupertonicDownloadModel,
         deleteModel: mockSupertonicDeleteModel,
+        reclaimLegacySpace: mockSupertonicReclaimLegacySpace,
       };
     },
   };
@@ -897,6 +900,48 @@ describe('TTSStore', () => {
       expect(store.supertonicDownloadState).toBe('ready');
       expect(store.supertonicDownloadProgress).toBe(1);
       expect(store.supertonicDownloadError).toBeNull();
+    });
+
+    it('downloadSupertonic: reclaims the stale v2 dir BEFORE the disk-space gate', async () => {
+      // Forced v2→v3 re-download rides the same reclaim-before-gate path as
+      // Kokoro's FP16→FP32 migration: the whole stale Supertonic dir is
+      // deleted before the disk preflight so its freed space counts toward
+      // the threshold. Guard via invocation-call-order.
+      const store = await makeStore();
+      (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValueOnce(
+        2 * GIB, // ample room so the download proceeds end-to-end
+      );
+
+      await store.downloadSupertonic();
+
+      expect(mockSupertonicReclaimLegacySpace).toHaveBeenCalledTimes(1);
+      const reclaimOrder =
+        mockSupertonicReclaimLegacySpace.mock.invocationCallOrder[0];
+      const diskCheckOrder = (DeviceInfo.getFreeDiskStorage as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(reclaimOrder).toBeLessThan(diskCheckOrder);
+    });
+
+    it('downloadSupertonic: restores the stashed Supertonic voice after forced re-download', async () => {
+      // Existing v2 user: persisted Supertonic voice, but isInstalled()
+      // reports false (no v3 sentinel), so init() clears currentVoice and
+      // stashes the id. After the v3 re-download the user's voice must be
+      // restored rather than defaulting to voices[0].
+      (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValueOnce(8 * GIB);
+      const store = new TTSStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+
+      await store.init();
+      expect(store.currentVoice).toBeNull();
+
+      mockSupertonicGetVoices.mockResolvedValueOnce([
+        {id: 'M1', name: 'Other', engine: 'supertonic', language: 'en'},
+        SUPERTONIC_VOICE,
+      ]);
+
+      await store.downloadSupertonic();
+
+      expect(store.currentVoice).toEqual(SUPERTONIC_VOICE);
     });
 
     it('downloadSupertonic: transitions to error on failure; retryDownload recovers', async () => {
