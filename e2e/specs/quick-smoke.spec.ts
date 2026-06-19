@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../pages/ChatPage';
-import {DrawerPage} from '../pages/DrawerPage';
+import {HomePage} from '../pages/HomePage';
 import {ModelsPage} from '../pages/ModelsPage';
 import {HFSearchSheet} from '../pages/HFSearchSheet';
 import {ModelDetailsSheet} from '../pages/ModelDetailsSheet';
@@ -76,19 +76,20 @@ describe('Quick Smoke Test', () => {
   const model = getModelForTest();
 
   let chatPage: ChatPage;
-  let drawerPage: DrawerPage;
+  let homePage: HomePage;
   let modelsPage: ModelsPage;
   let hfSearchSheet: HFSearchSheet;
   let modelDetailsSheet: ModelDetailsSheet;
 
   beforeEach(async () => {
     chatPage = new ChatPage();
-    drawerPage = new DrawerPage();
+    homePage = new HomePage();
     modelsPage = new ModelsPage();
     hfSearchSheet = new HFSearchSheet();
     modelDetailsSheet = new ModelDetailsSheet();
 
-    await chatPage.waitForReady(TIMEOUTS.appReady);
+    // The app shell opens on the Home screen (ChatsTab root).
+    await homePage.waitForReady(TIMEOUTS.appReady);
   });
 
   afterEach(async function (this: Mocha.Context) {
@@ -110,10 +111,12 @@ describe('Quick Smoke Test', () => {
   });
 
   it(`should download ${model.id}, load, and chat`, async () => {
-    // Navigate to Models screen
-    await chatPage.openDrawer();
-    await drawerPage.waitForOpen();
-    await drawerPage.navigateToModels();
+    // Reach the Models screen via the surviving in-app entry now that the
+    // drawer is gone: Home → start a chat → the no-model empty-state action
+    // navigates to Models.
+    await homePage.startChat();
+    await chatPage.waitForReady();
+    await chatPage.goToModelsViaEmptyState();
     await modelsPage.waitForReady();
 
     // Open HuggingFace search

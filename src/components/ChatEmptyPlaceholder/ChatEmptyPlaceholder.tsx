@@ -98,6 +98,7 @@ export const ChatEmptyPlaceholder = observer(
             mode="contained"
             onPress={onPress}
             style={styles.button}
+            testID="empty-placeholder-action"
             loading={modelStore.isContextLoading}
             disabled={hasActiveModel}>
             {modelStore.isContextLoading

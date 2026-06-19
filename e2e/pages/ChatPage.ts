@@ -19,7 +19,7 @@ declare const browser: WebdriverIO.Browser;
 
 export class ChatPage extends BasePage {
   /**
-   * Get the menu button element (hamburger to open drawer)
+   * Get the chat header overflow menu button (generation-settings menu).
    */
   get menuButton(): ChainableElement {
     return this.getElement(Selectors.chat.menuButton);
@@ -54,10 +54,24 @@ export class ChatPage extends BasePage {
   }
 
   /**
-   * Open the navigation drawer by tapping menu button
+   * Open the navigation drawer by tapping menu button.
+   *
+   * @deprecated The drawer was removed in the bottom-tab migration.
+   * Top-level navigation is the bottom-tab bar; drawer-era destinations
+   * are pushed routes reached from Home or the Chat flow. Specs still
+   * calling this need migrating to the tab/Home navigation model.
    */
   async openDrawer(): Promise<void> {
     await this.tap(Selectors.chat.menuButton);
+  }
+
+  /**
+   * Reach the Models screen from the Chat flow's empty-state action,
+   * which is the surviving in-app Models entry now that the drawer is
+   * gone (the no-model placeholder navigates to Models).
+   */
+  async goToModelsViaEmptyState(): Promise<void> {
+    await this.tap(Selectors.chat.emptyPlaceholderAction);
   }
 
   /**
@@ -221,22 +235,13 @@ export class ChatPage extends BasePage {
   }
 
   /**
-   * Open generation settings sheet via the menu
+   * Open generation settings sheet via the chat header overflow menu.
    */
   async openGenerationSettings(): Promise<void> {
-    // Tap the three-dot menu button (top right, not the hamburger)
-    const menuBtn = browser.$(Selectors.chat.menuButton);
-
-    // There are two elements with testID "menu-button": hamburger (left) and dots (right).
-    // We need the second one (dots menu). Use $$ to get all matches.
-    const menuButtons = browser.$$(Selectors.chat.menuButton);
-    const count = await menuButtons.length;
-    if (count >= 2) {
-      await menuButtons[count - 1].click();
-    } else {
-      await menuBtn.click();
-    }
-
+    // The chat header's three-dot overflow is now the only "menu-button":
+    // the drawer hamburger was removed with the bottom-tab migration, so
+    // the previous tap-last collision workaround no longer applies.
+    await this.tap(Selectors.chat.menuButton);
     await browser.pause(500);
 
     // Tap "Generation settings" menu item
