@@ -21,19 +21,32 @@ export const KITTEN_MODEL_SUBDIR = 'tts/kitten';
 export const TTS_PARENT_SUBDIR = 'tts';
 
 /**
- * HuggingFace base URL for the Supertonic v2 (multilingual) model.
+ * HuggingFace base URL for the Supertonic v3 (31-language) model.
  *
- * v2 preserves the v1 5-file manifest, filenames, voice catalog, and total
- * size (~265 MB, OnnxSlim-optimized) while adding KO/ES/PT/FR alongside EN.
- * The fork auto-detects v1 vs v2 by inspecting `unicode_indexer.json`, so no
- * PocketPal-side version flag is needed.
- *
- * URL traced from the upstream fork example app at pinned SHA
- * `3ae0094b094d7c3d4e17378e53199813384e88f9`
- * (`@pocketpalai/react-native-speech/example/src/utils/SupertonicModelManager.ts`).
+ * v3 preserves the 5-file manifest, filenames, and 10-voice catalog of v2
+ * while covering 31 languages plus a trained language-agnostic `<na>` tag.
+ * Because the filenames are identical to v2, a local version sentinel
+ * (`SUPERTONIC_VERSION_SENTINEL_FILENAME`) distinguishes a stale v2 install
+ * from v3; see the supertonic engine and architecture/tts.md.
  */
 export const SUPERTONIC_MODEL_BASE_URL =
-  'https://huggingface.co/Supertone/supertonic-2/resolve/main';
+  'https://huggingface.co/Supertone/supertonic-3/resolve/main';
+
+/**
+ * On-disk model generation this app expects. Bumped from the unversioned v2
+ * to 3 when Supertonic gained all 31 languages + the trained `na` tag. The
+ * version sentinel written after a successful download records this value;
+ * `isInstalled()` requires it to match, forcing a one-time v2 re-download.
+ */
+export const SUPERTONIC_MODEL_VERSION = 3;
+
+/**
+ * Local sentinel file recording the installed Supertonic model version.
+ * Lives in the model dir so the whole-dir reclaim removes it on re-download.
+ * Written as the final step of `downloadModel()` so an interrupted download
+ * never reports as installed.
+ */
+export const SUPERTONIC_VERSION_SENTINEL_FILENAME = 'model-version.json';
 
 /**
  * Voice-style embeddings base URL — recorded in the local
@@ -44,8 +57,8 @@ export const SUPERTONIC_VOICES_BASE_URL = `${SUPERTONIC_MODEL_BASE_URL}/voice_st
 
 /**
  * The five network-downloaded files that make up the Supertonic pipeline.
- * v2 preserves the v1 filenames; a sixth file (`voices-manifest.json`) is
- * synthesized locally after download.
+ * v3 preserves the v2 filenames; a sixth file (`voices-manifest.json`) and a
+ * version sentinel are synthesized locally after download.
  */
 export const SUPERTONIC_MODEL_FILES = [
   {name: 'duration_predictor.onnx', urlPath: 'onnx/duration_predictor.onnx'},
@@ -58,8 +71,13 @@ export const SUPERTONIC_MODEL_FILES = [
 /** Name of the voices manifest generated locally after model download. */
 export const SUPERTONIC_VOICES_MANIFEST_FILENAME = 'voices-manifest.json';
 
-/** Estimated total size of the Supertonic model bundle (~265 MB; v2 preserves v1's size). */
-export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 265 * 1024 * 1024;
+/**
+ * Total size of the Supertonic v3 model bundle: the exact summed byte size
+ * of the 5 downloaded files (4 onnx + unicode_indexer.json) on HuggingFace
+ * (Supertone/supertonic-3). Feeds the disk-space preflight (`estimated * 1.2`),
+ * so it must be >= the real total, not just a UI label. ~380 MB.
+ */
+export const SUPERTONIC_MODEL_ESTIMATED_BYTES = 398_352_949;
 
 // ---------------------------------------------------------------------------
 // Kokoro (FP32 variant)

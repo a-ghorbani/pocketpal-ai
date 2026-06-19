@@ -43,7 +43,7 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
     gradientTo: 'rgba(111, 92, 214, 0.02)',
   },
   supertonic: {
-    sizeMb: 265,
+    sizeMb: 380,
     ramMb: 428,
     voices: 10,
     accent: '#1E4DF6',
