@@ -531,6 +531,15 @@ export const ChatView = observer(
       chatSessionStore.exitEditMode();
     }, []);
 
+    // Voice-input seam: append a transcript to the current composer text.
+    // Reuses the prop-driven external-write mechanism of `initialInputText`
+    // but APPENDS (`prev => prev + text`) instead of overwriting, so a spoken
+    // phrase joins what the user has already typed. ChatView stays the single
+    // writer of `inputText`; the transcript is never auto-sent.
+    const appendTranscript = React.useCallback((text: string) => {
+      setInputText(prev => (prev ? `${prev} ${text}` : text));
+    }, []);
+
     const {handleCopy, handleEdit, handleTryAgain, handleTryAgainWith} =
       useMessageActions({
         user,
@@ -1166,6 +1175,7 @@ export const ChatView = observer(
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
+                  appendTranscript,
                   textInputProps: {
                     ...textInputProps,
                     // Only override value and onChangeText if not using promptText
