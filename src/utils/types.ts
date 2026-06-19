@@ -369,6 +369,10 @@ export interface SemanticColors {
   // Composer send-button gradient stops (`Color/Midnight/900` → `/1500`).
   midnightHigh: string;
   midnightLow: string;
+  // Disabled (empty-composer) send-button gradient stops — pre-blended at
+  // 40% over white so the fill stays visible without view opacity.
+  midnightDisabledHigh: string;
+  midnightDisabledLow: string;
 }
 
 export interface ThemeBorders {

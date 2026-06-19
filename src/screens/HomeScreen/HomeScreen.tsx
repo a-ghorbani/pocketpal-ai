@@ -225,16 +225,17 @@ export const HomeScreen: React.FC = observer(() => {
                   accessibilityLabel={l10n.home.sendLabel}
                   testID="home-composer-send">
                   <LinearGradient
-                    colors={[
-                      theme.colors.midnightHigh,
-                      theme.colors.midnightLow,
-                    ]}
+                    colors={
+                      canSend
+                        ? [theme.colors.midnightHigh, theme.colors.midnightLow]
+                        : [
+                            theme.colors.midnightDisabledHigh,
+                            theme.colors.midnightDisabledLow,
+                          ]
+                    }
                     start={{x: 0, y: 0}}
                     end={{x: 0, y: 1}}
-                    style={[
-                      styles.sendButton,
-                      !canSend && styles.sendButtonDisabled,
-                    ]}>
+                    style={styles.sendButton}>
                     <ArrowUpSmIcon
                       width={16}
                       height={16}

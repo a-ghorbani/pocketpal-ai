@@ -173,6 +173,11 @@ export const lightColors: TokenColors = {
   // Composer send-button gradient (`Color/Midnight/900` → `/1500`).
   midnightHigh: '#2a2928',
   midnightLow: '#0e0d0c',
+  // Disabled (empty-composer) send button — the midnight gradient pre-blended
+  // at 40% over the white composer card, so the fill stays visible without
+  // relying on view opacity (which over-lightens when composited a 2nd time).
+  midnightDisabledHigh: '#a8a8a7',
+  midnightDisabledLow: '#9f9f9e',
 };
 
 // Dark base values from canonical Figma. Where the canonical dark binding
@@ -325,4 +330,6 @@ export const darkColors: TokenColors = {
   yellowHighestContrast: '#a86c34',
   midnightHigh: '#2a2928',
   midnightLow: '#0e0d0c',
+  midnightDisabledHigh: '#a8a8a7',
+  midnightDisabledLow: '#9f9f9e',
 };

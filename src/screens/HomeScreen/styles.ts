@@ -181,9 +181,6 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       overflow: 'hidden',
     },
-    sendButtonDisabled: {
-      opacity: 0.4,
-    },
 
     // Model-used chip row.
     modelChip: {
