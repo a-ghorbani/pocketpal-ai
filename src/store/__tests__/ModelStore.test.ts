@@ -4147,6 +4147,23 @@ describe('ModelStore', () => {
 
       expect((modelStore.engine as any).timeoutMs).toBe(600000);
     });
+
+    it('builds the engine carrying the saved serverType', async () => {
+      runInAction(() => {
+        serverStore.servers = [
+          {
+            id: 'srv-1',
+            name: 'Ollama Server',
+            url: 'http://localhost:11434',
+            serverType: 'Ollama',
+          },
+        ];
+      });
+
+      await modelStore.setRemoteModel(remoteModel);
+
+      expect((modelStore.engine as any).serverType).toBe('Ollama');
+    });
   });
 
   describe('fetchAndPersistGGUFMetadata error handling', () => {

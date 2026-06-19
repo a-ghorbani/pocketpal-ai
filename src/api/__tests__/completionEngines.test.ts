@@ -140,12 +140,14 @@ describe('OpenAICompletionEngine', () => {
         max_tokens: 200,
         stop: ['</s>'],
         stream: true,
+        reasoning: undefined,
       },
       'http://localhost:1234',
       'sk-key',
       expect.any(Object), // AbortSignal
       onToken,
       undefined, // timeoutMs
+      undefined, // serverType
     );
 
     expect(result).toEqual(mockResult);
@@ -188,6 +190,7 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -218,6 +221,7 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
+      undefined,
     );
   });
 
@@ -246,6 +250,7 @@ describe('OpenAICompletionEngine', () => {
       'http://localhost:1234',
       'sk-key',
       expect.any(Object),
+      undefined,
       undefined,
       undefined,
     );
@@ -299,6 +304,7 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object), // AbortSignal
       undefined, // callback
       600000, // raw timeoutMs forwarded, not normalized
+      undefined, // serverType
     );
   });
 
@@ -319,6 +325,33 @@ describe('OpenAICompletionEngine', () => {
       expect.any(Object),
       undefined,
       undefined,
+      undefined,
+    );
+  });
+
+  it('forwards params.reasoning and the constructed serverType', async () => {
+    const typedEngine = new OpenAICompletionEngine(
+      'http://localhost:1234',
+      'test-model',
+      'sk-key',
+      undefined,
+      'Ollama',
+    );
+    mockedStreamChat.mockResolvedValueOnce({text: '', content: ''});
+
+    await typedEngine.completion({
+      messages: [{role: 'user', content: 'Hi'}],
+      reasoning: {enabled: false},
+    } as any);
+
+    expect(mockedStreamChat).toHaveBeenCalledWith(
+      expect.objectContaining({reasoning: {enabled: false}}),
+      'http://localhost:1234',
+      'sk-key',
+      expect.any(Object),
+      undefined,
+      undefined,
+      'Ollama',
     );
   });
 });

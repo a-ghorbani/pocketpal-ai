@@ -2,6 +2,7 @@ import {SSEParser} from './sseParser';
 import {
   CompletionResult,
   CompletionStreamData,
+  ReasoningIntent,
   ToolCall,
 } from '../utils/completionTypes';
 
@@ -67,6 +68,8 @@ export interface StreamChatParams {
   tools?: OpenAIToolDefinition[];
   tool_choice?: OpenAIToolChoice;
   response_format?: OpenAIResponseFormat;
+  /** Reasoning on/off + effort intent; translated to a per-serverType payload. */
+  reasoning?: ReasoningIntent;
 }
 
 /**
@@ -345,6 +348,50 @@ export async function detectServerType(
  * React Native's fetch does not expose response.body (ReadableStream), so
  * XMLHttpRequest with onprogress is the standard approach for SSE streaming.
  */
+/**
+ * Translate the reasoning intent into the per-serverType wire payload. Gating
+ * is keyed on the PERSISTED serverType (never live detection). An unknown /
+ * strict server receives no reasoning controls — omit beats a 400.
+ *
+ * - llama.cpp: OFF → enable_thinking:false + reasoning_format:none; ON →
+ *   reasoning_format:auto. (ignores unknown → safe)
+ * - LM Studio / vLLM (modern): OFF → enable_thinking:false. (ignores unknown)
+ * - Ollama (/v1): OFF → reasoning_effort:'none' (safe no-op). NEVER think:true,
+ *   NEVER a non-'none' effort (hard-400 risk). Graded effort deferred.
+ * - OpenAI: reasoning_effort:<value> only when axis-2 effort is known for the
+ *   model id; nothing for on/off (400 on misapplied params).
+ * - unknown / old vLLM: omit everything.
+ */
+export function buildReasoningPayload(
+  serverType: string | undefined,
+  reasoning: ReasoningIntent | undefined,
+): Record<string, any> {
+  if (!reasoning) {
+    return {};
+  }
+  const {enabled, effort} = reasoning;
+  switch (serverType) {
+    case 'llama.cpp':
+      return enabled
+        ? {reasoning_format: 'auto'}
+        : {
+            reasoning_format: 'none',
+            chat_template_kwargs: {enable_thinking: false},
+          };
+    case 'LM Studio':
+    case 'vLLM':
+      return enabled ? {} : {chat_template_kwargs: {enable_thinking: false}};
+    case 'Ollama':
+      // OFF sends a safe no-op; ON sends nothing (never think:true).
+      return enabled ? {} : {reasoning_effort: 'none'};
+    case 'OpenAI':
+      return effort ? {reasoning_effort: effort} : {};
+    default:
+      // unknown / old vLLM — omit everything.
+      return {};
+  }
+}
+
 export async function streamChatCompletion(
   params: StreamChatParams,
   serverUrl: string,
@@ -352,6 +399,7 @@ export async function streamChatCompletion(
   signal?: AbortSignal,
   onToken?: (data: CompletionStreamData) => void,
   timeoutMs?: number,
+  serverType?: string,
 ): Promise<CompletionResult> {
   const url = `${normalizeUrl(serverUrl)}/v1/chat/completions`;
   const connectionTimeoutMs = resolveTimeout(timeoutMs, CONNECTION_TIMEOUT_MS);
@@ -734,6 +782,22 @@ export async function streamChatCompletion(
         };
       } else {
         requestBody.response_format = params.response_format;
+      }
+    }
+    // Per-serverType reasoning controls. Merge chat_template_kwargs rather than
+    // overwrite so a future caller-supplied kwarg is preserved.
+    const reasoningPayload = buildReasoningPayload(
+      serverType,
+      params.reasoning,
+    );
+    for (const [key, value] of Object.entries(reasoningPayload)) {
+      if (key === 'chat_template_kwargs') {
+        requestBody.chat_template_kwargs = {
+          ...requestBody.chat_template_kwargs,
+          ...value,
+        };
+      } else {
+        requestBody[key] = value;
       }
     }
     xhr.send(JSON.stringify(requestBody));

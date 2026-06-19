@@ -4,6 +4,7 @@ import {
   detectServerType,
   testConnection,
   streamChatCompletion,
+  buildReasoningPayload,
 } from '../openai';
 
 /** Build a minimal Headers-like object for fetch mocks. */
@@ -1248,5 +1249,134 @@ describe('streamChatCompletion', () => {
         await expect(resultPromise).rejects.toThrow('Connection timed out');
       });
     });
+  });
+});
+
+describe('buildReasoningPayload (per-serverType gating)', () => {
+  it('returns empty when no reasoning intent', () => {
+    expect(buildReasoningPayload('llama.cpp', undefined)).toEqual({});
+  });
+
+  it('llama.cpp ON sends reasoning_format auto', () => {
+    expect(buildReasoningPayload('llama.cpp', {enabled: true})).toEqual({
+      reasoning_format: 'auto',
+    });
+  });
+
+  it('llama.cpp OFF sends enable_thinking:false + reasoning_format none', () => {
+    expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
+      reasoning_format: 'none',
+      chat_template_kwargs: {enable_thinking: false},
+    });
+  });
+
+  it('LM Studio OFF sends enable_thinking:false, ON sends nothing', () => {
+    expect(buildReasoningPayload('LM Studio', {enabled: false})).toEqual({
+      chat_template_kwargs: {enable_thinking: false},
+    });
+    expect(buildReasoningPayload('LM Studio', {enabled: true})).toEqual({});
+  });
+
+  it('vLLM behaves like LM Studio', () => {
+    expect(buildReasoningPayload('vLLM', {enabled: false})).toEqual({
+      chat_template_kwargs: {enable_thinking: false},
+    });
+  });
+
+  it('Ollama OFF sends only reasoning_effort none and never think:true', () => {
+    const off = buildReasoningPayload('Ollama', {enabled: false});
+    expect(off).toEqual({reasoning_effort: 'none'});
+    expect(off).not.toHaveProperty('think');
+    // ON sends nothing — never think:true, never a non-none effort.
+    const on = buildReasoningPayload('Ollama', {enabled: true, effort: 'high'});
+    expect(on).toEqual({});
+    expect(on).not.toHaveProperty('think');
+    expect(on).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('OpenAI sends reasoning_effort only when effort is known', () => {
+    expect(
+      buildReasoningPayload('OpenAI', {enabled: true, effort: 'medium'}),
+    ).toEqual({reasoning_effort: 'medium'});
+    // No effort known → omit everything (no enable_thinking, no 400 bait).
+    expect(buildReasoningPayload('OpenAI', {enabled: true})).toEqual({});
+    expect(buildReasoningPayload('OpenAI', {enabled: false})).toEqual({});
+  });
+
+  it('unknown serverType omits everything', () => {
+    expect(buildReasoningPayload(undefined, {enabled: false})).toEqual({});
+    expect(
+      buildReasoningPayload('something-else', {enabled: false, effort: 'low'}),
+    ).toEqual({});
+  });
+});
+
+describe('streamChatCompletion reasoning payload', () => {
+  let originalXHR: typeof XMLHttpRequest;
+  beforeEach(() => {
+    originalXHR = global.XMLHttpRequest;
+    (global as any).XMLHttpRequest = MockXHR;
+    MockXHR.instances = [];
+  });
+  afterEach(() => {
+    global.XMLHttpRequest = originalXHR;
+  });
+
+  it('attaches the gated payload by serverType', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        reasoning: {enabled: false},
+      },
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'llama.cpp',
+    );
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body.reasoning_format).toBe('none');
+    expect(body.chat_template_kwargs).toEqual({enable_thinking: false});
+    // The internal carrier is never sent on the wire.
+    expect(body).not.toHaveProperty('reasoning');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
+  });
+
+  it('omits reasoning controls for an unknown serverType', async () => {
+    const resultPromise = streamChatCompletion(
+      {
+        messages: [{role: 'user', content: 'Hi'}],
+        model: 'm',
+        reasoning: {enabled: false, effort: 'high'},
+      },
+      'http://localhost:1234',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+    const xhr = MockXHR.instances[0];
+    const body = JSON.parse(xhr.requestBody);
+    expect(body).not.toHaveProperty('reasoning_format');
+    expect(body).not.toHaveProperty('chat_template_kwargs');
+    expect(body).not.toHaveProperty('reasoning_effort');
+    expect(body).not.toHaveProperty('think');
+
+    xhr.simulateHeaders(200);
+    xhr.simulateProgress(
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+    );
+    xhr.simulateLoad();
+    await resultPromise;
   });
 });
