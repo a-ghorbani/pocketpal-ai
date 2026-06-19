@@ -1465,5 +1465,20 @@
     "titleByPal": "{{name}} is downloading",
     "titleByModel": "{{name}} is downloading",
     "extraInProgress": "+{{count}} more in progress"
+  },
+  "tabs": {
+    "chats": "Chats",
+    "explore": "Explore",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Chat with your pals",
+    "addPal": "Add",
+    "composerPlaceholder": "Start messaging with {{pal}}…",
+    "composerPlaceholderGeneric": "Start messaging…",
+    "modelChipPrefix": "Model used:",
+    "modelChipEmpty": "Select a model",
+    "chatHistory": "Chat history",
+    "emptyHint": "Select a pal or model, then start typing. Your conversations will appear here."
   }
 }
