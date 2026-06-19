@@ -220,6 +220,7 @@ jobs:
             'memory-snapshot-result'
             'BENCH_RUN_MATRIX'
             'bench-runner-screen-status'
+            'ASR_AUTOMATION_STATE'
           )
           FAIL=0
           for m in "${MARKERS[@]}"; do

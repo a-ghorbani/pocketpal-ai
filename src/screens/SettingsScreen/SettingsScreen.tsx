@@ -33,6 +33,7 @@ import {
   ShareIcon,
   LinkExternalIcon,
   VolumeOnIcon,
+  MicrophoneIcon,
 } from '../../assets/icons';
 
 import {
@@ -47,7 +48,14 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
+import {modelStore, uiStore, hfStore, ttsStore, asrStore} from '../../store';
+import {
+  ASR_DISK_HEADROOM_FACTOR,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIERS,
+  ASR_TIER_ORDER,
+  type AsrTier,
+} from '../../services/asr';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -983,6 +991,120 @@ export const SettingsScreen: React.FC = observer(() => {
                     onValueChange={value => ttsStore.setUserTTSOverride(value)}
                   />
                 </View>
+
+                <Divider />
+
+                {/* Voice input (ASR) availability toggle */}
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <View style={styles.labelWithIconContainer}>
+                      <MicrophoneIcon
+                        width={20}
+                        height={20}
+                        style={styles.settingIcon}
+                        stroke={theme.colors.onSurface}
+                      />
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.voiceInput.settingTitle}
+                      </Text>
+                    </View>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {l10n.voiceInput.settingDescription}
+                    </Text>
+                    {!asrStore.deviceMeetsMemory && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.voiceInput.lowMemoryHelper}
+                      </Text>
+                    )}
+                  </View>
+                  <Switch
+                    testID="asr-availability-switch"
+                    value={
+                      asrStore.userASROverride ?? asrStore.deviceMeetsMemory
+                    }
+                    onValueChange={value => asrStore.setUserASROverride(value)}
+                  />
+                </View>
+
+                {/* Per-tier voice-model install/delete (only when enabled) */}
+                {asrStore.asrAvailable &&
+                  ASR_TIER_ORDER.map((tier: AsrTier) => {
+                    const state = asrStore.downloadStates[tier];
+                    const sizeMb = Math.round(
+                      ASR_TIERS[tier].estimatedBytes / (1024 * 1024),
+                    );
+                    // Match the preflight threshold (estimated * headroom) so a
+                    // user who frees exactly this amount clears the disk gate.
+                    const requiredMb = Math.ceil(
+                      (ASR_TIERS[tier].estimatedBytes *
+                        ASR_DISK_HEADROOM_FACTOR) /
+                        (1024 * 1024),
+                    );
+                    const tierLabel =
+                      tier === 'base'
+                        ? l10n.voiceInput.tierBase
+                        : tier === 'small'
+                          ? l10n.voiceInput.tierSmall
+                          : l10n.voiceInput.tierLargeTurbo;
+                    const lowDisk =
+                      state === 'error' &&
+                      asrStore.downloadError[tier] === ASR_INSUFFICIENT_STORAGE;
+                    const freeMb =
+                      asrStore.freeDiskBytes != null
+                        ? Math.floor(asrStore.freeDiskBytes / (1024 * 1024))
+                        : null;
+                    return (
+                      <View key={tier} style={styles.switchContainer}>
+                        <View style={styles.textContainer}>
+                          <Text variant="bodyMedium" style={styles.textLabel}>
+                            {tierLabel}
+                          </Text>
+                          <Text
+                            variant="labelSmall"
+                            style={styles.textDescription}>
+                            {t(l10n.voiceInput.tierSizeLabel, {sizeMb})}
+                          </Text>
+                          {lowDisk && freeMb != null ? (
+                            <Text
+                              variant="labelSmall"
+                              style={styles.errorText}
+                              testID={`asr-insufficient-storage-${tier}`}>
+                              {t(l10n.voiceInput.insufficientStorage, {
+                                requiredMb,
+                                freeMb,
+                              })}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {state === 'ready' ? (
+                          <Button
+                            mode="outlined"
+                            testID={`asr-remove-${tier}`}
+                            onPress={() => asrStore.deleteModel(tier)}
+                            style={styles.menuButton}>
+                            {l10n.voiceInput.removeCta}
+                          </Button>
+                        ) : state === 'downloading' ? (
+                          <Button
+                            mode="outlined"
+                            disabled
+                            style={styles.menuButton}>
+                            {l10n.voiceInput.downloadingLabel}
+                          </Button>
+                        ) : (
+                          <Button
+                            mode="contained"
+                            testID={`asr-install-${tier}`}
+                            onPress={() => asrStore.downloadModel(tier)}
+                            style={styles.menuButton}>
+                            {state === 'error'
+                              ? l10n.voiceInput.retryCta
+                              : l10n.voiceInput.installCta}
+                          </Button>
+                        )}
+                      </View>
+                    );
+                  })}
 
                 {/* Display Memory Usage (iOS only) */}
                 {Platform.OS === 'ios' && (

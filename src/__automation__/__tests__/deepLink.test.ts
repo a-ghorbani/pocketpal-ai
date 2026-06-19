@@ -172,4 +172,29 @@ describe('dispatchAutomationDeepLink', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
   });
+
+  describe('asr host', () => {
+    it('runs the asr command for host=asr + cmd=state::<...>', async () => {
+      const runAsrCommand = jest.fn().mockResolvedValue(undefined);
+      jest.doMock('../asrAutomation', () => ({runAsrCommand}));
+      jest.resetModules();
+      const {dispatchAutomationDeepLink: dispatch} = require('../deepLink');
+
+      const handled = await dispatch(
+        makeParams({host: 'asr', queryParams: {cmd: 'state::ready'}}),
+      );
+
+      expect(handled).toBe(true);
+      expect(runAsrCommand).toHaveBeenCalledWith('state::ready');
+      jest.dontMock('../asrAutomation');
+    });
+
+    it('returns false when host=asr but no cmd is provided', async () => {
+      const handled = await dispatchAutomationDeepLink(
+        makeParams({host: 'asr', queryParams: {}}),
+      );
+
+      expect(handled).toBe(false);
+    });
+  });
 });

@@ -62,6 +62,7 @@ export {default as TrashIcon} from './trash.svg';
 export {default as UploadIcon} from './upload.svg';
 export {default as UserIcon} from './user.svg';
 export {default as UserCircleIcon} from './user-circle.svg';
+export {default as MicrophoneIcon} from './microphone.svg';
 export {default as VideoRecorderIcon} from './video-recorder.svg';
 export {default as VolumeMinIcon} from './volume-min.svg';
 export {default as VolumeOffIcon} from './volume-off.svg';

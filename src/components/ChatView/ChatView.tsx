@@ -53,8 +53,10 @@ import {t} from '../../locales';
 import {getModelMemoryRequirement} from '../../utils/memoryEstimator';
 import {CONTEXT_LADDER} from '../../utils/bannerVariantResolver';
 
-import {chatSessionStore, modelStore} from '../../store';
+import {asrStore, chatSessionStore, modelStore} from '../../store';
 
+import {openMicSettings} from '../../utils/asrMicPermission';
+import type {AsrErrorKind} from '../../services/asr';
 import {MessageType, User} from '../../utils/types';
 import {Pal} from '../../types/pal';
 import {
@@ -197,6 +199,24 @@ const PendingIndicatorView: React.FC = observer(() => (
     isStopping={chatSessionStore.isStopping}
   />
 ));
+
+type L10n = React.ContextType<typeof L10nContext>;
+
+/** Map a capture error kind to its user-facing composer message. */
+function asrErrorMessage(kind: AsrErrorKind, l10n: L10n): string {
+  switch (kind) {
+    case 'permission_denied':
+      return l10n.voiceInput.errorPermissionDenied;
+    case 'permission_blocked':
+      return l10n.voiceInput.errorPermissionBlocked;
+    case 'too_short':
+      return l10n.voiceInput.errorTooShort;
+    case 'transcribe_failed':
+      return l10n.voiceInput.errorTranscribeFailed;
+    case 'not_installed':
+      return l10n.voiceInput.errorNotInstalled;
+  }
+}
 
 /** Entry component, represents the complete chat */
 export const ChatView = observer(
@@ -529,6 +549,15 @@ export const ChatView = observer(
       setInputText('');
       setInputImages([]);
       chatSessionStore.exitEditMode();
+    }, []);
+
+    // Voice-input seam: append a transcript to the current composer text.
+    // Reuses the prop-driven external-write mechanism of `initialInputText`
+    // but APPENDS (`prev => prev + text`) instead of overwriting, so a spoken
+    // phrase joins what the user has already typed. ChatView stays the single
+    // writer of `inputText`; the transcript is never auto-sent.
+    const appendTranscript = React.useCallback((text: string) => {
+      setInputText(prev => (prev ? `${prev} ${text}` : text));
     }, []);
 
     const {handleCopy, handleEdit, handleTryAgain, handleTryAgainWith} =
@@ -1166,6 +1195,7 @@ export const ChatView = observer(
                   isVisionEnabled,
                   defaultImages: inputImages,
                   onDefaultImagesChange: setInputImages,
+                  appendTranscript,
                   textInputProps: {
                     ...textInputProps,
                     // Only override value and onChangeText if not using promptText
@@ -1296,6 +1326,32 @@ export const ChatView = observer(
             }}
             testID="pal-load-hint-snackbar">
             {l10n.chat.palLoadHint}
+          </Snackbar>
+
+          <Snackbar
+            visible={
+              isFocused &&
+              asrStore.lastError !== null &&
+              !reloadSnackbar &&
+              !palLoadHint.hintVisible
+            }
+            onDismiss={() => asrStore.resetCapture()}
+            duration={4000}
+            action={
+              asrStore.lastError === 'permission_blocked'
+                ? {
+                    label: l10n.voiceInput.openSettingsLabel,
+                    onPress: () => {
+                      asrStore.resetCapture();
+                      openMicSettings();
+                    },
+                  }
+                : undefined
+            }
+            testID="asr-error-snackbar">
+            {asrStore.lastError
+              ? asrErrorMessage(asrStore.lastError, l10n)
+              : ''}
           </Snackbar>
         </View>
       </UserContext.Provider>

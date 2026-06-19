@@ -6,3 +6,4 @@ export * from './useMessageActions';
 export * from './useStorageCheck';
 export * from './useDeepLinking';
 export * from './usePalLoadHint';
+export * from './usePushToTalk';
