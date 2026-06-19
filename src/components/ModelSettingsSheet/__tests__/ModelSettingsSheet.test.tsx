@@ -265,7 +265,25 @@ describe('ModelSettingsSheet', () => {
     });
 
     it("saving axis-1 'no' clears axis-2 (inert)", async () => {
-      const {getByText} = render(<ModelSettingsSheet {...defaultProps} />);
+      const {getByTestId, getByText} = render(
+        <ModelSettingsSheet {...defaultProps} />,
+      );
+      // The seed is 'unknown' (switch off). Toggle on then off so axis-1 is a
+      // deliberate user 'no' (marks the reasoning controls dirty).
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-is-reasoning-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-is-reasoning-switch'),
+          'valueChange',
+          false,
+        );
+      });
       await act(async () => {
         fireEvent.press(getByText('Save Changes'));
       });
@@ -279,6 +297,16 @@ describe('ModelSettingsSheet', () => {
           effortSource: 'none',
         }),
       );
+    });
+
+    it('save without touching reasoning controls does NOT write an override', async () => {
+      const {getByText} = render(<ModelSettingsSheet {...defaultProps} />);
+      await act(async () => {
+        fireEvent.press(getByText('Save Changes'));
+      });
+      // An unrelated save must not stamp a source:'user' override onto a
+      // fail-open 'unknown' model — that would kill detection + learn-from-stream.
+      expect(modelStore.setReasoningOverride).not.toHaveBeenCalled();
     });
   });
 });

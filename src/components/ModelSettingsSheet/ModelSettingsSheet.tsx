@@ -43,6 +43,23 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const [effortValuesText, setEffortValuesText] = useState(() =>
       seedReasoning().effortValues.join(', '),
     );
+    // Whether the user touched any reasoning control this session. A save
+    // persists a source:'user' override only when dirty, so an unrelated save
+    // (e.g. rename) never overwrites a 'detected'/'unknown'/'learned' capability.
+    const [reasoningDirty, setReasoningDirty] = useState(false);
+
+    const onIsReasoningModelChange = (value: boolean) => {
+      setReasoningDirty(true);
+      setIsReasoningModel(value);
+    };
+    const onSupportsEffortChange = (value: boolean) => {
+      setReasoningDirty(true);
+      setSupportsEffort(value);
+    };
+    const onEffortValuesTextChange = (value: string) => {
+      setReasoningDirty(true);
+      setEffortValuesText(value);
+    };
 
     // Reset temp settings when model changes
     useEffect(() => {
@@ -57,6 +74,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         setIsReasoningModel(cap.isReasoning === 'yes');
         setSupportsEffort(cap.supportsEffort);
         setEffortValuesText(cap.effortValues.join(', '));
+        setReasoningDirty(false);
       }
     }, [model]);
 
@@ -77,17 +95,23 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         modelStore.updateModelName(model.id, tempModelName);
         modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
         modelStore.updateModelStopWords(model.id, tempStopWords);
-        const effortValues = effortValuesText
-          .split(',')
-          .map(v => v.trim())
-          .filter(v => v.length > 0);
-        modelStore.setReasoningOverride(model.id, {
-          isReasoning: isReasoningModel ? 'yes' : 'no',
-          source: 'user',
-          supportsEffort: isReasoningModel && supportsEffort,
-          effortValues: isReasoningModel && supportsEffort ? effortValues : [],
-          effortSource: isReasoningModel && supportsEffort ? 'user' : 'none',
-        });
+        // Persist a source:'user' reasoning override only when the user
+        // actually touched a reasoning control. Otherwise leave the existing
+        // capability (detected/unknown/learned) intact.
+        if (reasoningDirty) {
+          const effortValues = effortValuesText
+            .split(',')
+            .map(v => v.trim())
+            .filter(v => v.length > 0);
+          modelStore.setReasoningOverride(model.id, {
+            isReasoning: isReasoningModel ? 'yes' : 'no',
+            source: 'user',
+            supportsEffort: isReasoningModel && supportsEffort,
+            effortValues:
+              isReasoningModel && supportsEffort ? effortValues : [],
+            effortSource: isReasoningModel && supportsEffort ? 'user' : 'none',
+          });
+        }
         onClose();
       }
     };
@@ -166,7 +190,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
             <Switch
               testID="reasoning-is-reasoning-switch"
               value={isReasoningModel}
-              onValueChange={setIsReasoningModel}
+              onValueChange={onIsReasoningModelChange}
             />
           </View>
           <Text variant="bodySmall" style={styles.reasoningHelp}>
@@ -179,7 +203,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
                 <Switch
                   testID="reasoning-supports-effort-switch"
                   value={supportsEffort}
-                  onValueChange={setSupportsEffort}
+                  onValueChange={onSupportsEffortChange}
                 />
               </View>
               {supportsEffort && (
@@ -191,7 +215,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
                     l10n.components.modelSettingsSheet.effortValuesPlaceholder
                   }
                   value={effortValuesText}
-                  onChangeText={setEffortValuesText}
+                  onChangeText={onEffortValuesTextChange}
                   autoCapitalize="none"
                 />
               )}
