@@ -9,9 +9,10 @@ import type {EngineId} from '../../services/tts';
  * `voiceAndSpeech.engine*` keys in en.json — look them up at the call
  * site so translators can localize without touching this table.
  *
- * RAM comes from on-device benchmarks (FOU-47, iPhone 13 Pro, Release,
- * 152-char prompt). Numbers are approximate peak resident MB during
- * inference, not disk footprint.
+ * RAM is the peak resident MB measured during synthesis (E2E memory
+ * profile, iPhone 17 Pro simulator and Pixel emulator, Release). Each value
+ * is the higher of the two platforms, rounded. Approximate, not disk
+ * footprint.
  */
 export interface EngineMeta {
   /** ~MB on disk after install (0 for system). */
@@ -28,7 +29,7 @@ export interface EngineMeta {
 export const ENGINE_META: Record<EngineId, EngineMeta> = {
   kitten: {
     sizeMb: 57,
-    ramMb: 235,
+    ramMb: 350,
     voices: 8,
     accent: '#F29547',
     gradientFrom: 'rgba(242, 149, 71, 0.12)',
@@ -36,15 +37,15 @@ export const ENGINE_META: Record<EngineId, EngineMeta> = {
   },
   kokoro: {
     sizeMb: 330,
-    ramMb: 1000,
+    ramMb: 640,
     voices: 22,
     accent: '#6F5CD6',
     gradientFrom: 'rgba(111, 92, 214, 0.14)',
     gradientTo: 'rgba(111, 92, 214, 0.02)',
   },
   supertonic: {
-    sizeMb: 265,
-    ramMb: 428,
+    sizeMb: 380,
+    ramMb: 670,
     voices: 10,
     accent: '#1E4DF6',
     gradientFrom: 'rgba(30, 77, 246, 0.14)',

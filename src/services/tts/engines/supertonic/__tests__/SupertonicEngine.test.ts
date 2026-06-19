@@ -1,5 +1,5 @@
 /**
- * Tests for the v1.2 real SupertonicEngine.
+ * Tests for the SupertonicEngine (v3, 31 languages + version sentinel).
  *
  * Mocks `@dr.pogodin/react-native-fs` via `__mocks__/external/...` and
  * `@pocketpalai/react-native-speech` via `moduleNameMapper`. Platform.OS is
@@ -14,6 +14,8 @@ import {SupertonicEngine} from '..';
 import {
   SUPERTONIC_MODEL_BASE_URL,
   SUPERTONIC_MODEL_FILES,
+  SUPERTONIC_MODEL_VERSION,
+  SUPERTONIC_VERSION_SENTINEL_FILENAME,
   SUPERTONIC_VOICES_MANIFEST_FILENAME,
 } from '../../../constants';
 import {ttsRuntime} from '../../../runtime';
@@ -31,7 +33,7 @@ const setPlatform = (os: 'ios' | 'android') => {
   });
 };
 
-describe('SupertonicEngine (v1.2 real)', () => {
+describe('SupertonicEngine', () => {
   const anyVoice = SUPERTONIC_VOICES[0]!;
 
   beforeEach(() => {
@@ -45,6 +47,12 @@ describe('SupertonicEngine (v1.2 real)', () => {
     (RNFS.mkdir as jest.Mock).mockResolvedValue(undefined);
     (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
     (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+    // When the sentinel is read, default to a valid current-version payload
+    // so an "all files present" install reports as v3-installed. Individual
+    // tests override this to exercise stale/missing/unparseable sentinels.
+    (RNFS.readFile as jest.Mock).mockResolvedValue(
+      JSON.stringify({version: SUPERTONIC_MODEL_VERSION}),
+    );
   });
 
   describe('getModelPath()', () => {
@@ -72,9 +80,40 @@ describe('SupertonicEngine (v1.2 real)', () => {
   });
 
   describe('isInstalled()', () => {
-    it('returns true when all 5 model files and manifest exist', async () => {
+    it('returns true when all 5 model files, manifest, and current-version sentinel exist', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
       await expect(new SupertonicEngine().isInstalled()).resolves.toBe(true);
+    });
+
+    it('returns false for a stale v2 install (no version sentinel)', async () => {
+      (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+        Promise.resolve(!path.endsWith(SUPERTONIC_VERSION_SENTINEL_FILENAME)),
+      );
+      await expect(new SupertonicEngine().isInstalled()).resolves.toBe(false);
+    });
+
+    it('returns false when a download is interrupted before the sentinel write (all files present, no sentinel)', async () => {
+      // Sentinel is the final disk write of downloadModel(): if the process
+      // dies after the model files land but before it, every file check passes
+      // yet the install must not count as complete.
+      (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+        Promise.resolve(!path.endsWith(SUPERTONIC_VERSION_SENTINEL_FILENAME)),
+      );
+      await expect(new SupertonicEngine().isInstalled()).resolves.toBe(false);
+    });
+
+    it('returns false when the sentinel records an older version', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (RNFS.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({version: SUPERTONIC_MODEL_VERSION - 1}),
+      );
+      await expect(new SupertonicEngine().isInstalled()).resolves.toBe(false);
+    });
+
+    it('returns false when the sentinel is unparseable', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      (RNFS.readFile as jest.Mock).mockResolvedValue('not json');
+      await expect(new SupertonicEngine().isInstalled()).resolves.toBe(false);
     });
 
     it('returns false when any model file is missing', async () => {
@@ -120,6 +159,28 @@ describe('SupertonicEngine (v1.2 real)', () => {
           `/tts/supertonic/${SUPERTONIC_VOICES_MANIFEST_FILENAME}`,
         ),
         expect.any(String),
+      );
+    });
+
+    it('writes the version sentinel as the final disk write', async () => {
+      (RNFS.downloadFile as jest.Mock).mockImplementation(okDownload);
+
+      await new SupertonicEngine().downloadModel();
+
+      const writeCalls = (RNFS.writeFile as jest.Mock).mock.calls;
+      const sentinelIdx = writeCalls.findIndex(([p]: [string]) =>
+        p.endsWith(`/${SUPERTONIC_VERSION_SENTINEL_FILENAME}`),
+      );
+      const manifestIdx = writeCalls.findIndex(([p]: [string]) =>
+        p.endsWith(`/${SUPERTONIC_VOICES_MANIFEST_FILENAME}`),
+      );
+      expect(sentinelIdx).toBeGreaterThan(-1);
+      // Sentinel must be the LAST write, and must come after the manifest,
+      // so an interrupted download never reports as installed.
+      expect(sentinelIdx).toBe(writeCalls.length - 1);
+      expect(sentinelIdx).toBeGreaterThan(manifestIdx);
+      expect(writeCalls[sentinelIdx]![1]).toBe(
+        JSON.stringify({version: SUPERTONIC_MODEL_VERSION}),
       );
     });
 
@@ -199,6 +260,33 @@ describe('SupertonicEngine (v1.2 real)', () => {
     });
   });
 
+  describe('reclaimLegacySpace()', () => {
+    it('deletes the whole model dir when the sentinel is stale (v2)', async () => {
+      // Stale v2: model dir exists, but no current-version sentinel.
+      (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+        Promise.resolve(!path.endsWith(SUPERTONIC_VERSION_SENTINEL_FILENAME)),
+      );
+      await new SupertonicEngine().reclaimLegacySpace();
+      expect(RNFS.unlink).toHaveBeenCalledWith(
+        expect.stringContaining('/tts/supertonic'),
+      );
+    });
+
+    it('is a no-op when the install is already at the current version', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(true);
+      await new SupertonicEngine().reclaimLegacySpace();
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+    });
+
+    it('is a safe no-op when nothing is on disk', async () => {
+      (RNFS.exists as jest.Mock).mockResolvedValue(false);
+      await expect(
+        new SupertonicEngine().reclaimLegacySpace(),
+      ).resolves.toBeUndefined();
+      expect(RNFS.unlink).not.toHaveBeenCalled();
+    });
+  });
+
   describe('play()', () => {
     it('throws when the model is not installed', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(false);
@@ -226,7 +314,7 @@ describe('SupertonicEngine (v1.2 real)', () => {
         }),
       );
       expect(Speech.speak).toHaveBeenCalledWith('hello', anyVoice.id, {
-        language: 'en',
+        language: 'na',
       });
 
       // Second play() reuses the initialized engine.
@@ -260,7 +348,7 @@ describe('SupertonicEngine (v1.2 real)', () => {
       expect(Speech.createSpeechStream).toHaveBeenCalledTimes(1);
       expect(Speech.createSpeechStream).toHaveBeenCalledWith(
         anyVoice.id,
-        expect.objectContaining({targetChars: 300, language: 'en'}),
+        expect.objectContaining({targetChars: 300, language: 'na'}),
       );
     });
 

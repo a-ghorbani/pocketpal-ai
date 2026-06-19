@@ -25,6 +25,8 @@ describe('HeroRow', () => {
     jest.clearAllMocks();
     runInAction(() => {
       ttsStore.currentVoice = null;
+      ttsStore.supertonicDownloadState = 'not_installed';
+      ttsStore.supertonicLanguage = 'na';
     });
   });
 
@@ -77,5 +79,106 @@ describe('HeroRow', () => {
 
     expect(ttsStore.stop).toHaveBeenCalled();
     expect(ttsStore.preview).not.toHaveBeenCalled();
+  });
+
+  describe('language picker', () => {
+    const setSupertonicReady = () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {
+          id: 'aria',
+          name: 'Aria',
+          engine: 'supertonic',
+        };
+        ttsStore.supertonicDownloadState = 'ready';
+        ttsStore.supertonicLanguage = 'na';
+      });
+    };
+
+    it('shows the picker trigger when Supertonic is current and ready', () => {
+      setSupertonicReady();
+      const {getByTestId} = renderHero();
+      expect(getByTestId('tts-hero-language-picker')).toBeTruthy();
+    });
+
+    it('hides the picker for a non-Supertonic voice', () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {
+          id: 'af_heart',
+          name: 'Heart',
+          engine: 'kokoro',
+        };
+        ttsStore.supertonicDownloadState = 'ready';
+      });
+      const {queryByTestId} = renderHero();
+      expect(queryByTestId('tts-hero-language-picker')).toBeNull();
+    });
+
+    it('hides the picker while Supertonic is still downloading', () => {
+      runInAction(() => {
+        ttsStore.currentVoice = {
+          id: 'aria',
+          name: 'Aria',
+          engine: 'supertonic',
+        };
+        ttsStore.supertonicDownloadState = 'downloading';
+      });
+      const {queryByTestId} = renderHero();
+      expect(queryByTestId('tts-hero-language-picker')).toBeNull();
+    });
+
+    it('trigger shows the current language label', () => {
+      setSupertonicReady();
+      runInAction(() => {
+        ttsStore.supertonicLanguage = 'ja';
+      });
+      const {getByTestId} = renderHero();
+      const trigger = getByTestId('tts-hero-language-picker');
+      expect(trigger).toHaveTextContent('Japanese');
+    });
+
+    it('opens the searchable sheet with "Auto" first when the trigger is tapped', () => {
+      setSupertonicReady();
+      const {getByTestId, getByText} = renderHero();
+      fireEvent.press(getByTestId('tts-hero-language-picker'));
+
+      // The sheet container and its option rows render once opened.
+      expect(getByTestId('tts-language-sheet')).toBeTruthy();
+      expect(getByTestId('tts-language-option-na')).toBeTruthy();
+      // A later-alphabet language is reachable in the same list.
+      expect(getByText('Japanese')).toBeTruthy();
+      expect(getByText('Arabic')).toBeTruthy();
+    });
+
+    it('typing in the search field filters the list', () => {
+      setSupertonicReady();
+      const {getByTestId, queryByTestId} = renderHero();
+      fireEvent.press(getByTestId('tts-hero-language-picker'));
+
+      fireEvent.changeText(getByTestId('tts-language-search'), 'jap');
+
+      expect(getByTestId('tts-language-option-ja')).toBeTruthy();
+      expect(queryByTestId('tts-language-option-ar')).toBeNull();
+    });
+
+    it('selecting a row calls setSupertonicLanguage', () => {
+      setSupertonicReady();
+      const {getByTestId} = renderHero();
+      fireEvent.press(getByTestId('tts-hero-language-picker'));
+      fireEvent.press(getByTestId('tts-language-option-ja'));
+      expect(ttsStore.setSupertonicLanguage).toHaveBeenCalledWith('ja');
+    });
+
+    it('shows the Auto label for an out-of-union persisted value without rewriting it', () => {
+      setSupertonicReady();
+      runInAction(() => {
+        // A code not in 2.5.0's union (e.g. from a future build).
+        (ttsStore as any).supertonicLanguage = 'xx';
+      });
+      const {getByTestId} = renderHero();
+      // Trigger label falls back to "Auto" for an unlisted code.
+      expect(getByTestId('tts-hero-language-picker')).toHaveTextContent('Auto');
+      // The label-only fallback must NOT coerce the stored value back to na.
+      expect(ttsStore.setSupertonicLanguage).not.toHaveBeenCalled();
+    });
   });
 });
