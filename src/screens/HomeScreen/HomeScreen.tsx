@@ -76,7 +76,7 @@ export const HomeScreen: React.FC = observer(() => {
     : l10n.home.composerPlaceholderGeneric;
 
   // Reuses the existing prefill contract: select the pal, optionally stash
-  // a pending message, then navigate into the Chat flow (POC-7 owns Chat).
+  // a pending message, then navigate into the Chat flow.
   const startChat = async (palId?: string, message?: string) => {
     if (message) {
       deepLinkStore.setPendingMessage(message);

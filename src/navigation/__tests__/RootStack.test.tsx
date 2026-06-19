@@ -50,7 +50,7 @@ const renderWithRef = () => {
 };
 
 describe('RootStack', () => {
-  it('mounts MainTabs as the initial route (D1)', () => {
+  it('mounts MainTabs as the initial route', () => {
     const {getByText} = renderWithRef();
     expect(getByText('MainTabs')).toBeTruthy();
   });

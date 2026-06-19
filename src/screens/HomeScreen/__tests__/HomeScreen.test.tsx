@@ -146,7 +146,7 @@ describe('HomeScreen', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('renders a carousel item per pal (D8 data wiring)', () => {
+  it('renders a carousel item per pal', () => {
     runInAction(() => {
       palStore.pals = [mockLocalPal];
     });
