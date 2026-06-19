@@ -27,20 +27,9 @@ import {
   CompletionResult,
   CompletionResultSnapshot,
 } from '../utils/completionTypes';
-import {talentRegistry} from '../services/talents';
-import type {ToolDefinition} from '../services/talents/types';
-import {
-  agentStateReducer,
-  createTriggerMarkerCache,
-  initialAgentUiState,
-  runAgent,
-  type AgentEvent,
-  type AgentUiState,
-} from '../services/agent';
-// Helper function to prepare completion parameters using OpenAI-compatible
-// messages API. Creates the empty `assistant_turn` row up-front so the
-// active-vs-persisted predicate sees the right "last message" before the
-// run flips to `preparing`.
+import {fetchDuckDuckGoSearchResults} from '../utils/duckDuckGo';
+
+// Helper function to prepare completion parameters using OpenAI-compatible messages API
 const prepareCompletion = async ({
   imageUris,
   message,
@@ -120,6 +109,30 @@ const prepareCompletion = async ({
     });
   }
 
+  if ((sessionCompletionSettings as CompletionParams)?.enable_internet_search) {
+    try {
+      const query = message.text?.trim();
+      if (query) {
+        const searchResults = await fetchDuckDuckGoSearchResults(query, 3);
+        if (searchResults.length > 0) {
+          const searchSummary = searchResults
+            .map(
+              (result, index) =>
+                `${index + 1}. ${result.title}\n${result.snippet}\n${result.url}`,
+            )
+            .join('\n\n');
+          systemMessages.unshift({
+            role: 'system',
+            content: `DuckDuckGo top ${searchResults.length} results for "${query}":\n\n${searchSummary}`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Internet search integration failed:', error);
+    }
+  }
+
+  // Create the messages array for llama.rn - same format for all cases
   const messages = [
     ...systemMessages,
     ...chatMessages,

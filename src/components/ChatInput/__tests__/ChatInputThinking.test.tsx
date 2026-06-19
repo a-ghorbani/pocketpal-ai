@@ -58,6 +58,7 @@ jest.mock('../../../assets/icons', () => ({
   VideoRecorderIcon: 'VideoRecorderIcon',
   PlusIcon: 'PlusIcon',
   AtomIcon: 'AtomIcon',
+  SearchIcon: 'SearchIcon',
 }));
 
 // Mock the components
@@ -242,5 +243,39 @@ describe('ChatInput Thinking Toggle', () => {
 
     // Should not throw when pressed
     expect(() => fireEvent.press(toggleButton)).not.toThrow();
+  });
+
+  it('should render the internet search toggle when showSearchToggle is true', () => {
+    const {getByLabelText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showSearchToggle={true}
+          isSearchEnabled={false}
+          onSearchToggle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByLabelText('Enable internet search')).toBeTruthy();
+  });
+
+  it('should call onSearchToggle with correct value when pressed', () => {
+    const mockOnSearchToggle = jest.fn();
+    const {getByLabelText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showSearchToggle={true}
+          isSearchEnabled={false}
+          onSearchToggle={mockOnSearchToggle}
+        />
+      </UserContext.Provider>,
+    );
+
+    const toggleButton = getByLabelText('Enable internet search');
+    fireEvent.press(toggleButton);
+
+    expect(mockOnSearchToggle).toHaveBeenCalledWith(true);
   });
 });

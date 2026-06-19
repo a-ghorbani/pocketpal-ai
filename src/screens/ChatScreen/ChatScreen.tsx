@@ -108,99 +108,49 @@ export const ChatScreen: React.FC = observer(() => {
 
   const thinkingSupported = modelStore.activeModel?.supportsThinking ?? false;
 
-  const [thinkingEnabled, setThinkingEnabled] = useState(true);
-  const activeSession = chatSessionStore.sessions.find(
-    s => s.id === chatSessionStore.activeSessionId,
-  );
-  React.useEffect(() => {
-    let cancelled = false;
-    chatSessionStore.getCurrentCompletionSettings().then(settings => {
-      if (!cancelled) {
-        setThinkingEnabled(settings.enable_thinking ?? true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    chatSessionStore.activeSessionId,
-    activeSession?.settingsSource,
-    activeSession?.completionSettings,
-    chatSessionStore.newChatCompletionSettings,
-    chatSessionStore.newChatThinkingOverride,
-    activePalId,
-  ]);
+  const chatSettings = (() => {
+    const currentSession = chatSessionStore.sessions.find(
+      s => s.id === chatSessionStore.activeSessionId,
+    );
+    return currentSession?.completionSettings ??
+      chatSessionStore.newChatCompletionSettings;
+  })();
 
-  // Tool-compatibility one-time banner: when the active Pal declares
-  // tools but the loaded model's jinja metadata signals no tool support
-  // in any of its slots (see below), surface an inline warning.
-  // Persisted per model id so the warning fires at most once.
-  React.useEffect(() => {
-    const palDeclaresTools =
-      activePal?.pact?.talents !== undefined &&
-      activePal.pact.talents.length > 0;
-    if (!palDeclaresTools) {
-      return;
-    }
-    const model = (modelStore.context as any)?.model;
-    const modelId = modelStore.activeModelId;
-    if (!model || !modelId) {
-      return;
-    }
-    // Tool support surfaces in four independent places in llama.rn's
-    // jinja metadata: defaultCaps.tools/toolCalls (model declares it
-    // inline in the default template — Ministral, Llama 3.x, etc.) or
-    // toolUse/toolUseCaps (separate tool-use template — Qwen3, etc.).
-    // Any one is sufficient; only warn when all four are absent.
-    const jinja = model.chatTemplates?.jinja;
-    const hasToolSupport =
-      !!jinja?.defaultCaps?.tools ||
-      !!jinja?.defaultCaps?.toolCalls ||
-      !!jinja?.toolUse ||
-      !!jinja?.toolUseCaps;
-    if (hasToolSupport) {
-      return;
-    }
-    if (uiStore.hasWarnedToolCompat(modelId)) {
-      return;
-    }
-    uiStore.setChatWarning({
-      code: 'unknown',
-      message: l10n.chat.toolCompatWarning,
-      context: 'chat',
-      recoverable: true,
-      severity: 'warning',
-      metadata: {modelId},
-    });
-    uiStore.markToolCompatWarned(modelId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePalId, modelStore.activeModelId, modelStore.context]);
+  const thinkingEnabled = chatSettings.enable_thinking ?? true;
+  const internetSearchEnabled = chatSettings.enable_internet_search ?? false;
 
-  const handleThinkingToggle = async (enabled: boolean) => {
+  // Show loading bubble only during the thinking phase (inferencing but not streaming)
+  const isThinking = modelStore.inferencing && !modelStore.isStreaming;
+
+  const updateChatSetting = async (
+    field: 'enable_thinking' | 'enable_internet_search',
+    enabled: boolean,
+  ) => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
     );
 
     if (currentSession) {
-      // Use resolved settings so pal overrides (temperature, etc.) are preserved
-      const resolvedSettings =
-        await chatSessionStore.getCurrentCompletionSettings();
       const updatedSettings = {
-        ...resolvedSettings,
-        enable_thinking: enabled,
+        ...currentSession.completionSettings,
+        [field]: enabled,
       };
       await chatSessionStore.updateSessionCompletionSettings(updatedSettings);
     } else {
-      // No active session: stage the user's choice on the new-chat
-      // override field. Resolver applies it as the last layer so the
-      // toggle persists; session creation bakes it in and births the
-      // session as 'custom'. Does NOT touch newChatCompletionSettings or
-      // newChatSettingsSource — pal's other params remain intact.
-      runInAction(() => {
-        chatSessionStore.newChatThinkingOverride = enabled;
-      });
+      const updatedSettings = {
+        ...chatSessionStore.newChatCompletionSettings,
+        [field]: enabled,
+      };
+      await chatSessionStore.setNewChatCompletionSettings(updatedSettings);
     }
+  };
+
+  const handleThinkingToggle = async (enabled: boolean) => {
+    await updateChatSetting('enable_thinking', enabled);
+  };
+
+  const handleSearchToggle = async (enabled: boolean) => {
+    await updateChatSetting('enable_internet_search', enabled);
   };
 
   // If the active pal is a video pal, show the video pal screen
@@ -230,6 +180,9 @@ export const ChatScreen: React.FC = observer(() => {
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
+          showSearchToggle: true,
+          isSearchEnabled: internetSearchEnabled,
+          onSearchToggle: handleSearchToggle,
         }}
         textInputProps={{
           placeholder: !modelStore.engine

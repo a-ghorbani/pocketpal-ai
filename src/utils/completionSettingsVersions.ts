@@ -46,6 +46,7 @@ export const defaultCompletionParams: CompletionParams = {
   stop: ['</s>'],
   jinja: true, // Whether to use Jinja templating for chat formatting
   enable_thinking: true, // Whether to enable thinking mode for compatible models
+  enable_internet_search: false, // Whether to include DuckDuckGo search context in chat
   // emit_partial_completion: true, // This is not used in the current version of llama.rn
 };
 
@@ -85,15 +86,17 @@ export function migrateCompletionSettings(settings: any): any {
   }
 
   if (migratedSettings.version < 4) {
-    // Migration to version 4: Change n_predict default to -1 (unlimited)
-    // Only migrate if user still has the old default; preserve intentional custom values
-    if (migratedSettings.n_predict === 1024) {
-      migratedSettings.n_predict = defaultCompletionParams.n_predict;
-    }
+    // Migration to version 4: Add enable_internet_search parameter
+    migratedSettings.enable_internet_search = defaultCompletionParams.enable_internet_search;
     migratedSettings.version = 4;
   }
 
   // Add future migrations here as needed
+  // if (migratedSettings.version < 5) {
+  //   // Migration to version 5
+  //   migratedSettings.new_field = defaultCompletionParams.new_field;
+  //   migratedSettings.version = 5;
+  // }
 
   return migratedSettings;
 }

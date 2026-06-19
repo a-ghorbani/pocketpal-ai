@@ -3,12 +3,18 @@ import {
   TextInput,
   TextInputProps,
   View,
-  Animated,
   TouchableOpacity,
   Alert,
   ScrollView,
   Image,
 } from 'react-native';
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useCameraPermission} from 'react-native-vision-camera';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
@@ -23,6 +29,7 @@ import {
   VideoRecorderIcon,
   PlusIcon,
   AtomIcon,
+  SearchIcon,
 } from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
@@ -71,6 +78,12 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether to show the internet search toggle button */
+  showSearchToggle?: boolean;
+  /** Whether internet search is currently enabled */
+  isSearchEnabled?: boolean;
+  /** Callback when the internet search toggle is pressed */
+  onSearchToggle?: (enabled: boolean) => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -88,6 +101,12 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether to show the internet search toggle button */
+  showSearchToggle?: boolean;
+  /** Whether internet search is currently enabled */
+  isSearchEnabled?: boolean;
+  /** Callback when the internet search toggle is pressed */
+  onSearchToggle?: (enabled: boolean) => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -122,13 +141,16 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    showSearchToggle = false,
+    isSearchEnabled = false,
+    onSearchToggle,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
     const user = React.useContext(UserContext);
     const inputRef = React.useRef<TextInput>(null);
-    const editBarHeight = React.useRef(new Animated.Value(0)).current;
-    const iconRotation = React.useRef(new Animated.Value(0)).current;
+    const editBarHeight = useSharedValue(0);
+    const iconRotation = useSharedValue(0);
     const activePalId = chatSessionStore.activePalId;
     const currentActivePal = palStore.pals.find(pal => pal.id === activePalId);
 
@@ -163,32 +185,36 @@ export const ChatInput = observer(
         : (textInputProps?.value ?? text);
 
     React.useEffect(() => {
+      editBarHeight.value = withTiming(isEditMode ? 28 : 0, {
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+      });
+
       if (isEditMode) {
-        // Animate edit bar height
-        Animated.spring(editBarHeight, {
-          toValue: 28,
-          useNativeDriver: false,
-          friction: 8,
-        }).start();
-        // Focus input
         inputRef.current?.focus();
       } else {
-        Animated.spring(editBarHeight, {
-          toValue: 0,
-          useNativeDriver: false,
-          friction: 8,
-        }).start();
         onCancelEdit?.();
       }
     }, [isEditMode, editBarHeight, onCancelEdit]);
 
     React.useEffect(() => {
-      Animated.spring(iconRotation, {
-        toValue: isPickerVisible ? 1 : 0,
-        useNativeDriver: true,
-        friction: 8,
-      }).start();
+      iconRotation.value = withTiming(isPickerVisible ? 1 : 0, {
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+      });
     }, [isPickerVisible, iconRotation]);
+
+    const editBarAnimatedStyle = useAnimatedStyle(() => ({
+      height: editBarHeight.value,
+    }));
+
+    const iconAnimatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        {
+          rotate: `${interpolate(iconRotation.value, [0, 1], [0, 180])}deg`,
+        },
+      ],
+    }));
 
     const handleChangeText = (newText: string) => {
       if (isVideoCapable && onPromptTextChange) {
@@ -333,11 +359,6 @@ export const ChatInput = observer(
     const isSendButtonEnabled = value.trim().length > 0 && hasActiveModel;
     const sendButtonOpacity = isSendButtonEnabled ? 1 : 0.4;
 
-    const rotateInterpolate = iconRotation.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['0deg', '180deg'],
-    });
-
     const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
     const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
     // // Plus button state
@@ -351,13 +372,8 @@ export const ChatInput = observer(
         <View style={styles.inputContainer}>
           {/* Edit Bar (when in edit mode) */}
           {isEditMode && (
-            <Animated.View
-              style={[
-                styles.editBar,
-                {
-                  height: editBarHeight,
-                },
-              ]}>
+            <Reanimated.View
+              style={[styles.editBar, editBarAnimatedStyle]}>
               <Text variant="labelSmall" style={styles.editBarText}>
                 Editing message
               </Text>
@@ -368,7 +384,7 @@ export const ChatInput = observer(
                 style={styles.editBarButton}
                 iconColor={theme.colors.onSurfaceVariant}
               />
-            </Animated.View>
+            </Reanimated.View>
           )}
 
           {/* Image Preview Section */}
@@ -511,12 +527,9 @@ export const ChatInput = observer(
                   onPress={onPalBtnPress}
                   accessibilityLabel="Select Pal"
                   accessibilityRole="button">
-                  <Animated.View
-                    style={{
-                      transform: [{rotate: rotateInterpolate}],
-                    }}>
+                  <Reanimated.View style={iconAnimatedStyle}>
                     <ChevronUpIcon stroke={inputBackgroundColor} />
-                  </Animated.View>
+                  </Reanimated.View>
                 </TouchableOpacity>
 
                 {/* Pal Name Display */}
@@ -575,6 +588,43 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                     ]}>
                     {l10n.components.chatInput.thinkingToggle.thinkText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Internet Search Toggle Button */}
+              {showSearchToggle && !isCameraActive && (
+                <TouchableOpacity
+                  style={[
+                    styles.thinkingToggleLeft,
+                    isSearchEnabled && {backgroundColor: onSurfaceColor},
+                    {borderColor: onSurfaceColorVariant},
+                  ]}
+                  onPress={() => onSearchToggle?.(!isSearchEnabled)}
+                  accessibilityLabel={
+                    isSearchEnabled
+                      ? 'Disable internet search'
+                      : 'Enable internet search'
+                  }
+                  accessibilityRole="button">
+                  <SearchIcon
+                    width={14}
+                    height={14}
+                    stroke={
+                      isSearchEnabled
+                        ? inputBackgroundColor
+                        : onSurfaceColorVariant
+                    }
+                    strokeWidth={2}
+                  />
+                  <Text
+                    style={[
+                      styles.thinkingToggleText,
+                      isSearchEnabled
+                        ? {color: inputBackgroundColor}
+                        : {color: onSurfaceColorVariant},
+                    ]}>
+                    Search
                   </Text>
                 </TouchableOpacity>
               )}

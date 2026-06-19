@@ -63,46 +63,24 @@ describe('migrateCompletionSettings', () => {
     expect(migrated.temperature).toBe(0.7);
   });
 
-  it('should migrate from version 3 to version 4 when n_predict is old default (1024)', () => {
+  it('should migrate from version 3 to version 4 (add enable_internet_search)', () => {
     const settings = {
       version: 3,
       temperature: 0.7,
-      n_predict: 1024,
-      enable_thinking: true,
-      jinja: true,
       include_thinking_in_context: true,
+      jinja: true,
+      enable_thinking: true,
     };
     const migrated = migrateCompletionSettings(settings);
 
-    expect(migrated.version).toBe(4);
-    expect(migrated.n_predict).toBe(-1);
+    expect(migrated.version).toBe(CURRENT_COMPLETION_SETTINGS_VERSION);
+    expect(migrated.enable_internet_search).toBe(
+      defaultCompletionParams.enable_internet_search,
+    );
+    expect(migrated.enable_thinking).toBe(true);
+    expect(migrated.jinja).toBe(true);
+    expect(migrated.include_thinking_in_context).toBe(true);
     expect(migrated.temperature).toBe(0.7);
-  });
-
-  it('should preserve custom n_predict value during v3 to v4 migration', () => {
-    const settings = {
-      version: 3,
-      temperature: 0.7,
-      n_predict: 2048,
-      enable_thinking: true,
-      jinja: true,
-      include_thinking_in_context: true,
-    };
-    const migrated = migrateCompletionSettings(settings);
-
-    expect(migrated.version).toBe(4);
-    expect(migrated.n_predict).toBe(2048);
-  });
-
-  it('should preserve n_predict=500 (per-model default) during v3 to v4 migration', () => {
-    const settings = {
-      version: 3,
-      n_predict: 500,
-    };
-    const migrated = migrateCompletionSettings(settings);
-
-    expect(migrated.version).toBe(4);
-    expect(migrated.n_predict).toBe(500);
   });
 
   it('should migrate through multiple versions', () => {
@@ -237,6 +215,10 @@ describe('defaultCompletionParams', () => {
 
   it('should have enable_thinking set to true by default', () => {
     expect(defaultCompletionParams.enable_thinking).toBe(true);
+  });
+
+  it('should have enable_internet_search set to false by default', () => {
+    expect(defaultCompletionParams.enable_internet_search).toBe(false);
   });
 
   it('should have include_thinking_in_context set to true by default', () => {
