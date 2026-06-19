@@ -34,6 +34,8 @@ const EXPECTED_SECTIONS = [
   'simulator',
   'voiceAndSpeech',
   'htmlPreview',
+  'onboarding',
+  'downloadBanner',
 ];
 
 const ALL_LANGUAGES: AvailableLanguage[] = [
@@ -61,7 +63,7 @@ describe('l10n object', () => {
   });
 
   it.each(ALL_LANGUAGES)(
-    'l10n.%s has all 20 expected top-level sections',
+    'l10n.%s has all expected top-level sections',
     lang => {
       const sections = Object.keys(l10n[lang]);
       for (const section of EXPECTED_SECTIONS) {

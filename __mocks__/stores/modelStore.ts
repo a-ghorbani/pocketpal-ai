@@ -43,6 +43,7 @@ class MockModelStore {
   getDownloadProgress: jest.Mock;
   manualReleaseContext: jest.Mock;
   addHFModel: jest.Mock;
+  registerOnboardingPalModel: jest.Mock;
   downloadHFModel: jest.Mock;
   cancelDownload: jest.Mock;
   disableAutoRelease: jest.Mock;
@@ -89,6 +90,7 @@ class MockModelStore {
       getDownloadProgress: false,
       manualReleaseContext: false,
       addHFModel: false,
+      registerOnboardingPalModel: false,
       downloadHFModel: false,
       cancelDownload: false,
       disableAutoRelease: false,
@@ -119,6 +121,7 @@ class MockModelStore {
       displayModels: computed,
       availableModels: computed,
       isDownloading: computed,
+      activeDownloads: computed,
     });
     this.refreshDownloadStatuses = jest.fn();
     this.addLocalModel = jest.fn();
@@ -133,10 +136,27 @@ class MockModelStore {
     this.initContext = jest.fn().mockResolvedValue(Promise.resolve());
     this.selectModel = jest.fn().mockResolvedValue(Promise.resolve());
     this.setRemoteModel = jest.fn().mockResolvedValue(Promise.resolve());
-    this.checkSpaceAndDownload = jest.fn();
+    this.checkSpaceAndDownload = jest.fn().mockResolvedValue(undefined);
     this.getDownloadProgress = jest.fn();
     this.manualReleaseContext = jest.fn();
     this.addHFModel = jest.fn();
+    this.registerOnboardingPalModel = jest.fn().mockImplementation(
+      async (entry: {
+        repo: string;
+        filename: string;
+        displayName: string;
+        sizeBytes: number;
+        params: number;
+      }) =>
+        ({
+          id: `${entry.repo}/${entry.filename}`,
+          name: entry.displayName,
+          size: entry.sizeBytes,
+          params: entry.params,
+          origin: 'HF',
+          isDownloaded: false,
+        }) as any,
+    );
     this.downloadHFModel = jest.fn();
     this.cancelDownload = jest.fn();
     this.disableAutoRelease = jest.fn();
@@ -209,6 +229,10 @@ class MockModelStore {
   get displayModels(): Model[] {
     // Filter out projection models for display purposes
     return this.models.filter(model => model.modelType !== 'projection');
+  }
+
+  get activeDownloads() {
+    return [];
   }
 
   get availableModels() {

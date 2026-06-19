@@ -111,4 +111,90 @@ describe('UIStore', () => {
       ]);
     });
   });
+
+  describe('onboarding', () => {
+    beforeEach(() => {
+      uiStore.resetOnboarding();
+    });
+
+    it('defaults hasCompletedOnboarding=false on a fresh store', () => {
+      expect(uiStore.hasCompletedOnboarding).toBe(false);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopic: null,
+        selectedModelId: null,
+      });
+    });
+
+    it('setOnboardingStep updates currentStep', () => {
+      uiStore.setOnboardingStep(3);
+      expect(uiStore.onboardingState.currentStep).toBe(3);
+    });
+
+    it('setOnboardingTopic overwrites the single selection', () => {
+      uiStore.setOnboardingTopic('smartchat');
+      expect(uiStore.onboardingState.selectedTopic).toBe('smartchat');
+      uiStore.setOnboardingTopic('coding');
+      expect(uiStore.onboardingState.selectedTopic).toBe('coding');
+      uiStore.setOnboardingTopic(null);
+      expect(uiStore.onboardingState.selectedTopic).toBeNull();
+    });
+
+    it('setOnboardingModelId writes the picked id (or null)', () => {
+      uiStore.setOnboardingModelId('model-a');
+      expect(uiStore.onboardingState.selectedModelId).toBe('model-a');
+      uiStore.setOnboardingModelId(null);
+      expect(uiStore.onboardingState.selectedModelId).toBeNull();
+    });
+
+    it('completeOnboarding flips the flag, derives snapshot, resets state', () => {
+      uiStore.setOnboardingStep(5);
+      uiStore.setOnboardingTopic('coding');
+      uiStore.setOnboardingModelId('model-a');
+      uiStore.completeOnboarding({
+        topic: 'coding',
+        modelId: 'model-a',
+      });
+      expect(uiStore.hasCompletedOnboarding).toBe(true);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual(['coding']);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopic: null,
+        selectedModelId: null,
+      });
+    });
+
+    it('completeOnboarding with null topic writes an empty snapshot (Skip / else path)', () => {
+      uiStore.completeOnboarding({topic: null, modelId: null});
+      expect(uiStore.hasCompletedOnboarding).toBe(true);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
+    });
+
+    it('resetOnboarding returns to the clean state', () => {
+      uiStore.completeOnboarding({topic: 'smartchat', modelId: 'm'});
+      uiStore.resetOnboarding();
+      expect(uiStore.hasCompletedOnboarding).toBe(false);
+      expect(uiStore.onboardingTopicsSnapshot).toEqual([]);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopic: null,
+        selectedModelId: null,
+      });
+    });
+
+    it('replayOnboarding re-enters the flow but keeps the topic snapshot', () => {
+      uiStore.completeOnboarding({topic: 'coding', modelId: 'm'});
+      uiStore.replayOnboarding();
+      expect(uiStore.hasCompletedOnboarding).toBe(false);
+      // Snapshot from prior completion survives so a Skip mid-replay
+      // doesn't wipe the user's existing topic preference.
+      expect(uiStore.onboardingTopicsSnapshot).toEqual(['coding']);
+      expect(uiStore.onboardingState).toEqual({
+        currentStep: 1,
+        selectedTopic: null,
+        selectedModelId: null,
+      });
+    });
+  });
 });

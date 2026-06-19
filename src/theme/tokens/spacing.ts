@@ -15,4 +15,5 @@ export const spacing: TokenSpacing = {
   ml: 20,
   l: 24,
   xl: 32,
+  xxl: 40,
 };

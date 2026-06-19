@@ -1,0 +1,240 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`HighlightText ignores empty phrase entries (defensive) 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    collapsable={false}
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          Quick
+        </Text>
+        <Text>
+           body.
+        </Text>
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`HighlightText renders the body plain when no phrase matches 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    collapsable={false}
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
+          }
+        }
+      >
+        <Text>
+          Plain copy with nothing to highlight.
+        </Text>
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`HighlightText wraps a single matching phrase in a pill segment 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    collapsable={false}
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
+          }
+        }
+      >
+        <Text>
+          Anytime, with 
+        </Text>
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          no internet, no signal
+        </Text>
+        <Text>
+           — nice.
+        </Text>
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`HighlightText wraps multiple distinct phrases in separate pills 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    collapsable={false}
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#646466",
+            "fontFamily": "Inter-Regular",
+            "fontSize": 16,
+            "fontWeight": "400",
+            "lineHeight": 24,
+            "textAlign": "center",
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          No accounts.
+        </Text>
+        <Text>
+           
+        </Text>
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          No cloud.
+        </Text>
+        <Text>
+           
+        </Text>
+        <Text
+          style={
+            {
+              "backgroundColor": "#FCE7CF",
+              "color": "#111111",
+            }
+          }
+        >
+          No tracking.
+        </Text>
+        <Text>
+           We promise.
+        </Text>
+      </Text>
+    </View>
+  </View>
+</View>
+`;

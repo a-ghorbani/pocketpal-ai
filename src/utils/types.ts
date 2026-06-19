@@ -285,6 +285,10 @@ export interface SemanticColors {
 
   border: string;
   placeholder: string;
+  // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
+  mutedLight: string;
+  // Figma `Color/Secondary/Default` — small DS button surface.
+  secondaryDefault: string;
 
   // Interactive states
   stateLayerOpacity: number;
@@ -339,6 +343,13 @@ export interface SemanticColors {
   iconModelTypeText: string;
   iconModelTypeVision: string;
   iconModelTypeAudio: string;
+
+  // Accent — peach pill / Recommended-tier card highlight; greenStrong
+  // powers the download progress-bar fill.
+  accent: {
+    peach: string;
+    greenStrong: string;
+  };
 }
 
 export interface ThemeBorders {
@@ -385,6 +396,8 @@ export interface ThemeSpacing {
   m: 16;
   ml: 20;
   l: 24;
+  xl: 32;
+  xxl: 40;
 }
 
 /**

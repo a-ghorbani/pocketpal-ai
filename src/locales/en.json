@@ -6,6 +6,7 @@
     "rename": "Rename",
     "reset": "Reset",
     "save": "Save",
+    "stop": "Stop",
     "update": "Update",
     "error": "Error",
     "export": "Export",
@@ -461,6 +462,9 @@
     "sponsorButton": "Become a Sponsor",
     "versionCopiedTitle": "Version copied",
     "versionCopiedDescription": "Version information has been copied to clipboard",
+    "tour": "Tour",
+    "tourDescription": "Replay the welcome screens to see what PocketPal AI offers.",
+    "showIntroButton": "Show intro again",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
   },
@@ -554,7 +558,9 @@
       "activateModelTitle": "Activate Model To Get Started",
       "activateModelDescription": "Select the model and download it. After downloading, tap Load next to the model and start chatting.",
       "activateModelButton": "Select Model",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "gettingReadyTitle": "{{name}} is getting ready",
+      "gettingReadyDescription": "We’ll let you know the moment your pal can chat. Tap the banner up top to see how it’s going."
     },
     "chatInput": {
       "inputPlaceholder": "Message",
@@ -1363,5 +1369,101 @@
     "voicesEmptyState": "No voices found.",
     "kokoroDeviceNote": "Some voices may not work on all devices.",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this engine ({{freeMb}} MB available)."
+  },
+  "onboarding": {
+    "back": "Back",
+    "skip": "Skip",
+    "skipForNow": "Skip for now",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "Meet your pals.",
+      "titleAccent": "pals.",
+      "body": "Smart little friends that live inside your phone.\nLet’s get you set up - it’ll take a minute.",
+      "cta": "Show me Around",
+      "eyebrow": "Welcome to PocketPal"
+    },
+    "screen2": {
+      "title": "Anytime,\nAnywhere.",
+      "body": "Your pals live inside your phone.\nNo internet, no signal - they work on planes, off-grid, in remote villages.",
+      "highlight": "No internet, no signal",
+      "cta": "Next",
+      "eyebrow": "The idea",
+      "titleAccent": "Anytime,"
+    },
+    "screen3": {
+      "title": "Smaller,\nbut yours.",
+      "titleAccent": "Smaller,",
+      "body": "Pals on your phone are quick and private - but lighter than Cloud AI. Think pocket companion, not all-knowing oracle.",
+      "highlight": "quick and private",
+      "cta": "Got it",
+      "eyebrow": "A heads-up"
+    },
+    "screen4": {
+      "title": "Nothing leaves your phone.",
+      "titleAccent": "leaves",
+      "body": "No accounts. No cloud. No tracking. Your conversations stay yours.",
+      "highlight": "No accounts. No cloud. No tracking.",
+      "cta": "Get Started",
+      "eyebrow": "Privacy promised"
+    },
+    "screen5": {
+      "title": "What’s your pal for?",
+      "body": "Pick what you’d like to discuss - we’ll match a pal that fits your phone.",
+      "topic": {
+        "smartchat": "Smart Chat",
+        "coding": "Coding",
+        "education": "Education",
+        "roleplay": "Roleplay",
+        "creative_writing": "Creative Writing",
+        "else": "Looking for something else?"
+      },
+      "topicDescription": {
+        "smartchat": "Friendly everyday companion",
+        "coding": "Code, debug, explain",
+        "education": "Learn, explain, quiz",
+        "roleplay": "Characters, scenarios",
+        "creative_writing": "Stories, ideas, drafts",
+        "else": "Browse all pals later in the app"
+      }
+    },
+    "screen6": {
+      "cta": "Download {{name}}",
+      "ctaTemplate": "Download {{name}} ({{size}})",
+      "useTemplate": "Use {{name}}",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB free",
+      "recommended": "Recommended",
+      "downloaded": "Downloaded",
+      "modelTier": {
+        "quick": "Quick",
+        "balanced": "Balanced",
+        "best": "Best"
+      },
+      "subtitleTemplate": "{{name}} thinks using a small AI model on your phone - pick one that fits.",
+      "pal": {
+        "pip": {
+          "body": "We found a perfect pal for you - a friendly everyday companion. Smart enough for most things, light enough for any phone."
+        },
+        "codie": {
+          "body": "Meet Codie — your local pair-programmer. Reads code, writes code, explains tricky bits without ever leaving your phone."
+        },
+        "sage": {
+          "body": "Sage is patient, curious, and walks you through ideas step by step. A study buddy you keep in your pocket."
+        },
+        "echo": {
+          "body": "Echo is a versatile roleplay companion — stays in character, paints scenes, follows wherever your story leads."
+        },
+        "muse": {
+          "body": "Muse helps you write. Suggests phrasing, finds the rhythm, and keeps your tone intact."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} is downloading",
+    "titleByModel": "{{name}} is downloading",
+    "extraInProgress": "+{{count}} more in progress"
   }
 }

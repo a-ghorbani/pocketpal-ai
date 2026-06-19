@@ -187,6 +187,98 @@ describe('PalStore', () => {
     });
   });
 
+  describe('Pip seeding', () => {
+    const callInitializePipPal = async () =>
+      (palStore as any).initializePipPal();
+
+    beforeEach(() => {
+      runInAction(() => {
+        palStore.pals = [];
+      });
+      (palRepository.createPal as jest.Mock).mockImplementation(
+        async (palData: any) => ({
+          ...palData,
+          id: `pip-${Math.random().toString(36).slice(2, 8)}`,
+          created_at: '2026-05-26T00:00:00Z',
+          updated_at: '2026-05-26T00:00:00Z',
+        }),
+      );
+    });
+
+    it('seeds Pip when absent', async () => {
+      await callInitializePipPal();
+      const pip = palStore.pals.find(
+        p => p.name === 'Pip' && p.source === 'local',
+      );
+      expect(pip).toBeDefined();
+      expect(pip?.type).toBe('local');
+      expect(pip?.defaultModel).toBeUndefined();
+      expect(palRepository.createPal).toHaveBeenCalledTimes(1);
+    });
+
+    it('is a no-op when Pip is already present', async () => {
+      await callInitializePipPal();
+      (palRepository.createPal as jest.Mock).mockClear();
+      await callInitializePipPal();
+      const pipCount = palStore.pals.filter(
+        p => p.name === 'Pip' && p.source === 'local',
+      ).length;
+      expect(pipCount).toBe(1);
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+    });
+
+    it('preserves an existing Pip record (including defaultModel) on re-init', async () => {
+      const boundModel = {
+        id: 'some-bound-model',
+        name: 'Some Bound Model',
+      } as any;
+      const existingPip: Pal = {
+        ...mockPal,
+        id: 'pip-existing',
+        name: 'Pip',
+        source: 'local',
+        type: 'local',
+        defaultModel: boundModel,
+      } as any;
+      runInAction(() => {
+        palStore.pals = [existingPip];
+      });
+
+      await callInitializePipPal();
+
+      const pip = palStore.pals.find(
+        p => p.name === 'Pip' && p.source === 'local',
+      );
+      expect(pip).toBeDefined();
+      expect(pip?.id).toBe('pip-existing');
+      // defaultModel content is preserved across re-init (MobX wraps
+      // observed objects in Proxies, so Object.is equality is brittle;
+      // value equality verifies the field wasn't cleared or rewritten).
+      expect(pip?.defaultModel).toEqual(boundModel);
+      expect(palRepository.createPal).not.toHaveBeenCalled();
+    });
+
+    it('coexists with Lookie regardless of order (idempotent)', async () => {
+      const lookie: Pal = {
+        ...mockPal,
+        id: 'lookie-1',
+        name: 'Lookie',
+        source: 'local',
+        type: 'local',
+        capabilities: {video: true},
+      } as any;
+      runInAction(() => {
+        palStore.pals = [lookie];
+      });
+
+      await callInitializePipPal();
+      await callInitializePipPal();
+
+      const names = palStore.pals.map(p => p.name).sort();
+      expect(names).toEqual(['Lookie', 'Pip']);
+    });
+  });
+
   describe('Core CRUD Operations', () => {
     describe('createPal', () => {
       it('should create a new pal successfully', async () => {
