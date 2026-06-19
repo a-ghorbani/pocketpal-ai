@@ -1,7 +1,6 @@
 import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
-import {fontStyles} from '../../utils/theme';
 
 export const createStyles = ({
   theme,
@@ -71,7 +70,7 @@ export const createStyles = ({
       flexShrink: 1,
     },
     input: {
-      ...theme.fonts.inputTextStyle,
+      ...theme.typography.bodyM,
       color: theme.colors.inverseOnSurface,
       flex: 1,
       maxHeight: 150,
@@ -142,24 +141,22 @@ export const createStyles = ({
       marginTop: isEditMode ? 28 : 0,
     },
     palNameWrapper: {
-      ...fontStyles.regular,
+      ...theme.typography.captionM,
       color: theme.colors.inverseOnSurface,
-      fontSize: 12,
     },
     palName: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.inverseOnSurface,
-      ...fontStyles.semibold,
     },
     // New compact pal name styles for control bar
     palNameCompact: {
+      ...theme.typography.captionM,
       fontSize: 10,
-      ...fontStyles.regular,
       color: theme.colors.inverseOnSurface,
     },
     palNameValueCompact: {
+      ...theme.typography.uiS,
       fontSize: 10,
-      ...fontStyles.semibold,
       color: theme.colors.inverseOnSurface,
     },
     // Image preview styles
