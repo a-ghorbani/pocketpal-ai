@@ -227,7 +227,7 @@ describe('ModelSettingsSheet', () => {
         <ModelSettingsSheet {...defaultProps} />,
       );
 
-      // Turn on axis-1, then axis-2, then set the value set.
+      // Turn on axis-1, then axis-2, then pick the supported effort levels.
       await act(async () => {
         fireEvent(
           getByTestId('reasoning-is-reasoning-switch'),
@@ -243,10 +243,13 @@ describe('ModelSettingsSheet', () => {
         );
       });
       await act(async () => {
-        fireEvent.changeText(
-          getByTestId('reasoning-effort-values-input'),
-          'low, medium, high',
-        );
+        fireEvent.press(getByTestId('effort-chip-low'));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('effort-chip-medium'));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('effort-chip-high'));
       });
       await act(async () => {
         fireEvent.press(getByText('Save Changes'));
@@ -261,6 +264,84 @@ describe('ModelSettingsSheet', () => {
           effortValues: ['low', 'medium', 'high'],
           effortSource: 'user',
         },
+      );
+    });
+
+    it('persists effort levels ordered low→medium→high regardless of tap order', async () => {
+      const {getByTestId, getByText} = render(
+        <ModelSettingsSheet {...defaultProps} />,
+      );
+
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-is-reasoning-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-supports-effort-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      // Tap out of order; the saved set must still be canonically ordered.
+      await act(async () => {
+        fireEvent.press(getByTestId('effort-chip-high'));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('effort-chip-low'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Save Changes'));
+      });
+
+      expect(modelStore.setReasoningOverride).toHaveBeenCalledWith(
+        mockModel.id,
+        expect.objectContaining({
+          supportsEffort: true,
+          effortValues: ['low', 'high'],
+        }),
+      );
+    });
+
+    it('toggling an effort chip off removes it from the saved set', async () => {
+      const {getByTestId, getByText} = render(
+        <ModelSettingsSheet {...defaultProps} />,
+      );
+
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-is-reasoning-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-supports-effort-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('effort-chip-medium'));
+      });
+      // Tap again to deselect.
+      await act(async () => {
+        fireEvent.press(getByTestId('effort-chip-medium'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Save Changes'));
+      });
+
+      expect(modelStore.setReasoningOverride).toHaveBeenCalledWith(
+        mockModel.id,
+        expect.objectContaining({
+          supportsEffort: true,
+          effortValues: [],
+        }),
       );
     });
 

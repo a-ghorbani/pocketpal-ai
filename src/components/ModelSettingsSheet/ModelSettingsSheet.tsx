@@ -1,5 +1,5 @@
 import React, {useState, useEffect, memo, useContext} from 'react';
-import {Button, Text, Divider, Switch, TextInput} from 'react-native-paper';
+import {Button, Text, Divider, Switch, Chip} from 'react-native-paper';
 
 import {ModelSettings} from '../../screens/ModelsScreen/ModelSettings';
 import {Sheet} from '../Sheet';
@@ -7,7 +7,11 @@ import {ProjectionModelSelector} from '../ProjectionModelSelector';
 import {Model} from '../../utils/types';
 import {modelStore, serverStore} from '../../store';
 import {chatTemplates} from '../../utils/chat';
-import {resolveReasoningCapability} from '../../utils/reasoningCapability';
+import {
+  resolveReasoningCapability,
+  EFFORT_LEVELS,
+  orderEffortValues,
+} from '../../utils/reasoningCapability';
 
 import {styles} from './styles';
 import {View} from 'react-native';
@@ -40,8 +44,10 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const [supportsEffort, setSupportsEffort] = useState(
       () => seedReasoning().supportsEffort,
     );
-    const [effortValuesText, setEffortValuesText] = useState(() =>
-      seedReasoning().effortValues.join(', '),
+    // Selected effort levels (subset of EFFORT_LEVELS), persisted ordered
+    // low→medium→high so the pill cycle stays consistent.
+    const [effortSet, setEffortSet] = useState<string[]>(() =>
+      orderEffortValues(seedReasoning().effortValues),
     );
     // Whether the user touched any reasoning control this session. A save
     // persists a source:'user' override only when dirty, so an unrelated save
@@ -56,9 +62,15 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
       setReasoningDirty(true);
       setSupportsEffort(value);
     };
-    const onEffortValuesTextChange = (value: string) => {
+    const onEffortLevelToggle = (level: string) => {
       setReasoningDirty(true);
-      setEffortValuesText(value);
+      setEffortSet(prev =>
+        orderEffortValues(
+          prev.includes(level)
+            ? prev.filter(v => v !== level)
+            : [...prev, level],
+        ),
+      );
     };
 
     // Reset temp settings when model changes
@@ -73,7 +85,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         );
         setIsReasoningModel(cap.isReasoning === 'yes');
         setSupportsEffort(cap.supportsEffort);
-        setEffortValuesText(cap.effortValues.join(', '));
+        setEffortSet(orderEffortValues(cap.effortValues));
         setReasoningDirty(false);
       }
     }, [model]);
@@ -99,10 +111,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         // actually touched a reasoning control. Otherwise leave the existing
         // capability (detected/unknown/learned) intact.
         if (reasoningDirty) {
-          const effortValues = effortValuesText
-            .split(',')
-            .map(v => v.trim())
-            .filter(v => v.length > 0);
+          const effortValues = orderEffortValues(effortSet);
           modelStore.setReasoningOverride(model.id, {
             isReasoning: isReasoningModel ? 'yes' : 'no',
             source: 'user',
@@ -207,17 +216,23 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
                 />
               </View>
               {supportsEffort && (
-                <TextInput
-                  testID="reasoning-effort-values-input"
-                  mode="outlined"
-                  label={l10n.components.modelSettingsSheet.effortValues}
-                  placeholder={
-                    l10n.components.modelSettingsSheet.effortValuesPlaceholder
-                  }
-                  value={effortValuesText}
-                  onChangeText={onEffortValuesTextChange}
-                  autoCapitalize="none"
-                />
+                <>
+                  <Text variant="bodySmall" style={styles.reasoningHelp}>
+                    {l10n.components.modelSettingsSheet.effortValues}
+                  </Text>
+                  <View style={styles.effortChipsRow}>
+                    {EFFORT_LEVELS.map(level => (
+                      <Chip
+                        key={level}
+                        testID={`effort-chip-${level}`}
+                        selected={effortSet.includes(level)}
+                        showSelectedCheck
+                        onPress={() => onEffortLevelToggle(level)}>
+                        {l10n.components.modelSettingsSheet.effortLevels[level]}
+                      </Chip>
+                    ))}
+                  </View>
+                </>
               )}
             </>
           )}

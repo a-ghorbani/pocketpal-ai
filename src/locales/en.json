@@ -753,8 +753,12 @@
       "isReasoningModel": "Reasoning model",
       "isReasoningModelHelp": "Show the thinking control for this model, even if it wasn't auto-detected.",
       "supportsEffort": "Supports graded effort",
-      "effortValues": "Effort levels",
-      "effortValuesPlaceholder": "low, medium, high"
+      "effortValues": "Effort levels this model supports",
+      "effortLevels": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face Models",

@@ -2,6 +2,8 @@ import {Model, ModelOrigin} from '../types';
 import {
   ReasoningCapability,
   resolveReasoningCapability,
+  orderEffortValues,
+  EFFORT_LEVELS,
 } from '../reasoningCapability';
 
 const localModel = (overrides: Partial<Model> = {}): Model =>
@@ -126,5 +128,31 @@ describe('resolveReasoningCapability', () => {
   it("isReasoning 'unknown' is preserved (pill fail-open)", () => {
     const m = remoteModel();
     expect(resolveReasoningCapability(m, {}).isReasoning).toBe('unknown');
+  });
+});
+
+describe('orderEffortValues', () => {
+  it('orders a selection canonically low→medium→high', () => {
+    expect(orderEffortValues(['high', 'low'])).toEqual(['low', 'high']);
+    expect(orderEffortValues(['medium', 'high', 'low'])).toEqual([
+      'low',
+      'medium',
+      'high',
+    ]);
+  });
+
+  it('drops values outside the canonical set', () => {
+    expect(orderEffortValues(['high', 'extreme', 'low'])).toEqual([
+      'low',
+      'high',
+    ]);
+  });
+
+  it('returns an empty array for an empty selection', () => {
+    expect(orderEffortValues([])).toEqual([]);
+  });
+
+  it('exposes the canonical level order', () => {
+    expect(EFFORT_LEVELS).toEqual(['low', 'medium', 'high']);
   });
 });

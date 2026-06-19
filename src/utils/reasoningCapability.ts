@@ -20,6 +20,21 @@ export interface ReasoningCapability {
 import {ModelOrigin} from './types';
 import type {Model} from './types';
 
+/**
+ * Canonical axis-2 effort levels, in pill-cycle order (low→medium→high). The
+ * universal set across reasoning families that grade effort; a model may
+ * support a subset. `effortValues` is always stored in this order so the pill
+ * cycles consistently.
+ */
+export const EFFORT_LEVELS = ['low', 'medium', 'high'] as const;
+
+export type EffortLevel = (typeof EFFORT_LEVELS)[number];
+
+/** Order an effort-level selection canonically (low→medium→high). */
+export function orderEffortValues(values: string[]): string[] {
+  return EFFORT_LEVELS.filter(level => values.includes(level));
+}
+
 const UNKNOWN: ReasoningCapability = {
   isReasoning: 'unknown',
   source: 'unknown',

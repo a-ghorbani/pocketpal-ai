@@ -634,9 +634,7 @@ export const Selectors = {
     get supportsEffortSwitch(): string {
       return byTestId('reasoning-supports-effort-switch');
     },
-    get effortValuesInput(): string {
-      return byTestId('reasoning-effort-values-input');
-    },
+    effortChip: (level: string): string => byTestId(`effort-chip-${level}`),
   },
 
   // User-selectable server-type dropdown (server details + remote model sheets)

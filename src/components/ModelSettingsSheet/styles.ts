@@ -26,4 +26,10 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
     opacity: 0.7,
   },
+  effortChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
 });
