@@ -10,6 +10,8 @@ import {
   SUPERTONIC_MODEL_BASE_URL,
   SUPERTONIC_MODEL_FILES,
   SUPERTONIC_MODEL_SUBDIR,
+  SUPERTONIC_MODEL_VERSION,
+  SUPERTONIC_VERSION_SENTINEL_FILENAME,
   SUPERTONIC_VOICES_BASE_URL,
   SUPERTONIC_VOICES_MANIFEST_FILENAME,
   TTS_PARENT_SUBDIR,
@@ -27,23 +29,27 @@ import {SUPERTONIC_VOICES} from './voices';
 export type SupertonicProgressCallback = (progress: number) => void;
 
 /**
- * Default synthesis language when callers don't specify one. v1.2 ships
- * without a UI selector; EN is the safe default and preserves behavior for
- * pre-v2 callers. Language-picker UX lands in follow-up `v1b-tts-language`.
+ * Engine-level fallback language, used only if a caller omits `language`.
+ * The app always passes `ttsStore.supertonicLanguage` explicitly, so this
+ * default never governs in practice; it matches the store default (`na`,
+ * language-agnostic "Auto") to avoid two competing defaults.
  */
-const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'en';
+const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'na';
 
 /**
- * Supertonic neural TTS engine.
+ * Supertonic neural TTS engine (v3, 31 languages + trained `na`).
  *
- * v1.2 flips Supertonic from a stub to a functional engine: the 4-model
- * ONNX pipeline (plus `unicode_indexer.json`) is downloaded on demand from
- * HuggingFace (URL traced from the upstream fork example at pinned SHA
- * `3ae0094b094d7c3d4e17378e53199813384e88f9`), stored under
+ * The 4-model ONNX pipeline (plus `unicode_indexer.json`) is downloaded on
+ * demand from HuggingFace (Supertone/supertonic-3), stored under
  * `Library/Application Support/tts/supertonic/` on iOS (with
  * `NSURLIsExcludedFromBackupKey` set on the parent `tts/` directory at
  * mkdir time) and `files/tts/supertonic/` on Android (excluded via backup
  * rules XML).
+ *
+ * v3 keeps the v2 filenames, so a version sentinel written as the final
+ * download step distinguishes a fresh v3 install from a stale v2 one;
+ * `isInstalled()` requires the sentinel at `SUPERTONIC_MODEL_VERSION`,
+ * forcing legacy v2 users through one clean re-download.
  *
  * Once installed, `play()` and `playStreaming()` delegate to
  * `@pocketpalai/react-native-speech`. The engine lazily calls
@@ -82,10 +88,59 @@ export class SupertonicEngine implements Engine {
           return false;
         }
       }
-      return RNFS.exists(this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME));
+      if (
+        !(await RNFS.exists(
+          this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
+        ))
+      ) {
+        return false;
+      }
+      // v3 gate: the model filenames are identical to v2, so a stale v2
+      // install passes every file check above. Require a version sentinel at
+      // the current version to tell v3 from v2. Missing, unparseable, or
+      // older-version sentinel → not installed → forced re-download.
+      return this.isSentinelAtCurrentVersion();
     } catch (err) {
       console.warn('[SupertonicEngine] isInstalled check failed:', err);
       return false;
+    }
+  }
+
+  /**
+   * True only when the version sentinel exists, parses, and records the
+   * model version this app expects. Any failure returns false.
+   */
+  private async isSentinelAtCurrentVersion(): Promise<boolean> {
+    try {
+      const sentinelPath = this.getFilePath(
+        SUPERTONIC_VERSION_SENTINEL_FILENAME,
+      );
+      if (!(await RNFS.exists(sentinelPath))) {
+        return false;
+      }
+      const raw = await RNFS.readFile(sentinelPath);
+      const parsed = JSON.parse(raw) as {version?: unknown};
+      return parsed.version === SUPERTONIC_MODEL_VERSION;
+    } catch (err) {
+      console.warn('[SupertonicEngine] sentinel check failed:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete the whole stale model directory before a (re)download. v2 and v3
+   * share filenames, so per-file reclaim is impossible — the entire dir is
+   * stale when the sentinel doesn't match. Invoked by the store before the
+   * disk-space preflight so reclaimed space counts toward the threshold.
+   * Idempotent; safe when the dir is absent or already at the current version.
+   */
+  async reclaimLegacySpace(): Promise<void> {
+    if (await this.isSentinelAtCurrentVersion()) {
+      return;
+    }
+    const modelDir = this.getModelPath();
+    if (await RNFS.exists(modelDir)) {
+      await RNFS.unlink(modelDir).catch(() => {});
     }
   }
 
@@ -207,6 +262,14 @@ export class SupertonicEngine implements Engine {
       await RNFS.writeFile(
         this.getFilePath(SUPERTONIC_VOICES_MANIFEST_FILENAME),
         JSON.stringify(manifest, null, 2),
+      );
+
+      // Version sentinel is the FINAL disk write (I-M2): if the process is
+      // killed before this, isInstalled() reports false and the download is
+      // cleanly redone — an interrupted v3 never looks installed.
+      await RNFS.writeFile(
+        this.getFilePath(SUPERTONIC_VERSION_SENTINEL_FILENAME),
+        JSON.stringify({version: SUPERTONIC_MODEL_VERSION}),
       );
 
       if (onProgress) {
