@@ -11,9 +11,11 @@ import {
   chatSessionStore,
   modelStore,
   palStore,
+  serverStore,
   ttsStore,
   uiStore,
 } from '../store';
+import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
@@ -139,8 +141,26 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
+  // Reasoning wire hints (llama.cpp template kwargs). "Off" is a best-effort
+  // hint only — it never strips reasoning the model still returns (rendered by
+  // ReasoningBlock regardless). This is separate from include_thinking_in_context
+  // above, which only governs what prior <think> we SEND.
   if (cleanCompletionParams.enable_thinking) {
     cleanCompletionParams.reasoning_format = 'auto';
+  } else {
+    cleanCompletionParams.reasoning_format = 'none';
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      enable_thinking: false,
+    };
+  }
+  // Graded effort (gpt-oss-style): carried by the resolver-populated intent.
+  const reasoningEffort = cleanCompletionParams.reasoning?.effort;
+  if (reasoningEffort) {
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      reasoning_effort: reasoningEffort,
+    };
   }
 
   // Create the empty AssistantTurn row in the store BEFORE the run
@@ -260,6 +280,23 @@ async function applyEventToStore(
       }
       if (!modelStore.isStreaming) {
         modelStore.setIsStreaming(true);
+      }
+      // Learn-from-stream: the first time a model emits reasoning while the
+      // resolver does not already know it reasons, persist the learned flag so
+      // the pill becomes reachable on the next render. The store writer is
+      // idempotent and never downgrades a user/learned 'yes'.
+      if (
+        event.delta.reasoningContent &&
+        event.delta.reasoningContent.length > 0
+      ) {
+        const activeModel = modelStore.activeModel;
+        if (
+          activeModel &&
+          resolveReasoningCapability(activeModel, serverStore.remoteReasoning)
+            .isReasoning !== 'yes'
+        ) {
+          modelStore.recordReasoningObserved(activeModel.id);
+        }
       }
       // TTS streaming hooks. Open a StreamingHandle on the first token
       // that carries content OR reasoning, then forward each new

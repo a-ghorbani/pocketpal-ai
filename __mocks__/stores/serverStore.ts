@@ -1,12 +1,14 @@
 import {makeAutoObservable, observable} from 'mobx';
 
 import {ServerConfig} from '../../src/utils/types';
+import {ReasoningCapability} from '../../src/utils/reasoningCapability';
 import {RemoteModelInfo} from '../../src/api/openai';
 
 class MockServerStore {
   servers: ServerConfig[] = [];
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
+  remoteReasoning: Record<string, ReasoningCapability> = {};
   isLoading = false;
   error: string | null = null;
   privacyNoticeAcknowledged = false;
@@ -26,6 +28,8 @@ class MockServerStore {
   removeServerIfOrphaned: jest.Mock;
   getModelsNotYetAdded: jest.Mock;
   getUserSelectedModelsForServer: jest.Mock;
+  recordRemoteReasoningObserved: jest.Mock;
+  setRemoteReasoningOverride: jest.Mock;
 
   constructor() {
     makeAutoObservable(this, {
@@ -44,6 +48,8 @@ class MockServerStore {
       removeServerIfOrphaned: false,
       getModelsNotYetAdded: false,
       getUserSelectedModelsForServer: false,
+      recordRemoteReasoningObserved: false,
+      setRemoteReasoningOverride: false,
     });
     this.addServer = jest.fn().mockReturnValue('mock-server-id');
     this.updateServer = jest.fn();
@@ -62,6 +68,8 @@ class MockServerStore {
     this.removeServerIfOrphaned = jest.fn();
     this.getModelsNotYetAdded = jest.fn().mockReturnValue([]);
     this.getUserSelectedModelsForServer = jest.fn().mockReturnValue([]);
+    this.recordRemoteReasoningObserved = jest.fn();
+    this.setRemoteReasoningOverride = jest.fn();
   }
 }
 
