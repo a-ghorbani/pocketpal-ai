@@ -1475,12 +1475,18 @@ class ChatSessionStore {
     }
 
     // No-session-only: apply user's explicit thinking override last so it
-    // wins over pal's enable_thinking. Single-key overlay — does NOT touch
-    // any other field, and does NOT affect tool availability.
+    // wins over pal's enable_thinking. Overlays the local enable_thinking flag
+    // AND the reasoning carrier (so the remote wire path honors the on/off
+    // intent for the first message of the new chat, not just local thinking).
+    // Does NOT touch any other field, and does NOT affect tool availability.
     if (!sessionId && this.newChatThinkingOverride !== undefined) {
       resolvedSettings = {
         ...resolvedSettings,
         enable_thinking: this.newChatThinkingOverride,
+        reasoning: {
+          ...resolvedSettings.reasoning,
+          enabled: this.newChatThinkingOverride,
+        },
       };
     }
 
