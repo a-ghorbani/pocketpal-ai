@@ -21,12 +21,13 @@ export const createStyles = (theme: Theme) =>
       backgroundColor: theme.colors.mutedBackground,
     },
     // Scroll content container. flexGrow (not flex) lets the column take at
-    // least the viewport height while still giving the bottom-anchored
-    // Content child vertical slack to push the hero down. paddingTop sits on
-    // top of the consumed top safe-area inset so the title lands ~1/4 down.
+    // least the viewport height while giving the bottom-anchored Content child
+    // vertical slack. paddingTop is the canonical Body top inset (Spacing/XXL
+    // ×3 = 120) sitting on top of the consumed top safe-area inset, which lands
+    // the title ~1/5 down to match the reference.
     body: {
       flexGrow: 1,
-      paddingTop: theme.spacing.xxl,
+      paddingTop: theme.spacing.xxl * 3,
       paddingHorizontal: theme.spacing.m,
       gap: theme.spacing.xxl,
     },
