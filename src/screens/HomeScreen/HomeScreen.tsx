@@ -35,7 +35,7 @@ import {
   SearchIcon,
   ClockIcon,
   DotsHorizontalIcon,
-  ChatIcon,
+  MessageCircleMdIcon,
 } from '../../assets/icons';
 import type {Pal} from '../../types/pal';
 import type {SessionMetaData} from '../../store/ChatSessionStore';
@@ -320,10 +320,10 @@ export const HomeScreen: React.FC = observer(() => {
           {isEmpty ? (
             <View style={styles.emptyState} testID="home-empty-state">
               <View style={styles.emptyStateIcon} testID="home-empty-icon">
-                <ChatIcon
+                <MessageCircleMdIcon
                   width={EMPTY_STATE_ICON_SIZE}
                   height={EMPTY_STATE_ICON_SIZE}
-                  stroke={theme.colors.foregroundSubtle}
+                  fill={theme.colors.foregroundSubtle}
                 />
               </View>
               <Text style={styles.emptyHint} testID="home-empty-hint">
