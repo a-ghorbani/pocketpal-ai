@@ -22,8 +22,8 @@ import {ROUTES} from '../../utils/navigationConstants';
 import {Pressable} from '../../components/ui/primitives/Pressable';
 import {ChatPalModelPickerSheet} from '../../components/ChatPalModelPickerSheet';
 import {
-  PlusIcon,
-  ArrowUpSmIcon,
+  PlusFilledIcon,
+  SendArrowIcon,
   ChevronDownIcon,
   MicIcon,
   SearchIcon,
@@ -173,10 +173,10 @@ export const HomeScreen: React.FC = observer(() => {
               accessibilityLabel={l10n.home.addPal}
               testID="home-add-pal">
               <View style={[styles.palAvatar, styles.addAvatar]}>
-                <PlusIcon
+                <PlusFilledIcon
                   width={16}
                   height={16}
-                  stroke={theme.colors.foregroundTertiary}
+                  fill={theme.colors.foregroundTertiary}
                 />
               </View>
               <Text style={styles.palLabel} numberOfLines={1}>
@@ -202,10 +202,10 @@ export const HomeScreen: React.FC = observer(() => {
                 accessibilityRole="button"
                 accessibilityLabel={l10n.home.addPal}
                 testID="home-composer-attach">
-                <PlusIcon
+                <PlusFilledIcon
                   width={16}
                   height={16}
-                  stroke={theme.colors.foregroundTertiary}
+                  fill={theme.colors.foregroundTertiary}
                 />
               </Pressable>
               <View style={styles.composerEndAddon}>
@@ -238,10 +238,10 @@ export const HomeScreen: React.FC = observer(() => {
                     start={{x: 0, y: 0}}
                     end={{x: 0, y: 1}}
                     style={styles.sendButton}>
-                    <ArrowUpSmIcon
+                    <SendArrowIcon
                       width={16}
                       height={16}
-                      stroke={theme.colors.inverseText}
+                      fill={theme.colors.inverseText}
                     />
                   </LinearGradient>
                 </Pressable>
