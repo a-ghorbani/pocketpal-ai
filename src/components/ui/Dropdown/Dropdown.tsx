@@ -3,6 +3,7 @@ import {Text} from 'react-native';
 import {Menu} from 'react-native-paper';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
+import {ChevronDownIcon} from '../../../assets/icons';
 import {useTheme} from '../../../hooks';
 import {Pressable} from '../primitives/Pressable';
 
@@ -52,6 +53,9 @@ export const Dropdown: React.FC<DropdownProps> = ({
   const styles = createStyles(theme, {size, disabled});
   const selected = options.find(o => o.value === value);
   const triggerLabel = selected?.label ?? placeholder ?? '';
+  const iconColor = disabled
+    ? theme.colors.onSurfaceVariant
+    : theme.colors.onSurface;
   return (
     <Menu
       visible={open}
@@ -67,6 +71,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
           onPress={() => setOpen(true)}
           style={[styles.trigger, style]}>
           <Text style={styles.label}>{triggerLabel}</Text>
+          <ChevronDownIcon width={16} height={16} stroke={iconColor} />
         </Pressable>
       }>
       {options.map(option => (
@@ -74,6 +79,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
           key={option.value}
           title={option.label}
           disabled={option.disabled}
+          leadingIcon={option.value === value ? 'check' : undefined}
           onPress={() => {
             onChange(option.value);
             setOpen(false);

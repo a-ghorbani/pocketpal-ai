@@ -28,6 +28,30 @@ describe('Dropdown', () => {
     fireEvent.press(getByText('Beta'));
     expect(onChange).toHaveBeenCalledWith('b');
   });
+
+  it('gives the trigger a >=44pt touch target', () => {
+    const {getByTestId} = render(
+      <Dropdown value="a" options={options} onChange={() => {}} />,
+    );
+    const trigger = getByTestId('ui-dropdown');
+    const flattened = Array.isArray(trigger.props.style)
+      ? Object.assign({}, ...trigger.props.style.flat())
+      : trigger.props.style;
+    expect(flattened.minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  it('marks the currently-selected option in the open menu', () => {
+    const {getByTestId, UNSAFE_root} = render(
+      <Dropdown value="a" options={options} onChange={() => {}} />,
+    );
+    fireEvent.press(getByTestId('ui-dropdown'));
+    // Paper renders leadingIcon='check' as an icon on the selected item only.
+    const checks = UNSAFE_root.findAll(
+      node =>
+        typeof node.props?.source === 'string' && node.props.source === 'check',
+    );
+    expect(checks.length).toBe(1);
+  });
 });
 
 runSnapshotMatrix(
