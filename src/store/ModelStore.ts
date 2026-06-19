@@ -80,6 +80,7 @@ import {
   getCpuCoreCount,
 } from '../utils/deviceCapabilities';
 import {detectThinkingCapability} from '../utils/thinkingCapabilityDetection';
+import {ReasoningCapability} from '../utils/reasoningCapability';
 import {t} from '../locales';
 import {resolveUseMmap} from '../utils/memorySettings';
 import {
@@ -2669,25 +2670,84 @@ class ModelStore {
         return;
       }
 
-      // Only check if supportsThinking is not already explicitly set
-      if (storeModel.supportsThinking === undefined) {
-        const result = await detectThinkingCapability(ctx);
-
-        runInAction(() => {
-          storeModel.supportsThinking = result.supported;
-          if (result.thinkingStartTag) {
-            storeModel.thinkingStartTag = result.thinkingStartTag;
-          }
-          if (result.thinkingEndTag) {
-            storeModel.thinkingEndTag = result.thinkingEndTag;
-          }
-        });
+      // Detection is the 'detected' writer; it must not override a user
+      // declaration or a learned flip (precedence: user > learned > detected).
+      if (
+        storeModel.reasoning?.source === 'user' ||
+        storeModel.reasoning?.source === 'learned'
+      ) {
+        return;
       }
+
+      const result = await detectThinkingCapability(ctx);
+
+      runInAction(() => {
+        // Keep the deprecated boolean + tags in sync for back-compat readers.
+        storeModel.supportsThinking = result.supported;
+        if (result.thinkingStartTag) {
+          storeModel.thinkingStartTag = result.thinkingStartTag;
+        }
+        if (result.thinkingEndTag) {
+          storeModel.thinkingEndTag = result.thinkingEndTag;
+        }
+        storeModel.reasoning = {
+          isReasoning: result.supported ? 'yes' : 'no',
+          source: 'detected',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+      });
     } catch (error) {
       console.error('Error updating model thinking capabilities:', error);
       // Continue execution - thinking capability detection is not critical
     }
   }
+
+  /**
+   * Learn-from-stream entry point. The first time a model actually emits
+   * reasoning, flip axis-1 to learned 'yes'. Routes remote ids to ServerStore
+   * (one direction). Idempotent and monotonic; never overrides a user
+   * declaration (handled by the per-store writers).
+   */
+  recordReasoningObserved = (modelId: string): void => {
+    const localModel = this.models.find(m => m.id === modelId);
+    if (!localModel) {
+      // Not a persisted local model → remote; delegate to ServerStore.
+      serverStore.recordRemoteReasoningObserved(modelId);
+      return;
+    }
+    const existing = localModel.reasoning;
+    if (existing?.source === 'user' || existing?.isReasoning === 'yes') {
+      return;
+    }
+    runInAction(() => {
+      localModel.reasoning = {
+        isReasoning: 'yes',
+        source: 'learned',
+        supportsEffort: existing?.supportsEffort ?? false,
+        effortValues: existing?.effortValues ?? [],
+        effortSource: existing?.effortSource ?? 'none',
+      };
+      localModel.supportsThinking = true;
+    });
+  };
+
+  /**
+   * Manual model-card override. Top of precedence; routes remote ids to
+   * ServerStore, local to the persisted Model.
+   */
+  setReasoningOverride = (modelId: string, cap: ReasoningCapability): void => {
+    const localModel = this.models.find(m => m.id === modelId);
+    if (!localModel) {
+      serverStore.setRemoteReasoningOverride(modelId, cap);
+      return;
+    }
+    runInAction(() => {
+      localModel.reasoning = cap;
+      localModel.supportsThinking = cap.isReasoning === 'yes';
+    });
+  };
 
   /**
    * Returns available (i.e. downloaded models) models with projection models filtered out,

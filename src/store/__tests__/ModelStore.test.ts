@@ -4217,4 +4217,77 @@ describe('ModelStore', () => {
       expect(metadata.n_layers).toBe(32);
     });
   });
+
+  describe('reasoning capability writers', () => {
+    it('hydrating a model without reasoning does not crash and stays undefined', () => {
+      const m = createModel({id: 'local-1', origin: ModelOrigin.PRESET});
+      modelStore.models = [m];
+      expect(modelStore.models[0].reasoning).toBeUndefined();
+    });
+
+    it('recordReasoningObserved flips a local model to learned yes', () => {
+      const m = createModel({id: 'local-1', origin: ModelOrigin.PRESET});
+      modelStore.models = [m];
+      modelStore.recordReasoningObserved('local-1');
+      expect(modelStore.models[0].reasoning).toMatchObject({
+        isReasoning: 'yes',
+        source: 'learned',
+      });
+    });
+
+    it('recordReasoningObserved never downgrades a user declaration', () => {
+      const m = createModel({id: 'local-1', origin: ModelOrigin.PRESET});
+      m.reasoning = {
+        isReasoning: 'no',
+        source: 'user',
+        supportsEffort: false,
+        effortValues: [],
+        effortSource: 'none',
+      };
+      modelStore.models = [m];
+      modelStore.recordReasoningObserved('local-1');
+      expect(modelStore.models[0].reasoning?.source).toBe('user');
+      expect(modelStore.models[0].reasoning?.isReasoning).toBe('no');
+    });
+
+    it('recordReasoningObserved routes an unknown id to ServerStore', () => {
+      const spy = jest.spyOn(serverStore, 'recordRemoteReasoningObserved');
+      modelStore.models = [];
+      modelStore.recordReasoningObserved('server-1/remote-m');
+      expect(spy).toHaveBeenCalledWith('server-1/remote-m');
+      spy.mockRestore();
+    });
+
+    it('setReasoningOverride writes a user capability on a local model', () => {
+      const m = createModel({id: 'local-1', origin: ModelOrigin.PRESET});
+      modelStore.models = [m];
+      modelStore.setReasoningOverride('local-1', {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'medium', 'high'],
+        effortSource: 'user',
+      });
+      expect(modelStore.models[0].reasoning).toMatchObject({
+        source: 'user',
+        supportsEffort: true,
+      });
+      expect(modelStore.models[0].supportsThinking).toBe(true);
+    });
+
+    it('setReasoningOverride routes an unknown id to ServerStore', () => {
+      const spy = jest.spyOn(serverStore, 'setRemoteReasoningOverride');
+      modelStore.models = [];
+      const cap = {
+        isReasoning: 'yes' as const,
+        source: 'user' as const,
+        supportsEffort: false,
+        effortValues: [],
+        effortSource: 'none' as const,
+      };
+      modelStore.setReasoningOverride('server-1/remote-m', cap);
+      expect(spy).toHaveBeenCalledWith('server-1/remote-m', cap);
+      spy.mockRestore();
+    });
+  });
 });
