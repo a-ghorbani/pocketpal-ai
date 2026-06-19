@@ -44,7 +44,8 @@ describe('HomeScreen', () => {
       withSafeArea: true,
     });
     expect(getByTestId('home-screen')).toBeTruthy();
-    expect(getByText(en.home.title)).toBeTruthy();
+    // Title renders across two lines; assert via its testID + a11y label.
+    expect(getByTestId('home-title')).toBeTruthy();
     expect(getByText(en.home.chatHistory)).toBeTruthy();
   });
 

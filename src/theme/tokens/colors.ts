@@ -65,6 +65,10 @@ export const lightColors: TokenColors = {
   // Figma `Color/Secondary/Default` — the secondary surface used by
   // small DS buttons (back chevron, audio glyph) over the muted canvas.
   secondaryDefault: '#f3f2f2',
+  // Canonical Figma foreground greys (`Color/Foreground/*`).
+  foregroundPrimary: '#181715',
+  foregroundTertiary: '#81807e',
+  foregroundSubtle: '#c4c2c0',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -165,6 +169,9 @@ export const lightColors: TokenColors = {
   // `Color/Yellow/Highest Contrast` label).
   yellowAccent: '#c58334',
   yellowHighestContrast: '#a86c34',
+  // Composer send-button gradient (`Color/Midnight/900` → `/1500`).
+  midnightHigh: '#2a2928',
+  midnightLow: '#0e0d0c',
 };
 
 // Dark base values from canonical Figma. Where the canonical dark binding
@@ -209,6 +216,11 @@ export const darkColors: TokenColors = {
   mutedLight: '#3a3937',
   // Figma `Color/Secondary/Default` — dark binding from canonical file.
   secondaryDefault: '#2a2928',
+  // Foreground greys — dark binding mirrors the on-surface ramp (home
+  // parity is a light-mode round; dark band tracked as a follow-up).
+  foregroundPrimary: '#fafafa',
+  foregroundTertiary: '#81807e',
+  foregroundSubtle: '#646466',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),
@@ -309,4 +321,6 @@ export const darkColors: TokenColors = {
   },
   yellowAccent: '#c58334',
   yellowHighestContrast: '#a86c34',
+  midnightHigh: '#2a2928',
+  midnightLow: '#0e0d0c',
 };

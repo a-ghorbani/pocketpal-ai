@@ -42,6 +42,12 @@ export interface TokenColors {
   mutedLight: string;
   // Design-system `Color/Secondary/Default` — small DS button surface.
   secondaryDefault: string;
+  // Canonical Figma foreground greys (`Color/Foreground/*`). The MD3
+  // migration palette doesn't expose these exact neutrals; redesigned
+  // screens bind them directly.
+  foregroundPrimary: string;
+  foregroundTertiary: string;
+  foregroundSubtle: string;
 
   // MD3 extras
   surfaceDisabled: string;
@@ -142,6 +148,11 @@ export interface TokenColors {
   // (canonical `Color/Yellow/Accent` + `Color/Yellow/Highest Contrast`).
   yellowAccent: string;
   yellowHighestContrast: string;
+
+  // Composer send-button gradient stops (canonical `Color/Midnight/900`
+  // → `Color/Midnight/1500`).
+  midnightHigh: string;
+  midnightLow: string;
 }
 
 /**

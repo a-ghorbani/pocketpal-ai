@@ -2,123 +2,281 @@ import {StyleSheet} from 'react-native';
 
 import type {Theme} from '../../utils/types';
 
+// Pal-carousel avatar card geometry (canonical Figma 888:33827).
+const PAL_AVATAR_WIDTH = 48;
+const PAL_AVATAR_HEIGHT = 45.45;
+const PAL_AVATAR_RADIUS = 18;
+const PAL_AVATAR_INNER_RADIUS = 16;
+const HISTORY_AVATAR_SIZE = 16;
+const COMPOSER_ATTACH_HEIGHT = 40;
+const COMPOSER_SEND_HEIGHT = 32;
+const BOTTOM_FADE_HEIGHT = 129;
+
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    scrollContent: {
-      flexGrow: 1,
+    body: {
+      flex: 1,
       paddingHorizontal: theme.spacing.m,
-      paddingTop: theme.spacing.l,
+      gap: theme.spacing.xxl,
+    },
+
+    // A. Content — bottom-anchored hero block.
+    content: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      gap: theme.spacing.l,
       paddingBottom: theme.spacing.xxl,
     },
     title: {
       ...theme.typography.headlineH1,
-      color: theme.colors.onBackground,
-      marginBottom: theme.spacing.l,
+      lineHeight: 50,
+      color: theme.colors.foregroundPrimary,
     },
-    carousel: {
-      marginBottom: theme.spacing.l,
-    },
+
+    // Pal carousel.
     carouselContent: {
-      gap: theme.spacing.m,
-      paddingRight: theme.spacing.m,
+      gap: theme.spacing.s,
+      alignItems: 'flex-start',
     },
     palItem: {
       alignItems: 'center',
-      width: 56,
+      gap: theme.spacing.xxs,
+      paddingTop: theme.spacing.xxs,
+      paddingBottom: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.xs,
     },
     palAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: theme.radius.xxl,
+      width: PAL_AVATAR_WIDTH,
+      height: PAL_AVATAR_HEIGHT,
+      borderRadius: PAL_AVATAR_RADIUS,
+      padding: theme.spacing.xxs,
+      backgroundColor: theme.colors.background,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.12,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    palAvatarActive: {
+      borderWidth: 2,
+      borderColor: theme.colors.yellowAccent,
+    },
+    palAvatarInner: {
+      flex: 1,
+      borderRadius: PAL_AVATAR_INNER_RADIUS,
+      overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
-      marginBottom: theme.spacing.xs,
     },
     palAvatarImage: {
       width: '100%',
       height: '100%',
     },
-    palAvatarInitial: {
-      ...theme.typography.titleM,
-      color: theme.colors.onPrimary,
+    addAvatar: {
+      backgroundColor: theme.colors.surfaceVariant,
+      borderWidth: 2,
+      borderColor: theme.colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     palLabel: {
       ...theme.typography.captionS,
-      color: theme.colors.onSurfaceVariant,
+      ...theme.typography.uiS,
+      fontSize: 11,
+      lineHeight: 18,
+      letterSpacing: 0.11,
+      color: theme.colors.foregroundTertiary,
       textAlign: 'center',
     },
-    addAvatar: {
-      backgroundColor: theme.colors.surfaceVariant,
+    palLabelActive: {
+      color: theme.colors.yellowHighestContrast,
     },
+
+    // Composer card.
     composer: {
-      borderWidth: theme.stroke.sm,
-      borderColor: theme.colors.outlineVariant,
-      borderRadius: theme.radius.l,
-      paddingHorizontal: theme.spacing.m,
+      backgroundColor: theme.colors.background,
+      borderWidth: theme.stroke.xs,
+      borderColor: theme.colors.mutedLight,
+      borderRadius: theme.radius.s,
       paddingTop: theme.spacing.m,
       paddingBottom: theme.spacing.s,
-      marginBottom: theme.spacing.m,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.03,
+      shadowRadius: 2,
+      elevation: 1,
     },
     composerInput: {
       ...theme.typography.bodyM,
+      fontSize: 15,
+      lineHeight: 28,
+      letterSpacing: -0.15,
       color: theme.colors.onSurface,
-      minHeight: 48,
+      minHeight: 74,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
       textAlignVertical: 'top',
     },
     composerActions: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       justifyContent: 'space-between',
-      marginTop: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
     },
-    sendButton: {
-      width: 36,
-      height: 36,
-      borderRadius: theme.radius.ml,
+    composerAttach: {
+      height: COMPOSER_ATTACH_HEIGHT,
+      paddingHorizontal: theme.spacing.sm,
+      borderRadius: theme.radius.m,
+      borderWidth: theme.stroke.xs,
+      borderColor: theme.colors.mutedLight,
+      backgroundColor: theme.colors.secondaryDefault,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.colors.primary,
     },
+    composerEndAddon: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.m,
+    },
+    composerMic: {
+      width: 20,
+      height: 20,
+      borderRadius: theme.radius.s,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sendButton: {
+      height: COMPOSER_SEND_HEIGHT,
+      paddingHorizontal: theme.spacing.s,
+      borderRadius: theme.radius.s,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    sendButtonDisabled: {
+      opacity: 0.4,
+    },
+
+    // Model-used chip row.
     modelChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      alignSelf: 'flex-start',
+      justifyContent: 'center',
       gap: theme.spacing.xs,
-      paddingVertical: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.s,
-      borderRadius: theme.radius.m,
-      marginBottom: theme.spacing.l,
+      padding: theme.spacing.s,
     },
-    modelChipText: {
-      ...theme.typography.captionM,
-      color: theme.colors.onSurfaceVariant,
+    modelChipPrefix: {
+      ...theme.typography.captionS,
+      fontSize: 10,
+      lineHeight: 18,
+      letterSpacing: 0.1,
+      color: theme.colors.foregroundSubtle,
+    },
+    modelChipName: {
+      ...theme.typography.captionS,
+      ...theme.typography.uiS,
+      fontSize: 11,
+      lineHeight: 18,
+      letterSpacing: 0.11,
+      color: theme.colors.foregroundTertiary,
+      flexShrink: 1,
+    },
+
+    // B. Previous chats.
+    historyHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
     },
     historyTitle: {
-      ...theme.typography.titleM,
-      color: theme.colors.onBackground,
-      marginBottom: theme.spacing.m,
+      ...theme.typography.uiM,
+      fontSize: 14,
+      lineHeight: 20,
+      letterSpacing: 0.14,
+      color: theme.colors.foregroundTertiary,
+      flex: 1,
+    },
+    historySearch: {
+      width: 28,
+      height: 28,
+      borderRadius: theme.radius.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    historyList: {
+      gap: theme.spacing.xs,
     },
     historyRow: {
-      paddingVertical: theme.spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.radius.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.ml,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: {width: 0, height: 1},
+      shadowOpacity: 0.03,
+      shadowRadius: 1,
+      elevation: 1,
+    },
+    historyRowMain: {
+      flex: 1,
+      gap: theme.spacing.xxs,
     },
     historyRowTitle: {
-      ...theme.typography.bodyM,
-      color: theme.colors.onSurface,
+      ...theme.typography.uiM,
+      fontSize: 14,
+      lineHeight: 20,
+      letterSpacing: 0.14,
+      color: theme.colors.foregroundPrimary,
     },
-    historyRowMeta: {
+    historyInfoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
+    historyAvatar: {
+      width: HISTORY_AVATAR_SIZE,
+      height: HISTORY_AVATAR_SIZE,
+      borderRadius: theme.radius.s,
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    historyAvatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    historyMetaText: {
       ...theme.typography.captionS,
-      color: theme.colors.onSurfaceVariant,
-      marginTop: theme.spacing.xxs,
+      ...theme.typography.uiS,
+      fontSize: 11,
+      lineHeight: 18,
+      letterSpacing: 0.11,
+      color: theme.colors.foregroundTertiary,
+    },
+    historyMore: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingLeft: theme.spacing.s,
     },
     emptyHint: {
       ...theme.typography.bodyS,
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'center',
-      marginTop: theme.spacing.l,
+      color: theme.colors.foregroundTertiary,
+    },
+
+    // C. Bottom gradient fade behind the floating tab bar.
+    bottomFade: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: BOTTOM_FADE_HEIGHT,
     },
   });

@@ -289,6 +289,10 @@ export interface SemanticColors {
   mutedLight: string;
   // Figma `Color/Secondary/Default` — small DS button surface.
   secondaryDefault: string;
+  // Canonical Figma foreground greys (`Color/Foreground/*`).
+  foregroundPrimary: string;
+  foregroundTertiary: string;
+  foregroundSubtle: string;
 
   // Interactive states
   stateLayerOpacity: number;
@@ -357,6 +361,10 @@ export interface SemanticColors {
   // Yellow accent ramp — pal-carousel active-card border + label.
   yellowAccent: string;
   yellowHighestContrast: string;
+
+  // Composer send-button gradient stops (`Color/Midnight/900` → `/1500`).
+  midnightHigh: string;
+  midnightLow: string;
 }
 
 export interface ThemeBorders {
