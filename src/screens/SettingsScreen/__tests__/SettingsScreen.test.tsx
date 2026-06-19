@@ -12,7 +12,8 @@ import {
 import {SettingsScreen} from '../SettingsScreen';
 
 import {modelStore, uiStore, ttsStore, asrStore} from '../../../store';
-import {l10n} from '../../../locales';
+import {l10n, t} from '../../../locales';
+import {ASR_INSUFFICIENT_STORAGE, ASR_TIERS} from '../../../services/asr';
 
 jest.useFakeTimers();
 
@@ -387,6 +388,8 @@ describe('SettingsScreen', () => {
         asrStore.deviceMeetsMemory = false;
         asrStore.userASROverride = null;
         asrStore.downloadStates.small = 'not_installed';
+        asrStore.downloadError.small = null;
+        asrStore.freeDiskBytes = null;
       });
     });
 
@@ -476,6 +479,28 @@ describe('SettingsScreen', () => {
         fireEvent.press(remove);
       });
       expect(asrStore.deleteModel).toHaveBeenCalledWith('small');
+    });
+
+    it('renders the insufficient-storage line for a disk-blocked tier', () => {
+      const freeMb = 50;
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = true;
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'error';
+        asrStore.downloadError.small = ASR_INSUFFICIENT_STORAGE;
+        asrStore.freeDiskBytes = freeMb * 1024 * 1024;
+      });
+      const sizeMb = Math.round(ASR_TIERS.small.estimatedBytes / (1024 * 1024));
+      const {getByTestId, getByText} = renderSettings();
+      expect(getByTestId('asr-insufficient-storage-small')).toBeTruthy();
+      expect(
+        getByText(
+          t(l10n.en.voiceInput.insufficientStorage, {
+            requiredMb: sizeMb,
+            freeMb,
+          }),
+        ),
+      ).toBeTruthy();
     });
   });
 });

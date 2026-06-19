@@ -49,7 +49,12 @@ import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 
 import {modelStore, uiStore, hfStore, ttsStore, asrStore} from '../../store';
-import {ASR_TIERS, ASR_TIER_ORDER, type AsrTier} from '../../services/asr';
+import {
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIERS,
+  ASR_TIER_ORDER,
+  type AsrTier,
+} from '../../services/asr';
 import {languageDisplayNames} from '../../locales';
 
 import {CacheType} from '../../utils/types';
@@ -1033,6 +1038,13 @@ export const SettingsScreen: React.FC = observer(() => {
                         : tier === 'small'
                           ? l10n.voiceInput.tierSmall
                           : l10n.voiceInput.tierLargeTurbo;
+                    const lowDisk =
+                      state === 'error' &&
+                      asrStore.downloadError[tier] === ASR_INSUFFICIENT_STORAGE;
+                    const freeMb =
+                      asrStore.freeDiskBytes != null
+                        ? Math.floor(asrStore.freeDiskBytes / (1024 * 1024))
+                        : null;
                     return (
                       <View key={tier} style={styles.switchContainer}>
                         <View style={styles.textContainer}>
@@ -1044,6 +1056,17 @@ export const SettingsScreen: React.FC = observer(() => {
                             style={styles.textDescription}>
                             {t(l10n.voiceInput.tierSizeLabel, {sizeMb})}
                           </Text>
+                          {lowDisk && freeMb != null ? (
+                            <Text
+                              variant="labelSmall"
+                              style={styles.errorText}
+                              testID={`asr-insufficient-storage-${tier}`}>
+                              {t(l10n.voiceInput.insufficientStorage, {
+                                requiredMb: sizeMb,
+                                freeMb,
+                              })}
+                            </Text>
+                          ) : null}
                         </View>
                         {state === 'ready' ? (
                           <Button
