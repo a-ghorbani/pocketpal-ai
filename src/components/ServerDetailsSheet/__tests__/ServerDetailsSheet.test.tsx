@@ -406,7 +406,9 @@ describe('ServerDetailsSheet', () => {
       />,
     );
 
-    fireEvent.press(getByTestId('server-type-Ollama'));
+    // Open the dropdown, then pick an override.
+    fireEvent.press(getByTestId('server-type-dropdown'));
+    fireEvent.press(getByTestId('server-type-option-Ollama'));
     fireEvent.press(getByTestId('save-server-button'));
 
     await waitFor(() => {

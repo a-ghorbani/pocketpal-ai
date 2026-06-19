@@ -78,24 +78,24 @@ function pingModelsEndpoint(timeoutMs = 4000): Promise<boolean> {
 }
 
 /**
- * Read whether a server-type chip is currently selected. react-native-paper's
- * Chip sets accessibilityState.selected, which iOS surfaces via the "selected"
- * attribute and Android via "selected"/"checked". Reads the attribute off the
- * EXISTING element — chips deep in a bottom sheet report isDisplayed=false on
+ * Read the value shown on the server-type dropdown trigger. The ui Dropdown
+ * renders the selected option's label as the trigger text and exposes that on
+ * the trigger element's "label"/"name"/"value"/text. Reads off the EXISTING
+ * element — the trigger deep in a bottom sheet can report isDisplayed=false on
  * iOS even when present, so we do not gate on visibility here.
  */
-async function isServerTypeChipSelected(option: string): Promise<boolean> {
-  const chip = browser.$(Selectors.serverType.chip(option));
-  if (!(await chip.isExisting().catch(() => false))) {
-    return false;
+async function readServerTypeValue(): Promise<string> {
+  const trigger = browser.$(Selectors.serverType.dropdown());
+  if (!(await trigger.isExisting().catch(() => false))) {
+    return '';
   }
-  for (const attr of ['selected', 'checked']) {
-    const raw = await chip.getAttribute(attr).catch(() => null);
-    if (raw === 'true' || raw === '1') {
-      return true;
+  for (const attr of ['label', 'name', 'value']) {
+    const raw = await trigger.getAttribute(attr).catch(() => null);
+    if (raw) {
+      return raw;
     }
   }
-  return false;
+  return (await trigger.getText().catch(() => '')) || '';
 }
 
 /** Dump the current page source to debug-output for diagnosis. */
@@ -174,11 +174,11 @@ describe('Remote Reasoning Features', () => {
     console.log(`Entered server URL: ${SERVER_URL}`);
 
     // Dismiss the keyboard so it does not cover the lower sheet (it blocks
-    // both the probe-revealed fields and scrolling to the chip row).
+    // both the probe-revealed fields and scrolling to the dropdown).
     await modelsPage.hideKeyboard();
     await browser.pause(4000);
 
-    // The probe reveals the server fields incl. the server-type chip row.
+    // The probe reveals the server fields incl. the server-type dropdown.
     const connectedText = browser.$(byPartialText('Connected'));
     const isConnected = await connectedText
       .waitForDisplayed({timeout: 12000})
@@ -186,19 +186,20 @@ describe('Remote Reasoning Features', () => {
       .catch(() => false);
     expect(isConnected).toBe(true);
 
-    // Scroll the chip row into the rendered region. On iOS, chips deep in a
-    // bottom sheet report isDisplayed=false, so scroll by existence.
+    // Scroll the dropdown trigger into the rendered region. On iOS, controls
+    // deep in a bottom sheet report isDisplayed=false, so scroll by existence.
     await Gestures.scrollInSheetToElementExists(
-      Selectors.serverType.chip('llama.cpp'),
+      Selectors.serverType.dropdown(),
       6,
     );
-    const llamaChip = browser.$(Selectors.serverType.chip('llama.cpp'));
-    await llamaChip.waitForExist({timeout: 5000});
+    const trigger = browser.$(Selectors.serverType.dropdown());
+    await trigger.waitForExist({timeout: 5000});
 
-    // detectServerType -> seedServerType should pre-select "llama.cpp".
-    const selected = await isServerTypeChipSelected('llama.cpp');
-    expect(selected).toBe(true);
-    console.log('Server type auto-selected: llama.cpp');
+    // detectServerType -> seedServerType should pre-select "llama.cpp"; the
+    // dropdown trigger shows that seeded value.
+    const value = await readServerTypeValue();
+    expect(value).toContain('llama.cpp');
+    console.log(`Server type auto-selected: ${value}`);
   });
 
   it('adds the remote model, selects it, and activates it in chat', async () => {

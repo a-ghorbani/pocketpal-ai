@@ -16,12 +16,6 @@ export const createStyles = (theme: Theme) => {
       color: theme.colors.onSurfaceVariant,
       fontSize: 12,
     },
-    serverTypeRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 4,
-    },
     probeStatusContainer: {
       flexDirection: 'row',
       alignItems: 'center',

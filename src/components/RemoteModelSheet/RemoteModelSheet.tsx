@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Icon,
 } from 'react-native-paper';
+import {Dropdown} from '../ui';
 import {observer} from 'mobx-react';
 import {runInAction} from 'mobx';
 import debounce from 'lodash/debounce';
@@ -26,7 +27,10 @@ import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
 import {parseTimeoutMs} from '../../utils/timeout';
-import {SERVER_TYPE_OPTIONS, seedServerType} from '../../utils/serverTypes';
+import {
+  SERVER_TYPE_DROPDOWN_OPTIONS,
+  seedServerType,
+} from '../../utils/serverTypes';
 import {ServerConfig} from '../../utils/types';
 import {
   RemoteModelInfo,
@@ -547,17 +551,12 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
 
               <View style={styles.inputSpacing}>
                 <Text>{l10n.settings.serverType}</Text>
-                <View style={styles.chipsRow}>
-                  {SERVER_TYPE_OPTIONS.map(option => (
-                    <Chip
-                      key={option}
-                      testID={`server-type-${option}`}
-                      selected={serverType === option}
-                      onPress={() => setServerType(option)}>
-                      {option}
-                    </Chip>
-                  ))}
-                </View>
+                <Dropdown
+                  testID="server-type-dropdown"
+                  value={serverType}
+                  options={SERVER_TYPE_DROPDOWN_OPTIONS}
+                  onChange={setServerType}
+                />
                 <Text style={styles.apiKeyDescription}>
                   {l10n.settings.serverTypeHelp}
                 </Text>

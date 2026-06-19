@@ -639,9 +639,10 @@ export const Selectors = {
     },
   },
 
-  // User-selectable server-type chips (server details + remote model sheets)
+  // User-selectable server-type dropdown (server details + remote model sheets)
   serverType: {
-    chip: (option: string): string => byTestId(`server-type-${option}`),
+    dropdown: (): string => byTestId('server-type-dropdown'),
+    option: (value: string): string => byTestId(`server-type-option-${value}`),
   },
 
   // Remote model sheet (add model from server)
