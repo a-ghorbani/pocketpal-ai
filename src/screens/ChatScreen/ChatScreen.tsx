@@ -196,34 +196,12 @@ export const ChatScreen: React.FC = observer(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePalId, modelStore.activeModelId, modelStore.context]);
 
-  const handleThinkingToggle = async (enabled: boolean) => {
-    const currentSession = chatSessionStore.sessions.find(
-      s => s.id === chatSessionStore.activeSessionId,
-    );
-
-    if (currentSession) {
-      // Use resolved settings so pal overrides (temperature, etc.) are preserved
-      const resolvedSettings =
-        await chatSessionStore.getCurrentCompletionSettings();
-      const updatedSettings = {
-        ...resolvedSettings,
-        enable_thinking: enabled,
-      };
-      await chatSessionStore.updateSessionCompletionSettings(updatedSettings);
-    } else {
-      // No active session: stage the user's choice on the new-chat
-      // override field. Resolver applies it as the last layer so the
-      // toggle persists; session creation bakes it in and births the
-      // session as 'custom'. Does NOT touch newChatCompletionSettings or
-      // newChatSettingsSource — pal's other params remain intact.
-      runInAction(() => {
-        chatSessionStore.newChatThinkingOverride = enabled;
-      });
-    }
-  };
-
-  // Persist the chosen reasoning effort alongside the on/off intent so the
-  // local hook / remote carrier can pick it up. Preserves pal overrides.
+  // Persist the on/off intent (and optional effort) onto both the local
+  // enable_thinking flag and the reasoning carrier so the remote wire path
+  // (openai.ts, gated per serverType) and the local hook both see it.
+  // Preserves pal overrides. No active session: stage on the new-chat
+  // override field — the resolver applies it as the last layer and session
+  // creation bakes it in, without touching newChatCompletionSettings.
   const persistReasoning = async (enabled: boolean, effort?: string) => {
     const currentSession = chatSessionStore.sessions.find(
       s => s.id === chatSessionStore.activeSessionId,
@@ -241,6 +219,12 @@ export const ChatScreen: React.FC = observer(() => {
         chatSessionStore.newChatThinkingOverride = enabled;
       });
     }
+  };
+
+  // Simple on/off pill (effortless models): carries the on/off intent on the
+  // reasoning carrier (effort undefined) so remote OFF is not a no-op.
+  const handleThinkingToggle = async (enabled: boolean) => {
+    await persistReasoning(enabled);
   };
 
   // Graded pill cycle: off -> values[0] -> ... -> values[n] -> off.
