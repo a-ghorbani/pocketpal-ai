@@ -1,3 +1,4 @@
+import {AppState} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 
 // Mock persistence BEFORE importing the store.
@@ -5,7 +6,22 @@ jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn().mockReturnValue(Promise.resolve()),
 }));
 
-import {ASR_MIN_RAM_BYTES, whisperAsrEngine} from '../../services/asr';
+// Capture AppState handlers so a background/inactive transition can be invoked.
+const appStateHandlers: Array<(s: string) => void> = [];
+jest
+  .spyOn(AppState, 'addEventListener')
+  .mockImplementation((event: string, handler: any) => {
+    if (event === 'change') {
+      appStateHandlers.push(handler);
+    }
+    return {remove: jest.fn()} as any;
+  });
+
+import {
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_MIN_RAM_BYTES,
+  whisperAsrEngine,
+} from '../../services/asr';
 import {ASRStore} from '../ASRStore';
 
 // Spy on the real engine singleton's methods (same identity the store holds)
@@ -14,6 +30,7 @@ const mockIsInstalled = jest.spyOn(whisperAsrEngine, 'isInstalled');
 const mockDownloadModel = jest.spyOn(whisperAsrEngine, 'downloadModel');
 const mockDeleteModel = jest.spyOn(whisperAsrEngine, 'deleteModel');
 const mockReclaim = jest.spyOn(whisperAsrEngine, 'reclaimLegacySpace');
+const mockRelease = jest.spyOn(whisperAsrEngine, 'release');
 
 const GIB = 1024 * 1024 * 1024;
 
@@ -22,10 +39,12 @@ describe('ASRStore', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    appStateHandlers.length = 0;
     mockIsInstalled.mockResolvedValue(false);
     mockDownloadModel.mockResolvedValue(undefined);
     mockDeleteModel.mockResolvedValue(undefined);
     mockReclaim.mockResolvedValue(undefined);
+    mockRelease.mockResolvedValue(undefined);
     (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(6 * GIB);
     (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValue(10 * GIB);
     store = new ASRStore();
@@ -105,12 +124,22 @@ describe('ASRStore', () => {
       expect(store.downloadProgress.small).toBe(1);
     });
 
-    it('blocks the download when disk is too low', async () => {
+    it('surfaces an insufficient-storage error when disk is too low', async () => {
       await store.init();
       (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValue(1024);
       await store.downloadModel('small');
       expect(mockDownloadModel).not.toHaveBeenCalled();
-      expect(store.downloadStates.small).toBe('not_installed');
+      expect(store.downloadStates.small).toBe('error');
+      expect(store.downloadError.small).toBe(ASR_INSUFFICIENT_STORAGE);
+      expect(store.freeDiskBytes).toBe(1024);
+    });
+
+    it('selects the installed tier on a successful download', async () => {
+      await store.init();
+      store.setSelectedTier('small');
+      await store.downloadModel('base');
+      expect(store.downloadStates.base).toBe('ready');
+      expect(store.selectedTier).toBe('base');
     });
 
     it('records an error when the download throws', async () => {
@@ -126,6 +155,49 @@ describe('ASRStore', () => {
       store.downloadStates.small = 'downloading';
       await store.downloadModel('small');
       expect(mockDownloadModel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteModel', () => {
+    it('reselects a remaining ready tier when the active tier is deleted', async () => {
+      await store.init();
+      store.downloadStates.base = 'ready';
+      store.downloadStates.small = 'ready';
+      store.setSelectedTier('small');
+      await store.deleteModel('small');
+      expect(store.downloadStates.small).toBe('not_installed');
+      expect(store.selectedTier).toBe('base');
+    });
+
+    it('falls back to the default tier when none remain ready', async () => {
+      await store.init();
+      store.downloadStates.base = 'ready';
+      store.setSelectedTier('base');
+      await store.deleteModel('base');
+      expect(store.selectedTier).toBe('small');
+    });
+
+    it('leaves the active tier untouched when a different tier is deleted', async () => {
+      await store.init();
+      store.downloadStates.small = 'ready';
+      store.downloadStates.base = 'ready';
+      store.setSelectedTier('small');
+      await store.deleteModel('base');
+      expect(store.selectedTier).toBe('small');
+    });
+  });
+
+  describe('background release', () => {
+    it('releases the whisper context when the app backgrounds', async () => {
+      await store.init();
+      appStateHandlers.forEach(h => h('background'));
+      expect(mockRelease).toHaveBeenCalled();
+    });
+
+    it('does not release on a transient inactive transition', async () => {
+      await store.init();
+      appStateHandlers.forEach(h => h('inactive'));
+      expect(mockRelease).not.toHaveBeenCalled();
     });
   });
 

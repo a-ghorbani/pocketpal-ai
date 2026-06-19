@@ -47,6 +47,14 @@ export const ASR_MODEL_VERSION = 1;
 /** Local sentinel file recording a tier's installed model version. */
 export const ASR_VERSION_SENTINEL_FILENAME = 'model-version.json';
 
+/**
+ * Sentinel stored on `downloadError[tier]` when a download is blocked by the
+ * disk-space preflight (rather than a network/IO failure). The Settings tier
+ * row checks for this exact value to render the insufficient-storage line.
+ * Namespaced so it can never collide with a real `Error.message`.
+ */
+export const ASR_INSUFFICIENT_STORAGE = 'asr::insufficient-storage';
+
 /** HuggingFace base URL for the whisper.cpp GGML models. */
 const WHISPER_CPP_BASE_URL =
   'https://huggingface.co/ggerganov/whisper.cpp/resolve/main';

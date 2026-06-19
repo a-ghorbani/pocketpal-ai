@@ -1,3 +1,9 @@
+import {
+  AppState,
+  type AppStateStatus,
+  type NativeEventSubscription,
+} from 'react-native';
+
 import {makeAutoObservable, runInAction} from 'mobx';
 import {makePersistable} from 'mobx-persist-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -5,6 +11,7 @@ import DeviceInfo from 'react-native-device-info';
 
 import {
   ASR_DEFAULT_TIER,
+  ASR_INSUFFICIENT_STORAGE,
   ASR_MIN_RAM_BYTES,
   ASR_TIERS,
   ASR_TIER_ORDER,
@@ -38,6 +45,7 @@ export class ASRStore {
   // Tristate persisted user choice. null = not set (mirrors deviceMeetsMemory).
   userASROverride: boolean | null = null;
   private initialized: boolean = false;
+  private appStateSubscription: NativeEventSubscription | null = null;
 
   // Persisted: which tier the user installed / uses.
   selectedTier: AsrTier = ASR_DEFAULT_TIER;
@@ -137,7 +145,24 @@ export class ASRStore {
         this.downloadStates[tier] = installed ? 'ready' : 'not_installed';
       }
     });
+
+    this.appStateSubscription = AppState.addEventListener(
+      'change',
+      this.handleAppStateChange,
+    );
   }
+
+  private handleAppStateChange = (nextAppState: AppStateStatus) => {
+    // Free the ~400 MB whisper context when backgrounded so it doesn't sit
+    // resident alongside the LLM and OOM low-RAM devices. Re-init is lazy on
+    // the next capture. Only react to 'background' — 'inactive' fires for
+    // transient interruptions that must not tear down a large context.
+    if (nextAppState === 'background') {
+      whisperAsrEngine.release().catch(err => {
+        console.warn('[ASRStore] background release failed:', err);
+      });
+    }
+  };
 
   /**
    * Persist the user's explicit choice for the availability gate. `true`
@@ -187,8 +212,11 @@ export class ASRStore {
     try {
       const freeBytes = await DeviceInfo.getFreeDiskStorage('important');
       if (freeBytes < requiredBytes) {
+        // Surface the disk shortfall on the download-error channel (not the
+        // capture FSM) so the Settings tier row can render an actionable line.
         runInAction(() => {
-          this.downloadStates[tier] = 'not_installed';
+          this.downloadStates[tier] = 'error';
+          this.downloadError[tier] = ASR_INSUFFICIENT_STORAGE;
           this.freeDiskBytes = freeBytes;
         });
         return;
@@ -207,6 +235,9 @@ export class ASRStore {
         this.downloadStates[tier] = 'ready';
         this.downloadProgress[tier] = 1;
       });
+      // Installing any tier makes it the active one so the mic becomes
+      // actionable without a separate selection step.
+      this.setSelectedTier(tier);
     } catch (err) {
       console.warn(`[ASRStore] ${tier} download failed:`, err);
       const message = err instanceof Error ? err.message : String(err);
@@ -231,6 +262,14 @@ export class ASRStore {
       this.downloadProgress[tier] = 0;
       this.downloadError[tier] = null;
     });
+    // If the active tier was removed, reselect a remaining ready tier (or fall
+    // back to the default, which self-gates the mic to the setup affordance).
+    if (tier === this.selectedTier) {
+      const nextReady = ASR_TIER_ORDER.find(
+        t => this.downloadStates[t] === 'ready',
+      );
+      this.setSelectedTier(nextReady ?? ASR_DEFAULT_TIER);
+    }
   }
 
   async retryDownload(tier: AsrTier): Promise<void> {
