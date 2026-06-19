@@ -163,6 +163,36 @@ describe('usePushToTalk', () => {
     expect(mockAudioOn.mock.calls.length).toBe(onCalls);
   });
 
+  it('re-arms and records on a press immediately after a capture error', async () => {
+    const onTranscript = jest.fn();
+    const {result} = renderHook(() => usePushToTalk({onTranscript}));
+
+    // First press yields a too-short capture, leaving captureState 'error'.
+    await act(async () => {
+      result.current.onPressIn();
+    });
+    await act(async () => {
+      result.current.onPressOut();
+    });
+    await waitFor(() =>
+      expect(asrStore.setError).toHaveBeenCalledWith('too_short'),
+    );
+    expect(asrStore.captureState).toBe('error');
+
+    // An immediate re-press must NOT silently no-op: it re-arms from 'error'.
+    await act(async () => {
+      result.current.onPressIn();
+    });
+
+    await waitFor(() =>
+      expect(asrStore.setCaptureState).toHaveBeenCalledWith('requesting_perm'),
+    );
+    await waitFor(() =>
+      expect(asrStore.setCaptureState).toHaveBeenCalledWith('recording'),
+    );
+    expect(mockAudioStart).toHaveBeenCalled();
+  });
+
   it('does not start capture when released before permission resolves', async () => {
     let resolvePerm: ((r: 'granted') => void) | null = null;
     mockEnsureMicPermission.mockImplementation(

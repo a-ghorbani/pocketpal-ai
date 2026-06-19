@@ -139,7 +139,13 @@ export function usePushToTalk(
     }
     // Ignore a re-entrant press while a capture is already starting or live —
     // a second onPressIn would overwrite listenerRef/maxTimerRef and leak them.
-    if (recordingRef.current || asrStore.captureState !== 'idle') {
+    // 'error' is a re-armable resting state: an immediate retry must work, so
+    // it is excluded from the guard (requesting_perm below clears lastError,
+    // dismissing the stale error snackbar).
+    if (
+      recordingRef.current ||
+      (asrStore.captureState !== 'idle' && asrStore.captureState !== 'error')
+    ) {
       return;
     }
     pressedRef.current = true;
