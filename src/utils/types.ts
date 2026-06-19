@@ -285,6 +285,10 @@ export interface SemanticColors {
 
   border: string;
   placeholder: string;
+  // Figma `Color/Background/Muted` (#fafafa) — the muted screen canvas
+  // that cards (composer, history rows) read against. Distinct from the
+  // pure-white `background` / `Color/Background/Card`.
+  mutedBackground: string;
   // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
   mutedLight: string;
   // Figma `Color/Secondary/Default` — small DS button surface.

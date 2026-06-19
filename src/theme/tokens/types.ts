@@ -32,6 +32,10 @@ export interface TokenColors {
   onErrorContainer: string;
   background: string;
   onBackground: string;
+  // Design-system `Color/Background/Muted` — the muted screen canvas that
+  // cards (composer, history rows) read against. Distinct from the pure-white
+  // `background`/`Color/Background/Card`.
+  mutedBackground: string;
   surface: string;
   onSurface: string;
   surfaceVariant: string;
