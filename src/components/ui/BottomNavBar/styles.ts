@@ -57,7 +57,9 @@ const createFloatingStyles = (theme: Theme, selected?: boolean) =>
       paddingHorizontal: theme.spacing.sm,
       gap: theme.spacing.xs,
       borderRadius: theme.radius.xxl,
-      backgroundColor: selected ? theme.colors.accent.peach : undefined,
+      borderWidth: selected ? theme.stroke.xs : 0,
+      borderColor: selected ? theme.colors.accent.yellowMute : undefined,
+      backgroundColor: selected ? theme.colors.accent.yellowSubtle : undefined,
     } as ViewStyle,
     label: {
       ...theme.typography.captionS,

@@ -25,7 +25,7 @@ export type BottomNavBarProps = Omit<CommonDSProps, 'disabled'> & {
  * DS BottomNavBar — presentational shell (no navigation wiring).
  *
  * `default` = bordered top-line bar, active item shown via text color.
- * `floating` = rounded floating bar with a peach pill on the active item.
+ * `floating` = rounded floating bar with a yellow pill on the active item.
  *
  * Defaults: testID='ui-bottom-nav', accessibilityRole='tablist'.
  * Item testID: 'ui-bottom-nav-item-<value>'; item role 'tab'.

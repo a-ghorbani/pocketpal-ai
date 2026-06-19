@@ -41,7 +41,7 @@ describe('BottomNavBar', () => {
     expect(onSelect).toHaveBeenCalledWith('models');
   });
 
-  it('floating variant fills the active item with the peach pill', () => {
+  it('floating variant fills the active item with the yellow pill', () => {
     const {getByTestId} = render(
       <BottomNavBar
         items={items}
@@ -55,7 +55,7 @@ describe('BottomNavBar', () => {
     const flatten = (s: unknown) =>
       Array.isArray(s) ? Object.assign({}, ...s) : s;
     expect(flatten(selected.props.style).backgroundColor).toBe(
-      themeFixtures.lightTheme.colors.accent.peach,
+      themeFixtures.lightTheme.colors.accent.yellowSubtle,
     );
     expect(flatten(unselected.props.style).backgroundColor).toBeUndefined();
   });
