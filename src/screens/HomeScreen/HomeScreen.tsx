@@ -154,6 +154,7 @@ export const HomeScreen: React.FC = observer(() => {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={styles.carousel}
             contentContainerStyle={styles.carouselContent}>
             {palStore.pals.map(pal => (
               <PalCarouselItem
@@ -359,7 +360,7 @@ export const HomeScreen: React.FC = observer(() => {
 
       <LinearGradient
         pointerEvents="none"
-        colors={['transparent', theme.colors.background]}
+        colors={['transparent', theme.colors.mutedBackground]}
         style={styles.bottomFade}
       />
 

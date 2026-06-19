@@ -7,6 +7,8 @@ const PAL_AVATAR_WIDTH = 48;
 const PAL_AVATAR_HEIGHT = 45.45;
 const PAL_AVATAR_RADIUS = 18;
 const PAL_AVATAR_INNER_RADIUS = 16;
+// Intrinsic height of one carousel item (see `carousel` style note).
+const PAL_ITEM_HEIGHT = 72;
 const HISTORY_AVATAR_SIZE = 16;
 const COMPOSER_ATTACH_HEIGHT = 40;
 const COMPOSER_SEND_HEIGHT = 32;
@@ -16,7 +18,7 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.mutedBackground,
     },
     body: {
       flex: 1,
@@ -37,7 +39,17 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.foregroundPrimary,
     },
 
-    // Pal carousel.
+    // Pal carousel. The horizontal scroller is pinned to its intrinsic
+    // item height so it does NOT flex-grow inside the bottom-anchored
+    // (justify-end) Content column — otherwise it absorbs the column's
+    // slack and pushes the title to the top.
+    // Item height = avatar 45.45 + paddingTop 2 + gap 2 + label lh 18 +
+    // paddingBottom 4 ≈ 71.45 → 72.
+    carousel: {
+      flexGrow: 0,
+      flexShrink: 0,
+      height: PAL_ITEM_HEIGHT,
+    },
     carouselContent: {
       gap: theme.spacing.s,
       alignItems: 'flex-start',
@@ -151,8 +163,8 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
     },
     sendButton: {
+      width: COMPOSER_SEND_HEIGHT,
       height: COMPOSER_SEND_HEIGHT,
-      paddingHorizontal: theme.spacing.s,
       borderRadius: theme.radius.s,
       alignItems: 'center',
       justifyContent: 'center',
