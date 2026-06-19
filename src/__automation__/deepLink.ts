@@ -8,7 +8,8 @@
  *   pocketpal://tts?cmd=download::<engine>
  *   pocketpal://tts?cmd=synthesize::<engine>
  *   pocketpal://tts?cmd=release
- *   pocketpal://asr?cmd=state::<ready|not-installed|low-memory>
+ *   pocketpal://asr?cmd=state::<ready|not-installed|low-memory|
+ *                              error-capture|error-blocked|error-disk>
  *   pocketpal://e2e/benchmark   (Android: cold-launch path lives in
  *                                useDeepLinking.ts since RN's Android side
  *                                doesn't deliver the URL via DeepLinkService)

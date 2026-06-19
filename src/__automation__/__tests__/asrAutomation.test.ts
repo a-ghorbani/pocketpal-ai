@@ -2,6 +2,7 @@ jest.mock('mobx-persist-store', () => ({
   makePersistable: jest.fn().mockReturnValue(Promise.resolve()),
 }));
 
+import {ASR_INSUFFICIENT_STORAGE} from '../../services/asr';
 import {asrStore} from '../../store/ASRStore';
 import {runAsrCommand} from '../asrAutomation';
 
@@ -10,6 +11,8 @@ describe('runAsrCommand', () => {
     asrStore.deviceMeetsMemory = false;
     asrStore.userASROverride = null;
     asrStore.downloadStates[asrStore.selectedTier] = 'not_installed';
+    asrStore.downloadError[asrStore.selectedTier] = null;
+    asrStore.freeDiskBytes = null;
     asrStore.captureState = 'idle';
     asrStore.lastError = null;
   });
@@ -34,6 +37,28 @@ describe('runAsrCommand', () => {
     expect(asrStore.deviceMeetsMemory).toBe(false);
     expect(asrStore.userASROverride).toBeNull();
     expect(asrStore.asrAvailable).toBe(false);
+  });
+
+  it('state::error-capture → composer transcribe-failed error', async () => {
+    await runAsrCommand('state::error-capture');
+
+    expect(asrStore.captureState).toBe('error');
+    expect(asrStore.lastError).toBe('transcribe_failed');
+  });
+
+  it('state::error-blocked → blocked-permission error', async () => {
+    await runAsrCommand('state::error-blocked');
+
+    expect(asrStore.lastError).toBe('permission_blocked');
+  });
+
+  it('state::error-disk → selected tier in disk-blocked download error', async () => {
+    await runAsrCommand('state::error-disk');
+
+    const tier = asrStore.selectedTier;
+    expect(asrStore.downloadStates[tier]).toBe('error');
+    expect(asrStore.downloadError[tier]).toBe(ASR_INSUFFICIENT_STORAGE);
+    expect(asrStore.freeDiskBytes).toBeGreaterThan(0);
   });
 
   it('ignores an unrecognized command', async () => {
