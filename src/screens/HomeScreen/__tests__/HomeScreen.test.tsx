@@ -14,7 +14,7 @@ import {mockLocalPal} from '../../../../jest/fixtures/pals';
 
 import {HomeScreen} from '../HomeScreen';
 
-const mockPicker = jest.fn(() => null);
+const mockPicker = jest.fn((_props: any) => null);
 jest.mock('../../../components/ChatPalModelPickerSheet', () => ({
   ChatPalModelPickerSheet: (props: any) => mockPicker(props),
 }));
