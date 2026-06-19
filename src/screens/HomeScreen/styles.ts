@@ -13,6 +13,11 @@ const HISTORY_AVATAR_SIZE = 16;
 const COMPOSER_ATTACH_HEIGHT = 40;
 const COMPOSER_SEND_HEIGHT = 32;
 const BOTTOM_FADE_HEIGHT = 129;
+// Floating tab bar footprint (MainTabs: bottom safe-area inset ≈ 34 + bar
+// height 48 ≈ 82) plus breathing room, so the centered empty block clears it.
+const EMPTY_STATE_TAB_BAR_CLEARANCE = 110;
+const EMPTY_STATE_ICON_BUTTON_HEIGHT = 28;
+export const EMPTY_STATE_ICON_SIZE = 20;
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
@@ -31,13 +36,26 @@ export const createStyles = (theme: Theme) =>
       paddingHorizontal: theme.spacing.m,
       gap: theme.spacing.xxl,
     },
-
-    // A. Content — bottom-anchored hero block.
+    // Empty (first-time) variant: a smaller top inset keeps the whole column
+    // (hero + centered empty block + tab-bar clearance) within the viewport so
+    // the block can sit in the band between the model-chip and the tab bar
+    // without the content overflowing and pinning the block under the tab bar.
+    bodyEmpty: {
+      paddingTop: theme.spacing.xxl,
+    },
+    // A. Content — bottom-anchored hero block. The hero takes the column slack
+    // and justify-end pins it low, letting the history peek + fade under the
+    // floating tab bar (populated) or seating the centered empty block below.
     content: {
       flex: 1,
       justifyContent: 'flex-end',
       gap: theme.spacing.l,
       paddingBottom: theme.spacing.xxl,
+    },
+    // Empty variant: the hero hugs its content (top-anchored after the inset)
+    // so the region below can take the column slack and center the empty block.
+    contentEmpty: {
+      flex: 0,
     },
     title: {
       ...theme.typography.headlineH1,
@@ -207,7 +225,11 @@ export const createStyles = (theme: Theme) =>
       flexShrink: 1,
     },
 
-    // B. Previous chats.
+    // B. Previous chats. Empty variant: the region takes the column slack so
+    // the empty block centers in the band between the model-chip and tab bar.
+    historyRegionEmpty: {
+      flex: 1,
+    },
     historyHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -286,9 +308,34 @@ export const createStyles = (theme: Theme) =>
       justifyContent: 'center',
       paddingLeft: theme.spacing.s,
     },
+
+    // First-time-user empty state (Figma 888:33856): replaces the history list
+    // when there are no sessions — a centered chat-bubble icon above a centered
+    // subtle-grey message, filling the region in normal flow. marginBottom lifts
+    // the centering band clear of the absolute floating tab bar so the block is
+    // never bottom-pinned or occluded.
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.s,
+      paddingHorizontal: theme.spacing.s,
+      marginBottom: EMPTY_STATE_TAB_BAR_CLEARANCE,
+    },
+    emptyStateIcon: {
+      height: EMPTY_STATE_ICON_BUTTON_HEIGHT,
+      padding: theme.spacing.xxs,
+      borderRadius: theme.radius.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     emptyHint: {
       ...theme.typography.bodyS,
-      color: theme.colors.foregroundTertiary,
+      fontSize: 13,
+      lineHeight: 20,
+      letterSpacing: 0.195,
+      color: theme.colors.foregroundSubtle,
+      textAlign: 'center',
     },
 
     // C. Bottom gradient fade behind the floating tab bar.

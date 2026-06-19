@@ -8,7 +8,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
 import {useTheme} from '../../hooks';
-import {createStyles} from './styles';
+import {createStyles, EMPTY_STATE_ICON_SIZE} from './styles';
 import {L10nContext} from '../../utils';
 import {t} from '../../locales';
 import {
@@ -29,6 +29,7 @@ import {
   SearchIcon,
   ClockIcon,
   DotsHorizontalIcon,
+  ChatIcon,
 } from '../../assets/icons';
 import type {Pal} from '../../types/pal';
 import type {SessionMetaData} from '../../store/ChatSessionStore';
@@ -84,6 +85,7 @@ export const HomeScreen: React.FC = observer(() => {
   const activePal = selectedPal ?? palStore.pals[0];
 
   const sessions = chatSessionStore.sessions;
+  const isEmpty = sessions.length === 0;
   const activeModelName = modelStore.activeModel?.name;
 
   const composerPlaceholder = activePal
@@ -136,9 +138,9 @@ export const HomeScreen: React.FC = observer(() => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']} testID="home-screen">
       <ScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, isEmpty && styles.bodyEmpty]}
         keyboardShouldPersistTaps="handled">
-        <View style={styles.content}>
+        <View style={[styles.content, isEmpty && styles.contentEmpty]}>
           <Text
             style={styles.title}
             testID="home-title"
@@ -273,7 +275,7 @@ export const HomeScreen: React.FC = observer(() => {
           </Pressable>
         </View>
 
-        <View>
+        <View style={isEmpty && styles.historyRegionEmpty}>
           <View style={styles.historyHeader}>
             <Text style={styles.historyTitle}>{l10n.home.chatHistory}</Text>
             <Pressable
@@ -289,10 +291,19 @@ export const HomeScreen: React.FC = observer(() => {
             </Pressable>
           </View>
 
-          {sessions.length === 0 ? (
-            <Text style={styles.emptyHint} testID="home-empty-hint">
-              {l10n.home.emptyHint}
-            </Text>
+          {isEmpty ? (
+            <View style={styles.emptyState} testID="home-empty-state">
+              <View style={styles.emptyStateIcon} testID="home-empty-icon">
+                <ChatIcon
+                  width={EMPTY_STATE_ICON_SIZE}
+                  height={EMPTY_STATE_ICON_SIZE}
+                  stroke={theme.colors.foregroundSubtle}
+                />
+              </View>
+              <Text style={styles.emptyHint} testID="home-empty-hint">
+                {l10n.home.emptyHint}
+              </Text>
+            </View>
           ) : (
             <View style={styles.historyList}>
               {sessions.map(session => {

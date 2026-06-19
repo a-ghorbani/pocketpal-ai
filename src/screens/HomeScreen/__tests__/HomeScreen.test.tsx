@@ -49,7 +49,7 @@ describe('HomeScreen', () => {
     expect(getByText(en.home.chatHistory)).toBeTruthy();
   });
 
-  it('shows the empty hint when no sessions exist (first-time variant)', () => {
+  it('shows the centered empty state (icon + hint) when no sessions exist', () => {
     runInAction(() => {
       chatSessionStore.sessions = [];
     });
@@ -57,6 +57,8 @@ describe('HomeScreen', () => {
       withNavigation: true,
       withSafeArea: true,
     });
+    expect(getByTestId('home-empty-state')).toBeTruthy();
+    expect(getByTestId('home-empty-icon')).toBeTruthy();
     expect(getByTestId('home-empty-hint')).toBeTruthy();
   });
 
@@ -79,6 +81,7 @@ describe('HomeScreen', () => {
     });
     expect(getByTestId('home-history-s1')).toBeTruthy();
     expect(queryByTestId('home-empty-hint')).toBeNull();
+    expect(queryByTestId('home-empty-state')).toBeNull();
   });
 
   it('always renders the Add-pal affordance even with an empty carousel', () => {
