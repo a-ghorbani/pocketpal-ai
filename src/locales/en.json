@@ -161,7 +161,9 @@
     "removeRemoteModel": "Remove {{modelName}} ({{serverName}})?",
     "retryConnection": "Retry",
     "enterUrlManually": "Enter URL manually",
-    "manageServers": "Manage Servers"
+    "manageServers": "Manage Servers",
+    "advancedSection": "Advanced",
+    "devTools": "Dev Tools"
   },
   "memory": {
     "shortWarning": "Memory Warning",
