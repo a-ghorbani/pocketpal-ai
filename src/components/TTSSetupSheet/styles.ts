@@ -189,6 +189,9 @@ export const createStyles = (theme: Theme) =>
       textTransform: 'uppercase',
       marginBottom: 8,
     },
+    heroLanguageWrap: {
+      marginTop: 14,
+    },
 
     // Voice rows (used by VoicePickerView)
     voiceRow: {
