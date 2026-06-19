@@ -74,8 +74,14 @@ export const HomeScreen: React.FC = observer(() => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const [composerText, setComposerText] = useState('');
-  const [activePal, setActivePalLocal] = useState<Pal | undefined>(undefined);
+  const [selectedPal, setSelectedPalLocal] = useState<Pal | undefined>(
+    undefined,
+  );
   const [isPickerVisible, setPickerVisible] = useState(false);
+
+  // The carousel highlights one pal at a time. With no explicit selection
+  // the first pal is active by default, matching the canonical layout.
+  const activePal = selectedPal ?? palStore.pals[0];
 
   const sessions = chatSessionStore.sessions;
   const activeModelName = modelStore.activeModel?.name;
@@ -107,7 +113,7 @@ export const HomeScreen: React.FC = observer(() => {
     navigation.navigate(ROUTES.CHAT);
   };
 
-  const handlePalPress = (pal: Pal) => setActivePalLocal(pal);
+  const handlePalPress = (pal: Pal) => setSelectedPalLocal(pal);
 
   const handleAddPal = () => navigation.navigate(ROUTES.PALS);
 
@@ -364,7 +370,7 @@ export const HomeScreen: React.FC = observer(() => {
           onClose={() => setPickerVisible(false)}
           onModelSelect={() => setPickerVisible(false)}
           onPalSelect={palId => {
-            setActivePalLocal(palId ? palStore.getPalById(palId) : undefined);
+            setSelectedPalLocal(palId ? palStore.getPalById(palId) : undefined);
             setPickerVisible(false);
           }}
         />
