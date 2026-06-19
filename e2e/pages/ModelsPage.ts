@@ -142,6 +142,20 @@ export class ModelsPage extends BasePage {
   }
 
   /**
+   * Open the per-model settings sheet for a model card, found by its
+   * download filename. Scopes the settings button to the card container so
+   * the right card's button is tapped when several cards are present.
+   */
+  async openModelSettings(downloadFile: string): Promise<void> {
+    const container = browser.$(Selectors.modelCard.cardContainer(downloadFile));
+    await container.waitForDisplayed({timeout: 30000});
+    const settingsBtn = container.$(Selectors.modelCard.settingsButton);
+    await settingsBtn.waitForDisplayed({timeout: 10000});
+    await settingsBtn.click();
+    await browser.pause(800);
+  }
+
+  /**
    * Dismiss keyboard (exposed from BasePage for use in tests)
    */
   async hideKeyboard(): Promise<void> {
