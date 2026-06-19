@@ -40,7 +40,7 @@ export async function dispatchAutomationDeepLink(
     return true;
   }
   if (params.host === 'tts' && params.queryParams?.cmd) {
-    const {runTtsCommand} = require('../utils/ttsAutomation');
+    const {runTtsCommand} = require('./ttsAutomation');
     await runTtsCommand(params.queryParams.cmd);
     return true;
   }

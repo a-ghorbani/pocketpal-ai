@@ -4,9 +4,9 @@ import {render, fireEvent, waitFor} from '../../../../jest/test-utils';
 
 import {TTSAdapter} from '../TTSAdapter';
 
-import {runTtsCommand, readTtsStatus} from '../../../utils/ttsAutomation';
+import {runTtsCommand, readTtsStatus} from '../../ttsAutomation';
 
-jest.mock('../../../utils/ttsAutomation', () => ({
+jest.mock('../../ttsAutomation', () => ({
   runTtsCommand: jest.fn().mockResolvedValue(undefined),
   readTtsStatus: jest.fn().mockResolvedValue('{"cmd":"x","state":"done"}'),
 }));
