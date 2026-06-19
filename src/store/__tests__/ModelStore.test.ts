@@ -4267,6 +4267,28 @@ describe('ModelStore', () => {
       expect(modelStore.models[0].reasoning?.isReasoning).toBe('no');
     });
 
+    it('recordReasoningObserved is a monotonic no-op once axis-1 is already yes', () => {
+      const m = createModel({id: 'local-1', origin: ModelOrigin.PRESET});
+      const detectedYes = {
+        isReasoning: 'yes' as const,
+        source: 'detected' as const,
+        supportsEffort: true,
+        effortValues: ['low', 'high'],
+        effortSource: 'detected' as const,
+      };
+      m.reasoning = detectedYes;
+      modelStore.models = [m];
+      modelStore.recordReasoningObserved('local-1');
+      // Already 'yes' → not re-flipped to 'learned' and axis-2 preserved.
+      expect(modelStore.models[0].reasoning?.source).toBe('detected');
+      expect(modelStore.models[0].reasoning?.isReasoning).toBe('yes');
+      expect(modelStore.models[0].reasoning?.supportsEffort).toBe(true);
+      expect(modelStore.models[0].reasoning?.effortValues).toEqual([
+        'low',
+        'high',
+      ]);
+    });
+
     it('recordReasoningObserved routes an unknown id to ServerStore', () => {
       const spy = jest.spyOn(serverStore, 'recordRemoteReasoningObserved');
       modelStore.models = [];
