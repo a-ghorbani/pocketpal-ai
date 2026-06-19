@@ -10,6 +10,9 @@ import * as micPerm from '../../utils/asrMicPermission';
 
 const mockEnsureMicPermission = jest.spyOn(micPerm, 'ensureMicPermission');
 const mockTranscribe = jest.spyOn(whisperAsrEngine, 'transcribe');
+const mockRelease = jest.spyOn(whisperAsrEngine, 'release');
+const mockAudioInit = AudioRecord.init as jest.Mock;
+const mockAudioStart = AudioRecord.start as jest.Mock;
 const mockAudioStop = AudioRecord.stop as jest.Mock;
 const mockAudioOn = AudioRecord.on as jest.Mock;
 
@@ -39,7 +42,11 @@ describe('usePushToTalk', () => {
     asrStore.lastError = null;
     mockEnsureMicPermission.mockResolvedValue('granted');
     mockTranscribe.mockResolvedValue('hello world');
-    mockAudioStop.mockResolvedValue('');
+    mockRelease.mockResolvedValue(undefined);
+    // Native init() returns void on the JS bridge (the .d.ts is wrong).
+    mockAudioInit.mockReturnValue(undefined);
+    // Native stop() returns undefined (void), not a Promise — the real contract.
+    mockAudioStop.mockReturnValue(undefined);
     mockAudioOn.mockImplementation(
       (_event: string, cb: (c: string) => void) => {
         dataCallback = cb;
@@ -69,6 +76,8 @@ describe('usePushToTalk', () => {
 
     await waitFor(() => expect(mockTranscribe).toHaveBeenCalled());
     expect(onTranscript).toHaveBeenCalledWith('hello world');
+    // The whisper context is freed once transcription settles.
+    await waitFor(() => expect(mockRelease).toHaveBeenCalled());
   });
 
   it('routes to error and never records when permission is denied', async () => {
@@ -118,7 +127,84 @@ describe('usePushToTalk', () => {
     expect(mockEnsureMicPermission).not.toHaveBeenCalled();
   });
 
-  it('releases native capture on unmount (I-CAPTURE-RELEASE)', async () => {
+  it('maps a blocked permission to permission_blocked', async () => {
+    mockEnsureMicPermission.mockResolvedValue('blocked');
+    const onTranscript = jest.fn();
+    const {result} = renderHook(() => usePushToTalk({onTranscript}));
+
+    await act(async () => {
+      result.current.onPressIn();
+    });
+
+    await waitFor(() =>
+      expect(asrStore.setError).toHaveBeenCalledWith('permission_blocked'),
+    );
+    expect(mockAudioStart).not.toHaveBeenCalled();
+  });
+
+  it('ignores a re-entrant press while a capture is starting', async () => {
+    const onTranscript = jest.fn();
+    const {result} = renderHook(() => usePushToTalk({onTranscript}));
+
+    await act(async () => {
+      result.current.onPressIn();
+    });
+    await waitFor(() =>
+      expect(asrStore.setCaptureState).toHaveBeenCalledWith('recording'),
+    );
+    const startCalls = mockAudioStart.mock.calls.length;
+    const onCalls = mockAudioOn.mock.calls.length;
+
+    await act(async () => {
+      result.current.onPressIn();
+    });
+
+    expect(mockAudioStart.mock.calls.length).toBe(startCalls);
+    expect(mockAudioOn.mock.calls.length).toBe(onCalls);
+  });
+
+  it('does not start capture when released before permission resolves', async () => {
+    let resolvePerm: ((r: 'granted') => void) | null = null;
+    mockEnsureMicPermission.mockImplementation(
+      () =>
+        new Promise<'granted'>(resolve => {
+          resolvePerm = resolve;
+        }),
+    );
+    const onTranscript = jest.fn();
+    const {result} = renderHook(() => usePushToTalk({onTranscript}));
+
+    await act(async () => {
+      result.current.onPressIn();
+    });
+    // Release while the (mocked) permission prompt is still pending.
+    act(() => {
+      result.current.onPressOut();
+    });
+    await act(async () => {
+      resolvePerm?.('granted');
+    });
+
+    expect(mockAudioStart).not.toHaveBeenCalled();
+    expect(asrStore.captureState).toBe('idle');
+  });
+
+  it('aborts cleanly when audio init rejects', async () => {
+    mockAudioInit.mockRejectedValueOnce(new Error('init failed'));
+    const onTranscript = jest.fn();
+    const {result} = renderHook(() => usePushToTalk({onTranscript}));
+
+    await act(async () => {
+      result.current.onPressIn();
+    });
+
+    await waitFor(() =>
+      expect(asrStore.setError).toHaveBeenCalledWith('transcribe_failed'),
+    );
+    expect(mockAudioStart).not.toHaveBeenCalled();
+  });
+
+  it('releases native capture on unmount', async () => {
     const onTranscript = jest.fn();
     const {result, unmount} = renderHook(() => usePushToTalk({onTranscript}));
 

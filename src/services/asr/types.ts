@@ -31,6 +31,7 @@ export type CaptureState =
 /** Discrete error kinds surfaced inline in the composer. */
 export type AsrErrorKind =
   | 'permission_denied'
+  | 'permission_blocked'
   | 'too_short'
   | 'transcribe_failed'
   | 'not_installed';

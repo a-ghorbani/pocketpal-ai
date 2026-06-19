@@ -70,6 +70,7 @@ export function usePushToTalk(
 
   const chunksRef = useRef<Uint8Array[]>([]);
   const recordingRef = useRef(false);
+  const pressedRef = useRef(false);
   const listenerRef = useRef<{remove: () => void} | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTranscriptRef = useRef(onTranscript);
@@ -83,7 +84,10 @@ export function usePushToTalk(
     }
     listenerRef.current?.remove();
     listenerRef.current = null;
-    AudioRecord.stop().catch(() => {});
+    // Native stop() returns the bare native value (effectively void on both
+    // platforms; the .d.ts Promise<string> type is wrong). Wrap so a synchronous
+    // undefined return can't throw and abort teardown/transcribe.
+    Promise.resolve(AudioRecord.stop()).catch(() => {});
   }, []);
 
   const discardCapture = useCallback(() => {
@@ -120,6 +124,12 @@ export function usePushToTalk(
     } catch (err) {
       console.warn('[usePushToTalk] transcribe failed:', err);
       asrStore.setError('transcribe_failed');
+    } finally {
+      // Free the ~400 MB whisper context once idle; re-init from the local
+      // model on the next utterance is cheap. Best-effort — never block append.
+      whisperAsrEngine.release().catch(err => {
+        console.warn('[usePushToTalk] context release failed:', err);
+      });
     }
   }, [teardownCapture]);
 
@@ -127,48 +137,75 @@ export function usePushToTalk(
     if (!asrStore.asrAvailable || !asrStore.isSelectedTierReady) {
       return;
     }
+    // Ignore a re-entrant press while a capture is already starting or live —
+    // a second onPressIn would overwrite listenerRef/maxTimerRef and leak them.
+    if (recordingRef.current || asrStore.captureState !== 'idle') {
+      return;
+    }
+    pressedRef.current = true;
     asrStore.setCaptureState('requesting_perm');
-    ensureMicPermission()
-      .then(result => {
-        if (result !== 'granted') {
-          asrStore.setError('permission_denied');
-          return;
-        }
-        chunksRef.current = [];
-        recordingRef.current = true;
-        AudioRecord.init({
+    (async () => {
+      let result;
+      try {
+        result = await ensureMicPermission();
+      } catch (err) {
+        console.warn('[usePushToTalk] permission check failed:', err);
+        asrStore.setError('permission_denied');
+        return;
+      }
+      if (result === 'blocked') {
+        asrStore.setError('permission_blocked');
+        return;
+      }
+      if (result !== 'granted') {
+        asrStore.setError('permission_denied');
+        return;
+      }
+      // The user released during the (first-run) system dialog — don't start
+      // an unattended recording that would run to the 30 s cap.
+      if (!pressedRef.current) {
+        asrStore.resetCapture();
+        return;
+      }
+      chunksRef.current = [];
+      recordingRef.current = true;
+      try {
+        await AudioRecord.init({
           sampleRate: ASR_SAMPLE_RATE,
           channels: ASR_CHANNELS,
           bitsPerSample: ASR_BITS_PER_SAMPLE,
           bufferSize: 4096,
           wavFile: '',
         });
-        listenerRef.current = AudioRecord.on('data', (chunk: string) => {
-          if (recordingRef.current) {
-            chunksRef.current.push(toByteArray(chunk));
-          }
-        });
-        AudioRecord.start();
-        asrStore.setCaptureState('recording');
-        maxTimerRef.current = setTimeout(() => {
-          // Reaching the cap ends capture as if the user released.
-          finishAndTranscribe().catch(() => {});
-        }, ASR_MAX_RECORD_MS);
-      })
-      .catch(err => {
-        console.warn('[usePushToTalk] permission check failed:', err);
-        asrStore.setError('permission_denied');
+      } catch (err) {
+        console.warn('[usePushToTalk] audio init failed:', err);
+        recordingRef.current = false;
+        asrStore.setError('transcribe_failed');
+        return;
+      }
+      listenerRef.current = AudioRecord.on('data', (chunk: string) => {
+        if (recordingRef.current) {
+          chunksRef.current.push(toByteArray(chunk));
+        }
       });
+      AudioRecord.start();
+      asrStore.setCaptureState('recording');
+      maxTimerRef.current = setTimeout(() => {
+        // Reaching the cap ends capture as if the user released.
+        finishAndTranscribe().catch(() => {});
+      }, ASR_MAX_RECORD_MS);
+    })();
   }, [finishAndTranscribe]);
 
   const onPressOut = useCallback(() => {
+    pressedRef.current = false;
     if (!recordingRef.current) {
       return;
     }
     finishAndTranscribe().catch(() => {});
   }, [finishAndTranscribe]);
 
-  // Release capture on background and unmount (I-CAPTURE-RELEASE).
+  // Release capture on background and unmount so the mic is never leaked.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (next === 'background' && recordingRef.current) {
