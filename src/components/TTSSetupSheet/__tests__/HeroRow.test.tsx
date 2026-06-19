@@ -94,7 +94,7 @@ describe('HeroRow', () => {
       });
     };
 
-    it('shows the picker when Supertonic is current and ready', () => {
+    it('shows the picker trigger when Supertonic is current and ready', () => {
       setSupertonicReady();
       const {getByTestId} = renderHero();
       expect(getByTestId('tts-hero-language-picker')).toBeTruthy();
@@ -126,25 +126,45 @@ describe('HeroRow', () => {
       expect(queryByTestId('tts-hero-language-picker')).toBeNull();
     });
 
-    it('lists "Auto" first, then languages sorted by display name', () => {
+    it('trigger shows the current language label', () => {
       setSupertonicReady();
-      const {getByTestId, getAllByText, getByText} = renderHero();
+      runInAction(() => {
+        ttsStore.supertonicLanguage = 'ja';
+      });
+      const {getByTestId} = renderHero();
+      const trigger = getByTestId('tts-hero-language-picker');
+      expect(trigger).toHaveTextContent('Japanese');
+    });
+
+    it('opens the searchable sheet with "Auto" first when the trigger is tapped', () => {
+      setSupertonicReady();
+      const {getByTestId, getByText} = renderHero();
       fireEvent.press(getByTestId('tts-hero-language-picker'));
 
-      // "Auto" must be the first option in the opened menu.
-      const autoNodes = getAllByText('Auto');
-      expect(autoNodes.length).toBeGreaterThan(0);
-      // Remaining options are present and alphabetised by display name —
-      // a later-alphabet name must still be reachable in the same menu.
+      // The sheet container and its option rows render once opened.
+      expect(getByTestId('tts-language-sheet')).toBeTruthy();
+      expect(getByTestId('tts-language-option-na')).toBeTruthy();
+      // A later-alphabet language is reachable in the same list.
       expect(getByText('Japanese')).toBeTruthy();
       expect(getByText('Arabic')).toBeTruthy();
     });
 
-    it('selecting a language calls setSupertonicLanguage', () => {
+    it('typing in the search field filters the list', () => {
       setSupertonicReady();
-      const {getByTestId, getByText} = renderHero();
+      const {getByTestId, queryByTestId} = renderHero();
       fireEvent.press(getByTestId('tts-hero-language-picker'));
-      fireEvent.press(getByText('Japanese'));
+
+      fireEvent.changeText(getByTestId('tts-language-search'), 'jap');
+
+      expect(getByTestId('tts-language-option-ja')).toBeTruthy();
+      expect(queryByTestId('tts-language-option-ar')).toBeNull();
+    });
+
+    it('selecting a row calls setSupertonicLanguage', () => {
+      setSupertonicReady();
+      const {getByTestId} = renderHero();
+      fireEvent.press(getByTestId('tts-hero-language-picker'));
+      fireEvent.press(getByTestId('tts-language-option-ja'));
       expect(ttsStore.setSupertonicLanguage).toHaveBeenCalledWith('ja');
     });
 
@@ -154,9 +174,9 @@ describe('HeroRow', () => {
         // A code not in 2.5.0's union (e.g. from a future build).
         (ttsStore as any).supertonicLanguage = 'xx';
       });
-      const {getByText} = renderHero();
-      // Trigger label falls back to the "Auto" placeholder for an unlisted code.
-      expect(getByText('Auto')).toBeTruthy();
+      const {getByTestId} = renderHero();
+      // Trigger label falls back to "Auto" for an unlisted code.
+      expect(getByTestId('tts-hero-language-picker')).toHaveTextContent('Auto');
       // The label-only fallback must NOT coerce the stored value back to na.
       expect(ttsStore.setSupertonicLanguage).not.toHaveBeenCalled();
     });

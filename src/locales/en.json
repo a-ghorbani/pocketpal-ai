@@ -1338,6 +1338,8 @@
     "supertonicStepsLabel": "Quality (diffusion steps)",
     "supertonicLanguageLabel": "Language",
     "supertonicLanguageAuto": "Auto",
+    "supertonicLanguageSheetTitle": "Language",
+    "supertonicLanguageSearchPlaceholder": "Search languages",
     "supertonicLanguageNames": {
       "ar": "Arabic",
       "bg": "Bulgarian",

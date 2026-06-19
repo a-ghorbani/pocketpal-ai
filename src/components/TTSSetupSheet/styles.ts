@@ -192,6 +192,23 @@ export const createStyles = (theme: Theme) =>
     heroLanguageWrap: {
       marginTop: 14,
     },
+    heroLanguageTrigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 44,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.outlineVariant,
+      backgroundColor: theme.colors.surface,
+    },
+    heroLanguageTriggerLabel: {
+      flex: 1,
+      color: theme.colors.onSurface,
+      fontSize: 16,
+      paddingRight: 8,
+    },
 
     // Voice rows (used by VoicePickerView)
     voiceRow: {

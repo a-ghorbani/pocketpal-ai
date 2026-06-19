@@ -1,11 +1,13 @@
-import React, {useContext, useMemo} from 'react';
+import React, {useContext, useMemo, useState} from 'react';
 import {View} from 'react-native';
 import {IconButton, SegmentedButtons, Text} from 'react-native-paper';
 import {observer} from 'mobx-react';
 
 import type {SupertonicLanguage} from '@pocketpalai/react-native-speech';
 
-import {Dropdown} from '../ui/Dropdown';
+import {ChevronDownIcon} from '../../assets/icons';
+import {Pressable} from '../ui/primitives/Pressable';
+import {SearchableSelectSheet} from '../SearchableSelectSheet';
 import {useTheme} from '../../hooks';
 import {t} from '../../locales';
 import type {EngineId, SupertonicSteps} from '../../services/tts';
@@ -43,6 +45,21 @@ export const HeroRow: React.FC = observer(() => {
   const theme = useTheme();
   const l10n = useContext(L10nContext);
   const styles = createStyles(theme);
+  const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
+
+  // "Auto" (na) first, then the 31 languages sorted by display name. An
+  // out-of-union persisted code isn't listed; the trigger then shows the
+  // "Auto" label fallback without rewriting the stored value.
+  const languageOptions = useMemo(() => {
+    const names = l10n.voiceAndSpeech.supertonicLanguageNames;
+    const languages = (Object.keys(names) as Array<keyof typeof names>)
+      .map(code => ({value: code, label: names[code]}))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    return [
+      {value: 'na', label: l10n.voiceAndSpeech.supertonicLanguageAuto},
+      ...languages,
+    ];
+  }, [l10n]);
 
   const current = ttsStore.currentVoice;
   if (!current) {
@@ -71,20 +88,11 @@ export const HeroRow: React.FC = observer(() => {
     current.engine === 'supertonic' &&
     ttsStore.supertonicDownloadState === 'ready';
 
-  // "Auto" (na) first, then the 31 languages sorted by display name. An
-  // out-of-union persisted code isn't listed; the Dropdown then shows the
-  // "Auto" placeholder LABEL without rewriting the stored value (onChange
-  // only fires on user selection).
-  const languageOptions = useMemo(() => {
-    const names = l10n.voiceAndSpeech.supertonicLanguageNames;
-    const languages = (Object.keys(names) as Array<keyof typeof names>)
-      .map(code => ({value: code, label: names[code]}))
-      .sort((a, b) => a.label.localeCompare(b.label));
-    return [
-      {value: 'na', label: l10n.voiceAndSpeech.supertonicLanguageAuto},
-      ...languages,
-    ];
-  }, [l10n]);
+  const selectedLanguage = languageOptions.find(
+    o => o.value === ttsStore.supertonicLanguage,
+  );
+  const languageTriggerLabel =
+    selectedLanguage?.label ?? l10n.voiceAndSpeech.supertonicLanguageAuto;
 
   const subtitleParts = [
     l10n.voiceAndSpeech[engineChipKey[current.engine]],
@@ -151,18 +159,41 @@ export const HeroRow: React.FC = observer(() => {
             <Text style={styles.heroQualityLabel}>
               {l10n.voiceAndSpeech.supertonicLanguageLabel}
             </Text>
-            <Dropdown
+            <Pressable
               testID="tts-hero-language-picker"
+              accessibilityRole="button"
               accessibilityLabel={l10n.voiceAndSpeech.supertonicLanguageLabel}
-              value={ttsStore.supertonicLanguage}
-              options={languageOptions}
-              placeholder={l10n.voiceAndSpeech.supertonicLanguageAuto}
-              onChange={value =>
-                ttsStore.setSupertonicLanguage(value as SupertonicLanguage)
-              }
-            />
+              onPress={() => setLanguageSheetOpen(true)}
+              style={styles.heroLanguageTrigger}>
+              <Text style={styles.heroLanguageTriggerLabel} numberOfLines={1}>
+                {languageTriggerLabel}
+              </Text>
+              <ChevronDownIcon
+                width={18}
+                height={18}
+                stroke={theme.colors.onSurface}
+              />
+            </Pressable>
           </View>
         </View>
+      ) : null}
+      {showSupertonicQuality ? (
+        <SearchableSelectSheet
+          testID="tts-language-sheet"
+          searchTestID="tts-language-search"
+          optionTestIDPrefix="tts-language-option"
+          isVisible={languageSheetOpen}
+          onClose={() => setLanguageSheetOpen(false)}
+          title={l10n.voiceAndSpeech.supertonicLanguageSheetTitle}
+          searchPlaceholder={
+            l10n.voiceAndSpeech.supertonicLanguageSearchPlaceholder
+          }
+          options={languageOptions}
+          value={ttsStore.supertonicLanguage}
+          onSelect={value =>
+            ttsStore.setSupertonicLanguage(value as SupertonicLanguage)
+          }
+        />
       ) : null}
     </View>
   );
