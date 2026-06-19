@@ -4,12 +4,19 @@ import {fireEvent, waitFor} from '@testing-library/react-native';
 
 import {render} from '../../../../jest/test-utils';
 import {l10n} from '../../../locales';
-import {chatSessionStore, deepLinkStore} from '../../../store';
+import {
+  chatSessionStore,
+  deepLinkStore,
+  palStore,
+  modelStore,
+} from '../../../store';
+import {mockLocalPal} from '../../../../jest/fixtures/pals';
 
 import {HomeScreen} from '../HomeScreen';
 
+const mockPicker = jest.fn(() => null);
 jest.mock('../../../components/ChatPalModelPickerSheet', () => ({
-  ChatPalModelPickerSheet: jest.fn(() => null),
+  ChatPalModelPickerSheet: (props: any) => mockPicker(props),
 }));
 
 const mockNavigate = jest.fn();
@@ -23,6 +30,12 @@ const en = l10n.en;
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    runInAction(() => {
+      palStore.pals = [];
+      modelStore.models = [];
+      modelStore.activeModelId = undefined;
+      chatSessionStore.sessions = [];
+    });
   });
 
   it('renders the serif title and chat-history heading', () => {
@@ -130,6 +143,65 @@ describe('HomeScreen', () => {
       withSafeArea: true,
     });
     fireEvent.press(getByTestId('home-model-chip'));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('renders a carousel item per pal (D8 data wiring)', () => {
+    runInAction(() => {
+      palStore.pals = [mockLocalPal];
+    });
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByTestId(`home-pal-${mockLocalPal.id}`)).toBeTruthy();
+  });
+
+  it('shows the active model name in the model chip when a model is active', () => {
+    runInAction(() => {
+      modelStore.models = [{id: 'm1', name: 'Qwen3 1.7B'} as any];
+      modelStore.activeModelId = 'm1';
+    });
+    const {getByText} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByText(`${en.home.modelChipPrefix} Qwen3 1.7B`)).toBeTruthy();
+  });
+
+  it('shows the empty model-chip label when no model is active', () => {
+    const {getByText} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByText(en.home.modelChipEmpty)).toBeTruthy();
+  });
+
+  it('renders the picker only after the model chip is tapped', () => {
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(mockPicker).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId('home-model-chip'));
+    expect(mockPicker).toHaveBeenCalled();
+    expect(mockPicker.mock.calls[0][0].isVisible).toBe(true);
+  });
+
+  it('selecting a pal in the picker sets the active pal without navigating (scenario F)', () => {
+    runInAction(() => {
+      palStore.pals = [mockLocalPal];
+    });
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    fireEvent.press(getByTestId('home-model-chip'));
+    const pickerProps = mockPicker.mock.calls[0][0] as any;
+
+    pickerProps.onPalSelect(mockLocalPal.id);
+
+    expect(palStore.getPalById).toHaveBeenCalledWith(mockLocalPal.id);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
