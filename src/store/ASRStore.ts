@@ -11,6 +11,7 @@ import DeviceInfo from 'react-native-device-info';
 
 import {
   ASR_DEFAULT_TIER,
+  ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
   ASR_MIN_RAM_BYTES,
   ASR_TIERS,
@@ -208,7 +209,9 @@ export class ASRStore {
       console.warn(`[ASRStore] ${tier} legacy reclaim failed:`, err);
     }
 
-    const requiredBytes = Math.ceil(ASR_TIERS[tier].estimatedBytes * 1.2);
+    const requiredBytes = Math.ceil(
+      ASR_TIERS[tier].estimatedBytes * ASR_DISK_HEADROOM_FACTOR,
+    );
     try {
       const freeBytes = await DeviceInfo.getFreeDiskStorage('important');
       if (freeBytes < requiredBytes) {

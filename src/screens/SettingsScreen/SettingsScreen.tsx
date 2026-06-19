@@ -50,6 +50,7 @@ import {createStyles} from './styles';
 
 import {modelStore, uiStore, hfStore, ttsStore, asrStore} from '../../store';
 import {
+  ASR_DISK_HEADROOM_FACTOR,
   ASR_INSUFFICIENT_STORAGE,
   ASR_TIERS,
   ASR_TIER_ORDER,
@@ -1032,6 +1033,13 @@ export const SettingsScreen: React.FC = observer(() => {
                     const sizeMb = Math.round(
                       ASR_TIERS[tier].estimatedBytes / (1024 * 1024),
                     );
+                    // Match the preflight threshold (estimated * headroom) so a
+                    // user who frees exactly this amount clears the disk gate.
+                    const requiredMb = Math.ceil(
+                      (ASR_TIERS[tier].estimatedBytes *
+                        ASR_DISK_HEADROOM_FACTOR) /
+                        (1024 * 1024),
+                    );
                     const tierLabel =
                       tier === 'base'
                         ? l10n.voiceInput.tierBase
@@ -1062,7 +1070,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.errorText}
                               testID={`asr-insufficient-storage-${tier}`}>
                               {t(l10n.voiceInput.insufficientStorage, {
-                                requiredMb: sizeMb,
+                                requiredMb,
                                 freeMb,
                               })}
                             </Text>

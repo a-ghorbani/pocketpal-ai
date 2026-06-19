@@ -175,6 +175,8 @@ describe('ASRStore', () => {
       store.setSelectedTier('base');
       await store.deleteModel('base');
       expect(store.selectedTier).toBe('small');
+      // The fallback tier is not installed, so the mic stays self-gated.
+      expect(store.isSelectedTierReady).toBe(false);
     });
 
     it('leaves the active tier untouched when a different tier is deleted', async () => {

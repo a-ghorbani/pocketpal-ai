@@ -55,6 +55,13 @@ export const ASR_VERSION_SENTINEL_FILENAME = 'model-version.json';
  */
 export const ASR_INSUFFICIENT_STORAGE = 'asr::insufficient-storage';
 
+/**
+ * Free-disk headroom multiplier applied to a tier's `estimatedBytes` for the
+ * download preflight. Single source of truth so the preflight threshold and
+ * the Settings insufficient-storage message agree on the required figure.
+ */
+export const ASR_DISK_HEADROOM_FACTOR = 1.2;
+
 /** HuggingFace base URL for the whisper.cpp GGML models. */
 const WHISPER_CPP_BASE_URL =
   'https://huggingface.co/ggerganov/whisper.cpp/resolve/main';
@@ -63,7 +70,8 @@ const WHISPER_CPP_BASE_URL =
  * Per-tier model manifests. Each tier is an independent on-disk install with
  * its own subdirectory and sentinel. `estimatedBytes` is the exact summed
  * HuggingFace byte total of the downloaded file(s), feeding the disk-space
- * preflight (`estimated * 1.2`), so it must be >= the real total.
+ * preflight (`estimated * ASR_DISK_HEADROOM_FACTOR`), so it must be >= the
+ * real total.
  *
  * The iOS CoreML encoder sidecar (`ggml-<size>-encoder.mlmodelc`) is an
  * optional accelerator: its absence degrades to the GGUF CPU path and never

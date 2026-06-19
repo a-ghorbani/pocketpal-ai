@@ -13,7 +13,11 @@ import {SettingsScreen} from '../SettingsScreen';
 
 import {modelStore, uiStore, ttsStore, asrStore} from '../../../store';
 import {l10n, t} from '../../../locales';
-import {ASR_INSUFFICIENT_STORAGE, ASR_TIERS} from '../../../services/asr';
+import {
+  ASR_DISK_HEADROOM_FACTOR,
+  ASR_INSUFFICIENT_STORAGE,
+  ASR_TIERS,
+} from '../../../services/asr';
 
 jest.useFakeTimers();
 
@@ -490,13 +494,18 @@ describe('SettingsScreen', () => {
         asrStore.downloadError.small = ASR_INSUFFICIENT_STORAGE;
         asrStore.freeDiskBytes = freeMb * 1024 * 1024;
       });
-      const sizeMb = Math.round(ASR_TIERS.small.estimatedBytes / (1024 * 1024));
+      // The line shows the headroom-inclusive required figure (matching the
+      // preflight threshold), not the raw model size.
+      const requiredMb = Math.ceil(
+        (ASR_TIERS.small.estimatedBytes * ASR_DISK_HEADROOM_FACTOR) /
+          (1024 * 1024),
+      );
       const {getByTestId, getByText} = renderSettings();
       expect(getByTestId('asr-insufficient-storage-small')).toBeTruthy();
       expect(
         getByText(
           t(l10n.en.voiceInput.insufficientStorage, {
-            requiredMb: sizeMb,
+            requiredMb,
             freeMb,
           }),
         ),
