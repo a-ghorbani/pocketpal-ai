@@ -3,6 +3,7 @@ import {Text} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 
 import {render} from '../../../../../jest/test-utils';
+import {themeFixtures} from '../../../../../jest/fixtures/theme';
 import {BottomNavBar} from '../BottomNavBar';
 import {runSnapshotMatrix} from '../../__tests__/helpers/snapshotMatrix';
 
@@ -39,15 +40,39 @@ describe('BottomNavBar', () => {
     fireEvent.press(getByTestId('ui-bottom-nav-item-models'));
     expect(onSelect).toHaveBeenCalledWith('models');
   });
+
+  it('floating variant fills the active item with the peach pill', () => {
+    const {getByTestId} = render(
+      <BottomNavBar
+        items={items}
+        selectedValue="pals"
+        onSelect={() => {}}
+        variant="floating"
+      />,
+    );
+    const selected = getByTestId('ui-bottom-nav-item-pals');
+    const unselected = getByTestId('ui-bottom-nav-item-chat');
+    const flatten = (s: unknown) =>
+      Array.isArray(s) ? Object.assign({}, ...s) : s;
+    expect(flatten(selected.props.style).backgroundColor).toBe(
+      themeFixtures.lightTheme.colors.accent.peach,
+    );
+    expect(flatten(unselected.props.style).backgroundColor).toBeUndefined();
+  });
 });
 
 runSnapshotMatrix(
   'BottomNavBar',
-  ({variant: _v, size: _s}) => (
-    <BottomNavBar items={items} selectedValue="chat" onSelect={() => {}} />
+  ({variant}) => (
+    <BottomNavBar
+      items={items}
+      selectedValue="chat"
+      onSelect={() => {}}
+      variant={variant}
+    />
   ),
   {
-    variants: ['default'] as const,
+    variants: ['default', 'floating'] as const,
     sizes: ['m'] as const,
     langs: ['fa'] as const,
   },

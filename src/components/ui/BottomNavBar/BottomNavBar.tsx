@@ -6,7 +6,7 @@ import {useTheme} from '../../../hooks';
 import type {CommonDSProps} from '../types';
 
 import {NavItem} from './NavItem';
-import {createStyles} from './styles';
+import {createStyles, type BottomNavBarVariant} from './styles';
 
 export type BottomNavBarItem = {
   value: string;
@@ -18,10 +18,14 @@ export type BottomNavBarProps = Omit<CommonDSProps, 'disabled'> & {
   items: BottomNavBarItem[];
   selectedValue: string;
   onSelect: (value: string) => void;
+  variant?: BottomNavBarVariant;
 };
 
 /**
  * DS BottomNavBar — presentational shell (no navigation wiring).
+ *
+ * `default` = bordered top-line bar, active item shown via text color.
+ * `floating` = rounded floating bar with a peach pill on the active item.
  *
  * Defaults: testID='ui-bottom-nav', accessibilityRole='tablist'.
  * Item testID: 'ui-bottom-nav-item-<value>'; item role 'tab'.
@@ -34,9 +38,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   items,
   selectedValue,
   onSelect,
+  variant = 'default',
 }) => {
   const theme = useTheme();
-  const styles = createStyles(theme, {});
+  const styles = createStyles(theme, {variant});
   return (
     <View
       testID={testID}
@@ -51,6 +56,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           icon={item.icon}
           selected={item.value === selectedValue}
           onSelect={onSelect}
+          variant={variant}
         />
       ))}
     </View>
