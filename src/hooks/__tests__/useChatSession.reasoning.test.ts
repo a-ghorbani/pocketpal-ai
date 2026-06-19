@@ -90,6 +90,30 @@ describe('useChatSession reasoning wire (local)', () => {
     expect(captured.current.chat_template_kwargs?.enable_thinking).toBe(false);
   });
 
+  it('non-reasoning model: stale enable_thinking false attaches no reasoning hints', async () => {
+    // A model resolved as isReasoning:'no' must not receive reasoning wire
+    // hints even when enable_thinking is stale-false.
+    setSettings({enable_thinking: false});
+    const model = {
+      ...(modelsList as any)[0],
+      reasoning: {
+        isReasoning: 'no' as const,
+        source: 'user' as const,
+        supportsEffort: false,
+        effortValues: [],
+        effortSource: 'none' as const,
+      },
+    };
+    modelStore.models = [model] as any;
+    modelStore.activeModelId = model.id;
+    const captured = captureCompletionParams();
+    await send();
+    expect(captured.current.reasoning_format).toBeUndefined();
+    expect(
+      captured.current.chat_template_kwargs?.enable_thinking,
+    ).toBeUndefined();
+  });
+
   it('axis-2 effort emits chat_template_kwargs.reasoning_effort', async () => {
     setSettings({
       enable_thinking: true,

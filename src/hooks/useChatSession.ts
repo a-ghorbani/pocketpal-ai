@@ -145,14 +145,24 @@ const prepareCompletion = async ({
   // hint only — it never strips reasoning the model still returns (rendered by
   // ReasoningBlock regardless). This is separate from include_thinking_in_context
   // above, which only governs what prior <think> we SEND.
-  if (cleanCompletionParams.enable_thinking) {
-    cleanCompletionParams.reasoning_format = 'auto';
-  } else {
-    cleanCompletionParams.reasoning_format = 'none';
-    cleanCompletionParams.chat_template_kwargs = {
-      ...cleanCompletionParams.chat_template_kwargs,
-      enable_thinking: false,
-    };
+  // Only attach hints for reasoning-capable models (axis-1 not 'no'); a plain
+  // non-reasoning model with stale enable_thinking:false gets no reasoning wire
+  // params.
+  const isReasoningCapable =
+    resolveReasoningCapability(
+      modelStore.activeModel,
+      serverStore.remoteReasoning,
+    ).isReasoning !== 'no';
+  if (isReasoningCapable) {
+    if (cleanCompletionParams.enable_thinking) {
+      cleanCompletionParams.reasoning_format = 'auto';
+    } else {
+      cleanCompletionParams.reasoning_format = 'none';
+      cleanCompletionParams.chat_template_kwargs = {
+        ...cleanCompletionParams.chat_template_kwargs,
+        enable_thinking: false,
+      };
+    }
   }
   // Graded effort (gpt-oss-style): carried by the resolver-populated intent.
   const reasoningEffort = cleanCompletionParams.reasoning?.effort;
