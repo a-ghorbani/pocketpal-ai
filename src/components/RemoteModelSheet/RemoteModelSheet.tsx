@@ -26,6 +26,7 @@ import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {isLocalHost} from '../../utils/network';
 import {parseTimeoutMs} from '../../utils/timeout';
+import {SERVER_TYPE_OPTIONS, seedServerType} from '../../utils/serverTypes';
 import {ServerConfig} from '../../utils/types';
 import {
   RemoteModelInfo,
@@ -55,6 +56,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
     const [serverName, setServerName] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [timeoutSeconds, setTimeoutSeconds] = useState('');
+    const [serverType, setServerType] = useState('unknown');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
 
     // Auto-probe
@@ -100,6 +102,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
         setApiKey('');
         setTimeoutSeconds('');
         timeoutSecondsRef.current = '';
+        setServerType('unknown');
         setSecureTextEntry(true);
         setIsProbing(false);
         setProbeResult(null);
@@ -144,6 +147,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             setSelectedModelId(models[0].id);
           }
           const detected = await detectServerType(trimmedUrl, models, headers);
+          setServerType(seedServerType(detected, trimmedUrl));
           setServerName(prev => {
             if (prev) {
               return prev;
@@ -266,6 +270,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
             name: serverName.trim(),
             url: url.trim(),
             requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
+            serverType,
           });
           if (apiKey.trim()) {
             await serverStore.setApiKey(serverId, apiKey.trim());
@@ -287,6 +292,7 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
       url,
       apiKey,
       timeoutSeconds,
+      serverType,
       onModelAdded,
       onDismiss,
     ]);
@@ -536,6 +542,24 @@ export const RemoteModelSheet: React.FC<RemoteModelSheetProps> = observer(
                 />
                 <Text style={styles.apiKeyDescription}>
                   {l10n.settings.requestTimeoutHelp}
+                </Text>
+              </View>
+
+              <View style={styles.inputSpacing}>
+                <Text>{l10n.settings.serverType}</Text>
+                <View style={styles.chipsRow}>
+                  {SERVER_TYPE_OPTIONS.map(option => (
+                    <Chip
+                      key={option}
+                      testID={`server-type-${option}`}
+                      selected={serverType === option}
+                      onPress={() => setServerType(option)}>
+                      {option}
+                    </Chip>
+                  ))}
+                </View>
+                <Text style={styles.apiKeyDescription}>
+                  {l10n.settings.serverTypeHelp}
                 </Text>
               </View>
             </>

@@ -16,4 +16,14 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
+  reasoningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  reasoningHelp: {
+    marginBottom: 12,
+    opacity: 0.7,
+  },
 });

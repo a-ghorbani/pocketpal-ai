@@ -71,6 +71,14 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether the model supports graded reasoning effort (axis 2) */
+  supportsEffort?: boolean;
+  /** The graded effort value set, e.g. ['low','medium','high'] */
+  effortValues?: string[];
+  /** Currently selected reasoning effort (when graded) */
+  reasoningEffort?: string;
+  /** Callback to cycle the graded effort state (off -> values -> off) */
+  onEffortCycle?: () => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -88,6 +96,14 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether the model supports graded reasoning effort (axis 2) */
+  supportsEffort?: boolean;
+  /** The graded effort value set, e.g. ['low','medium','high'] */
+  effortValues?: string[];
+  /** Currently selected reasoning effort (when graded) */
+  reasoningEffort?: string;
+  /** Callback to cycle the graded effort state (off -> values -> off) */
+  onEffortCycle?: () => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -122,6 +138,10 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    supportsEffort = false,
+    effortValues = [],
+    reasoningEffort,
+    onEffortCycle,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -542,15 +562,22 @@ export const ChatInput = observer(
                 )}
               </View>
 
-              {/* Thinking Toggle Button */}
+              {/* Thinking Toggle Button. Graded models (axis-2) cycle
+                  off -> low -> medium -> high; effortless models toggle
+                  on/off. The label shows the current effort when graded. */}
               {showThinkingToggle && !isCameraActive && (
                 <TouchableOpacity
+                  testID="thinking-toggle"
                   style={[
                     styles.thinkingToggleLeft,
                     isThinkingEnabled && {backgroundColor: onSurfaceColor},
                     {borderColor: onSurfaceColorVariant},
                   ]}
-                  onPress={() => onThinkingToggle?.(!isThinkingEnabled)}
+                  onPress={() =>
+                    supportsEffort && effortValues.length > 0
+                      ? onEffortCycle?.()
+                      : onThinkingToggle?.(!isThinkingEnabled)
+                  }
                   accessibilityLabel={
                     isThinkingEnabled
                       ? l10n.components.chatInput.thinkingToggle.disableThinking
@@ -574,7 +601,9 @@ export const ChatInput = observer(
                         ? {color: inputBackgroundColor}
                         : {color: onSurfaceColorVariant},
                     ]}>
-                    {l10n.components.chatInput.thinkingToggle.thinkText}
+                    {supportsEffort && isThinkingEnabled && reasoningEffort
+                      ? reasoningEffort
+                      : l10n.components.chatInput.thinkingToggle.thinkText}
                   </Text>
                 </TouchableOpacity>
               )}

@@ -131,6 +131,8 @@
     "requestTimeout": "Request Timeout (seconds)",
     "requestTimeoutPlaceholder": "Optional - leave empty for default",
     "requestTimeoutHelp": "Max wait for a slow server to respond. Leave empty for default.",
+    "serverType": "Server Type",
+    "serverTypeHelp": "Controls how reasoning settings are sent. Auto-detected; change if it's wrong.",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "Optional - required for OpenAI/Groq",
     "apiKeyDescription": "Stored securely on device.",
@@ -746,7 +748,13 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Model Settings",
-      "saveChanges": "Save Changes"
+      "saveChanges": "Save Changes",
+      "reasoningSection": "Reasoning",
+      "isReasoningModel": "Reasoning model",
+      "isReasoningModelHelp": "Show the thinking control for this model, even if it wasn't auto-detected.",
+      "supportsEffort": "Supports graded effort",
+      "effortValues": "Effort levels",
+      "effortValuesPlaceholder": "low, medium, high"
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face Models",

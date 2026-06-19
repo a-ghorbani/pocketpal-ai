@@ -1,12 +1,13 @@
 import React, {useState, useEffect, memo, useContext} from 'react';
-import {Button, Text, Divider} from 'react-native-paper';
+import {Button, Text, Divider, Switch, TextInput} from 'react-native-paper';
 
 import {ModelSettings} from '../../screens/ModelsScreen/ModelSettings';
 import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
 import {Model} from '../../utils/types';
-import {modelStore} from '../../store';
+import {modelStore, serverStore} from '../../store';
 import {chatTemplates} from '../../utils/chat';
+import {resolveReasoningCapability} from '../../utils/reasoningCapability';
 
 import {styles} from './styles';
 import {View} from 'react-native';
@@ -29,12 +30,33 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     );
     const l10n = useContext(L10nContext);
 
+    // Reasoning override (seeded from the resolver so the controls show the
+    // effective state). Axis-1 is reasoning yes/no; axis-2 graded effort + set.
+    const seedReasoning = () =>
+      resolveReasoningCapability(model, serverStore.remoteReasoning);
+    const [isReasoningModel, setIsReasoningModel] = useState(
+      () => seedReasoning().isReasoning === 'yes',
+    );
+    const [supportsEffort, setSupportsEffort] = useState(
+      () => seedReasoning().supportsEffort,
+    );
+    const [effortValuesText, setEffortValuesText] = useState(() =>
+      seedReasoning().effortValues.join(', '),
+    );
+
     // Reset temp settings when model changes
     useEffect(() => {
       if (model) {
         setTempModelName(model.name);
         setTempChatTemplate(model.chatTemplate);
         setTempStopWords(model.stopWords || []);
+        const cap = resolveReasoningCapability(
+          model,
+          serverStore.remoteReasoning,
+        );
+        setIsReasoningModel(cap.isReasoning === 'yes');
+        setSupportsEffort(cap.supportsEffort);
+        setEffortValuesText(cap.effortValues.join(', '));
       }
     }, [model]);
 
@@ -55,6 +77,17 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
         modelStore.updateModelName(model.id, tempModelName);
         modelStore.updateModelChatTemplate(model.id, tempChatTemplate);
         modelStore.updateModelStopWords(model.id, tempStopWords);
+        const effortValues = effortValuesText
+          .split(',')
+          .map(v => v.trim())
+          .filter(v => v.length > 0);
+        modelStore.setReasoningOverride(model.id, {
+          isReasoning: isReasoningModel ? 'yes' : 'no',
+          source: 'user',
+          supportsEffort: isReasoningModel && supportsEffort,
+          effortValues: isReasoningModel && supportsEffort ? effortValues : [],
+          effortSource: isReasoningModel && supportsEffort ? 'user' : 'none',
+        });
         onClose();
       }
     };
@@ -119,6 +152,49 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
                   );
                 }}
               />
+            </>
+          )}
+
+          {/* Reasoning override (axis 1 + axis 2). Manual escape hatch when
+              detection is wrong or impossible (remote models). */}
+          <Divider style={styles.multimodalDivider} />
+          <Text style={styles.multimodalSectionTitle}>
+            {l10n.components.modelSettingsSheet.reasoningSection}
+          </Text>
+          <View style={styles.reasoningRow}>
+            <Text>{l10n.components.modelSettingsSheet.isReasoningModel}</Text>
+            <Switch
+              testID="reasoning-is-reasoning-switch"
+              value={isReasoningModel}
+              onValueChange={setIsReasoningModel}
+            />
+          </View>
+          <Text variant="bodySmall" style={styles.reasoningHelp}>
+            {l10n.components.modelSettingsSheet.isReasoningModelHelp}
+          </Text>
+          {isReasoningModel && (
+            <>
+              <View style={styles.reasoningRow}>
+                <Text>{l10n.components.modelSettingsSheet.supportsEffort}</Text>
+                <Switch
+                  testID="reasoning-supports-effort-switch"
+                  value={supportsEffort}
+                  onValueChange={setSupportsEffort}
+                />
+              </View>
+              {supportsEffort && (
+                <TextInput
+                  testID="reasoning-effort-values-input"
+                  mode="outlined"
+                  label={l10n.components.modelSettingsSheet.effortValues}
+                  placeholder={
+                    l10n.components.modelSettingsSheet.effortValuesPlaceholder
+                  }
+                  value={effortValuesText}
+                  onChangeText={setEffortValuesText}
+                  autoCapitalize="none"
+                />
+              )}
             </>
           )}
         </Sheet.ScrollView>

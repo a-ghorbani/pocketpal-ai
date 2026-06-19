@@ -15,10 +15,17 @@ import {useChatSession} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
 import {Pal} from '../../types/pal';
 
-import {modelStore, chatSessionStore, palStore, uiStore} from '../../store';
+import {
+  modelStore,
+  chatSessionStore,
+  palStore,
+  serverStore,
+  uiStore,
+} from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
+import {resolveReasoningCapability} from '../../utils/reasoningCapability';
 import {MessageType} from '../../utils/types';
 import {ErrorState} from '../../utils/errors';
 import {user, assistant} from '../../utils/chat';
@@ -106,9 +113,20 @@ export const ChatScreen: React.FC = observer(() => {
     checkMultimodal();
   }, [isMultimodalEnabled]);
 
-  const thinkingSupported = modelStore.activeModel?.supportsThinking ?? false;
+  // Resolver is the single source of truth for reasoning capability.
+  // Pill is reachable whenever the model is not known to be non-reasoning
+  // (fail-open on 'unknown' so remote + missed-local models are reachable).
+  const reasoningCapability = resolveReasoningCapability(
+    modelStore.activeModel,
+    serverStore.remoteReasoning,
+  );
+  const thinkingSupported =
+    !!modelStore.activeModel && reasoningCapability.isReasoning !== 'no';
 
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
+  const [reasoningEffort, setReasoningEffort] = useState<string | undefined>(
+    undefined,
+  );
   const activeSession = chatSessionStore.sessions.find(
     s => s.id === chatSessionStore.activeSessionId,
   );
@@ -117,6 +135,7 @@ export const ChatScreen: React.FC = observer(() => {
     chatSessionStore.getCurrentCompletionSettings().then(settings => {
       if (!cancelled) {
         setThinkingEnabled(settings.enable_thinking ?? true);
+        setReasoningEffort(settings.reasoning?.effort);
       }
     });
     return () => {
@@ -203,6 +222,53 @@ export const ChatScreen: React.FC = observer(() => {
     }
   };
 
+  // Persist the chosen reasoning effort alongside the on/off intent so the
+  // local hook / remote carrier can pick it up. Preserves pal overrides.
+  const persistReasoning = async (enabled: boolean, effort?: string) => {
+    const currentSession = chatSessionStore.sessions.find(
+      s => s.id === chatSessionStore.activeSessionId,
+    );
+    if (currentSession) {
+      const resolvedSettings =
+        await chatSessionStore.getCurrentCompletionSettings();
+      await chatSessionStore.updateSessionCompletionSettings({
+        ...resolvedSettings,
+        enable_thinking: enabled,
+        reasoning: {enabled, effort},
+      });
+    } else {
+      runInAction(() => {
+        chatSessionStore.newChatThinkingOverride = enabled;
+      });
+    }
+  };
+
+  // Graded pill cycle: off -> values[0] -> ... -> values[n] -> off.
+  const handleEffortCycle = async () => {
+    const values = reasoningCapability.effortValues;
+    if (values.length === 0) {
+      return;
+    }
+    let nextEnabled: boolean;
+    let nextEffort: string | undefined;
+    if (!thinkingEnabled) {
+      nextEnabled = true;
+      nextEffort = values[0];
+    } else {
+      const idx = reasoningEffort ? values.indexOf(reasoningEffort) : -1;
+      if (idx < 0 || idx >= values.length - 1) {
+        nextEnabled = false;
+        nextEffort = undefined;
+      } else {
+        nextEnabled = true;
+        nextEffort = values[idx + 1];
+      }
+    }
+    setThinkingEnabled(nextEnabled);
+    setReasoningEffort(nextEffort);
+    await persistReasoning(nextEnabled, nextEffort);
+  };
+
   // If the active pal is a video pal, show the video pal screen
   if (isVideoPal) {
     return <VideoPalScreen activePal={activePal} />;
@@ -230,6 +296,10 @@ export const ChatScreen: React.FC = observer(() => {
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,
           onThinkingToggle: handleThinkingToggle,
+          supportsEffort: reasoningCapability.supportsEffort,
+          effortValues: reasoningCapability.effortValues,
+          reasoningEffort,
+          onEffortCycle: handleEffortCycle,
         }}
         textInputProps={{
           placeholder: !modelStore.engine

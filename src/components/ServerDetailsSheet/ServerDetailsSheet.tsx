@@ -13,6 +13,7 @@ import {
   TextInput as PaperTextInput,
   ActivityIndicator,
   Icon,
+  Chip,
 } from 'react-native-paper';
 import {observer} from 'mobx-react';
 import debounce from 'lodash/debounce';
@@ -22,6 +23,7 @@ import {useTheme} from '../../hooks';
 import {serverStore} from '../../store';
 import {L10nContext} from '../../utils';
 import {parseTimeoutMs} from '../../utils/timeout';
+import {SERVER_TYPE_OPTIONS} from '../../utils/serverTypes';
 import {testConnection} from '../../api/openai';
 import {t} from '../../locales';
 
@@ -43,6 +45,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
     const [url, setUrl] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [timeoutSeconds, setTimeoutSeconds] = useState('');
+    const [serverType, setServerType] = useState('unknown');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<{
@@ -73,6 +76,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
               : '';
           setTimeoutSeconds(seconds);
           timeoutSecondsRef.current = seconds;
+          setServerType(server.serverType || 'unknown');
         }
         serverStore.getApiKey(serverId).then(key => {
           setApiKey(key || '');
@@ -153,6 +157,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
         serverStore.updateServer(serverId, {
           url: url.trim(),
           requestTimeoutMs: parseTimeoutMs(timeoutSeconds),
+          serverType,
         });
         if (apiKey.trim()) {
           await serverStore.setApiKey(serverId, apiKey.trim());
@@ -163,7 +168,7 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
       } finally {
         setIsSaving(false);
       }
-    }, [serverId, server, url, apiKey, timeoutSeconds, onDismiss]);
+    }, [serverId, server, url, apiKey, timeoutSeconds, serverType, onDismiss]);
 
     const handleRemoveServer = useCallback(() => {
       if (!serverId || !server) {
@@ -236,6 +241,25 @@ export const ServerDetailsSheet: React.FC<ServerDetailsSheetProps> = observer(
             />
             <Text style={styles.apiKeyDescription}>
               {l10n.settings.requestTimeoutHelp}
+            </Text>
+          </View>
+
+          {/* Server Type selector */}
+          <View style={styles.inputSpacing}>
+            <Text>{l10n.settings.serverType}</Text>
+            <View style={styles.serverTypeRow}>
+              {SERVER_TYPE_OPTIONS.map(option => (
+                <Chip
+                  key={option}
+                  testID={`server-type-${option}`}
+                  selected={serverType === option}
+                  onPress={() => setServerType(option)}>
+                  {option}
+                </Chip>
+              ))}
+            </View>
+            <Text style={styles.apiKeyDescription}>
+              {l10n.settings.serverTypeHelp}
             </Text>
           </View>
 

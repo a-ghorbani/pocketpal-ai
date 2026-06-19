@@ -215,4 +215,70 @@ describe('ModelSettingsSheet', () => {
     // The state updates are handled by useEffect, which is tested implicitly
     // through the save/cancel/reset tests
   });
+
+  describe('reasoning override', () => {
+    it('renders the axis-1 reasoning toggle', () => {
+      const {getByTestId} = render(<ModelSettingsSheet {...defaultProps} />);
+      expect(getByTestId('reasoning-is-reasoning-switch')).toBeTruthy();
+    });
+
+    it('save writes a user-sourced override beating detection', async () => {
+      const {getByTestId, getByText} = render(
+        <ModelSettingsSheet {...defaultProps} />,
+      );
+
+      // Turn on axis-1, then axis-2, then set the value set.
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-is-reasoning-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      await act(async () => {
+        fireEvent(
+          getByTestId('reasoning-supports-effort-switch'),
+          'valueChange',
+          true,
+        );
+      });
+      await act(async () => {
+        fireEvent.changeText(
+          getByTestId('reasoning-effort-values-input'),
+          'low, medium, high',
+        );
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Save Changes'));
+      });
+
+      expect(modelStore.setReasoningOverride).toHaveBeenCalledWith(
+        mockModel.id,
+        {
+          isReasoning: 'yes',
+          source: 'user',
+          supportsEffort: true,
+          effortValues: ['low', 'medium', 'high'],
+          effortSource: 'user',
+        },
+      );
+    });
+
+    it("saving axis-1 'no' clears axis-2 (inert)", async () => {
+      const {getByText} = render(<ModelSettingsSheet {...defaultProps} />);
+      await act(async () => {
+        fireEvent.press(getByText('Save Changes'));
+      });
+      expect(modelStore.setReasoningOverride).toHaveBeenCalledWith(
+        mockModel.id,
+        expect.objectContaining({
+          isReasoning: 'no',
+          source: 'user',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        }),
+      );
+    });
+  });
 });

@@ -10,7 +10,7 @@ import {
 } from '../../../../jest/test-utils';
 import {ChatScreen} from '../ChatScreen';
 
-import {chatSessionStore, modelStore} from '../../../store';
+import {chatSessionStore, modelStore, serverStore} from '../../../store';
 
 import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
@@ -248,13 +248,20 @@ describe('ChatScreen', () => {
     let savedModels: any[];
 
     beforeEach(() => {
-      // Inject a thinking-capable model into the mock model list so the
-      // `activeModel?.supportsThinking` computed in ChatScreen returns true.
+      // Inject a reasoning-capable model so the resolver in ChatScreen reports
+      // isReasoning 'yes' and the thinking pill is shown.
       savedModels = modelStore.models;
       const thinkingModel = {
         ...modelStore.models[0],
         id: 'thinking-model-id',
         supportsThinking: true,
+        reasoning: {
+          isReasoning: 'yes' as const,
+          source: 'detected' as const,
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none' as const,
+        },
       };
       modelStore.models = [...modelStore.models, thinkingModel];
 
@@ -399,5 +406,69 @@ describe('ChatScreen', () => {
         'tool-model-id',
       );
     });
+  });
+});
+
+describe('ChatScreen reasoning pill visibility', () => {
+  let savedModels: any[];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    runInAction(() => {
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      serverStore.remoteReasoning = {};
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+  });
+
+  afterEach(() => {
+    modelStore.models = savedModels;
+    modelStore.activeModelId = undefined;
+  });
+
+  const useModel = (overrides: any) => {
+    const model = {...savedModels[0], id: 'pill-model', ...overrides};
+    modelStore.models = [...savedModels, model];
+    runInAction(() => {
+      modelStore.activeModelId = 'pill-model';
+    });
+  };
+
+  it("shows the pill when isReasoning is 'unknown' (fail-open)", () => {
+    useModel({supportsThinking: undefined, reasoning: undefined});
+    const {queryByTestId} = render(<ChatScreen />, {withNavigation: true});
+    expect(queryByTestId('thinking-toggle')).toBeTruthy();
+  });
+
+  it("hides the pill when isReasoning is 'no'", () => {
+    useModel({
+      reasoning: {
+        isReasoning: 'no',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'high'],
+        effortSource: 'user',
+      },
+    });
+    const {queryByTestId} = render(<ChatScreen />, {withNavigation: true});
+    expect(queryByTestId('thinking-toggle')).toBeNull();
+  });
+
+  it('shows the pill for a graded effort model', () => {
+    useModel({
+      reasoning: {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'medium', 'high'],
+        effortSource: 'user',
+      },
+    });
+    const {queryByTestId} = render(<ChatScreen />, {withNavigation: true});
+    expect(queryByTestId('thinking-toggle')).toBeTruthy();
   });
 });
