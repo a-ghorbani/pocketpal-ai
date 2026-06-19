@@ -20,8 +20,13 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
       backgroundColor: theme.colors.mutedBackground,
     },
+    // Scroll content container. flexGrow (not flex) lets the column take at
+    // least the viewport height while still giving the bottom-anchored
+    // Content child vertical slack to push the hero down. paddingTop sits on
+    // top of the consumed top safe-area inset so the title lands ~1/4 down.
     body: {
-      flex: 1,
+      flexGrow: 1,
+      paddingTop: theme.spacing.xxl,
       paddingHorizontal: theme.spacing.m,
       gap: theme.spacing.xxl,
     },
@@ -54,7 +59,11 @@ export const createStyles = (theme: Theme) =>
       gap: theme.spacing.s,
       alignItems: 'flex-start',
     },
+    // Width pinned to the avatar footprint (48 + 2×paddingH 4) so the
+    // numberOfLines={1} label ellipsizes instead of widening the item — keeps
+    // the carousel pitch tight enough to fit pals + Add in one viewport.
     palItem: {
+      width: PAL_AVATAR_WIDTH + 2 * theme.spacing.xs,
       alignItems: 'center',
       gap: theme.spacing.xxs,
       paddingTop: theme.spacing.xxs,
@@ -103,6 +112,7 @@ export const createStyles = (theme: Theme) =>
       letterSpacing: 0.11,
       color: theme.colors.foregroundTertiary,
       textAlign: 'center',
+      alignSelf: 'stretch',
     },
     palLabelActive: {
       color: theme.colors.yellowHighestContrast,
