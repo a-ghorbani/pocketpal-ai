@@ -2,19 +2,28 @@ import React, {useContext, useState} from 'react';
 import {Image, ScrollView, Text, TextInput, View} from 'react-native';
 
 import {observer} from 'mobx-react';
+import {useNavigation} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {L10nContext} from '../../utils';
 import {t} from '../../locales';
-import {palStore, chatSessionStore, modelStore} from '../../store';
+import {
+  palStore,
+  chatSessionStore,
+  modelStore,
+  deepLinkStore,
+} from '../../store';
 import {getFullThumbnailUri} from '../../utils/imageUtils';
+import {ROUTES} from '../../utils/navigationConstants';
 import {Pressable} from '../../components/ui/primitives/Pressable';
 import {ChatPalModelPickerSheet} from '../../components/ChatPalModelPickerSheet';
 import {PlusIcon, SendIcon, ChevronDownIcon} from '../../assets/icons';
 import type {Pal} from '../../types/pal';
 import type {SessionMetaData} from '../../store/ChatSessionStore';
+import type {RootStackParamList} from '../../utils/types';
 
 const PalCarouselItem: React.FC<{
   pal: Pal;
@@ -53,6 +62,7 @@ export const HomeScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const [composerText, setComposerText] = useState('');
   const [activePal, setActivePalLocal] = useState<Pal | undefined>(undefined);
@@ -65,11 +75,31 @@ export const HomeScreen: React.FC = observer(() => {
     ? t(l10n.home.composerPlaceholder, {pal: activePal.name})
     : l10n.home.composerPlaceholderGeneric;
 
-  // Inert in this slice; the start-chat handoff is wired in a later step.
-  const handlePalPress = (_pal: Pal) => {};
-  const handleAddPal = () => {};
-  const handleSend = () => {};
-  const handleHistoryPress = (_session: SessionMetaData) => {};
+  // Reuses the existing prefill contract: select the pal, optionally stash
+  // a pending message, then navigate into the Chat flow (POC-7 owns Chat).
+  const startChat = async (palId?: string, message?: string) => {
+    if (message) {
+      deepLinkStore.setPendingMessage(message);
+    }
+    await chatSessionStore.setActivePal(palId);
+    navigation.navigate(ROUTES.CHAT);
+  };
+
+  const handlePalPress = (pal: Pal) => setActivePalLocal(pal);
+
+  const handleAddPal = () => navigation.navigate(ROUTES.PALS);
+
+  const handleSend = () => {
+    const text = composerText.trim();
+    void startChat(activePal?.id, text || undefined);
+    setComposerText('');
+  };
+
+  const handleHistoryPress = async (session: SessionMetaData) => {
+    await chatSessionStore.setActiveSession(session.id);
+    navigation.navigate(ROUTES.CHAT);
+  };
+
   const handleModelChipPress = () => setPickerVisible(true);
 
   const palNameFor = (palId?: string) =>
@@ -121,9 +151,9 @@ export const HomeScreen: React.FC = observer(() => {
           />
           <View style={styles.composerActions}>
             <Pressable
-              onPress={handleAddPal}
+              onPress={handleModelChipPress}
               accessibilityRole="button"
-              accessibilityLabel={l10n.home.addPal}
+              accessibilityLabel={l10n.home.modelChipPrefix}
               testID="home-composer-attach">
               <PlusIcon stroke={theme.colors.onSurfaceVariant} />
             </Pressable>
@@ -162,7 +192,7 @@ export const HomeScreen: React.FC = observer(() => {
             <Pressable
               key={session.id}
               style={styles.historyRow}
-              onPress={() => handleHistoryPress(session)}
+              onPress={() => void handleHistoryPress(session)}
               accessibilityRole="button"
               accessibilityLabel={session.title}
               testID={`home-history-${session.id}`}>
