@@ -546,8 +546,8 @@ describe('ChatScreen graded effort pill cycle', () => {
     });
   };
 
-  // Scenario D state machine (§3): a graded model's single pill cycles
-  // off → low → medium → high → off in value-set order, never on/off only.
+  // A graded model's single pill cycles off → low → medium → high → off in
+  // value-set order, never on/off only.
   it('cycles off → low → medium → high → off in value-set order', async () => {
     const thinkText = l10n.en.components.chatInput.thinkingToggle.thinkText;
     useGradedModel();
