@@ -30,7 +30,8 @@
     "ok": "Oke",
     "close": "Tutup",
     "clear": "Bersihkan",
-    "gallery": "Galeri"
+    "gallery": "Galeri",
+    "stop": "Berhenti"
   },
   "settings": {
     "modelInitializationSettings": "Pengaturan Inisialisasi Model",
@@ -130,7 +131,7 @@
     "apiKeyDescription": "Disimpan dengan aman di perangkat.",
     "remoteModel": "Jarak jauh(Remote)",
     "remotePrivacyNotice": "Pesan dikirim ke server remote meninggalkan perangkat Anda. Hanya hubungkan ke server yang Anda percaya.",
-    "remoteIndicator": "Remote",
+    "remoteIndicator": "Jarak Jauh",
     "serverUrlRequired": "Dibutuhkan URL server",
     "serverUrlInvalid": "Format URL tidak valid",
     "serverUrlHttpWarning": "iOS membutuhkan HTTPS untuk server non-lokal. Gunakan https:// atau alamat jaringan lokal.",
@@ -371,7 +372,7 @@
     "modelSettings": {
       "template": {
         "label": "Template:",
-        "editButton": "Edit",
+        "editButton": "Sunting",
         "dialogTitle": "Edit Template Obrolan",
         "note1": "Catatan: Mengubah template dapat mengubah token BOS, EOS, dan prompt sistem.",
         "note2": "Menggunakan Nunjucks. Biarkan kosong untuk menggunakan template bawaan model.",
@@ -462,7 +463,10 @@
     "versionCopiedTitle": "Versi disalin",
     "versionCopiedDescription": "Informasi versi telah disalin ke papan klip",
     "privacyPolicy": "Kebijakan Privasi",
-    "termsOfService": "Ketentuan Layanan"
+    "termsOfService": "Ketentuan Layanan",
+    "tour": "Tur",
+    "tourDescription": "Putar ulang layar selamat datang untuk melihat apa yang ditawarkan PocketPal AI.",
+    "showIntroButton": "Tampilkan intro lagi"
   },
   "feedback": {
     "title": "Kirim Masukan",
@@ -536,7 +540,9 @@
       "activateModelTitle": "Aktifkan Model untuk Memulai",
       "activateModelDescription": "Pilih model dan unduh. Setelah diunduh, ketuk Muat di sebelah model dan mulai mengobrol.",
       "activateModelButton": "Pilih Model",
-      "loading": "Memuat..."
+      "loading": "Memuat...",
+      "gettingReadyTitle": "{{name}} sedang bersiap",
+      "gettingReadyDescription": "Kami akan memberi tahu saat pal Anda siap mengobrol. Ketuk banner di atas untuk melihat perkembangannya."
     },
     "chatInput": {
       "inputPlaceholder": "Pesan",
@@ -742,7 +748,7 @@
     },
     "palSheet": {
       "title": {
-        "edit": "Edit Pal",
+        "edit": "Sunting Pal",
         "newPal": "Pal Baru",
         "newVideoPal": "Pal Video Baru"
       },
@@ -930,7 +936,7 @@
         "copy": "Salin",
         "regenerate": "Hasilkan Ulang",
         "regenerateWith": "Hasilkan Ulang dengan",
-        "edit": "Edit",
+        "edit": "Sunting",
         "reportContent": "Laporkan Konten"
       }
     },
@@ -974,7 +980,7 @@
     "toneStyle": "Nada/Gaya",
     "aiRole": "Peran AI",
     "userRole": "Peran Saya",
-    "prompt": "Prompt",
+    "prompt": "Perintah",
     "assistant": "Asisten",
     "roleplay": "Bermain Peran",
     "video": "Video",
@@ -1021,7 +1027,7 @@
     "palDetailSheet": {
       "by": "oleh",
       "unknown": "Tidak Diketahui",
-      "rating": "Rating",
+      "rating": "Peringkat",
       "reviews": "Ulasan",
       "created": "Dibuat",
       "description": "Deskripsi",
@@ -1354,7 +1360,44 @@
     "engineRetryCta": "Coba lagi",
     "voicesEmptyState": "Suara tidak ditemukan.",
     "kokoroDeviceNote": "Beberapa suara mungkin tidak berfungsi di semua perangkat.",
-    "insufficientStorage": "Ruang tidak mencukupi — bebaskan {{requiredMb}} MB untuk memasang mesin ini ({{freeMb}} MB tersedia)."
+    "insufficientStorage": "Ruang tidak mencukupi — bebaskan {{requiredMb}} MB untuk memasang mesin ini ({{freeMb}} MB tersedia).",
+    "supertonicLanguageLabel": "Bahasa",
+    "supertonicLanguageAuto": "Otomatis",
+    "supertonicLanguageSheetTitle": "Bahasa",
+    "supertonicLanguageSearchPlaceholder": "Cari bahasa",
+    "supertonicLanguageNames": {
+      "ar": "Arab",
+      "bg": "Bulgaria",
+      "hr": "Kroasia",
+      "cs": "Ceko",
+      "da": "Denmark",
+      "nl": "Belanda",
+      "en": "Inggris",
+      "et": "Estonia",
+      "fi": "Finlandia",
+      "fr": "Prancis",
+      "de": "Jerman",
+      "el": "Yunani",
+      "hi": "Hindi",
+      "hu": "Hongaria",
+      "id": "Indonesia",
+      "it": "Italia",
+      "ja": "Jepang",
+      "ko": "Korea",
+      "lv": "Latvia",
+      "lt": "Lituania",
+      "pl": "Polandia",
+      "pt": "Portugis",
+      "ro": "Rumania",
+      "ru": "Rusia",
+      "sk": "Slovakia",
+      "sl": "Slovenia",
+      "es": "Spanyol",
+      "sv": "Swedia",
+      "tr": "Turki",
+      "uk": "Ukraina",
+      "vi": "Vietnam"
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Pratinjau",
@@ -1363,5 +1406,101 @@
     "copyHtml": "Salin HTML",
     "closePreview": "Tutup pratinjau",
     "openFullscreen": "Buka layar penuh: {{title}}"
+  },
+  "onboarding": {
+    "back": "Kembali",
+    "skip": "Lewati",
+    "skipForNow": "Lewati untuk sekarang",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "Temui para pal Anda.",
+      "titleAccent": "pal.",
+      "body": "Teman-teman kecil pintar yang tinggal di dalam ponsel Anda.\nMari kita siapkan - akan memakan waktu sebentar.",
+      "cta": "Tunjukkan Saya",
+      "eyebrow": "Selamat Datang di PocketPal"
+    },
+    "screen2": {
+      "title": "Kapan Saja,\nDi Mana Saja.",
+      "body": "Pal Anda tinggal di dalam ponsel Anda.\nTanpa internet, tanpa sinyal - mereka bekerja di pesawat, di luar jaringan, di desa terpencil.",
+      "highlight": "Tanpa internet, tanpa sinyal",
+      "cta": "Lanjut",
+      "eyebrow": "Konsepnya",
+      "titleAccent": "Kapan Saja,"
+    },
+    "screen3": {
+      "title": "Lebih Kecil,\ntapi Milik Anda.",
+      "titleAccent": "Lebih Kecil,",
+      "body": "Pal di ponsel Anda cepat dan pribadi - namun lebih ringan dari AI Cloud. Anggap saja teman saku, bukan oracle yang tahu segalanya.",
+      "highlight": "cepat dan pribadi",
+      "cta": "Mengerti",
+      "eyebrow": "Peringatan"
+    },
+    "screen4": {
+      "title": "Tidak ada yang meninggalkan ponsel Anda.",
+      "titleAccent": "meninggalkan",
+      "body": "Tanpa akun. Tanpa cloud. Tanpa pelacakan. Percakapan Anda tetap milik Anda.",
+      "highlight": "Tanpa akun. Tanpa cloud. Tanpa pelacakan.",
+      "cta": "Mulai",
+      "eyebrow": "Privasi Terjamin"
+    },
+    "screen5": {
+      "title": "Untuk apa pal Anda?",
+      "body": "Pilih apa yang ingin Anda diskusikan - kami akan mencocokkan pal yang cocok dengan ponsel Anda.",
+      "topic": {
+        "smartchat": "Obrolan Cerdas",
+        "coding": "Pemrograman",
+        "education": "Pendidikan",
+        "roleplay": "Bermain Peran",
+        "creative_writing": "Penulisan Kreatif",
+        "else": "Mencari yang lain?"
+      },
+      "topicDescription": {
+        "smartchat": "Teman sehari-hari yang ramah",
+        "coding": "Kode, debug, jelaskan",
+        "education": "Belajar, jelaskan, kuis",
+        "roleplay": "Karakter, skenario",
+        "creative_writing": "Cerita, ide, draf",
+        "else": "Jelajahi semua pal nanti di aplikasi"
+      }
+    },
+    "screen6": {
+      "cta": "Unduh {{name}}",
+      "ctaTemplate": "Unduh {{name}} ({{size}})",
+      "useTemplate": "Gunakan {{name}}",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB gratis",
+      "recommended": "Direkomendasikan",
+      "downloaded": "Terunduh",
+      "modelTier": {
+        "quick": "Cepat",
+        "balanced": "Seimbang",
+        "best": "Terbaik"
+      },
+      "subtitleTemplate": "{{name}} berpikir menggunakan model AI kecil di ponsel Anda — pilih yang cocok.",
+      "pal": {
+        "pip": {
+          "body": "Kami menemukan pal yang sempurna untuk Anda — teman sehari-hari yang ramah. Cukup pintar untuk sebagian besar hal, cukup ringan untuk ponsel mana pun."
+        },
+        "codie": {
+          "body": "Kenali Codie — pair-programmer lokal Anda. Membaca kode, menulis kode, menjelaskan bagian rumit tanpa meninggalkan ponsel Anda."
+        },
+        "sage": {
+          "body": "Sage sabar, ingin tahu, dan membimbing Anda melalui ide-ide langkah demi langkah. Teman belajar yang Anda simpan di saku."
+        },
+        "echo": {
+          "body": "Echo adalah teman bermain peran yang serbaguna — tetap dalam karakter, melukiskan suasana, mengikuti ke mana pun cerita Anda berlanjut."
+        },
+        "muse": {
+          "body": "Muse membantu Anda menulis. Menyarankan frasa, menemukan ritme, dan menjaga nada Anda tetap utuh."
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} sedang mengunduh",
+    "titleByModel": "{{name}} sedang mengunduh",
+    "extraInProgress": "+{{count}} lainnya sedang berlangsung"
   }
 }
