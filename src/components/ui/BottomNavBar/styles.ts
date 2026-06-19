@@ -27,6 +27,9 @@ const createDefaultStyles = (theme: Theme, selected?: boolean) =>
       paddingVertical: theme.spacing.xs,
       gap: theme.spacing.xxs,
     } as ViewStyle,
+    // The default (docked) variant has no sliding pill; this keeps the style
+    // shape uniform across variants and is never rendered (floating-only).
+    pill: {} as ViewStyle,
     label: {
       ...theme.typography.captionS,
       color: selected ? theme.colors.primary : theme.colors.onSurfaceVariant,
@@ -57,9 +60,19 @@ const createFloatingStyles = (theme: Theme, selected?: boolean) =>
       paddingHorizontal: theme.spacing.sm,
       gap: theme.spacing.xs,
       borderRadius: theme.radius.xxl,
-      borderWidth: selected ? theme.stroke.xs : 0,
-      borderColor: selected ? theme.colors.accent.yellowMute : undefined,
-      backgroundColor: selected ? theme.colors.accent.yellowSubtle : undefined,
+    } as ViewStyle,
+    // Sliding active pill, rendered once behind the items and animated to the
+    // selected item's measured frame. Replaces the per-item background so the
+    // selection glides instead of jumping. top/bottom equal the root padding so
+    // the pill spans exactly the item row height; x/width are driven at runtime.
+    pill: {
+      position: 'absolute',
+      top: theme.spacing.xs,
+      bottom: theme.spacing.xs,
+      borderRadius: theme.radius.xxl,
+      borderWidth: theme.stroke.xs,
+      borderColor: theme.colors.accent.yellowMute,
+      backgroundColor: theme.colors.accent.yellowSubtle,
     } as ViewStyle,
     label: {
       ...theme.typography.captionS,

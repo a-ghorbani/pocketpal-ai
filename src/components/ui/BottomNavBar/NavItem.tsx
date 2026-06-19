@@ -1,5 +1,5 @@
 import React from 'react';
-import {Text} from 'react-native';
+import {Text, type LayoutChangeEvent} from 'react-native';
 
 import {useTheme} from '../../../hooks';
 import {Pressable} from '../primitives/Pressable';
@@ -14,6 +14,7 @@ export type NavItemProps = {
   onSelect: (value: string) => void;
   testID?: string;
   variant?: BottomNavBarVariant;
+  onLayout?: (event: LayoutChangeEvent) => void;
 };
 
 export const NavItem: React.FC<NavItemProps> = ({
@@ -24,6 +25,7 @@ export const NavItem: React.FC<NavItemProps> = ({
   onSelect,
   testID,
   variant = 'default',
+  onLayout,
 }) => {
   const theme = useTheme();
   const styles = createStyles(theme, {variant, selected});
@@ -35,6 +37,7 @@ export const NavItem: React.FC<NavItemProps> = ({
       accessibilityLabel={label}
       accessibilityState={{selected}}
       onPress={() => onSelect(value)}
+      onLayout={onLayout}
       style={styles.item}>
       {icon}
       <Text style={styles.label}>{label}</Text>

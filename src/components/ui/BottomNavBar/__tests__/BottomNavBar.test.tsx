@@ -3,7 +3,6 @@ import {Text} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 
 import {render} from '../../../../../jest/test-utils';
-import {themeFixtures} from '../../../../../jest/fixtures/theme';
 import {BottomNavBar} from '../BottomNavBar';
 import {runSnapshotMatrix} from '../../__tests__/helpers/snapshotMatrix';
 
@@ -41,7 +40,7 @@ describe('BottomNavBar', () => {
     expect(onSelect).toHaveBeenCalledWith('models');
   });
 
-  it('floating variant fills the active item with the yellow pill', () => {
+  it('floating variant marks the selected item without a per-item pill fill', () => {
     const {getByTestId} = render(
       <BottomNavBar
         items={items}
@@ -51,13 +50,11 @@ describe('BottomNavBar', () => {
       />,
     );
     const selected = getByTestId('ui-bottom-nav-item-pals');
-    const unselected = getByTestId('ui-bottom-nav-item-chat');
     const flatten = (s: unknown) =>
       Array.isArray(s) ? Object.assign({}, ...s) : s;
-    expect(flatten(selected.props.style).backgroundColor).toBe(
-      themeFixtures.lightTheme.colors.accent.yellowSubtle,
-    );
-    expect(flatten(unselected.props.style).backgroundColor).toBeUndefined();
+    // The active pill is now a single sliding element, not an item background.
+    expect(flatten(selected.props.style).backgroundColor).toBeUndefined();
+    expect(selected.props.accessibilityState?.selected).toBe(true);
   });
 });
 

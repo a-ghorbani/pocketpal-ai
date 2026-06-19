@@ -906,6 +906,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -915,10 +916,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": "#f5dbbc",
-          "borderColor": "#f8f1e2",
           "borderRadius": 40,
-          "borderWidth": 0.5,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -971,6 +969,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -980,10 +979,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1036,6 +1032,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1045,10 +1042,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1141,6 +1135,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1150,10 +1145,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": "#f5dbbc",
-          "borderColor": "#f8f1e2",
           "borderRadius": 40,
-          "borderWidth": 0.5,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1206,6 +1198,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1215,10 +1208,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1271,6 +1261,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1280,10 +1271,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1376,6 +1364,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1385,10 +1374,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": "#f5dbbc",
-          "borderColor": "#f8f1e2",
           "borderRadius": 40,
-          "borderWidth": 0.5,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1441,6 +1427,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1450,10 +1437,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1506,6 +1490,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1515,10 +1500,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1611,6 +1593,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1620,10 +1603,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": "#f5dbbc",
-          "borderColor": "#f8f1e2",
           "borderRadius": 40,
-          "borderWidth": 0.5,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1676,6 +1656,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1685,10 +1666,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
@@ -1741,6 +1719,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       onBlur={[Function]}
       onClick={[Function]}
       onFocus={[Function]}
+      onLayout={[Function]}
       onResponderGrant={[Function]}
       onResponderMove={[Function]}
       onResponderRelease={[Function]}
@@ -1750,10 +1729,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       style={
         {
           "alignItems": "center",
-          "backgroundColor": undefined,
-          "borderColor": undefined,
           "borderRadius": 40,
-          "borderWidth": 0,
           "flexDirection": "row",
           "gap": 4,
           "justifyContent": "center",
