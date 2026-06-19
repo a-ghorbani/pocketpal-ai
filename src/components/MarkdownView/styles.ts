@@ -11,56 +11,42 @@ export const codeHighlighterPreOverride = {
 
 export const createTagsStyles = (theme: Theme) => ({
   body: {
+    ...theme.typography.bodyM,
     color: theme.colors.text,
-    fontSize: 16,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     padding: 0,
     paddingTop: 0,
     margin: 0,
     backgroundColor: 'transparent',
-    // display: 'inline-block',
   },
   code: {
-    fontFamily: 'Courier', // Change the font for code snippets
-    backgroundColor: theme.colors.surface, // Custom background for code blocks
+    ...theme.typography.codeS,
+    backgroundColor: theme.colors.surface,
     padding: 4,
     borderRadius: 4,
-    color: theme.colors.onSurface, // Color for code text
-    fontSize: 12,
+    color: theme.colors.onSurface,
     whiteSpace: 'pre' as const,
   },
   pre: {
-    backgroundColor: theme.colors.surface, // Background for pre blocks
+    ...theme.typography.codeM,
+    backgroundColor: theme.colors.surface,
     padding: 8,
     borderRadius: 6,
     marginVertical: 8,
     color: theme.colors.onPrimaryContainer,
-    fontFamily: 'Courier',
-    fontSize: 14,
     whiteSpace: 'pre' as const,
   },
   // Styles for thinking tags
   thinking: {
+    ...theme.typography.bodyS,
     color: theme.colors.thinkingBubbleText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   think: {
+    ...theme.typography.bodyS,
     color: theme.colors.thinkingBubbleText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
   thought: {
+    ...theme.typography.bodyS,
     color: theme.colors.thinkingBubbleText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },
 });
 
@@ -73,7 +59,7 @@ export const createStyles = (theme: Theme) =>
       // Dynamic maxWidth will be applied via style prop
     },
     codeHighlighterText: {
-      fontFamily: 'Courier',
+      fontFamily: theme.typography.codeM.fontFamily,
     },
     codeHighlighterScrollContent: {
       backgroundColor: theme.colors.surface,
