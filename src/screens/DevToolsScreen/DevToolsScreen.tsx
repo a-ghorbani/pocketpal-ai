@@ -2,9 +2,11 @@ import React from 'react';
 import {View, ScrollView, Alert} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Card, Text, Button, IconButton} from 'react-native-paper';
-import {createStackNavigator} from '@react-navigation/stack';
+import {
+  createStackNavigator,
+  StackNavigationProp,
+} from '@react-navigation/stack';
 import {useNavigation, ParamListBase} from '@react-navigation/native';
-import {DrawerNavigationProp} from '@react-navigation/drawer';
 
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
@@ -21,7 +23,7 @@ type DevToolsStackParamList = {
 const Stack = createStackNavigator<DevToolsStackParamList>();
 
 // Define the navigation type
-type DevToolsScreenNavigationProp = DrawerNavigationProp<ParamListBase>;
+type DevToolsScreenNavigationProp = StackNavigationProp<ParamListBase>;
 
 // Header button components
 const BackButton = ({
@@ -49,7 +51,7 @@ const MenuButton = ({
   navigation,
 }: {
   navigation: DevToolsScreenNavigationProp;
-}) => <IconButton icon="menu" onPress={() => navigation.openDrawer()} />;
+}) => <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />;
 
 // Main DevTools Home Screen
 const DevToolsHomeScreen: React.FC = () => {

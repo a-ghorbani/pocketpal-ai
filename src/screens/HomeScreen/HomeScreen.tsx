@@ -179,16 +179,18 @@ export const HomeScreen: React.FC = observer(() => {
         )}
       </ScrollView>
 
-      <ChatPalModelPickerSheet
-        isVisible={isPickerVisible}
-        chatInputHeight={0}
-        onClose={() => setPickerVisible(false)}
-        onModelSelect={() => setPickerVisible(false)}
-        onPalSelect={palId => {
-          setActivePalLocal(palId ? palStore.getPalById(palId) : undefined);
-          setPickerVisible(false);
-        }}
-      />
+      {isPickerVisible && (
+        <ChatPalModelPickerSheet
+          isVisible={isPickerVisible}
+          chatInputHeight={0}
+          onClose={() => setPickerVisible(false)}
+          onModelSelect={() => setPickerVisible(false)}
+          onPalSelect={palId => {
+            setActivePalLocal(palId ? palStore.getPalById(palId) : undefined);
+            setPickerVisible(false);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 });

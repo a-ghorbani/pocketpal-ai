@@ -1,12 +1,11 @@
 import * as React from 'react';
-import {Appearance, Dimensions, StyleSheet, View} from 'react-native';
+import {Appearance, StyleSheet, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {isHydrated} from 'mobx-persist-store';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider as PaperProvider} from 'react-native-paper';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
-import {createDrawerNavigator} from '@react-navigation/drawer';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {KeyboardProvider} from 'react-native-keyboard-controller';
 import {
@@ -24,10 +23,6 @@ import {L10nContext} from './src/utils';
 import {ROUTES} from './src/utils/navigationConstants';
 
 import {
-  SidebarContent,
-  ModelsHeaderRight,
-  PalHeaderRight,
-  HeaderLeft,
   AppWithMigration,
   TTSSetupSheet,
   DownloadOverlay,
@@ -35,25 +30,23 @@ import {
 } from './src/components';
 import {MarkdownProvider} from './src/components/MarkdownView';
 import {AutomationBridge, BenchmarkRunnerScreen} from './src/__automation__';
-import {
-  ChatScreen,
-  ModelsScreen,
-  SettingsScreen,
-  BenchmarkScreen,
-  AboutScreen,
-
-  // Dev tools screen. Only available in debug mode.
-  DevToolsScreen,
-} from './src/screens';
-import PalsScreen from './src/screens/PalsScreen';
+import {RootStack, Stack} from './src/navigation';
 import {OnboardingStack} from './src/screens/OnboardingScreens';
 
-// Check if app is in debug mode
-const isDebugMode = __DEV__;
-
-const Drawer = createDrawerNavigator();
-
-const screenWidth = Dimensions.get('window').width;
+// E2E-only deep-link-driven benchmark matrix runner, registered as a
+// pushed route on the root Stack. Hidden from any visible nav; reachable
+// only by the deep link pocketpal://e2e/benchmark in the e2e flavor build
+// (see useDeepLinking cold-launch effect and
+// android/app/src/e2e/AndroidManifest.xml). App is the only place allowed
+// to import from src/__automation__/, so the route is injected here.
+const renderAutomationScreens = () =>
+  __E2E__ ? (
+    <Stack.Screen
+      name={ROUTES.BENCHMARK_RUNNER}
+      component={gestureHandlerRootHOC(BenchmarkRunnerScreen)}
+      options={{title: 'Benchmark Runner'}}
+    />
+  ) : null;
 
 // Component that handles deep linking - must be inside NavigationContainer
 const DeepLinkHandler = () => {
@@ -62,22 +55,22 @@ const DeepLinkHandler = () => {
 };
 
 // Branches between the OnboardingStack (first-launch flow) and the main
-// Drawer.Navigator. Both children mount under the same provider tree —
-// switching does NOT remount providers above this point.
+// app shell (the root Stack hosting the bottom-tab navigator). Both
+// children mount under the same provider tree — switching does NOT remount
+// providers above this point.
 //
 // The hydration check is belt-and-suspenders. AppWithMigrationWrapper
 // already gates render on `isHydrated(uiStore)`, but reading the same
 // observable here keeps the contract local and survives refactors of the
 // outer gate.
-type SwitchPointProps = {drawer: React.ReactNode};
-const SwitchPoint: React.FC<SwitchPointProps> = observer(({drawer}) => {
+const SwitchPoint: React.FC = observer(() => {
   if (!isHydrated(uiStore)) {
     return null;
   }
   if (!uiStore.hasCompletedOnboarding) {
     return <OnboardingStack />;
   }
-  return <>{drawer}</>;
+  return <RootStack renderAutomationScreens={renderAutomationScreens} />;
 });
 
 const App = observer(() => {
@@ -109,110 +102,7 @@ const App = observer(() => {
                 <NavigationContainer>
                   <DeepLinkHandler />
                   <BottomSheetModalProvider>
-                    <SwitchPoint
-                      drawer={
-                        <Drawer.Navigator
-                          screenOptions={{
-                            headerLeft: () => <HeaderLeft />,
-                            drawerStyle: {
-                              width:
-                                screenWidth > 400 ? 320 : screenWidth * 0.8,
-                            },
-                            headerStyle: {
-                              backgroundColor: theme.colors.background,
-                            },
-                            headerTintColor: theme.colors.onBackground,
-                            headerTitleStyle: styles.headerTitle,
-                          }}
-                          drawerContent={props => (
-                            <SidebarContent {...props} />
-                          )}>
-                          <Drawer.Screen
-                            name={ROUTES.CHAT}
-                            component={gestureHandlerRootHOC(ChatScreen)}
-                            options={{
-                              headerShown: false,
-                            }}
-                          />
-                          <Drawer.Screen
-                            name={ROUTES.PALS}
-                            component={gestureHandlerRootHOC(PalsScreen)}
-                            options={{
-                              headerRight: () => <PalHeaderRight />,
-                              headerStyle: styles.headerWithoutDivider,
-                              title: currentL10n.screenTitles.pals,
-                            }}
-                          />
-                          <Drawer.Screen
-                            name={ROUTES.MODELS}
-                            component={gestureHandlerRootHOC(ModelsScreen)}
-                            options={{
-                              headerRight: () => <ModelsHeaderRight />,
-                              headerStyle: styles.headerWithoutDivider,
-                              title: currentL10n.screenTitles.models,
-                            }}
-                          />
-                          <Drawer.Screen
-                            name={ROUTES.BENCHMARK}
-                            component={gestureHandlerRootHOC(BenchmarkScreen)}
-                            options={{
-                              headerStyle: styles.headerWithoutDivider,
-                              title: currentL10n.screenTitles.benchmark,
-                            }}
-                          />
-                          <Drawer.Screen
-                            name={ROUTES.SETTINGS}
-                            component={gestureHandlerRootHOC(SettingsScreen)}
-                            options={{
-                              headerStyle: styles.headerWithoutDivider,
-                              title: currentL10n.screenTitles.settings,
-                            }}
-                          />
-                          <Drawer.Screen
-                            name={ROUTES.APP_INFO}
-                            component={gestureHandlerRootHOC(AboutScreen)}
-                            options={{
-                              headerStyle: styles.headerWithoutDivider,
-                              title: currentL10n.screenTitles.appInfo,
-                            }}
-                          />
-
-                          {/* Only show Dev Tools screen in debug mode */}
-                          {isDebugMode && (
-                            <Drawer.Screen
-                              name={ROUTES.DEV_TOOLS}
-                              component={gestureHandlerRootHOC(DevToolsScreen)}
-                              options={{
-                                headerStyle: styles.headerWithoutDivider,
-                                title: 'Dev Tools',
-                              }}
-                            />
-                          )}
-
-                          {/*
-                      E2E-only deep-link-driven benchmark matrix runner.
-                      Hidden from the drawer sidebar via
-                      drawerItemStyle:{display:'none'}; reachable only by
-                      the deep link pocketpal://e2e/benchmark in the e2e
-                      flavor build (see useDeepLinking cold-launch effect
-                      and android/app/src/e2e/AndroidManifest.xml).
-                    */}
-                          {__E2E__ && (
-                            <Drawer.Screen
-                              name={ROUTES.BENCHMARK_RUNNER}
-                              component={gestureHandlerRootHOC(
-                                BenchmarkRunnerScreen,
-                              )}
-                              options={{
-                                headerStyle: styles.headerWithoutDivider,
-                                title: 'Benchmark Runner',
-                                drawerItemStyle: {display: 'none'},
-                              }}
-                            />
-                          )}
-                        </Drawer.Navigator>
-                      }
-                    />
+                    <SwitchPoint />
                     <TTSSetupSheet />
                     <DownloadOverlay />
                     <HubRunSheetHost />
@@ -227,22 +117,10 @@ const App = observer(() => {
   );
 });
 
-const createStyles = (theme: Theme) =>
+const createStyles = (_theme: Theme) =>
   StyleSheet.create({
     root: {
       flex: 1,
-    },
-    headerWithoutDivider: {
-      elevation: 0,
-      shadowOpacity: 0,
-      borderBottomWidth: 0,
-      backgroundColor: theme.colors.background,
-    },
-    headerWithDivider: {
-      backgroundColor: theme.colors.background,
-    },
-    headerTitle: {
-      ...theme.fonts.titleSmall,
     },
   });
 
