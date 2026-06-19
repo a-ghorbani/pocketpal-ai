@@ -14,6 +14,7 @@ import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
 
 import {useTheme} from '../../hooks';
 import {createStyles, EMPTY_STATE_ICON_SIZE} from './styles';
+import {palAvatarArt} from './palAvatars';
 import {L10nContext} from '../../utils';
 import {t} from '../../locales';
 import {
@@ -51,6 +52,7 @@ const PalCarouselItem: React.FC<{
   const theme = useTheme();
   const styles = createStyles(theme);
   const uri = palThumbnailUri(pal);
+  const art = uri ? null : palAvatarArt(pal);
   const fill = pal.color?.[0] ?? theme.colors.surfaceVariant;
   return (
     <Pressable
@@ -61,7 +63,7 @@ const PalCarouselItem: React.FC<{
       testID={`home-pal-${pal.id}`}>
       <View style={[styles.palAvatar, active && styles.palAvatarActive]}>
         <View style={[styles.palAvatarInner, {backgroundColor: fill}]}>
-          {uri ? <Image source={{uri}} style={styles.palAvatarImage} /> : null}
+          {uri ? <Image source={{uri}} style={styles.palAvatarImage} /> : art}
         </View>
       </View>
       <Text
@@ -358,7 +360,9 @@ export const HomeScreen: React.FC = observer(() => {
                                 source={{uri: palUri}}
                                 style={styles.historyAvatarImage}
                               />
-                            ) : null}
+                            ) : (
+                              palAvatarArt(pal)
+                            )}
                           </View>
                         ) : null}
                         {pal ? (
