@@ -1428,6 +1428,7 @@
     "errorTooShort": "Didn't catch that — hold the mic and speak.",
     "errorTranscribeFailed": "Couldn't transcribe — please try again.",
     "errorNotInstalled": "Download a voice model to use voice input.",
+    "openSettingsLabel": "Open Settings",
     "insufficientStorage": "Not enough space — free up {{requiredMb}} MB to install this model ({{freeMb}} MB available)."
   },
   "onboarding": {

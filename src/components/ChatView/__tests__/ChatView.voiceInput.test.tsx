@@ -4,7 +4,12 @@ import {runInAction} from 'mobx';
 import {user} from '../../../../jest/fixtures';
 import {act, fireEvent, render} from '../../../../jest/test-utils';
 import {asrStore} from '../../../store';
+import * as micPerm from '../../../utils/asrMicPermission';
 import {ChatView} from '../ChatView';
+
+const mockOpenMicSettings = jest
+  .spyOn(micPerm, 'openMicSettings')
+  .mockResolvedValue(undefined);
 
 jest.useFakeTimers();
 
@@ -83,5 +88,31 @@ describe('ChatView voice-input append seam', () => {
     act(() => capturedOnTranscript?.('and eggs'));
 
     expect(getByTestId('chat-input').props.value).toBe('buy milk and eggs');
+  });
+
+  it('surfaces a capture error in a transient snackbar', () => {
+    const {getByTestId, getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('transcribe_failed');
+    });
+
+    expect(getByTestId('asr-error-snackbar')).toBeTruthy();
+    expect(getByText("Couldn't transcribe — please try again.")).toBeTruthy();
+  });
+
+  it('offers an open-Settings action when permission is blocked', () => {
+    const {getByText} = renderChat();
+
+    act(() => {
+      asrStore.setError('permission_blocked');
+    });
+
+    const action = getByText('Open Settings');
+    expect(action).toBeTruthy();
+    act(() => {
+      fireEvent.press(action);
+    });
+    expect(mockOpenMicSettings).toHaveBeenCalled();
   });
 });
