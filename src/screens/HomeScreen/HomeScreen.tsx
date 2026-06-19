@@ -82,8 +82,10 @@ export const HomeScreen: React.FC = observer(() => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
 
-  // Lift the bottom-anchored composer (+ model chip) above the keyboard when
-  // the input is focused, mirroring the Chat input. The library reports a
+  // Lift the whole bottom-anchored hero (title + carousel + composer + model
+  // chip) above the keyboard when the input is focused. Translating the group
+  // together keeps the natural order intact (carousel stays above the composer)
+  // and lets the title scroll off the top as needed. The library reports a
   // negative height while the keyboard is up; the IME inset already spans the
   // navigation bar (KeyboardProvider is navigationBarTranslucent), so the space
   // actually stolen is the IME inset minus the safe-area bottom inset.
@@ -91,7 +93,7 @@ export const HomeScreen: React.FC = observer(() => {
   const keyboardOcclusion = useDerivedValue(() =>
     Math.max(0, Math.abs(keyboard.height.value) - insets.bottom),
   );
-  const composerLiftStyle = useAnimatedStyle(() => ({
+  const heroLiftStyle = useAnimatedStyle(() => ({
     transform: [{translateY: -keyboardOcclusion.value}],
   }));
 
@@ -161,7 +163,12 @@ export const HomeScreen: React.FC = observer(() => {
       <ScrollView
         contentContainerStyle={[styles.body, isEmpty && styles.bodyEmpty]}
         keyboardShouldPersistTaps="handled">
-        <View style={[styles.content, isEmpty && styles.contentEmpty]}>
+        <Animated.View
+          style={[
+            styles.content,
+            isEmpty && styles.contentEmpty,
+            heroLiftStyle,
+          ]}>
           <Text
             style={styles.title}
             testID="home-title"
@@ -206,7 +213,7 @@ export const HomeScreen: React.FC = observer(() => {
             </Pressable>
           </ScrollView>
 
-          <Animated.View style={composerLiftStyle}>
+          <View>
             <View style={styles.composer}>
               <TextInput
                 style={styles.composerInput}
@@ -298,8 +305,8 @@ export const HomeScreen: React.FC = observer(() => {
                 stroke={theme.colors.foregroundTertiary}
               />
             </Pressable>
-          </Animated.View>
-        </View>
+          </View>
+        </Animated.View>
 
         <View style={isEmpty && styles.historyRegionEmpty}>
           <View style={styles.historyHeader}>
