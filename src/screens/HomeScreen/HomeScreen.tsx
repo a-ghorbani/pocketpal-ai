@@ -4,8 +4,13 @@ import {Image, ScrollView, Text, TextInput, View} from 'react-native';
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+} from 'react-native-reanimated';
+import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
 
 import {useTheme} from '../../hooks';
 import {createStyles, EMPTY_STATE_ICON_SIZE} from './styles';
@@ -73,6 +78,20 @@ export const HomeScreen: React.FC = observer(() => {
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
+
+  // Lift the bottom-anchored composer (+ model chip) above the keyboard when
+  // the input is focused, mirroring the Chat input. The library reports a
+  // negative height while the keyboard is up; the IME inset already spans the
+  // navigation bar (KeyboardProvider is navigationBarTranslucent), so the space
+  // actually stolen is the IME inset minus the safe-area bottom inset.
+  const keyboard = useReanimatedKeyboardAnimation();
+  const keyboardOcclusion = useDerivedValue(() =>
+    Math.max(0, Math.abs(keyboard.height.value) - insets.bottom),
+  );
+  const composerLiftStyle = useAnimatedStyle(() => ({
+    transform: [{translateY: -keyboardOcclusion.value}],
+  }));
 
   const [composerText, setComposerText] = useState('');
   const [selectedPal, setSelectedPalLocal] = useState<Pal | undefined>(
@@ -185,94 +204,99 @@ export const HomeScreen: React.FC = observer(() => {
             </Pressable>
           </ScrollView>
 
-          <View style={styles.composer}>
-            <TextInput
-              style={styles.composerInput}
-              placeholder={composerPlaceholder}
-              placeholderTextColor={theme.colors.foregroundTertiary}
-              value={composerText}
-              onChangeText={setComposerText}
-              multiline
-              testID="home-composer-input"
-            />
-            <View style={styles.composerActions}>
-              <Pressable
-                style={styles.composerAttach}
-                onPress={handleAddPal}
-                accessibilityRole="button"
-                accessibilityLabel={l10n.home.addPal}
-                testID="home-composer-attach">
-                <PlusFilledIcon
-                  width={16}
-                  height={16}
-                  fill={theme.colors.foregroundTertiary}
-                />
-              </Pressable>
-              <View style={styles.composerEndAddon}>
+          <Animated.View style={composerLiftStyle}>
+            <View style={styles.composer}>
+              <TextInput
+                style={styles.composerInput}
+                placeholder={composerPlaceholder}
+                placeholderTextColor={theme.colors.foregroundTertiary}
+                value={composerText}
+                onChangeText={setComposerText}
+                multiline
+                testID="home-composer-input"
+              />
+              <View style={styles.composerActions}>
                 <Pressable
-                  style={styles.composerMic}
+                  style={styles.composerAttach}
+                  onPress={handleAddPal}
                   accessibilityRole="button"
-                  accessibilityLabel={l10n.home.micLabel}
-                  testID="home-composer-mic">
-                  <MicIcon
+                  accessibilityLabel={l10n.home.addPal}
+                  testID="home-composer-attach">
+                  <PlusFilledIcon
                     width={16}
                     height={16}
-                    stroke={theme.colors.foregroundTertiary}
+                    fill={theme.colors.foregroundTertiary}
                   />
                 </Pressable>
-                <Pressable
-                  onPress={handleSend}
-                  disabled={!canSend}
-                  accessibilityRole="button"
-                  accessibilityLabel={l10n.home.sendLabel}
-                  testID="home-composer-send">
-                  <LinearGradient
-                    colors={
-                      canSend
-                        ? [theme.colors.midnightHigh, theme.colors.midnightLow]
-                        : [
-                            theme.colors.midnightDisabledHigh,
-                            theme.colors.midnightDisabledLow,
-                          ]
-                    }
-                    start={{x: 0, y: 0}}
-                    end={{x: 0, y: 1}}
-                    style={styles.sendButton}>
-                    <SendArrowIcon
+                <View style={styles.composerEndAddon}>
+                  <Pressable
+                    style={styles.composerMic}
+                    accessibilityRole="button"
+                    accessibilityLabel={l10n.home.micLabel}
+                    testID="home-composer-mic">
+                    <MicIcon
                       width={16}
                       height={16}
-                      fill={theme.colors.inverseText}
+                      stroke={theme.colors.foregroundTertiary}
                     />
-                  </LinearGradient>
-                </Pressable>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleSend}
+                    disabled={!canSend}
+                    accessibilityRole="button"
+                    accessibilityLabel={l10n.home.sendLabel}
+                    testID="home-composer-send">
+                    <LinearGradient
+                      colors={
+                        canSend
+                          ? [
+                              theme.colors.midnightHigh,
+                              theme.colors.midnightLow,
+                            ]
+                          : [
+                              theme.colors.midnightDisabledHigh,
+                              theme.colors.midnightDisabledLow,
+                            ]
+                      }
+                      start={{x: 0, y: 0}}
+                      end={{x: 0, y: 1}}
+                      style={styles.sendButton}>
+                      <SendArrowIcon
+                        width={16}
+                        height={16}
+                        fill={theme.colors.inverseText}
+                      />
+                    </LinearGradient>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
 
-          <Pressable
-            style={styles.modelChip}
-            onPress={handleModelChipPress}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.home.modelChipPrefix}
-            testID="home-model-chip">
-            {activeModelName ? (
-              <Text numberOfLines={1}>
-                <Text style={styles.modelChipPrefix}>
-                  {l10n.home.modelChipPrefix}{' '}
+            <Pressable
+              style={styles.modelChip}
+              onPress={handleModelChipPress}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.home.modelChipPrefix}
+              testID="home-model-chip">
+              {activeModelName ? (
+                <Text numberOfLines={1}>
+                  <Text style={styles.modelChipPrefix}>
+                    {l10n.home.modelChipPrefix}{' '}
+                  </Text>
+                  <Text style={styles.modelChipName}>{activeModelName}</Text>
                 </Text>
-                <Text style={styles.modelChipName}>{activeModelName}</Text>
-              </Text>
-            ) : (
-              <Text style={styles.modelChipPrefix} numberOfLines={1}>
-                {l10n.home.modelChipEmpty}
-              </Text>
-            )}
-            <ChevronDownIcon
-              width={14}
-              height={14}
-              stroke={theme.colors.foregroundTertiary}
-            />
-          </Pressable>
+              ) : (
+                <Text style={styles.modelChipPrefix} numberOfLines={1}>
+                  {l10n.home.modelChipEmpty}
+                </Text>
+              )}
+              <ChevronDownIcon
+                width={14}
+                height={14}
+                stroke={theme.colors.foregroundTertiary}
+              />
+            </Pressable>
+          </Animated.View>
         </View>
 
         <View style={isEmpty && styles.historyRegionEmpty}>
