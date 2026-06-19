@@ -1308,6 +1308,20 @@ describe('TTSStore', () => {
       );
     });
 
+    it('play() threads the default language "na" when none is set', async () => {
+      const store = await makeStore();
+      store.setCurrentVoice(SUPERTONIC_VOICE);
+      mockSupertonicPlay.mockResolvedValueOnce(undefined);
+
+      await store.play('msg-1', 'hello');
+
+      expect(mockSupertonicPlay).toHaveBeenCalledWith(
+        'hello',
+        SUPERTONIC_VOICE,
+        expect.objectContaining({language: 'na'}),
+      );
+    });
+
     it('preview() forwards the selected language to the Supertonic engine', async () => {
       const store = await makeStore();
       store.setSupertonicLanguage('fr');
@@ -1319,6 +1333,19 @@ describe('TTSStore', () => {
         expect.any(String),
         SUPERTONIC_VOICE,
         expect.objectContaining({language: 'fr'}),
+      );
+    });
+
+    it('preview() threads the default language "na" when none is set', async () => {
+      const store = await makeStore();
+      mockSupertonicPlay.mockResolvedValueOnce(undefined);
+
+      await store.preview(SUPERTONIC_VOICE);
+
+      expect(mockSupertonicPlay).toHaveBeenCalledWith(
+        expect.any(String),
+        SUPERTONIC_VOICE,
+        expect.objectContaining({language: 'na'}),
       );
     });
 

@@ -92,6 +92,16 @@ describe('SupertonicEngine', () => {
       await expect(new SupertonicEngine().isInstalled()).resolves.toBe(false);
     });
 
+    it('returns false when a download is interrupted before the sentinel write (all files present, no sentinel)', async () => {
+      // Sentinel is the final disk write of downloadModel(): if the process
+      // dies after the model files land but before it, every file check passes
+      // yet the install must not count as complete.
+      (RNFS.exists as jest.Mock).mockImplementation((path: string) =>
+        Promise.resolve(!path.endsWith(SUPERTONIC_VERSION_SENTINEL_FILENAME)),
+      );
+      await expect(new SupertonicEngine().isInstalled()).resolves.toBe(false);
+    });
+
     it('returns false when the sentinel records an older version', async () => {
       (RNFS.exists as jest.Mock).mockResolvedValue(true);
       (RNFS.readFile as jest.Mock).mockResolvedValue(
