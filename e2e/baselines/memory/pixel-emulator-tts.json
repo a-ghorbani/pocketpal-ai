@@ -1,0 +1,145 @@
+{
+  "version": "1.0",
+  "commit": "6a340dc1",
+  "device": "sdk_gphone64_arm64",
+  "os_version": "16",
+  "platform": "android",
+  "timestamp": "2026-06-19T15:49:01.459Z",
+  "engines": {
+    "kitten": {
+      "peak_memory_mb": 349.46,
+      "checkpoints": [
+        {
+          "label": "tts_kitten_loaded",
+          "memory_mb": 164.47
+        },
+        {
+          "label": "tts_kitten_active",
+          "memory_mb": 349.46
+        },
+        {
+          "label": "tts_kitten_idle",
+          "memory_mb": 249.43
+        }
+      ]
+    },
+    "supertonic": {
+      "peak_memory_mb": 667.28,
+      "checkpoints": [
+        {
+          "label": "tts_supertonic_loaded",
+          "memory_mb": 253.08
+        },
+        {
+          "label": "tts_supertonic_active",
+          "memory_mb": 667.28
+        },
+        {
+          "label": "tts_supertonic_idle",
+          "memory_mb": 269.01
+        }
+      ]
+    },
+    "kokoro": {
+      "peak_memory_mb": 636.31,
+      "checkpoints": [
+        {
+          "label": "tts_kokoro_loaded",
+          "memory_mb": 271.79
+        },
+        {
+          "label": "tts_kokoro_active",
+          "memory_mb": 636.31
+        },
+        {
+          "label": "tts_kokoro_idle",
+          "memory_mb": 240.21
+        }
+      ]
+    }
+  },
+  "checkpoints": [
+    {
+      "label": "tts_kitten_loaded",
+      "timestamp": "2026-06-19T15:46:53.522919Z",
+      "native": {
+        "pss_total": 172454912,
+        "native_heap_allocated": 48973344,
+        "available_memory": 4413120512
+      }
+    },
+    {
+      "label": "tts_kitten_active",
+      "timestamp": "2026-06-19T15:47:09.149281Z",
+      "native": {
+        "pss_total": 366440448,
+        "native_heap_allocated": 205570000,
+        "available_memory": 4287184896
+      }
+    },
+    {
+      "label": "tts_kitten_idle",
+      "timestamp": "2026-06-19T15:47:21.655199Z",
+      "native": {
+        "pss_total": 261545984,
+        "native_heap_allocated": 70962992,
+        "available_memory": 4418404352
+      }
+    },
+    {
+      "label": "tts_supertonic_loaded",
+      "timestamp": "2026-06-19T15:47:37.237887Z",
+      "native": {
+        "pss_total": 265378816,
+        "native_heap_allocated": 71677296,
+        "available_memory": 4442636288
+      }
+    },
+    {
+      "label": "tts_supertonic_active",
+      "timestamp": "2026-06-19T15:47:52.954115Z",
+      "native": {
+        "pss_total": 699691008,
+        "native_heap_allocated": 527044704,
+        "available_memory": 3990847488
+      }
+    },
+    {
+      "label": "tts_supertonic_idle",
+      "timestamp": "2026-06-19T15:48:05.741968Z",
+      "native": {
+        "pss_total": 282079232,
+        "native_heap_allocated": 94302160,
+        "available_memory": 4509712384
+      }
+    },
+    {
+      "label": "tts_kokoro_loaded",
+      "timestamp": "2026-06-19T15:48:27.741436Z",
+      "native": {
+        "pss_total": 284991488,
+        "native_heap_allocated": 94866208,
+        "available_memory": 4487970816
+      }
+    },
+    {
+      "label": "tts_kokoro_active",
+      "timestamp": "2026-06-19T15:48:43.324708Z",
+      "native": {
+        "pss_total": 667224064,
+        "native_heap_allocated": 527361712,
+        "available_memory": 4086644736
+      }
+    },
+    {
+      "label": "tts_kokoro_idle",
+      "timestamp": "2026-06-19T15:48:55.590046Z",
+      "native": {
+        "pss_total": 251873280,
+        "native_heap_allocated": 62089280,
+        "available_memory": 4501381120
+      }
+    }
+  ],
+  "peak_memory_mb": 667.28
+}
