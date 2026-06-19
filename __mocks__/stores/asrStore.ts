@@ -1,4 +1,4 @@
-import {makeAutoObservable} from 'mobx';
+import {makeAutoObservable, runInAction} from 'mobx';
 
 type DownloadState = 'not_installed' | 'downloading' | 'ready' | 'error';
 type AsrTier = 'base' | 'small' | 'large-turbo';
@@ -64,25 +64,35 @@ class MockASRStore {
     });
     this.init = jest.fn().mockResolvedValue(undefined);
     this.setUserASROverride = jest.fn((v: boolean) => {
-      this.userASROverride = v;
+      runInAction(() => {
+        this.userASROverride = v;
+      });
     });
     this.setSelectedTier = jest.fn((t: AsrTier) => {
-      this.selectedTier = t;
+      runInAction(() => {
+        this.selectedTier = t;
+      });
     });
     this.refreshFreeDisk = jest.fn().mockResolvedValue(undefined);
     this.downloadModel = jest.fn().mockResolvedValue(undefined);
     this.deleteModel = jest.fn().mockResolvedValue(undefined);
     this.retryDownload = jest.fn().mockResolvedValue(undefined);
     this.setCaptureState = jest.fn((s: CaptureState) => {
-      this.captureState = s;
+      runInAction(() => {
+        this.captureState = s;
+      });
     });
     this.setError = jest.fn((k: AsrErrorKind) => {
-      this.captureState = 'error';
-      this.lastError = k;
+      runInAction(() => {
+        this.captureState = 'error';
+        this.lastError = k;
+      });
     });
     this.resetCapture = jest.fn(() => {
-      this.captureState = 'idle';
-      this.lastError = null;
+      runInAction(() => {
+        this.captureState = 'idle';
+        this.lastError = null;
+      });
     });
   }
 

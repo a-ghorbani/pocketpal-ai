@@ -11,7 +11,7 @@ import {
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {modelStore, uiStore, ttsStore, asrStore} from '../../../store';
 import {l10n} from '../../../locales';
 
 jest.useFakeTimers();
@@ -378,6 +378,104 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('voice input (ASR)', () => {
+    afterEach(() => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = false;
+        asrStore.userASROverride = null;
+        asrStore.downloadStates.small = 'not_installed';
+      });
+    });
+
+    const renderSettings = () =>
+      render(<SettingsScreen />, {withSafeArea: true, withNavigation: true});
+
+    it('toggle reflects the device default when no override is set', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = true;
+        asrStore.userASROverride = null;
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-availability-switch').props.value).toBe(true);
+    });
+
+    it('toggle reflects an explicit user override over the device default', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = true;
+        asrStore.userASROverride = false;
+      });
+      const {getByTestId} = renderSettings();
+      expect(getByTestId('asr-availability-switch').props.value).toBe(false);
+    });
+
+    it('shows the low-memory helper line only when the device gate fails', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = false;
+        asrStore.userASROverride = null;
+      });
+      const {getByText} = renderSettings();
+      expect(getByText(l10n.en.voiceInput.lowMemoryHelper)).toBeTruthy();
+    });
+
+    it('hides the low-memory helper when the device meets memory', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = true;
+        asrStore.userASROverride = null;
+      });
+      const {queryByText} = renderSettings();
+      expect(queryByText(l10n.en.voiceInput.lowMemoryHelper)).toBeNull();
+    });
+
+    it('writes the override through setUserASROverride when toggled', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = false;
+        asrStore.userASROverride = null;
+      });
+      const {getByTestId} = renderSettings();
+      act(() => {
+        fireEvent(getByTestId('asr-availability-switch'), 'valueChange', true);
+      });
+      expect(asrStore.setUserASROverride).toHaveBeenCalledWith(true);
+    });
+
+    it('offers install controls only when the gate is open', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = false;
+        asrStore.userASROverride = false;
+      });
+      const {queryByTestId} = renderSettings();
+      expect(queryByTestId('asr-install-small')).toBeNull();
+    });
+
+    it('shows an install control for a not-installed tier when enabled', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = true;
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'not_installed';
+      });
+      const {getByTestId} = renderSettings();
+      const install = getByTestId('asr-install-small');
+      act(() => {
+        fireEvent.press(install);
+      });
+      expect(asrStore.downloadModel).toHaveBeenCalledWith('small');
+    });
+
+    it('shows a remove control for an installed tier and deletes on press', () => {
+      runInAction(() => {
+        asrStore.deviceMeetsMemory = true;
+        asrStore.userASROverride = true;
+        asrStore.downloadStates.small = 'ready';
+      });
+      const {getByTestId} = renderSettings();
+      const remove = getByTestId('asr-remove-small');
+      act(() => {
+        fireEvent.press(remove);
+      });
+      expect(asrStore.deleteModel).toHaveBeenCalledWith('small');
     });
   });
 });
