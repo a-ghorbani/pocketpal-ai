@@ -442,8 +442,8 @@ export const VoicePickerView: React.FC = observer(() => {
 
     // Two-line subtitle: tier (bold) on top; specs (regular) below.
     // Specs include disk MB AND peak RAM — RAM is the true device-fit
-    // signal, especially on lower-end devices where Supertonic's ~430 MB
-    // working set matters more than its 265 MB on disk.
+    // signal, especially on lower-end devices where peak working set matters
+    // more than disk size (meta.sizeMb).
     // RAM rounds to nearest 50 MB — exact numbers ("235 MB" vs "228 MB")
     // are noise; the "~" prefix is in the localized template.
     const ramRounded = Math.round(meta.ramMb / 50) * 50;
