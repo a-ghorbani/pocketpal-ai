@@ -1,5 +1,10 @@
-import React, {useRef, useState} from 'react';
-import {View, type LayoutRectangle} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {
+  I18nManager,
+  View,
+  type LayoutChangeEvent,
+  type LayoutRectangle,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,6 +20,23 @@ import {createStyles, type BottomNavBarVariant} from './styles';
 
 // Quick, subtle glide for the active pill between tabs.
 const PILL_TIMING = {duration: 180};
+
+/**
+ * Pill translateX relative to its logical `start` anchor (left in LTR, right in
+ * RTL). `onLayout` reports a physical-left `x`; in RTL we mirror it and shift
+ * the pill leftward from the start (right) edge so the highlight lands on the
+ * correct tab on both platforms.
+ */
+export const pillTranslateX = (
+  frameX: number,
+  frameWidth: number,
+  containerWidth: number,
+  isRTL: boolean,
+): number => {
+  const x = isRTL ? -(containerWidth - frameX - frameWidth) : frameX;
+  // Normalise -0 to 0 (identical translate; keeps equality checks clean).
+  return x === 0 ? 0 : x;
+};
 
 export type BottomNavBarItem = {
   value: string;
@@ -51,27 +73,45 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   const theme = useTheme();
   const styles = createStyles(theme, {variant});
   const isFloating = variant === 'floating';
+  const isRTL = I18nManager.isRTL;
 
   // Per-item frames, captured on layout, used to position the sliding pill.
   const layoutsRef = useRef<Record<string, LayoutRectangle>>({});
+  const containerWidthRef = useRef(0);
   const [pillReady, setPillReady] = useState(false);
   const pillX = useSharedValue(0);
   const pillWidth = useSharedValue(0);
 
   const movePillTo = (value: string, animated: boolean) => {
     const frame = layoutsRef.current[value];
-    if (!frame) {
+    // RTL positioning is relative to the container's right edge, so the pill
+    // can only be seated once the container width is known.
+    if (!frame || (isRTL && !containerWidthRef.current)) {
       return;
     }
+    const x = pillTranslateX(
+      frame.x,
+      frame.width,
+      containerWidthRef.current,
+      isRTL,
+    );
     if (animated) {
-      pillX.value = withTiming(frame.x, PILL_TIMING);
+      pillX.value = withTiming(x, PILL_TIMING);
       pillWidth.value = withTiming(frame.width, PILL_TIMING);
     } else {
-      pillX.value = frame.x;
+      pillX.value = x;
       pillWidth.value = frame.width;
     }
     if (!pillReady) {
       setPillReady(true);
+    }
+  };
+
+  const handleRootLayout = (e: LayoutChangeEvent) => {
+    containerWidthRef.current = e.nativeEvent.layout.width;
+    // In RTL the first seat may have been deferred until the width was known.
+    if (isFloating) {
+      movePillTo(selectedValue, false);
     }
   };
 
@@ -90,6 +130,17 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
     onSelect(value);
   };
 
+  // Keep the pill in sync with the selected tab even when it changes without a
+  // tap (back gesture, deep link, programmatic nav) so it never desyncs from
+  // the icon/label colours.
+  useEffect(() => {
+    if (isFloating) {
+      movePillTo(selectedValue, true);
+    }
+    // movePillTo is recreated each render; we intentionally track selectedValue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedValue]);
+
   const pillAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{translateX: pillX.value}],
     width: pillWidth.value,
@@ -100,6 +151,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       testID={testID}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
+      onLayout={isFloating ? handleRootLayout : undefined}
       style={[styles.root, style]}>
       {isFloating && pillReady ? (
         <Animated.View

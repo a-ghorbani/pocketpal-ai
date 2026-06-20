@@ -65,10 +65,13 @@ const createFloatingStyles = (theme: Theme, selected?: boolean) =>
     // selected item's measured frame. Replaces the per-item background so the
     // selection glides instead of jumping. top/bottom equal the root padding so
     // the pill spans exactly the item row height; x/width are driven at runtime.
+    // `start: 0` anchors it to the logical start edge so the runtime translateX
+    // (mirrored in RTL) lands it on the correct tab in both directions.
     pill: {
       position: 'absolute',
       top: theme.spacing.xs,
       bottom: theme.spacing.xs,
+      start: 0,
       borderRadius: theme.radius.xxl,
       borderWidth: theme.stroke.xs,
       borderColor: theme.colors.accent.yellowMute,

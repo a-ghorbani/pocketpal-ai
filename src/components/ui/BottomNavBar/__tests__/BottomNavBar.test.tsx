@@ -3,7 +3,7 @@ import {Text} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 
 import {render} from '../../../../../jest/test-utils';
-import {BottomNavBar} from '../BottomNavBar';
+import {BottomNavBar, pillTranslateX} from '../BottomNavBar';
 import {runSnapshotMatrix} from '../../__tests__/helpers/snapshotMatrix';
 
 const items = [
@@ -55,6 +55,37 @@ describe('BottomNavBar', () => {
     // The active pill is now a single sliding element, not an item background.
     expect(flatten(selected.props.style).backgroundColor).toBeUndefined();
     expect(selected.props.accessibilityState?.selected).toBe(true);
+  });
+});
+
+describe('BottomNavBar floating pill — RTL positioning', () => {
+  // A 3-tab bar: container width 306, each item 100 wide with a 3px gap.
+  const containerWidth = 306;
+  const middle = {x: 103, width: 100}; // the centre tab
+
+  it('positions the pill at the physical-left frame.x in LTR', () => {
+    expect(pillTranslateX(middle.x, middle.width, containerWidth, false)).toBe(
+      103,
+    );
+  });
+
+  it('mirrors frame.x off the start (right) edge in RTL', () => {
+    // Mirror of [103, 203] within 306 is [103, 203] from the right → -103.
+    expect(pillTranslateX(middle.x, middle.width, containerWidth, true)).toBe(
+      -(containerWidth - middle.x - middle.width),
+    );
+    expect(pillTranslateX(middle.x, middle.width, containerWidth, true)).toBe(
+      -103,
+    );
+  });
+
+  it('keeps the first and last tabs symmetric across LTR/RTL', () => {
+    const first = {x: 0, width: 100};
+    const last = {x: 206, width: 100};
+    // First tab in LTR sits at the start (0); the same tab in RTL sits at the
+    // start (right) edge → also 0 translate.
+    expect(pillTranslateX(first.x, first.width, containerWidth, false)).toBe(0);
+    expect(pillTranslateX(last.x, last.width, containerWidth, true)).toBe(0);
   });
 });
 
