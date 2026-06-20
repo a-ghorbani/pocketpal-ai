@@ -229,7 +229,7 @@ export const darkColors: TokenColors = {
   // Foreground greys — dark binding mirrors the on-surface ramp (home
   // parity is a light-mode round; dark band tracked as a follow-up).
   foregroundPrimary: '#fafafa',
-  foregroundSecondary: '#b9b8b6',
+  foregroundSecondary: '#c4c2c0',
   foregroundTertiary: '#81807e',
   foregroundSubtle: '#646466',
   // MD3 extras
@@ -325,10 +325,11 @@ export const darkColors: TokenColors = {
     peach: '#7A4A1F',
     // Progress-bar fill — dark binding mirrors the light token (same hue).
     greenStrong: '#7c8e8a',
-    // Yellow accents — dark binding mirrors the light hue (no canonical
-    // dark band yet; home parity is a light-mode round).
-    yellowSubtle: '#f5dbbc',
-    yellowMute: '#f8f1e2',
+    // Yellow accents — mode-aware: the floating active-tab pill is a saturated
+    // amber on dark (Figma dark Color/Yellow/Subtle + Mute), so the white
+    // active label/icon keeps contrast.
+    yellowSubtle: '#a86c34',
+    yellowMute: '#443c35',
   },
   yellowAccent: '#c58334',
   yellowHighestContrast: '#a86c34',
