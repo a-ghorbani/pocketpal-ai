@@ -12,7 +12,7 @@ export const codeHighlighterPreOverride = {
 export const createTagsStyles = (theme: Theme) => ({
   body: {
     ...theme.typography.bodyM,
-    color: theme.colors.text,
+    color: theme.colors.foregroundPrimary,
     padding: 0,
     paddingTop: 0,
     margin: 0,
