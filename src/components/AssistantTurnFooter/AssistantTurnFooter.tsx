@@ -6,7 +6,12 @@ import {Text} from 'react-native-paper';
 import Clipboard from '@react-native-clipboard/clipboard';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
-import {CopyIcon, RefreshIcon, DotsVerticalIcon} from '../../assets/icons';
+import {
+  ClockIcon,
+  CopyIcon,
+  RefreshIcon,
+  DotsVerticalIcon,
+} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {PlayButton} from '../TextMessage/PlayButton';
 
@@ -74,31 +79,24 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
 
     const componentStyles = styles({theme});
 
-    // Build timing string from whichever parts are available. Each part
-    // is independent; missing parts are omitted from the joined string.
-    const timingParts: string[] = [];
-    if (timings?.predicted_per_token_ms != null) {
-      timingParts.push(
-        t(l10n.components.bubble.msPerToken, {
-          value: timings.predicted_per_token_ms.toFixed(),
-        }),
-      );
-    }
+    // Compact timing chips: a clock glyph + value, one per metric,
+    // bullet-separated. Each chip is independent; missing metrics are
+    // omitted. ms/token is dropped from this surface.
+    const timingChips: string[] = [];
     if (timings?.predicted_per_second != null) {
-      timingParts.push(
-        t(l10n.components.bubble.tokensPerSec, {
-          value: timings.predicted_per_second.toFixed(2),
+      timingChips.push(
+        t(l10n.components.bubble.tokensPerSecCompact, {
+          value: timings.predicted_per_second.toFixed(1),
         }),
       );
     }
     if (timings?.time_to_first_token_ms != null) {
-      timingParts.push(
-        t(l10n.components.bubble.ttft, {
+      timingChips.push(
+        t(l10n.components.bubble.ttftCompact, {
           value: timings.time_to_first_token_ms,
         }),
       );
     }
-    const fullTimingsString = timingParts.join(', ');
 
     const copyToClipboard = () => {
       if (message.type !== 'text' && message.type !== 'assistant_turn') {
@@ -138,10 +136,20 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
             />
           </TouchableOpacity>
         ) : null}
-        {timings && fullTimingsString ? (
-          <Text style={componentStyles.timing} testID="footer-timing">
-            {fullTimingsString}
-          </Text>
+        {timings && timingChips.length > 0 ? (
+          <View style={componentStyles.timingRow} testID="footer-timing">
+            {timingChips.map((chip, index) => (
+              <View key={chip} style={componentStyles.timingChip}>
+                {index > 0 && <Text style={componentStyles.timing}>·</Text>}
+                <ClockIcon
+                  stroke={theme.colors.textSecondary}
+                  width={12}
+                  height={12}
+                />
+                <Text style={componentStyles.timing}>{chip}</Text>
+              </View>
+            ))}
+          </View>
         ) : null}
         {interrupted ? (
           <Text

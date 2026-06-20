@@ -233,7 +233,7 @@ export async function waitForInferenceComplete(
       const labelText = await timingElement
         .getAttribute(attrName)
         .catch(() => '');
-      const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
+      const timingMatch = labelText.match(/(\d+(?:\.\d+)?\s*tok\/s.*TTFT[^·]*)/);
       return timingMatch ? timingMatch[1] : labelText.slice(-100);
     }
 

@@ -105,17 +105,18 @@ describe('AssistantTurnFooter', () => {
     });
   });
 
-  it('renders timing line when timings present (no copy button if not copyable)', () => {
+  it('renders compact tok/s chip when timings present (ms/token dropped, no copy button if not copyable)', () => {
     const message = baseTurn({
       metadata: {
         timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
       },
     });
-    const {getByText, queryByTestId} = render(
+    const {getByText, queryByText, queryByTestId} = render(
       <AssistantTurnFooter message={message} />,
     );
     expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
-    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
+    expect(getByText('100.0 tok/s')).toBeTruthy();
+    expect(queryByText(/ms\/token/)).toBeNull();
     expect(queryByTestId('footer-copy')).toBeNull();
   });
 
@@ -139,7 +140,7 @@ describe('AssistantTurnFooter', () => {
     const {getByText, queryByTestId} = render(
       <AssistantTurnFooter message={message} />,
     );
-    expect(getByText('32ms/token, 30.00 tokens/sec')).toBeTruthy();
+    expect(getByText('30.0 tok/s')).toBeTruthy();
     expect(queryByTestId('footer-copy')).toBeTruthy();
   });
 
@@ -178,14 +179,14 @@ describe('AssistantTurnFooter', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('renders TTFT-only timing string when only ttft is present', () => {
+  it('renders TTFT-only timing chip when only ttft is present', () => {
     const message = baseTurn({
       metadata: {
         timings: {time_to_first_token_ms: 150},
       },
     });
     const {getByText} = render(<AssistantTurnFooter message={message} />);
-    expect(getByText('150ms TTFT')).toBeTruthy();
+    expect(getByText('TTFT 150ms')).toBeTruthy();
   });
 
   it('does not render the timing Text when timings are empty (no parts to show)', () => {

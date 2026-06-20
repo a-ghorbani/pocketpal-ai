@@ -515,7 +515,9 @@
     "bubble": {
       "msPerToken": "{{value}}ms/token",
       "tokensPerSec": "{{value}} tokens/sec",
+      "tokensPerSecCompact": "{{value}} tok/s",
       "ttft": "{{value}}ms TTFT",
+      "ttftCompact": "TTFT {{value}}ms",
       "interrupted": "Interrupted",
       "truncated": "Cut off — likely context full"
     },
