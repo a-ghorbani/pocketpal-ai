@@ -19,14 +19,12 @@ export class HomePage extends BasePage {
   }
 
   /**
-   * Start a chat from the composer. Sending navigates into the Chat flow
-   * via the existing pending-message + active-pal handoff.
+   * Start a chat from the composer. The composer is a launcher: tapping it
+   * opens the Chat screen (where the input is focused). It accepts no text on
+   * Home, so any message is typed in the Chat input after arrival.
    */
-  async startChat(message?: string): Promise<void> {
-    if (message) {
-      await this.typeText(Selectors.home.composerInput, message);
-    }
-    await this.tap(Selectors.home.composerSend);
+  async startChat(): Promise<void> {
+    await this.tap(Selectors.home.composerInput);
   }
 
   /**
