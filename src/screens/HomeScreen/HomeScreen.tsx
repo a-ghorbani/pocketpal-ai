@@ -233,8 +233,8 @@ export const HomeScreen: React.FC = observer(() => {
                     testID="home-composer-send">
                     <LinearGradient
                       colors={[
-                        theme.colors.midnightHigh,
-                        theme.colors.midnightLow,
+                        theme.colors.midnightDisabledHigh,
+                        theme.colors.midnightDisabledLow,
                       ]}
                       start={{x: 0, y: 0}}
                       end={{x: 0, y: 1}}
