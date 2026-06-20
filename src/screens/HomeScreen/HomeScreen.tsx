@@ -278,21 +278,6 @@ export const HomeScreen: React.FC = observer(() => {
         </View>
 
         <View style={isEmpty && styles.historyRegionEmpty}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.historyTitle}>{l10n.home.chatHistory}</Text>
-            <Pressable
-              style={styles.historySearch}
-              accessibilityRole="button"
-              accessibilityLabel={l10n.home.searchLabel}
-              testID="home-history-search">
-              <SearchIcon
-                width={20}
-                height={20}
-                stroke={theme.colors.foregroundTertiary}
-              />
-            </Pressable>
-          </View>
-
           {isEmpty ? (
             <View style={styles.emptyState} testID="home-empty-state">
               <View style={styles.emptyStateIcon} testID="home-empty-icon">
@@ -308,6 +293,20 @@ export const HomeScreen: React.FC = observer(() => {
             </View>
           ) : (
             <View style={styles.historyList}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyTitle}>{l10n.home.chatHistory}</Text>
+                <Pressable
+                  style={styles.historySearch}
+                  accessibilityRole="button"
+                  accessibilityLabel={l10n.home.searchLabel}
+                  testID="home-history-search">
+                  <SearchIcon
+                    width={20}
+                    height={20}
+                    stroke={theme.colors.foregroundTertiary}
+                  />
+                </Pressable>
+              </View>
               {sessions.map(session => {
                 const pal = palFor(session.activePalId);
                 const palUri = pal ? palThumbnailUri(pal) : undefined;

@@ -38,15 +38,18 @@ describe('HomeScreen', () => {
     });
   });
 
-  it('renders the serif title and chat-history heading', () => {
-    const {getByText, getByTestId} = render(<HomeScreen />, {
+  it('renders the serif title; hides the chat-history header when empty', () => {
+    const {queryByText, queryByTestId, getByTestId} = render(<HomeScreen />, {
       withNavigation: true,
       withSafeArea: true,
     });
     expect(getByTestId('home-screen')).toBeTruthy();
     // Title renders across two lines; assert via its testID + a11y label.
     expect(getByTestId('home-title')).toBeTruthy();
-    expect(getByText(en.home.chatHistory)).toBeTruthy();
+    // First-time / empty state shows only the centered bubble + hint — no
+    // "Chat history" header and no search affordance (Figma 888:33856).
+    expect(queryByText(en.home.chatHistory)).toBeNull();
+    expect(queryByTestId('home-history-search')).toBeNull();
   });
 
   it('shows the centered empty state (icon + hint) when no sessions exist', () => {
@@ -75,11 +78,14 @@ describe('HomeScreen', () => {
         },
       ];
     });
-    const {getByTestId, queryByTestId} = render(<HomeScreen />, {
+    const {getByText, getByTestId, queryByTestId} = render(<HomeScreen />, {
       withNavigation: true,
       withSafeArea: true,
     });
     expect(getByTestId('home-history-s1')).toBeTruthy();
+    // The "Chat history" header + search appear only in the populated state.
+    expect(getByText(en.home.chatHistory)).toBeTruthy();
+    expect(getByTestId('home-history-search')).toBeTruthy();
     expect(queryByTestId('home-empty-hint')).toBeNull();
     expect(queryByTestId('home-empty-state')).toBeNull();
   });
