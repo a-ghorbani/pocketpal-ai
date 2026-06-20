@@ -14,10 +14,6 @@ export const ChatHeaderTitle: React.FC = observer(() => {
   const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
 
-  const activeSessionId = chatSessionStore.activeSessionId;
-  const activeSession = chatSessionStore.sessions.find(
-    session => session.id === activeSessionId,
-  );
   const activeModel = modelStore.activeModel;
 
   const activePalId = chatSessionStore.activePalId;
@@ -27,8 +23,7 @@ export const ChatHeaderTitle: React.FC = observer(() => {
     : undefined;
   const palTileColor = activePal?.color?.[0] ?? theme.colors.secondaryDefault;
 
-  const title =
-    activeSession?.title || l10n.components.chatHeaderTitle.defaultTitle;
+  const title = activePal?.name || l10n.components.chatHeaderTitle.defaultTitle;
 
   return (
     <View testID="chat-header-title" style={styles.container}>
