@@ -1,12 +1,12 @@
 import React, {useContext} from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import {GestureResponderEvent, TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
 import Clipboard from '@react-native-clipboard/clipboard';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
-import {CopyIcon} from '../../assets/icons';
+import {CopyIcon, RefreshIcon, DotsVerticalIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {PlayButton} from '../TextMessage/PlayButton';
 
@@ -25,6 +25,16 @@ const hapticOptions = {
 
 interface AssistantTurnFooterProps {
   message: MessageType.Any;
+  /**
+   * Regenerate the turn — wired to the existing "try again" action.
+   * Absent for legacy/user rows; the button is omitted when undefined.
+   */
+  onRegenerate?: () => void;
+  /**
+   * Open the existing long-press action menu. Receives the press event so
+   * the menu anchors at the tap position, same as a row long-press.
+   */
+  onMore?: (event: GestureResponderEvent) => void;
 }
 
 /**
@@ -42,7 +52,7 @@ interface AssistantTurnFooterProps {
  * Used by both AssistantTurn rows and legacy assistant Text rows.
  */
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
-  ({message}) => {
+  ({message, onRegenerate, onMore}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const {copyable, timings, interrupted, truncationLikely, completionResult} =
@@ -110,6 +120,24 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
             />
           </TouchableOpacity>
         )}
+        {onRegenerate ? (
+          <TouchableOpacity onPress={onRegenerate} testID="footer-regenerate">
+            <RefreshIcon
+              stroke={theme.colors.textSecondary}
+              width={16}
+              height={16}
+            />
+          </TouchableOpacity>
+        ) : null}
+        {onMore ? (
+          <TouchableOpacity onPress={onMore} testID="footer-more">
+            <DotsVerticalIcon
+              fill={theme.colors.textSecondary}
+              width={16}
+              height={16}
+            />
+          </TouchableOpacity>
+        ) : null}
         {timings && fullTimingsString ? (
           <Text style={componentStyles.timing} testID="footer-timing">
             {fullTimingsString}
