@@ -4,9 +4,52 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 import enData from './en.json';
 
-// Relative time ("2 days ago") for the Home chat-history rows. Extended here at
-// the locale hub so it is localized + RTL-safe across the registry's languages.
+// Relative time for the Home chat-history rows. Extended here at the locale hub
+// so it is localized + RTL-safe across the registry's languages.
 dayjs.extend(relativeTime);
+
+// Compact English relative time ("2d ago") for tight rows — Figma's canonical
+// string. Registered as a NON-GLOBAL named locale (the trailing `true` keeps it
+// off the global default) so no other `fromNow` consumer inherits the short
+// tokens. The design shows no sub-minute bucket, so `s` uses a concise "now".
+dayjs.locale(
+  'en-short',
+  {
+    ...require('dayjs/locale/en'),
+    relativeTime: {
+      future: 'in %s',
+      past: '%s ago',
+      s: 'now',
+      m: '1m',
+      mm: '%dm',
+      h: '1h',
+      hh: '%dh',
+      d: '1d',
+      dd: '%dd',
+      M: '1mo',
+      MM: '%dmo',
+      y: '1y',
+      yy: '%dy',
+    },
+  },
+  true,
+);
+
+// Relative "age" for compact rows: abbreviated when the app is in English
+// (Figma parity), otherwise the active locale's standard localized long form.
+// Sub-minute ages collapse to a clean "now" (dayjs's %s-ago template can't
+// express a bare "now" on its own).
+export const formatRelativeAge = (date: string | number | Date): string => {
+  const active = dayjs.locale();
+  const m = dayjs(date);
+  if (active && active !== 'en') {
+    return m.fromNow();
+  }
+  if (Math.abs(m.diff(dayjs(), 'second')) < 60) {
+    return 'now';
+  }
+  return m.locale('en-short').fromNow();
+};
 
 import type {Translations} from './types';
 

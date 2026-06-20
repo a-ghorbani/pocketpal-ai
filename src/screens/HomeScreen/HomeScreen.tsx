@@ -1,7 +1,6 @@
 import React, {useContext, useState} from 'react';
 import {Image, ScrollView, Text, View} from 'react-native';
 
-import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -12,7 +11,7 @@ import {useTheme} from '../../hooks';
 import {createStyles, EMPTY_STATE_ICON_SIZE} from './styles';
 import {palAvatarArt} from './palAvatars';
 import {L10nContext} from '../../utils';
-import {t} from '../../locales';
+import {t, formatRelativeAge} from '../../locales';
 import {
   palStore,
   chatSessionStore,
@@ -417,7 +416,7 @@ export const HomeScreen: React.FC = observer(() => {
                           stroke={theme.colors.foregroundTertiary}
                         />
                         <Text style={styles.historyMetaText} numberOfLines={1}>
-                          {dayjs(session.date).fromNow()}
+                          {formatRelativeAge(session.date)}
                         </Text>
                       </View>
                     </View>

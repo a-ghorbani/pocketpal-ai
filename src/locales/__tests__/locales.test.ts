@@ -1,10 +1,13 @@
 import _ from 'lodash';
 
+import dayjs from 'dayjs';
+
 import {
   l10n,
   t,
   supportedLanguages,
   languageDisplayNames,
+  formatRelativeAge,
   _testGetCacheKeys,
 } from '../index';
 import enData from '../en.json';
@@ -397,5 +400,31 @@ describe('t() interpolation helper', () => {
   it('preserves all unreplaced when params is empty and template has placeholders', () => {
     const result = t('{{a}} and {{b}}', {});
     expect(result).toBe('{{a}} and {{b}}');
+  });
+});
+
+describe('formatRelativeAge', () => {
+  const prevLocale = dayjs.locale();
+  afterEach(() => {
+    dayjs.locale(prevLocale || 'en');
+  });
+
+  it('renders the abbreviated English form (Figma "2d ago"), not the long form', () => {
+    dayjs.locale('en');
+    const twoDaysAgo = dayjs().subtract(2, 'day').toISOString();
+    expect(formatRelativeAge(twoDaysAgo)).toBe('2d ago');
+  });
+
+  it('renders a concise "now" for sub-minute ages in English', () => {
+    dayjs.locale('en');
+    expect(formatRelativeAge(new Date())).toBe('now');
+  });
+
+  it("falls back to the active locale's standard long form for non-English", () => {
+    require('dayjs/locale/ru');
+    dayjs.locale('ru');
+    const result = formatRelativeAge(dayjs().subtract(2, 'day').toISOString());
+    // Russian long form is multi-character words, never the en-short "2d ago".
+    expect(result).not.toBe('2d ago');
   });
 });
