@@ -1,6 +1,6 @@
 import {fireEvent, waitFor} from '@testing-library/react-native';
 import * as React from 'react';
-import {ScrollView, Alert} from 'react-native';
+import {ScrollView, Alert, InteractionManager} from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {runInAction} from 'mobx';
 
@@ -847,5 +847,52 @@ describe('input', () => {
         imageUris: undefined,
       });
     });
+  });
+});
+
+describe('auto-focus on Home-launcher arrival', () => {
+  const renderInput = (autoFocusSignal: number) =>
+    render(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          onSendPress={jest.fn()}
+          sendButtonVisibilityMode="editing"
+          autoFocusSignal={autoFocusSignal}
+        />
+      </UserContext.Provider>,
+    );
+
+  it('schedules a focus when the auto-focus signal increments', () => {
+    const spy = jest.spyOn(InteractionManager, 'runAfterInteractions');
+    const {rerender} = renderInput(0);
+    spy.mockClear(); // ignore any mount-time scheduling
+    rerender(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          onSendPress={jest.fn()}
+          sendButtonVisibilityMode="editing"
+          autoFocusSignal={1}
+        />
+      </UserContext.Provider>,
+    );
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('does not schedule a focus while the signal stays at rest (0)', () => {
+    const spy = jest.spyOn(InteractionManager, 'runAfterInteractions');
+    const {rerender} = renderInput(0);
+    spy.mockClear();
+    rerender(
+      <UserContext.Provider value={user}>
+        <ChatInput
+          onSendPress={jest.fn()}
+          sendButtonVisibilityMode="editing"
+          autoFocusSignal={0}
+        />
+      </UserContext.Provider>,
+    );
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
