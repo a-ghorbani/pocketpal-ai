@@ -21,11 +21,11 @@ export const createStyles = ({
       alignItems: 'center',
       gap: 10,
     },
-    leftSection: {
+    titleSection: {
+      flex: 1,
       flexDirection: 'row',
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: 8,
-      flexShrink: 1,
     },
     menuIcon: {
       height: 40,
