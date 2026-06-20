@@ -11,6 +11,10 @@ import type {HubRunRequest} from '../services/hubRunLink';
 class DeepLinkStore {
   pendingMessage: string | null = null;
   pendingHubRun: HubRunRequest | null = null;
+  // One-shot request to focus the chat input on the next Chat-screen arrival.
+  // Set only by the Home composer launcher; consumed and cleared once by
+  // ChatScreen so other Chat entries (history, deep links) never auto-focus.
+  autoFocusChat: boolean = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -25,6 +29,18 @@ class DeepLinkStore {
   clearPendingMessage() {
     runInAction(() => {
       this.pendingMessage = null;
+    });
+  }
+
+  setAutoFocusChat(value: boolean) {
+    runInAction(() => {
+      this.autoFocusChat = value;
+    });
+  }
+
+  clearAutoFocusChat() {
+    runInAction(() => {
+      this.autoFocusChat = false;
     });
   }
 
