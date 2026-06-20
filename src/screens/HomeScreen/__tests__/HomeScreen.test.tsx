@@ -385,6 +385,51 @@ describe('HomeScreen', () => {
     expect(order).toEqual(['home-pal-sage', 'home-pal-lookie', 'home-pal-pip']);
   });
 
+  it('fronts the default pal (Pip) in the carousel on a cold install', () => {
+    runInAction(() => {
+      // Lookie is seeded first, but with no usage the default (Pip) must lead.
+      palStore.pals = [palNamed('lookie', 'Lookie'), palNamed('pip', 'Pip')];
+      chatSessionStore.sessions = [];
+    });
+    const {getAllByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    const order = getAllByTestId(/^home-pal-/).map(n => n.props.testID);
+    expect(order).toEqual(['home-pal-pip', 'home-pal-lookie']);
+  });
+
+  it('renders history rows newest-first regardless of store order', () => {
+    runInAction(() => {
+      chatSessionStore.sessions = [
+        {
+          id: 'old',
+          title: 'Older chat',
+          date: '2026-06-01T10:00:00.000Z',
+          messages: [],
+          completionSettings: {} as any,
+          settingsSource: 'custom',
+        },
+        {
+          id: 'new',
+          title: 'Newer chat',
+          date: '2026-06-10T10:00:00.000Z',
+          messages: [],
+          completionSettings: {} as any,
+          settingsSource: 'custom',
+        },
+      ];
+    });
+    const {getAllByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    const order = getAllByTestId(/^home-history-/)
+      .map(n => n.props.testID)
+      .filter(id => id !== 'home-history-search');
+    expect(order).toEqual(['home-history-new', 'home-history-old']);
+  });
+
   it('deselects the active pal when it is tapped (generic placeholder)', () => {
     runInAction(() => {
       palStore.pals = [palNamed('lookie', 'Lookie'), palNamed('pip', 'Pip')];

@@ -1,6 +1,7 @@
 import React, {useContext, useState} from 'react';
 import {Image, ScrollView, Text, View} from 'react-native';
 
+import dayjs from 'dayjs';
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -87,6 +88,12 @@ export const HomeScreen: React.FC = observer(() => {
   const sessions = chatSessionStore.sessions;
   const isEmpty = sessions.length === 0;
 
+  // History rows render newest-first. Sort a copy in the view — getAllSessions
+  // has no ordering and the store must not be mutated for a presentation need.
+  const recentSessions = [...sessions].sort((a, b) =>
+    a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
+  );
+
   // Per-pal usage recency, derived from chat sessions (each carries the pal it
   // ran with + a date). Drives both the default selection and the carousel
   // order, so the pal you reach for most leads and is preselected.
@@ -101,21 +108,39 @@ export const HomeScreen: React.FC = observer(() => {
     }
   }
 
-  // Most-recently-used pals first; never-used pals keep their original order
-  // behind them (stable sort, empty recency key sorts last).
-  const orderedPals = [...palStore.pals].sort((a, b) => {
-    const da = palLastUsed.get(a.id) ?? '';
-    const db = palLastUsed.get(b.id) ?? '';
-    return da === db ? 0 : da < db ? 1 : -1;
-  });
-
-  // Default when the user hasn't chosen one this session: the last-used pal,
-  // else the onboarding pal (Pip) on a cold install, else the first pal.
-  const lastUsedPalId = orderedPals.find(p => palLastUsed.has(p.id))?.id;
+  // Default when the user hasn't chosen one this session: the last-used pal
+  // (max recency), else the onboarding pal (Pip) on a cold install, else the
+  // first pal.
+  let lastUsedPalId: string | undefined;
+  let lastUsedDate = '';
+  for (const [id, date] of palLastUsed) {
+    if (date > lastUsedDate) {
+      lastUsedDate = date;
+      lastUsedPalId = id;
+    }
+  }
   const onboardingPalId = palStore.pals.find(
     p => p.name === 'Pip' && p.source === 'local',
   )?.id;
   const defaultPalId = lastUsedPalId ?? onboardingPalId ?? palStore.pals[0]?.id;
+
+  // Carousel: most-recently-used first; ties (notably never-used pals on a cold
+  // install) put the default pal first, then keep the original order. Ordering
+  // keys off the default — never the live selection — so taps don't reshuffle.
+  const orderedPals = [...palStore.pals].sort((a, b) => {
+    const da = palLastUsed.get(a.id) ?? '';
+    const db = palLastUsed.get(b.id) ?? '';
+    if (da !== db) {
+      return da < db ? 1 : -1;
+    }
+    if (a.id === defaultPalId) {
+      return -1;
+    }
+    if (b.id === defaultPalId) {
+      return 1;
+    }
+    return 0;
+  });
 
   const activePalId =
     selectedPalId === undefined ? defaultPalId : (selectedPalId ?? undefined);
@@ -345,7 +370,7 @@ export const HomeScreen: React.FC = observer(() => {
                   />
                 </Pressable>
               </View>
-              {sessions.map(session => {
+              {recentSessions.map(session => {
                 const pal = palFor(session.activePalId);
                 const palUri = pal ? palThumbnailUri(pal) : undefined;
                 const palFill = pal?.color?.[0] ?? theme.colors.surfaceVariant;
@@ -392,7 +417,7 @@ export const HomeScreen: React.FC = observer(() => {
                           stroke={theme.colors.foregroundTertiary}
                         />
                         <Text style={styles.historyMetaText} numberOfLines={1}>
-                          {session.date}
+                          {dayjs(session.date).fromNow()}
                         </Text>
                       </View>
                     </View>

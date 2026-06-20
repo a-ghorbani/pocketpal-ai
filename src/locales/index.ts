@@ -1,7 +1,12 @@
 import _ from 'lodash';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 
 import enData from './en.json';
+
+// Relative time ("2 days ago") for the Home chat-history rows. Extended here at
+// the locale hub so it is localized + RTL-safe across the registry's languages.
+dayjs.extend(relativeTime);
 
 import type {Translations} from './types';
 
