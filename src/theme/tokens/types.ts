@@ -158,10 +158,6 @@ export interface TokenColors {
   yellowAccent: string;
   yellowHighestContrast: string;
 
-  // Composer send-button gradient stops (canonical `Color/Midnight/900`
-  // → `Color/Midnight/1500`).
-  midnightHigh: string;
-  midnightLow: string;
   // Disabled (empty-composer) send-button gradient stops — the midnight
   // gradient pre-blended at 40% over the white composer card.
   midnightDisabledHigh: string;

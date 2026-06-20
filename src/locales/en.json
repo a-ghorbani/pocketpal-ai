@@ -1482,7 +1482,6 @@
     "modelChipEmpty": "Select a model",
     "chatHistory": "Chat history",
     "emptyHint": "Select a pal or model, then start typing. Your conversations will appear here.",
-    "micLabel": "Voice input",
     "sendLabel": "Send message",
     "searchLabel": "Search chats"
   }
