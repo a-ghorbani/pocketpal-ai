@@ -376,7 +376,10 @@ export const HomeScreen: React.FC = observer(() => {
 
       <LinearGradient
         pointerEvents="none"
-        colors={['transparent', theme.colors.mutedBackground]}
+        colors={[
+          theme.colors.mutedBackgroundTransparent,
+          theme.colors.mutedBackground,
+        ]}
         style={styles.bottomFade}
       />
 

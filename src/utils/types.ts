@@ -289,6 +289,10 @@ export interface SemanticColors {
   // that cards (composer, history rows) read against. Distinct from the
   // pure-white `background` / `Color/Background/Card`.
   mutedBackground: string;
+  // Same hue as `mutedBackground` at zero alpha, for fade-out gradient stops
+  // (RN's `'transparent'` is transparent black and greys a fade over a light
+  // canvas).
+  mutedBackgroundTransparent: string;
   // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
   mutedLight: string;
   // Figma `Color/Secondary/Default` — small DS button surface.

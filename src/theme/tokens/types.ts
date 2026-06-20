@@ -36,6 +36,10 @@ export interface TokenColors {
   // cards (composer, history rows) read against. Distinct from the pure-white
   // `background`/`Color/Background/Card`.
   mutedBackground: string;
+  // Same hue as `mutedBackground` at zero alpha, for fade-out gradient stops.
+  // RN's `'transparent'` is transparent black, which greys a fade over a light
+  // canvas; matching the hue keeps the fade clean in both themes.
+  mutedBackgroundTransparent: string;
   surface: string;
   onSurface: string;
   surfaceVariant: string;
