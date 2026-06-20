@@ -142,9 +142,8 @@ export const createStyles = (theme: Theme) => {
       gap: 6,
     },
     collapsedRowLabel: {
-      fontSize: 12,
-      color: textColor,
-      opacity: 0.75,
+      ...theme.typography.captionS,
+      color: theme.colors.foregroundTertiary,
     },
   });
 };

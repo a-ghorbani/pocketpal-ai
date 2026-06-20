@@ -285,7 +285,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
           <MCIcon
             name="brain"
             size={13}
-            color={theme.colors.thinkingBubbleText}
+            color={theme.colors.foregroundTertiary}
           />
           <Text style={styles.collapsedRowLabel}>
             {l10n.components.thinkingBubble.reasoning}
@@ -298,7 +298,7 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
               testID="chevron-icon"
               width={12}
               height={12}
-              stroke={theme.colors.thinkingBubbleText}
+              stroke={theme.colors.foregroundTertiary}
             />
           </Animated.View>
         </View>
