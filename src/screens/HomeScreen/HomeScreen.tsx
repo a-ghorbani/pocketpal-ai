@@ -7,8 +7,11 @@ import {StackNavigationProp} from '@react-navigation/stack';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
+  ReduceMotion,
   useAnimatedStyle,
   useDerivedValue,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
 
@@ -82,22 +85,30 @@ export const HomeScreen: React.FC = observer(() => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
 
-  // Lift the whole bottom-anchored hero (title + carousel + composer + model
-  // chip) above the keyboard when the input is focused. Translating the group
-  // together keeps the natural order intact (carousel stays above the composer)
-  // and lets the title scroll off the top as needed. The library reports a
-  // negative height while the keyboard is up; the IME inset already spans the
-  // navigation bar (KeyboardProvider is navigationBarTranslucent), so the space
-  // actually stolen is the IME inset minus the safe-area bottom inset.
+  // Dock only the composer cluster (card + model chip) just above the keyboard;
+  // the title and carousel above it stay perfectly still and may be occluded.
+  // The library reports a negative height while the keyboard is up; the IME
+  // inset already spans the navigation bar (KeyboardProvider is
+  // navigationBarTranslucent), so the space actually stolen is the IME inset
+  // minus the safe-area bottom inset — the same single occlusion source the
+  // chat surface uses. The composer tracks this 1:1 (no timing) so it feels
+  // attached to the keyboard curve.
   const keyboard = useReanimatedKeyboardAnimation();
+  const insetBottom = useSharedValue(insets.bottom);
+  insetBottom.value = insets.bottom;
   const keyboardOcclusion = useDerivedValue(() =>
-    Math.max(0, Math.abs(keyboard.height.value) - insets.bottom),
+    Math.max(0, Math.abs(keyboard.height.value) - insetBottom.value),
   );
-  const heroLiftStyle = useAnimatedStyle(() => ({
+  // The composer paddingBottom clears the home indicator at rest and collapses
+  // to 0 when the keyboard is up — same reservation the chat input container
+  // uses, driven by the single occlusion source.
+  const composerDockStyle = useAnimatedStyle(() => ({
     transform: [{translateY: -keyboardOcclusion.value}],
+    paddingBottom: keyboardOcclusion.value > 0 ? 0 : insetBottom.value,
   }));
 
   const [composerText, setComposerText] = useState('');
+  const [composerFocused, setComposerFocused] = useState(false);
   const [selectedPal, setSelectedPalLocal] = useState<Pal | undefined>(
     undefined,
   );
@@ -116,6 +127,19 @@ export const HomeScreen: React.FC = observer(() => {
     : l10n.home.composerPlaceholderGeneric;
 
   const canSend = composerText.trim().length > 0;
+
+  // The first-run hint fades out while the composer is focused and fades back
+  // on blur (only if the field is left empty). withTiming honours the OS
+  // reduce-motion setting (ReduceMotion.System) by snapping when enabled.
+  const hintOpacity = useSharedValue(1);
+  const hintHidden = composerFocused;
+  hintOpacity.value = withTiming(hintHidden ? 0 : 1, {
+    duration: 140,
+    reduceMotion: ReduceMotion.System,
+  });
+  const hintAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: hintOpacity.value,
+  }));
 
   // Hero title breaks after the first word ("Chat" / "with your pals"),
   // matching the canonical two-line layout.
@@ -163,12 +187,7 @@ export const HomeScreen: React.FC = observer(() => {
       <ScrollView
         contentContainerStyle={[styles.body, isEmpty && styles.bodyEmpty]}
         keyboardShouldPersistTaps="handled">
-        <Animated.View
-          style={[
-            styles.content,
-            isEmpty && styles.contentEmpty,
-            heroLiftStyle,
-          ]}>
+        <View style={[styles.content, isEmpty && styles.contentEmpty]}>
           <Text
             style={styles.title}
             testID="home-title"
@@ -213,7 +232,9 @@ export const HomeScreen: React.FC = observer(() => {
             </Pressable>
           </ScrollView>
 
-          <View>
+          <Animated.View
+            style={[styles.composerDock, composerDockStyle]}
+            testID="home-composer-dock">
             <View style={styles.composer}>
               <TextInput
                 style={styles.composerInput}
@@ -221,6 +242,8 @@ export const HomeScreen: React.FC = observer(() => {
                 placeholderTextColor={theme.colors.foregroundTertiary}
                 value={composerText}
                 onChangeText={setComposerText}
+                onFocus={() => setComposerFocused(true)}
+                onBlur={() => setComposerFocused(false)}
                 multiline
                 testID="home-composer-input"
               />
@@ -305,8 +328,8 @@ export const HomeScreen: React.FC = observer(() => {
                 stroke={theme.colors.foregroundTertiary}
               />
             </Pressable>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        </View>
 
         <View style={isEmpty && styles.historyRegionEmpty}>
           <View style={styles.historyHeader}>
@@ -325,7 +348,13 @@ export const HomeScreen: React.FC = observer(() => {
           </View>
 
           {isEmpty ? (
-            <View style={styles.emptyState} testID="home-empty-state">
+            <Animated.View
+              style={[styles.emptyState, hintAnimatedStyle]}
+              testID="home-empty-state"
+              accessibilityElementsHidden={hintHidden}
+              importantForAccessibility={
+                hintHidden ? 'no-hide-descendants' : 'auto'
+              }>
               <View style={styles.emptyStateIcon} testID="home-empty-icon">
                 <MessageCircleMdIcon
                   width={EMPTY_STATE_ICON_SIZE}
@@ -336,7 +365,7 @@ export const HomeScreen: React.FC = observer(() => {
               <Text style={styles.emptyHint} testID="home-empty-hint">
                 {l10n.home.emptyHint}
               </Text>
-            </View>
+            </Animated.View>
           ) : (
             <View style={styles.historyList}>
               {sessions.map(session => {

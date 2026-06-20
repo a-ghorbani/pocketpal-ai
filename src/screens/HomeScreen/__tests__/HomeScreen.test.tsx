@@ -208,4 +208,37 @@ describe('HomeScreen', () => {
     expect(palStore.getPalById).toHaveBeenCalledWith(mockLocalPal.id);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
+
+  it('docks the composer cluster in its own keyboard-tracked container', () => {
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    const dock = getByTestId('home-composer-dock');
+    // The composer input and model chip ride inside the docked cluster.
+    expect(dock.findByProps({testID: 'home-composer-input'})).toBeTruthy();
+    expect(dock.findByProps({testID: 'home-model-chip'})).toBeTruthy();
+  });
+
+  it('hides the empty hint from assistive tech once the composer is focused', () => {
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    const hint = getByTestId('home-empty-state');
+    expect(hint.props.accessibilityElementsHidden).toBe(false);
+    expect(hint.props.importantForAccessibility).toBe('auto');
+
+    fireEvent(getByTestId('home-composer-input'), 'focus');
+
+    // Once hidden from accessibility the element is excluded from default
+    // queries, so include hidden elements to assert the a11y props directly.
+    const hiddenHint = getByTestId('home-empty-state', {
+      includeHiddenElements: true,
+    });
+    expect(hiddenHint.props.accessibilityElementsHidden).toBe(true);
+    expect(hiddenHint.props.importantForAccessibility).toBe(
+      'no-hide-descendants',
+    );
+  });
 });

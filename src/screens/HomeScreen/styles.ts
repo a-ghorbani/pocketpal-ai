@@ -137,6 +137,12 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.yellowHighestContrast,
     },
 
+    // Composer cluster (card + model chip). This is the only element that
+    // tracks the keyboard: it docks just above the keyboard via an animated
+    // translateY, while the title and carousel above it hold still. The
+    // animated paddingBottom clears the home indicator at rest and collapses
+    // to 0 when the keyboard is up (mirrors the chat input container).
+    composerDock: {},
     // Composer card.
     composer: {
       backgroundColor: theme.colors.background,
