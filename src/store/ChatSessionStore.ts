@@ -96,6 +96,11 @@ class ChatSessionStore {
   // persists; cleared on session creation, new-chat reset, and session
   // switch.
   newChatThinkingOverride: boolean | undefined = undefined;
+  // User's manual graded-effort choice in the no-session chat path, paired with
+  // newChatThinkingOverride. Carries the effort grade (low/medium/high) so a
+  // graded pill round-trips before the first message creates a session; cleared
+  // alongside newChatThinkingOverride.
+  newChatReasoningEffort: string | undefined = undefined;
   // Store localized date group names
   dateGroupNames: typeof DEFAULT_GROUP_NAMES = DEFAULT_GROUP_NAMES;
   // Migration status
@@ -358,6 +363,7 @@ class ChatSessionStore {
       this.newChatPalId = this.activePalId;
       this.newChatSettingsSource = 'pal'; // Reset to default for new chat
       this.newChatThinkingOverride = undefined;
+      this.newChatReasoningEffort = undefined;
       // Do not copy completion settings from session to global settings
       // Instead, preserve global settings as they are
       this.exitEditMode();
@@ -409,6 +415,7 @@ class ChatSessionStore {
       this.newChatPalId = undefined;
       this.newChatSettingsSource = 'pal'; // Reset for consistency
       this.newChatThinkingOverride = undefined;
+      this.newChatReasoningEffort = undefined;
       this.lastCompletionResult = this.hydrateCompletionSnapshot(session);
       this.dismissedBannerVariants = new Set();
       this.consecutiveFullFailures = 0;
@@ -605,6 +612,7 @@ class ChatSessionStore {
         this.activeSessionId = newSession.id;
         this.newChatPalId = undefined;
         this.newChatThinkingOverride = undefined;
+        this.newChatReasoningEffort = undefined;
       });
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -1486,6 +1494,7 @@ class ChatSessionStore {
         reasoning: {
           ...resolvedSettings.reasoning,
           enabled: this.newChatThinkingOverride,
+          effort: this.newChatReasoningEffort,
         },
       };
     }

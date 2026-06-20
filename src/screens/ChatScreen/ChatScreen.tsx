@@ -148,6 +148,7 @@ export const ChatScreen: React.FC = observer(() => {
     activeSession?.completionSettings,
     chatSessionStore.newChatCompletionSettings,
     chatSessionStore.newChatThinkingOverride,
+    chatSessionStore.newChatReasoningEffort,
     activePalId,
   ]);
 
@@ -217,6 +218,7 @@ export const ChatScreen: React.FC = observer(() => {
     } else {
       runInAction(() => {
         chatSessionStore.newChatThinkingOverride = enabled;
+        chatSessionStore.newChatReasoningEffort = effort;
       });
     }
   };
