@@ -1,9 +1,12 @@
 import React from 'react';
 import {fireEvent} from '@testing-library/react-native';
+import {useKeyboardState} from 'react-native-keyboard-controller';
 
 import {render} from '../../../jest/test-utils';
 
 import {MainTabs} from '../MainTabs';
+
+const mockUseKeyboardState = useKeyboardState as jest.Mock;
 
 jest.mock('../../screens', () => {
   const {Text} = require('react-native');
@@ -15,6 +18,12 @@ jest.mock('../../screens', () => {
 });
 
 describe('MainTabs', () => {
+  beforeEach(() => {
+    mockUseKeyboardState.mockImplementation((selector?: (s: any) => any) =>
+      selector ? selector({isVisible: false}) : {isVisible: false},
+    );
+  });
+
   it('renders the floating tab bar with the three tab items', () => {
     const {getByTestId} = render(<MainTabs />, {
       withNavigation: true,
@@ -45,5 +54,24 @@ describe('MainTabs', () => {
     });
     fireEvent.press(getByTestId('ui-bottom-nav-item-SettingsTab'));
     expect(getByText('SettingsScreen')).toBeTruthy();
+  });
+
+  it('leaves the tab bar hit-testable when the keyboard is closed', () => {
+    const {getByTestId} = render(<MainTabs />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByTestId('floating-tab-bar').props.pointerEvents).toBe('auto');
+  });
+
+  it('removes the tab bar from the hit-test region while the keyboard is open', () => {
+    mockUseKeyboardState.mockImplementation((selector?: (s: any) => any) =>
+      selector ? selector({isVisible: true}) : {isVisible: true},
+    );
+    const {getByTestId} = render(<MainTabs />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByTestId('floating-tab-bar').props.pointerEvents).toBe('none');
   });
 });
