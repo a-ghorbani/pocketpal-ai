@@ -137,13 +137,10 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.yellowHighestContrast,
     },
 
-    // Composer cluster (card + model chip). This is the only element that
-    // tracks the keyboard: it docks just above the keyboard via an animated
-    // translateY, while the title and carousel above it hold still. The
-    // animated paddingBottom clears the home indicator at rest and collapses
-    // to 0 when the keyboard is up (mirrors the chat input container).
+    // Composer cluster (card + model chip).
     composerDock: {},
-    // Composer card.
+    // Composer card — a launcher. Tapping anywhere opens the Chat screen; it
+    // accepts no text input, so the card shows the placeholder as static text.
     composer: {
       backgroundColor: theme.colors.background,
       borderWidth: theme.stroke.xs,
@@ -157,16 +154,19 @@ export const createStyles = (theme: Theme) =>
       shadowRadius: 2,
       elevation: 1,
     },
+    // Holds the static placeholder; keeps the prior TextInput box geometry so
+    // the resting card is visually identical to the editable version.
     composerInput: {
+      minHeight: 74,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+    },
+    composerPlaceholder: {
       ...theme.typography.bodyM,
       fontSize: 15,
       lineHeight: 28,
       letterSpacing: -0.15,
-      color: theme.colors.onSurface,
-      minHeight: 74,
-      paddingHorizontal: theme.spacing.m,
-      paddingVertical: theme.spacing.s,
-      textAlignVertical: 'top',
+      color: theme.colors.foregroundTertiary,
     },
     composerActions: {
       flexDirection: 'row',

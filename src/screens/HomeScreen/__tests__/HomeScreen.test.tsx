@@ -92,19 +92,86 @@ describe('HomeScreen', () => {
     expect(getByTestId('home-add-pal')).toBeTruthy();
   });
 
-  it('starts a chat from the composer: prefill + setActivePal + navigate(Chat)', async () => {
+  it('launches Chat from the composer card: setActivePal + navigate(Chat), no message', async () => {
     const {getByTestId} = render(<HomeScreen />, {
       withNavigation: true,
       withSafeArea: true,
     });
-    fireEvent.changeText(getByTestId('home-composer-input'), 'hi');
-    fireEvent.press(getByTestId('home-composer-send'));
+    fireEvent.press(getByTestId('home-composer-input'));
 
-    expect(deepLinkStore.setPendingMessage).toHaveBeenCalledWith('hi');
+    // The launcher carries no prefill text.
+    expect(deepLinkStore.setPendingMessage).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(chatSessionStore.setActivePal).toHaveBeenCalled(),
     );
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Chat'));
+  });
+
+  it('launches Chat from the send affordance the same as the card', async () => {
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    fireEvent.press(getByTestId('home-composer-send'));
+
+    expect(deepLinkStore.setPendingMessage).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Chat'));
+  });
+
+  it('requests one-shot auto-focus only when a model is loaded', () => {
+    runInAction(() => {
+      modelStore.engine = {} as any;
+    });
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    fireEvent.press(getByTestId('home-composer-input'));
+    expect(deepLinkStore.setAutoFocusChat).toHaveBeenCalledWith(true);
+    runInAction(() => {
+      modelStore.engine = undefined;
+    });
+  });
+
+  it('does NOT request auto-focus when no model is loaded', () => {
+    runInAction(() => {
+      modelStore.engine = undefined;
+    });
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    fireEvent.press(getByTestId('home-composer-input'));
+    expect(deepLinkStore.setAutoFocusChat).not.toHaveBeenCalled();
+  });
+
+  it('does NOT request auto-focus when opening a chat from a history row', async () => {
+    runInAction(() => {
+      modelStore.engine = {} as any;
+      chatSessionStore.sessions = [
+        {
+          id: 's1',
+          title: 'First chat',
+          date: '2026-06-01T10:00:00.000Z',
+          messages: [],
+          completionSettings: {} as any,
+          settingsSource: 'custom',
+        },
+      ];
+    });
+    const {getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    fireEvent.press(getByTestId('home-history-s1'));
+
+    await waitFor(() =>
+      expect(chatSessionStore.setActiveSession).toHaveBeenCalledWith('s1'),
+    );
+    expect(deepLinkStore.setAutoFocusChat).not.toHaveBeenCalled();
+    runInAction(() => {
+      modelStore.engine = undefined;
+    });
   });
 
   it('opens a previous chat from a history row: setActiveSession + navigate(Chat)', async () => {
@@ -209,36 +276,21 @@ describe('HomeScreen', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('docks the composer cluster in its own keyboard-tracked container', () => {
+  it('groups the composer card and model chip inside the composer cluster', () => {
     const {getByTestId} = render(<HomeScreen />, {
       withNavigation: true,
       withSafeArea: true,
     });
     const dock = getByTestId('home-composer-dock');
-    // The composer input and model chip ride inside the docked cluster.
     expect(dock.findByProps({testID: 'home-composer-input'})).toBeTruthy();
     expect(dock.findByProps({testID: 'home-model-chip'})).toBeTruthy();
   });
 
-  it('hides the empty hint from assistive tech once the composer is focused', () => {
-    const {getByTestId} = render(<HomeScreen />, {
+  it('renders the composer placeholder as static text (no editable input)', () => {
+    const {getByText} = render(<HomeScreen />, {
       withNavigation: true,
       withSafeArea: true,
     });
-    const hint = getByTestId('home-empty-state');
-    expect(hint.props.accessibilityElementsHidden).toBe(false);
-    expect(hint.props.importantForAccessibility).toBe('auto');
-
-    fireEvent(getByTestId('home-composer-input'), 'focus');
-
-    // Once hidden from accessibility the element is excluded from default
-    // queries, so include hidden elements to assert the a11y props directly.
-    const hiddenHint = getByTestId('home-empty-state', {
-      includeHiddenElements: true,
-    });
-    expect(hiddenHint.props.accessibilityElementsHidden).toBe(true);
-    expect(hiddenHint.props.importantForAccessibility).toBe(
-      'no-hide-descendants',
-    );
+    expect(getByText(en.home.composerPlaceholderGeneric)).toBeTruthy();
   });
 });

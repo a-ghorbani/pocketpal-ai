@@ -1,19 +1,11 @@
 import React, {useContext, useState} from 'react';
-import {Image, ScrollView, Text, TextInput, View} from 'react-native';
+import {Image, ScrollView, Text, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import Animated, {
-  ReduceMotion,
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import {useReanimatedKeyboardAnimation} from 'react-native-keyboard-controller';
 
 import {useTheme} from '../../hooks';
 import {createStyles, EMPTY_STATE_ICON_SIZE} from './styles';
@@ -85,30 +77,6 @@ export const HomeScreen: React.FC = observer(() => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
 
-  // Dock only the composer cluster (card + model chip) just above the keyboard;
-  // the title and carousel above it stay perfectly still and may be occluded.
-  // The library reports a negative height while the keyboard is up; the IME
-  // inset already spans the navigation bar (KeyboardProvider is
-  // navigationBarTranslucent), so the space actually stolen is the IME inset
-  // minus the safe-area bottom inset — the same single occlusion source the
-  // chat surface uses. The composer tracks this 1:1 (no timing) so it feels
-  // attached to the keyboard curve.
-  const keyboard = useReanimatedKeyboardAnimation();
-  const insetBottom = useSharedValue(insets.bottom);
-  insetBottom.value = insets.bottom;
-  const keyboardOcclusion = useDerivedValue(() =>
-    Math.max(0, Math.abs(keyboard.height.value) - insetBottom.value),
-  );
-  // The composer paddingBottom clears the home indicator at rest and collapses
-  // to 0 when the keyboard is up — same reservation the chat input container
-  // uses, driven by the single occlusion source.
-  const composerDockStyle = useAnimatedStyle(() => ({
-    transform: [{translateY: -keyboardOcclusion.value}],
-    paddingBottom: keyboardOcclusion.value > 0 ? 0 : insetBottom.value,
-  }));
-
-  const [composerText, setComposerText] = useState('');
-  const [composerFocused, setComposerFocused] = useState(false);
   const [selectedPal, setSelectedPalLocal] = useState<Pal | undefined>(
     undefined,
   );
@@ -126,21 +94,6 @@ export const HomeScreen: React.FC = observer(() => {
     ? t(l10n.home.composerPlaceholder, {pal: activePal.name})
     : l10n.home.composerPlaceholderGeneric;
 
-  const canSend = composerText.trim().length > 0;
-
-  // The first-run hint fades out while the composer is focused and fades back
-  // on blur (only if the field is left empty). withTiming honours the OS
-  // reduce-motion setting (ReduceMotion.System) by snapping when enabled.
-  const hintOpacity = useSharedValue(1);
-  const hintHidden = composerFocused;
-  hintOpacity.value = withTiming(hintHidden ? 0 : 1, {
-    duration: 140,
-    reduceMotion: ReduceMotion.System,
-  });
-  const hintAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: hintOpacity.value,
-  }));
-
   // Hero title breaks after the first word ("Chat" / "with your pals"),
   // matching the canonical two-line layout.
   const firstSpace = l10n.home.title.indexOf(' ');
@@ -152,11 +105,13 @@ export const HomeScreen: React.FC = observer(() => {
           l10n.home.title.slice(firstSpace + 1),
         ];
 
-  // Reuses the existing prefill contract: select the pal, optionally stash
-  // a pending message, then navigate into the Chat flow.
-  const startChat = async (palId?: string, message?: string) => {
-    if (message) {
-      deepLinkStore.setPendingMessage(message);
+  // The composer is a launcher: tapping it opens the Chat screen and focuses
+  // the chat input there (the keyboard never opens on Home). It carries no
+  // message. Auto-focus is requested via the one-shot store flag only when a
+  // model is loaded, so an unsendable input is never focused on a dead-end.
+  const launchChat = async (palId?: string) => {
+    if (modelStore.engine) {
+      deepLinkStore.setAutoFocusChat(true);
     }
     await chatSessionStore.setActivePal(palId);
     navigation.navigate(ROUTES.CHAT);
@@ -166,12 +121,12 @@ export const HomeScreen: React.FC = observer(() => {
 
   const handleAddPal = () => navigation.navigate(ROUTES.PALS);
 
-  const handleSend = () => {
-    const text = composerText.trim();
-    void startChat(activePal?.id, text || undefined);
-    setComposerText('');
+  const handleComposerLaunch = () => {
+    void launchChat(activePal?.id);
   };
 
+  // History rows open an existing session; they are NOT the launcher and must
+  // never request auto-focus (the chat input is not the entry point there).
   const handleHistoryPress = async (session: SessionMetaData) => {
     await chatSessionStore.setActiveSession(session.id);
     navigation.navigate(ROUTES.CHAT);
@@ -232,21 +187,20 @@ export const HomeScreen: React.FC = observer(() => {
             </Pressable>
           </ScrollView>
 
-          <Animated.View
-            style={[styles.composerDock, composerDockStyle]}
+          <View
+            style={[styles.composerDock, {paddingBottom: insets.bottom}]}
             testID="home-composer-dock">
-            <View style={styles.composer}>
-              <TextInput
-                style={styles.composerInput}
-                placeholder={composerPlaceholder}
-                placeholderTextColor={theme.colors.foregroundTertiary}
-                value={composerText}
-                onChangeText={setComposerText}
-                onFocus={() => setComposerFocused(true)}
-                onBlur={() => setComposerFocused(false)}
-                multiline
-                testID="home-composer-input"
-              />
+            <Pressable
+              style={styles.composer}
+              onPress={handleComposerLaunch}
+              accessibilityRole="button"
+              accessibilityLabel={composerPlaceholder}
+              testID="home-composer-input">
+              <View style={styles.composerInput}>
+                <Text style={styles.composerPlaceholder} numberOfLines={2}>
+                  {composerPlaceholder}
+                </Text>
+              </View>
               <View style={styles.composerActions}>
                 <Pressable
                   style={styles.composerAttach}
@@ -261,35 +215,27 @@ export const HomeScreen: React.FC = observer(() => {
                   />
                 </Pressable>
                 <View style={styles.composerEndAddon}>
-                  <Pressable
+                  <View
                     style={styles.composerMic}
-                    accessibilityRole="button"
-                    accessibilityLabel={l10n.home.micLabel}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
                     testID="home-composer-mic">
                     <MicIcon
                       width={16}
                       height={16}
                       stroke={theme.colors.foregroundTertiary}
                     />
-                  </Pressable>
+                  </View>
                   <Pressable
-                    onPress={handleSend}
-                    disabled={!canSend}
+                    onPress={handleComposerLaunch}
                     accessibilityRole="button"
                     accessibilityLabel={l10n.home.sendLabel}
                     testID="home-composer-send">
                     <LinearGradient
-                      colors={
-                        canSend
-                          ? [
-                              theme.colors.midnightHigh,
-                              theme.colors.midnightLow,
-                            ]
-                          : [
-                              theme.colors.midnightDisabledHigh,
-                              theme.colors.midnightDisabledLow,
-                            ]
-                      }
+                      colors={[
+                        theme.colors.midnightHigh,
+                        theme.colors.midnightLow,
+                      ]}
                       start={{x: 0, y: 0}}
                       end={{x: 0, y: 1}}
                       style={styles.sendButton}>
@@ -302,7 +248,7 @@ export const HomeScreen: React.FC = observer(() => {
                   </Pressable>
                 </View>
               </View>
-            </View>
+            </Pressable>
 
             <Pressable
               style={styles.modelChip}
@@ -328,7 +274,7 @@ export const HomeScreen: React.FC = observer(() => {
                 stroke={theme.colors.foregroundTertiary}
               />
             </Pressable>
-          </Animated.View>
+          </View>
         </View>
 
         <View style={isEmpty && styles.historyRegionEmpty}>
@@ -348,13 +294,7 @@ export const HomeScreen: React.FC = observer(() => {
           </View>
 
           {isEmpty ? (
-            <Animated.View
-              style={[styles.emptyState, hintAnimatedStyle]}
-              testID="home-empty-state"
-              accessibilityElementsHidden={hintHidden}
-              importantForAccessibility={
-                hintHidden ? 'no-hide-descendants' : 'auto'
-              }>
+            <View style={styles.emptyState} testID="home-empty-state">
               <View style={styles.emptyStateIcon} testID="home-empty-icon">
                 <MessageCircleMdIcon
                   width={EMPTY_STATE_ICON_SIZE}
@@ -365,7 +305,7 @@ export const HomeScreen: React.FC = observer(() => {
               <Text style={styles.emptyHint} testID="home-empty-hint">
                 {l10n.home.emptyHint}
               </Text>
-            </Animated.View>
+            </View>
           ) : (
             <View style={styles.historyList}>
               {sessions.map(session => {
