@@ -22,7 +22,10 @@ jest.mock('../../../components/ChatPalModelPickerSheet', () => ({
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
-  useNavigation: () => ({navigate: mockNavigate}),
+  useNavigation: () => ({
+    navigate: mockNavigate,
+    addListener: jest.fn(() => jest.fn()),
+  }),
 }));
 
 const en = l10n.en;
@@ -124,7 +127,7 @@ describe('HomeScreen', () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Chat'));
   });
 
-  it('requests one-shot auto-focus only when a model is loaded', () => {
+  it('requests one-shot auto-focus only when a model is loaded', async () => {
     runInAction(() => {
       modelStore.engine = {} as any;
     });
@@ -133,7 +136,10 @@ describe('HomeScreen', () => {
       withSafeArea: true,
     });
     fireEvent.press(getByTestId('home-composer-input'));
-    expect(deepLinkStore.setAutoFocusChat).toHaveBeenCalledWith(true);
+    // The flag is set after the setActivePal await, right before navigating.
+    await waitFor(() =>
+      expect(deepLinkStore.setAutoFocusChat).toHaveBeenCalledWith(true),
+    );
     runInAction(() => {
       modelStore.engine = undefined;
     });

@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext, useEffect, useMemo, useState} from 'react';
 import {Image, ScrollView, Text, View} from 'react-native';
 
 import {observer} from 'mobx-react';
@@ -70,9 +70,75 @@ const PalCarouselItem: React.FC<{
   );
 };
 
+type HomeStyles = ReturnType<typeof createStyles>;
+
+// A single chat-history row. An `observer` so a streaming message that mutates
+// one session re-renders only that row, not the whole (mounted) Home screen.
+const HistoryRow: React.FC<{
+  session: SessionMetaData;
+  styles: HomeStyles;
+  onPress: () => void;
+}> = observer(({session, styles, onPress}) => {
+  const theme = useTheme();
+  const pal = session.activePalId
+    ? palStore.getPalById(session.activePalId)
+    : undefined;
+  const palUri = pal ? palThumbnailUri(pal) : undefined;
+  const palFill = pal?.color?.[0] ?? theme.colors.surfaceVariant;
+  return (
+    <Pressable
+      style={styles.historyRow}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={session.title}
+      testID={`home-history-${session.id}`}>
+      <View style={styles.historyRowMain}>
+        <Text style={styles.historyRowTitle} numberOfLines={1}>
+          {session.title}
+        </Text>
+        <View style={styles.historyInfoRow}>
+          {pal ? (
+            <View style={[styles.historyAvatar, {backgroundColor: palFill}]}>
+              {palUri ? (
+                <Image
+                  source={{uri: palUri}}
+                  style={styles.historyAvatarImage}
+                />
+              ) : (
+                palAvatarArt(pal)
+              )}
+            </View>
+          ) : null}
+          {pal ? (
+            <Text style={styles.historyMetaText} numberOfLines={1}>
+              {pal.name}
+            </Text>
+          ) : null}
+          <Text style={styles.historyMetaText}>·</Text>
+          <ClockIcon
+            width={14}
+            height={14}
+            stroke={theme.colors.foregroundTertiary}
+          />
+          <Text style={styles.historyMetaText} numberOfLines={1}>
+            {formatRelativeAge(session.date)}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.historyMore}>
+        <DotsHorizontalIcon
+          width={14}
+          height={14}
+          stroke={theme.colors.foregroundTertiary}
+        />
+      </View>
+    </Pressable>
+  );
+});
+
 export const HomeScreen: React.FC = observer(() => {
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const l10n = useContext(L10nContext);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -84,62 +150,80 @@ export const HomeScreen: React.FC = observer(() => {
   );
   const [isPickerVisible, setPickerVisible] = useState(false);
 
+  // Defensive: clear any stale one-shot auto-focus flag whenever Home regains
+  // focus, so a launch that navigated but never mounted Chat can't carry over.
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => deepLinkStore.clearAutoFocusChat()),
+    [navigation],
+  );
+
   const sessions = chatSessionStore.sessions;
   const isEmpty = sessions.length === 0;
 
-  // History rows render newest-first. Sort a copy in the view — getAllSessions
-  // has no ordering and the store must not be mutated for a presentation need.
-  const recentSessions = [...sessions].sort((a, b) =>
-    a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
-  );
+  // Cheap order-signatures: only the fields that affect ordering/default. Home
+  // stays mounted under the bottom tabs and re-renders during inference, so the
+  // derivation below is memoised on these — message streaming mutates session
+  // bodies (read by the row observers), not these keys, so it won't recompute.
+  const pals = palStore.pals;
+  const sessionOrderSig = sessions
+    .map(s => `${s.id}:${s.date}:${s.activePalId ?? ''}`)
+    .join('|');
+  const palOrderSig = pals
+    .map(p => `${p.id}:${p.name}:${p.source ?? ''}`)
+    .join('|');
 
-  // Per-pal usage recency, derived from chat sessions (each carries the pal it
-  // ran with + a date). Drives both the default selection and the carousel
-  // order, so the pal you reach for most leads and is preselected.
-  const palLastUsed = new Map<string, string>();
-  for (const session of sessions) {
-    if (!session.activePalId) {
-      continue;
+  const {recentSessions, orderedPals, defaultPalId} = useMemo(() => {
+    // Per-pal usage recency from chat sessions (each carries the pal it ran with
+    // + a date) — drives the default selection and the carousel order.
+    const lastUsed = new Map<string, string>();
+    for (const s of sessions) {
+      if (!s.activePalId) {
+        continue;
+      }
+      const prev = lastUsed.get(s.activePalId);
+      if (!prev || s.date > prev) {
+        lastUsed.set(s.activePalId, s.date);
+      }
     }
-    const prev = palLastUsed.get(session.activePalId);
-    if (!prev || session.date > prev) {
-      palLastUsed.set(session.activePalId, session.date);
+    // Default: last-used pal (max recency), else the onboarding pal (Pip) on a
+    // cold install, else the first pal.
+    let luId: string | undefined;
+    let luDate = '';
+    for (const [id, date] of lastUsed) {
+      if (date > luDate) {
+        luDate = date;
+        luId = id;
+      }
     }
-  }
-
-  // Default when the user hasn't chosen one this session: the last-used pal
-  // (max recency), else the onboarding pal (Pip) on a cold install, else the
-  // first pal.
-  let lastUsedPalId: string | undefined;
-  let lastUsedDate = '';
-  for (const [id, date] of palLastUsed) {
-    if (date > lastUsedDate) {
-      lastUsedDate = date;
-      lastUsedPalId = id;
-    }
-  }
-  const onboardingPalId = palStore.pals.find(
-    p => p.name === 'Pip' && p.source === 'local',
-  )?.id;
-  const defaultPalId = lastUsedPalId ?? onboardingPalId ?? palStore.pals[0]?.id;
-
-  // Carousel: most-recently-used first; ties (notably never-used pals on a cold
-  // install) put the default pal first, then keep the original order. Ordering
-  // keys off the default — never the live selection — so taps don't reshuffle.
-  const orderedPals = [...palStore.pals].sort((a, b) => {
-    const da = palLastUsed.get(a.id) ?? '';
-    const db = palLastUsed.get(b.id) ?? '';
-    if (da !== db) {
-      return da < db ? 1 : -1;
-    }
-    if (a.id === defaultPalId) {
-      return -1;
-    }
-    if (b.id === defaultPalId) {
-      return 1;
-    }
-    return 0;
-  });
+    const pipId = pals.find(p => p.name === 'Pip' && p.source === 'local')?.id;
+    const dft = luId ?? pipId ?? pals[0]?.id;
+    // Carousel: most-recently-used first; ties (never-used pals on a cold
+    // install) put the default pal first, then keep the original order. Keys off
+    // the default — never the live selection — so taps don't reshuffle.
+    const ordered = [...pals].sort((a, b) => {
+      const da = lastUsed.get(a.id) ?? '';
+      const db = lastUsed.get(b.id) ?? '';
+      if (da !== db) {
+        return da < db ? 1 : -1;
+      }
+      if (a.id === dft) {
+        return -1;
+      }
+      if (b.id === dft) {
+        return 1;
+      }
+      return 0;
+    });
+    // History rows render newest-first (getAllSessions has no order); copy so
+    // the store is not mutated for a presentation need.
+    const recent = [...sessions].sort((a, b) =>
+      a.date < b.date ? 1 : a.date > b.date ? -1 : 0,
+    );
+    return {recentSessions: recent, orderedPals: ordered, defaultPalId: dft};
+    // Recomputes only when ordering-relevant fields change (the signatures).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionOrderSig, palOrderSig]);
 
   const activePalId =
     selectedPalId === undefined ? defaultPalId : (selectedPalId ?? undefined);
@@ -166,10 +250,12 @@ export const HomeScreen: React.FC = observer(() => {
   // message. Auto-focus is requested via the one-shot store flag only when a
   // model is loaded, so an unsendable input is never focused on a dead-end.
   const launchChat = async (palId?: string) => {
+    await chatSessionStore.setActivePal(palId);
+    // Set the one-shot flag right before navigating (after the await) so an
+    // aborted/double-tapped launch can't leave it set for a later Chat open.
     if (modelStore.engine) {
       deepLinkStore.setAutoFocusChat(true);
     }
-    await chatSessionStore.setActivePal(palId);
     navigation.navigate(ROUTES.CHAT);
   };
 
@@ -195,9 +281,6 @@ export const HomeScreen: React.FC = observer(() => {
   };
 
   const handleModelChipPress = () => setPickerVisible(true);
-
-  const palFor = (palId?: string) =>
-    palId ? palStore.getPalById(palId) : undefined;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']} testID="home-screen">
@@ -316,7 +399,11 @@ export const HomeScreen: React.FC = observer(() => {
               style={styles.modelChip}
               onPress={handleModelChipPress}
               accessibilityRole="button"
-              accessibilityLabel={l10n.home.modelChipPrefix}
+              accessibilityLabel={
+                activeModelName
+                  ? `${l10n.home.modelChipPrefix} ${activeModelName}`
+                  : l10n.home.modelChipEmpty
+              }
               testID="home-model-chip">
               {activeModelName ? (
                 <Text numberOfLines={1}>
@@ -369,67 +456,14 @@ export const HomeScreen: React.FC = observer(() => {
                   />
                 </Pressable>
               </View>
-              {recentSessions.map(session => {
-                const pal = palFor(session.activePalId);
-                const palUri = pal ? palThumbnailUri(pal) : undefined;
-                const palFill = pal?.color?.[0] ?? theme.colors.surfaceVariant;
-                return (
-                  <Pressable
-                    key={session.id}
-                    style={styles.historyRow}
-                    onPress={() => void handleHistoryPress(session)}
-                    accessibilityRole="button"
-                    accessibilityLabel={session.title}
-                    testID={`home-history-${session.id}`}>
-                    <View style={styles.historyRowMain}>
-                      <Text style={styles.historyRowTitle} numberOfLines={1}>
-                        {session.title}
-                      </Text>
-                      <View style={styles.historyInfoRow}>
-                        {pal ? (
-                          <View
-                            style={[
-                              styles.historyAvatar,
-                              {backgroundColor: palFill},
-                            ]}>
-                            {palUri ? (
-                              <Image
-                                source={{uri: palUri}}
-                                style={styles.historyAvatarImage}
-                              />
-                            ) : (
-                              palAvatarArt(pal)
-                            )}
-                          </View>
-                        ) : null}
-                        {pal ? (
-                          <Text
-                            style={styles.historyMetaText}
-                            numberOfLines={1}>
-                            {pal.name}
-                          </Text>
-                        ) : null}
-                        <Text style={styles.historyMetaText}>·</Text>
-                        <ClockIcon
-                          width={14}
-                          height={14}
-                          stroke={theme.colors.foregroundTertiary}
-                        />
-                        <Text style={styles.historyMetaText} numberOfLines={1}>
-                          {formatRelativeAge(session.date)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.historyMore}>
-                      <DotsHorizontalIcon
-                        width={14}
-                        height={14}
-                        stroke={theme.colors.foregroundTertiary}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              })}
+              {recentSessions.map(session => (
+                <HistoryRow
+                  key={session.id}
+                  session={session}
+                  styles={styles}
+                  onPress={() => void handleHistoryPress(session)}
+                />
+              ))}
             </View>
           )}
         </View>
