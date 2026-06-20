@@ -3,7 +3,7 @@ import {Text} from 'react-native';
 import {fireEvent} from '@testing-library/react-native';
 
 import {render} from '../../../../../jest/test-utils';
-import {BottomNavBar, pillTranslateX} from '../BottomNavBar';
+import {BottomNavBar, pillLeft} from '../BottomNavBar';
 import {runSnapshotMatrix} from '../../__tests__/helpers/snapshotMatrix';
 
 const items = [
@@ -58,34 +58,66 @@ describe('BottomNavBar', () => {
   });
 });
 
-describe('BottomNavBar floating pill — RTL positioning', () => {
+describe('BottomNavBar floating pill — positioning & sync', () => {
+  const layoutItem = (el: any, x: number, width: number) =>
+    fireEvent(el, 'layout', {
+      nativeEvent: {layout: {x, y: 0, width, height: 40}},
+    });
+
   // A 3-tab bar: container width 306, each item 100 wide with a 3px gap.
   const containerWidth = 306;
-  const middle = {x: 103, width: 100}; // the centre tab
 
-  it('positions the pill at the physical-left frame.x in LTR', () => {
-    expect(pillTranslateX(middle.x, middle.width, containerWidth, false)).toBe(
-      103,
-    );
+  it('uses the physical onLayout x directly in LTR', () => {
+    expect(pillLeft(103, 100, containerWidth, false)).toBe(103);
+    expect(pillLeft(0, 100, containerWidth, false)).toBe(0);
   });
 
-  it('mirrors frame.x off the start (right) edge in RTL', () => {
-    // Mirror of [103, 203] within 306 is [103, 203] from the right → -103.
-    expect(pillTranslateX(middle.x, middle.width, containerWidth, true)).toBe(
-      -(containerWidth - middle.x - middle.width),
-    );
-    expect(pillTranslateX(middle.x, middle.width, containerWidth, true)).toBe(
-      -103,
-    );
+  it('mirrors the onLayout x against the container width in RTL', () => {
+    // In RTL onLayout x is measured from the right; mirror it to a physical
+    // left. The centre tab [103,203] mirrors to 306-103-100 = 103.
+    expect(pillLeft(103, 100, containerWidth, true)).toBe(103);
+    // The logical-first tab (x=0) sits physically at the right edge.
+    expect(pillLeft(0, 100, containerWidth, true)).toBe(containerWidth - 100);
+    // The logical-last tab (x=206) sits physically at the left (0, not -0).
+    expect(pillLeft(206, 100, containerWidth, true)).toBe(0);
   });
 
-  it('keeps the first and last tabs symmetric across LTR/RTL', () => {
-    const first = {x: 0, width: 100};
-    const last = {x: 206, width: 100};
-    // First tab in LTR sits at the start (0); the same tab in RTL sits at the
-    // start (right) edge → also 0 translate.
-    expect(pillTranslateX(first.x, first.width, containerWidth, false)).toBe(0);
-    expect(pillTranslateX(last.x, last.width, containerWidth, true)).toBe(0);
+  it('seats the sliding pill only after the selected tab measures', () => {
+    const {getByTestId, queryByTestId} = render(
+      <BottomNavBar
+        variant="floating"
+        items={items}
+        selectedValue="chat"
+        onSelect={() => {}}
+      />,
+    );
+    // Pre-layout: no measured frame yet, so the pill is not rendered.
+    expect(queryByTestId('ui-bottom-nav-pill')).toBeNull();
+    layoutItem(getByTestId('ui-bottom-nav-item-chat'), 0, 100);
+    expect(getByTestId('ui-bottom-nav-pill')).toBeTruthy();
+  });
+
+  it('keeps the pill seated when selectedValue changes without a tap', () => {
+    const {getByTestId, rerender} = render(
+      <BottomNavBar
+        variant="floating"
+        items={items}
+        selectedValue="chat"
+        onSelect={() => {}}
+      />,
+    );
+    layoutItem(getByTestId('ui-bottom-nav-item-chat'), 0, 100);
+    layoutItem(getByTestId('ui-bottom-nav-item-pals'), 104, 100);
+    // Programmatic / back / deep-link selection change (no tap).
+    rerender(
+      <BottomNavBar
+        variant="floating"
+        items={items}
+        selectedValue="pals"
+        onSelect={() => {}}
+      />,
+    );
+    expect(getByTestId('ui-bottom-nav-pill')).toBeTruthy();
   });
 });
 
