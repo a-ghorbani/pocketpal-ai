@@ -364,11 +364,23 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     }, [model, l10n, isActiveModel]);
 
     const renderActionButtons = () => {
-      // Remote models: load/offload + delete
+      // Remote models: load/offload + settings (reasoning override) + delete
       if (isRemoteModel) {
         return (
           <View style={styles.actionButtonsRow}>
             {renderModelLoadButton()}
+            <TouchableOpacity
+              testID="settings-button"
+              onPress={onOpenSettings}
+              style={styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={l10n.models.modelCard.buttons.settings}>
+              <SettingsIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
             <TouchableOpacity
               testID="delete-button"
               onPress={handleRemoteDelete}
