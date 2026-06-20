@@ -312,7 +312,7 @@ export const createStyles = (theme: Theme) =>
     historyMore: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingLeft: theme.spacing.s,
+      paddingStart: theme.spacing.s,
     },
 
     // First-time-user empty state (Figma 888:33856): replaces the history list
