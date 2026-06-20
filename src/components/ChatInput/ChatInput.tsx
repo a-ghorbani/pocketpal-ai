@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   Image,
+  InteractionManager,
 } from 'react-native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useCameraPermission} from 'react-native-vision-camera';
@@ -71,6 +72,11 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Monotonic signal requesting the input focus itself once the screen
+   * transition settles. Bumped per Home-launcher arrival; 0 means no request.
+   * Focusing is deferred via InteractionManager so it never fires
+   * mid-transition (which drops the keyboard on Android). */
+  autoFocusSignal?: number;
 }
 
 export interface ChatInputAdditionalProps {
@@ -122,6 +128,7 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    autoFocusSignal = 0,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -189,6 +196,19 @@ export const ChatInput = observer(
         friction: 8,
       }).start();
     }, [isPickerVisible, iconRotation]);
+
+    // Auto-focus on a Home-launcher arrival. Deferred until interactions
+    // (the screen-push transition) settle so the keyboard is not raised
+    // mid-transition. A 0 signal is the no-request resting state.
+    React.useEffect(() => {
+      if (autoFocusSignal <= 0) {
+        return;
+      }
+      const task = InteractionManager.runAfterInteractions(() => {
+        inputRef.current?.focus();
+      });
+      return () => task.cancel();
+    }, [autoFocusSignal]);
 
     const handleChangeText = (newText: string) => {
       if (isVideoCapable && onPromptTextChange) {
