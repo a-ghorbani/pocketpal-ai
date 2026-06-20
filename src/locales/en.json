@@ -565,7 +565,7 @@
       "gettingReadyDescription": "We’ll let you know the moment your pal can chat. Tap the banner up top to see how it’s going."
     },
     "chatInput": {
-      "inputPlaceholder": "Message",
+      "inputPlaceholder": "Start messaging…",
       "thinkingToggle": {
         "enableThinking": "Enable thinking mode",
         "disableThinking": "Disable thinking mode",

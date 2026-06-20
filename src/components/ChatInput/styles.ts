@@ -21,12 +21,14 @@ export const createStyles = ({
       borderRadius: 100,
     },
     plusButton: {
-      height: 28,
-      width: 28,
+      height: 40,
+      width: 40,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 100,
-      opacity: 0.9,
+      borderRadius: 12,
+      backgroundColor: theme.colors.secondaryDefault,
+      borderWidth: 0.5,
+      borderColor: theme.colors.mutedLight,
     },
     thinkingToggle: {
       height: 28,

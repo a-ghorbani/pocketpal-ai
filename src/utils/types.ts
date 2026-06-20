@@ -285,6 +285,9 @@ export interface SemanticColors {
 
   border: string;
   placeholder: string;
+  // Figma `Color/Background/Card` — the raised card surface (chat input bar)
+  // over the muted canvas.
+  backgroundCard: string;
   // Figma `Color/Background/Muted` (#fafafa) — the muted screen canvas
   // that cards (composer, history rows) read against. Distinct from the
   // pure-white `background` / `Color/Background/Card`.
@@ -302,6 +305,8 @@ export interface SemanticColors {
   foregroundSecondary: string;
   foregroundTertiary: string;
   foregroundSubtle: string;
+  // Figma `Color/Red/Accent` — inline error accents (tool-failure rows).
+  redAccent: string;
 
   // Interactive states
   stateLayerOpacity: number;
