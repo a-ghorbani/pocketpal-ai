@@ -120,6 +120,11 @@ describe('design-token grep invariants', () => {
       // onboarding; lives at app-level above the navigator.
       'components/DownloadOverlay',
       'components/DownloadProgressCard',
+      // App-shell tab roots: the new Home screen (serif headline) and the
+      // Explore placeholder consume the typography axis as the first
+      // feature surfaces under the bottom-tab navigation.
+      'screens/HomeScreen',
+      'screens/ExploreScreen',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

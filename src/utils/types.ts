@@ -285,10 +285,23 @@ export interface SemanticColors {
 
   border: string;
   placeholder: string;
+  // Figma `Color/Background/Muted` (#fafafa) — the muted screen canvas
+  // that cards (composer, history rows) read against. Distinct from the
+  // pure-white `background` / `Color/Background/Card`.
+  mutedBackground: string;
+  // Same hue as `mutedBackground` at zero alpha, for fade-out gradient stops
+  // (RN's `'transparent'` is transparent black and greys a fade over a light
+  // canvas).
+  mutedBackgroundTransparent: string;
   // Subtle border / divider — Figma `Color/muted/light` (#e5e3e1).
   mutedLight: string;
   // Figma `Color/Secondary/Default` — small DS button surface.
   secondaryDefault: string;
+  // Canonical Figma foreground greys (`Color/Foreground/*`).
+  foregroundPrimary: string;
+  foregroundSecondary: string;
+  foregroundTertiary: string;
+  foregroundSubtle: string;
 
   // Interactive states
   stateLayerOpacity: number;
@@ -345,11 +358,23 @@ export interface SemanticColors {
   iconModelTypeAudio: string;
 
   // Accent — peach pill / Recommended-tier card highlight; greenStrong
-  // powers the download progress-bar fill.
+  // powers the download progress-bar fill. yellowSubtle/yellowMute are the
+  // floating-tab active-pill fill + border.
   accent: {
     peach: string;
     greenStrong: string;
+    yellowSubtle: string;
+    yellowMute: string;
   };
+
+  // Yellow accent ramp — pal-carousel active-card border + label.
+  yellowAccent: string;
+  yellowHighestContrast: string;
+
+  // Disabled (empty-composer) send-button gradient stops — pre-blended at
+  // 40% over white so the fill stays visible without view opacity.
+  midnightDisabledHigh: string;
+  midnightDisabledLow: string;
 }
 
 export interface ThemeBorders {
@@ -551,10 +576,22 @@ export interface Model {
   remoteModelId?: string; // The model ID as reported by the server's /v1/models
 }
 
-export type RootDrawerParamList = {
+export type MainTabParamList = {
+  ChatsTab: undefined;
+  ExploreTab: undefined;
+  SettingsTab: undefined;
+};
+
+export type RootStackParamList = {
+  MainTabs: undefined;
   Chat: undefined;
   Models: undefined;
+  'Pals (experimental)': undefined;
+  Benchmark: undefined;
   Settings: undefined;
+  'App Info': undefined;
+  'Dev Tools': undefined;
+  BenchmarkRunner: undefined;
 };
 
 export type TokenNativeEvent = {

@@ -55,6 +55,8 @@ export const lightColors: TokenColors = {
   onErrorContainer: '#330B09',
   background: LIGHT_BACKGROUND,
   onBackground: LIGHT_ON_BACKGROUND,
+  mutedBackground: '#fafafa',
+  mutedBackgroundTransparent: 'rgba(250,250,250,0)',
   surface: LIGHT_SURFACE,
   onSurface: LIGHT_ON_SURFACE,
   surfaceVariant: '#e4e4e6',
@@ -65,6 +67,11 @@ export const lightColors: TokenColors = {
   // Figma `Color/Secondary/Default` — the secondary surface used by
   // small DS buttons (back chevron, audio glyph) over the muted canvas.
   secondaryDefault: '#f3f2f2',
+  // Canonical Figma foreground greys (`Color/Foreground/*`).
+  foregroundPrimary: '#181715',
+  foregroundSecondary: '#474747',
+  foregroundTertiary: '#81807e',
+  foregroundSubtle: '#c4c2c0',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -157,7 +164,19 @@ export const lightColors: TokenColors = {
     peach: '#FCE7CF',
     // Progress-bar fill (canonical Figma `Color/Green/Strong`).
     greenStrong: '#7c8e8a',
+    // Floating-tab active pill (canonical `Color/Yellow/Subtle` + `/Mute`).
+    yellowSubtle: '#f5dbbc',
+    yellowMute: '#f8f1e2',
   },
+  // Pal-carousel active card (canonical `Color/Yellow/Accent` border +
+  // `Color/Yellow/Highest Contrast` label).
+  yellowAccent: '#c58334',
+  yellowHighestContrast: '#a86c34',
+  // Disabled (empty-composer) send button — the midnight gradient pre-blended
+  // at 40% over the white composer card, so the fill stays visible without
+  // relying on view opacity (which over-lightens when composited a 2nd time).
+  midnightDisabledHigh: '#a8a8a7',
+  midnightDisabledLow: '#9f9f9e',
 };
 
 // Dark base values from canonical Figma. Where the canonical dark binding
@@ -193,6 +212,8 @@ export const darkColors: TokenColors = {
   onErrorContainer: '#E6ACA9',
   background: DARK_BACKGROUND,
   onBackground: DARK_ON_BACKGROUND,
+  mutedBackground: '#0a0a0a',
+  mutedBackgroundTransparent: 'rgba(10,10,10,0)',
   surface: DARK_SURFACE,
   onSurface: DARK_ON_SURFACE,
   surfaceVariant: '#646466',
@@ -202,6 +223,12 @@ export const darkColors: TokenColors = {
   mutedLight: '#3a3937',
   // Figma `Color/Secondary/Default` — dark binding from canonical file.
   secondaryDefault: '#2a2928',
+  // Foreground greys — dark binding mirrors the on-surface ramp (home
+  // parity is a light-mode round; dark band tracked as a follow-up).
+  foregroundPrimary: '#fafafa',
+  foregroundSecondary: '#c4c2c0',
+  foregroundTertiary: '#81807e',
+  foregroundSubtle: '#646466',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),
@@ -295,5 +322,14 @@ export const darkColors: TokenColors = {
     peach: '#7A4A1F',
     // Progress-bar fill — dark binding mirrors the light token (same hue).
     greenStrong: '#7c8e8a',
+    // Yellow accents — mode-aware: the floating active-tab pill is a saturated
+    // amber on dark (Figma dark Color/Yellow/Subtle + Mute), so the white
+    // active label/icon keeps contrast.
+    yellowSubtle: '#a86c34',
+    yellowMute: '#443c35',
   },
+  yellowAccent: '#c58334',
+  yellowHighestContrast: '#a86c34',
+  midnightDisabledHigh: '#a8a8a7',
+  midnightDisabledLow: '#9f9f9e',
 };

@@ -15,7 +15,8 @@ import {debounce} from 'lodash';
 import {observer} from 'mobx-react-lite';
 import {toJS} from 'mobx';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useIsFocused} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
 import {
   Switch,
   Text,
@@ -33,6 +34,9 @@ import {
   ShareIcon,
   LinkExternalIcon,
   VolumeOnIcon,
+  BenchmarkIcon,
+  AppInfoIcon,
+  ChevronRightIcon,
 } from '../../assets/icons';
 
 import {
@@ -50,7 +54,8 @@ import {createStyles} from './styles';
 import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
 import {languageDisplayNames} from '../../locales';
 
-import {CacheType} from '../../utils/types';
+import {CacheType, RootStackParamList} from '../../utils/types';
+import {ROUTES} from '../../utils/navigationConstants';
 import {
   L10nContext,
   formatBytes,
@@ -76,6 +81,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const theme = useTheme();
   const styles = createStyles(theme);
   const isFocused = useIsFocused();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [contextSize, setContextSize] = useState(
     modelStore.contextInitParams.n_ctx.toString(),
   );
@@ -286,7 +292,7 @@ export const SettingsScreen: React.FC = observer(() => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <TouchableWithoutFeedback onPress={handleOutsidePress} accessible={false}>
         <ScrollView
           contentContainerStyle={styles.container}
@@ -1207,6 +1213,77 @@ export const SettingsScreen: React.FC = observer(() => {
                   </Button>
                 </View>
               </View>
+            </Card.Content>
+          </Card>
+
+          {/* Interim entry points kept reachable while the drawer is retired;
+              superseded once these screens are re-homed under their tabs. */}
+          <Card elevation={0} style={styles.card}>
+            <Card.Title title={l10n.settings.advancedSection} />
+            <Card.Content>
+              <List.Item
+                title={l10n.screenTitles.benchmark}
+                testID="settings-nav-benchmark"
+                left={() => (
+                  <BenchmarkIcon
+                    width={20}
+                    height={20}
+                    stroke={theme.colors.onSurface}
+                  />
+                )}
+                right={() => (
+                  <ChevronRightIcon
+                    width={20}
+                    height={20}
+                    stroke={theme.colors.onSurfaceVariant}
+                  />
+                )}
+                onPress={() => navigation.navigate(ROUTES.BENCHMARK)}
+              />
+              <Divider />
+              <List.Item
+                title={l10n.screenTitles.appInfo}
+                testID="settings-nav-app-info"
+                left={() => (
+                  <AppInfoIcon
+                    width={20}
+                    height={20}
+                    stroke={theme.colors.onSurface}
+                  />
+                )}
+                right={() => (
+                  <ChevronRightIcon
+                    width={20}
+                    height={20}
+                    stroke={theme.colors.onSurfaceVariant}
+                  />
+                )}
+                onPress={() => navigation.navigate(ROUTES.APP_INFO)}
+              />
+              {__DEV__ && (
+                <>
+                  <Divider />
+                  <List.Item
+                    title={l10n.settings.devTools}
+                    testID="settings-nav-dev-tools"
+                    left={() => (
+                      <CpuChipIcon
+                        width={20}
+                        height={20}
+                        stroke={theme.colors.onSurface}
+                      />
+                    )}
+                    right={() => (
+                      <ChevronRightIcon
+                        width={20}
+                        height={20}
+                        stroke={theme.colors.onSurfaceVariant}
+                      />
+                    )}
+                    onPress={() => navigation.navigate(ROUTES.DEV_TOOLS)}
+                  />
+                </>
+              )}
             </Card.Content>
           </Card>
         </ScrollView>

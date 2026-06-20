@@ -109,6 +109,38 @@ export const nativeTextInput = (): string => {
  * All use getters for lazy evaluation at runtime
  */
 export const Selectors = {
+  // Bottom-tab app shell (replaces the drawer as top-level navigation).
+  tabs: {
+    get bar(): string {
+      return byTestId('ui-bottom-nav');
+    },
+    get chats(): string {
+      return byTestId('ui-bottom-nav-item-ChatsTab');
+    },
+    get explore(): string {
+      return byTestId('ui-bottom-nav-item-ExploreTab');
+    },
+    get settings(): string {
+      return byTestId('ui-bottom-nav-item-SettingsTab');
+    },
+  },
+
+  // Home screen (ChatsTab root).
+  home: {
+    get screen(): string {
+      return byTestId('home-screen');
+    },
+    get composerInput(): string {
+      return byTestId('home-composer-input');
+    },
+    get composerSend(): string {
+      return byTestId('home-composer-send');
+    },
+    get modelChip(): string {
+      return byTestId('home-model-chip');
+    },
+  },
+
   // Navigation drawer - use text labels for reliable tapping
   // react-native-paper Drawer.Item doesn't always respond to testID taps
   drawer: {
@@ -141,6 +173,9 @@ export const Selectors = {
     get sendButton(): string {
       return byTestId('send-button');
     },
+    // Chat header overflow (generation-settings) menu. Since the drawer
+    // hamburger was removed in the bottom-tab migration, this is now the
+    // only element carrying testID "menu-button".
     get menuButton(): string {
       return byTestId('menu-button');
     },
@@ -152,6 +187,12 @@ export const Selectors = {
     },
     get resetButton(): string {
       return byTestId('reset-button');
+    },
+    // Empty-state primary action on the Chat screen (e.g. "go to Models"
+    // when no model is loaded). The reachable Models entry now that the
+    // drawer is gone.
+    get emptyPlaceholderAction(): string {
+      return byTestId('empty-placeholder-action');
     },
     get messageTiming(): string {
       return byTestId('message-timing');

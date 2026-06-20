@@ -14,6 +14,12 @@ import {SettingsScreen} from '../SettingsScreen';
 import {modelStore, uiStore, ttsStore} from '../../../store';
 import {l10n} from '../../../locales';
 
+const mockNavigate = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useNavigation: () => ({navigate: mockNavigate}),
+}));
+
 jest.useFakeTimers();
 
 const render = (ui: React.ReactElement, options: any = {}) =>
@@ -378,6 +384,35 @@ describe('SettingsScreen', () => {
     await waitFor(() => {
       // Should show effective value clamped to n_ctx (2048)
       expect(getByText(/effective: 2048/)).toBeTruthy();
+    });
+  });
+
+  describe('Advanced section navigation', () => {
+    it('navigates to Benchmark', () => {
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      fireEvent.press(getByTestId('settings-nav-benchmark'));
+      expect(mockNavigate).toHaveBeenCalledWith('Benchmark');
+    });
+
+    it('navigates to App Info', () => {
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      fireEvent.press(getByTestId('settings-nav-app-info'));
+      expect(mockNavigate).toHaveBeenCalledWith('App Info');
+    });
+
+    it('navigates to Dev Tools', () => {
+      const {getByTestId} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+      fireEvent.press(getByTestId('settings-nav-dev-tools'));
+      expect(mockNavigate).toHaveBeenCalledWith('Dev Tools');
     });
   });
 });

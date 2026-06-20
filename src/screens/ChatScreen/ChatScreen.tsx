@@ -2,6 +2,7 @@ import React, {useRef, ReactNode, useState} from 'react';
 
 import {observer} from 'mobx-react';
 import {runInAction} from 'mobx';
+import {useNavigation} from '@react-navigation/native';
 
 import {
   Bubble,
@@ -15,7 +16,13 @@ import {useChatSession} from '../../hooks';
 import {usePendingMessage} from '../../hooks/useDeepLinking';
 import {Pal} from '../../types/pal';
 
-import {modelStore, chatSessionStore, palStore, uiStore} from '../../store';
+import {
+  modelStore,
+  chatSessionStore,
+  palStore,
+  uiStore,
+  deepLinkStore,
+} from '../../store';
 import {hasVideoCapability} from '../../utils/pal-capabilities';
 
 import {L10nContext} from '../../utils';
@@ -70,6 +77,29 @@ export const ChatScreen: React.FC = observer(() => {
 
   // Handle deep linking for message prefill
   const {pendingMessage, clearPendingMessage} = usePendingMessage();
+
+  const navigation = useNavigation();
+
+  // One-shot auto-focus on arrival from the Home composer launcher. The flag
+  // is read and cleared once on mount (so history rows and deep-link entries,
+  // which never set it, can never auto-focus). Focusing itself waits for the
+  // screen-push `transitionEnd` so the keyboard is not raised mid-transition,
+  // and is skipped entirely when no model is loaded (the input cannot send).
+  const [autoFocusSignal, setAutoFocusSignal] = useState(0);
+  React.useEffect(() => {
+    const wantsFocus = deepLinkStore.autoFocusChat;
+    deepLinkStore.clearAutoFocusChat();
+    if (!wantsFocus || !modelStore.engine) {
+      return;
+    }
+    const unsubscribe = navigation.addListener('transitionEnd' as any, () => {
+      setAutoFocusSignal(n => n + 1);
+      unsubscribe();
+    });
+    return unsubscribe;
+    // Mount-only: the flag is a one-shot consumed exactly once per arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Callback handler for opening pal sheet
   const handleOpenPalSheet = React.useCallback((_pal: Pal) => {
@@ -226,6 +256,7 @@ export const ChatScreen: React.FC = observer(() => {
         isVisionEnabled={multimodalEnabled}
         initialInputText={pendingMessage || undefined}
         onInitialTextConsumed={clearPendingMessage}
+        autoFocusSignal={autoFocusSignal}
         inputProps={{
           showThinkingToggle: thinkingSupported,
           isThinkingEnabled: thinkingEnabled,

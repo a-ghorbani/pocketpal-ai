@@ -1,23 +1,24 @@
 import React from 'react';
 import {TouchableOpacity} from 'react-native';
-import {DrawerNavigationProp} from '@react-navigation/drawer';
+import {StackNavigationProp} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
 
 import {styles} from './styles';
-import {MenuIcon} from '../../assets/icons';
+import {ArrowLeftMdIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
+import type {RootStackParamList} from '../../utils/types';
 
 export const HeaderLeft: React.FC = () => {
   const theme = useTheme();
-  const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   return (
     <TouchableOpacity
       style={[styles.menuIcon]}
-      testID="menu-button"
-      accessibilityLabel="Open drawer"
-      onPress={() => navigation.openDrawer()}>
-      <MenuIcon stroke={theme.colors.primary} />
+      testID="back-button"
+      accessibilityLabel="Go back"
+      onPress={() => navigation.goBack()}>
+      <ArrowLeftMdIcon stroke={theme.colors.primary} />
     </TouchableOpacity>
   );
 };

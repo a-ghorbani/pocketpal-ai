@@ -95,13 +95,30 @@ jest.mock('../src/specs/NativeHardwareInfo', () => ({
 }));
 
 jest.mock('react-native-safe-area-context', () => {
+  const actual = jest.requireActual('react-native-safe-area-context');
   const inset = {top: 0, right: 0, bottom: 0, left: 0};
+  const frame = {x: 0, y: 0, width: 390, height: 844};
+  // Provide the inset/frame contexts so consumers reading them directly
+  // (e.g. @react-navigation/stack's CardStack) resolve a value instead of
+  // null. The previous passthrough left those contexts undefined.
+  const SafeAreaProvider = jest.fn(({children}) => {
+    const React = require('react');
+    return React.createElement(
+      actual.SafeAreaFrameContext.Provider,
+      {value: frame},
+      React.createElement(
+        actual.SafeAreaInsetsContext.Provider,
+        {value: inset},
+        children,
+      ),
+    );
+  });
   return {
-    ...jest.requireActual('react-native-safe-area-context'),
-    SafeAreaProvider: jest.fn(({children}) => children),
+    ...actual,
+    SafeAreaProvider,
     SafeAreaConsumer: jest.fn(({children}) => children(inset)),
     useSafeAreaInsets: jest.fn(() => inset),
-    useSafeAreaFrame: jest.fn(() => ({x: 0, y: 0, width: 390, height: 844})),
+    useSafeAreaFrame: jest.fn(() => frame),
   };
 });
 

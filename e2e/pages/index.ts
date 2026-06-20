@@ -1,5 +1,6 @@
 export {BasePage, ChainableElement} from './BasePage';
 export {ChatPage} from './ChatPage';
+export {HomePage} from './HomePage';
 export {DrawerPage} from './DrawerPage';
 export {ModelsPage} from './ModelsPage';
 export {SettingsPage} from './SettingsPage';

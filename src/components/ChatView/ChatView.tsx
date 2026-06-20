@@ -171,6 +171,9 @@ export interface ChatProps extends ChatTopLevelProps {
   initialInputText?: string;
   /** Callback when initial text is consumed */
   onInitialTextConsumed?: () => void;
+  /** Monotonic signal asking the input to focus once the screen transition
+   * settles (Home composer launcher). Forwarded to ChatInput. */
+  autoFocusSignal?: number;
   /**
    * Allows you to customize the time format. IMPORTANT: only for the time,
    * do not return date here. @see {@link ChatProps.dateFormat} to customize the date format.
@@ -233,6 +236,7 @@ export const ChatView = observer(
     isVisionEnabled = false,
     initialInputText,
     onInitialTextConsumed,
+    autoFocusSignal,
     textInputProps,
     timeFormat,
     usePreviewData = true,
@@ -1153,6 +1157,7 @@ export const ChatView = observer(
                 {...{
                   ...unwrap(inputProps),
                   isStreaming,
+                  autoFocusSignal,
                   onSendPress: wrappedOnSendPress,
                   onStopPress,
                   chatInputHeight,

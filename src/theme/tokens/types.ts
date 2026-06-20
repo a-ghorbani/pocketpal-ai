@@ -32,6 +32,14 @@ export interface TokenColors {
   onErrorContainer: string;
   background: string;
   onBackground: string;
+  // Design-system `Color/Background/Muted` — the muted screen canvas that
+  // cards (composer, history rows) read against. Distinct from the pure-white
+  // `background`/`Color/Background/Card`.
+  mutedBackground: string;
+  // Same hue as `mutedBackground` at zero alpha, for fade-out gradient stops.
+  // RN's `'transparent'` is transparent black, which greys a fade over a light
+  // canvas; matching the hue keeps the fade clean in both themes.
+  mutedBackgroundTransparent: string;
   surface: string;
   onSurface: string;
   surfaceVariant: string;
@@ -42,6 +50,13 @@ export interface TokenColors {
   mutedLight: string;
   // Design-system `Color/Secondary/Default` — small DS button surface.
   secondaryDefault: string;
+  // Canonical Figma foreground greys (`Color/Foreground/*`). The MD3
+  // migration palette doesn't expose these exact neutrals; redesigned
+  // screens bind them directly.
+  foregroundPrimary: string;
+  foregroundSecondary: string;
+  foregroundTertiary: string;
+  foregroundSubtle: string;
 
   // MD3 extras
   surfaceDisabled: string;
@@ -129,10 +144,24 @@ export interface TokenColors {
   // Accent — peach pill / recommended-tier highlight (canonical Figma
   // `Color/Accent/Peach`; see `accent.peach` consumers in onboarding).
   // `accent.greenStrong` powers the download progress-bar fill.
+  // `yellowSubtle`/`yellowMute` are the floating-tab active-pill fill +
+  // border (canonical `Color/Yellow/Subtle` + `Color/Yellow/Mute`).
   accent: {
     peach: string;
     greenStrong: string;
+    yellowSubtle: string;
+    yellowMute: string;
   };
+
+  // Yellow accent ramp — pal-carousel active-card border + label
+  // (canonical `Color/Yellow/Accent` + `Color/Yellow/Highest Contrast`).
+  yellowAccent: string;
+  yellowHighestContrast: string;
+
+  // Disabled (empty-composer) send-button gradient stops — the midnight
+  // gradient pre-blended at 40% over the white composer card.
+  midnightDisabledHigh: string;
+  midnightDisabledLow: string;
 }
 
 /**

@@ -11,7 +11,7 @@ import {
 
 import {observer} from 'mobx-react-lite';
 import {useNavigation} from '@react-navigation/native';
-import {DrawerNavigationProp} from '@react-navigation/drawer';
+import {StackNavigationProp} from '@react-navigation/stack';
 import {
   Card,
   Icon,
@@ -38,7 +38,7 @@ import {
   Model,
   ModelOrigin,
   ModelType,
-  RootDrawerParamList,
+  RootStackParamList,
 } from '../../../utils/types';
 import {
   getModelSizeString,
@@ -60,7 +60,7 @@ import {
   ChevronSelectorExpandedVerticalIcon,
 } from '../../../assets/icons';
 
-type ChatScreenNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
+type ChatScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 interface ModelCardProps {
   model: Model;

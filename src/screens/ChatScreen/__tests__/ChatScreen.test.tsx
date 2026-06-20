@@ -10,7 +10,7 @@ import {
 } from '../../../../jest/test-utils';
 import {ChatScreen} from '../ChatScreen';
 
-import {chatSessionStore, modelStore} from '../../../store';
+import {chatSessionStore, modelStore, deepLinkStore} from '../../../store';
 
 import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
@@ -399,5 +399,50 @@ describe('ChatScreen', () => {
         'tool-model-id',
       );
     });
+  });
+});
+
+describe('ChatScreen — Home-launcher auto-focus consumer', () => {
+  const engine = () => ({
+    completion: jest.fn(),
+    stopCompletion: jest.fn(),
+  });
+
+  afterEach(() => {
+    runInAction(() => {
+      deepLinkStore.autoFocusChat = false;
+      modelStore.engine = undefined;
+    });
+  });
+
+  it('reads and clears the one-shot flag exactly once on arrival (model loaded)', () => {
+    runInAction(() => {
+      deepLinkStore.autoFocusChat = true;
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      modelStore.engine = engine();
+    });
+    render(<ChatScreen />, {withNavigation: true});
+    expect(deepLinkStore.clearAutoFocusChat).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the flag without engaging focus when no model is loaded', () => {
+    runInAction(() => {
+      deepLinkStore.autoFocusChat = true;
+      modelStore.engine = undefined;
+    });
+    render(<ChatScreen />, {withNavigation: true});
+    // Flag is consumed (cleared) so it cannot leak; no model means no focus.
+    expect(deepLinkStore.clearAutoFocusChat).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the flag on a non-launcher arrival (history / deep link)', () => {
+    runInAction(() => {
+      // History rows and deep links never set the flag; arrival still clears it.
+      deepLinkStore.autoFocusChat = false;
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      modelStore.engine = engine();
+    });
+    render(<ChatScreen />, {withNavigation: true});
+    expect(deepLinkStore.clearAutoFocusChat).toHaveBeenCalledTimes(1);
   });
 });

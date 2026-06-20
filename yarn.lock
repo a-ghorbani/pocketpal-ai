@@ -2606,6 +2606,14 @@
     invariant "^2.2.4"
     nullthrows "^1.1.1"
 
+"@react-navigation/bottom-tabs@7.4.9":
+  version "7.4.9"
+  resolved "https://registry.yarnpkg.com/@react-navigation/bottom-tabs/-/bottom-tabs-7.4.9.tgz#464351385350e2c80d1f0665bed07310c5e19202"
+  integrity sha512-Q7oUEB3YjwGyY/OLzkq+tv0STe2d9m8NAJOtKsd6GtN/LtrHmG7LdpOm5qitL60+gdY1zY7SWUD4am5c33RssA==
+  dependencies:
+    "@react-navigation/elements" "^2.6.5"
+    color "^4.2.3"
+
 "@react-navigation/core@^7.13.7":
   version "7.13.7"
   resolved "https://registry.yarnpkg.com/@react-navigation/core/-/core-7.13.7.tgz#1263903a703b5f183a08c22dfc5c3735ac4ef91c"
@@ -2629,6 +2637,15 @@
     color "^4.2.3"
     react-native-drawer-layout "^4.2.1"
     use-latest-callback "^0.2.4"
+
+"@react-navigation/elements@^2.6.5":
+  version "2.9.25"
+  resolved "https://registry.yarnpkg.com/@react-navigation/elements/-/elements-2.9.25.tgz#b42e6080a77cf06bc69de95a1936cbabca43abee"
+  integrity sha512-cV7Hny55aE/uge6f4UB0pbGQbFl3XjXLMW+lTBNuJs8P7a9tuf7dkkPHxxgnLIvxE+KJVI2K8CGabfDk4Ht0Sg==
+  dependencies:
+    color "^4.2.3"
+    use-latest-callback "^0.2.4"
+    use-sync-external-store "^1.5.0"
 
 "@react-navigation/elements@^2.9.3":
   version "2.9.3"

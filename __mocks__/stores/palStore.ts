@@ -53,6 +53,8 @@ class MockPalStore {
     return this.pals;
   });
 
+  getPalById = jest.fn((id: string) => this.pals.find(p => p.id === id));
+
   getAllPals = jest.fn(() => this.pals);
 
   // Capability-based methods
