@@ -26,7 +26,7 @@ export const createStyles = (theme: Theme) =>
     },
     onlineDot: {
       position: 'absolute',
-      right: -1,
+      end: -1,
       bottom: -1,
       width: 8,
       height: 8,

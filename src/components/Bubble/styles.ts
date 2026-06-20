@@ -17,8 +17,9 @@ export const styles = ({
       backgroundColor: userBubble ? theme.colors.mutedLight : 'transparent',
       borderColor: 'transparent',
       borderRadius: 16,
-      // Tail: square off the bottom-right corner on the user bubble.
-      borderBottomRightRadius: userBubble ? 2 : 16,
+      // Tail: square off the bottom trailing corner on the user bubble.
+      // Logical `end-end` so the tail mirrors under RTL.
+      borderEndEndRadius: userBubble ? 2 : 16,
       overflow: 'hidden',
     },
     dateHeader0: {
