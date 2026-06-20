@@ -353,9 +353,13 @@ export async function detectServerType(
  * is keyed on the PERSISTED serverType (never live detection). An unknown /
  * strict server receives no reasoning controls — omit beats a 400.
  *
- * - llama.cpp: OFF → enable_thinking:false + reasoning_format:none; ON →
- *   reasoning_format:auto. (ignores unknown → safe)
- * - LM Studio / vLLM (modern): OFF → enable_thinking:false. (ignores unknown)
+ * - llama.cpp: ON+effort → reasoning_format:auto + chat_template_kwargs:
+ *   {reasoning_effort}; ON → reasoning_format:auto; OFF → reasoning_format:none
+ *   + chat_template_kwargs:{enable_thinking:false}. (ignores unknown → safe)
+ * - vLLM (modern): ON+effort → chat_template_kwargs:{reasoning_effort}; ON →
+ *   nothing; OFF → chat_template_kwargs:{enable_thinking:false}. (ignores unknown)
+ * - LM Studio: on/off only — its chat API ignores reasoning_effort. ON →
+ *   nothing; OFF → chat_template_kwargs:{enable_thinking:false}.
  * - Ollama (/v1): OFF → reasoning_effort:'none' (safe no-op). NEVER think:true,
  *   NEVER a non-'none' effort (hard-400 risk). Graded effort deferred.
  * - OpenAI: reasoning_effort:<value> only when axis-2 effort is known for the
@@ -372,14 +376,25 @@ export function buildReasoningPayload(
   const {enabled, effort} = reasoning;
   switch (serverType) {
     case 'llama.cpp':
-      return enabled
-        ? {reasoning_format: 'auto'}
-        : {
-            reasoning_format: 'none',
-            chat_template_kwargs: {enable_thinking: false},
-          };
-    case 'LM Studio':
+      if (!enabled) {
+        return {
+          reasoning_format: 'none',
+          chat_template_kwargs: {enable_thinking: false},
+        };
+      }
+      return effort
+        ? {
+            reasoning_format: 'auto',
+            chat_template_kwargs: {reasoning_effort: effort},
+          }
+        : {reasoning_format: 'auto'};
     case 'vLLM':
+      if (!enabled) {
+        return {chat_template_kwargs: {enable_thinking: false}};
+      }
+      return effort ? {chat_template_kwargs: {reasoning_effort: effort}} : {};
+    case 'LM Studio':
+      // On/off only; the LM Studio chat API ignores reasoning_effort.
       return enabled ? {} : {chat_template_kwargs: {enable_thinking: false}};
     case 'Ollama':
       // OFF sends a safe no-op; ON sends nothing (never think:true).

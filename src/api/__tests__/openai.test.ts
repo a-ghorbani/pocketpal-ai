@@ -1263,6 +1263,15 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     });
   });
 
+  it('llama.cpp ON+effort sends reasoning_format auto + reasoning_effort', () => {
+    expect(
+      buildReasoningPayload('llama.cpp', {enabled: true, effort: 'high'}),
+    ).toEqual({
+      reasoning_format: 'auto',
+      chat_template_kwargs: {reasoning_effort: 'high'},
+    });
+  });
+
   it('llama.cpp OFF sends enable_thinking:false + reasoning_format none', () => {
     expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
       reasoning_format: 'none',
@@ -1270,14 +1279,29 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     });
   });
 
-  it('LM Studio OFF sends enable_thinking:false, ON sends nothing', () => {
+  it('LM Studio is on/off only — no graded effort', () => {
     expect(buildReasoningPayload('LM Studio', {enabled: false})).toEqual({
       chat_template_kwargs: {enable_thinking: false},
     });
     expect(buildReasoningPayload('LM Studio', {enabled: true})).toEqual({});
+    // Even when an effort is set, LM Studio never sends reasoning_effort.
+    const onEffort = buildReasoningPayload('LM Studio', {
+      enabled: true,
+      effort: 'high',
+    });
+    expect(onEffort).toEqual({});
+    expect(onEffort).not.toHaveProperty('reasoning_effort');
   });
 
-  it('vLLM behaves like LM Studio', () => {
+  it('vLLM ON+effort sends chat_template_kwargs.reasoning_effort', () => {
+    expect(
+      buildReasoningPayload('vLLM', {enabled: true, effort: 'max'}),
+    ).toEqual({chat_template_kwargs: {reasoning_effort: 'max'}});
+    // ON without an effort sends nothing.
+    expect(buildReasoningPayload('vLLM', {enabled: true})).toEqual({});
+  });
+
+  it('vLLM OFF sends enable_thinking:false', () => {
     expect(buildReasoningPayload('vLLM', {enabled: false})).toEqual({
       chat_template_kwargs: {enable_thinking: false},
     });
