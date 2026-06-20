@@ -32,6 +32,79 @@ describe('AssistantTurnFooter', () => {
     expect(queryByTestId('assistant-turn-footer')).toBeNull();
   });
 
+  describe('regenerate / more action affordances', () => {
+    it('omits both regenerate and more buttons when no handlers are supplied', () => {
+      const message = baseTurn({metadata: {copyable: true}});
+      const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+      expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
+      expect(queryByTestId('footer-regenerate')).toBeNull();
+      expect(queryByTestId('footer-more')).toBeNull();
+    });
+
+    it('renders the regenerate button and invokes onRegenerate on press', () => {
+      const onRegenerate = jest.fn();
+      const message = baseTurn({metadata: {copyable: true}});
+      const {getByTestId} = render(
+        <AssistantTurnFooter message={message} onRegenerate={onRegenerate} />,
+      );
+      const button = getByTestId('footer-regenerate');
+      expect(button).toBeTruthy();
+      fireEvent.press(button);
+      expect(onRegenerate).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the more button and invokes onMore with the press event', () => {
+      const onMore = jest.fn();
+      const message = baseTurn({metadata: {copyable: true}});
+      const {getByTestId} = render(
+        <AssistantTurnFooter message={message} onMore={onMore} />,
+      );
+      const button = getByTestId('footer-more');
+      expect(button).toBeTruthy();
+      const pressEvent = {nativeEvent: {pageX: 42, pageY: 84}};
+      fireEvent.press(button, pressEvent);
+      expect(onMore).toHaveBeenCalledTimes(1);
+      // The handler must receive the press event so the menu can anchor
+      // at the tap position (parity with a row long-press).
+      expect(onMore.mock.calls[0][0]).toBeDefined();
+    });
+
+    it('regenerate/more are independent of copy — both still render the existing copy button', () => {
+      const onRegenerate = jest.fn();
+      const onMore = jest.fn();
+      const message = baseTurn({metadata: {copyable: true}});
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={message}
+          onRegenerate={onRegenerate}
+          onMore={onMore}
+        />,
+      );
+      expect(getByTestId('footer-copy')).toBeTruthy();
+      expect(getByTestId('footer-regenerate')).toBeTruthy();
+      expect(getByTestId('footer-more')).toBeTruthy();
+    });
+
+    it('renders regenerate/more even on a copy-only (aborted) turn with no timings', () => {
+      const onRegenerate = jest.fn();
+      const onMore = jest.fn();
+      const message = baseTurn({
+        metadata: {copyable: true, interrupted: true},
+      });
+      const {getByTestId, queryByTestId} = render(
+        <AssistantTurnFooter
+          message={message}
+          onRegenerate={onRegenerate}
+          onMore={onMore}
+        />,
+      );
+      expect(queryByTestId('footer-timing')).toBeNull();
+      expect(getByTestId('footer-regenerate')).toBeTruthy();
+      expect(getByTestId('footer-more')).toBeTruthy();
+      expect(getByTestId('footer-interrupted-status')).toBeTruthy();
+    });
+  });
+
   it('renders timing line when timings present (no copy button if not copyable)', () => {
     const message = baseTurn({
       metadata: {
