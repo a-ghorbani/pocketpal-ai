@@ -17,7 +17,11 @@ import {useKeyboardState} from 'react-native-keyboard-controller';
 import {useTheme} from '../hooks';
 import {L10nContext} from '../utils';
 import {BottomNavBar} from '../components/ui/BottomNavBar';
-import {ChatIcon, CompassIcon, SettingsIcon} from '../assets/icons';
+import {
+  MessageCircleMdIcon,
+  CompassMdIcon,
+  SettingsMdIcon,
+} from '../assets/icons';
 import {HomeScreen, ExploreScreen, SettingsScreen} from '../screens';
 import type {MainTabParamList} from '../utils/types';
 
@@ -50,25 +54,42 @@ const FloatingTabBar: React.FC<BottomTabBarProps> = ({state, navigation}) => {
     transform: [{translateY: hideProgress.value * hideOffset}],
   }));
 
+  const focusedValue = state.routes[state.index].name;
+
+  // Active tab glyph reads at foreground/primary, inactive at foreground/
+  // secondary, matching the Figma tab component.
+  const iconFill = (value: string) =>
+    focusedValue === value
+      ? theme.colors.foregroundPrimary
+      : theme.colors.foregroundSecondary;
+
   const items = [
     {
       value: 'ChatsTab',
       label: l10n.tabs.chats,
-      icon: <ChatIcon stroke={theme.colors.onSurface} />,
+      icon: (
+        <MessageCircleMdIcon
+          width={16}
+          height={16}
+          fill={iconFill('ChatsTab')}
+        />
+      ),
     },
     {
       value: 'ExploreTab',
       label: l10n.tabs.explore,
-      icon: <CompassIcon stroke={theme.colors.onSurface} />,
+      icon: (
+        <CompassMdIcon width={16} height={16} fill={iconFill('ExploreTab')} />
+      ),
     },
     {
       value: 'SettingsTab',
       label: l10n.tabs.settings,
-      icon: <SettingsIcon stroke={theme.colors.onSurface} />,
+      icon: (
+        <SettingsMdIcon width={14} height={14} fill={iconFill('SettingsTab')} />
+      ),
     },
   ];
-
-  const focusedValue = state.routes[state.index].name;
 
   const onSelect = (value: string) => {
     const route = state.routes.find(r => r.name === value);

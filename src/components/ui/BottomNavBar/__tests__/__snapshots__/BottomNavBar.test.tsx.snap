@@ -932,7 +932,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#181715",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -995,7 +995,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1058,7 +1058,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1161,7 +1161,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#181715",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1224,7 +1224,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1287,7 +1287,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1390,7 +1390,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#181715",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1453,7 +1453,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1516,7 +1516,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1619,7 +1619,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#333333",
+            "color": "#181715",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1682,7 +1682,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",
@@ -1745,7 +1745,7 @@ exports[`BottomNavBar — snapshot matrix baseline (variant x size x {default,di
       <Text
         style={
           {
-            "color": "#646466",
+            "color": "#474747",
             "fontFamily": "Inter-Regular",
             "fontSize": 11,
             "fontWeight": "400",

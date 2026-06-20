@@ -22,6 +22,7 @@ export {default as ClockIcon} from './clock.svg';
 export {default as CloseIcon} from './close.svg';
 export {default as CodeIcon} from './code.svg';
 export {default as CompassIcon} from './compass.svg';
+export {default as CompassMdIcon} from './compass-md.svg';
 export {default as CopyIcon} from './copy.svg';
 export {default as CloudIcon} from './cloud.svg';
 export {default as CloudPlusIcon} from './cloud-plus.svg';

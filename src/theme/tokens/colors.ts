@@ -69,6 +69,7 @@ export const lightColors: TokenColors = {
   secondaryDefault: '#f3f2f2',
   // Canonical Figma foreground greys (`Color/Foreground/*`).
   foregroundPrimary: '#181715',
+  foregroundSecondary: '#474747',
   foregroundTertiary: '#81807e',
   foregroundSubtle: '#c4c2c0',
   // MD3 extras
@@ -228,6 +229,7 @@ export const darkColors: TokenColors = {
   // Foreground greys — dark binding mirrors the on-surface ramp (home
   // parity is a light-mode round; dark band tracked as a follow-up).
   foregroundPrimary: '#fafafa',
+  foregroundSecondary: '#b9b8b6',
   foregroundTertiary: '#81807e',
   foregroundSubtle: '#646466',
   // MD3 extras

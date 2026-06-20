@@ -76,7 +76,9 @@ const createFloatingStyles = (theme: Theme, selected?: boolean) =>
     } as ViewStyle,
     label: {
       ...theme.typography.captionS,
-      color: selected ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+      color: selected
+        ? theme.colors.foregroundPrimary
+        : theme.colors.foregroundSecondary,
     } as TextStyle,
   });
 

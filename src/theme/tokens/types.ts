@@ -54,6 +54,7 @@ export interface TokenColors {
   // migration palette doesn't expose these exact neutrals; redesigned
   // screens bind them directly.
   foregroundPrimary: string;
+  foregroundSecondary: string;
   foregroundTertiary: string;
   foregroundSubtle: string;
 

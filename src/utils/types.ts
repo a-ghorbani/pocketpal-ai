@@ -299,6 +299,7 @@ export interface SemanticColors {
   secondaryDefault: string;
   // Canonical Figma foreground greys (`Color/Foreground/*`).
   foregroundPrimary: string;
+  foregroundSecondary: string;
   foregroundTertiary: string;
   foregroundSubtle: string;
 
