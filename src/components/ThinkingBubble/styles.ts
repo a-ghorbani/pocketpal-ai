@@ -75,6 +75,11 @@ export const createStyles = (theme: Theme) => {
       paddingVertical: 6,
       alignItems: 'center',
     },
+    headerLabelGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     headerText: {
       color: textColor,
       letterSpacing: 0.5,

@@ -17,7 +17,7 @@ describe('ToolErrorBlock', () => {
     expect(getByTestId('tool-error-block')).toBeTruthy();
     expect(getByText('render_html failed')).toBeTruthy();
     expect(getByText('invalid markup')).toBeTruthy();
-    expect(getByText('alert-circle-outline')).toBeTruthy();
+    expect(getByText('alert-outline')).toBeTruthy();
   });
 
   it('renders the error block without a message line when errorMessage missing', () => {

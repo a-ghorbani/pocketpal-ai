@@ -5,7 +5,6 @@ import {Theme} from '../../utils/types';
 export const styles = ({theme}: {theme: Theme}) =>
   StyleSheet.create({
     container: {
-      paddingHorizontal: 12,
       paddingVertical: 4,
     },
     row: {
@@ -15,16 +14,24 @@ export const styles = ({theme}: {theme: Theme}) =>
     icon: {
       fontSize: 14,
       marginRight: 6,
-      color: theme.colors.error,
+      color: theme.colors.redAccent,
     },
     label: {
-      fontSize: 12,
-      color: theme.colors.error,
+      ...theme.typography.captionS,
+      color: theme.colors.redAccent,
+    },
+    separator: {
+      ...theme.typography.captionS,
+      color: theme.colors.redAccent,
     },
     message: {
-      fontSize: 11,
-      marginTop: 2,
-      marginLeft: 20,
-      color: theme.colors.onSurfaceVariant,
+      ...theme.typography.captionS,
+      color: theme.colors.redAccent,
+      flexShrink: 1,
+    },
+    chevron: {
+      fontSize: 14,
+      marginLeft: 4,
+      color: theme.colors.redAccent,
     },
   });

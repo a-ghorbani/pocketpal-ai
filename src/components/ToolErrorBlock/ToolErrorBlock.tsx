@@ -38,19 +38,26 @@ export const ToolErrorBlock: React.FC<ToolErrorBlockProps> = ({
     <View style={componentStyles.container} testID="tool-error-block">
       <View style={componentStyles.row}>
         <Icon
-          name="alert-circle-outline"
+          name="alert-outline"
           style={componentStyles.icon}
           testID="tool-error-block-icon"
         />
-        <Text style={componentStyles.label}>
+        <Text style={componentStyles.label} numberOfLines={1}>
           {t(l10n.chat.toolErrorBlock, {name: toolName})}
         </Text>
+        {errorMessage ? (
+          <Text style={componentStyles.separator}>{' · '}</Text>
+        ) : null}
+        {errorMessage ? (
+          <Text
+            style={componentStyles.message}
+            numberOfLines={1}
+            testID="tool-error-block-message">
+            {errorMessage}
+          </Text>
+        ) : null}
+        <Icon name="chevron-right" style={componentStyles.chevron} />
       </View>
-      {errorMessage ? (
-        <Text style={componentStyles.message} testID="tool-error-block-message">
-          {errorMessage}
-        </Text>
-      ) : null}
     </View>
   );
 };
