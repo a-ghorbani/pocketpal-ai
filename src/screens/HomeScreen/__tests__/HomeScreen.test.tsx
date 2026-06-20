@@ -299,4 +299,104 @@ describe('HomeScreen', () => {
     });
     expect(getByText(en.home.composerPlaceholderGeneric)).toBeTruthy();
   });
+
+  const palNamed = (id: string, name: string): any => ({
+    ...mockLocalPal,
+    id,
+    name,
+    source: 'local',
+  });
+  const placeholderFor = (name: string) =>
+    en.home.composerPlaceholder.replace('{{pal}}', name);
+
+  it('defaults selection to the onboarding pal (Pip), not the first pal', () => {
+    runInAction(() => {
+      // Lookie (the video pal) is seeded first; Pip is the onboarding pal.
+      palStore.pals = [palNamed('lookie', 'Lookie'), palNamed('pip', 'Pip')];
+      chatSessionStore.sessions = [];
+    });
+    const {getByText} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByText(placeholderFor('Pip'))).toBeTruthy();
+  });
+
+  it('defaults selection to the last-used pal over the onboarding pal', () => {
+    runInAction(() => {
+      palStore.pals = [
+        palNamed('lookie', 'Lookie'),
+        palNamed('pip', 'Pip'),
+        palNamed('sage', 'Sage'),
+      ];
+      chatSessionStore.sessions = [
+        {
+          id: 's1',
+          title: 'Older',
+          date: '2026-06-01T10:00:00.000Z',
+          activePalId: 'pip',
+          messages: [],
+          completionSettings: {} as any,
+          settingsSource: 'custom',
+        },
+        {
+          id: 's2',
+          title: 'Newer',
+          date: '2026-06-10T10:00:00.000Z',
+          activePalId: 'sage',
+          messages: [],
+          completionSettings: {} as any,
+          settingsSource: 'custom',
+        },
+      ];
+    });
+    const {getByText} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    expect(getByText(placeholderFor('Sage'))).toBeTruthy();
+  });
+
+  it('orders the carousel by usage recency, most-recent first', () => {
+    runInAction(() => {
+      palStore.pals = [
+        palNamed('lookie', 'Lookie'),
+        palNamed('pip', 'Pip'),
+        palNamed('sage', 'Sage'),
+      ];
+      chatSessionStore.sessions = [
+        {
+          id: 's1',
+          title: 'a',
+          date: '2026-06-10T10:00:00.000Z',
+          activePalId: 'sage',
+          messages: [],
+          completionSettings: {} as any,
+          settingsSource: 'custom',
+        },
+      ];
+    });
+    const {getAllByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    const order = getAllByTestId(/^home-pal-/).map(n => n.props.testID);
+    // Sage (most recently used) leads; the rest keep their seeded order.
+    expect(order).toEqual(['home-pal-sage', 'home-pal-lookie', 'home-pal-pip']);
+  });
+
+  it('deselects the active pal when it is tapped (generic placeholder)', () => {
+    runInAction(() => {
+      palStore.pals = [palNamed('lookie', 'Lookie'), palNamed('pip', 'Pip')];
+      chatSessionStore.sessions = [];
+    });
+    const {getByText, getByTestId} = render(<HomeScreen />, {
+      withNavigation: true,
+      withSafeArea: true,
+    });
+    // Pip is the default active pal; tapping it clears the selection.
+    expect(getByText(placeholderFor('Pip'))).toBeTruthy();
+    fireEvent.press(getByTestId('home-pal-pip'));
+    expect(getByText(en.home.composerPlaceholderGeneric)).toBeTruthy();
+  });
 });

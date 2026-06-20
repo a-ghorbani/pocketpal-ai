@@ -77,17 +77,49 @@ export const HomeScreen: React.FC = observer(() => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
 
-  const [selectedPal, setSelectedPalLocal] = useState<Pal | undefined>(
+  // undefined = no explicit choice yet (use the default below); null = the user
+  // deselected (no active pal); string = the explicitly chosen pal id.
+  const [selectedPalId, setSelectedPalId] = useState<string | null | undefined>(
     undefined,
   );
   const [isPickerVisible, setPickerVisible] = useState(false);
 
-  // The carousel highlights one pal at a time. With no explicit selection
-  // the first pal is active by default, matching the canonical layout.
-  const activePal = selectedPal ?? palStore.pals[0];
-
   const sessions = chatSessionStore.sessions;
   const isEmpty = sessions.length === 0;
+
+  // Per-pal usage recency, derived from chat sessions (each carries the pal it
+  // ran with + a date). Drives both the default selection and the carousel
+  // order, so the pal you reach for most leads and is preselected.
+  const palLastUsed = new Map<string, string>();
+  for (const session of sessions) {
+    if (!session.activePalId) {
+      continue;
+    }
+    const prev = palLastUsed.get(session.activePalId);
+    if (!prev || session.date > prev) {
+      palLastUsed.set(session.activePalId, session.date);
+    }
+  }
+
+  // Most-recently-used pals first; never-used pals keep their original order
+  // behind them (stable sort, empty recency key sorts last).
+  const orderedPals = [...palStore.pals].sort((a, b) => {
+    const da = palLastUsed.get(a.id) ?? '';
+    const db = palLastUsed.get(b.id) ?? '';
+    return da === db ? 0 : da < db ? 1 : -1;
+  });
+
+  // Default when the user hasn't chosen one this session: the last-used pal,
+  // else the onboarding pal (Pip) on a cold install, else the first pal.
+  const lastUsedPalId = orderedPals.find(p => palLastUsed.has(p.id))?.id;
+  const onboardingPalId = palStore.pals.find(
+    p => p.name === 'Pip' && p.source === 'local',
+  )?.id;
+  const defaultPalId = lastUsedPalId ?? onboardingPalId ?? palStore.pals[0]?.id;
+
+  const activePalId =
+    selectedPalId === undefined ? defaultPalId : selectedPalId ?? undefined;
+  const activePal = activePalId ? palStore.getPalById(activePalId) : undefined;
   const activeModelName = modelStore.activeModel?.name;
 
   const composerPlaceholder = activePal
@@ -117,7 +149,13 @@ export const HomeScreen: React.FC = observer(() => {
     navigation.navigate(ROUTES.CHAT);
   };
 
-  const handlePalPress = (pal: Pal) => setSelectedPalLocal(pal);
+  // Tapping the active pal deselects it (no active pal → generic placeholder);
+  // tapping a different pal selects it.
+  const handlePalPress = (pal: Pal) =>
+    setSelectedPalId(prev => {
+      const current = prev === undefined ? defaultPalId : prev ?? undefined;
+      return current === pal.id ? null : pal.id;
+    });
 
   const handleAddPal = () => navigation.navigate(ROUTES.PALS);
 
@@ -160,7 +198,7 @@ export const HomeScreen: React.FC = observer(() => {
             showsHorizontalScrollIndicator={false}
             style={styles.carousel}
             contentContainerStyle={styles.carouselContent}>
-            {palStore.pals.map(pal => (
+            {orderedPals.map(pal => (
               <PalCarouselItem
                 key={pal.id}
                 pal={pal}
@@ -389,7 +427,9 @@ export const HomeScreen: React.FC = observer(() => {
           onClose={() => setPickerVisible(false)}
           onModelSelect={() => setPickerVisible(false)}
           onPalSelect={palId => {
-            setSelectedPalLocal(palId ? palStore.getPalById(palId) : undefined);
+            // A cleared pick (no id) is an explicit "no pal", not a fall-back
+            // to the default — store null so the default does not reassert.
+            setSelectedPalId(palId ?? null);
             setPickerVisible(false);
           }}
         />
