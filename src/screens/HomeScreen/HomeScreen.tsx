@@ -118,7 +118,7 @@ export const HomeScreen: React.FC = observer(() => {
   const defaultPalId = lastUsedPalId ?? onboardingPalId ?? palStore.pals[0]?.id;
 
   const activePalId =
-    selectedPalId === undefined ? defaultPalId : selectedPalId ?? undefined;
+    selectedPalId === undefined ? defaultPalId : (selectedPalId ?? undefined);
   const activePal = activePalId ? palStore.getPalById(activePalId) : undefined;
   const activeModelName = modelStore.activeModel?.name;
 
@@ -153,7 +153,7 @@ export const HomeScreen: React.FC = observer(() => {
   // tapping a different pal selects it.
   const handlePalPress = (pal: Pal) =>
     setSelectedPalId(prev => {
-      const current = prev === undefined ? defaultPalId : prev ?? undefined;
+      const current = prev === undefined ? defaultPalId : (prev ?? undefined);
       return current === pal.id ? null : pal.id;
     });
 
