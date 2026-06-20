@@ -6,9 +6,9 @@ import {Icon, IconButton} from 'react-native-paper';
 
 import {
   // ClockFastForwardIcon,
+  ChatPlusIcon,
   DotsVerticalIcon,
   DuplicateIcon,
-  EditBoxIcon,
   EditIcon,
   GridIcon,
   SettingsIcon,
@@ -147,7 +147,7 @@ export const HeaderRight: React.FC = observer(() => {
     <View style={styles.headerRightContainer}>
       {uiStore.displayMemUsage && <UsageStats width={40} height={20} />}
       <IconButton
-        icon={() => <EditBoxIcon stroke={theme.colors.foregroundPrimary} />}
+        icon={() => <ChatPlusIcon fill={theme.colors.foregroundPrimary} />}
         testID="reset-button"
         style={styles.chatBtn}
         onPress={() => {
