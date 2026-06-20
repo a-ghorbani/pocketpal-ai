@@ -132,8 +132,13 @@ describe('resolveReasoningCapability', () => {
 });
 
 describe('orderEffortValues', () => {
-  it('orders a selection canonically low→medium→high', () => {
+  it('orders a selection canonically lowest→highest', () => {
     expect(orderEffortValues(['high', 'low'])).toEqual(['low', 'high']);
+    expect(orderEffortValues(['max', 'minimal', 'high'])).toEqual([
+      'minimal',
+      'high',
+      'max',
+    ]);
     expect(orderEffortValues(['medium', 'high', 'low'])).toEqual([
       'low',
       'medium',
@@ -152,7 +157,14 @@ describe('orderEffortValues', () => {
     expect(orderEffortValues([])).toEqual([]);
   });
 
-  it('exposes the canonical level order', () => {
-    expect(EFFORT_LEVELS).toEqual(['low', 'medium', 'high']);
+  it('exposes the six canonical levels in intensity order', () => {
+    expect(EFFORT_LEVELS).toEqual([
+      'minimal',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ]);
   });
 });

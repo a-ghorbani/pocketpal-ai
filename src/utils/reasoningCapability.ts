@@ -21,16 +21,23 @@ import {ModelOrigin} from './types';
 import type {Model} from './types';
 
 /**
- * Canonical axis-2 effort levels, in pill-cycle order (low→medium→high). The
- * universal set across reasoning families that grade effort; a model may
- * support a subset. `effortValues` is always stored in this order so the pill
- * cycles consistently.
+ * Canonical axis-2 effort levels, in pill-cycle order from lowest to highest
+ * intensity. The universal set across reasoning families that grade effort; a
+ * model may support a subset. `effortValues` is always stored in this order so
+ * the pill cycles consistently.
  */
-export const EFFORT_LEVELS = ['low', 'medium', 'high'] as const;
+export const EFFORT_LEVELS = [
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+] as const;
 
 export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
-/** Order an effort-level selection canonically (low→medium→high). */
+/** Order an effort-level selection canonically (lowest→highest intensity). */
 export function orderEffortValues(values: string[]): string[] {
   return EFFORT_LEVELS.filter(level => values.includes(level));
 }

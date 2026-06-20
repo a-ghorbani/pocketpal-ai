@@ -755,9 +755,12 @@
       "supportsEffort": "Supports graded effort",
       "effortValues": "Effort levels this model supports",
       "effortLevels": {
+        "minimal": "Minimal",
         "low": "Low",
         "medium": "Medium",
-        "high": "High"
+        "high": "High",
+        "xhigh": "Extra high",
+        "max": "Max"
       }
     },
     "modelsHeaderRight": {
