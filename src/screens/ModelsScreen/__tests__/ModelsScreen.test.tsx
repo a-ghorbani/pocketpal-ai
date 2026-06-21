@@ -428,6 +428,48 @@ describe('ModelsScreen', () => {
       });
     });
 
+    it('tapping the Ready to Use tab writes the downloaded filter', async () => {
+      uiStore.pageStates.modelsScreen.filters = [];
+
+      const {getByTestId} = render(<ModelsScreen />);
+
+      fireEvent.press(getByTestId('ui-tab-item-downloaded'));
+
+      expect(uiStore.setValue).toHaveBeenCalledWith(
+        'modelsScreen',
+        'filters',
+        expect.arrayContaining(['downloaded']),
+      );
+    });
+
+    it('tapping the Hugging Face chip writes the hf filter', async () => {
+      uiStore.pageStates.modelsScreen.filters = [];
+
+      const {getByTestId} = render(<ModelsScreen />);
+
+      fireEvent.press(getByTestId('chip-hugging-face'));
+
+      expect(uiStore.setValue).toHaveBeenCalledWith(
+        'modelsScreen',
+        'filters',
+        expect.arrayContaining(['hf']),
+      );
+    });
+
+    it('tapping the All Models chip clears the hf filter', async () => {
+      uiStore.pageStates.modelsScreen.filters = ['hf'];
+
+      const {getByTestId} = render(<ModelsScreen />);
+
+      fireEvent.press(getByTestId('chip-all-models'));
+
+      expect(uiStore.setValue).toHaveBeenCalledWith(
+        'modelsScreen',
+        'filters',
+        expect.not.arrayContaining(['hf']),
+      );
+    });
+
     it('should group models by type when grouped filter is active', async () => {
       uiStore.pageStates.modelsScreen.filters = ['grouped'];
 
