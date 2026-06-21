@@ -128,6 +128,15 @@ describe('design-token grep invariants', () => {
       // Models screen reskin: cards consume the radius/stroke axes onto the
       // canonical Figma token scale.
       'screens/ModelsScreen',
+      // Model settings sheet reskin: settings form controls consume the
+      // typography axis alongside the Models screen cards.
+      'components/ModelSettingsSheet',
+      // Model load/error/recovery surfaces reskin: the error snackbar,
+      // error report sheet, and chat "no model loaded" prompt consume the
+      // typography/radius axes onto the canonical Figma token scale.
+      'components/ErrorSnackbar',
+      'components/ModelErrorReportSheet',
+      'screens/ChatScreen/ModelNotLoadedMessage',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');
