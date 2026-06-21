@@ -14,10 +14,24 @@ interface AddPalMenuProps {
   iconColor: string;
   iconSize: number;
   onCreatePal: (type: 'assistant' | 'roleplay' | 'video') => void;
+  /**
+   * When provided, replaces the default bottom-bar anchor. The create
+   * entry's `bottom-action-add` testID rides on whatever node the caller
+   * returns. `anchorPosition` defaults to 'top' (bottom bar) and can be
+   * overridden (e.g. 'bottom' for a header action).
+   */
+  renderAnchor?: (props: {open: () => void; testID: string}) => React.ReactNode;
+  anchorPosition?: 'top' | 'bottom';
 }
 
 export const AddPalMenu: React.FC<AddPalMenuProps> = observer(
-  ({iconColor, iconSize, onCreatePal}) => {
+  ({
+    iconColor,
+    iconSize,
+    onCreatePal,
+    renderAnchor,
+    anchorPosition = 'top',
+  }) => {
     const theme = useTheme();
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
@@ -45,17 +59,25 @@ export const AddPalMenu: React.FC<AddPalMenuProps> = observer(
       <Menu
         visible={menuVisible}
         onDismiss={closeMenu}
-        anchorPosition="top"
+        anchorPosition={anchorPosition}
         anchor={
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={openMenu}
-            testID="bottom-action-add">
-            <View style={styles.iconContainer}>
-              <PlusIcon stroke={iconColor} width={iconSize} height={iconSize} />
-            </View>
-            <Text style={styles.actionLabel}>{l10n.palsScreen.addPal}</Text>
-          </TouchableOpacity>
+          renderAnchor ? (
+            renderAnchor({open: openMenu, testID: 'bottom-action-add'})
+          ) : (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={openMenu}
+              testID="bottom-action-add">
+              <View style={styles.iconContainer}>
+                <PlusIcon
+                  stroke={iconColor}
+                  width={iconSize}
+                  height={iconSize}
+                />
+              </View>
+              <Text style={styles.actionLabel}>{l10n.palsScreen.addPal}</Text>
+            </TouchableOpacity>
+          )
         }>
         <Menu.Item
           icon="account"

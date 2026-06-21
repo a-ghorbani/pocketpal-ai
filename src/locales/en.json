@@ -30,6 +30,7 @@
     "justNow": "just now",
     "ok": "OK",
     "close": "Close",
+    "back": "Go back",
     "clear": "Clear All",
     "gallery": "Gallery"
   },
@@ -789,8 +790,8 @@
       "description": "Description",
       "descriptionPlaceholder": "Enter a brief description of your pal",
       "parameters": "Parameters",
-      "generationSettings": "Generation Settings",
-      "configureGenerationSettings": "Configure Generation Settings",
+      "tabGeneral": "General",
+      "tabGeneration": "Generation",
       "validation": {
         "nameRequired": "Name is required",
         "generatingPromptRequired": "Generating prompt is required when using AI prompt",
@@ -986,6 +987,19 @@
       "myPalsLocal": "My Pals (local)",
       "myLibrary": "My Library (palshub.ai)",
       "discoverPals": "Discover Pals (palshub.ai)"
+    },
+    "myPals": {
+      "title": "My Pals",
+      "createPal": "Create Pal",
+      "editPalHint": "Edits this pal",
+      "tabDownloaded": "Downloaded",
+      "tabCreatedByMe": "Created by me",
+      "overflowMenu": "More actions",
+      "overflowEdit": "Edit",
+      "overflowShare": "Share",
+      "overflowDelete": "Delete",
+      "emptyDownloaded": "No downloaded Pals yet.\nFind Pals to download in Explore.",
+      "emptyCreatedByMe": "No Pals yet.\nCreate your first Pal with “+ Create Pal”."
     },
     "systemPrompt": "System Prompt",
     "videoAnalysis": "Video Analysis",

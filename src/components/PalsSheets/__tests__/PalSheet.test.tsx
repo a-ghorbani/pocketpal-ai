@@ -1,4 +1,5 @@
 import React from 'react';
+import {Alert} from 'react-native';
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {PalSheet} from '../PalSheet';
 import {l10n} from '../../../locales';
@@ -6,6 +7,7 @@ import {L10nContext} from '../../../utils';
 import type {Pal} from '../../../types/pal';
 import {modelsList} from '../../../../jest/fixtures/models';
 import type {ParameterDefinition} from '../../../types/pal';
+import {ROLEPLAY_SCHEMA, VIDEO_SCHEMA} from '../../../types/pal';
 
 // Mock the Sheet component
 jest.mock('../../Sheet/Sheet', () => {
@@ -31,25 +33,6 @@ jest.mock('../../Sheet/Sheet', () => {
   return {Sheet: MockSheet};
 });
 
-// Mock PalGenerationSettingsSheet
-jest.mock('../../PalGenerationSettingsSheet', () => ({
-  PalGenerationSettingsSheet: ({isVisible, onClose}) => {
-    const {View, Button} = require('react-native');
-    if (!isVisible) {
-      return null;
-    }
-    return (
-      <View testID="pal-generation-settings-sheet">
-        <Button
-          title="Close Settings"
-          onPress={onClose}
-          testID="close-settings-button"
-        />
-      </View>
-    );
-  },
-}));
-
 // Mock useStructuredOutput hook
 jest.mock('../../../hooks/useStructuredOutput', () => ({
   useStructuredOutput: jest.fn(() => ({
@@ -59,7 +42,10 @@ jest.mock('../../../hooks/useStructuredOutput', () => ({
 }));
 
 // Import the mocked palStore (already mocked globally in jest/setup.ts)
-import {palStore} from '../../../store';
+import {
+  palStore,
+  defaultCompletionSettings as mockDefaultCompletionSettings,
+} from '../../../store';
 
 import {
   talentRegistry,
@@ -113,6 +99,7 @@ describe('PalSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
   describe('Rendering', () => {
@@ -170,17 +157,13 @@ describe('PalSheet', () => {
       expect(getByText('Save')).toBeTruthy();
     });
 
-    it('renders generation settings section only for existing pals', () => {
-      const {getByText} = renderPalSheet(createExistingPal());
+    it('renders the General and Generation tabs', () => {
+      const {getByTestId} = renderPalSheet(createBasicPal());
 
-      expect(getByText('Generation Settings')).toBeTruthy();
-      expect(getByText('Configure Generation Settings')).toBeTruthy();
-    });
-
-    it('does not render generation settings for new pals', () => {
-      const {queryByText} = renderPalSheet(createBasicPal());
-
-      expect(queryByText('Generation Settings')).toBeNull();
+      expect(getByTestId('ui-tab-item-general')).toBeTruthy();
+      expect(getByTestId('ui-tab-item-generation')).toBeTruthy();
+      // General tab content mounts by default.
+      expect(getByTestId('pal-form-tab-general')).toBeTruthy();
     });
 
     it('renders dynamic parameters section when schema is provided', () => {
@@ -267,24 +250,29 @@ describe('PalSheet', () => {
       expect(nameInput.props.value).toBe('My New Pal');
     });
 
-    it('opens generation settings sheet when button is pressed', () => {
-      const {getByText, getByTestId} = renderPalSheet(createExistingPal());
+    it('switches to the Generation tab and back to General', async () => {
+      const {getByTestId, queryByTestId} = renderPalSheet(createExistingPal());
 
-      fireEvent.press(getByText('Configure Generation Settings'));
-      expect(getByTestId('pal-generation-settings-sheet')).toBeTruthy();
-    });
+      // General is mounted by default.
+      expect(getByTestId('pal-form-tab-general')).toBeTruthy();
 
-    it('closes generation settings sheet when close button is pressed', () => {
-      const {getByText, getByTestId, queryByTestId} =
-        renderPalSheet(createExistingPal());
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
 
-      // Open the settings sheet
-      fireEvent.press(getByText('Configure Generation Settings'));
-      expect(getByTestId('pal-generation-settings-sheet')).toBeTruthy();
+      await waitFor(() => {
+        expect(getByTestId('pal-form-tab-generation')).toBeTruthy();
+        expect(queryByTestId('pal-form-tab-general')).toBeNull();
+      });
 
-      // Close the settings sheet
-      fireEvent.press(getByTestId('close-settings-button'));
-      expect(queryByTestId('pal-generation-settings-sheet')).toBeNull();
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-general'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('pal-form-tab-general')).toBeTruthy();
+        expect(queryByTestId('pal-form-tab-generation')).toBeNull();
+      });
     });
   });
 
@@ -674,6 +662,207 @@ describe('PalSheet', () => {
           'test-pal-id',
           expect.objectContaining({
             completionSettings,
+          }),
+        );
+      });
+    });
+
+    it('blocks Save and does not persist when completion settings are invalid', async () => {
+      const {getByText, getByTestId} = renderPalSheet(
+        createExistingPal({
+          completionSettings: {
+            ...mockDefaultCompletionSettings,
+            // Below n_predict min (-1) and a non-numeric value in the
+            // numeric seed field — both must be rejected, not persisted.
+            n_predict: -5,
+            seed: 'abc',
+          },
+        }),
+      );
+
+      await waitFor(() => {
+        const nameInput = getByTestId('form-field-name');
+        expect(nameInput.props.value).toBe('Test Pal');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalled();
+      });
+      expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Generation tab', () => {
+    it('renders the inherited-settings indicator on the Generation tab', async () => {
+      const {getByTestId, getByText} = renderPalSheet(createExistingPal());
+
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
+
+      await waitFor(() => {
+        // Inherited copy renders when the pal has no custom settings.
+        expect(getByText(/Inherited settings for/i)).toBeTruthy();
+        expect(getByTestId('generation-reset-button')).toBeTruthy();
+      });
+    });
+
+    it('persists reset-to-system completionSettings via the single updatePal path', async () => {
+      const {getByTestId, getByText} = renderPalSheet(createExistingPal());
+
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
+
+      // Open the Reset menu and pick "Reset to System Defaults".
+      await act(async () => {
+        fireEvent.press(getByTestId('generation-reset-button'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Reset to System Defaults'));
+      });
+
+      // Save through the form footer (single writer).
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.updatePal).toHaveBeenCalledWith(
+          'test-pal-id',
+          expect.objectContaining({
+            completionSettings: expect.objectContaining({
+              temperature: expect.anything(),
+            }),
+          }),
+        );
+      });
+    });
+
+    it('does NOT persist on Reset alone — no store write until Save', async () => {
+      const {getByTestId, getByText} = renderPalSheet(createExistingPal());
+
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
+
+      // Open the Reset menu and pick "Reset to System Defaults".
+      await act(async () => {
+        fireEvent.press(getByTestId('generation-reset-button'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Reset to System Defaults'));
+      });
+
+      // The Reset mutates in-form state only. With no footer Save pressed,
+      // the completionSettings writers must not have run at all.
+      expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
+    });
+
+    it('does NOT persist on Clear Pal Settings alone', async () => {
+      // Seed a fully-formed custom settings object so every slider renders;
+      // the assertion is about the persist boundary, not slider edge-cases.
+      const {getByTestId, getByText} = renderPalSheet(
+        createExistingPal({
+          completionSettings: {
+            ...mockDefaultCompletionSettings,
+            temperature: 0.9,
+          },
+        }),
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('generation-reset-button'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Clear Pal Settings'));
+      });
+
+      expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Schema-driven fields (General tab)', () => {
+    it('renders Capture Interval for a video pal from its parameter schema', () => {
+      const {getByTestId} = renderPalSheet(
+        createBasicPal({
+          capabilities: {video: true},
+          parameterSchema: VIDEO_SCHEMA,
+        }),
+      );
+
+      expect(getByTestId('dynamic-field-captureInterval')).toBeTruthy();
+    });
+
+    it('omits Capture Interval for a non-video pal (no schema field)', () => {
+      const {queryByTestId} = renderPalSheet(
+        createBasicPal({parameterSchema: []}),
+      );
+
+      expect(queryByTestId('dynamic-field-captureInterval')).toBeNull();
+    });
+
+    it('gates Capture Interval on the parameter schema, not capabilities.video', () => {
+      // A pal flagged video-capable but carrying no VIDEO_SCHEMA must NOT
+      // render Capture Interval: the field is schema-driven, so the
+      // capability flag alone never surfaces it.
+      const {queryByTestId} = renderPalSheet(
+        createBasicPal({capabilities: {video: true}, parameterSchema: []}),
+      );
+
+      expect(queryByTestId('dynamic-field-captureInterval')).toBeNull();
+    });
+
+    it('renders World and Location for a roleplay pal from ROLEPLAY_SCHEMA', () => {
+      const {getByTestId} = renderPalSheet(
+        createBasicPal({parameterSchema: ROLEPLAY_SCHEMA}),
+      );
+
+      expect(getByTestId('dynamic-field-world')).toBeTruthy();
+      expect(getByTestId('dynamic-field-location')).toBeTruthy();
+    });
+
+    it('creates a roleplay pal persisting World/Location via createPal', async () => {
+      const {getByTestId} = renderPalSheet(
+        createBasicPal({parameterSchema: ROLEPLAY_SCHEMA}),
+      );
+
+      await act(async () => {
+        fireEvent.changeText(getByTestId('form-field-name'), 'Roleplay Pal');
+        fireEvent.changeText(getByTestId('dynamic-field-world'), 'Eldoria');
+        fireEvent.changeText(
+          getByTestId('dynamic-field-location'),
+          'Throne room',
+        );
+        fireEvent.changeText(getByTestId('dynamic-field-aiRole'), 'Wizard');
+        fireEvent.changeText(getByTestId('dynamic-field-userRole'), 'Knight');
+        fireEvent.changeText(getByTestId('dynamic-field-situation'), 'A quest');
+        fireEvent.changeText(getByTestId('dynamic-field-toneStyle'), 'Formal');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('submit-button'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.createPal).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Roleplay Pal',
+            parameters: expect.objectContaining({
+              world: 'Eldoria',
+              location: 'Throne room',
+            }),
           }),
         );
       });

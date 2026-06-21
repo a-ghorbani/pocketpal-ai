@@ -8,7 +8,6 @@ import {useTheme} from '../hooks';
 import {L10nContext} from '../utils';
 import {ROUTES} from '../utils/navigationConstants';
 import type {RootStackParamList, Theme} from '../utils/types';
-import {PalHeaderRight} from '../components';
 import {
   ChatScreen,
   ModelsScreen,
@@ -58,10 +57,7 @@ export const RootStack: React.FC<RootStackProps> = ({
       <Stack.Screen
         name={ROUTES.PALS}
         component={gestureHandlerRootHOC(PalsScreen)}
-        options={{
-          headerRight: () => <PalHeaderRight />,
-          title: l10n.screenTitles.pals,
-        }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name={ROUTES.MODELS}

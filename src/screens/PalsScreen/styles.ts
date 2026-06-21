@@ -4,31 +4,52 @@ import {Theme} from '../../utils/types';
 
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
-    container: {
+    safeArea: {
       flex: 1,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingTop: theme.spacing.s,
+      paddingBottom: theme.spacing.s,
+    },
+    backButton: {
+      padding: theme.spacing.xs,
+      marginStart: -theme.spacing.xs,
+    },
+    title: {
+      flex: 1,
+      ...theme.typography.headlineH1,
+      color: theme.colors.foregroundPrimary,
+    },
+    createAction: {
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.xs,
+    },
+    createActionLabel: {
+      ...theme.typography.uiM,
+      color: theme.colors.foregroundPrimary,
+    },
+    tabs: {
+      marginHorizontal: theme.spacing.m,
+      marginBottom: theme.spacing.s,
     },
     listContainer: {
-      padding: 16,
-      paddingBottom: 100, // Extra space for bottom action bar
-    },
-    row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingHorizontal: 0,
+      paddingHorizontal: theme.spacing.m,
+      paddingBottom: theme.spacing.xl,
     },
     emptyState: {
-      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 64,
-      paddingHorizontal: 32,
+      paddingVertical: theme.spacing.xxl,
+      paddingHorizontal: theme.spacing.xl,
     },
     emptyStateText: {
-      fontSize: 16,
-      color: theme.colors.onSurfaceVariant,
+      ...theme.typography.bodyM,
+      color: theme.colors.foregroundTertiary,
       textAlign: 'center',
-      marginTop: 16,
-      lineHeight: 24,
     },
   });

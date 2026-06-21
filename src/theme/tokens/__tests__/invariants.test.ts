@@ -150,6 +150,11 @@ describe('design-token grep invariants', () => {
       'components/ThinkingBubble',
       'components/ToolErrorBlock',
       'components/ToolUsedChip',
+      // My Pals reskin: the local-only My Pals screen (serif header, tabs,
+      // single-column cards) and the tabbed create/modify pal form consume
+      // the typography/radius axes onto the canonical Figma token scale.
+      'screens/PalsScreen',
+      'components/PalsSheets',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

@@ -32,6 +32,27 @@ export const createStyles = (theme: Theme) =>
     scrollviewContainer: {
       padding: theme.spacing.default,
     },
+    tabs: {
+      marginHorizontal: theme.spacing.m,
+      marginTop: theme.spacing.s,
+    },
+    settingsLevelIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: theme.radius.s,
+      marginBottom: theme.spacing.m,
+    },
+    settingsLevelText: {
+      flex: 1,
+      color: theme.colors.onSurfaceVariant,
+    },
+    settingsLevelIcon: {
+      color: theme.colors.primary,
+    },
     form: {
       gap: theme.spacing.default,
       padding: theme.spacing.default,
@@ -189,13 +210,6 @@ export const createStyles = (theme: Theme) =>
       flexDirection: 'row',
       justifyContent: 'flex-start',
       gap: 8,
-      marginTop: 8,
-    },
-    generationSettingsSection: {
-      paddingHorizontal: theme.spacing.default,
-      marginBottom: theme.spacing.default,
-    },
-    generationSettingsButton: {
       marginTop: 8,
     },
     talentItem: {
