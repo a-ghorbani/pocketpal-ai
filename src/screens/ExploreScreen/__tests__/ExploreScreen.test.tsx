@@ -37,8 +37,8 @@ describe('ExploreScreen', () => {
     (authService as any).isAuthenticated = false;
   });
 
-  // §6.A — Explore tab loads on Pals
-  describe('Scenario A: mount on Pals sub-tab', () => {
+  // Explore tab loads on the Pals sub-tab
+  describe('mount on Pals sub-tab', () => {
     it('renders the shell: header, pill Tabs, and the Pals discovery panel', async () => {
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
 
@@ -132,8 +132,8 @@ describe('ExploreScreen', () => {
     });
   });
 
-  // §6.B — Filter by category
-  describe('Scenario B: filter by category', () => {
+  // Filter by category
+  describe('filter by category', () => {
     it('opens the category sheet, applies a selection, and searches by category_ids', async () => {
       const category = {
         id: 'cat-1',
@@ -202,8 +202,8 @@ describe('ExploreScreen', () => {
     });
   });
 
-  // §6.C — Reached the end (has_more === false off the RESOLVED response)
-  describe('Scenario C: reached-the-end footer', () => {
+  // Reached the end: has_more === false read off the resolved response
+  describe('reached-the-end footer', () => {
     it('shows the end footer when the resolved response has has_more === false', async () => {
       runInAction(() => {
         palStore.cachedPalsHubPals = [mockPalsHubPal];
@@ -249,8 +249,8 @@ describe('ExploreScreen', () => {
     });
   });
 
-  // §6.F — Gated action while signed-out
-  describe('Scenario F: gated action while signed-out', () => {
+  // Gated action while signed-out
+  describe('gated action while signed-out', () => {
     it('opens the login-required modal on a premium card tap and fires onSignInPress', async () => {
       runInAction(() => {
         palStore.cachedPalsHubPals = [mockPremiumPalsHubPal];
@@ -298,8 +298,8 @@ describe('ExploreScreen', () => {
     });
   });
 
-  // §6.G — Models segment is inert (edge 9f)
-  describe('Scenario G: Models segment is inert', () => {
+  // Models segment is inert (disabled "coming soon")
+  describe('Models segment is inert', () => {
     it('keeps the Pals panel active when the disabled Models segment is tapped', async () => {
       const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
         withSafeArea: true,
