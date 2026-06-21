@@ -5,3 +5,4 @@ export * from './FilterChips';
 export * from './SquarePalCard';
 export * from './ProfileSheet';
 export * from './AddPalMenu';
+export * from './MyPalsCard';

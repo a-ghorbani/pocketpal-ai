@@ -987,6 +987,18 @@
       "myLibrary": "My Library (palshub.ai)",
       "discoverPals": "Discover Pals (palshub.ai)"
     },
+    "myPals": {
+      "title": "My Pals",
+      "createPal": "Create Pal",
+      "tabDownloaded": "Downloaded",
+      "tabCreatedByMe": "Created by me",
+      "overflowMenu": "More actions",
+      "overflowEdit": "Edit",
+      "overflowShare": "Share",
+      "overflowDelete": "Delete",
+      "emptyDownloaded": "No downloaded Pals yet.\nFind Pals to download in Explore.",
+      "emptyCreatedByMe": "No Pals yet.\nCreate your first Pal with “+ Create Pal”."
+    },
     "systemPrompt": "System Prompt",
     "videoAnalysis": "Video Analysis",
     "videoAnalysisDescription": "This is a video-based AI assistant that provides real-time commentary on video streams from your device's camera.",
