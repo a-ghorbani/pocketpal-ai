@@ -125,6 +125,9 @@ describe('design-token grep invariants', () => {
       // feature surfaces under the bottom-tab navigation.
       'screens/HomeScreen',
       'screens/ExploreScreen',
+      // Pal-details sheet: reskinned in place onto the token surface
+      // alongside the Explore tab (same slice, tokens-only restyle).
+      'components/PalsHub/PalDetailSheet',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

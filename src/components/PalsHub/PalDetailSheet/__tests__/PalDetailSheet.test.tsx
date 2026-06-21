@@ -91,6 +91,68 @@ describe('PalDetailSheet', () => {
     };
   });
 
+  // I-FREEZE: the in-place reskin must not drop or rename any existing testID
+  // on a reskinned element (Appium migration contract). New Explore-surface
+  // ids are additive; the frozen pal-details set must survive byte-for-byte.
+  describe('testID freeze (reskin contract)', () => {
+    it('keeps the close-button testID on the reskinned sheet', async () => {
+      const {getByTestId} = render(<PalDetailSheet {...defaultProps} />);
+      await waitFor(() => {
+        expect(getByTestId('sheet-close-button')).toBeTruthy();
+      });
+    });
+
+    it('keeps the free-pal download-button testID after the reskin', async () => {
+      const {getByTestId} = render(<PalDetailSheet {...defaultProps} />);
+      await waitFor(() => {
+        expect(getByTestId('download-button')).toBeTruthy();
+      });
+    });
+
+    it('keeps the owned-pal downloaded-button testID after the reskin', async () => {
+      (palStore.isPalsHubPalDownloaded as jest.Mock).mockReturnValue(true);
+      const {getByTestId} = render(<PalDetailSheet {...defaultProps} />);
+      await waitFor(() => {
+        expect(getByTestId('downloaded-button')).toBeTruthy();
+      });
+    });
+
+    it('keeps the premium pal-label + buy-button testIDs after the reskin', async () => {
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+      const {getByTestId} = render(
+        <PalDetailSheet {...defaultProps} pal={mockPremiumPalsHubPal} />,
+      );
+      await waitFor(() => {
+        expect(getByTestId('pal-label-premium')).toBeTruthy();
+        expect(getByTestId('buy-button')).toBeTruthy();
+      });
+    });
+
+    it('keeps the checkout-signin-button testID on a 401 checkout error', async () => {
+      (palStore as any).isUSRegion = true;
+      (palsHubService.getPal as jest.Mock).mockResolvedValue(
+        mockPremiumPalsHubPal,
+      );
+      runInAction(() => {
+        checkoutFlowStore.status = 'error';
+        checkoutFlowStore.errorKind = '401';
+      });
+      const {getByTestId} = render(
+        <PalDetailSheet
+          {...defaultProps}
+          pal={mockPremiumPalsHubPal}
+          onSignInPress={jest.fn()}
+        />,
+      );
+      await waitFor(() => {
+        expect(getByTestId('checkout-signin-button')).toBeTruthy();
+      });
+    });
+  });
+
   describe('Rendering', () => {
     it('renders correctly when visible', async () => {
       const {getByTestId} = render(<PalDetailSheet {...defaultProps} />);
