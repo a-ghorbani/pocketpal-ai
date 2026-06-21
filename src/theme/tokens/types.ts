@@ -112,7 +112,6 @@ export interface TokenColors {
   menuDangerText: string;
 
   // Messages
-  authorBubbleBackground: string;
   receivedMessageDocumentIcon: string;
   sentMessageDocumentIcon: string;
   userAvatarImageBackground: string;

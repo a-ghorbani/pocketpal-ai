@@ -325,7 +325,6 @@ export interface SemanticColors {
   menuDangerText: string;
 
   // Message specific
-  authorBubbleBackground: string;
   receivedMessageDocumentIcon: string;
   sentMessageDocumentIcon: string;
   userAvatarImageBackground: string;
