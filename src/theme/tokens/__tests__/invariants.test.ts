@@ -125,6 +125,9 @@ describe('design-token grep invariants', () => {
       // feature surfaces under the bottom-tab navigation.
       'screens/HomeScreen',
       'screens/ExploreScreen',
+      // Models screen reskin: cards consume the radius/stroke axes onto the
+      // canonical Figma token scale.
+      'screens/ModelsScreen',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

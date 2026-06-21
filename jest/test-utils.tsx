@@ -28,7 +28,16 @@ export type CustomRenderOptions = {
   withBottomSheetProvider?: boolean;
 };
 
-const TestStack = createStackNavigator();
+// Created lazily so suites that mock @react-navigation/native (and therefore
+// have no real createNavigatorFactory) don't crash merely by importing this
+// module. Only suites opting into withNavigationScreen build the stack.
+let testStack: ReturnType<typeof createStackNavigator> | undefined;
+const getTestStack = () => {
+  if (!testStack) {
+    testStack = createStackNavigator();
+  }
+  return testStack;
+};
 
 const customRender = (
   ui: React.ReactElement,
@@ -49,24 +58,25 @@ const customRender = (
       children
     );
 
-    const withNavigationWrapper =
-      withNavigation || withNavigationScreen ? (
+    let withNavigationWrapper: React.ReactNode = withBottomSheetProviderWrapper;
+    if (withNavigationScreen) {
+      const Stack = getTestStack();
+      withNavigationWrapper = (
         <NavigationContainer>
-          {withNavigationScreen ? (
-            <TestStack.Navigator>
-              <TestStack.Screen
-                name="TestScreen"
-                options={{headerShown: false}}>
-                {() => withBottomSheetProviderWrapper}
-              </TestStack.Screen>
-            </TestStack.Navigator>
-          ) : (
-            withBottomSheetProviderWrapper
-          )}
+          <Stack.Navigator>
+            <Stack.Screen name="TestScreen" options={{headerShown: false}}>
+              {() => withBottomSheetProviderWrapper}
+            </Stack.Screen>
+          </Stack.Navigator>
         </NavigationContainer>
-      ) : (
-        withBottomSheetProviderWrapper
       );
+    } else if (withNavigation) {
+      withNavigationWrapper = (
+        <NavigationContainer>
+          {withBottomSheetProviderWrapper}
+        </NavigationContainer>
+      );
+    }
 
     // Sits inside PaperProvider so the MarkdownProvider can read theme,
     // and provides the ambient TRenderEngineProvider/RenderHTMLConfigProvider
