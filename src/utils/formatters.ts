@@ -68,6 +68,31 @@ export function formatNumber(
   }
 }
 
+/**
+ * Formats a price given in minor units (cents) into a localized currency
+ * string. PalsHub prices are denominated in EUR cents. Uses Intl when
+ * available and falls back to a plain symbol+amount string on platforms
+ * without full ICU data.
+ * @param priceCents - Amount in cents (e.g., 999 for €9.99)
+ * @param locale - BCP 47 locale tag (e.g., 'en', 'de')
+ * @param currency - ISO 4217 currency code (default: 'EUR')
+ */
+export function formatPriceCents(
+  priceCents: number,
+  locale: string = 'en',
+  currency: string = 'EUR',
+): string {
+  const amount = priceCents / 100;
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  } catch {
+    return `€${amount.toFixed(2)}`;
+  }
+}
+
 /** Returns formatted date used as a divider between different days in the chat history */
 export const getVerboseDateTimeRepresentation = (
   dateTime: number,
