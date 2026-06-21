@@ -15,8 +15,11 @@ export const createStyles = (theme: Theme) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: theme.spacing.s,
-      paddingHorizontal: theme.spacing.ml,
-      paddingBottom: theme.spacing.s,
+    },
+    outlinedBadge: {
+      backgroundColor: 'transparent',
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
     },
     cardContent: {
       paddingBottom: theme.spacing.xs,
@@ -55,22 +58,35 @@ export const createStyles = (theme: Theme) =>
     },
     headerContent: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: theme.spacing.sm,
     },
-    headerLeft: {
-      flexDirection: 'row',
+    thumbnail: {
+      width: 48,
+      height: 48,
+      borderRadius: theme.radius.m,
+      backgroundColor: theme.colors.surfaceContainer,
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
+      flexShrink: 0,
       alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerColumn: {
       flex: 1,
       minWidth: 0,
+      gap: theme.spacing.xs,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       gap: theme.spacing.s,
     },
     headerRight: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing.s,
-    },
-    modelTypeIcon: {
       flexShrink: 0,
     },
     compactModelName: {
@@ -78,15 +94,9 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurface,
       flex: 1,
     },
-    sizeInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginEnd: theme.spacing.s,
-    },
     sizeInfoText: {
       ...theme.typography.uiS,
       color: theme.colors.onSurfaceVariant,
-      marginStart: theme.spacing.xs,
     },
     serverLink: {
       flexDirection: 'row',
@@ -162,15 +172,22 @@ export const createStyles = (theme: Theme) =>
     // Action buttons section
     actionButtonsContainer: {
       paddingHorizontal: theme.spacing.m,
+      paddingTop: theme.spacing.sm,
       paddingBottom: theme.spacing.sm,
+    },
+    actionDivider: {
+      marginHorizontal: theme.spacing.m,
     },
     actionButtonsRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing.s,
     },
-    primaryActionButton: {
+    actionButtonsSpacer: {
       flex: 1,
+    },
+    primaryActionButton: {
+      alignSelf: 'flex-start',
       borderRadius: theme.radius.m,
       minHeight: 40,
     },

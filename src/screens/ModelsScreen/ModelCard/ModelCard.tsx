@@ -22,7 +22,11 @@ import {
   Snackbar,
 } from 'react-native-paper';
 
-import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
+import {
+  ProjectionModelSelector,
+  MemoryRequirement,
+  Divider,
+} from '../../../components';
 import {Label, Button, IconButton} from '../../../components/ui';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
@@ -50,15 +54,14 @@ import {
   LinkExternalIcon,
   TrashIcon,
   SettingsIcon,
-  CpuChipIcon,
+  CameraIcon,
   EyeIcon,
-  ChatIcon,
   XIcon,
   PlayIcon,
   StopIcon,
   DownloadIcon,
-  ChevronSelectorVerticalIcon,
-  ChevronSelectorExpandedVerticalIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '../../../assets/icons';
 
 type ChatScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -277,26 +280,25 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       [model.id],
     );
 
-    // Helper function to get model type icon - updated sizes
-    const getModelTypeIcon = () => {
-      if (model.supportsMultimodal) {
-        return (
-          <EyeIcon
-            width={16}
-            height={16}
+    // Leading square thumbnail glyph (placeholder per Figma). Vision-capable
+    // models surface a camera glyph; text models a generic model glyph tint.
+    const renderThumbnail = () => (
+      <View style={styles.thumbnail}>
+        {model.supportsMultimodal ? (
+          <CameraIcon
+            width={20}
+            height={20}
             stroke={theme.colors.iconModelTypeVision}
           />
-        );
-      }
-      // Default to chat icon for text models
-      return (
-        <ChatIcon
-          width={16}
-          height={16}
-          stroke={theme.colors.iconModelTypeText}
-        />
-      );
-    };
+        ) : (
+          <PlayIcon
+            width={20}
+            height={20}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        )}
+      </View>
+    );
 
     // Helper function to get status dot
     const getStatusDot = () => {
@@ -328,7 +330,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           <Label
             key="recommended"
             testID="badge-recommended"
-            variant="informational"
+            variant="status-info"
             size="s"
             label={l10n.models.modelCard.badges.recommended}
           />,
@@ -362,9 +364,10 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             testID="badge-vision"
             variant="informational"
             size="s"
+            style={styles.outlinedBadge}
             label={l10n.models.modelCard.badges.visionSupport}
             leadingIcon={
-              <EyeIcon
+              <CameraIcon
                 width={12}
                 height={12}
                 stroke={theme.colors.iconModelTypeVision}
@@ -438,13 +441,13 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         }
         icon={
           isExpanded ? (
-            <ChevronSelectorExpandedVerticalIcon
+            <ChevronUpIcon
               width={16}
               height={16}
               stroke={theme.colors.onSurfaceVariant}
             />
           ) : (
-            <ChevronSelectorVerticalIcon
+            <ChevronDownIcon
               width={16}
               height={16}
               stroke={theme.colors.onSurfaceVariant}
@@ -471,11 +474,10 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     );
 
     const renderActionButtons = () => {
-      // Remote models: load/offload + delete
+      // Remote models: delete + load/offload
       if (isRemoteModel) {
         return (
           <View style={styles.actionButtonsRow}>
-            {renderModelLoadButton()}
             <IconButton
               testID="delete-button"
               variant="standard"
@@ -485,6 +487,9 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 <TrashIcon width={16} height={16} stroke={theme.colors.error} />
               }
             />
+            {renderModelLoadButton()}
+            <View style={styles.actionButtonsSpacer} />
+            {renderExpandButton()}
           </View>
         );
       }
@@ -508,6 +513,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 <Text style={styles.buttonLabel}>{l10n.common.stop}</Text>
               </View>
             </Button>
+            <View style={styles.actionButtonsSpacer} />
             {renderExpandButton()}
           </View>
         );
@@ -517,6 +523,24 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         // Not downloaded state
         return (
           <View style={styles.actionButtonsRow}>
+            {isHfModel && (
+              <IconButton
+                testID="remove-model-button"
+                variant="standard"
+                onPress={handleRemove}
+                accessibilityLabel={l10n.models.modelCard.buttons.remove}
+                icon={
+                  <TrashIcon
+                    width={16}
+                    height={16}
+                    stroke={theme.colors.error}
+                  />
+                }
+              />
+            )}
+
+            {renderSettingsButton()}
+
             <Button
               testID="download-button"
               variant="secondary"
@@ -544,20 +568,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               </View>
             </Button>
 
-            {renderSettingsButton()}
-
-            {isHfModel && (
-              <IconButton
-                testID="remove-model-button"
-                variant="standard"
-                onPress={handleRemove}
-                accessibilityLabel={l10n.models.modelCard.buttons.remove}
-                icon={
-                  <XIcon width={20} height={20} stroke={theme.colors.error} />
-                }
-              />
-            )}
-
+            <View style={styles.actionButtonsSpacer} />
             {renderExpandButton()}
           </View>
         );
@@ -566,10 +577,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       // Downloaded state
       return (
         <View style={styles.actionButtonsRow}>
-          {renderModelLoadButton()}
-
-          {renderSettingsButton()}
-
           <IconButton
             testID="delete-button"
             variant="standard"
@@ -580,6 +587,11 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
             }
           />
 
+          {renderSettingsButton()}
+
+          {renderModelLoadButton()}
+
+          <View style={styles.actionButtonsSpacer} />
           {renderExpandButton()}
         </View>
       );
@@ -660,53 +672,46 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>
-              <View style={styles.headerLeft}>
-                <View style={styles.modelTypeIcon}>{getModelTypeIcon()}</View>
-                <Text
-                  style={styles.compactModelName}
-                  numberOfLines={1}
-                  ellipsizeMode="middle">
-                  {model.name}
-                </Text>
-              </View>
-              <View style={styles.headerRight}>
-                {isRemoteModel ? (
-                  <TouchableOpacity
-                    testID="server-link"
-                    onPress={() => {
-                      if (model.serverId && onOpenServerDetails) {
-                        onOpenServerDetails(model.serverId);
-                      }
-                    }}
-                    style={styles.serverLink}>
-                    <Icon
-                      source="cloud-outline"
-                      size={12}
-                      color={theme.colors.primary}
-                    />
-                    <Text style={styles.serverLinkText}>
-                      {model.serverName || 'Remote'}
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.sizeInfo}>
-                    <CpuChipIcon
-                      width={10}
-                      height={10}
-                      stroke={theme.colors.onSurfaceVariant}
-                    />
-                    <Text style={styles.sizeInfoText}>
-                      {getModelSizeString(model, isActiveModel, l10n)}
-                    </Text>
+              {renderThumbnail()}
+              <View style={styles.headerColumn}>
+                <View style={styles.titleRow}>
+                  <Text
+                    style={styles.compactModelName}
+                    numberOfLines={1}
+                    ellipsizeMode="middle">
+                    {model.name}
+                  </Text>
+                  <View style={styles.headerRight}>
+                    {isRemoteModel ? (
+                      <TouchableOpacity
+                        testID="server-link"
+                        onPress={() => {
+                          if (model.serverId && onOpenServerDetails) {
+                            onOpenServerDetails(model.serverId);
+                          }
+                        }}
+                        style={styles.serverLink}>
+                        <Icon
+                          source="cloud-outline"
+                          size={12}
+                          color={theme.colors.primary}
+                        />
+                        <Text style={styles.serverLinkText}>
+                          {model.serverName || 'Remote'}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.sizeInfoText}>
+                        {getModelSizeString(model, isActiveModel, l10n)}
+                      </Text>
+                    )}
+                    {getStatusDot()}
                   </View>
-                )}
-                {getStatusDot()}
+                </View>
+                {renderStatusBadges()}
               </View>
             </View>
           </View>
-
-          {/* Status badges */}
-          {renderStatusBadges()}
 
           {/* Content */}
           <View style={styles.cardContent}>
@@ -771,7 +776,8 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               </View>
             )}
 
-            {/* Action Buttons Section */}
+            {/* Action Buttons Section — divider above a left-aligned row */}
+            <Divider style={styles.actionDivider} />
             <View style={styles.actionButtonsContainer}>
               {renderActionButtons()}
             </View>
