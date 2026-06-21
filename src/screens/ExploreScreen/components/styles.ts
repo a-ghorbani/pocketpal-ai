@@ -208,10 +208,6 @@ export const createControlStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    searchInput: {
-      paddingHorizontal: theme.spacing.m,
-      paddingBottom: theme.spacing.s,
-    },
   });
 
 export const createSearchOverlayStyles = (theme: Theme) =>

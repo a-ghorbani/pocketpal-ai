@@ -21,7 +21,8 @@ import type {PalsHubPal, PalsQuery} from '../../../types/palshub';
 
 import {ExploreFilterRow, type ExploreFilterKey} from './ExploreFilterRow';
 import {ExploreSortControl} from './ExploreSortControl';
-import {ExploreSearchInput, ExploreSearchToggle} from './ExploreSearch';
+import {ExploreSearchToggle} from './ExploreSearch';
+import {ExploreSearchOverlay} from './ExploreSearchOverlay';
 import {CategoryFilterSheet} from './CategoryFilterSheet';
 import {PriceFilterSheet, type PriceRange} from './PriceFilterSheet';
 import {TagsFilterSheet} from './TagsFilterSheet';
@@ -205,13 +206,6 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
           onOpen={key => setOpenSheet(key as OpenSheet)}
         />
 
-        {searchExpanded && (
-          <ExploreSearchInput
-            query={searchInput}
-            onChangeQuery={setSearchInput}
-          />
-        )}
-
         <View style={styles.availableHeader}>
           <Text style={styles.availableTitle}>
             {l10n.explore.availablePals}
@@ -296,6 +290,25 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
             onClose={() => {
               setShowDetail(false);
               setSelectedPal(null);
+            }}
+          />
+        )}
+
+        {searchExpanded && (
+          <ExploreSearchOverlay
+            searchInput={searchInput}
+            onChangeSearchInput={setSearchInput}
+            debouncedQuery={debouncedQuery}
+            isLoading={isLoading}
+            items={items}
+            onResultPress={handleCardPress}
+            onClose={() => {
+              setSearchExpanded(false);
+              setSearchInput('');
+            }}
+            onExplorePals={() => {
+              setSearchExpanded(false);
+              setSearchInput('');
             }}
           />
         )}
