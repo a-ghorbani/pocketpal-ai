@@ -18,7 +18,7 @@ export const HeaderLeft: React.FC = () => {
       testID="back-button"
       accessibilityLabel="Go back"
       onPress={() => navigation.goBack()}>
-      <ArrowLeftMdIcon stroke={theme.colors.primary} />
+      <ArrowLeftMdIcon stroke={theme.colors.foregroundPrimary} />
     </TouchableOpacity>
   );
 };

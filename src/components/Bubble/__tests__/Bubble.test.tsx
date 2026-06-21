@@ -1,10 +1,15 @@
 import React from 'react';
 
+import {StyleSheet} from 'react-native';
 import {Text} from 'react-native-paper';
 
 import {render} from '../../../../jest/test-utils';
+import {themeFixtures} from '../../../../jest/fixtures/theme';
 
 import {Bubble} from '../Bubble';
+
+// The default UserContext user fixture id (jest/fixtures.ts).
+const CURRENT_USER_ID = 'userId';
 
 describe('Bubble', () => {
   let mockMessage;
@@ -49,6 +54,32 @@ describe('Bubble', () => {
     const messageWithoutMetadata = {...mockMessage, metadata: undefined};
     const {getByText} = renderBubble(messageWithoutMetadata);
     expect(getByText('Child content')).toBeTruthy();
+  });
+
+  it('renders a grey-tail bubble for the current user (filled bg, squared trailing corner)', () => {
+    const userMessage = {...mockMessage, author: {id: CURRENT_USER_ID}};
+    const {getByTestId} = renderBubble(userMessage);
+    const node = getByTestId('user-message');
+    const flat = StyleSheet.flatten(node.props.style);
+    // Grey fill + 2px tail via the LOGICAL corner so it mirrors under RTL.
+    expect(flat.backgroundColor).toBe(
+      themeFixtures.lightTheme.colors.mutedLight,
+    );
+    expect(flat.borderRadius).toBe(16);
+    expect(flat.borderEndEndRadius).toBe(2);
+    // Must NOT use the physical corner (would not mirror under RTL).
+    expect(flat.borderBottomRightRadius).toBeUndefined();
+  });
+
+  it('renders the assistant bubble borderless and transparent (text sits flush on the surface)', () => {
+    const aiMessage = {...mockMessage, author: {id: 'assistant'}};
+    const {getByTestId} = renderBubble(aiMessage);
+    const node = getByTestId('ai-message');
+    const flat = StyleSheet.flatten(node.props.style);
+    expect(flat.backgroundColor).toBe('transparent');
+    expect(flat.borderColor).toBe('transparent');
+    // No tail on the assistant bubble — all corners stay at 16.
+    expect(flat.borderEndEndRadius).toBe(16);
   });
 
   it('does NOT render timing or copy chrome (chrome lives in AssistantTurnFooter now)', () => {

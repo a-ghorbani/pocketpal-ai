@@ -32,17 +32,91 @@ describe('AssistantTurnFooter', () => {
     expect(queryByTestId('assistant-turn-footer')).toBeNull();
   });
 
-  it('renders timing line when timings present (no copy button if not copyable)', () => {
+  describe('regenerate / more action affordances', () => {
+    it('omits both regenerate and more buttons when no handlers are supplied', () => {
+      const message = baseTurn({metadata: {copyable: true}});
+      const {queryByTestId} = render(<AssistantTurnFooter message={message} />);
+      expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
+      expect(queryByTestId('footer-regenerate')).toBeNull();
+      expect(queryByTestId('footer-more')).toBeNull();
+    });
+
+    it('renders the regenerate button and invokes onRegenerate on press', () => {
+      const onRegenerate = jest.fn();
+      const message = baseTurn({metadata: {copyable: true}});
+      const {getByTestId} = render(
+        <AssistantTurnFooter message={message} onRegenerate={onRegenerate} />,
+      );
+      const button = getByTestId('footer-regenerate');
+      expect(button).toBeTruthy();
+      fireEvent.press(button);
+      expect(onRegenerate).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the more button and invokes onMore with the press event', () => {
+      const onMore = jest.fn();
+      const message = baseTurn({metadata: {copyable: true}});
+      const {getByTestId} = render(
+        <AssistantTurnFooter message={message} onMore={onMore} />,
+      );
+      const button = getByTestId('footer-more');
+      expect(button).toBeTruthy();
+      const pressEvent = {nativeEvent: {pageX: 42, pageY: 84}};
+      fireEvent.press(button, pressEvent);
+      expect(onMore).toHaveBeenCalledTimes(1);
+      // The handler must receive the press event so the menu can anchor
+      // at the tap position (parity with a row long-press).
+      expect(onMore.mock.calls[0][0]).toBeDefined();
+    });
+
+    it('regenerate/more are independent of copy — both still render the existing copy button', () => {
+      const onRegenerate = jest.fn();
+      const onMore = jest.fn();
+      const message = baseTurn({metadata: {copyable: true}});
+      const {getByTestId} = render(
+        <AssistantTurnFooter
+          message={message}
+          onRegenerate={onRegenerate}
+          onMore={onMore}
+        />,
+      );
+      expect(getByTestId('footer-copy')).toBeTruthy();
+      expect(getByTestId('footer-regenerate')).toBeTruthy();
+      expect(getByTestId('footer-more')).toBeTruthy();
+    });
+
+    it('renders regenerate/more even on a copy-only (aborted) turn with no timings', () => {
+      const onRegenerate = jest.fn();
+      const onMore = jest.fn();
+      const message = baseTurn({
+        metadata: {copyable: true, interrupted: true},
+      });
+      const {getByTestId, queryByTestId} = render(
+        <AssistantTurnFooter
+          message={message}
+          onRegenerate={onRegenerate}
+          onMore={onMore}
+        />,
+      );
+      expect(queryByTestId('footer-timing')).toBeNull();
+      expect(getByTestId('footer-regenerate')).toBeTruthy();
+      expect(getByTestId('footer-more')).toBeTruthy();
+      expect(getByTestId('footer-interrupted-status')).toBeTruthy();
+    });
+  });
+
+  it('renders compact tok/s chip when timings present (ms/token dropped, no copy button if not copyable)', () => {
     const message = baseTurn({
       metadata: {
         timings: {predicted_per_token_ms: 10, predicted_per_second: 100},
       },
     });
-    const {getByText, queryByTestId} = render(
+    const {getByText, queryByText, queryByTestId} = render(
       <AssistantTurnFooter message={message} />,
     );
     expect(queryByTestId('assistant-turn-footer')).toBeTruthy();
-    expect(getByText('10ms/token, 100.00 tokens/sec')).toBeTruthy();
+    expect(getByText('100.0 tok/s')).toBeTruthy();
+    expect(queryByText(/ms\/token/)).toBeNull();
     expect(queryByTestId('footer-copy')).toBeNull();
   });
 
@@ -66,7 +140,7 @@ describe('AssistantTurnFooter', () => {
     const {getByText, queryByTestId} = render(
       <AssistantTurnFooter message={message} />,
     );
-    expect(getByText('32ms/token, 30.00 tokens/sec')).toBeTruthy();
+    expect(getByText('30.0 tok/s')).toBeTruthy();
     expect(queryByTestId('footer-copy')).toBeTruthy();
   });
 
@@ -105,14 +179,26 @@ describe('AssistantTurnFooter', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('renders TTFT-only timing string when only ttft is present', () => {
+  it('renders TTFT-only timing chip when only ttft is present', () => {
     const message = baseTurn({
       metadata: {
         timings: {time_to_first_token_ms: 150},
       },
     });
     const {getByText} = render(<AssistantTurnFooter message={message} />);
-    expect(getByText('150ms TTFT')).toBeTruthy();
+    expect(getByText('TTFT 150ms')).toBeTruthy();
+  });
+
+  it('exposes one aggregated accessibility label on the timing row', () => {
+    const message = baseTurn({
+      metadata: {
+        timings: {predicted_per_second: 100, time_to_first_token_ms: 150},
+      },
+    });
+    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
+    const timingRow = getByTestId('footer-timing');
+    expect(timingRow.props.accessible).toBe(true);
+    expect(timingRow.props.accessibilityLabel).toBe('100.0 tok/s · TTFT 150ms');
   });
 
   it('does not render the timing Text when timings are empty (no parts to show)', () => {

@@ -358,7 +358,8 @@ export const ChatInput = observer(
       outputRange: ['0deg', '180deg'],
     });
 
-    const onSurfaceColor = currentActivePal?.color?.[0] || theme.colors.text;
+    const onSurfaceColor =
+      currentActivePal?.color?.[0] || theme.colors.foregroundPrimary;
     const onSurfaceColorVariant = onSurfaceColor + '55'; // for disabled state or placeholder text
     // // Plus button state
     const isPlusButtonEnabled = !isStreaming && isVisionEnabled;
