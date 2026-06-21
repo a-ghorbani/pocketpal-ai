@@ -189,6 +189,18 @@ describe('AssistantTurnFooter', () => {
     expect(getByText('TTFT 150ms')).toBeTruthy();
   });
 
+  it('exposes one aggregated accessibility label on the timing row', () => {
+    const message = baseTurn({
+      metadata: {
+        timings: {predicted_per_second: 100, time_to_first_token_ms: 150},
+      },
+    });
+    const {getByTestId} = render(<AssistantTurnFooter message={message} />);
+    const timingRow = getByTestId('footer-timing');
+    expect(timingRow.props.accessible).toBe(true);
+    expect(timingRow.props.accessibilityLabel).toBe('100.0 tok/s · TTFT 150ms');
+  });
+
   it('does not render the timing Text when timings are empty (no parts to show)', () => {
     const message = baseTurn({
       metadata: {

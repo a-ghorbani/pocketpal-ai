@@ -119,7 +119,14 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
           </TouchableOpacity>
         )}
         {onRegenerate ? (
-          <TouchableOpacity onPress={onRegenerate} testID="footer-regenerate">
+          <TouchableOpacity
+            onPress={onRegenerate}
+            testID="footer-regenerate"
+            accessibilityRole="button"
+            accessibilityLabel={
+              l10n.components.assistantTurnFooter.regenerateAccessibilityLabel
+            }
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
             <RefreshIcon
               stroke={theme.colors.textSecondary}
               width={16}
@@ -128,7 +135,14 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
           </TouchableOpacity>
         ) : null}
         {onMore ? (
-          <TouchableOpacity onPress={onMore} testID="footer-more">
+          <TouchableOpacity
+            onPress={onMore}
+            testID="footer-more"
+            accessibilityRole="button"
+            accessibilityLabel={
+              l10n.components.assistantTurnFooter.moreAccessibilityLabel
+            }
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
             <DotsVerticalIcon
               fill={theme.colors.textSecondary}
               width={16}
@@ -137,7 +151,11 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
           </TouchableOpacity>
         ) : null}
         {timings && timingChips.length > 0 ? (
-          <View style={componentStyles.timingRow} testID="footer-timing">
+          <View
+            style={componentStyles.timingRow}
+            testID="footer-timing"
+            accessible
+            accessibilityLabel={timingChips.join(' · ')}>
             {timingChips.map((chip, index) => (
               <View key={chip} style={componentStyles.timingChip}>
                 {index > 0 && <Text style={componentStyles.timing}>·</Text>}
@@ -145,6 +163,8 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
                   stroke={theme.colors.textSecondary}
                   width={12}
                   height={12}
+                  importantForAccessibility="no"
+                  accessibilityElementsHidden
                 />
                 <Text style={componentStyles.timing}>{chip}</Text>
               </View>
