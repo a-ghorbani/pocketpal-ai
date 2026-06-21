@@ -1587,7 +1587,7 @@
     "searchPromptTitle": "Start typing",
     "searchPromptBody": "Enter pal name and view available options",
     "searchNoResults": "No Results for {{query}}",
-    "searchNoResultsHelper": "Try another keyword or continue browsing the pals instead",
+    "searchNoResultsHelper": "Try another keyword or check your connection, or continue browsing the pals instead",
     "searchExploreCta": "Explore Pals",
     "searchResultsHeader": "Search results"
   }

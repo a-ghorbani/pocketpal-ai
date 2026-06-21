@@ -28,7 +28,6 @@ interface ExploreSearchOverlayProps {
   isLoading: boolean;
   items: PalsHubPal[];
   onClose: () => void;
-  onExplorePals: () => void;
   onResultPress: (pal: PalsHubPal) => void;
 }
 
@@ -39,7 +38,6 @@ export const ExploreSearchOverlay: React.FC<ExploreSearchOverlayProps> = ({
   isLoading,
   items,
   onClose,
-  onExplorePals,
   onResultPress,
 }) => {
   const theme = useTheme();
@@ -68,6 +66,11 @@ export const ExploreSearchOverlay: React.FC<ExploreSearchOverlayProps> = ({
     }
 
     if (items.length === 0) {
+      // `searchPalsHubPals` swallows backend failures and returns an empty
+      // response (PalStore.searchPalsHubPals catch), so a failed fetch is
+      // indistinguishable from a genuine zero-results here. The helper copy
+      // stays neutral rather than asserting "no matches"; surfacing a real
+      // error/retry state needs a store-level error signal (follow-up).
       const [before, after] = l10n.explore.searchNoResults.split('{{query}}');
       return (
         <View style={styles.noResultsBody} testID="explore-search-no-results">
@@ -83,7 +86,7 @@ export const ExploreSearchOverlay: React.FC<ExploreSearchOverlayProps> = ({
             testID="explore-search-explore-cta"
             accessibilityRole="button"
             accessibilityLabel={l10n.explore.searchExploreCta}
-            onPress={onExplorePals}
+            onPress={onClose}
             style={styles.exploreCta}>
             <Text style={styles.exploreCtaText}>
               {l10n.explore.searchExploreCta}
@@ -116,8 +119,9 @@ export const ExploreSearchOverlay: React.FC<ExploreSearchOverlayProps> = ({
     <Portal>
       <View style={styles.overlayWrapper}>
         <RNPressable
+          testID="explore-search-scrim"
           accessibilityRole="button"
-          accessibilityLabel={l10n.explore.searchLabel}
+          accessibilityLabel={l10n.common.close}
           onPress={onClose}
           style={styles.scrim}
         />
@@ -149,7 +153,8 @@ export const ExploreSearchOverlay: React.FC<ExploreSearchOverlayProps> = ({
                   <Pressable
                     testID="explore-search-clear"
                     accessibilityRole="button"
-                    accessibilityLabel={l10n.explore.searchLabel}
+                    accessibilityLabel={l10n.common.clear}
+                    hitSlop={10}
                     onPress={() => onChangeSearchInput('')}>
                     <CloseIcon stroke={theme.colors.foregroundSecondary} />
                   </Pressable>

@@ -149,6 +149,13 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
       setShowDetail(true);
     };
 
+    // Single close-and-clear used by the scrim, the "Explore Pals" CTA, and a
+    // result-row tap — keeps the overlay's dismiss paths identical.
+    const closeSearch = () => {
+      setSearchExpanded(false);
+      setSearchInput('');
+    };
+
     const activeFilters = new Set<ExploreFilterKey>();
     if (categoryIds.length > 0) {
       activeFilters.add('categories');
@@ -160,6 +167,9 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
       activeFilters.add('tags');
     }
 
+    // Store-wide PalsHub loading flag, not scoped to this query — an unrelated
+    // PalsHub fetch flips the overlay into its loading body. A query-local
+    // loading signal is a follow-up.
     const isLoading = palStore.isLoadingPalsHub;
 
     const renderEmpty = () => {
@@ -301,15 +311,14 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
             debouncedQuery={debouncedQuery}
             isLoading={isLoading}
             items={items}
-            onResultPress={handleCardPress}
-            onClose={() => {
-              setSearchExpanded(false);
-              setSearchInput('');
+            onResultPress={pal => {
+              // Close the overlay before opening the detail sheet. The overlay
+              // is a paper Portal painted above the bottom-sheet host, so an
+              // open scrim would sit over the sheet and swallow its touches.
+              closeSearch();
+              handleCardPress(pal);
             }}
-            onExplorePals={() => {
-              setSearchExpanded(false);
-              setSearchInput('');
-            }}
+            onClose={closeSearch}
           />
         )}
       </View>
