@@ -112,6 +112,24 @@ describe('ExploreScreen', () => {
         ).toBeTruthy();
       });
     });
+
+    it('shows a price pill for premium pals and the free label for free pals', async () => {
+      runInAction(() => {
+        palStore.cachedPalsHubPals = [mockPalsHubPal, mockPremiumPalsHubPal];
+      });
+
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+
+      await waitFor(() => {
+        expect(
+          getByTestId(`explore-pal-price-${mockPremiumPalsHubPal.id}`).props
+            .children,
+        ).toBe('€9.99');
+        expect(
+          getByTestId(`explore-pal-price-${mockPalsHubPal.id}`).props.children,
+        ).toBe('Free');
+      });
+    });
   });
 
   // §6.B — Filter by category
