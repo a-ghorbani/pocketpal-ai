@@ -4,6 +4,7 @@ import {StyleSheet} from 'react-native';
 import {PaperProvider} from 'react-native-paper';
 import {render} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
+import {createStackNavigator} from '@react-navigation/stack';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -20,9 +21,14 @@ export type CustomRenderOptions = {
   theme?: Theme;
   user?: any;
   withNavigation?: boolean;
+  // Renders inside a real Stack.Screen so screens that call
+  // navigation.setOptions (e.g. dynamic headerRight) don't throw.
+  withNavigationScreen?: boolean;
   withSafeArea?: boolean;
   withBottomSheetProvider?: boolean;
 };
+
+const TestStack = createStackNavigator();
 
 const customRender = (
   ui: React.ReactElement,
@@ -30,6 +36,7 @@ const customRender = (
     theme = themeFixtures.lightTheme,
     user = userFixture,
     withNavigation = false,
+    withNavigationScreen = false,
     withSafeArea = false,
     withBottomSheetProvider = false,
     ...renderOptions
@@ -42,13 +49,24 @@ const customRender = (
       children
     );
 
-    const withNavigationWrapper = withNavigation ? (
-      <NavigationContainer>
-        {withBottomSheetProviderWrapper}
-      </NavigationContainer>
-    ) : (
-      withBottomSheetProviderWrapper
-    );
+    const withNavigationWrapper =
+      withNavigation || withNavigationScreen ? (
+        <NavigationContainer>
+          {withNavigationScreen ? (
+            <TestStack.Navigator>
+              <TestStack.Screen
+                name="TestScreen"
+                options={{headerShown: false}}>
+                {() => withBottomSheetProviderWrapper}
+              </TestStack.Screen>
+            </TestStack.Navigator>
+          ) : (
+            withBottomSheetProviderWrapper
+          )}
+        </NavigationContainer>
+      ) : (
+        withBottomSheetProviderWrapper
+      );
 
     // Sits inside PaperProvider so the MarkdownProvider can read theme,
     // and provides the ambient TRenderEngineProvider/RenderHTMLConfigProvider

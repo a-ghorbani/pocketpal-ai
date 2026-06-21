@@ -1,10 +1,11 @@
-import React, {useState, useContext, useEffect} from 'react';
+import React, {useState, useContext, useEffect, useLayoutEffect} from 'react';
 import {FlatList, RefreshControl, Platform, Alert, View} from 'react-native';
 
 import {reaction, computed} from 'mobx';
 import {v4 as uuidv4} from 'uuid';
 import 'react-native-get-random-values';
 import {observer} from 'mobx-react-lite';
+import {useNavigation} from '@react-navigation/native';
 import * as RNFS from '@dr.pogodin/react-native-fs';
 import {pick, types} from '@react-native-documents/picker';
 import {Portal, Snackbar} from 'react-native-paper';
@@ -21,9 +22,11 @@ import {
   ErrorSnackbar,
   ModelSettingsSheet,
   ModelErrorReportSheet,
+  ModelsHeaderRight,
   RemoteModelSheet,
   ServerDetailsSheet,
 } from '../../components';
+import {Chip, Tabs} from '../../components/ui';
 
 import {uiStore, modelStore, hfStore, UIStore, serverStore} from '../../store';
 
@@ -55,9 +58,34 @@ export const ModelsScreen: React.FC = observer(() => {
 
   const theme = useTheme();
   const styles = createStyles(theme);
+  const navigation = useNavigation();
 
   const filters = uiStore.pageStates.modelsScreen.filters;
   const expandedGroups = uiStore.pageStates.modelsScreen.expandedGroups;
+
+  const setFilter = (name: string, on: boolean) => {
+    const next = on
+      ? filters.includes(name)
+        ? filters
+        : [...filters, name]
+      : filters.filter(f => f !== name);
+    uiStore.setValue('modelsScreen', 'filters', next);
+  };
+
+  // Segmented tab maps to the `downloaded` filter (Ready to Use = downloaded).
+  const activeTab = filters.includes('downloaded') ? 'downloaded' : 'explore';
+  // Filter chip maps to the `hf` filter (Hugging Face = HF-origin only).
+  const activeChip = filters.includes('hf') ? 'hf' : 'all';
+
+  // The "Add a Model" affordance lives in the native-stack header; wire it to
+  // the existing HF-search trigger that the FAB also opens.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <ModelsHeaderRight onAddModel={() => setHFSearchVisible(true)} />
+      ),
+    });
+  }, [navigation]);
 
   // Set up MobX reactions to track store changes
   useEffect(() => {
@@ -393,6 +421,35 @@ export const ModelsScreen: React.FC = observer(() => {
           onReport={handleReportModelError}
         />
       )}
+
+      <Tabs
+        testID="models-tabs"
+        selectedValue={activeTab}
+        onChange={value => setFilter('downloaded', value === 'downloaded')}
+        items={[
+          {value: 'explore', label: l10n.models.labels.tabExplore},
+          {value: 'downloaded', label: l10n.models.labels.tabReadyToUse},
+        ]}
+      />
+
+      <View style={styles.filterChips}>
+        <Chip
+          variant="selectable"
+          label={l10n.models.labels.chipAllModels}
+          accessibilityLabel={l10n.models.labels.chipAllModels}
+          selected={activeChip === 'all'}
+          onPress={() => setFilter('hf', false)}
+          testID="chip-all-models"
+        />
+        <Chip
+          variant="selectable"
+          label={l10n.models.labels.chipHuggingFace}
+          accessibilityLabel={l10n.models.labels.chipHuggingFace}
+          selected={activeChip === 'hf'}
+          onPress={() => setFilter('hf', true)}
+          testID="chip-hugging-face"
+        />
+      </View>
 
       <FlatList
         testID="flat-list"

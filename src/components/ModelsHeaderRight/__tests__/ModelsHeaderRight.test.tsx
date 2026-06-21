@@ -18,42 +18,13 @@ describe('ModelsHeaderRight', () => {
     expect(getByTestId('models-menu-button')).toBeTruthy();
   });
 
-  it('toggles HF filter when pressed', async () => {
-    const {getByTestId, getByText} = render(<ModelsHeaderRight />);
+  it('calls onAddModel when Add a Model is pressed', () => {
+    const onAddModel = jest.fn();
+    const {getByTestId} = render(<ModelsHeaderRight onAddModel={onAddModel} />);
 
-    // Open menu
-    fireEvent.press(getByTestId('models-menu-button'));
+    fireEvent.press(getByTestId('add-model-button'));
 
-    // Press HF filter option
-    const hfOption = getByText(
-      l10n.en.components.modelsHeaderRight.menuTitleHf,
-    );
-    fireEvent.press(hfOption);
-
-    expect(uiStore.setValue).toHaveBeenCalledWith(
-      'modelsScreen',
-      'filters',
-      expect.arrayContaining(['hf']),
-    );
-  });
-
-  it('toggles downloaded filter when pressed', async () => {
-    const {getByTestId, getByText} = render(<ModelsHeaderRight />);
-
-    // Open menu
-    fireEvent.press(getByTestId('models-menu-button'));
-
-    // Press downloaded filter option
-    const downloadedOption = getByText(
-      l10n.en.components.modelsHeaderRight.menuTitleDownloaded,
-    );
-    fireEvent.press(downloadedOption);
-
-    expect(uiStore.setValue).toHaveBeenCalledWith(
-      'modelsScreen',
-      'filters',
-      expect.arrayContaining(['downloaded']),
-    );
+    expect(onAddModel).toHaveBeenCalled();
   });
 
   it('toggles grouped view when pressed', async () => {

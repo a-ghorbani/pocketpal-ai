@@ -8,7 +8,7 @@ import {useTheme} from '../hooks';
 import {L10nContext} from '../utils';
 import {ROUTES} from '../utils/navigationConstants';
 import type {RootStackParamList, Theme} from '../utils/types';
-import {ModelsHeaderRight, PalHeaderRight} from '../components';
+import {PalHeaderRight} from '../components';
 import {
   ChatScreen,
   ModelsScreen,
@@ -67,7 +67,8 @@ export const RootStack: React.FC<RootStackProps> = ({
         name={ROUTES.MODELS}
         component={gestureHandlerRootHOC(ModelsScreen)}
         options={{
-          headerRight: () => <ModelsHeaderRight />,
+          // headerRight is set from within ModelsScreen so "Add a Model" can
+          // open the in-screen HF search.
           title: l10n.screenTitles.models,
         }}
       />

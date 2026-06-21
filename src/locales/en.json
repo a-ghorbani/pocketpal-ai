@@ -206,7 +206,12 @@
       "unknownGroup": "Unknown",
       "availableToUse": "Ready to Use",
       "availableToDownload": "Available to Download",
-      "useAddButtonForMore": "Use + button to find more models"
+      "useAddButtonForMore": "Use + button to find more models",
+      "addAModel": "Add a Model",
+      "tabExplore": "Explore",
+      "tabReadyToUse": "Ready to Use",
+      "chipAllModels": "All Models",
+      "chipHuggingFace": "Hugging Face"
     },
     "vision": "Vision",
     "mmproj": "Projector",
