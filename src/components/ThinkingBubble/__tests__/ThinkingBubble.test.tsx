@@ -149,6 +149,83 @@ describe('ThinkingBubble', () => {
     expect(getByTestId('masked-view')).toBeTruthy();
   });
 
+  it('auto-collapses to the compact reasoning row when autoCollapse rises', () => {
+    const {queryByTestId, rerender} = render(
+      <L10nContext.Provider value={l10n.en}>
+        <ThinkingBubble autoCollapse={false}>
+          <Text testID="thinking-content">streaming…</Text>
+        </ThinkingBubble>
+      </L10nContext.Provider>,
+      {withSafeArea: true},
+    );
+    // Streams expanded (PARTIAL): no compact collapsed row yet.
+    expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
+
+    // autoCollapse rises (content begins / step finalizes) → collapse.
+    rerender(
+      <L10nContext.Provider value={l10n.en}>
+        <ThinkingBubble autoCollapse={true}>
+          <Text testID="thinking-content">streaming…</Text>
+        </ThinkingBubble>
+      </L10nContext.Provider>,
+    );
+    expect(queryByTestId('thinking-bubble-collapsed')).not.toBeNull();
+  });
+
+  it('compact collapsed reasoning row shows only the label + chevron, no metric suffix', () => {
+    const {getByTestId, getByText} = render(
+      <L10nContext.Provider value={l10n.en}>
+        <ThinkingBubble autoCollapse={true}>
+          <Text testID="thinking-content">done</Text>
+        </ThinkingBubble>
+      </L10nContext.Provider>,
+      {withSafeArea: true},
+    );
+    const collapsedRow = getByTestId('thinking-bubble-collapsed');
+    expect(collapsedRow).toBeTruthy();
+    expect(getByText(l10n.en.components.thinkingBubble.reasoning)).toBeTruthy();
+    // No per-reasoning token/duration suffix exists (no backing data) —
+    // the row must not render any "tokens" / "ms" / "·" metric text.
+    const suffixNodes = collapsedRow.findAll(
+      (n: any) =>
+        n.props &&
+        typeof n.props.children === 'string' &&
+        /tokens|·|\bms\b|\bs\b\s*$/i.test(n.props.children),
+    );
+    expect(suffixNodes).toHaveLength(0);
+  });
+
+  it('user manual toggle wins: once toggled, a later autoCollapse rise is a no-op', () => {
+    // Start expanded, user taps to collapse (takes control), then
+    // autoCollapse rises — the bubble must NOT be forced back to collapsed
+    // on the user's behalf; their last manual state stands.
+    const {getByText, queryByTestId, rerender} = render(
+      <L10nContext.Provider value={l10n.en}>
+        <ThinkingBubble autoCollapse={false}>
+          <Text testID="thinking-content">reasoning…</Text>
+        </ThinkingBubble>
+      </L10nContext.Provider>,
+      {withSafeArea: true},
+    );
+    // PARTIAL → press → EXPANDED → press → COLLAPSED → press → PARTIAL.
+    const press = () =>
+      fireEvent.press(getByText(l10n.en.components.thinkingBubble.reasoning));
+    press(); // EXPANDED
+    press(); // COLLAPSED
+    press(); // PARTIAL — user has now taken control, bubble is open
+    expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
+
+    // autoCollapse rises after the user took control → ignored.
+    rerender(
+      <L10nContext.Provider value={l10n.en}>
+        <ThinkingBubble autoCollapse={true}>
+          <Text testID="thinking-content">reasoning…</Text>
+        </ThinkingBubble>
+      </L10nContext.Provider>,
+    );
+    expect(queryByTestId('thinking-bubble-collapsed')).toBeNull();
+  });
+
   it('handles long content properly', () => {
     const longContent =
       'This is a very long content that should trigger scrolling behavior. '.repeat(

@@ -17,12 +17,10 @@ export const styles = ({theme}: {theme: Theme}) =>
     icon: {
       fontSize: 12,
       marginRight: 6,
-      color: theme.colors.textSecondary,
-      opacity: 0.75,
+      color: theme.colors.foregroundTertiary,
     },
     label: {
-      fontSize: 11,
-      color: theme.colors.textSecondary,
-      opacity: 0.85,
+      ...theme.typography.captionS,
+      color: theme.colors.foregroundTertiary,
     },
   });

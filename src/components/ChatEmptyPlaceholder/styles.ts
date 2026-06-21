@@ -8,18 +8,18 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 32,
-      gap: theme.spacing.default,
+      gap: theme.spacing.m,
     },
     title: {
       color: theme.colors.onSurface,
       textAlign: 'center',
       marginBottom: 8,
-      ...theme.fonts.titleMedium,
+      ...theme.typography.titleS,
     },
     description: {
       color: theme.colors.onSurfaceVariant,
       textAlign: 'center',
-      ...theme.fonts.bodyMedium,
+      ...theme.typography.bodyS,
     },
     button: {
       minWidth: 200,

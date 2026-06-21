@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
     // Minimum 44pt touch target for iOS accessibility guidelines
     height: 44,
     width: 44,
-    marginHorizontal: 11,
+    marginStart: -8,
     justifyContent: 'center',
     alignItems: 'center',
   },

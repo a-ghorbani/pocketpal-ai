@@ -1,12 +1,17 @@
 import React, {useContext} from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import {GestureResponderEvent, TouchableOpacity, View} from 'react-native';
 
 import {observer} from 'mobx-react';
 import {Text} from 'react-native-paper';
 import Clipboard from '@react-native-clipboard/clipboard';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
-import {CopyIcon} from '../../assets/icons';
+import {
+  ClockIcon,
+  CopyIcon,
+  RefreshIcon,
+  DotsVerticalIcon,
+} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {PlayButton} from '../TextMessage/PlayButton';
 
@@ -25,6 +30,16 @@ const hapticOptions = {
 
 interface AssistantTurnFooterProps {
   message: MessageType.Any;
+  /**
+   * Regenerate the turn — wired to the existing "try again" action.
+   * Absent for legacy/user rows; the button is omitted when undefined.
+   */
+  onRegenerate?: () => void;
+  /**
+   * Open the existing long-press action menu. Receives the press event so
+   * the menu anchors at the tap position, same as a row long-press.
+   */
+  onMore?: (event: GestureResponderEvent) => void;
 }
 
 /**
@@ -42,7 +57,7 @@ interface AssistantTurnFooterProps {
  * Used by both AssistantTurn rows and legacy assistant Text rows.
  */
 export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
-  ({message}) => {
+  ({message, onRegenerate, onMore}) => {
     const theme = useTheme();
     const l10n = useContext(L10nContext);
     const {copyable, timings, interrupted, truncationLikely, completionResult} =
@@ -64,31 +79,24 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
 
     const componentStyles = styles({theme});
 
-    // Build timing string from whichever parts are available. Each part
-    // is independent; missing parts are omitted from the joined string.
-    const timingParts: string[] = [];
-    if (timings?.predicted_per_token_ms != null) {
-      timingParts.push(
-        t(l10n.components.bubble.msPerToken, {
-          value: timings.predicted_per_token_ms.toFixed(),
-        }),
-      );
-    }
+    // Compact timing chips: a clock glyph + value, one per metric,
+    // bullet-separated. Each chip is independent; missing metrics are
+    // omitted. ms/token is dropped from this surface.
+    const timingChips: string[] = [];
     if (timings?.predicted_per_second != null) {
-      timingParts.push(
-        t(l10n.components.bubble.tokensPerSec, {
-          value: timings.predicted_per_second.toFixed(2),
+      timingChips.push(
+        t(l10n.components.bubble.tokensPerSecCompact, {
+          value: timings.predicted_per_second.toFixed(1),
         }),
       );
     }
     if (timings?.time_to_first_token_ms != null) {
-      timingParts.push(
-        t(l10n.components.bubble.ttft, {
+      timingChips.push(
+        t(l10n.components.bubble.ttftCompact, {
           value: timings.time_to_first_token_ms,
         }),
       );
     }
-    const fullTimingsString = timingParts.join(', ');
 
     const copyToClipboard = () => {
       if (message.type !== 'text' && message.type !== 'assistant_turn') {
@@ -110,10 +118,58 @@ export const AssistantTurnFooter: React.FC<AssistantTurnFooterProps> = observer(
             />
           </TouchableOpacity>
         )}
-        {timings && fullTimingsString ? (
-          <Text style={componentStyles.timing} testID="footer-timing">
-            {fullTimingsString}
-          </Text>
+        {onRegenerate ? (
+          <TouchableOpacity
+            onPress={onRegenerate}
+            testID="footer-regenerate"
+            accessibilityRole="button"
+            accessibilityLabel={
+              l10n.components.assistantTurnFooter.regenerateAccessibilityLabel
+            }
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <RefreshIcon
+              stroke={theme.colors.textSecondary}
+              width={16}
+              height={16}
+            />
+          </TouchableOpacity>
+        ) : null}
+        {onMore ? (
+          <TouchableOpacity
+            onPress={onMore}
+            testID="footer-more"
+            accessibilityRole="button"
+            accessibilityLabel={
+              l10n.components.assistantTurnFooter.moreAccessibilityLabel
+            }
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <DotsVerticalIcon
+              fill={theme.colors.textSecondary}
+              width={16}
+              height={16}
+            />
+          </TouchableOpacity>
+        ) : null}
+        {timings && timingChips.length > 0 ? (
+          <View
+            style={componentStyles.timingRow}
+            testID="footer-timing"
+            accessible
+            accessibilityLabel={timingChips.join(' · ')}>
+            {timingChips.map((chip, index) => (
+              <View key={chip} style={componentStyles.timingChip}>
+                {index > 0 && <Text style={componentStyles.timing}>·</Text>}
+                <ClockIcon
+                  stroke={theme.colors.textSecondary}
+                  width={12}
+                  height={12}
+                  importantForAccessibility="no"
+                  accessibilityElementsHidden
+                />
+                <Text style={componentStyles.timing}>{chip}</Text>
+              </View>
+            ))}
+          </View>
         ) : null}
         {interrupted ? (
           <Text

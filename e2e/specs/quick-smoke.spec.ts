@@ -191,7 +191,7 @@ describe('Quick Smoke Test', () => {
         // Extract timing from accessibility label (content-desc on Android, label on iOS)
         const attrName = driver.isAndroid ? 'content-desc' : 'label';
         const labelText = await timingElement.getAttribute(attrName).catch(() => '');
-        const timingMatch = labelText.match(/(\d+(?:\.\d+)?ms\/token.*TTFT)/);
+        const timingMatch = labelText.match(/(\d+(?:\.\d+)?\s*tok\/s.*TTFT[^·]*)/);
         timingText = timingMatch ? timingMatch[1] : labelText.slice(-100);
         inferenceComplete = true;
         break;

@@ -32,6 +32,9 @@ export interface TokenColors {
   onErrorContainer: string;
   background: string;
   onBackground: string;
+  // Design-system `Color/Background/Card` — the raised card surface (chat
+  // input bar) over the muted canvas.
+  backgroundCard: string;
   // Design-system `Color/Background/Muted` — the muted screen canvas that
   // cards (composer, history rows) read against. Distinct from the pure-white
   // `background`/`Color/Background/Card`.
@@ -57,6 +60,9 @@ export interface TokenColors {
   foregroundSecondary: string;
   foregroundTertiary: string;
   foregroundSubtle: string;
+  // Design-system `Color/Red/Accent` — tool-failure rows and other inline
+  // error accents on the chat surface (shared light/dark).
+  redAccent: string;
 
   // MD3 extras
   surfaceDisabled: string;
@@ -106,7 +112,6 @@ export interface TokenColors {
   menuDangerText: string;
 
   // Messages
-  authorBubbleBackground: string;
   receivedMessageDocumentIcon: string;
   sentMessageDocumentIcon: string;
   userAvatarImageBackground: string;

@@ -2,13 +2,13 @@ import React, {useContext} from 'react';
 import {Alert, Keyboard, View} from 'react-native';
 
 import {observer} from 'mobx-react';
-import {Icon, IconButton, useTheme} from 'react-native-paper';
+import {Icon, IconButton} from 'react-native-paper';
 
 import {
   // ClockFastForwardIcon,
+  ChatPlusIcon,
   DotsVerticalIcon,
   DuplicateIcon,
-  EditBoxIcon,
   EditIcon,
   GridIcon,
   SettingsIcon,
@@ -19,6 +19,7 @@ import {
 import {Menu} from '../Menu';
 import {styles} from './styles';
 
+import {useTheme} from '../../hooks';
 import {chatSessionStore, modelStore, uiStore} from '../../store';
 
 import {L10nContext} from '../../utils';
@@ -146,7 +147,7 @@ export const HeaderRight: React.FC = observer(() => {
     <View style={styles.headerRightContainer}>
       {uiStore.displayMemUsage && <UsageStats width={40} height={20} />}
       <IconButton
-        icon={() => <EditBoxIcon stroke={theme.colors.primary} />}
+        icon={() => <ChatPlusIcon fill={theme.colors.foregroundPrimary} />}
         testID="reset-button"
         style={styles.chatBtn}
         onPress={() => {
@@ -159,7 +160,9 @@ export const HeaderRight: React.FC = observer(() => {
         anchorPosition="bottom"
         anchor={
           <IconButton
-            icon={() => <DotsVerticalIcon fill={theme.colors.primary} />}
+            icon={() => (
+              <DotsVerticalIcon fill={theme.colors.foregroundPrimary} />
+            )}
             style={styles.menuBtn}
             onPress={openMenu}
             testID="menu-button"

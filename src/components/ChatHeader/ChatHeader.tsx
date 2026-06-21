@@ -37,8 +37,8 @@ export const ChatHeader: React.FC = observer(() => {
 
   return (
     <View testID="header-view" style={[styles.container, headerStyle]}>
-      <View style={styles.leftSection}>
-        <HeaderLeft />
+      <HeaderLeft />
+      <View style={styles.titleSection}>
         <ChatHeaderTitle />
       </View>
       <HeaderRight />

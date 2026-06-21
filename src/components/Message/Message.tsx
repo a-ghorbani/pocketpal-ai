@@ -1,5 +1,11 @@
 import * as React from 'react';
-import {Pressable, Text, View, Animated} from 'react-native';
+import {
+  GestureResponderEvent,
+  Pressable,
+  Text,
+  View,
+  Animated,
+} from 'react-native';
 
 import {oneOf} from '@flyerhq/react-native-link-preview';
 import {observer} from 'mobx-react';
@@ -95,6 +101,13 @@ export interface MessageProps extends MessageTopLevelProps {
   showAvatar: boolean;
   showName: boolean;
   showStatus: boolean;
+  /** Footer "regenerate" — wired to the existing try-again action. */
+  onRegenerate?: (message: MessageType.Any) => void;
+  /** Footer "more" — opens the existing long-press action menu. */
+  onFooterMore?: (
+    message: MessageType.Any,
+    event: GestureResponderEvent,
+  ) => void;
 }
 
 /** Base component for all message types in the chat. Sets maximum width
@@ -127,6 +140,8 @@ export const Message = observer(
     showStatus,
     showUserAvatars,
     usePreviewData,
+    onRegenerate,
+    onFooterMore,
   }: MessageProps) => {
     const user = React.useContext(UserContext);
     const theme = useTheme();
@@ -402,16 +417,30 @@ export const Message = observer(
     // wrapper to `messageWidth` so it has a budget to stretch into;
     // text-only siblings still wrap to their natural width via
     // MarkdownView's own `maxWidth` cap.
+    const footerActionProps = {
+      onRegenerate: onRegenerate
+        ? () => onRegenerate(excludeDerivedMessageProps(message))
+        : undefined,
+      onMore: onFooterMore
+        ? (event: GestureResponderEvent) =>
+            onFooterMore(excludeDerivedMessageProps(message), event)
+        : undefined,
+    };
+
     const innerContent =
       message.type === 'assistant_turn' ? (
         <View style={{width: messageWidth}}>
           {renderAssistantTurn()}
-          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+          {showAssistantFooter && (
+            <AssistantTurnFooter message={message} {...footerActionProps} />
+          )}
         </View>
       ) : (
         <>
           {renderBubbleContainer()}
-          {showAssistantFooter && <AssistantTurnFooter message={message} />}
+          {showAssistantFooter && (
+            <AssistantTurnFooter message={message} {...footerActionProps} />
+          )}
         </>
       );
 

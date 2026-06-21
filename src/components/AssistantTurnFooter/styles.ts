@@ -10,6 +10,16 @@ export const styles = ({theme}: {theme: Theme}) =>
       paddingBottom: 12,
       gap: 5,
     },
+    timingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    timingChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
     timing: {
       color: theme.colors.textSecondary,
       fontSize: 10,

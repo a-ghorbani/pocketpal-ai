@@ -874,6 +874,12 @@ export const ChatView = observer(
                 messageWidth,
                 onMessageLongPress: handleMessageLongPress,
                 onMessagePress: handleMessagePress,
+                onRegenerate: (m: MessageType.Any) => {
+                  if (m.type === 'text' || m.type === 'assistant_turn') {
+                    handleTryAgain(m);
+                  }
+                },
+                onFooterMore: handleMessageLongPress,
                 onPreviewDataFetched,
                 renderBubble,
                 renderCustomMessage,
@@ -895,6 +901,7 @@ export const ChatView = observer(
         enableAnimation,
         handleMessageLongPress,
         handleMessagePress,
+        handleTryAgain,
         onPreviewDataFetched,
         renderBubble,
         renderCustomMessage,
@@ -1096,7 +1103,7 @@ export const ChatView = observer(
     // ============ COMPUTED VALUES ============
     const inputBackgroundColor = activePal?.color?.[1]
       ? activePal.color?.[1]
-      : theme.colors.surface;
+      : theme.colors.backgroundCard;
 
     // Soft cap: warn the user before the 5th HTML preview in this session.
     // Memory pressure on budget Android becomes a hazard above 5 WebViews;

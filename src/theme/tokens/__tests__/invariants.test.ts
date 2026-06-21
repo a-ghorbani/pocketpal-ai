@@ -137,6 +137,16 @@ describe('design-token grep invariants', () => {
       'components/ErrorSnackbar',
       'components/ModelErrorReportSheet',
       'screens/ChatScreen/ModelNotLoadedMessage',
+      // Chat reskin: the chat surface adopts the typography axis across its
+      // composer, header title, message body, empty state, and tool/thinking
+      // affordances.
+      'components/ChatEmptyPlaceholder',
+      'components/ChatHeaderTitle',
+      'components/ChatInput',
+      'components/MarkdownView',
+      'components/ThinkingBubble',
+      'components/ToolErrorBlock',
+      'components/ToolUsedChip',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');
