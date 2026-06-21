@@ -45,10 +45,10 @@ export const CategoryFilterSheet: React.FC<CategoryFilterSheetProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible]);
 
-  const toggle = (id: string) => {
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id],
-    );
+  // Single-select: the API filters by a single category, so selecting a chip
+  // replaces the current choice; tapping the active chip clears it.
+  const select = (id: string) => {
+    setSelected(prev => (prev.includes(id) ? [] : [id]));
   };
 
   return (
@@ -67,7 +67,7 @@ export const CategoryFilterSheet: React.FC<CategoryFilterSheetProps> = ({
               selected={selected.includes(category.id)}
               label={category.name}
               accessibilityLabel={category.name}
-              onPress={() => toggle(category.id)}
+              onPress={() => select(category.id)}
             />
           ))}
         </View>

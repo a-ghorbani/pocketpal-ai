@@ -364,6 +364,48 @@ describe('ExploreScreen', () => {
       });
     });
 
+    it('is single-select: choosing a second category replaces the first', async () => {
+      const first = {
+        id: 'cat-1',
+        name: 'Productivity',
+        sort_order: 1,
+        created_at: '2023-01-01T00:00:00Z',
+      };
+      const second = {
+        id: 'cat-2',
+        name: 'Coding',
+        sort_order: 2,
+        created_at: '2023-01-01T00:00:00Z',
+      };
+      (palStore.getCategories as jest.Mock).mockResolvedValue({
+        categories: [first, second],
+      });
+
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-filter-categories'));
+      });
+      await waitFor(() =>
+        expect(getByTestId(`explore-category-chip-${first.id}`)).toBeTruthy(),
+      );
+
+      fireEvent.press(getByTestId(`explore-category-chip-${first.id}`));
+      fireEvent.press(getByTestId(`explore-category-chip-${second.id}`));
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-category-apply'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
+          expect.objectContaining({category_ids: [second.id]}),
+        );
+      });
+    });
+
     it('searches by price bounds when a price preset is applied', async () => {
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
 
@@ -442,6 +484,48 @@ describe('ExploreScreen', () => {
       await waitFor(() => {
         expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
           expect.objectContaining({tag_names: [tag.name]}),
+        );
+      });
+    });
+
+    it('is single-select: choosing a second tag replaces the first', async () => {
+      const first = {
+        id: 'tag-1',
+        name: 'assistant',
+        usage_count: 5,
+        created_at: '2023-01-01T00:00:00Z',
+      };
+      const second = {
+        id: 'tag-2',
+        name: 'coding',
+        usage_count: 3,
+        created_at: '2023-01-01T00:00:00Z',
+      };
+      (palStore.getTags as jest.Mock).mockResolvedValue({
+        tags: [first, second],
+      });
+
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-filter-tags'));
+      });
+      await waitFor(() =>
+        expect(getByTestId(`explore-tag-chip-${first.id}`)).toBeTruthy(),
+      );
+
+      fireEvent.press(getByTestId(`explore-tag-chip-${first.id}`));
+      fireEvent.press(getByTestId(`explore-tag-chip-${second.id}`));
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-tags-apply'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
+          expect.objectContaining({tag_names: [second.name]}),
         );
       });
     });

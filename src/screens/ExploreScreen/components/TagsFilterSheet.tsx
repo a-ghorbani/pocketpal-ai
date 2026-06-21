@@ -45,12 +45,10 @@ export const TagsFilterSheet: React.FC<TagsFilterSheetProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible]);
 
-  const toggle = (name: string) => {
-    setSelected(prev =>
-      prev.includes(name)
-        ? prev.filter(value => value !== name)
-        : [...prev, name],
-    );
+  // Single-select: the API filters by a single tag, so selecting a chip
+  // replaces the current choice; tapping the active chip clears it.
+  const select = (name: string) => {
+    setSelected(prev => (prev.includes(name) ? [] : [name]));
   };
 
   return (
@@ -69,7 +67,7 @@ export const TagsFilterSheet: React.FC<TagsFilterSheetProps> = ({
               selected={selected.includes(tag.name)}
               label={tag.name}
               accessibilityLabel={tag.name}
-              onPress={() => toggle(tag.name)}
+              onPress={() => select(tag.name)}
             />
           ))}
         </View>
