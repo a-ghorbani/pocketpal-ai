@@ -5,6 +5,11 @@ import {chatSessionStore, modelStore, palStore} from '../../../store';
 import {runInAction} from 'mobx';
 import {basicModel, downloadedModel} from '../../../../jest/fixtures/models';
 
+const originalActivePalIdDescriptor = Object.getOwnPropertyDescriptor(
+  chatSessionStore,
+  'activePalId',
+);
+
 const setActivePalId = (id: string | null) => {
   Object.defineProperty(chatSessionStore, 'activePalId', {
     get: () => id,
@@ -19,6 +24,18 @@ describe('ChatHeaderTitle', () => {
       palStore.pals = [];
     });
     setActivePalId(null);
+  });
+
+  afterEach(() => {
+    if (originalActivePalIdDescriptor) {
+      Object.defineProperty(
+        chatSessionStore,
+        'activePalId',
+        originalActivePalIdDescriptor,
+      );
+    } else {
+      delete (chatSessionStore as any).activePalId;
+    }
   });
 
   it('renders "Chat" when no active pal exists', () => {

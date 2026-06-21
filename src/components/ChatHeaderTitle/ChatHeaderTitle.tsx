@@ -3,7 +3,6 @@ import {Image, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
 
 import {createStyles} from './styles';
-import {ChevronDownSmIcon} from '../../assets/icons';
 import {useTheme} from '../../hooks';
 import {chatSessionStore, modelStore, palStore} from '../../store';
 import {L10nContext} from '../../utils';
@@ -40,9 +39,6 @@ export const ChatHeaderTitle: React.FC = observer(() => {
           <Text numberOfLines={1} style={styles.title}>
             {title}
           </Text>
-          <View style={styles.chevron}>
-            <ChevronDownSmIcon fill={theme.colors.foregroundPrimary} />
-          </View>
         </View>
         {activeModel?.name && (
           <Text numberOfLines={1} style={styles.model}>

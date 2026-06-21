@@ -48,10 +48,6 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.foregroundPrimary,
       flexShrink: 1,
     },
-    chevron: {
-      width: 11,
-      height: 6,
-    },
     model: {
       ...theme.typography.captionS,
       color: theme.colors.foregroundTertiary,
