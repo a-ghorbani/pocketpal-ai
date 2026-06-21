@@ -164,8 +164,6 @@
     "manageServers": "Manage Servers",
     "advancedSection": "Advanced",
     "devTools": "Dev Tools",
-    "backgroundDownload": "Background Download",
-    "backgroundDownloadDescription": "Start downloading a model, switch to another app, and the download keeps going.",
     "launcher": {
       "welcome": "Welcome, {{name}}",
       "memberSince": "Member since, {{year}}",

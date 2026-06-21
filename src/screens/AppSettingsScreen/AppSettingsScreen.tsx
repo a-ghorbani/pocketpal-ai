@@ -10,7 +10,6 @@ import {
   MoonIcon,
   CpuChipIcon,
   VolumeOnIcon,
-  DownloadIcon,
 } from '../../assets/icons';
 
 import {Switch} from '../../components/ui/Switch';
@@ -69,37 +68,6 @@ export const AppSettingsScreen: React.FC = observer(() => {
                 value={uiStore.colorScheme === 'dark'}
                 onValueChange={value =>
                   uiStore.setColorScheme(value ? 'dark' : 'light')
-                }
-              />
-            </View>
-          </View>
-          <Divider />
-
-          {/* Background Download */}
-          <View style={styles.settingItemContainer}>
-            <View style={styles.row}>
-              <View style={styles.textContainer}>
-                <View style={styles.labelWithIconContainer}>
-                  <DownloadIcon
-                    width={20}
-                    height={20}
-                    style={styles.settingIcon}
-                    stroke={theme.colors.onSurface}
-                  />
-                  <Text variant="titleMedium" style={styles.textLabel}>
-                    {l10n.settings.backgroundDownload}
-                  </Text>
-                </View>
-                <Text variant="labelSmall" style={styles.textDescription}>
-                  {l10n.settings.backgroundDownloadDescription}
-                </Text>
-              </View>
-              <Switch
-                testID="background-download-switch"
-                accessibilityLabel={l10n.settings.backgroundDownload}
-                value={uiStore.iOSBackgroundDownloading}
-                onValueChange={value =>
-                  uiStore.setiOSBackgroundDownloading(value)
                 }
               />
             </View>

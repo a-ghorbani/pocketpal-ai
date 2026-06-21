@@ -35,19 +35,6 @@ describe('AppSettingsScreen', () => {
     expect(uiStore.setColorScheme).toHaveBeenCalledWith('dark');
   });
 
-  it('reflects the Background Download value and routes through the existing writer', async () => {
-    runInAction(() => {
-      uiStore.iOSBackgroundDownloading = true;
-    });
-    const {getByTestId} = render(<AppSettingsScreen />);
-    const sw = getByTestId('background-download-switch');
-
-    await act(async () => {
-      fireEvent(sw, 'valueChange', false);
-    });
-    expect(uiStore.setiOSBackgroundDownloading).toHaveBeenCalledWith(false);
-  });
-
   it('renders the language selector and its menu options', () => {
     const {getByTestId} = render(<AppSettingsScreen />);
     expect(getByTestId('language-selector-button')).toBeTruthy();
