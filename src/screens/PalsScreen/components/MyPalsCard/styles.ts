@@ -53,4 +53,10 @@ export const createStyles = (theme: Theme) =>
     categoryChip: {
       marginEnd: 0,
     },
+    overflowButton: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });

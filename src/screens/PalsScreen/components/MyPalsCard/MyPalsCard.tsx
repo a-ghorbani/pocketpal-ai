@@ -31,9 +31,6 @@ const getSubtitle = (pal: Pal): string => {
   if (pal.description && pal.description.trim().length > 0) {
     return pal.description.trim();
   }
-  if (pal.systemPrompt && pal.systemPrompt.trim().length > 0) {
-    return pal.systemPrompt.trim();
-  }
   return '';
 };
 
@@ -122,7 +119,9 @@ export const MyPalsCard: React.FC<MyPalsCardProps> = observer(
         variant="outlined"
         style={styles.card}
         onPress={onPress}
+        accessibilityRole="button"
         accessibilityLabel={pal.name}
+        accessibilityHint={l10n.palsScreen.myPals.editPalHint}
         testID={`local-pal-card-${pal.id}`}>
         <View style={styles.row}>
           <Avatar pal={pal} />
@@ -174,6 +173,7 @@ export const MyPalsCard: React.FC<MyPalsCardProps> = observer(
                     height={20}
                   />
                 }
+                style={styles.overflowButton}
                 accessibilityLabel={l10n.palsScreen.myPals.overflowMenu}
                 onPress={() => setMenuVisible(true)}
                 testID={`mypals-card-overflow-${pal.id}`}

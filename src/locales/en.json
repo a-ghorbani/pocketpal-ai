@@ -993,6 +993,7 @@
     "myPals": {
       "title": "My Pals",
       "createPal": "Create Pal",
+      "editPalHint": "Edits this pal",
       "tabDownloaded": "Downloaded",
       "tabCreatedByMe": "Created by me",
       "overflowMenu": "More actions",
