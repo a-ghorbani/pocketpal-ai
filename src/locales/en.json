@@ -1583,6 +1583,12 @@
     "sortOldest": "Oldest",
     "sortPopular": "Most Popular",
     "sortPriceLow": "Price: Low to High",
-    "sortPriceHigh": "Price: High to Low"
+    "sortPriceHigh": "Price: High to Low",
+    "searchPromptTitle": "Start typing",
+    "searchPromptBody": "Enter pal name and view available options",
+    "searchNoResults": "No Results for {{query}}",
+    "searchNoResultsHelper": "Try another keyword or continue browsing the pals instead",
+    "searchExploreCta": "Explore Pals",
+    "searchResultsHeader": "Search results"
   }
 }
