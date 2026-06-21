@@ -5,6 +5,10 @@ class MockPalStore {
   pals: Pal[] = [];
   isUSRegion: boolean = false;
 
+  // PalsHub discovery state (read by the Explore tab).
+  cachedPalsHubPals: any[] = [];
+  isLoadingPalsHub: boolean = false;
+
   constructor() {
     // makeAutoObservable(this);
   }
@@ -68,13 +72,21 @@ class MockPalStore {
   getDownloadedPalsHubPals = jest.fn(() =>
     this.pals.filter(p => p.source === 'palshub'),
   );
-  searchPalsHubPals = jest.fn(async () => {});
+  searchPalsHubPals = jest.fn(async () => ({
+    pals: this.cachedPalsHubPals,
+    total_count: this.cachedPalsHubPals.length,
+    page: 1,
+    limit: 20,
+    has_more: false,
+  }));
   loadUserLibrary = jest.fn(async () => {});
   loadUserCreatedPals = jest.fn(async () => {});
 
   // PalsHub-related methods
   isPalsHubPalDownloaded = jest.fn(() => false);
   downloadPalsHubPal = jest.fn(async () => {});
+  getCategories = jest.fn(async () => ({categories: []}));
+  getTags = jest.fn(async () => ({tags: []}));
 }
 
 export const mockPalStore = new MockPalStore();
