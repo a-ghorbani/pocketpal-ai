@@ -163,7 +163,31 @@
     "enterUrlManually": "Enter URL manually",
     "manageServers": "Manage Servers",
     "advancedSection": "Advanced",
-    "devTools": "Dev Tools"
+    "devTools": "Dev Tools",
+    "backgroundDownload": "Background Download",
+    "backgroundDownloadDescription": "Start downloading a model, switch to another app, and the download keeps going.",
+    "launcher": {
+      "welcome": "Welcome, {{name}}",
+      "memberSince": "Member since, {{year}}",
+      "createAccountTitle": "Create Account",
+      "createAccountDescription": "Sign up to enjoy full access to the app after a seamless onboarding experience.",
+      "createAccountButton": "Create Account",
+      "logOut": "Log out",
+      "myPals": "My pals",
+      "myPalsSubtitle": "{{count}} Pals available",
+      "accountSettings": "Account Settings",
+      "accountSettingsSubtitle": "Email, Password",
+      "preferences": "Preferences",
+      "preferencesSubtitle": "Batch size, CPU Threads, Seed, Flash attention",
+      "benchmark": "Benchmark",
+      "benchmarkSubtitle": "Measure model speed on your device",
+      "models": "Models",
+      "modelsSubtitle": "Download and manage models",
+      "appSettings": "App Settings",
+      "appSettingsSubtitle": "Dark mode, background download, display",
+      "aboutApp": "About App",
+      "aboutAppSubtitle": "Learn more about PocketPal and share feedback"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -1111,6 +1135,8 @@
     "benchmark": "Benchmark",
     "settings": "Settings",
     "appInfo": "App Info",
+    "preferences": "Preferences",
+    "appSettings": "App Settings",
     "testCompletion": "Test Completion"
   },
   "chat": {
