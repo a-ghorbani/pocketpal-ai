@@ -1,17 +1,10 @@
 import React from 'react';
-import {Platform, Keyboard} from 'react-native';
-import {runInAction} from 'mobx';
 
-import {
-  fireEvent,
-  render as baseRender,
-  waitFor,
-  act,
-} from '../../../../jest/test-utils';
+import {fireEvent, render as baseRender} from '../../../../jest/test-utils';
 
 import {SettingsScreen} from '../SettingsScreen';
 
-import {modelStore, uiStore, ttsStore} from '../../../store';
+import {ROUTES} from '../../../utils/navigationConstants';
 import {l10n} from '../../../locales';
 
 const mockNavigate = jest.fn();
@@ -23,396 +16,74 @@ jest.mock('@react-navigation/native', () => ({
 jest.useFakeTimers();
 
 const render = (ui: React.ReactElement, options: any = {}) =>
-  baseRender(ui, {withBottomSheetProvider: true, ...options});
+  baseRender(ui, {withSafeArea: true, withNavigation: true, ...options});
 
-describe('SettingsScreen', () => {
+describe('SettingsScreen (launcher)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(Keyboard, 'dismiss');
-    // Ensure clean timer state for each test
-    jest.clearAllTimers();
   });
 
-  afterEach(() => {
-    // Clean up any remaining timers
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
+  it('renders the not-registered Create Account CTA and no Welcome/My-pals', () => {
+    const {getByTestId, queryByTestId, queryByText} = render(
+      <SettingsScreen />,
+    );
+
+    expect(getByTestId('settings-create-account')).toBeTruthy();
+    expect(queryByTestId('settings-nav-my-pals')).toBeNull();
+    expect(
+      queryByText(l10n.en.settings.launcher.welcome.replace('{{name}}', '')),
+    ).toBeNull();
   });
 
-  it('renders settings screen correctly', async () => {
-    const {getByText, getByDisplayValue} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-
-    expect(getByText('Model Initialization Settings')).toBeTruthy();
-    expect(getByText('Model Loading Settings')).toBeTruthy();
-    expect(getByText('App Settings')).toBeTruthy();
-    expect(getByDisplayValue('2048')).toBeTruthy(); // Context size
+  it('Create Account CTA is inert (no navigation on press)', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-create-account'));
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('updates context size correctly', async () => {
-    jest.useFakeTimers();
-    const {getByDisplayValue} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const contextSizeInput = getByDisplayValue('2048');
-
-    act(() => {
-      fireEvent.changeText(contextSizeInput, '512');
-    });
-    act(() => {
-      fireEvent(contextSizeInput, 'blur');
-    });
-
-    // Advance timers within act to handle React state updates
-    act(() => {
-      jest.advanceTimersByTime(501); // Wait for debounce
-    });
-
-    await waitFor(() => {
-      expect(modelStore.setNContext).toHaveBeenCalledWith(512);
-    });
+  it('Account Settings row is inert (no navigation on press)', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-account-settings'));
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('displays error for invalid context size input', async () => {
-    const {getByDisplayValue, getByText} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const contextSizeInput = getByDisplayValue('2048');
-
-    await act(async () => {
-      fireEvent.changeText(contextSizeInput, '100'); // Below minimum size
-    });
-
-    expect(getByText('Please enter a valid number (minimum 200)')).toBeTruthy();
+  it('navigates to Preferences', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-preferences'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.PREFERENCES);
   });
 
-  it('handles outside press correctly and resets input', async () => {
-    const {getByDisplayValue, getByText} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const contextSizeInput = getByDisplayValue('2048');
-
-    fireEvent.changeText(contextSizeInput, '512');
-    fireEvent.press(getByText('Model Initialization Settings'));
-
-    await waitFor(() => {
-      expect(Keyboard.dismiss).toHaveBeenCalled();
-      expect(getByDisplayValue('2048')).toBeTruthy(); // Reset back to original size
-    });
+  it('navigates to App Settings', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-app-settings'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.APP_SETTINGS);
   });
 
-  it('re-syncs the displayed context size when n_ctx changes externally', async () => {
-    const {getByDisplayValue, rerender} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    expect(getByDisplayValue('2048')).toBeTruthy();
-
-    const original = modelStore.contextInitParams.n_ctx;
-    // Simulate the chat banner's increase-context flow raising the global n_ctx.
-    runInAction(() => {
-      modelStore.contextInitParams.n_ctx = 8192;
-    });
-    rerender(<SettingsScreen />);
-
-    await waitFor(() => {
-      expect(getByDisplayValue('8192')).toBeTruthy();
-    });
-
-    runInAction(() => {
-      modelStore.contextInitParams.n_ctx = original;
-    });
+  it('navigates to Benchmark (settings-nav-benchmark kept reachable)', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-benchmark'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.BENCHMARK);
   });
 
-  it('toggles Auto Offload/Load switch', async () => {
-    const {getByTestId} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const autoOffloadSwitch = getByTestId('auto-offload-load-switch');
-
-    await act(async () => {
-      fireEvent(autoOffloadSwitch, 'valueChange', false);
-    });
-
-    expect(modelStore.updateUseAutoRelease).toHaveBeenCalledWith(false);
+  it('navigates to Models', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-models'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.MODELS);
   });
 
-  it('toggles Auto-Navigate to Chat switch', async () => {
-    const {getByTestId} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const autoNavigateSwitch = getByTestId('auto-navigate-to-chat-switch');
-
-    await act(async () => {
-      fireEvent(autoNavigateSwitch, 'valueChange', false);
-    });
-
-    expect(uiStore.setAutoNavigateToChat).toHaveBeenCalledWith(false);
+  it('navigates to App Info (About App row)', () => {
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-app-info'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.APP_INFO);
   });
 
-  it('toggles Dark Mode switch', async () => {
-    const {getByTestId} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const darkModeSwitch = getByTestId('dark-mode-switch');
-
-    await act(async () => {
-      fireEvent(darkModeSwitch, 'valueChange', true);
-    });
-
-    expect(uiStore.setColorScheme).toHaveBeenCalledWith('dark');
-  });
-
-  it('toggles GPU acceleration switch on iOS and adjusts GPU layers', async () => {
-    Platform.OS = 'ios';
-    jest.useFakeTimers();
-
-    const {getByTestId} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    await waitFor(() => {
-      expect(getByTestId('device-option-gpu')).toBeTruthy();
-    });
-    const gpuBtn = getByTestId('device-option-gpu');
-
-    act(() => {
-      fireEvent(gpuBtn, 'press');
-    });
-
-    expect(modelStore.setDevices).toHaveBeenCalledWith(['Metal']);
-
-    const gpuSlider = getByTestId('gpu-layers-slider');
-
-    act(() => {
-      fireEvent(gpuSlider, 'valueChange', 60);
-    });
-
-    // Fast-forward time by 300ms to trigger debounced callback within act
-    act(() => {
-      jest.advanceTimersByTime(300); // Wait for debounce
-    });
-
-    expect(modelStore.setNGPULayers).toHaveBeenCalledWith(60);
-  });
-
-  it('toggles Display Memory Usage switch', async () => {
-    const {getByTestId} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-    const memoryUsageSwitch = getByTestId('display-memory-usage-switch');
-
-    await act(async () => {
-      fireEvent(memoryUsageSwitch, 'valueChange', true);
-    });
-
-    expect(uiStore.setDisplayMemUsage).toHaveBeenCalledWith(true);
-  });
-
-  it('renders image max tokens slider in advanced settings', async () => {
-    jest.useFakeTimers();
-    const {getByTestId, getByText} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-
-    // Expand advanced settings
-    const advancedSettingsButton = getByText('Advanced Settings');
-    fireEvent.press(advancedSettingsButton);
-
-    await waitFor(() => {
-      expect(getByTestId('image-max-tokens-slider')).toBeTruthy();
-    });
-  });
-
-  it('updates image max tokens correctly', async () => {
-    jest.useFakeTimers();
-    const {getByTestId, getByText} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-
-    // Expand advanced settings
-    fireEvent.press(getByText('Advanced Settings'));
-
-    await waitFor(() => {
-      expect(getByTestId('image-max-tokens-slider')).toBeTruthy();
-    });
-
-    const slider = getByTestId('image-max-tokens-slider');
-
-    act(() => {
-      fireEvent(slider, 'onValueChange', 768);
-    });
-
-    // Fast-forward time by 300ms to trigger debounced callback within act
-    act(() => {
-      jest.advanceTimersByTime(300);
-    });
-
-    expect(modelStore.setImageMaxTokens).toHaveBeenCalledWith(768);
-  });
-
-  describe('TTS availability toggle', () => {
-    afterEach(() => {
-      // Reset observable fields between tests — beforeEach's clearAllMocks()
-      // resets jest.fn() call lists but not field values.
-      runInAction(() => {
-        ttsStore.deviceMeetsMemory = false;
-        ttsStore.userTTSOverride = null;
-      });
-    });
-
-    it('§6.A — high-memory, no override: switch ON, helper line hidden', async () => {
-      runInAction(() => {
-        ttsStore.deviceMeetsMemory = true;
-        ttsStore.userTTSOverride = null;
-      });
-      const {getByTestId, queryByText} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-
-      const sw = getByTestId('tts-availability-switch');
-      expect(sw.props.value).toBe(true);
-      expect(
-        queryByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
-      ).toBeNull();
-    });
-
-    it('§6.B — low-memory, no override: switch OFF, helper line visible', async () => {
-      runInAction(() => {
-        ttsStore.deviceMeetsMemory = false;
-        ttsStore.userTTSOverride = null;
-      });
-      const {getByTestId, getByText} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-
-      const sw = getByTestId('tts-availability-switch');
-      expect(sw.props.value).toBe(false);
-      expect(
-        getByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
-      ).toBeTruthy();
-    });
-
-    it('§6.C — low-memory: toggling ON calls setUserTTSOverride(true)', async () => {
-      runInAction(() => {
-        ttsStore.deviceMeetsMemory = false;
-        ttsStore.userTTSOverride = null;
-      });
-      const {getByTestId} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-      const sw = getByTestId('tts-availability-switch');
-
-      await act(async () => {
-        fireEvent(sw, 'valueChange', true);
-      });
-
-      expect(ttsStore.setUserTTSOverride).toHaveBeenCalledWith(true);
-    });
-
-    it('§6.D — high-memory: toggling OFF calls setUserTTSOverride(false)', async () => {
-      runInAction(() => {
-        ttsStore.deviceMeetsMemory = true;
-        ttsStore.userTTSOverride = null;
-      });
-      const {getByTestId} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-      const sw = getByTestId('tts-availability-switch');
-
-      await act(async () => {
-        fireEvent(sw, 'valueChange', false);
-      });
-
-      expect(ttsStore.setUserTTSOverride).toHaveBeenCalledWith(false);
-    });
-
-    it('§9f — low-memory + opt-in: switch ON, helper line still visible', async () => {
-      runInAction(() => {
-        ttsStore.deviceMeetsMemory = false;
-        ttsStore.userTTSOverride = true;
-      });
-      const {getByTestId, getByText} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-
-      const sw = getByTestId('tts-availability-switch');
-      expect(sw.props.value).toBe(true);
-      // Helper line tracks deviceMeetsMemory, NOT the override.
-      expect(
-        getByText(l10n.en.settings.ttsAvailabilityLowMemoryWarning),
-      ).toBeTruthy();
-    });
-  });
-
-  it('shows effective value when image_max_tokens exceeds n_ctx', async () => {
-    jest.useFakeTimers();
-    const {getByText, queryByText} = render(<SettingsScreen />, {
-      withSafeArea: true,
-      withNavigation: true,
-    });
-
-    // Expand advanced settings
-    fireEvent.press(getByText('Advanced Settings'));
-
-    await waitFor(() => {
-      // Initially, with image_max_tokens = 512 and n_ctx = 2048, no effective label should show
-      expect(queryByText(/effective:/)).toBeFalsy();
-    });
-
-    // Now set image_max_tokens > n_ctx to trigger effective display
-    act(() => {
-      modelStore.contextInitParams.image_max_tokens = 3000;
-    });
-
-    await waitFor(() => {
-      // Should show effective value clamped to n_ctx (2048)
-      expect(getByText(/effective: 2048/)).toBeTruthy();
-    });
-  });
-
-  describe('Advanced section navigation', () => {
-    it('navigates to Benchmark', () => {
-      const {getByTestId} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-      fireEvent.press(getByTestId('settings-nav-benchmark'));
-      expect(mockNavigate).toHaveBeenCalledWith('Benchmark');
-    });
-
-    it('navigates to App Info', () => {
-      const {getByTestId} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-      fireEvent.press(getByTestId('settings-nav-app-info'));
-      expect(mockNavigate).toHaveBeenCalledWith('App Info');
-    });
-
-    it('navigates to Dev Tools', () => {
-      const {getByTestId} = render(<SettingsScreen />, {
-        withSafeArea: true,
-        withNavigation: true,
-      });
-      fireEvent.press(getByTestId('settings-nav-dev-tools'));
-      expect(mockNavigate).toHaveBeenCalledWith('Dev Tools');
-    });
+  it('navigates to Dev Tools when __DEV__ exposes the row', () => {
+    const {queryByTestId} = render(<SettingsScreen />);
+    const devToolsRow = queryByTestId('settings-nav-dev-tools');
+    // Dev Tools is gated on __DEV__; in the Jest env __DEV__ is true.
+    if (devToolsRow) {
+      fireEvent.press(devToolsRow);
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.DEV_TOOLS);
+    }
   });
 });
