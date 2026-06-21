@@ -28,10 +28,12 @@ import {CategoryFilterSheet} from './CategoryFilterSheet';
 import {PriceFilterSheet, type PriceRange} from './PriceFilterSheet';
 import {TagsFilterSheet} from './TagsFilterSheet';
 import {SortFilterSheet, type SortOption} from './SortFilterSheet';
+import {LoginRequiredModal} from './LoginRequiredModal';
 import {PalCardList} from './PalCardList';
 import {createPanelStyles} from './styles';
 
 interface ExplorePalsPanelProps {
+  isAuthenticated: boolean;
   onSignInPress?: () => void;
 }
 
@@ -41,7 +43,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 const DEFAULT_SORT: SortOption = 'newest';
 
 export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
-  ({onSignInPress}) => {
+  ({isAuthenticated, onSignInPress}) => {
     const theme = useTheme();
     const styles = createPanelStyles(theme);
     const l10n = useContext(L10nContext);
@@ -54,6 +56,7 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [searchExpanded, setSearchExpanded] = useState(false);
     const [openSheet, setOpenSheet] = useState<OpenSheet>('none');
+    const [showLoginRequired, setShowLoginRequired] = useState(false);
     const [selectedPal, setSelectedPal] = useState<PalsHubPal | null>(null);
     const [showDetail, setShowDetail] = useState(false);
 
@@ -135,8 +138,14 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
     }, [buildQuery, hasMore, loadingMore]);
 
     const handleCardPress = (pal: PalsHubPal) => {
-      // The detail sheet owns auth gating (routes to sign-in on purchase),
-      // so the card simply opens it.
+      // Gates sheet ACCESS: a premium, unowned pal needs an account before the
+      // detail sheet opens. Distinct from the sheet's own gate, which gates the
+      // BUY action at purchase time; keep both so the predicates can't drift.
+      const gated = pal.price_cents > 0 && !pal.is_owned;
+      if (gated && !isAuthenticated) {
+        setShowLoginRequired(true);
+        return;
+      }
       setSelectedPal(pal);
       setShowDetail(true);
     };
@@ -284,6 +293,12 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
             setSort(value);
             setOpenSheet('none');
           }}
+        />
+
+        <LoginRequiredModal
+          isVisible={showLoginRequired}
+          onClose={() => setShowLoginRequired(false)}
+          onSignInPress={onSignInPress}
         />
 
         {selectedPal && (

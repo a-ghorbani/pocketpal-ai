@@ -67,7 +67,10 @@ export const ExploreScreen: React.FC = observer(() => {
 
       <View style={styles.panel}>
         {subTab === 'pals' ? (
-          <ExplorePalsPanel onSignInPress={() => setShowAuth(true)} />
+          <ExplorePalsPanel
+            isAuthenticated={isAuthenticated}
+            onSignInPress={() => setShowAuth(true)}
+          />
         ) : (
           <View style={styles.comingSoon} testID="explore-models-panel">
             <Text style={styles.comingSoonText}>

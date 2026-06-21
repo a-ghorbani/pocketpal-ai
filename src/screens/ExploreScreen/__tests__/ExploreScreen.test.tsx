@@ -528,9 +528,11 @@ describe('ExploreScreen', () => {
     });
   });
 
-  // Single auth gate: the card-tap routes through the detail sheet.
-  describe('detail sheet is the single gate', () => {
-    it('opens the detail sheet for a premium pal while signed-out (no redundant pre-gate modal)', async () => {
+  // Two distinct auth gates: the card-tap gates sheet ACCESS for a premium,
+  // unowned pal while signed-out (the login-required modal); the detail sheet
+  // separately gates the BUY action at purchase time.
+  describe('sheet-access gate while signed-out', () => {
+    it('shows the login-required modal for a premium pal and keeps the detail sheet closed', async () => {
       (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
         pageResponse([mockPremiumPalsHubPal], false),
       );
@@ -546,11 +548,41 @@ describe('ExploreScreen', () => {
         fireEvent.press(card);
       });
 
-      // The sheet opens (its label renders); the old pre-gate modal is gone.
+      // The login-required modal opens; the detail sheet does NOT.
       await waitFor(() => {
-        expect(getByTestId('pal-label-premium')).toBeTruthy();
+        expect(getByTestId('explore-login-required')).toBeTruthy();
+        expect(getByTestId('explore-login-action')).toBeTruthy();
       });
-      expect(queryByTestId('explore-login-required')).toBeNull();
+      expect(queryByTestId('pal-label-premium')).toBeNull();
+    });
+
+    it('routes the login-required action to the sign-in surface', async () => {
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPremiumPalsHubPal], false),
+      );
+
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
+
+      const card = await waitFor(() =>
+        getByTestId(`explore-pal-card-${mockPremiumPalsHubPal.id}`),
+      );
+      await act(async () => {
+        fireEvent.press(card);
+      });
+
+      const action = await waitFor(() => getByTestId('explore-login-action'));
+      await act(async () => {
+        fireEvent.press(action);
+      });
+
+      // The action dismisses the modal and fires onSignInPress; the screen
+      // stays mounted and the modal is gone.
+      await waitFor(() => {
+        expect(queryByTestId('explore-login-required')).toBeNull();
+      });
+      expect(getByTestId('explore-screen')).toBeTruthy();
     });
 
     it('opens the detail sheet for a free pal while signed-out', async () => {
@@ -569,6 +601,7 @@ describe('ExploreScreen', () => {
         fireEvent.press(card);
       });
 
+      // The detail sheet opens (its label renders); no sheet-access modal.
       await waitFor(() => {
         expect(getByTestId('pal-label-free')).toBeTruthy();
       });

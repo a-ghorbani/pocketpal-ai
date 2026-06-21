@@ -233,4 +233,27 @@ export const createSheetStyles = (theme: Theme) =>
       justifyContent: 'flex-end',
       gap: theme.spacing.s,
     },
+    loginBody: {
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.m,
+    },
+    loginIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: theme.radius.xxl,
+      backgroundColor: theme.colors.secondaryContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loginTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.foregroundPrimary,
+      textAlign: 'center',
+    },
+    loginMessage: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundSecondary,
+      textAlign: 'center',
+    },
   });
