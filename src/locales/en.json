@@ -792,8 +792,6 @@
       "parameters": "Parameters",
       "tabGeneral": "General",
       "tabGeneration": "Generation",
-      "generationSettings": "Generation Settings",
-      "configureGenerationSettings": "Configure Generation Settings",
       "validation": {
         "nameRequired": "Name is required",
         "generatingPromptRequired": "Generating prompt is required when using AI prompt",

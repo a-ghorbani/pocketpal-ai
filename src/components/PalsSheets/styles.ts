@@ -53,11 +53,6 @@ export const createStyles = (theme: Theme) =>
     settingsLevelIcon: {
       color: theme.colors.primary,
     },
-    generationResetRow: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginBottom: theme.spacing.s,
-    },
     form: {
       gap: theme.spacing.default,
       padding: theme.spacing.default,
@@ -215,13 +210,6 @@ export const createStyles = (theme: Theme) =>
       flexDirection: 'row',
       justifyContent: 'flex-start',
       gap: 8,
-      marginTop: 8,
-    },
-    generationSettingsSection: {
-      paddingHorizontal: theme.spacing.default,
-      marginBottom: theme.spacing.default,
-    },
-    generationSettingsButton: {
       marginTop: 8,
     },
     talentItem: {
