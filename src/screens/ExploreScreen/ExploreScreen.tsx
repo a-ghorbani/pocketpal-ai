@@ -47,11 +47,13 @@ export const ExploreScreen: React.FC = observer(() => {
           <Text style={styles.promoSubtitle}>{l10n.explore.promoSubtitle}</Text>
           <Button
             testID="explore-promo-login"
-            variant="secondary"
-            label={l10n.explore.promoAction}
+            accessibilityLabel={l10n.explore.promoAction}
             style={styles.promoAction}
-            onPress={() => setShowAuth(true)}
-          />
+            onPress={() => setShowAuth(true)}>
+            <Text style={styles.promoActionLabel}>
+              {l10n.explore.promoAction}
+            </Text>
+          </Button>
         </View>
       )}
 

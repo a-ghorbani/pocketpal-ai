@@ -22,20 +22,25 @@ export const createStyles = (theme: Theme) =>
       marginBottom: theme.spacing.m,
       padding: theme.spacing.l,
       borderRadius: theme.radius.ml,
-      backgroundColor: theme.colors.secondaryContainer,
+      backgroundColor: theme.colors.yellowAccent,
       gap: theme.spacing.s,
     },
     promoTitle: {
       ...theme.typography.titleM,
-      color: theme.colors.onSecondaryContainer,
+      color: theme.colors.onYellowAccent,
     },
     promoSubtitle: {
       ...theme.typography.bodyS,
-      color: theme.colors.onSecondaryContainer,
+      color: theme.colors.onYellowAccent,
     },
     promoAction: {
       marginTop: theme.spacing.s,
       alignSelf: 'flex-start',
+      backgroundColor: theme.colors.onYellowAccent,
+    },
+    promoActionLabel: {
+      ...theme.typography.uiM,
+      color: theme.colors.yellowHighestContrast,
     },
     tabs: {
       marginHorizontal: theme.spacing.m,

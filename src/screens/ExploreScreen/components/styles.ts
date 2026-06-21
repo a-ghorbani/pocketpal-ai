@@ -69,6 +69,20 @@ export const createCardStyles = (theme: Theme) =>
     card: {
       padding: theme.spacing.m,
     },
+    pricePill: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      paddingHorizontal: theme.spacing.s,
+      paddingVertical: theme.spacing.xxs,
+      borderTopRightRadius: theme.radius.m,
+      borderBottomLeftRadius: theme.radius.m,
+      backgroundColor: theme.colors.yellowAccent,
+    },
+    pricePillText: {
+      ...theme.typography.captionM,
+      color: theme.colors.onYellowAccent,
+    },
     row: {
       flexDirection: 'row',
       gap: theme.spacing.sm,

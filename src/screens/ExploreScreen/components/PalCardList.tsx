@@ -37,6 +37,15 @@ export const PalCardList: React.FC<PalCardListProps> = ({pal, onPress}) => {
       accessibilityRole="button"
       accessibilityLabel={pal.title}
       style={styles.card}>
+      {!isFree ? (
+        <View style={styles.pricePill} pointerEvents="none">
+          <Text
+            testID={`explore-pal-price-${pal.id}`}
+            style={styles.pricePillText}>
+            {formatPrice(pal.price_cents)}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.row}>
         <View style={styles.avatar}>
           {pal.thumbnail_url ? (
@@ -54,11 +63,13 @@ export const PalCardList: React.FC<PalCardListProps> = ({pal, onPress}) => {
             <Text style={styles.name} numberOfLines={1}>
               {pal.title}
             </Text>
-            <Text
-              testID={`explore-pal-price-${pal.id}`}
-              style={[styles.price, isFree ? styles.priceFree : null]}>
-              {isFree ? l10n.explore.free : formatPrice(pal.price_cents)}
-            </Text>
+            {isFree ? (
+              <Text
+                testID={`explore-pal-price-${pal.id}`}
+                style={[styles.price, styles.priceFree]}>
+                {l10n.explore.free}
+              </Text>
+            ) : null}
           </View>
 
           {pal.description ? (

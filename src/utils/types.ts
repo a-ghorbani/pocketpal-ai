@@ -368,8 +368,11 @@ export interface SemanticColors {
   };
 
   // Yellow accent ramp — pal-carousel active-card border + label.
+  // onYellowAccent is the white-in-both-modes foreground over a saturated
+  // yellowAccent fill (Explore promo card).
   yellowAccent: string;
   yellowHighestContrast: string;
+  onYellowAccent: string;
 
   // Disabled (empty-composer) send-button gradient stops — pre-blended at
   // 40% over white so the fill stays visible without view opacity.

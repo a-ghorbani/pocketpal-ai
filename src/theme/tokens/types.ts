@@ -155,8 +155,11 @@ export interface TokenColors {
 
   // Yellow accent ramp — pal-carousel active-card border + label
   // (canonical `Color/Yellow/Accent` + `Color/Yellow/Highest Contrast`).
+  // `onYellowAccent` is the white-in-both-modes foreground for content
+  // sitting on a saturated `yellowAccent` fill (Explore promo card).
   yellowAccent: string;
   yellowHighestContrast: string;
+  onYellowAccent: string;
 
   // Disabled (empty-composer) send-button gradient stops — the midnight
   // gradient pre-blended at 40% over the white composer card.
