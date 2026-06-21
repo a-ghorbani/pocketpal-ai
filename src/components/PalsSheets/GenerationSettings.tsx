@@ -52,11 +52,10 @@ interface GenerationSettingsProps {
 }
 
 /**
- * Generation-tab body of the pal form. Folds the former
- * PalGenerationSettingsSheet interior (level indicator + Reset menu +
- * completion params) into the tabbed form. Edits mirror straight into the
- * form's `completionSettings` field; persistence happens only when the
- * form footer Save runs PalStore.create/updatePal.
+ * Generation-tab body of the pal form: level indicator + Reset menu +
+ * completion params. Edits mirror straight into the form's
+ * `completionSettings` field; persistence happens only when the form footer
+ * Save runs PalStore.create/updatePal.
  */
 export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
   palName,

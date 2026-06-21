@@ -38,7 +38,6 @@ export * from './Menu';
 export * from './Message';
 export * from './ModelsHeaderRight';
 export * from './ModelsResetDialog';
-export * from './PalGenerationSettingsSheet';
 
 export * from './ModelSettingsSheet';
 export * from './ModelTypeTag';
