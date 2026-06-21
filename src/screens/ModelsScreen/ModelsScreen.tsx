@@ -438,6 +438,7 @@ export const ModelsScreen: React.FC = observer(() => {
           label={l10n.models.labels.chipAllModels}
           accessibilityLabel={l10n.models.labels.chipAllModels}
           selected={activeChip === 'all'}
+          style={activeChip === 'all' ? styles.filterChipSelected : undefined}
           onPress={() => setFilter('hf', false)}
           testID="chip-all-models"
         />
@@ -446,6 +447,7 @@ export const ModelsScreen: React.FC = observer(() => {
           label={l10n.models.labels.chipHuggingFace}
           accessibilityLabel={l10n.models.labels.chipHuggingFace}
           selected={activeChip === 'hf'}
+          style={activeChip === 'hf' ? styles.filterChipSelected : undefined}
           onPress={() => setFilter('hf', true)}
           testID="chip-hugging-face"
         />

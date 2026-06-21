@@ -19,4 +19,7 @@ export const createStyles = (theme: Theme) =>
       paddingHorizontal: theme.spacing.m,
       paddingVertical: theme.spacing.sm,
     },
+    filterChipSelected: {
+      backgroundColor: theme.colors.accent.yellowSubtle,
+    },
   });
