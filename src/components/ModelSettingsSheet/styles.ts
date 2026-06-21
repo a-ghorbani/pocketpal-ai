@@ -7,9 +7,28 @@ export const createStyles = (theme: Theme) =>
     sheetScrollViewContainer: {
       padding: theme.spacing.m,
     },
-    secondaryButtons: {
+    header: {
       flexDirection: 'row',
-      gap: theme.spacing.s,
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.m,
+      paddingBottom: theme.spacing.sm,
+    },
+    headerTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.onSurface,
+      flex: 1,
+      textAlign: 'center',
+    },
+    headerSide: {
+      minWidth: 56,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerSideEnd: {
+      justifyContent: 'flex-end',
+    },
+    headerDivider: {
+      marginBottom: theme.spacing.sm,
     },
     multimodalDivider: {
       marginVertical: theme.spacing.m,
