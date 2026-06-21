@@ -6,7 +6,10 @@ import {DownloadIcon, StarIcon, UserIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
 import {L10nContext} from '../../../utils';
+import {formatPriceCents} from '../../../utils/formatters';
 import {getFullThumbnailUri} from '../../../utils/imageUtils';
+
+import {uiStore} from '../../../store';
 
 import type {PalsHubPal} from '../../../types/palshub';
 
@@ -16,8 +19,6 @@ interface PalCardListProps {
   pal: PalsHubPal;
   onPress: (pal: PalsHubPal) => void;
 }
-
-const formatPrice = (priceCents: number) => `€${(priceCents / 100).toFixed(2)}`;
 
 export const PalCardList: React.FC<PalCardListProps> = ({pal, onPress}) => {
   const theme = useTheme();
@@ -42,7 +43,7 @@ export const PalCardList: React.FC<PalCardListProps> = ({pal, onPress}) => {
           <Text
             testID={`explore-pal-price-${pal.id}`}
             style={styles.pricePillText}>
-            {formatPrice(pal.price_cents)}
+            {formatPriceCents(pal.price_cents, uiStore.language)}
           </Text>
         </View>
       ) : null}
