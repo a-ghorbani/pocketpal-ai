@@ -86,6 +86,9 @@ export const createStyles = (theme: Theme, insets: EdgeInsets) =>
       borderWidth: 1,
       borderColor: theme.colors.surfaceVariant,
     },
+    primaryActionButton: {
+      borderRadius: theme.borders.default,
+    },
     orText: {
       ...theme.fonts.bodyMedium,
       color: theme.colors.onSurfaceVariant,

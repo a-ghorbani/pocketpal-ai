@@ -13,6 +13,8 @@ import {
   ModelsScreen,
   BenchmarkScreen,
   AboutScreen,
+  PreferencesScreen,
+  AppSettingsScreen,
   DevToolsScreen,
 } from '../screens';
 import PalsScreen from '../screens/PalsScreen';
@@ -43,6 +45,7 @@ export const RootStack: React.FC<RootStackProps> = ({
         headerStyle: styles.headerWithoutDivider,
         headerTintColor: theme.colors.onBackground,
         headerTitleStyle: styles.headerTitle,
+        headerBackButtonDisplayMode: 'minimal',
       }}>
       <Stack.Screen
         name="MainTabs"
@@ -67,6 +70,16 @@ export const RootStack: React.FC<RootStackProps> = ({
           // open the in-screen HF search.
           title: l10n.screenTitles.models,
         }}
+      />
+      <Stack.Screen
+        name={ROUTES.PREFERENCES}
+        component={gestureHandlerRootHOC(PreferencesScreen)}
+        options={{title: l10n.screenTitles.preferences}}
+      />
+      <Stack.Screen
+        name={ROUTES.APP_SETTINGS}
+        component={gestureHandlerRootHOC(AppSettingsScreen)}
+        options={{title: l10n.screenTitles.appSettings}}
       />
       <Stack.Screen
         name={ROUTES.BENCHMARK}

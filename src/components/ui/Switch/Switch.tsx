@@ -46,6 +46,7 @@ export const Switch: React.FC<SwitchProps> = ({
         onValueChange={onValueChange}
         disabled={disabled}
         color={theme.colors.primary}
+        ios_backgroundColor={theme.colors.surfaceVariant}
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
       />

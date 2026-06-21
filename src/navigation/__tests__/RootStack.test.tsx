@@ -18,6 +18,8 @@ jest.mock('../../screens', () => {
     ModelsScreen: stub('ModelsScreen'),
     BenchmarkScreen: stub('BenchmarkScreen'),
     AboutScreen: stub('AboutScreen'),
+    PreferencesScreen: stub('PreferencesScreen'),
+    AppSettingsScreen: stub('AppSettingsScreen'),
     DevToolsScreen: stub('DevToolsScreen'),
   };
 });
@@ -67,11 +69,21 @@ describe('RootStack', () => {
         ROUTES.CHAT,
         ROUTES.MODELS,
         ROUTES.PALS,
+        ROUTES.PREFERENCES,
+        ROUTES.APP_SETTINGS,
         ROUTES.BENCHMARK,
         ROUTES.APP_INFO,
         ROUTES.DEV_TOOLS,
       ]),
     );
+  });
+
+  it('registers the Settings sub-screens as pushed routes', () => {
+    const {navigationRef} = renderWithRef();
+    const routeNames = navigationRef.getRootState().routeNames;
+
+    expect(routeNames).toContain(ROUTES.PREFERENCES);
+    expect(routeNames).toContain(ROUTES.APP_SETTINGS);
   });
 
   it('keeps the deep-link target route names unchanged (I5)', () => {

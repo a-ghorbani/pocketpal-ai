@@ -95,7 +95,10 @@ describe('Context-Limit Banner', () => {
     // n_ctx that fills quickly.
     const settingsPage = new SettingsPage();
     await settingsPage.navigateTo();
+    // setContextSize pushes the Preferences sub-screen; pop back to the Settings
+    // launcher root before leaving for Chat so the drawer opens from a known root.
     await settingsPage.setContextSize(SMALL_N_CTX);
+    await settingsPage.backToSettingsRoot();
     const drawerPage = new DrawerPage();
     await chatPage.openDrawer();
     await drawerPage.navigateToChat();

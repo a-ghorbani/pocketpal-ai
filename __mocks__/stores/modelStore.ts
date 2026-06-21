@@ -64,6 +64,7 @@ class MockModelStore {
   setNUBatch: jest.Mock;
   setCacheTypeK: jest.Mock;
   setCacheTypeV: jest.Mock;
+  setUseMlock: jest.Mock;
   setUseMmap: jest.Mock;
   setNoExtraBufts: jest.Mock;
   enterBenchmarkMode: jest.Mock;
@@ -111,6 +112,7 @@ class MockModelStore {
       setNUBatch: false,
       setCacheTypeK: false,
       setCacheTypeV: false,
+      setUseMlock: false,
       setUseMmap: false,
       setNoExtraBufts: false,
       enterBenchmarkMode: false,
@@ -181,6 +183,7 @@ class MockModelStore {
     this.setNUBatch = jest.fn();
     this.setCacheTypeK = jest.fn();
     this.setCacheTypeV = jest.fn();
+    this.setUseMlock = jest.fn();
     this.setUseMmap = jest.fn();
     this.setNoExtraBufts = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);

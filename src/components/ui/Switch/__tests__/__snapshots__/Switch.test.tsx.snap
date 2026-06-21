@@ -31,9 +31,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={false}
@@ -73,9 +79,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={true}
@@ -115,9 +127,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={false}
@@ -157,9 +175,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={true}
@@ -199,9 +223,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={false}
@@ -241,9 +271,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={true}
@@ -283,9 +319,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={false}
@@ -325,9 +367,15 @@ exports[`Switch — snapshot matrix baseline (variant x size x {default,disabled
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={true}
@@ -367,9 +415,15 @@ exports[`Switch — snapshot matrix non-Latin font-fallback canary (canaryVarian
       onStartShouldSetResponder={[Function]}
       onTintColor="#333333"
       style={
-        {
-          "alignSelf": "flex-start",
-        }
+        [
+          {
+            "alignSelf": "flex-start",
+          },
+          {
+            "backgroundColor": "#e4e4e6",
+            "borderRadius": 16,
+          },
+        ]
       }
       tintColor="#333333"
       value={false}

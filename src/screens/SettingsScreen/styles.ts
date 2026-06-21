@@ -6,102 +6,81 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: theme.colors.surface,
-    },
-    container: {
-      padding: 16,
-    },
-    scrollViewContent: {
-      paddingVertical: 16,
-      paddingHorizontal: 16,
-    },
-    card: {
-      marginVertical: 8,
-      borderRadius: 12,
       backgroundColor: theme.colors.background,
     },
-    settingItemContainer: {
-      marginVertical: 16,
+    container: {
+      padding: theme.spacing.m,
+      gap: theme.spacing.sm,
     },
-    switchContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    headerRegistered: {
       alignItems: 'center',
-      marginVertical: 8,
+      paddingVertical: theme.spacing.l,
+      gap: theme.spacing.xxs,
     },
-    textContainer: {
+    welcome: {
+      ...theme.fonts.headlineMedium,
+      color: theme.colors.onBackground,
+    },
+    memberSince: {
+      ...theme.fonts.bodyMedium,
+      color: theme.colors.onSurfaceVariant,
+    },
+    ctaCard: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.l,
+      paddingHorizontal: theme.spacing.m,
+      gap: theme.spacing.sm,
+    },
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.primary,
+    },
+    ctaTitle: {
+      ...theme.fonts.headlineMedium,
+      color: theme.colors.onBackground,
+      textAlign: 'center',
+    },
+    ctaDescription: {
+      ...theme.fonts.bodyMedium,
+      color: theme.colors.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    ctaButton: {
+      marginTop: theme.spacing.s,
+    },
+    group: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borders.default,
+      overflow: 'hidden',
+    },
+    rowPressable: {
+      paddingVertical: theme.spacing.m,
+      paddingHorizontal: theme.spacing.m,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.m,
+    },
+    rowTextContainer: {
       flex: 1,
-      marginRight: 16,
     },
-    labelWithIconContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 4,
-    },
-    settingIcon: {
-      marginRight: 8,
-    },
-    textLabel: {
+    rowTitle: {
+      ...theme.fonts.titleMedium,
       color: theme.colors.onSurface,
     },
-    textDescription: {
+    rowSubtitle: {
+      ...theme.fonts.bodySmall,
       color: theme.colors.onSurfaceVariant,
-      //marginTop: 4,
     },
-    divider: {
-      marginVertical: 12,
+    rowInert: {
+      opacity: 0.5,
     },
-    slider: {
-      //marginVertical: 8,
-      //height: 40,
-    },
-    textInput: {
-      marginVertical: 8,
-    },
-    invalidInput: {
-      borderColor: theme.colors.error,
-      borderWidth: 1,
-    },
-    errorText: {
-      color: theme.colors.error,
-      marginTop: 4,
-    },
-    menuContainer: {
-      position: 'relative',
-    },
-    menuButton: {
-      minWidth: 100,
-    },
-    buttonContent: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
-    },
-    advancedSettingsButton: {
-      marginVertical: 8,
-    },
-    advancedSettingsContent: {
-      marginTop: 8,
-    },
-    advancedAccordion: {
-      height: 55,
-      //backgroundColor: theme.colors.surface,
-    },
-    accordionTitle: {
-      fontSize: 14,
-      color: theme.colors.secondary,
-    },
-    menu: {
-      width: 170,
-    },
-    linkContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 4,
-    },
-    linkIcon: {
-      marginLeft: 4,
-    },
-    segmentedButtons: {
-      marginVertical: 8,
+    logOut: {
+      marginTop: theme.spacing.s,
     },
   });

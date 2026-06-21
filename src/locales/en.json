@@ -164,7 +164,29 @@
     "enterUrlManually": "Enter URL manually",
     "manageServers": "Manage Servers",
     "advancedSection": "Advanced",
-    "devTools": "Dev Tools"
+    "devTools": "Dev Tools",
+    "launcher": {
+      "welcome": "Welcome, {{name}}",
+      "memberSince": "Member since, {{year}}",
+      "createAccountTitle": "Create Account",
+      "createAccountDescription": "Sign up to enjoy full access to the app after a seamless onboarding experience.",
+      "createAccountButton": "Create Account",
+      "logOut": "Log out",
+      "myPals": "My pals",
+      "myPalsSubtitle": "{{count}} Pals available",
+      "accountSettings": "Account Settings",
+      "accountSettingsSubtitle": "Email, Password",
+      "preferences": "Preferences",
+      "preferencesSubtitle": "Batch size, CPU Threads, Seed, Flash attention",
+      "benchmark": "Benchmark",
+      "benchmarkSubtitle": "Measure model speed on your device",
+      "models": "Models",
+      "modelsSubtitle": "Download and manage models",
+      "appSettings": "App Settings",
+      "appSettingsSubtitle": "Dark mode, display, language",
+      "aboutApp": "About App",
+      "aboutAppSubtitle": "Learn more about PocketPal and share feedback"
+    }
   },
   "memory": {
     "shortWarning": "Memory Warning",
@@ -485,7 +507,7 @@
   "feedback": {
     "title": "Send Feedback",
     "description": "Your voice matters! Tell us how PocketPal AI is helping you and what we can do to make it even more useful.",
-    "shareThoughtsButton": "Sharing your thoughts",
+    "shareThoughtsButton": "Share Your Thoughts",
     "useCase": {
       "label": "What are you using PocketPal AI for?",
       "placeholder": "e.g., summarization, roleplay, etc."
@@ -1138,7 +1160,9 @@
     "pals": "Pals (experimental)",
     "benchmark": "Benchmark",
     "settings": "Settings",
-    "appInfo": "App Info",
+    "appInfo": "About App",
+    "preferences": "Preferences",
+    "appSettings": "App Settings",
     "testCompletion": "Test Completion"
   },
   "chat": {

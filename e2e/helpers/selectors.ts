@@ -393,6 +393,18 @@ export const Selectors = {
   },
 
   // Settings screen
+  // Settings launcher rows (always on the Settings tab root). Tapping these
+  // pushes the relocated sub-screens (Preferences / App Settings) onto the
+  // root stack.
+  settingsNav: {
+    get preferences(): string {
+      return byTestId('settings-nav-preferences');
+    },
+    get appSettings(): string {
+      return byTestId('settings-nav-app-settings');
+    },
+  },
+
   settings: {
     get container(): string {
       return byTestId('settings-container');
