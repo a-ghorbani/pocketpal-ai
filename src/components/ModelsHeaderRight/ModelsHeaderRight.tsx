@@ -71,7 +71,7 @@ export const ModelsHeaderRight = observer(
           size="s"
           accessibilityLabel={l10n.models.labels.addAModel}
           onPress={onAddModel}
-          testID="add-model-button">
+          testID="models-add-model-button">
           <View style={styles.addModel}>
             <PlusIcon width={18} height={18} stroke={theme.colors.onSurface} />
             <Text style={styles.addModelLabel}>

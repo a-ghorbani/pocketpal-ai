@@ -22,7 +22,7 @@ describe('ModelsHeaderRight', () => {
     const onAddModel = jest.fn();
     const {getByTestId} = render(<ModelsHeaderRight onAddModel={onAddModel} />);
 
-    fireEvent.press(getByTestId('add-model-button'));
+    fireEvent.press(getByTestId('models-add-model-button'));
 
     expect(onAddModel).toHaveBeenCalled();
   });

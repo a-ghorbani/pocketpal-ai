@@ -734,6 +734,10 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               isDownloaded && (
                 <TouchableOpacity
                   testID="memory-warning-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    l10n.models.modelCard.accessibility.memoryWarningButton
+                  }
                   onPress={handleWarningPress}
                   style={styles.advisoryContainer}>
                   <Label

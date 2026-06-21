@@ -118,7 +118,7 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
           </Text>
           <View style={[styles.headerSide, styles.headerSideEnd]}>
             <Button
-              testID="reset-button"
+              testID="model-settings-reset-button"
               variant="tertiary"
               label={l10n.common.reset}
               onPress={handleReset}
