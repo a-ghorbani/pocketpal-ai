@@ -7,14 +7,14 @@ const screenHeight = Dimensions.get('window').height;
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
-      padding: 16,
+      padding: theme.spacing.m,
       backgroundColor: theme.colors.surface,
-      borderRadius: theme.borders.default,
+      borderRadius: theme.radius.m,
     },
     chatTemplateRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 2,
+      paddingHorizontal: theme.spacing.xxs,
     },
     chatTemplateLabel: {
       flex: 1,
@@ -32,45 +32,49 @@ export const createStyles = (theme: Theme) =>
       flex: 1,
     },
     textArea: {
-      fontSize: 12,
-      lineHeight: 16,
-      borderRadius: 8,
+      ...theme.typography.uiS,
+      borderRadius: theme.radius.s,
       maxHeight: screenHeight * 0.4,
     },
     completionSettingsContainer: {
-      marginTop: 12,
-      paddingHorizontal: 2,
+      marginTop: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.xxs,
     },
     switchContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginVertical: 4,
+      marginVertical: theme.spacing.xs,
+    },
+    switchLabel: {
+      ...theme.typography.uiM,
+      color: theme.colors.onSurface,
     },
     settingsSection: {
-      paddingVertical: 8,
+      paddingVertical: theme.spacing.s,
     },
     modelNameLabel: {
-      ...theme.fonts.titleMediumLight,
-      paddingVertical: 8,
+      ...theme.typography.titleS,
+      color: theme.colors.onSurface,
+      paddingVertical: theme.spacing.s,
     },
     divider: {
-      marginVertical: 4,
+      marginVertical: theme.spacing.xs,
     },
     templateNote: {
       color: theme.colors.textSecondary,
-      marginVertical: 8,
+      marginVertical: theme.spacing.s,
     },
     stopLabel: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     settingItem: {
-      marginBottom: 24,
-      paddingHorizontal: 4,
+      marginBottom: theme.spacing.l,
+      paddingHorizontal: theme.spacing.xs,
     },
     settingLabel: {
-      marginBottom: 2,
+      marginBottom: theme.spacing.xxs,
     },
     settingValue: {
       textAlign: 'right',
@@ -78,18 +82,24 @@ export const createStyles = (theme: Theme) =>
     stopWordsContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 8,
-      marginBottom: 8,
+      gap: theme.spacing.s,
+      marginBottom: theme.spacing.s,
     },
     stopChip: {
-      marginRight: 4,
-      marginVertical: 4,
+      marginRight: theme.spacing.xs,
+      marginVertical: theme.spacing.xs,
+    },
+    stopChipContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
     },
     stopChipText: {
-      fontSize: 12,
+      ...theme.typography.uiS,
+      color: theme.colors.onSurface,
     },
     sheetContainer: {
-      padding: 16,
+      padding: theme.spacing.m,
     },
     actionsContainer: {
       alignItems: 'center',

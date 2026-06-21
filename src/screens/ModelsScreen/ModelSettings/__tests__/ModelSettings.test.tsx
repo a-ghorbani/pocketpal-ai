@@ -210,11 +210,11 @@ describe('ModelSettings', () => {
 
     // Mock existing stop words
     mockProps.stopWords = ['<stop1>'];
-    const {getAllByRole} = render(<ModelSettings {...mockProps} />);
+    const {getByRole} = render(<ModelSettings {...mockProps} />);
 
-    // Test removing stop word using chip close button
-    const closeButtons = getAllByRole('button', {name: /close/i});
-    fireEvent.press(closeButtons[0]);
+    // Removing a stop word: pressing its chip removes it
+    const stopChip = getByRole('button', {name: '<stop1>'});
+    fireEvent.press(stopChip);
 
     expect(mockProps.onStopWordsChange).toHaveBeenCalledWith([]);
   });
