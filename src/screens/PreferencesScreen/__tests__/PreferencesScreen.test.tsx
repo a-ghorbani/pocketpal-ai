@@ -10,7 +10,7 @@ import {
 
 import {PreferencesScreen} from '../PreferencesScreen';
 
-import {modelStore, uiStore} from '../../../store';
+import {modelStore, uiStore, hfStore} from '../../../store';
 
 jest.useFakeTimers();
 
@@ -102,5 +102,54 @@ describe('PreferencesScreen', () => {
     const {getByTestId} = render(<PreferencesScreen />);
     expect(getByTestId('weight-repacking-switch')).toBeTruthy();
     Platform.OS = 'ios';
+  });
+
+  it('renders device-option-* segments and the gpu-layers slider when multiple devices exist', async () => {
+    Platform.OS = 'ios';
+    const {getByTestId, findByTestId} = render(<PreferencesScreen />);
+    // device options load async on mount (iOS exposes auto/gpu/cpu).
+    expect(await findByTestId('device-option-auto')).toBeTruthy();
+    expect(getByTestId('gpu-layers-slider')).toBeTruthy();
+  });
+
+  it('keeps the gpu-layers writer wired (single writer setNGPULayers)', async () => {
+    Platform.OS = 'ios';
+    const {findByTestId} = render(<PreferencesScreen />);
+    const slider = await findByTestId('gpu-layers-slider');
+    act(() => {
+      fireEvent(slider, 'valueChange', 12);
+    });
+    // InputSlider debounces onValueChange (300ms default).
+    act(() => {
+      jest.advanceTimersByTime(301);
+    });
+    await waitFor(() => {
+      expect(modelStore.setNGPULayers).toHaveBeenCalledWith(12);
+    });
+  });
+
+  it('renders the use-hf-token switch and routes through hfStore.setUseHfToken when a token is present', async () => {
+    (hfStore as any).hfToken = 'hf_present';
+    hfStore.useHfToken = true;
+    const {getByTestId} = render(<PreferencesScreen />);
+    const sw = getByTestId('use-hf-token-switch');
+    expect(sw).toBeTruthy();
+    await act(async () => {
+      fireEvent(sw, 'valueChange', false);
+    });
+    expect(hfStore.setUseHfToken).toHaveBeenCalledWith(false);
+    (hfStore as any).hfToken = '';
+  });
+
+  it('disables the use-hf-token switch when no token is present (condition preserved)', () => {
+    (hfStore as any).hfToken = '';
+    const {getByTestId} = render(<PreferencesScreen />);
+    // DS Switch puts testID on the wrapper View; the `disabled` prop is
+    // forwarded to the inner Paper switch.
+    const wrapper: any = getByTestId('use-hf-token-switch');
+    const disabledNodes = wrapper.findAll(
+      (node: any) => node.props?.disabled === true,
+    );
+    expect(disabledNodes.length).toBeGreaterThan(0);
   });
 });

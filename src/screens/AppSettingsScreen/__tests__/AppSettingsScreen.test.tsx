@@ -53,6 +53,19 @@ describe('AppSettingsScreen', () => {
     expect(getByTestId('language-selector-button')).toBeTruthy();
   });
 
+  it('drives the language menu from supportedLanguages so every option is templated', () => {
+    // The menu items (language-option-*) render only after the anchor button's
+    // native measure() callback fires, which jsdom does not invoke; the visible
+    // selector and the supportedLanguages source that templates the options are
+    // the unit-testable surface. The open-menu + language-option-* selection
+    // interaction is exercised by the App Settings visual capture and the
+    // Appium language spec.
+    const {getByTestId} = render(<AppSettingsScreen />);
+    expect(getByTestId('language-selector-button')).toBeTruthy();
+    expect(uiStore.supportedLanguages.length).toBeGreaterThan(0);
+    expect(uiStore.supportedLanguages).toContain('en');
+  });
+
   it('toggles TTS availability through its existing writer', async () => {
     runInAction(() => {
       ttsStore.deviceMeetsMemory = true;

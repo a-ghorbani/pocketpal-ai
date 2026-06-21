@@ -78,12 +78,27 @@ describe('SettingsScreen (launcher)', () => {
   });
 
   it('navigates to Dev Tools when __DEV__ exposes the row', () => {
-    const {queryByTestId} = render(<SettingsScreen />);
-    const devToolsRow = queryByTestId('settings-nav-dev-tools');
-    // Dev Tools is gated on __DEV__; in the Jest env __DEV__ is true.
-    if (devToolsRow) {
-      fireEvent.press(devToolsRow);
-      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.DEV_TOOLS);
+    // __DEV__ defaults to true in the Jest env, so the row is present here.
+    const {getByTestId} = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings-nav-dev-tools'));
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.DEV_TOOLS);
+  });
+
+  it('hides the Dev Tools row when __DEV__ is false but keeps Benchmark and About App reachable', () => {
+    const original = (global as any).__DEV__;
+    (global as any).__DEV__ = false;
+    try {
+      const {queryByTestId, getByTestId} = render(<SettingsScreen />);
+      expect(queryByTestId('settings-nav-dev-tools')).toBeNull();
+      expect(getByTestId('settings-nav-benchmark')).toBeTruthy();
+      expect(getByTestId('settings-nav-app-info')).toBeTruthy();
+    } finally {
+      (global as any).__DEV__ = original;
     }
+  });
+
+  it('does not render the Log out footer in the not-registered state (inert auth)', () => {
+    const {queryByTestId} = render(<SettingsScreen />);
+    expect(queryByTestId('settings-log-out')).toBeNull();
   });
 });

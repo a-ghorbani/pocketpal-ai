@@ -3,6 +3,7 @@ import React from 'react';
 import {render} from '../../../../../jest/test-utils';
 import {Switch} from '../Switch';
 import {runSnapshotMatrix} from '../../__tests__/helpers/snapshotMatrix';
+import {themeFixtures} from '../../../../../jest/fixtures/theme';
 
 describe('Switch', () => {
   it('defaults to testID=ui-switch', () => {
@@ -10,6 +11,21 @@ describe('Switch', () => {
       <Switch value={false} onValueChange={() => {}} accessibilityLabel="x" />,
     );
     expect(getByTestId('ui-switch')).toBeTruthy();
+  });
+
+  it('binds the off-track ios_backgroundColor to a mode-aware theme token (not raw hex)', () => {
+    const {UNSAFE_root} = render(
+      <Switch value={false} onValueChange={() => {}} accessibilityLabel="x" />,
+    );
+    const withIosBg = UNSAFE_root.findAll(
+      node => node.props?.ios_backgroundColor !== undefined,
+    );
+    expect(withIosBg.length).toBeGreaterThan(0);
+    withIosBg.forEach(node => {
+      expect(node.props.ios_backgroundColor).toBe(
+        themeFixtures.lightTheme.colors.surfaceVariant,
+      );
+    });
   });
 
   it('forwards accessibilityLabel to Paper Switch', () => {

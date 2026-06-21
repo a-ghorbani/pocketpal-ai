@@ -28,6 +28,7 @@ export const mockUiStore = {
   displayMemUsage: false,
   iOSBackgroundDownloading: true,
   setAutoNavigateToChat: jest.fn(),
+  setLanguage: jest.fn(),
   setColorScheme: jest.fn(),
   setDisplayMemUsage: jest.fn(),
   setiOSBackgroundDownloading: jest.fn(),
