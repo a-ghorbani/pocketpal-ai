@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import {View, TextInput as RNTextInput} from 'react-native';
+import {Alert, View, TextInput as RNTextInput} from 'react-native';
 
 import {z} from 'zod';
 import {observer} from 'mobx-react-lite';
@@ -34,6 +34,7 @@ import {palStore} from '../../store';
 import type {Pal, TalentRef} from '../../types/pal';
 
 import {L10nContext} from '../../utils';
+import {validateCompletionSettings} from '../../utils/modelSettings';
 
 import {Tabs} from '../ui';
 
@@ -228,6 +229,25 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
     const onSubmit = async (data: PalFormData) => {
       if (isSaving) {
         return; // Prevent double submission
+      }
+
+      // Block submit on invalid completion settings (out-of-range numbers,
+      // non-numeric input in numeric fields). The folded Generation tab edits
+      // the form's completionSettings directly, so validate before persisting.
+      if (data.completionSettings) {
+        const {errors} = validateCompletionSettings(data.completionSettings);
+        if (Object.keys(errors).length > 0) {
+          Alert.alert(
+            l10n.components.chatGenerationSettingsSheet.invalidValues,
+            l10n.components.chatGenerationSettingsSheet.pleaseCorrect +
+              '\n' +
+              Object.entries(errors)
+                .map(([key, msg]) => `• ${key}: ${msg}`)
+                .join('\n'),
+            [{text: l10n.components.chatGenerationSettingsSheet.ok}],
+          );
+          return;
+        }
       }
 
       setIsSaving(true);

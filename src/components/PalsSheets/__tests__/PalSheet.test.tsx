@@ -1,4 +1,5 @@
 import React from 'react';
+import {Alert} from 'react-native';
 import {act, fireEvent, render, waitFor} from '../../../../jest/test-utils';
 import {PalSheet} from '../PalSheet';
 import {l10n} from '../../../locales';
@@ -98,6 +99,7 @@ describe('PalSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
   describe('Rendering', () => {
@@ -663,6 +665,35 @@ describe('PalSheet', () => {
           }),
         );
       });
+    });
+
+    it('blocks Save and does not persist when completion settings are invalid', async () => {
+      const {getByText, getByTestId} = renderPalSheet(
+        createExistingPal({
+          completionSettings: {
+            ...mockDefaultCompletionSettings,
+            // Below n_predict min (-1) and a non-numeric value in the
+            // numeric seed field — both must be rejected, not persisted.
+            n_predict: -5,
+            seed: 'abc',
+          },
+        }),
+      );
+
+      await waitFor(() => {
+        const nameInput = getByTestId('form-field-name');
+        expect(nameInput.props.value).toBe('Test Pal');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByText('Save'));
+      });
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalled();
+      });
+      expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
     });
   });
 
