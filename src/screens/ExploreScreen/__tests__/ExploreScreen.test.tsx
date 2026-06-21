@@ -932,19 +932,19 @@ describe('ExploreScreen', () => {
     });
 
     it('dismissing via the scrim closes the overlay and clears the input', async () => {
-      const {getByTestId, queryByTestId, getAllByLabelText} = render(
-        <ExploreScreen />,
-        {withSafeArea: true},
-      );
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
       await waitFor(() =>
         expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
       );
 
       openOverlay(getByTestId);
 
-      // The scrim is the first "Search pals"-labelled button (the backdrop
-      // Pressable, rendered before the Surface/input); pressing it = onClose.
-      const scrim = getAllByLabelText('Search pals')[0];
+      // The scrim is the backdrop Pressable (label "Close", distinct from the
+      // input's "Search pals" and the clear control's "Clear All"); pressing
+      // it = onClose.
+      const scrim = getByTestId('explore-search-scrim');
       await act(async () => {
         fireEvent.press(scrim);
       });
