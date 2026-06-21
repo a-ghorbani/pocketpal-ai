@@ -36,25 +36,12 @@ export const createStyles = (theme: Theme) =>
       textAlign: 'right',
       marginTop: theme.spacing.xs,
     },
-    warningContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 8,
-      marginBottom: 12,
+    advisoryContainer: {
+      paddingHorizontal: theme.spacing.s,
+      marginBottom: theme.spacing.sm,
     },
-    warningContent: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    warningIcon: {
-      margin: 0,
-    },
-    warningText: {
-      color: theme.colors.error,
-      fontSize: 12,
-      flex: 1,
-      flexWrap: 'wrap',
+    advisoryLabel: {
+      alignSelf: 'stretch',
     },
     visionToggleContainer: {
       backgroundColor: theme.colors.surface,
@@ -245,9 +232,6 @@ export const createStyles = (theme: Theme) =>
       ...theme.typography.uiS,
       color: theme.colors.onErrorContainer,
       textAlign: 'center',
-    },
-    storageErrorText: {
-      marginHorizontal: theme.spacing.ml,
     },
     fullModelNameContainer: {
       backgroundColor: theme.colors.surface,

@@ -19,10 +19,7 @@ import {
   ProgressBar,
   Text,
   Switch,
-  TouchableRipple,
   Snackbar,
-  HelperText,
-  IconButton as PaperIconButton,
 } from 'react-native-paper';
 
 import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
@@ -713,54 +710,48 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
 
           {/* Content */}
           <View style={styles.cardContent}>
-            {/* Storage Error Display */}
+            {/* Pre-load advisory: insufficient storage */}
             {!isRemoteModel && !storageOk && !isDownloaded && (
-              <HelperText
-                testID="storage-error-text"
-                type="error"
-                visible={!storageOk}
-                padding="none"
-                style={styles.storageErrorText}>
-                {storageNOkMessage}
-              </HelperText>
+              <View style={styles.advisoryContainer}>
+                <Label
+                  testID="storage-error-text"
+                  variant="status-warning"
+                  size="s"
+                  style={styles.advisoryLabel}
+                  label={storageNOkMessage}
+                />
+              </View>
             )}
 
-            {/* Display warnings */}
+            {/* Pre-load advisory: low memory / multimodal mismatch */}
             {!isRemoteModel &&
               (shortMemoryWarning || multimodalWarning) &&
               isDownloaded && (
-                <TouchableRipple
+                <TouchableOpacity
                   testID="memory-warning-button"
                   onPress={handleWarningPress}
-                  style={styles.warningContainer}>
-                  <View style={styles.warningContent}>
-                    <PaperIconButton
-                      icon="alert-circle-outline"
-                      iconColor={theme.colors.error}
-                      size={20}
-                      style={styles.warningIcon}
-                    />
-                    <Text style={styles.warningText}>
-                      {shortMemoryWarning || multimodalWarning}
-                    </Text>
-                  </View>
-                </TouchableRipple>
+                  style={styles.advisoryContainer}>
+                  <Label
+                    variant="status-warning"
+                    size="s"
+                    style={styles.advisoryLabel}
+                    label={shortMemoryWarning || multimodalWarning || ''}
+                  />
+                </TouchableOpacity>
               )}
 
+            {/* Pre-load advisory: file integrity */}
             {!isRemoteModel && integrityError && (
-              <TouchableRipple
+              <View
                 testID="integrity-warning-button"
-                style={styles.warningContainer}>
-                <View style={styles.warningContent}>
-                  <PaperIconButton
-                    icon="alert-circle-outline"
-                    iconColor={theme.colors.error}
-                    size={20}
-                    style={styles.warningIcon}
-                  />
-                  <Text style={styles.warningText}>{integrityError}</Text>
-                </View>
-              </TouchableRipple>
+                style={styles.advisoryContainer}>
+                <Label
+                  variant="status-warning"
+                  size="s"
+                  style={styles.advisoryLabel}
+                  label={integrityError}
+                />
+              </View>
             )}
 
             {/* Download Progress */}
