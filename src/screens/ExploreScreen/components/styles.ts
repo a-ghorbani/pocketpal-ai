@@ -228,7 +228,10 @@ export const createSearchOverlayStyles = (theme: Theme) =>
       padding: theme.spacing.m,
       gap: theme.spacing.m,
       maxHeight: '70%',
-      overflow: 'hidden',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: {width: 0, height: 2},
+      shadowRadius: 4,
+      shadowOpacity: 0.08,
     },
     inputWrapper: {
       borderWidth: theme.stroke.sm,
@@ -286,12 +289,11 @@ export const createSearchOverlayStyles = (theme: Theme) =>
       paddingHorizontal: theme.spacing.l,
       paddingVertical: theme.spacing.s,
       borderRadius: theme.radius.l,
-      borderWidth: theme.stroke.sm,
-      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.secondaryDefault,
     },
     exploreCtaText: {
       ...theme.typography.uiM,
-      color: theme.colors.primary,
+      color: theme.colors.foregroundPrimary,
     },
     resultsBody: {
       gap: theme.spacing.s,
@@ -309,7 +311,7 @@ export const createSearchOverlayStyles = (theme: Theme) =>
     resultAvatar: {
       width: 40,
       height: 40,
-      borderRadius: theme.radius.m,
+      borderRadius: 20,
       backgroundColor: theme.colors.surfaceVariant,
       alignItems: 'center',
       justifyContent: 'center',
