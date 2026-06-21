@@ -1,5 +1,5 @@
 import React, {useState, useContext} from 'react';
-import {FlatList, TouchableOpacity, View} from 'react-native';
+import {Alert, FlatList, TouchableOpacity, View} from 'react-native';
 
 import {Text} from 'react-native-paper';
 import {observer} from 'mobx-react-lite';
@@ -7,13 +7,17 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 
-import {ChevronLeftMdIcon} from '../../assets/icons';
+import {ChevronLeftMdIcon, DotsVerticalIcon} from '../../assets/icons';
 
-import {Tabs} from '../../components/ui';
+import {Tabs, IconButton} from '../../components/ui';
+import {Menu} from '../../components/Menu';
 
 import {useTheme} from '../../hooks';
 import {createStyles} from './styles';
 import {L10nContext} from '../../utils';
+import {t} from '../../locales';
+import {exportAllPals} from '../../utils/exportUtils';
+import {importPals} from '../../utils/importUtils';
 import type {RootStackParamList} from '../../utils/types';
 
 // Components
@@ -46,6 +50,38 @@ export const PalsScreen: React.FC = observer(() => {
   // Unified pal sheet state
   const [showPalSheet, setShowPalSheet] = useState(false);
   const [currentPal, setCurrentPal] = useState<Partial<Pal> | null>(null);
+
+  // Header overflow menu (bulk import / export-all)
+  const [overflowVisible, setOverflowVisible] = useState(false);
+  const closeOverflow = () => setOverflowVisible(false);
+
+  const handleExportAllPals = async () => {
+    closeOverflow();
+    try {
+      await exportAllPals();
+    } catch (error) {
+      console.error('Error exporting all pals:', error);
+      Alert.alert('Export Error', 'Failed to export all pals.');
+    }
+  };
+
+  const handleImportPals = async () => {
+    closeOverflow();
+    try {
+      const count = await importPals();
+      if (count > 0) {
+        Alert.alert(
+          'Import Success',
+          t(l10n.components.palHeaderRight.importSuccess, {
+            count: count.toString(),
+          }),
+        );
+      }
+    } catch (error) {
+      console.error('Error importing pals:', error);
+      Alert.alert('Import Error', l10n.components.palHeaderRight.importError);
+    }
+  };
 
   const handleCreatePal = (type: 'assistant' | 'roleplay' | 'video') => {
     let newPal: Partial<Pal>;
@@ -95,9 +131,14 @@ export const PalsScreen: React.FC = observer(() => {
         <TouchableOpacity
           style={styles.backButton}
           testID="back-button"
-          accessibilityLabel={l10n.common.close}
+          accessibilityLabel={l10n.common.back}
+          hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
           onPress={() => navigation.goBack()}>
-          <ChevronLeftMdIcon stroke={theme.colors.foregroundPrimary} />
+          <ChevronLeftMdIcon
+            width={20}
+            height={20}
+            fill={theme.colors.foregroundPrimary}
+          />
         </TouchableOpacity>
 
         <Text style={styles.title}>{l10n.palsScreen.myPals.title}</Text>
@@ -112,6 +153,7 @@ export const PalsScreen: React.FC = observer(() => {
               style={styles.createAction}
               testID={testID}
               accessibilityLabel={l10n.palsScreen.myPals.createPal}
+              hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
               onPress={open}>
               <Text style={styles.createActionLabel}>
                 + {l10n.palsScreen.myPals.createPal}
@@ -119,6 +161,34 @@ export const PalsScreen: React.FC = observer(() => {
             </TouchableOpacity>
           )}
         />
+
+        <Menu
+          visible={overflowVisible}
+          onDismiss={closeOverflow}
+          anchorPosition="bottom"
+          anchor={
+            <IconButton
+              icon={
+                <DotsVerticalIcon
+                  fill={theme.colors.foregroundPrimary}
+                  width={20}
+                  height={20}
+                />
+              }
+              accessibilityLabel={l10n.palsScreen.myPals.overflowMenu}
+              onPress={() => setOverflowVisible(true)}
+              testID="pals-header-overflow"
+            />
+          }>
+          <Menu.Item
+            onPress={handleExportAllPals}
+            label={l10n.components.palHeaderRight.exportAllPals}
+          />
+          <Menu.Item
+            onPress={handleImportPals}
+            label={l10n.components.palHeaderRight.importPals}
+          />
+        </Menu>
       </View>
 
       <Tabs
