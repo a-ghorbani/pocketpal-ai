@@ -23,9 +23,4 @@ export const styles = ({theme}: {theme: Theme}) =>
       ...theme.typography.captionS,
       color: theme.colors.foregroundTertiary,
     },
-    chevron: {
-      fontSize: 14,
-      marginLeft: 4,
-      color: theme.colors.foregroundTertiary,
-    },
   });

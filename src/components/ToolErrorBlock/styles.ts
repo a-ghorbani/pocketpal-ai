@@ -20,18 +20,9 @@ export const styles = ({theme}: {theme: Theme}) =>
       ...theme.typography.captionS,
       color: theme.colors.redAccent,
     },
-    separator: {
-      ...theme.typography.captionS,
-      color: theme.colors.redAccent,
-    },
     message: {
       ...theme.typography.captionS,
       color: theme.colors.redAccent,
-      flexShrink: 1,
-    },
-    chevron: {
-      fontSize: 14,
-      marginLeft: 4,
-      color: theme.colors.redAccent,
+      marginTop: 2,
     },
   });

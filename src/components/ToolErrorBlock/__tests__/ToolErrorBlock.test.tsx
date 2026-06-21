@@ -20,6 +20,18 @@ describe('ToolErrorBlock', () => {
     expect(getByText('alert-outline')).toBeTruthy();
   });
 
+  it('does not truncate the error message to a single line', () => {
+    const {getByTestId} = render(
+      <ToolErrorBlock
+        toolName="render_html"
+        errorMessage="a long diagnostic that must wrap across multiple lines"
+      />,
+    );
+    expect(
+      getByTestId('tool-error-block-message').props.numberOfLines,
+    ).toBeUndefined();
+  });
+
   it('renders the error block without a message line when errorMessage missing', () => {
     const {getByText, queryByTestId} = render(
       <ToolErrorBlock toolName="datetime" />,

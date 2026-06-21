@@ -57,7 +57,6 @@ export const ToolUsedChip: React.FC<ToolUsedChipProps> = ({
         testID="tool-used-chip-icon"
       />
       <Text style={componentStyles.label}>{labelWithMetrics}</Text>
-      <Icon name="chevron-right" style={componentStyles.chevron} />
     </View>
   );
 };
