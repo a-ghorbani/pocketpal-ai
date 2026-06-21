@@ -7,7 +7,7 @@ import {StackNavigationProp} from '@react-navigation/stack';
 
 import {useTheme} from '../../../hooks';
 
-import {styles} from './styles';
+import {createStyles} from './styles';
 
 import {modelStore} from '../../../store';
 
@@ -30,6 +30,7 @@ export const ModelNotLoadedMessage: React.FC = () => {
   }, []); // Runs on mount to check if the model is available
 
   const theme = useTheme();
+  const styles = createStyles(theme);
 
   const loadModelDirectly = () => {
     if (lastUsedModel) {
@@ -57,10 +58,11 @@ export const ModelNotLoadedMessage: React.FC = () => {
       <Snackbar
         visible={true}
         onDismiss={onDismiss}
+        style={styles.snackbar}
         action={{
           label: lastUsedModel ? l10n.chat.load : l10n.chat.goToModels,
           onPress: lastUsedModel ? loadModelDirectly : navigateToModelsPage,
-          labelStyle: {color: theme.colors.inverseSecondary},
+          labelStyle: styles.actionLabel,
         }}>
         {lastUsedModel ? l10n.chat.readyToChat : l10n.chat.pleaseLoadModel}
       </Snackbar>
