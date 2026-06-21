@@ -137,7 +137,8 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
         Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {});
         return;
       }
-      // Send the user to sign-in rather than a 401 error when logged out.
+      // Gates the BUY action (distinct from the Explore sheet-access gate):
+      // send the user to sign-in rather than a 401 error when logged out.
       if (!authService.isAuthenticated) {
         onSignInPress?.();
         return;

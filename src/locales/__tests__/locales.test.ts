@@ -41,6 +41,7 @@ const EXPECTED_SECTIONS = [
   'downloadBanner',
   'tabs',
   'home',
+  'explore',
 ];
 
 const ALL_LANGUAGES: AvailableLanguage[] = [

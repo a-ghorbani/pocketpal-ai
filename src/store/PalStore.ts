@@ -37,6 +37,7 @@ import {getDisplayNameFromFilename} from '../utils/formatters';
 import type {Pal, ParameterDefinition} from '../types/pal';
 import type {
   ModelReference,
+  PalsHubCategory,
   PalsHubPal,
   SearchFilters,
   SyncState,
@@ -57,6 +58,9 @@ class PalStore {
   isLoadingPalsHub: boolean = false;
   searchFilters: SearchFilters = {};
   syncState: SyncState = {status: 'idle'};
+
+  // Categories are effectively static; fetch once and reuse across openings.
+  private categoriesCache: PalsHubCategory[] | null = null;
 
   // Region state
   isUSRegion: boolean = false;
@@ -638,11 +642,19 @@ class PalStore {
   // Additional helper methods for PalsHub integration
 
   /**
-   * Get categories from PalsHub
+   * Get categories from PalsHub. Result is memoized for the session since the
+   * category list is effectively static; repeated callers reuse the cache.
    */
   getCategories = async () => {
+    if (this.categoriesCache) {
+      return {categories: this.categoriesCache};
+    }
     try {
-      return await palsHubService.getCategories();
+      const response = await palsHubService.getCategories();
+      runInAction(() => {
+        this.categoriesCache = response.categories;
+      });
+      return response;
     } catch (error) {
       console.error('Failed to fetch categories:', error);
       throw error;

@@ -93,6 +93,9 @@ describe('PalStore', () => {
       palStore.syncState = {status: 'idle'};
       palStore.isMigrating = false;
       palStore.migrationComplete = false;
+      // Clear the session category cache so memoization does not leak
+      // across tests.
+      (palStore as any).categoriesCache = null;
     });
 
     // Setup default mocks
@@ -534,6 +537,26 @@ describe('PalStore', () => {
 
         expect(result).toEqual(mockCategories);
         expect(palsHubService.getCategories).toHaveBeenCalled();
+      });
+
+      it('caches categories and does not re-fetch on subsequent calls', async () => {
+        const mockCategories = {
+          categories: [{id: '1', name: 'AI Assistant'}],
+        };
+        (palsHubService.getCategories as jest.Mock).mockResolvedValue(
+          mockCategories,
+        );
+
+        const first = await palStore.getCategories();
+        const second = await palStore.getCategories();
+        const third = await palStore.getCategories();
+
+        // The underlying network fetch runs exactly once; later calls reuse
+        // the cached list.
+        expect(palsHubService.getCategories).toHaveBeenCalledTimes(1);
+        expect(first).toEqual(mockCategories);
+        expect(second).toEqual(mockCategories);
+        expect(third).toEqual(mockCategories);
       });
 
       it('should get tags', async () => {

@@ -173,6 +173,9 @@ export const lightColors: TokenColors = {
   // `Color/Yellow/Highest Contrast` label).
   yellowAccent: '#c58334',
   yellowHighestContrast: '#a86c34',
+  // On-accent foreground for content over a saturated `yellowAccent` fill.
+  // White in both modes (the fill stays bronze in both).
+  onYellowAccent: '#ffffff',
   // Disabled (empty-composer) send button — the midnight gradient pre-blended
   // at 40% over the white composer card, so the fill stays visible without
   // relying on view opacity (which over-lightens when composited a 2nd time).
@@ -332,6 +335,7 @@ export const darkColors: TokenColors = {
   },
   yellowAccent: '#c58334',
   yellowHighestContrast: '#a86c34',
+  onYellowAccent: '#ffffff',
   midnightDisabledHigh: '#a8a8a7',
   midnightDisabledLow: '#9f9f9e',
 };
