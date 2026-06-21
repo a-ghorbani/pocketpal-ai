@@ -73,6 +73,13 @@ export const SettingsScreen: React.FC = observer(() => {
     </Pressable>
   );
 
+  const accountSettingsRow = renderRow(
+    UserCircleIcon,
+    l10n.settings.launcher.accountSettings,
+    l10n.settings.launcher.accountSettingsSubtitle,
+    {testID: 'settings-nav-account-settings', inert: true},
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -123,12 +130,7 @@ export const SettingsScreen: React.FC = observer(() => {
                 onPress: () => navigation.navigate(ROUTES.PALS),
               },
             )}
-          {renderRow(
-            UserCircleIcon,
-            l10n.settings.launcher.accountSettings,
-            l10n.settings.launcher.accountSettingsSubtitle,
-            {testID: 'settings-nav-account-settings', inert: true},
-          )}
+          {IS_REGISTERED && accountSettingsRow}
           {renderRow(
             SettingsIcon,
             l10n.settings.launcher.preferences,
@@ -174,6 +176,7 @@ export const SettingsScreen: React.FC = observer(() => {
               onPress: () => navigation.navigate(ROUTES.APP_INFO),
             },
           )}
+          {!IS_REGISTERED && accountSettingsRow}
           {__DEV__ &&
             renderRow(
               CpuChipIcon,

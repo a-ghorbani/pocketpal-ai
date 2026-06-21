@@ -47,6 +47,22 @@ describe('SettingsScreen (launcher)', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  it('renders Account Settings last (after About App) in the not-registered state', () => {
+    const original = (global as any).__DEV__;
+    (global as any).__DEV__ = false;
+    try {
+      const {getByTestId, getAllByTestId} = render(<SettingsScreen />);
+      const account = getByTestId('settings-nav-account-settings');
+      const aboutApp = getByTestId('settings-nav-app-info');
+
+      const rows = getAllByTestId(/^settings-nav-/);
+      expect(rows[rows.length - 1]).toBe(account);
+      expect(rows.indexOf(aboutApp)).toBeLessThan(rows.indexOf(account));
+    } finally {
+      (global as any).__DEV__ = original;
+    }
+  });
+
   it('navigates to Preferences', () => {
     const {getByTestId} = render(<SettingsScreen />);
     fireEvent.press(getByTestId('settings-nav-preferences'));
