@@ -142,11 +142,11 @@ export const AboutScreen: React.FC = () => {
               {l10n.about.supportProjectDescription}
             </Text>
             <Button
-              mode="outlined"
+              mode="contained-tonal"
               onPress={() =>
                 Linking.openURL('https://github.com/a-ghorbani/pocketpal-ai')
               }
-              style={styles.actionButton}
+              style={styles.primaryActionButton}
               icon={GithubButtonIcon}>
               {l10n.about.githubButton}
             </Button>
@@ -165,7 +165,7 @@ export const AboutScreen: React.FC = () => {
                 </TouchableOpacity>
               </>
             )}
-            <Text style={styles.orText}>{l10n.about.orBy}</Text>
+            <Text style={styles.orText}>{l10n.about.orText}</Text>
             <Button
               mode="outlined"
               style={styles.actionButton}

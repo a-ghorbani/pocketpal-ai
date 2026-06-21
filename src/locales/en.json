@@ -497,7 +497,7 @@
   "feedback": {
     "title": "Send Feedback",
     "description": "Your voice matters! Tell us how PocketPal AI is helping you and what we can do to make it even more useful.",
-    "shareThoughtsButton": "Sharing your thoughts",
+    "shareThoughtsButton": "Share Your Thoughts",
     "useCase": {
       "label": "What are you using PocketPal AI for?",
       "placeholder": "e.g., summarization, roleplay, etc."
