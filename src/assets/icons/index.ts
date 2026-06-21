@@ -5,6 +5,7 @@ export {default as BenchmarkIcon} from './benchmark.svg';
 export {default as BrowserIcon} from './browser.svg';
 export {default as CameraIcon} from './camera.svg';
 export {default as ChatIcon} from './chat.svg';
+export {default as ChatPlusIcon} from './chat-plus.svg';
 export {default as CheckCircleIcon} from './check-circle.svg';
 export {default as ChevronDownIcon} from './chevron-down.svg';
 // Design-system chevron-left exported directly from the canonical Figma

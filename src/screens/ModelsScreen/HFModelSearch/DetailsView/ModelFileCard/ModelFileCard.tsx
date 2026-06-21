@@ -34,6 +34,10 @@ import {
 import {VisionDownloadSheet} from '../../../../../components';
 import {ChevronRightIcon} from '../../../../../assets/icons';
 
+// HuggingFace brand color for the download-progress gradient on HF cards.
+// Brand constant, not a themeable token (cf. EngineLogo brand colors).
+const HF_YELLOW = '#FFD21E';
+
 interface ModelFileCardProps {
   modelFile: ModelFile;
   hfModel: HuggingFaceModel;
@@ -62,7 +66,6 @@ export const ModelFileCard: FC<ModelFileCardProps> = observer(
       () => createStyles(theme, isProjection),
       [theme, isProjection],
     );
-    const HF_YELLOW = '#FFD21E';
 
     // Check if we have all the necessary data, as some are fetched async, like size.
     const isModelInfoReady = Boolean(

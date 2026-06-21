@@ -1,30 +1,51 @@
 import React, {useContext} from 'react';
-import {View} from 'react-native';
+import {Image, Text, View} from 'react-native';
 import {observer} from 'mobx-react';
-import {Text} from 'react-native-paper';
 
-import {styles} from './styles';
-import {chatSessionStore, modelStore} from '../../store';
+import {createStyles} from './styles';
+import {useTheme} from '../../hooks';
+import {chatSessionStore, modelStore, palStore} from '../../store';
 import {L10nContext} from '../../utils';
+import {getFullThumbnailUri} from '../../utils/imageUtils';
 
 export const ChatHeaderTitle: React.FC = observer(() => {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const l10n = useContext(L10nContext);
-  const activeSessionId = chatSessionStore.activeSessionId;
-  const activeSession = chatSessionStore.sessions.find(
-    session => session.id === activeSessionId,
-  );
+
   const activeModel = modelStore.activeModel;
 
+  const activePalId = chatSessionStore.activePalId;
+  const activePal = palStore.pals.find(pal => pal.id === activePalId);
+  const palThumbnailUri = activePal?.thumbnail_url
+    ? getFullThumbnailUri(activePal.thumbnail_url)
+    : undefined;
+  const palTileColor = activePal?.color?.[0] ?? theme.colors.secondaryDefault;
+
+  const title = activePal?.name || l10n.components.chatHeaderTitle.defaultTitle;
+
   return (
-    <View style={styles.container}>
-      <Text numberOfLines={1} variant="titleSmall">
-        {activeSession?.title || l10n.components.chatHeaderTitle.defaultTitle}
-      </Text>
-      {activeModel?.name && (
-        <Text numberOfLines={1} variant="bodySmall">
-          {activeModel?.name}
-        </Text>
-      )}
+    <View testID="chat-header-title" style={styles.container}>
+      <View style={styles.avatar}>
+        {palThumbnailUri ? (
+          <Image source={{uri: palThumbnailUri}} style={styles.avatarImage} />
+        ) : (
+          <View style={[styles.avatarTile, {backgroundColor: palTileColor}]} />
+        )}
+        <View style={styles.onlineDot} />
+      </View>
+      <View style={styles.labels}>
+        <View style={styles.titleRow}>
+          <Text numberOfLines={1} style={styles.title}>
+            {title}
+          </Text>
+        </View>
+        {activeModel?.name && (
+          <Text numberOfLines={1} style={styles.model}>
+            {activeModel.name}
+          </Text>
+        )}
+      </View>
     </View>
   );
 });

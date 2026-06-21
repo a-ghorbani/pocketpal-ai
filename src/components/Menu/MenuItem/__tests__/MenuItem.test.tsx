@@ -2,10 +2,12 @@ import React from 'react';
 import {MenuItem} from '../MenuItem';
 import {useTheme} from '../../../../hooks';
 import {fireEvent, render} from '../../../../../jest/test-utils';
+import {themeFixtures} from '../../../../../jest/fixtures/theme';
 
 describe('MenuItem', () => {
   beforeEach(() => {
     (useTheme as jest.Mock).mockReturnValue({
+      ...themeFixtures.lightTheme,
       colors: {
         menuText: '#000000',
         menuDangerText: '#FF0000',

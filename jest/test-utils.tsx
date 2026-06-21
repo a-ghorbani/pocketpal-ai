@@ -4,6 +4,7 @@ import {StyleSheet} from 'react-native';
 import {PaperProvider} from 'react-native-paper';
 import {render} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
+import {createStackNavigator} from '@react-navigation/stack';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -20,8 +21,22 @@ export type CustomRenderOptions = {
   theme?: Theme;
   user?: any;
   withNavigation?: boolean;
+  // Renders inside a real Stack.Screen so screens that call
+  // navigation.setOptions (e.g. dynamic headerRight) don't throw.
+  withNavigationScreen?: boolean;
   withSafeArea?: boolean;
   withBottomSheetProvider?: boolean;
+};
+
+// Created lazily so suites that mock @react-navigation/native (and therefore
+// have no real createNavigatorFactory) don't crash merely by importing this
+// module. Only suites opting into withNavigationScreen build the stack.
+let testStack: ReturnType<typeof createStackNavigator> | undefined;
+const getTestStack = () => {
+  if (!testStack) {
+    testStack = createStackNavigator();
+  }
+  return testStack;
 };
 
 const customRender = (
@@ -30,6 +45,7 @@ const customRender = (
     theme = themeFixtures.lightTheme,
     user = userFixture,
     withNavigation = false,
+    withNavigationScreen = false,
     withSafeArea = false,
     withBottomSheetProvider = false,
     ...renderOptions
@@ -42,13 +58,25 @@ const customRender = (
       children
     );
 
-    const withNavigationWrapper = withNavigation ? (
-      <NavigationContainer>
-        {withBottomSheetProviderWrapper}
-      </NavigationContainer>
-    ) : (
-      withBottomSheetProviderWrapper
-    );
+    let withNavigationWrapper: React.ReactNode = withBottomSheetProviderWrapper;
+    if (withNavigationScreen) {
+      const Stack = getTestStack();
+      withNavigationWrapper = (
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen name="TestScreen" options={{headerShown: false}}>
+              {() => withBottomSheetProviderWrapper}
+            </Stack.Screen>
+          </Stack.Navigator>
+        </NavigationContainer>
+      );
+    } else if (withNavigation) {
+      withNavigationWrapper = (
+        <NavigationContainer>
+          {withBottomSheetProviderWrapper}
+        </NavigationContainer>
+      );
+    }
 
     // Sits inside PaperProvider so the MarkdownProvider can read theme,
     // and provides the ambient TRenderEngineProvider/RenderHTMLConfigProvider

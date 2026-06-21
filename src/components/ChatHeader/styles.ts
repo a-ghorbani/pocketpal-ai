@@ -15,16 +15,17 @@ export const createStyles = ({
     container: {
       height: headerHeight,
       paddingTop: insets.top,
+      paddingHorizontal: 16,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       gap: 10,
     },
-    leftSection: {
+    titleSection: {
+      flex: 1,
       flexDirection: 'row',
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: 10,
-      flexShrink: 1,
     },
     menuIcon: {
       height: 40,
@@ -36,9 +37,9 @@ export const createStyles = ({
       elevation: 0,
       shadowOpacity: 0,
       borderBottomWidth: 0,
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.mutedBackground,
     },
     headerWithDivider: {
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.mutedBackground,
     },
   });

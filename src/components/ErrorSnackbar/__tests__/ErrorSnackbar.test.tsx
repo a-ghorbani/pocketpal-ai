@@ -10,6 +10,7 @@ describe('ErrorSnackbar', () => {
   const mockDismiss = jest.fn();
   const mockRetry = jest.fn();
   const mockSettings = jest.fn();
+  const mockReport = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -131,6 +132,51 @@ describe('ErrorSnackbar', () => {
 
     // Check that the error message is displayed
     expect(getByText('Not enough storage space')).toBeTruthy();
+  });
+
+  it('shows Report (not Retry) for a model-init failure', () => {
+    const error: ErrorState = createErrorState(
+      new Error('GGUF load failed'),
+      'modelInit',
+      'localapi',
+      {modelId: 'model-1', modelName: 'basic model'},
+    );
+
+    // A model-init error is recoverable by default, so the Retry branch would
+    // fire if it were not pre-empted. onRetry is passed to prove Report wins.
+    const {getByText, queryByText} = render(
+      <ErrorSnackbar
+        error={error}
+        onDismiss={mockDismiss}
+        onRetry={mockRetry}
+        onReport={mockReport}
+      />,
+    );
+
+    expect(queryByText('Retry')).toBeNull();
+
+    const reportButton = getByText('Report');
+    fireEvent.press(reportButton);
+    expect(mockReport).toHaveBeenCalled();
+    expect(mockRetry).not.toHaveBeenCalled();
+  });
+
+  it('falls back to Dismiss for a model-init failure without onReport', () => {
+    const error: ErrorState = createErrorState(
+      new Error('GGUF load failed'),
+      'modelInit',
+      'localapi',
+      {modelId: 'model-1'},
+    );
+
+    const {getByText, queryByText} = render(
+      <ErrorSnackbar error={error} onDismiss={mockDismiss} />,
+    );
+
+    expect(queryByText('Report')).toBeNull();
+    expect(queryByText('Retry')).toBeNull();
+    fireEvent.press(getByText('Dismiss'));
+    expect(mockDismiss).toHaveBeenCalled();
   });
 
   it('renders unknown error with default icon', () => {

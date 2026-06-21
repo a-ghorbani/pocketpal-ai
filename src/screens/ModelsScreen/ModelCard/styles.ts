@@ -5,160 +5,159 @@ import {Theme} from '../../../utils/types';
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     card: {
-      borderRadius: 24, // Updated to match rounded-3xl (24px)
-      margin: 6,
-      //overflow: 'hidden',
+      borderRadius: theme.radius.l,
+      margin: theme.spacing.xs,
       backgroundColor: theme.colors.background,
       borderColor: theme.colors.outline,
-      borderWidth: 1,
+      borderWidth: theme.stroke.sm,
+    },
+    statusBadges: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.s,
+    },
+    outlinedBadge: {
+      backgroundColor: 'transparent',
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
     },
     cardContent: {
-      paddingBottom: 6,
+      paddingBottom: theme.spacing.xs,
       paddingTop: 0,
-      //paddingHorizontal: 12,
     },
     downloadProgressContainer: {
-      marginHorizontal: 18,
-      marginTop: 6,
-      marginBottom: 12,
+      marginHorizontal: theme.spacing.m,
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
     },
     progressBar: {
-      height: 8,
-      borderRadius: 5,
+      height: theme.spacing.s,
+      borderRadius: theme.radius.xs,
     },
     downloadSpeed: {
+      ...theme.typography.uiS,
       textAlign: 'right',
-      fontSize: 12,
-      marginTop: 4,
+      marginTop: theme.spacing.xs,
     },
-    warningContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 8,
-      marginBottom: 12,
+    advisoryContainer: {
+      paddingHorizontal: theme.spacing.s,
+      marginBottom: theme.spacing.sm,
     },
-    warningContent: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    warningIcon: {
-      margin: 0,
-    },
-    warningText: {
-      color: theme.colors.error,
-      fontSize: 12,
-      flex: 1,
-      flexWrap: 'wrap',
+    advisoryLabel: {
+      alignSelf: 'stretch',
     },
     visionToggleContainer: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 16,
-      padding: 12,
-      gap: 8,
+      borderRadius: theme.radius.ml,
+      padding: theme.spacing.sm,
+      gap: theme.spacing.s,
     },
     compactHeader: {
-      paddingHorizontal: 18,
-      paddingVertical: 12,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.sm,
     },
     headerContent: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: theme.spacing.sm,
     },
-    headerLeft: {
-      flexDirection: 'row',
+    thumbnail: {
+      width: 48,
+      height: 48,
+      borderRadius: theme.radius.m,
+      backgroundColor: theme.colors.surfaceContainer,
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
+      flexShrink: 0,
       alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerColumn: {
       flex: 1,
       minWidth: 0,
-      gap: 10,
+      gap: theme.spacing.xs,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: theme.spacing.s,
     },
     headerRight: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-    },
-    modelTypeIcon: {
+      gap: theme.spacing.s,
       flexShrink: 0,
     },
     compactModelName: {
-      //fontSize: 16,
-      //fontWeight: '600',
+      ...theme.typography.titleS,
       color: theme.colors.onSurface,
       flex: 1,
     },
-    sizeInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginRight: 8,
-    },
     sizeInfoText: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.onSurfaceVariant,
-      marginLeft: 4,
     },
     serverLink: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: 8,
+      marginEnd: theme.spacing.s,
     },
     serverLinkText: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.primary,
-      marginLeft: 4,
+      marginStart: theme.spacing.xs,
       textDecorationLine: 'underline',
     },
     statusDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+      width: theme.spacing.s,
+      height: theme.spacing.s,
+      borderRadius: theme.radius.xs,
     },
     detailsContent: {
-      paddingHorizontal: 18,
-      paddingBottom: 18,
-      gap: 12,
+      paddingHorizontal: theme.spacing.m,
+      paddingBottom: theme.spacing.m,
+      gap: theme.spacing.sm,
     },
     descriptionContainer: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 16, // rounded-2xl
-      padding: 12,
+      borderRadius: theme.radius.ml,
+      padding: theme.spacing.sm,
     },
     descriptionText: {
-      fontSize: 14,
+      ...theme.typography.uiM,
       color: theme.colors.onSurface,
-      lineHeight: 20, // leading-relaxed
     },
     technicalDetailsGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 10,
+      gap: theme.spacing.s,
     },
     technicalDetailCard: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 16, // rounded-2xl
-      padding: 10,
+      borderRadius: theme.radius.ml,
+      padding: theme.spacing.s,
       flex: 1,
-      minWidth: '45%', // Approximate 2-column grid
+      minWidth: '45%',
     },
     technicalDetailLabel: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.onSurfaceVariant,
-      marginBottom: 3,
+      marginBottom: theme.spacing.xxs,
     },
     technicalDetailValue: {
-      fontSize: 14,
-      fontWeight: '500',
+      ...theme.typography.uiM,
       color: theme.colors.onSurface,
     },
     hfLinkButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 12,
-      paddingHorizontal: 12,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.sm,
       backgroundColor: theme.colors.surface,
-      borderRadius: 16, // rounded-2xl
-      borderWidth: 2,
+      borderRadius: theme.radius.ml,
+      borderWidth: theme.stroke.sm,
       borderColor: theme.colors.primaryContainer,
     },
     hfLinkContent: {
@@ -166,29 +165,48 @@ export const createStyles = (theme: Theme) =>
       alignItems: 'center',
     },
     hfLinkText: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.primary,
-      marginLeft: 8,
+      marginStart: theme.spacing.s,
     },
     // Action buttons section
     actionButtonsContainer: {
-      paddingHorizontal: 18,
-      paddingBottom: 12,
+      paddingHorizontal: theme.spacing.m,
+      paddingTop: theme.spacing.sm,
+      paddingBottom: theme.spacing.sm,
+    },
+    actionDivider: {
+      marginHorizontal: theme.spacing.m,
     },
     actionButtonsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8, // gap-2 equivalent
+      gap: theme.spacing.s,
+    },
+    actionButtonsSpacer: {
+      flex: 1,
     },
     primaryActionButton: {
-      flex: 1,
-      borderRadius: 16, // rounded-2xl
-      borderWidth: 1,
-      height: 40,
+      alignSelf: 'flex-start',
+      borderRadius: theme.radius.m,
+      minHeight: 40,
+    },
+    buttonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.s,
+    },
+    buttonLabel: {
+      ...theme.typography.uiM,
+      color: theme.colors.onSecondaryContainer,
+    },
+    buttonLabelDisabled: {
+      color: theme.colors.onSurfaceVariant,
     },
     iconButton: {
-      padding: 10, // p-2.5 equivalent
-      borderRadius: 16, // rounded-2xl
+      padding: theme.spacing.s,
+      borderRadius: theme.radius.m,
       backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',
@@ -203,53 +221,47 @@ export const createStyles = (theme: Theme) =>
     visionToggleLeft: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: theme.spacing.s,
       flex: 1,
     },
     visionToggleLabel: {
-      fontSize: 14,
-      fontWeight: '500',
+      ...theme.typography.uiM,
       color: theme.colors.onSurface,
     },
     visionHelpText: {
-      fontSize: 11,
+      ...theme.typography.uiS,
       color: theme.colors.onSurfaceVariant,
       fontStyle: 'italic',
     },
     projectionModelsContainer: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 16,
-      padding: 12,
+      borderRadius: theme.radius.ml,
+      padding: theme.spacing.sm,
     },
     warningButton: {
-      paddingVertical: 6,
-      paddingHorizontal: 8,
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.s,
       backgroundColor: theme.colors.errorContainer,
-      borderRadius: 6,
-      marginTop: 8,
+      borderRadius: theme.radius.s,
+      marginTop: theme.spacing.s,
     },
     warningButtonText: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.onErrorContainer,
       textAlign: 'center',
     },
-    storageErrorText: {
-      marginHorizontal: 20,
-    },
     fullModelNameContainer: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 16,
-      padding: 12,
+      borderRadius: theme.radius.ml,
+      padding: theme.spacing.sm,
     },
     fullModelNameLabel: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.onSurfaceVariant,
-      marginBottom: 4,
-      fontWeight: '500',
+      marginBottom: theme.spacing.xs,
     },
     fullModelNameText: {
-      fontSize: 14,
+      ...theme.typography.uiM,
       color: theme.colors.onSurface,
-      lineHeight: 20,
     },
   });

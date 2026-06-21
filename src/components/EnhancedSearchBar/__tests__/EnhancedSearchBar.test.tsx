@@ -7,6 +7,8 @@ import {l10n} from '../../../locales';
 // Mock the theme hook
 jest.mock('../../../hooks', () => ({
   useTheme: () => ({
+    ...jest.requireActual('../../../../jest/fixtures/theme').themeFixtures
+      .lightTheme,
     colors: {
       surface: '#ffffff',
       onSurface: '#000000',

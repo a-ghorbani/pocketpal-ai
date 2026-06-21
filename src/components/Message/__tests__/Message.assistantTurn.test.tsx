@@ -795,6 +795,114 @@ describe('Message — AssistantTurn renderer', () => {
       expect(getAllByTestId('assistant-turn-footer')).toHaveLength(1);
     });
 
+    it('footer regenerate/more wire through to the supplied handlers (assistant_turn branch)', () => {
+      const onRegenerate = jest.fn();
+      const onFooterMore = jest.fn();
+      const message = makeDerivedTurn([{content: 'Hi! How can I help?'}], {
+        metadata: {timings: {predicted_per_second: 30}, copyable: true},
+      });
+      const {getByTestId} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          onRegenerate={onRegenerate}
+          onFooterMore={onFooterMore}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      fireEvent.press(getByTestId('footer-regenerate'));
+      expect(onRegenerate).toHaveBeenCalledTimes(1);
+      // The handler receives the (derived-props-excluded) message, not a
+      // raw event — so ChatView can route it into handleTryAgain.
+      expect(onRegenerate.mock.calls[0][0].id).toBe('turn-1');
+
+      fireEvent.press(getByTestId('footer-more'), {
+        nativeEvent: {pageX: 10, pageY: 20},
+      });
+      expect(onFooterMore).toHaveBeenCalledTimes(1);
+      // more → (message, event): message first so the long-press menu
+      // targets this turn; event second so it anchors at the tap.
+      expect(onFooterMore.mock.calls[0][0].id).toBe('turn-1');
+      expect(onFooterMore.mock.calls[0][1]).toBeDefined();
+    });
+
+    it('footer regenerate/more are omitted when no handlers are supplied (existing long-press path unaffected)', () => {
+      const onLongPress = jest.fn();
+      const message = makeDerivedTurn([{content: 'Hello'}], {
+        metadata: {timings: {predicted_per_second: 30}, copyable: true},
+      });
+      const {getByTestId, queryByTestId, UNSAFE_root} = render(
+        <Message
+          message={message}
+          messageWidth={440}
+          onMessageLongPress={onLongPress}
+          onMessagePress={jest.fn()}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      // Footer still renders (copy/timing present) but the net-new
+      // affordances are absent without their handlers.
+      expect(getByTestId('assistant-turn-footer')).toBeTruthy();
+      expect(queryByTestId('footer-regenerate')).toBeNull();
+      expect(queryByTestId('footer-more')).toBeNull();
+      // The pre-existing long-press path is untouched by the new footer.
+      const longPressables = UNSAFE_root.findAll(
+        (n: any) => n.props && typeof n.props.onLongPress === 'function',
+      );
+      expect(longPressables).toHaveLength(1);
+      fireEvent(longPressables[0], 'longPress', {
+        nativeEvent: {pageX: 0, pageY: 0},
+      });
+      expect(onLongPress).toHaveBeenCalledTimes(1);
+      expect(onLongPress.mock.calls[0][0].id).toBe('turn-1');
+    });
+
+    it('footer regenerate/more wire through the legacy assistant text branch too', () => {
+      // Legacy non-turn assistant rows render the footer at the second
+      // render site (Message.tsx text branch). Both sites must thread the
+      // same action props so the affordances work for old persisted rows.
+      const onRegenerate = jest.fn();
+      const onFooterMore = jest.fn();
+      const legacyTextMessage: MessageType.DerivedText = {
+        ...defaultDerivedMessageProps,
+        author,
+        createdAt: 0,
+        id: 'legacy-text-1',
+        type: 'text',
+        text: 'A legacy assistant reply.',
+        metadata: {timings: {predicted_per_second: 30}, copyable: true},
+      };
+      const {getByTestId} = render(
+        <Message
+          message={legacyTextMessage}
+          messageWidth={440}
+          onMessagePress={jest.fn()}
+          onRegenerate={onRegenerate}
+          onFooterMore={onFooterMore}
+          roundBorder
+          showAvatar
+          showName
+          showStatus
+        />,
+      );
+      expect(getByTestId('assistant-turn-footer')).toBeTruthy();
+      fireEvent.press(getByTestId('footer-regenerate'));
+      expect(onRegenerate).toHaveBeenCalledTimes(1);
+      expect(onRegenerate.mock.calls[0][0].id).toBe('legacy-text-1');
+      fireEvent.press(getByTestId('footer-more'), {
+        nativeEvent: {pageX: 5, pageY: 6},
+      });
+      expect(onFooterMore).toHaveBeenCalledTimes(1);
+      expect(onFooterMore.mock.calls[0][0].id).toBe('legacy-text-1');
+    });
+
     it('multi-step turn renders exactly ONE AssistantTurnFooter', () => {
       const message = makeDerivedTurn(
         [

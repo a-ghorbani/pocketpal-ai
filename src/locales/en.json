@@ -206,7 +206,12 @@
       "unknownGroup": "Unknown",
       "availableToUse": "Ready to Use",
       "availableToDownload": "Available to Download",
-      "useAddButtonForMore": "Use + button to find more models"
+      "useAddButtonForMore": "Use + button to find more models",
+      "addAModel": "Add a Model",
+      "tabExplore": "Explore",
+      "tabReadyToUse": "Ready to Use",
+      "chipAllModels": "All Models",
+      "chipHuggingFace": "Hugging Face"
     },
     "vision": "Vision",
     "mmproj": "Projector",
@@ -361,6 +366,12 @@
         "downloadProjectionModel": "Download projection model",
         "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
       },
+      "badges": {
+        "downloaded": "Downloaded",
+        "visionSupport": "Vision Support",
+        "recommended": "Recommended for this model",
+        "loaded": "Loaded"
+      },
       "accessibility": {
         "expandDetails": "Expand details",
         "collapseDetails": "Collapse details",
@@ -512,10 +523,13 @@
     "attachmentButton": {
       "attachmentButtonAccessibilityLabel": "Send media"
     },
+    "assistantTurnFooter": {
+      "regenerateAccessibilityLabel": "Regenerate response",
+      "moreAccessibilityLabel": "More actions"
+    },
     "bubble": {
-      "msPerToken": "{{value}}ms/token",
-      "tokensPerSec": "{{value}} tokens/sec",
-      "ttft": "{{value}}ms TTFT",
+      "tokensPerSecCompact": "{{value}} tok/s",
+      "ttftCompact": "TTFT {{value}}ms",
       "interrupted": "Interrupted",
       "truncated": "Cut off — likely context full"
     },
@@ -565,7 +579,7 @@
       "gettingReadyDescription": "We’ll let you know the moment your pal can chat. Tap the banner up top to see how it’s going."
     },
     "chatInput": {
-      "inputPlaceholder": "Message",
+      "inputPlaceholder": "Start messaging…",
       "thinkingToggle": {
         "enableThinking": "Enable thinking mode",
         "disableThinking": "Disable thinking mode",

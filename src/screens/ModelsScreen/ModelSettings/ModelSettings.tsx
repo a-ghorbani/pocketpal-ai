@@ -2,11 +2,13 @@ import React, {useEffect, useRef, useState, useContext} from 'react';
 import {TextInput as RNTextInput} from 'react-native';
 import {View, Keyboard} from 'react-native';
 
-import {Button, Text, Switch, Chip} from 'react-native-paper';
+import {Text} from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 
 import {Divider, TextInput} from '../../../components';
+import {Button, Switch, Chip} from '../../../components/ui';
+import {XIcon} from '../../../assets/icons';
 
 import {useTheme} from '../../../hooks';
 
@@ -97,9 +99,10 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
   ) => (
     <View>
       <View style={styles.switchContainer}>
-        <Text>{label}</Text>
+        <Text style={styles.switchLabel}>{label}</Text>
         <Switch
           testID={`${testID}-switch`}
+          accessibilityLabel={label}
           value={isEnabled}
           onValueChange={value => onChange(toggleName, value)}
         />
@@ -138,12 +141,13 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
           />
         </MaskedView>
         <Button
+          variant="tertiary"
+          label={l10n.models.modelSettings.template.editButton}
           onPress={() => {
             setLocalChatTemplate(chatTemplate.chatTemplate);
             setDialogVisible(true);
-          }}>
-          {l10n.models.modelSettings.template.editButton}
-        </Button>
+          }}
+        />
       </View>
     </View>
   );
@@ -156,19 +160,27 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
         </Text>
       </View>
 
-      {/* Display existing stop words as chips */}
+      {/* Display existing stop words as removable chips */}
       <View style={styles.stopWordsContainer}>
         {(stopWords ?? []).map((word, index) => (
           <Chip
             key={index}
-            onClose={() => {
+            variant="input"
+            size="s"
+            accessibilityLabel={word}
+            style={styles.stopChip}
+            onPress={() => {
               const newStops = (stopWords ?? []).filter((_, i) => i !== index);
               onStopWordsChange(newStops);
-            }}
-            compact
-            textStyle={styles.stopChipText}
-            style={styles.stopChip}>
-            {word}
+            }}>
+            <View style={styles.stopChipContent}>
+              <Text style={styles.stopChipText}>{word}</Text>
+              <XIcon
+                width={12}
+                height={12}
+                stroke={theme.colors.onSurfaceVariant}
+              />
+            </View>
           </Chip>
         ))}
       </View>
@@ -298,10 +310,10 @@ export const ModelSettings: React.FC<ModelSettingsProps> = ({
         <Sheet.Actions style={styles.actionsContainer}>
           <Button
             testID="template-close-button"
-            mode="contained"
-            onPress={handleSave}>
-            {l10n.models.modelSettings.template.closeButton}
-          </Button>
+            variant="primary"
+            label={l10n.models.modelSettings.template.closeButton}
+            onPress={handleSave}
+          />
         </Sheet.Actions>
       </Sheet>
     </View>

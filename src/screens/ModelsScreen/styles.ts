@@ -8,29 +8,18 @@ export const createStyles = (theme: Theme) =>
     },
     container: {
       flex: 1,
-      padding: 2,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
     },
     listContainer: {
       paddingBottom: 150,
     },
-    header: {
-      paddingVertical: 12,
-      paddingHorizontal: 16,
+    filterChips: {
       flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.outlineVariant,
+      gap: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.sm,
     },
-    filterContainer: {
-      flexDirection: 'row',
-      padding: 4,
-      gap: 1,
-      justifyContent: 'flex-end',
-    },
-    filterIcon: {
-      borderRadius: 8,
-      marginHorizontal: 2,
+    filterChipSelected: {
+      backgroundColor: theme.colors.accent.yellowSubtle,
     },
   });

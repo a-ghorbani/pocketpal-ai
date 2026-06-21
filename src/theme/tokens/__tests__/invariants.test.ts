@@ -128,6 +128,28 @@ describe('design-token grep invariants', () => {
       // Pal-details sheet: reskinned in place onto the token surface
       // alongside the Explore tab (same slice, tokens-only restyle).
       'components/PalsHub/PalDetailSheet',
+      // Models screen reskin: cards consume the radius/stroke axes onto the
+      // canonical Figma token scale.
+      'screens/ModelsScreen',
+      // Model settings sheet reskin: settings form controls consume the
+      // typography axis alongside the Models screen cards.
+      'components/ModelSettingsSheet',
+      // Model load/error/recovery surfaces reskin: the error snackbar,
+      // error report sheet, and chat "no model loaded" prompt consume the
+      // typography/radius axes onto the canonical Figma token scale.
+      'components/ErrorSnackbar',
+      'components/ModelErrorReportSheet',
+      'screens/ChatScreen/ModelNotLoadedMessage',
+      // Chat reskin: the chat surface adopts the typography axis across its
+      // composer, header title, message body, empty state, and tool/thinking
+      // affordances.
+      'components/ChatEmptyPlaceholder',
+      'components/ChatHeaderTitle',
+      'components/ChatInput',
+      'components/MarkdownView',
+      'components/ThinkingBubble',
+      'components/ToolErrorBlock',
+      'components/ToolUsedChip',
     ];
     const files = listFiles(SRC).filter(f => {
       const rel = path.relative(SRC, f).replace(/\\/g, '/');

@@ -3452,6 +3452,30 @@ describe('ModelStore', () => {
       expect(modelStore.isContextLoading).toBe(false);
     });
 
+    it('sets modelLoadError once and does not auto-retry when init fails', async () => {
+      const model = basicModel;
+
+      runInAction(() => {
+        modelStore.modelLoadError = null;
+      });
+
+      initLlamaMock.mockReset();
+      initLlamaMock.mockRejectedValue(new Error('GGUF load failed'));
+
+      await expect(modelStore.initContext(model)).rejects.toThrow(
+        'GGUF load failed',
+      );
+
+      // Failure is surfaced exactly once via modelLoadError, scoped to the
+      // failed load, so the UI can offer a user-initiated retry.
+      expect(modelStore.modelLoadError).not.toBeNull();
+      expect(modelStore.modelLoadError?.context).toBe('modelInit');
+      expect(modelStore.modelLoadError?.metadata?.modelId).toBe(model.id);
+
+      // Crash-loop guard: a failed load never re-enters initLlama on its own.
+      expect(initLlamaMock).toHaveBeenCalledTimes(1);
+    });
+
     it('should return existing context when same model is already loaded', async () => {
       const model = basicModel;
       const mockContext = {

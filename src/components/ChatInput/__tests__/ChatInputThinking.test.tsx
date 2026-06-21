@@ -14,11 +14,21 @@ jest.mock('../../../hooks', () => ({
       primary: '#007AFF',
       onPrimary: '#FFFFFF',
       surface: '#FFFFFF',
+      surfaceVariant: '#EEEEEE',
       onSurface: '#000000',
       inverseOnSurface: '#FFFFFF',
       inverseSurface: '#000000',
       onSurfaceVariant: '#666666',
+      outlineVariant: '#CCCCCC',
+      errorContainer: '#FFDAD6',
+      onErrorContainer: '#410002',
     },
+    typography: {
+      bodyM: {fontFamily: 'Inter-Regular', fontSize: 16, lineHeight: 24},
+      captionM: {fontFamily: 'Inter-Regular', fontSize: 12, lineHeight: 16},
+      uiS: {fontFamily: 'Inter-Medium', fontSize: 12, lineHeight: 16},
+    },
+    spacing: {xs: 4, s: 8, sm: 12, m: 16},
     fonts: {
       inputTextStyle: {
         fontSize: 16,

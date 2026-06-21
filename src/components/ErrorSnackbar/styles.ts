@@ -5,23 +5,19 @@ export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     snackbar: {
       backgroundColor: theme.colors.errorContainer,
+      borderRadius: theme.radius.m,
     },
     content: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     icon: {
-      marginRight: 8,
+      marginEnd: theme.spacing.s,
     },
     message: {
+      ...theme.typography.uiM,
       color: theme.colors.onErrorContainer,
       flex: 1,
-    },
-    action: {
-      marginRight: -8, // Offset Paper's internal padding
-    },
-    actionLabel: {
-      color: theme.colors.primary,
     },
     wrapper: {
       zIndex: 9999,

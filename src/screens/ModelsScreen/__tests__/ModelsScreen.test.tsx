@@ -23,7 +23,7 @@ import {
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {
     withBottomSheetProvider: true,
-    withNavigation: true,
+    withNavigationScreen: true,
     ...options,
   });
 
@@ -428,6 +428,48 @@ describe('ModelsScreen', () => {
       });
     });
 
+    it('tapping the Ready to Use tab writes the downloaded filter', async () => {
+      uiStore.pageStates.modelsScreen.filters = [];
+
+      const {getByTestId} = render(<ModelsScreen />);
+
+      fireEvent.press(getByTestId('ui-tab-item-downloaded'));
+
+      expect(uiStore.setValue).toHaveBeenCalledWith(
+        'modelsScreen',
+        'filters',
+        expect.arrayContaining(['downloaded']),
+      );
+    });
+
+    it('tapping the Hugging Face chip writes the hf filter', async () => {
+      uiStore.pageStates.modelsScreen.filters = [];
+
+      const {getByTestId} = render(<ModelsScreen />);
+
+      fireEvent.press(getByTestId('chip-hugging-face'));
+
+      expect(uiStore.setValue).toHaveBeenCalledWith(
+        'modelsScreen',
+        'filters',
+        expect.arrayContaining(['hf']),
+      );
+    });
+
+    it('tapping the All Models chip clears the hf filter', async () => {
+      uiStore.pageStates.modelsScreen.filters = ['hf'];
+
+      const {getByTestId} = render(<ModelsScreen />);
+
+      fireEvent.press(getByTestId('chip-all-models'));
+
+      expect(uiStore.setValue).toHaveBeenCalledWith(
+        'modelsScreen',
+        'filters',
+        expect.not.arrayContaining(['hf']),
+      );
+    });
+
     it('should group models by type when grouped filter is active', async () => {
       uiStore.pageStates.modelsScreen.filters = ['grouped'];
 
@@ -441,10 +483,12 @@ describe('ModelsScreen', () => {
     it('should group models into ready-to-use and available-to-download when not grouped', async () => {
       uiStore.pageStates.modelsScreen.filters = [];
 
-      const {getByText} = render(<ModelsScreen />);
+      const {getAllByText, getByText} = render(<ModelsScreen />);
 
       await waitFor(() => {
-        expect(getByText('Ready to Use')).toBeTruthy();
+        // "Ready to Use" labels both the Explore/Ready-to-Use tab and the
+        // ready-to-use group header, so more than one node carries it.
+        expect(getAllByText('Ready to Use').length).toBeGreaterThan(0);
         expect(getByText('Available to Download')).toBeTruthy();
       });
     });

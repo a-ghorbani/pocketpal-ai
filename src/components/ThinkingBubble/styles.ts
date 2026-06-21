@@ -75,6 +75,11 @@ export const createStyles = (theme: Theme) => {
       paddingVertical: 6,
       alignItems: 'center',
     },
+    headerLabelGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
     headerText: {
       color: textColor,
       letterSpacing: 0.5,
@@ -137,9 +142,8 @@ export const createStyles = (theme: Theme) => {
       gap: 6,
     },
     collapsedRowLabel: {
-      fontSize: 12,
-      color: textColor,
-      opacity: 0.75,
+      ...theme.typography.captionS,
+      color: theme.colors.foregroundTertiary,
     },
   });
 };

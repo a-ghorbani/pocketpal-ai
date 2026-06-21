@@ -1,14 +1,24 @@
 import {StyleSheet} from 'react-native';
 
-export const createStyles = () =>
+import {Theme} from '../../utils/types';
+
+export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: 8,
+      marginEnd: theme.spacing.s,
     },
     iconButton: {
-      margin: 0,
-      marginHorizontal: 4,
+      marginHorizontal: theme.spacing.xxs,
+    },
+    addModel: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
+    addModelLabel: {
+      ...theme.fonts.titleSmall,
+      color: theme.colors.onSurface,
     },
   });
