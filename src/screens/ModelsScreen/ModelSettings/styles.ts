@@ -86,7 +86,7 @@ export const createStyles = (theme: Theme) =>
       marginBottom: theme.spacing.s,
     },
     stopChip: {
-      marginRight: theme.spacing.xs,
+      marginEnd: theme.spacing.xs,
       marginVertical: theme.spacing.xs,
     },
     stopChipContent: {

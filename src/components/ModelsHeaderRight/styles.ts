@@ -7,15 +7,15 @@ export const createStyles = (theme: Theme) =>
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: 8,
+      marginEnd: theme.spacing.s,
     },
     iconButton: {
-      marginHorizontal: 2,
+      marginHorizontal: theme.spacing.xxs,
     },
     addModel: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: theme.spacing.xs,
     },
     addModelLabel: {
       ...theme.fonts.titleSmall,

@@ -81,22 +81,22 @@ export const createStyles = (theme: Theme) =>
     sizeInfo: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: theme.spacing.s,
+      marginEnd: theme.spacing.s,
     },
     sizeInfoText: {
       ...theme.typography.uiS,
       color: theme.colors.onSurfaceVariant,
-      marginLeft: theme.spacing.xs,
+      marginStart: theme.spacing.xs,
     },
     serverLink: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: theme.spacing.s,
+      marginEnd: theme.spacing.s,
     },
     serverLinkText: {
       ...theme.typography.uiS,
       color: theme.colors.primary,
-      marginLeft: theme.spacing.xs,
+      marginStart: theme.spacing.xs,
       textDecorationLine: 'underline',
     },
     statusDot: {
@@ -157,7 +157,7 @@ export const createStyles = (theme: Theme) =>
     hfLinkText: {
       ...theme.typography.uiS,
       color: theme.colors.primary,
-      marginLeft: theme.spacing.s,
+      marginStart: theme.spacing.s,
     },
     // Action buttons section
     actionButtonsContainer: {
