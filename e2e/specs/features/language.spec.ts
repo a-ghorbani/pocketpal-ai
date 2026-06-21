@@ -21,58 +21,24 @@ declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
 /**
- * Expected translated values for assertion.
- * Keys: screenTitles.settings (navigation header)
- * Values: settings.modelInitializationSettings (first card title)
+ * Expected translated value for assertion: the settings.language label, which
+ * is always visible next to the language selector on the App Settings sub-screen
+ * where the switch happens. Other on-screen chrome (the App Settings nav title)
+ * uses launcher.* keys that are only translated for English so far, so the
+ * always-translated Language label is the stable per-language signal.
  */
-const LANGUAGE_ASSERTIONS: Record<
-  string,
-  {screenTitle: string; firstCardTitle: string}
-> = {
-  en: {
-    screenTitle: 'Settings',
-    firstCardTitle: 'Model Initialization Settings',
-  },
-  fa: {
-    screenTitle: 'تنظیمات',
-    firstCardTitle: 'تنظیمات راه‌اندازی مدل',
-  },
-  he: {
-    screenTitle: 'הגדרות',
-    firstCardTitle: 'הגדרות איתחול מודל',
-  },
-  id: {
-    screenTitle: 'Pengaturan',
-    firstCardTitle: 'Pengaturan Inisialisasi Model',
-  },
-  ja: {
-    screenTitle: '設定',
-    firstCardTitle: 'モデル初期化設定',
-  },
-  ko: {
-    screenTitle: '설정',
-    firstCardTitle: '모델 초기화 설정',
-  },
-  ms: {
-    screenTitle: 'Tetapan',
-    firstCardTitle: 'Tetapan Permulaan Model',
-  },
-  ru: {
-    screenTitle: 'Настройки',
-    firstCardTitle: 'Настройки инициализации модели',
-  },
-  uk: {
-    screenTitle: 'Налаштування',
-    firstCardTitle: 'Налаштування ініціалізації моделі',
-  },
-  zh: {
-    screenTitle: '设置',
-    firstCardTitle: '模型初始化设置',
-  },
-  zh_Hant: {
-    screenTitle: '設定',
-    firstCardTitle: '模型初始化設定',
-  },
+const LANGUAGE_ASSERTIONS: Record<string, {languageLabel: string}> = {
+  en: {languageLabel: 'Language'},
+  fa: {languageLabel: 'زبان'},
+  he: {languageLabel: 'שפה'},
+  id: {languageLabel: 'Bahasa'},
+  ja: {languageLabel: '言語'},
+  ko: {languageLabel: '언어'},
+  ms: {languageLabel: 'Bahasa'},
+  ru: {languageLabel: 'Язык'},
+  uk: {languageLabel: 'Мова'},
+  zh: {languageLabel: '语言'},
+  zh_Hant: {languageLabel: '語系'},
 };
 
 // Order: start with non-English, end with English to restore default state
@@ -109,11 +75,19 @@ describe('Language Switching', () => {
   });
 
   it('should switch between all supported languages', async () => {
-    // Navigate: Chat -> Drawer -> Settings
+    // Navigate: Chat -> Drawer -> Settings launcher
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
     await drawerPage.navigateToSettings();
     await settingsPage.waitForReady();
+
+    // The language selector now lives on the App Settings sub-screen. Push it
+    // once and scroll the selector into view; selecting a language keeps us on
+    // this screen, so subsequent iterations operate in place.
+    const found = await settingsPage.scrollToLanguageSelector();
+    if (!found) {
+      throw new Error('Could not find language selector button after scrolling');
+    }
 
     // Ensure screenshot directory exists
     if (!fs.existsSync(SCREENSHOT_DIR)) {
@@ -125,31 +99,19 @@ describe('Language Switching', () => {
       console.log(`\n--- Switching to: ${lang} ---`);
       const expected = LANGUAGE_ASSERTIONS[lang];
 
-      // Scroll to the language selector
-      const found = await settingsPage.scrollToLanguageSelector();
-      if (!found) {
-        throw new Error(
-          `Could not find language selector button after scrolling`,
-        );
-      }
-
       // Open language menu and select the language
       await settingsPage.openLanguageMenu();
       await settingsPage.selectLanguage(lang);
 
-      // After language change, screen re-renders and scrolls to top.
-      // Assert the navigation header title changed.
-      // Use byStaticText to target text elements only (excludes buttons).
-      // On iOS this avoids matching hidden drawer buttons.
-      // On Android this matches both TextView and View (React Navigation header).
-      const titleElement = browser.$(byStaticText(expected.screenTitle));
-      await titleElement.waitForDisplayed({timeout: 5000});
-      console.log(`  Screen title: "${expected.screenTitle}" - OK`);
-
-      // Assert the first card title changed (visible at top after re-render).
-      const cardTitleElement = browser.$(byStaticText(expected.firstCardTitle));
-      await cardTitleElement.waitForDisplayed({timeout: 5000});
-      console.log(`  First card title: "${expected.firstCardTitle}" - OK`);
+      // After the switch the App Settings screen re-renders in the new language.
+      // Assert the always-translated Language label rendered (the App Settings
+      // nav title uses launcher.* keys only translated for English so far, so
+      // the Language label is the stable per-language signal).
+      // Use byStaticText to target text elements only (excludes buttons); on iOS
+      // this avoids matching hidden buttons, on Android it matches TextView/View.
+      const labelElement = browser.$(byStaticText(expected.languageLabel));
+      await labelElement.waitForDisplayed({timeout: 5000});
+      console.log(`  Language label: "${expected.languageLabel}" - OK`);
 
       // Take screenshot
       await driver.saveScreenshot(
