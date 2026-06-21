@@ -1,14 +1,18 @@
 import React, {useState, useEffect, memo, useContext} from 'react';
-import {Button, Text, Divider} from 'react-native-paper';
+import {Text} from 'react-native-paper';
 
 import {ModelSettings} from '../../screens/ModelsScreen/ModelSettings';
+import {Divider} from '../Divider';
+import {Button, IconButton} from '../ui';
 import {Sheet} from '../Sheet';
 import {ProjectionModelSelector} from '../ProjectionModelSelector';
+import {ChevronDownIcon} from '../../assets/icons';
 import {Model} from '../../utils/types';
 import {modelStore} from '../../store';
 import {chatTemplates} from '../../utils/chat';
+import {useTheme} from '../../hooks';
 
-import {styles} from './styles';
+import {createStyles} from './styles';
 import {View} from 'react-native';
 import {L10nContext} from '../../utils';
 
@@ -28,6 +32,8 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
       model?.stopWords || [],
     );
     const l10n = useContext(L10nContext);
+    const theme = useTheme();
+    const styles = createStyles(theme);
 
     // Reset temp settings when model changes
     useEffect(() => {
@@ -89,8 +95,37 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
       <Sheet
         isVisible={isVisible}
         onClose={handleCancelSettings}
-        title={l10n.components.modelSettingsSheet.modelSettings}
+        showCloseButton={false}
         displayFullHeight>
+        <View style={styles.header}>
+          <View style={styles.headerSide}>
+            <IconButton
+              testID="model-settings-collapse-button"
+              variant="standard"
+              onPress={handleCancelSettings}
+              accessibilityLabel={l10n.common.cancel}
+              icon={
+                <ChevronDownIcon
+                  width={20}
+                  height={20}
+                  stroke={theme.colors.onSurfaceVariant}
+                />
+              }
+            />
+          </View>
+          <Text style={styles.headerTitle}>
+            {l10n.components.modelSettingsSheet.modelSettings}
+          </Text>
+          <View style={[styles.headerSide, styles.headerSideEnd]}>
+            <Button
+              testID="model-settings-reset-button"
+              variant="tertiary"
+              label={l10n.common.reset}
+              onPress={handleReset}
+            />
+          </View>
+        </View>
+        <Divider style={styles.headerDivider} />
         <Sheet.ScrollView
           bottomOffset={16}
           contentContainerStyle={styles.sheetScrollViewContainer}>
@@ -123,17 +158,16 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
           )}
         </Sheet.ScrollView>
         <Sheet.Actions>
-          <View style={styles.secondaryButtons}>
-            <Button mode="text" onPress={handleReset}>
-              {l10n.common.reset}
-            </Button>
-            <Button mode="text" onPress={handleCancelSettings}>
-              {l10n.common.cancel}
-            </Button>
-          </View>
-          <Button mode="contained" onPress={handleSaveSettings}>
-            {l10n.components.modelSettingsSheet.saveChanges}
-          </Button>
+          <Button
+            variant="tertiary"
+            label={l10n.common.cancel}
+            onPress={handleCancelSettings}
+          />
+          <Button
+            variant="primary"
+            label={l10n.components.modelSettingsSheet.saveChanges}
+            onPress={handleSaveSettings}
+          />
         </Sheet.Actions>
       </Sheet>
     );

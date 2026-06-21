@@ -7,6 +7,7 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import {observer} from 'mobx-react-lite';
@@ -16,16 +17,17 @@ import {
   Card,
   Icon,
   ProgressBar,
-  Button,
-  IconButton,
   Text,
-  TouchableRipple,
-  Snackbar,
   Switch,
-  HelperText,
+  Snackbar,
 } from 'react-native-paper';
 
-import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
+import {
+  ProjectionModelSelector,
+  MemoryRequirement,
+  Divider,
+} from '../../../components';
+import {Label, Button, IconButton} from '../../../components/ui';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
@@ -52,12 +54,14 @@ import {
   LinkExternalIcon,
   TrashIcon,
   SettingsIcon,
-  CpuChipIcon,
+  CameraIcon,
   EyeIcon,
-  ChatIcon,
   XIcon,
-  ChevronSelectorVerticalIcon,
-  ChevronSelectorExpandedVerticalIcon,
+  PlayIcon,
+  StopIcon,
+  DownloadIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '../../../assets/icons';
 
 type ChatScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -276,26 +280,25 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       [model.id],
     );
 
-    // Helper function to get model type icon - updated sizes
-    const getModelTypeIcon = () => {
-      if (model.supportsMultimodal) {
-        return (
-          <EyeIcon
-            width={16}
-            height={16}
+    // Leading square thumbnail glyph (placeholder per Figma). Vision-capable
+    // models surface a camera glyph; text models a generic model glyph tint.
+    const renderThumbnail = () => (
+      <View style={styles.thumbnail}>
+        {model.supportsMultimodal ? (
+          <CameraIcon
+            width={20}
+            height={20}
             stroke={theme.colors.iconModelTypeVision}
           />
-        );
-      }
-      // Default to chat icon for text models
-      return (
-        <ChatIcon
-          width={16}
-          height={16}
-          stroke={theme.colors.iconModelTypeText}
-        />
-      );
-    };
+        ) : (
+          <PlayIcon
+            width={20}
+            height={20}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        )}
+      </View>
+    );
 
     // Helper function to get status dot
     const getStatusDot = () => {
@@ -314,6 +317,69 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           ]}
         />
       );
+    };
+
+    // Status badges shown under the title row. Recommended maps to the
+    // device-rule preset provenance (isRulePreset) and shows on not-yet-
+    // downloaded models. The "⚡ tok/s" metric has no backing field and is
+    // omitted (no persisted per-model inference speed).
+    const renderStatusBadges = () => {
+      const badges: React.ReactNode[] = [];
+      if (!isDownloaded && !isRemoteModel && model.isRulePreset) {
+        badges.push(
+          <Label
+            key="recommended"
+            testID="badge-recommended"
+            variant="status-info"
+            size="s"
+            label={l10n.models.modelCard.badges.recommended}
+          />,
+        );
+      }
+      if (isActiveModel) {
+        badges.push(
+          <Label
+            key="loaded"
+            testID="badge-loaded"
+            variant="status-success"
+            size="s"
+            label={l10n.models.modelCard.badges.loaded}
+          />,
+        );
+      } else if (isDownloaded) {
+        badges.push(
+          <Label
+            key="downloaded"
+            testID="badge-downloaded"
+            variant="status-success"
+            size="s"
+            label={l10n.models.modelCard.badges.downloaded}
+          />,
+        );
+      }
+      if (model.supportsMultimodal) {
+        badges.push(
+          <Label
+            key="vision"
+            testID="badge-vision"
+            variant="informational"
+            size="s"
+            style={styles.outlinedBadge}
+            label={l10n.models.modelCard.badges.visionSupport}
+            leadingIcon={
+              <CameraIcon
+                width={12}
+                height={12}
+                stroke={theme.colors.iconModelTypeVision}
+              />
+            }
+          />,
+        );
+      }
+      if (badges.length === 0) {
+        return null;
+      }
+      return <View style={styles.statusBadges}>{badges}</View>;
     };
 
     // Helper function to toggle expanded state with smooth LayoutAnimation
@@ -363,43 +429,92 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       );
     }, [model, l10n, isActiveModel]);
 
+    const renderExpandButton = () => (
+      <IconButton
+        testID="expand-details-button"
+        variant="standard"
+        onPress={toggleExpanded}
+        accessibilityLabel={
+          isExpanded
+            ? l10n.models.modelCard.accessibility.collapseDetails
+            : l10n.models.modelCard.accessibility.expandDetails
+        }
+        icon={
+          isExpanded ? (
+            <ChevronUpIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          ) : (
+            <ChevronDownIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          )
+        }
+      />
+    );
+
+    const renderSettingsButton = () => (
+      <IconButton
+        testID="settings-button"
+        variant="standard"
+        onPress={onOpenSettings}
+        accessibilityLabel={l10n.models.modelCard.buttons.settings}
+        icon={
+          <SettingsIcon
+            width={16}
+            height={16}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        }
+      />
+    );
+
     const renderActionButtons = () => {
-      // Remote models: load/offload + delete
+      // Remote models: delete + load/offload
       if (isRemoteModel) {
         return (
           <View style={styles.actionButtonsRow}>
-            {renderModelLoadButton()}
-            <TouchableOpacity
+            <IconButton
               testID="delete-button"
+              variant="standard"
               onPress={handleRemoteDelete}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={l10n.common.delete}>
-              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
-            </TouchableOpacity>
+              accessibilityLabel={l10n.common.delete}
+              icon={
+                <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+              }
+            />
+            {renderModelLoadButton()}
+            <View style={styles.actionButtonsSpacer} />
+            {renderExpandButton()}
           </View>
         );
       }
 
       if (isDownloading) {
-        // Downloading state - show cancel button
+        // Downloading state - show stop button
         return (
           <View style={styles.actionButtonsRow}>
             <Button
               testID="cancel-button"
-              icon="close"
-              mode="outlined"
+              variant="secondary"
+              accessibilityLabel={l10n.common.stop}
               onPress={() => modelStore.cancelDownload(model.id)}
-              style={[
-                styles.primaryActionButton,
-                {
-                  backgroundColor: theme.colors.errorContainer,
-                  borderColor: theme.colors.error,
-                },
-              ]}
-              textColor={theme.colors.error}>
-              {l10n.common.cancel}
+              style={styles.primaryActionButton}>
+              <View style={styles.buttonContent}>
+                <StopIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSecondaryContainer}
+                />
+                <Text style={styles.buttonLabel}>{l10n.common.stop}</Text>
+              </View>
             </Button>
+            <View style={styles.actionButtonsSpacer} />
+            {renderExpandButton()}
           </View>
         );
       }
@@ -408,131 +523,76 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         // Not downloaded state
         return (
           <View style={styles.actionButtonsRow}>
-            <Button
-              testID="download-button"
-              icon="download"
-              mode="outlined"
-              onPress={() => modelStore.checkSpaceAndDownload(model.id)}
-              disabled={!storageOk}
-              style={[
-                styles.primaryActionButton,
-                storageOk
-                  ? {
-                      backgroundColor: theme.colors.btnDownloadBg,
-                      borderColor: theme.colors.btnDownloadBorder,
-                    }
-                  : {
-                      backgroundColor: theme.colors.surfaceDim,
-                      borderColor: theme.colors.outline,
-                    },
-              ]}
-              textColor={theme.colors.btnDownloadText}>
-              {l10n.models.modelCard.buttons.download}
-            </Button>
-
-            <TouchableOpacity
-              testID="settings-button"
-              onPress={onOpenSettings}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={l10n.models.modelCard.buttons.settings}>
-              <SettingsIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
-
             {isHfModel && (
-              <TouchableOpacity
+              <IconButton
                 testID="remove-model-button"
+                variant="standard"
                 onPress={handleRemove}
-                style={styles.iconButton}
-                accessibilityRole="button"
-                accessibilityLabel={l10n.models.modelCard.buttons.remove}>
-                <XIcon width={20} height={20} stroke={theme.colors.error} />
-              </TouchableOpacity>
+                accessibilityLabel={l10n.models.modelCard.buttons.remove}
+                icon={
+                  <TrashIcon
+                    width={16}
+                    height={16}
+                    stroke={theme.colors.error}
+                  />
+                }
+              />
             )}
 
-            <TouchableOpacity
-              testID="expand-details-button"
-              onPress={toggleExpanded}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isExpanded
-                  ? l10n.models.modelCard.accessibility.collapseDetails
-                  : l10n.models.modelCard.accessibility.expandDetails
-              }>
-              {isExpanded ? (
-                <ChevronSelectorExpandedVerticalIcon
+            {renderSettingsButton()}
+
+            <Button
+              testID="download-button"
+              variant="secondary"
+              disabled={!storageOk}
+              accessibilityLabel={l10n.models.modelCard.buttons.download}
+              onPress={() => modelStore.checkSpaceAndDownload(model.id)}
+              style={styles.primaryActionButton}>
+              <View style={styles.buttonContent}>
+                <DownloadIcon
                   width={16}
                   height={16}
-                  stroke={theme.colors.onSurfaceVariant}
+                  stroke={
+                    storageOk
+                      ? theme.colors.onSecondaryContainer
+                      : theme.colors.onSurfaceVariant
+                  }
                 />
-              ) : (
-                <ChevronSelectorVerticalIcon
-                  width={16}
-                  height={16}
-                  stroke={theme.colors.onSurfaceVariant}
-                />
-              )}
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.buttonLabel,
+                    !storageOk && styles.buttonLabelDisabled,
+                  ]}>
+                  {l10n.models.modelCard.buttons.download}
+                </Text>
+              </View>
+            </Button>
+
+            <View style={styles.actionButtonsSpacer} />
+            {renderExpandButton()}
           </View>
         );
       }
 
-      // Downloaded state - soft blue styling
+      // Downloaded state
       return (
         <View style={styles.actionButtonsRow}>
+          <IconButton
+            testID="delete-button"
+            variant="standard"
+            onPress={() => handleDelete()}
+            accessibilityLabel={l10n.common.delete}
+            icon={
+              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+            }
+          />
+
+          {renderSettingsButton()}
+
           {renderModelLoadButton()}
 
-          <TouchableOpacity
-            testID="settings-button"
-            onPress={onOpenSettings}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.models.modelCard.buttons.settings}>
-            <SettingsIcon
-              width={16}
-              height={16}
-              stroke={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="delete-button"
-            onPress={() => handleDelete()}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.common.delete}>
-            <TrashIcon width={16} height={16} stroke={theme.colors.error} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="expand-details-button"
-            onPress={toggleExpanded}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isExpanded
-                ? l10n.models.modelCard.accessibility.collapseDetails
-                : l10n.models.modelCard.accessibility.expandDetails
-            }>
-            {isExpanded ? (
-              <ChevronSelectorExpandedVerticalIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            ) : (
-              <ChevronSelectorVerticalIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            )}
-          </TouchableOpacity>
+          <View style={styles.actionButtonsSpacer} />
+          {renderExpandButton()}
         </View>
       );
     };
@@ -545,17 +605,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         return (
           <Button
             testID="loading-indicator"
+            variant="secondary"
             disabled={true}
-            loading={true}
-            style={[
-              styles.primaryActionButton,
-              {
-                backgroundColor: theme.colors.btnPrimaryBg,
-                borderColor: theme.colors.btnPrimaryBorder,
-              },
-            ]}
-            textColor={theme.colors.btnPrimaryText}>
-            {''}
+            accessibilityLabel={l10n.models.modelCard.buttons.load}
+            style={styles.primaryActionButton}>
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.onSurfaceVariant}
+            />
           </Button>
         );
       }
@@ -575,43 +632,33 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         }
       };
 
-      const getButtonText = () => {
-        if (isActiveModel) {
-          return l10n.models.modelCard.buttons.offload;
-        }
-        return l10n.models.modelCard.buttons.load;
-      };
-
-      const getButtonStyle = () => {
-        if (isActiveModel) {
-          return {
-            backgroundColor: theme.colors.btnReadyBg,
-            borderColor: theme.colors.btnReadyBorder,
-          };
-        }
-        return {
-          backgroundColor: theme.colors.btnPrimaryBg,
-          borderColor: theme.colors.btnPrimaryBorder,
-        };
-      };
-
-      const getTextColor = () => {
-        if (isActiveModel) {
-          return theme.colors.btnReadyText;
-        }
-        return theme.colors.btnPrimaryText;
-      };
+      const label = isActiveModel
+        ? l10n.models.modelCard.buttons.offload
+        : l10n.models.modelCard.buttons.load;
 
       return (
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
+          variant="secondary"
           accessibilityLabel={isActiveModel ? 'Offload model' : 'Load model'}
-          icon={isActiveModel ? 'eject' : 'play-circle-outline'}
-          //mode="contained-tonal"
           onPress={handlePress}
-          style={[styles.primaryActionButton, getButtonStyle()]}
-          textColor={getTextColor()}>
-          {getButtonText()}
+          style={styles.primaryActionButton}>
+          <View style={styles.buttonContent}>
+            {isActiveModel ? (
+              <XIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSecondaryContainer}
+              />
+            ) : (
+              <PlayIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSecondaryContainer}
+              />
+            )}
+            <Text style={styles.buttonLabel}>{label}</Text>
+          </View>
         </Button>
       );
     };
@@ -625,102 +672,95 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           {/* Compact Header */}
           <View style={styles.compactHeader}>
             <View style={styles.headerContent}>
-              <View style={styles.headerLeft}>
-                <View style={styles.modelTypeIcon}>{getModelTypeIcon()}</View>
-                <Text
-                  variant="titleSmall"
-                  style={styles.compactModelName}
-                  numberOfLines={1}
-                  ellipsizeMode="middle">
-                  {model.name}
-                </Text>
-              </View>
-              <View style={styles.headerRight}>
-                {isRemoteModel ? (
-                  <TouchableOpacity
-                    testID="server-link"
-                    onPress={() => {
-                      if (model.serverId && onOpenServerDetails) {
-                        onOpenServerDetails(model.serverId);
-                      }
-                    }}
-                    style={styles.serverLink}>
-                    <Icon
-                      source="cloud-outline"
-                      size={12}
-                      color={theme.colors.primary}
-                    />
-                    <Text style={styles.serverLinkText}>
-                      {model.serverName || 'Remote'}
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.sizeInfo}>
-                    <CpuChipIcon
-                      width={10}
-                      height={10}
-                      stroke={theme.colors.onSurfaceVariant}
-                    />
-                    <Text style={styles.sizeInfoText}>
-                      {getModelSizeString(model, isActiveModel, l10n)}
-                    </Text>
+              {renderThumbnail()}
+              <View style={styles.headerColumn}>
+                <View style={styles.titleRow}>
+                  <Text
+                    style={styles.compactModelName}
+                    numberOfLines={1}
+                    ellipsizeMode="middle">
+                    {model.name}
+                  </Text>
+                  <View style={styles.headerRight}>
+                    {isRemoteModel ? (
+                      <TouchableOpacity
+                        testID="server-link"
+                        onPress={() => {
+                          if (model.serverId && onOpenServerDetails) {
+                            onOpenServerDetails(model.serverId);
+                          }
+                        }}
+                        style={styles.serverLink}>
+                        <Icon
+                          source="cloud-outline"
+                          size={12}
+                          color={theme.colors.primary}
+                        />
+                        <Text style={styles.serverLinkText}>
+                          {model.serverName || 'Remote'}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.sizeInfoText}>
+                        {getModelSizeString(model, isActiveModel, l10n)}
+                      </Text>
+                    )}
+                    {getStatusDot()}
                   </View>
-                )}
-                {getStatusDot()}
+                </View>
+                {renderStatusBadges()}
               </View>
             </View>
           </View>
 
           {/* Content */}
           <View style={styles.cardContent}>
-            {/* Storage Error Display */}
+            {/* Pre-load advisory: insufficient storage */}
             {!isRemoteModel && !storageOk && !isDownloaded && (
-              <HelperText
-                testID="storage-error-text"
-                type="error"
-                visible={!storageOk}
-                padding="none"
-                style={styles.storageErrorText}>
-                {storageNOkMessage}
-              </HelperText>
+              <View style={styles.advisoryContainer}>
+                <Label
+                  testID="storage-error-text"
+                  variant="status-warning"
+                  size="s"
+                  style={styles.advisoryLabel}
+                  label={storageNOkMessage}
+                />
+              </View>
             )}
 
-            {/* Display warnings */}
+            {/* Pre-load advisory: low memory / multimodal mismatch */}
             {!isRemoteModel &&
               (shortMemoryWarning || multimodalWarning) &&
               isDownloaded && (
-                <TouchableRipple
+                <TouchableOpacity
                   testID="memory-warning-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    l10n.models.modelCard.accessibility.memoryWarningButton
+                  }
                   onPress={handleWarningPress}
-                  style={styles.warningContainer}>
-                  <View style={styles.warningContent}>
-                    <IconButton
-                      icon="alert-circle-outline"
-                      iconColor={theme.colors.error}
-                      size={20}
-                      style={styles.warningIcon}
-                    />
-                    <Text style={styles.warningText}>
-                      {shortMemoryWarning || multimodalWarning}
-                    </Text>
-                  </View>
-                </TouchableRipple>
+                  style={styles.advisoryContainer}>
+                  <Label
+                    variant="status-warning"
+                    size="s"
+                    style={styles.advisoryLabel}
+                    label={shortMemoryWarning || multimodalWarning || ''}
+                  />
+                </TouchableOpacity>
               )}
 
+            {/* Pre-load advisory: file integrity */}
             {!isRemoteModel && integrityError && (
-              <TouchableRipple
+              <View
                 testID="integrity-warning-button"
-                style={styles.warningContainer}>
-                <View style={styles.warningContent}>
-                  <IconButton
-                    icon="alert-circle-outline"
-                    iconColor={theme.colors.error}
-                    size={20}
-                    style={styles.warningIcon}
-                  />
-                  <Text style={styles.warningText}>{integrityError}</Text>
-                </View>
-              </TouchableRipple>
+                style={styles.advisoryContainer}>
+                <Label
+                  variant="status-warning"
+                  size="s"
+                  style={styles.advisoryLabel}
+                  label={integrityError}
+                />
+              </View>
             )}
 
             {/* Download Progress */}
@@ -740,7 +780,8 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               </View>
             )}
 
-            {/* Action Buttons Section */}
+            {/* Action Buttons Section — divider above a left-aligned row */}
+            <Divider style={styles.actionDivider} />
             <View style={styles.actionButtonsContainer}>
               {renderActionButtons()}
             </View>

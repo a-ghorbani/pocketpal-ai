@@ -3,7 +3,7 @@ import React, {useContext, useState, useEffect, useCallback} from 'react';
 
 import {ContextParams} from 'llama.rn';
 import DeviceInfo from 'react-native-device-info';
-import {Text, Button, Checkbox, ActivityIndicator} from 'react-native-paper';
+import {Text, Checkbox, ActivityIndicator} from 'react-native-paper';
 
 import {submitModelLoadErrorReport} from '../../api/feedback';
 
@@ -14,6 +14,7 @@ import {createStyles} from './styles';
 import {ErrorState, L10nContext, formatBytes} from '../../utils';
 
 import {Sheet, TextInput} from '..';
+import {Button} from '../ui';
 
 interface ModelErrorReportSheetProps {
   isVisible: boolean;
@@ -314,21 +315,24 @@ export const ModelErrorReportSheet: React.FC<ModelErrorReportSheetProps> = ({
       <Sheet.Actions>
         <View style={styles.actionsContainer}>
           <Button
-            mode="outlined"
+            variant="tertiary"
+            label={l10n.common.cancel}
             onPress={handleClose}
             disabled={isSubmitting}
-            style={styles.button}>
-            {l10n.common.cancel}
-          </Button>
+            style={styles.button}
+          />
           <Button
-            mode="contained"
+            variant="primary"
+            accessibilityLabel={l10n.components.modelErrorReportSheet.submit}
             onPress={handleSubmit}
             disabled={isSubmitting}
             style={styles.button}>
             {isSubmitting ? (
-              <ActivityIndicator size="small" />
+              <ActivityIndicator size="small" color={theme.colors.onPrimary} />
             ) : (
-              l10n.components.modelErrorReportSheet.submit
+              <Text style={styles.submitLabel}>
+                {l10n.components.modelErrorReportSheet.submit}
+              </Text>
             )}
           </Button>
         </View>

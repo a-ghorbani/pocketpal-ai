@@ -4,8 +4,10 @@ import {Linking, Alert} from 'react-native';
 import {render, fireEvent, waitFor, act} from '../../../../../jest/test-utils';
 import {
   basicModel,
+  createModel,
   downloadedModel,
   downloadingModel,
+  largeDiskModel,
   largeMemoryModel,
   remoteModel,
 } from '../../../../../jest/fixtures/models';
@@ -48,6 +50,71 @@ describe('ModelCard', () => {
     const {getByText} = customRender(<ModelCard model={basicModel} />);
     await waitFor(() => {
       expect(getByText(basicModel.name)).toBeTruthy();
+    });
+  });
+
+  describe('Status badges', () => {
+    it('shows the Recommended badge for a device-rule preset not yet downloaded', async () => {
+      const model = createModel({
+        id: 'rec-1',
+        name: 'recommended model',
+        isDownloaded: false,
+        isLocal: false,
+        isRulePreset: true,
+      });
+      const {getByTestId} = customRender(<ModelCard model={model} />);
+      await waitFor(() => {
+        expect(getByTestId('badge-recommended')).toBeTruthy();
+      });
+    });
+
+    it('hides the Recommended badge when the model is not a rule preset', async () => {
+      const model = createModel({
+        id: 'rec-2',
+        name: 'plain model',
+        isDownloaded: false,
+        isLocal: false,
+        isRulePreset: false,
+      });
+      const {queryByTestId} = customRender(<ModelCard model={model} />);
+      await waitFor(() => {
+        expect(queryByTestId('badge-recommended')).toBeNull();
+      });
+    });
+
+    it('hides the Recommended badge once a rule preset is downloaded', async () => {
+      const model = createModel({
+        id: 'rec-3',
+        name: 'downloaded preset',
+        isDownloaded: true,
+        isLocal: false,
+        isRulePreset: true,
+      });
+      const {queryByTestId} = customRender(<ModelCard model={model} />);
+      await waitFor(() => {
+        expect(queryByTestId('badge-recommended')).toBeNull();
+        // Downloaded models surface the Downloaded badge instead.
+        expect(queryByTestId('badge-downloaded')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('Storage advisory', () => {
+    it('shows the storage warning when a downloadable model needs more space', async () => {
+      const {getByTestId} = customRender(<ModelCard model={largeDiskModel} />);
+      await waitFor(() => {
+        expect(getByTestId('storage-error-text')).toBeTruthy();
+      });
+    });
+
+    it('skips the storage warning for remote models', async () => {
+      const {getByText, queryByTestId} = customRender(
+        <ModelCard model={remoteModel} />,
+      );
+      await waitFor(() => {
+        expect(getByText(remoteModel.name)).toBeTruthy();
+      });
+      expect(queryByTestId('storage-error-text')).toBeNull();
     });
   });
 
