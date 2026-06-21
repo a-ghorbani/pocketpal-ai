@@ -46,6 +46,7 @@ export const RootStack: React.FC<RootStackProps> = ({
         headerStyle: styles.headerWithoutDivider,
         headerTintColor: theme.colors.onBackground,
         headerTitleStyle: styles.headerTitle,
+        headerBackButtonDisplayMode: 'minimal',
       }}>
       <Stack.Screen
         name="MainTabs"
