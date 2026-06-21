@@ -121,8 +121,9 @@ describe('design-token grep invariants', () => {
       'components/DownloadOverlay',
       'components/DownloadProgressCard',
       // App-shell tab roots: the new Home screen (serif headline) and the
-      // Explore placeholder consume the typography axis as the first
-      // feature surfaces under the bottom-tab navigation.
+      // Explore tab consume the typography axis as the first feature
+      // surfaces under the bottom-tab navigation. The Explore prefix also
+      // covers the pal-search overlay surface (overlay + result row).
       'screens/HomeScreen',
       'screens/ExploreScreen',
       // Pal-details sheet: reskinned in place onto the token surface
