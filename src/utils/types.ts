@@ -589,6 +589,8 @@ export type RootStackParamList = {
   'Pals (experimental)': undefined;
   Benchmark: undefined;
   Settings: undefined;
+  Preferences: undefined;
+  'App Settings': undefined;
   'App Info': undefined;
   'Dev Tools': undefined;
   BenchmarkRunner: undefined;

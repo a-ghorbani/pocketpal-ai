@@ -6,6 +6,8 @@ export const ROUTES = {
   PALS: 'Pals (experimental)',
   BENCHMARK: 'Benchmark',
   SETTINGS: 'Settings',
+  PREFERENCES: 'Preferences',
+  APP_SETTINGS: 'App Settings',
   APP_INFO: 'App Info',
 
   // Dev tools route. Only available in debug mode.
