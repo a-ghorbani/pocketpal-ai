@@ -35,9 +35,11 @@ describe('SettingsScreen (launcher)', () => {
     ).toBeNull();
   });
 
-  it('Create Account CTA is inert (no navigation on press)', () => {
+  it('Create Account CTA is disabled (honest inert affordance, no navigation)', () => {
     const {getByTestId} = render(<SettingsScreen />);
-    fireEvent.press(getByTestId('settings-create-account'));
+    const cta = getByTestId('settings-create-account');
+    expect(cta.props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(cta);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

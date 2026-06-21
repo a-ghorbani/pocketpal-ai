@@ -110,6 +110,7 @@ export const SettingsScreen: React.FC = observer(() => {
             <Button
               testID="settings-create-account"
               variant="secondary"
+              disabled
               style={styles.ctaButton}
               label={l10n.settings.launcher.createAccountButton}
               accessibilityLabel={l10n.settings.launcher.createAccountButton}
