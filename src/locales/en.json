@@ -1521,5 +1521,32 @@
     "emptyHint": "Select a pal or model, then start typing. Your conversations will appear here.",
     "sendLabel": "Send message",
     "searchLabel": "Search chats"
+  },
+  "explore": {
+    "title": "Explore",
+    "promoTitle": "Get your pals",
+    "promoSubtitle": "Log in to your account to access the pals you already own on the website.",
+    "promoAction": "Log in to Palshub",
+    "tabPals": "Pals",
+    "tabModels": "Models",
+    "modelsComingSoon": "Models discovery is coming soon.",
+    "categories": "Categories",
+    "priceRange": "Price Range",
+    "popularTags": "Popular Tags",
+    "availablePals": "Available Pals",
+    "mostRelevant": "Most Relevant",
+    "searchPlaceholder": "Search pals…",
+    "searchLabel": "Search pals",
+    "noPalsFound": "No Pals found",
+    "reachedTheEndTitle": "You've reached the end",
+    "reachedTheEndSubtitle": "You'll be seeing new pals here after a while. You can browse pals at Palshub as well.",
+    "browseOnPalshub": "Browse Pals on Palshub",
+    "getPal": "Get Pal",
+    "free": "Free",
+    "apply": "Apply",
+    "clearFilters": "Clear",
+    "loginRequiredTitle": "Create an Account",
+    "loginRequiredMessage": "To get the pal, create or log in to your account and make a purchase first.",
+    "loginRequiredAction": "Log in"
   }
 }
