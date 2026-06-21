@@ -666,7 +666,6 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               <View style={styles.headerLeft}>
                 <View style={styles.modelTypeIcon}>{getModelTypeIcon()}</View>
                 <Text
-                  variant="titleSmall"
                   style={styles.compactModelName}
                   numberOfLines={1}
                   ellipsizeMode="middle">
