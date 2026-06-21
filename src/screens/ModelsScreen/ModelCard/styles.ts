@@ -188,13 +188,25 @@ export const createStyles = (theme: Theme) =>
     },
     primaryActionButton: {
       flex: 1,
-      borderRadius: 16, // rounded-2xl
-      borderWidth: 1,
-      height: 40,
+      borderRadius: theme.radius.m,
+      minHeight: 40,
+    },
+    buttonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.s,
+    },
+    buttonLabel: {
+      ...theme.typography.uiM,
+      color: theme.colors.onSecondaryContainer,
+    },
+    buttonLabelDisabled: {
+      color: theme.colors.onSurfaceVariant,
     },
     iconButton: {
-      padding: 10, // p-2.5 equivalent
-      borderRadius: 16, // rounded-2xl
+      padding: theme.spacing.s,
+      borderRadius: theme.radius.m,
       backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',

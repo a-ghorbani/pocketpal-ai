@@ -7,6 +7,7 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import {observer} from 'mobx-react-lite';
@@ -16,17 +17,16 @@ import {
   Card,
   Icon,
   ProgressBar,
-  Button,
-  IconButton,
   Text,
+  Switch,
   TouchableRipple,
   Snackbar,
-  Switch,
   HelperText,
+  IconButton as PaperIconButton,
 } from 'react-native-paper';
 
 import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
-import {Label} from '../../../components/ui';
+import {Label, Button, IconButton} from '../../../components/ui';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
@@ -57,6 +57,9 @@ import {
   EyeIcon,
   ChatIcon,
   XIcon,
+  PlayIcon,
+  StopIcon,
+  DownloadIcon,
   ChevronSelectorVerticalIcon,
   ChevronSelectorExpandedVerticalIcon,
 } from '../../../assets/icons';
@@ -317,11 +320,23 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       );
     };
 
-    // Status badges shown under the title row (only those with backing data:
-    // Downloaded, Vision Support, Loaded). Note: the Figma "Recommended"
-    // badge and the "⚡ tok/s" metric have no backing field and are omitted.
+    // Status badges shown under the title row. Recommended maps to the
+    // device-rule preset provenance (isRulePreset) and shows on not-yet-
+    // downloaded models. The "⚡ tok/s" metric has no backing field and is
+    // omitted (no persisted per-model inference speed).
     const renderStatusBadges = () => {
       const badges: React.ReactNode[] = [];
+      if (!isDownloaded && !isRemoteModel && model.isRulePreset) {
+        badges.push(
+          <Label
+            key="recommended"
+            testID="badge-recommended"
+            variant="informational"
+            size="s"
+            label={l10n.models.modelCard.badges.recommended}
+          />,
+        );
+      }
       if (isActiveModel) {
         badges.push(
           <Label
@@ -414,43 +429,89 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
       );
     }, [model, l10n, isActiveModel]);
 
+    const renderExpandButton = () => (
+      <IconButton
+        testID="expand-details-button"
+        variant="standard"
+        onPress={toggleExpanded}
+        accessibilityLabel={
+          isExpanded
+            ? l10n.models.modelCard.accessibility.collapseDetails
+            : l10n.models.modelCard.accessibility.expandDetails
+        }
+        icon={
+          isExpanded ? (
+            <ChevronSelectorExpandedVerticalIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          ) : (
+            <ChevronSelectorVerticalIcon
+              width={16}
+              height={16}
+              stroke={theme.colors.onSurfaceVariant}
+            />
+          )
+        }
+      />
+    );
+
+    const renderSettingsButton = () => (
+      <IconButton
+        testID="settings-button"
+        variant="standard"
+        onPress={onOpenSettings}
+        accessibilityLabel={l10n.models.modelCard.buttons.settings}
+        icon={
+          <SettingsIcon
+            width={16}
+            height={16}
+            stroke={theme.colors.onSurfaceVariant}
+          />
+        }
+      />
+    );
+
     const renderActionButtons = () => {
       // Remote models: load/offload + delete
       if (isRemoteModel) {
         return (
           <View style={styles.actionButtonsRow}>
             {renderModelLoadButton()}
-            <TouchableOpacity
+            <IconButton
               testID="delete-button"
+              variant="standard"
               onPress={handleRemoteDelete}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={l10n.common.delete}>
-              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
-            </TouchableOpacity>
+              accessibilityLabel={l10n.common.delete}
+              icon={
+                <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+              }
+            />
           </View>
         );
       }
 
       if (isDownloading) {
-        // Downloading state - show cancel button
+        // Downloading state - show stop button
         return (
           <View style={styles.actionButtonsRow}>
             <Button
               testID="cancel-button"
-              icon="close"
-              mode="outlined"
+              variant="secondary"
+              accessibilityLabel={l10n.common.stop}
               onPress={() => modelStore.cancelDownload(model.id)}
-              style={[
-                styles.primaryActionButton,
-                {
-                  backgroundColor: theme.colors.errorContainer,
-                  borderColor: theme.colors.error,
-                },
-              ]}
-              textColor={theme.colors.error}>
-              {l10n.common.cancel}
+              style={styles.primaryActionButton}>
+              <View style={styles.buttonContent}>
+                <StopIcon
+                  width={16}
+                  height={16}
+                  stroke={theme.colors.onSecondaryContainer}
+                />
+                <Text style={styles.buttonLabel}>{l10n.common.stop}</Text>
+              </View>
             </Button>
+            {renderExpandButton()}
           </View>
         );
       }
@@ -461,129 +522,68 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           <View style={styles.actionButtonsRow}>
             <Button
               testID="download-button"
-              icon="download"
-              mode="outlined"
-              onPress={() => modelStore.checkSpaceAndDownload(model.id)}
+              variant="secondary"
               disabled={!storageOk}
-              style={[
-                styles.primaryActionButton,
-                storageOk
-                  ? {
-                      backgroundColor: theme.colors.btnDownloadBg,
-                      borderColor: theme.colors.btnDownloadBorder,
-                    }
-                  : {
-                      backgroundColor: theme.colors.surfaceDim,
-                      borderColor: theme.colors.outline,
-                    },
-              ]}
-              textColor={theme.colors.btnDownloadText}>
-              {l10n.models.modelCard.buttons.download}
+              accessibilityLabel={l10n.models.modelCard.buttons.download}
+              onPress={() => modelStore.checkSpaceAndDownload(model.id)}
+              style={styles.primaryActionButton}>
+              <View style={styles.buttonContent}>
+                <DownloadIcon
+                  width={16}
+                  height={16}
+                  stroke={
+                    storageOk
+                      ? theme.colors.onSecondaryContainer
+                      : theme.colors.onSurfaceVariant
+                  }
+                />
+                <Text
+                  style={[
+                    styles.buttonLabel,
+                    !storageOk && styles.buttonLabelDisabled,
+                  ]}>
+                  {l10n.models.modelCard.buttons.download}
+                </Text>
+              </View>
             </Button>
 
-            <TouchableOpacity
-              testID="settings-button"
-              onPress={onOpenSettings}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={l10n.models.modelCard.buttons.settings}>
-              <SettingsIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
+            {renderSettingsButton()}
 
             {isHfModel && (
-              <TouchableOpacity
+              <IconButton
                 testID="remove-model-button"
+                variant="standard"
                 onPress={handleRemove}
-                style={styles.iconButton}
-                accessibilityRole="button"
-                accessibilityLabel={l10n.models.modelCard.buttons.remove}>
-                <XIcon width={20} height={20} stroke={theme.colors.error} />
-              </TouchableOpacity>
+                accessibilityLabel={l10n.models.modelCard.buttons.remove}
+                icon={
+                  <XIcon width={20} height={20} stroke={theme.colors.error} />
+                }
+              />
             )}
 
-            <TouchableOpacity
-              testID="expand-details-button"
-              onPress={toggleExpanded}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isExpanded
-                  ? l10n.models.modelCard.accessibility.collapseDetails
-                  : l10n.models.modelCard.accessibility.expandDetails
-              }>
-              {isExpanded ? (
-                <ChevronSelectorExpandedVerticalIcon
-                  width={16}
-                  height={16}
-                  stroke={theme.colors.onSurfaceVariant}
-                />
-              ) : (
-                <ChevronSelectorVerticalIcon
-                  width={16}
-                  height={16}
-                  stroke={theme.colors.onSurfaceVariant}
-                />
-              )}
-            </TouchableOpacity>
+            {renderExpandButton()}
           </View>
         );
       }
 
-      // Downloaded state - soft blue styling
+      // Downloaded state
       return (
         <View style={styles.actionButtonsRow}>
           {renderModelLoadButton()}
 
-          <TouchableOpacity
-            testID="settings-button"
-            onPress={onOpenSettings}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.models.modelCard.buttons.settings}>
-            <SettingsIcon
-              width={16}
-              height={16}
-              stroke={theme.colors.onSurfaceVariant}
-            />
-          </TouchableOpacity>
+          {renderSettingsButton()}
 
-          <TouchableOpacity
+          <IconButton
             testID="delete-button"
+            variant="standard"
             onPress={() => handleDelete()}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={l10n.common.delete}>
-            <TrashIcon width={16} height={16} stroke={theme.colors.error} />
-          </TouchableOpacity>
+            accessibilityLabel={l10n.common.delete}
+            icon={
+              <TrashIcon width={16} height={16} stroke={theme.colors.error} />
+            }
+          />
 
-          <TouchableOpacity
-            testID="expand-details-button"
-            onPress={toggleExpanded}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isExpanded
-                ? l10n.models.modelCard.accessibility.collapseDetails
-                : l10n.models.modelCard.accessibility.expandDetails
-            }>
-            {isExpanded ? (
-              <ChevronSelectorExpandedVerticalIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            ) : (
-              <ChevronSelectorVerticalIcon
-                width={16}
-                height={16}
-                stroke={theme.colors.onSurfaceVariant}
-              />
-            )}
-          </TouchableOpacity>
+          {renderExpandButton()}
         </View>
       );
     };
@@ -596,17 +596,14 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         return (
           <Button
             testID="loading-indicator"
+            variant="secondary"
             disabled={true}
-            loading={true}
-            style={[
-              styles.primaryActionButton,
-              {
-                backgroundColor: theme.colors.btnPrimaryBg,
-                borderColor: theme.colors.btnPrimaryBorder,
-              },
-            ]}
-            textColor={theme.colors.btnPrimaryText}>
-            {''}
+            accessibilityLabel={l10n.models.modelCard.buttons.load}
+            style={styles.primaryActionButton}>
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.onSurfaceVariant}
+            />
           </Button>
         );
       }
@@ -626,43 +623,33 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
         }
       };
 
-      const getButtonText = () => {
-        if (isActiveModel) {
-          return l10n.models.modelCard.buttons.offload;
-        }
-        return l10n.models.modelCard.buttons.load;
-      };
-
-      const getButtonStyle = () => {
-        if (isActiveModel) {
-          return {
-            backgroundColor: theme.colors.btnReadyBg,
-            borderColor: theme.colors.btnReadyBorder,
-          };
-        }
-        return {
-          backgroundColor: theme.colors.btnPrimaryBg,
-          borderColor: theme.colors.btnPrimaryBorder,
-        };
-      };
-
-      const getTextColor = () => {
-        if (isActiveModel) {
-          return theme.colors.btnReadyText;
-        }
-        return theme.colors.btnPrimaryText;
-      };
+      const label = isActiveModel
+        ? l10n.models.modelCard.buttons.offload
+        : l10n.models.modelCard.buttons.load;
 
       return (
         <Button
           testID={isActiveModel ? 'offload-button' : 'load-button'}
+          variant="secondary"
           accessibilityLabel={isActiveModel ? 'Offload model' : 'Load model'}
-          icon={isActiveModel ? 'eject' : 'play-circle-outline'}
-          //mode="contained-tonal"
           onPress={handlePress}
-          style={[styles.primaryActionButton, getButtonStyle()]}
-          textColor={getTextColor()}>
-          {getButtonText()}
+          style={styles.primaryActionButton}>
+          <View style={styles.buttonContent}>
+            {isActiveModel ? (
+              <XIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSecondaryContainer}
+              />
+            ) : (
+              <PlayIcon
+                width={16}
+                height={16}
+                stroke={theme.colors.onSecondaryContainer}
+              />
+            )}
+            <Text style={styles.buttonLabel}>{label}</Text>
+          </View>
         </Button>
       );
     };
@@ -748,7 +735,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   onPress={handleWarningPress}
                   style={styles.warningContainer}>
                   <View style={styles.warningContent}>
-                    <IconButton
+                    <PaperIconButton
                       icon="alert-circle-outline"
                       iconColor={theme.colors.error}
                       size={20}
@@ -766,7 +753,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 testID="integrity-warning-button"
                 style={styles.warningContainer}>
                 <View style={styles.warningContent}>
-                  <IconButton
+                  <PaperIconButton
                     icon="alert-circle-outline"
                     iconColor={theme.colors.error}
                     size={20}
