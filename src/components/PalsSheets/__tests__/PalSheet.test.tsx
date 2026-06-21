@@ -713,7 +713,7 @@ describe('PalSheet', () => {
       });
     });
 
-    it('does NOT persist on Reset alone — no store write until Save (I-P1)', async () => {
+    it('does NOT persist on Reset alone — no store write until Save', async () => {
       const {getByTestId, getByText} = renderPalSheet(createExistingPal());
 
       await act(async () => {
@@ -734,7 +734,7 @@ describe('PalSheet', () => {
       expect(palStore.createPal).not.toHaveBeenCalled();
     });
 
-    it('does NOT persist on Clear Pal Settings alone (I-P1)', async () => {
+    it('does NOT persist on Clear Pal Settings alone', async () => {
       // Seed a fully-formed custom settings object so every slider renders;
       // the assertion is about the persist boundary, not slider edge-cases.
       const {getByTestId, getByText} = renderPalSheet(
@@ -784,7 +784,7 @@ describe('PalSheet', () => {
 
     it('gates Capture Interval on the parameter schema, not capabilities.video', () => {
       // A pal flagged video-capable but carrying no VIDEO_SCHEMA must NOT
-      // render Capture Interval: the field is schema-driven (SUGG-1), so the
+      // render Capture Interval: the field is schema-driven, so the
       // capability flag alone never surfaces it.
       const {queryByTestId} = renderPalSheet(
         createBasicPal({capabilities: {video: true}, parameterSchema: []}),
