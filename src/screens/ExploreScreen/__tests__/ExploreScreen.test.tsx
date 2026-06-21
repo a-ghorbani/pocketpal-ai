@@ -1,5 +1,4 @@
 import React from 'react';
-import {Linking} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
@@ -487,7 +486,6 @@ describe('ExploreScreen', () => {
 
       await waitFor(() => {
         expect(getByTestId('explore-pals-end')).toBeTruthy();
-        expect(getByTestId('explore-browse-palshub')).toBeTruthy();
       });
     });
 
@@ -506,25 +504,6 @@ describe('ExploreScreen', () => {
         ).toBeTruthy();
       });
       expect(queryByTestId('explore-pals-end')).toBeNull();
-    });
-
-    it('opens the user-facing web listing from the browse CTA', async () => {
-      const openURL = jest
-        .spyOn(Linking, 'openURL')
-        .mockResolvedValue(undefined as any);
-      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
-        pageResponse([mockPalsHubPal], false),
-      );
-
-      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
-      const cta = await waitFor(() => getByTestId('explore-browse-palshub'));
-      fireEvent.press(cta);
-
-      // Browse URL must NOT be the empty-id per-pal route.
-      const url = openURL.mock.calls[0][0];
-      expect(url).not.toMatch(/\/pals\/$/);
-      expect(url).toMatch(/\/pals$/);
-      openURL.mockRestore();
     });
   });
 

@@ -5,17 +5,15 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {ActivityIndicator, FlatList, Linking, Text, View} from 'react-native';
+import {ActivityIndicator, FlatList, Text, View} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 
-import {Button} from '../../../components/ui';
 import {CheckCircleIcon} from '../../../assets/icons';
 import {PalDetailSheet} from '../../../components/PalsHub/PalDetailSheet';
 
 import {useTheme} from '../../../hooks';
 import {L10nContext} from '../../../utils';
-import {getPalsBrowseUrl} from '../../../utils/palshub-display';
 
 import {palStore} from '../../../store';
 
@@ -196,17 +194,6 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
           <Text style={styles.endSubtitle}>
             {l10n.explore.reachedTheEndSubtitle}
           </Text>
-          <Button
-            testID="explore-browse-palshub"
-            variant="secondary"
-            label={l10n.explore.browseOnPalshub}
-            style={styles.endButton}
-            onPress={() => {
-              Linking.openURL(getPalsBrowseUrl()).catch(error =>
-                console.warn('Failed to open PalsHub browse URL:', error),
-              );
-            }}
-          />
         </View>
       );
     };

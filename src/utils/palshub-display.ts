@@ -5,7 +5,7 @@
  * labels and actions based on pricing and ownership.
  */
 
-import {APP_URL, PALSHUB_API_BASE_URL} from '@env';
+import {PALSHUB_API_BASE_URL} from '@env';
 
 import type {PalsHubPal} from '../types/palshub';
 import {l10n} from '../locales';
@@ -132,15 +132,6 @@ export function shouldShowPalContent(pal: PalsHubPal): boolean {
  */
 export function getPalBuyUrl(palId: string): string {
   return `${PALSHUB_API_BASE_URL}/pals/${palId}`;
-}
-
-/**
- * Get the URL for the user-facing web pals listing. Uses APP_URL (the public
- * web app) rather than the REST API base so the link opens the browsable
- * marketplace, not an API route.
- */
-export function getPalsBrowseUrl(): string {
-  return `${APP_URL}/pals`;
 }
 
 /**

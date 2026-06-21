@@ -63,9 +63,6 @@ export const createPanelStyles = (theme: Theme) =>
       color: theme.colors.foregroundTertiary,
       textAlign: 'center',
     },
-    endButton: {
-      marginTop: theme.spacing.s,
-    },
   });
 
 export const createCardStyles = (theme: Theme) =>
