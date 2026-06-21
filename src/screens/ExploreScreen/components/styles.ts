@@ -33,6 +33,10 @@ export const createPanelStyles = (theme: Theme) =>
       paddingVertical: theme.spacing.xxl,
       alignItems: 'center',
     },
+    loadingMore: {
+      paddingVertical: theme.spacing.l,
+      alignItems: 'center',
+    },
     empty: {
       paddingVertical: theme.spacing.xxl,
       alignItems: 'center',
@@ -72,11 +76,11 @@ export const createCardStyles = (theme: Theme) =>
     pricePill: {
       position: 'absolute',
       top: 0,
-      right: 0,
+      end: 0,
       paddingHorizontal: theme.spacing.s,
       paddingVertical: theme.spacing.xxs,
-      borderTopRightRadius: theme.radius.m,
-      borderBottomLeftRadius: theme.radius.m,
+      borderStartEndRadius: theme.radius.m,
+      borderEndStartRadius: theme.radius.m,
       backgroundColor: theme.colors.yellowAccent,
     },
     pricePillText: {
@@ -202,6 +206,10 @@ export const createControlStyles = (theme: Theme) =>
     },
     searchButton: {
       padding: theme.spacing.xs,
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     searchInput: {
       paddingHorizontal: theme.spacing.m,
@@ -224,28 +232,5 @@ export const createSheetStyles = (theme: Theme) =>
       flexDirection: 'row',
       justifyContent: 'flex-end',
       gap: theme.spacing.s,
-    },
-    loginBody: {
-      alignItems: 'center',
-      gap: theme.spacing.sm,
-      paddingVertical: theme.spacing.m,
-    },
-    loginIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: theme.radius.xxl,
-      backgroundColor: theme.colors.secondaryContainer,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    loginTitle: {
-      ...theme.typography.titleM,
-      color: theme.colors.foregroundPrimary,
-      textAlign: 'center',
-    },
-    loginMessage: {
-      ...theme.typography.bodyS,
-      color: theme.colors.foregroundSecondary,
-      textAlign: 'center',
     },
   });

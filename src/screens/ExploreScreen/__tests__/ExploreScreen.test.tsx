@@ -1,15 +1,37 @@
 import React from 'react';
+import {Linking} from 'react-native';
 import {runInAction} from 'mobx';
 
 import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
 import {palStore} from '../../../store';
-import {authService} from '../../../services';
+import {authService, palsHubService} from '../../../services';
 import {
   mockPalsHubPal,
   mockPremiumPalsHubPal,
+  createPalsHubPal,
 } from '../../../../jest/fixtures/pals';
 
 import {ExploreScreen} from '../ExploreScreen';
+
+// Matches the panel's debounce window; advancing past it flushes one search.
+const SEARCH_DEBOUNCE_FLUSH = 350;
+
+// A controllable promise: lets a test resolve a pending mock call on demand,
+// so out-of-order resolution and per-page appends can be exercised.
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(res => {
+    resolve = res;
+  });
+  return {promise, resolve};
+};
+
+const pageResponse = (
+  pals: any[],
+  has_more: boolean,
+  page = 1,
+  total_count = pals.length,
+) => ({pals, total_count, page, limit: 20, has_more});
 
 const resetPalStore = () => {
   runInAction(() => {
@@ -17,17 +39,15 @@ const resetPalStore = () => {
     palStore.isLoadingPalsHub = false;
   });
   (palStore.searchPalsHubPals as jest.Mock).mockReset();
-  (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue({
-    pals: [],
-    total_count: 0,
-    page: 1,
-    limit: 20,
-    has_more: false,
-  });
+  (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+    pageResponse([], false),
+  );
   (palStore.getCategories as jest.Mock).mockReset();
   (palStore.getCategories as jest.Mock).mockResolvedValue({categories: []});
   (palStore.getTags as jest.Mock).mockReset();
   (palStore.getTags as jest.Mock).mockResolvedValue({tags: []});
+  (palsHubService.getPal as jest.Mock).mockReset();
+  (palsHubService.getPal as jest.Mock).mockResolvedValue(null);
 };
 
 describe('ExploreScreen', () => {
@@ -46,10 +66,8 @@ describe('ExploreScreen', () => {
       expect(getByTestId('ui-tabs')).toBeTruthy();
       expect(getByTestId('ui-tab-item-pals')).toBeTruthy();
       expect(getByTestId('ui-tab-item-models')).toBeTruthy();
-      // Pals panel mounts (its list); Models panel does not.
       expect(getByTestId('explore-pals-list')).toBeTruthy();
 
-      // The discovery panel runs an initial search on mount.
       await waitFor(() => {
         expect(palStore.searchPalsHubPals).toHaveBeenCalled();
       });
@@ -68,7 +86,7 @@ describe('ExploreScreen', () => {
       const signedIn = render(<ExploreScreen />, {withSafeArea: true});
       expect(signedIn.queryByTestId('explore-promo-card')).toBeNull();
       await waitFor(() =>
-        expect(palStore.searchPalsHubPals).toHaveBeenCalledTimes(2),
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
       );
     });
 
@@ -96,10 +114,10 @@ describe('ExploreScreen', () => {
       );
     });
 
-    it('renders a card row per cached pal', async () => {
-      runInAction(() => {
-        palStore.cachedPalsHubPals = [mockPalsHubPal, mockPremiumPalsHubPal];
-      });
+    it('renders a card row per pal returned by the discovery search', async () => {
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal, mockPremiumPalsHubPal], false),
+      );
 
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
 
@@ -113,22 +131,196 @@ describe('ExploreScreen', () => {
       });
     });
 
-    it('shows a price pill for premium pals and the free label for free pals', async () => {
-      runInAction(() => {
-        palStore.cachedPalsHubPals = [mockPalsHubPal, mockPremiumPalsHubPal];
-      });
+    it('shows a localized price pill for premium pals and the free label for free pals', async () => {
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal, mockPremiumPalsHubPal], false),
+      );
 
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
 
       await waitFor(() => {
+        // Premium pal: EUR currency formatting via Intl (locale 'en').
         expect(
           getByTestId(`explore-pal-price-${mockPremiumPalsHubPal.id}`).props
             .children,
         ).toBe('€9.99');
+        // Free pal: localized "Free" label, not a hardcoded string.
         expect(
           getByTestId(`explore-pal-price-${mockPalsHubPal.id}`).props.children,
         ).toBe('Free');
       });
+    });
+  });
+
+  // Debounce + last-query-wins stale-response guard.
+  describe('search debounce and stale-response guard', () => {
+    it('coalesces rapid keystrokes into a single search after the debounce', async () => {
+      jest.useFakeTimers();
+      try {
+        const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+
+        // Initial mount search (page 1, no query).
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        const callsAfterMount = (palStore.searchPalsHubPals as jest.Mock).mock
+          .calls.length;
+
+        // Reveal the input and type a sequence quickly.
+        fireEvent.press(getByTestId('explore-search-toggle'));
+        const input = getByTestId('explore-search-input');
+        act(() => {
+          fireEvent.changeText(input, 'c');
+          fireEvent.changeText(input, 'ca');
+          fireEvent.changeText(input, 'cat');
+        });
+
+        // Before the debounce elapses, no new request fired.
+        expect(
+          (palStore.searchPalsHubPals as jest.Mock).mock.calls.length,
+        ).toBe(callsAfterMount);
+
+        // After the debounce window, exactly one coalesced request fires.
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        const newCalls = (palStore.searchPalsHubPals as jest.Mock).mock.calls
+          .slice(callsAfterMount)
+          .map(args => args[0]?.query);
+        expect(newCalls.filter(Boolean)).toEqual(['cat']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('ignores an earlier broad response that resolves after a later narrow query', async () => {
+      const broadPal = createPalsHubPal({id: 'broad-1', title: 'Broad Result'});
+      const narrowPal = createPalsHubPal({
+        id: 'narrow-1',
+        title: 'Narrow Result',
+      });
+
+      const broad = deferred<any>();
+      const narrow = deferred<any>();
+
+      // Mount call resolves immediately (empty); then the broad query, then
+      // the narrow query each get their own controllable promise.
+      (palStore.searchPalsHubPals as jest.Mock)
+        .mockResolvedValueOnce(pageResponse([], false))
+        .mockReturnValueOnce(broad.promise)
+        .mockReturnValueOnce(narrow.promise);
+
+      jest.useFakeTimers();
+      let view: ReturnType<typeof render>;
+      try {
+        view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        const input = (() => {
+          fireEvent.press(view.getByTestId('explore-search-toggle'));
+          return view.getByTestId('explore-search-input');
+        })();
+
+        // Type the broad query, let it debounce -> issues the broad request.
+        act(() => fireEvent.changeText(input, 'a'));
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        // Type the narrow query, let it debounce -> issues the narrow request.
+        act(() => fireEvent.changeText(input, 'assistant'));
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+      } finally {
+        jest.useRealTimers();
+      }
+
+      // The narrow (later) request resolves FIRST.
+      await act(async () => {
+        narrow.resolve(pageResponse([narrowPal], false));
+      });
+      // The broad (earlier) request resolves LATER and must be ignored.
+      await act(async () => {
+        broad.resolve(pageResponse([broadPal], false));
+      });
+
+      await waitFor(() => {
+        expect(
+          view.getByTestId(`explore-pal-card-${narrowPal.id}`),
+        ).toBeTruthy();
+      });
+      // The stale broad result must NOT have overwritten the narrow one.
+      expect(view.queryByTestId(`explore-pal-card-${broadPal.id}`)).toBeNull();
+    });
+  });
+
+  // Pagination: onEndReached appends the next page.
+  describe('pagination', () => {
+    it('appends the next page on end-reached and advances the query page', async () => {
+      const page1 = [
+        createPalsHubPal({id: 'p1', title: 'Page1 A'}),
+        createPalsHubPal({id: 'p2', title: 'Page1 B'}),
+      ];
+      const page2 = [createPalsHubPal({id: 'p3', title: 'Page2 A'})];
+
+      (palStore.searchPalsHubPals as jest.Mock)
+        .mockResolvedValueOnce(pageResponse(page1, true, 1))
+        .mockResolvedValueOnce(pageResponse(page2, false, 2));
+
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('explore-pal-card-p1')).toBeTruthy();
+        expect(getByTestId('explore-pal-card-p2')).toBeTruthy();
+      });
+      // More pages remain -> end footer hidden.
+      expect(queryByTestId('explore-pals-end')).toBeNull();
+
+      // Trigger end-reached.
+      await act(async () => {
+        fireEvent(getByTestId('explore-pals-list'), 'endReached');
+      });
+
+      // Page 2 fetched with page advanced, and its items appended.
+      await waitFor(() => {
+        expect(getByTestId('explore-pal-card-p3')).toBeTruthy();
+      });
+      expect(getByTestId('explore-pal-card-p1')).toBeTruthy();
+      const lastCall = (palStore.searchPalsHubPals as jest.Mock).mock.calls.at(
+        -1,
+      )?.[0];
+      expect(lastCall.page).toBe(2);
+
+      // Now that has_more is false, the end footer appears.
+      await waitFor(() => {
+        expect(getByTestId('explore-pals-end')).toBeTruthy();
+      });
+    });
+
+    it('does not fetch beyond the last page once has_more is false', async () => {
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([createPalsHubPal({id: 'only-1'})], false),
+      );
+
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      await waitFor(() => {
+        expect(getByTestId('explore-pal-card-only-1')).toBeTruthy();
+      });
+      const callsBefore = (palStore.searchPalsHubPals as jest.Mock).mock.calls
+        .length;
+
+      await act(async () => {
+        fireEvent(getByTestId('explore-pals-list'), 'endReached');
+      });
+
+      expect((palStore.searchPalsHubPals as jest.Mock).mock.calls.length).toBe(
+        callsBefore,
+      );
     });
   });
 
@@ -147,12 +339,10 @@ describe('ExploreScreen', () => {
 
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
 
-      // Initial mount search runs with no filters.
       await waitFor(() => {
-        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith({});
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled();
       });
 
-      // Open the category sheet -> getCategories fires and chip renders.
       await act(async () => {
         fireEvent.press(getByTestId('explore-filter-categories'));
       });
@@ -163,17 +353,15 @@ describe('ExploreScreen', () => {
         ).toBeTruthy();
       });
 
-      // Select the chip and apply.
       fireEvent.press(getByTestId(`explore-category-chip-${category.id}`));
       await act(async () => {
         fireEvent.press(getByTestId('explore-category-apply'));
       });
 
-      // Re-search is driven with the selected category_ids.
       await waitFor(() => {
-        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith({
-          category_ids: [category.id],
-        });
+        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
+          expect.objectContaining({category_ids: [category.id]}),
+        );
       });
     });
 
@@ -187,34 +375,113 @@ describe('ExploreScreen', () => {
       await act(async () => {
         fireEvent.press(getByTestId('explore-filter-price'));
       });
-      // "€5 – €10" preset -> {min:500,max:1000}
       fireEvent.press(getByTestId('explore-price-chip-5-10'));
       await act(async () => {
         fireEvent.press(getByTestId('explore-price-apply'));
       });
 
       await waitFor(() => {
-        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith({
-          price_min: 500,
-          price_max: 1000,
-        });
+        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
+          expect.objectContaining({price_min: 500, price_max: 1000}),
+        );
+      });
+    });
+
+    it('renders localized price preset labels (no hardcoded currency strings)', async () => {
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-filter-price'));
+      });
+
+      // "Free" routes through l10n.explore.free; ranges through Intl currency.
+      expect(getByTestId('explore-price-chip-free')).toHaveTextContent('Free');
+      expect(getByTestId('explore-price-chip-under-5')).toHaveTextContent(
+        '< €5.00',
+      );
+      expect(getByTestId('explore-price-chip-5-10')).toHaveTextContent(
+        '€5.00 – €10.00',
+      );
+      expect(getByTestId('explore-price-chip-over-10')).toHaveTextContent(
+        '€10.00+',
+      );
+    });
+  });
+
+  // Tags filter is wired into the query.
+  describe('filter by tags', () => {
+    it('opens the tags sheet, applies a tag, and searches by tag_names', async () => {
+      const tag = {
+        id: 'tag-1',
+        name: 'assistant',
+        usage_count: 5,
+        created_at: '2023-01-01T00:00:00Z',
+      };
+      (palStore.getTags as jest.Mock).mockResolvedValue({tags: [tag]});
+
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-filter-tags'));
+      });
+      await waitFor(() => {
+        expect(palStore.getTags).toHaveBeenCalled();
+        expect(getByTestId(`explore-tag-chip-${tag.id}`)).toBeTruthy();
+      });
+
+      fireEvent.press(getByTestId(`explore-tag-chip-${tag.id}`));
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-tags-apply'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
+          expect.objectContaining({tag_names: [tag.name]}),
+        );
       });
     });
   });
 
-  // Reached the end: has_more === false read off the resolved response
+  // Sort control is wired into the query.
+  describe('sort', () => {
+    it('opens the sort sheet and searches with the chosen sort_by', async () => {
+      const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      // Default sort is applied on mount.
+      expect(
+        (palStore.searchPalsHubPals as jest.Mock).mock.calls[0][0].sort_by,
+      ).toBe('newest');
+
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-sort-control'));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('explore-sort-chip-rating'));
+      });
+
+      await waitFor(() => {
+        expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
+          expect.objectContaining({sort_by: 'rating'}),
+        );
+      });
+    });
+  });
+
+  // Reached the end footer reflects the resolved has_more
   describe('reached-the-end footer', () => {
     it('shows the end footer when the resolved response has has_more === false', async () => {
-      runInAction(() => {
-        palStore.cachedPalsHubPals = [mockPalsHubPal];
-      });
-      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValueOnce({
-        pals: [mockPalsHubPal],
-        total_count: 1,
-        page: 1,
-        limit: 20,
-        has_more: false,
-      });
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal], false),
+      );
 
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
 
@@ -225,16 +492,9 @@ describe('ExploreScreen', () => {
     });
 
     it('does NOT show the end footer while more results remain (has_more === true)', async () => {
-      runInAction(() => {
-        palStore.cachedPalsHubPals = [mockPalsHubPal];
-      });
-      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValueOnce({
-        pals: [mockPalsHubPal],
-        total_count: 50,
-        page: 1,
-        limit: 20,
-        has_more: true,
-      });
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal], true, 1, 50),
+      );
 
       const {queryByTestId, getByTestId} = render(<ExploreScreen />, {
         withSafeArea: true,
@@ -247,39 +507,56 @@ describe('ExploreScreen', () => {
       });
       expect(queryByTestId('explore-pals-end')).toBeNull();
     });
-  });
 
-  // Gated action while signed-out
-  describe('gated action while signed-out', () => {
-    it('opens the login-required modal on a premium card tap and fires onSignInPress', async () => {
-      runInAction(() => {
-        palStore.cachedPalsHubPals = [mockPremiumPalsHubPal];
-      });
+    it('opens the user-facing web listing from the browse CTA', async () => {
+      const openURL = jest
+        .spyOn(Linking, 'openURL')
+        .mockResolvedValue(undefined as any);
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal], false),
+      );
 
       const {getByTestId} = render(<ExploreScreen />, {withSafeArea: true});
+      const cta = await waitFor(() => getByTestId('explore-browse-palshub'));
+      fireEvent.press(cta);
+
+      // Browse URL must NOT be the empty-id per-pal route.
+      const url = openURL.mock.calls[0][0];
+      expect(url).not.toMatch(/\/pals\/$/);
+      expect(url).toMatch(/\/pals$/);
+      openURL.mockRestore();
+    });
+  });
+
+  // Single auth gate: the card-tap routes through the detail sheet.
+  describe('detail sheet is the single gate', () => {
+    it('opens the detail sheet for a premium pal while signed-out (no redundant pre-gate modal)', async () => {
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPremiumPalsHubPal], false),
+      );
+
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
 
       const card = await waitFor(() =>
         getByTestId(`explore-pal-card-${mockPremiumPalsHubPal.id}`),
       );
-      fireEvent.press(card);
-
-      // Login-required modal is shown (no detail sheet for the gated pal).
-      await waitFor(() => {
-        expect(getByTestId('explore-login-required')).toBeTruthy();
-        expect(getByTestId('explore-login-action')).toBeTruthy();
+      await act(async () => {
+        fireEvent.press(card);
       });
 
-      // Tapping the modal action routes to the auth surface (AuthSheet).
-      fireEvent.press(getByTestId('explore-login-action'));
+      // The sheet opens (its label renders); the old pre-gate modal is gone.
       await waitFor(() => {
-        expect(getByTestId('explore-screen')).toBeTruthy();
+        expect(getByTestId('pal-label-premium')).toBeTruthy();
       });
+      expect(queryByTestId('explore-login-required')).toBeNull();
     });
 
-    it('opens the detail sheet (not the login modal) for a free pal while signed-out', async () => {
-      runInAction(() => {
-        palStore.cachedPalsHubPals = [mockPalsHubPal];
-      });
+    it('opens the detail sheet for a free pal while signed-out', async () => {
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal], false),
+      );
 
       const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
         withSafeArea: true,
@@ -288,13 +565,14 @@ describe('ExploreScreen', () => {
       const card = await waitFor(() =>
         getByTestId(`explore-pal-card-${mockPalsHubPal.id}`),
       );
-      fireEvent.press(card);
+      await act(async () => {
+        fireEvent.press(card);
+      });
 
-      // Free pal is not gated -> no login-required modal.
+      await waitFor(() => {
+        expect(getByTestId('pal-label-free')).toBeTruthy();
+      });
       expect(queryByTestId('explore-login-required')).toBeNull();
-      await waitFor(() =>
-        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
-      );
     });
   });
 
@@ -305,7 +583,6 @@ describe('ExploreScreen', () => {
         withSafeArea: true,
       });
 
-      // Pals panel is active to start.
       expect(getByTestId('explore-pals-list')).toBeTruthy();
       expect(queryByTestId('explore-models-panel')).toBeNull();
       await waitFor(() =>
@@ -314,7 +591,6 @@ describe('ExploreScreen', () => {
 
       fireEvent.press(getByTestId('ui-tab-item-models'));
 
-      // No-op: still on Pals, Models panel never mounts.
       expect(getByTestId('explore-pals-list')).toBeTruthy();
       expect(queryByTestId('explore-models-panel')).toBeNull();
     });
