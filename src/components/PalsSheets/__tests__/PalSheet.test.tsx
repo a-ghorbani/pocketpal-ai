@@ -41,7 +41,10 @@ jest.mock('../../../hooks/useStructuredOutput', () => ({
 }));
 
 // Import the mocked palStore (already mocked globally in jest/setup.ts)
-import {palStore} from '../../../store';
+import {
+  palStore,
+  defaultCompletionSettings as mockDefaultCompletionSettings,
+} from '../../../store';
 
 import {
   talentRegistry,
@@ -709,6 +712,54 @@ describe('PalSheet', () => {
         );
       });
     });
+
+    it('does NOT persist on Reset alone — no store write until Save (I-P1)', async () => {
+      const {getByTestId, getByText} = renderPalSheet(createExistingPal());
+
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
+
+      // Open the Reset menu and pick "Reset to System Defaults".
+      await act(async () => {
+        fireEvent.press(getByTestId('generation-reset-button'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Reset to System Defaults'));
+      });
+
+      // The Reset mutates in-form state only. With no footer Save pressed,
+      // the completionSettings writers must not have run at all.
+      expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
+    });
+
+    it('does NOT persist on Clear Pal Settings alone (I-P1)', async () => {
+      // Seed a fully-formed custom settings object so every slider renders;
+      // the assertion is about the persist boundary, not slider edge-cases.
+      const {getByTestId, getByText} = renderPalSheet(
+        createExistingPal({
+          completionSettings: {
+            ...mockDefaultCompletionSettings,
+            temperature: 0.9,
+          },
+        }),
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('ui-tab-item-generation'));
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('generation-reset-button'));
+      });
+      await act(async () => {
+        fireEvent.press(getByText('Clear Pal Settings'));
+      });
+
+      expect(palStore.updatePal).not.toHaveBeenCalled();
+      expect(palStore.createPal).not.toHaveBeenCalled();
+    });
   });
 
   describe('Schema-driven fields (General tab)', () => {
@@ -726,6 +777,17 @@ describe('PalSheet', () => {
     it('omits Capture Interval for a non-video pal (no schema field)', () => {
       const {queryByTestId} = renderPalSheet(
         createBasicPal({parameterSchema: []}),
+      );
+
+      expect(queryByTestId('dynamic-field-captureInterval')).toBeNull();
+    });
+
+    it('gates Capture Interval on the parameter schema, not capabilities.video', () => {
+      // A pal flagged video-capable but carrying no VIDEO_SCHEMA must NOT
+      // render Capture Interval: the field is schema-driven (SUGG-1), so the
+      // capability flag alone never surfaces it.
+      const {queryByTestId} = renderPalSheet(
+        createBasicPal({capabilities: {video: true}, parameterSchema: []}),
       );
 
       expect(queryByTestId('dynamic-field-captureInterval')).toBeNull();

@@ -30,6 +30,13 @@ describe('PalsScreen (My Pals)', () => {
     expect(getByText('+ Create Pal')).toBeTruthy();
   });
 
+  it('mounts a single bottom-action-add node (E2E create entry, no collision)', () => {
+    const {getAllByTestId} = renderScreen();
+    // The frozen E2E create id must resolve to exactly one mounted node so
+    // the live create path stays unambiguous after the header re-home.
+    expect(getAllByTestId('bottom-action-add')).toHaveLength(1);
+  });
+
   describe('Tab routing', () => {
     beforeEach(() => {
       palStore.pals = [
