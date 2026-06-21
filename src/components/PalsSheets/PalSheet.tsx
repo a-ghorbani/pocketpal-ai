@@ -26,8 +26,8 @@ import {GreetingSection} from './GreetingSection';
 import {SectionDivider} from './SectionDivider';
 import {ModelNotAvailable} from './ModelNotAvailable';
 import {SystemPromptSection} from './SystemPromptSection';
+import {GenerationSettings} from './GenerationSettings';
 import {DynamicParameterForm} from '../DynamicParameters';
-import {PalGenerationSettingsSheet} from '../PalGenerationSettingsSheet';
 
 import {palStore} from '../../store';
 
@@ -35,7 +35,11 @@ import type {Pal, TalentRef} from '../../types/pal';
 
 import {L10nContext} from '../../utils';
 
+import {Tabs} from '../ui';
+
 import {Sheet} from '..';
+
+type PalFormTab = 'general' | 'generation';
 
 interface PalSheetProps {
   isVisible: boolean;
@@ -66,20 +70,13 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
     const styles = createStyles(theme);
     const l10n = useContext(L10nContext);
 
-    // Internal state for generation settings sheet
-    const [showGenerationSettings, setShowGenerationSettings] = useState(false);
+    // Active form tab (General | Generation)
+    const [activeTab, setActiveTab] = useState<PalFormTab>('general');
+
+    // Mirror of the form's completionSettings for the Generation tab.
     const [currentCompletionSettings, setCurrentCompletionSettings] = useState<
       Record<string, any> | undefined
     >(pal.completionSettings);
-
-    // Handlers for generation settings
-    const handleOpenGenerationSettings = useCallback(() => {
-      setShowGenerationSettings(true);
-    }, []);
-
-    const handleCloseGenerationSettings = useCallback(() => {
-      setShowGenerationSettings(false);
-    }, []);
 
     // Determine if we're editing an existing pal or creating a new one
     const isEditing = !!pal.id;
@@ -337,6 +334,11 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
     // Determine if we should show parameters section
     const showParametersSection = activeSchema.length > 0;
 
+    const tabItems = [
+      {value: 'general', label: l10n.components.palSheet.tabGeneral},
+      {value: 'generation', label: l10n.components.palSheet.tabGeneration},
+    ];
+
     return (
       <>
         <Sheet
@@ -345,105 +347,112 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
           displayFullHeight
           onClose={handleClose}>
           <FormProvider {...methods}>
+            <Tabs
+              style={styles.tabs}
+              variant="underline"
+              items={tabItems}
+              selectedValue={activeTab}
+              onChange={value => setActiveTab(value as PalFormTab)}
+            />
             <Sheet.ScrollView
               bottomOffset={16}
               contentContainerStyle={styles.scrollviewContainer}>
-              <View style={styles.form}>
-                <FormField
-                  ref={ref => {
-                    inputRefs.current.name = ref;
-                  }}
-                  name="name"
-                  label={
-                    l10n.components.assistantPalSheet?.palName || 'Pal Name'
-                  }
-                  placeholder={
-                    l10n.components.assistantPalSheet?.palNamePlaceholder ||
-                    'Enter pal name'
-                  }
-                  required
-                  onSubmitEditing={() => inputRefs.current.description?.focus()}
-                />
+              {activeTab === 'general' ? (
+                <View style={styles.form} testID="pal-form-tab-general">
+                  <FormField
+                    ref={ref => {
+                      inputRefs.current.name = ref;
+                    }}
+                    name="name"
+                    label={
+                      l10n.components.assistantPalSheet?.palName || 'Pal Name'
+                    }
+                    placeholder={
+                      l10n.components.assistantPalSheet?.palNamePlaceholder ||
+                      'Enter pal name'
+                    }
+                    required
+                    onSubmitEditing={() =>
+                      inputRefs.current.description?.focus()
+                    }
+                  />
 
-                <FormField
-                  ref={ref => {
-                    inputRefs.current.description = ref;
-                  }}
-                  name="description"
-                  label={l10n.components.palSheet.description}
-                  placeholder={l10n.components.palSheet.descriptionPlaceholder}
-                  multiline
-                  onSubmitEditing={() =>
-                    inputRefs.current.defaultModel?.focus()
-                  }
-                />
+                  <FormField
+                    ref={ref => {
+                      inputRefs.current.description = ref;
+                    }}
+                    name="description"
+                    label={l10n.components.palSheet.description}
+                    placeholder={
+                      l10n.components.palSheet.descriptionPlaceholder
+                    }
+                    multiline
+                    onSubmitEditing={() =>
+                      inputRefs.current.defaultModel?.focus()
+                    }
+                  />
 
-                <Controller
-                  name="defaultModel"
-                  control={methods.control}
-                  render={({field: {onChange, value}, fieldState: {error}}) => (
-                    <ModelSelector
-                      value={value}
-                      onChange={onChange}
-                      label={
-                        l10n.components.assistantPalSheet?.defaultModel ||
-                        'Default Model'
-                      }
-                      placeholder={
-                        l10n.components.assistantPalSheet
-                          ?.defaultModelPlaceholder || 'Select model'
-                      }
-                      error={!!error}
-                      helperText={error?.message}
-                      testID="pal-default-model-selector"
-                    />
+                  <Controller
+                    name="defaultModel"
+                    control={methods.control}
+                    render={({
+                      field: {onChange, value},
+                      fieldState: {error},
+                    }) => (
+                      <ModelSelector
+                        value={value}
+                        onChange={onChange}
+                        label={
+                          l10n.components.assistantPalSheet?.defaultModel ||
+                          'Default Model'
+                        }
+                        placeholder={
+                          l10n.components.assistantPalSheet
+                            ?.defaultModelPlaceholder || 'Select model'
+                        }
+                        error={!!error}
+                        helperText={error?.message}
+                        testID="pal-default-model-selector"
+                      />
+                    )}
+                  />
+
+                  <ModelNotAvailable
+                    model={pal.defaultModel}
+                    currentlySelectedModel={currentDefaultModel}
+                    closeSheet={handleClose}
+                  />
+
+                  {showParametersSection && (
+                    <>
+                      <SectionDivider
+                        label={l10n.components.palSheet.parameters}
+                      />
+                      <DynamicParameterForm schema={activeSchema} />
+                    </>
                   )}
-                />
 
-                <ModelNotAvailable
-                  model={pal.defaultModel}
-                  currentlySelectedModel={currentDefaultModel}
-                  closeSheet={handleClose}
-                />
+                  <SystemPromptSection
+                    validateFields={validateDynamicFields}
+                    closeSheet={handleClose}
+                    parameterSchema={activeSchema}
+                  />
 
-                {showParametersSection && (
-                  <>
-                    <SectionDivider
-                      label={l10n.components.palSheet.parameters}
-                    />
-                    <DynamicParameterForm schema={activeSchema} />
-                  </>
-                )}
+                  <GreetingSection />
 
-                <SystemPromptSection
-                  validateFields={validateDynamicFields}
-                  closeSheet={handleClose}
-                  parameterSchema={activeSchema}
-                />
+                  <ColorSection />
 
-                <GreetingSection />
-
-                <ColorSection />
-
-                <TalentSection />
-
-                {/* Generation Settings Section - only for existing local pals */}
-                {pal.id && (
-                  <>
-                    <SectionDivider
-                      label={l10n.components.palSheet.generationSettings}
-                    />
-                    <View style={styles.generationSettingsSection}>
-                      <Button
-                        mode="outlined"
-                        onPress={handleOpenGenerationSettings}
-                        style={styles.generationSettingsButton}>
-                        {l10n.components.palSheet.configureGenerationSettings}
-                      </Button>
-                    </View>
-                  </>
-                )}
-              </View>
+                  <TalentSection />
+                </View>
+              ) : (
+                <View testID="pal-form-tab-generation">
+                  <GenerationSettings
+                    palName={pal.name || 'Pal'}
+                    completionSettings={currentCompletionSettings}
+                    onUpdateSettings={handleUpdateCompletionSettings}
+                  />
+                </View>
+              )}
             </Sheet.ScrollView>
 
             <Sheet.Actions>
@@ -469,15 +478,6 @@ export const PalSheet: React.FC<PalSheetProps> = observer(
             </Sheet.Actions>
           </FormProvider>
         </Sheet>
-
-        {/* Generation Settings Sheet */}
-        <PalGenerationSettingsSheet
-          isVisible={showGenerationSettings}
-          onClose={handleCloseGenerationSettings}
-          palName={pal.name || 'Pal'}
-          completionSettings={currentCompletionSettings}
-          onUpdateSettings={handleUpdateCompletionSettings}
-        />
       </>
     );
   },

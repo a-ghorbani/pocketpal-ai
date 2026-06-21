@@ -32,6 +32,32 @@ export const createStyles = (theme: Theme) =>
     scrollviewContainer: {
       padding: theme.spacing.default,
     },
+    tabs: {
+      marginHorizontal: theme.spacing.m,
+      marginTop: theme.spacing.s,
+    },
+    settingsLevelIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.s,
+      paddingHorizontal: theme.spacing.m,
+      paddingVertical: theme.spacing.s,
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: theme.radius.s,
+      marginBottom: theme.spacing.m,
+    },
+    settingsLevelText: {
+      flex: 1,
+      color: theme.colors.onSurfaceVariant,
+    },
+    settingsLevelIcon: {
+      color: theme.colors.primary,
+    },
+    generationResetRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginBottom: theme.spacing.s,
+    },
     form: {
       gap: theme.spacing.default,
       padding: theme.spacing.default,

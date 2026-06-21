@@ -789,6 +789,8 @@
       "description": "Description",
       "descriptionPlaceholder": "Enter a brief description of your pal",
       "parameters": "Parameters",
+      "tabGeneral": "General",
+      "tabGeneration": "Generation",
       "generationSettings": "Generation Settings",
       "configureGenerationSettings": "Configure Generation Settings",
       "validation": {
