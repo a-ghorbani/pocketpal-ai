@@ -214,6 +214,129 @@ export const createControlStyles = (theme: Theme) =>
     },
   });
 
+export const createSearchOverlayStyles = (theme: Theme) =>
+  StyleSheet.create({
+    overlayWrapper: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'flex-start',
+      paddingTop: theme.spacing.xxl,
+      paddingHorizontal: theme.spacing.m,
+    },
+    scrim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.colors.scrim,
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.l,
+      padding: theme.spacing.m,
+      gap: theme.spacing.m,
+      maxHeight: '70%',
+      overflow: 'hidden',
+    },
+    inputWrapper: {
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
+      borderRadius: theme.radius.l,
+      backgroundColor: theme.colors.secondaryDefault,
+      paddingHorizontal: theme.spacing.s,
+      overflow: 'hidden',
+    },
+    inputWrapperFocused: {
+      borderColor: theme.colors.primary,
+    },
+    input: {
+      marginBottom: -theme.stroke.sm,
+    },
+    promptBody: {
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+      paddingVertical: theme.spacing.xl,
+    },
+    promptTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.foregroundPrimary,
+      textAlign: 'center',
+    },
+    promptText: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundTertiary,
+      textAlign: 'center',
+    },
+    loadingBody: {
+      paddingVertical: theme.spacing.xl,
+      alignItems: 'center',
+    },
+    noResultsBody: {
+      alignItems: 'center',
+      gap: theme.spacing.s,
+      paddingVertical: theme.spacing.xl,
+    },
+    noResultsTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.foregroundPrimary,
+      textAlign: 'center',
+    },
+    noResultsQuery: {
+      color: theme.colors.primary,
+    },
+    noResultsHelper: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundTertiary,
+      textAlign: 'center',
+    },
+    exploreCta: {
+      marginTop: theme.spacing.s,
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.radius.l,
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.primary,
+    },
+    exploreCtaText: {
+      ...theme.typography.uiM,
+      color: theme.colors.primary,
+    },
+    resultsBody: {
+      gap: theme.spacing.s,
+    },
+    resultsHeader: {
+      ...theme.typography.titleS,
+      color: theme.colors.foregroundPrimary,
+    },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.s,
+    },
+    resultAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: theme.radius.m,
+      backgroundColor: theme.colors.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    resultAvatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    resultBody: {
+      flex: 1,
+      gap: theme.spacing.xxs,
+    },
+    resultName: {
+      ...theme.typography.titleS,
+      color: theme.colors.foregroundPrimary,
+    },
+    resultSubtitle: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundSecondary,
+    },
+  });
+
 export const createSheetStyles = (theme: Theme) =>
   StyleSheet.create({
     content: {
