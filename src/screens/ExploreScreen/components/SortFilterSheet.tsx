@@ -11,7 +11,9 @@ import type {PalsQuery} from '../../../types/palshub';
 
 import {createSheetStyles} from './styles';
 
-export type SortOption = NonNullable<PalsQuery['sort_by']>;
+// 'rating' is omitted: the API maps it to the same ordering as 'popular', so
+// the sheet offers only distinct orderings.
+export type SortOption = Exclude<NonNullable<PalsQuery['sort_by']>, 'rating'>;
 
 interface SortFilterSheetProps {
   isVisible: boolean;
@@ -23,7 +25,6 @@ interface SortFilterSheetProps {
 export const SORT_OPTIONS: SortOption[] = [
   'newest',
   'oldest',
-  'rating',
   'popular',
   'price_low',
   'price_high',
@@ -37,8 +38,6 @@ export const useSortLabel = () => {
         return l10n.explore.sortNewest;
       case 'oldest':
         return l10n.explore.sortOldest;
-      case 'rating':
-        return l10n.explore.sortRating;
       case 'popular':
         return l10n.explore.sortPopular;
       case 'price_low':

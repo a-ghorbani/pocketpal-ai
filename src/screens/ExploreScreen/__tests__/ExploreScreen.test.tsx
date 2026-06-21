@@ -464,12 +464,12 @@ describe('ExploreScreen', () => {
         fireEvent.press(getByTestId('explore-sort-control'));
       });
       await act(async () => {
-        fireEvent.press(getByTestId('explore-sort-chip-rating'));
+        fireEvent.press(getByTestId('explore-sort-chip-popular'));
       });
 
       await waitFor(() => {
         expect(palStore.searchPalsHubPals).toHaveBeenCalledWith(
-          expect.objectContaining({sort_by: 'rating'}),
+          expect.objectContaining({sort_by: 'popular'}),
         );
       });
     });
