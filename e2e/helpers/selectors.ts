@@ -203,9 +203,9 @@ export const Selectors = {
         // Android: Find TextView sibling that follows message-timing ViewGroup
         return `//*[@resource-id="message-timing"]/following-sibling::android.widget.TextView[1]`;
       }
-      // iOS: Match StaticText containing timing pattern (tokens/sec)
+      // iOS: Match StaticText containing timing pattern (tok/s)
       // Class chain doesn't support following-sibling, so we match by content
-      return `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "tokens/sec"`;
+      return `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "tok/s"`;
     },
     get userMessage(): string {
       return byTestId('user-message');
@@ -226,11 +226,11 @@ export const Selectors = {
       byTestId(`suggested-prompt-chip-${idx}`),
     /**
      * Selector for detecting inference completion.
-     * Matches any element with "tokens/sec" in its accessibility label/content-desc.
+     * Matches any element with "tok/s" in its accessibility label/content-desc.
      * The timing info appears in the message bubble's accessibility label when inference completes.
      */
     get inferenceComplete(): string {
-      return byAccessibilityLabelContains('tokens/sec');
+      return byAccessibilityLabelContains('tok/s');
     },
   },
 

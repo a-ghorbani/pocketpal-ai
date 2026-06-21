@@ -55,6 +55,7 @@ export const lightColors: TokenColors = {
   onErrorContainer: '#330B09',
   background: LIGHT_BACKGROUND,
   onBackground: LIGHT_ON_BACKGROUND,
+  backgroundCard: '#ffffff',
   mutedBackground: '#fafafa',
   mutedBackgroundTransparent: 'rgba(250,250,250,0)',
   surface: LIGHT_SURFACE,
@@ -72,6 +73,7 @@ export const lightColors: TokenColors = {
   foregroundSecondary: '#474747',
   foregroundTertiary: '#81807e',
   foregroundSubtle: '#c4c2c0',
+  redAccent: '#eb8570',
   // MD3 extras
   surfaceDisabled: withOpacity('#fcfcfc', 0.12),
   onSurfaceDisabled: withOpacity('#333333', 0.38),
@@ -119,7 +121,6 @@ export const lightColors: TokenColors = {
   menuDangerText: LIGHT_ERROR,
 
   // Messages
-  authorBubbleBackground: '#f2f2f2',
   receivedMessageDocumentIcon: LIGHT_PRIMARY,
   sentMessageDocumentIcon: LIGHT_ON_SURFACE,
   userAvatarImageBackground: 'transparent',
@@ -212,15 +213,16 @@ export const darkColors: TokenColors = {
   onErrorContainer: '#E6ACA9',
   background: DARK_BACKGROUND,
   onBackground: DARK_ON_BACKGROUND,
-  mutedBackground: '#0a0a0a',
-  mutedBackgroundTransparent: 'rgba(10,10,10,0)',
+  backgroundCard: '#181715',
+  mutedBackground: '#0e0d0c',
+  mutedBackgroundTransparent: 'rgba(14,13,12,0)',
   surface: DARK_SURFACE,
   onSurface: DARK_ON_SURFACE,
   surfaceVariant: '#646466',
   onSurfaceVariant: '#e3e4e6',
   outline: '#444444',
   outlineVariant: '#a1a1a1',
-  mutedLight: '#3a3937',
+  mutedLight: '#2a2928',
   // Figma `Color/Secondary/Default` — dark binding from canonical file.
   secondaryDefault: '#2a2928',
   // Foreground greys — dark binding mirrors the on-surface ramp (home
@@ -229,6 +231,7 @@ export const darkColors: TokenColors = {
   foregroundSecondary: '#c4c2c0',
   foregroundTertiary: '#81807e',
   foregroundSubtle: '#646466',
+  redAccent: '#eb8570',
   // MD3 extras
   surfaceDisabled: withOpacity('#333333', 0.12),
   onSurfaceDisabled: withOpacity('#e5e5e6', 0.38),
@@ -277,7 +280,6 @@ export const darkColors: TokenColors = {
   menuDangerText: DARK_ERROR,
 
   // Messages
-  authorBubbleBackground: '#212121',
   receivedMessageDocumentIcon: DARK_PRIMARY,
   sentMessageDocumentIcon: DARK_ON_SURFACE,
   userAvatarImageBackground: 'transparent',

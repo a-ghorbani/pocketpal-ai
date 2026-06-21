@@ -54,8 +54,8 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       backgroundColor: 'transparent',
     },
     inputContainer: {
-      borderTopLeftRadius: theme.borders.inputBorderRadius,
-      borderTopRightRadius: theme.borders.inputBorderRadius,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
       position: 'absolute',
       zIndex: 10,
       left: 0,
@@ -63,7 +63,7 @@ export const createStyles = ({theme}: {theme: Theme}) =>
       bottom: 0,
       ...(!theme.dark
         ? {
-            boxShadow: `0px -2px 8px ${theme.colors.shadow}1A`,
+            boxShadow: '0px -6px 36px #8989890A',
           }
         : {}),
     },

@@ -38,7 +38,7 @@ export const ToolErrorBlock: React.FC<ToolErrorBlockProps> = ({
     <View style={componentStyles.container} testID="tool-error-block">
       <View style={componentStyles.row}>
         <Icon
-          name="alert-circle-outline"
+          name="alert-outline"
           style={componentStyles.icon}
           testID="tool-error-block-icon"
         />

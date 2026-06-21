@@ -1,40 +1,56 @@
 import React from 'react';
 import {render} from '../../../../jest/test-utils';
 import {ChatHeaderTitle} from '../ChatHeaderTitle';
-import {chatSessionStore, modelStore} from '../../../store';
+import {chatSessionStore, modelStore, palStore} from '../../../store';
 import {runInAction} from 'mobx';
 import {basicModel, downloadedModel} from '../../../../jest/fixtures/models';
+
+const originalActivePalIdDescriptor = Object.getOwnPropertyDescriptor(
+  chatSessionStore,
+  'activePalId',
+);
+
+const setActivePalId = (id: string | null) => {
+  Object.defineProperty(chatSessionStore, 'activePalId', {
+    get: () => id,
+    configurable: true,
+  });
+};
 
 describe('ChatHeaderTitle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    runInAction(() => {
+      palStore.pals = [];
+    });
+    setActivePalId(null);
   });
 
-  it('renders "Chat" when no active session exists', () => {
-    runInAction(() => {
-      chatSessionStore.resetActiveSession();
-      chatSessionStore.sessions = [];
-    });
+  afterEach(() => {
+    if (originalActivePalIdDescriptor) {
+      Object.defineProperty(
+        chatSessionStore,
+        'activePalId',
+        originalActivePalIdDescriptor,
+      );
+    } else {
+      delete (chatSessionStore as any).activePalId;
+    }
+  });
+
+  it('renders "Chat" when no active pal exists', () => {
     const {getByText} = render(<ChatHeaderTitle />);
     expect(getByText('Chat')).toBeTruthy();
   });
 
-  it('renders session title when active session exists', () => {
-    const mockSession = {
-      id: '123',
-      title: 'Test Session',
-      date: new Date().toISOString(),
-      messages: [],
-    };
+  it('renders the active pal name as the primary title', () => {
     runInAction(() => {
-      Object.assign(chatSessionStore, {
-        activeSessionId: mockSession.id,
-        sessions: [mockSession],
-      });
+      palStore.pals = [{id: 'pal-1', name: 'Social Caption Builder'} as any];
     });
+    setActivePalId('pal-1');
 
     const {getByText} = render(<ChatHeaderTitle />);
-    expect(getByText('Test Session')).toBeTruthy();
+    expect(getByText('Social Caption Builder')).toBeTruthy();
   });
 
   it('renders model name when active model exists', () => {

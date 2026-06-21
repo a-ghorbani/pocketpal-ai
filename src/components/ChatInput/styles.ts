@@ -1,7 +1,6 @@
 import {StyleSheet} from 'react-native';
 
 import {Theme} from '../../utils/types';
-import {fontStyles} from '../../utils/theme';
 
 export const createStyles = ({
   theme,
@@ -22,12 +21,14 @@ export const createStyles = ({
       borderRadius: 100,
     },
     plusButton: {
-      height: 28,
-      width: 28,
+      height: 40,
+      width: 40,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 100,
-      opacity: 0.9,
+      borderRadius: 12,
+      backgroundColor: theme.colors.secondaryDefault,
+      borderWidth: 0.5,
+      borderColor: theme.colors.mutedLight,
     },
     thinkingToggle: {
       height: 28,
@@ -71,7 +72,7 @@ export const createStyles = ({
       flexShrink: 1,
     },
     input: {
-      ...theme.fonts.inputTextStyle,
+      ...theme.typography.bodyM,
       color: theme.colors.inverseOnSurface,
       flex: 1,
       maxHeight: 150,
@@ -142,24 +143,22 @@ export const createStyles = ({
       marginTop: isEditMode ? 28 : 0,
     },
     palNameWrapper: {
-      ...fontStyles.regular,
+      ...theme.typography.captionM,
       color: theme.colors.inverseOnSurface,
-      fontSize: 12,
     },
     palName: {
-      fontSize: 12,
+      ...theme.typography.uiS,
       color: theme.colors.inverseOnSurface,
-      ...fontStyles.semibold,
     },
     // New compact pal name styles for control bar
     palNameCompact: {
+      ...theme.typography.captionM,
       fontSize: 10,
-      ...fontStyles.regular,
       color: theme.colors.inverseOnSurface,
     },
     palNameValueCompact: {
+      ...theme.typography.uiS,
       fontSize: 10,
-      ...fontStyles.semibold,
       color: theme.colors.inverseOnSurface,
     },
     // Image preview styles

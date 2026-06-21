@@ -13,6 +13,7 @@ import {
 import {Text} from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {ChevronRightIcon, ChevronDownIcon} from '../../assets/icons';
 
 import {useTheme} from '../../hooks';
@@ -281,6 +282,14 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
         onPress={handlePress}
         hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
         <View style={styles.collapsedRow} testID="thinking-bubble-collapsed">
+          <MCIcon
+            name="brain"
+            size={13}
+            color={theme.colors.foregroundTertiary}
+          />
+          <Text style={styles.collapsedRowLabel}>
+            {l10n.components.thinkingBubble.reasoning}
+          </Text>
           <Animated.View
             style={{
               transform: [{rotate: chevronRotationDeg}, {scale: chevronScale}],
@@ -289,12 +298,9 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
               testID="chevron-icon"
               width={12}
               height={12}
-              stroke={theme.colors.thinkingBubbleText}
+              stroke={theme.colors.foregroundTertiary}
             />
           </Animated.View>
-          <Text style={styles.collapsedRowLabel}>
-            {l10n.components.thinkingBubble.reasoning}
-          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -309,9 +315,16 @@ export const ThinkingBubble: React.FC<ThinkingBubbleProps> = ({
       <View style={containerStyle}>
         {/* Header */}
         <View style={styles.headerContainer}>
-          <Text variant="titleSmall" style={styles.headerText}>
-            {l10n.components.thinkingBubble.reasoning}
-          </Text>
+          <View style={styles.headerLabelGroup}>
+            <MCIcon
+              name="brain"
+              size={15}
+              color={theme.colors.thinkingBubbleText}
+            />
+            <Text variant="titleSmall" style={styles.headerText}>
+              {l10n.components.thinkingBubble.reasoning}
+            </Text>
+          </View>
           <Animated.View
             style={[
               styles.chevronContainer,
