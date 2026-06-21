@@ -1534,7 +1534,6 @@
     "priceRange": "Price Range",
     "popularTags": "Popular Tags",
     "availablePals": "Available Pals",
-    "mostRelevant": "Most Relevant",
     "searchPlaceholder": "Search pals…",
     "searchLabel": "Search pals",
     "noPalsFound": "No Pals found",
@@ -1545,8 +1544,16 @@
     "free": "Free",
     "apply": "Apply",
     "clearFilters": "Clear",
-    "loginRequiredTitle": "Create an Account",
-    "loginRequiredMessage": "To get the pal, create or log in to your account and make a purchase first.",
-    "loginRequiredAction": "Log in"
+    "priceUnder": "< {{price}}",
+    "priceBetween": "{{min}} – {{max}}",
+    "priceOver": "{{price}}+",
+    "tags": "Tags",
+    "sortBy": "Sort by",
+    "sortNewest": "Newest",
+    "sortOldest": "Oldest",
+    "sortRating": "Highest Rated",
+    "sortPopular": "Most Popular",
+    "sortPriceLow": "Price: Low to High",
+    "sortPriceHigh": "Price: High to Low"
   }
 }

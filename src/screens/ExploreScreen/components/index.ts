@@ -7,4 +7,6 @@ export {ExploreSearchInput, ExploreSearchToggle} from './ExploreSearch';
 export {CategoryFilterSheet} from './CategoryFilterSheet';
 export {PriceFilterSheet} from './PriceFilterSheet';
 export type {PriceRange} from './PriceFilterSheet';
-export {LoginRequiredModal} from './LoginRequiredModal';
+export {TagsFilterSheet} from './TagsFilterSheet';
+export {SortFilterSheet, SORT_OPTIONS} from './SortFilterSheet';
+export type {SortOption} from './SortFilterSheet';
