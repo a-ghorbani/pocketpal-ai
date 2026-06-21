@@ -909,9 +909,7 @@ describe('ExploreScreen', () => {
         // genuine 0-results AND a failed fetch; the copy stays neutral (offers
         // "check your connection") rather than asserting "no matches" exist.
         // There is no distinct error-body testID — the body is shared by design.
-        expect(
-          view.getByText(en.explore.searchNoResultsHelper),
-        ).toBeTruthy();
+        expect(view.getByText(en.explore.searchNoResultsHelper)).toBeTruthy();
       } finally {
         jest.useRealTimers();
       }
@@ -984,12 +982,12 @@ describe('ExploreScreen', () => {
         // testID and assert the label it carries (a11y label is not globally
         // unique — an unrelated "Close" lives elsewhere on the tree — so
         // selecting by label would be ambiguous; testID is the right key).
-        const scrimLabel =
-          view.getByTestId('explore-search-scrim').props.accessibilityLabel;
-        const clearLabel =
-          view.getByTestId('explore-search-clear').props.accessibilityLabel;
-        const inputLabel =
-          view.getByTestId('explore-search-input').props.accessibilityLabel;
+        const scrimLabel = view.getByTestId('explore-search-scrim').props
+          .accessibilityLabel;
+        const clearLabel = view.getByTestId('explore-search-clear').props
+          .accessibilityLabel;
+        const inputLabel = view.getByTestId('explore-search-input').props
+          .accessibilityLabel;
 
         expect(scrimLabel).toBe(en.common.close); // "Close"
         expect(clearLabel).toBe(en.common.clear); // "Clear All"
