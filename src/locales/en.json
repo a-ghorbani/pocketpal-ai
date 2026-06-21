@@ -366,6 +366,12 @@
         "downloadProjectionModel": "Download projection model",
         "viewModelCardOnHuggingFace": "View Model Card on Hugging Face"
       },
+      "badges": {
+        "downloaded": "Downloaded",
+        "visionSupport": "Vision Support",
+        "recommended": "Recommended for this model",
+        "loaded": "Loaded"
+      },
       "accessibility": {
         "expandDetails": "Expand details",
         "collapseDetails": "Collapse details",

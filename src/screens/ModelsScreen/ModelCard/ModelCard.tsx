@@ -26,6 +26,7 @@ import {
 } from 'react-native-paper';
 
 import {ProjectionModelSelector, MemoryRequirement} from '../../../components';
+import {Label} from '../../../components/ui';
 
 import {useTheme, useMemoryCheck, useStorageCheck} from '../../../hooks';
 
@@ -314,6 +315,56 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
           ]}
         />
       );
+    };
+
+    // Status badges shown under the title row (only those with backing data:
+    // Downloaded, Vision Support, Loaded). Note: the Figma "Recommended"
+    // badge and the "⚡ tok/s" metric have no backing field and are omitted.
+    const renderStatusBadges = () => {
+      const badges: React.ReactNode[] = [];
+      if (isActiveModel) {
+        badges.push(
+          <Label
+            key="loaded"
+            testID="badge-loaded"
+            variant="status-success"
+            size="s"
+            label={l10n.models.modelCard.badges.loaded}
+          />,
+        );
+      } else if (isDownloaded) {
+        badges.push(
+          <Label
+            key="downloaded"
+            testID="badge-downloaded"
+            variant="status-success"
+            size="s"
+            label={l10n.models.modelCard.badges.downloaded}
+          />,
+        );
+      }
+      if (model.supportsMultimodal) {
+        badges.push(
+          <Label
+            key="vision"
+            testID="badge-vision"
+            variant="informational"
+            size="s"
+            label={l10n.models.modelCard.badges.visionSupport}
+            leadingIcon={
+              <EyeIcon
+                width={12}
+                height={12}
+                stroke={theme.colors.iconModelTypeVision}
+              />
+            }
+          />,
+        );
+      }
+      if (badges.length === 0) {
+        return null;
+      }
+      return <View style={styles.statusBadges}>{badges}</View>;
     };
 
     // Helper function to toggle expanded state with smooth LayoutAnimation
@@ -670,6 +721,9 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
               </View>
             </View>
           </View>
+
+          {/* Status badges */}
+          {renderStatusBadges()}
 
           {/* Content */}
           <View style={styles.cardContent}>

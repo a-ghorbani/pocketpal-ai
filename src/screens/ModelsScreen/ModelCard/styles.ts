@@ -5,12 +5,18 @@ import {Theme} from '../../../utils/types';
 export const createStyles = (theme: Theme) =>
   StyleSheet.create({
     card: {
-      borderRadius: 24, // Updated to match rounded-3xl (24px)
-      margin: 6,
-      //overflow: 'hidden',
+      borderRadius: theme.radius.l,
+      margin: theme.spacing.xs,
       backgroundColor: theme.colors.background,
       borderColor: theme.colors.outline,
-      borderWidth: 1,
+      borderWidth: theme.stroke.sm,
+    },
+    statusBadges: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.s,
+      paddingHorizontal: theme.spacing.ml,
+      paddingBottom: theme.spacing.s,
     },
     cardContent: {
       paddingBottom: 6,
