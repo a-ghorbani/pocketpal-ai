@@ -21,7 +21,8 @@ import type {PalsHubPal, PalsQuery} from '../../../types/palshub';
 
 import {ExploreFilterRow, type ExploreFilterKey} from './ExploreFilterRow';
 import {ExploreSortControl} from './ExploreSortControl';
-import {ExploreSearchInput, ExploreSearchToggle} from './ExploreSearch';
+import {ExploreSearchToggle} from './ExploreSearch';
+import {ExploreSearchOverlay} from './ExploreSearchOverlay';
 import {CategoryFilterSheet} from './CategoryFilterSheet';
 import {PriceFilterSheet, type PriceRange} from './PriceFilterSheet';
 import {TagsFilterSheet} from './TagsFilterSheet';
@@ -148,6 +149,13 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
       setShowDetail(true);
     };
 
+    // Single close-and-clear used by the scrim, the "Explore Pals" CTA, and a
+    // result-row tap — keeps the overlay's dismiss paths identical.
+    const closeSearch = () => {
+      setSearchExpanded(false);
+      setSearchInput('');
+    };
+
     const activeFilters = new Set<ExploreFilterKey>();
     if (categoryIds.length > 0) {
       activeFilters.add('categories');
@@ -159,6 +167,9 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
       activeFilters.add('tags');
     }
 
+    // Store-wide PalsHub loading flag, not scoped to this query — an unrelated
+    // PalsHub fetch flips the overlay into its loading body. A query-local
+    // loading signal is a follow-up.
     const isLoading = palStore.isLoadingPalsHub;
 
     const renderEmpty = () => {
@@ -204,13 +215,6 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
           activeFilters={activeFilters}
           onOpen={key => setOpenSheet(key as OpenSheet)}
         />
-
-        {searchExpanded && (
-          <ExploreSearchInput
-            query={searchInput}
-            onChangeQuery={setSearchInput}
-          />
-        )}
 
         <View style={styles.availableHeader}>
           <Text style={styles.availableTitle}>
@@ -297,6 +301,24 @@ export const ExplorePalsPanel: React.FC<ExplorePalsPanelProps> = observer(
               setShowDetail(false);
               setSelectedPal(null);
             }}
+          />
+        )}
+
+        {searchExpanded && (
+          <ExploreSearchOverlay
+            searchInput={searchInput}
+            onChangeSearchInput={setSearchInput}
+            debouncedQuery={debouncedQuery}
+            isLoading={isLoading}
+            items={items}
+            onResultPress={pal => {
+              // Close the overlay before opening the detail sheet. The overlay
+              // is a paper Portal painted above the bottom-sheet host, so an
+              // open scrim would sit over the sheet and swallow its touches.
+              closeSearch();
+              handleCardPress(pal);
+            }}
+            onClose={closeSearch}
           />
         )}
       </View>

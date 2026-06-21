@@ -208,9 +208,130 @@ export const createControlStyles = (theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    searchInput: {
+  });
+
+export const createSearchOverlayStyles = (theme: Theme) =>
+  StyleSheet.create({
+    overlayWrapper: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'flex-start',
+      paddingTop: theme.spacing.xxl,
       paddingHorizontal: theme.spacing.m,
-      paddingBottom: theme.spacing.s,
+    },
+    scrim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.colors.scrim,
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.l,
+      padding: theme.spacing.m,
+      gap: theme.spacing.m,
+      maxHeight: '70%',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: {width: 0, height: 2},
+      shadowRadius: 4,
+      shadowOpacity: 0.08,
+    },
+    inputWrapper: {
+      borderWidth: theme.stroke.sm,
+      borderColor: theme.colors.outline,
+      borderRadius: theme.radius.l,
+      backgroundColor: theme.colors.secondaryDefault,
+      paddingHorizontal: theme.spacing.s,
+      overflow: 'hidden',
+    },
+    inputWrapperFocused: {
+      borderColor: theme.colors.primary,
+    },
+    input: {
+      marginBottom: -theme.stroke.sm,
+    },
+    promptBody: {
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+      paddingVertical: theme.spacing.xl,
+    },
+    promptTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.foregroundPrimary,
+      textAlign: 'center',
+    },
+    promptText: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundTertiary,
+      textAlign: 'center',
+    },
+    loadingBody: {
+      paddingVertical: theme.spacing.xl,
+      alignItems: 'center',
+    },
+    noResultsBody: {
+      alignItems: 'center',
+      gap: theme.spacing.s,
+      paddingVertical: theme.spacing.xl,
+    },
+    noResultsTitle: {
+      ...theme.typography.titleM,
+      color: theme.colors.foregroundPrimary,
+      textAlign: 'center',
+    },
+    noResultsQuery: {
+      color: theme.colors.primary,
+    },
+    noResultsHelper: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundTertiary,
+      textAlign: 'center',
+    },
+    exploreCta: {
+      marginTop: theme.spacing.s,
+      paddingHorizontal: theme.spacing.l,
+      paddingVertical: theme.spacing.s,
+      borderRadius: theme.radius.l,
+      backgroundColor: theme.colors.secondaryDefault,
+    },
+    exploreCtaText: {
+      ...theme.typography.uiM,
+      color: theme.colors.foregroundPrimary,
+    },
+    resultsBody: {
+      gap: theme.spacing.s,
+    },
+    resultsHeader: {
+      ...theme.typography.titleS,
+      color: theme.colors.foregroundPrimary,
+    },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.s,
+    },
+    resultAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    resultAvatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    resultBody: {
+      flex: 1,
+      gap: theme.spacing.xxs,
+    },
+    resultName: {
+      ...theme.typography.titleS,
+      color: theme.colors.foregroundPrimary,
+    },
+    resultSubtitle: {
+      ...theme.typography.bodyS,
+      color: theme.colors.foregroundSecondary,
     },
   });
 

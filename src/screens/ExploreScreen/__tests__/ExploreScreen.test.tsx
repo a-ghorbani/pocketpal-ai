@@ -1,7 +1,13 @@
 import React from 'react';
 import {runInAction} from 'mobx';
 
-import {render, fireEvent, waitFor, act} from '../../../../jest/test-utils';
+import {
+  render,
+  fireEvent,
+  waitFor,
+  act,
+  within,
+} from '../../../../jest/test-utils';
 import {palStore} from '../../../store';
 import {authService, palsHubService} from '../../../services';
 import {
@@ -9,6 +15,7 @@ import {
   mockPremiumPalsHubPal,
   createPalsHubPal,
 } from '../../../../jest/fixtures/pals';
+import en from '../../../locales/en.json';
 
 import {ExploreScreen} from '../ExploreScreen';
 
@@ -669,6 +676,544 @@ describe('ExploreScreen', () => {
         expect(getByTestId('pal-label-free')).toBeTruthy();
       });
       expect(queryByTestId('explore-login-required')).toBeNull();
+    });
+  });
+
+  // Search overlay: a Portal sibling gated on the search toggle. Its body is
+  // selected by the SIGNALS (debouncedQuery / isLoading / items.length), not by
+  // the toggle alone — the riskiest piece is that the prompt body is chosen by
+  // `debouncedQuery === ''` even while `items` is still populated from the
+  // dimmed discovery grid behind the scrim.
+  describe('search overlay', () => {
+    const openOverlay = (getByTestId: any) => {
+      fireEvent.press(getByTestId('explore-search-toggle'));
+    };
+
+    it('mounts the overlay (with its focused input) when the toggle is pressed', async () => {
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      expect(queryByTestId('explore-search-overlay')).toBeNull();
+      openOverlay(getByTestId);
+
+      // I1: the frozen `explore-search-input` testID resolves on the overlay.
+      expect(getByTestId('explore-search-overlay')).toBeTruthy();
+      expect(getByTestId('explore-search-input')).toBeTruthy();
+    });
+
+    it('shows the prompt body for an empty query EVEN WHILE the grid items are populated', async () => {
+      // The grid resolves with pals, so `items` is non-empty. Opening the
+      // overlay with an empty query must still select the prompt body — the
+      // selection is by `debouncedQuery === ''`, NOT by `items.length`.
+      (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+        pageResponse([mockPalsHubPal, mockPremiumPalsHubPal], false),
+      );
+
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
+
+      // Grid populated behind the (not-yet-open) overlay.
+      await waitFor(() =>
+        expect(
+          getByTestId(`explore-pal-card-${mockPalsHubPal.id}`),
+        ).toBeTruthy(),
+      );
+
+      openOverlay(getByTestId);
+
+      // Prompt body selected despite populated items; NOT the results header.
+      expect(getByTestId('explore-search-prompt')).toBeTruthy();
+      expect(queryByTestId('explore-search-results-header')).toBeNull();
+      expect(
+        queryByTestId(`explore-search-result-row-${mockPalsHubPal.id}`),
+      ).toBeNull();
+    });
+
+    it('renders the results header and one reskinned row per pal, with the description subtitle', async () => {
+      jest.useFakeTimers();
+      try {
+        // Mount discovery resolves empty; the typed query resolves with pals.
+        (palStore.searchPalsHubPals as jest.Mock)
+          .mockResolvedValueOnce(pageResponse([], false))
+          .mockResolvedValue(
+            pageResponse([mockPalsHubPal, mockPremiumPalsHubPal], false),
+          );
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(view.getByTestId('explore-search-input'), 'pal'),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        expect(view.getByTestId('explore-search-results-header')).toBeTruthy();
+        const row = view.getByTestId(
+          `explore-search-result-row-${mockPalsHubPal.id}`,
+        );
+        expect(row).toBeTruthy();
+        expect(
+          view.getByTestId(
+            `explore-search-result-row-${mockPremiumPalsHubPal.id}`,
+          ),
+        ).toBeTruthy();
+        // Subtitle binds pal.description (not a static literal). Scope to the
+        // row — the same description also renders in the dimmed grid card.
+        expect(within(row).getByText(mockPalsHubPal.description!)).toBeTruthy();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('closes the overlay BEFORE opening the detail sheet on a free result tap', async () => {
+      jest.useFakeTimers();
+      try {
+        (palStore.searchPalsHubPals as jest.Mock)
+          .mockResolvedValueOnce(pageResponse([], false))
+          .mockResolvedValue(pageResponse([mockPalsHubPal], false));
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(view.getByTestId('explore-search-input'), 'pal'),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        // Overlay + scrim are present right up until the row is tapped.
+        expect(view.getByTestId('explore-search-overlay')).toBeTruthy();
+        expect(view.getByTestId('explore-search-scrim')).toBeTruthy();
+
+        await act(async () => {
+          fireEvent.press(
+            view.getByTestId(`explore-search-result-row-${mockPalsHubPal.id}`),
+          );
+        });
+
+        // Paint-order-independent guard: assert the overlay (and its scrim) is
+        // GONE — not merely that the sheet is present. A revert to
+        // onResultPress={handleCardPress} would leave searchExpanded true, the
+        // overlay/scrim mounted above the bottom-sheet host, and this fails.
+        await waitFor(() => {
+          expect(view.queryByTestId('explore-search-overlay')).toBeNull();
+        });
+        expect(view.queryByTestId('explore-search-scrim')).toBeNull();
+        expect(view.queryByTestId('explore-search-input')).toBeNull();
+
+        // Free pal: with the overlay closed, the detail sheet opens; no gate.
+        await waitFor(() => {
+          expect(view.getByTestId('pal-label-free')).toBeTruthy();
+        });
+        expect(view.queryByTestId('explore-login-required')).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('closes the overlay AND hits the login-required gate on a premium result tap while signed-out', async () => {
+      jest.useFakeTimers();
+      try {
+        (authService as any).isAuthenticated = false;
+        (palStore.searchPalsHubPals as jest.Mock)
+          .mockResolvedValueOnce(pageResponse([], false))
+          .mockResolvedValue(pageResponse([mockPremiumPalsHubPal], false));
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(
+            view.getByTestId('explore-search-input'),
+            'premium',
+          ),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        expect(view.getByTestId('explore-search-overlay')).toBeTruthy();
+
+        await act(async () => {
+          fireEvent.press(
+            view.getByTestId(
+              `explore-search-result-row-${mockPremiumPalsHubPal.id}`,
+            ),
+          );
+        });
+
+        // The handler closes the overlay on ANY result tap (closeSearch runs
+        // before handleCardPress), then the gate fires. Assert overlay-absence
+        // so the login modal isn't dimmed/swallowed by a left-open scrim.
+        await waitFor(() => {
+          expect(view.queryByTestId('explore-search-overlay')).toBeNull();
+        });
+        expect(view.queryByTestId('explore-search-scrim')).toBeNull();
+
+        // Same gate as the discovery card: login-required modal, sheet closed.
+        await waitFor(() => {
+          expect(view.getByTestId('explore-login-required')).toBeTruthy();
+        });
+        expect(view.queryByTestId('pal-label-premium')).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('shows the 0-results body with the query in the accent span when the search returns nothing', async () => {
+      jest.useFakeTimers();
+      try {
+        // Mount AND the typed query both resolve empty.
+        (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+          pageResponse([], false),
+        );
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(
+            view.getByTestId('explore-search-input'),
+            'zzzqqq',
+          ),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        const noResults = view.getByTestId('explore-search-no-results');
+        expect(noResults).toBeTruthy();
+        // The query string is rendered (its own accent span).
+        expect(view.getByText('zzzqqq')).toBeTruthy();
+        expect(view.getByTestId('explore-search-explore-cta')).toBeTruthy();
+        // The softened helper copy renders. The store swallows fetch
+        // failures into an empty response, so this same body covers both a
+        // genuine 0-results AND a failed fetch; the copy stays neutral (offers
+        // "check your connection") rather than asserting "no matches" exist.
+        // There is no distinct error-body testID — the body is shared by design.
+        expect(view.getByText(en.explore.searchNoResultsHelper)).toBeTruthy();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('the "Explore Pals" CTA closes the overlay AND clears the search input (real action)', async () => {
+      jest.useFakeTimers();
+      try {
+        (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+          pageResponse([], false),
+        );
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(
+            view.getByTestId('explore-search-input'),
+            'nothinghere',
+          ),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        await act(async () => {
+          fireEvent.press(view.getByTestId('explore-search-explore-cta'));
+        });
+
+        // Overlay unmounts...
+        await waitFor(() => {
+          expect(view.queryByTestId('explore-search-overlay')).toBeNull();
+        });
+        // ...and the input is cleared: re-opening shows an empty input, and
+        // once the debounce settles the prompt body is selected (no stale
+        // query carried over).
+        openOverlay(view.getByTestId);
+        expect(view.getByTestId('explore-search-input').props.value).toBe('');
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        expect(view.getByTestId('explore-search-prompt')).toBeTruthy();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('gives the scrim, input, and clear-X distinct a11y labels that resolve the right control', async () => {
+      jest.useFakeTimers();
+      try {
+        (palStore.searchPalsHubPals as jest.Mock).mockResolvedValue(
+          pageResponse([], false),
+        );
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        // The clear-X only mounts once the input is non-empty.
+        act(() =>
+          fireEvent.changeText(view.getByTestId('explore-search-input'), 'pal'),
+        );
+
+        // The three overlay controls carry three DISTINCT labels — previously
+        // all collided on explore.searchLabel. Select each by its unique
+        // testID and assert the label it carries (a11y label is not globally
+        // unique — an unrelated "Close" lives elsewhere on the tree — so
+        // selecting by label would be ambiguous; testID is the right key).
+        const scrimLabel = view.getByTestId('explore-search-scrim').props
+          .accessibilityLabel;
+        const clearLabel = view.getByTestId('explore-search-clear').props
+          .accessibilityLabel;
+        const inputLabel = view.getByTestId('explore-search-input').props
+          .accessibilityLabel;
+
+        expect(scrimLabel).toBe(en.common.close); // "Close"
+        expect(clearLabel).toBe(en.common.clear); // "Clear All"
+        expect(inputLabel).toBe(en.explore.searchLabel); // "Search pals"
+        // All three are mutually distinct.
+        expect(new Set([scrimLabel, clearLabel, inputLabel]).size).toBe(3);
+
+        // Let the debounce settle so teardown is clean.
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('dismissing via the scrim (by testID) closes the overlay and clears the input', async () => {
+      const {getByTestId, queryByTestId} = render(<ExploreScreen />, {
+        withSafeArea: true,
+      });
+      await waitFor(() =>
+        expect(palStore.searchPalsHubPals).toHaveBeenCalled(),
+      );
+
+      openOverlay(getByTestId);
+
+      // The scrim is the backdrop Pressable (label common.close "Close",
+      // distinct from the input's "Search pals" and the clear control's
+      // "Clear All"); the test targets it by its dedicated testID.
+      const scrim = getByTestId('explore-search-scrim');
+      await act(async () => {
+        fireEvent.press(scrim);
+      });
+
+      await waitFor(() => {
+        expect(queryByTestId('explore-search-overlay')).toBeNull();
+      });
+      openOverlay(getByTestId);
+      expect(getByTestId('explore-search-input').props.value).toBe('');
+    });
+
+    it('shows the loading spinner body while a non-empty query is in flight', async () => {
+      jest.useFakeTimers();
+      try {
+        const inflight = deferred<any>();
+        // The overlay's `isLoading` is the store-wide `palStore.isLoadingPalsHub`,
+        // captured by the observer `ExplorePalsPanel` and passed DOWN as a plain
+        // prop to the non-observer overlay. Driving the flag through the real
+        // search path is NOT cheap with this harness: the centralized palStore
+        // mock's searchPalsHubPals does not model the real store's loading-flag
+        // lifecycle, and when the flag is flipped mid in-flight-promise under
+        // fake timers the observer→prop re-render does not flush deterministically
+        // (verified: getByTestId/waitFor both still see the stale prop). So we
+        // flip the flag directly before opening the overlay — the value the
+        // overlay reads is identical to the real path's — rather than fabricating
+        // a flush. The store-wide loading coupling (an unrelated PalsHub fetch
+        // flips this overlay's loading body) is a documented follow-up.
+        (palStore.searchPalsHubPals as jest.Mock)
+          .mockResolvedValueOnce(pageResponse([], false))
+          .mockReturnValueOnce(inflight.promise);
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        // Flip the store's loading flag for the overlay's isLoading prop.
+        runInAction(() => {
+          palStore.isLoadingPalsHub = true;
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(view.getByTestId('explore-search-input'), 'sun'),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        expect(view.getByTestId('explore-search-loading')).toBeTruthy();
+        expect(view.queryByTestId('explore-search-prompt')).toBeNull();
+        expect(view.queryByTestId('explore-search-results-header')).toBeNull();
+
+        // Let the pending request settle so teardown is clean.
+        await act(async () => {
+          inflight.resolve(pageResponse([], false));
+        });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('the clear (X) button clears the query and returns to the prompt body', async () => {
+      jest.useFakeTimers();
+      try {
+        (palStore.searchPalsHubPals as jest.Mock)
+          .mockResolvedValueOnce(pageResponse([], false))
+          .mockResolvedValue(pageResponse([mockPalsHubPal], false));
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(view.getByTestId('explore-search-input'), 'pal'),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        expect(view.getByTestId('explore-search-results-header')).toBeTruthy();
+
+        // The clear affordance is present once the input is non-empty.
+        act(() => fireEvent.press(view.getByTestId('explore-search-clear')));
+        expect(view.getByTestId('explore-search-input').props.value).toBe('');
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+        expect(view.getByTestId('explore-search-prompt')).toBeTruthy();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('renders the avatar fallback icon and drops the subtitle for a pal with no thumbnail/description', async () => {
+      jest.useFakeTimers();
+      try {
+        const bare = createPalsHubPal({
+          id: 'bare-1',
+          title: 'Bare Pal',
+          thumbnail_url: undefined,
+          description: '',
+        });
+        (palStore.searchPalsHubPals as jest.Mock)
+          .mockResolvedValueOnce(pageResponse([], false))
+          .mockResolvedValue(pageResponse([bare], false));
+
+        const view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        act(() =>
+          fireEvent.changeText(
+            view.getByTestId('explore-search-input'),
+            'bare',
+          ),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        const row = view.getByTestId(`explore-search-result-row-${bare.id}`);
+        // Name renders; empty description means no subtitle text is mounted.
+        expect(within(row).getByText('Bare Pal')).toBeTruthy();
+        expect(within(row).queryByText(mockPalsHubPal.description!)).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('preserves the last-query-wins stale guard with the overlay mounted (out-of-order deferred resolves)', async () => {
+      // A SYNC mock proves nothing here: this asserts the seqRef guard still
+      // discards an earlier broad response that resolves AFTER a later narrow
+      // one, with the overlay (not just the grid) reading `items`.
+      const broadPal = createPalsHubPal({
+        id: 'overlay-broad-1',
+        title: 'Overlay Broad',
+      });
+      const narrowPal = createPalsHubPal({
+        id: 'overlay-narrow-1',
+        title: 'Overlay Narrow',
+      });
+
+      const broad = deferred<any>();
+      const narrow = deferred<any>();
+
+      (palStore.searchPalsHubPals as jest.Mock)
+        .mockResolvedValueOnce(pageResponse([], false))
+        .mockReturnValueOnce(broad.promise)
+        .mockReturnValueOnce(narrow.promise);
+
+      jest.useFakeTimers();
+      let view: ReturnType<typeof render>;
+      try {
+        view = render(<ExploreScreen />, {withSafeArea: true});
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        openOverlay(view.getByTestId);
+        const input = view.getByTestId('explore-search-input');
+
+        act(() => fireEvent.changeText(input, 'a'));
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+
+        act(() => fireEvent.changeText(input, 'assistant'));
+        await act(async () => {
+          jest.advanceTimersByTime(SEARCH_DEBOUNCE_FLUSH);
+        });
+      } finally {
+        jest.useRealTimers();
+      }
+
+      // Later (narrow) request resolves FIRST...
+      await act(async () => {
+        narrow.resolve(pageResponse([narrowPal], false));
+      });
+      // ...earlier (broad) request resolves LATER and must be discarded.
+      await act(async () => {
+        broad.resolve(pageResponse([broadPal], false));
+      });
+
+      await waitFor(() => {
+        expect(
+          view.getByTestId(`explore-search-result-row-${narrowPal.id}`),
+        ).toBeTruthy();
+      });
+      // The stale broad result must NOT overwrite the narrow one in the overlay.
+      expect(
+        view.queryByTestId(`explore-search-result-row-${broadPal.id}`),
+      ).toBeNull();
     });
   });
 
