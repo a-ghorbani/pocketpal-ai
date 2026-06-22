@@ -37,6 +37,13 @@ export const EFFORT_LEVELS = [
 
 export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
+/**
+ * Standard subset pre-selected the first time a user enables graded effort on
+ * a model — gives the chips an immediate selected/unselected contrast (instead
+ * of an all-blank row that doesn't read as togglable) and a sensible default.
+ */
+export const DEFAULT_EFFORT_VALUES: string[] = ['low', 'medium', 'high'];
+
 /** Order an effort-level selection canonically (lowest→highest intensity). */
 export function orderEffortValues(values: string[]): string[] {
   return EFFORT_LEVELS.filter(level => values.includes(level));

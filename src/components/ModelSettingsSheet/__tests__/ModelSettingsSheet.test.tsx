@@ -255,7 +255,9 @@ describe('ModelSettingsSheet', () => {
         <ModelSettingsSheet {...defaultProps} />,
       );
 
-      // Turn on axis-1, then axis-2, then pick the supported effort levels.
+      // Turn on axis-1, then axis-2. Enabling graded effort pre-selects the
+      // standard low/medium/high subset, so saving without touching any chip
+      // persists exactly that default.
       await act(async () => {
         fireEvent(
           getByTestId('reasoning-is-reasoning-switch'),
@@ -269,15 +271,6 @@ describe('ModelSettingsSheet', () => {
           'valueChange',
           true,
         );
-      });
-      await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-low'));
-      });
-      await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-medium'));
-      });
-      await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-high'));
       });
       await act(async () => {
         fireEvent.press(getByText('Save Changes'));
@@ -314,12 +307,13 @@ describe('ModelSettingsSheet', () => {
           true,
         );
       });
-      // Tap out of order; the saved set must still be canonically ordered.
+      // Add levels out of order on top of the pre-selected low/medium/high;
+      // the saved set must still be canonically ordered.
       await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-high'));
+        fireEvent.press(getByTestId('effort-chip-xhigh'));
       });
       await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-low'));
+        fireEvent.press(getByTestId('effort-chip-minimal'));
       });
       await act(async () => {
         fireEvent.press(getByText('Save Changes'));
@@ -329,7 +323,7 @@ describe('ModelSettingsSheet', () => {
         mockModel.id,
         expect.objectContaining({
           supportsEffort: true,
-          effortValues: ['low', 'high'],
+          effortValues: ['minimal', 'low', 'medium', 'high', 'xhigh'],
         }),
       );
     });
@@ -353,12 +347,9 @@ describe('ModelSettingsSheet', () => {
           true,
         );
       });
+      // Pre-selected set is low/medium/high; tapping 'low' removes just it.
       await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-medium'));
-      });
-      // Tap again to deselect.
-      await act(async () => {
-        fireEvent.press(getByTestId('effort-chip-medium'));
+        fireEvent.press(getByTestId('effort-chip-low'));
       });
       await act(async () => {
         fireEvent.press(getByText('Save Changes'));
@@ -368,7 +359,7 @@ describe('ModelSettingsSheet', () => {
         mockModel.id,
         expect.objectContaining({
           supportsEffort: true,
-          effortValues: [],
+          effortValues: ['medium', 'high'],
         }),
       );
     });

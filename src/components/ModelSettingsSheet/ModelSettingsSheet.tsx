@@ -10,6 +10,7 @@ import {chatTemplates} from '../../utils/chat';
 import {
   resolveReasoningCapability,
   EFFORT_LEVELS,
+  DEFAULT_EFFORT_VALUES,
   orderEffortValues,
 } from '../../utils/reasoningCapability';
 
@@ -65,6 +66,11 @@ export const ModelSettingsSheet: React.FC<ModelSettingsSheetProps> = memo(
     const onSupportsEffortChange = (value: boolean) => {
       setReasoningDirty(true);
       setSupportsEffort(value);
+      // Pre-select the standard subset on first enable so the chips read as
+      // togglable (selected/unselected contrast) instead of an all-blank row.
+      if (value && effortSet.length === 0) {
+        setEffortSet(DEFAULT_EFFORT_VALUES);
+      }
     };
     const onEffortLevelToggle = (level: string) => {
       setReasoningDirty(true);
