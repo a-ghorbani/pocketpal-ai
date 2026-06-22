@@ -565,7 +565,8 @@
         "disableThinking": "Disable thinking mode",
         "thinkingEnabled": "Thinking mode enabled",
         "thinkingDisabled": "Thinking mode disabled",
-        "thinkText": "Think"
+        "thinkText": "Think",
+        "cycleEffort": "Reasoning effort: {{level}}. Double tap to cycle effort level"
       }
     },
     "contentReportSheet": {

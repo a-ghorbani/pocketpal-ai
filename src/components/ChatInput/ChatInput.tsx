@@ -33,6 +33,7 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
+import {t} from '../../locales';
 
 import {SendButton, StopButton, Menu, VoiceChip} from '..';
 
@@ -366,6 +367,14 @@ export const ChatInput = observer(
       ? onSurfaceColor
       : onSurfaceColorVariant;
 
+    // Localize the current graded-effort tier through the same table the
+    // model-settings chips use; fall back to the raw token for an unlisted one.
+    const effortLevelLabels = l10n.components.modelSettingsSheet.effortLevels;
+    const localizedEffort =
+      reasoningEffort && reasoningEffort in effortLevelLabels
+        ? effortLevelLabels[reasoningEffort as keyof typeof effortLevelLabels]
+        : reasoningEffort;
+
     return (
       <View style={styles.container}>
         <View style={styles.inputContainer}>
@@ -579,9 +588,18 @@ export const ChatInput = observer(
                       : onThinkingToggle?.(!isThinkingEnabled)
                   }
                   accessibilityLabel={
-                    isThinkingEnabled
-                      ? l10n.components.chatInput.thinkingToggle.disableThinking
-                      : l10n.components.chatInput.thinkingToggle.enableThinking
+                    supportsEffort && effortValues.length > 0
+                      ? t(
+                          l10n.components.chatInput.thinkingToggle.cycleEffort,
+                          {
+                            level: localizedEffort ?? '',
+                          },
+                        )
+                      : isThinkingEnabled
+                        ? l10n.components.chatInput.thinkingToggle
+                            .disableThinking
+                        : l10n.components.chatInput.thinkingToggle
+                            .enableThinking
                   }
                   accessibilityRole="button">
                   <AtomIcon
@@ -602,7 +620,7 @@ export const ChatInput = observer(
                         : {color: onSurfaceColorVariant},
                     ]}>
                     {supportsEffort && isThinkingEnabled && reasoningEffort
-                      ? reasoningEffort
+                      ? localizedEffort
                       : l10n.components.chatInput.thinkingToggle.thinkText}
                   </Text>
                 </TouchableOpacity>

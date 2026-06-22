@@ -5,6 +5,7 @@ import {
   orderEffortValues,
   EFFORT_LEVELS,
 } from '../reasoningCapability';
+import en from '../../locales/en.json';
 
 const localModel = (overrides: Partial<Model> = {}): Model =>
   ({
@@ -166,5 +167,14 @@ describe('orderEffortValues', () => {
       'xhigh',
       'max',
     ]);
+  });
+});
+
+describe('effortLevels l10n table', () => {
+  it('keeps en.json effortLevels keys in lockstep with EFFORT_LEVELS', () => {
+    const labelKeys = Object.keys(
+      en.components.modelSettingsSheet.effortLevels,
+    ).sort();
+    expect(labelKeys).toEqual([...EFFORT_LEVELS].sort());
   });
 });

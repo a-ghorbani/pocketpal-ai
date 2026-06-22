@@ -21,6 +21,11 @@ import {ModelOrigin} from '../../../utils/types';
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});
 
+// The pill renders the localized effort tier (e.g. 'Low'), not the raw carrier
+// token ('low'); map the token through the same table the component uses.
+const effortLabels = l10n.en.components.modelSettingsSheet.effortLevels;
+const effortLabel = (token: keyof typeof effortLabels) => effortLabels[token];
+
 describe('ChatScreen', () => {
   let llamaRN;
 
@@ -572,14 +577,16 @@ describe('ChatScreen reasoning override reaches the pill (live, no remount)', ()
     // The already-mounted ChatScreen must now drive a graded pill: tapping
     // cycles off → low → medium → high instead of a plain on/off toggle. Each
     // tap awaits the async persist + state flush before the label settles.
-    for (const expected of ['low', 'medium', 'high']) {
+    for (const expected of ['low', 'medium', 'high'] as const) {
       await act(async () => {
         fireEvent.press(getByTestId('thinking-toggle'));
       });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 30));
       });
-      await waitFor(() => expect(pill().getByText(expected)).toBeTruthy());
+      await waitFor(() =>
+        expect(pill().getByText(effortLabel(expected))).toBeTruthy(),
+      );
     }
   });
 
@@ -630,14 +637,16 @@ describe('ChatScreen reasoning override reaches the pill (live, no remount)', ()
 
     await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
 
-    for (const expected of ['low', 'medium', 'high']) {
+    for (const expected of ['low', 'medium', 'high'] as const) {
       await act(async () => {
         fireEvent.press(getByTestId('thinking-toggle'));
       });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 30));
       });
-      await waitFor(() => expect(pill().getByText(expected)).toBeTruthy());
+      await waitFor(() =>
+        expect(pill().getByText(effortLabel(expected))).toBeTruthy(),
+      );
     }
   });
 });
@@ -725,11 +734,13 @@ describe('ChatScreen graded effort pill cycle', () => {
     // The init effect resolves enable_thinking:false → pill settles to OFF.
     await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
 
-    for (const expected of ['low', 'medium', 'high']) {
+    for (const expected of ['low', 'medium', 'high'] as const) {
       await act(async () => {
         fireEvent.press(getByTestId('thinking-toggle'));
       });
-      await waitFor(() => expect(pill().getByText(expected)).toBeTruthy());
+      await waitFor(() =>
+        expect(pill().getByText(effortLabel(expected))).toBeTruthy(),
+      );
       // The chosen effort is persisted onto the reasoning carrier intent.
       expect(persisted).toMatchObject({
         enable_thinking: true,
