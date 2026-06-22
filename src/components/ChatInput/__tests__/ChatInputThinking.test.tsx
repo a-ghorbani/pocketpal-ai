@@ -266,6 +266,25 @@ describe('ChatInput Thinking Toggle', () => {
     expect(queryByText('minimal')).toBeNull();
   });
 
+  it('degrades an unlisted tier to the raw string instead of dropping it', () => {
+    const {getByText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle={true}
+          isThinkingEnabled={true}
+          onThinkingToggle={jest.fn()}
+          supportsEffort={true}
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="turbo"
+          onEffortCycle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByText('turbo')).toBeTruthy();
+  });
+
   it('announces the active tier and that the control cycles on a graded pill', () => {
     const {getByLabelText, queryByLabelText} = render(
       <UserContext.Provider value={mockUser}>
