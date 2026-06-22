@@ -82,17 +82,18 @@ describe('useChatSession reasoning wire (local)', () => {
     ).toBeUndefined();
   });
 
-  it('axis-1 OFF emits enable_thinking:false + reasoning_format none', async () => {
+  it('axis-1 OFF emits enable_thinking:false + reasoning_format auto', async () => {
     setSettings({enable_thinking: false});
     const captured = captureCompletionParams();
     await send();
-    expect(captured.current.reasoning_format).toBe('none');
+    expect(captured.current.reasoning_format).toBe('auto');
     expect(captured.current.chat_template_kwargs?.enable_thinking).toBe(false);
   });
 
-  it('non-reasoning model: stale enable_thinking false attaches no reasoning hints', async () => {
-    // A model resolved as isReasoning:'no' must not receive reasoning wire
-    // hints even when enable_thinking is stale-false.
+  it('non-reasoning model: reasoning_format auto (no-op) but no enable_thinking hint', async () => {
+    // reasoning_format is always 'auto' (a no-op for non-reasoning models, and
+    // the value that prevents raw channel/think markers leaking into content);
+    // the enable_thinking:false hint is still withheld from isReasoning:'no'.
     setSettings({enable_thinking: false});
     const model = {
       ...(modelsList as any)[0],
@@ -108,7 +109,7 @@ describe('useChatSession reasoning wire (local)', () => {
     modelStore.activeModelId = model.id;
     const captured = captureCompletionParams();
     await send();
-    expect(captured.current.reasoning_format).toBeUndefined();
+    expect(captured.current.reasoning_format).toBe('auto');
     expect(
       captured.current.chat_template_kwargs?.enable_thinking,
     ).toBeUndefined();
@@ -134,7 +135,7 @@ describe('useChatSession reasoning wire (local)', () => {
     await send();
     // No client-side reasoning-display suppression is added to the params.
     expect(captured.current).not.toHaveProperty('strip_reasoning');
-    expect(captured.current.reasoning_format).toBe('none');
+    expect(captured.current.reasoning_format).toBe('auto');
   });
 });
 

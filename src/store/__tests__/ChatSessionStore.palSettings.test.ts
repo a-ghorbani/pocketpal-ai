@@ -272,7 +272,7 @@ describe('ChatSessionStore - Pal Settings', () => {
 
       expect(result.reasoning?.enabled).toBe(false);
       expect(buildReasoningPayload('llama.cpp', result.reasoning)).toEqual({
-        reasoning_format: 'none',
+        reasoning_format: 'auto',
         chat_template_kwargs: {enable_thinking: false},
       });
       expect(buildReasoningPayload('Ollama', result.reasoning)).toEqual({

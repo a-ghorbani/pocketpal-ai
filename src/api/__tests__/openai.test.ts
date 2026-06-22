@@ -1272,9 +1272,9 @@ describe('buildReasoningPayload (per-serverType gating)', () => {
     });
   });
 
-  it('llama.cpp OFF sends enable_thinking:false + reasoning_format none', () => {
+  it('llama.cpp OFF sends enable_thinking:false + reasoning_format auto', () => {
     expect(buildReasoningPayload('llama.cpp', {enabled: false})).toEqual({
-      reasoning_format: 'none',
+      reasoning_format: 'auto',
       chat_template_kwargs: {enable_thinking: false},
     });
   });
@@ -1362,7 +1362,7 @@ describe('streamChatCompletion reasoning payload', () => {
     );
     const xhr = MockXHR.instances[0];
     const body = JSON.parse(xhr.requestBody);
-    expect(body.reasoning_format).toBe('none');
+    expect(body.reasoning_format).toBe('auto');
     expect(body.chat_template_kwargs).toEqual({enable_thinking: false});
     // The internal carrier is never sent on the wire.
     expect(body).not.toHaveProperty('reasoning');

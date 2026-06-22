@@ -839,7 +839,7 @@ describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
 
     // The carrier drives the per-serverType OFF payload.
     expect(buildReasoningPayload('llama.cpp', persisted.reasoning)).toEqual({
-      reasoning_format: 'none',
+      reasoning_format: 'auto',
       chat_template_kwargs: {enable_thinking: false},
     });
     expect(buildReasoningPayload('Ollama', persisted.reasoning)).toEqual({

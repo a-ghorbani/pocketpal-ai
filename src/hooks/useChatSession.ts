@@ -141,28 +141,27 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
-  // Reasoning wire hints (llama.cpp template kwargs). "Off" is a best-effort
-  // hint only — it never strips reasoning the model still returns (rendered by
-  // ReasoningBlock regardless). This is separate from include_thinking_in_context
-  // above, which only governs what prior <think> we SEND.
-  // Only attach hints for reasoning-capable models (axis-1 not 'no'); a plain
-  // non-reasoning model with stale enable_thinking:false gets no reasoning wire
-  // params.
+  // reasoning_format is always 'auto' for the local (llama.rn) path: a no-op for
+  // non-reasoning models and the value that extracts reasoning into
+  // reasoning_content instead of leaking raw channel/think markers into content
+  // (e.g. gemma-4 emits an empty <|channel>thought block even when thinking is
+  // off). On/off is carried solely by enable_thinking. "Off" stays a best-effort
+  // hint — it never strips reasoning the model still returns (rendered by
+  // ReasoningBlock); separate from include_thinking_in_context, which only
+  // governs what prior <think> we SEND.
   const isReasoningCapable =
     resolveReasoningCapability(
       modelStore.activeModel,
       serverStore.remoteReasoning,
     ).isReasoning !== 'no';
-  if (isReasoningCapable) {
-    if (cleanCompletionParams.enable_thinking) {
-      cleanCompletionParams.reasoning_format = 'auto';
-    } else {
-      cleanCompletionParams.reasoning_format = 'none';
-      cleanCompletionParams.chat_template_kwargs = {
-        ...cleanCompletionParams.chat_template_kwargs,
-        enable_thinking: false,
-      };
-    }
+  cleanCompletionParams.reasoning_format = 'auto';
+  // The enable_thinking:false hint only matters for reasoning-capable models;
+  // a non-reasoning model would just ignore it.
+  if (isReasoningCapable && !cleanCompletionParams.enable_thinking) {
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      enable_thinking: false,
+    };
   }
   // Graded effort (gpt-oss-style): carried by the resolver-populated intent.
   const reasoningEffort = cleanCompletionParams.reasoning?.effort;
