@@ -11,7 +11,9 @@
     "sponsorButton": "스폰서 되기",
     "versionCopiedTitle": "버전 복사됨",
     "privacyPolicy": "개인정보 처리방침",
-    "termsOfService": "서비스 약관"
+    "termsOfService": "서비스 약관",
+    "tourDescription": "온보딩 화면을 재생하여 PocketPal AI가 제공하는 기능을 확인하세요.",
+    "showIntroButton": "인트로 다시 보기"
   },
   "benchmark": {
     "title": "벤치마크",
@@ -180,7 +182,7 @@
     "increaseContextTightChip": "빠듯함",
     "increaseContextWontFitChip": "부족함",
     "increaseContextFitsStatus": "이 기기에서 충분히 여유롭습니다.",
-    "increaseContextFitsUnconstrainedStatus": "RAM이 충분합니다 — 모델 자체에 의해서만 제한됩니다.",
+    "increaseContextFitsUnconstrainedStatus": "이 기기의 RAM이 충분합니다 — 모델에 따라서만 영향을 받습니다.",
     "increaseContextTightStatus": "약 {{tokens}}을(를) 넘으면 이 기기의 메모리가 부족해 느려질 수 있습니다. 그래도 시도해 볼 수는 있습니다.",
     "increaseContextWontFitStatus": "약 {{tokens}}은(는) 이 기기의 메모리에 맞지 않을 가능성이 높습니다. 더 작은 크기를 선택해 주세요.",
     "increaseContextModelMax": "{{tokens}} · 모델 최대",
@@ -229,7 +231,8 @@
     "close": "닫기",
     "clear": "모두 삭제",
     "gallery": "갤러리",
-    "error": "오류"
+    "error": "오류",
+    "stop": "중지"
   },
   "completionParams": {
     "grammar": "특정 문법 규칙을 적용하여 생성된 텍스트가 정해진 구조나 형식을 따르도록 강제합니다.",
@@ -272,7 +275,9 @@
       "activateModelTitle": "시작하려면 모델을 활성화하세요",
       "loading": "로딩 중...",
       "activateModelDescription": "모델을 선택하고 다운로드하세요. 다운로드가 완료되면 모델 옆의 불러오기 버튼을 눌러 채팅을 시작할 수 있습니다.",
-      "activateModelButton": "모델 선택"
+      "activateModelButton": "모델 선택",
+      "gettingReadyTitle": "{{name}}이 준비 중임",
+      "gettingReadyDescription": "Pal이 채팅할 수 있도록 준비가 완료될 때 알려드리겠습니다. 배너를 위쪽으로 탭하여 진행 상황을 확인하세요."
     },
     "chatInput": {
       "inputPlaceholder": "메시지",
@@ -1146,7 +1151,7 @@
     "ttsAvailabilityDescription": "어시스턴트의 답변을 음성으로 출력합니다.",
     "ttsAvailabilityLowMemoryWarning": "귀하의 기기 메모리가 낮습니다 — 신뢰성 있게 작동하지 않을 수 있습니다.",
     "requestTimeout": "요청 제한 시간(초)",
-    "requestTimeoutHelp": "서버 응답을 기다리는 최대 시간이에요. 비워 두면 기본값이 적용돼요.",
+    "requestTimeoutHelp": "서버 응답을 기다리는 최대 시간입니다. 비워 두면 기본값이 적용됩니다.",
     "requestTimeoutPlaceholder": "선택 사항 - 비워 두면 기본값 적용"
   },
   "storage": {
@@ -1245,7 +1250,7 @@
       "finalizingPurchase": "구매를 마무리하는 중…",
       "processingPurchase": "처리 중 — 곧 잠금이 해제됩니다.",
       "checkoutSessionExpired": "세션이 만료되었습니다. 계속하려면 다시 로그인해 주세요.",
-      "signInAgain": "다시 로그인",
+      "signInAgain": "다시 로그인하기",
       "palNotAvailable": "이 Pal은 현재 구매할 수 없습니다.",
       "checkoutFailed": "문제가 발생했습니다. 다시 시도해 주세요."
     }
@@ -1354,7 +1359,44 @@
     "voicesEmptyState": "음성 없음.",
     "kokoroDeviceNote": "일부 음성은 모든 기기에서 작동하지 않을 수 있습니다.",
     "insufficientStorage": "저장 공간 부족 — 이 엔진 설치에 필요한 {{requiredMb}}MB를 확보하세요. ({{freeMb}} MB 사용 가능).",
-    "engineRemoveBody": "저장 공간 {{sizeMb}} MB 확보 가능"
+    "engineRemoveBody": "저장 공간 {{sizeMb}} MB 확보 가능",
+    "supertonicLanguageLabel": "언어",
+    "supertonicLanguageAuto": "자동",
+    "supertonicLanguageSheetTitle": "언어",
+    "supertonicLanguageSearchPlaceholder": "언어 검색",
+    "supertonicLanguageNames": {
+      "ar": "아랍어",
+      "bg": "불가리아어",
+      "hr": "크로아티아어",
+      "cs": "체코어",
+      "da": "덴마크어",
+      "nl": "네덜란드어",
+      "en": "영어",
+      "et": "에스토니아어",
+      "fi": "핀란드어",
+      "fr": "프랑스어",
+      "de": "독일어",
+      "el": "그리스어",
+      "hi": "힌디어",
+      "hu": "헝가리어",
+      "id": "인도네시아어",
+      "it": "이탈리아어",
+      "ja": "일본어",
+      "ko": "한국어",
+      "lv": "라트비아어",
+      "lt": "리투아니아어",
+      "pl": "폴란드어",
+      "pt": "포르투갈어",
+      "ro": "루마니아어",
+      "ru": "러시아어",
+      "sk": "슬로바키아어",
+      "sl": "슬로베니아어",
+      "es": "스페인어",
+      "sv": "스웨덴어",
+      "tr": "튀르키예어",
+      "uk": "우크라이나어",
+      "vi": "베트남어"
+    }
   },
   "htmlPreview": {
     "defaultTitle": "미리보기",
@@ -1363,5 +1405,23 @@
     "copyHtml": "HTML 복사",
     "closePreview": "미리보기 닫기",
     "openFullscreen": "전체화면 표시: {{title}}"
+  },
+  "onboarding": {
+    "back": "뒤로 가기",
+    "skip": "건너뛰기",
+    "skipForNow": "나중에 다시 보기",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "당신의 Pal을 만나보세요.",
+      "titleAccent": "Pal.",
+      "body": "당신의 휴대폰 안에 사는 똑똑한 작은 친구들.\n설정을 시작해 보세요 - 시간이 잠시 걸립니다."
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}}이 다운로드 중",
+    "titleByModel": "{{name}}이 다운로드 중",
+    "extraInProgress": "+{{count}}개 추가 진행 중"
   }
 }
