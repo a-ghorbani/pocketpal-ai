@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useContext} from 'react';
-import {View, Image, Alert, Linking, Platform} from 'react-native';
+import {View, Image, Alert} from 'react-native';
 
 import {observer} from 'mobx-react-lite';
 import {Text, Button, Divider} from 'react-native-paper';
@@ -23,7 +23,6 @@ import type {PalsHubPal} from '../../../types/palshub';
 import {
   getPalDisplayLabel,
   getPalActionText,
-  getPalBuyUrl,
   shouldShowPalContent,
   getPremiumInfoText,
 } from '../../../utils/palshub-display';
@@ -133,20 +132,19 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
     };
 
     const handleBuyPress = () => {
-      if (Platform.OS !== 'ios') {
-        Linking.openURL(getPalBuyUrl(displayPal.id)).catch(() => {});
-        return;
-      }
       // Send the user to sign-in rather than a 401 error when logged out.
       if (!authService.isAuthenticated) {
         onSignInPress?.();
         return;
       }
+      // Both platforms start directly. On Android the store runs the Play
+      // link-out prep (Play renders its own disclosure); there is no app sheet.
       checkoutFlowStore.start(displayPal.id);
     };
 
     const isCheckoutInFlight =
       checkoutStatus === 'creating' ||
+      checkoutStatus === 'linking' ||
       checkoutStatus === 'browser_open' ||
       checkoutStatus === 'finalizing';
 
@@ -411,7 +409,10 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
                   testID="buy-button"
                   mode="contained"
                   onPress={handleBuyPress}
-                  loading={checkoutStatus === 'creating'}
+                  loading={
+                    checkoutStatus === 'creating' ||
+                    checkoutStatus === 'linking'
+                  }
                   disabled={isCheckoutInFlight}
                   style={styles.buyButton}>
                   {l10n.palsScreen.palDetailSheet.buyOnPalshub}
