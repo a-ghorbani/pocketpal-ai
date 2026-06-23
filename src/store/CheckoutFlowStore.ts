@@ -153,6 +153,11 @@ class CheckoutFlowStore {
         if (this.epoch !== myEpoch) {
           return;
         }
+        if (prep.outcome !== 'launched') {
+          console.warn(
+            `[checkout] prepareExternalLink outcome="${prep.outcome}" — see Android logcat tag ExternalContentLinkModule for the Billing responseCode/debugMessage`,
+          );
+        }
         if (prep.outcome === 'launched') {
           this.reportToken = prep.token;
           this.setStatus('browser_open');

@@ -40,6 +40,7 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
   override fun prepareExternalLink(checkoutUrl: String, promise: Promise) {
     val activity = currentActivity
     if (activity == null) {
+      Log.w(TAG, "prepareExternalLink: no current activity")
       resolveOutcome(promise, OUTCOME_ERROR)
       return
     }
@@ -47,6 +48,7 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
         try {
           Uri.parse(checkoutUrl)
         } catch (e: Exception) {
+          Log.w(TAG, "prepareExternalLink: failed to parse checkout url", e)
           resolveOutcome(promise, OUTCOME_ERROR)
           return
         }
@@ -61,6 +63,9 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
         object : BillingClientStateListener {
           override fun onBillingSetupFinished(result: BillingResult) {
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+              Log.w(
+                  TAG,
+                  "billing setup failed: code=${result.responseCode} msg=${result.debugMessage}")
               endAndResolve(client, promise, settled, OUTCOME_ERROR)
               return
             }
@@ -68,6 +73,7 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
           }
 
           override fun onBillingServiceDisconnected() {
+            Log.w(TAG, "billing service disconnected during setup")
             endAndResolve(client, promise, settled, OUTCOME_ERROR)
           }
         })
@@ -84,6 +90,9 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
         result,
         _ ->
       if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+        Log.w(
+            TAG,
+            "program unavailable: code=${result.responseCode} msg=${result.debugMessage}")
         endAndResolve(client, promise, settled, OUTCOME_INELIGIBLE)
         return@isBillingProgramAvailableAsync
       }
@@ -104,6 +113,9 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
             .build()
     client.createBillingProgramReportingDetailsAsync(params) { result, details ->
       if (result.responseCode != BillingClient.BillingResponseCode.OK || details == null) {
+        Log.w(
+            TAG,
+            "reporting-details (token) failed: code=${result.responseCode} msg=${result.debugMessage} details=${details != null}")
         endAndResolve(client, promise, settled, OUTCOME_ERROR)
         return@createBillingProgramReportingDetailsAsync
       }
@@ -137,6 +149,11 @@ class ExternalContentLinkModule(reactContext: ReactApplicationContext) :
             BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> OUTCOME_INELIGIBLE
             else -> OUTCOME_ERROR
           }
+      if (outcome != OUTCOME_LAUNCHED) {
+        Log.w(
+            TAG,
+            "launchExternalLink not launched: code=${result.responseCode} msg=${result.debugMessage} -> $outcome")
+      }
       // CALLER_WILL_LAUNCH_LINK: on OK the store opens checkoutUrl in the
       // Custom Tab. The token rides back only when we are about to launch.
       val map = Arguments.createMap()
