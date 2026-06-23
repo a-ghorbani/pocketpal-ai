@@ -104,6 +104,7 @@ describe('UIStore', () => {
         'ja',
         'ko',
         'ms',
+        'pt_BR',
         'ru',
         'uk',
         'zh',
