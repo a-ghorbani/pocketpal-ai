@@ -1156,7 +1156,7 @@
     "increaseContextAdvancedBody": "Розмір контексту для цього чату: {{from}} → {{to}} токенів (максимальний розмір моделі — {{max}}). Обмеження пристрою є приблизним і збільшується у міру успішного завантаження більших контекстів.",
     "increaseContextSliderA11yLabel": "Розмір контексту",
     "increaseContextSliderA11yValue": "{{tokens}} токенів",
-    "increaseContextConfirmSize": "Встановити до {{size}}",
+    "increaseContextConfirmSize": "Встановити {{size}}",
     "increaseContextReloadingShort": "Перезавантаження…",
     "increaseContextNoFitBody": "Цей пристрій не підходить для більш широкого контексту цієї моделі. Щоб продовжити, розпочніть новий чат.",
     "increaseContextCancel": "Не зараз",
