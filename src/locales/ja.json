@@ -30,7 +30,8 @@
     "ok": "OK",
     "close": "閉じる",
     "clear": "すべてクリア",
-    "gallery": "ギャラリー"
+    "gallery": "ギャラリー",
+    "stop": "停止"
   },
   "settings": {
     "modelInitializationSettings": "モデル初期化設定",
@@ -462,7 +463,10 @@
     "versionCopiedTitle": "バージョンをコピーしました",
     "versionCopiedDescription": "バージョン情報がクリップボードにコピーされました",
     "privacyPolicy": "プライバシーポリシー",
-    "termsOfService": "利用規約"
+    "termsOfService": "利用規約",
+    "tour": "ツアー",
+    "tourDescription": "ウェルカム画面をもう一度見て、PocketPal AIでできることを確認しましょう。",
+    "showIntroButton": "イントロをもう一度見る"
   },
   "feedback": {
     "title": "フィードバックを送信",
@@ -536,7 +540,9 @@
       "activateModelTitle": "開始するにはモデルを有効化してください",
       "activateModelDescription": "モデルを選択してダウンロードしてください、ダウンロード後、モデルの横にある読み込みをタップしてチャットを開始します",
       "activateModelButton": "モデルを選択",
-      "loading": "読み込み中..."
+      "loading": "読み込み中...",
+      "gettingReadyTitle": "{{name}}が準備中です",
+      "gettingReadyDescription": "パルがチャットできるようになったらすぐにお知らせします。上部のバナーをタップすると進み具合を確認できます。"
     },
     "chatInput": {
       "inputPlaceholder": "メッセージを入力",
@@ -1362,6 +1368,139 @@
     "engineRetryCta": "再試行",
     "voicesEmptyState": "音声が見つかりません。",
     "kokoroDeviceNote": "一部の音声はすべてのデバイスで動作しない場合があります。",
-    "insufficientStorage": "空き容量が不足しています。このエンジンをインストールするには{{requiredMb}} MBを空けてください（現在{{freeMb}} MB利用可能）。"
+    "insufficientStorage": "空き容量が不足しています。このエンジンをインストールするには{{requiredMb}} MBを空けてください（現在{{freeMb}} MB利用可能）。",
+    "supertonicLanguageLabel": "言語",
+    "supertonicLanguageAuto": "自動",
+    "supertonicLanguageSheetTitle": "言語",
+    "supertonicLanguageSearchPlaceholder": "言語を検索",
+    "supertonicLanguageNames": {
+      "ar": "アラビア語",
+      "bg": "ブルガリア語",
+      "hr": "クロアチア語",
+      "cs": "チェコ語",
+      "da": "デンマーク語",
+      "nl": "オランダ語",
+      "en": "英語",
+      "et": "エストニア語",
+      "fi": "フィンランド語",
+      "fr": "フランス語",
+      "de": "ドイツ語",
+      "el": "ギリシャ語",
+      "hi": "ヒンディー語",
+      "hu": "ハンガリー語",
+      "id": "インドネシア語",
+      "it": "イタリア語",
+      "ja": "日本語",
+      "ko": "韓国語",
+      "lv": "ラトビア語",
+      "lt": "リトアニア語",
+      "pl": "ポーランド語",
+      "pt": "ポルトガル語",
+      "ro": "ルーマニア語",
+      "ru": "ロシア語",
+      "sk": "スロバキア語",
+      "sl": "スロベニア語",
+      "es": "スペイン語",
+      "sv": "スウェーデン語",
+      "tr": "トルコ語",
+      "uk": "ウクライナ語",
+      "vi": "ベトナム語"
+    }
+  },
+  "onboarding": {
+    "back": "戻る",
+    "skip": "スキップ",
+    "skipForNow": "今はスキップ",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "あなたのパルに会いましょう。",
+      "titleAccent": "パルに。",
+      "body": "あなたのスマホの中に住む、賢くて小さな友だち。\nセットアップを始めましょう。すぐに終わります。",
+      "cta": "案内してもらう",
+      "eyebrow": "PocketPalへようこそ"
+    },
+    "screen2": {
+      "title": "いつでも、\nどこでも。",
+      "body": "パルはあなたのスマホの中にいます。\nインターネットも電波もいりません。飛行機の中でも、電波の届かない場所でも、辺ぴな村でも使えます。",
+      "highlight": "インターネットも電波もいらない",
+      "cta": "次へ",
+      "eyebrow": "コンセプト",
+      "titleAccent": "いつでも、"
+    },
+    "screen3": {
+      "title": "小さくても、\nあなただけのもの。",
+      "titleAccent": "小さくても、",
+      "body": "スマホの中のパルは、すばやくてプライベート。でもクラウドAIよりは軽量です。何でも知っている賢者ではなく、ポケットに入る相棒だと考えてください。",
+      "highlight": "すばやくてプライベート",
+      "cta": "わかりました",
+      "eyebrow": "ちょっとひとこと"
+    },
+    "screen4": {
+      "title": "何もスマホの外に出ません。",
+      "titleAccent": "外に出ません",
+      "body": "アカウント不要。クラウドなし。トラッキングなし。あなたの会話はあなたのものです。",
+      "highlight": "アカウント不要。クラウドなし。トラッキングなし。",
+      "cta": "始める",
+      "eyebrow": "プライバシーをお約束"
+    },
+    "screen5": {
+      "title": "パルを何に使いますか？",
+      "body": "話したいことを選んでください。あなたのスマホに合ったパルをご案内します。",
+      "topic": {
+        "smartchat": "スマートチャット",
+        "coding": "コーディング",
+        "education": "学習",
+        "roleplay": "ロールプレイ",
+        "creative_writing": "創作",
+        "else": "ほかをお探しですか？"
+      },
+      "topicDescription": {
+        "smartchat": "毎日のフレンドリーな相棒",
+        "coding": "コード作成、デバッグ、解説",
+        "education": "学ぶ、解説する、クイズ",
+        "roleplay": "キャラクター、シナリオ",
+        "creative_writing": "物語、アイデア、下書き",
+        "else": "あとでアプリ内ですべてのパルを見る"
+      }
+    },
+    "screen6": {
+      "cta": "{{name}}をダウンロード",
+      "ctaTemplate": "{{name}}をダウンロード（{{size}}）",
+      "useTemplate": "{{name}}を使う",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB空き",
+      "recommended": "おすすめ",
+      "downloaded": "ダウンロード済み",
+      "modelTier": {
+        "quick": "高速",
+        "balanced": "バランス",
+        "best": "最高品質"
+      },
+      "subtitleTemplate": "{{name}}はスマホ上の小さなAIモデルを使って考えます。ぴったりのものを選んでください。",
+      "pal": {
+        "pip": {
+          "body": "あなたにぴったりのパルが見つかりました。毎日使えるフレンドリーな相棒です。たいていのことに対応できる賢さで、どんなスマホでも動く軽さです。"
+        },
+        "codie": {
+          "body": "Codieを紹介します。あなたのローカルなペアプログラマーです。コードを読み、コードを書き、難しい部分を解説します。すべてスマホの中だけで完結します。"
+        },
+        "sage": {
+          "body": "Sageは辛抱強く、好奇心旺盛で、アイデアを一歩ずつ一緒に考えてくれます。ポケットに入る学習の相棒です。"
+        },
+        "echo": {
+          "body": "Echoは多才なロールプレイの相棒です。キャラクターを保ち、情景を描き、物語の行く先までどこまでもついていきます。"
+        },
+        "muse": {
+          "body": "Museは文章作成を手伝います。言い回しを提案し、リズムを見つけ、あなたのトーンをそのまま保ちます。"
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}}をダウンロード中",
+    "titleByModel": "{{name}}をダウンロード中",
+    "extraInProgress": "他に{{count}}件進行中"
   }
 }
