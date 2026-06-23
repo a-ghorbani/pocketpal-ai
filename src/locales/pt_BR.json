@@ -161,7 +161,9 @@
     "removeRemoteModel": "Remover {{modelName}} ({{serverName}})?",
     "retryConnection": "Tentar Novamente",
     "enterUrlManually": "Inserir URL manualmente",
-    "manageServers": "Gerenciar Servidores"
+    "manageServers": "Gerenciar Servidores",
+    "serverType": "Tipo de Servidor",
+    "serverTypeHelp": "Detectado automaticamente; altere se estiver errado."
   },
   "memory": {
     "shortWarning": "Aviso de Memória",
@@ -569,7 +571,8 @@
         "disableThinking": "Desativar modo de raciocínio",
         "thinkingEnabled": "Modo de raciocínio ativado",
         "thinkingDisabled": "Modo de raciocínio desativado",
-        "thinkText": "Pensar"
+        "thinkText": "Pensar",
+        "cycleEffort": "Esforço de raciocínio: {{level}}. Toque duas vezes para alternar o nível de esforço"
       }
     },
     "contentReportSheet": {
@@ -752,7 +755,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Configurações do Modelo",
-      "saveChanges": "Salvar Alterações"
+      "saveChanges": "Salvar Alterações",
+      "reasoningSection": "Raciocínio",
+      "isReasoningModel": "Modelo de raciocínio",
+      "isReasoningModelHelp": "Mostrar o controle de raciocínio para este modelo, mesmo que não tenha sido detectado automaticamente.",
+      "supportsEffort": "Suporta esforço graduado",
+      "effortValues": "Níveis de esforço que este modelo suporta",
+      "effortLevels": {
+        "minimal": "Mínimo",
+        "low": "Baixo",
+        "medium": "Médio",
+        "high": "Alto",
+        "xhigh": "Muito alto",
+        "max": "Máximo"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Modelos do Hugging Face",
