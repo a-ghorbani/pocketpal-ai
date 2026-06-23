@@ -13,7 +13,8 @@
     "privacyPolicy": "개인정보 처리방침",
     "termsOfService": "서비스 약관",
     "tourDescription": "온보딩 화면을 재생하여 PocketPal AI가 제공하는 기능을 확인하세요.",
-    "showIntroButton": "인트로 다시 보기"
+    "showIntroButton": "인트로 다시 보기",
+    "tour": "둘러보기"
   },
   "benchmark": {
     "title": "벤치마크",
@@ -277,7 +278,7 @@
       "activateModelDescription": "모델을 선택하고 다운로드하세요. 다운로드가 완료되면 모델 옆의 불러오기 버튼을 눌러 채팅을 시작할 수 있습니다.",
       "activateModelButton": "모델 선택",
       "gettingReadyTitle": "{{name}}이 준비 중임",
-      "gettingReadyDescription": "Pal이 채팅할 수 있도록 준비가 완료될 때 알려드리겠습니다. 배너를 위쪽으로 탭하여 진행 상황을 확인하세요."
+      "gettingReadyDescription": "Pal이 채팅할 수 있게 준비되면 바로 알려드릴게요. 위쪽 배너를 탭하여 진행 상황을 확인하세요."
     },
     "chatInput": {
       "inputPlaceholder": "메시지",
@@ -1416,7 +1417,85 @@
     "screen1": {
       "title": "당신의 Pal을 만나보세요.",
       "titleAccent": "Pal.",
-      "body": "당신의 휴대폰 안에 사는 똑똑한 작은 친구들.\n설정을 시작해 보세요 - 시간이 잠시 걸립니다."
+      "body": "당신의 휴대폰 안에 사는 똑똑한 작은 친구들.\n설정을 시작해 보세요 - 시간이 잠시 걸립니다.",
+      "cta": "둘러볼게요",
+      "eyebrow": "PocketPal에 오신 걸 환영해요"
+    },
+    "screen2": {
+      "title": "언제나,\n어디서나.",
+      "body": "Pal은 여러분의 휴대폰 안에 살아요.\n인터넷도, 신호도 필요 없어요 - 비행기 안에서도, 오지에서도, 외딴 마을에서도 작동해요.",
+      "highlight": "인터넷도, 신호도 필요 없어요",
+      "cta": "다음",
+      "eyebrow": "기본 아이디어",
+      "titleAccent": "언제나,"
+    },
+    "screen3": {
+      "title": "작지만,\n온전히 내 것.",
+      "titleAccent": "작지만,",
+      "body": "휴대폰 속 Pal은 빠르고 프라이버시를 지켜줘요 - 다만 클라우드 AI보다는 가벼워요. 모든 걸 아는 신탁이 아니라, 주머니 속 동반자라고 생각하면 돼요.",
+      "highlight": "빠르고 프라이버시를 지켜줘요",
+      "cta": "알겠어요",
+      "eyebrow": "참고하세요"
+    },
+    "screen4": {
+      "title": "어떤 것도 휴대폰을 벗어나지 않아요.",
+      "titleAccent": "벗어나지 않아요",
+      "body": "계정도, 클라우드도, 추적도 없어요. 대화는 온전히 여러분의 것으로 남아요.",
+      "highlight": "계정도, 클라우드도, 추적도 없어요.",
+      "cta": "시작하기",
+      "eyebrow": "프라이버시 약속"
+    },
+    "screen5": {
+      "title": "Pal을 어디에 쓰고 싶나요?",
+      "body": "이야기 나누고 싶은 주제를 골라 주세요 - 여러분의 휴대폰에 맞는 Pal을 찾아드릴게요.",
+      "topic": {
+        "smartchat": "스마트 채팅",
+        "coding": "코딩",
+        "education": "교육",
+        "roleplay": "역할극",
+        "creative_writing": "창작 글쓰기",
+        "else": "다른 걸 찾고 있나요?"
+      },
+      "topicDescription": {
+        "smartchat": "친근한 일상 동반자",
+        "coding": "코딩, 디버깅, 설명",
+        "education": "학습, 설명, 퀴즈",
+        "roleplay": "캐릭터, 시나리오",
+        "creative_writing": "이야기, 아이디어, 초안",
+        "else": "나중에 앱에서 모든 Pal을 둘러보세요"
+      }
+    },
+    "screen6": {
+      "cta": "{{name}} 다운로드",
+      "ctaTemplate": "{{name}} 다운로드 ({{size}})",
+      "useTemplate": "{{name}} 사용하기",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB 여유",
+      "recommended": "추천",
+      "downloaded": "다운로드됨",
+      "modelTier": {
+        "quick": "빠름",
+        "balanced": "균형",
+        "best": "최고"
+      },
+      "subtitleTemplate": "{{name}}은(는) 휴대폰에서 작은 AI 모델로 생각해요 - 잘 맞는 모델을 골라 주세요.",
+      "pal": {
+        "pip": {
+          "body": "여러분에게 딱 맞는 Pal을 찾았어요 - 친근한 일상 동반자예요. 대부분의 일을 똑똑하게 처리하면서도, 어떤 휴대폰에서나 가볍게 돌아가요."
+        },
+        "codie": {
+          "body": "Codie를 소개할게요 — 휴대폰 안의 페어 프로그래머예요. 코드를 읽고, 코드를 쓰고, 까다로운 부분을 설명해 줘요. 그 모든 일이 휴대폰을 벗어나지 않아요."
+        },
+        "sage": {
+          "body": "Sage는 인내심 있고 호기심 많아서, 개념을 하나씩 차근차근 안내해 줘요. 주머니 속에 두는 학습 친구예요."
+        },
+        "echo": {
+          "body": "Echo는 다재다능한 역할극 동반자예요 — 캐릭터를 끝까지 유지하고, 장면을 생생하게 그려내며, 이야기가 어디로 흘러가든 함께해요."
+        },
+        "muse": {
+          "body": "Muse는 글쓰기를 도와줘요. 표현을 제안하고, 리듬을 찾아주며, 여러분의 어조를 그대로 살려줘요."
+        }
+      }
     }
   },
   "downloadBanner": {
