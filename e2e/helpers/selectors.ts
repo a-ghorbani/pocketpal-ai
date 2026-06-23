@@ -340,6 +340,22 @@ export const Selectors = {
       }
       return `-ios predicate string:name == "cancel-button"`;
     },
+    // List-wide (NOT card-scoped) clickable Download/Cancel buttons — for
+    // enumerating every download control on the Models screen with $$ when the
+    // test should not pin a specific model (the device-rule list varies). Filter
+    // to the Button class so taps land on the control, not the wrapper View.
+    get anyDownloadButton(): string {
+      if (isAndroid()) {
+        return `//android.widget.Button[contains(@resource-id, "download-button")]`;
+      }
+      return `-ios predicate string:name == "download-button"`;
+    },
+    get anyCancelButton(): string {
+      if (isAndroid()) {
+        return `//android.widget.Button[contains(@resource-id, "cancel-button")]`;
+      }
+      return `-ios predicate string:name == "cancel-button"`;
+    },
     get offloadButton(): string {
       return byTestId('offload-button');
     },
