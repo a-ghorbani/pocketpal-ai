@@ -34,7 +34,12 @@ import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {DrawerPage} from '../../pages/DrawerPage';
 import {ModelsPage} from '../../pages/ModelsPage';
-import {Selectors, byPartialText} from '../../helpers/selectors';
+import {
+  Selectors,
+  byPartialText,
+  isAndroid,
+  nativeTextElement,
+} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
 import {TIMEOUTS} from '../../fixtures/models';
 import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
@@ -79,23 +84,40 @@ function pingModelsEndpoint(timeoutMs = 4000): Promise<boolean> {
 
 /**
  * Read the value shown on the server-type dropdown trigger. The ui Dropdown
- * renders the selected option's label as the trigger text and exposes that on
- * the trigger element's "label"/"name"/"value"/text. Reads off the EXISTING
- * element — the trigger deep in a bottom sheet can report isDisplayed=false on
- * iOS even when present, so we do not gate on visibility here.
+ * renders the selected option's label as both the trigger's accessibilityLabel
+ * and a child Text node. Reads off the EXISTING element — the trigger deep in a
+ * bottom sheet can report isDisplayed=false on iOS even when present, so we do
+ * not gate on visibility here.
+ *
+ * Cross-platform read: on iOS the accessibilityLabel surfaces via the trigger's
+ * "label"/"name"/"value" attributes. On Android (UiAutomator2) it maps to
+ * content-desc, and the trigger's own "text" is empty because the visible value
+ * lives in a child TextView — so we also try content-desc and the child Text.
  */
 async function readServerTypeValue(): Promise<string> {
   const trigger = browser.$(Selectors.serverType.dropdown());
   if (!(await trigger.isExisting().catch(() => false))) {
     return '';
   }
-  for (const attr of ['label', 'name', 'value']) {
+  const attrs = isAndroid()
+    ? ['content-desc', 'label', 'name', 'value']
+    : ['label', 'name', 'value'];
+  for (const attr of attrs) {
     const raw = await trigger.getAttribute(attr).catch(() => null);
     if (raw) {
       return raw;
     }
   }
-  return (await trigger.getText().catch(() => '')) || '';
+  const direct = (await trigger.getText().catch(() => '')) || '';
+  if (direct) {
+    return direct;
+  }
+  // Fall back to the child Text node (Android renders the value there).
+  const childText = await trigger
+    .$(nativeTextElement())
+    .getText()
+    .catch(() => '');
+  return childText || '';
 }
 
 /** Dump the current page source to debug-output for diagnosis. */
