@@ -11,7 +11,10 @@
     "versionCopiedTitle": "版本已複製",
     "versionCopiedDescription": "版本資訊已複製至剪貼板",
     "privacyPolicy": "隱私權政策",
-    "termsOfService": "服務條款"
+    "termsOfService": "服務條款",
+    "tourDescription": "重播歡迎畫面，以查看 PocketPal AI 提供的功能。",
+    "showIntroButton": "再次顯示介紹",
+    "tour": "導覽"
   },
   "benchmark": {
     "title": "基準",
@@ -229,7 +232,8 @@
     "ok": "確定",
     "close": "關閉",
     "clear": "全部清除",
-    "gallery": "圖庫"
+    "gallery": "圖庫",
+    "stop": "停止"
   },
   "completionParams": {
     "grammar": "如何在生成文字本時強制執行特定語法規則（快速指南）",
@@ -272,7 +276,9 @@
       "activateModelTitle": "啟動模型以開始",
       "activateModelDescription": "請先選擇模型並下載。下載完成後，點擊模型右側的「載入」按鈕即可開始對話。",
       "activateModelButton": "選擇模型",
-      "loading": "正在載入..."
+      "loading": "正在載入...",
+      "gettingReadyTitle": "{{name}} 正在準備中",
+      "gettingReadyDescription": "我們會在您的夥伴可以開始聊天時立即通知您。點擊上方的橫幅可查看目前的進度。"
     },
     "chatInput": {
       "inputPlaceholder": "訊息",
@@ -615,10 +621,10 @@
         "generatingPromptRequired": "使用 AI 提示詞時需要生成提示詞",
         "promptModelRequired": "使用 AI 提示詞時需要提示詞生成模型"
       },
-      "talents": "才華",
+      "talents": "技能",
       "talentNames": {
         "render_html": "HTML 預覽",
-        "calculate": "數學式子",
+        "calculate": "數學算式",
         "datetime": "日期與時間"
       },
       "talentDescriptions": {
@@ -632,7 +638,7 @@
         "textPlaceholder": "此 pal 在空聊天室中該說什麼？",
         "suggestedPromptsLabel": "建議提示詞",
         "addPromptButton": "新增提示詞",
-        "promptPlaceholder": "用於提示按鈕的簡短提示詞",
+        "promptPlaceholder": "針對此建議指令（Chip）編寫簡短提示詞",
         "removePromptLabel": "移除提示詞"
       }
     },
@@ -664,7 +670,7 @@
       "tokensPerSec": "{{value}} 詞元/秒",
       "ttft": "{{value}}毫秒 TTFT",
       "interrupted": "被打斷",
-      "truncated": "中斷 — 可能為上下文容量已滿載"
+      "truncated": "已截斷 — 可能是上下文已滿"
     },
     "thinkingBubble": {
       "reasoning": "推理"
@@ -720,7 +726,7 @@
   },
   "feedback": {
     "title": "送出反饋",
-    "description": "您的意見對我們非常重要！請告訴我們 PocketPal AI 如何對您有所幫助，以及我們還可以做些什麼來讓它變得更好用。",
+    "description": "請讓我們聽見您的心聲！告訴我們 PocketPal AI 對您的幫助，以及我們該如何進一步提升實用性。",
     "shareThoughtsButton": "分享您的想法",
     "useCase": {
       "label": "您正在使用 PocketPal AI 做什麼？",
@@ -1144,7 +1150,10 @@
     "manageServers": "管理伺服器",
     "ttsAvailability": "文字轉語音",
     "ttsAvailabilityDescription": "朗讀助理回覆。",
-    "ttsAvailabilityLowMemoryWarning": "您的裝置記憶體不足 — 這可能會影響功能運作的穩定性。"
+    "ttsAvailabilityLowMemoryWarning": "您的裝置記憶體不足 — 這可能會影響功能運作的穩定性。",
+    "requestTimeout": "請求逾時（秒）",
+    "requestTimeoutHelp": "等待較慢的伺服器回應的最長時間。留空則使用預設值。",
+    "requestTimeoutPlaceholder": "可選 – 留空則使用預設值"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
@@ -1351,7 +1360,44 @@
     "engineRetryCta": "再試一次",
     "voicesEmptyState": "找不到任何語音。",
     "kokoroDeviceNote": "部分語音可能無法在所有裝置上運作。",
-    "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此引擎（目前剩餘 {{freeMb}} MB）。"
+    "insufficientStorage": "空間不足 — 請釋放 {{requiredMb}} MB 以安裝此引擎（目前剩餘 {{freeMb}} MB）。",
+    "supertonicLanguageLabel": "語言",
+    "supertonicLanguageAuto": "自動",
+    "supertonicLanguageSheetTitle": "語言",
+    "supertonicLanguageSearchPlaceholder": "搜尋語言",
+    "supertonicLanguageNames": {
+      "ar": "阿拉伯語",
+      "bg": "保加利亞語",
+      "hr": "克羅埃西亞語",
+      "cs": "捷克語",
+      "da": "丹麥語",
+      "nl": "荷蘭語",
+      "en": "英語",
+      "et": "愛沙尼亞語",
+      "fi": "芬蘭語",
+      "fr": "法語",
+      "de": "德語",
+      "el": "希臘語",
+      "hi": "印地語",
+      "hu": "匈牙利語",
+      "id": "印尼語",
+      "it": "義大利語",
+      "ja": "日語",
+      "ko": "韓語",
+      "lv": "拉脫維亞語",
+      "lt": "立陶宛語",
+      "pl": "波蘭語",
+      "pt": "葡萄牙語",
+      "ro": "羅馬尼亞語",
+      "ru": "俄語",
+      "sk": "斯洛伐克語",
+      "sl": "斯洛維尼亞語",
+      "es": "西班牙語",
+      "sv": "瑞典語",
+      "tr": "土耳其語",
+      "uk": "烏克蘭語",
+      "vi": "越南語"
+    }
   },
   "htmlPreview": {
     "defaultTitle": "預覽",
@@ -1360,5 +1406,101 @@
     "copyHtml": "複製 HTML",
     "closePreview": "關閉預覽",
     "openFullscreen": "全螢幕開啟：{{title}}"
+  },
+  "onboarding": {
+    "back": "返回",
+    "skip": "跳過",
+    "skipForNow": "暫時跳過",
+    "screen6": {
+      "recommended": "建議",
+      "downloaded": "已下載",
+      "modelTier": {
+        "quick": "快速",
+        "balanced": "平衡",
+        "best": "最佳"
+      },
+      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行思考 - 請選一個適合您的模型。",
+      "pal": {
+        "pip": {
+          "body": "我們為您找到了完美的夥伴 - 一位友善的日常夥伴。它聰明到足以應對大多數事務，又輕量到適用於任何手機。"
+        },
+        "codie": {
+          "body": "認識 Codie - 您的在地開發夥伴。它可以讀取程式碼、編寫程式碼，並在不離開手機的情況下為您解釋複雜的部分。"
+        },
+        "sage": {
+          "body": "Sage 很有耐心且充滿好奇心，會引導您逐步實踐想法。它是您隨身攜帶的學習夥伴。"
+        },
+        "echo": {
+          "body": "Echo 是一位多才多藝的角色扮演夥伴 — 它能維持人設、描繪場景，並隨您的故事走向而變幻。"
+        },
+        "muse": {
+          "body": "Muse 協助您進行創作。它能提供措辭建議、掌握節奏，並維持您的語調。"
+        }
+      },
+      "cta": "下載 {{name}}",
+      "ctaTemplate": "下載 {{name}} ({{size}})",
+      "useTemplate": "使用 {{name}}",
+      "deviceRamSuffix": "GB RAM",
+      "deviceFreeSuffix": "GB 剩餘空間"
+    },
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "認識您的夥伴。",
+      "titleAccent": "夥伴。",
+      "body": "住在您手機裡的聰明小夥伴。\n讓我們開始設定吧——只需花一點時間即可。",
+      "cta": "帶我導覽",
+      "eyebrow": "歡迎來到 PocketPal"
+    },
+    "screen2": {
+      "title": "隨時，\n隨地。",
+      "body": "您的夥伴住在您的手機裡。\n無需網路、無需訊號 - 無論在飛機上、野外地區，還是偏遠村莊，他們都能運作。",
+      "highlight": "無需網路，無需訊號",
+      "cta": "下一步",
+      "eyebrow": "概念",
+      "titleAccent": "隨時，"
+    },
+    "screen3": {
+      "title": "更小，\n但屬於你。",
+      "titleAccent": "更小，",
+      "body": "您手機中的夥伴反應迅速且保有隱私 - 但比雲端 AI 更輕量。把它當作隨身的夥伴，而非無所不知的神諭。",
+      "highlight": "快速且保有隱私",
+      "cta": "了解",
+      "eyebrow": "事先告知"
+    },
+    "screen4": {
+      "title": "任何內容都不會離開您的手機。",
+      "titleAccent": "離開",
+      "body": "無需帳號。無需雲端。無需追蹤。您的對話內容仍屬於您。",
+      "highlight": "無需帳號。無需雲端。無需追蹤。",
+      "cta": "開始使用",
+      "eyebrow": "承諾隱私"
+    },
+    "screen5": {
+      "title": "您的夥伴是為了什麼用途？",
+      "body": "選擇您想要討論的主題 - 我們將為您配對一個適合您手機的夥伴。",
+      "topic": {
+        "smartchat": "智慧對話",
+        "coding": "程式開發",
+        "education": "教育",
+        "roleplay": "角色扮演",
+        "creative_writing": "創意寫作",
+        "else": "正在尋找其他內容？"
+      },
+      "topicDescription": {
+        "smartchat": "友善的日常夥伴",
+        "coding": "編寫、除錯、解釋",
+        "education": "學習、解釋、測驗",
+        "roleplay": "角色、場景",
+        "creative_writing": "故事、創意、草稿",
+        "else": "稍後可在應用程式中瀏覽所有夥伴"
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}} 正在下載中",
+    "titleByModel": "{{name}} 正在下載中",
+    "extraInProgress": "還有 {{count}} 個正在處理中"
   }
 }
