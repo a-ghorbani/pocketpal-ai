@@ -54,10 +54,23 @@ export class ChatPage extends BasePage {
   }
 
   /**
-   * Open the navigation drawer by tapping menu button
+   * Open the navigation drawer by tapping the menu button.
+   *
+   * The single tap is occasionally missed on Android (the drawer never opens),
+   * which then fails the downstream waitForOpen. Tap, verify the drawer
+   * actually opened (the Pals item appears), and retry the tap if it didn't —
+   * checking "already open" first so a retry can't toggle an open drawer shut.
    */
   async openDrawer(): Promise<void> {
-    await this.tap(Selectors.chat.menuButton);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (await this.isElementDisplayed(Selectors.drawer.palsTab, 1000)) {
+        return;
+      }
+      await this.tap(Selectors.chat.menuButton);
+      if (await this.isElementDisplayed(Selectors.drawer.palsTab, 5000)) {
+        return;
+      }
+    }
   }
 
   /**
@@ -327,18 +340,28 @@ export class ChatPage extends BasePage {
   async selectPal(palName: string): Promise<void> {
     // The picker shows Models tab by default.
     // Swipe right to reach the Pals tab (Pals is to the left of Models).
-    await Gestures.swipe({
-      startXPercent: 0.2,
-      startYPercent: 0.7,
-      endXPercent: 0.8,
-      endYPercent: 0.7,
-      duration: 300,
-    });
-    await browser.pause(500);
-
-    // Now find and tap the pal using partial text match
-    // (Pressable may combine child text labels into one accessibility element)
+    // Swipe right to reach the Pals tab, then find the pal by partial text.
+    // The first swipe can land short / the list can still be settling, so
+    // retry the swipe+lookup before giving up (the pal-picker tab transition
+    // is gesture-driven and flaky on a fresh model load).
     const palItem = browser.$(byPartialText(palName));
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await Gestures.swipe({
+        startXPercent: 0.2,
+        startYPercent: 0.7,
+        endXPercent: 0.8,
+        endYPercent: 0.7,
+        duration: 300,
+      });
+      await browser.pause(500);
+      const found = await palItem
+        .waitForDisplayed({timeout: 5000})
+        .then(() => true)
+        .catch(() => false);
+      if (found) {
+        break;
+      }
+    }
     await palItem.waitForDisplayed({timeout: 5000});
     await palItem.click();
     await browser.pause(500);

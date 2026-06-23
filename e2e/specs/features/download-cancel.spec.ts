@@ -32,10 +32,12 @@ import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
-// First default model on the Models screen — large enough (~2.15 GB) that the
-// download stays in progress through the cancel tap. The download is aborted
-// almost immediately, so only a small fraction is ever fetched.
-const TARGET_FILE = 'gemma-2-2b-it-Q6_K.gguf';
+// A default model on the Models screen (device-rule-resolved list, PR #772),
+// large enough that the download stays in progress through the cancel tap.
+// Gemma 3 1B (0.81 GB) downloads too fast on the Android emulator to catch the
+// in-progress window, so use Gemma 3 4B (~2.4 GB). The quant filename differs
+// per platform (iOS Q4_K_M / Android Q4_0), so resolve it at runtime inside the
+// test where `driver` is ready — see TARGET_FILE in the spec body.
 // Default "Available to Download" group is collapsed on first load; its
 // accordion testID uses the localized display name.
 const AVAILABLE_GROUP = 'Available to Download';
@@ -71,6 +73,15 @@ describe('Download cancel', () => {
   });
 
   it('stopping an in-progress download shows no error dialog', async () => {
+    // Gemma 3 1B (~0.81 GB) — present in every device tier on both platforms
+    // with an identical filename (pinned to Q4_K_M in rules.{ios,android}.json),
+    // and small enough to fit a normally-provisioned emulator's storage. The
+    // download must stay in progress through the cancel tap, so the device
+    // needs enough free space to actually start fetching it: a storage-starved
+    // emulator disables the Download button ("Storage low!") and this times out
+    // at the cancel control — free device storage if that happens.
+    const TARGET_FILE = 'gemma-3-1b-it-Q4_K_M.gguf';
+
     // Navigate to the Models screen
     await chatPage.openDrawer();
     await drawerPage.waitForOpen();
