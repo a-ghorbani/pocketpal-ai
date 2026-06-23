@@ -60,6 +60,7 @@ async function downloadTranslations() {
     'ja',
     'ko',
     'ms',
+    'pt_BR',
     'ru',
     'uk',
     'zh',
