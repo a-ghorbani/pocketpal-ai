@@ -9,10 +9,10 @@
  * modelStore.downloadError and pop the DownloadErrorDialog ("Download has been
  * aborted" + "Try again").
  *
- * Flow: download a default model straight from the Models screen and cancel on
- * the same card. Download + cancel happen on one card with no navigation, so
- * the in-progress window is caught reliably, and the card's cancel control is a
- * Paper Button that resolves on both platforms.
+ * Flow: start whichever default model the device offers (the Models list is
+ * device-rule-driven, so no filename is pinned) and cancel it on the Models
+ * screen with no navigation, so the in-progress window is caught reliably. The
+ * cancel control is a Paper Button that resolves on both platforms.
  *
  * Usage:
  *   yarn test:ios:local --spec specs/features/download-cancel.spec.ts
@@ -32,12 +32,11 @@ import {SCREENSHOT_DIR} from '../../wdio.shared.conf';
 declare const driver: WebdriverIO.Browser;
 declare const browser: WebdriverIO.Browser;
 
-// First default model on the Models screen — large enough (~2.15 GB) that the
-// download stays in progress through the cancel tap. The download is aborted
-// almost immediately, so only a small fraction is ever fetched.
-const TARGET_FILE = 'gemma-2-2b-it-Q6_K.gguf';
-// Default "Available to Download" group is collapsed on first load; its
-// accordion testID uses the localized display name.
+// The "Available to Download" group is collapsed on first load; its accordion
+// testID uses the localized display name. Which models the group contains is
+// device-rule-driven (#772) and varies by platform and device tier, so the test
+// does NOT pin a model filename — it starts whichever model the device actually
+// offers (see the spec body).
 const AVAILABLE_GROUP = 'Available to Download';
 
 describe('Download cancel', () => {
@@ -84,25 +83,35 @@ describe('Download cancel', () => {
     );
     await accordion.waitForDisplayed({timeout: 10000});
     await accordion.click();
+    await browser.pause(500);
 
-    // Locate the target model card and start its download.
-    const cardContainer = browser.$(
-      Selectors.modelCard.cardContainer(TARGET_FILE),
+    // Start the first model whose download actually begins, rather than pinning
+    // a filename (the device-rule list varies by platform/tier — #772). Cards
+    // are listed largest-first, so this naturally picks the biggest model that
+    // fits the device's free storage, giving the longest in-progress window to
+    // cancel. A storage-starved device disables every Download button ("Storage
+    // low!"); those taps no-op, so we fall through to a smaller one. Only a real
+    // download swaps the Download control for a Cancel control.
+    const cancelButton = browser.$(Selectors.modelCard.anyCancelButton);
+    const downloadButtons = await browser.$$(
+      Selectors.modelCard.anyDownloadButton,
     );
-    await cardContainer.waitForDisplayed({timeout: 10000});
-    const downloadButton = cardContainer.$(
-      Selectors.modelCard.downloadButtonElement,
-    );
-    await downloadButton.waitForDisplayed({timeout: 10000});
-    await downloadButton.click();
-
-    // Download started → the same card swaps its download button for a cancel
-    // button. Scope to the card and the Button class so we target the clickable
-    // control, not the surrounding "cancel-button-container" wrapper.
-    const cancelButton = cardContainer.$(
-      Selectors.modelCard.cancelButtonElement,
-    );
-    await cancelButton.waitForDisplayed({timeout: 15000});
+    let started = false;
+    for (const downloadButton of downloadButtons) {
+      if (!(await downloadButton.isDisplayed().catch(() => false))) {
+        continue;
+      }
+      await downloadButton.click().catch(() => {});
+      started = await cancelButton
+        .waitForDisplayed({timeout: 8000})
+        .then(() => true)
+        .catch(() => false);
+      if (started) {
+        break;
+      }
+    }
+    // Nothing started → no listed model fits the device's free storage.
+    expect(started).toBe(true);
     console.log('[download-cancel] download in progress, tapping cancel');
 
     // Tap Stop/Cancel — the user-initiated cancellation under test.
