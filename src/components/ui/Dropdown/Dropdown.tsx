@@ -15,6 +15,7 @@ export type DropdownOption = {
   value: string;
   label: string;
   disabled?: boolean;
+  testID?: string;
 };
 
 export type DropdownProps = CommonDSProps & {
@@ -77,6 +78,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
       {options.map(option => (
         <Menu.Item
           key={option.value}
+          testID={option.testID}
           title={option.label}
           disabled={option.disabled}
           leadingIcon={option.value === value ? 'check' : undefined}

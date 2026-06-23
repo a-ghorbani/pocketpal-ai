@@ -11,9 +11,11 @@ import {
   chatSessionStore,
   modelStore,
   palStore,
+  serverStore,
   ttsStore,
   uiStore,
 } from '../store';
+import {resolveReasoningCapability} from '../utils/reasoningCapability';
 
 import {MessageType, ModelOrigin, User} from '../utils/types';
 import {createMultimodalWarning} from '../utils/errors';
@@ -139,8 +141,35 @@ const prepareCompletion = async ({
     completionParamsWithAppProps as CompletionParams,
   );
 
-  if (cleanCompletionParams.enable_thinking) {
-    cleanCompletionParams.reasoning_format = 'auto';
+  // reasoning_format is always 'auto' for the local (llama.rn) path: a no-op for
+  // non-reasoning models and the value that extracts reasoning into
+  // reasoning_content instead of leaking raw channel/think markers into content
+  // (e.g. gemma-4 emits an empty <|channel>thought block even when thinking is
+  // off). On/off is carried solely by enable_thinking. "Off" stays a best-effort
+  // hint — it never strips reasoning the model still returns (rendered by
+  // ReasoningBlock); separate from include_thinking_in_context, which only
+  // governs what prior <think> we SEND.
+  const isReasoningCapable =
+    resolveReasoningCapability(
+      modelStore.activeModel,
+      serverStore.remoteReasoning,
+    ).isReasoning !== 'no';
+  cleanCompletionParams.reasoning_format = 'auto';
+  // The enable_thinking:false hint only matters for reasoning-capable models;
+  // a non-reasoning model would just ignore it.
+  if (isReasoningCapable && !cleanCompletionParams.enable_thinking) {
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      enable_thinking: false,
+    };
+  }
+  // Graded effort (gpt-oss-style): carried by the resolver-populated intent.
+  const reasoningEffort = cleanCompletionParams.reasoning?.effort;
+  if (reasoningEffort) {
+    cleanCompletionParams.chat_template_kwargs = {
+      ...cleanCompletionParams.chat_template_kwargs,
+      reasoning_effort: reasoningEffort,
+    };
   }
 
   // Create the empty AssistantTurn row in the store BEFORE the run
@@ -260,6 +289,23 @@ async function applyEventToStore(
       }
       if (!modelStore.isStreaming) {
         modelStore.setIsStreaming(true);
+      }
+      // Learn-from-stream: the first time a model emits reasoning while the
+      // resolver does not already know it reasons, persist the learned flag so
+      // the pill becomes reachable on the next render. The store writer is
+      // idempotent and never downgrades a user/learned 'yes'.
+      if (
+        event.delta.reasoningContent &&
+        event.delta.reasoningContent.length > 0
+      ) {
+        const activeModel = modelStore.activeModel;
+        if (
+          activeModel &&
+          resolveReasoningCapability(activeModel, serverStore.remoteReasoning)
+            .isReasoning !== 'yes'
+        ) {
+          modelStore.recordReasoningObserved(activeModel.id);
+        }
       }
       // TTS streaming hooks. Open a StreamingHandle on the first token
       // that carries content OR reasoning, then forward each new

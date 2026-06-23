@@ -39,6 +39,7 @@ describe('ServerStore', () => {
       serverStore.isLoading = false;
       serverStore.error = null;
       serverStore.privacyNoticeAcknowledged = false;
+      serverStore.remoteReasoning = {};
     });
   });
 
@@ -694,6 +695,93 @@ describe('ServerStore', () => {
       // we verify indirectly that the store has the subscription set up.
       // The constructor calls setupAppStateListener() which creates the subscription.
       expect(serverStore).toBeDefined();
+    });
+  });
+
+  describe('remote reasoning capability', () => {
+    const key = 'server-1/gpt-x';
+
+    it('starts empty and hydrating without the field does not crash', () => {
+      expect(serverStore.remoteReasoning).toEqual({});
+    });
+
+    it('recordRemoteReasoningObserved flips axis-1 to learned yes', () => {
+      serverStore.recordRemoteReasoningObserved(key);
+      expect(serverStore.remoteReasoning[key]).toMatchObject({
+        isReasoning: 'yes',
+        source: 'learned',
+        supportsEffort: false,
+      });
+    });
+
+    it('recordRemoteReasoningObserved is idempotent once yes', () => {
+      serverStore.recordRemoteReasoningObserved(key);
+      const first = serverStore.remoteReasoning[key];
+      serverStore.recordRemoteReasoningObserved(key);
+      expect(serverStore.remoteReasoning[key]).toBe(first);
+    });
+
+    it('recordRemoteReasoningObserved never overrides a user declaration', () => {
+      runInAction(() => {
+        serverStore.remoteReasoning[key] = {
+          isReasoning: 'no',
+          source: 'user',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+      });
+      serverStore.recordRemoteReasoningObserved(key);
+      expect(serverStore.remoteReasoning[key].source).toBe('user');
+      expect(serverStore.remoteReasoning[key].isReasoning).toBe('no');
+    });
+
+    it('setRemoteReasoningOverride writes a user-sourced capability', () => {
+      serverStore.setRemoteReasoningOverride(key, {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'high'],
+        effortSource: 'user',
+      });
+      expect(serverStore.remoteReasoning[key]).toMatchObject({
+        source: 'user',
+        supportsEffort: true,
+      });
+    });
+
+    it('removeServer drops reasoning entries keyed by that server', () => {
+      const id = serverStore.addServer({name: 'A', url: 'http://x'});
+      runInAction(() => {
+        serverStore.remoteReasoning[`${id}/m1`] = {
+          isReasoning: 'yes',
+          source: 'learned',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+        serverStore.remoteReasoning['other-server/m2'] = {
+          isReasoning: 'yes',
+          source: 'learned',
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none',
+        };
+      });
+      serverStore.removeServer(id);
+      expect(serverStore.remoteReasoning[`${id}/m1`]).toBeUndefined();
+      expect(serverStore.remoteReasoning['other-server/m2']).toBeDefined();
+    });
+
+    it('addServer persists a user-selected serverType pass-through', () => {
+      const id = serverStore.addServer({
+        name: 'A',
+        url: 'http://x',
+        serverType: 'Ollama',
+      });
+      expect(serverStore.servers.find(s => s.id === id)?.serverType).toBe(
+        'Ollama',
+      );
     });
   });
 });

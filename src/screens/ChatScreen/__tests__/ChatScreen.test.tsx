@@ -7,16 +7,24 @@ import {
   fireEvent,
   act,
   waitFor,
+  within,
 } from '../../../../jest/test-utils';
 import {ChatScreen} from '../ChatScreen';
 
-import {chatSessionStore, modelStore} from '../../../store';
+import {chatSessionStore, modelStore, serverStore} from '../../../store';
 
 import {l10n} from '../../../locales';
 import {mockLlamaContextParams} from '../../../../jest/fixtures/models';
+import {buildReasoningPayload} from '../../../api/openai';
+import {ModelOrigin} from '../../../utils/types';
 
 const render = (ui: React.ReactElement, options: any = {}) =>
   baseRender(ui, {withBottomSheetProvider: true, ...options});
+
+// The pill renders the localized effort tier (e.g. 'Low'), not the raw carrier
+// token ('low'); map the token through the same table the component uses.
+const effortLabels = l10n.en.components.modelSettingsSheet.effortLevels;
+const effortLabel = (token: keyof typeof effortLabels) => effortLabels[token];
 
 describe('ChatScreen', () => {
   let llamaRN;
@@ -248,13 +256,20 @@ describe('ChatScreen', () => {
     let savedModels: any[];
 
     beforeEach(() => {
-      // Inject a thinking-capable model into the mock model list so the
-      // `activeModel?.supportsThinking` computed in ChatScreen returns true.
+      // Inject a reasoning-capable model so the resolver in ChatScreen reports
+      // isReasoning 'yes' and the thinking pill is shown.
       savedModels = modelStore.models;
       const thinkingModel = {
         ...modelStore.models[0],
         id: 'thinking-model-id',
         supportsThinking: true,
+        reasoning: {
+          isReasoning: 'yes' as const,
+          source: 'detected' as const,
+          supportsEffort: false,
+          effortValues: [],
+          effortSource: 'none' as const,
+        },
       };
       modelStore.models = [...modelStore.models, thinkingModel];
 
@@ -398,6 +413,448 @@ describe('ChatScreen', () => {
       expect(uiStore.markToolCompatWarned).toHaveBeenCalledWith(
         'tool-model-id',
       );
+    });
+  });
+});
+
+describe('ChatScreen reasoning pill visibility', () => {
+  let savedModels: any[];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    runInAction(() => {
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      serverStore.remoteReasoning = {};
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+  });
+
+  afterEach(() => {
+    modelStore.models = savedModels;
+    modelStore.activeModelId = undefined;
+  });
+
+  const useModel = (overrides: any) => {
+    const model = {...savedModels[0], id: 'pill-model', ...overrides};
+    modelStore.models = [...savedModels, model];
+    runInAction(() => {
+      modelStore.activeModelId = 'pill-model';
+    });
+  };
+
+  it("shows the pill when isReasoning is 'unknown' (fail-open)", () => {
+    useModel({supportsThinking: undefined, reasoning: undefined});
+    const {queryByTestId} = render(<ChatScreen />, {withNavigation: true});
+    expect(queryByTestId('thinking-toggle')).toBeTruthy();
+  });
+
+  it("hides the pill when isReasoning is 'no'", () => {
+    useModel({
+      reasoning: {
+        isReasoning: 'no',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'high'],
+        effortSource: 'user',
+      },
+    });
+    const {queryByTestId} = render(<ChatScreen />, {withNavigation: true});
+    expect(queryByTestId('thinking-toggle')).toBeNull();
+  });
+
+  it('shows the pill for a graded effort model', () => {
+    useModel({
+      reasoning: {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'medium', 'high'],
+        effortSource: 'user',
+      },
+    });
+    const {queryByTestId} = render(<ChatScreen />, {withNavigation: true});
+    expect(queryByTestId('thinking-toggle')).toBeTruthy();
+  });
+});
+
+describe('ChatScreen reasoning override reaches the pill (live, no remount)', () => {
+  // Reproduces the user-reported flow: a model is loaded as the active chat
+  // model with NO reasoning capability (binary pill), the chat is already on
+  // screen, then the user saves a graded-effort override on the model card.
+  // The card mutates the live observable Model via setReasoningOverride; the
+  // already-mounted ChatScreen must react and the pill must become graded
+  // without a remount. Existing tests bake `reasoning` in before render, so
+  // they cannot catch a broken live-override/observation path.
+  let savedModels: any[];
+  let savedSessionId: string | null | undefined;
+  // Persisted reasoning settings for the active session — the pill init effect
+  // reads enable_thinking back from here, mirroring real session persistence.
+  let persisted: {enable_thinking: boolean; reasoning?: {effort?: string}};
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    savedSessionId = chatSessionStore.activeSessionId;
+    // Start from a settled OFF pill so the first graded tap advances to the
+    // first effort value rather than wrapping the cycle from an on-state.
+    persisted = {enable_thinking: false, reasoning: {effort: undefined}};
+    runInAction(() => {
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      serverStore.remoteReasoning = {};
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockImplementation(async () => ({...persisted}));
+    (
+      chatSessionStore.updateSessionCompletionSettings as jest.Mock
+    ).mockImplementation(async (s: any) => {
+      persisted = {enable_thinking: s.enable_thinking, reasoning: s.reasoning};
+      runInAction(() => {
+        const session = chatSessionStore.sessions.find(
+          x => x.id === 'session-1',
+        );
+        if (session) {
+          (session as any).completionSettings = {...persisted};
+        }
+      });
+    });
+  });
+
+  afterEach(() => {
+    runInAction(() => {
+      modelStore.models = savedModels;
+      modelStore.activeModelId = undefined;
+      chatSessionStore.activeSessionId = savedSessionId as any;
+    });
+  });
+
+  it('turns the binary pill into a graded cycle after setReasoningOverride', async () => {
+    const thinkText = l10n.en.components.chatInput.thinkingToggle.thinkText;
+
+    // Active local model with reasoning absent → pill is binary on/off.
+    const model = {
+      ...savedModels[0],
+      id: 'override-model',
+      origin: ModelOrigin.LOCAL,
+      supportsThinking: true,
+      reasoning: undefined,
+    };
+    runInAction(() => {
+      modelStore.models = [...savedModels, model];
+      modelStore.activeModelId = 'override-model';
+    });
+
+    const {getByTestId} = render(<ChatScreen />, {
+      withNavigation: true,
+    });
+    const pill = () => within(getByTestId('thinking-toggle'));
+
+    // The pill starts binary and settled OFF (no effort label, no graded cycle
+    // available yet).
+    await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
+
+    // User saves a graded-effort override on the model card. This is the exact
+    // writer the ModelSettingsSheet calls.
+    await act(async () => {
+      modelStore.setReasoningOverride('override-model', {
+        isReasoning: 'yes',
+        source: 'user',
+        supportsEffort: true,
+        effortValues: ['low', 'medium', 'high'],
+        effortSource: 'user',
+      });
+    });
+
+    // The already-mounted ChatScreen must now drive a graded pill: tapping
+    // cycles off → low → medium → high instead of a plain on/off toggle. Each
+    // tap awaits the async persist + state flush before the label settles.
+    for (const expected of ['low', 'medium', 'high'] as const) {
+      await act(async () => {
+        fireEvent.press(getByTestId('thinking-toggle'));
+      });
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 30));
+      });
+      await waitFor(() =>
+        expect(pill().getByText(effortLabel(expected))).toBeTruthy(),
+      );
+    }
+  });
+
+  it('graded cycle advances in a fresh chat (no active session)', async () => {
+    // The user-reported repro: a freshly loaded model in a brand-new chat (no
+    // session yet). The graded pill must still advance off → low → medium →
+    // high. The no-session path stages the effort on the new-chat override
+    // fields; if it drops the effort grade the cycle collapses to on/off and
+    // the pill alternates instead of stepping through the grades.
+    runInAction(() => {
+      chatSessionStore.activeSessionId = null as any;
+      chatSessionStore.newChatThinkingOverride = undefined;
+      chatSessionStore.newChatReasoningEffort = undefined;
+    });
+    // Mirror resolveCompletionSettings' no-session overlay: read the on/off and
+    // effort back from the new-chat override fields the pill writes through.
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockImplementation(async () => ({
+      enable_thinking: chatSessionStore.newChatThinkingOverride ?? false,
+      reasoning: {
+        enabled: chatSessionStore.newChatThinkingOverride ?? false,
+        effort: chatSessionStore.newChatReasoningEffort,
+      },
+    }));
+
+    const model = {
+      ...savedModels[0],
+      id: 'fresh-chat-model',
+      origin: ModelOrigin.HF,
+      supportsThinking: true,
+      reasoning: {
+        isReasoning: 'yes' as const,
+        source: 'user' as const,
+        supportsEffort: true,
+        effortValues: ['low', 'medium', 'high'],
+        effortSource: 'user' as const,
+      },
+    };
+    runInAction(() => {
+      modelStore.models = [...savedModels, model];
+      modelStore.activeModelId = 'fresh-chat-model';
+    });
+
+    const {getByTestId} = render(<ChatScreen />, {withNavigation: true});
+    const pill = () => within(getByTestId('thinking-toggle'));
+    const thinkText = l10n.en.components.chatInput.thinkingToggle.thinkText;
+
+    await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
+
+    for (const expected of ['low', 'medium', 'high'] as const) {
+      await act(async () => {
+        fireEvent.press(getByTestId('thinking-toggle'));
+      });
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 30));
+      });
+      await waitFor(() =>
+        expect(pill().getByText(effortLabel(expected))).toBeTruthy(),
+      );
+    }
+  });
+});
+
+describe('ChatScreen graded effort pill cycle', () => {
+  let savedModels: any[];
+  let savedSessionId: string | null | undefined;
+  // Persisted reasoning settings for the active session. The pill's cycle
+  // writes through updateSessionCompletionSettings; the init effect reads back
+  // via getCurrentCompletionSettings, mirroring real session persistence so a
+  // re-render does not clobber the just-applied state.
+  let persisted: {enable_thinking: boolean; reasoning?: {effort?: string}};
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    savedSessionId = chatSessionStore.activeSessionId;
+    persisted = {enable_thinking: false, reasoning: {effort: undefined}};
+    runInAction(() => {
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      serverStore.remoteReasoning = {};
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+    // Pill initializes to OFF; cycle round-trips through the session settings.
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockImplementation(async () => ({...persisted}));
+    (
+      chatSessionStore.updateSessionCompletionSettings as jest.Mock
+    ).mockImplementation(async (s: any) => {
+      persisted = {
+        enable_thinking: s.enable_thinking,
+        reasoning: s.reasoning,
+      };
+      // Bump the session reference so the init effect re-reads the new value.
+      runInAction(() => {
+        const session = chatSessionStore.sessions.find(
+          x => x.id === 'session-1',
+        );
+        if (session) {
+          (session as any).completionSettings = {...persisted};
+        }
+      });
+    });
+  });
+
+  afterEach(() => {
+    modelStore.models = savedModels;
+    runInAction(() => {
+      modelStore.activeModelId = undefined;
+      chatSessionStore.activeSessionId = savedSessionId as any;
+    });
+  });
+
+  const useGradedModel = () => {
+    const model = {
+      ...savedModels[0],
+      id: 'graded-model',
+      reasoning: {
+        isReasoning: 'yes' as const,
+        source: 'user' as const,
+        supportsEffort: true,
+        effortValues: ['low', 'medium', 'high'],
+        effortSource: 'user' as const,
+      },
+    };
+    modelStore.models = [...savedModels, model];
+    runInAction(() => {
+      modelStore.activeModelId = 'graded-model';
+    });
+  };
+
+  // A graded model's single pill cycles off → low → medium → high → off in
+  // value-set order, never on/off only.
+  it('cycles off → low → medium → high → off in value-set order', async () => {
+    const thinkText = l10n.en.components.chatInput.thinkingToggle.thinkText;
+    useGradedModel();
+    const {getByTestId} = render(<ChatScreen />, {withNavigation: true});
+    const pill = () => within(getByTestId('thinking-toggle'));
+
+    // The init effect resolves enable_thinking:false → pill settles to OFF.
+    await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
+
+    for (const expected of ['low', 'medium', 'high'] as const) {
+      await act(async () => {
+        fireEvent.press(getByTestId('thinking-toggle'));
+      });
+      await waitFor(() =>
+        expect(pill().getByText(effortLabel(expected))).toBeTruthy(),
+      );
+      // The chosen effort is persisted onto the reasoning carrier intent.
+      expect(persisted).toMatchObject({
+        enable_thinking: true,
+        reasoning: {enabled: true, effort: expected},
+      });
+    }
+
+    // One more tap past the last value wraps back to off.
+    await act(async () => {
+      fireEvent.press(getByTestId('thinking-toggle'));
+    });
+    await waitFor(() => expect(pill().getByText(thinkText)).toBeTruthy());
+    expect(persisted).toMatchObject({
+      enable_thinking: false,
+      reasoning: {enabled: false, effort: undefined},
+    });
+  });
+});
+
+describe('ChatScreen on/off toggle → reasoning carrier (remote)', () => {
+  let savedModels: any[];
+  let savedSessionId: string | null | undefined;
+  // Session-backed persistence so the simple on/off toggle round-trips through
+  // updateSessionCompletionSettings, mirroring real session behaviour.
+  let persisted: {
+    enable_thinking: boolean;
+    reasoning?: {enabled: boolean; effort?: string};
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    savedModels = modelStore.models;
+    savedSessionId = chatSessionStore.activeSessionId;
+    persisted = {enable_thinking: true, reasoning: undefined};
+    runInAction(() => {
+      modelStore.context = new LlamaContext(mockLlamaContextParams);
+      // No entry → resolver reports isReasoning 'unknown' (pill shown,
+      // fail-open) and supportsEffort false (simple on/off toggle).
+      serverStore.remoteReasoning = {};
+      chatSessionStore.activeSessionId = 'session-1';
+    });
+    modelStore.engine = {
+      completion: jest.fn(),
+      stopCompletion: jest.fn(),
+    } as any;
+    (
+      chatSessionStore.getCurrentCompletionSettings as jest.Mock
+    ).mockImplementation(async () => ({...persisted}));
+    (
+      chatSessionStore.updateSessionCompletionSettings as jest.Mock
+    ).mockImplementation(async (s: any) => {
+      persisted = {
+        enable_thinking: s.enable_thinking,
+        reasoning: s.reasoning,
+      };
+      runInAction(() => {
+        const session = chatSessionStore.sessions.find(
+          x => x.id === 'session-1',
+        );
+        if (session) {
+          (session as any).completionSettings = {...persisted};
+        }
+      });
+    });
+  });
+
+  afterEach(() => {
+    modelStore.models = savedModels;
+    runInAction(() => {
+      modelStore.activeModelId = undefined;
+      chatSessionStore.activeSessionId = savedSessionId as any;
+    });
+  });
+
+  const useRemoteEffortUnknownModel = () => {
+    const model = {
+      ...savedModels[0],
+      id: 'remote-effort-unknown',
+      origin: ModelOrigin.REMOTE,
+      supportsThinking: undefined,
+      reasoning: undefined,
+    };
+    modelStore.models = [...savedModels, model];
+    runInAction(() => {
+      modelStore.activeModelId = 'remote-effort-unknown';
+    });
+  };
+
+  // Toggling thinking OFF on a remote effort-unknown model must populate the
+  // reasoning carrier (enabled:false), so buildReasoningPayload produces the
+  // per-serverType OFF wire shape. Pre-R1 the toggle set only enable_thinking,
+  // leaving params.reasoning undefined → buildReasoningPayload returns {}.
+  it('off toggle yields reasoning.enabled false reaching buildReasoningPayload', async () => {
+    useRemoteEffortUnknownModel();
+    const {getByLabelText} = render(<ChatScreen />, {withNavigation: true});
+
+    // Default thinkingEnabled true → label is "Disable thinking mode".
+    const toggle = getByLabelText('Disable thinking mode');
+    await act(async () => {
+      fireEvent.press(toggle);
+    });
+
+    await waitFor(() =>
+      expect(persisted.reasoning).toEqual({enabled: false, effort: undefined}),
+    );
+    expect(persisted.reasoning?.enabled).toBe(false);
+
+    // The carrier drives the per-serverType OFF payload.
+    expect(buildReasoningPayload('llama.cpp', persisted.reasoning)).toEqual({
+      reasoning_format: 'auto',
+      chat_template_kwargs: {enable_thinking: false},
+    });
+    expect(buildReasoningPayload('Ollama', persisted.reasoning)).toEqual({
+      reasoning_effort: 'none',
     });
   });
 });

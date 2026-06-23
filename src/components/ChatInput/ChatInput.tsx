@@ -33,6 +33,7 @@ import {chatSessionStore, modelStore, palStore, uiStore} from '../../store';
 
 import {MessageType} from '../../utils/types';
 import {L10nContext, UserContext} from '../../utils';
+import {t} from '../../locales';
 
 import {SendButton, StopButton, Menu, VoiceChip} from '..';
 
@@ -71,6 +72,14 @@ export interface ChatInputTopLevelProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether the model supports graded reasoning effort (axis 2) */
+  supportsEffort?: boolean;
+  /** The graded effort value set, e.g. ['low','medium','high'] */
+  effortValues?: string[];
+  /** Currently selected reasoning effort (when graded) */
+  reasoningEffort?: string;
+  /** Callback to cycle the graded effort state (off -> values -> off) */
+  onEffortCycle?: () => void;
 }
 
 export interface ChatInputAdditionalProps {
@@ -88,6 +97,14 @@ export interface ChatInputAdditionalProps {
   isThinkingEnabled?: boolean;
   /** Callback when thinking toggle is pressed */
   onThinkingToggle?: (enabled: boolean) => void;
+  /** Whether the model supports graded reasoning effort (axis 2) */
+  supportsEffort?: boolean;
+  /** The graded effort value set, e.g. ['low','medium','high'] */
+  effortValues?: string[];
+  /** Currently selected reasoning effort (when graded) */
+  reasoningEffort?: string;
+  /** Callback to cycle the graded effort state (off -> values -> off) */
+  onEffortCycle?: () => void;
 }
 
 export type ChatInputProps = ChatInputTopLevelProps & ChatInputAdditionalProps;
@@ -122,6 +139,10 @@ export const ChatInput = observer(
     showThinkingToggle = false,
     isThinkingEnabled = false,
     onThinkingToggle,
+    supportsEffort = false,
+    effortValues = [],
+    reasoningEffort,
+    onEffortCycle,
   }: ChatInputProps) => {
     const l10n = React.useContext(L10nContext);
     const theme = useTheme();
@@ -346,6 +367,14 @@ export const ChatInput = observer(
       ? onSurfaceColor
       : onSurfaceColorVariant;
 
+    // Localize the current graded-effort tier through the same table the
+    // model-settings chips use; fall back to the raw token for an unlisted one.
+    const effortLevelLabels = l10n.components.modelSettingsSheet.effortLevels;
+    const localizedEffort =
+      reasoningEffort && reasoningEffort in effortLevelLabels
+        ? effortLevelLabels[reasoningEffort as keyof typeof effortLevelLabels]
+        : reasoningEffort;
+
     return (
       <View style={styles.container}>
         <View style={styles.inputContainer}>
@@ -542,19 +571,35 @@ export const ChatInput = observer(
                 )}
               </View>
 
-              {/* Thinking Toggle Button */}
+              {/* Thinking Toggle Button. Graded models (axis-2) cycle
+                  off -> low -> medium -> high; effortless models toggle
+                  on/off. The label shows the current effort when graded. */}
               {showThinkingToggle && !isCameraActive && (
                 <TouchableOpacity
+                  testID="thinking-toggle"
                   style={[
                     styles.thinkingToggleLeft,
                     isThinkingEnabled && {backgroundColor: onSurfaceColor},
                     {borderColor: onSurfaceColorVariant},
                   ]}
-                  onPress={() => onThinkingToggle?.(!isThinkingEnabled)}
+                  onPress={() =>
+                    supportsEffort && effortValues.length > 0
+                      ? onEffortCycle?.()
+                      : onThinkingToggle?.(!isThinkingEnabled)
+                  }
                   accessibilityLabel={
-                    isThinkingEnabled
-                      ? l10n.components.chatInput.thinkingToggle.disableThinking
-                      : l10n.components.chatInput.thinkingToggle.enableThinking
+                    supportsEffort && effortValues.length > 0
+                      ? t(
+                          l10n.components.chatInput.thinkingToggle.cycleEffort,
+                          {
+                            level: localizedEffort ?? '',
+                          },
+                        )
+                      : isThinkingEnabled
+                        ? l10n.components.chatInput.thinkingToggle
+                            .disableThinking
+                        : l10n.components.chatInput.thinkingToggle
+                            .enableThinking
                   }
                   accessibilityRole="button">
                   <AtomIcon
@@ -574,7 +619,9 @@ export const ChatInput = observer(
                         ? {color: inputBackgroundColor}
                         : {color: onSurfaceColorVariant},
                     ]}>
-                    {l10n.components.chatInput.thinkingToggle.thinkText}
+                    {supportsEffort && isThinkingEnabled && reasoningEffort
+                      ? localizedEffort
+                      : l10n.components.chatInput.thinkingToggle.thinkText}
                   </Text>
                 </TouchableOpacity>
               )}

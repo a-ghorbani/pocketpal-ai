@@ -3,6 +3,7 @@ import {palStore} from '../PalStore';
 import {defaultCompletionSettings} from '../ChatSessionStore';
 import {CompletionParams} from '../../utils/completionTypes';
 import type {Pal} from '../PalStore';
+import {buildReasoningPayload} from '../../api/openai';
 
 describe('ChatSessionStore - Pal Settings', () => {
   beforeEach(() => {
@@ -234,6 +235,9 @@ describe('ChatSessionStore - Pal Settings', () => {
 
       // Override wins for enable_thinking.
       expect(result.enable_thinking).toBe(false);
+      // Reasoning carrier mirrors the override so the remote wire path honors
+      // the OFF intent for the first message of the new chat (not local-only).
+      expect(result.reasoning).toEqual({enabled: false});
       // Pal's other completion settings survive — override is single-key.
       expect(result.temperature).toBe(0.5);
     });
@@ -250,6 +254,30 @@ describe('ChatSessionStore - Pal Settings', () => {
       );
 
       expect(result.enable_thinking).toBe(true);
+      expect(result.reasoning).toEqual({enabled: true});
+    });
+
+    it('no-session OFF override carrier yields per-serverType OFF payload', async () => {
+      // The whole point of carrying the override on `reasoning`: a brand-new
+      // remote chat opened with thinking OFF must produce a real OFF wire
+      // payload, not an empty object.
+      palStore.pals.push(makeThinkingPal('palRemote', true));
+      chatSessionStore.newChatPalId = 'palRemote';
+      chatSessionStore.newChatThinkingOverride = false;
+
+      const result = await chatSessionStore.resolveCompletionSettings(
+        undefined,
+        'palRemote',
+      );
+
+      expect(result.reasoning?.enabled).toBe(false);
+      expect(buildReasoningPayload('llama.cpp', result.reasoning)).toEqual({
+        reasoning_format: 'auto',
+        chat_template_kwargs: {enable_thinking: false},
+      });
+      expect(buildReasoningPayload('Ollama', result.reasoning)).toEqual({
+        reasoning_effort: 'none',
+      });
     });
 
     it('override is ignored on session-branch resolution (settingsSource pal)', async () => {

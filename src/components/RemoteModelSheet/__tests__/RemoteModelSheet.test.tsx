@@ -245,6 +245,40 @@ describe('RemoteModelSheet', () => {
       });
     });
 
+    // The server-type dropdown is seeded by detectServerType (mocked to ''),
+    // so it falls back to 'unknown'. Selecting an override persists through the
+    // addServer call.
+    it('persists a user-selected serverType when adding a new server', async () => {
+      mockedFetchModelsWithHeaders.mockResolvedValue({
+        models: [{id: 'llama-7b', object: 'model', owned_by: 'system'}],
+        headers: {},
+      });
+
+      const {getByTestId, getByText} = render(
+        <RemoteModelSheet isVisible={true} onDismiss={jest.fn()} />,
+      );
+
+      fireEvent.changeText(
+        getByTestId('remote-url-input'),
+        'http://localhost:1234',
+      );
+      await waitFor(() => {
+        expect(getByTestId('server-type-dropdown')).toBeTruthy();
+        expect(getByText('llama-7b')).toBeTruthy();
+      });
+
+      // Open the dropdown and override the seeded value.
+      fireEvent.press(getByTestId('server-type-dropdown'));
+      fireEvent.press(getByTestId('server-type-option-Ollama'));
+      fireEvent.press(getByTestId('add-model-button'));
+
+      await waitFor(() => {
+        expect(serverStore.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({serverType: 'Ollama'}),
+        );
+      });
+    });
+
     it('persists requestTimeoutMs undefined when adding a server with empty timeout', async () => {
       mockedFetchModelsWithHeaders.mockResolvedValue({
         models: [{id: 'llama-7b', object: 'model', owned_by: 'system'}],
