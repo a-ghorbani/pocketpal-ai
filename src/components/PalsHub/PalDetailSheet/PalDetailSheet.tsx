@@ -410,7 +410,8 @@ export const PalDetailSheet: React.FC<PalDetailSheetProps> = observer(
                   mode="contained"
                   onPress={handleBuyPress}
                   loading={
-                    checkoutStatus === 'creating' || checkoutStatus === 'linking'
+                    checkoutStatus === 'creating' ||
+                    checkoutStatus === 'linking'
                   }
                   disabled={isCheckoutInFlight}
                   style={styles.buyButton}>
