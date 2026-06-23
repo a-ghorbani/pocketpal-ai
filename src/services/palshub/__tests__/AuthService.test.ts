@@ -50,4 +50,20 @@ describe('AuthService.loadUserProfile', () => {
     ).resolves.toBeUndefined();
     expect(authService.profile).toBe(before);
   });
+
+  it('returns early on a permission-denied error without throwing and leaves profile unchanged', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const {authService} = setup({
+      data: null,
+      error: {code: '42501', message: 'permission denied for table profiles'},
+    });
+
+    const before = authService.profile;
+    await expect(
+      (authService as any).loadUserProfile('u1'),
+    ).resolves.toBeUndefined();
+    expect(authService.profile).toBe(before);
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });
