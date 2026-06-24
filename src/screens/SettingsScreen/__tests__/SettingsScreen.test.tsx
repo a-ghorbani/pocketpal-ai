@@ -540,6 +540,75 @@ describe('SettingsScreen', () => {
         getByTestId('speculative-draft-value-cache-button'),
       ).toHaveTextContent(/Q8_0/);
     });
+
+    it('stale selection (set id that does not resolve to a downloaded model) is treated as embedded/None', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        // The picked id points to a model that is NOT present/downloaded
+        // (e.g. it was deleted). The selection must be treated as None: the
+        // button shows "None", the cache rows are disabled (embedded), and the
+        // disabled explanation is shown — all consistent, no phantom pairing.
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'gone/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+        modelStore.models = [];
+      });
+      const {getByTestId, getByText, getAllByText} = render(
+        <SettingsScreen />,
+        {
+          withSafeArea: true,
+          withNavigation: true,
+        },
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // Button label falls back to None. (Substring match — the button
+      // prepends a chevron icon glyph to the label text content.)
+      expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
+        /None \(embedded MTP\)/,
+      );
+      // Cache rows are gated as embedded (q8_0 default, disabled + explained).
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBe(true);
+      expect(keyCacheButton).toHaveTextContent(/Q8_0/);
+      expect(
+        getAllByText(
+          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+        ).length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+
+    it('resolvable selection (set id present and downloaded) is treated as paired', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      runInAction(() => {
+        // The picked id resolves to a downloaded model → paired: button shows
+        // the model name and the cache rows are enabled (f16 default).
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // Substring match — the button prepends a chevron icon glyph.
+      expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
+        /Tiny Draft/,
+      );
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
+    });
   });
 
   describe('TTS availability toggle', () => {

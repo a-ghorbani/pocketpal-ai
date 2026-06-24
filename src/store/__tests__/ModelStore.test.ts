@@ -1493,6 +1493,68 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('deleteModel clears stale global draft selection', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (RNFS as any).__resetMockState?.();
+      modelStore.models = [];
+      modelStore.context = undefined;
+      modelStore.activeModelId = undefined;
+      modelStore.setSelectedDraftModel(undefined);
+    });
+
+    it('clears selectedDraftModelId when the deleted model was the global draft pick', async () => {
+      const draftModel = {
+        ...presetModelFixture,
+        id: 'test-draft-model',
+        modelType: ModelType.DRAFT,
+        isDownloaded: true,
+        fullPath: '/path/to/test-draft-model.gguf',
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+      };
+      modelStore.models = [draftModel];
+      modelStore.setSelectedDraftModel(draftModel.id);
+      expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
+        draftModel.id,
+      );
+
+      await modelStore.deleteModel(draftModel);
+
+      // No dangling id should persist.
+      expect(modelStore.contextInitParams.selectedDraftModelId).toBeUndefined();
+    });
+
+    it('leaves selectedDraftModelId alone when a different model is deleted', async () => {
+      const draftModel = {
+        ...presetModelFixture,
+        id: 'test-draft-model',
+        modelType: ModelType.DRAFT,
+        isDownloaded: true,
+        fullPath: '/path/to/test-draft-model.gguf',
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+      };
+      const otherModel = {
+        ...presetModelFixture,
+        id: 'test-other-model',
+        isDownloaded: true,
+        fullPath: '/path/to/test-other-model.gguf',
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+      };
+      modelStore.models = [draftModel, otherModel];
+      modelStore.setSelectedDraftModel(draftModel.id);
+
+      await modelStore.deleteModel(otherModel);
+
+      // The global draft pick is unrelated to the deleted model — keep it.
+      expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
+        draftModel.id,
+      );
+    });
+  });
+
   describe('context management', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -4756,6 +4818,13 @@ describe('ModelStore', () => {
           isDownloaded: false,
           isLocal: false,
           origin: ModelOrigin.HF,
+          // A real downloadUrl is required to actually exercise the DRAFT guard:
+          // without it, checkSpaceAndDownload's own !downloadUrl short-circuit
+          // would mask a missing recursion guard (the test would pass either
+          // way). With it present, removing the DRAFT guard would let the draft
+          // recurse into downloading itself, failing this assertion.
+          downloadUrl:
+            'https://huggingface.co/user/global/resolve/main/dr.gguf',
           modelType: ModelType.DRAFT,
         } as any;
         runInAction(() => {
