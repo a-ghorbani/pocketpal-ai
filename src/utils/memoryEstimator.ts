@@ -100,14 +100,19 @@ function calculateComputeBuffer(
  * @param model - The model to estimate memory for
  * @param projectionModel - Optional mmproj model for multimodal
  * @param contextSettings - Optional context settings (n_ctx, cache types, etc.)
+ * @param draftModel - Optional speculative draft model loaded alongside the target
  * @returns Estimated memory requirement in bytes
  */
 export function getModelMemoryRequirement(
   model: Model,
   projectionModel?: Model,
   contextSettings?: ContextInitParams,
+  draftModel?: Model,
 ): number {
   const mmProjSize = projectionModel?.size || 0;
+  // A paired draft is resident at load alongside the projection, so its size is
+  // summed on top of mmProjSize (additive, not max).
+  const draftSize = draftModel?.size || 0;
 
   // If GGUF metadata is available and valid, use accurate formula
   if (
@@ -126,15 +131,15 @@ export function getModelMemoryRequirement(
     // Compute Buffer: temporary buffers for inference
     const computeBuffer = calculateComputeBuffer(metadata, contextSettings);
 
-    // Total: (Weights + KV Cache + Compute) × 1.1 overhead + mmproj
+    // Total: (Weights + KV Cache + Compute) × 1.1 overhead + mmproj + draft
     const baseMemory = weightsSize + kvCacheSize + computeBuffer;
-    const totalMemory = baseMemory * 1.1 + mmProjSize * 1.1;
+    const totalMemory = baseMemory * 1.1 + mmProjSize * 1.1 + draftSize * 1.1;
 
     return totalMemory;
   }
 
   // Fallback: simple size-based estimation
-  const totalSize = model.size + mmProjSize;
+  const totalSize = model.size + mmProjSize + draftSize;
   const estimated = totalSize * 1.2; // 20% overhead (more conservative when no metadata)
 
   return estimated;

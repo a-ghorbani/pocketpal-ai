@@ -145,5 +145,93 @@ describe('memoryEstimator', () => {
 
       expect(withProj).toBeGreaterThan(withoutProj);
     });
+
+    it('adds draft model size in the fallback branch', () => {
+      const model = {...baseModel} as Model;
+      const draftModel = {size: 500 * 1e6} as Model; // 500MB
+
+      const withoutDraft = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+      );
+      const withDraft = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+        draftModel,
+      );
+
+      // Fallback: (target + draft) × 1.2
+      expect(withDraft).toBe((2 * 1e9 + 500 * 1e6) * 1.2);
+      expect(withDraft).toBeGreaterThan(withoutDraft);
+    });
+
+    it('sums projection and draft sizes (additive, not max)', () => {
+      const model = {...baseModel} as Model;
+      const projectionModel = {size: 500 * 1e6} as Model; // 500MB
+      const draftModel = {size: 300 * 1e6} as Model; // 300MB
+
+      const projOnly = getModelMemoryRequirement(
+        model,
+        projectionModel,
+        contextSettings,
+      );
+      const both = getModelMemoryRequirement(
+        model,
+        projectionModel,
+        contextSettings,
+        draftModel,
+      );
+
+      // Both resident at load → sizes summed, so adding a draft strictly grows
+      // the estimate beyond projection-only (not max).
+      expect(both).toBeGreaterThan(projOnly);
+      expect(both).toBe((2 * 1e9 + 500 * 1e6 + 300 * 1e6) * 1.2);
+    });
+
+    it('sums draft size in the GGUF metadata branch too', () => {
+      const model = {
+        ...baseModel,
+        ggufMetadata: {
+          architecture: 'llama',
+          n_layers: 32,
+          n_embd: 4096,
+          n_head: 32,
+          n_head_kv: 8,
+          n_vocab: 32000,
+          n_embd_head_k: 128,
+          n_embd_head_v: 128,
+        },
+      } as Model;
+      const draftModel = {size: 400 * 1e6} as Model; // 400MB
+
+      const withoutDraft = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+      );
+      const withDraft = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+        draftModel,
+      );
+
+      // Metadata branch charges draftSize × 1.1 on top of the base estimate.
+      expect(withDraft).toBeCloseTo(withoutDraft + 400 * 1e6 * 1.1, 0);
+    });
+
+    it('is unchanged when no draft is passed', () => {
+      const model = {...baseModel} as Model;
+      const a = getModelMemoryRequirement(model, undefined, contextSettings);
+      const b = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+        undefined,
+      );
+      expect(a).toBe(b);
+    });
   });
 });

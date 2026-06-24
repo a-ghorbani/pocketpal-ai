@@ -167,6 +167,11 @@ class ModelStore {
   isMultimodalActive: boolean = false;
   activeProjectionModelId: string | undefined = undefined;
 
+  // Draft model paired with the active context (runtime only; mirrors
+  // activeProjectionModelId). Set by proceedWithInitialization, cleared on every
+  // context release.
+  activeDraftModelId: string | undefined = undefined;
+
   // Track initialization settings for the active context
   activeContextSettings: ContextInitParams | undefined = undefined;
 
@@ -436,12 +441,88 @@ class ModelStore {
     });
   };
 
+  // Sole writers of the speculative-decoding engine knobs (single-writer rule).
+  setSpeculativeEnabled = (speculativeEnabled: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        speculativeEnabled,
+      };
+    });
+  };
+
+  setSpecDraftNMax = (spec_draft_n_max: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_n_max};
+    });
+  };
+
+  setSpecDraftNMin = (spec_draft_n_min: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_n_min};
+    });
+  };
+
+  setSpecDraftPMin = (spec_draft_p_min: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_p_min};
+    });
+  };
+
+  setSpecDraftPSplit = (spec_draft_p_split: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_p_split};
+    });
+  };
+
+  setSpecDraftNGpuLayers = (spec_draft_n_gpu_layers: number) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_n_gpu_layers,
+      };
+    });
+  };
+
+  setSpecDraftCacheTypeK = (spec_draft_cache_type_k: CacheType) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_cache_type_k,
+      };
+    });
+  };
+
+  setSpecDraftCacheTypeV = (spec_draft_cache_type_v: CacheType) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_cache_type_v,
+      };
+    });
+  };
+
+  setDefaultDraftModel = (
+    modelId: string,
+    draftModelId: string | undefined,
+  ) => {
+    runInAction(() => {
+      this.models = this.models.map(m =>
+        m.id === modelId ? {...m, defaultDraftModel: draftModelId} : m,
+      );
+    });
+  };
+
   /**
    * Get effective context initialization parameters with constraints applied
    * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
    */
   getEffectiveContextInitParams = async (
     filePath?: string,
+    draftConfig?: {
+      mode: 'off' | 'paired' | 'embedded';
+      resolvedDraftPath?: string;
+    },
   ): Promise<Omit<ContextParams, 'model'>> => {
     // Apply batch constraints
     const effectiveContext = this.contextInitParams.n_ctx;
@@ -472,10 +553,25 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
-    // Handle flash_attn_type (v2.0) - platform-specific default
+    // Speculative-decoding mode (§4a). Defaults to 'off' when no draftConfig is
+    // passed, so callers that don't resolve a draft (e.g. benchmark) are
+    // unaffected. Mode defaults are applied as ?? fallbacks over user-set
+    // contextInitParams — an explicit user value is never overwritten.
+    const mode = draftConfig?.mode ?? 'off';
+    const speculative = mode !== 'off';
+
+    // Handle flash_attn_type (v2.0) - platform-specific default. Paired draft
+    // mode defaults it 'off', embedded-MTP mode defaults it 'auto'.
+    const flashAttnModeDefault =
+      mode === 'paired'
+        ? 'off'
+        : mode === 'embedded'
+          ? 'auto'
+          : Platform.OS === 'ios'
+            ? 'auto'
+            : 'off';
     const flash_attn_type =
-      this.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
+      this.contextInitParams.flash_attn_type ?? flashAttnModeDefault;
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {
@@ -494,6 +590,36 @@ class ModelStore {
       use_mmap: effectiveUseMmap,
       no_extra_bufts: this.contextInitParams.no_extra_bufts,
     };
+
+    if (speculative) {
+      // Forwarded in both speculative modes (paired + embedded). Pass through any
+      // user-set tuning verbatim; only the cache-type/gpu-layer defaults differ
+      // per mode below.
+      params.spec_draft_n_max = this.contextInitParams.spec_draft_n_max;
+      params.spec_draft_n_min = this.contextInitParams.spec_draft_n_min;
+      params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
+      params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
+
+      if (mode === 'paired' && draftConfig?.resolvedDraftPath) {
+        // Separate draft pairing: set the draft path; apply paired defaults.
+        params.model_draft = draftConfig.resolvedDraftPath;
+        params.is_model_draft_asset = false; // downloaded file, not bundled asset
+        params.spec_draft_n_gpu_layers =
+          this.contextInitParams.spec_draft_n_gpu_layers ?? 99;
+        params.spec_draft_cache_type_k =
+          this.contextInitParams.spec_draft_cache_type_k ?? 'f16';
+        params.spec_draft_cache_type_v =
+          this.contextInitParams.spec_draft_cache_type_v ?? 'f16';
+      } else {
+        // Embedded / hybrid MTP (or no-op): leave model_draft unset; MTP defaults.
+        params.spec_draft_n_gpu_layers =
+          this.contextInitParams.spec_draft_n_gpu_layers;
+        params.spec_draft_cache_type_k =
+          this.contextInitParams.spec_draft_cache_type_k ?? 'q8_0';
+        params.spec_draft_cache_type_v =
+          this.contextInitParams.spec_draft_cache_type_v ?? 'q8_0';
+      }
+    }
 
     // Remove undefined values from the params object
     return Object.fromEntries(
@@ -1176,6 +1302,43 @@ class ModelStore {
     }
   };
 
+  /**
+   * Auto-download a paired speculative draft model for a target. Best-effort:
+   * a draft download failure must NOT fail the target download (mirrors the
+   * projection auto-download swallow-and-continue). Gated on speculativeEnabled
+   * so drafts aren't pulled when the feature is off.
+   */
+  private _downloadDraftModelIfNeeded = async (model: Model) => {
+    if (
+      !model.defaultDraftModel ||
+      model.modelType === ModelType.DRAFT ||
+      !this.contextInitParams.speculativeEnabled
+    ) {
+      return;
+    }
+
+    const draftModelId = model.defaultDraftModel;
+    const draftModel = this.models.find(m => m.id === draftModelId);
+
+    if (
+      draftModel &&
+      !draftModel.isDownloaded &&
+      !downloadManager.isDownloading(draftModelId)
+    ) {
+      console.log('Auto-downloading draft model for speculative target:', {
+        target: model.id,
+        draft: draftModelId,
+      });
+
+      try {
+        await this.checkSpaceAndDownload(draftModelId);
+      } catch (error) {
+        console.error('Failed to auto-download draft model:', error);
+        // Don't re-throw - draft download failure shouldn't fail the target download.
+      }
+    }
+  };
+
   checkSpaceAndDownload = async (modelId: string) => {
     const model = this.models.find(m => m.id === modelId);
     // Skip if model is undefined, already downloaded, local or doesn't have a download URL
@@ -1197,6 +1360,8 @@ class ModelStore {
 
       // For vision models, automatically download the projection model
       await this._downloadProjectionModelIfNeeded(model);
+      // For speculative targets, automatically download the paired draft model
+      await this._downloadDraftModelIfNeeded(model);
     } catch (err) {
       if (err instanceof DownloadCancelledError) {
         // User cancelled — not a failure. Don't surface an error and don't
@@ -1599,6 +1764,39 @@ class ModelStore {
     return {isMultimodalInit: false};
   };
 
+  // Resolve the speculative-decoding mode for a target load. Read-only; runs
+  // outside the mutex (mirrors resolveMultimodalConfig). Modes:
+  //  - 'off':      speculative disabled → no draft, no spec_draft_*.
+  //  - 'paired':   a default draft resolves to a downloaded file → model_draft set.
+  //  - 'embedded': speculative on but no paired draft (embedded/hybrid MTP or no-op).
+  // A configured-but-not-downloaded draft degrades to 'embedded' (drop the draft,
+  // never block or error the target load — graceful degradation, I3 / scenario C).
+  private resolveDraftConfig = async (
+    model: Model,
+  ): Promise<{
+    mode: 'off' | 'paired' | 'embedded';
+    resolvedDraftPath?: string;
+    draftModel?: Model;
+  }> => {
+    if (!this.contextInitParams.speculativeEnabled) {
+      return {mode: 'off'};
+    }
+
+    if (model.defaultDraftModel) {
+      const draftModel = this.models.find(
+        m => m.id === model.defaultDraftModel,
+      );
+      if (draftModel?.isDownloaded) {
+        const resolvedDraftPath = await this.getModelFullPath(draftModel);
+        if (resolvedDraftPath) {
+          return {mode: 'paired', resolvedDraftPath, draftModel};
+        }
+      }
+    }
+
+    return {mode: 'embedded'};
+  };
+
   /**
    * Check memory/capability requirements and show warning alert if needed.
    * Returns true if user confirms or no warning needed, false if cancelled.
@@ -1607,10 +1805,11 @@ class ModelStore {
     model: Model,
     isMultimodalInit: boolean,
     projectionModel?: Model,
+    draftModel?: Model,
   ): Promise<boolean> => {
     let hasMemory = true;
     try {
-      hasMemory = await hasEnoughMemory(model, projectionModel);
+      hasMemory = await hasEnoughMemory(model, projectionModel, draftModel);
     } catch (error) {
       console.error('Memory check failed:', error);
       return false;
@@ -1738,11 +1937,15 @@ class ModelStore {
       const {isMultimodalInit, resolvedMmProjPath, projectionModel} =
         await this.resolveMultimodalConfig(model, mmProjPath);
 
+      // Resolve speculative-decoding mode (read-only, pre-mutex like multimodal).
+      const draftConfig = await this.resolveDraftConfig(model);
+
       // Check memory and get user confirmation if needed (no mutex - UI interaction)
       const shouldProceed = await this.checkMemoryAndConfirm(
         model,
         isMultimodalInit,
         projectionModel,
+        draftConfig.draftModel,
       );
 
       if (!shouldProceed) {
@@ -1800,6 +2003,7 @@ class ModelStore {
           resolvedMmProjPath,
           isMultimodalInit,
           projectionModel,
+          draftConfig,
         );
       });
 
@@ -1825,6 +2029,11 @@ class ModelStore {
     mmProjPath?: string,
     isMultimodalInit: boolean = false,
     projectionModel?: Model,
+    draftConfig?: {
+      mode: 'off' | 'paired' | 'embedded';
+      resolvedDraftPath?: string;
+      draftModel?: Model;
+    },
   ): Promise<LlamaContext> {
     const filePath = await this.getModelFullPath(model);
     if (!filePath) {
@@ -1834,12 +2043,17 @@ class ModelStore {
     runInAction(() => {
       this.isMultimodalActive = false; // Reset until we confirm it's enabled
       this.activeProjectionModelId = projectionModel?.id;
+      // Sole writer of activeDraftModelId (paired with this context). Set only
+      // when a draft is actually paired; cleared on every context release.
+      this.activeDraftModelId = draftConfig?.draftModel?.id;
     });
 
     // Get all effective initialization settings BEFORE try block
     // so they're available for error reporting if initialization fails
-    const effectiveSettings =
-      await this.getEffectiveContextInitParams(filePath);
+    const effectiveSettings = await this.getEffectiveContextInitParams(
+      filePath,
+      draftConfig,
+    );
 
     try {
       // Create properly versioned ContextInitParams
@@ -1916,6 +2130,7 @@ class ModelStore {
           model,
           projectionModel,
           contextInitParams,
+          draftConfig?.draftModel,
         );
         runInAction(() => {
           if (
@@ -1983,6 +2198,7 @@ class ModelStore {
           }
           this.isMultimodalActive = false;
           this.activeProjectionModelId = undefined;
+          this.activeDraftModelId = undefined;
         });
       }
       if (!this.engine && !clearActiveModel) {
@@ -2040,6 +2256,7 @@ class ModelStore {
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
+            this.activeDraftModelId = undefined;
           });
           console.log('Multimodal context released and state cleared');
         } catch (error) {
@@ -2048,6 +2265,7 @@ class ModelStore {
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
+            this.activeDraftModelId = undefined;
           });
         }
       }
@@ -2065,6 +2283,7 @@ class ModelStore {
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
+        this.activeDraftModelId = undefined;
         // Clear active model if requested (for deletion scenarios)
         if (clearActiveModel) {
           this.activeModelId = undefined;
