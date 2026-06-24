@@ -478,6 +478,68 @@ describe('SettingsScreen', () => {
         ).length,
       ).toBeGreaterThanOrEqual(1);
     });
+
+    it('paired draft renders the f16 effective-default label (positive assertion)', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      runInAction(() => {
+        // A draft is picked but no explicit cache type set → label must resolve
+        // to the EFFECTIVE paired default (f16), not the "None" string and not
+        // an empty/wrong value.
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // The f16 cache option renders 'F16 (Default)' (flashAttnCompatibility),
+      // shown for BOTH the key and value draft cache rows. Substring match —
+      // the button prepends a chevron icon glyph to the label text content.
+      expect(getByTestId('speculative-draft-key-cache-button')).toHaveTextContent(
+        /F16 \(Default\)/,
+      );
+      expect(
+        getByTestId('speculative-draft-value-cache-button'),
+      ).toHaveTextContent(/F16 \(Default\)/);
+    });
+
+    it('embedded mode renders the q8_0 effective-default label (positive assertion)', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        // No global pick and no per-target draft → effectively embedded; the
+        // draft cache rows must show the embedded default (q8_0), not f16 and
+        // not the "None" string.
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+        modelStore.models = [];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      expect(getByTestId('speculative-draft-key-cache-button')).toHaveTextContent(
+        /Q8_0/,
+      );
+      expect(
+        getByTestId('speculative-draft-value-cache-button'),
+      ).toHaveTextContent(/Q8_0/);
+    });
   });
 
   describe('TTS availability toggle', () => {
