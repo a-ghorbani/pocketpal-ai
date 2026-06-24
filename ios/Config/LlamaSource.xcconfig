@@ -1,0 +1,17 @@
+// From-source llama.rn header search paths for the PocketPal target.
+//
+// The AppIntents LlamaContextWrapper includes rnllama C++ headers directly. A
+// from-source llama.rn pod publishes its cpp headers FLAT as symlinks, and the
+// flat `common.h` resolves to cpp/ggml-cpu/common.h — not the llama.cpp
+// cpp/common/common.h the rnllama headers actually need. These nested source
+// dirs are prepended (ahead of $(inherited), so they win) so chat.h/common.h/
+// jinja/* and nlohmann/* resolve consistently from one tree. No-op for a
+// prebuilt xcframework build, where the <rnllama/...> include path wins.
+//
+// Committed so the resolved header paths live in source control rather than
+// being injected into the tracked project from a post_install hook. The Podfile
+// post_install appends an idempotent `#include` of this file into the
+// (gitignored) regenerated Pods-PocketPal.*.xcconfig, so `pod install` rewrites
+// no tracked file.
+
+HEADER_SEARCH_PATHS = "${PODS_ROOT}/../../node_modules/llama.rn/cpp/common" "${PODS_ROOT}/../../node_modules/llama.rn/cpp" $(inherited)

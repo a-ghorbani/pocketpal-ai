@@ -97,26 +97,21 @@ target 'PocketPal' do
       end
     end
 
-    # The AppIntents LlamaContextWrapper includes rnllama C++ headers directly.
-    # A from-source llama-rn pod publishes its cpp headers FLAT as symlinks, and
-    # the flat `common.h` resolves to cpp/ggml-cpu/common.h — not the llama.cpp
-    # cpp/common/common.h the rnllama headers actually need. Prepend the real
-    # nested source dirs (ahead of $(inherited), so they win) so chat.h/common.h/
-    # jinja/* and nlohmann/* resolve consistently from one tree. No-op for a
-    # prebuilt xcframework build, where the <rnllama/...> include path wins.
-    llama_cpp = '${PODS_ROOT}/../../node_modules/llama.rn/cpp'
-    llama_paths = ["\"#{llama_cpp}/common\"", "\"#{llama_cpp}\""]
-    installer.aggregate_targets.each do |aggregate_target|
-      aggregate_target.user_project.native_targets.each do |native_target|
-        next unless native_target.name == 'PocketPal'
-        native_target.build_configurations.each do |config|
-          existing = Array(config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)'])
-          existing -= llama_paths
-          config.build_settings['HEADER_SEARCH_PATHS'] = llama_paths + existing
-        end
-      end
+    # The AppIntents LlamaContextWrapper includes rnllama C++ headers directly,
+    # which need the from-source llama.rn nested header dirs (see
+    # ios/Config/LlamaSource.xcconfig for the full rationale). Those paths are
+    # committed in that xcconfig; here we only `#include` it into the
+    # (gitignored) regenerated Pods-PocketPal.*.xcconfig so it layers on top of
+    # the pod-generated HEADER_SEARCH_PATHS. The tracked project.pbxproj is left
+    # untouched, so `pod install` rewrites no tracked file. Idempotent: skip if
+    # the include is already present.
+    pods_xcconfig_dir = File.join(installer.sandbox.root, 'Target Support Files', 'Pods-PocketPal')
+    include_line = '#include "../../../Config/LlamaSource.xcconfig"'
+    Dir.glob(File.join(pods_xcconfig_dir, 'Pods-PocketPal.*.xcconfig')).each do |xcconfig|
+      contents = File.read(xcconfig)
+      next if contents.include?(include_line)
+      File.write(xcconfig, "#{include_line}\n#{contents}")
     end
-    installer.aggregate_targets.first&.user_project&.save
   end
 
 
