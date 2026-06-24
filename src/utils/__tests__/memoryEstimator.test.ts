@@ -190,7 +190,7 @@ describe('memoryEstimator', () => {
       expect(both).toBe((2 * 1e9 + 500 * 1e6 + 300 * 1e6) * 1.2);
     });
 
-    it('sums draft size in the GGUF metadata branch too', () => {
+    it('sums the draft weights AND the draft KV cache in the GGUF metadata branch', () => {
       const model = {
         ...baseModel,
         ggufMetadata: {
@@ -204,7 +204,22 @@ describe('memoryEstimator', () => {
           n_embd_head_v: 128,
         },
       } as Model;
-      const draftModel = {size: 400 * 1e6} as Model; // 400MB
+      // A draft WITH its own metadata runs its own KV cache, sized by the
+      // target n_ctx and the draft cache type (default f16).
+      const draftMetadata = {
+        architecture: 'llama',
+        n_layers: 16,
+        n_embd: 1024,
+        n_head: 16,
+        n_head_kv: 4,
+        n_vocab: 32000,
+        n_embd_head_k: 64,
+        n_embd_head_v: 64,
+      };
+      const draftModel = {
+        size: 400 * 1e6, // 400MB
+        ggufMetadata: draftMetadata,
+      } as Model;
 
       const withoutDraft = getModelMemoryRequirement(
         model,
@@ -218,7 +233,57 @@ describe('memoryEstimator', () => {
         draftModel,
       );
 
-      // Metadata branch charges draftSize × 1.1 on top of the base estimate.
+      // Draft KV: target n_ctx × draft cache (f16, 2 bytes), key + value.
+      const {n_ctx} = contextSettings;
+      const draftKv =
+        draftMetadata.n_layers *
+          n_ctx *
+          draftMetadata.n_embd_head_k *
+          draftMetadata.n_head_kv *
+          2.0 +
+        draftMetadata.n_layers *
+          n_ctx *
+          draftMetadata.n_embd_head_v *
+          draftMetadata.n_head_kv *
+          2.0;
+
+      // Estimate includes the draft weights AND the draft KV footprint, not
+      // weights-only.
+      expect(withDraft).toBeCloseTo(
+        withoutDraft + (400 * 1e6 + draftKv) * 1.1,
+        0,
+      );
+      expect(withDraft).toBeGreaterThan(withoutDraft + 400 * 1e6 * 1.1);
+    });
+
+    it('falls back to draft weights-only when the draft has no metadata', () => {
+      const model = {
+        ...baseModel,
+        ggufMetadata: {
+          architecture: 'llama',
+          n_layers: 32,
+          n_embd: 4096,
+          n_head: 32,
+          n_head_kv: 8,
+          n_vocab: 32000,
+          n_embd_head_k: 128,
+          n_embd_head_v: 128,
+        },
+      } as Model;
+      const draftModel = {size: 400 * 1e6} as Model; // no metadata
+
+      const withoutDraft = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+      );
+      const withDraft = getModelMemoryRequirement(
+        model,
+        undefined,
+        contextSettings,
+        draftModel,
+      );
+
       expect(withDraft).toBeCloseTo(withoutDraft + 400 * 1e6 * 1.1, 0);
     });
 

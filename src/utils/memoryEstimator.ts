@@ -1,4 +1,4 @@
-import {Model, GGUFMetadata, ContextInitParams} from './types';
+import {Model, GGUFMetadata, ContextInitParams, CacheType} from './types';
 
 /**
  * Validate that GGUF metadata has valid numeric values for core fields.
@@ -114,6 +114,25 @@ export function getModelMemoryRequirement(
   // summed on top of mmProjSize (additive, not max).
   const draftSize = draftModel?.size || 0;
 
+  // A paired draft runs inference with its OWN KV cache, sized by the target's
+  // n_ctx (no separate draft n_ctx exists) and the draft cache type (default
+  // f16). Sum it on top of the draft weight size; fall back to weights-only
+  // when the draft's metadata is absent (mirrors the model's own fallback).
+  let draftKvCacheSize = 0;
+  if (
+    draftModel?.ggufMetadata &&
+    contextSettings &&
+    isValidGGUFMetadata(draftModel.ggufMetadata)
+  ) {
+    draftKvCacheSize = calculateKVCacheMemory(draftModel.ggufMetadata, {
+      ...contextSettings,
+      cache_type_k: (contextSettings.spec_draft_cache_type_k ||
+        'f16') as CacheType,
+      cache_type_v: (contextSettings.spec_draft_cache_type_v ||
+        'f16') as CacheType,
+    });
+  }
+
   // If GGUF metadata is available and valid, use accurate formula
   if (
     model.ggufMetadata &&
@@ -131,9 +150,13 @@ export function getModelMemoryRequirement(
     // Compute Buffer: temporary buffers for inference
     const computeBuffer = calculateComputeBuffer(metadata, contextSettings);
 
-    // Total: (Weights + KV Cache + Compute) × 1.1 overhead + mmproj + draft
+    // Total: (Weights + KV Cache + Compute) × 1.1 overhead + mmproj
+    // + draft (weights + its own KV cache).
     const baseMemory = weightsSize + kvCacheSize + computeBuffer;
-    const totalMemory = baseMemory * 1.1 + mmProjSize * 1.1 + draftSize * 1.1;
+    const totalMemory =
+      baseMemory * 1.1 +
+      mmProjSize * 1.1 +
+      (draftSize + draftKvCacheSize) * 1.1;
 
     return totalMemory;
   }

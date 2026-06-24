@@ -4486,7 +4486,7 @@ describe('ModelStore', () => {
           origin: ModelOrigin.LOCAL,
           fullPath,
           modelType: ModelType.DRAFT,
-        } as any);
+        }) as any;
 
       it('global pick, no per-target draft → paired with the global draft', async () => {
         modelStore.setSpeculativeEnabled(true);
@@ -4515,7 +4515,10 @@ describe('ModelStore', () => {
         });
         modelStore.setSelectedDraftModel('user/other.gguf');
 
-        const target = {id: 'a/b/t.gguf', defaultDraftModel: 'rules/draft.gguf'};
+        const target = {
+          id: 'a/b/t.gguf',
+          defaultDraftModel: 'rules/draft.gguf',
+        };
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
         expect(cfg.mode).toBe('paired');
@@ -4720,7 +4723,9 @@ describe('ModelStore', () => {
           modelStore.models[0],
         );
 
-        expect(downloadManager.startDownload as jest.Mock).not.toHaveBeenCalled();
+        expect(
+          downloadManager.startDownload as jest.Mock,
+        ).not.toHaveBeenCalled();
       });
 
       it('a DRAFT model does not recurse into its own draft download', async () => {
@@ -4740,7 +4745,9 @@ describe('ModelStore', () => {
 
         await (modelStore as any)._downloadDraftModelIfNeeded(draft);
 
-        expect(downloadManager.startDownload as jest.Mock).not.toHaveBeenCalled();
+        expect(
+          downloadManager.startDownload as jest.Mock,
+        ).not.toHaveBeenCalled();
       });
     });
 
