@@ -22,6 +22,12 @@ $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
 
+# Build llama-rn from its bundled C++ sources instead of the prebuilt
+# xcframework (the pinned source tarball ships no xcframework). iOS analog of
+# Android's rnllamaBuildFromSource=true gradle flag. Allow an explicit env
+# override to '0' for anyone who restores a prebuilt distribution.
+ENV['RNLLAMA_BUILD_FROM_SOURCE'] ||= '1'
+
 target 'PocketPal' do
   config = use_native_modules!
 
@@ -90,6 +96,27 @@ target 'PocketPal' do
         end
       end
     end
+
+    # The AppIntents LlamaContextWrapper includes rnllama C++ headers directly.
+    # A from-source llama-rn pod publishes its cpp headers FLAT as symlinks, and
+    # the flat `common.h` resolves to cpp/ggml-cpu/common.h — not the llama.cpp
+    # cpp/common/common.h the rnllama headers actually need. Prepend the real
+    # nested source dirs (ahead of $(inherited), so they win) so chat.h/common.h/
+    # jinja/* and nlohmann/* resolve consistently from one tree. No-op for a
+    # prebuilt xcframework build, where the <rnllama/...> include path wins.
+    llama_cpp = '${PODS_ROOT}/../../node_modules/llama.rn/cpp'
+    llama_paths = ["\"#{llama_cpp}/common\"", "\"#{llama_cpp}\""]
+    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.user_project.native_targets.each do |native_target|
+        next unless native_target.name == 'PocketPal'
+        native_target.build_configurations.each do |config|
+          existing = Array(config.build_settings['HEADER_SEARCH_PATHS'] || ['$(inherited)'])
+          existing -= llama_paths
+          config.build_settings['HEADER_SEARCH_PATHS'] = llama_paths + existing
+        end
+      end
+    end
+    installer.aggregate_targets.first&.user_project&.save
   end
 
 
