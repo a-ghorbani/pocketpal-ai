@@ -484,6 +484,7 @@ export enum ModelType {
   PROJECTION = 'projection',
   VISION = 'vision',
   LLM = 'llm',
+  DRAFT = 'draft',
 }
 
 /**
@@ -531,6 +532,11 @@ export interface Model {
   compatibleProjectionModels?: string[]; // Array of mmproj model IDs that work with this model
   defaultProjectionModel?: string; // Default mmproj model ID to use with this model
   visionEnabled?: boolean; // User preference for enabling vision capabilities (defaults to true for backward compatibility)
+
+  // Speculative-decoding draft pairing (runtime pairing mirrors projection; the
+  // draft is authored as a cross-repo device-rules block, not an hfAsModel sibling)
+  compatibleDraftModels?: string[]; // Array of draft model IDs valid for this target
+  defaultDraftModel?: string; // Default draft model ID to auto-pair / auto-download
 
   // Thinking capabilities
   /** @deprecated Read via resolveReasoningCapability; kept as a fallback for old records. */
@@ -687,6 +693,19 @@ export interface ContextInitParams
   /** Disable extra buffer types for weight repacking (CPU_REPACK). Android only.
    * Reduces memory usage at the cost of slower prompt processing. Default: false */
   no_extra_bufts?: boolean;
+
+  // v2.3+ speculative decoding / draft model (global engine knobs).
+  // spec_draft_* are also carried by the underlying ContextParams; re-declared
+  // here so the persisted contract is explicit and pinned to this slice.
+  /** Master switch for speculative decoding; default false (feature OFF). */
+  speculativeEnabled?: boolean;
+  spec_draft_n_max?: number;
+  spec_draft_n_min?: number;
+  spec_draft_p_min?: number;
+  spec_draft_p_split?: number;
+  spec_draft_n_gpu_layers?: number;
+  spec_draft_cache_type_k?: string;
+  spec_draft_cache_type_v?: string;
 
   // Deprecated (kept for migration)
   /** @deprecated Use devices instead */
