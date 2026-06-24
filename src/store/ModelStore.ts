@@ -1319,15 +1319,18 @@ class ModelStore {
    * so drafts aren't pulled when the feature is off.
    */
   private _downloadDraftModelIfNeeded = async (model: Model) => {
+    // Same precedence as resolveDraftConfig: per-target authored draft wins,
+    // the global user-picked draft is the fallback.
+    const draftModelId =
+      model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
     if (
-      !model.defaultDraftModel ||
+      !draftModelId ||
       model.modelType === ModelType.DRAFT ||
       !this.contextInitParams.speculativeEnabled
     ) {
       return;
     }
 
-    const draftModelId = model.defaultDraftModel;
     const draftModel = this.models.find(m => m.id === draftModelId);
 
     if (
@@ -1792,10 +1795,13 @@ class ModelStore {
       return {mode: 'off'};
     }
 
-    if (model.defaultDraftModel) {
-      const draftModel = this.models.find(
-        m => m.id === model.defaultDraftModel,
-      );
+    // Precedence: per-target authored draft wins; the global user-picked draft
+    // is the fallback when the target has none. Both resolve to the same
+    // paired-mode shape; embedded is the final fallback.
+    const draftId =
+      model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
+    if (draftId) {
+      const draftModel = this.models.find(m => m.id === draftId);
       if (draftModel?.isDownloaded) {
         const resolvedDraftPath = await this.getModelFullPath(draftModel);
         if (resolvedDraftPath) {

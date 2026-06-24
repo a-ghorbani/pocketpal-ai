@@ -4465,6 +4465,114 @@ describe('ModelStore', () => {
         expect(modelStore.contextInitParams.spec_draft_n_max).toBe(5);
         expect(modelStore.contextInitParams.spec_draft_n_gpu_layers).toBe(10);
       });
+
+      it('setSelectedDraftModel is the sole writer of the global pick', () => {
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
+          'c/d/dr.gguf',
+        );
+        modelStore.setSelectedDraftModel(undefined);
+        expect(
+          modelStore.contextInitParams.selectedDraftModelId,
+        ).toBeUndefined();
+      });
+    });
+
+    describe('global draft pick precedence (resolveDraftConfig)', () => {
+      const downloadedDraft = (id: string, fullPath: string) =>
+        ({
+          id,
+          isDownloaded: true,
+          origin: ModelOrigin.LOCAL,
+          fullPath,
+          modelType: ModelType.DRAFT,
+        } as any);
+
+      it('global pick, no per-target draft → paired with the global draft', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            downloadedDraft('user/global/dr.gguf', '/path/global.gguf'),
+          ];
+        });
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('paired');
+        expect(cfg.resolvedDraftPath).toBe('/path/global.gguf');
+        expect(cfg.draftModel?.id).toBe('user/global/dr.gguf');
+      });
+
+      it('per-target draft overrides the global pick', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            downloadedDraft('rules/draft.gguf', '/path/rules.gguf'),
+            downloadedDraft('user/other.gguf', '/path/other.gguf'),
+          ];
+        });
+        modelStore.setSelectedDraftModel('user/other.gguf');
+
+        const target = {id: 'a/b/t.gguf', defaultDraftModel: 'rules/draft.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('paired');
+        expect(cfg.resolvedDraftPath).toBe('/path/rules.gguf');
+        expect(cfg.draftModel?.id).toBe('rules/draft.gguf');
+      });
+
+      it('global pick not downloaded → embedded, no error', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'user/global/dr.gguf',
+              isDownloaded: false,
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+          modelStore.modelLoadError = null;
+        });
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('embedded');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+        expect(modelStore.modelLoadError).toBeNull();
+      });
+
+      it('load-time no-op: nothing picked, no per-target draft → embedded (migrated record loads identically to pre-feature)', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        runInAction(() => {
+          modelStore.models = [];
+        });
+
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('embedded');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+      });
+
+      it('speculative off → off before reading the global pick', async () => {
+        modelStore.setSpeculativeEnabled(false);
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+        runInAction(() => {
+          modelStore.models = [
+            downloadedDraft('user/global/dr.gguf', '/path/global.gguf'),
+          ];
+        });
+
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('off');
+      });
     });
 
     describe('activeDraftModelId reset on release', () => {
@@ -4550,6 +4658,89 @@ describe('ModelStore', () => {
         await expect(
           modelStore.checkSpaceAndDownload('a/b/t.gguf'),
         ).resolves.not.toThrow();
+      });
+
+      it('auto-downloads a globally-picked draft when the target has no per-target draft', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'a/b/t.gguf',
+              filename: 't.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'a',
+              repo: 'b',
+              downloadUrl: 'https://huggingface.co/a/b/resolve/main/t.gguf',
+            } as any,
+            {
+              id: 'user/global/dr.gguf',
+              filename: 'dr.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'user',
+              repo: 'global',
+              downloadUrl:
+                'https://huggingface.co/user/global/resolve/main/dr.gguf',
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+        });
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+
+        await modelStore.checkSpaceAndDownload('a/b/t.gguf');
+
+        const downloaded = (
+          downloadManager.startDownload as jest.Mock
+        ).mock.calls.map((c: any[]) => c[0].id);
+        expect(downloaded).toContain('user/global/dr.gguf');
+      });
+
+      it('no draft id (no per-target, no global pick) → no draft download attempt', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'a/b/t.gguf',
+              filename: 't.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'a',
+              repo: 'b',
+              downloadUrl: 'https://huggingface.co/a/b/resolve/main/t.gguf',
+            } as any,
+          ];
+        });
+
+        await (modelStore as any)._downloadDraftModelIfNeeded(
+          modelStore.models[0],
+        );
+
+        expect(downloadManager.startDownload as jest.Mock).not.toHaveBeenCalled();
+      });
+
+      it('a DRAFT model does not recurse into its own draft download', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+        const draft = {
+          id: 'user/global/dr.gguf',
+          filename: 'dr.gguf',
+          isDownloaded: false,
+          isLocal: false,
+          origin: ModelOrigin.HF,
+          modelType: ModelType.DRAFT,
+        } as any;
+        runInAction(() => {
+          modelStore.models = [draft];
+        });
+
+        await (modelStore as any)._downloadDraftModelIfNeeded(draft);
+
+        expect(downloadManager.startDownload as jest.Mock).not.toHaveBeenCalled();
       });
     });
 
