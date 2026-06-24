@@ -451,6 +451,16 @@ class ModelStore {
     });
   };
 
+  // Sole writer of the global user-picked draft (undefined clears it).
+  setSelectedDraftModel = (selectedDraftModelId?: string) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        selectedDraftModelId,
+      };
+    });
+  };
+
   setSpecDraftNMax = (spec_draft_n_max: number) => {
     runInAction(() => {
       this.contextInitParams = {...this.contextInitParams, spec_draft_n_max};

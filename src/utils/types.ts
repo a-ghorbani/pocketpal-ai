@@ -699,6 +699,9 @@ export interface ContextInitParams
   // here so the persisted contract is explicit and pinned to this slice.
   /** Master switch for speculative decoding; default false (feature OFF). */
   speculativeEnabled?: boolean;
+  /** User-picked global draft Model ID, used when a target has no per-target
+   * defaultDraftModel; undefined = none. Optional (no migration, no version bump). */
+  selectedDraftModelId?: string;
   spec_draft_n_max?: number;
   spec_draft_n_min?: number;
   spec_draft_p_min?: number;
