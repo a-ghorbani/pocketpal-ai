@@ -84,6 +84,8 @@ export const SettingsScreen: React.FC = observer(() => {
   const inputRef = useRef<RNTextInput>(null);
   const [showKeyCacheMenu, setShowKeyCacheMenu] = useState(false);
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
+  const [showDraftKeyCacheMenu, setShowDraftKeyCacheMenu] = useState(false);
+  const [showDraftValueCacheMenu, setShowDraftValueCacheMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
@@ -92,6 +94,14 @@ export const SettingsScreen: React.FC = observer(() => {
     y: 0,
   });
   const [valueCacheAnchor, setValueCacheAnchor] = useState<{
+    x: number;
+    y: number;
+  }>({x: 0, y: 0});
+  const [draftKeyCacheAnchor, setDraftKeyCacheAnchor] = useState<{
+    x: number;
+    y: number;
+  }>({x: 0, y: 0});
+  const [draftValueCacheAnchor, setDraftValueCacheAnchor] = useState<{
     x: number;
     y: number;
   }>({x: 0, y: 0});
@@ -105,6 +115,8 @@ export const SettingsScreen: React.FC = observer(() => {
   >(Platform.OS === 'ios' ? 'metal' : 'cpu');
   const keyCacheButtonRef = useRef<View>(null);
   const valueCacheButtonRef = useRef<View>(null);
+  const draftKeyCacheButtonRef = useRef<View>(null);
+  const draftValueCacheButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
@@ -178,6 +190,8 @@ export const SettingsScreen: React.FC = observer(() => {
     setIsValidInput(true);
     setShowKeyCacheMenu(false);
     setShowValueCacheMenu(false);
+    setShowDraftKeyCacheMenu(false);
+    setShowDraftValueCacheMenu(false);
     setShowLanguageMenu(false);
   };
 
@@ -212,6 +226,31 @@ export const SettingsScreen: React.FC = observer(() => {
     isValueCache = false,
   ) => {
     const options = isValueCache ? cacheTypeVOptions : cacheTypeKOptions;
+    return options.find(option => option.value === value)?.label || value;
+  };
+
+  // Draft (speculative) cache options share the same flash-attn compatibility
+  // gating as the main cache menus.
+  const speculativeEnabled =
+    modelStore.contextInitParams.speculativeEnabled ?? false;
+  const draftCacheTypeKOptions = getAllowedCacheTypeKOptions(
+    currentFlashAttnType as 'auto' | 'on' | 'off',
+    currentBackend,
+  );
+  const draftCacheTypeVOptions = getAllowedCacheTypeVOptions(
+    currentFlashAttnType as 'auto' | 'on' | 'off',
+    currentBackend,
+  );
+  const getDraftCacheTypeLabel = (
+    value: CacheType | string | undefined,
+    isValueCache = false,
+  ) => {
+    if (value === undefined) {
+      return l10n.settings.speculativeDraftModelNone;
+    }
+    const options = isValueCache
+      ? draftCacheTypeVOptions
+      : draftCacheTypeKOptions;
     return options.find(option => option.value === value)?.label || value;
   };
 
@@ -274,6 +313,24 @@ export const SettingsScreen: React.FC = observer(() => {
       (x, y, width, height, pageX, pageY) => {
         setValueCacheAnchor({x: pageX, y: pageY + height});
         setShowValueCacheMenu(true);
+      },
+    );
+  };
+
+  const handleDraftKeyCachePress = () => {
+    draftKeyCacheButtonRef.current?.measure(
+      (x, y, width, height, pageX, pageY) => {
+        setDraftKeyCacheAnchor({x: pageX, y: pageY + height});
+        setShowDraftKeyCacheMenu(true);
+      },
+    );
+  };
+
+  const handleDraftValueCachePress = () => {
+    draftValueCacheButtonRef.current?.measure(
+      (x, y, width, height, pageX, pageY) => {
+        setDraftValueCacheAnchor({x: pageX, y: pageY + height});
+        setShowDraftValueCacheMenu(true);
       },
     );
   };
@@ -738,6 +795,171 @@ export const SettingsScreen: React.FC = observer(() => {
                       </View>
                     </View>
                   </View>
+                  <Divider />
+
+                  {/* Speculative Decoding (draft model) */}
+                  <View style={styles.settingItemContainer}>
+                    <View style={styles.switchContainer}>
+                      <View style={styles.textContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          {l10n.settings.speculativeDecoding}
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {l10n.settings.speculativeDecodingDescription}
+                        </Text>
+                      </View>
+                      <Switch
+                        testID="speculative-decoding-switch"
+                        value={speculativeEnabled}
+                        onValueChange={value =>
+                          modelStore.setSpeculativeEnabled(value)
+                        }
+                      />
+                    </View>
+                  </View>
+
+                  {speculativeEnabled && (
+                    <>
+                      <Divider />
+
+                      {/* Draft Key Cache Type */}
+                      <View style={styles.settingItemContainer}>
+                        <View style={styles.switchContainer}>
+                          <View style={styles.textContainer}>
+                            <Text
+                              variant="titleMedium"
+                              style={styles.textLabel}>
+                              {l10n.settings.speculativeDraftKeyCacheType}
+                            </Text>
+                          </View>
+                          <View style={styles.menuContainer}>
+                            <Button
+                              ref={draftKeyCacheButtonRef}
+                              mode="outlined"
+                              onPress={handleDraftKeyCachePress}
+                              style={styles.menuButton}
+                              contentStyle={styles.buttonContent}
+                              disabled={
+                                !modelStore.contextInitParams.flash_attn_type ||
+                                modelStore.contextInitParams.flash_attn_type ===
+                                  'off'
+                              }
+                              icon={({size, color}) => (
+                                <Icon
+                                  source="chevron-down"
+                                  size={size}
+                                  color={color}
+                                />
+                              )}>
+                              {getDraftCacheTypeLabel(
+                                modelStore.contextInitParams
+                                  .spec_draft_cache_type_k,
+                                false,
+                              )}
+                            </Button>
+                            <Menu
+                              visible={showDraftKeyCacheMenu}
+                              onDismiss={() => setShowDraftKeyCacheMenu(false)}
+                              anchor={draftKeyCacheAnchor}
+                              selectable>
+                              {draftCacheTypeKOptions.map(option => (
+                                <Menu.Item
+                                  key={option.value}
+                                  style={styles.menu}
+                                  label={option.label}
+                                  selected={
+                                    option.value ===
+                                    modelStore.contextInitParams
+                                      .spec_draft_cache_type_k
+                                  }
+                                  disabled={option.disabled}
+                                  onPress={() => {
+                                    if (!option.disabled) {
+                                      modelStore.setSpecDraftCacheTypeK(
+                                        option.value,
+                                      );
+                                      setShowDraftKeyCacheMenu(false);
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Menu>
+                          </View>
+                        </View>
+                      </View>
+                      <Divider />
+
+                      {/* Draft Value Cache Type */}
+                      <View style={styles.settingItemContainer}>
+                        <View style={styles.switchContainer}>
+                          <View style={styles.textContainer}>
+                            <Text
+                              variant="titleMedium"
+                              style={styles.textLabel}>
+                              {l10n.settings.speculativeDraftValueCacheType}
+                            </Text>
+                          </View>
+                          <View style={styles.menuContainer}>
+                            <Button
+                              ref={draftValueCacheButtonRef}
+                              mode="outlined"
+                              onPress={handleDraftValueCachePress}
+                              style={styles.menuButton}
+                              contentStyle={styles.buttonContent}
+                              disabled={
+                                !modelStore.contextInitParams.flash_attn_type ||
+                                modelStore.contextInitParams.flash_attn_type ===
+                                  'off'
+                              }
+                              icon={({size, color}) => (
+                                <Icon
+                                  source="chevron-down"
+                                  size={size}
+                                  color={color}
+                                />
+                              )}>
+                              {getDraftCacheTypeLabel(
+                                modelStore.contextInitParams
+                                  .spec_draft_cache_type_v,
+                                true,
+                              )}
+                            </Button>
+                            <Menu
+                              visible={showDraftValueCacheMenu}
+                              onDismiss={() =>
+                                setShowDraftValueCacheMenu(false)
+                              }
+                              anchor={draftValueCacheAnchor}
+                              selectable>
+                              {draftCacheTypeVOptions.map(option => (
+                                <Menu.Item
+                                  key={option.value}
+                                  style={styles.menu}
+                                  label={option.label}
+                                  selected={
+                                    option.value ===
+                                    modelStore.contextInitParams
+                                      .spec_draft_cache_type_v
+                                  }
+                                  disabled={option.disabled}
+                                  onPress={() => {
+                                    if (!option.disabled) {
+                                      modelStore.setSpecDraftCacheTypeV(
+                                        option.value,
+                                      );
+                                      setShowDraftValueCacheMenu(false);
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Menu>
+                          </View>
+                        </View>
+                      </View>
+                    </>
+                  )}
                 </View>
               </List.Accordion>
             </Card.Content>

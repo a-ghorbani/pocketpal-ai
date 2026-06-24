@@ -553,7 +553,7 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
-    // Speculative-decoding mode (§4a). Defaults to 'off' when no draftConfig is
+    // Speculative-decoding mode. Defaults to 'off' when no draftConfig is
     // passed, so callers that don't resolve a draft (e.g. benchmark) are
     // unaffected. Mode defaults are applied as ?? fallbacks over user-set
     // contextInitParams — an explicit user value is never overwritten.
@@ -1770,7 +1770,7 @@ class ModelStore {
   //  - 'paired':   a default draft resolves to a downloaded file → model_draft set.
   //  - 'embedded': speculative on but no paired draft (embedded/hybrid MTP or no-op).
   // A configured-but-not-downloaded draft degrades to 'embedded' (drop the draft,
-  // never block or error the target load — graceful degradation, I3 / scenario C).
+  // never block or error the target load — graceful degradation).
   private resolveDraftConfig = async (
     model: Model,
   ): Promise<{

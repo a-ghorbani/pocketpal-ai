@@ -256,6 +256,63 @@ describe('SettingsScreen', () => {
     expect(modelStore.setImageMaxTokens).toHaveBeenCalledWith(768);
   });
 
+  it('toggles the speculative decoding switch in advanced settings', async () => {
+    jest.useFakeTimers();
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    // Expand advanced settings to reveal the speculative section.
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+    });
+
+    act(() => {
+      fireEvent(
+        getByTestId('speculative-decoding-switch'),
+        'valueChange',
+        true,
+      );
+    });
+
+    expect(modelStore.setSpeculativeEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it('gates the draft cache menus behind the speculative toggle', async () => {
+    jest.useFakeTimers();
+    runInAction(() => {
+      modelStore.contextInitParams.speculativeEnabled = false;
+    });
+    const {getByTestId, getByText, queryByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+    });
+
+    // Off → draft cache controls are not rendered.
+    expect(queryByText('Draft Key Cache Type')).toBeNull();
+
+    // On → draft cache controls appear.
+    runInAction(() => {
+      modelStore.contextInitParams.speculativeEnabled = true;
+    });
+    await waitFor(() => {
+      expect(getByText('Draft Key Cache Type')).toBeTruthy();
+    });
+
+    runInAction(() => {
+      modelStore.contextInitParams.speculativeEnabled = false;
+    });
+  });
+
   describe('TTS availability toggle', () => {
     afterEach(() => {
       // Reset observable fields between tests — beforeEach's clearAllMocks()

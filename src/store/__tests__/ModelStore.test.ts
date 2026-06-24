@@ -4349,8 +4349,8 @@ describe('ModelStore', () => {
       });
     });
 
-    describe('getEffectiveContextInitParams mode (§4a)', () => {
-      it('scenario A (embedded): speculative on, no draft → MTP defaults, no model_draft', async () => {
+    describe('getEffectiveContextInitParams speculative mode', () => {
+      it('embedded mode: speculative on, no draft → MTP defaults, no model_draft', async () => {
         modelStore.setSpeculativeEnabled(true);
         const params: any = await modelStore.getEffectiveContextInitParams(
           undefined,
@@ -4363,7 +4363,7 @@ describe('ModelStore', () => {
         expect(params.flash_attn_type).toBe('auto');
       });
 
-      it('scenario B (paired): downloaded draft → model_draft set, paired defaults', async () => {
+      it('paired mode: downloaded draft → model_draft set, paired defaults', async () => {
         modelStore.setSpeculativeEnabled(true);
         const params: any = await modelStore.getEffectiveContextInitParams(
           undefined,
@@ -4378,7 +4378,7 @@ describe('ModelStore', () => {
         expect(params.flash_attn_type).toBe('off');
       });
 
-      it('scenario D (off): no draftConfig → zero spec_draft_*, no model_draft', async () => {
+      it('off mode: no draftConfig → zero spec_draft_*, no model_draft', async () => {
         const params: any =
           await modelStore.getEffectiveContextInitParams(undefined);
 
@@ -4409,7 +4409,7 @@ describe('ModelStore', () => {
         expect(cfg.mode).toBe('off');
       });
 
-      it('scenario C: paired draft not downloaded → embedded mode, no error', async () => {
+      it('paired draft not downloaded → embedded mode, no error', async () => {
         modelStore.setSpeculativeEnabled(true);
         runInAction(() => {
           modelStore.models = [
@@ -4467,7 +4467,7 @@ describe('ModelStore', () => {
       });
     });
 
-    describe('activeDraftModelId reset on release (I5 / 9d)', () => {
+    describe('activeDraftModelId reset on release', () => {
       it('clears activeDraftModelId on context release', async () => {
         runInAction(() => {
           modelStore.activeDraftModelId = 'c/d/dr.gguf';
@@ -4481,7 +4481,7 @@ describe('ModelStore', () => {
       });
     });
 
-    describe('draft auto-download (I4 / 9e)', () => {
+    describe('draft auto-download', () => {
       const makeDownloadPair = () => {
         runInAction(() => {
           modelStore.models = [
