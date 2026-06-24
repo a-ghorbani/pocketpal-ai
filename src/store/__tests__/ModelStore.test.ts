@@ -4399,6 +4399,25 @@ describe('ModelStore', () => {
         // Paired mode default is f16, but the user explicitly chose q4_0.
         expect(params.spec_draft_cache_type_k).toBe('q4_0');
       });
+
+      it('an explicit user flash_attn_type survives both speculative modes', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        // User explicitly chose 'on'; neither paired ('off' default) nor
+        // embedded ('auto' default) may overwrite it.
+        modelStore.setFlashAttnType('on');
+
+        const paired: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+        );
+        expect(paired.flash_attn_type).toBe('on');
+
+        const embedded: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'embedded'},
+        );
+        expect(embedded.flash_attn_type).toBe('on');
+      });
     });
 
     describe('resolveDraftConfig', () => {
