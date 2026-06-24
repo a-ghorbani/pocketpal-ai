@@ -97,6 +97,7 @@
     "speculativeDraftValueCacheType": "Draft Value Cache Type",
     "speculativeDraftNGpuLayers": "Draft GPU Layers",
     "speculativeDraftNGpuLayersDescription": "Number of draft-model layers to offload to the GPU.",
+    "speculativeDraftCacheTypeDisabledDescription": "Draft cache type applies only when a separate draft model is paired.",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Read assistant replies aloud.",
     "ttsAvailabilityLowMemoryWarning": "Your device's memory is low — this may not work reliably.",

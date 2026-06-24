@@ -67,6 +67,7 @@ class MockModelStore {
   setUseMmap: jest.Mock;
   setNoExtraBufts: jest.Mock;
   setSpeculativeEnabled: jest.Mock;
+  setSelectedDraftModel: jest.Mock;
   setSpecDraftNMax: jest.Mock;
   setSpecDraftNMin: jest.Mock;
   setSpecDraftPMin: jest.Mock;
@@ -125,6 +126,7 @@ class MockModelStore {
       setUseMmap: false,
       setNoExtraBufts: false,
       setSpeculativeEnabled: false,
+      setSelectedDraftModel: false,
       setSpecDraftNMax: false,
       setSpecDraftNMin: false,
       setSpecDraftPMin: false,
@@ -206,6 +208,7 @@ class MockModelStore {
     this.setUseMmap = jest.fn();
     this.setNoExtraBufts = jest.fn();
     this.setSpeculativeEnabled = jest.fn();
+    this.setSelectedDraftModel = jest.fn();
     this.setSpecDraftNMax = jest.fn();
     this.setSpecDraftNMin = jest.fn();
     this.setSpecDraftPMin = jest.fn();

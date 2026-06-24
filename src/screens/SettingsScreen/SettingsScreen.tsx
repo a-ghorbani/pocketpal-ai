@@ -50,7 +50,7 @@ import {createStyles} from './styles';
 import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
 import {languageDisplayNames} from '../../locales';
 
-import {CacheType} from '../../utils/types';
+import {CacheType, ModelType} from '../../utils/types';
 import {
   L10nContext,
   formatBytes,
@@ -86,6 +86,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
   const [showDraftKeyCacheMenu, setShowDraftKeyCacheMenu] = useState(false);
   const [showDraftValueCacheMenu, setShowDraftValueCacheMenu] = useState(false);
+  const [showDraftModelMenu, setShowDraftModelMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
   const [gpuSupported, setGpuSupported] = useState(false);
@@ -105,6 +106,10 @@ export const SettingsScreen: React.FC = observer(() => {
     x: number;
     y: number;
   }>({x: 0, y: 0});
+  const [draftModelAnchor, setDraftModelAnchor] = useState<{
+    x: number;
+    y: number;
+  }>({x: 0, y: 0});
   const [languageAnchor, setLanguageAnchor] = useState<{x: number; y: number}>({
     x: 0.0,
     y: 0.0,
@@ -117,6 +122,7 @@ export const SettingsScreen: React.FC = observer(() => {
   const valueCacheButtonRef = useRef<View>(null);
   const draftKeyCacheButtonRef = useRef<View>(null);
   const draftValueCacheButtonRef = useRef<View>(null);
+  const draftModelButtonRef = useRef<View>(null);
   const languageButtonRef = useRef<View>(null);
   const debouncedUpdateStore = useRef(
     debounce((value: number) => {
@@ -192,6 +198,7 @@ export const SettingsScreen: React.FC = observer(() => {
     setShowValueCacheMenu(false);
     setShowDraftKeyCacheMenu(false);
     setShowDraftValueCacheMenu(false);
+    setShowDraftModelMenu(false);
     setShowLanguageMenu(false);
   };
 
@@ -229,29 +236,59 @@ export const SettingsScreen: React.FC = observer(() => {
     return options.find(option => option.value === value)?.label || value;
   };
 
-  // Draft (speculative) cache options share the same flash-attn compatibility
-  // gating as the main cache menus.
   const speculativeEnabled =
     modelStore.contextInitParams.speculativeEnabled ?? false;
+  const selectedDraftModelId =
+    modelStore.contextInitParams.selectedDraftModelId;
+
+  // Eligible draft models: downloaded, non-projection. Settings has no target
+  // in scope, so no self-pair filter (incompatible picks degrade gracefully at
+  // load). availableModels already excludes projection models, but the explicit
+  // filter keeps the contract clear.
+  const eligibleDraftModels = modelStore.availableModels.filter(
+    m => m.isDownloaded && m.modelType !== ModelType.PROJECTION,
+  );
+  const selectedDraftModel = eligibleDraftModels.find(
+    m => m.id === selectedDraftModelId,
+  );
+
+  // Effective draft mode, mirroring resolveDraftConfig from a global vantage: a
+  // draft is effectively PAIRED when the user picked one globally, or any
+  // downloaded model carries a per-target defaultDraftModel; otherwise the
+  // load runs EMBEDDED. getEffectiveContextInitParams forwards the draft cache
+  // type in BOTH modes (paired default f16, embedded default q8_0) regardless
+  // of the target flash-attn setting, so the draft cache menus are applicable
+  // whenever speculative decoding is enabled.
+  const isEffectivelyPaired =
+    !!selectedDraftModelId ||
+    modelStore.availableModels.some(m => !!m.defaultDraftModel);
+  const effectiveDraftCacheDefault = isEffectivelyPaired ? 'f16' : 'q8_0';
+
+  // Draft cache options track the draft's own cache compatibility. The draft
+  // cache type applies whenever speculative is on, so these are not gated on
+  // the target flash-attn (unlike the main cache menus).
   const draftCacheTypeKOptions = getAllowedCacheTypeKOptions(
-    currentFlashAttnType as 'auto' | 'on' | 'off',
+    'on',
     currentBackend,
   );
   const draftCacheTypeVOptions = getAllowedCacheTypeVOptions(
-    currentFlashAttnType as 'auto' | 'on' | 'off',
+    'on',
     currentBackend,
   );
   const getDraftCacheTypeLabel = (
     value: CacheType | string | undefined,
     isValueCache = false,
   ) => {
-    if (value === undefined) {
-      return l10n.settings.speculativeDraftModelNone;
-    }
+    // No explicit user value → show the EFFECTIVE resolved default (f16 when a
+    // draft is effectively paired, q8_0 when embedded), not a "None" string.
+    const effectiveValue = value ?? effectiveDraftCacheDefault;
     const options = isValueCache
       ? draftCacheTypeVOptions
       : draftCacheTypeKOptions;
-    return options.find(option => option.value === value)?.label || value;
+    return (
+      options.find(option => option.value === effectiveValue)?.label ||
+      effectiveValue
+    );
   };
 
   const getCurrentDeviceId = (): string => {
@@ -331,6 +368,15 @@ export const SettingsScreen: React.FC = observer(() => {
       (x, y, width, height, pageX, pageY) => {
         setDraftValueCacheAnchor({x: pageX, y: pageY + height});
         setShowDraftValueCacheMenu(true);
+      },
+    );
+  };
+
+  const handleDraftModelPress = () => {
+    draftModelButtonRef.current?.measure(
+      (x, y, width, height, pageX, pageY) => {
+        setDraftModelAnchor({x: pageX, y: pageY + height});
+        setShowDraftModelMenu(true);
       },
     );
   };
@@ -824,6 +870,97 @@ export const SettingsScreen: React.FC = observer(() => {
                     <>
                       <Divider />
 
+                      {/* Draft Model Picker */}
+                      <View style={styles.settingItemContainer}>
+                        <View style={styles.switchContainer}>
+                          <View style={styles.textContainer}>
+                            <Text
+                              variant="titleMedium"
+                              style={styles.textLabel}>
+                              {l10n.settings.speculativeDraftModel}
+                            </Text>
+                            <Text
+                              variant="labelSmall"
+                              style={styles.textDescription}>
+                              {l10n.settings.speculativeDraftModelDescription}
+                            </Text>
+                          </View>
+                          <View style={styles.menuContainer}>
+                            <Button
+                              ref={draftModelButtonRef}
+                              mode="outlined"
+                              onPress={handleDraftModelPress}
+                              style={styles.menuButton}
+                              contentStyle={styles.buttonContent}
+                              testID="speculative-draft-model-picker"
+                              icon={({size, color}) => (
+                                <Icon
+                                  source="chevron-down"
+                                  size={size}
+                                  color={color}
+                                />
+                              )}>
+                              {selectedDraftModel?.name ??
+                                l10n.settings.speculativeDraftModelNone}
+                            </Button>
+                            <Menu
+                              visible={showDraftModelMenu}
+                              onDismiss={() => setShowDraftModelMenu(false)}
+                              anchor={draftModelAnchor}
+                              selectable>
+                              <Menu.Item
+                                style={styles.menu}
+                                label={l10n.settings.speculativeDraftModelNone}
+                                selected={!selectedDraftModelId}
+                                onPress={() => {
+                                  modelStore.setSelectedDraftModel(undefined);
+                                  setShowDraftModelMenu(false);
+                                }}
+                              />
+                              {eligibleDraftModels.map(model => (
+                                <Menu.Item
+                                  key={model.id}
+                                  style={styles.menu}
+                                  label={model.name}
+                                  selected={model.id === selectedDraftModelId}
+                                  onPress={() => {
+                                    modelStore.setSelectedDraftModel(model.id);
+                                    setShowDraftModelMenu(false);
+                                  }}
+                                />
+                              ))}
+                            </Menu>
+                          </View>
+                        </View>
+                      </View>
+                      <Divider />
+
+                      {/* Draft GPU Layers Slider */}
+                      <View style={styles.settingItemContainer}>
+                        <Text variant="titleMedium" style={styles.textLabel}>
+                          {l10n.settings.speculativeDraftNGpuLayers}
+                        </Text>
+                        <Text
+                          variant="labelSmall"
+                          style={styles.textDescription}>
+                          {l10n.settings.speculativeDraftNGpuLayersDescription}
+                        </Text>
+                        <InputSlider
+                          testID="speculative-draft-gpu-layers-slider"
+                          value={
+                            modelStore.contextInitParams
+                              .spec_draft_n_gpu_layers ?? 99
+                          }
+                          onValueChange={value =>
+                            modelStore.setSpecDraftNGpuLayers(Math.round(value))
+                          }
+                          min={0}
+                          max={99}
+                          step={1}
+                        />
+                      </View>
+                      <Divider />
+
                       {/* Draft Key Cache Type */}
                       <View style={styles.settingItemContainer}>
                         <View style={styles.switchContainer}>
@@ -833,6 +970,16 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.textLabel}>
                               {l10n.settings.speculativeDraftKeyCacheType}
                             </Text>
+                            {!isEffectivelyPaired && (
+                              <Text
+                                variant="labelSmall"
+                                style={styles.textDescription}>
+                                {
+                                  l10n.settings
+                                    .speculativeDraftCacheTypeDisabledDescription
+                                }
+                              </Text>
+                            )}
                           </View>
                           <View style={styles.menuContainer}>
                             <Button
@@ -841,11 +988,8 @@ export const SettingsScreen: React.FC = observer(() => {
                               onPress={handleDraftKeyCachePress}
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
-                              disabled={
-                                !modelStore.contextInitParams.flash_attn_type ||
-                                modelStore.contextInitParams.flash_attn_type ===
-                                  'off'
-                              }
+                              testID="speculative-draft-key-cache-button"
+                              disabled={!isEffectivelyPaired}
                               icon={({size, color}) => (
                                 <Icon
                                   source="chevron-down"
@@ -900,6 +1044,16 @@ export const SettingsScreen: React.FC = observer(() => {
                               style={styles.textLabel}>
                               {l10n.settings.speculativeDraftValueCacheType}
                             </Text>
+                            {!isEffectivelyPaired && (
+                              <Text
+                                variant="labelSmall"
+                                style={styles.textDescription}>
+                                {
+                                  l10n.settings
+                                    .speculativeDraftCacheTypeDisabledDescription
+                                }
+                              </Text>
+                            )}
                           </View>
                           <View style={styles.menuContainer}>
                             <Button
@@ -908,11 +1062,8 @@ export const SettingsScreen: React.FC = observer(() => {
                               onPress={handleDraftValueCachePress}
                               style={styles.menuButton}
                               contentStyle={styles.buttonContent}
-                              disabled={
-                                !modelStore.contextInitParams.flash_attn_type ||
-                                modelStore.contextInitParams.flash_attn_type ===
-                                  'off'
-                              }
+                              testID="speculative-draft-value-cache-button"
+                              disabled={!isEffectivelyPaired}
                               icon={({size, color}) => (
                                 <Icon
                                   source="chevron-down"
