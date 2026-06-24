@@ -241,13 +241,19 @@ export const SettingsScreen: React.FC = observer(() => {
   const selectedDraftModelId =
     modelStore.contextInitParams.selectedDraftModelId;
 
-  // Eligible draft models: downloaded, non-projection. Settings has no target
-  // in scope, so no self-pair filter (incompatible picks degrade gracefully at
-  // load). availableModels already excludes projection models, but the explicit
-  // filter keeps the contract clear.
+  // Eligible draft models: downloaded, non-projection, and not the currently
+  // active model itself (a model can't be its own draft). availableModels
+  // already excludes projection models, but the explicit filter keeps the
+  // contract clear.
+  const activeModelId = modelStore.activeModel?.id;
   const eligibleDraftModels = modelStore.availableModels.filter(
-    m => m.isDownloaded && m.modelType !== ModelType.PROJECTION,
+    m =>
+      m.isDownloaded &&
+      m.modelType !== ModelType.PROJECTION &&
+      m.id !== activeModelId,
   );
+  // The picked draft, resolved against the eligible source. A set-but-stale id
+  // (deleted/unavailable model) resolves to undefined and is treated as None.
   const selectedDraftModel = eligibleDraftModels.find(
     m => m.id === selectedDraftModelId,
   );
@@ -259,8 +265,11 @@ export const SettingsScreen: React.FC = observer(() => {
   // type in BOTH modes (paired default f16, embedded default q8_0) regardless
   // of the target flash-attn setting, so the draft cache menus are applicable
   // whenever speculative decoding is enabled.
+  // Resolve-aware: a stale global pick (set id that no longer resolves to a
+  // downloaded model) must NOT count as paired, so the button, the cache-row
+  // gating, and the disabled-reason all agree the load runs embedded.
   const isEffectivelyPaired =
-    !!selectedDraftModelId ||
+    !!selectedDraftModel ||
     modelStore.availableModels.some(m => !!m.defaultDraftModel);
   const effectiveDraftCacheDefault = isEffectivelyPaired ? 'f16' : 'q8_0';
 
@@ -911,7 +920,7 @@ export const SettingsScreen: React.FC = observer(() => {
                               <Menu.Item
                                 style={styles.menu}
                                 label={l10n.settings.speculativeDraftModelNone}
-                                selected={!selectedDraftModelId}
+                                selected={!selectedDraftModel}
                                 onPress={() => {
                                   modelStore.setSelectedDraftModel(undefined);
                                   setShowDraftModelMenu(false);
@@ -922,7 +931,7 @@ export const SettingsScreen: React.FC = observer(() => {
                                   key={model.id}
                                   style={styles.menu}
                                   label={model.name}
-                                  selected={model.id === selectedDraftModelId}
+                                  selected={model.id === selectedDraftModel?.id}
                                   onPress={() => {
                                     modelStore.setSelectedDraftModel(model.id);
                                     setShowDraftModelMenu(false);

@@ -1576,6 +1576,14 @@ class ModelStore {
     ) {
       await this.cleanupOrphanedProjectionModels(projectionModelIds);
     }
+
+    // If the deleted model was the globally-picked speculative draft, clear the
+    // selection via the sole writer so no dangling id persists. (Local models
+    // are spliced out; non-local ones just become not-downloaded — either way
+    // the picked draft is no longer usable, so drop the global pick.)
+    if (this.contextInitParams.selectedDraftModelId === _model.id) {
+      this.setSelectedDraftModel(undefined);
+    }
   };
 
   /**
