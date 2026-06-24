@@ -503,9 +503,9 @@ describe('SettingsScreen', () => {
       // The f16 cache option renders 'F16 (Default)' (flashAttnCompatibility),
       // shown for BOTH the key and value draft cache rows. Substring match —
       // the button prepends a chevron icon glyph to the label text content.
-      expect(getByTestId('speculative-draft-key-cache-button')).toHaveTextContent(
-        /F16 \(Default\)/,
-      );
+      expect(
+        getByTestId('speculative-draft-key-cache-button'),
+      ).toHaveTextContent(/F16 \(Default\)/);
       expect(
         getByTestId('speculative-draft-value-cache-button'),
       ).toHaveTextContent(/F16 \(Default\)/);
@@ -533,9 +533,9 @@ describe('SettingsScreen', () => {
       await waitFor(() => {
         expect(getByText('Draft Key Cache Type')).toBeTruthy();
       });
-      expect(getByTestId('speculative-draft-key-cache-button')).toHaveTextContent(
-        /Q8_0/,
-      );
+      expect(
+        getByTestId('speculative-draft-key-cache-button'),
+      ).toHaveTextContent(/Q8_0/);
       expect(
         getByTestId('speculative-draft-value-cache-button'),
       ).toHaveTextContent(/Q8_0/);
