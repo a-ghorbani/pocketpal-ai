@@ -4552,5 +4552,111 @@ describe('ModelStore', () => {
         ).resolves.not.toThrow();
       });
     });
+
+    describe('paired load through initContext (writer + crash guard)', () => {
+      // A downloaded target paired with a downloaded draft drives the real
+      // initContext → proceedWithInitialization path, the only writer of
+      // activeDraftModelId and the only native-load entry point.
+      const setupPairedDownloadedModels = () => {
+        runInAction(() => {
+          modelStore.models = [
+            {
+              ...basicModel,
+              id: 'a/b/t.gguf',
+              name: 'target',
+              isDownloaded: true,
+              isLocal: true,
+              origin: ModelOrigin.LOCAL,
+              fullPath: '/path/to/t.gguf',
+              defaultDraftModel: 'c/d/dr.gguf',
+            } as any,
+            {
+              ...basicModel,
+              id: 'c/d/dr.gguf',
+              name: 'draft',
+              isDownloaded: true,
+              isLocal: true,
+              origin: ModelOrigin.LOCAL,
+              fullPath: '/path/to/dr.gguf',
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+          modelStore.context = undefined;
+          modelStore.activeModelId = undefined;
+          modelStore.isContextLoading = false;
+          modelStore.modelLoadError = null;
+        });
+      };
+
+      it('proceedWithInitialization writes activeDraftModelId when a paired draft loads', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        setupPairedDownloadedModels();
+
+        const {initLlama} = require('llama.rn');
+        (initLlama as jest.Mock).mockReset();
+        (initLlama as jest.Mock).mockResolvedValue({
+          release: jest.fn(),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        });
+
+        const target = modelStore.models.find(m => m.id === 'a/b/t.gguf')!;
+        await modelStore.initContext(target);
+
+        // Sole writer set the paired draft id alongside the active context.
+        expect(modelStore.activeDraftModelId).toBe('c/d/dr.gguf');
+        // And the draft path was forwarded to the single native-load entry.
+        const params = (initLlama as jest.Mock).mock.calls[0][0];
+        expect(params.model_draft).toBe('/path/to/dr.gguf');
+        expect(params.is_model_draft_asset).toBe(false);
+      });
+
+      it('a draft-related init failure sets modelLoadError once and calls initLlama once — no auto-retry', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        setupPairedDownloadedModels();
+
+        const {initLlama} = require('llama.rn');
+        (initLlama as jest.Mock).mockReset();
+        (initLlama as jest.Mock).mockRejectedValue(
+          new Error('draft init failed'),
+        );
+
+        const target = modelStore.models.find(m => m.id === 'a/b/t.gguf')!;
+        await expect(modelStore.initContext(target)).rejects.toThrow();
+
+        // Crash-loop guard: error surfaced exactly once, no auto-fallback
+        // re-init, no auto-retry → initLlama invoked exactly once.
+        expect(initLlama as jest.Mock).toHaveBeenCalledTimes(1);
+        expect(modelStore.modelLoadError).not.toBeNull();
+        // Failed load leaves no stale active draft.
+        expect(modelStore.context).toBeUndefined();
+      });
+    });
+
+    describe('activeDraftModelId reset at the main-context release path', () => {
+      it('clears activeDraftModelId in the finally branch when a real context is released', async () => {
+        const releasedCtx = {
+          release: jest.fn().mockResolvedValue(undefined),
+          stopCompletion: jest.fn().mockResolvedValue(undefined),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        };
+        runInAction(() => {
+          modelStore.activeDraftModelId = 'c/d/dr.gguf';
+          modelStore.activeProjectionModelId = 'proj';
+          modelStore.context = releasedCtx as any;
+          modelStore.engine = {stopCompletion: jest.fn()} as any;
+          modelStore.inferencing = false;
+          modelStore.isStreaming = false;
+        });
+
+        await (modelStore as any)._releaseContextInternal(false);
+
+        // The main-context release path (finally block) must clear the draft id
+        // alongside the projection id, guarding against a stale-state reset
+        // omission on switch/release.
+        expect(releasedCtx.release).toHaveBeenCalled();
+        expect(modelStore.activeDraftModelId).toBeUndefined();
+        expect(modelStore.activeProjectionModelId).toBeUndefined();
+      });
+    });
   });
 });
