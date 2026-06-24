@@ -6,6 +6,7 @@ import {
   DeviceRules,
   RamBand,
   RuleCandidate,
+  RuleDraft,
   RuleMmproj,
   Tier,
   TierMatrixEntry,
@@ -261,6 +262,29 @@ const parseMmproj = (v: unknown, candidateRepo: string): RuleMmproj | null => {
   };
 };
 
+// A speculative-decoding draft model. Unlike mmproj it is usually a DIFFERENT
+// repo, so it does NOT ride hfAsModel sibling pairing (which requires the same
+// repo) and there is no same-repo / projector-name check. The same parse-time
+// path guard as model/mmproj still applies (untrusted JSON drives the draft
+// download URL too), and size_bytes is required so the stub is downloadable.
+const parseDraft = (v: unknown): RuleDraft | null => {
+  if (!isObject(v)) {
+    return null;
+  }
+  const sizeBytes = asNumber(v.size_bytes);
+  if (sizeBytes === undefined) {
+    return null;
+  }
+  if (!guardRepoFilename(v.hf_repo, v.hf_filename)) {
+    return null;
+  }
+  return {
+    hfRepo: v.hf_repo as string,
+    hfFilename: v.hf_filename as string,
+    sizeBytes,
+  };
+};
+
 const parseCandidate = (v: unknown): RuleCandidate | null => {
   if (!isObject(v) || typeof v.model !== 'string') {
     return null;
@@ -286,6 +310,9 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
     }
     mmproj = parsed;
   }
+  // An invalid draft block degrades to no-draft (drop only the draft, keep the
+  // target) — unlike mmproj, a bad draft must not drop the whole candidate.
+  const draft = v.draft !== undefined ? parseDraft(v.draft) : null;
   return {
     model: v.model,
     displayName: asString(v.display_name),
@@ -296,6 +323,7 @@ const parseCandidate = (v: unknown): RuleCandidate | null => {
     minRamGb: asNumber(v.min_ram_gb),
     multimodal: multimodal || undefined,
     mmproj,
+    draft: draft ?? undefined,
   };
 };
 

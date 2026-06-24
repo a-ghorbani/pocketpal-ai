@@ -46,6 +46,7 @@ import {
   DeviceRules,
   DeviceSignals,
   RuleCandidate,
+  RuleDraft,
   Tier,
 } from '../services/deviceRules/types';
 
@@ -635,6 +636,27 @@ class ModelStore {
     return {hfModel, modelFile};
   };
 
+  // Build a standalone draft-model stub from a candidate's cross-repo draft
+  // block. Unlike mmproj, the draft is usually a different repo, so it cannot be
+  // an hfAsModel sibling of the target — it gets its own minimal {hfModel,
+  // modelFile} pair (own repo + deterministic download URL) and is tagged
+  // modelType: DRAFT. The resulting id is draftRepo/draftFilename.
+  private draftToStub = (draft: RuleDraft): Model => {
+    const modelFile: ModelFile = {
+      rfilename: draft.hfFilename,
+      url: deriveUrl(draft.hfRepo, draft.hfFilename),
+      size: draft.sizeBytes,
+    };
+    const hfModel = {
+      id: draft.hfRepo,
+      author: draft.hfRepo.split('/')[0],
+      url: `https://huggingface.co/${draft.hfRepo}`,
+      specs: {gguf: {total: 0}},
+      siblings: undefined,
+    } as unknown as HuggingFaceModel;
+    return {...hfAsModel(hfModel, modelFile), modelType: ModelType.DRAFT};
+  };
+
   // Materialize the device-tier preset list from rules. Each thin candidate is
   // turned into the minimal pair hfAsModel reads (candidateToPair), so the
   // result is origin:HF, identical to an HF-browser add. Multimodal candidates
@@ -653,16 +675,30 @@ class ModelStore {
     const flat = rules.tiers[tier].models.flatMap(candidate => {
       const {hfModel, modelFile} = this.candidateToPair(candidate);
       const llm = hfAsModel(hfModel, modelFile);
-      const named = candidate.displayName
+      let named = candidate.displayName
         ? {...llm, name: candidate.displayName}
         : llm;
+
+      const extras: Model[] = [];
       if (named.supportsMultimodal) {
         const projModels = getMmprojFiles(hfModel.siblings || []).map(file =>
           hfAsModel(hfModel, file),
         );
-        return [named, ...projModels];
+        extras.push(...projModels);
       }
-      return [named];
+      // Pair an authored cross-repo draft model: push its own stub and point the
+      // target at it (auto-pair / auto-download). Mirrors projection pairing but
+      // via the standalone draftToStub path, not an hfAsModel sibling.
+      if (candidate.draft) {
+        const draftStub = this.draftToStub(candidate.draft);
+        named = {
+          ...named,
+          defaultDraftModel: draftStub.id,
+          compatibleDraftModels: [draftStub.id],
+        };
+        extras.push(draftStub);
+      }
+      return [named, ...extras];
     });
 
     // Dedup on the full model id (author/repo/filename) so two authors sharing a
