@@ -202,12 +202,7 @@ jobs:
         env:
           APP_RELEASE_STORE_PASSWORD: dummy-ci-password
           APP_RELEASE_KEY_PASSWORD: dummy-ci-password
-        # Restrict the from-source build to arm64-v8a in CI. x86_64 is a
-        # simulator-only ABI that ships to no device, and building llama.rn
-        # from source for x86_64 hits an unrelated vision-camera prefab issue.
-        # Scoped to CI only (not gradle.properties) so local/dev emulator
-        # builds still produce x86_64.
-        run: ./gradlew assembleProdRelease -PreactNativeArchitectures=arm64-v8a
+        run: ./gradlew assembleProdRelease
 
       - name: Verify prod APK has no automation-bridge code (DCE sanity check)
         run: |

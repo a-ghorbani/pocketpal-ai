@@ -22,12 +22,6 @@ $RNFirebaseAsStaticFramework = true
 
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
 
-# Build llama-rn from its bundled C++ sources instead of the prebuilt
-# xcframework (the pinned source tarball ships no xcframework). iOS analog of
-# Android's rnllamaBuildFromSource=true gradle flag. Allow an explicit env
-# override to '0' for anyone who restores a prebuilt distribution.
-ENV['RNLLAMA_BUILD_FROM_SOURCE'] ||= '1'
-
 target 'PocketPal' do
   config = use_native_modules!
 
@@ -95,22 +89,6 @@ target 'PocketPal' do
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
         end
       end
-    end
-
-    # The AppIntents LlamaContextWrapper includes rnllama C++ headers directly,
-    # which need the from-source llama.rn nested header dirs (see
-    # ios/Config/LlamaSource.xcconfig for the full rationale). Those paths are
-    # committed in that xcconfig; here we only `#include` it into the
-    # (gitignored) regenerated Pods-PocketPal.*.xcconfig so it layers on top of
-    # the pod-generated HEADER_SEARCH_PATHS. The tracked project.pbxproj is left
-    # untouched, so `pod install` rewrites no tracked file. Idempotent: skip if
-    # the include is already present.
-    pods_xcconfig_dir = File.join(installer.sandbox.root, 'Target Support Files', 'Pods-PocketPal')
-    include_line = '#include "../../../Config/LlamaSource.xcconfig"'
-    Dir.glob(File.join(pods_xcconfig_dir, 'Pods-PocketPal.*.xcconfig')).each do |xcconfig|
-      contents = File.read(xcconfig)
-      next if contents.include?(include_line)
-      File.write(xcconfig, "#{include_line}\n#{contents}")
     end
   end
 

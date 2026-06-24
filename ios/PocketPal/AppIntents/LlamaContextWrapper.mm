@@ -7,20 +7,11 @@
 
 #import "LlamaContextWrapper.h"
 
-// Import the rnllama C++ headers. The prebuilt xcframework namespaces them
-// under <rnllama/...>; a from-source pod build exposes them flat. Pick whichever
-// layout is present so both distributions compile.
-#if __has_include(<rnllama/rn-llama.h>)
+// Import the C++ headers from the rnllama framework
 #include <rnllama/rn-llama.h>
 #include <rnllama/rn-completion.h>
 #include <rnllama/chat.h>
 #include <rnllama/common.h>
-#else
-#include <rn-llama.h>
-#include <rn-completion.h>
-#include <chat.h>
-#include <common.h>
-#endif
 
 #include <string>
 #include <vector>
