@@ -90,7 +90,7 @@ export const SearchProviderKeySheet: React.FC<SearchProviderKeySheetProps> =
             <TextInput
               testID="search-provider-key-input"
               label={t(strings.keyLabel, {provider: providerLabel})}
-              defaultValue={key}
+              value={key}
               onChangeText={setKey}
               placeholder={t(strings.keyInputPlaceholder, {
                 provider: providerLabel,
