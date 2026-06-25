@@ -17,6 +17,22 @@ const config = {
     //nodeModulesPaths: [...localPackagePaths], // update to resolver
     assetExts: assetExts.filter(ext => ext !== 'svg'),
     sourceExts: [...sourceExts, 'svg'],
+    // @huggingface/gguf has no `browser` export condition, so Metro resolves
+    // its Node build, which statically imports stream/fs (FileBlob) and breaks
+    // the RN bundle. Redirect to the fetch-based browser build instead.
+    resolveRequest: (context, moduleName, platform) => {
+      if (
+        moduleName === '@huggingface/gguf' ||
+        moduleName.startsWith('@huggingface/gguf/')
+      ) {
+        return context.resolveRequest(
+          context,
+          '@huggingface/gguf/dist/browser/index.mjs',
+          platform,
+        );
+      }
+      return context.resolveRequest(context, moduleName, platform);
+    },
   },
   transformer: {
     babelTransformerPath: require.resolve(
