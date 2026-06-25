@@ -407,11 +407,22 @@ async function applyEventToStore(
         modelStore.activeContextSettings?.n_ctx,
         modelStore.activeModel?.origin === ModelOrigin.REMOTE,
       );
+      // Speculative-decoding (MTP) engagement: carry the draft counters into
+      // the timings bag only when the draft path actually ran (draft_tokens>0),
+      // so non-speculative turns are unchanged.
+      const draftTimings =
+        finalResult.draft_tokens != null && finalResult.draft_tokens > 0
+          ? {
+              draft_tokens: finalResult.draft_tokens,
+              draft_tokens_accepted: finalResult.draft_tokens_accepted,
+            }
+          : {};
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
             ...(finalResult.timings ?? {}),
             time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
+            ...draftTimings,
           },
           copyable: true,
           multimodal: ctx.hasImages && ctx.isMultimodalEnabled,
