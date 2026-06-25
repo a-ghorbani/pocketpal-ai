@@ -1,5 +1,6 @@
 import {RenderHtmlEngine} from './RenderHtmlEngine';
 import {RenderHtmlTalentUI} from './RenderHtmlTalentUI';
+import {WebSearchTalentUI} from './WebSearchTalentUI';
 import {CalculateEngine} from './CalculateEngine';
 import {DatetimeEngine} from './DatetimeEngine';
 import {WebSearchEngine} from './WebSearchEngine';
@@ -16,6 +17,7 @@ export {TalentUIRegistry, talentUIRegistry} from './TalentUIRegistry';
 export type {TalentUI} from './TalentUIRegistry';
 export {RenderHtmlEngine} from './RenderHtmlEngine';
 export {RenderHtmlTalentUI} from './RenderHtmlTalentUI';
+export {WebSearchTalentUI} from './WebSearchTalentUI';
 export {CalculateEngine} from './CalculateEngine';
 export {DatetimeEngine} from './DatetimeEngine';
 export {WebSearchEngine} from './WebSearchEngine';
@@ -59,6 +61,7 @@ export function registerDefaultTalents(): void {
   talentRegistry.register(new ReadUrlEngine(searchAccess));
   // UIs
   talentUIRegistry.register(new RenderHtmlTalentUI());
+  talentUIRegistry.register(new WebSearchTalentUI());
   registered = true;
 }
 

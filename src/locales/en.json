@@ -1205,7 +1205,11 @@
     "generatingPreview": "Generating preview… ({{tokens}} tokens)",
     "generatingPreviewPending": "Generating preview…",
     "toolUsedChip": "used {{name}}",
-    "toolErrorBlock": "{{name}} failed"
+    "toolErrorBlock": "{{name}} failed",
+    "webSearch": {
+      "searched": "Searched: {{query}}",
+      "noResults": "No results"
+    }
   },
   "htmlPreview": {
     "defaultTitle": "Preview",

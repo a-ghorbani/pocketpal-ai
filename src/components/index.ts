@@ -68,6 +68,7 @@ export * from './UsageStats';
 export * from './VideoPalEmptyPlaceholder';
 export * from './VoiceChip';
 export * from './VisionDownloadSheet';
+export * from './WebSearchResultCard';
 
 export * from './PalHeaderRight';
 export * from './InputSlider';

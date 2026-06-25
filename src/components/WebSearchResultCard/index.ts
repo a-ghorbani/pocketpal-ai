@@ -1,0 +1,1 @@
+export {WebSearchResultCard} from './WebSearchResultCard';
