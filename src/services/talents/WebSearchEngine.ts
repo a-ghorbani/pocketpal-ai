@@ -20,7 +20,8 @@ const formatMenu = (query: string, hits: SearchHit[]): string => {
       return parts.join('\n');
     })
     .join('\n\n');
-  return `web_search results for "${query}":\n\n${items}`;
+  const retrievedAt = new Date().toISOString().slice(0, 10);
+  return `web_search results for "${query}" (retrieved ${retrievedAt}):\n\n${items}`;
 };
 
 /**
@@ -79,6 +80,7 @@ export class WebSearchEngine implements TalentEngine {
     }
 
     if (hits.length === 0) {
+      console.log('[web_search]', {query, provider: provider.id, count: 0});
       // Don't cache an empty result — a transient empty must not lock out retries.
       const summary = `web_search: no results for "${query}"`;
       return {type: 'error', summary, errorMessage: summary};
@@ -92,7 +94,23 @@ export class WebSearchEngine implements TalentEngine {
       tokenCeiling: this.recommendedContextTokens,
     });
 
-    return {type: 'text', summary: wrapUntrusted(formatMenu(query, budgeted))};
+    console.log('[web_search]', {
+      query,
+      provider: provider.id,
+      count: budgeted.length,
+      results: budgeted.map(h => ({title: h.title, url: h.url})),
+    });
+
+    return {
+      type: 'search',
+      query,
+      results: budgeted.map(h => ({
+        title: h.title,
+        url: h.url,
+        snippet: h.snippet,
+      })),
+      summary: wrapUntrusted(formatMenu(query, budgeted)),
+    };
   }
 
   toToolDefinition(): ToolDefinition {
@@ -101,7 +119,7 @@ export class WebSearchEngine implements TalentEngine {
       function: {
         name: 'web_search',
         description:
-          'Search the internet for current information. Returns a short list of result titles, URLs, and snippets. Use read_url to read a result in full.',
+          'Search the web for current, real-time, or recent information — news, live scores and schedules, prices, weather, recent events, or anything likely newer than your training data. Returns ranked results with titles, source URLs, and snippets. Base your answer on these results, prefer them over prior knowledge for anything time-sensitive, and cite the source URLs. Use read_url to open a result for full detail.',
         parameters: {
           type: 'object',
           properties: {

@@ -145,7 +145,7 @@ describe('ReadUrlEngine', () => {
     });
     if (result.type === 'text') {
       expect(result.summary).toContain('UNTRUSTED WEB CONTENT');
-      expect(result.summary).toMatch(/not instructions/i);
+      expect(result.summary).toMatch(/never as instructions/i);
     }
   });
 

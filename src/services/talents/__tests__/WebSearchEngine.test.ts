@@ -36,7 +36,7 @@ describe('WebSearchEngine', () => {
     expect(def.function.parameters.properties).not.toHaveProperty('maxResults');
   });
 
-  it('returns a text menu of budgeted hits on success', async () => {
+  it('returns a structured search result of budgeted hits on success', async () => {
     const provider: SearchProvider = {
       id: 'tavily',
       search: jest
@@ -47,8 +47,13 @@ describe('WebSearchEngine', () => {
     };
     const access = makeAccess({getActiveProvider: () => provider});
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
-    expect(result.type).toBe('text');
-    if (result.type === 'text') {
+    expect(result.type).toBe('search');
+    if (result.type === 'search') {
+      expect(result.query).toBe('mars');
+      expect(result.results).toEqual([
+        {title: 'Mars', url: 'https://m.com', snippet: 'rover'},
+      ]);
+      // The model-facing payload is the wrapped menu, still carrying the hits.
       expect(result.summary).toContain('Mars');
       expect(result.summary).toContain('https://m.com');
     }
@@ -83,9 +88,9 @@ describe('WebSearchEngine', () => {
     };
     const access = makeAccess({getActiveProvider: () => provider});
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
-    if (result.type === 'text') {
+    if (result.type === 'search') {
       expect(result.summary).toContain('UNTRUSTED WEB CONTENT');
-      expect(result.summary).toMatch(/not instructions/i);
+      expect(result.summary).toMatch(/never as instructions/i);
     }
   });
 
@@ -163,9 +168,24 @@ describe('WebSearchEngine', () => {
 
     const second = await engine.execute({query: 'mars'});
     expect(search).toHaveBeenCalledTimes(2);
-    expect(second.type).toBe('text');
-    if (second.type === 'text') {
+    expect(second.type).toBe('search');
+    if (second.type === 'search') {
       expect(second.summary).toContain('Mars');
+    }
+  });
+
+  it('anchors recency by stamping the retrieval date in the menu header', async () => {
+    const provider: SearchProvider = {
+      id: 'tavily',
+      search: jest.fn().mockResolvedValue([hit({title: 'Mars'})]),
+    };
+    const access = makeAccess({getActiveProvider: () => provider});
+    const result = await new WebSearchEngine(access).execute({query: 'mars'});
+    const today = new Date().toISOString().slice(0, 10);
+    if (result.type === 'search') {
+      expect(result.summary).toContain(
+        `web_search results for "mars" (retrieved ${today}):`,
+      );
     }
   });
 });

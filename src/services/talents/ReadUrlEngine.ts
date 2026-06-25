@@ -78,6 +78,11 @@ export class ReadUrlEngine implements TalentEngine {
     }
 
     const bounded = budgetPage(page, this.recommendedContextTokens);
+    console.log('[read_url]', {
+      url,
+      provider: provider.read ? provider.id : 'default-reader',
+      textLength: bounded.text.length,
+    });
     if (!bounded.text) {
       const summary = `read_url: no readable content at ${url}`;
       return {type: 'error', summary, errorMessage: summary};
@@ -96,7 +101,7 @@ export class ReadUrlEngine implements TalentEngine {
       function: {
         name: 'read_url',
         description:
-          'Fetch and read the full content of one web page. Use after web_search to read a result in depth.',
+          'Open one web page and read its full text. Use after web_search when a snippet is not enough — to read an article, page, or document in depth. Provide an exact URL (usually one from web_search results).',
         parameters: {
           type: 'object',
           properties: {
