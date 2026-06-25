@@ -125,9 +125,12 @@
       "resultCountLabel": "Results per search",
       "resultCountDescription": "Fewer results keep more room in the model's context.",
       "consentTitle": "Searches leave your device",
-      "consentDescription": "When a Pal searches the web, your query (and any page it reads) is sent to the selected provider over the internet. Keys and queries are never sent to PocketPal.",
+      "consentDescription": "When a Pal searches the web, your query is sent to the selected provider over the internet. When a Pal reads a page, the URL and page content may instead be sent to a default reader service (r.jina.ai) if the selected provider has no native reader. Keys and queries are never sent to PocketPal.",
       "consentAccept": "I understand",
-      "consentRequired": "Accept the disclosure above to set a key and enable search."
+      "consentRequired": "Accept the disclosure above to set a key and enable search.",
+      "consentGivenTitle": "Searching the web is enabled",
+      "consentGivenDescription": "Queries and page reads may leave your device as described above.",
+      "consentRevoke": "Revoke"
     },
     "apiSettingsTitle": "API Settings",
     "huggingFaceTokenLabel": "Hugging Face Token",
@@ -827,8 +830,8 @@
         "render_html": "Render HTML documents inline in chat",
         "calculate": "Evaluate mathematical expressions",
         "datetime": "Get the current date and time",
-        "web_search": "Search the internet for current information",
-        "read_url": "Read the full content of a web page"
+        "web_search": "Search the internet for current information (requires API key in Settings)",
+        "read_url": "Read the full content of a web page (requires API key in Settings)"
       },
       "greeting": {
         "sectionLabel": "Greeting",

@@ -1060,8 +1060,8 @@ export const SettingsScreen: React.FC = observer(() => {
                   {l10n.settings.internetSearch.description}
                 </Text>
 
-                {/* First-enable consent gate */}
-                {!searchHasConsent && (
+                {/* First-enable consent gate / revoke affordance */}
+                {!searchHasConsent ? (
                   <View
                     testID="internet-search-consent"
                     style={styles.switchContainer}>
@@ -1079,6 +1079,26 @@ export const SettingsScreen: React.FC = observer(() => {
                       onPress={() => searchProviderStore.setConsent(true)}
                       style={styles.menuButton}>
                       {l10n.settings.internetSearch.consentAccept}
+                    </Button>
+                  </View>
+                ) : (
+                  <View
+                    testID="internet-search-consent-given"
+                    style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.internetSearch.consentGivenTitle}
+                      </Text>
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.internetSearch.consentGivenDescription}
+                      </Text>
+                    </View>
+                    <Button
+                      testID="internet-search-consent-revoke"
+                      mode="outlined"
+                      onPress={() => searchProviderStore.setConsent(false)}
+                      style={styles.menuButton}>
+                      {l10n.settings.internetSearch.consentRevoke}
                     </Button>
                   </View>
                 )}
