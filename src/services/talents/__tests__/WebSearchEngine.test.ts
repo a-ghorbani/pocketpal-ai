@@ -18,7 +18,7 @@ const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
   };
   return {
     getActiveProvider: () => provider,
-    isConfigured: () => true,
+    canSearch: () => true,
     getResultCount: () => 3,
     readWithDefaultReader: jest.fn(),
     ...overrides,
@@ -54,12 +54,12 @@ describe('WebSearchEngine', () => {
     }
   });
 
-  it('returns an error result when no key is configured (never silent)', async () => {
-    const access = makeAccess({isConfigured: () => false});
+  it('returns an error result when search is not enabled (never silent)', async () => {
+    const access = makeAccess({canSearch: () => false});
     const result = await new WebSearchEngine(access).execute({query: 'mars'});
     expect(result.type).toBe('error');
     if (result.type === 'error') {
-      expect(result.summary).toMatch(/key not set/i);
+      expect(result.summary).toMatch(/not enabled/i);
     }
   });
 

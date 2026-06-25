@@ -2,6 +2,28 @@ import {TalentEngine, TalentResult, ToolDefinition} from './types';
 import type {SearchAccess} from './searchAccess';
 import type {PageContent} from '../search/types';
 import {budgetPage} from '../search/searchBudget';
+import {wrapUntrusted} from './untrustedContent';
+
+/**
+ * Accept only plain `http(s)` URLs with no embedded credentials. Rejecting
+ * `file:`/`data:`/other schemes and userinfo blocks a malicious page from
+ * steering a later read at an exfiltration target or a non-web resource.
+ */
+const isAllowedReadUrl = (raw: string): boolean => {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return false;
+  }
+  if (parsed.username || parsed.password) {
+    return false;
+  }
+  return parsed.hostname.length > 0;
+};
 
 /**
  * `read_url` talent. Deep-reads one page on demand via the active provider's
@@ -25,12 +47,17 @@ export class ReadUrlEngine implements TalentEngine {
       };
     }
 
-    if (!this.access.isConfigured()) {
+    if (!isAllowedReadUrl(url)) {
+      const summary = 'read_url: only http(s) URLs are allowed';
+      return {type: 'error', summary, errorMessage: summary};
+    }
+
+    if (!this.access.canSearch()) {
       const provider = this.access.getActiveProvider();
       return {
         type: 'error',
-        summary: `read_url: ${provider.id} key not set`,
-        errorMessage: `No API key configured for ${provider.id}. Set one in Settings → Internet Search.`,
+        summary: `read_url: ${provider.id} not enabled`,
+        errorMessage: `Internet search is not enabled. Accept the disclosure and set an API key for ${provider.id} in Settings → Internet Search.`,
       };
     }
 
@@ -57,7 +84,10 @@ export class ReadUrlEngine implements TalentEngine {
     }
 
     const header = bounded.title ? `${bounded.title}\n${url}` : url;
-    return {type: 'text', summary: `${header}\n\n${bounded.text}`};
+    return {
+      type: 'text',
+      summary: wrapUntrusted(`${header}\n\n${bounded.text}`),
+    };
   }
 
   toToolDefinition(): ToolDefinition {

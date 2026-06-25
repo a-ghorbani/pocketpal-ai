@@ -34,7 +34,7 @@ function createSearchAccess(): SearchAccess {
       const id = searchProviderStore.activeProviderId;
       return createSearchProvider(id, () => searchProviderStore.getKey(id));
     },
-    isConfigured: () => searchProviderStore.isProviderConfigured,
+    canSearch: () => searchProviderStore.canSearch,
     getResultCount: () => searchProviderStore.resultCount,
     readWithDefaultReader,
   };

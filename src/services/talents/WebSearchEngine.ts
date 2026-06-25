@@ -2,6 +2,7 @@ import {TalentEngine, TalentResult, ToolDefinition} from './types';
 import type {SearchAccess} from './searchAccess';
 import type {SearchHit} from '../search/types';
 import {budgetHits, getCachedHits, setCachedHits} from '../search/searchBudget';
+import {wrapUntrusted} from './untrustedContent';
 
 const PER_SNIPPET_CHARS = 280;
 
@@ -48,12 +49,12 @@ export class WebSearchEngine implements TalentEngine {
       };
     }
 
-    if (!this.access.isConfigured()) {
+    if (!this.access.canSearch()) {
       const provider = this.access.getActiveProvider();
       return {
         type: 'error',
-        summary: `web_search: ${provider.id} key not set`,
-        errorMessage: `No API key configured for ${provider.id}. Set one in Settings → Internet Search.`,
+        summary: `web_search: ${provider.id} not enabled`,
+        errorMessage: `Internet search is not enabled. Accept the disclosure and set an API key for ${provider.id} in Settings → Internet Search.`,
       };
     }
 
@@ -67,7 +68,6 @@ export class WebSearchEngine implements TalentEngine {
         hits = cached;
       } else {
         hits = await provider.search(query, {maxResults});
-        setCachedHits(provider.id, query, maxResults, hits);
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
@@ -79,9 +79,12 @@ export class WebSearchEngine implements TalentEngine {
     }
 
     if (hits.length === 0) {
+      // Don't cache an empty result — a transient empty must not lock out retries.
       const summary = `web_search: no results for "${query}"`;
       return {type: 'error', summary, errorMessage: summary};
     }
+
+    setCachedHits(provider.id, query, maxResults, hits);
 
     const budgeted = budgetHits(hits, {
       maxResults,
@@ -89,7 +92,7 @@ export class WebSearchEngine implements TalentEngine {
       tokenCeiling: this.recommendedContextTokens,
     });
 
-    return {type: 'text', summary: formatMenu(query, budgeted)};
+    return {type: 'text', summary: wrapUntrusted(formatMenu(query, budgeted))};
   }
 
   toToolDefinition(): ToolDefinition {

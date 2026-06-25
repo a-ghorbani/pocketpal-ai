@@ -48,6 +48,8 @@ export const createSearchProvider = (
 export const readWithDefaultReader = async (
   url: string,
 ): Promise<PageContent> => {
-  const text = await fetchText(`https://r.jina.ai/${url}`, {method: 'GET'});
+  const text = await fetchText(`https://r.jina.ai/${encodeURI(url)}`, {
+    method: 'GET',
+  });
   return {url, text};
 };

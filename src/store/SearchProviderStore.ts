@@ -4,6 +4,7 @@ import {makePersistable} from 'mobx-persist-store';
 import * as Keychain from 'react-native-keychain';
 
 import type {SearchProviderId} from '../services/search/types';
+import {resetSearchCache} from '../services/search/searchBudget';
 
 /** Distinct Keychain service per provider so iOS entries co-exist. */
 const keychainService = (id: SearchProviderId): string =>
@@ -87,6 +88,11 @@ class SearchProviderStore {
     return this.hasKey(this.activeProviderId);
   }
 
+  /** True only when the user has consented AND the active provider has a key. */
+  get canSearch(): boolean {
+    return this.hasConsentedToSearch && this.isProviderConfigured;
+  }
+
   setActiveProvider(id: SearchProviderId) {
     const meta = SEARCH_PROVIDERS.find(p => p.id === id);
     if (!meta || !meta.selectable) {
@@ -95,6 +101,7 @@ class SearchProviderStore {
     runInAction(() => {
       this.activeProviderId = id;
     });
+    resetSearchCache();
   }
 
   setResultCount(count: number) {
@@ -111,6 +118,7 @@ class SearchProviderStore {
     runInAction(() => {
       this.hasConsentedToSearch = consented;
     });
+    resetSearchCache();
   }
 
   async setKey(id: SearchProviderId, key: string): Promise<boolean> {
@@ -121,6 +129,7 @@ class SearchProviderStore {
       runInAction(() => {
         this.keys[id] = key;
       });
+      resetSearchCache();
       return true;
     } catch (error) {
       console.error(`Failed to save ${id} search key:`, error);
@@ -134,6 +143,7 @@ class SearchProviderStore {
       runInAction(() => {
         delete this.keys[id];
       });
+      resetSearchCache();
       return true;
     } catch (error) {
       console.error(`Failed to clear ${id} search key:`, error);
