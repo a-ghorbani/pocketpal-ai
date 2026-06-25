@@ -604,10 +604,21 @@ class ModelStore {
     };
 
     if (speculative) {
+      // Activator (the inertness fix): without spec_type, llama.rn's speculative
+      // type set stays empty and nothing engages. Emitted ONLY for paired/embedded
+      // (mode === 'off' skips this whole block), so spec_type leaves PocketPal
+      // exactly when capability is real. Constant at the call site, never persisted.
+      params.spec_type = 'draft-mtp';
+
       // Forwarded in both speculative modes (paired + embedded). Pass through any
       // user-set tuning verbatim; only the cache-type/gpu-layer defaults differ
-      // per mode below.
-      params.spec_draft_n_max = this.contextInitParams.spec_draft_n_max;
+      // per mode below. spec_draft_n_max is coerced to ≥1 when the user set it —
+      // llama.rn throws on n_max ≤ 0 with DRAFT_MTP; leaving it undefined inherits
+      // the cpp default (3).
+      params.spec_draft_n_max =
+        this.contextInitParams.spec_draft_n_max !== undefined
+          ? Math.max(1, this.contextInitParams.spec_draft_n_max)
+          : undefined;
       params.spec_draft_n_min = this.contextInitParams.spec_draft_n_min;
       params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
       params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
