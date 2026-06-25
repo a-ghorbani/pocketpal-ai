@@ -1725,7 +1725,7 @@
   dependencies:
     "@standard-schema/utils" "^0.3.0"
 
-"@huggingface/gguf@^0.4.2":
+"@huggingface/gguf@0.4.2":
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/@huggingface/gguf/-/gguf-0.4.2.tgz#4d4e959e1fedfc2b7736c4c73548eab924e767e8"
   integrity sha512-pog57zGj/u8uZ6cFi2vH9MkWvq+ZtFDa5iUeNxggDSle+04htJQFbl31TcauGUhnxTBJokFexWK9WL2BakLR0Q==
