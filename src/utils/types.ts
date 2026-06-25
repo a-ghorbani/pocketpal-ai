@@ -502,6 +502,8 @@ export interface GGUFMetadata {
   n_embd_head_v: number; // Value head dimension
   sliding_window?: number; // For SWA models
   context_length?: number; // Native context length from GGUF
+  nextn_predict_layers?: number; // <arch>.nextn_predict_layers; >0 ⇒ embedded MTP draft layers
+  embedding_length_out?: number; // <arch>.embedding_length_out; draft output width (n_embd_out)
 }
 
 export interface Model {

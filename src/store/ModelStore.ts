@@ -1673,6 +1673,13 @@ class ModelStore {
       // Context length from GGUF
       const context_length = getArchValue('context_length');
 
+      // MTP / speculative capability signals (optional; absent KV ⇒ undefined).
+      // nextn_predict_layers > 0 marks an embedded MTP target / valid draft.
+      // embedding_length_out is the draft output width the native paired assert
+      // compares (n_embd_out); falls back to n_embd when unset at resolve time.
+      const nextn_predict_layers = getArchValue('nextn_predict_layers');
+      const embedding_length_out = getArchValue('embedding_length_out');
+
       const metadata = {
         architecture,
         n_layers,
@@ -1684,6 +1691,8 @@ class ModelStore {
         n_embd_head_v,
         sliding_window,
         context_length,
+        nextn_predict_layers,
+        embedding_length_out,
       };
 
       const paramCount = parseSizeLabel(
