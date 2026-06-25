@@ -146,4 +146,26 @@ describe('WebSearchEngine', () => {
     await engine.execute({query: 'mars'});
     expect(search).toHaveBeenCalledTimes(1);
   });
+
+  it('re-hits the provider after an empty result (no empty-result lockout)', async () => {
+    // First call returns empty (transient), second identical query must NOT be
+    // served from cache — an empty result is never cached.
+    const search = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([hit({title: 'Mars'})]);
+    const provider: SearchProvider = {id: 'tavily', search};
+    const access = makeAccess({getActiveProvider: () => provider});
+    const engine = new WebSearchEngine(access);
+
+    const first = await engine.execute({query: 'mars'});
+    expect(first.type).toBe('error');
+
+    const second = await engine.execute({query: 'mars'});
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(second.type).toBe('text');
+    if (second.type === 'text') {
+      expect(second.summary).toContain('Mars');
+    }
+  });
 });
