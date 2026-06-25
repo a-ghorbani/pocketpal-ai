@@ -1,19 +1,46 @@
 import {RenderHtmlEngine} from './RenderHtmlEngine';
 import {RenderHtmlTalentUI} from './RenderHtmlTalentUI';
+import {WebSearchTalentUI} from './WebSearchTalentUI';
 import {CalculateEngine} from './CalculateEngine';
 import {DatetimeEngine} from './DatetimeEngine';
+import {WebSearchEngine} from './WebSearchEngine';
+import {ReadUrlEngine} from './ReadUrlEngine';
 import {talentRegistry} from './TalentRegistry';
 import {talentUIRegistry} from './TalentUIRegistry';
+import type {SearchAccess} from './searchAccess';
 import type {ToolDefinition} from './types';
+import {searchProviderStore} from '../../store';
+import {createSearchProvider, readWithDefaultReader} from '../search';
 
 export {TalentRegistry, talentRegistry} from './TalentRegistry';
 export {TalentUIRegistry, talentUIRegistry} from './TalentUIRegistry';
 export type {TalentUI} from './TalentUIRegistry';
 export {RenderHtmlEngine} from './RenderHtmlEngine';
 export {RenderHtmlTalentUI} from './RenderHtmlTalentUI';
+export {WebSearchTalentUI} from './WebSearchTalentUI';
 export {CalculateEngine} from './CalculateEngine';
 export {DatetimeEngine} from './DatetimeEngine';
+export {WebSearchEngine} from './WebSearchEngine';
+export {ReadUrlEngine} from './ReadUrlEngine';
+export type {SearchAccess} from './searchAccess';
 export type {TalentEngine, TalentResult, ToolDefinition} from './types';
+
+/**
+ * Build the read-only accessor the search engines use to reach the active
+ * provider + result count. This is the single place that imports the store, so
+ * the engines stay store-free and pure.
+ */
+function createSearchAccess(): SearchAccess {
+  return {
+    getActiveProvider: () => {
+      const id = searchProviderStore.activeProviderId;
+      return createSearchProvider(id, () => searchProviderStore.getKey(id));
+    },
+    canSearch: () => searchProviderStore.canSearch,
+    getResultCount: () => searchProviderStore.resultCount,
+    readWithDefaultReader,
+  };
+}
 
 let registered = false;
 
@@ -29,8 +56,12 @@ export function registerDefaultTalents(): void {
   talentRegistry.register(new RenderHtmlEngine());
   talentRegistry.register(new CalculateEngine());
   talentRegistry.register(new DatetimeEngine());
+  const searchAccess = createSearchAccess();
+  talentRegistry.register(new WebSearchEngine(searchAccess));
+  talentRegistry.register(new ReadUrlEngine(searchAccess));
   // UIs
   talentUIRegistry.register(new RenderHtmlTalentUI());
+  talentUIRegistry.register(new WebSearchTalentUI());
   registered = true;
 }
 

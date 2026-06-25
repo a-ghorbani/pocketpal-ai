@@ -43,11 +43,13 @@ describe('TalentRegistry', () => {
       resetRegisteredFlag();
     });
 
-    it('registers render_html, calculate, and datetime', () => {
+    it('registers the built-in talents', () => {
       registerDefaultTalents();
       expect(talentRegistry.has('render_html')).toBe(true);
       expect(talentRegistry.has('calculate')).toBe(true);
       expect(talentRegistry.has('datetime')).toBe(true);
+      expect(talentRegistry.has('web_search')).toBe(true);
+      expect(talentRegistry.has('read_url')).toBe(true);
     });
 
     it('is idempotent across calls', () => {
