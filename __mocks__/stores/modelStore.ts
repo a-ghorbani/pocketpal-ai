@@ -69,6 +69,8 @@ class MockModelStore {
   setNoExtraBufts: jest.Mock;
   enterBenchmarkMode: jest.Mock;
   exitBenchmarkMode: jest.Mock;
+  recordReasoningObserved: jest.Mock;
+  setReasoningOverride: jest.Mock;
   benchmarkActive: boolean = false;
   isContextLoading: boolean = false;
   loadingModel: Model | undefined;
@@ -117,6 +119,8 @@ class MockModelStore {
       setNoExtraBufts: false,
       enterBenchmarkMode: false,
       exitBenchmarkMode: false,
+      recordReasoningObserved: false,
+      setReasoningOverride: false,
       contextId: computed,
       lastUsedModel: computed,
       activeModel: computed,
@@ -188,6 +192,18 @@ class MockModelStore {
     this.setNoExtraBufts = jest.fn();
     this.enterBenchmarkMode = jest.fn().mockResolvedValue(undefined);
     this.exitBenchmarkMode = jest.fn();
+    this.recordReasoningObserved = jest.fn();
+    // Mirror the real writer so tests exercise the live override → resolver →
+    // pill reactive chain. Local ids mutate Model.reasoning on the observable
+    // model; remote ids route to ServerStore (kept as a spy fallback here).
+    this.setReasoningOverride = jest.fn((modelId: string, cap: any) => {
+      const localModel = this.models.find(m => m.id === modelId);
+      if (!localModel) {
+        return;
+      }
+      localModel.reasoning = cap;
+      localModel.supportsThinking = cap.isReasoning === 'yes';
+    });
   }
 
   setActiveModel = (modelId: string) => {

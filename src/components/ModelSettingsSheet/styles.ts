@@ -38,4 +38,20 @@ export const createStyles = (theme: Theme) =>
       color: theme.colors.onSurface,
       marginBottom: theme.spacing.sm,
     },
+    reasoningRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.sm,
+    },
+    reasoningHelp: {
+      marginBottom: theme.spacing.sm,
+      opacity: 0.7,
+    },
+    effortChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.s,
+      marginBottom: theme.spacing.sm,
+    },
   });

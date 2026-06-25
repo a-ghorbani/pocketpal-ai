@@ -68,6 +68,7 @@ export class OpenAICompletionEngine implements CompletionEngine {
     private modelId: string,
     private apiKey?: string,
     private timeoutMs?: number,
+    private serverType?: string,
   ) {}
 
   async completion(
@@ -91,12 +92,15 @@ export class OpenAICompletionEngine implements CompletionEngine {
         tools: (params as any).tools,
         tool_choice: (params as any).tool_choice,
         response_format: (params as any).response_format,
+        // Reasoning intent carried on the params; openai.ts owns the wire shape.
+        reasoning: params.reasoning,
       },
       this.serverUrl,
       this.apiKey,
       this.abortController.signal,
       callback,
       this.timeoutMs,
+      this.serverType,
     );
   }
 

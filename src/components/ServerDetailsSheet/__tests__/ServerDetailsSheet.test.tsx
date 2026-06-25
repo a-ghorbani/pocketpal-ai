@@ -386,11 +386,36 @@ describe('ServerDetailsSheet', () => {
     fireEvent.press(getByTestId('save-server-button'));
 
     await waitFor(() => {
-      expect(serverStore.updateServer).toHaveBeenCalledWith('srv-1', {
-        url: 'http://localhost:5678',
-      });
+      expect(serverStore.updateServer).toHaveBeenCalledWith(
+        'srv-1',
+        expect.objectContaining({
+          url: 'http://localhost:5678',
+        }),
+      );
       expect(serverStore.setApiKey).toHaveBeenCalledWith('srv-1', 'sk-new-key');
       expect(mockDismiss).toHaveBeenCalled();
+    });
+  });
+
+  it('persists a user-selected serverType on save', async () => {
+    const {getByTestId} = render(
+      <ServerDetailsSheet
+        isVisible={true}
+        onDismiss={jest.fn()}
+        serverId="srv-1"
+      />,
+    );
+
+    // Open the dropdown, then pick an override.
+    fireEvent.press(getByTestId('server-type-dropdown'));
+    fireEvent.press(getByTestId('server-type-option-Ollama'));
+    fireEvent.press(getByTestId('save-server-button'));
+
+    await waitFor(() => {
+      expect(serverStore.updateServer).toHaveBeenCalledWith(
+        'srv-1',
+        expect.objectContaining({serverType: 'Ollama'}),
+      );
     });
   });
 });

@@ -35,6 +35,7 @@ const LANGUAGE_ASSERTIONS: Record<string, {languageLabel: string}> = {
   ja: {languageLabel: '言語'},
   ko: {languageLabel: '언어'},
   ms: {languageLabel: 'Bahasa'},
+  pt_BR: {languageLabel: 'Idioma'},
   ru: {languageLabel: 'Язык'},
   uk: {languageLabel: 'Мова'},
   zh: {languageLabel: '语言'},
@@ -42,7 +43,7 @@ const LANGUAGE_ASSERTIONS: Record<string, {languageLabel: string}> = {
 };
 
 // Order: start with non-English, end with English to restore default state
-const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
+const LANGUAGE_ORDER = ['fa', 'he', 'id', 'ja', 'ko', 'ms', 'pt_BR', 'ru', 'uk', 'zh', 'zh_Hant', 'en'];
 
 describe('Language Switching', () => {
   let chatPage: ChatPage;

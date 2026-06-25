@@ -474,7 +474,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
     );
 
     const renderActionButtons = () => {
-      // Remote models: delete + load/offload
+      // Remote models: delete + settings (reasoning override) + load/offload
       if (isRemoteModel) {
         return (
           <View style={styles.actionButtonsRow}>
@@ -487,6 +487,7 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                 <TrashIcon width={16} height={16} stroke={theme.colors.error} />
               }
             />
+            {renderSettingsButton()}
             {renderModelLoadButton()}
             <View style={styles.actionButtonsSpacer} />
             {renderExpandButton()}

@@ -133,6 +133,8 @@
     "requestTimeout": "Request Timeout (seconds)",
     "requestTimeoutPlaceholder": "Optional - leave empty for default",
     "requestTimeoutHelp": "Max wait for a slow server to respond. Leave empty for default.",
+    "serverType": "Server Type",
+    "serverTypeHelp": "Auto-detected; change if it's wrong.",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "Optional - required for OpenAI/Groq",
     "apiKeyDescription": "Stored securely on device.",
@@ -608,7 +610,8 @@
         "disableThinking": "Disable thinking mode",
         "thinkingEnabled": "Thinking mode enabled",
         "thinkingDisabled": "Thinking mode disabled",
-        "thinkText": "Think"
+        "thinkText": "Think",
+        "cycleEffort": "Reasoning effort: {{level}}. Double tap to cycle effort level"
       }
     },
     "contentReportSheet": {
@@ -791,7 +794,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "Model Settings",
-      "saveChanges": "Save Changes"
+      "saveChanges": "Save Changes",
+      "reasoningSection": "Reasoning",
+      "isReasoningModel": "Reasoning model",
+      "isReasoningModelHelp": "Show the thinking control for this model, even if it wasn't auto-detected.",
+      "supportsEffort": "Supports graded effort",
+      "effortValues": "Effort levels this model supports",
+      "effortLevels": {
+        "minimal": "Minimal",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "xhigh": "Extra high",
+        "max": "Max"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Face Models",

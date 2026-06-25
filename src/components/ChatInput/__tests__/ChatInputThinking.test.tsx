@@ -236,6 +236,110 @@ describe('ChatInput Thinking Toggle', () => {
     expect(getByLabelText('Enable thinking mode')).toBeTruthy();
   });
 
+  it('renders the localized effort tier on the graded pill, not the raw token', () => {
+    const {getByText, queryByText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle={true}
+          isThinkingEnabled={true}
+          onThinkingToggle={jest.fn()}
+          supportsEffort={true}
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="high"
+          onEffortCycle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByText('High')).toBeTruthy();
+    expect(queryByText('high')).toBeNull();
+  });
+
+  it('looks the tier up in the table rather than hardcoding a single value', () => {
+    const {getByText, queryByText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle={true}
+          isThinkingEnabled={true}
+          onThinkingToggle={jest.fn()}
+          supportsEffort={true}
+          effortValues={['minimal', 'low', 'medium']}
+          reasoningEffort="minimal"
+          onEffortCycle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByText('Minimal')).toBeTruthy();
+    expect(queryByText('minimal')).toBeNull();
+  });
+
+  it('degrades an unlisted tier to the raw string instead of dropping it', () => {
+    const {getByText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle={true}
+          isThinkingEnabled={true}
+          onThinkingToggle={jest.fn()}
+          supportsEffort={true}
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="turbo"
+          onEffortCycle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByText('turbo')).toBeTruthy();
+  });
+
+  it('announces the active tier and that the control cycles on a graded pill', () => {
+    const {getByLabelText, queryByLabelText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle={true}
+          isThinkingEnabled={true}
+          onThinkingToggle={jest.fn()}
+          supportsEffort={true}
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="high"
+          onEffortCycle={jest.fn()}
+        />
+      </UserContext.Provider>,
+    );
+
+    expect(getByLabelText(/Reasoning effort: High/i)).toBeTruthy();
+    expect(getByLabelText(/cycle/i)).toBeTruthy();
+    expect(queryByLabelText('Disable thinking mode')).toBeNull();
+  });
+
+  it('cycles effort instead of toggling when the graded pill is pressed', () => {
+    const mockOnEffortCycle = jest.fn();
+    const mockOnThinkingToggle = jest.fn();
+    const {getByLabelText} = render(
+      <UserContext.Provider value={mockUser}>
+        <ChatInput
+          {...defaultProps}
+          showThinkingToggle={true}
+          isThinkingEnabled={true}
+          onThinkingToggle={mockOnThinkingToggle}
+          supportsEffort={true}
+          effortValues={['low', 'medium', 'high']}
+          reasoningEffort="high"
+          onEffortCycle={mockOnEffortCycle}
+        />
+      </UserContext.Provider>,
+    );
+
+    fireEvent.press(getByLabelText(/Reasoning effort: High/i));
+
+    expect(mockOnEffortCycle).toHaveBeenCalledTimes(1);
+    expect(mockOnThinkingToggle).not.toHaveBeenCalled();
+  });
+
   it('should handle missing onThinkingToggle callback gracefully', () => {
     const {getByLabelText} = render(
       <UserContext.Provider value={mockUser}>
