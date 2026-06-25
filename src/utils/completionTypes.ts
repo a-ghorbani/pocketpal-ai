@@ -104,6 +104,14 @@ export interface CompletionResult {
   };
   tokens_predicted?: number;
   tokens_evaluated?: number;
+  /**
+   * Speculative-decoding (e.g. MTP) engagement counters, top-level on
+   * llama.rn's NativeCompletionResult. `draft_tokens` is the number of tokens
+   * the draft path proposed; `draft_tokens_accepted` how many the target model
+   * accepted. Absent / 0 on non-speculative turns.
+   */
+  draft_tokens?: number;
+  draft_tokens_accepted?: number;
   truncated?: boolean;
   stopped_eos?: boolean;
   stopped_limit?: number;
