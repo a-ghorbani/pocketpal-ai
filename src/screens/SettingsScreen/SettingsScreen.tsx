@@ -40,6 +40,7 @@ import {
   Menu,
   Divider,
   HFTokenSheet,
+  SearchProviderKeySheet,
   InputSlider,
 } from '../../components';
 
@@ -47,8 +48,15 @@ import {useTheme} from '../../hooks';
 
 import {createStyles} from './styles';
 
-import {modelStore, uiStore, hfStore, ttsStore} from '../../store';
+import {
+  modelStore,
+  uiStore,
+  hfStore,
+  ttsStore,
+  searchProviderStore,
+} from '../../store';
 import {languageDisplayNames} from '../../locales';
+import type {SearchProviderId} from '../../services/search/types';
 
 import {CacheType} from '../../utils/types';
 import {
@@ -86,6 +94,13 @@ export const SettingsScreen: React.FC = observer(() => {
   const [showValueCacheMenu, setShowValueCacheMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showHfTokenDialog, setShowHfTokenDialog] = useState(false);
+  const [showSearchProviderMenu, setShowSearchProviderMenu] = useState(false);
+  const [searchProviderAnchor, setSearchProviderAnchor] = useState<{
+    x: number;
+    y: number;
+  }>({x: 0, y: 0});
+  const [showSearchKeySheet, setShowSearchKeySheet] = useState(false);
+  const searchProviderButtonRef = useRef<View>(null);
   const [gpuSupported, setGpuSupported] = useState(false);
   const [keyCacheAnchor, setKeyCacheAnchor] = useState<{x: number; y: number}>({
     x: 0,
@@ -284,6 +299,21 @@ export const SettingsScreen: React.FC = observer(() => {
       setShowLanguageMenu(true);
     });
   };
+
+  const handleSearchProviderPress = () => {
+    searchProviderButtonRef.current?.measure(
+      (x, y, width, height, pageX, pageY) => {
+        setSearchProviderAnchor({x: pageX, y: pageY + height});
+        setShowSearchProviderMenu(true);
+      },
+    );
+  };
+
+  const activeSearchProvider = searchProviderStore.providers.find(
+    p => p.id === searchProviderStore.activeProviderId,
+  );
+  const activeSearchProviderId = searchProviderStore.activeProviderId;
+  const searchHasConsent = searchProviderStore.hasConsentedToSearch;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -1021,6 +1051,150 @@ export const SettingsScreen: React.FC = observer(() => {
             </Card.Content>
           </Card>
 
+          {/* Internet Search */}
+          <Card elevation={0} style={styles.card} testID="internet-search-card">
+            <Card.Title title={l10n.settings.internetSearch.title} />
+            <Card.Content>
+              <View style={styles.settingItemContainer}>
+                <Text variant="labelSmall" style={styles.textDescription}>
+                  {l10n.settings.internetSearch.description}
+                </Text>
+
+                {/* First-enable consent gate */}
+                {!searchHasConsent && (
+                  <View
+                    testID="internet-search-consent"
+                    style={styles.switchContainer}>
+                    <View style={styles.textContainer}>
+                      <Text variant="titleMedium" style={styles.textLabel}>
+                        {l10n.settings.internetSearch.consentTitle}
+                      </Text>
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.internetSearch.consentDescription}
+                      </Text>
+                    </View>
+                    <Button
+                      testID="internet-search-consent-accept"
+                      mode="contained"
+                      onPress={() => searchProviderStore.setConsent(true)}
+                      style={styles.menuButton}>
+                      {l10n.settings.internetSearch.consentAccept}
+                    </Button>
+                  </View>
+                )}
+
+                {/* Provider picker */}
+                <Divider style={styles.divider} />
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.internetSearch.providerLabel}
+                    </Text>
+                  </View>
+                  <View style={styles.menuContainer}>
+                    <Button
+                      ref={searchProviderButtonRef}
+                      testID="search-provider-selector-button"
+                      mode="outlined"
+                      onPress={handleSearchProviderPress}
+                      style={styles.menuButton}
+                      contentStyle={styles.buttonContent}
+                      icon={({size, color}) => (
+                        <Icon source="chevron-down" size={size} color={color} />
+                      )}>
+                      {activeSearchProvider?.label ?? activeSearchProviderId}
+                    </Button>
+                    <Menu
+                      visible={showSearchProviderMenu}
+                      onDismiss={() => setShowSearchProviderMenu(false)}
+                      anchor={searchProviderAnchor}
+                      selectable>
+                      {searchProviderStore.providers.map(provider => (
+                        <Menu.Item
+                          key={provider.id}
+                          testID={`search-provider-option-${provider.id}`}
+                          disabled={!provider.selectable}
+                          style={styles.menu}
+                          label={
+                            provider.selectable
+                              ? provider.label
+                              : `${provider.label} (${l10n.settings.internetSearch.providerGated})`
+                          }
+                          selected={provider.id === activeSearchProviderId}
+                          onPress={() => {
+                            searchProviderStore.setActiveProvider(
+                              provider.id as SearchProviderId,
+                            );
+                            setShowSearchProviderMenu(false);
+                          }}
+                        />
+                      ))}
+                    </Menu>
+                  </View>
+                </View>
+
+                {/* Per-provider BYOK key entry */}
+                <Divider style={styles.divider} />
+                <View style={styles.switchContainer}>
+                  <View style={styles.textContainer}>
+                    <Text variant="titleMedium" style={styles.textLabel}>
+                      {l10n.settings.internetSearch.keyLabel}
+                    </Text>
+                    <Text variant="labelSmall" style={styles.textDescription}>
+                      {searchProviderStore.hasKey(activeSearchProviderId)
+                        ? t(l10n.settings.internetSearch.keyIsSet, {
+                            provider:
+                              activeSearchProvider?.label ??
+                              activeSearchProviderId,
+                          })
+                        : t(l10n.settings.internetSearch.keyNotSet, {
+                            provider:
+                              activeSearchProvider?.label ??
+                              activeSearchProviderId,
+                          })}
+                    </Text>
+                    {!searchHasConsent && (
+                      <Text variant="labelSmall" style={styles.textDescription}>
+                        {l10n.settings.internetSearch.consentRequired}
+                      </Text>
+                    )}
+                  </View>
+                  <Button
+                    testID="search-provider-key-button"
+                    mode="outlined"
+                    disabled={!searchHasConsent}
+                    onPress={() => setShowSearchKeySheet(true)}
+                    style={styles.menuButton}>
+                    {searchProviderStore.hasKey(activeSearchProviderId)
+                      ? l10n.settings.internetSearch.updateKeyButton
+                      : l10n.settings.internetSearch.setKeyButton}
+                  </Button>
+                </View>
+
+                {/* Result-count control */}
+                <Divider style={styles.divider} />
+                <View style={styles.textContainer}>
+                  <Text variant="titleMedium" style={styles.textLabel}>
+                    {l10n.settings.internetSearch.resultCountLabel}
+                  </Text>
+                  <InputSlider
+                    testID="search-result-count-slider"
+                    value={searchProviderStore.resultCount}
+                    onValueChange={value =>
+                      searchProviderStore.setResultCount(Math.round(value))
+                    }
+                    min={1}
+                    max={8}
+                    step={1}
+                  />
+                  <Text variant="labelSmall" style={styles.textDescription}>
+                    {l10n.settings.internetSearch.resultCountDescription}
+                  </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
           {/* API Settings */}
           <Card elevation={0} style={styles.card}>
             <Card.Title title={l10n.settings.apiSettingsTitle} />
@@ -1215,6 +1389,12 @@ export const SettingsScreen: React.FC = observer(() => {
         isVisible={showHfTokenDialog}
         onDismiss={() => setShowHfTokenDialog(false)}
         onSave={() => setShowHfTokenDialog(false)}
+      />
+      <SearchProviderKeySheet
+        isVisible={showSearchKeySheet}
+        providerId={activeSearchProviderId}
+        providerLabel={activeSearchProvider?.label ?? activeSearchProviderId}
+        onDismiss={() => setShowSearchKeySheet(false)}
       />
     </SafeAreaView>
   );

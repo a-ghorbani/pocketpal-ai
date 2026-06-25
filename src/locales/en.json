@@ -110,6 +110,25 @@
     "importButton": "Import",
     "importSuccess": "Successfully imported {{count}} chat session(s).",
     "importError": "Failed to import chat sessions. Please check the file format.",
+    "internetSearch": {
+      "title": "Internet Search",
+      "description": "Let Pals search the web with their own tools. Bring your own API key — PocketPal never holds your keys or routes your queries.",
+      "providerLabel": "Search provider",
+      "providerGated": "Coming soon",
+      "keyLabel": "API key",
+      "keyIsSet": "Key is set for {{provider}}.",
+      "keyNotSet": "No key set for {{provider}}.",
+      "setKeyButton": "Set Key",
+      "updateKeyButton": "Update Key",
+      "clearKeyButton": "Clear Key",
+      "keyInputPlaceholder": "Paste your {{provider}} API key",
+      "resultCountLabel": "Results per search",
+      "resultCountDescription": "Fewer results keep more room in the model's context.",
+      "consentTitle": "Searches leave your device",
+      "consentDescription": "When a Pal searches the web, your query (and any page it reads) is sent to the selected provider over the internet. Keys and queries are never sent to PocketPal.",
+      "consentAccept": "I understand",
+      "consentRequired": "Accept the disclosure above to set a key and enable search."
+    },
     "apiSettingsTitle": "API Settings",
     "huggingFaceTokenLabel": "Hugging Face Token",
     "tokenIsSetDescription": "Token is set. Required for accessing gated models.",
@@ -800,12 +819,16 @@
       "talentNames": {
         "render_html": "HTML preview",
         "calculate": "Math expressions",
-        "datetime": "Date & time"
+        "datetime": "Date & time",
+        "web_search": "Web search",
+        "read_url": "Read web page"
       },
       "talentDescriptions": {
         "render_html": "Render HTML documents inline in chat",
         "calculate": "Evaluate mathematical expressions",
-        "datetime": "Get the current date and time"
+        "datetime": "Get the current date and time",
+        "web_search": "Search the internet for current information",
+        "read_url": "Read the full content of a web page"
       },
       "greeting": {
         "sectionLabel": "Greeting",
