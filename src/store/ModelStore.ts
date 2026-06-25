@@ -32,6 +32,8 @@ import {
   filterProjectionModels,
   inferRepoFromModelId,
   parseSizeLabel,
+  isMTPCapable,
+  nEmbdOut,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -1794,13 +1796,21 @@ class ModelStore {
     return {isMultimodalInit: false};
   };
 
-  // Resolve the speculative-decoding mode for a target load. Read-only; runs
-  // outside the mutex (mirrors resolveMultimodalConfig). Modes:
-  //  - 'off':      speculative disabled → no draft, no spec_draft_*.
-  //  - 'paired':   a default draft resolves to a downloaded file → model_draft set.
-  //  - 'embedded': speculative on but no paired draft (embedded/hybrid MTP or no-op).
-  // A configured-but-not-downloaded draft degrades to 'embedded' (drop the draft,
-  // never block or error the target load — graceful degradation).
+  // Resolve the speculative-decoding mode for a target load by MTP CAPABILITY
+  // (not merely draft-path presence). Read-only; runs outside the mutex
+  // (mirrors resolveMultimodalConfig). Modes:
+  //  - 'off':      speculative disabled, OR enabled but neither the target nor a
+  //                valid paired draft is MTP-capable. Emits nothing speculative.
+  //  - 'paired':   a resolved draft is itself MTP-capable AND its output width
+  //                matches the target → model_draft set.
+  //  - 'embedded': the target carries embedded MTP draft layers (no model_draft).
+  //
+  // Crash-safety: emitting a paired draft whose width does not match the target
+  // is an UNCATCHABLE native abort (LM_GGML_ASSERT → SIGABRT) inside init_mtp —
+  // there is no native fallback to degrade. So this JS pre-check is the only
+  // guard: pair ONLY when both widths are known and equal; an unknown/unreadable
+  // width resolves to NOT paired ("unknown ⇒ not paired"). An invalid draft
+  // falls through to embedded (if the target is MTP-capable) and then to off.
   private resolveDraftConfig = async (
     model: Model,
   ): Promise<{
@@ -1813,21 +1823,38 @@ class ModelStore {
     }
 
     // Precedence: per-target authored draft wins; the global user-picked draft
-    // is the fallback when the target has none. Both resolve to the same
-    // paired-mode shape; embedded is the final fallback.
+    // is the fallback when the target has none.
     const draftId =
       model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
     if (draftId) {
       const draftModel = this.models.find(m => m.id === draftId);
-      if (draftModel?.isDownloaded) {
-        const resolvedDraftPath = await this.getModelFullPath(draftModel);
-        if (resolvedDraftPath) {
-          return {mode: 'paired', resolvedDraftPath, draftModel};
+      if (draftModel?.isDownloaded && isMTPCapable(draftModel)) {
+        // Width gate (the only crash guard). Both widths must be known and equal.
+        const draftWidth = nEmbdOut(draftModel.ggufMetadata);
+        const targetWidth = model.ggufMetadata?.n_embd;
+        if (
+          draftWidth !== undefined &&
+          targetWidth !== undefined &&
+          draftWidth === targetWidth
+        ) {
+          const resolvedDraftPath = await this.getModelFullPath(draftModel);
+          if (resolvedDraftPath) {
+            return {mode: 'paired', resolvedDraftPath, draftModel};
+          }
         }
       }
+      // A resolved-but-invalid draft (not downloaded / not MTP / width mismatch
+      // or unknown) falls through — never paired.
     }
 
-    return {mode: 'embedded'};
+    // Embedded MTP: the target itself carries draft layers.
+    if (isMTPCapable(model)) {
+      return {mode: 'embedded'};
+    }
+
+    // Speculative enabled but nothing MTP-capable → off (dodges the non-MTP
+    // native error; PocketPal never sends spec_type).
+    return {mode: 'off'};
   };
 
   /**
