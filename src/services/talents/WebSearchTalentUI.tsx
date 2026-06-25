@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {WebSearchResultCard} from '../../components/WebSearchResultCard';
+import {WebSearchResultBubble} from '../../components/WebSearchResultCard';
 
 import {TalentUI} from './TalentUIRegistry';
 import {TalentResult} from './types';
@@ -13,7 +13,7 @@ export class WebSearchTalentUI implements TalentUI {
       return null;
     }
     return (
-      <WebSearchResultCard query={result.query} results={result.results} />
+      <WebSearchResultBubble query={result.query} results={result.results} />
     );
   }
 }

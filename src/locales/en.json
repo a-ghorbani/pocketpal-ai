@@ -1208,7 +1208,11 @@
     "toolErrorBlock": "{{name}} failed",
     "webSearch": {
       "searched": "Searched: {{query}}",
-      "noResults": "No results"
+      "noResults": "No results",
+      "noResultsFor": "No results for {{query}}",
+      "resultsCount": "{{count}} results",
+      "searchResultsTitle": "Search results",
+      "showResultsAccessibilityLabel": "Show web search results for {{query}}"
     }
   },
   "htmlPreview": {

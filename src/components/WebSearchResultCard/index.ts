@@ -1,1 +1,2 @@
-export {WebSearchResultCard} from './WebSearchResultCard';
+export {WebSearchResultBubble} from './WebSearchResultBubble';
+export {WebSearchResultsSheet} from './WebSearchResultsSheet';
