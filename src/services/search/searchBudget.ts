@@ -32,9 +32,19 @@ const toPlainText = (raw: string): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
+/** Drop a trailing unpaired high surrogate so a slice never splits an emoji. */
+const stripTrailingHighSurrogate = (text: string): string => {
+  const last = text.charCodeAt(text.length - 1);
+  if (last >= 0xd800 && last <= 0xdbff) {
+    return text.slice(0, -1);
+  }
+  return text;
+};
+
 /**
  * Truncate to at most `maxChars` on a word boundary — never mid-word. Returns
- * the text unchanged when it already fits.
+ * the text unchanged when it already fits. For space-less scripts (CJK/Thai)
+ * the cut falls back to a character boundary, never splitting a surrogate pair.
  */
 const truncateOnWordBoundary = (text: string, maxChars: number): string => {
   if (maxChars <= 0) {
@@ -45,7 +55,10 @@ const truncateOnWordBoundary = (text: string, maxChars: number): string => {
   }
   const slice = text.slice(0, maxChars);
   const lastSpace = slice.lastIndexOf(' ');
-  const cut = lastSpace > 0 ? slice.slice(0, lastSpace) : slice;
+  const cut =
+    lastSpace > 0
+      ? slice.slice(0, lastSpace)
+      : stripTrailingHighSurrogate(slice);
   return `${cut.trimEnd()}…`;
 };
 
@@ -105,8 +118,15 @@ export const budgetPage = (
 
 /**
  * In-session cache for identical `(providerId, query, maxResults)` searches.
- * Module-scoped and ephemeral — cleared on app restart and via the test hook.
+ * Module-scoped and ephemeral — cleared on app restart, on any key / consent /
+ * provider change (via `resetSearchCache`), and via the test hook. Bounded by
+ * `MAX_CACHE_ENTRIES` with oldest-key (insertion-order) eviction so it can't
+ * grow unbounded over a long session.
+ *
+ * The BYOK key is deliberately NOT part of the cache key — invalidation on key
+ * change is explicit (`resetSearchCache`) so a secret never lands in a key.
  */
+const MAX_CACHE_ENTRIES = 50;
 const searchCache = new Map<string, SearchHit[]>();
 
 const cacheKey = (
@@ -128,7 +148,16 @@ export const setCachedHits = (
   maxResults: number,
   hits: SearchHit[],
 ): void => {
-  searchCache.set(cacheKey(providerId, query, maxResults), hits);
+  const key = cacheKey(providerId, query, maxResults);
+  // Re-insert moves the key to newest so eviction stays LRU-ish on overwrite.
+  searchCache.delete(key);
+  searchCache.set(key, hits);
+  if (searchCache.size > MAX_CACHE_ENTRIES) {
+    const oldest = searchCache.keys().next().value;
+    if (oldest !== undefined) {
+      searchCache.delete(oldest);
+    }
+  }
 };
 
 /** Test hook: clear the in-session cache. */

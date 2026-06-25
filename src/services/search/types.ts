@@ -51,7 +51,7 @@ export interface SearchProvider {
 export interface SearchBudget {
   /** From settings (default 3). */
   maxResults: number;
-  /** ~280; snippets truncate on a word boundary. */
+  /** ~280; snippets truncate on a word boundary, char boundary for CJK/Thai. */
   perSnippetChars: number;
   /** The talent's recommendedContextTokens — the result token ceiling. */
   tokenCeiling: number;
