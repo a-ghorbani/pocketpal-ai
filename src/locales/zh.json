@@ -30,7 +30,8 @@
     "ok": "确定",
     "close": "关闭",
     "clear": "全部清除",
-    "gallery": "图库"
+    "gallery": "图库",
+    "stop": "停止"
   },
   "settings": {
     "modelInitializationSettings": "模型初始化设置",
@@ -157,7 +158,10 @@
     "manageServers": "管理服务器",
     "ttsAvailability": "文本转语音",
     "ttsAvailabilityDescription": "朗读 助手回复",
-    "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行"
+    "ttsAvailabilityLowMemoryWarning": "你的设备内存较低——这可能无法稳定运行",
+    "requestTimeout": "请求超时（秒）",
+    "requestTimeoutHelp": "等待服务器响应的最长时间。留空则使用默认值。",
+    "requestTimeoutPlaceholder": "可选 - 留空则使用默认值"
   },
   "memory": {
     "shortWarning": "内存警告",
@@ -459,7 +463,10 @@
     "versionCopiedTitle": "复制成功！",
     "versionCopiedDescription": "版本信息已复制到剪贴板",
     "privacyPolicy": "隐私政策",
-    "termsOfService": "服务条款"
+    "termsOfService": "服务条款",
+    "tour": "导览",
+    "tourDescription": "重新观看欢迎页面，了解PocketPal AI能为你做些什么。",
+    "showIntroButton": "再看一次介绍"
   },
   "feedback": {
     "title": "发送反馈",
@@ -533,7 +540,9 @@
       "activateModelTitle": "在你和PocketPal开始聊天前，请先激活模型~",
       "activateModelDescription": "选择并加载一个模型以开始聊天",
       "activateModelButton": "选择模型",
-      "loading": "加载中..."
+      "loading": "加载中...",
+      "gettingReadyTitle": "{{name}}正在准备中",
+      "gettingReadyDescription": "你的Pal一准备好聊天，我们就会通知你。点击顶部的横幅可以查看进度。"
     },
     "chatInput": {
       "inputPlaceholder": "消息",
@@ -1351,7 +1360,44 @@
     "engineRetryCta": "再试一次",
     "voicesEmptyState": "未找到语音",
     "kokoroDeviceNote": "某些语音可能不兼容所有设备",
-    "insufficientStorage": "存储空间不足，请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）"
+    "insufficientStorage": "存储空间不足，请释放 {{requiredMb}} MB 以安装此引擎（当前可用 {{freeMb}} MB）",
+    "supertonicLanguageLabel": "语言",
+    "supertonicLanguageAuto": "自动",
+    "supertonicLanguageSheetTitle": "语言",
+    "supertonicLanguageSearchPlaceholder": "搜索语言",
+    "supertonicLanguageNames": {
+      "ar": "阿拉伯语",
+      "bg": "保加利亚语",
+      "hr": "克罗地亚语",
+      "cs": "捷克语",
+      "da": "丹麦语",
+      "nl": "荷兰语",
+      "en": "英语",
+      "et": "爱沙尼亚语",
+      "fi": "芬兰语",
+      "fr": "法语",
+      "de": "德语",
+      "el": "希腊语",
+      "hi": "印地语",
+      "hu": "匈牙利语",
+      "id": "印尼语",
+      "it": "意大利语",
+      "ja": "日语",
+      "ko": "韩语",
+      "lv": "拉脱维亚语",
+      "lt": "立陶宛语",
+      "pl": "波兰语",
+      "pt": "葡萄牙语",
+      "ro": "罗马尼亚语",
+      "ru": "俄语",
+      "sk": "斯洛伐克语",
+      "sl": "斯洛文尼亚语",
+      "es": "西班牙语",
+      "sv": "瑞典语",
+      "tr": "土耳其语",
+      "uk": "乌克兰语",
+      "vi": "越南语"
+    }
   },
   "htmlPreview": {
     "defaultTitle": "预览",
@@ -1360,5 +1406,101 @@
     "copyHtml": "复制HTML",
     "closePreview": "关闭预览",
     "openFullscreen": "全屏打开：{{title}}"
+  },
+  "onboarding": {
+    "back": "返回",
+    "skip": "跳过",
+    "skipForNow": "暂时跳过",
+    "splash": {
+      "brand": "PocketPal"
+    },
+    "screen1": {
+      "title": "认识你的Pal。",
+      "titleAccent": "Pal。",
+      "body": "住在你手机里的聪明小伙伴。\n来花一分钟把它们设置好吧。",
+      "cta": "带我逛逛",
+      "eyebrow": "欢迎使用PocketPal"
+    },
+    "screen2": {
+      "title": "随时，\n随地。",
+      "body": "你的Pal就住在你的手机里。\n不用联网、没有信号也能用——在飞机上、断网时、偏远村庄里都能正常工作。",
+      "highlight": "不用联网、没有信号",
+      "cta": "下一步",
+      "eyebrow": "理念",
+      "titleAccent": "随时，"
+    },
+    "screen3": {
+      "title": "更小巧，\n但完全属于你。",
+      "titleAccent": "更小巧，",
+      "body": "手机上的Pal快速又私密——但比云端AI更轻量。把它当成口袋里的小伙伴，而不是无所不知的神谕。",
+      "highlight": "快速又私密",
+      "cta": "知道了",
+      "eyebrow": "温馨提示"
+    },
+    "screen4": {
+      "title": "一切都不会离开你的手机。",
+      "titleAccent": "离开",
+      "body": "无需账户。没有云端。不做追踪。你的对话始终属于你自己。",
+      "highlight": "无需账户。没有云端。不做追踪。",
+      "cta": "开始使用",
+      "eyebrow": "隐私承诺"
+    },
+    "screen5": {
+      "title": "你想让Pal帮你做什么？",
+      "body": "选一个你想聊的话题——我们会为你匹配适合你手机的Pal。",
+      "topic": {
+        "smartchat": "智能聊天",
+        "coding": "编程",
+        "education": "学习",
+        "roleplay": "角色扮演",
+        "creative_writing": "创意写作",
+        "else": "想找点别的？"
+      },
+      "topicDescription": {
+        "smartchat": "贴心的日常小伙伴",
+        "coding": "写代码、调试、讲解",
+        "education": "学习、讲解、测验",
+        "roleplay": "角色、情景",
+        "creative_writing": "故事、灵感、草稿",
+        "else": "稍后在应用内浏览所有Pal"
+      }
+    },
+    "screen6": {
+      "cta": "下载{{name}}",
+      "ctaTemplate": "下载{{name}}（{{size}}）",
+      "useTemplate": "使用{{name}}",
+      "deviceRamSuffix": "GB 内存",
+      "deviceFreeSuffix": "GB 可用",
+      "recommended": "推荐",
+      "downloaded": "已下载",
+      "modelTier": {
+        "quick": "快速",
+        "balanced": "均衡",
+        "best": "最佳"
+      },
+      "subtitleTemplate": "{{name}}靠手机上的小型AI模型来思考——挑一个适合的吧。",
+      "pal": {
+        "pip": {
+          "body": "我们为你找到了一个完美的Pal——贴心的日常小伙伴。够聪明，能应付大多数事情；够轻量，适配任何手机。"
+        },
+        "codie": {
+          "body": "认识一下Codie——你本地的结对编程伙伴。读代码、写代码、讲解难点，全程都不会离开你的手机。"
+        },
+        "sage": {
+          "body": "Sage耐心又好奇，会一步步带你理清思路。一个揣在口袋里的学习搭档。"
+        },
+        "echo": {
+          "body": "Echo是个多才多艺的角色扮演伙伴——始终入戏、描绘场景，无论你的故事走向何方都紧紧跟随。"
+        },
+        "muse": {
+          "body": "Muse帮你写作。提供措辞建议、找准节奏，并保持你独有的语气。"
+        }
+      }
+    }
+  },
+  "downloadBanner": {
+    "titleByPal": "{{name}}正在下载",
+    "titleByModel": "{{name}}正在下载",
+    "extraInProgress": "另有{{count}}个正在进行"
   }
 }

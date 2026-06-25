@@ -10,6 +10,7 @@ import {MD3Colors, MD3Typescale} from 'react-native-paper/lib/typescript/types';
 import type {TokenRadius, TokenStroke, TokenTypography} from '../theme/tokens';
 import {SkillKey} from '.';
 import type {TalentResult} from '../services/talents/types';
+import type {ReasoningCapability} from './reasoningCapability';
 
 /**
  * One model-emitted tool call within an `AgentStep`. The `arguments` field
@@ -500,6 +501,15 @@ export interface ServerConfig {
   url: string; // Base URL e.g. "http://192.168.1.100:1234"
   lastConnected?: number; // Timestamp
   requestTimeoutMs?: number; // Per-server network timeout in ms; undefined = API default
+  // User-selectable server type; gates the per-server reasoning wire payload.
+  // detectServerType seeds it best-effort; user selection wins. undefined = unknown.
+  serverType?:
+    | 'llama.cpp'
+    | 'LM Studio'
+    | 'Ollama'
+    | 'OpenAI'
+    | 'vLLM'
+    | string;
 }
 
 export enum ModelType {
@@ -555,9 +565,12 @@ export interface Model {
   visionEnabled?: boolean; // User preference for enabling vision capabilities (defaults to true for backward compatibility)
 
   // Thinking capabilities
+  /** @deprecated Read via resolveReasoningCapability; kept as a fallback for old records. */
   supportsThinking?: boolean; // Whether this model supports thinking/reasoning mode
   thinkingStartTag?: string; // Thinking start tag from getFormattedChat (e.g., '<think>')
   thinkingEndTag?: string; // Thinking end tag from getFormattedChat (e.g., '</think>')
+  // Reasoning capability (two axes). Local home; persisted with the model.
+  reasoning?: ReasoningCapability;
 
   // GGUF metadata (for memory estimation)
   ggufMetadata?: GGUFMetadata;

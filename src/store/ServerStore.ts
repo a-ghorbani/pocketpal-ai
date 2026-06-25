@@ -6,6 +6,7 @@ import * as Keychain from 'react-native-keychain';
 
 import {fetchModels, testConnection, RemoteModelInfo} from '../api/openai';
 import {ServerConfig} from '../utils/types';
+import {ReasoningCapability} from '../utils/reasoningCapability';
 
 const KEYCHAIN_SERVICE_PREFIX = 'pocketpal-server-';
 
@@ -14,6 +15,10 @@ const FETCH_THROTTLE_MS = 60000;
 
 class ServerStore {
   servers: ServerConfig[] = [];
+  // Remote reasoning capability keyed by full model id (`${serverId}/${remoteModelId}`).
+  // Remote Models are rebuilt each launch and not persisted, so their capability
+  // lives here and persists with the store.
+  remoteReasoning: Record<string, ReasoningCapability> = {};
   serverModels: Map<string, RemoteModelInfo[]> = observable.map();
   userSelectedModels: Array<{serverId: string; remoteModelId: string}> = [];
   isLoading = false;
@@ -34,6 +39,7 @@ class ServerStore {
         'servers',
         'privacyNoticeAcknowledged',
         'userSelectedModels',
+        'remoteReasoning',
       ],
       storage: AsyncStorage,
     }).then(() => {
@@ -69,6 +75,13 @@ class ServerStore {
     this.userSelectedModels = this.userSelectedModels.filter(
       m => m.serverId !== id,
     );
+    // Drop remote reasoning entries keyed by this server's model ids.
+    const prefix = `${id}/`;
+    this.remoteReasoning = Object.fromEntries(
+      Object.entries(this.remoteReasoning).filter(
+        ([k]) => !k.startsWith(prefix),
+      ),
+    );
     // Clean up API key from keychain
     this.removeApiKey(id);
   }
@@ -86,6 +99,30 @@ class ServerStore {
     this.userSelectedModels = this.userSelectedModels.filter(
       m => !(m.serverId === serverId && m.remoteModelId === remoteModelId),
     );
+  }
+
+  /**
+   * Learn-from-stream writer for a remote model. Flips axis-1 to learned 'yes'
+   * the first time the model actually emits reasoning. Idempotent and monotonic:
+   * a no-op once axis-1 is already 'yes', and never overrides a user declaration.
+   */
+  recordRemoteReasoningObserved(modelId: string): void {
+    const existing = this.remoteReasoning[modelId];
+    if (existing?.source === 'user' || existing?.isReasoning === 'yes') {
+      return;
+    }
+    this.remoteReasoning[modelId] = {
+      isReasoning: 'yes',
+      source: 'learned',
+      supportsEffort: existing?.supportsEffort ?? false,
+      effortValues: existing?.effortValues ?? [],
+      effortSource: existing?.effortSource ?? 'none',
+    };
+  }
+
+  /** Manual model-card override for a remote model. Top of precedence. */
+  setRemoteReasoningOverride(modelId: string, cap: ReasoningCapability): void {
+    this.remoteReasoning[modelId] = cap;
   }
 
   removeServerIfOrphaned(serverId: string): void {

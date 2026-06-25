@@ -52,6 +52,7 @@ const ALL_LANGUAGES: AvailableLanguage[] = [
   'ja',
   'ko',
   'ms',
+  'pt_BR',
   'ru',
   'uk',
   'zh',
@@ -90,6 +91,7 @@ describe('l10n object', () => {
     'ja',
     'ko',
     'ms',
+    'pt_BR',
     'ru',
     'uk',
     'zh',
@@ -110,6 +112,7 @@ describe('l10n object', () => {
     'ja',
     'ko',
     'ms',
+    'pt_BR',
     'ru',
     'uk',
     'zh',
@@ -159,6 +162,7 @@ describe('l10n object', () => {
     expect('ja' in l10n).toBe(true);
     expect('ko' in l10n).toBe(true);
     expect('ms' in l10n).toBe(true);
+    expect('pt_BR' in l10n).toBe(true);
     expect('ru' in l10n).toBe(true);
     expect('uk' in l10n).toBe(true);
     expect('zh' in l10n).toBe(true);
@@ -223,6 +227,7 @@ describe('exports', () => {
     expect(languageDisplayNames.ja).toBe('\u65E5\u672C\u8A9E (JA)');
     expect(languageDisplayNames.ko).toBe('\uD55C\uAD6D\uC5B4 (KO)');
     expect(languageDisplayNames.ms).toBe('Melayu (MS)');
+    expect(languageDisplayNames.pt_BR).toBe('Português (PT_BR)');
     expect(languageDisplayNames.ru).toBe(
       '\u0420\u0443\u0441\u0441\u043A\u0438\u0439 (RU)',
     );
@@ -268,6 +273,7 @@ describe('lazy loading', () => {
     'ja',
     'ko',
     'ms',
+    'pt_BR',
     'ru',
     'uk',
     'zh',
@@ -326,6 +332,7 @@ describe('type safety', () => {
       'ja',
       'ko',
       'ms',
+      'pt_BR',
       'ru',
       'uk',
       'zh',

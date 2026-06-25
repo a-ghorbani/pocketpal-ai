@@ -57,7 +57,12 @@ describe('Talent Tool-Use Pipeline', () => {
   let drawerPage: DrawerPage;
   let palSheetPage: PalSheetPage;
 
-  before(async () => {
+  before(async function (this: Mocha.Context) {
+    // Qwen3-1.7B (~1 GB) is re-downloaded every run on Android (fullReset) and
+    // its download + load can exceed the default 10-min hook timeout on the
+    // emulator late in a long suite. Give the setup hook extra headroom.
+    this.timeout(900000);
+
     chatPage = new ChatPage();
     drawerPage = new DrawerPage();
     palSheetPage = new PalSheetPage();

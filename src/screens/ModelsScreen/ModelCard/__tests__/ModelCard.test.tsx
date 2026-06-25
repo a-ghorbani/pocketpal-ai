@@ -620,6 +620,33 @@ describe('ModelCard', () => {
       });
     });
 
+    it('shows a settings button for remote models', async () => {
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('settings-button')).toBeTruthy();
+      });
+    });
+
+    it('calls onOpenSettings when the remote settings button is pressed', async () => {
+      const mockOnOpenSettings = jest.fn();
+      const {getByTestId} = customRender(
+        <ModelCard
+          model={remoteModel}
+          onOpenSettings={mockOnOpenSettings}
+          onOpenServerDetails={mockOnOpenServerDetails}
+        />,
+      );
+
+      fireEvent.press(getByTestId('settings-button'));
+      expect(mockOnOpenSettings).toHaveBeenCalled();
+    });
+
     it('shows delete confirmation dialog for remote models', async () => {
       jest.spyOn(Alert, 'alert').mockImplementation();
 
