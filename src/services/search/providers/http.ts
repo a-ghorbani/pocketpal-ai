@@ -77,8 +77,11 @@ export const fetchText = async (
     throw new Error(`request failed (${res.status})`);
   }
   assertWithinDeclaredSize(res);
-  // Full-page reads are the model-driven OOM vector: clamp the buffered body to
-  // the byte cap so an unsized/chunked page can't grow without bound.
+  // Clamp the body to the byte cap before it reaches budgeting/the model. Stock
+  // RN fetch is XHR-backed with no streaming reader, so an unsized/chunked body
+  // is still materialized in full here before the slice — that transient peak is
+  // bounded only by the request timeout and the trusted reader endpoint, not by
+  // this clamp. A hard streamed cap would need a native streaming transport.
   const text = await res.text();
   return text.length > MAX_BODY_BYTES ? text.slice(0, MAX_BODY_BYTES) : text;
 };
