@@ -539,6 +539,7 @@ export const SettingsScreen: React.FC = observer(() => {
 
               {/* Advanced Settings */}
               <List.Accordion
+                testID="advanced-settings-accordion"
                 title={l10n.settings.advancedSettings}
                 titleStyle={styles.accordionTitle}
                 style={styles.advancedAccordion}

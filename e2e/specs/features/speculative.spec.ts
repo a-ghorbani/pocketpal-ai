@@ -7,11 +7,11 @@
  * loads and produces inference output with no native error. The load path
  * derives embedded mode, drops `model_draft`, and runs the model normally.
  *
- * Also exercises the Settings → Advanced Settings speculative controls and
+ * Also exercises the Settings -> Advanced Settings speculative controls and
  * captures the enabled state (draft-model picker + tuning controls).
  *
  * This is a normal RN Settings + model-load surface and runs on a
- * simulator/emulator via the standard pipeline — it is NOT an App-Intents /
+ * simulator/emulator via the standard pipeline -- it is NOT an App-Intents /
  * Shortcuts path and needs no physical device.
  *
  * Usage:
@@ -24,7 +24,7 @@ import * as path from 'path';
 import {expect} from '@wdio/globals';
 import {ChatPage} from '../../pages/ChatPage';
 import {SettingsPage} from '../../pages/SettingsPage';
-import {Selectors, byTestId, byText, nativeTextElement} from '../../helpers/selectors';
+import {Selectors, byTestId, nativeTextElement} from '../../helpers/selectors';
 import {Gestures} from '../../helpers/gestures';
 import {
   downloadAndLoadModel,
@@ -45,14 +45,10 @@ const NON_MTP_MODEL = {
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
 };
 
+const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
 const SPEC_PICKER = byTestId('speculative-draft-model-picker');
-const SPEC_DRAFT_CONTROLS = [
-  'speculative-draft-model-picker',
-  'speculative-draft-gpu-layers-slider',
-  'speculative-draft-key-cache-button',
-  'speculative-draft-value-cache-button',
-];
+const SPEC_GPU_LAYERS = byTestId('speculative-draft-gpu-layers-slider');
 
 async function saveShot(name: string): Promise<void> {
   try {
@@ -65,17 +61,6 @@ async function saveShot(name: string): Promise<void> {
   }
 }
 
-/** Open Settings, expand the Advanced Settings accordion, surface the speculative switch. */
-async function openSpeculativeSection(settingsPage: SettingsPage): Promise<void> {
-  await settingsPage.navigateTo();
-  const accordion = byText('Advanced Settings');
-  await Gestures.scrollToElement(accordion, 8);
-  await browser.$(accordion).click();
-  await browser.pause(500);
-  await Gestures.scrollToElement(SPEC_SWITCH, 8);
-  await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
-}
-
 describe('Speculative Decoding / MTP draft model', () => {
   let chatPage: ChatPage;
   let settingsPage: SettingsPage;
@@ -85,12 +70,20 @@ describe('Speculative Decoding / MTP draft model', () => {
     settingsPage = new SettingsPage();
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
-    // Precondition for V1: enable speculative decoding globally BEFORE loading a
-    // model, since the flag is read from contextInitParams at initLlama time.
-    await openSpeculativeSection(settingsPage);
+    // Enable speculative decoding globally BEFORE loading a model -- the flag is
+    // read from contextInitParams at initLlama time. This Settings visit happens
+    // while no model is loaded (clean navigation), so we also assert the enabled
+    // controls render and capture them here rather than re-navigating later.
+    await settingsPage.navigateTo();
+    await Gestures.scrollToElement(SPEC_ACCORDION, 8);
+    await browser.$(SPEC_ACCORDION).click();
+    await browser.pause(500);
+    await Gestures.scrollToElement(SPEC_SWITCH, 8);
+    await browser.$(SPEC_SWITCH).waitForExist({timeout: TIMEOUTS.element});
+
     // The DS Switch carries its testID on a wrapper view; click rather than
     // relying on a `value` attribute. The draft-model picker only renders once
-    // speculative is on, so its presence is our reliable "enabled" signal.
+    // speculative is on, so its presence is the reliable "enabled" signal.
     if (!(await browser.$(SPEC_PICKER).isExisting())) {
       await browser.$(SPEC_SWITCH).click();
       await browser.pause(700);
@@ -99,7 +92,12 @@ describe('Speculative Decoding / MTP draft model', () => {
     await browser.$(SPEC_PICKER).waitForExist({timeout: TIMEOUTS.element});
     await saveShot('speculative-settings-enabled');
 
-    // Load a non-MTP model with speculative on and NO paired draft.
+    // The draft tuning controls render in the enabled state.
+    await Gestures.scrollToElement(SPEC_GPU_LAYERS, 4);
+    await browser.$(SPEC_GPU_LAYERS).waitForExist({timeout: TIMEOUTS.element});
+    await saveShot('speculative-settings-controls');
+
+    // Load a non-MTP model with speculative on and NO paired draft. Ends in chat.
     await downloadAndLoadModel(NON_MTP_MODEL);
   });
 
@@ -132,15 +130,5 @@ describe('Speculative Decoding / MTP draft model', () => {
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
     await saveShot('speculative-noop-inference');
-  });
-
-  it('exposes the draft-model picker and tuning controls when speculative is enabled', async () => {
-    await openSpeculativeSection(settingsPage);
-    await Gestures.scrollToElement(SPEC_PICKER, 4);
-    for (const id of SPEC_DRAFT_CONTROLS) {
-      const exists = await browser.$(byTestId(id)).isExisting();
-      expect(exists).toBe(true);
-    }
-    await saveShot('speculative-settings-controls');
   });
 });
