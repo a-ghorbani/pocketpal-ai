@@ -59,6 +59,10 @@ class MockSearchProviderStore {
   get isProviderConfigured(): boolean {
     return this.hasKey(this.activeProviderId);
   }
+
+  get canSearch(): boolean {
+    return this.hasConsentedToSearch && this.isProviderConfigured;
+  }
 }
 
 export const mockSearchProviderStore = new MockSearchProviderStore();
