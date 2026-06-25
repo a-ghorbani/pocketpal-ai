@@ -56,6 +56,7 @@ import {
   formatBytes,
   clearAllSessionCaches,
   getSessionCacheInfo,
+  isMTPCapable,
 } from '../../utils';
 import {t} from '../../locales';
 import {checkGpuSupport} from '../../utils/deviceCapabilities';
@@ -272,6 +273,17 @@ export const SettingsScreen: React.FC = observer(() => {
     !!selectedDraftModel ||
     modelStore.availableModels.some(m => !!m.defaultDraftModel);
   const effectiveDraftCacheDefault = isEffectivelyPaired ? 'f16' : 'q8_0';
+
+  // Informative-only: when speculative is on but the active target is not
+  // MTP-capable and no valid draft pairs, the load resolves to OFF for it (no
+  // effect, no error). The toggle stays available (global intent); we just note
+  // the no-effect case so "globally on" isn't mistaken for "active here".
+  const activeModel = modelStore.activeModel;
+  const showSpeculativeNoEffectNote =
+    speculativeEnabled &&
+    !!activeModel &&
+    !isMTPCapable(activeModel) &&
+    !isEffectivelyPaired;
 
   // Draft cache options track the draft's own cache compatibility. The draft
   // cache type applies whenever speculative is on, so these are not gated on
@@ -874,6 +886,14 @@ export const SettingsScreen: React.FC = observer(() => {
                         }
                       />
                     </View>
+                    {showSpeculativeNoEffectNote && (
+                      <Text
+                        variant="labelSmall"
+                        style={styles.textDescription}
+                        testID="speculative-no-effect-note">
+                        {l10n.settings.speculativeNotMTPCapable}
+                      </Text>
+                    )}
                   </View>
 
                   {speculativeEnabled && (

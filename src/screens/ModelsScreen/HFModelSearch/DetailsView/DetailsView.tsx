@@ -1,4 +1,4 @@
-import React, {useContext} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {View} from 'react-native';
 
 import {Text, Chip, Tooltip} from 'react-native-paper';
@@ -19,6 +19,7 @@ import {
   timeAgo,
   isVisionRepo,
   getLLMFiles,
+  isMTPCapableRemote,
 } from '../../../../utils';
 
 interface DetailsViewProps {
@@ -35,6 +36,28 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
 
   // Get LLM files (non-mmproj files) - projection models are hidden from UI
   const llmFiles = getLLMFiles(hfModel.siblings || []);
+
+  // Lazy MTP (speculative) capability probe via a GGUF header range-fetch on the
+  // first LLM file, fired once when details open (not per search row). Unknown /
+  // fetch failure shows no badge (unknown ≠ incapable).
+  const [isMTP, setIsMTP] = useState(false);
+  useEffect(() => {
+    const firstLLM = llmFiles[0];
+    if (!firstLLM) {
+      return;
+    }
+    let cancelled = false;
+    const ggufUrl = `https://huggingface.co/${hfModel.id}/resolve/main/${firstLLM.rfilename}`;
+    isMTPCapableRemote(ggufUrl).then(capable => {
+      if (!cancelled) {
+        setIsMTP(capable);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hfModel.id]);
 
   const renderItem = ({item}: {item: ModelFile}) => (
     <ModelFileCard key={item.rfilename} modelFile={item} hfModel={hfModel} />
@@ -53,6 +76,17 @@ export const DetailsView = ({hfModel}: DetailsViewProps) => {
               label={l10n.models?.vision || 'Vision'}
               size="medium"
             />
+          )}
+          {isMTP && (
+            <Chip
+              icon="rocket-launch-outline"
+              compact
+              style={styles.stat}
+              textStyle={styles.statText}
+              mode="outlined"
+              testID="mtp-capability-badge">
+              {l10n.models.modelCapabilities.mtp}
+            </Chip>
           )}
         </View>
         <View style={styles.titleContainer}>

@@ -46,6 +46,7 @@ import {
   checkModelFileIntegrity,
   getModelSkills,
   formatNumber,
+  isMTPCapable,
 } from '../../../utils';
 
 import {
@@ -777,18 +778,24 @@ export const ModelCard: React.FC<ModelCardProps> = observer(
                   />
                 )}
 
-                {/* Description - matching updated React example */}
-                {model.capabilities && model.capabilities.length > 0 && (
+                {/* Description - matching updated React example. MTP (speculative)
+                    capability is derived from ggufMetadata, not model.capabilities,
+                    so it's appended explicitly and renders the line on its own. */}
+                {((model.capabilities && model.capabilities.length > 0) ||
+                  isMTPCapable(model)) && (
                   <View style={styles.descriptionContainer}>
                     <Text style={styles.descriptionText}>
-                      {getModelSkills(model)
-                        .map(
+                      {[
+                        ...getModelSkills(model).map(
                           skill =>
                             l10n.models.modelCapabilities[
                               skill.labelKey as keyof typeof l10n.models.modelCapabilities
                             ] || skill.labelKey,
-                        )
-                        .join(', ')}{' '}
+                        ),
+                        ...(isMTPCapable(model)
+                          ? [l10n.models.modelCapabilities.mtp]
+                          : []),
+                      ].join(', ')}{' '}
                       {l10n.models.modelCard.labels.capabilities}
                     </Text>
                   </View>
