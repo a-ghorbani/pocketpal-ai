@@ -97,6 +97,58 @@ describe('ReadUrlEngine', () => {
     }
   });
 
+  it('errors when consent is absent even with a key (canSearch=false), before any fetch', async () => {
+    const read = jest.fn();
+    const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      canSearch: () => false,
+    });
+    const result = await new ReadUrlEngine(access).execute({
+      url: 'https://e.com/p',
+    });
+    expect(result.type).toBe('error');
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'file:///etc/passwd',
+    'data:text/html,x',
+    'http://user:pass@e.com',
+    'ftp://e.com',
+    'not a url',
+  ])(
+    'rejects a non-http(s) or credentialed URL before any fetch (%s)',
+    async badUrl => {
+      const read = jest.fn();
+      const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+      const access = makeAccess({getActiveProvider: () => provider});
+      const result = await new ReadUrlEngine(access).execute({url: badUrl});
+      expect(result.type).toBe('error');
+      if (result.type === 'error') {
+        expect(result.summary).toMatch(/only http/i);
+      }
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
+
+  it('wraps the page result in untrusted-data markers', async () => {
+    const read = jest.fn().mockResolvedValue({
+      url: 'https://e.com/p',
+      title: 'Page',
+      text: 'full page body',
+    } as PageContent);
+    const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+    const access = makeAccess({getActiveProvider: () => provider});
+    const result = await new ReadUrlEngine(access).execute({
+      url: 'https://e.com/p',
+    });
+    if (result.type === 'text') {
+      expect(result.summary).toContain('UNTRUSTED WEB CONTENT');
+      expect(result.summary).toMatch(/not instructions/i);
+    }
+  });
+
   it('returns an error result when the reader throws', async () => {
     const provider: SearchProvider = {
       id: 'exa',

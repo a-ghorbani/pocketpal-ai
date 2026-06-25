@@ -63,6 +63,32 @@ describe('WebSearchEngine', () => {
     }
   });
 
+  it('errors when consent is absent even though a key is present (canSearch=false)', async () => {
+    // canSearch folds in consent: key present but consent missing → false.
+    const search = jest.fn().mockResolvedValue([hit()]);
+    const provider: SearchProvider = {id: 'tavily', search};
+    const access = makeAccess({
+      getActiveProvider: () => provider,
+      canSearch: () => false,
+    });
+    const result = await new WebSearchEngine(access).execute({query: 'mars'});
+    expect(result.type).toBe('error');
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('wraps the result menu in untrusted-data markers', async () => {
+    const provider: SearchProvider = {
+      id: 'tavily',
+      search: jest.fn().mockResolvedValue([hit({title: 'Mars'})]),
+    };
+    const access = makeAccess({getActiveProvider: () => provider});
+    const result = await new WebSearchEngine(access).execute({query: 'mars'});
+    if (result.type === 'text') {
+      expect(result.summary).toContain('UNTRUSTED WEB CONTENT');
+      expect(result.summary).toMatch(/not instructions/i);
+    }
+  });
+
   it('returns an error result on no results', async () => {
     const provider: SearchProvider = {
       id: 'tavily',

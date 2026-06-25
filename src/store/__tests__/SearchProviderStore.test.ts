@@ -2,6 +2,7 @@ import * as Keychain from 'react-native-keychain';
 import {makePersistable} from 'mobx-persist-store';
 
 import {SearchProviderStore, SEARCH_PROVIDERS} from '../SearchProviderStore';
+import * as budget from '../../services/search/searchBudget';
 
 // `mobx-persist-store` is globally mocked (jest.config.js moduleNameMapper →
 // __mocks__/external/mobx-persist-store.js); `makePersistable` is a jest.fn.
@@ -151,6 +152,39 @@ describe('SearchProviderStore', () => {
       expect(store.isProviderConfigured).toBe(false);
       await store.setKey('tavily', 'k');
       expect(store.isProviderConfigured).toBe(true);
+    });
+  });
+
+  describe('canSearch (consent + key, load-bearing at execution)', () => {
+    it('requires both consent and a key', async () => {
+      const store = await newStore();
+      expect(store.canSearch).toBe(false);
+
+      await store.setKey('tavily', 'k');
+      expect(store.canSearch).toBe(false); // key but no consent
+
+      store.setConsent(true);
+      expect(store.canSearch).toBe(true);
+
+      store.setConsent(false);
+      expect(store.canSearch).toBe(false); // consent revoked
+    });
+  });
+
+  describe('cache invalidation on auth-boundary changes', () => {
+    it('resets the search cache on key/consent/provider changes', async () => {
+      const reset = jest.spyOn(budget, 'resetSearchCache');
+      const store = await newStore();
+      reset.mockClear();
+
+      await store.setKey('tavily', 'k');
+      await store.clearKey('tavily');
+      store.setConsent(true);
+      store.setActiveProvider('brave');
+
+      // setKey + clearKey + setConsent + setActiveProvider each invalidate.
+      expect(reset.mock.calls.length).toBeGreaterThanOrEqual(4);
+      reset.mockRestore();
     });
   });
 });

@@ -88,6 +88,19 @@ describe('budgetHits', () => {
     expect(out[0].url).toBe('https://example.com/a');
     expect(out[0].publishedAt).toBe('2026-01-01');
   });
+
+  it('truncates space-less CJK without emitting a lone surrogate', () => {
+    // No spaces (CJK) so the cut falls back to the char-boundary branch. The
+    // emoji at the cut must not be split into a lone high surrogate.
+    const snippet = '中文内容😀中文内容';
+    const out = budgetHits([hit({snippet})], budget({perSnippetChars: 7}));
+    const truncated = out[0].snippet;
+    // No unpaired high surrogate (0xD800–0xDBFF) left dangling before the ellipsis.
+    const beforeEllipsis = truncated.replace(/…$/, '');
+    const lastCode = beforeEllipsis.charCodeAt(beforeEllipsis.length - 1);
+    expect(lastCode >= 0xd800 && lastCode <= 0xdbff).toBe(false);
+    expect(truncated.endsWith('…')).toBe(true);
+  });
 });
 
 describe('budgetPage', () => {
@@ -133,5 +146,14 @@ describe('in-session cache', () => {
     setCachedHits('tavily', 'q', 3, [hit()]);
     resetSearchCache();
     expect(getCachedHits('tavily', 'q', 3)).toBeUndefined();
+  });
+
+  it('evicts the oldest entry once the cap is exceeded', () => {
+    // Cap is 50; insert 51 distinct keys and the first must be evicted.
+    for (let i = 0; i < 51; i++) {
+      setCachedHits('tavily', `q${i}`, 3, [hit()]);
+    }
+    expect(getCachedHits('tavily', 'q0', 3)).toBeUndefined();
+    expect(getCachedHits('tavily', 'q50', 3)).toBeDefined();
   });
 });
