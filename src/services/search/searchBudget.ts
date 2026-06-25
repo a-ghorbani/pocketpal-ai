@@ -50,7 +50,7 @@ const truncateOnWordBoundary = (text: string, maxChars: number): string => {
 };
 
 /**
- * Apply the §4b budgeting invariants to raw provider hits, in order:
+ * Apply the budgeting invariants to raw provider hits, in order:
  * 1. cap result count, 2. strip to plain text (keep url), 3. word-boundary
  * snippet cap, 4. assemble hit-by-hit dropping trailing hits past the token
  * ceiling (never mid-fact).
@@ -88,7 +88,7 @@ export const budgetHits = (
 
 /**
  * Bound a full-page read to the token ceiling, keeping the leading content and
- * dropping the tail on a word boundary (D5).
+ * dropping the tail on a word boundary.
  */
 export const budgetPage = (
   page: PageContent,
