@@ -1,10 +1,11 @@
 import * as Keychain from 'react-native-keychain';
+import {makePersistable} from 'mobx-persist-store';
 
 import {SearchProviderStore, SEARCH_PROVIDERS} from '../SearchProviderStore';
 
-jest.mock('mobx-persist-store', () => ({
-  makePersistable: jest.fn(() => Promise.resolve()),
-}));
+// `mobx-persist-store` is globally mocked (jest.config.js moduleNameMapper →
+// __mocks__/external/mobx-persist-store.js); `makePersistable` is a jest.fn.
+const persistMock = makePersistable as jest.Mock;
 
 const setMock = Keychain.setGenericPassword as jest.Mock;
 const getMock = Keychain.getGenericPassword as jest.Mock;
@@ -45,6 +46,36 @@ describe('SearchProviderStore', () => {
           service: `search_provider_service_${id}`,
         });
       }
+    });
+  });
+
+  describe('secure-store boundary (keys never in plain storage)', () => {
+    it('persists only non-secret prefs via AsyncStorage, never a key field', async () => {
+      await newStore();
+      const config = persistMock.mock.calls[0][1];
+      expect(config.properties).toEqual([
+        'activeProviderId',
+        'resultCount',
+        'hasConsentedToSearch',
+      ]);
+      // No key/secret field is persisted to plain storage.
+      expect(config.properties).not.toContain('keys');
+      expect(JSON.stringify(config.properties)).not.toMatch(/key/i);
+    });
+
+    it('writes BYOK keys only through Keychain, not via the persisted store', async () => {
+      const store = await newStore();
+      persistMock.mockClear();
+      await store.setKey('tavily', 'tav-secret');
+      // setKey routes the secret to Keychain only — no re-persist of plain prefs
+      // carries the key, and the key never enters the persisted property set.
+      expect(setMock).toHaveBeenCalledWith('tavily', 'tav-secret', {
+        service: 'search_provider_service_tavily',
+      });
+      const persistedKeys = persistMock.mock.calls.flatMap(
+        c => c[1]?.properties ?? [],
+      );
+      expect(persistedKeys).not.toContain('keys');
     });
   });
 

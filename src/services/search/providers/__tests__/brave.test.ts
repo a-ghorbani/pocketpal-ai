@@ -49,6 +49,14 @@ describe('BraveProvider', () => {
     expect(provider.read).toBeUndefined();
   });
 
+  it('returns [] for an empty or missing-field body without throwing', async () => {
+    const provider = new BraveProvider(() => 'key');
+    for (const body of [{}, {web: {}}, {web: {results: null}}]) {
+      (global.fetch as jest.Mock).mockReturnValue(okJson(body));
+      await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
+    }
+  });
+
   it('throws when no key is set', async () => {
     const provider = new BraveProvider(() => '');
     await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(

@@ -1,6 +1,7 @@
 import {WebSearchEngine} from '../WebSearchEngine';
 import type {SearchAccess} from '../searchAccess';
 import type {SearchHit, SearchProvider} from '../../search/types';
+import * as budget from '../../search/searchBudget';
 import {resetSearchCache} from '../../search/searchBudget';
 
 const hit = (overrides: Partial<SearchHit> = {}): SearchHit => ({
@@ -93,6 +94,21 @@ describe('WebSearchEngine', () => {
       query: ' ',
     });
     expect(result.type).toBe('error');
+  });
+
+  it('passes its own recommendedContextTokens to budgetHits as the token ceiling', async () => {
+    const spy = jest.spyOn(budget, 'budgetHits');
+    const engine = new WebSearchEngine(makeAccess({getResultCount: () => 5}));
+    expect(engine.recommendedContextTokens).toBe(1000);
+    await engine.execute({query: 'mars'});
+    expect(spy).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        maxResults: 5,
+        tokenCeiling: engine.recommendedContextTokens,
+      }),
+    );
+    spy.mockRestore();
   });
 
   it('serves a second identical query from the in-session cache (no network)', async () => {

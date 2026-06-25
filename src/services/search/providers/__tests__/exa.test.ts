@@ -51,6 +51,21 @@ describe('ExaProvider', () => {
     });
   });
 
+  it('returns [] for an empty or missing-field search body without throwing', async () => {
+    const provider = new ExaProvider(() => 'key');
+    for (const body of [{}, {results: null}, {results: []}]) {
+      (global.fetch as jest.Mock).mockReturnValue(okJson(body));
+      await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
+    }
+  });
+
+  it('reads to empty text when the contents body has no result', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(okJson({}));
+    const provider = new ExaProvider(() => 'key');
+    const page = await provider.read!('https://e.com/x');
+    expect(page).toEqual({url: 'https://e.com/x', text: ''});
+  });
+
   it('throws when no key is set', async () => {
     const provider = new ExaProvider(() => '');
     await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(

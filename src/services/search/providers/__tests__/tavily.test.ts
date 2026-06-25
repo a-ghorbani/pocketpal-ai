@@ -44,6 +44,14 @@ describe('TavilyProvider', () => {
     expect(hit.snippet).toBe('');
   });
 
+  it('returns [] for an empty or missing-field body without throwing', async () => {
+    const provider = new TavilyProvider(() => 'key');
+    for (const body of [{}, {results: null}, {results: []}]) {
+      (global.fetch as jest.Mock).mockReturnValue(okJson(body));
+      await expect(provider.search('q', {maxResults: 3})).resolves.toEqual([]);
+    }
+  });
+
   it('throws when no key is set (never silent)', async () => {
     const provider = new TavilyProvider(() => '');
     await expect(provider.search('q', {maxResults: 3})).rejects.toThrow(

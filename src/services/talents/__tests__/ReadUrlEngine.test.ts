@@ -1,6 +1,7 @@
 import {ReadUrlEngine} from '../ReadUrlEngine';
 import type {SearchAccess} from '../searchAccess';
 import type {SearchProvider, PageContent} from '../../search/types';
+import * as budget from '../../search/searchBudget';
 
 const makeAccess = (overrides: Partial<SearchAccess> = {}): SearchAccess => {
   const provider: SearchProvider = {
@@ -58,6 +59,31 @@ describe('ReadUrlEngine', () => {
     });
     expect(readWithDefaultReader).toHaveBeenCalledWith('https://e.com/x');
     expect(result.type).toBe('text');
+  });
+
+  it('bounds the page by its own recommendedContextTokens ceiling', async () => {
+    const spy = jest.spyOn(budget, 'budgetPage');
+    const longBody = 'word '.repeat(4000).trim(); // far past the 1200-tok ceiling
+    const read = jest
+      .fn()
+      .mockResolvedValue({url: 'https://e.com/p', text: longBody});
+    const provider: SearchProvider = {id: 'exa', search: jest.fn(), read};
+    const engine = new ReadUrlEngine(
+      makeAccess({getActiveProvider: () => provider}),
+    );
+    expect(engine.recommendedContextTokens).toBe(1200);
+    const result = await engine.execute({url: 'https://e.com/p'});
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'https://e.com/p'}),
+      engine.recommendedContextTokens,
+    );
+    expect(result.type).toBe('text');
+    if (result.type === 'text') {
+      // Tail dropped on a word boundary — the result is shorter than the source.
+      expect(result.summary.length).toBeLessThan(longBody.length);
+      expect(result.summary).toContain('…');
+    }
+    spy.mockRestore();
   });
 
   it('returns an error result when no key is configured', async () => {
