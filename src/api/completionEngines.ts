@@ -33,6 +33,22 @@ export class LocalCompletionEngine implements CompletionEngine {
           }
         : undefined,
     );
+    // TEMP MTP-ENGAGEMENT PROBE (PR-805 verify only — REVERT before merge).
+    // draft_tokens / draft_tokens_accepted are TOP-LEVEL on the native result
+    // (llama.rn NativeCompletionResult, siblings of timings) but are NOT mapped
+    // into PocketPal's CompletionResult, so this is the only site that can see
+    // them. The chat UI never surfaces them to Appium; log to Metro/JS console
+    // for the V1' (draft_tokens>0) / V2-C (draft_tokens===0) engagement proof.
+    // Gated on __E2E__ so it fires in the Release e2e build (where __DEV__=false).
+    if (typeof __E2E__ !== 'undefined' && __E2E__) {
+      const r = result as unknown as {
+        draft_tokens?: number;
+        draft_tokens_accepted?: number;
+      };
+      console.log(
+        `[MTP-PROBE] draft_tokens=${r?.draft_tokens} draft_tokens_accepted=${r?.draft_tokens_accepted}`,
+      );
+    }
     return {
       text: result.text,
       content: result.content,
