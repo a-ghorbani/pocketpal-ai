@@ -204,48 +204,48 @@ describe('Speculative Decoding / MTP draft model', () => {
     await saveShot('speculative-v2c-off-safety');
   });
 
-  it('V1′ engagement: MTP model + speculative on produces draft tokens (draft_tokens > 0)', async () => {
-    // Engagement gate. With a real MTP-capable target, resolveDraftConfig returns
-    // embedded, getEffectiveContextInitParams emits spec_type=draft-mtp, and the
-    // completion reports draft_tokens > 0. The assistant turn footer surfaces this
-    // as the message-draft-tokens element; its presence (only rendered when
-    // draft_tokens > 0) is the engagement proof.
-    await downloadAndLoadModel(MTP_MODEL);
-
-    const responseText = await runPromptAndReadResponse(chatPage, 'Hi');
-    console.log(`[V1'] MTP engagement response: ${responseText}`);
-    expect(responseText).not.toBe('Unable to extract');
-    expect(responseText.length).toBeGreaterThan(0);
-
-    const draftEl = browser.$(DRAFT_TOKENS_EL);
-    await draftEl.waitForExist({timeout: TIMEOUTS.element});
-    const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
-    const draftText = await draftEl.getAttribute(attrName).catch(() => '');
-    console.log(`[V1'] draft tokens surfaced: ${draftText}`);
-    await expect(draftEl).toBeExisting();
-    await saveShot('speculative-v1-engagement');
-  });
-
   it('V2-D crash-safety: a width-mismatched paired draft does not abort the process', async () => {
     // A mismatched pair, had it reached init_mtp, would SIGABRT uncatchably.
     // PocketPal must decline paired (unknown/mismatched width => not paired) and
     // fall through to embedded/off, so the process survives and the target loads.
-    // The gate is "no SIGABRT + target loads", not a draft count. The verify
-    // stage pairs the non-MTP model as a draft of the MTP target (a guaranteed
-    // width/validity mismatch), asserts the app process is still alive after the
-    // load, and that a completion still returns (OWED on-device, see header).
+    // The gate is "no SIGABRT + target loads", not a draft count.
     //
-    // UI-observable proxy here: load the non-MTP model with speculative on (the
-    // resolveDraftConfig width gate path) and confirm the app remains responsive
-    // -- i.e. a subsequent prompt still completes, proving no native abort.
-    await downloadAndLoadModel(NON_MTP_MODEL);
-
-    const responseText = await runPromptAndReadResponse(chatPage, 'Hi');
+    // UI-observable proxy: the non-MTP model is ALREADY loaded with speculative
+    // on (from V2-C) -- PocketPal's width gate resolved it to off (no valid paired
+    // MTP draft). A fresh completion that returns + a responsive app == no native
+    // abort/SIGABRT. (No re-load: the model is loaded, so there is no load-button;
+    // runs right after V2-C while that model is still the active context.)
+    const responseText = await runPromptAndReadResponse(chatPage, 'Still there?');
     console.log(`[V2-D] crash-safety probe response: ${responseText}`);
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
-    // App still responsive after a speculative-on load == no SIGABRT.
-    await expect(browser.$(Selectors.chat.aiMessage)).toBeExisting();
+    // App still responsive + producing output after a speculative-on load == no SIGABRT.
+    await expect(browser.$(Selectors.chat.input)).toBeExisting();
     await saveShot('speculative-v2d-crash-safety');
+  });
+
+  it('V1′ engagement: MTP model + speculative on produces draft tokens (draft_tokens > 0)', async () => {
+    // Engagement gate -- the proof the feature is not inert. With a real
+    // MTP-capable target, resolveDraftConfig returns embedded, spec_type=draft-mtp
+    // is emitted, and the completion reports draft_tokens > 0, surfaced by the
+    // assistant turn footer as message-draft-tokens ("draft: <accepted>/<total>").
+    // Assert on that footer DIRECTLY (not the message body): an MTP reasoning
+    // model can draft a long turn that exhausts context, so the body may not
+    // render -- but the footer renders on turn completion either way and IS the
+    // engagement signal. Runs last (loading the MTP model reorders the model list).
+    await downloadAndLoadModel(MTP_MODEL);
+    await chatPage.resetChat();
+    await chatPage.sendMessage('Hi');
+
+    const draftEl = browser.$(DRAFT_TOKENS_EL);
+    await draftEl.waitForExist({timeout: TIMEOUTS.inference});
+    const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
+    const draftText = (await draftEl.getAttribute(attrName).catch(() => '')) || '';
+    console.log(`[V1'] draft tokens surfaced: ${draftText}`);
+    // "draft: <accepted>/<total> (<pct>%)" -- total is draft_tokens; > 0 == engaged.
+    const m = draftText.match(/(\d+)\s*\/\s*(\d+)/);
+    expect(m).not.toBeNull();
+    expect(Number(m && m[2])).toBeGreaterThan(0);
+    await saveShot('speculative-v1-engagement');
   });
 });
