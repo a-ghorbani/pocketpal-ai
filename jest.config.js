@@ -35,6 +35,7 @@ module.exports = {
     '@react-native-async-storage/async-storage':
       '<rootDir>/__mocks__/external/@react-native-async-storage/async-storage.js',
     'llama.rn': '<rootDir>/__mocks__/external/llama.rn.ts',
+    '@huggingface/gguf': '<rootDir>/__mocks__/external/@huggingface/gguf.ts',
     'react-native-webview':
       '<rootDir>/__mocks__/external/react-native-webview.ts',
     'react-dom': '<rootDir>/__mocks__/external/react-dom.js',
