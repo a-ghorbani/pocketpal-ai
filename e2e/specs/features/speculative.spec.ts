@@ -65,15 +65,16 @@ const NON_MTP_MODEL = {
 
 /**
  * A small MTP-capable GGUF (embedded nextn draft layers) for the engagement
- * gate (V1'). The exact repo/file MUST be confirmed available by the verify
- * stage — MTP GGUF conversions are still sparse; swap to whichever small
- * Qwen3/Gemma MTP GGUF is published when this runs on device.
+ * gate (V1'). Confirmed available + MTP-signalled: header range-fetch shows
+ * `qwen35.nextn_predict_layers = 1` and `blk.*.nextn.*` tensors, and the pinned
+ * llama.rn@0.12.5 registers LLM_ARCH_QWEN35 + the nextn KV/tensors, so it loads
+ * and resolves to embedded MTP. ~0.8B Q4_0 (~0.5GB) — sim-runnable.
  */
 const MTP_MODEL = {
-  id: 'qwen3-mtp',
-  searchQuery: 'Qwen3 MTP GGUF',
-  selectorText: 'Qwen3',
-  downloadFile: 'Qwen3-MTP-Q4_0.gguf',
+  id: 'qwen3.5-0.8b-mtp',
+  searchQuery: 'unsloth Qwen3.5-0.8B-MTP-GGUF',
+  selectorText: 'Qwen3.5-0.8B-MTP',
+  downloadFile: 'Qwen3.5-0.8B-Q4_0.gguf',
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
 };
 

@@ -2440,6 +2440,49 @@ describe('ModelStore', () => {
         await expect(resolve(target)).resolves.toEqual({mode: 'off'});
       });
 
+      it('not paired when an MTP-capable draft has unknown width (the crash guard)', async () => {
+        // MTP-capable (nextn>0) but NO width KV → nEmbdOut undefined. The width
+        // gate must decline paired even though the draft itself is MTP-capable
+        // (unknown ⇒ not paired); a paired init on an unreadable width would
+        // SIGABRT uncatchably. Target is also non-MTP → falls through to off.
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: {nextn_predict_layers: 1} as GGUFMetadata,
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired when the target width is unknown even for an MTP-capable draft', async () => {
+        // Draft is a valid MTP draft with a known width, but the TARGET width is
+        // unreadable → the equality is unknown → decline paired. Target is also
+        // MTP-capable here, so it falls through to embedded (still never paired).
+        const draft = localModel({
+          id: 'draft',
+          fullPath: '/tmp/draft.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: {nextn_predict_layers: 1} as GGUFMetadata,
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        // target width unknown ⇒ not paired; target MTP-capable ⇒ embedded.
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
       it('honours per-target defaultDraftModel over the global selectedDraftModelId', async () => {
         const perTargetDraft = localModel({
           id: 'per-target',
