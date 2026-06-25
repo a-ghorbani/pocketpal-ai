@@ -1725,6 +1725,18 @@
   dependencies:
     "@standard-schema/utils" "^0.3.0"
 
+"@huggingface/gguf@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@huggingface/gguf/-/gguf-0.4.2.tgz#4d4e959e1fedfc2b7736c4c73548eab924e767e8"
+  integrity sha512-pog57zGj/u8uZ6cFi2vH9MkWvq+ZtFDa5iUeNxggDSle+04htJQFbl31TcauGUhnxTBJokFexWK9WL2BakLR0Q==
+  dependencies:
+    "@huggingface/tasks" "^0.20.12"
+
+"@huggingface/tasks@^0.20.12":
+  version "0.20.25"
+  resolved "https://registry.yarnpkg.com/@huggingface/tasks/-/tasks-0.20.25.tgz#c00dec13b07fc06afe8b2960709d0b8871a5f5fb"
+  integrity sha512-id1Yp40dLFh2Hqy6PFN+9+PEXyKCB13hq6JSe0AkHfq3XVGjQGEO8C0UFVFUlHWCzB7FgI+u/hXn6aeRs/SE9w==
+
 "@humanwhocodes/config-array@^0.13.0":
   version "0.13.0"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/config-array/-/config-array-0.13.0.tgz#fb907624df3256d04b9aa2df50d7aa97ec648748"
