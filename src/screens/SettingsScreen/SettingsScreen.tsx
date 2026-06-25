@@ -274,16 +274,21 @@ export const SettingsScreen: React.FC = observer(() => {
     modelStore.availableModels.some(m => !!m.defaultDraftModel);
   const effectiveDraftCacheDefault = isEffectivelyPaired ? 'f16' : 'q8_0';
 
-  // Informative-only: when speculative is on but the active target is not
-  // MTP-capable and no valid draft pairs, the load resolves to OFF for it (no
-  // effect, no error). The toggle stays available (global intent); we just note
-  // the no-effect case so "globally on" isn't mistaken for "active here".
+  // Informative-only: when speculative is on but the ACTIVE load won't actually
+  // speculate, the load resolves to OFF for it (no effect, no error). That is
+  // the case when the active target is not MTP-capable (no embedded draft) AND
+  // the selected draft (if any) is itself not MTP-capable — keyed off the active
+  // model's real capability rather than the coarse "any draft picked anywhere"
+  // signal, which hides the note for a globally-picked incompatible draft.
+  // Capability is checked synchronously; exact width-pairing is async and out of
+  // scope for advisory copy. The toggle stays available (global intent); we just
+  // note the no-effect case so "globally on" isn't mistaken for "active here".
   const activeModel = modelStore.activeModel;
   const showSpeculativeNoEffectNote =
     speculativeEnabled &&
     !!activeModel &&
     !isMTPCapable(activeModel) &&
-    !isEffectivelyPaired;
+    !(selectedDraftModel && isMTPCapable(selectedDraftModel));
 
   // Draft cache options track the draft's own cache compatibility. The draft
   // cache type applies whenever speculative is on, so these are not gated on

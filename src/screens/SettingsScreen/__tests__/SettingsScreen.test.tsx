@@ -611,6 +611,134 @@ describe('SettingsScreen', () => {
     });
   });
 
+  describe('speculative no-effect advisory note', () => {
+    const mtpMeta = {nextn_predict_layers: 1} as any;
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = false;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.models = [];
+      });
+    });
+
+    const openSpeculative = async (getByTestId: any, getByText: any) => {
+      fireEvent.press(getByText('Advanced Settings'));
+      await waitFor(() => {
+        expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+      });
+    };
+
+    it('shows the note when speculative is on, the active model is not MTP-capable, and no capable draft is selected', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
+    });
+
+    it('shows the note when an incompatible (non-MTP) draft is selected — the coarse "any draft picked" signal would have hidden it', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Plain Draft',
+            isDownloaded: true,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
+    });
+
+    it('hides the note when the active model is MTP-capable', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = 'active/mtp.gguf';
+        modelStore.models = [
+          {
+            id: 'active/mtp.gguf',
+            name: 'MTP Active',
+            isDownloaded: true,
+            ggufMetadata: mtpMeta,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+    });
+
+    it('hides the note when a capable draft is selected for a non-MTP active model', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/capable.gguf';
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+          } as any,
+          {
+            id: 'a/b/capable.gguf',
+            name: 'Capable Draft',
+            isDownloaded: true,
+            ggufMetadata: mtpMeta,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+    });
+  });
+
   describe('TTS availability toggle', () => {
     afterEach(() => {
       // Reset observable fields between tests — beforeEach's clearAllMocks()
