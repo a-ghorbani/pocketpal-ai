@@ -250,6 +250,63 @@ function deriveSnapshotFromResult(
 }
 
 /**
+ * Compute the displayed generation throughput from the wall-clock pieces the
+ * hook tracks (run start → first token → run end), returning the
+ * `predicted_per_second` / `predicted_per_token_ms` fields the footer reads.
+ *
+ * This is the honest end-to-end gen rate: tokens generated divided by the time
+ * spent generating them (excluding time-to-first-token, which is prompt/prefill
+ * latency reported separately). It is used for every engine, MTP or not, so a
+ * single number is shown. The native rate is unreliable for speculative (MTP)
+ * turns — llama.cpp's blocking-path perf counter buckets MTP's multi-token
+ * verification batches as PROMPT eval, so native predicted_per_second comes
+ * back 0 even though tokens_predicted is accurate.
+ *
+ * Falls back to the native rate when a wall-clock piece is unusable
+ * (tokens_predicted missing/0, generation window <= 0, or start/TTFT missing),
+ * so we never display a worse number than before.
+ */
+export function computeGenThroughput(args: {
+  tokensPredicted: number | undefined;
+  completionStartTime: number;
+  timeToFirstTokenMs: number | null;
+  completionEndMs: number;
+  nativeTimings: CompletionResult['timings'];
+}): {predicted_per_second?: number; predicted_per_token_ms?: number} {
+  const {
+    tokensPredicted,
+    completionStartTime,
+    timeToFirstTokenMs,
+    completionEndMs,
+    nativeTimings,
+  } = args;
+
+  const nativeFallback = {
+    predicted_per_second: nativeTimings?.predicted_per_second,
+    predicted_per_token_ms: nativeTimings?.predicted_per_token_ms,
+  };
+
+  if (
+    tokensPredicted == null ||
+    tokensPredicted <= 0 ||
+    timeToFirstTokenMs == null
+  ) {
+    return nativeFallback;
+  }
+
+  const genMs = completionEndMs - (completionStartTime + timeToFirstTokenMs);
+  if (genMs <= 0) {
+    return nativeFallback;
+  }
+
+  const genSeconds = genMs / 1000;
+  return {
+    predicted_per_second: tokensPredicted / genSeconds,
+    predicted_per_token_ms: genMs / tokensPredicted,
+  };
+}
+
+/**
  * Map a single AgentEvent into the corresponding store mutation(s).
  * Free of business logic — every event maps to a known action surface
  * on `chatSessionStore`. This is the only place inside the run
@@ -417,10 +474,28 @@ async function applyEventToStore(
               draft_tokens_accepted: finalResult.draft_tokens_accepted,
             }
           : {};
+      // Displayed generation throughput is computed from the wall-clock pieces
+      // the hook already tracks (start → first token → end), not from the
+      // native per-second counter. llama.cpp's blocking-path perf counter
+      // (llama_perf_context) buckets MTP's >1-token verification batches as
+      // PROMPT eval, so native predicted_per_second / predicted_per_token_ms
+      // come back 0 for speculative turns even though generation succeeded.
+      // The counted tokens (tokens_predicted) are accurate, so the honest
+      // end-to-end gen rate is tokens / (end - firstToken). Falls back to the
+      // native rate only when a wall-clock piece is missing.
+      const completionEndMs = Date.now();
+      const genThroughput = computeGenThroughput({
+        tokensPredicted: finalResult.tokens_predicted,
+        completionStartTime: ctx.completionStartTime,
+        timeToFirstTokenMs: ctx.timeToFirstTokenMs.value,
+        completionEndMs,
+        nativeTimings: finalResult.timings,
+      });
       await chatSessionStore.updateMessage(ctx.messageId, ctx.sessionId, {
         metadata: {
           timings: {
             ...(finalResult.timings ?? {}),
+            ...genThroughput,
             time_to_first_token_ms: ctx.timeToFirstTokenMs.value,
             ...draftTimings,
           },
