@@ -23,14 +23,14 @@
  * simulator/emulator via the standard pipeline -- it is NOT an App-Intents /
  * Shortcuts path and needs no physical device.
  *
- * ── OWED device proof (tester / verify stage) ───────────────────────────────
- * The numeric `draft_tokens > 0` (V1') and `draft_tokens === 0` (V2-C)
- * assertions require reading the native completion result, which the chat UI
- * does not currently surface to Appium. The verify stage must run this spec on a
- * real MTP GGUF fixture (iOS + Android, `--devices virtual-only`) and confirm
- * `draft_tokens` via a debug read (Metro/JS log of the completion result, or a
- * temporary observability hook), since inertness is invisible to the UI alone.
- * The MTP_MODEL fixture repo below must also be confirmed available at run time.
+ * ── draft_tokens read surface ────────────────────────────────────────────────
+ * The chat now surfaces speculative engagement in the assistant turn footer:
+ * when `draft_tokens > 0`, a `message-draft-tokens` element renders
+ * "draft: <accepted>/<total> (<pct>%)". V1' asserts that element is present
+ * (engagement, draft_tokens > 0); V2-C asserts it is ABSENT (PocketPal resolved
+ * to OFF, draft_tokens === 0). The verify stage runs this spec on a real MTP
+ * GGUF fixture (iOS + Android, `--devices virtual-only`); the MTP_MODEL fixture
+ * repo below must be confirmed available at run time.
  *
  * Usage:
  *   yarn e2e:ios --spec speculative --devices virtual-only
@@ -78,10 +78,28 @@ const MTP_MODEL = {
   prompts: [{input: 'Hi', description: 'Basic greeting'}],
 };
 
+/**
+ * Context size (n_ctx) used for the speculative runs. The MTP model needs more
+ * room than the small default to generate to completion -- with the default,
+ * the "Give this chat more room" sheet pops at completion and the inference-wait
+ * helper cancels it, leaving n_ctx too small so generation never finishes (the
+ * "ran out of room" false negative). The feature generates fine manually with
+ * adequate context, so the spec raises n_ctx up front to replicate that. n_ctx
+ * is read from the global store at initLlama time, so it must be set before the
+ * model loads. Non-MTP (V2-C) is unaffected by the larger context.
+ */
+const SPEC_CONTEXT_SIZE = '4096';
+
 const SPEC_ACCORDION = byTestId('advanced-settings-accordion');
 const SPEC_SWITCH = byTestId('speculative-decoding-switch');
 const SPEC_PICKER = byTestId('speculative-draft-model-picker');
 const SPEC_GPU_LAYERS = byTestId('speculative-draft-gpu-layers-slider');
+
+/**
+ * Assistant turn footer element that renders draft acceptance, present only
+ * when the completion reported draft_tokens > 0 (speculative engagement).
+ */
+const DRAFT_TOKENS_EL = byTestId('message-draft-tokens');
 
 async function saveShot(name: string): Promise<void> {
   try {
@@ -145,6 +163,12 @@ describe('Speculative Decoding / MTP draft model', () => {
     settingsPage = new SettingsPage();
     await chatPage.waitForReady(TIMEOUTS.appReady);
 
+    // Raise the global context size BEFORE loading a model so the MTP model has
+    // enough room to generate to completion (see SPEC_CONTEXT_SIZE). n_ctx is
+    // read at initLlama time, so it must be committed before the load.
+    await settingsPage.navigateTo();
+    await settingsPage.setContextSize(SPEC_CONTEXT_SIZE);
+
     // Enable speculative globally BEFORE loading a model -- the flag is read
     // from contextInitParams at initLlama time. Also captures the enabled
     // controls (draft-model picker + tuning) for the settings reference shots.
@@ -168,31 +192,37 @@ describe('Speculative Decoding / MTP draft model', () => {
   it('V2-C off-safety: non-MTP model + speculative on loads, outputs, no native error', async () => {
     // PocketPal must resolve this to OFF (target is non-MTP, no valid draft) and
     // emit NO spec_type -- proving the P0-2 dodge. Output produced + no crash is
-    // the UI-observable proof; the verify stage additionally confirms
-    // draft_tokens === 0 from the native completion result (OWED, see header).
+    // the UI-observable proof. The draft-tokens footer element must be ABSENT
+    // (draft_tokens === 0, so the footer renders nothing speculative).
     await downloadAndLoadModel(NON_MTP_MODEL);
 
     const responseText = await runPromptAndReadResponse(chatPage, 'Hi');
     console.log(`[V2-C] non-MTP off-safety response: ${responseText}`);
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
+    await expect(browser.$(DRAFT_TOKENS_EL)).not.toBeExisting();
     await saveShot('speculative-v2c-off-safety');
   });
 
   it('V1′ engagement: MTP model + speculative on produces draft tokens (draft_tokens > 0)', async () => {
     // Engagement gate. With a real MTP-capable target, resolveDraftConfig returns
     // embedded, getEffectiveContextInitParams emits spec_type=draft-mtp, and the
-    // completion must report draft_tokens > 0. The numeric assertion is read from
-    // the native completion result by the verify stage (OWED, see header) -- the
-    // chat UI does not surface draft_tokens to Appium. Here we drive the path and
-    // assert output is produced with no crash; the verify stage gates on the
-    // draft_tokens > 0 value.
+    // completion reports draft_tokens > 0. The assistant turn footer surfaces this
+    // as the message-draft-tokens element; its presence (only rendered when
+    // draft_tokens > 0) is the engagement proof.
     await downloadAndLoadModel(MTP_MODEL);
 
     const responseText = await runPromptAndReadResponse(chatPage, 'Hi');
     console.log(`[V1'] MTP engagement response: ${responseText}`);
     expect(responseText).not.toBe('Unable to extract');
     expect(responseText.length).toBeGreaterThan(0);
+
+    const draftEl = browser.$(DRAFT_TOKENS_EL);
+    await draftEl.waitForExist({timeout: TIMEOUTS.element});
+    const attrName = (browser as any).isAndroid ? 'content-desc' : 'label';
+    const draftText = await draftEl.getAttribute(attrName).catch(() => '');
+    console.log(`[V1'] draft tokens surfaced: ${draftText}`);
+    await expect(draftEl).toBeExisting();
     await saveShot('speculative-v1-engagement');
   });
 
