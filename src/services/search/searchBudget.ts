@@ -6,7 +6,12 @@
  * / cache rules live in exactly one place.
  */
 
-import type {SearchHit, PageContent, SearchProviderId, SearchBudget} from './types';
+import type {
+  SearchHit,
+  PageContent,
+  SearchProviderId,
+  SearchBudget,
+} from './types';
 
 /** Rough token estimate: ~4 chars per token, the common heuristic. */
 const CHARS_PER_TOKEN = 4;
@@ -114,7 +119,8 @@ export const getCachedHits = (
   providerId: SearchProviderId,
   query: string,
   maxResults: number,
-): SearchHit[] | undefined => searchCache.get(cacheKey(providerId, query, maxResults));
+): SearchHit[] | undefined =>
+  searchCache.get(cacheKey(providerId, query, maxResults));
 
 export const setCachedHits = (
   providerId: SearchProviderId,
