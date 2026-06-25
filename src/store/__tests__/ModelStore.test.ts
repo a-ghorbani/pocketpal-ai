@@ -2296,6 +2296,243 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('speculative / MTP capability resolution', () => {
+    const mtpMeta = (over: Partial<GGUFMetadata> = {}): GGUFMetadata =>
+      ({
+        architecture: 'qwen3',
+        n_layers: 28,
+        n_embd: 1024,
+        n_head: 16,
+        n_head_kv: 8,
+        n_vocab: 151936,
+        n_embd_head_k: 64,
+        n_embd_head_v: 64,
+        ...over,
+      }) as GGUFMetadata;
+
+    const localModel = (over = {}): Model =>
+      createModel({
+        isDownloaded: true,
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+        fullPath: '/tmp/model.gguf',
+        ...over,
+      }) as Model;
+
+    const resolve = (model: Model) =>
+      (modelStore as any).resolveDraftConfig(model) as Promise<{
+        mode: 'off' | 'paired' | 'embedded';
+        resolvedDraftPath?: string;
+        draftModel?: Model;
+      }>;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = false;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.contextInitParams.spec_draft_n_max = undefined;
+        modelStore.models = [];
+      });
+    });
+
+    describe('resolveDraftConfig', () => {
+      it('off when speculative is disabled (scenario E)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = false;
+        });
+        const target = localModel({
+          id: 'target',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1}),
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('embedded when the target is MTP-capable and no draft (scenario A)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+        });
+        const target = localModel({
+          id: 'target',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1}),
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
+      it('paired when a valid MTP draft matches the target width (scenario B)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          fullPath: '/tmp/draft.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        const result = await resolve(target);
+        expect(result.mode).toBe('paired');
+        expect(result.resolvedDraftPath).toBe('/tmp/draft.gguf');
+        expect(result.draftModel?.id).toBe('draft');
+      });
+
+      it('off when speculative is on but the target is not MTP-capable and no draft (scenario C)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+        });
+        const target = localModel({id: 'target', ggufMetadata: mtpMeta()});
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired for a plain (non-MTP) draft → off when target not capable (scenario D)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}), // no nextn → not MTP
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired on a width mismatch → falls through to embedded when target capable (scenario D)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 2048}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
+      it('not paired when the draft width is unknown (unknown ⇒ not paired)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          // MTP-capable but NO width metadata → width unknown.
+          ggufMetadata: undefined,
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        // draft has no nextn KV either, so it isn't even MTP-capable → off.
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('honours per-target defaultDraftModel over the global selectedDraftModelId', async () => {
+        const perTargetDraft = localModel({
+          id: 'per-target',
+          fullPath: '/tmp/per-target.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const globalDraft = localModel({
+          id: 'global',
+          fullPath: '/tmp/global.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'per-target',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.contextInitParams.selectedDraftModelId = 'global';
+          modelStore.models = [perTargetDraft, globalDraft, target];
+        });
+        const result = await resolve(target);
+        expect(result.mode).toBe('paired');
+        expect(result.draftModel?.id).toBe('per-target');
+      });
+    });
+
+    describe('getEffectiveContextInitParams activator + n_max', () => {
+      it('emits spec_type=draft-mtp for embedded mode', async () => {
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'embedded',
+          },
+        );
+        expect(params.spec_type).toBe('draft-mtp');
+      });
+
+      it('emits spec_type=draft-mtp and model_draft for paired mode', async () => {
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'paired',
+            resolvedDraftPath: '/tmp/draft.gguf',
+          },
+        );
+        expect(params.spec_type).toBe('draft-mtp');
+        expect(params.model_draft).toBe('/tmp/draft.gguf');
+      });
+
+      it('emits nothing speculative for off mode', async () => {
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'off',
+          },
+        );
+        expect(params.spec_type).toBeUndefined();
+        expect(params.model_draft).toBeUndefined();
+        expect(params.spec_draft_n_max).toBeUndefined();
+      });
+
+      it('coerces a user-set spec_draft_n_max of 0 up to 1', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.spec_draft_n_max = 0;
+        });
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'embedded',
+          },
+        );
+        expect(params.spec_draft_n_max).toBe(1);
+        runInAction(() => {
+          modelStore.contextInitParams.spec_draft_n_max = undefined;
+        });
+      });
+
+      it('omits spec_draft_n_max when the user has not set it (inherits cpp default)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.spec_draft_n_max = undefined;
+        });
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'embedded',
+          },
+        );
+        expect(params.spec_draft_n_max).toBeUndefined();
+      });
+    });
+  });
+
   // Add tests for auto-release functionality
   describe('auto-release functionality', () => {
     beforeEach(() => {
@@ -4393,6 +4630,21 @@ describe('ModelStore', () => {
   });
 
   describe('speculative decoding', () => {
+    // MTP-capable GGUF metadata helper. nextn_predict_layers marks MTP capability;
+    // n_embd is the width the paired gate compares.
+    const specMeta = (over: Partial<GGUFMetadata> = {}): GGUFMetadata =>
+      ({
+        architecture: 'qwen3',
+        n_layers: 28,
+        n_embd: 1024,
+        n_head: 16,
+        n_head_kv: 8,
+        n_vocab: 151936,
+        n_embd_head_k: 64,
+        n_embd_head_v: 64,
+        ...over,
+      }) as GGUFMetadata;
+
     beforeEach(() => {
       runInAction(() => {
         modelStore.contextInitParams = {
@@ -4490,7 +4742,7 @@ describe('ModelStore', () => {
         expect(cfg.mode).toBe('off');
       });
 
-      it('paired draft not downloaded → embedded mode, no error', async () => {
+      it('draft not downloaded, non-MTP target → off (no draft, no embedded), no error', async () => {
         modelStore.setSpeculativeEnabled(true);
         runInAction(() => {
           modelStore.models = [
@@ -4502,7 +4754,32 @@ describe('ModelStore', () => {
           ];
           modelStore.modelLoadError = null;
         });
+        // Target carries no MTP metadata → not embedded-capable → resolves off.
         const target = {id: 'a/b/t.gguf', defaultDraftModel: 'c/d/dr.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('off');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+        expect(modelStore.modelLoadError).toBeNull();
+      });
+
+      it('draft not downloaded but target is MTP-capable → embedded, no error', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'c/d/dr.gguf',
+              isDownloaded: false,
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+          modelStore.modelLoadError = null;
+        });
+        const target = {
+          id: 'a/b/t.gguf',
+          defaultDraftModel: 'c/d/dr.gguf',
+          ggufMetadata: specMeta({nextn_predict_layers: 1}),
+        };
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
         expect(cfg.mode).toBe('embedded');
@@ -4510,7 +4787,7 @@ describe('ModelStore', () => {
         expect(modelStore.modelLoadError).toBeNull();
       });
 
-      it('paired when the draft is downloaded with a resolvable path', async () => {
+      it('paired when a downloaded MTP draft matches the target width', async () => {
         modelStore.setSpeculativeEnabled(true);
         runInAction(() => {
           modelStore.models = [
@@ -4520,10 +4797,15 @@ describe('ModelStore', () => {
               origin: ModelOrigin.LOCAL,
               fullPath: '/path/to/dr.gguf',
               modelType: ModelType.DRAFT,
+              ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
             } as any,
           ];
         });
-        const target = {id: 'a/b/t.gguf', defaultDraftModel: 'c/d/dr.gguf'};
+        const target = {
+          id: 'a/b/t.gguf',
+          defaultDraftModel: 'c/d/dr.gguf',
+          ggufMetadata: specMeta({n_embd: 1024}),
+        };
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
         expect(cfg.mode).toBe('paired');
@@ -4560,6 +4842,7 @@ describe('ModelStore', () => {
     });
 
     describe('global draft pick precedence (resolveDraftConfig)', () => {
+      // A valid MTP draft: own nextn layers + a width matching the target below.
       const downloadedDraft = (id: string, fullPath: string) =>
         ({
           id,
@@ -4567,7 +4850,15 @@ describe('ModelStore', () => {
           origin: ModelOrigin.LOCAL,
           fullPath,
           modelType: ModelType.DRAFT,
+          ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
         }) as any;
+
+      // Target with a width matching the drafts (so the paired width gate passes).
+      const widthTarget = (over = {}) => ({
+        id: 'a/b/t.gguf',
+        ggufMetadata: specMeta({n_embd: 1024}),
+        ...over,
+      });
 
       it('global pick, no per-target draft → paired with the global draft', async () => {
         modelStore.setSpeculativeEnabled(true);
@@ -4578,7 +4869,7 @@ describe('ModelStore', () => {
         });
         modelStore.setSelectedDraftModel('user/global/dr.gguf');
 
-        const target = {id: 'a/b/t.gguf'};
+        const target = widthTarget();
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
         expect(cfg.mode).toBe('paired');
@@ -4596,10 +4887,7 @@ describe('ModelStore', () => {
         });
         modelStore.setSelectedDraftModel('user/other.gguf');
 
-        const target = {
-          id: 'a/b/t.gguf',
-          defaultDraftModel: 'rules/draft.gguf',
-        };
+        const target = widthTarget({defaultDraftModel: 'rules/draft.gguf'});
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
         expect(cfg.mode).toBe('paired');
@@ -4607,7 +4895,7 @@ describe('ModelStore', () => {
         expect(cfg.draftModel?.id).toBe('rules/draft.gguf');
       });
 
-      it('global pick not downloaded → embedded, no error', async () => {
+      it('global pick not downloaded, non-MTP target → off, no error', async () => {
         modelStore.setSpeculativeEnabled(true);
         runInAction(() => {
           modelStore.models = [
@@ -4621,15 +4909,16 @@ describe('ModelStore', () => {
         });
         modelStore.setSelectedDraftModel('user/global/dr.gguf');
 
+        // Target has no MTP metadata → resolves off (not embedded).
         const target = {id: 'a/b/t.gguf'};
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
-        expect(cfg.mode).toBe('embedded');
+        expect(cfg.mode).toBe('off');
         expect(cfg.resolvedDraftPath).toBeUndefined();
         expect(modelStore.modelLoadError).toBeNull();
       });
 
-      it('load-time no-op: nothing picked, no per-target draft → embedded (migrated record loads identically to pre-feature)', async () => {
+      it('load-time off: nothing picked, non-MTP target → off (migrated record loads identically to pre-feature)', async () => {
         modelStore.setSpeculativeEnabled(true);
         modelStore.setSelectedDraftModel(undefined);
         runInAction(() => {
@@ -4639,7 +4928,7 @@ describe('ModelStore', () => {
         const target = {id: 'a/b/t.gguf'};
         const cfg = await (modelStore as any).resolveDraftConfig(target);
 
-        expect(cfg.mode).toBe('embedded');
+        expect(cfg.mode).toBe('off');
         expect(cfg.resolvedDraftPath).toBeUndefined();
       });
 
@@ -4855,6 +5144,9 @@ describe('ModelStore', () => {
               origin: ModelOrigin.LOCAL,
               fullPath: '/path/to/t.gguf',
               defaultDraftModel: 'c/d/dr.gguf',
+              // Target carries a known width so the draft's matching width passes
+              // the paired width gate.
+              ggufMetadata: specMeta({n_embd: 1024}),
             } as any,
             {
               ...basicModel,
@@ -4865,6 +5157,8 @@ describe('ModelStore', () => {
               origin: ModelOrigin.LOCAL,
               fullPath: '/path/to/dr.gguf',
               modelType: ModelType.DRAFT,
+              // Valid MTP draft: own nextn layers + width matching the target.
+              ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
             } as any,
           ];
           modelStore.context = undefined;
