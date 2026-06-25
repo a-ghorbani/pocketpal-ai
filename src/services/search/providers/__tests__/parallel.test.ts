@@ -1,4 +1,5 @@
 import {ParallelProvider} from '../parallel';
+import type {SearchProvider} from '../../types';
 
 const okJson = (body: unknown) =>
   Promise.resolve({ok: true, status: 200, json: () => Promise.resolve(body)});
@@ -28,15 +29,9 @@ describe('ParallelProvider', () => {
     expect(hit.publishedAt).toBe('2026-04-04');
   });
 
-  it('maps a deep read to PageContent', async () => {
-    (global.fetch as jest.Mock).mockReturnValue(
-      okJson({results: [{title: 'Title', excerpts: ['a', 'b']}]}),
-    );
-    const provider = new ParallelProvider(() => 'key');
-    const page = await provider.read!('https://example.com/x');
-    expect(page.url).toBe('https://example.com/x');
-    expect(page.title).toBe('Title');
-    expect(page.text).toBe('a\nb');
+  it('has no native deep-read (read_url falls through to the default reader)', () => {
+    const provider: SearchProvider = new ParallelProvider(() => 'key');
+    expect(provider.read).toBeUndefined();
   });
 
   it('returns [] for an empty or missing-field body without throwing', async () => {

@@ -1,9 +1,4 @@
-import type {
-  SearchProvider,
-  SearchHit,
-  SearchOptions,
-  PageContent,
-} from '../types';
+import type {SearchProvider, SearchHit, SearchOptions} from '../types';
 import {fetchJson, requireKey} from './http';
 
 interface ParallelExcerpt {
@@ -50,21 +45,5 @@ export class ParallelProvider implements SearchProvider {
     }));
   }
 
-  async read(url: string): Promise<PageContent> {
-    const key = requireKey(this.getKey(), 'Parallel');
-    const data = await fetchJson<ParallelResponse>(
-      'https://api.parallel.ai/v1/search',
-      {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'x-api-key': key},
-        body: JSON.stringify({objective: url, max_results: 1}),
-      },
-    );
-    const first = data.results?.[0];
-    return {
-      url,
-      ...(first?.title ? {title: first.title} : {}),
-      text: (first?.excerpts ?? []).join('\n'),
-    };
-  }
+  // No native deep-read: read_url falls through to the default reader.
 }
