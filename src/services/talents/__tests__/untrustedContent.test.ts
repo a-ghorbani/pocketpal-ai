@@ -4,7 +4,9 @@ describe('wrapUntrusted', () => {
   it('wraps content in nonce-bearing BEGIN/END markers with the deterrent note', () => {
     const out = wrapUntrusted('hello world');
     expect(out).toContain('UNTRUSTED WEB CONTENT');
-    expect(out).toMatch(/not instructions/i);
+    expect(out).toMatch(/never as instructions/i);
+    // Leads with the directive to use the facts and cite sources.
+    expect(out).toMatch(/use the facts/i);
     const begin = out.match(/----- BEGIN UNTRUSTED WEB CONTENT ([\w-]+) -----/);
     const end = out.match(/----- END UNTRUSTED WEB CONTENT ([\w-]+) -----/);
     expect(begin).not.toBeNull();
