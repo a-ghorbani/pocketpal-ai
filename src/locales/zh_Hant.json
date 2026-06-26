@@ -432,7 +432,7 @@
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
       "saveChanges": "儲存更改",
-      "reasoningSection": "推理中",
+      "reasoningSection": "推理",
       "isReasoningModel": "推理模型",
       "effortLevels": {
         "minimal": "最小",
