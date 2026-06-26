@@ -161,7 +161,9 @@
     "ttsAvailabilityLowMemoryWarning": "זיכרון המכשיר שלך נמוך - ייתכן שזה לא יעבוד בצורה אמינה.",
     "requestTimeout": "זמן קצוב לבקשה (בשניות)",
     "requestTimeoutHelp": "כמה זמן לחכות לתגובה משרת איטי. אפשר להשאיר ריק לערך ברירת המחדל.",
-    "requestTimeoutPlaceholder": "אופציונלי - אפשר להשאיר ריק לברירת המחדל"
+    "requestTimeoutPlaceholder": "אופציונלי - אפשר להשאיר ריק לברירת המחדל",
+    "serverType": "סוג שרת",
+    "serverTypeHelp": "מזוהה אוטומטית; שנה אם זה לא נכון."
   },
   "memory": {
     "shortWarning": "אזהרת זיכרון",
@@ -551,7 +553,8 @@
         "disableThinking": "השבת מצב חשיבה",
         "thinkingEnabled": "מצב חשיבה הופעל",
         "thinkingDisabled": "מצב חשיבה הושבת",
-        "thinkText": "חשיבה"
+        "thinkText": "חשיבה",
+        "cycleEffort": "מאמץ חשיבה: {{level}}. הקש פעמיים כדי לעבור בין רמות המאמץ"
       }
     },
     "contentReportSheet": {
@@ -734,7 +737,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "הגדרות מודל",
-      "saveChanges": "שמור שינויים"
+      "saveChanges": "שמור שינויים",
+      "reasoningSection": "חשיבה",
+      "isReasoningModel": "מודל חשיבה",
+      "isReasoningModelHelp": "הצג את פקד החשיבה עבור מודל זה, גם אם הוא לא זוהה אוטומטית.",
+      "supportsEffort": "תומך במאמץ מדורג",
+      "effortValues": "רמות המאמץ שמודל זה תומך בהן",
+      "effortLevels": {
+        "minimal": "מינימלי",
+        "low": "נמוך",
+        "medium": "בינוני",
+        "high": "גבוה",
+        "xhigh": "גבוה מאוד",
+        "max": "מרבי"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "מודלי Hugging Face",
