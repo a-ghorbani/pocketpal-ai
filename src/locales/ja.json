@@ -161,7 +161,9 @@
     "manageServers": "サーバーを管理",
     "requestTimeout": "リクエストのタイムアウト（秒）",
     "requestTimeoutHelp": "応答が遅いサーバーを待つ最大時間です。空欄にするとデフォルトが使われます。",
-    "requestTimeoutPlaceholder": "任意 - 空欄でデフォルト"
+    "requestTimeoutPlaceholder": "任意 - 空欄でデフォルト",
+    "serverType": "サーバータイプ",
+    "serverTypeHelp": "自動検出されます。誤っている場合は変更してください。"
   },
   "memory": {
     "shortWarning": "メモリ警告",
@@ -551,7 +553,8 @@
         "disableThinking": "思考モードを無効にする",
         "thinkingEnabled": "思考モードが有効",
         "thinkingDisabled": "思考モードが無効",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推論の努力レベル：{{level}}。ダブルタップで努力レベルを切り替えます"
       }
     },
     "contentReportSheet": {
@@ -734,7 +737,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "モデル設定",
-      "saveChanges": "変更を保存"
+      "saveChanges": "変更を保存",
+      "reasoningSection": "推論",
+      "isReasoningModel": "推論モデル",
+      "isReasoningModelHelp": "自動検出されなかった場合でも、このモデルで思考コントロールを表示します。",
+      "supportsEffort": "段階的な努力レベルに対応",
+      "effortValues": "このモデルが対応する努力レベル",
+      "effortLevels": {
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "非常に高",
+        "max": "最大"
+      }
     },
     "modelsHeaderRight": {
       "menuTitleHf": "Hugging Faceモデル",
