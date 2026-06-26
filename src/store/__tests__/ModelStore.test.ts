@@ -1493,6 +1493,68 @@ describe('ModelStore', () => {
     });
   });
 
+  describe('deleteModel clears stale global draft selection', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (RNFS as any).__resetMockState?.();
+      modelStore.models = [];
+      modelStore.context = undefined;
+      modelStore.activeModelId = undefined;
+      modelStore.setSelectedDraftModel(undefined);
+    });
+
+    it('clears selectedDraftModelId when the deleted model was the global draft pick', async () => {
+      const draftModel = {
+        ...presetModelFixture,
+        id: 'test-draft-model',
+        modelType: ModelType.DRAFT,
+        isDownloaded: true,
+        fullPath: '/path/to/test-draft-model.gguf',
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+      };
+      modelStore.models = [draftModel];
+      modelStore.setSelectedDraftModel(draftModel.id);
+      expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
+        draftModel.id,
+      );
+
+      await modelStore.deleteModel(draftModel);
+
+      // No dangling id should persist.
+      expect(modelStore.contextInitParams.selectedDraftModelId).toBeUndefined();
+    });
+
+    it('leaves selectedDraftModelId alone when a different model is deleted', async () => {
+      const draftModel = {
+        ...presetModelFixture,
+        id: 'test-draft-model',
+        modelType: ModelType.DRAFT,
+        isDownloaded: true,
+        fullPath: '/path/to/test-draft-model.gguf',
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+      };
+      const otherModel = {
+        ...presetModelFixture,
+        id: 'test-other-model',
+        isDownloaded: true,
+        fullPath: '/path/to/test-other-model.gguf',
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+      };
+      modelStore.models = [draftModel, otherModel];
+      modelStore.setSelectedDraftModel(draftModel.id);
+
+      await modelStore.deleteModel(otherModel);
+
+      // The global draft pick is unrelated to the deleted model — keep it.
+      expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
+        draftModel.id,
+      );
+    });
+  });
+
   describe('context management', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -2231,6 +2293,286 @@ describe('ModelStore', () => {
 
       expect(effectiveValue).toBe(512); // Unclamped - within n_ctx
       expect(modelStore.contextInitParams.image_max_tokens).toBe(512); // User value unchanged
+    });
+  });
+
+  describe('speculative / MTP capability resolution', () => {
+    const mtpMeta = (over: Partial<GGUFMetadata> = {}): GGUFMetadata =>
+      ({
+        architecture: 'qwen3',
+        n_layers: 28,
+        n_embd: 1024,
+        n_head: 16,
+        n_head_kv: 8,
+        n_vocab: 151936,
+        n_embd_head_k: 64,
+        n_embd_head_v: 64,
+        ...over,
+      }) as GGUFMetadata;
+
+    const localModel = (over = {}): Model =>
+      createModel({
+        isDownloaded: true,
+        isLocal: true,
+        origin: ModelOrigin.LOCAL,
+        fullPath: '/tmp/model.gguf',
+        ...over,
+      }) as Model;
+
+    const resolve = (model: Model) =>
+      (modelStore as any).resolveDraftConfig(model) as Promise<{
+        mode: 'off' | 'paired' | 'embedded';
+        resolvedDraftPath?: string;
+        draftModel?: Model;
+      }>;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = false;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.contextInitParams.spec_draft_n_max = undefined;
+        modelStore.models = [];
+      });
+    });
+
+    describe('resolveDraftConfig', () => {
+      it('off when speculative is disabled (scenario E)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = false;
+        });
+        const target = localModel({
+          id: 'target',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1}),
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('embedded when the target is MTP-capable and no draft (scenario A)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+        });
+        const target = localModel({
+          id: 'target',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1}),
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
+      it('paired when a valid MTP draft matches the target width (scenario B)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          fullPath: '/tmp/draft.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        const result = await resolve(target);
+        expect(result.mode).toBe('paired');
+        expect(result.resolvedDraftPath).toBe('/tmp/draft.gguf');
+        expect(result.draftModel?.id).toBe('draft');
+      });
+
+      it('off when speculative is on but the target is not MTP-capable and no draft (scenario C)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+        });
+        const target = localModel({id: 'target', ggufMetadata: mtpMeta()});
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired for a plain (non-MTP) draft → off when target not capable (scenario D)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}), // no nextn → not MTP
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired on a width mismatch → falls through to embedded when target capable (scenario D)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 2048}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
+      it('not paired when the draft width is unknown (unknown ⇒ not paired)', async () => {
+        const draft = localModel({
+          id: 'draft',
+          // MTP-capable but NO width metadata → width unknown.
+          ggufMetadata: undefined,
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        // draft has no nextn KV either, so it isn't even MTP-capable → off.
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired when an MTP-capable draft has unknown width (the crash guard)', async () => {
+        // MTP-capable (nextn>0) but NO width KV → nEmbdOut undefined. The width
+        // gate must decline paired even though the draft itself is MTP-capable
+        // (unknown ⇒ not paired); a paired init on an unreadable width would
+        // SIGABRT uncatchably. Target is also non-MTP → falls through to off.
+        const draft = localModel({
+          id: 'draft',
+          ggufMetadata: {nextn_predict_layers: 1} as GGUFMetadata,
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        await expect(resolve(target)).resolves.toEqual({mode: 'off'});
+      });
+
+      it('not paired when the target width is unknown even for an MTP-capable draft', async () => {
+        // Draft is a valid MTP draft with a known width, but the TARGET width is
+        // unreadable → the equality is unknown → decline paired. Target is also
+        // MTP-capable here, so it falls through to embedded (still never paired).
+        const draft = localModel({
+          id: 'draft',
+          fullPath: '/tmp/draft.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'draft',
+          ggufMetadata: {nextn_predict_layers: 1} as GGUFMetadata,
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.models = [draft, target];
+        });
+        // target width unknown ⇒ not paired; target MTP-capable ⇒ embedded.
+        await expect(resolve(target)).resolves.toEqual({mode: 'embedded'});
+      });
+
+      it('honours per-target defaultDraftModel over the global selectedDraftModelId', async () => {
+        const perTargetDraft = localModel({
+          id: 'per-target',
+          fullPath: '/tmp/per-target.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const globalDraft = localModel({
+          id: 'global',
+          fullPath: '/tmp/global.gguf',
+          ggufMetadata: mtpMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        });
+        const target = localModel({
+          id: 'target',
+          defaultDraftModel: 'per-target',
+          ggufMetadata: mtpMeta({n_embd: 1024}),
+        });
+        runInAction(() => {
+          modelStore.contextInitParams.speculativeEnabled = true;
+          modelStore.contextInitParams.selectedDraftModelId = 'global';
+          modelStore.models = [perTargetDraft, globalDraft, target];
+        });
+        const result = await resolve(target);
+        expect(result.mode).toBe('paired');
+        expect(result.draftModel?.id).toBe('per-target');
+      });
+    });
+
+    describe('getEffectiveContextInitParams activator + n_max', () => {
+      it('emits spec_type=draft-mtp for embedded mode', async () => {
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'embedded',
+          },
+        );
+        expect(params.spec_type).toBe('draft-mtp');
+      });
+
+      it('emits spec_type=draft-mtp and model_draft for paired mode', async () => {
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'paired',
+            resolvedDraftPath: '/tmp/draft.gguf',
+          },
+        );
+        expect(params.spec_type).toBe('draft-mtp');
+        expect(params.model_draft).toBe('/tmp/draft.gguf');
+      });
+
+      it('emits nothing speculative for off mode', async () => {
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'off',
+          },
+        );
+        expect(params.spec_type).toBeUndefined();
+        expect(params.model_draft).toBeUndefined();
+        expect(params.spec_draft_n_max).toBeUndefined();
+      });
+
+      it('coerces a user-set spec_draft_n_max of 0 up to 1', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.spec_draft_n_max = 0;
+        });
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'embedded',
+          },
+        );
+        expect(params.spec_draft_n_max).toBe(1);
+        runInAction(() => {
+          modelStore.contextInitParams.spec_draft_n_max = undefined;
+        });
+      });
+
+      it('omits spec_draft_n_max when the user has not set it (inherits cpp default)', async () => {
+        runInAction(() => {
+          modelStore.contextInitParams.spec_draft_n_max = undefined;
+        });
+        const params = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {
+            mode: 'embedded',
+          },
+        );
+        expect(params.spec_draft_n_max).toBeUndefined();
+      });
     });
   });
 
@@ -4327,6 +4669,617 @@ describe('ModelStore', () => {
       modelStore.setReasoningOverride('server-1/remote-m', cap);
       expect(spy).toHaveBeenCalledWith('server-1/remote-m', cap);
       spy.mockRestore();
+    });
+  });
+
+  describe('speculative decoding', () => {
+    // MTP-capable GGUF metadata helper. nextn_predict_layers marks MTP capability;
+    // n_embd is the width the paired gate compares.
+    const specMeta = (over: Partial<GGUFMetadata> = {}): GGUFMetadata =>
+      ({
+        architecture: 'qwen3',
+        n_layers: 28,
+        n_embd: 1024,
+        n_head: 16,
+        n_head_kv: 8,
+        n_vocab: 151936,
+        n_embd_head_k: 64,
+        n_embd_head_v: 64,
+        ...over,
+      }) as GGUFMetadata;
+
+    beforeEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams = {
+          ...modelStore.contextInitParams,
+          speculativeEnabled: false,
+          flash_attn_type: undefined,
+          spec_draft_n_max: undefined,
+          spec_draft_n_min: undefined,
+          spec_draft_p_min: undefined,
+          spec_draft_p_split: undefined,
+          spec_draft_n_gpu_layers: undefined,
+          spec_draft_cache_type_k: undefined,
+          spec_draft_cache_type_v: undefined,
+        };
+        modelStore.activeDraftModelId = undefined;
+      });
+    });
+
+    describe('getEffectiveContextInitParams speculative mode', () => {
+      it('embedded mode: speculative on, no draft → MTP defaults, no model_draft', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        const params: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'embedded'},
+        );
+
+        expect(params.model_draft).toBeUndefined();
+        expect(params.spec_draft_cache_type_k).toBe('q8_0');
+        expect(params.spec_draft_cache_type_v).toBe('q8_0');
+        expect(params.flash_attn_type).toBe('auto');
+      });
+
+      it('paired mode: downloaded draft → model_draft set, paired defaults', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        const params: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+        );
+
+        expect(params.model_draft).toBe('/path/to/draft.gguf');
+        expect(params.is_model_draft_asset).toBe(false);
+        expect(params.spec_draft_cache_type_k).toBe('f16');
+        expect(params.spec_draft_cache_type_v).toBe('f16');
+        expect(params.spec_draft_n_gpu_layers).toBe(99);
+        expect(params.flash_attn_type).toBe('off');
+      });
+
+      it('off mode: no draftConfig → zero spec_draft_*, no model_draft', async () => {
+        const params: any =
+          await modelStore.getEffectiveContextInitParams(undefined);
+
+        expect(params.model_draft).toBeUndefined();
+        expect(params.spec_draft_cache_type_k).toBeUndefined();
+        expect(params.spec_draft_n_gpu_layers).toBeUndefined();
+      });
+
+      it('does not overwrite an explicit user-set spec_draft value with a mode default', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSpecDraftCacheTypeK('q4_0' as any);
+
+        const params: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+        );
+
+        // Paired mode default is f16, but the user explicitly chose q4_0.
+        expect(params.spec_draft_cache_type_k).toBe('q4_0');
+      });
+
+      it('an explicit user flash_attn_type survives both speculative modes', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        // User explicitly chose 'on'; neither paired ('off' default) nor
+        // embedded ('auto' default) may overwrite it.
+        modelStore.setFlashAttnType('on');
+
+        const paired: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'paired', resolvedDraftPath: '/path/to/draft.gguf'},
+        );
+        expect(paired.flash_attn_type).toBe('on');
+
+        const embedded: any = await modelStore.getEffectiveContextInitParams(
+          undefined,
+          {mode: 'embedded'},
+        );
+        expect(embedded.flash_attn_type).toBe('on');
+      });
+    });
+
+    describe('resolveDraftConfig', () => {
+      it('returns off when speculative is disabled', async () => {
+        modelStore.setSpeculativeEnabled(false);
+        const target = {id: 'a/b/t.gguf', defaultDraftModel: 'c/d/dr.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+        expect(cfg.mode).toBe('off');
+      });
+
+      it('draft not downloaded, non-MTP target → off (no draft, no embedded), no error', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'c/d/dr.gguf',
+              isDownloaded: false,
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+          modelStore.modelLoadError = null;
+        });
+        // Target carries no MTP metadata → not embedded-capable → resolves off.
+        const target = {id: 'a/b/t.gguf', defaultDraftModel: 'c/d/dr.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('off');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+        expect(modelStore.modelLoadError).toBeNull();
+      });
+
+      it('draft not downloaded but target is MTP-capable → embedded, no error', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'c/d/dr.gguf',
+              isDownloaded: false,
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+          modelStore.modelLoadError = null;
+        });
+        const target = {
+          id: 'a/b/t.gguf',
+          defaultDraftModel: 'c/d/dr.gguf',
+          ggufMetadata: specMeta({nextn_predict_layers: 1}),
+        };
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('embedded');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+        expect(modelStore.modelLoadError).toBeNull();
+      });
+
+      it('paired when a downloaded MTP draft matches the target width', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'c/d/dr.gguf',
+              isDownloaded: true,
+              origin: ModelOrigin.LOCAL,
+              fullPath: '/path/to/dr.gguf',
+              modelType: ModelType.DRAFT,
+              ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
+            } as any,
+          ];
+        });
+        const target = {
+          id: 'a/b/t.gguf',
+          defaultDraftModel: 'c/d/dr.gguf',
+          ggufMetadata: specMeta({n_embd: 1024}),
+        };
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('paired');
+        expect(cfg.resolvedDraftPath).toBe('/path/to/dr.gguf');
+        expect(cfg.draftModel?.id).toBe('c/d/dr.gguf');
+      });
+    });
+
+    describe('single-writer setters', () => {
+      it('setSpeculativeEnabled is the sole writer of the master switch', () => {
+        modelStore.setSpeculativeEnabled(true);
+        expect(modelStore.contextInitParams.speculativeEnabled).toBe(true);
+        modelStore.setSpeculativeEnabled(false);
+        expect(modelStore.contextInitParams.speculativeEnabled).toBe(false);
+      });
+
+      it('spec_draft_* setters update only their own field', () => {
+        modelStore.setSpecDraftNMax(5);
+        modelStore.setSpecDraftNGpuLayers(10);
+        expect(modelStore.contextInitParams.spec_draft_n_max).toBe(5);
+        expect(modelStore.contextInitParams.spec_draft_n_gpu_layers).toBe(10);
+      });
+
+      it('setSelectedDraftModel is the sole writer of the global pick', () => {
+        modelStore.setSelectedDraftModel('c/d/dr.gguf');
+        expect(modelStore.contextInitParams.selectedDraftModelId).toBe(
+          'c/d/dr.gguf',
+        );
+        modelStore.setSelectedDraftModel(undefined);
+        expect(
+          modelStore.contextInitParams.selectedDraftModelId,
+        ).toBeUndefined();
+      });
+    });
+
+    describe('global draft pick precedence (resolveDraftConfig)', () => {
+      // A valid MTP draft: own nextn layers + a width matching the target below.
+      const downloadedDraft = (id: string, fullPath: string) =>
+        ({
+          id,
+          isDownloaded: true,
+          origin: ModelOrigin.LOCAL,
+          fullPath,
+          modelType: ModelType.DRAFT,
+          ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
+        }) as any;
+
+      // Target with a width matching the drafts (so the paired width gate passes).
+      const widthTarget = (over = {}) => ({
+        id: 'a/b/t.gguf',
+        ggufMetadata: specMeta({n_embd: 1024}),
+        ...over,
+      });
+
+      it('global pick, no per-target draft → paired with the global draft', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            downloadedDraft('user/global/dr.gguf', '/path/global.gguf'),
+          ];
+        });
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+
+        const target = widthTarget();
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('paired');
+        expect(cfg.resolvedDraftPath).toBe('/path/global.gguf');
+        expect(cfg.draftModel?.id).toBe('user/global/dr.gguf');
+      });
+
+      it('per-target draft overrides the global pick', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            downloadedDraft('rules/draft.gguf', '/path/rules.gguf'),
+            downloadedDraft('user/other.gguf', '/path/other.gguf'),
+          ];
+        });
+        modelStore.setSelectedDraftModel('user/other.gguf');
+
+        const target = widthTarget({defaultDraftModel: 'rules/draft.gguf'});
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('paired');
+        expect(cfg.resolvedDraftPath).toBe('/path/rules.gguf');
+        expect(cfg.draftModel?.id).toBe('rules/draft.gguf');
+      });
+
+      it('global pick not downloaded, non-MTP target → off, no error', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'user/global/dr.gguf',
+              isDownloaded: false,
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+          modelStore.modelLoadError = null;
+        });
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+
+        // Target has no MTP metadata → resolves off (not embedded).
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('off');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+        expect(modelStore.modelLoadError).toBeNull();
+      });
+
+      it('load-time off: nothing picked, non-MTP target → off (migrated record loads identically to pre-feature)', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        runInAction(() => {
+          modelStore.models = [];
+        });
+
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('off');
+        expect(cfg.resolvedDraftPath).toBeUndefined();
+      });
+
+      it('speculative off → off before reading the global pick', async () => {
+        modelStore.setSpeculativeEnabled(false);
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+        runInAction(() => {
+          modelStore.models = [
+            downloadedDraft('user/global/dr.gguf', '/path/global.gguf'),
+          ];
+        });
+
+        const target = {id: 'a/b/t.gguf'};
+        const cfg = await (modelStore as any).resolveDraftConfig(target);
+
+        expect(cfg.mode).toBe('off');
+      });
+    });
+
+    describe('activeDraftModelId reset on release', () => {
+      it('clears activeDraftModelId on context release', async () => {
+        runInAction(() => {
+          modelStore.activeDraftModelId = 'c/d/dr.gguf';
+          modelStore.context = undefined;
+          modelStore.engine = {stopCompletion: jest.fn()} as any;
+        });
+
+        await (modelStore as any)._releaseContextInternal(true);
+
+        expect(modelStore.activeDraftModelId).toBeUndefined();
+      });
+    });
+
+    describe('draft auto-download', () => {
+      const makeDownloadPair = () => {
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'a/b/t.gguf',
+              filename: 't.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'a',
+              repo: 'b',
+              downloadUrl: 'https://huggingface.co/a/b/resolve/main/t.gguf',
+              defaultDraftModel: 'c/d/dr.gguf',
+            } as any,
+            {
+              id: 'c/d/dr.gguf',
+              filename: 'dr.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'c',
+              repo: 'd',
+              downloadUrl: 'https://huggingface.co/c/d/resolve/main/dr.gguf',
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+        });
+      };
+
+      it('auto-downloads the paired draft when speculative is on', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        makeDownloadPair();
+
+        await modelStore.checkSpaceAndDownload('a/b/t.gguf');
+
+        const downloaded = (
+          downloadManager.startDownload as jest.Mock
+        ).mock.calls.map((c: any[]) => c[0].id);
+        expect(downloaded).toContain('c/d/dr.gguf');
+      });
+
+      it('does not auto-download the draft when speculative is off', async () => {
+        modelStore.setSpeculativeEnabled(false);
+        makeDownloadPair();
+
+        await modelStore.checkSpaceAndDownload('a/b/t.gguf');
+
+        const downloaded = (
+          downloadManager.startDownload as jest.Mock
+        ).mock.calls.map((c: any[]) => c[0].id);
+        expect(downloaded).not.toContain('c/d/dr.gguf');
+      });
+
+      it('a draft download failure does not reject the target download', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        makeDownloadPair();
+
+        (downloadManager.startDownload as jest.Mock).mockImplementation(
+          async (m: any) => {
+            if (m.id === 'c/d/dr.gguf') {
+              throw new Error('draft download failed');
+            }
+          },
+        );
+
+        await expect(
+          modelStore.checkSpaceAndDownload('a/b/t.gguf'),
+        ).resolves.not.toThrow();
+      });
+
+      it('auto-downloads a globally-picked draft when the target has no per-target draft', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'a/b/t.gguf',
+              filename: 't.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'a',
+              repo: 'b',
+              downloadUrl: 'https://huggingface.co/a/b/resolve/main/t.gguf',
+            } as any,
+            {
+              id: 'user/global/dr.gguf',
+              filename: 'dr.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'user',
+              repo: 'global',
+              downloadUrl:
+                'https://huggingface.co/user/global/resolve/main/dr.gguf',
+              modelType: ModelType.DRAFT,
+            } as any,
+          ];
+        });
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+
+        await modelStore.checkSpaceAndDownload('a/b/t.gguf');
+
+        const downloaded = (
+          downloadManager.startDownload as jest.Mock
+        ).mock.calls.map((c: any[]) => c[0].id);
+        expect(downloaded).toContain('user/global/dr.gguf');
+      });
+
+      it('no draft id (no per-target, no global pick) → no draft download attempt', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel(undefined);
+        runInAction(() => {
+          modelStore.models = [
+            {
+              id: 'a/b/t.gguf',
+              filename: 't.gguf',
+              isDownloaded: false,
+              isLocal: false,
+              origin: ModelOrigin.HF,
+              author: 'a',
+              repo: 'b',
+              downloadUrl: 'https://huggingface.co/a/b/resolve/main/t.gguf',
+            } as any,
+          ];
+        });
+
+        await (modelStore as any)._downloadDraftModelIfNeeded(
+          modelStore.models[0],
+        );
+
+        expect(
+          downloadManager.startDownload as jest.Mock,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('a DRAFT model does not recurse into its own draft download', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        modelStore.setSelectedDraftModel('user/global/dr.gguf');
+        const draft = {
+          id: 'user/global/dr.gguf',
+          filename: 'dr.gguf',
+          isDownloaded: false,
+          isLocal: false,
+          origin: ModelOrigin.HF,
+          // A real downloadUrl is required to actually exercise the DRAFT guard:
+          // without it, checkSpaceAndDownload's own !downloadUrl short-circuit
+          // would mask a missing recursion guard (the test would pass either
+          // way). With it present, removing the DRAFT guard would let the draft
+          // recurse into downloading itself, failing this assertion.
+          downloadUrl:
+            'https://huggingface.co/user/global/resolve/main/dr.gguf',
+          modelType: ModelType.DRAFT,
+        } as any;
+        runInAction(() => {
+          modelStore.models = [draft];
+        });
+
+        await (modelStore as any)._downloadDraftModelIfNeeded(draft);
+
+        expect(
+          downloadManager.startDownload as jest.Mock,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('paired load through initContext (writer + crash guard)', () => {
+      // A downloaded target paired with a downloaded draft drives the real
+      // initContext → proceedWithInitialization path, the only writer of
+      // activeDraftModelId and the only native-load entry point.
+      const setupPairedDownloadedModels = () => {
+        runInAction(() => {
+          modelStore.models = [
+            {
+              ...basicModel,
+              id: 'a/b/t.gguf',
+              name: 'target',
+              isDownloaded: true,
+              isLocal: true,
+              origin: ModelOrigin.LOCAL,
+              fullPath: '/path/to/t.gguf',
+              defaultDraftModel: 'c/d/dr.gguf',
+              // Target carries a known width so the draft's matching width passes
+              // the paired width gate.
+              ggufMetadata: specMeta({n_embd: 1024}),
+            } as any,
+            {
+              ...basicModel,
+              id: 'c/d/dr.gguf',
+              name: 'draft',
+              isDownloaded: true,
+              isLocal: true,
+              origin: ModelOrigin.LOCAL,
+              fullPath: '/path/to/dr.gguf',
+              modelType: ModelType.DRAFT,
+              // Valid MTP draft: own nextn layers + width matching the target.
+              ggufMetadata: specMeta({nextn_predict_layers: 1, n_embd: 1024}),
+            } as any,
+          ];
+          modelStore.context = undefined;
+          modelStore.activeModelId = undefined;
+          modelStore.isContextLoading = false;
+          modelStore.modelLoadError = null;
+        });
+      };
+
+      it('proceedWithInitialization writes activeDraftModelId when a paired draft loads', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        setupPairedDownloadedModels();
+
+        const {initLlama} = require('llama.rn');
+        (initLlama as jest.Mock).mockReset();
+        (initLlama as jest.Mock).mockResolvedValue({
+          release: jest.fn(),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        });
+
+        const target = modelStore.models.find(m => m.id === 'a/b/t.gguf')!;
+        await modelStore.initContext(target);
+
+        // Sole writer set the paired draft id alongside the active context.
+        expect(modelStore.activeDraftModelId).toBe('c/d/dr.gguf');
+        // And the draft path was forwarded to the single native-load entry.
+        const params = (initLlama as jest.Mock).mock.calls[0][0];
+        expect(params.model_draft).toBe('/path/to/dr.gguf');
+        expect(params.is_model_draft_asset).toBe(false);
+      });
+
+      it('a draft-related init failure sets modelLoadError once and calls initLlama once — no auto-retry', async () => {
+        modelStore.setSpeculativeEnabled(true);
+        setupPairedDownloadedModels();
+
+        const {initLlama} = require('llama.rn');
+        (initLlama as jest.Mock).mockReset();
+        (initLlama as jest.Mock).mockRejectedValue(
+          new Error('draft init failed'),
+        );
+
+        const target = modelStore.models.find(m => m.id === 'a/b/t.gguf')!;
+        await expect(modelStore.initContext(target)).rejects.toThrow();
+
+        // Crash-loop guard: error surfaced exactly once, no auto-fallback
+        // re-init, no auto-retry → initLlama invoked exactly once.
+        expect(initLlama as jest.Mock).toHaveBeenCalledTimes(1);
+        expect(modelStore.modelLoadError).not.toBeNull();
+        // Failed load leaves no stale active draft.
+        expect(modelStore.context).toBeUndefined();
+      });
+    });
+
+    describe('activeDraftModelId reset at the main-context release path', () => {
+      it('clears activeDraftModelId in the finally branch when a real context is released', async () => {
+        const releasedCtx = {
+          release: jest.fn().mockResolvedValue(undefined),
+          stopCompletion: jest.fn().mockResolvedValue(undefined),
+          isMultimodalEnabled: jest.fn().mockResolvedValue(false),
+        };
+        runInAction(() => {
+          modelStore.activeDraftModelId = 'c/d/dr.gguf';
+          modelStore.activeProjectionModelId = 'proj';
+          modelStore.context = releasedCtx as any;
+          modelStore.engine = {stopCompletion: jest.fn()} as any;
+          modelStore.inferencing = false;
+          modelStore.isStreaming = false;
+        });
+
+        await (modelStore as any)._releaseContextInternal(false);
+
+        // The main-context release path (finally block) must clear the draft id
+        // alongside the projection id, guarding against a stale-state reset
+        // omission on switch/release.
+        expect(releasedCtx.release).toHaveBeenCalled();
+        expect(modelStore.activeDraftModelId).toBeUndefined();
+        expect(modelStore.activeProjectionModelId).toBeUndefined();
+      });
     });
   });
 });

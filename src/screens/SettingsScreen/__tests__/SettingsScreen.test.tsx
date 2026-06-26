@@ -256,6 +256,489 @@ describe('SettingsScreen', () => {
     expect(modelStore.setImageMaxTokens).toHaveBeenCalledWith(768);
   });
 
+  it('toggles the speculative decoding switch in advanced settings', async () => {
+    jest.useFakeTimers();
+    const {getByTestId, getByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    // Expand advanced settings to reveal the speculative section.
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+    });
+
+    act(() => {
+      fireEvent(
+        getByTestId('speculative-decoding-switch'),
+        'valueChange',
+        true,
+      );
+    });
+
+    expect(modelStore.setSpeculativeEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it('gates the draft cache menus behind the speculative toggle', async () => {
+    jest.useFakeTimers();
+    runInAction(() => {
+      modelStore.contextInitParams.speculativeEnabled = false;
+    });
+    const {getByTestId, getByText, queryByText} = render(<SettingsScreen />, {
+      withSafeArea: true,
+      withNavigation: true,
+    });
+
+    fireEvent.press(getByText('Advanced Settings'));
+
+    await waitFor(() => {
+      expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+    });
+
+    // Off → draft cache controls are not rendered.
+    expect(queryByText('Draft Key Cache Type')).toBeNull();
+
+    // On → draft cache controls appear.
+    runInAction(() => {
+      modelStore.contextInitParams.speculativeEnabled = true;
+    });
+    await waitFor(() => {
+      expect(getByText('Draft Key Cache Type')).toBeTruthy();
+    });
+
+    runInAction(() => {
+      modelStore.contextInitParams.speculativeEnabled = false;
+    });
+  });
+
+  describe('speculative draft model picker', () => {
+    // Menus open from a ref.measure() callback. The test renderer's shared
+    // measure mock is a no-op; make it invoke the callback so the menu opens.
+    const mockNativeMethods =
+      require('react-native/jest/MockNativeMethods').default;
+    beforeEach(() => {
+      mockNativeMethods.measure.mockImplementation((cb: any) =>
+        cb(0, 0, 10, 10, 0, 0),
+      );
+    });
+    afterEach(() => {
+      mockNativeMethods.measure.mockReset();
+    });
+
+    const openMenu = (element: any) => {
+      fireEvent.press(element);
+    };
+
+    const setupDraftModels = () => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.models = [
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Tiny Draft',
+            isDownloaded: true,
+          } as any,
+        ];
+      });
+    };
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = false;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+      });
+    });
+
+    const openSpeculative = async (getByTestId: any, getByText: any) => {
+      fireEvent.press(getByText('Advanced Settings'));
+      await waitFor(() => {
+        expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+      });
+    };
+
+    it('picking a draft model calls setSelectedDraftModel with its id', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      openMenu(getByTestId('speculative-draft-model-picker'));
+      await waitFor(() => {
+        expect(getByText('Tiny Draft')).toBeTruthy();
+      });
+      fireEvent.press(getByText('Tiny Draft'));
+
+      expect(modelStore.setSelectedDraftModel).toHaveBeenCalledWith(
+        'a/b/draft.gguf',
+      );
+    });
+
+    it('picking None clears the draft model (undefined)', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      runInAction(() => {
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      openMenu(getByTestId('speculative-draft-model-picker'));
+      await waitFor(() => {
+        expect(getByText('None (embedded MTP)')).toBeTruthy();
+      });
+      fireEvent.press(getByText('None (embedded MTP)'));
+
+      expect(modelStore.setSelectedDraftModel).toHaveBeenCalledWith(undefined);
+    });
+
+    it('the draft GPU-layers slider writes setSpecDraftNGpuLayers', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      const slider = getByTestId('speculative-draft-gpu-layers-slider');
+      act(() => {
+        fireEvent(slider, 'valueChange', 42);
+      });
+      // InputSlider debounces onValueChange (default 300ms).
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(modelStore.setSpecDraftNGpuLayers).toHaveBeenCalledWith(42);
+    });
+
+    it('draft cache label shows the effective default (f16 when a draft is picked)', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      runInAction(() => {
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+      });
+      const {getByTestId, getByText, queryByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // Effective paired default is f16, not the "None" string.
+      expect(
+        queryByText(l10n.en.settings.speculativeDraftModelNone),
+      ).toBeNull();
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
+    });
+
+    it('draft cache menus are disabled with an explanation when no draft is paired (embedded)', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.models = [];
+      });
+      const {getByTestId, getByText, getAllByText} = render(
+        <SettingsScreen />,
+        {
+          withSafeArea: true,
+          withNavigation: true,
+        },
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBe(true);
+      // The explanation appears on both the key and value cache rows.
+      expect(
+        getAllByText(
+          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+        ).length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+
+    it('paired draft renders the f16 effective-default label (positive assertion)', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      runInAction(() => {
+        // A draft is picked but no explicit cache type set → label must resolve
+        // to the EFFECTIVE paired default (f16), not the "None" string and not
+        // an empty/wrong value.
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // The f16 cache option renders 'F16 (Default)' (flashAttnCompatibility),
+      // shown for BOTH the key and value draft cache rows. Substring match —
+      // the button prepends a chevron icon glyph to the label text content.
+      expect(
+        getByTestId('speculative-draft-key-cache-button'),
+      ).toHaveTextContent(/F16 \(Default\)/);
+      expect(
+        getByTestId('speculative-draft-value-cache-button'),
+      ).toHaveTextContent(/F16 \(Default\)/);
+    });
+
+    it('embedded mode renders the q8_0 effective-default label (positive assertion)', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        // No global pick and no per-target draft → effectively embedded; the
+        // draft cache rows must show the embedded default (q8_0), not f16 and
+        // not the "None" string.
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+        modelStore.models = [];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      expect(
+        getByTestId('speculative-draft-key-cache-button'),
+      ).toHaveTextContent(/Q8_0/);
+      expect(
+        getByTestId('speculative-draft-value-cache-button'),
+      ).toHaveTextContent(/Q8_0/);
+    });
+
+    it('stale selection (set id that does not resolve to a downloaded model) is treated as embedded/None', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        // The picked id points to a model that is NOT present/downloaded
+        // (e.g. it was deleted). The selection must be treated as None: the
+        // button shows "None", the cache rows are disabled (embedded), and the
+        // disabled explanation is shown — all consistent, no phantom pairing.
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'gone/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+        modelStore.contextInitParams.spec_draft_cache_type_v = undefined;
+        modelStore.models = [];
+      });
+      const {getByTestId, getByText, getAllByText} = render(
+        <SettingsScreen />,
+        {
+          withSafeArea: true,
+          withNavigation: true,
+        },
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // Button label falls back to None. (Substring match — the button
+      // prepends a chevron icon glyph to the label text content.)
+      expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
+        /None \(embedded MTP\)/,
+      );
+      // Cache rows are gated as embedded (q8_0 default, disabled + explained).
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBe(true);
+      expect(keyCacheButton).toHaveTextContent(/Q8_0/);
+      expect(
+        getAllByText(
+          l10n.en.settings.speculativeDraftCacheTypeDisabledDescription,
+        ).length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+
+    it('resolvable selection (set id present and downloaded) is treated as paired', async () => {
+      jest.useFakeTimers();
+      setupDraftModels();
+      runInAction(() => {
+        // The picked id resolves to a downloaded model → paired: button shows
+        // the model name and the cache rows are enabled (f16 default).
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.contextInitParams.spec_draft_cache_type_k = undefined;
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      await waitFor(() => {
+        expect(getByText('Draft Key Cache Type')).toBeTruthy();
+      });
+      // Substring match — the button prepends a chevron icon glyph.
+      expect(getByTestId('speculative-draft-model-picker')).toHaveTextContent(
+        /Tiny Draft/,
+      );
+      const keyCacheButton = getByTestId('speculative-draft-key-cache-button');
+      expect(keyCacheButton.props.accessibilityState?.disabled).toBeFalsy();
+    });
+  });
+
+  describe('speculative no-effect advisory note', () => {
+    const mtpMeta = {nextn_predict_layers: 1} as any;
+
+    afterEach(() => {
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = false;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = undefined;
+        modelStore.models = [];
+      });
+    });
+
+    const openSpeculative = async (getByTestId: any, getByText: any) => {
+      fireEvent.press(getByText('Advanced Settings'));
+      await waitFor(() => {
+        expect(getByTestId('speculative-decoding-switch')).toBeTruthy();
+      });
+    };
+
+    it('shows the note when speculative is on, the active model is not MTP-capable, and no capable draft is selected', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
+    });
+
+    it('shows the note when an incompatible (non-MTP) draft is selected — the coarse "any draft picked" signal would have hidden it', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/draft.gguf';
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+          } as any,
+          {
+            id: 'a/b/draft.gguf',
+            name: 'Plain Draft',
+            isDownloaded: true,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText} = render(<SettingsScreen />, {
+        withSafeArea: true,
+        withNavigation: true,
+      });
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(getByTestId('speculative-no-effect-note')).toBeTruthy();
+    });
+
+    it('hides the note when the active model is MTP-capable', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = undefined;
+        modelStore.activeModelId = 'active/mtp.gguf';
+        modelStore.models = [
+          {
+            id: 'active/mtp.gguf',
+            name: 'MTP Active',
+            isDownloaded: true,
+            ggufMetadata: mtpMeta,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+    });
+
+    it('hides the note when a capable draft is selected for a non-MTP active model', async () => {
+      jest.useFakeTimers();
+      runInAction(() => {
+        modelStore.contextInitParams.speculativeEnabled = true;
+        modelStore.contextInitParams.selectedDraftModelId = 'a/b/capable.gguf';
+        modelStore.activeModelId = 'active/plain.gguf';
+        modelStore.models = [
+          {
+            id: 'active/plain.gguf',
+            name: 'Plain Active',
+            isDownloaded: true,
+          } as any,
+          {
+            id: 'a/b/capable.gguf',
+            name: 'Capable Draft',
+            isDownloaded: true,
+            ggufMetadata: mtpMeta,
+          } as any,
+        ];
+      });
+      const {getByTestId, getByText, queryByTestId} = render(
+        <SettingsScreen />,
+        {withSafeArea: true, withNavigation: true},
+      );
+
+      await openSpeculative(getByTestId, getByText);
+
+      expect(queryByTestId('speculative-no-effect-note')).toBeNull();
+    });
+  });
+
   describe('TTS availability toggle', () => {
     afterEach(() => {
       // Reset observable fields between tests — beforeEach's clearAllMocks()

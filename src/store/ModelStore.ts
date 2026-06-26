@@ -32,6 +32,8 @@ import {
   filterProjectionModels,
   inferRepoFromModelId,
   parseSizeLabel,
+  isMTPCapable,
+  nEmbdOut,
 } from '../utils';
 import {getRecommendedProjectionModel} from '../utils/multimodalHelpers';
 import {getOriginalModelName} from '../utils/formatters';
@@ -46,6 +48,7 @@ import {
   DeviceRules,
   DeviceSignals,
   RuleCandidate,
+  RuleDraft,
   Tier,
 } from '../services/deviceRules/types';
 
@@ -165,6 +168,11 @@ class ModelStore {
   // Flag to track if multimodal is currently active
   isMultimodalActive: boolean = false;
   activeProjectionModelId: string | undefined = undefined;
+
+  // Draft model paired with the active context (runtime only; mirrors
+  // activeProjectionModelId). Set by proceedWithInitialization, cleared on every
+  // context release.
+  activeDraftModelId: string | undefined = undefined;
 
   // Track initialization settings for the active context
   activeContextSettings: ContextInitParams | undefined = undefined;
@@ -435,12 +443,98 @@ class ModelStore {
     });
   };
 
+  // Sole writers of the speculative-decoding engine knobs (single-writer rule).
+  setSpeculativeEnabled = (speculativeEnabled: boolean) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        speculativeEnabled,
+      };
+    });
+  };
+
+  // Sole writer of the global user-picked draft (undefined clears it).
+  setSelectedDraftModel = (selectedDraftModelId?: string) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        selectedDraftModelId,
+      };
+    });
+  };
+
+  setSpecDraftNMax = (spec_draft_n_max: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_n_max};
+    });
+  };
+
+  setSpecDraftNMin = (spec_draft_n_min: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_n_min};
+    });
+  };
+
+  setSpecDraftPMin = (spec_draft_p_min: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_p_min};
+    });
+  };
+
+  setSpecDraftPSplit = (spec_draft_p_split: number) => {
+    runInAction(() => {
+      this.contextInitParams = {...this.contextInitParams, spec_draft_p_split};
+    });
+  };
+
+  setSpecDraftNGpuLayers = (spec_draft_n_gpu_layers: number) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_n_gpu_layers,
+      };
+    });
+  };
+
+  setSpecDraftCacheTypeK = (spec_draft_cache_type_k: CacheType) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_cache_type_k,
+      };
+    });
+  };
+
+  setSpecDraftCacheTypeV = (spec_draft_cache_type_v: CacheType) => {
+    runInAction(() => {
+      this.contextInitParams = {
+        ...this.contextInitParams,
+        spec_draft_cache_type_v,
+      };
+    });
+  };
+
+  setDefaultDraftModel = (
+    modelId: string,
+    draftModelId: string | undefined,
+  ) => {
+    runInAction(() => {
+      this.models = this.models.map(m =>
+        m.id === modelId ? {...m, defaultDraftModel: draftModelId} : m,
+      );
+    });
+  };
+
   /**
    * Get effective context initialization parameters with constraints applied
    * This is the unified method that replaces both getEffectiveBatchValues and getEffectiveInitSettings
    */
   getEffectiveContextInitParams = async (
     filePath?: string,
+    draftConfig?: {
+      mode: 'off' | 'paired' | 'embedded';
+      resolvedDraftPath?: string;
+    },
   ): Promise<Omit<ContextParams, 'model'>> => {
     // Apply batch constraints
     const effectiveContext = this.contextInitParams.n_ctx;
@@ -471,10 +565,25 @@ class ModelStore {
       effectiveUseMmap = true;
     }
 
-    // Handle flash_attn_type (v2.0) - platform-specific default
+    // Speculative-decoding mode. Defaults to 'off' when no draftConfig is
+    // passed, so callers that don't resolve a draft (e.g. benchmark) are
+    // unaffected. Mode defaults are applied as ?? fallbacks over user-set
+    // contextInitParams — an explicit user value is never overwritten.
+    const mode = draftConfig?.mode ?? 'off';
+    const speculative = mode !== 'off';
+
+    // Handle flash_attn_type (v2.0) - platform-specific default. Paired draft
+    // mode defaults it 'off', embedded-MTP mode defaults it 'auto'.
+    const flashAttnModeDefault =
+      mode === 'paired'
+        ? 'off'
+        : mode === 'embedded'
+          ? 'auto'
+          : Platform.OS === 'ios'
+            ? 'auto'
+            : 'off';
     const flash_attn_type =
-      this.contextInitParams.flash_attn_type ??
-      (Platform.OS === 'ios' ? 'auto' : 'off');
+      this.contextInitParams.flash_attn_type ?? flashAttnModeDefault;
 
     // Build the params object, filtering out undefined values
     const params: Partial<Omit<ContextParams, 'model'>> = {
@@ -493,6 +602,47 @@ class ModelStore {
       use_mmap: effectiveUseMmap,
       no_extra_bufts: this.contextInitParams.no_extra_bufts,
     };
+
+    if (speculative) {
+      // Activator (the inertness fix): without spec_type, llama.rn's speculative
+      // type set stays empty and nothing engages. Emitted ONLY for paired/embedded
+      // (mode === 'off' skips this whole block), so spec_type leaves PocketPal
+      // exactly when capability is real. Constant at the call site, never persisted.
+      params.spec_type = 'draft-mtp';
+
+      // Forwarded in both speculative modes (paired + embedded). Pass through any
+      // user-set tuning verbatim; only the cache-type/gpu-layer defaults differ
+      // per mode below. spec_draft_n_max is coerced to ≥1 when the user set it —
+      // llama.rn throws on n_max ≤ 0 with DRAFT_MTP; leaving it undefined inherits
+      // the cpp default (3).
+      params.spec_draft_n_max =
+        this.contextInitParams.spec_draft_n_max !== undefined
+          ? Math.max(1, this.contextInitParams.spec_draft_n_max)
+          : undefined;
+      params.spec_draft_n_min = this.contextInitParams.spec_draft_n_min;
+      params.spec_draft_p_min = this.contextInitParams.spec_draft_p_min;
+      params.spec_draft_p_split = this.contextInitParams.spec_draft_p_split;
+
+      if (mode === 'paired' && draftConfig?.resolvedDraftPath) {
+        // Separate draft pairing: set the draft path; apply paired defaults.
+        params.model_draft = draftConfig.resolvedDraftPath;
+        params.is_model_draft_asset = false; // downloaded file, not bundled asset
+        params.spec_draft_n_gpu_layers =
+          this.contextInitParams.spec_draft_n_gpu_layers ?? 99;
+        params.spec_draft_cache_type_k =
+          this.contextInitParams.spec_draft_cache_type_k ?? 'f16';
+        params.spec_draft_cache_type_v =
+          this.contextInitParams.spec_draft_cache_type_v ?? 'f16';
+      } else {
+        // Embedded / hybrid MTP (or no-op): leave model_draft unset; MTP defaults.
+        params.spec_draft_n_gpu_layers =
+          this.contextInitParams.spec_draft_n_gpu_layers;
+        params.spec_draft_cache_type_k =
+          this.contextInitParams.spec_draft_cache_type_k ?? 'q8_0';
+        params.spec_draft_cache_type_v =
+          this.contextInitParams.spec_draft_cache_type_v ?? 'q8_0';
+      }
+    }
 
     // Remove undefined values from the params object
     return Object.fromEntries(
@@ -635,6 +785,27 @@ class ModelStore {
     return {hfModel, modelFile};
   };
 
+  // Build a standalone draft-model stub from a candidate's cross-repo draft
+  // block. Unlike mmproj, the draft is usually a different repo, so it cannot be
+  // an hfAsModel sibling of the target — it gets its own minimal {hfModel,
+  // modelFile} pair (own repo + deterministic download URL) and is tagged
+  // modelType: DRAFT. The resulting id is draftRepo/draftFilename.
+  private draftToStub = (draft: RuleDraft): Model => {
+    const modelFile: ModelFile = {
+      rfilename: draft.hfFilename,
+      url: deriveUrl(draft.hfRepo, draft.hfFilename),
+      size: draft.sizeBytes,
+    };
+    const hfModel = {
+      id: draft.hfRepo,
+      author: draft.hfRepo.split('/')[0],
+      url: `https://huggingface.co/${draft.hfRepo}`,
+      specs: {gguf: {total: 0}},
+      siblings: undefined,
+    } as unknown as HuggingFaceModel;
+    return {...hfAsModel(hfModel, modelFile), modelType: ModelType.DRAFT};
+  };
+
   // Materialize the device-tier preset list from rules. Each thin candidate is
   // turned into the minimal pair hfAsModel reads (candidateToPair), so the
   // result is origin:HF, identical to an HF-browser add. Multimodal candidates
@@ -653,16 +824,30 @@ class ModelStore {
     const flat = rules.tiers[tier].models.flatMap(candidate => {
       const {hfModel, modelFile} = this.candidateToPair(candidate);
       const llm = hfAsModel(hfModel, modelFile);
-      const named = candidate.displayName
+      let named = candidate.displayName
         ? {...llm, name: candidate.displayName}
         : llm;
+
+      const extras: Model[] = [];
       if (named.supportsMultimodal) {
         const projModels = getMmprojFiles(hfModel.siblings || []).map(file =>
           hfAsModel(hfModel, file),
         );
-        return [named, ...projModels];
+        extras.push(...projModels);
       }
-      return [named];
+      // Pair an authored cross-repo draft model: push its own stub and point the
+      // target at it (auto-pair / auto-download). Mirrors projection pairing but
+      // via the standalone draftToStub path, not an hfAsModel sibling.
+      if (candidate.draft) {
+        const draftStub = this.draftToStub(candidate.draft);
+        named = {
+          ...named,
+          defaultDraftModel: draftStub.id,
+          compatibleDraftModels: [draftStub.id],
+        };
+        extras.push(draftStub);
+      }
+      return [named, ...extras];
     });
 
     // Dedup on the full model id (author/repo/filename) so two authors sharing a
@@ -1140,6 +1325,46 @@ class ModelStore {
     }
   };
 
+  /**
+   * Auto-download a paired speculative draft model for a target. Best-effort:
+   * a draft download failure must NOT fail the target download (mirrors the
+   * projection auto-download swallow-and-continue). Gated on speculativeEnabled
+   * so drafts aren't pulled when the feature is off.
+   */
+  private _downloadDraftModelIfNeeded = async (model: Model) => {
+    // Same precedence as resolveDraftConfig: per-target authored draft wins,
+    // the global user-picked draft is the fallback.
+    const draftModelId =
+      model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
+    if (
+      !draftModelId ||
+      model.modelType === ModelType.DRAFT ||
+      !this.contextInitParams.speculativeEnabled
+    ) {
+      return;
+    }
+
+    const draftModel = this.models.find(m => m.id === draftModelId);
+
+    if (
+      draftModel &&
+      !draftModel.isDownloaded &&
+      !downloadManager.isDownloading(draftModelId)
+    ) {
+      console.log('Auto-downloading draft model for speculative target:', {
+        target: model.id,
+        draft: draftModelId,
+      });
+
+      try {
+        await this.checkSpaceAndDownload(draftModelId);
+      } catch (error) {
+        console.error('Failed to auto-download draft model:', error);
+        // Don't re-throw - draft download failure shouldn't fail the target download.
+      }
+    }
+  };
+
   checkSpaceAndDownload = async (modelId: string) => {
     const model = this.models.find(m => m.id === modelId);
     // Skip if model is undefined, already downloaded, local or doesn't have a download URL
@@ -1161,6 +1386,8 @@ class ModelStore {
 
       // For vision models, automatically download the projection model
       await this._downloadProjectionModelIfNeeded(model);
+      // For speculative targets, automatically download the paired draft model
+      await this._downloadDraftModelIfNeeded(model);
     } catch (err) {
       if (err instanceof DownloadCancelledError) {
         // User cancelled — not a failure. Don't surface an error and don't
@@ -1362,6 +1589,14 @@ class ModelStore {
     ) {
       await this.cleanupOrphanedProjectionModels(projectionModelIds);
     }
+
+    // If the deleted model was the globally-picked speculative draft, clear the
+    // selection via the sole writer so no dangling id persists. (Local models
+    // are spliced out; non-local ones just become not-downloaded — either way
+    // the picked draft is no longer usable, so drop the global pick.)
+    if (this.contextInitParams.selectedDraftModelId === _model.id) {
+      this.setSelectedDraftModel(undefined);
+    }
   };
 
   /**
@@ -1451,6 +1686,13 @@ class ModelStore {
       // Context length from GGUF
       const context_length = getArchValue('context_length');
 
+      // MTP / speculative capability signals (optional; absent KV ⇒ undefined).
+      // nextn_predict_layers > 0 marks an embedded MTP target / valid draft.
+      // embedding_length_out is the draft output width the native paired assert
+      // compares (n_embd_out); falls back to n_embd when unset at resolve time.
+      const nextn_predict_layers = getArchValue('nextn_predict_layers');
+      const embedding_length_out = getArchValue('embedding_length_out');
+
       const metadata = {
         architecture,
         n_layers,
@@ -1462,6 +1704,8 @@ class ModelStore {
         n_embd_head_v,
         sliding_window,
         context_length,
+        nextn_predict_layers,
+        embedding_length_out,
       };
 
       const paramCount = parseSizeLabel(
@@ -1563,6 +1807,67 @@ class ModelStore {
     return {isMultimodalInit: false};
   };
 
+  // Resolve the speculative-decoding mode for a target load by MTP CAPABILITY
+  // (not merely draft-path presence). Read-only; runs outside the mutex
+  // (mirrors resolveMultimodalConfig). Modes:
+  //  - 'off':      speculative disabled, OR enabled but neither the target nor a
+  //                valid paired draft is MTP-capable. Emits nothing speculative.
+  //  - 'paired':   a resolved draft is itself MTP-capable AND its output width
+  //                matches the target → model_draft set.
+  //  - 'embedded': the target carries embedded MTP draft layers (no model_draft).
+  //
+  // Crash-safety: emitting a paired draft whose width does not match the target
+  // is an UNCATCHABLE native abort (LM_GGML_ASSERT → SIGABRT) inside init_mtp —
+  // there is no native fallback to degrade. So this JS pre-check is the only
+  // guard: pair ONLY when both widths are known and equal; an unknown/unreadable
+  // width resolves to NOT paired ("unknown ⇒ not paired"). An invalid draft
+  // falls through to embedded (if the target is MTP-capable) and then to off.
+  private resolveDraftConfig = async (
+    model: Model,
+  ): Promise<{
+    mode: 'off' | 'paired' | 'embedded';
+    resolvedDraftPath?: string;
+    draftModel?: Model;
+  }> => {
+    if (!this.contextInitParams.speculativeEnabled) {
+      return {mode: 'off'};
+    }
+
+    // Precedence: per-target authored draft wins; the global user-picked draft
+    // is the fallback when the target has none.
+    const draftId =
+      model.defaultDraftModel ?? this.contextInitParams.selectedDraftModelId;
+    if (draftId) {
+      const draftModel = this.models.find(m => m.id === draftId);
+      if (draftModel?.isDownloaded && isMTPCapable(draftModel)) {
+        // Width gate (the only crash guard). Both widths must be known and equal.
+        const draftWidth = nEmbdOut(draftModel.ggufMetadata);
+        const targetWidth = model.ggufMetadata?.n_embd;
+        if (
+          draftWidth !== undefined &&
+          targetWidth !== undefined &&
+          draftWidth === targetWidth
+        ) {
+          const resolvedDraftPath = await this.getModelFullPath(draftModel);
+          if (resolvedDraftPath) {
+            return {mode: 'paired', resolvedDraftPath, draftModel};
+          }
+        }
+      }
+      // A resolved-but-invalid draft (not downloaded / not MTP / width mismatch
+      // or unknown) falls through — never paired.
+    }
+
+    // Embedded MTP: the target itself carries draft layers.
+    if (isMTPCapable(model)) {
+      return {mode: 'embedded'};
+    }
+
+    // Speculative enabled but nothing MTP-capable → off (dodges the non-MTP
+    // native error; PocketPal never sends spec_type).
+    return {mode: 'off'};
+  };
+
   /**
    * Check memory/capability requirements and show warning alert if needed.
    * Returns true if user confirms or no warning needed, false if cancelled.
@@ -1571,10 +1876,11 @@ class ModelStore {
     model: Model,
     isMultimodalInit: boolean,
     projectionModel?: Model,
+    draftModel?: Model,
   ): Promise<boolean> => {
     let hasMemory = true;
     try {
-      hasMemory = await hasEnoughMemory(model, projectionModel);
+      hasMemory = await hasEnoughMemory(model, projectionModel, draftModel);
     } catch (error) {
       console.error('Memory check failed:', error);
       return false;
@@ -1702,11 +2008,15 @@ class ModelStore {
       const {isMultimodalInit, resolvedMmProjPath, projectionModel} =
         await this.resolveMultimodalConfig(model, mmProjPath);
 
+      // Resolve speculative-decoding mode (read-only, pre-mutex like multimodal).
+      const draftConfig = await this.resolveDraftConfig(model);
+
       // Check memory and get user confirmation if needed (no mutex - UI interaction)
       const shouldProceed = await this.checkMemoryAndConfirm(
         model,
         isMultimodalInit,
         projectionModel,
+        draftConfig.draftModel,
       );
 
       if (!shouldProceed) {
@@ -1764,6 +2074,7 @@ class ModelStore {
           resolvedMmProjPath,
           isMultimodalInit,
           projectionModel,
+          draftConfig,
         );
       });
 
@@ -1789,6 +2100,11 @@ class ModelStore {
     mmProjPath?: string,
     isMultimodalInit: boolean = false,
     projectionModel?: Model,
+    draftConfig?: {
+      mode: 'off' | 'paired' | 'embedded';
+      resolvedDraftPath?: string;
+      draftModel?: Model;
+    },
   ): Promise<LlamaContext> {
     const filePath = await this.getModelFullPath(model);
     if (!filePath) {
@@ -1798,12 +2114,17 @@ class ModelStore {
     runInAction(() => {
       this.isMultimodalActive = false; // Reset until we confirm it's enabled
       this.activeProjectionModelId = projectionModel?.id;
+      // Sole writer of activeDraftModelId (paired with this context). Set only
+      // when a draft is actually paired; cleared on every context release.
+      this.activeDraftModelId = draftConfig?.draftModel?.id;
     });
 
     // Get all effective initialization settings BEFORE try block
     // so they're available for error reporting if initialization fails
-    const effectiveSettings =
-      await this.getEffectiveContextInitParams(filePath);
+    const effectiveSettings = await this.getEffectiveContextInitParams(
+      filePath,
+      draftConfig,
+    );
 
     try {
       // Create properly versioned ContextInitParams
@@ -1880,6 +2201,7 @@ class ModelStore {
           model,
           projectionModel,
           contextInitParams,
+          draftConfig?.draftModel,
         );
         runInAction(() => {
           if (
@@ -1947,6 +2269,7 @@ class ModelStore {
           }
           this.isMultimodalActive = false;
           this.activeProjectionModelId = undefined;
+          this.activeDraftModelId = undefined;
         });
       }
       if (!this.engine && !clearActiveModel) {
@@ -2004,6 +2327,7 @@ class ModelStore {
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
+            this.activeDraftModelId = undefined;
           });
           console.log('Multimodal context released and state cleared');
         } catch (error) {
@@ -2012,6 +2336,7 @@ class ModelStore {
           runInAction(() => {
             this.isMultimodalActive = false;
             this.activeProjectionModelId = undefined;
+            this.activeDraftModelId = undefined;
           });
         }
       }
@@ -2029,6 +2354,7 @@ class ModelStore {
         // Ensure multimodal state is cleared even if something went wrong above
         this.isMultimodalActive = false;
         this.activeProjectionModelId = undefined;
+        this.activeDraftModelId = undefined;
         // Clear active model if requested (for deletion scenarios)
         if (clearActiveModel) {
           this.activeModelId = undefined;

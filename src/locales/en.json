@@ -88,6 +88,17 @@
     "useMmapFalseDescription": "Disabled is recommended when weight repacking is enabled to avoid doubling memory usage",
     "weightRepacking": "Enable Weight Repacking",
     "weightRepackingDescription": "Faster prompt processing with minimal memory overhead when memory mapping is disabled. Token generation is unaffected.",
+    "speculativeDecoding": "Speculative Decoding",
+    "speculativeDecodingDescription": "Use a small draft model (or an embedded MTP model) to predict tokens and speed up generation. Experimental.",
+    "speculativeNotMTPCapable": "The active model isn't speculative-capable and no compatible draft is paired, so this stays off for it with no effect. It applies automatically to capable models.",
+    "speculativeDraftModel": "Draft Model",
+    "speculativeDraftModelDescription": "Smaller model used to draft tokens for the active model.",
+    "speculativeDraftModelNone": "None (embedded MTP)",
+    "speculativeDraftKeyCacheType": "Draft Key Cache Type",
+    "speculativeDraftValueCacheType": "Draft Value Cache Type",
+    "speculativeDraftNGpuLayers": "Draft GPU Layers",
+    "speculativeDraftNGpuLayersDescription": "Number of draft-model layers to offload to the GPU.",
+    "speculativeDraftCacheTypeDisabledDescription": "Draft cache type applies only when a separate draft model is paired.",
     "ttsAvailability": "Text-to-speech",
     "ttsAvailabilityDescription": "Read assistant replies aloud.",
     "ttsAvailabilityLowMemoryWarning": "Your device's memory is low — this may not work reliably.",
@@ -420,7 +431,8 @@
       "multilingual": "Multilingual",
       "rewriting": "Rewriting",
       "creativity": "Creative writing",
-      "vision": "Vision"
+      "vision": "Vision",
+      "mtp": "Speculative (MTP)"
     }
   },
   "completionParams": {

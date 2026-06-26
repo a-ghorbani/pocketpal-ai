@@ -13,7 +13,7 @@ import {Platform} from 'react-native';
 
 // Current version of the context init params schema
 // Increment this when adding new parameters or changing existing ones
-export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.2';
+export const CURRENT_CONTEXT_INIT_PARAMS_VERSION = '2.3';
 
 /**
  * Creates properly versioned ContextInitParams from ContextParams (excluding model)
@@ -60,6 +60,10 @@ export const createContextInitParams = (
 
     // v2.2+
     no_extra_bufts: (params as any).no_extra_bufts ?? false, // Default ON: repack enabled (mmap OFF + repack ON is optimal on Android)
+
+    // v2.3+ speculative decoding: feature OFF by default. spec_draft_* stay
+    // undefined until the user enables speculative and tunes them in Settings.
+    speculativeEnabled: (params as any).speculativeEnabled ?? false,
   };
 };
 
@@ -194,6 +198,17 @@ export function migrateContextInitParams(
     migratedParams.version = '2.2';
   }
 
+  // Migration from 2.2 to 2.3: speculative decoding / draft model.
+  // Feature defaults OFF for every upgraded record — speculativeEnabled false
+  // and all spec_draft_* left undefined so load behaviour is unchanged.
+  if (migratedParams.version === '2.2') {
+    if (migratedParams.speculativeEnabled === undefined) {
+      migratedParams.speculativeEnabled = false;
+    }
+
+    migratedParams.version = '2.3';
+  }
+
   // Ensure the final version is set correctly
   migratedParams.version = CURRENT_CONTEXT_INIT_PARAMS_VERSION;
 
@@ -258,5 +273,8 @@ export function createDefaultContextInitParams(): ContextInitParams {
 
     // v2.2 parameters
     no_extra_bufts: false, // Repack ON: mmap OFF + repack ON is optimal on Android
+
+    // v2.3 parameters: speculative decoding OFF by default
+    speculativeEnabled: false,
   };
 }

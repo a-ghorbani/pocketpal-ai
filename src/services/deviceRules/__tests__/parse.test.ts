@@ -101,6 +101,70 @@ describe('parseDeviceRules', () => {
     expect(c.mmproj?.modalities).toEqual(['vision']);
   });
 
+  it('parses a candidate with a cross-repo speculative draft', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'qwen3-8b',
+        hf_repo: 'Qwen/Qwen3-8B-GGUF',
+        hf_filename: 'Qwen3-8B-Q4_K_M.gguf',
+        draft: {
+          // A DIFFERENT repo than the target — the case mmproj rejects.
+          hf_repo: 'Qwen/Qwen3-0.6B-GGUF',
+          hf_filename: 'Qwen3-0.6B-Q4_K_M.gguf',
+          size_bytes: 500000000,
+        },
+      }),
+    );
+    const c = rules.tiers.mid.models[0];
+    expect(c.draft?.hfRepo).toBe('Qwen/Qwen3-0.6B-GGUF');
+    expect(c.draft?.hfFilename).toBe('Qwen3-0.6B-Q4_K_M.gguf');
+    expect(c.draft?.sizeBytes).toBe(500000000);
+  });
+
+  it('drops only the draft (keeps the target) when the draft is missing size', () => {
+    const rules = parseDeviceRules(
+      withCandidate({
+        model: 'qwen3-8b',
+        hf_repo: 'Qwen/Qwen3-8B-GGUF',
+        hf_filename: 'Qwen3-8B-Q4_K_M.gguf',
+        draft: {
+          hf_repo: 'Qwen/Qwen3-0.6B-GGUF',
+          hf_filename: 'Qwen3-0.6B-Q4_K_M.gguf',
+          // no size_bytes
+        },
+      }),
+    );
+    const c = rules.tiers.mid.models[0];
+    expect(c).toBeDefined();
+    expect(c.hfRepo).toBe('Qwen/Qwen3-8B-GGUF');
+    expect(c.draft).toBeUndefined();
+  });
+
+  it('drops only the draft (keeps the target) for an unsafe draft path', () => {
+    const cases = [
+      {hf_repo: '../evil', hf_filename: 'd.gguf'}, // bad repo shape
+      {hf_repo: 'a/b/c', hf_filename: 'd.gguf'}, // three-part repo
+      {hf_repo: 'a/', hf_filename: 'd.gguf'}, // empty repo part
+      {hf_repo: 'a/b', hf_filename: '../d.gguf'}, // path traversal
+      {hf_repo: 'a/b', hf_filename: 'd\\e.gguf'}, // path separator
+      {hf_repo: 'a/b', hf_filename: 'd.bin'}, // non-.gguf
+    ];
+    for (const bad of cases) {
+      const rules = parseDeviceRules(
+        withCandidate({
+          model: 'qwen3-8b',
+          hf_repo: 'Qwen/Qwen3-8B-GGUF',
+          hf_filename: 'Qwen3-8B-Q4_K_M.gguf',
+          draft: {...bad, size_bytes: 500000000},
+        }),
+      );
+      const c = rules.tiers.mid.models[0];
+      expect(c).toBeDefined();
+      expect(c.hfRepo).toBe('Qwen/Qwen3-8B-GGUF');
+      expect(c.draft).toBeUndefined();
+    }
+  });
+
   it('omits an optional display_name when absent', () => {
     const noName = withCandidate({
       model: 'x',
