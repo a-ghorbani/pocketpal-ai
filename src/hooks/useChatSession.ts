@@ -250,33 +250,46 @@ function deriveSnapshotFromResult(
 }
 
 /**
- * Compute the displayed generation throughput from the wall-clock pieces the
- * hook tracks (run start → first token → run end), returning the
+ * Compute the displayed generation throughput, returning the
  * `predicted_per_second` / `predicted_per_token_ms` fields the footer reads.
  *
- * This is the honest end-to-end gen rate: tokens generated divided by the time
- * spent generating them (excluding time-to-first-token, which is prompt/prefill
- * latency reported separately). It is used for every engine, MTP or not, so a
- * single number is shown. The native rate is unreliable for speculative (MTP)
- * turns — llama.cpp's blocking-path perf counter buckets MTP's multi-token
- * verification batches as PROMPT eval, so native predicted_per_second comes
- * back 0 even though tokens_predicted is accurate.
+ * Native-first: llama.cpp's own rate is preferred whenever it is trustworthy,
+ * because it is self-healing (tracks upstream fixes without our involvement) and
+ * avoids our wall-clock quirks. The native rate is "trustworthy" when it is a
+ * finite positive number AND llama.cpp counted ~all the tokens we actually
+ * generated (`predicted_n` ≈ `tokensPredicted`). When trustworthy we return the
+ * native `{predicted_per_second, predicted_per_token_ms}` pair verbatim.
  *
- * Falls back to the native rate when a wall-clock piece is unusable
- * (tokens_predicted missing/0, generation window <= 0, or start/TTFT missing),
- * so we never display a worse number than before.
+ * Speculative (MTP) turns are the case that fails the predicate: llama.cpp's
+ * blocking-path perf counter (llama_perf_context) buckets MTP's >1-token
+ * verification batches as PROMPT eval, so `predicted_n` (n_eval) comes back ~0
+ * while `tokensPredicted` is accurate — making the native rate ~0 and
+ * unrepresentative. For those turns we fall back to a wall-clock rate measured
+ * over the LAST STEP only: tokens generated in the last step divided by the time
+ * from that step's first token to run end. Measuring the last step (not the
+ * whole turn) is what fixes multi-step / tool-call under-reporting — `finalResult`
+ * carries only the last step's `tokens_predicted`, so a whole-turn window would
+ * divide last-step tokens by the entire (tool-call-inflated) turn duration.
+ *
+ * Self-healing: once upstream fixes MTP's n_eval bucketing, `predicted_n` will
+ * track `tokensPredicted` again and the native rate is used automatically with no
+ * code change here.
+ *
+ * Falls back to the native pair (which may be 0/undefined — never worse than
+ * before) when the wall-clock pieces are unusable: tokens missing/≤0, the
+ * last-step first-token timestamp missing, or a non-positive window.
+ *
+ * `Number.isFinite` is used throughout so NaN/Infinity from native are rejected.
  */
 export function computeGenThroughput(args: {
   tokensPredicted: number | undefined;
-  completionStartTime: number;
-  timeToFirstTokenMs: number | null;
+  lastStepFirstTokenMs: number | null;
   completionEndMs: number;
   nativeTimings: CompletionResult['timings'];
 }): {predicted_per_second?: number; predicted_per_token_ms?: number} {
   const {
     tokensPredicted,
-    completionStartTime,
-    timeToFirstTokenMs,
+    lastStepFirstTokenMs,
     completionEndMs,
     nativeTimings,
   } = args;
@@ -286,16 +299,34 @@ export function computeGenThroughput(args: {
     predicted_per_token_ms: nativeTimings?.predicted_per_token_ms,
   };
 
+  // Native-first: trust llama.cpp's rate when it counted ~all the tokens we
+  // generated. `predicted_n` (= n_eval) rides the native timings bag via its
+  // `[key: string]: number | undefined` index signature.
+  const nativePerSecond = nativeTimings?.predicted_per_second;
+  const nativePredictedN = nativeTimings?.predicted_n;
+  const generatedTokens = tokensPredicted ?? 0;
   if (
-    tokensPredicted == null ||
-    tokensPredicted <= 0 ||
-    timeToFirstTokenMs == null
+    nativePerSecond != null &&
+    Number.isFinite(nativePerSecond) &&
+    nativePerSecond > 0 &&
+    nativePredictedN != null &&
+    Number.isFinite(nativePredictedN) &&
+    nativePredictedN >= generatedTokens * 0.5
   ) {
     return nativeFallback;
   }
 
-  const genMs = completionEndMs - (completionStartTime + timeToFirstTokenMs);
-  if (genMs <= 0) {
+  // Wall-clock fallback over the LAST STEP only.
+  if (
+    tokensPredicted == null ||
+    tokensPredicted <= 0 ||
+    lastStepFirstTokenMs == null
+  ) {
+    return nativeFallback;
+  }
+
+  const genMs = completionEndMs - lastStepFirstTokenMs;
+  if (!Number.isFinite(genMs) || genMs <= 0) {
     return nativeFallback;
   }
 
@@ -320,6 +351,14 @@ async function applyEventToStore(
     sessionId: string;
     completionStartTime: number;
     timeToFirstTokenMs: {value: number | null};
+    // Last agent step's first-token timestamp (epoch ms). The displayed gen
+    // rate's wall-clock fallback windows over the LAST step only (run_finished
+    // sees finalResult = the last step's CompletionResult), so multi-step /
+    // tool-call turns don't dilute the rate with earlier steps' duration.
+    // `awaitingStepFirstToken` is armed on each step_started and disarmed on the
+    // next content/reasoning token, which stamps lastStepFirstTokenMs.value.
+    lastStepFirstTokenMs: {value: number | null};
+    awaitingStepFirstToken: {value: boolean};
     hasImages: boolean;
     isMultimodalEnabled: boolean;
     tts: TtsRunState;
@@ -332,17 +371,31 @@ async function applyEventToStore(
       // persist here — the message was added before the run started.
       return;
     case 'step_started':
+      // Arm last-step first-token capture: the next content/reasoning token
+      // stamps lastStepFirstTokenMs for the displayed gen rate's wall-clock
+      // fallback window (last step only).
+      ctx.awaitingStepFirstToken.value = true;
       await chatSessionStore.pushAgentStep(ctx.messageId, ctx.sessionId, {
         partial: true,
       });
       return;
     case 'token': {
-      // Capture time-to-first-token on the first content/reasoning token.
-      if (
-        ctx.timeToFirstTokenMs.value === null &&
-        (event.delta.content || event.delta.reasoningContent)
-      ) {
+      const hasFirstTokenSignal = !!(
+        event.delta.content || event.delta.reasoningContent
+      );
+      // Capture time-to-first-token on the first content/reasoning token. This
+      // stays TURN-level (the turn's first token), unchanged — it feeds the
+      // displayed TTFT field.
+      if (ctx.timeToFirstTokenMs.value === null && hasFirstTokenSignal) {
         ctx.timeToFirstTokenMs.value = Date.now() - ctx.completionStartTime;
+      }
+      // Stamp the LAST step's first-token timestamp: armed by the preceding
+      // step_started, consumed once on this step's first content/reasoning
+      // token. For a single-step turn this equals the turn's first token, so the
+      // wall-clock fallback window == the whole gen window (unchanged/correct).
+      if (ctx.awaitingStepFirstToken.value && hasFirstTokenSignal) {
+        ctx.awaitingStepFirstToken.value = false;
+        ctx.lastStepFirstTokenMs.value = Date.now();
       }
       if (!modelStore.isStreaming) {
         modelStore.setIsStreaming(true);
@@ -474,20 +527,18 @@ async function applyEventToStore(
               draft_tokens_accepted: finalResult.draft_tokens_accepted,
             }
           : {};
-      // Displayed generation throughput is computed from the wall-clock pieces
-      // the hook already tracks (start → first token → end), not from the
-      // native per-second counter. llama.cpp's blocking-path perf counter
-      // (llama_perf_context) buckets MTP's >1-token verification batches as
-      // PROMPT eval, so native predicted_per_second / predicted_per_token_ms
-      // come back 0 for speculative turns even though generation succeeded.
-      // The counted tokens (tokens_predicted) are accurate, so the honest
-      // end-to-end gen rate is tokens / (end - firstToken). Falls back to the
-      // native rate only when a wall-clock piece is missing.
+      // Displayed generation throughput is native-first: llama.cpp's own rate is
+      // used when it counted ~all the tokens we generated (predicted_n ≈
+      // tokens_predicted), which is self-healing and avoids our wall-clock
+      // quirks. For speculative (MTP) turns llama.cpp's perf counter mis-buckets
+      // the >1-token verify batches as prompt eval (predicted_n ≈ 0), so we fall
+      // back to a wall-clock rate over the LAST STEP only (finalResult carries
+      // the last step's tokens), which also fixes multi-step / tool-call
+      // under-reporting.
       const completionEndMs = Date.now();
       const genThroughput = computeGenThroughput({
         tokensPredicted: finalResult.tokens_predicted,
-        completionStartTime: ctx.completionStartTime,
-        timeToFirstTokenMs: ctx.timeToFirstTokenMs.value,
+        lastStepFirstTokenMs: ctx.lastStepFirstTokenMs.value,
         completionEndMs,
         nativeTimings: finalResult.timings,
       });
@@ -650,6 +701,10 @@ export const useChatSession = (
     abortRef.current = new AbortController();
     const completionStartTime = Date.now();
     const timeToFirstTokenMs: {value: number | null} = {value: null};
+    // Last agent step's first-token timestamp + the per-step arming flag (see
+    // applyEventToStore ctx). Drives the gen rate's last-step wall-clock window.
+    const lastStepFirstTokenMs: {value: number | null} = {value: null};
+    const awaitingStepFirstToken: {value: boolean} = {value: false};
     const tts: TtsRunState = {
       enabled: ttsStore.autoSpeakEnabled,
       started: false,
@@ -767,6 +822,8 @@ export const useChatSession = (
           sessionId: messageInfo.sessionId,
           completionStartTime,
           timeToFirstTokenMs,
+          lastStepFirstTokenMs,
+          awaitingStepFirstToken,
           hasImages,
           isMultimodalEnabled,
           tts,
