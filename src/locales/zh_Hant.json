@@ -287,7 +287,8 @@
         "disableThinking": "停用思考模式",
         "thinkingEnabled": "思考模式已啟用",
         "thinkingDisabled": "思考模式已停用",
-        "thinkText": "思考"
+        "thinkText": "思考",
+        "cycleEffort": "推理強度：{{level}}。連按兩次可切換強度層級"
       }
     },
     "chatGenerationSettingsSheet": {
@@ -430,7 +431,20 @@
     },
     "modelSettingsSheet": {
       "modelSettings": "模型設定",
-      "saveChanges": "儲存更改"
+      "saveChanges": "儲存更改",
+      "reasoningSection": "推理",
+      "isReasoningModel": "推理模型",
+      "effortLevels": {
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "超高",
+        "max": "最高"
+      },
+      "isReasoningModelHelp": "顯示此模型的思考控制，即使未自動偵測到。",
+      "supportsEffort": "支援漸進式強度",
+      "effortValues": "此模型支援的強度層級"
     },
     "assistantPalSheet": {
       "title": {
@@ -1153,7 +1167,9 @@
     "ttsAvailabilityLowMemoryWarning": "您的裝置記憶體不足 — 這可能會影響功能運作的穩定性。",
     "requestTimeout": "請求逾時（秒）",
     "requestTimeoutHelp": "等待較慢的伺服器回應的最長時間。留空則使用預設值。",
-    "requestTimeoutPlaceholder": "可選 – 留空則使用預設值"
+    "requestTimeoutPlaceholder": "可選 – 留空則使用預設值",
+    "serverType": "伺服器類型",
+    "serverTypeHelp": "自動偵測；若有誤請修改。"
   },
   "storage": {
     "checkFailed": "無法檢查存儲",
@@ -1419,7 +1435,7 @@
         "balanced": "平衡",
         "best": "最佳"
       },
-      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行思考 - 請選一個適合您的模型。",
+      "subtitleTemplate": "{{name}} 透過手機上的小型 AI 模型進行推理——請選擇適合的選項。",
       "pal": {
         "pip": {
           "body": "我們為您找到了完美的夥伴 - 一位友善的日常夥伴。它聰明到足以應對大多數事務，又輕量到適用於任何手機。"
