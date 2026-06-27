@@ -554,7 +554,7 @@
         "thinkingEnabled": "Mode berpikir diaktifkan",
         "thinkingDisabled": "Mode berpikir dinonaktifkan",
         "thinkText": "Berpikir",
-        "cycleEffort": "Tingkat penalaran: {{level}}. Ketuk dua kali untuk mengganti tingkat"
+        "cycleEffort": "Tingkat penalaran: {{level}}. Ketuk dua kali untuk mengganti tingkat penalaran"
       }
     },
     "contentReportSheet": {
